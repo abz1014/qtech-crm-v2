@@ -76,7 +76,11 @@ describe('ClarificationsPanel chase text', () => {
     )
     // The message waits under "Show the whole message": the questions are listed right above it.
     expect(screen.queryByTestId('chase-text')).toBeNull()
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Show the whole message' }))
+    const user = userEvent.setup()
+    expect(await screen.findByRole('button', { name: 'Copy chase text' })).toBeInTheDocument() // wider screens: the card shows
+    expect(screen.queryByRole('button', { name: 'Email instead' })).toBeNull() // the other channel waits with the whole message
+    await user.click(screen.getByRole('button', { name: 'Show the whole message' }))
+    expect(screen.getByRole('button', { name: 'Email instead' })).toBeInTheDocument()
     const text = await screen.findByTestId('chase-text')
     expect(text.textContent).toMatch(/gentle reminder/)
 
@@ -117,5 +121,42 @@ describe('ClarificationsPanel copy and mark asked', () => {
     release()
     await waitFor(() => expect(screen.getAllByText('Chase text copied').length).toBeGreaterThan(0))
     expect(stamps).toHaveLength(1)
+  })
+})
+
+describe('ClarificationsPanel on a phone (grade-A 6 fix 2)', () => {
+  it('questions waiting on the customer show one "Chase the customer" button that opens the card', async () => {
+    const orig = window.matchMedia
+    window.matchMedia = ((q: string) => ({
+      matches: q === '(max-width: 767px)',
+      media: q,
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia
+    try {
+      installFakeDb((call: FakeCall) => (call.target === 'clarifications' ? { data: [question(1)] } : { data: [] }))
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+      render(
+        <QueryClientProvider client={client}>
+          <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+            <MemoryRouter>
+              <ToastProvider>
+                <ClarificationsPanel rfq={rfq} inquiries={[]} />
+              </ToastProvider>
+            </MemoryRouter>
+          </SessionContext.Provider>
+        </QueryClientProvider>,
+      )
+      const user = userEvent.setup()
+      await user.click(await screen.findByRole('button', { name: 'Chase the customer' }))
+      expect(screen.getByRole('button', { name: 'Copy chase text' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Chase the customer' })).toBeNull()
+    } finally {
+      window.matchMedia = orig
+    }
   })
 })

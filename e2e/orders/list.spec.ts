@@ -1,7 +1,7 @@
 import { test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
-import { expect, get, shot } from './fixtures'
+import { expect, get, setProfile, shot } from './fixtures'
 
 /*
  * O04 end to end: the orders list, with one plain "Next step" per row (UX audit 2026-10-19) and the state filters behind one Filters button. Each test makes its own customer with a unique name and
@@ -14,7 +14,7 @@ interface ListSeed {
   tag: string
   company: { id: string; name: string }
   /** a: goods to place, commissioning planned, assigned to the fixture engineer. b: goods late. c: delivered. d: cancelled. */
-  orders: Record<'a' | 'b' | 'c' | 'd', { id: string; number: number; po: string }>
+  orders: Record<'a' | 'b' | 'c' | 'd', { id: string; number: number; po: string; legId: string | null; itemId: string }>
   engineerName: string
   supplierName: string
 }
@@ -29,8 +29,8 @@ async function seedList(): Promise<ListSeed> {
     const o = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, customer_po_number: po, ordered_on: karachiDay(-5), ...extra } })))[0]
     let legId: string | null = null
     if (leg) legId = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: o.id, supplier_id: supplier.id, currency: 'USD', ...leg } })))[0].id
-    await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: o.id, position: 0, description: `Line ${key} ${tag}`, qty: 1, unit_price_net: 1000, supplier_order_id: legId }, prefer: 'return=minimal' }))
-    return { id: o.id, number: o.number, po }
+    const item = (await must(rest<{ id: string }[]>('admin', 'order_items', { method: 'POST', body: { order_id: o.id, position: 0, description: `Line ${key} ${tag}`, qty: 1, unit_price_net: 1000, supplier_order_id: legId } })))[0]
+    return { id: o.id, number: o.number, po, legId, itemId: item.id }
   }
   const a = await make('A', { needs_commissioning: true, commissioning_planned_on: karachiDay(10) }, {})
   await must(rest('admin', 'order_engineers', { method: 'POST', body: { order_id: a.id, user_id: engineer.id }, prefer: 'return=minimal' }))
@@ -73,11 +73,16 @@ test.describe('O04: the orders list', () => {
     await expect(row(page, s.orders.a).locator('[data-status]')).toHaveCount(0)
     await expect(page.getByRole('columnheader', { name: 'Next step' })).toBeVisible()
     await shot(page, 'o04-orders-list-1440')
+    // a typed search is not stopped by the tab (UX audit 2026-10-22, area 4): on Done, the matches in the other tabs follow under a divider
     await page.getByRole('tab', { name: /^Done/ }).click()
-    await expect(page.getByText(/^Nothing matches/)).toBeVisible()
-    await expect(row(page, s.orders.a)).toHaveCount(0)
+    await expect(page.getByText(/^Nothing matches/)).toHaveCount(0)
+    await expect(page.getByText('Also in Active', { exact: true })).toBeVisible()
+    await expect(page.getByText('Also in Cancelled', { exact: true })).toBeVisible()
+    await expect(row(page, s.orders.a)).toBeVisible()
+    await expect(page.getByText(/^Showing 0 of \d+ done orders? · 4 more found in other lists$/)).toBeVisible()
     await page.getByRole('tab', { name: /^Cancelled/ }).click()
     await expect(row(page, s.orders.d)).toBeVisible()
+    await expect(page.getByText('In Cancelled', { exact: true })).toBeVisible()
   })
 
   test('a filter for each dimension behind one Filters button, combined: goods, commissioning, invoicing and payment', async ({ page }) => {
@@ -110,7 +115,7 @@ test.describe('O04: the orders list', () => {
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(row(page, s.orders.b)).toHaveCount(0)
     await page.getByLabel('Invoicing state').selectOption({ label: 'To invoice · nothing invoiced (1)' })
-    await page.getByLabel('Payment state').selectOption({ label: 'Awaiting payment · nothing paid (1)' })
+    await page.getByLabel('Payment state').selectOption({ label: 'Waiting for payment · nothing paid (1)' })
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(page).toHaveURL(/commissioning=planned/)
     await expect(page).toHaveURL(/invoicing=not_invoiced/)
@@ -122,13 +127,28 @@ test.describe('O04: the orders list', () => {
     await expect(row(page, s.orders.a)).toBeVisible()
   })
 
-  test('search finds an order by number and by customer PO; a row opens the order', async ({ page }) => {
+  test('search finds an order by number, by customer PO and by our supplier PO; a row opens the order', async ({ page }) => {
     const s = await seedList()
+    await setProfile(true)
+    await must(
+      rest('admin', 'rpc/issue_purchase_order', {
+        method: 'POST',
+        body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: s.orders.b.legId, p_lines: [{ order_item_id: s.orders.b.itemId, unit_price: 100, qty: 1 }] },
+      }),
+    )
+    const issued = (await get<{ number: number; issued_on: string }>(`purchase_orders?supplier_order_id=eq.${s.orders.b.legId}&select=number,issued_on`))[0]
+    const poRef = `PO-${issued.issued_on.slice(2, 4)}-${String(issued.number).padStart(4, '0')}`
     await open(page, 'sales', s)
     const search = page.getByLabel('Search orders')
     await search.fill(s.orders.b.po)
     await expect(row(page, s.orders.b)).toBeVisible()
     await expect(row(page, s.orders.a)).toHaveCount(0)
+    // our supplier PO, as printed and in short
+    await search.fill(poRef)
+    await expect(row(page, s.orders.b)).toBeVisible()
+    await expect(row(page, s.orders.a)).toHaveCount(0)
+    await search.fill(`PO ${issued.number}`)
+    await expect(row(page, s.orders.b)).toBeVisible()
     await search.fill(`ORD-${String(s.orders.a.number).padStart(4, '0')}`)
     await expect(row(page, s.orders.a)).toBeVisible()
     await row(page, s.orders.a).click()
@@ -138,11 +158,14 @@ test.describe('O04: the orders list', () => {
   test('sales start on Mine and can show everyone', async ({ page }) => {
     const s = await seedList()
     await openAs(page, 'sales', `/orders?q=${encodeURIComponent(s.tag)}`)
-    // none of these orders belong to the fixture salesperson, so Mine is empty until All is chosen
+    // none of these orders belong to the fixture salesperson: a typed search still finds them, under "not yours" (area 4)
     await expect(page.getByRole('radio', { name: /^Mine/ })).toBeChecked()
-    await expect(page.getByText(/^Nothing matches/)).toBeVisible()
+    await expect(page.getByText(/^Nothing matches/)).toHaveCount(0)
+    await expect(page.getByText('Also in Active · not yours', { exact: true })).toBeVisible()
+    await expect(row(page, s.orders.a)).toBeVisible()
     await page.getByRole('radio', { name: /^All/ }).click()
     await expect(row(page, s.orders.a)).toBeVisible()
+    await expect(page.getByText('Also in Active · not yours', { exact: true })).toHaveCount(0)
     await expect(page.getByRole('radio', { name: /^All/ })).toBeChecked()
     await expect(page.getByRole('button', { name: 'Repeat a past order' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'New order' })).toHaveCount(0)
@@ -155,10 +178,12 @@ test.describe('O04: the orders list', () => {
       if (r.url().includes('/rest/v1/')) urls.push(decodeURIComponent(r.url()))
     })
     await openAs(page, 'engineer', `/orders?q=${encodeURIComponent(s.tag)}`)
-    // My jobs: only the order the engineer is assigned to
+    // My jobs: the order the engineer is assigned to first; the search's other matches follow under "not your jobs"
     await expect(page.getByRole('radio', { name: /^My jobs/ })).toBeChecked()
+    await expect(page.getByText('In Active · your jobs', { exact: true })).toBeVisible()
     await expect(row(page, s.orders.a)).toBeVisible()
-    await expect(row(page, s.orders.b)).toHaveCount(0)
+    await expect(page.getByText('Also in Active · not your jobs', { exact: true })).toBeVisible()
+    await expect(row(page, s.orders.b)).toBeVisible()
     await page.getByRole('radio', { name: /^All/ }).click()
     await expect(row(page, s.orders.b)).toBeVisible()
     await page.waitForLoadState('networkidle')
@@ -181,6 +206,8 @@ test.describe('O04: the orders list', () => {
   test('loading, an empty list and an error say what is true', async ({ page }) => {
     await openAs(page, 'admin', `/orders?owner=all&q=${encodeURIComponent('zzzz-nothing-matches')}`)
     await expect(page.getByText(/^Nothing matches/)).toBeVisible()
+    // a search looks in every tab and at everyone's orders, and says so
+    await expect(page.getByText(/^Searched every order \(active, done and cancelled, everyone’s\)/)).toBeVisible()
     await page.route(/\/rest\/v1\/v_order_state/, route => route.abort())
     await page.reload()
     // the query retries before it gives up
@@ -198,6 +225,13 @@ test.describe('O04: the orders list', () => {
       // nothing scrolls sideways at this width
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
       await shot(page, `o04-orders-list-axe-${width}`)
+      // O2/O3 (UX audit 2026-10-22): one toolbar row, no "Any" segment (Who acts next is in Filters), and the search box is whole
+      // on screen (an inner strip that runs off the edge does not show as page scroll, so measure the box itself)
+      await expect(page.getByRole('radio', { name: 'Any' })).toHaveCount(0)
+      const box = await page.getByRole('textbox', { name: 'Search orders' }).boundingBox()
+      expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true)
+      // no cell runs into its neighbour: the Order cell's PO and owner wrap rather than spill over the Value column
+      expect(await page.locator('table tbody td').evaluateAll(tds => tds.filter(td => td.scrollWidth > td.clientWidth + 1).length)).toBe(0)
       if (width < 640) {
         // a phone gets one Filter button instead of six controls; the owner switch and the four filters are in its sheet
         await expect(page.getByRole('radio', { name: /^All/ })).toHaveCount(0)
@@ -205,6 +239,7 @@ test.describe('O04: the orders list', () => {
         const sheet = page.getByRole('dialog', { name: 'Filter orders' })
         await expect(sheet.getByRole('radio', { name: /^All/ })).toBeVisible()
         await expect(sheet.getByLabel('Goods state')).toBeVisible()
+        await expect(sheet.getByLabel('Who acts next')).toBeVisible()
         expect(await axeViolations(page, { landmarks: false })).toEqual([])
         await shot(page, 'o04-orders-list-filter-sheet-375')
         await sheet.getByRole('button', { name: /^Show \d+ orders?$/ }).click()

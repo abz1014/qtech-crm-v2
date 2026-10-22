@@ -47,7 +47,7 @@ describe('StatusText', () => {
   })
 
   it('reads the registry, including a hidden key and an icon override', () => {
-    expect(text(<StatusText dimension="goods" value="on_order" detail="Due 3 Nov" />)).toBe('On order Due 3 Nov')
+    expect(text(<StatusText dimension="goods" value="on_order" detail="Due 3 Nov" />)).toBe('Ordered Due 3 Nov')
     expect(html(<StatusText dimension="goods" value="on_order" />)).toContain('data-tone="waiting"')
     expect(text(<StatusText dimension="user" value="active" />)).toBe('Active')
     expect(html(<StatusText dimension="order" value="cancelled" />)).toContain('lucide-ban')

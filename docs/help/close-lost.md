@@ -5,8 +5,8 @@ roles: sales, admin
 keywords: close, lost, no reply, cancel, reason, dead, reopen
 screens: /rfqs, /today
 ---
-1. Open the RFQ and tap [More].
-2. Under [Close the RFQ because], pick the reason.
+1. Open the RFQ. Quotation already sent? Tap [Mark lost] beside [Mark won]. Otherwise tap [More].
+2. Pick the reason (in [More] it is under [Close the RFQ because]).
 3. It leaves your open RFQs. Reports use the reason.
 
 Tip: On [Today], a quotation with no decision has [Lost on price] and [Lost to a competitor] under it. No need to open the RFQ.

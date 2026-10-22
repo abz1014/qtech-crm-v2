@@ -72,7 +72,7 @@ const IE_COLS: InlineEditColumn[] = [
 const CURRENCIES = ['USD', 'EUR', 'CNY', 'AED'].map(c => ({ value: c, label: c }))
 const STOCK = [
   { value: 'in-stock', label: 'In stock' },
-  { value: 'to-order', label: 'To order' },
+  { value: 'to-order', label: 'Not ordered yet' },
 ]
 
 interface Reply {

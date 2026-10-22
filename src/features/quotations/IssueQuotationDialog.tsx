@@ -504,11 +504,17 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </Banner>
             ) : null}
 
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
+            {/* Two fields; the validity rule is the help under Valid until, not a third column of its own (grade-B Q, minimal fields). */}
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Addressed to" requirement="optional" source={previous?.contactId === contactId && contactId ? 'from the last quotation' : undefined}>
                 <Select value={contactId} onChange={e => setContactId(e.target.value)} placeholder="No contact" options={addressedOptions} />
               </Field>
-              <Field label="Valid until" requirement="optional" edited={validEdited}>
+              <Field
+                label="Valid until"
+                requirement="optional"
+                edited={validEdited}
+                help={validEdited ? 'Set by you for this quotation' : `${profile?.quotation_validity_days ?? 30} days from today, the company default`}
+              >
                 <DateInput
                   value={validUntil}
                   defaultToday={false}
@@ -518,12 +524,6 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   }}
                 />
               </Field>
-              <div className="grid min-w-0 content-start gap-[6px]">
-                <p className="text-sm font-medium leading-5 text-fg">Validity</p>
-                <p className="flex h-control items-center text-sm text-fg-muted">
-                  {validEdited ? 'Set by you for this quotation' : `${profile?.quotation_validity_days ?? 30} days from today, the company default`}
-                </p>
-              </div>
             </div>
 
             <div className="rounded border">
@@ -548,7 +548,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   const n = idx + 1
                   const nothingToQuote = !on && price === null && !hasSupplierPrice(it.id) && sold === null && quoted === null
                   return (
-                    <li key={it.id} className={`grid gap-3 px-3 py-3 md:items-start ${GRID} ${on ? '' : 'bg-sunken'}`} data-testid={`quote-line-${n}`}>
+                    <li key={it.id} className={`grid grid-cols-[28px_minmax(0,1fr)] gap-3 px-3 py-3 md:items-start ${GRID} ${on ? '' : 'bg-sunken'}`} data-testid={`quote-line-${n}`}>
                       <div className="pt-[1px]">
                         <Checkbox
                           aria-label={`Include item ${n}`}
@@ -593,7 +593,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                         {it.qty}
                         {it.unit ? <span className="block text-xs text-fg-muted">{it.unit}</span> : null}
                       </p>
-                      <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 md:contents">
+                      <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 max-md:col-start-2 md:contents">
                         <div className="grid gap-1 md:block">
                           <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
                             Unit price, net PKR
@@ -616,7 +616,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           <Select aria-label={`GST rate, item ${n}`} value={rateOf[it.id] ?? '18'} onChange={e => setRateOf(r => ({ ...r, [it.id]: e.target.value }))} options={GST_OPTIONS} />
                         </div>
                       </div>
-                      <div className="grid min-w-0 content-start gap-2">
+                      <div className="grid min-w-0 content-start gap-2 max-md:col-start-2">
                         <div className="grid gap-1">
                           <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
                             Lead time we quote
@@ -630,7 +630,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                         </div>
                         <LeadHint item={it} inquiries={inquiries} />
                       </div>
-                      <p className="num text-right text-sm font-medium text-fg md:pt-2">
+                      <p className="num text-right text-sm font-medium text-fg max-md:col-start-2 md:pt-2">
                         <span className="sr-only">{`Line net, item ${n}: `}</span>
                         {on && a.priced ? `PKR ${formatPaisa(a.net, 'auto')}` : on ? 'No price yet' : 'Not included'}
                       </p>

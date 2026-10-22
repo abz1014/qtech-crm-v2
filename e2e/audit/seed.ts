@@ -22,7 +22,8 @@ export const USER = {
 } as const
 
 export interface Fixture {
-  rfq: { notSent: string; waiting: string; pricesIn: string; quoted: string; compare: string }
+  /** won is absent in a seed.json written before it was seeded. */
+  rfq: { notSent: string; waiting: string; pricesIn: string; quoted: string; compare: string; won?: string }
   order: { notPlaced: string; poIssued: string; delivered: string; invoiced: string; paid: string; multiLeg: string }
   company: { customer: string; supplier: string }
   intake: { customerName: string; paste: string }
@@ -552,6 +553,36 @@ async function seedAll(): Promise<Fixture> {
     B,
   )
 
+  // Won: quoted, then made into an order through convert_rfq_to_order (the app's Mark won, then Create order), so the closed list
+  // shows a won RFQ next to the lost ones and the won RFQ page can be captured.
+  const rfqWon = await makeRfq(
+    {
+      company: c.thar.id,
+      owner: SALES,
+      received: -21,
+      due: -14,
+      ref: 'TML-PR-011',
+      items: [
+        { d: 'ABB AquaMaster 4 electromagnetic flow meter DN150', qty: 1, brand: 'ABB' },
+        { d: 'Danfoss MBS 3000 pressure transmitter 0-40 bar', qty: 4, brand: 'Danfoss' },
+      ],
+      inquiries: [
+        {
+          supplier: s.khi.id,
+          currency: 'PKR',
+          sent: -20,
+          quotes: [
+            { i: 0, price: 905000, lead: '4 weeks' },
+            { i: 1, price: 61500, lead: 'Ex-stock', stock: true },
+          ],
+        },
+      ],
+      quote: [1085000, 78500],
+    },
+    B,
+  )
+  await rpc('convert_rfq_to_order', { p_order_id: crypto.randomUUID(), p_rfq_id: rfqWon.id, p_customer_po_number: 'TML-PO-2026-044', p_ordered_on: D(-9) })
+
   // More open RFQs, so the lists and Today look like a normal week. Owners spread over all three users.
   const open: RfqSpec[] = [
     {
@@ -901,7 +932,7 @@ async function seedAll(): Promise<Fixture> {
   ])
 
   return {
-    rfq: { notSent: rfqNotSent.id, waiting: rfqWaiting.id, pricesIn: rfqPrices.id, quoted: rfqQuoted.id, compare: rfqCompare.id },
+    rfq: { notSent: rfqNotSent.id, waiting: rfqWaiting.id, pricesIn: rfqPrices.id, quoted: rfqQuoted.id, compare: rfqCompare.id, won: rfqWon.id },
     order: { notPlaced: notPlaced.id, poIssued: poIssued.id, delivered: delivered.id, invoiced: invoiced.id, paid: paid.id, multiLeg: multiLeg.id },
     company: { customer: c.indus.id, supplier: s.dubai.id },
     intake: {

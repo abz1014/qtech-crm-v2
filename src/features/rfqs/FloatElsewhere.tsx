@@ -77,7 +77,7 @@ export function FloatElsewhere({
                 {s.reason.replace(/\.$/, '')}
                 {s.coversItemIds.length > 0 ? ` (${numbersText(s.coversItemIds.map(id => numberOf.get(id) ?? 0).filter(Boolean))})` : ''}.
               </span>
-              <span className="text-xs text-fg-muted">{s.memoryLine}</span>
+              <span className="text-sm text-fg-muted">{s.memoryLine}</span>
             </span>
           ))}
         </span>

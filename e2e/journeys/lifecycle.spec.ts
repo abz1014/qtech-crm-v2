@@ -40,8 +40,9 @@ test('overpayment and advance: an advance before the invoice, then more than is 
   const page = await openPage(ctx, `/orders/${o.order.id}`)
   const payments = () => must(rest<{ amount: number }[]>('admin', `payments_in?order_id=eq.${o.order.id}&select=amount&order=created_at`))
   const record = async (amount: string) => {
-    // one Record payment on the page (the status strip, or the green next step): never two
-    await page.getByRole('button', { name: 'Record payment' }).click()
+    // no invoice yet: Record payment (an advance) is in the order's More menu, not offered up front (UX audit 2026-10-22, P2)
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
+    await page.getByRole('menuitem', { name: 'Record payment' }).click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue(/.+/) // the balance due is pre-filled
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill(amount)
@@ -149,7 +150,8 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const o = await newOrder('Locked Payer', 50000)
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${o.order.id}`)
-    await page.getByRole('button', { name: 'Record payment' }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
+    await page.getByRole('menuitem', { name: 'Record payment' }).click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
     await d.getByRole('textbox', { name: 'Date received' }).fill(typed)

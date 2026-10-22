@@ -126,6 +126,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo])
 
+  const lift = useLiftAboveStickyBar(items.length > 0)
+
   const api = useMemo<ToastApi>(() => ({ toast, dismiss }), [toast, dismiss])
   const card = (item: Item) => (
     <ToastCard key={item.id} item={item} onUndo={() => void undo(item.id)} onSettle={() => settle(item.id)} onDismiss={() => dismiss(item.id)} onGone={() => remove(item.id)} />
@@ -137,6 +139,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         role="region"
         aria-label="Notifications"
+        style={lift ? { bottom: lift } : undefined}
         className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[380px] max-w-full flex-col gap-2 max-md:inset-x-4 max-md:bottom-[76px] max-md:w-auto"
       >
         {/* WCAG 4.1.3: errors speak for themselves as role="alert". Every other toast goes into one persistent polite
@@ -149,6 +152,42 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       </div>
     </ToastContext.Provider>
   )
+}
+
+/**
+ * A page's sticky step bar (`data-sticky-bar`, the New RFQ "Next step" bar) holds its primary button at the bottom
+ * right, exactly where toasts sit: an "Undone" toast covered "Copy message" for its 5 s. While toasts show, they rise
+ * to sit 8px above such a bar when it is in the bottom half of the screen. Returns the bottom offset in px, or null
+ * for the usual place.
+ */
+function useLiftAboveStickyBar(active: boolean): number | null {
+  const [lift, setLift] = useState<number | null>(null)
+  useEffect(() => {
+    if (!active || typeof window === 'undefined') return
+    const measure = () => {
+      const vh = window.innerHeight
+      const usual = window.matchMedia?.('(max-width: 767px)').matches ? 76 : 16
+      let need = 0
+      document.querySelectorAll<HTMLElement>('[data-sticky-bar]').forEach(bar => {
+        const r = bar.getBoundingClientRect()
+        if (r.height === 0 || r.top >= vh || r.bottom <= 0 || r.top < vh / 2) return
+        need = Math.max(need, Math.ceil(vh - r.top + 8))
+      })
+      const next = need > usual ? need : null
+      setLift(prev => (prev === next ? prev : next))
+    }
+    measure()
+    // The bar can appear after the toast (Undo puts the step back) and moves as the page scrolls: re-measure.
+    const id = window.setInterval(measure, 200)
+    window.addEventListener('scroll', measure, { capture: true, passive: true })
+    window.addEventListener('resize', measure)
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('scroll', measure, { capture: true })
+      window.removeEventListener('resize', measure)
+    }
+  }, [active])
+  return active ? lift : null
 }
 
 function reducedMotion() {

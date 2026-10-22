@@ -153,20 +153,27 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     })
     await openAs(page, 'sales', `/rfqs/${s.rfqId}`)
 
-    // 0 taps: ranked rows, in rank order, are on the page.
+    // 0 taps: the rows are on the page, cheapest first (grade-B C1); the ranking's rank 1 keeps the one mark wherever it lands.
     const art = page.getByRole('article', { name: 'Item 1' })
     await expect(art.locator('li[data-ranked]')).toHaveCount(4)
     const order = await art.locator('li[data-ranked]').evaluateAll(els => els.map(e => e.getAttribute('data-ranked')))
-    expect(order).toEqual(['1', '2', '3', 'none'])
+    expect(order).toEqual(['2', '1', '3', 'none'])
     const names = await art.locator('li[data-ranked]').allInnerTexts()
-    expect(names[0]).toContain(s.bravo.name) // 1.0% dearer, but inside the 2% band and proven: first
-    expect(names[1]).toContain(s.apex.name)
+    expect(names[0]).toContain(s.apex.name) // the cheapest
+    expect(names[1]).toContain(s.bravo.name) // 1.0% dearer, but inside the 2% band and proven: rank 1
     expect(names[2]).toContain(s.charlie.name)
     expect(names[3]).toContain(s.delta.name)
-    // ONE mark per item: Recommended on rank 1; the cheapest is someone else, so a plain line names it (UX audit 2026-10-19).
+    // ONE mark per item: Recommended on rank 1; the cheapest is someone else, so its price is tagged "Cheapest" and a plain line
+    // directly under the Recommended row says why (UX audit 2026-10-19, grade-B C1).
     await expect(art.getByText('Recommended', { exact: true })).toHaveCount(1)
     await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('Recommended')
+    await expect(rowOf(page, 'Item 1', s.apex.name).locator('[data-cheapest-tag]')).toHaveText('Cheapest')
+    await expect(art.locator('[data-cheapest-tag]')).toHaveCount(1)
     await expect(art.locator('[data-cheapest]')).toHaveText(`Cheapest: ${s.apex.name}. ${s.bravo.name} is only 1.0% dearer and has the better delivery record.`)
+    expect(await rowOf(page, 'Item 1', s.bravo.name).evaluate(el => el.nextElementSibling?.hasAttribute('data-cheapest'))).toBe(true)
+    // The supplier's own figure, in grey under the PKR one; the header explains "≈" once.
+    await expect(rowOf(page, 'Item 1', s.apex.name).locator('[data-own-price]')).toHaveText('USD 100')
+    await expect(art.getByText('Price, PKR today (≈ = converted)')).toBeVisible()
     await expect(art.getByText('Lowest', { exact: true })).toHaveCount(0)
     // The rule is one tip in the panel header, not a note above every item.
     await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(1)
@@ -243,6 +250,7 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     await expect(art.getByText('Recommended')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Show details for / })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(0)
+    await expect(art.getByText(/Cheapest/)).toHaveCount(0)
 
     // No price, selling price or spread anywhere on the items panel.
     const panel = page.locator('[data-slot="items"]')
@@ -256,7 +264,7 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     expect(await violations(page)).toEqual([])
   })
 
-  test('phone 375: Recommended above the supplier, the price on the same line, and the reasons wrap under it when opened', async ({ page }) => {
+  test('phone 375: two lines per supplier (the name, then price · lead time · stock), and the reasons wrap under it when opened', async ({ page }) => {
     const s = await seed()
     await page.setViewportSize({ width: 375, height: 900 })
     await openAs(page, 'sales', `/rfqs/${s.rfqId}`)
@@ -265,6 +273,12 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     const first = rowOf(page, 'Item 1', s.bravo.name)
     await expect(first).toHaveAttribute('data-recommended', '')
     await expect(first).toContainText('Recommended')
+    // grade-B C3: the price starts on its own line below the name, at the row's left edge, so the name keeps the row's full width.
+    const box = async (sel: string) => (await first.locator(sel).first().boundingBox())!
+    const name = await first.getByText(s.bravo.name, { exact: true }).boundingBox()
+    const price = await box('.num')
+    expect(price.y).toBeGreaterThan(name!.y + name!.height - 1)
+    expect(Math.abs(price.x - name!.x)).toBeLessThan(40)
     await first.getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
     await expect(first).toContainText('On time 3 of 3 deliveries')
     // The page does not scroll sideways.
@@ -280,14 +294,19 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfqId}`)
     const art = page.getByRole('article', { name: 'Item 1' })
     await expect(art.locator('li[data-ranked]')).toHaveCount(4)
-    await expect(art.locator('li[data-ranked]').first()).toContainText(s.bravo.name)
+    // Cheapest first (grade-B C1): Apex leads the list, Bravo keeps the Recommended mark.
+    await expect(art.locator('li[data-ranked]').first()).toContainText(s.apex.name)
+    await expect(rowOf(page, 'Item 1', s.bravo.name)).toHaveAttribute('data-recommended', '')
     // Echo quotes far below everyone (its currency is picked with one chip tap, never typed): it becomes rank 1 without a reload.
-    const region = page.getByRole('region', { name: echo.name })
+    // The reply opens from the supplier's "Enter reply" in Suppliers asked, in a dialog named after them (grade-B R2/R4).
+    await page.getByRole('button', { name: `Enter reply, ${echo.name}`, exact: true }).click()
+    const region = page.getByRole('dialog', { name: echo.name, exact: true })
     await region.getByRole('group', { name: `Currency for ${echo.name}` }).getByRole('button', { name: 'PKR' }).click()
     await region.getByLabel(`Price for item 1 from ${echo.name}`).fill('90')
     await region.getByRole('button', { name: 'Save reply' }).click()
     await expect(art.locator('li[data-ranked]')).toHaveCount(5)
     await expect(art.locator('li[data-ranked]').first()).toContainText(echo.name)
+    await expect(rowOf(page, 'Item 1', echo.name)).toHaveAttribute('data-recommended', '')
   })
 })
 
@@ -383,7 +402,7 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
     await expect(row.locator('[data-memory-line]')).not.toContainText('last contacted')
 
     // The card: 1 optional tap, the latest order with its days, then the counts.
-    await page.getByRole('button', { name: `Memory, ${supplier.name}` }).click()
+    await page.getByRole('button', { name: `History, ${supplier.name}` }).click()
     const block = page.getByLabel(`What we know about ${supplier.name}`).locator('[data-evidence-block]')
     await expect(block).toContainText('Recent orders of this item from')
     // P9: up to three orders, each with its own days (the mockup's evidence block), and the supplier's order count.

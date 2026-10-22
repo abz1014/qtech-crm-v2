@@ -72,8 +72,8 @@ export const ROUTES: readonly RouteSpec[] = [
     ],
     // Owner decision 2026-10-22: pricing actions and price columns are admin and sales only.
     engineerAbsent: [
-      /^Issue quotation$/, /^Revise quotation$/, /^Mark won$/, /^Open PDF$/, /^Share$/, /^Gross, PKR$/, /^Price, PKR today$/,
-      /^Add reply/, /^Edit reply/, /^Paste reply/, /^Copy price$/, /^How are prices compared\?$/,
+      /^Issue quotation$/, /^Revise quotation$/, /^Mark won$/, /^Open PDF$/, /^Share$/, /^Gross, PKR$/, /^Price, PKR today/,
+      /^Add reply/, /^Enter reply/, /^Edit reply/, /^Paste reply/, /^Copy price$/, /^How are prices compared\?$/,
     ],
   },
   { path: '/rfqs/{rfq}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation dialog (admin and sales; an engineer gets the page without it)' },

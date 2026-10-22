@@ -30,8 +30,8 @@ function leave(config: MobileBarConfig, navigate: NavigateFunction, location: Lo
 
 /**
  * Phone header (below 768). Default: logo mark, the current destination as the title, search, the paste-or-photo
- * action and the avatar, --topbar-h tall. Room is tight at the bigger text size, so the logo mark goes below 400 px
- * (the Today tab is home) and the action keeps only its icon below 360 px; the title truncates last.
+ * action (an outlined 44 px icon button, never green: the screen's own button is the one primary) and the avatar, --topbar-h
+ * tall. Room is tight at the bigger text size, so the logo mark goes below 400 px (the Today tab is home); the title truncates last.
  * A screen can ask for the one-bar form through useMobileBar(): chevron-left or x, its own title, and one slot on the
  * right for its actions (g2-login-team-settings phone frames). Logo, search, paste-or-photo and the avatar are not shown then.
  */
@@ -60,11 +60,8 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
       <p className="min-w-0 flex-1 break-words text-base font-semibold leading-tight tracking-snug max-[399px]:text-sm">{config?.title ?? title}</p>
       {actions ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
       {onCapture ? (
-        <Button variant="primary" size="touch" icon={Import} aria-label={CAPTURE_LABEL} onClick={onCapture} className="max-[359px]:w-touch max-[359px]:px-0">
-          <span aria-hidden="true" className="max-[359px]:hidden">
-            {CAPTURE_LABEL}
-          </span>
-        </Button>
+        // Icon only and secondary (audit X1): the screen's own green button is the one primary on a phone; the name is "Paste or photo".
+        <Button variant="secondary" size="touch" icon={Import} aria-label={CAPTURE_LABEL} onClick={onCapture} />
       ) : null}
       <AccountMenu user={user} touch />
     </header>

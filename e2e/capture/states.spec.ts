@@ -38,7 +38,7 @@ async function ready(page: Page, rfqId: string) {
 
 const sheet = (page: Page) => page.getByRole('dialog', { name: 'Paste or photo' })
 
-/** R2-11: only the chosen option shows; "Something else" opens the other tiles and the reply and order choices (once per capture). */
+/** R2-11: only the chosen option shows; "Something else" opens the other tiles and the questions and order choices (once per capture). */
 async function openMore(page: Page) {
   const more = sheet(page).getByRole('button', { name: 'Something else' })
   if ((await more.getAttribute('aria-expanded')) !== 'true') await more.click()
@@ -46,6 +46,11 @@ async function openMore(page: Page) {
 async function chooseDest(page: Page, name: RegExp) {
   await openMore(page)
   await sheet(page).getByRole('radio', { name }).click()
+}
+/** grade-B K2: "Questions from a supplier" is a choice under "Something else" (the reply with prices took its tile). */
+async function chooseQuestions(page: Page) {
+  await openMore(page)
+  await sheet(page).getByRole('button', { name: 'Questions from a supplier' }).click()
 }
 const settle = (page: Page) => page.waitForTimeout(450)
 
@@ -143,7 +148,7 @@ for (const [name, size] of [
       await page.getByRole('button', { name: 'Remove nameplate-photo.png' }).click()
       // b: several questions
       await paste(page, 'Dear Sir, for the Belimo quote please confirm:\n1. Valve size and Kvs\n2. Actuator torque and supply voltage\n3. Fail-safe position on power loss\n4. Medium and maximum temperature')
-      await chooseDest(page, /Questions from a supplier/)
+      await chooseQuestions(page)
       await expect(sheet(page).getByText('Tick the ones to keep')).toBeVisible()
       await expect(sheet(page).getByText('Each line becomes one question on the RFQ, ready to put to the customer.')).toBeVisible()
       await settle(page)
@@ -316,7 +321,7 @@ test.describe('after 7 days', () => {
     await expect(sheet(page).getByText('Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.')).toBeVisible()
     await settle(page)
     await review(page, 'capture-frame-expired-375')
-    await sheet(page).getByRole('button', { name: 'Paste or photo' }).click()
+    await sheet(page).getByRole('button', { name: 'Paste or photo', exact: true }).click()
     await expect(sheet(page).getByText('Tap and hold here, then tap Paste')).toBeVisible()
   })
 })

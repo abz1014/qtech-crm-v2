@@ -27,6 +27,7 @@ export const listRow = (over: Partial<OrderListRow>): OrderListRow => ({
   moreLines: false,
   itemsText: 'belimo actuator',
   legs: [],
+  poNumbers: [],
   ...over,
 })
 

@@ -666,7 +666,13 @@ test('books: two admins, one closes last month while the other has Add expense o
 
     await probe(info, a, 'Record payment dated in the closed month: the sentence, nothing saved', async () => {
       await visit(a, info, `/orders/${o.order.id}`, 'order A')
-      await a.getByRole('button', { name: 'Record payment' }).first().click({ timeout: 10_000 })
+      // Before an invoice (an advance) Record payment is in the order's More menu (r3/rfq-orders, UX audit P2); a button once one is owed.
+      const pay = a.getByRole('button', { name: 'Record payment' }).first()
+      if (await pay.waitFor({ timeout: 5_000 }).then(() => true).catch(() => false)) await pay.click()
+      else {
+        await a.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: 10_000 })
+        await a.getByRole('menuitem', { name: 'Record payment' }).click({ timeout: 10_000 })
+      }
       const d = a.getByRole('dialog', { name: 'Record payment' })
       await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
       await d.getByRole('textbox', { name: 'Date received' }).fill(typed(M1.day(5)))

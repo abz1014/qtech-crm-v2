@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type Keyboa
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as RadixDialog from '@radix-ui/react-dialog'
-import { ArrowRight, Check, ChevronDown, ClipboardPaste, Clock, FileWarning, MessageSquareReply, Package, Share2, WifiOff, X } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, ClipboardPaste, Clock, FileWarning, Package, Share2, WifiOff, X } from 'lucide-react'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { deleteCapture, safely } from '@/lib/capture/store'
 import { readRecentOrders, readRecents } from '@/lib/capture/recents'
@@ -27,6 +27,7 @@ import {
   type OrderCandidate,
 } from '@/features/capture/model'
 import { CapNote, CaptureArea, ChosenCard, OrderPicker, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
+import { QUESTIONS_DEST } from '@/features/capture/tiles'
 import { useCapture } from '@/app/capture/useCapture'
 import { useBackToClose } from '@/lib/useBackToClose'
 import { useCompanyMatches, useRfqInquiries } from '@/features/rfqs/hooks'
@@ -136,10 +137,10 @@ export default function CaptureSheet() {
   const [company, setCompany] = useState<{ id: string; name: string } | null>(null)
   const [companyText, setCompanyText] = useState('')
   const [inquiryPick, setInquiryPick] = useState<string | null>(null)
-  // R2-11: only the chosen option is shown; "Something else" opens the other three tiles and the reply and order choices.
+  // R2-11: only the chosen option is shown; "Something else" opens the other three tiles and the questions and order choices.
   const [more, setMore] = useState(false)
 
-  const dest: Dest = orderMode ? 'order' : (userDest ?? guessDestination(kind, draft.text, ordered))
+  const dest: Dest = orderMode ? 'order' : (userDest ?? guessDestination(kind, draft.text, ordered, seesPrices(user?.role)))
   const rfq = dest === 'order' ? null : (ordered.find(c => c.id === userRfqId) ?? defaultRfq(dest, ordered))
   const open = rfq?.open ?? []
   const ticked = tickState && rfq && tickState.rfqId === rfq.id ? tickState.ids : new Set(defaultTicks(kind, open))
@@ -395,7 +396,7 @@ export default function CaptureSheet() {
     }
   }, [empty])
   const ref = rfq ? rfqRef(rfq.number) : ''
-  const isTile = dest !== 'reply' && dest !== 'order'
+  const isTile = dest !== 'questions' && dest !== 'order'
   const shorts = tickedList.map(q => shortQuestion(q.question)).join(', ')
 
   const body = (
@@ -461,6 +462,8 @@ export default function CaptureSheet() {
               kind={kind}
               off={empty}
               only={!empty && !more}
+              /* A supplier's reply is prices: admin and sales only (owner decision 2026-10-22, engineers see no prices). */
+              prices={seesPrices(user?.role)}
               onChoose={d => {
                 setOrderMode(false)
                 choose(d)
@@ -468,29 +471,26 @@ export default function CaptureSheet() {
             />
           ) : (
             <ChosenCard
-              icon={dest === 'order' ? Package : MessageSquareReply}
-              title={dest === 'order' ? 'Attach to an order' : 'A supplier’s reply'}
-              help={dest === 'order' ? 'Kept with the order’s files and notes' : 'The RFQ opens with the prices read out'}
+              icon={dest === 'order' ? Package : QUESTIONS_DEST.icon}
+              title={dest === 'order' ? 'Attach to an order' : QUESTIONS_DEST.title}
+              help={dest === 'order' ? 'Kept with the order’s files and notes' : QUESTIONS_DEST.help}
             />
           )}
         </Section>
         {empty ? <span className="text-xs text-fg-muted">You choose after you add something.</span> : null}
         {!empty && more ? (
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {/* A supplier's reply is prices: admin and sales only (owner decision 2026-10-22, engineers see no prices). */}
-            {seesPrices(user?.role) ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setOrderMode(false)
-                  choose('reply')
-                }}
-                aria-pressed={dest === 'reply'}
-                className={cn('w-fit rounded text-sm text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
-              >
-                {dest === 'reply' ? 'Reading it as a supplier’s reply' : 'This is a supplier’s reply'}
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setOrderMode(false)
+                choose('questions')
+              }}
+              aria-pressed={dest === 'questions'}
+              className={cn('w-fit rounded text-sm text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'questions' && 'font-medium text-fg no-underline')}
+            >
+              {QUESTIONS_DEST.title}
+            </button>
             <button
               type="button"
               onClick={() => setOrderMode(m => !m)}

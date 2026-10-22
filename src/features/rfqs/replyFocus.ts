@@ -25,6 +25,19 @@ export function focusReplyInput(inquiryId: string, itemId: string): boolean {
   return true
 }
 
+/**
+ * Phone (grade-A 6 fix 2): open the RFQ page at a supplier's row in Suppliers asked, the first one still without a reply. Only
+ * from the top of a fresh page: never when the person has already scrolled, or when the address points somewhere (#...).
+ * Returns true when it scrolled.
+ */
+export function jumpToReplyRow(supplierId: string): boolean {
+  if (window.scrollY > 8 || window.location.hash) return false
+  const el = document.querySelector(`[data-reply-row="${CSS.escape(supplierId)}"]`)
+  if (!el) return false
+  el.scrollIntoView({ block: 'start' })
+  return true
+}
+
 /** Items this supplier has neither priced nor declined: what a chase asks for. */
 export function outstandingItems(inquiry: InquiryRow, items: readonly RfqItemRow[]): RfqItemRow[] {
   return items.filter(it => !inquiry.lines.some(l => l.itemId === it.id) && !inquiry.itemDeclines[it.id])

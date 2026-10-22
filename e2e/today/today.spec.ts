@@ -128,7 +128,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     // ---- the chase: one tap
     let taps = 0
     await resetClipboard(page)
-    await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
     taps++
     const toast = page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })
     await expect(toast).toBeVisible()
@@ -148,7 +148,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(row.getByText('Copied')).toHaveCount(0)
 
     // ---- chase again and let the window close: the item moves to Waiting
-    await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
     await expect(page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })).toBeVisible()
     await expect(page.getByRole('status').filter({ hasText: `${s.ref} marked chased` })).toBeVisible({ timeout: 15_000 }) // the settled sentence
     const waiting = page.getByRole('region', { name: 'Waiting' })
@@ -157,16 +157,16 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(page.locator('li[data-rule="chase_customer"]:not([data-waiting])').filter({ hasText: s.ref })).toHaveCount(0)
     expect((await askOf(s.clarificationId)).ask_count).toBe(2)
 
-    // ---- just chased: the title stays, the bar says where it went, the cells and the card switch, "Chase again now" is there
+    // ---- just chased: the title stays, the bar says where it went, the cells and the card switch, "Chase again" is there
     await expect(pane.getByRole('heading', { level: 2, name: 'Chase customer for clarifications' })).toBeVisible()
     await expect(pane.getByText('Moved to Waiting.')).toBeVisible()
     await expect(pane.getByText('Chased customer', { exact: true })).toBeVisible()
     await expect(pane.getByText('Chase again on', { exact: true })).toBeVisible()
     await expect(pane.getByRole('region', { name: 'Chased today' })).toBeVisible()
-    await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toHaveCount(0)
+    await expect(pane.getByRole('button', { name: 'Copy and mark chased' })).toHaveCount(0)
     await review(page, 'today-03-waiting-1440')
-    await pane.getByRole('button', { name: 'Chase again now' }).click()
-    await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toBeVisible()
+    await pane.getByRole('button', { name: 'Chase again', exact: true }).click()
+    await expect(pane.getByRole('button', { name: 'Copy and mark chased' })).toBeVisible()
   })
 
   test('the collision line: a colleague already chased it, so you are told who and when before you chase it again', async ({ page }) => {
@@ -198,13 +198,13 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })).toBeVisible()
   })
 
-  test('at 1366 x 768 the one job, "Copy message and mark chased", is on the first screen without scrolling', async ({ page }) => {
+  test('at 1366 x 768 the one job, "Copy and mark chased", is on the first screen without scrolling', async ({ page }) => {
     const s = await seedCustomerChase(SALES)
     await page.setViewportSize({ width: 1366, height: 768 })
     await openAs(page, 'sales', '/today')
     await rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' }).getByRole('button').first().click()
     const pane = paneFor(page, s.ref)
-    const copy = pane.getByRole('button', { name: 'Copy message and mark chased' })
+    const copy = pane.getByRole('button', { name: 'Copy and mark chased' })
     await expect(copy).toBeVisible()
     const box = await copy.boundingBox()
     expect((box?.y ?? 9999) + (box?.height ?? 0), 'the button bottom is inside the 768 px window').toBeLessThanOrEqual(768)
@@ -239,7 +239,7 @@ test.describe('Today: role-aware', () => {
     await expect(job).toContainText('Commissioning tomorrow')
     await expect(job).toContainText(planned.customer)
     await expect(page.locator('li[data-rule="job_on_site"]').filter({ hasText: onSite.ref })).toContainText('Goods delivered to site: set the commissioning date')
-    // one list for an engineer: no Quotes / Suppliers / Money tabs
+    // one list for an engineer: no Quotations / Suppliers / Money tabs
     await expect(page.getByRole('radiogroup', { name: 'Show' })).toHaveCount(0)
     await job.getByRole('button').first().click()
     await paneFor(page, planned.ref).getByRole('button', { name: `Open ${planned.ref}` }).click()
@@ -265,7 +265,7 @@ test.describe('Today: role-aware', () => {
     const pane = paneFor(page, g.reference)
     await expect(pane.getByTestId('draft-text')).toContainText(g.reference)
     await resetClipboard(page)
-    await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'marked chased' })).toBeVisible()
     const leg = (await must(rest<{ chase_count: number }[]>('admin', `supplier_orders?id=eq.${g.leg.id}&select=chase_count`)))[0]
     expect(leg.chase_count).toBe(1)
@@ -281,7 +281,7 @@ test.describe('Today: role-aware', () => {
     await row.getByRole('button').first().click()
     const pane = paneFor(page, `ORD-0*${p.order.number}`)
     await expect(pane.getByTestId('draft-text')).toContainText('outstanding balance of PKR 118,000')
-    await pane.getByRole('button', { name: 'Copy message and mark reminded' }).click()
+    await pane.getByRole('button', { name: 'Copy and mark reminded' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'marked reminded' })).toBeVisible()
     const inv = await must(rest<{ reminder_count: number }[]>('admin', `invoices?order_id=eq.${p.order.id}&select=reminder_count`))
     expect(inv[0].reminder_count).toBe(1)
@@ -346,7 +346,7 @@ test.describe('Today: role-aware', () => {
     await expect(rowOf(page, theirs.ref)).toHaveCount(0)
     await expect(page.getByRole('radio', { name: /^Money/ })).toBeVisible()
     // the tabs in plain words (owner glossary 2026-10-19)
-    await expect(page.getByRole('radio', { name: /^Quotes/ })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /^Quotations/ })).toBeVisible()
     await expect(page.getByRole('radio', { name: /^Suppliers/ })).toBeVisible()
     await expect(page.getByRole('radio', { name: /^(Bids|Sourcing)/ })).toHaveCount(0)
     await review(page, 'today-07-admin-1440')
@@ -363,6 +363,10 @@ test.describe('Today: the tab strip fits', () => {
       await expect(strip.getByRole('radio', { name: /^Money/ })).toBeVisible()
       for (const tab of await strip.getByRole('radio').all()) await expect(tab).toBeInViewport({ ratio: 1 })
       expect(await strip.evaluate(el => el.scrollWidth <= el.clientWidth + 1), 'the strip scrolls sideways').toBe(true)
+      if (width >= 1024) {
+        const tops = await strip.getByRole('radio').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)))
+        expect(new Set(tops).size, 'All, Quotations, Suppliers and Money sit on one line').toBe(1)
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     })
   }

@@ -8,9 +8,9 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
  * Every test seeds its own companies and RFQ (unique names), so tests do not depend on each other.
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2; the UX audit of 2026-10-19 moved the rare actions into More):
- *   Supplier reply        at most 1 typed price per item, currency never typed (then one Save reply); the reply is already open
- *   Paste reply           paste + accept, at most 2 actions (nothing is saved until Accept)
- *   Can't quote           1 tap
+ *   Supplier reply        Enter reply, then at most 1 typed price per item, currency never typed (then one Save reply)
+ *   Paste reply           paste + accept, at most 2 actions once the reply is open (nothing is saved until Accept)
+ *   Can't quote           Enter reply, Can't quote, the reason (the five reasons sit behind one menu: grade-B R2)
  *   Chase                 1 tap for EVERY supplier asked (Copy and mark chased on the one shown, Chase on the others)
  *   Mark quotation sent   2 taps (More, then the item): a quotation issued from the app is marked sent by Issue itself
  *   Lose / close          at most 2 taps (open More, choose the reason; the suggested one is marked)
@@ -93,7 +93,21 @@ async function seed(opts: { dueInDays?: number; brand?: boolean; asked?: boolean
   return { tag, dueDate: karachiDay(opts.dueInDays ?? 6), carrier, rfq, customer, items, china, usd, germany }
 }
 
-const row = (page: Page, name: string) => page.getByRole('region', { name })
+/**
+ * A supplier's reply (grade-B R2/R4): each supplier is listed once, in Suppliers asked, and "Enter reply" (or "Edit reply") opens
+ * the price form in a dialog named after the supplier. Opens it if it is not open yet.
+ */
+const row = async (page: Page, name: string) => {
+  const dialog = page.getByRole('dialog', { name, exact: true })
+  if (!(await dialog.isVisible())) {
+    await page
+      .getByRole('button', { name: `Enter reply, ${name}`, exact: true })
+      .or(page.getByRole('button', { name: `Edit reply, ${name}`, exact: true }))
+      .click()
+  }
+  await expect(dialog).toBeVisible()
+  return dialog
+}
 const linesOf = (inquiryId: string) =>
   must(rest<{ rfq_item_id: string; unit_price: number; currency: string; fx_rate_pkr: number | null; lead_time: string | null; in_stock: boolean | null }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${inquiryId}&select=rfq_item_id,unit_price,currency,fx_rate_pkr,lead_time,in_stock`))
 const inquiryOf = (id: string) =>
@@ -111,11 +125,14 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await review(page, 'rfq-detail-01-populated-1440')
 
     // China, no earlier reply: the country map fills CNY. The USD supplier's last reply fills USD. Nobody types a currency.
-    // Every supplier still owing a reply has it open, ready to type into: no tap first.
-    const cn = row(page, s.china.name)
+    // The price form opens only when asked for: one tap on Enter reply in Suppliers asked (grade-B R2).
+    await expect(page.getByLabel(`Price for item 1 from ${s.china.name}`)).toHaveCount(0)
+    await expect((await row(page, s.usd.name)).getByText(/USD, their last reply/)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect((await row(page, s.germany.name)).getByText(/EUR, usual for Germany/)).toBeVisible()
+    await page.keyboard.press('Escape')
+    const cn = await row(page, s.china.name)
     await expect(cn.getByText('Prices in CNY, usual for China.')).toBeVisible()
-    await expect(row(page, s.usd.name).getByText(/USD, their last reply/)).toBeVisible()
-    await expect(row(page, s.germany.name).getByText(/EUR, usual for Germany/)).toBeVisible()
     await expect(cn.getByLabel(`Currency for ${s.china.name}`)).toHaveCount(0) // no control to pick one
     await expect(cn.getByLabel(`Price for item 1 from ${s.china.name}`)).toBeVisible()
 
@@ -139,7 +156,8 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     expect(lines.every(l => l.currency === 'CNY')).toBe(true)
     expect(lines.every(l => l.fx_rate_pkr === null)).toBe(true) // no CNY rate: saved anyway, never blocked
 
-    // The price line shows the supplier's own figure, not compared; the reply row closes to one line with Edit reply.
+    // The price line shows the supplier's own figure, not compared; the dialog closed, and the supplier's row offers Edit reply.
+    await expect(cn).toHaveCount(0)
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.getByText('not compared, no rate').first()).toBeVisible()
     await expect(page.locator(`[data-reply-row="${s.china.id}"]`).getByRole('button', { name: `Edit reply, ${s.china.name}` })).toBeVisible()
@@ -151,7 +169,7 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
   test('a USD price captures today\'s rate and is shown with the rate\'s age', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const r = row(page, s.usd.name)
+    const r = await row(page, s.usd.name)
     await r.getByLabel(`Price for item 1 from ${s.usd.name}`).fill('100')
     // The live preview: what it reads as in PKR at today's rate, and that it would be the lowest (C-40).
     await expect(r.getByText("Reads as ≈ PKR 28,000 at today's USD rate.")).toBeVisible()
@@ -180,7 +198,7 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
   test('one paste and one accept save every offer; nothing is saved before Accept', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const r = row(page, s.usd.name)
+    const r = await row(page, s.usd.name)
     await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 4 weeks`, 'Regards'].join('\n'))
     let actions = 0
     await r.getByRole('button', { name: 'Paste reply' }).click() // action 1: paste
@@ -200,7 +218,7 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
   test('a figure that could be read two ways is highlighted for checking, and Cancel saves nothing', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const r = row(page, s.germany.name)
+    const r = await row(page, s.germany.name)
     await copy(page, `FM${s.tag}1 DN50: EUR 1.234 each`)
     await r.getByRole('button', { name: 'Paste reply' }).click()
     await expect(r.locator('[data-flagged]')).toHaveCount(1)
@@ -212,7 +230,7 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
   test("a regret becomes can't quote with the reason filled in", async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const r = row(page, s.china.name)
+    const r = await row(page, s.china.name)
     await copy(page, 'Regret, we do not handle this brand. Sorry we cannot quote.')
     await r.getByRole('button', { name: 'Paste reply' }).click()
     await expect(r.getByText(/They say they can't quote\. Reason:/)).toBeVisible()
@@ -282,15 +300,18 @@ test.describe('comparison', () => {
   })
 })
 
-test.describe("can't quote (FE-2: 1 tap)", () => {
-  test('one tap records the reason, a per-item override is optional, and it can be taken back', async ({ page }) => {
+test.describe("can't quote (Enter reply, Can't quote, the reason)", () => {
+  test('the reasons sit behind one menu; one tap records the reason, and it can be taken back', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', `supplier_inquiries?id=eq.${s.china.inquiryId}`, { method: 'PATCH', body: { notes: 'Call Imran on Monday' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const r = row(page, s.china.name)
-    await r.getByRole('button', { name: "Doesn't carry this brand" }).click() // the one tap
+    const r = await row(page, s.china.name)
+    await expect(r.getByRole('button', { name: "Doesn't carry this brand" })).toHaveCount(0) // not five buttons (grade-B R2)
+    await r.getByRole('button', { name: `Can't quote, ${s.china.name}` }).click()
+    await page.getByRole('menuitem', { name: "Doesn't carry this brand" }).click() // the one tap on the reason
     await expect(page.getByRole('status').filter({ hasText: "Marked can't quote" })).toBeVisible()
-    // The supplier's reply row closes to one line: the reason and Take back.
+    await expect(r).toHaveCount(0) // the dialog closes
+    // The supplier's row in Suppliers asked: the reason and Take back.
     const closed = page.locator(`[data-reply-row="${s.china.id}"]`)
     await expect(closed).toContainText("Can't quote: Doesn't carry this brand")
     const after = await inquiryOf(s.china.inquiryId)
@@ -299,8 +320,8 @@ test.describe("can't quote (FE-2: 1 tap)", () => {
     expect(after.notes).toBe('Call Imran on Monday') // the notes belong to people and are never written
     await expect(page.getByRole('article', { name: 'Item 1' }).locator(`[data-declined="${s.china.id}"]`)).toContainText("Doesn't carry this brand")
 
-    await closed.getByRole('button', { name: 'Take back' }).click()
-    await expect(r.getByRole('button', { name: "Doesn't carry this brand" })).toBeVisible() // a reply is expected again: open again
+    await closed.getByRole('button', { name: `Take back can't quote, ${s.china.name}` }).click()
+    await expect(closed.getByRole('button', { name: `Enter reply, ${s.china.name}` })).toBeVisible() // a reply is expected again
     const back = await inquiryOf(s.china.inquiryId)
     expect(back.no_offer_on).toBeNull()
     expect(back.no_offer_reason).toBeNull()
@@ -310,13 +331,17 @@ test.describe("can't quote (FE-2: 1 tap)", () => {
   test('a different reason for one item is kept beside the inquiry reason', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const r = row(page, s.germany.name)
+    const r = await row(page, s.germany.name)
     await r.getByText('A different reason for one item').click()
     await r.getByLabel(`Can't quote reason for item 2 from ${s.germany.name}`).selectOption('Item discontinued')
     await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[1].id, 'discontinued']])
     const after = await inquiryOf(s.germany.inquiryId)
     expect(after.notes).toBeNull()
     expect(after.no_offer_on).toBeNull()
+    // The reply dialog says it at once; the page behind it (hidden while the dialog is open) shows it on the item once it closes.
+    await expect(r).toContainText("Can't quote: Item discontinued")
+    await page.keyboard.press('Escape')
+    await expect(r).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Item 2' }).locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
   })
 })
@@ -347,12 +372,15 @@ test.describe('chase (FE-2: 1 tap)', () => {
     expect((await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
   })
 
-  test('the card shows a short preview and the recipient; the whole message lists only the items still without a price; Email is a link; another supplier is one tap away', async ({ page }) => {
+  test('the card shows a short preview and the recipient; the whole message lists only the items still without a price; Email is a link; another supplier is one choice away', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[0].id, unit_price: 5, currency: 'CNY' } }))
     await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: s.china.id, name: 'Mr. Li Wei', phone: '+86 138 0000 0000', email: 'li@hengxin.example' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    // A price is in, so Issue quotation is the green button: the chase card waits for "Show message" (grade-B R3).
     const card = page.locator(`[data-chase-card="${s.china.id}"]`)
+    await expect(card).toHaveCount(0)
+    await page.getByRole('button', { name: `Show message, ${s.china.name}` }).click()
     await expect(card.getByText('WhatsApp to Mr. Li Wei')).toBeVisible()
     await expect(card.getByText('+86 138 0000 0000')).toBeVisible()
     // A preview: the ticks and the reply-by date wait under "Show the whole message".
@@ -368,8 +396,9 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.getByRole('button', { name: 'Copy subject' })).toBeVisible()
     await expect(card.getByText(/^RFQ-\d+: price needed/)).toBeVisible()
     await expect(card.getByRole('button', { name: 'WhatsApp instead' })).toBeVisible()
-    // Another supplier: "Show message" opens its card.
-    await page.getByRole('button', { name: `Show message, ${s.usd.name}` }).click()
+    // Another supplier: the card's "Message for" picker switches it (one control, not a "Show message" on every row; grade-A 9).
+    await expect(page.getByRole('button', { name: `Show message, ${s.usd.name}` })).toHaveCount(0)
+    await card.getByRole('combobox', { name: /^Message for/ }).selectOption({ label: s.usd.name })
     await expect(page.locator(`[data-chase-card="${s.usd.id}"]`)).toBeVisible()
   })
 
@@ -413,6 +442,11 @@ test.describe('quotation sent and close or lose (the More menu)', () => {
     await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBe(today())
     await expect(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).toBeVisible() // now the green one
     await expect(page.locator('[data-stage]')).toHaveText('Quotation sent')
+    // Sent (grade-B R6, R3): no due chip but the day it went; Mark lost is a quiet menu beside Mark won; no supplier chase left.
+    await expect(page.locator('[data-sent]')).toHaveText(`Sent ${formatLong(today())}`)
+    await expect(page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'Mark lost' })).not.toHaveClass(/bg-primary/)
+    await expect(page.locator('[data-chase-card]')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: `Chase ${s.usd.name}`, exact: true })).toHaveCount(0)
     await more(page).click()
     await expect(page.getByRole('menuitem', { name: /Quotation sent again/ })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: /Mark quotation sent/ })).toHaveCount(0) // already sent
@@ -463,16 +497,21 @@ test.describe('states', () => {
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
     await expect(page.locator('[data-slot="clarifications"]')).toContainText('Questions for the customer')
     await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
+    // Owner decision 2026-10-22: a reply is prices, so an engineer sees who was asked but has no Enter or Edit reply.
+    await expect(page.locator('aside').getByRole('heading', { name: 'Suppliers asked' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^(Enter|Edit) reply, / })).toHaveCount(0)
   })
 })
 
 test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
-  test('one Items and supplier prices panel with Add item; replies and Quotations under it; Suppliers asked, Questions and Files in the rail', async ({ page }) => {
+  test('one Items and supplier prices panel with Add item; Quotations under it; Suppliers asked (with each reply), Questions and Files in the rail', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const items = page.locator('[data-slot="items"]')
     await expect(items.getByRole('heading', { name: 'Items and supplier prices', level: 2 })).toBeVisible()
-    await expect(page.locator('[data-slot="replies"]').getByRole('heading', { name: 'Replies from suppliers', level: 2 })).toBeVisible()
+    // Suppliers are listed once (grade-B R4): no separate replies panel; Enter reply sits on each supplier in the rail.
+    await expect(page.locator('[data-slot="replies"]')).toHaveCount(0)
+    await expect(page.locator('aside').getByRole('button', { name: /^Enter reply, / })).toHaveCount(3)
     await expect(items.getByRole('button', { name: 'Add item' })).toBeVisible()
     await expect(items).toContainText('2 items · 3 suppliers asked · 0 items have a price')
     await expect(page.locator('[data-slot="quotations"]')).toBeVisible()
@@ -483,7 +522,9 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect(rail.getByRole('heading', { name: 'Questions for the customer' })).toBeVisible()
     await expect(rail.getByRole('heading', { name: 'Files' })).toBeVisible()
     // The header: at most two chips, ONE green button by state (waiting for prices: the supplier chase in the rail), the rest in More.
-    await expect(page.locator('header:has(h1) > div [data-status]')).toHaveCount(2) // the chip row under the title, none in the h1
+    // Due in 6 days is not close yet: only the stage chip, and the Quotation due tile is not orange (grade-B R7).
+    await expect(page.locator('header:has(h1) > div [data-status]')).toHaveCount(1) // the chip row under the title, none in the h1
+    await expect(page.locator('dt', { hasText: 'Quotation due' })).not.toHaveClass(/text-tone-warning-fg/)
     await expect(page.locator('h1 [data-status]')).toHaveCount(0)
     await expect(page.locator('[data-stage]')).toHaveText('Waiting for prices')
     // The h1 is the company, a link to it; the facts strip has no Company cell.
@@ -515,8 +556,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.getByText('1 price so far', { exact: true })).toBeVisible()
-    await expect(one.locator(`[data-waiting="${s.china.id}"]`)).toContainText(`Waiting on ${s.china.name}`)
-    await expect(one.locator(`[data-waiting="${s.china.id}"]`)).toContainText('asked')
+    await expect(one.locator(`[data-waiting~="${s.china.id}"]`)).toHaveText('Waiting on 2 suppliers') // China and Germany, one line
     // A price is in: Issue quotation is the green button.
     await expect(page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: 'Issue quotation' })).toBeVisible()
     await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)
@@ -530,26 +570,33 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-waiting]')).toHaveCount(0)
   })
 
-  test("a waiting supplier is one line with a Can't quote menu that records the reason for that item in one tap; Add reply is not repeated on items", async ({ page }) => {
+  test('the suppliers still to answer an item are ONE line, with no buttons; each supplier is listed once, in Suppliers asked (grade-B R1, R4)', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const one = page.getByRole('article', { name: 'Item 1' })
-    const waiting = one.locator(`[data-waiting="${s.germany.id}"]`)
-    await expect(one.getByRole('button', { name: /Add reply/ })).toHaveCount(0)
-    // The price boxes of a supplier still owing a reply are already open below, one row per supplier.
-    await expect(page.getByLabel(`Price for item 1 from ${s.germany.name}`)).toBeVisible()
-    await waiting.getByRole('button', { name: new RegExp(`Can't quote, ${s.germany.name}`) }).click()
-    await expect(page.getByRole('menu', { name: 'Reason' })).toContainText('One tap records the reason')
-    await page.getByRole('menuitem', { name: 'Item discontinued' }).click() // the one tap
+    await expect(one.locator('[data-waiting]')).toHaveCount(1)
+    await expect(one.locator('[data-waiting]')).toHaveText('Waiting on 3 suppliers')
+    await expect(one.getByRole('button', { name: /Add reply|Enter reply|Can't quote/ })).toHaveCount(0)
+    // No price boxes until a supplier's Enter reply is tapped.
+    await expect(page.getByLabel(`Price for item 1 from ${s.germany.name}`)).toHaveCount(0)
+    await expect(page.locator(`[data-reply-row="${s.germany.id}"]`)).toHaveCount(1)
+    // A reason for this one item is set in that supplier's reply.
+    const r = await row(page, s.germany.name)
+    await r.getByText('A different reason for one item').click()
+    await r.getByLabel(`Can't quote reason for item 1 from ${s.germany.name}`).selectOption('Item discontinued')
     await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[0].id, 'discontinued']])
+    await page.keyboard.press('Escape')
     await expect(one.locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
-    await expect(one.locator(`[data-waiting="${s.germany.id}"]`)).toHaveCount(0)
+    await expect(one.locator('[data-waiting]')).toHaveText('Waiting on 2 suppliers')
   })
 
   test('the item row menu: Copy price, Remove reply with an Undo, Edit reply goes to the price box', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '3 weeks' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    // The "..." waits behind the line's chevron (one control per price line until it is opened; grade-A 9).
+    await expect(page.getByRole('button', { name: `More for ${s.usd.name}` })).toHaveCount(0)
+    await page.getByRole('button', { name: `Show details for ${s.usd.name}` }).click()
     const menu = () => page.getByRole('button', { name: `More for ${s.usd.name}` }).click()
     await menu()
     await resetClipboard(page)
@@ -558,7 +605,9 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
 
     await menu()
     await page.getByRole('menuitem', { name: 'Edit reply' }).click()
-    await expect(page.getByLabel(`Price for item 1 from ${s.usd.name}`)).toBeFocused()
+    // The supplier's reply dialog opens with the cursor in that item's price box.
+    await expect(page.getByRole('dialog', { name: s.usd.name, exact: true }).getByLabel(`Price for item 1 from ${s.usd.name}`)).toBeFocused()
+    await page.keyboard.press('Escape')
 
     await menu()
     await page.getByRole('menuitem', { name: 'Remove reply' }).click()
@@ -597,16 +646,17 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     ] }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const bar = page.locator('[data-ratebar]')
-    await expect(bar).toContainText("Today's rates, PKR per unit")
+    // One line (grade-B R5): a fresh rate is its figure (where it came from is its title); a stale one says how old.
+    await expect(bar).toContainText('Rates today, PKR per unit')
     await expect(bar.locator('[data-rate="USD"]')).toContainText('USD 280.00')
-    await expect(bar.locator('[data-rate="USD"]')).toContainText('by hand · today')
-    await expect(bar.locator('[data-rate="EUR"]')).toContainText('12 days ago, stale')
+    await expect(bar.locator('[data-rate="USD"]')).toHaveAttribute('title', 'by hand · today')
+    await expect(bar.locator('[data-rate="EUR"]')).toContainText('12 days old')
     await expect(bar.locator('[data-rate="EUR"]')).toHaveAttribute('data-band', 'stale')
     await expect(bar.locator('[data-rate="JPY"]')).toContainText(/JPY\s*no rate, not compared/)
     // JPY is not compared: EUR is the lowest of the two that are.
     await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-lowest]')).toContainText(s.china.name)
 
-    await bar.getByRole('link', { name: 'Exchange rates' }).click()
+    await bar.getByRole('link', { name: 'Edit exchange rates' }).click()
     await expect(page).toHaveURL(/\/settings\/exchange-rates$/)
     await expect(page.getByRole('heading', { name: 'Exchange rates', level: 1 })).toBeVisible()
     await expect(page.getByRole('row', { name: /USD/ })).not.toContainText('Old rate') // a fresh rate: its age as text, no chip
@@ -746,8 +796,10 @@ test.describe('optional fields (migration 0039): bid time, company city, contact
       await expect(meta).toContainText('Faisalabad') // under the site
       await expect(meta).toContainText('Procurement Manager') // under the contact
       await expect(meta).toContainText('+92 300 555 0188') // the owner's phone, beside the role
-      await expect(row(page, s.china.name)).toContainText('Shenzhen, China')
+      await expect(await row(page, s.china.name)).toContainText('Shenzhen, China')
+      await page.keyboard.press('Escape')
       const card = page.locator(`[data-chase-card="${s.china.id}"]`)
+      await card.getByRole('button', { name: 'Show the whole message' }).click() // the other channel waits with the whole message
       await card.getByRole('button', { name: 'Email instead' }).click()
       await expect(card.locator('pre')).toContainText('Q-Tech Solutions\n+92 300 555 0188')
     } finally {
@@ -864,6 +916,8 @@ test.describe('the side column at 1366 (UX audit: never longer than the page bes
     ], prefer: 'return=minimal' }))
     await page.setViewportSize({ width: 1366, height: 768 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    // Prices are in, so no chase card shows by itself (round 3 R): open the waiting supplier's message so the rail is at its fullest.
+    await page.getByRole('button', { name: `Show message, ${s.china.name}`, exact: true }).click()
     await expect(page.locator(`[data-chase-card="${s.china.id}"]`)).toBeVisible()
     await expect(page.locator('[data-slot="clarifications"]')).toContainText('Is the line size DN50 or DN80?')
     const h = await page.evaluate(() => {
@@ -936,8 +990,8 @@ test.describe('reply currency for a supplier with no country (audit R1)', () => 
     await must(rest('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: withLeg.id, currency: 'CNY' } }))
     await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: withLeg.id, sent_on: karachiDay(-1) } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await expect(row(page, withLeg.name).getByText(/CNY, their last reply/)).toBeVisible()
-    await expect(row(page, withLeg.name).getByRole('group', { name: `Currency for ${withLeg.name}` })).toHaveCount(0)
+    await expect((await row(page, withLeg.name)).getByText(/CNY, their last reply/)).toBeVisible()
+    await expect((await row(page, withLeg.name)).getByRole('group', { name: `Currency for ${withLeg.name}` })).toHaveCount(0)
   })
 
   test('nothing on file: no silent PKR. A chip row, no preselection, no save until one is picked; the pick is remembered', async ({ page }) => {
@@ -945,7 +999,7 @@ test.describe('reply currency for a supplier with no country (audit R1)', () => 
     const bare = await createCompany(uniqueName('Baresup'))
     const inq = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: bare.id, sent_on: karachiDay(-1) } })))[0]
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const r = row(page, bare.name)
+    const r = await row(page, bare.name)
     const chips = r.getByRole('group', { name: `Currency for ${bare.name}` })
     await expect(chips).toBeVisible()
     for (const c of ['USD', 'EUR', 'CNY', 'PKR']) await expect(chips.getByRole('button', { name: c, exact: true })).toBeVisible()
@@ -963,8 +1017,8 @@ test.describe('reply currency for a supplier with no country (audit R1)', () => 
     await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: other.id, position: 0, description: 'Another item', qty: 1 } }))
     await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: other.id, supplier_id: bare.id, sent_on: karachiDay(-1) } }))
     await page.goto(`/rfqs/${other.id}`)
-    await expect(row(page, bare.name).getByText(/USD, their last reply/)).toBeVisible()
-    await expect(row(page, bare.name).getByRole('group', { name: `Currency for ${bare.name}` })).toHaveCount(0)
+    await expect((await row(page, bare.name)).getByText(/USD, their last reply/)).toBeVisible()
+    await expect((await row(page, bare.name)).getByRole('group', { name: `Currency for ${bare.name}` })).toHaveCount(0)
   })
 
   test('a supplier whose country is Pakistan keeps PKR, with no chip row', async ({ page }) => {
@@ -972,7 +1026,7 @@ test.describe('reply currency for a supplier with no country (audit R1)', () => 
     const pk = await createCompany(uniqueName('Pksup'), { country: 'Pakistan' })
     await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: pk.id, sent_on: karachiDay(-1) } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await expect(row(page, pk.name).getByText(/PKR, usual for Pakistan/)).toBeVisible()
-    await expect(row(page, pk.name).getByRole('group', { name: `Currency for ${pk.name}` })).toHaveCount(0)
+    await expect((await row(page, pk.name)).getByText(/PKR, usual for Pakistan/)).toBeVisible()
+    await expect((await row(page, pk.name)).getByRole('group', { name: `Currency for ${pk.name}` })).toHaveCount(0)
   })
 })

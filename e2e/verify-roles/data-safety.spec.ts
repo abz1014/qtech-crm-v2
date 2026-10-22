@@ -188,7 +188,7 @@ test('Undo of a leg stamp puts the leg back exactly as it was', async ({ page })
   const pick = 'id,placed_on,expected_on,received_on,reference,currency,supplier_id,order_id,chase_count,last_chased_on,last_chased_by'
   const before = (await rows<Record<string, unknown>>(`supplier_orders?id=eq.${world.leg}&select=${pick}`))[0]
   await openAs(page, 'engineer', `/orders/${world.order.id}`)
-  await page.getByRole('button', { name: /^Mark placed, / }).first().click()
+  await page.getByRole('button', { name: /^I placed this order, / }).first().click()
   await expect.poll(async () => (await rows<{ placed_on: string | null }>(`supplier_orders?id=eq.${world.leg}&select=placed_on`))[0].placed_on).not.toBeNull()
   await page.getByRole('region', { name: 'Notifications' }).getByRole('button', { name: /^Undo/ }).first().click()
   await expect.poll(async () => (await rows<Record<string, unknown>>(`supplier_orders?id=eq.${world.leg}&select=${pick}`))[0]).toEqual(before)

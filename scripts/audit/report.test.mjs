@@ -12,7 +12,7 @@ function cap(role, screen, viewport, over = {}, extra = {}) {
     viewport: { width: w, height: h },
     contentHeight: h * 2,
     actions: { total: 20, aboveFold: 10, buttons: 12, links: 8 },
-    primary: { inMain: 1, inMainAboveFold: 1, disabledInMain: 0, inChrome: 1, labels: ['Save'] },
+    primary: { inMain: 1, inMainAboveFold: 1, disabledInMain: 0, inChrome: 1, labels: ['Save'], onScreen: 1, anywhere: 1, onScreenLabels: ['Save'] },
     chips: { total: 4, aboveFold: 2, header: 1, headerMethod: 'header element', headerLabels: ['Open'] },
     tables: { count: 1, maxColumns: 5, columns: [5] },
     words: { aboveFold: 120, total: 300 },
@@ -21,6 +21,8 @@ function cap(role, screen, viewport, over = {}, extra = {}) {
     tap: w < 768 ? { checked: 10, minPx: 44, under44: 0, under24: 0, inlineLinks: 0, worst: [] } : null,
     nav: { levels: 1, labels: ['nav: Main'] },
     clipped: { count: 0, ellipsis: 0, samples: [] },
+    overlap: { count: 0, checked: 200, samples: [] },
+    overflow: { scrollers: 0, cut: 0, offscreen: 0, samples: [] },
     ...over,
   }
   return { role, screen, visit: screen, title: `Title ${screen}`, viewport, status: 'ok', ms: 1, metrics, axe: { rules: 0, nodes: 0, byImpact: {}, byRule: {}, sample: [] }, shots: { fold: `shots/${role}/${screen}/${viewport}-fold.png` }, ...extra }
@@ -70,7 +72,7 @@ describe('screen audit report', () => {
     expect(s.contrastHi.pass).toBe(false)
     expect(s.inputs16.pass).toBe(false)
     // desktop: the phone-only targets do not apply; a capture made before the new metrics existed leaves them out
-    const old = score(cap('admin', 'rfq', '1366x768', { primary: { inMain: 1, inMainAboveFold: 1, disabledInMain: 0, inChrome: 0, labels: [] } }))
+    const old = score(cap('admin', 'rfq', '1366x768', { primary: { inMain: 1, inMainAboveFold: 1, disabledInMain: 0, inChrome: 0, labels: [] }, overlap: undefined, overflow: undefined }))
     expect(old.greenAll).toEqual({ value: 1, pass: true })
     expect(old.mainActionsFold).toBeUndefined()
     expect(old.overlap).toBeUndefined()
@@ -113,6 +115,44 @@ describe('screen audit report', () => {
     // every table row of a screen has the same number of cells as its header
     const rows = md.split('\n').filter(l => l.startsWith('| 1366x768'))
     expect(rows).toHaveLength(3)
-    for (const row of rows) expect(row.match(/(?<!\\)\|/g)).toHaveLength(17)
+    for (const row of rows) expect(row.match(/(?<!\\)\|/g)).toHaveLength(20)
+  })
+
+  it('counts green buttons in the bars, overlapping text and cut text, and tolerates parts without them', () => {
+    const two = cap('sales', 'rfqs-open', '1366x768', {
+      primary: { inMain: 1, inMainAboveFold: 1, disabledInMain: 0, inChrome: 1, labels: ['New RFQ'], onScreen: 2, anywhere: 2, onScreenLabels: ['New RFQ', 'Paste or photo [bar]'] },
+      overlap: { count: 2, checked: 300, samples: ['"flow meter" x "RFQ-0008" (12x18px)'] },
+      overflow: {
+        scrollers: 1,
+        cut: 1,
+        offscreen: 1,
+        samples: [
+          { kind: 'cut', what: '"waiting or" in span' },
+          { kind: 'offscreen', what: 'input "Search" right=402' },
+          { kind: 'scroller', what: 'div.flex +40px' },
+        ],
+      },
+    })
+    const s = score(two)
+    expect(s.green).toEqual({ value: 2, pass: false })
+    expect(s.overlap).toEqual({ value: 2, pass: false })
+    expect(s.cut).toEqual({ value: 2, pass: false })
+    const none = cap('admin', 'settings', '1366x768', { primary: { inMain: 0, inMainAboveFold: 0, disabledInMain: 0, inChrome: 0, labels: [], onScreen: 0, anywhere: 0, onScreenLabels: [] } })
+    expect(score(none).green.pass).toBe(true)
+    // a part written before these metrics existed
+    const old = cap('admin', 'today', '1366x768', { primary: { inMain: 1, inMainAboveFold: 1, disabledInMain: 0, inChrome: 1, labels: ['Save'] }, overlap: undefined, overflow: undefined })
+    expect(score(old).green).toBeUndefined()
+    expect(score(old).overlap).toBeUndefined()
+    expect(score(old).cut).toBeUndefined()
+    const md = renderMarkdown(buildResults([{ meta: { finishedAt: '2026-10-22T00:00:00Z', viewports: ['1366x768'] }, captures: [two, none, old] }]))
+    expect(md).toContain('green on screen: "New RFQ", "Paste or photo [bar]"')
+    expect(md).toContain('text over text: "flow meter" x "RFQ-0008" (12x18px)')
+    expect(md).toContain('cut off: "waiting or" in span')
+    expect(md).toContain('past right edge: input "Search" right=402')
+    expect(md).toContain('scrolls sideways: div.flex +40px')
+    expect(md).toContain('info: no green button on screen')
+    const rows = md.split('\n').filter(l => l.startsWith('| 1366x768'))
+    expect(rows).toHaveLength(3)
+    for (const row of rows) expect(row.match(/(?<!\\)\|/g)).toHaveLength(20)
   })
 })

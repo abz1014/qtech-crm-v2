@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, TriangleAlert, Truck } from 'lucide-react'
+import { ChevronDown, Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, TriangleAlert, Truck } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
+import { formatShortDate } from '@/lib/formatDay'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
@@ -40,7 +41,8 @@ const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/Expe
  * text that edits on tap (optional). When placed, the expected date is suggested from the placed date plus the supplier's lead time.
  *
  * The page has one green button (the order header's next step, lib/primaryAction.ts); here every button is secondary. Visible on the row:
- * the stamp, "Issue PO" while there is no PO (admin and sales: a PO carries prices; "Mark placed, no PO" is then in the menu) and "Chase
+ * the stamp, "Issue PO" while there is no PO and the goods are neither delivered nor invoiced (admin and sales: a PO carries prices;
+ * "Mark placed, no PO" is then in the menu; once delivered or invoiced, Issue PO moves into the menu) and "Chase
  * goods" once the goods are late. The rest is in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Pay <supplier> (admin; the M03 dialog with this supplier as
  * the payee and Supplier payment as the category: the one Add expense per supplier order).
  */
@@ -123,6 +125,7 @@ export function LegsPanel({
               rates={rates}
               owed={owedByLeg.get(leg.id)}
               today={today}
+              collapsible={legs.length > 1}
               onChase={() => setChasing(leg)}
               onIssue={() => setIssuing(leg)}
               onViewPo={() => void poPdf.open(leg.id)}
@@ -155,6 +158,7 @@ function Leg({
   onIssue,
   onViewPo,
   viewingPo,
+  collapsible,
 }: {
   order: OrderHeader
   leg: OrderLegRow
@@ -175,8 +179,12 @@ function Leg({
   onIssue: () => void
   onViewPo: () => void
   viewingPo: boolean
+  /** With two or more suppliers, one already delivered when the page opened folds to one line (UX audit P9). */
+  collapsible: boolean
 }) {
   const actions = useLegActions(order, leg)
+  // Folded only if it was delivered when the page opened: stamping "Delivered today" keeps the row open, with its dates, for the Undo.
+  const [folded, setFolded] = useState(() => collapsible && leg.deliveredOn !== null)
   const [addingExpense, setAddingExpense] = useState(false)
   const dates: LegDates = { placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }
   const state = legState(dates, today)
@@ -215,9 +223,42 @@ function Leg({
 
   // The default expected date of an order placed by any route (a PO issued, a typed date) is written by the database (0067); the stamp sends the same date at once.
   // Not placed and no PO yet (admin and sales): Issue PO is the way to place it, so "Mark placed" (an order placed by phone or WhatsApp,
-  // no PO) goes into the menu: never two buttons for one step side by side. An engineer, who cannot issue a PO, keeps Mark placed.
+  // no PO) goes into the menu: never two buttons for one step side by side. An engineer, who cannot issue a PO, keeps the stamp as "I placed this order".
   const placeInMenu = Boolean(money && !po && stamp?.step === 'place')
-  const menu = Boolean(money && po) || (canChase && !late) || isAdmin || placeInMenu
+  // Delivered, or the whole order already invoiced, with no PO (an order placed by phone, UX audit P3 and area 9): no "Issue PO" on
+  // the row and no "No PO yet" chip, since that step no longer matters; the Ref says what the supplier's paper was, and issuing a PO
+  // after the fact stays in the row's menu.
+  const delivered = state === 'delivered' || state === 'received'
+  const pastPo = delivered || order.state?.invoicing === 'fully_invoiced'
+  const issueOnRow = money && !po && !pastPo
+  const issueInMenu = money && !po && pastPo
+  const menu = Boolean(money && po) || (canChase && !late) || isAdmin || placeInMenu || issueInMenu
+  // An engineer may mark an order placed (they sometimes order by phone on site), in their own words.
+  const stampLabel = stamp && stamp.step === 'place' && !money ? 'I placed this order' : stamp?.label
+
+  if (folded) {
+    return (
+      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="px-4 py-1 md:px-5">
+        <button
+          type="button"
+          aria-expanded={false}
+          onClick={() => setFolded(false)}
+          className="flex min-h-11 w-full flex-wrap items-center gap-x-2 gap-y-1 rounded text-left hover:bg-sunken"
+        >
+          <span className="min-w-0 break-words font-medium">{name}</span>
+          <span data-testid={`leg-${letter}-state`} className="text-fg-2">
+            <span className="text-fg-muted">·</span> Delivered{leg.deliveredOn ? ` ${formatShortDate(leg.deliveredOn, today)}` : ''}
+          </span>
+          {money && total.priced > 0 ? (
+            <span className="num text-fg-2">
+              <span className="text-fg-muted">·</span> {`${ccy ?? ''} ${formatAmount(total.total)}`.trim()}
+            </span>
+          ) : null}
+          <ChevronDown size={16} aria-hidden="true" className="ml-auto shrink-0 text-fg-muted" />
+        </button>
+      </li>
+    )
+  }
 
   return (
     <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="grid gap-3 px-4 py-4 md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6">
@@ -228,10 +269,12 @@ function Leg({
           <span data-testid={`leg-${letter}-state`}>
             <StatusBadge dimension="goods" value={STATE_DIM[state]} />
           </span>
-          {/* the PO chip: the latest issued revision, or "No PO yet" */}
+          {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
+          {po || !pastPo ? (
           <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-5 items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
+          ) : null}
           {fromSplit ? (
             <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
               <Split size={12} aria-hidden="true" />
@@ -289,12 +332,12 @@ function Leg({
         {canEdit ? (
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {stamp && !placeInMenu ? (
-              <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stamp.label}, ${name}`}>
-                {stamp.label}
+              <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
+                {stampLabel}
               </Button>
             ) : null}
             {/* data-slot="issue-po" (O07): Issue PO opens the dialog (1 tap, then Issue PO in it: 2 taps). Admin and sales only: a PO carries prices. */}
-            {money && !po ? (
+            {issueOnRow ? (
               <span data-slot="issue-po" className="contents">
                 <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Issue PO, ${name}`}>
                   Issue PO
@@ -320,6 +363,11 @@ function Leg({
                   {money && po ? (
                     <MenuItem icon={RefreshCw} onClick={onIssue}>
                       {`Revise PO (R${po.revision + 1})`}
+                    </MenuItem>
+                  ) : null}
+                  {issueInMenu ? (
+                    <MenuItem icon={FileText} onClick={onIssue}>
+                      Issue PO
                     </MenuItem>
                   ) : null}
                   {placeInMenu ? (

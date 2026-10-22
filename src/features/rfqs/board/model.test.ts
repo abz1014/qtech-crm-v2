@@ -11,6 +11,7 @@ import {
   isBoardShow,
   nextStepOf,
   nextStepText,
+  outcomeText,
   pageSummary,
   sortBoard,
   stepCounts,
@@ -129,6 +130,8 @@ describe('due text', () => {
   it('reads overdue in the danger tone with the days late', () => {
     expect(dueText({ dueOn: '2026-11-24', daysToDue: -3, isOverdue: true })).toEqual({ date: 'Tue 24 Nov', hint: '3 days overdue', tone: 'danger' })
     expect(dueText({ dueOn: '2026-11-26', daysToDue: -1, isOverdue: true }).hint).toBe('1 day overdue')
+    // Once the quotation is sent the due date is met: no red "overdue" (R6).
+    expect(dueText({ dueOn: '2026-11-26', daysToDue: -1, isOverdue: true, quotedOn: '2026-11-25' })).toEqual({ date: 'Thu 26 Nov', hint: '', tone: 'normal' })
   })
   it('warns on today and tomorrow, and stays calm beyond', () => {
     expect(dueText({ dueOn: '2026-11-27', daysToDue: 0, isOverdue: false })).toMatchObject({ hint: 'Due today', tone: 'warning' })
@@ -168,8 +171,19 @@ describe('next step words', () => {
 })
 
 describe('status words come from the U05 registry', () => {
-  it('the closed list still shows the outcome chip', () => {
+  it('the rfq-outcome dimension still knows every outcome', () => {
     for (const v of ['open', 'won', 'closed']) expect(() => resolveStatus('rfq-outcome', v)).not.toThrow()
+  })
+})
+
+describe('the closed list says the outcome in words (L3)', () => {
+  it('a closed RFQ reads as its reason, a won one as Won', () => {
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'price' }))).toBe('Lost on price')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'competitor' }))).toBe('Lost to a competitor')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'customer_cancelled' }))).toBe('Customer cancelled')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'something_new' }))).toBe('Other reason')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: null }))).toBe('Closed, no reason given')
+    expect(outcomeText(row({ outcome: 'won', closeReason: null }))).toBe('Won')
   })
 })
 

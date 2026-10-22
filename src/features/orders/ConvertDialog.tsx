@@ -25,7 +25,7 @@ import { useQuotations } from '@/features/quotations/hooks'
 import { quotationRef } from '@/features/quotations/lib/refs'
 import { RankedPicker } from '@/features/orders/RankedPicker'
 import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
-import { orderTotals } from '@/features/orders/lib/orderMath'
+import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
 import { forItem, priceTexts, rankOne, type RankedQuote } from '@/features/orders/lib/ranking'
 import { buildSplitPayload, checkSplit, isSplit, nextRanked, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
 import { orderRef } from '@/lib/refs'
@@ -331,7 +331,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                       </div>
                       <span className="num text-sm lg:pt-1.5 lg:text-right">
                         {it.qty}
-                        {it.unit ? <span className="text-fg-muted"> {it.unit}</span> : null}
+                        {it.unit ? <span className="text-fg-muted"> {unitWord(it.qty, it.unit)}</span> : null}
                       </span>
                       {isSplitItem ? (
                         <>

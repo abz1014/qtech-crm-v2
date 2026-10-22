@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, CircleCheck, CircleDot, Copy, Info, Pencil, X } from 'lucide-react'
+import { ChevronRight, Circle, CircleCheck, CircleDot, Copy, Info, Pencil, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
-import { joinNames } from '@/features/rfqs/lib/intakeModel'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { joinNames, RFQ_REF_PLACEHOLDER } from '@/features/rfqs/lib/intakeModel'
 import { draftAge, draftSummary, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import type { EnquiryVariant, ReplyBy } from '@/features/rfqs/lib/enquiryDraft'
 import { Banner } from '@/ui/Banner'
@@ -14,6 +15,9 @@ import { useRfqInquiries } from '@/features/rfqs/hooks'
 import { Button } from '@/ui/Button'
 import { ChannelLink } from '@/features/rfqs/ChaseParts'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
+import { MoreMenu } from '@/ui/MoreMenu'
+import { MenuItem } from '@/ui/Popover'
 
 /*
  * The step line, the enquiry card and the "floated" panel of the intake screen (g2-intake-float frames 5 and 6). The
@@ -24,6 +28,89 @@ export type Step = 'build' | 'suppliers' | 'enquiry' | 'floated' | 'saved'
 
 const PRIMARY_LINK =
   'inline-flex h-control items-center justify-center rounded border border-primary bg-primary px-3 text-sm font-medium leading-none text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover'
+const SECONDARY_LINK =
+  'inline-flex h-control items-center justify-center rounded border border-line-strong bg-surface px-3 text-sm font-medium leading-none text-fg transition-colors duration-fast ease-out hover:bg-sunken'
+
+/** The words for saving without asking anyone (owner audit N2): what it does, and what it does not. */
+export const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
+
+/** One button of the step bar. */
+export interface BarAction {
+  label: string
+  onClick: () => void
+  icon?: LucideIcon
+  busy?: boolean
+  busyLabel?: string
+  disabled?: boolean
+  /** A chevron after the label ("Looks right: find suppliers >"). */
+  next?: boolean
+  /** Desktop look of a secondary action: outlined (Back) by default, or quiet (Save for later). */
+  quiet?: boolean
+}
+
+/**
+ * The sticky "Next step" bar under the steps of New RFQ. Desktop: the summary, a warning, then the buttons in one row, the green
+ * one last. Phone (owner audit N1): one slim row (about 62 px) so it never covers the items: the green button at full width and
+ * the rest ("Back", "Save for later") in a ⋯ menu. The summary is not repeated there, and the warning (with its own one-tap fix)
+ * sits just above the bar, in the page.
+ */
+export function StepBar({ summary, warning, primary, more }: { summary?: ReactNode; warning?: ReactNode; primary?: BarAction; more: readonly BarAction[] }) {
+  const phone = useMediaQuery('(max-width: 767px)')
+  if (phone) {
+    return (
+      <>
+        {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
+        <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-3 z-10 flex items-center gap-2 rounded border bg-surface p-2 shadow-pop">
+          {primary ? (
+            <Button
+              variant="primary"
+              size="touch"
+              icon={primary.icon}
+              onClick={primary.onClick}
+              busy={primary.busy}
+              busyLabel={primary.busyLabel}
+              disabled={primary.disabled}
+              // A long label ("Looks right: find suppliers") wraps to two lines at 320 px instead of being cut off; the bar stays one slim row.
+              className="h-auto min-h-touch min-w-0 flex-1 whitespace-normal py-1"
+            >
+              <span className="line-clamp-2 min-w-0 text-balance text-center leading-tight">{primary.label}</span>
+              {primary.next ? <Icon icon={ChevronRight} /> : null}
+            </Button>
+          ) : null}
+          {more.length > 0 ? (
+            <MoreMenu touch side="top" label="More options" className={primary ? undefined : 'ml-auto'} menuClassName="w-[min(300px,calc(100vw-48px))]">
+              {more.map(a => (
+                <MenuItem key={a.label} icon={a.icon} onClick={a.onClick} disabled={a.disabled || a.busy} className="h-auto min-h-touch py-2">
+                  <span className="whitespace-normal">{a.busy && a.busyLabel ? a.busyLabel : a.label}</span>
+                </MenuItem>
+              ))}
+            </MoreMenu>
+          ) : null}
+        </div>
+      </>
+    )
+  }
+  return (
+    <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded border bg-surface px-4 py-3 shadow-pop">
+      {summary ? <p className="m-0 min-w-0 text-sm text-fg-2">{summary}</p> : null}
+      {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
+      <span className="flex-1" />
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        {more.map(a => (
+          <Button key={a.label} variant={a.quiet ? 'quiet' : 'secondary'} icon={a.icon} onClick={a.onClick} busy={a.busy} busyLabel={a.busyLabel} disabled={a.disabled}>
+            {a.label}
+          </Button>
+        ))}
+        {primary ? (
+          <Button variant="primary" icon={primary.icon} onClick={primary.onClick} busy={primary.busy} busyLabel={primary.busyLabel} disabled={primary.disabled}>
+            {primary.label}
+            {primary.next ? <Icon icon={ChevronRight} /> : null}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
 
 /**
  * The kept New RFQ draft, offered before anything else on every way in (review of ux/rfqs, item 1): Continue your draft, or Start
@@ -157,16 +244,45 @@ function PreviewLine({ line }: { line: string }) {
   return (
     <>
       {line.split(/(\*[^*\n]+\*)/).map((part, i) =>
-        /^\*[^*\n]+\*$/.test(part) ? (
+        part === `*${RFQ_REF_PLACEHOLDER}*` ? (
+          <PendingRef key={i} />
+        ) : /^\*[^*\n]+\*$/.test(part) ? (
           <span key={i}>
             <span className="text-fg-muted">*</span>
             <b className="font-semibold">{part.slice(1, -1)}</b>
             <span className="text-fg-muted">*</span>
           </span>
         ) : (
-          part
+          <WithPendingRef key={i} text={part} />
         ),
       )}
+    </>
+  )
+}
+
+/**
+ * The RFQ number is given by the database when the RFQ is saved (an identity column, 0007_rfqs.sql), and that save happens in the
+ * copy's own tap. Until then the preview says so in words instead of a template-looking "RFQ-####" (owner audit N5); the copied
+ * text always carries the real number (fillRfqRef).
+ */
+function PendingRef() {
+  return (
+    <span data-rfq-ref-pending className="rounded bg-sunken px-1 text-fg-muted">
+      RFQ number added when you copy
+    </span>
+  )
+}
+
+function WithPendingRef({ text }: { text: string }) {
+  if (!text.includes(RFQ_REF_PLACEHOLDER)) return <>{text}</>
+  return (
+    <>
+      {text.split(RFQ_REF_PLACEHOLDER).map((bit, i) => (
+        <span key={i}>
+          {i > 0 ? <PendingRef /> : null}
+          {bit}
+        </span>
+      ))}
     </>
   )
 }
@@ -192,8 +308,9 @@ export function EnquiryCard({
   subject: string | null
   body: string
   onBody: (text: string) => void
-  actions: ReactNode
-  note: string
+  /** Buttons in the card's footer. New RFQ puts them in its sticky step bar instead, so they are never below the fold. */
+  actions?: ReactNode
+  note?: string
   /** The RFQ is already saved: the recipients are fixed here. */
   locked: boolean
 }) {
@@ -203,9 +320,15 @@ export function EnquiryCard({
     <section aria-label="The message" className="overflow-hidden rounded border bg-surface">
       <header className="flex flex-wrap items-start gap-3 border-b px-5 py-4">
         <div className="min-w-0 flex-1">
-          <h2 className="m-0 text-base font-semibold">
-            {variant === 'email' ? 'Email' : 'WhatsApp message'} to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
-          </h2>
+          <span className="inline-flex items-center gap-1">
+            <h2 className="m-0 text-base font-semibold">
+              {variant === 'email' ? 'Email' : 'WhatsApp message'} to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
+            </h2>
+            <InfoTip label="Why are the spec lines blank?">
+              Spec lines are blank on purpose. Type what the customer gave you under any item, or leave it: the app never writes a spec for you,
+              and a blank one is fine to send.
+            </InfoTip>
+          </span>
           <p className="m-0 mt-1 text-sm text-fg-muted">
             {count === 1 ? 'The message for this supplier.' : `One message for all ${count}. Each supplier skips what they cannot offer.`}
           </p>
@@ -230,7 +353,7 @@ export function EnquiryCard({
         {subject ? (
           <p className="m-0 text-sm">
             <span className="text-fg-muted">Subject </span>
-            {subject}
+            <WithPendingRef text={subject} />
           </p>
         ) : null}
         {editing ? (
@@ -260,10 +383,12 @@ export function EnquiryCard({
           </div>
         )}
       </div>
-      <footer className="flex flex-wrap items-center gap-3 border-t bg-sunken px-5 py-3">
-        {actions}
-        <span className="ml-auto text-xs text-fg-muted">{note}</span>
-      </footer>
+      {actions || note ? (
+        <footer className="flex flex-wrap items-center gap-3 border-t bg-sunken px-5 py-3">
+          {actions}
+          {note ? <span className="ml-auto text-sm text-fg-muted">{note}</span> : null}
+        </footer>
+      ) : null}
     </section>
   )
 }
@@ -306,6 +431,10 @@ export function FloatedPanel({
 }) {
   const n = names.length
   const asked = useRfqInquiries(rfqId).data?.filter(i => i.sentOn) ?? []
+  // One green button (owner audit N6): Open in WhatsApp for the first supplier whose chat has not been opened yet. Once every chat
+  // is opened (or there is none to open), the green moves to Open RFQ.
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
+  const next = messages ? asked.find(i => !opened.has(i.id)) : undefined
   return (
     <section aria-label="Sent to suppliers" className="grid gap-4 rounded border bg-surface p-6">
       <p className="m-0 flex items-center gap-2 text-sm text-tone-success-fg">
@@ -328,7 +457,7 @@ export function FloatedPanel({
           <label htmlFor="floated-text" className="sr-only">
             Message to copy
           </label>
-          <textarea id="floated-text" readOnly value={text} rows={10} className="w-full rounded border border-line-input bg-sunken px-3 py-3 text-sm leading-5" />
+          <textarea id="floated-text" readOnly value={text} rows={10} className="w-full rounded border border-line-input bg-sunken px-3 py-3 text-sm leading-5 max-md:text-base max-md:leading-6" />
           <div>
             <Button icon={Copy} onClick={onCopyAgain}>
               Copy again
@@ -347,6 +476,8 @@ export function FloatedPanel({
                 text={messages.whatsapp}
                 email={messages.email}
                 copy={false}
+                variant={next?.id === i.id ? 'primary' : 'secondary'}
+                onOpen={() => setOpened(o => new Set(o).add(i.id))}
                 channel={channel}
                 onChannelChange={onChannelChange}
               />
@@ -390,10 +521,7 @@ export function FloatedPanel({
         </Hint>
       ))}
       <div className="flex flex-wrap gap-2">
-        <Link
-          to={openTo}
-          className="inline-flex h-control items-center justify-center rounded border border-primary bg-primary px-3 text-sm font-medium leading-none text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover"
-        >
+        <Link to={openTo} className={next ? SECONDARY_LINK : PRIMARY_LINK}>
           Open {refText}
         </Link>
         <Button onClick={onAnother}>Start another RFQ</Button>

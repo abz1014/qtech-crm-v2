@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { comparePrices, type RateTable } from './comparePrices'
+import { cheapestFirst, comparePrices, type RateTable } from './comparePrices'
 
 const usd = { rate: 280, ageDays: 0 }
 const rates: RateTable = {
@@ -122,5 +122,20 @@ describe('comparePrices', () => {
 
   it('handles no lines', () => {
     expect(comparePrices([], rates)).toMatchObject({ comparableCount: 0, lowestIds: [] })
+  })
+})
+
+describe('cheapestFirst', () => {
+  it('orders compared lines by PKR, cheapest first, then the lines with no rate; ties go to the tie-break', () => {
+    const lines = [
+      { id: 'dear', amount: 120, currency: 'USD' },
+      { id: 'norate', amount: 1, currency: 'GBP' },
+      { id: 'cheap', amount: 100, currency: 'USD' },
+      { id: 'pkr', amount: 28_500, currency: 'PKR' },
+    ]
+    const c = comparePrices(lines, rates)
+    const rows = lines.map(l => ({ id: l.id, amount: l.amount, c: by(c, l.id) }))
+    rows.sort((a, b) => cheapestFirst(a, b, () => a.id.localeCompare(b.id)))
+    expect(rows.map(r => r.id)).toEqual(['cheap', 'pkr', 'dear', 'norate'])
   })
 })

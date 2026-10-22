@@ -21,7 +21,7 @@ import { Icon } from '@/ui/Icon'
  * Suppliers (g2-intake-float frame 4): reasons first. Every suggestion says why in a sentence, with the counts from
  * its history beneath. Only "supplied this item before" is ticked when the step opens. Nothing is scored. Inside a reason
  * group the supplier with the better record comes first (A8). The order behind it (number, the date we placed it, days to
- * delivery) is in the Memory card, so a row is the name, the reason and one record line. The whole row is the tap target.
+ * delivery) is in the History card (the memory card), so a row is the name, the reason and one record line. The whole row is the tap target.
  */
 
 const pill = 'inline-flex h-5 shrink-0 items-center gap-[6px] whitespace-nowrap rounded border border-line-strong bg-surface px-[6px] text-xs text-fg-2'
@@ -72,7 +72,7 @@ function MemoryPanel({ s, ctx, panelId }: { s: SupplierSuggestion; ctx: MemoryCo
     <div id={panelId} className="relative z-10 mt-2 grid gap-2 pl-[30px] pr-0">
       {covered.length > 1 ? (
         <SegmentedControl
-          aria-label={`Item for the memory of ${s.name}`}
+          aria-label={`Item for the history of ${s.name}`}
           value={item.id}
           onValueChange={setPicked}
           options={covered.map(i => ({ value: i.id, label: `Item ${i.number}` }))}
@@ -140,11 +140,11 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
             type="button"
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            aria-label={`Memory, ${s.name}`}
+            aria-label={`History, ${s.name}`}
             onClick={() => setOpen(o => !o)}
             className="relative z-10 inline-flex h-6 shrink-0 items-center gap-1 rounded px-2 text-xs font-medium text-fg-2 hover:bg-selected"
           >
-            Memory
+            History
             <ChevronDown aria-hidden="true" size={14} strokeWidth={1.75} className={cn('transition-transform', open && 'rotate-180')} />
           </button>
         ) : null}
@@ -199,7 +199,7 @@ export function SupplierPicker({
   loading: boolean
   error: boolean
   onRetry: () => void
-  /** When given, every suggestion gets a Memory button that opens its card. */
+  /** When given, every suggestion gets a History button that opens its memory card. */
   memory?: MemoryContext
 }) {
   const [text, setText] = useState('')

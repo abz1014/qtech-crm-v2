@@ -55,6 +55,30 @@ function toRow(r: StateRow, ref: RefInfo | undefined): BoardRow {
   }
 }
 
+type WonOrder = { id: string; number: number; rfq_id: string; ordered_on: string | null }
+
+/**
+ * The closed list's outcome facts (L3): the live order each won RFQ became (a won RFQ is one a non-cancelled order references,
+ * v_rfq_state), and the day it closed: rfqs.closed_on for a closed one, the order's date for a won one.
+ */
+async function withOutcome(states: readonly StateRow[], refBy: Map<string, RefInfo>): Promise<BoardRow[]> {
+  const wonIds = states.filter(s => s.outcome === 'won').map(s => s.rfq_id as string)
+  const orderBy = new Map<string, WonOrder>()
+  if (wonIds.length) {
+    const res = await requireSupabase().from('orders').select('id, number, rfq_id, ordered_on').in('rfq_id', wonIds).is('cancelled_on', null).order('number')
+    for (const o of (unwrap(res as unknown as { data: WonOrder[] | null; error: PgError | null }) ?? []) as WonOrder[]) if (!orderBy.has(o.rfq_id)) orderBy.set(o.rfq_id, o)
+  }
+  return states.map(s => {
+    const row = toRow(s, refBy.get(s.rfq_id as string))
+    const order = orderBy.get(row.rfqId)
+    return {
+      ...row,
+      wonOrder: order ? { id: order.id, number: Number(order.number) } : null,
+      closedOn: row.outcome === 'won' ? (order?.ordered_on ?? s.closed_on ?? null) : (s.closed_on ?? null),
+    }
+  })
+}
+
 /** Every open RFQ, unsorted (model.sortBoard orders it). Two reads, joined here: the state view, and the refs with the first item. */
 export async function listOpenRfqs(): Promise<BoardRow[]> {
   const db = requireSupabase()
@@ -101,7 +125,7 @@ async function refsFor(ids: readonly string[]): Promise<Map<string, RefInfo>> {
  * One page of won and closed RFQs, newest first, with the total for the pager. With `text`, the search runs on the server over
  * EVERY won and closed RFQ (search_closed_rfqs, 0070): each word must appear in the company name, their reference, the number or an
  * item; closed and won are picked before the page is cut, and the text is a bound parameter. Then the page's rows are read from
- * v_rfq_state, in the order the search gave.
+ * v_rfq_state, in the order the search gave. Won rows carry their order's code, and every row the day it closed (withOutcome).
  */
 export async function listClosedRfqs(page: number, size: number, text = ''): Promise<ClosedPage> {
   const db = requireSupabase()
@@ -114,7 +138,7 @@ export async function listClosedRfqs(page: number, size: number, text = ''): Pro
     const [states, refBy] = await Promise.all([db.from('v_rfq_state').select(STATE_SELECT).in('rfq_id', ids), refsFor(ids)])
     const byId = new Map(((unwrap(states as unknown as { data: StateRow[] | null; error: PgError | null }) ?? []) as StateRow[]).map(s => [s.rfq_id as string, s]))
     const rows = ids.map(id => byId.get(id)).filter((s): s is StateRow => Boolean(s))
-    return { rows: rows.map(r => toRow(r, refBy.get(r.rfq_id as string))), total: Number(hits[0].total) }
+    return { rows: await withOutcome(rows, refBy), total: Number(hits[0].total) }
   }
   const res = await db
     .from('v_rfq_state')
@@ -125,7 +149,7 @@ export async function listClosedRfqs(page: number, size: number, text = ''): Pro
     .range(from, from + size - 1)
   const rows = unwrap(res as unknown as { data: StateRow[] | null; error: PgError | null }) ?? []
   const refBy = await refsFor(rows.map(r => r.rfq_id as string))
-  return { rows: rows.map(r => toRow(r, refBy.get(r.rfq_id as string))), total: res.count ?? rows.length }
+  return { rows: await withOutcome(rows, refBy), total: res.count ?? rows.length }
 }
 
 export interface RfqHit {

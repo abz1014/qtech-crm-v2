@@ -94,6 +94,20 @@ export function comparePrices(lines: readonly PriceLine[], rates: RateTable): Co
   return { lines: out, basis: native ? 'native' : 'pkr', comparableCount: comparable.length, lowestIds }
 }
 
+/**
+ * The order of an item's price rows on screen (UX audit C1): compared lines first, cheapest first (PKR at today's rate, or the one
+ * shared currency's own figure); lines that cannot be compared after them, by their own figure. `tie` breaks equal prices.
+ */
+export function cheapestFirst(a: { c: ComparedLine; amount: number }, b: { c: ComparedLine; amount: number }, tie: () => number = () => 0): number {
+  if (a.c.compared !== b.c.compared) return a.c.compared ? -1 : 1
+  if (a.c.pkrPaisa !== null && b.c.pkrPaisa !== null) {
+    if (a.c.pkrPaisa !== b.c.pkrPaisa) return a.c.pkrPaisa < b.c.pkrPaisa ? -1 : 1
+  } else if (a.amount !== b.amount) {
+    return a.amount - b.amount
+  }
+  return tie()
+}
+
 /** The rate table from v_fx_latest rows (currency, PKR per unit, age in days, the view's own band). */
 export function toRateTable(
   rows: ReadonlyArray<{ currency: string; ratePkr: number; ageDays: number; staleness?: FxStaleness | null }>,

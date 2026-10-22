@@ -1,7 +1,6 @@
 import { useId, useState } from 'react'
 import { ChevronDown, CircleHelp, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { howItWorksFor, howItWorksKey } from '@/features/help/howItWorks'
@@ -11,8 +10,9 @@ import { useHelp } from '@/features/help/useHelp'
 
 /*
  * "How this works" (learnability spec 1.3): an optional card above Today's list for someone new. Never a modal, never in
- * the way. Desktop and tablet: a short card with the role's 3 to 5 steps, each with "Show me" (opens that recipe in Help).
- * Phone: one collapsed row, "New here? How Q-Tech CRM works · 4 steps", that opens on tap, so the list does not move down.
+ * the way. At every width it is one collapsed row, "New here? How Q-Tech CRM works · 4 steps", that opens on tap to the role's
+ * 3 to 5 steps, each with "Show me" (opens that recipe in Help), so the list does not move down: on a 1366 x 768 laptop
+ * the open card pushed Today's jobs below the fold (audit T1). The × hides it without opening it.
  * "Got it" hides it for this person on this device (localStorage qtech.howItWorks.<id>); Help offers it again.
  * It also stays hidden once the person is no longer new: 14 days after `since` (users.created_at), when the caller has it.
  */
@@ -31,7 +31,6 @@ export const NEW_FOR_DAYS = 14
 export function HowItWorksCard({ userId, role, since, now, className }: HowItWorksCardProps) {
   const steps = howItWorksFor(role)
   const [dismissed, setDismissed] = useDismissed(howItWorksKey(userId))
-  const wide = useMediaQuery('(min-width: 768px)')
   const [expanded, setExpanded] = useState(false)
   const { openHelp } = useHelp()
   const id = useId()
@@ -40,45 +39,29 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
   const longAgo = Number.isFinite(sinceMs) && (now ?? new Date()).getTime() - sinceMs > NEW_FOR_DAYS * 86_400_000
   if (dismissed || longAgo || steps.length === 0) return null
 
-  const open = wide || expanded
   const titleId = `${id}-title`
   const listId = `${id}-steps`
   return (
     <section aria-labelledby={titleId} className={cn('rounded border bg-surface', className)}>
-      {wide ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-3">
-          <h2 id={titleId} className="flex flex-1 items-center gap-2 text-base font-semibold">
+      <div className="flex items-center">
+        <h2 id={titleId} className="min-w-0 flex-1">
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={listId}
+            onClick={() => setExpanded(e => !e)}
+            className="flex min-h-touch w-full items-center gap-2 px-4 text-left text-sm font-medium"
+          >
             <Icon icon={CircleHelp} className="text-fg-muted" />
-            How Q-Tech CRM works
-          </h2>
-          <Button variant="quiet" size="sm" onClick={() => openHelp(null)}>
-            Open Help
-          </Button>
-          <Button size="sm" onClick={() => setDismissed(true)}>
-            Got it
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center">
-          <h2 id={titleId} className="min-w-0 flex-1">
-            <button
-              type="button"
-              aria-expanded={expanded}
-              aria-controls={listId}
-              onClick={() => setExpanded(e => !e)}
-              className="flex min-h-touch w-full items-center gap-2 px-4 text-left text-sm font-medium"
-            >
-              <Icon icon={CircleHelp} className="text-fg-muted" />
-              <span className="min-w-0 flex-1">
-                New here? How Q-Tech CRM works · {steps.length} steps
-              </span>
-              <Icon icon={ChevronDown} className={cn('text-fg-muted transition-transform duration-fast', expanded && 'rotate-180')} />
-            </button>
-          </h2>
-          <Button variant="quiet" size="touch" icon={X} aria-label="Hide How this works" onClick={() => setDismissed(true)} />
-        </div>
-      )}
-      {open ? (
+            <span className="min-w-0 flex-1">
+              New here? How Q-Tech CRM works · {steps.length} steps
+            </span>
+            <Icon icon={ChevronDown} className={cn('text-fg-muted transition-transform duration-fast', expanded && 'rotate-180')} />
+          </button>
+        </h2>
+        <Button variant="quiet" size="touch" icon={X} aria-label="Hide How this works" onClick={() => setDismissed(true)} />
+      </div>
+      {expanded ? (
         <div id={listId} className="grid gap-3 px-4 pb-3 pt-2">
           {/* Two columns only when the CARD has room for two (about 2 x 16rem), not when the window does: in Today's 420 px
               list a viewport breakpoint squeezed each step to a word per line and pushed "Show me" past the card's edge. */}
@@ -97,16 +80,14 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
               </li>
             ))}
           </ol>
-          {wide ? null : (
-            <div className="flex gap-2">
-              <Button size="touch" onClick={() => setDismissed(true)}>
-                Got it
-              </Button>
-              <Button variant="quiet" size="touch" onClick={() => openHelp(null)}>
-                Open Help
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button size="touch" onClick={() => setDismissed(true)}>
+              Got it
+            </Button>
+            <Button variant="quiet" size="touch" onClick={() => openHelp(null)}>
+              Open Help
+            </Button>
+          </div>
         </div>
       ) : null}
     </section>

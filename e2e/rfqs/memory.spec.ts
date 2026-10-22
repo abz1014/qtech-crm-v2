@@ -148,7 +148,7 @@ async function reachSuppliers(page: Page, s: Seed, itemsText: string): Promise<v
 }
 
 const order = (page: Page) => page.locator('label[for^="sup-"]').allInnerTexts()
-const memoryButton = (page: Page, name: string) => page.getByRole('button', { name: `Memory, ${name}` })
+const memoryButton = (page: Page, name: string) => page.getByRole('button', { name: `History, ${name}` })
 
 test.describe('R17 memory in intake', () => {
   test('(k) same model, (n) rate at the time, imported and thin states; memory never reorders; the card renders fast', async ({ page }) => {
@@ -224,7 +224,7 @@ test.describe('R17 memory in intake', () => {
     const ms = await page.evaluate(
       name =>
         new Promise<number>(resolve => {
-          const btn = document.querySelector<HTMLButtonElement>(`button[aria-label="Memory, ${name}"]`) as HTMLButtonElement
+          const btn = document.querySelector<HTMLButtonElement>(`button[aria-label="History, ${name}"]`) as HTMLButtonElement
           const t0 = performance.now()
           const obs = new MutationObserver(() => {
             if (document.querySelector('[data-memory-card]')) {

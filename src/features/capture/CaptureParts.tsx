@@ -10,7 +10,7 @@ import { openedAgo } from '@/lib/capture/recents'
 import type { AddedFile } from '@/lib/fileIntake'
 import { cn } from '@/lib/utils'
 import { shortDay, type Candidate, type Dest, type OpenQuestion, type OrderCandidate, type PayloadKind } from '@/features/capture/model'
-import { TILES } from '@/features/capture/tiles'
+import { TILES, type TileDest } from '@/features/capture/tiles'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
@@ -49,10 +49,13 @@ export function CapNote({ children }: { children: ReactNode }) {
 /**
  * The four destinations as radio tiles. With `only` (R2-11) just the chosen one is drawn, wide, and "Something else" (in the sheet)
  * opens the rest; the arrow keys still step through all four, on the same element, so the focus stays put.
+ * `prices` false (an engineer: owner decision 2026-10-22, engineers see no prices) leaves out "A supplier's prices": three tiles.
  */
-export function Tiles({ chosen, kind, off, onChoose, only = false }: { chosen: Dest; kind: PayloadKind; off: boolean; onChoose: (d: Dest) => void; only?: boolean }) {
-  const order = Object.keys(TILES) as Exclude<Dest, 'reply' | 'order'>[]
+export function Tiles({ chosen, kind, off, onChoose, only = false, prices = true }: { chosen: Dest; kind: PayloadKind; off: boolean; onChoose: (d: Dest) => void; only?: boolean; prices?: boolean }) {
+  const order = (Object.keys(TILES) as TileDest[]).filter(d => prices || d !== 'reply')
   const shown = only ? order.filter(d => d === chosen) : order
+  // Nothing ticked (the choice is under "Something else", or nothing is captured yet): the first tile takes the Tab stop.
+  const noneOn = off || !order.includes(chosen as TileDest)
   const move = (e: KeyboardEvent, i: number) => {
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
     if (!step || off) return
@@ -77,7 +80,7 @@ export function Tiles({ chosen, kind, off, onChoose, only = false }: { chosen: D
             aria-checked={on}
             disabled={off}
             data-dest={d}
-            tabIndex={on || (off && i === 0) ? 0 : -1}
+            tabIndex={on || (noneOn && i === 0) ? 0 : -1}
             onKeyDown={e => move(e, i)}
             onClick={() => onChoose(d)}
             className={cn(
@@ -98,7 +101,7 @@ export function Tiles({ chosen, kind, off, onChoose, only = false }: { chosen: D
   )
 }
 
-/** The chosen destination when it is not one of the four tiles (a supplier's reply, an order), drawn like the chosen tile. */
+/** The chosen destination when it is not one of the four tiles (questions from a supplier, an order), drawn like the chosen tile. */
 export function ChosenCard({ icon, title, help }: { icon: LucideIcon; title: string; help: string }) {
   return (
     <div className="relative grid grid-cols-[auto_minmax(0,1fr)] content-start gap-x-3 gap-y-[2px] rounded border border-fg bg-sunken p-3 pr-8 text-left" data-chosen-dest>

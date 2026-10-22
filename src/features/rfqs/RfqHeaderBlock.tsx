@@ -1,6 +1,8 @@
+import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Calendar,
+  ChevronDown,
   Copy,
   FileCheck2,
   FilePlus2,
@@ -36,12 +38,28 @@ import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
-import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, nextStepSentence, quotationSent, stageKey, type CloseReason, type RfqPrimary } from '@/features/rfqs/lib'
+import {
+  CLOSE_REASONS,
+  closeReasonLabel,
+  defaultCloseReason,
+  dueChipLabel,
+  dueIsUrgent,
+  dueSubLabel,
+  nextStepSentence,
+  quotationSent,
+  refBreaks,
+  stageKey,
+  type CloseReason,
+  type RfqPrimary,
+} from '@/features/rfqs/lib'
 
 /*
  * The top of the RFQ page (g2-rfq-detail header, the phone bar and the action bar), reworked by the UX audit of 2026-10-19:
  *   - who it is for first (the company), then the code;
- *   - at most two chips: the stage, in the board's next-step words, and the due date when it is close or past;
+ *   - at most two chips: the stage, in the board's next-step words, and the due date when it is two days or less away or past
+ *     (orange, as the Quotation due tile then is; grade-B R7). Once a quotation is out there is no due chip: "Sent Thu 22 Oct ·
+ *     valid to Sat 21 Nov" instead, and the Next step is "Follow up with <contact>" with Mark won green and a quiet "Mark lost"
+ *     menu of reasons beside it (grade-B R6);
  *   - exactly one green button, chosen by state (lib/nextAction.ts): Ask suppliers, then Issue quotation, then Mark won (and while
  *     waiting for prices, Chase suppliers, which goes to the chase in the side column). It sits in a labelled "Next step" box under
  *     the title, with a sentence saying why (coordinator decision 2026-10-20: every detail page, the pattern ux/orders built; this
@@ -71,6 +89,9 @@ export interface HeaderFacts {
   onAsk: () => void
   /** Suppliers asked who have not replied yet, for the Next step sentence. */
   awaiting?: number
+  /** When the latest quotation went out (or the RFQ was marked quotation sent), and until when it is valid (grade-B R6). */
+  sentOn?: string | null
+  validUntil?: string | null
 }
 
 // ------------------------------------------------------------------------------------------------ the actions
@@ -328,10 +349,50 @@ function RfqNextStep({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFac
     text = 'Won.'
   } else {
     quiet = facts.primary === 'none'
-    text = nextStepSentence({ primary: facts.primary, sourcingState: s?.sourcing_state, bidState: s?.bid_state, itemCount: facts.itemCount, awaiting: facts.awaiting ?? 0 })
+    text = nextStepSentence({
+      primary: facts.primary,
+      sourcingState: s?.sourcing_state,
+      bidState: s?.bid_state,
+      itemCount: facts.itemCount,
+      awaiting: facts.awaiting ?? 0,
+      contactName: rfq.contact?.name,
+    })
     action = quiet ? null : <PrimaryButton rfq={rfq} facts={facts} className="max-md:hidden" />
+    // Quotation sent (grade-B R6): Mark won is the green button, "Mark lost" a quiet menu of reasons beside it.
+    if (facts.primary === 'won') {
+      action = (
+        <div className="flex flex-wrap items-center gap-2">
+          <MarkLost actions={actions} />
+          {action}
+        </div>
+      )
+    }
   }
   return <NextStepBox text={text} tone={quiet ? 'quiet' : 'action'} action={action} />
+}
+
+/** "Mark lost": a quiet button with the reasons to close (the same list as More), one tap each. */
+function MarkLost({ actions }: { actions: Actions }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="quiet" className="underline underline-offset-2" disabled={actions.busy}>
+          Mark lost
+          <Icon icon={ChevronDown} size="sm" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent variant="menu" align="end" className="min-w-[280px]" aria-label="Lost because">
+        <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
+          Lost because
+        </p>
+        {CLOSE_REASONS.map(r => (
+          <MenuItem key={r.value} hint={r.value === actions.suggested ? 'suggested' : undefined} onClick={() => void actions.close(r.value)}>
+            {r.label}
+          </MenuItem>
+        ))}
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 // ------------------------------------------------------------------------------------------------ the meta strip
@@ -375,7 +436,12 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
   const ref = rfqRef(rfq.number)
   const open = (s?.outcome ?? 'open') === 'open'
   const dueIn = s?.days_to_due
-  const due = open ? dueChipLabel(dueIn, Boolean(s?.is_overdue)) : null
+  // Once a quotation is out the due date is history: no red "overdue" chip, the chip says when it was sent instead (grade-B R6).
+  const sent = quotationSent({ bidState: s?.bid_state, quotationCount: facts.quotationCount })
+  // Orange (the chip and the tile) only when the due date is two days or less away, or past (grade-B R7).
+  const urgent = open && !sent && dueIsUrgent(dueIn, Boolean(s?.is_overdue))
+  const due = urgent ? dueChipLabel(dueIn, Boolean(s?.is_overdue)) : null
+  const sentText = open && sent && facts.sentOn ? `Sent ${formatDay(facts.sentOn)}${facts.validUntil ? ` · valid to ${formatDay(facts.validUntil)}` : ''}` : null
   const since = rfq.company.createdAt ? rfq.company.createdAt.slice(0, 4) : null
   // The stage chip is a registry key (rfq-stage while open, else the outcome): the same words and tone as the board's Next step.
   const [stageDim, stageValue] = stageKey({
@@ -404,6 +470,11 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
             <StatusBadge dimension={stageDim} value={stageValue} />
           </span>
           {due ? <StatusBadge dimension="deadline" value={s?.is_overdue ? 'overdue' : 'due-soon'} label={due} /> : null}
+          {sentText ? (
+            <span data-sent className="num text-sm text-fg-2">
+              {sentText}
+            </span>
+          ) : null}
         </>
       }
       meta={[
@@ -420,7 +491,17 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
 
       <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>
-          <span className="num">{rfq.customerRef ?? 'None given'}</span>
+          {/* A long ref ("RFF/PUR/261/1") breaks after its separators on a 320 phone, never mid-number (grade-B R8). */}
+          <span className="num [overflow-wrap:anywhere]">
+            {rfq.customerRef
+              ? refBreaks(rfq.customerRef).map((part, n) => (
+                  <Fragment key={n}>
+                    {part}
+                    <wbr />
+                  </Fragment>
+                ))
+              : 'None given'}
+          </span>
         </Meta>
         <Meta icon={MapPin} label="Site" sub={rfq.company.city ?? rfq.site?.address ?? undefined}>
           {rfq.site?.name ?? 'Not set'}
@@ -440,7 +521,13 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
         >
           {rfq.contact?.name ?? 'Not set'}
         </Meta>
-        <Meta icon={Calendar} label="Quotation due" phone tone={due ? 'warn' : undefined} sub={open ? (dueSubLabel(dueIn) ?? undefined) : undefined}>
+        <Meta
+          icon={Calendar}
+          label="Quotation due"
+          phone
+          tone={urgent ? 'warn' : undefined}
+          sub={open && sent && facts.sentOn ? `Sent ${formatDay(facts.sentOn)}` : open ? (dueSubLabel(dueIn) ?? undefined) : undefined}
+        >
           <span className="num">{rfq.dueOn ? `${formatDay(rfq.dueOn)}${rfq.dueTime ? `, ${rfq.dueTime}` : ''}` : 'No date'}</span>
         </Meta>
         <Meta icon={Users} label="Owner" phone sub={rfq.owner ? [ROLE_LABEL[rfq.owner.role] ?? rfq.owner.role, rfq.owner.phone].filter(Boolean).join(' · ') : undefined}>

@@ -43,6 +43,10 @@ export interface BoardRow {
   bidState: BidState
   /** When the quotation was sent (rfqs.quoted_on), for "Sent Thu 26 Nov". */
   quotedOn: string | null
+  /** Closed list only: the day it was closed (rfqs.closed_on), or for a won RFQ the day its order was placed. */
+  closedOn?: string | null
+  /** Closed list only: the live order a won RFQ became, for "Won → ORD-0012". */
+  wonOrder?: { id: string; number: number } | null
 }
 
 /*
@@ -206,24 +210,37 @@ export interface DueText {
   tone: 'danger' | 'warning' | 'normal'
 }
 
-export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'>): DueText {
+/** Overdue only while our quotation is still owed: once it is sent the due date is met (R6, UX audit 2026-10-22). */
+export const isLate = (r: Pick<BoardRow, 'isOverdue'> & Partial<Pick<BoardRow, 'quotedOn'>>) => r.isOverdue && !r.quotedOn
+
+export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'> & Partial<Pick<BoardRow, 'quotedOn'>>): DueText {
   if (!r.dueOn) return { date: null, hint: 'No due date', tone: 'normal' }
   const date = formatDay(r.dueOn)
   const n = r.daysToDue
+  // The Next step column already says "Quotation sent · Sent Thu 22 Oct": the date stands alone, neutral.
+  if (r.quotedOn) return { date, hint: '', tone: 'normal' }
   if (r.isOverdue) return { date, hint: daysOverdue(n ?? 0), tone: 'danger' }
   if (n === null) return { date, hint: '', tone: 'normal' }
   if (n <= 1) return { date, hint: dueWord(Math.max(0, n)), tone: 'warning' }
   return { date, hint: dueWord(n), tone: 'normal' }
 }
 
+/** The closed list's outcome in words (UX audit 2026-10-22, L3): why it was closed, as a sentence, not a grey "Closed" chip. */
 export const CLOSE_REASON: Record<string, string> = {
   competitor: 'Lost to a competitor',
-  price: 'Price',
+  price: 'Lost on price',
   no_reply_to_clarification: 'No reply to our question',
   customer_cancelled: 'Customer cancelled',
   could_not_source: 'Could not source',
   we_were_late: 'We were late',
   other: 'Other reason',
+}
+
+/** "Lost on price", "Customer cancelled", or "Won" (the order code is drawn beside it as a link). */
+export function outcomeText(r: Pick<BoardRow, 'outcome' | 'closeReason'>): string {
+  if (r.outcome === 'won') return 'Won'
+  if (r.outcome === 'open') return 'Open'
+  return r.closeReason ? (CLOSE_REASON[r.closeReason] ?? 'Other reason') : 'Closed, no reason given'
 }
 
 export const PAGE_SIZE = 25

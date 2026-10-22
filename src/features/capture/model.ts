@@ -69,10 +69,19 @@ const looksLikeQuestionLines = (text: string) => {
   return lines.length >= 2 && lines.filter(l => l.endsWith('?')).length >= Math.ceil(lines.length / 2)
 }
 
-/** The destination to pre-select. A reply to what we asked is by far the commonest capture, so it wins when a question is waiting. */
-export function guessDestination(kind: PayloadKind, text: string, ordered: readonly Candidate[]): Dest {
+/** A supplier's price reply: at least two amounts written with a currency ("GBP 1,840", "USD 2,395.00", "Rs. 45,000"). */
+const CURRENCY_AMOUNT = /\b(?:USD|EUR|GBP|AED|CNY|RMB|JPY|CHF|SAR|PKR|Rs\.?)\s?\d[\d,]*(?:\.\d+)?/gi
+export const looksLikePriceReply = (text: string) => (text.match(CURRENCY_AMOUNT) ?? []).length >= 2
+
+/**
+ * The destination to pre-select. A supplier's price reply (amounts with a currency) goes to "A supplier's prices" (grade-B K2),
+ * unless prices are not for this person (`pricesAllowed` false: engineers). Otherwise a reply to what we asked is by far the
+ * commonest capture, so it wins when a question is waiting.
+ */
+export function guessDestination(kind: PayloadKind, text: string, ordered: readonly Candidate[], pricesAllowed = true): Dest {
   const waiting = ordered.some(c => c.open.length > 0)
   if (kind === 'empty') return waiting ? 'answer' : 'notes'
+  if (pricesAllowed && (kind === 'text' || kind === 'both') && looksLikePriceReply(text)) return 'reply'
   if (waiting) return 'answer'
   if (kind === 'files') return 'notes'
   if (looksLikeQuestionLines(text)) return 'questions'
