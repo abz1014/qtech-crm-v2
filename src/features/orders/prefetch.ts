@@ -1,5 +1,6 @@
 import type { Prefetch } from '@/app/routeChunks'
 import { orderEngineersQuery, orderHeaderQuery, orderItemsQuery, orderLegsQuery, orderMoneyQuery, ordersListQuery } from '@/features/orders/hooks'
+import { companyProfileQuery } from '@/features/settings/hooks'
 
 type Role = 'admin' | 'sales' | 'engineer'
 const roleOf = (role: string): Role | null => (role === 'admin' || role === 'sales' || role === 'engineer' ? role : null)
@@ -24,5 +25,8 @@ export const prefetchOrder: Prefetch = ({ client, user, id }) => {
     client.prefetchQuery(orderLegsQuery(id)),
     client.prefetchQuery(orderEngineersQuery(id)),
     role === 'engineer' ? null : client.prefetchQuery(orderMoneyQuery(id, role)),
+    // The header's terms fall back to the company's default terms: read in this round, not after the header is drawn (perf/lcp:
+    // a read started as the header drew was one more round trip before the page counted as painted).
+    client.prefetchQuery(companyProfileQuery()),
   ])
 }

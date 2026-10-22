@@ -197,6 +197,10 @@ export async function layout(page: Page, info: TestInfo, label: string): Promise
       }
       const visible = (el: Element) => {
         if (hidden(el)) return false
+        // Rendered, as e2e/audit/collect.ts checks it: the content of a closed <details> is laid out (getBoundingClientRect gives it a
+        // box over the next section's summary) but never painted (content-visibility: hidden), so it is not text a person sees.
+        const check = (el as HTMLElement & { checkVisibility?: (o: object) => boolean }).checkVisibility
+        if (check && !check.call(el, { checkOpacity: true, checkVisibilityCSS: true })) return false
         const r = el.getBoundingClientRect()
         const cs = getComputedStyle(el)
         return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.05

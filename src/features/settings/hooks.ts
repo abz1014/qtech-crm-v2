@@ -83,8 +83,11 @@ export function useReactivatePerson() {
   })
 }
 
+/** The one company-profile row; also read ahead by the order page (orders/prefetch.ts), whose header shows its default terms. */
+export const companyProfileQuery = () => ({ queryKey: qk.settings.profile(), queryFn: () => api.getCompanyProfile() })
+
 export function useCompanyProfile() {
-  return useQuery({ queryKey: qk.settings.profile(), queryFn: () => api.getCompanyProfile() })
+  return useQuery(companyProfileQuery())
 }
 
 export function useSaveCompanyProfile() {
