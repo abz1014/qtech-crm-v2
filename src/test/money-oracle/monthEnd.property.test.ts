@@ -316,7 +316,8 @@ describe('months and quarters at every boundary (Asia/Karachi calendar dates, le
         expect(closeState(nextMonth(monthOf(d), -1), d, new Set(), []).kind).toBe('open')
         const earlier = nextMonth(monthOf(d), -3)
         const s = closeState(nextMonth(monthOf(d), -1), d, new Set(), [earlier])
-        expect(s.kind === 'open' && s.through).toBe(true)
+        // one month at a time (owner decision 2026-10-22): the older open month is the one the button closes
+        expect(s.kind === 'open' && s.target).toBe(earlier)
       }),
       RUNS,
     )
