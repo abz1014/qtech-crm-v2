@@ -8,7 +8,7 @@ import { BOOKS, COMMON, amount } from '../support/text'
  * The books for one whole month, worked out by hand, then the month closed (its P&L frozen) and reopened.
  *
  * Month-level figures (P&L, checklist, team, GST month) are global, so this file uses a month 20 months back that nothing else in
- * the suite touches, and it is the earliest month with money in it (so "close through" closes exactly this one).
+ * the suite touches, and it is the earliest month with money in it (so it is the oldest open month, the one the close button names).
  *
  *   Order A (sales owns it): 1 x 100,000 at 18% (GST 18,000) and 1 x 50,000 exempt; items net 150,000, gross 168,000.
  *     Invoice A1, day 5:  net 100,000, GST 18,000, gross 118,000 (the 18% line only).
@@ -63,7 +63,7 @@ async function reopenIfClosed(month: string): Promise<void> {
 }
 
 test('one month of books by hand: P&L, team, GST month, checklist and aging; then closed (frozen) and reopened (live)', async ({ browser }, info) => {
-  // Nothing else may sit before this month, or "close through" would close more than it.
+  // Nothing else may sit before this month, or the close button would name that older month instead (one month at a time).
   const earlier = await db.rows(`payments_in?received_on=lt.${M.start}&select=id`)
   expect(earlier, 'no payment is dated before the isolated month').toHaveLength(0)
 
