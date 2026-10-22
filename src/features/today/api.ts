@@ -353,7 +353,9 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
 /** Overdue orders only, filtered on the server (receivables_list 'overdue' = is_overdue) and paged, so none is lost past 1,000 rows. */
 async function loadReceivables(names: Map<string, string>): Promise<ReceivableFact[]> {
   const rows = await fetchReceivablesList({ p_state: 'overdue' })
-  return rows.map(r => toReceivableFact(r, names))
+  // owner decision 2026-10-22 (1): a late payment on an imported order waits in the Imported fold (ids only are read)
+  const imported = await importedOrderIds(rows.map(r => r.order_id))
+  return rows.map(r => ({ ...toReceivableFact(r, names), legacy: imported.has(r.order_id) }))
 }
 
 export const toReceivableFact = (r: Omit<ReceivablesListRow, 'company_name' | 'invoice_numbers'>, names: Map<string, string>): ReceivableFact => ({

@@ -4,6 +4,7 @@ import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
+import { pkr } from '@/features/money/expenses/model'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
@@ -110,6 +111,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const waiting = useMemo(() => (view ? view.waiting.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const stale = useMemo(() => (view ? view.stale.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const imported = useMemo(() => (view ? view.imported.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  const latePayments = useMemo(() => imported.filter(i => i.rule === 'payment_overdue'), [imported])
   const groups = useMemo(
     () => (view ? [
       { id: 'now', title: 'Overdue or due today', items: view.now.filter(inTab) },
@@ -274,8 +276,13 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                 className="flex w-full items-center gap-2 px-5 py-3 text-left text-base font-medium text-fg-2"
               >
                 <Icon icon={importedOpen ? ChevronDown : ChevronRight} size="sm" />
-                <span>
+                <span className="min-w-0 break-words">
                   Imported, to review · <span className="num">{imported.length}</span>
+                  {latePayments.length > 0 ? (
+                    <span className="text-tone-warning-fg">
+                      {' '}· incl. {latePayments.length} late {latePayments.length === 1 ? 'payment' : 'payments'} · <span className="num">{pkr(latePayments.reduce((s, i) => s + (i.amount ?? 0), 0))}</span>
+                    </span>
+                  ) : null}
                   <span className="font-regular text-fg-muted">{importedOpen ? ' · not counted' : ' · show'}</span>
                 </span>
               </button>

@@ -453,6 +453,8 @@ export function rulePaymentOverdue(ctx: TodayInputs): Entry[] {
         orderId: p.orderId,
         href: `/orders/${p.orderId}`,
         number: p.orderNumber,
+        amount: p.balance,
+        ...(p.legacy ? { imported: true } : {}),
       },
       ctx.today,
     )
