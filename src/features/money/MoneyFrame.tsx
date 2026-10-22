@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState, type ReactNode } from 'react'
+import { lazy, memo, Suspense, useCallback, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ChartColumn, ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -123,10 +123,12 @@ export function MoneyFrame({
   )
 }
 
-function FrameBar({ title }: { title: string }) {
+// Memo: the frame re-renders when its tab counts arrive (MoneyTabCounts), and a re-run here would replace the bar a sub-page set
+// (Month end's hideTabs) with the plain title. It re-runs only when the title changes.
+const FrameBar = memo(function FrameBar({ title }: { title: string }) {
   useMobileBar({ title })
   return null
-}
+})
 
 /** One Money tab. A plain Link: the lit tab follows `active` (Month end stays lit on the pages reached from it), not the address. */
 function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boolean; n: number | undefined; phone?: boolean }) {

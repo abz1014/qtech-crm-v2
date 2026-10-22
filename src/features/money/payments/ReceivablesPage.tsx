@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { FilePlus } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Dialog, DialogContent } from '@/ui/Dialog'
-import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
@@ -46,6 +45,7 @@ import {
 // Admin's held advances (usually nothing to show) are read and drawn after the list too.
 const HeldAdvancesPanel = lazyWithReload(() => import('@/features/money/payments/HeldAdvancesPanel').then(m => ({ default: m.HeldAdvancesPanel })))
 const ReminderPanel = lazyWithReload(() => import('@/features/money/payments/ReminderPanel').then(m => ({ default: m.ReminderPanel })))
+const CreateInvoiceDialog = lazyDialog(() => import('@/features/money/invoices/CreateInvoiceDialog').then(m => m.CreateInvoiceDialog))
 const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
