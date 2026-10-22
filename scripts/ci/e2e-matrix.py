@@ -8,8 +8,11 @@ names from dorny/paths-filter (CHANGED), and RUN_ALL ("true" runs every suite). 
 """
 import json, math, os, re, sys
 
-SHARDS_MAX = int(os.environ.get("E2E_MAX_SHARDS", "7"))  # 7 since the hunt suites joined: 5 x 30 min no longer held a full run
-TARGET_SECONDS = 200  # one shard should not take more than about this much test time
+# Weights are MEASURED seconds (see e2e-suites.yml). A shard also pays about 270 s of fixed cost (runner, npm ci, Supabase start, build,
+# upload), so test time of ~930 s per shard plans a shard at about 20 min; the full run (about 7,500 s of tests) needs 8 shards.
+# The longest single suite (hunt-edges-probe, ~900 s) cannot be split further by this generator.
+SHARDS_MAX = int(os.environ.get("E2E_MAX_SHARDS", "8"))
+TARGET_SECONDS = 950  # one shard should not take more than about this much test time
 
 suites, weights = [], {}
 for line in open(sys.argv[1], encoding="utf-8"):
