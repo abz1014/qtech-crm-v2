@@ -296,7 +296,8 @@ test.describe('Company profile (A06)', () => {
     // A bad value is refused in place and nothing is saved.
     await page.getByLabel(/^Email/).fill('not-an-email')
     await page.getByRole('button', { name: 'Save changes' }).click()
-    await expect(page.getByText('Enter a valid email address, or leave it empty.')).toBeVisible()
+    // exact: the error summary above the form now repeats the field's message after its label ("Email: Enter a valid…")
+    await expect(page.getByText('Enter a valid email address, or leave it empty.', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Discard' }).click()
 
     // Sales reads the same values, with no way to edit.

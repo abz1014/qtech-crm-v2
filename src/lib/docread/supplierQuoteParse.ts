@@ -17,6 +17,7 @@
 
 import { parseLeadTime, parseSupplierReply, type LeadTime, type ParsedReply, type ParseReplyOptions, type ReplyCurrency, type ReplyItemRef } from '@/features/rfqs/lib/replyParse'
 import { businessToday } from '@/lib/dates'
+import { alignSpacedRows, rebuildCellText } from './cellTable'
 import { findDate } from './enquiryParse'
 
 export interface QuoteFacts {
@@ -146,15 +147,30 @@ function readFacts(lines: string[], today: string): Omit<QuoteFacts, 'currency'>
 
 export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: ParseReplyOptions = {}): SupplierQuoteParse {
   const today = opts.today ?? businessToday()
-  const lines = plainQuoteText(raw).split('\n')
+  // A letterhead copied from a PDF keeps its two columns on one line ("Your Ref: RFQ-118        Currency: USD"): each labelled
+  // part is a line of its own, so the quotation's own facts are not dropped with our reference.
+  const lines = rebuildCellText(alignSpacedRows(plainQuoteText(raw).split('\n')).join('\n'), t => TOTAL_LABEL.test(t) || BANK.test(t))
+    .split('\n')
+    .flatMap(l => {
+      const parts = l.includes('\t') ? [l] : l.trim().split(/\s{4,}/)
+      return parts.length === 2 && parts.every(p => /^[A-Za-z][A-Za-z .'/#]{1,30}:/.test(p)) ? parts : [l]
+    })
   const kept: string[] = []
   const dropped: string[] = []
+  /** Under a totals label copied one cell per line ("Grand Total" / "53,959.51"): its amount goes with it. */
+  let afterTotal = false
   for (const line of lines) {
     const t = line.trim()
     if (!t) {
       kept.push('')
+      afterTotal = false
       continue
     }
+    if (afterTotal && /^[^A-Za-z]*\d[^A-Za-z]*$/.test(t)) {
+      dropped.push(t)
+      continue
+    }
+    afterTotal = isTotalRow(t) && !/\d/.test(t)
     const first = cells(t).find(Boolean) ?? ''
     const drop =
       isTotalRow(t) ||

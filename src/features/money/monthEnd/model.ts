@@ -573,7 +573,12 @@ export interface AdvanceRow {
   orderRef: string | null
   customer: string
   held: string
+  /** The order was cancelled by the date (0080): the advance is held to refund or keep. */
+  cancelled?: boolean
 }
+
+/** The aging report's words for an advance (owner decision 2026-10-22: a cancelled order's advance is never owed). */
+export const advanceLabel = (a: Pick<AdvanceRow, 'cancelled'>): string => (a.cancelled ? 'Advance held — refund or keep (order cancelled)' : 'Advance held, not invoiced yet')
 
 export const AGING_BUCKETS = ['0-30', '31-60', '61-90', '90+'] as const
 export type AgingBucket = (typeof AGING_BUCKETS)[number]
@@ -626,7 +631,7 @@ export function agingCsv(v: AgingView): { headers: string[]; rows: unknown[][] }
         csvNum(r.applied),
         ...AGING_BUCKETS.map(b => (r.bucket === b ? csvNum(r.remaining) : '')),
       ]),
-      ...v.advances.map(a => [v.asOf, a.customer, 'Advance held, not invoiced yet', a.orderRef ?? '', '', '', '', csvNum(a.held), '', '', '', '']),
+      ...v.advances.map(a => [v.asOf, a.customer, advanceLabel(a), a.orderRef ?? '', '', '', '', csvNum(a.held), '', '', '', '']),
     ],
   }
 }

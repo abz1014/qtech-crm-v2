@@ -41,7 +41,7 @@ describe('mapPgError (U07)', () => {
 
   it('22003 numeric overflow: says the number is too large, not "try again" (hunt HE-7)', () => {
     const m = mapPgError({ code: '22003', message: 'numeric field overflow' })
-    expect(m.kind).toBe('check')
+    expect(m.kind).toBe('too-large')
     expect(m.message).toMatch(/too large/)
     expect(m.message).not.toMatch(/Something went wrong/)
   })

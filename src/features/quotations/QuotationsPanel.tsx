@@ -11,6 +11,7 @@ import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
+import { useSeesPrices } from '@/app/session'
 import type { InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
@@ -32,12 +33,15 @@ import { sharePdf, downloadBlob } from '@/features/quotations/lib/sharePdf'
  * Mark won is not repeated here: it is the page's one green button once a quotation is out.
  * State per version (consistency spec 1.5): the current one has no mark (the normal state); an older one says "Replaced by
  * revision N" in plain words; an expired current one shows the registry's `bid:expired` chip.
+ * An engineer (owner decision 2026-10-22: no prices) sees each version, its dates and state only: no items count (it comes from
+ * the priced lines, which are not fetched), no gross or net, no PDF (it is all prices) and no Revise quotation.
  */
 
 const gross = (q: QuotationRow) => toPaisa(q.netTotal) + toPaisa(q.gstTotal)
 
 export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader; inquiries: InquiryRow[]; itemCount: number }) {
   const { toast } = useToast()
+  const prices = useSeesPrices()
   const quotations = useQuotations(rfq.id)
   const profileQ = useCompanyProfile()
   const storePdf = useStorePdf(rfq.id)
@@ -89,14 +93,16 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
     }
   }
 
-  const GRID = 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_72px_minmax(0,1.1fr)_minmax(0,1.4fr)]'
+  const GRID = prices
+    ? 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_72px_minmax(0,1.1fr)_minmax(0,1.4fr)]'
+    : 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]'
   return (
     <DetailPanel
       title="Quotations"
       tip={rows.length > 0 ? <InfoTip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</InfoTip> : null}
       dataSlot="quotations"
       actions={
-        isOpen && rows.length > 0 ? (
+        prices && isOpen && rows.length > 0 ? (
           <Button icon={FilePlus2} onClick={() => setOpen(true)}>
             Revise quotation
           </Button>
@@ -114,10 +120,14 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
           </Banner>
         </div>
       ) : rows.length === 0 ? (
-        <p className="px-5 py-5 text-fg-muted">Nothing issued yet. Issue quotation sets your price on each item, from a supplier price or one you type, and makes the PDF.</p>
+        <p className="px-5 py-5 text-fg-muted">
+          {prices
+            ? 'Nothing issued yet. Issue quotation sets your price on each item, from a supplier price or one you type, and makes the PDF.'
+            : 'Nothing issued yet. Sales issue the quotation.'}
+        </p>
       ) : (
         <>
-          {lacksPdf && gaps.length > 0 ? (
+          {prices && lacksPdf && gaps.length > 0 ? (
             <div className="px-5 pt-4">
               <Banner tone="warning" title={`A PDF needs the company's ${gaps.join(' and ')}`}>
                 Quotations are saved without one. Their PDFs are made when you open them after the profile is complete. <SettingsLink />
@@ -129,13 +139,17 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
               <span role="columnheader">Quotation</span>
               <span role="columnheader">Issued</span>
               <span role="columnheader">Valid until</span>
-              <span role="columnheader">Items</span>
-              <span role="columnheader" className="text-right">
-                Gross, PKR
-              </span>
-              <span role="columnheader" className="sr-only">
-                Actions
-              </span>
+              {prices ? (
+                <>
+                  <span role="columnheader">Items</span>
+                  <span role="columnheader" className="text-right">
+                    Gross, PKR
+                  </span>
+                  <span role="columnheader" className="sr-only">
+                    Actions
+                  </span>
+                </>
+              ) : null}
             </div>
             <div role="rowgroup">
               {rows.map((q, i) => {
@@ -168,35 +182,39 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                       <span className="text-sm font-regular text-fg-muted sm:sr-only">{expired ? 'Expired ' : 'Valid until '}</span>
                       {formatDay(q.validUntil)}
                     </span>
-                    <span role="cell" className="num text-sm">
-                      {q.lines.length} of {itemCount}
-                      <span className="text-sm text-fg-muted sm:sr-only">{q.lines.length === 1 ? ' item' : ' items'}</span>
-                    </span>
-                    <span role="cell" className="grid sm:justify-items-end sm:text-right">
-                      <span className="num text-sm font-medium">
-                        <span className="mr-1 font-sans text-sm font-regular text-fg-muted sm:sr-only">PKR{' '}</span>
-                        {formatPaisa(gp, 'auto')}
-                      </span>
-                      <span className="num text-sm text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
-                    </span>
-                    <span role="cell" className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      <Button
-                        size="sm"
-                        variant={latest ? 'secondary' : 'quiet'}
-                        icon={ExternalLink}
-                        busy={working === `open-${q.id}`}
-                        busyLabel="Opening"
-                        disabled={!q.pdfPath && gaps.length > 0}
-                        onClick={() => void run(q, 'open')}
-                      >
-                        Open PDF
-                      </Button>
-                      {latest ? (
-                        <Button size="sm" icon={Share2} busy={working === `share-${q.id}`} busyLabel="Sharing" disabled={!q.pdfPath && gaps.length > 0} onClick={() => void run(q, 'share')}>
-                          Share
-                        </Button>
-                      ) : null}
-                    </span>
+                    {prices ? (
+                      <>
+                        <span role="cell" className="num text-sm">
+                          {q.lines.length} of {itemCount}
+                          <span className="text-sm text-fg-muted sm:sr-only">{q.lines.length === 1 ? ' item' : ' items'}</span>
+                        </span>
+                        <span role="cell" className="grid sm:justify-items-end sm:text-right">
+                          <span className="num text-sm font-medium">
+                            <span className="mr-1 font-sans text-sm font-regular text-fg-muted sm:sr-only">PKR{' '}</span>
+                            {formatPaisa(gp, 'auto')}
+                          </span>
+                          <span className="num text-sm text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
+                        </span>
+                        <span role="cell" className="flex flex-wrap items-center gap-2 sm:justify-end">
+                          <Button
+                            size="sm"
+                            variant={latest ? 'secondary' : 'quiet'}
+                            icon={ExternalLink}
+                            busy={working === `open-${q.id}`}
+                            busyLabel="Opening"
+                            disabled={!q.pdfPath && gaps.length > 0}
+                            onClick={() => void run(q, 'open')}
+                          >
+                            Open PDF
+                          </Button>
+                          {latest ? (
+                            <Button size="sm" icon={Share2} busy={working === `share-${q.id}`} busyLabel="Sharing" disabled={!q.pdfPath && gaps.length > 0} onClick={() => void run(q, 'share')}>
+                              Share
+                            </Button>
+                          ) : null}
+                        </span>
+                      </>
+                    ) : null}
                   </div>
                 )
               })}
@@ -204,7 +222,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
           </div>
         </>
       )}
-      {open ? <IssueQuotationDialog rfq={rfq} inquiries={inquiries} onClose={() => setOpen(false)} /> : null}
+      {open && prices ? <IssueQuotationDialog rfq={rfq} inquiries={inquiries} onClose={() => setOpen(false)} /> : null}
     </DetailPanel>
   )
 }

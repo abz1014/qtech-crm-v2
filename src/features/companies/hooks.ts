@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
 import { nullOnInvalidId } from '@/lib/uuid'
 import { buildSupplierRecord, type SupplierRecord } from '@/features/companies/supplierRecord'
+import { useSeesPrices } from '@/app/session'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/companies/api'
@@ -78,9 +79,11 @@ export function useSupplierActivity(id: string | undefined, enabled = true) {
 
 /** Quotes, deliveries and open items with this supplier (R18). Plain rows; supplierRecord.ts builds the display. */
 export function useSupplierRecord(id: string | undefined, enabled = true) {
+  // An engineer's read has no prices or rates (owner decision 2026-10-22); the key says which.
+  const prices = useSeesPrices()
   return useQuery({
-    queryKey: qk.companies.part(id ?? '', 'supplier-record'),
-    queryFn: () => api.getSupplierRecord(id as string),
+    queryKey: [...qk.companies.part(id ?? '', 'supplier-record'), prices ? 'prices' : 'no-prices'],
+    queryFn: () => api.getSupplierRecord(id as string, prices),
     enabled: Boolean(id) && enabled,
   })
 }

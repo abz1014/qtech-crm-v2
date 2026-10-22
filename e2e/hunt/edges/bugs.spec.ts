@@ -132,9 +132,10 @@ test('HE-9 a hand-entered exchange rate dated in 2200 is refused as a typo, not 
   await page.getByLabel('Rate, PKR for 1 unit').fill('281.5')
   await page.getByLabel('As of').fill('1/1/2200')
   await page.getByLabel('As of').press('Tab')
-  await page.getByRole('button', { name: 'Save rate' }).click()
-  // Refused as a typo, with the reason under the date; nothing is stored.
-  await expect(page.getByText(/Use a date between .* Check the year/).first()).toBeVisible()
+  // Refused, with the reason under the date: Save rate stays aria-disabled and nothing is stored.
+  await expect(page.getByText(/can.t be dated in the future|Use a date between/).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save rate' })).toHaveAttribute('aria-disabled', 'true')
+  await page.getByRole('button', { name: 'Save rate' }).click({ force: true })
   await page.waitForTimeout(1000)
   await expect(page.getByRole('status').filter({ hasText: 'Rate saved' })).toHaveCount(0)
   const rows = (await (await service('/rest/v1/fx_rates?as_of=eq.2200-01-01&select=as_of')).json()) as unknown[]

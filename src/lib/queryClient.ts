@@ -1,6 +1,7 @@
 import { MutationCache, onlineManager, QueryClient, type Query } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { wireOnlineManager } from '@/lib/connection'
+import { refuseOutdatedSave } from '@/lib/pwa/minVersion'
 
 /** A refresh on return to the app happens only for data at least this old, whatever a query's own staleTime is. */
 export const FOCUS_REFETCH_MIN_AGE_MS = 30_000
@@ -35,7 +36,13 @@ export function refuseOfflineSave(): void {
  * how fresh a read must be when a screen mounts, the app comes back to the front, or the network returns.
  */
 export const queryClient = new QueryClient({
-  mutationCache: new MutationCache({ onMutate: refuseOfflineSave }),
+  // Offline first (the U07 sentence), then an app older than the server's minimum (owner decision 2026-10-22, pwa/minVersion.ts).
+  mutationCache: new MutationCache({
+    onMutate: () => {
+      refuseOfflineSave()
+      refuseOutdatedSave()
+    },
+  }),
   defaultOptions: {
     mutations: { networkMode: 'always' },
     queries: {

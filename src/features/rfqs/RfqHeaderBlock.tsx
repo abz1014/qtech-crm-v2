@@ -20,7 +20,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
 import type { StatusDimension } from '@/lib/status'
 import { NextStepBox } from '@/ui/NextStepBox'
-import { ROLE_LABEL } from '@/app/session'
+import { ROLE_LABEL, useSeesPrices } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Avatar } from '@/ui/Avatar'
 import { Button } from '@/ui/Button'
@@ -163,6 +163,8 @@ type Actions = ReturnType<typeof useQuoteAndClose>
 function useMainActions(rfq: RfqHeader, facts: HeaderFacts) {
   const [, setIssue] = useIssueDialog()
   const [, setWon] = useWonDialog()
+  // Issue quotation and Mark won set prices: admin and sales only (owner decision 2026-10-22, engineers see no prices).
+  const prices = useSeesPrices()
   const orders = useOrdersForRfq(rfq.id)
   const liveOrders = (orders.data ?? []).filter(o => !o.cancelledOn)
   const asked = (rfq.state?.floated ?? 0) > 0
@@ -173,7 +175,8 @@ function useMainActions(rfq: RfqHeader, facts: HeaderFacts) {
     ask: facts.onAsk,
     issue: () => setIssue(true),
     won: () => setWon(true),
-    canWin: rfq.state?.outcome !== 'won' && liveOrders.length === 0,
+    canIssue: prices,
+    canWin: prices && rfq.state?.outcome !== 'won' && liveOrders.length === 0,
   }
 }
 
@@ -189,7 +192,7 @@ function MoreItems({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts
           {main.askLabel}
         </MenuItem>
       ) : null}
-      {facts.primary !== 'issue' ? (
+      {facts.primary !== 'issue' && main.canIssue ? (
         <MenuItem icon={FilePlus2} disabled={noItems} hint={noItems ? 'add an item first' : undefined} onClick={main.issue}>
           {main.issueLabel}
         </MenuItem>
@@ -250,6 +253,7 @@ function PrimaryButton({ rfq, facts, size = 'md', className }: { rfq: RfqHeader;
         </Button>,
       )
     case 'issue':
+      if (!main.canIssue) return null
       return wrap(
         'issue-quotation',
         <Button variant="primary" size={size} icon={FilePlus2} className={className} onClick={main.issue}>

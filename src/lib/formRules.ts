@@ -10,8 +10,6 @@ import { formatPaisa, formatRate } from '@/lib/money'
 
 /** numeric(14,2): the largest amount a money column holds. */
 export const MAX_AMOUNT = 999_999_999_999.99
-/** numeric(14,6): the largest exchange rate. */
-export const MAX_RATE = 99_999_999.999999
 /** The earliest business date a payment, expense or rate may carry. */
 export const EARLIEST_DATE = '2000-01-01'
 
@@ -57,11 +55,6 @@ function addYears(isoDate: string, years: number): string {
   return t.toISOString().slice(0, 10)
 }
 
-function addDays(isoDate: string, days: number): string {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
-}
-
 export interface DateRange {
   earliest: string
   latest: string
@@ -70,11 +63,6 @@ export interface DateRange {
 /** Payments and expenses: 1 Jan 2000 to a year from today (a post-dated cheque is fine; 2200 is a typo). */
 export function businessDateRange(today: string = businessToday()): DateRange {
   return { earliest: EARLIEST_DATE, latest: addYears(today, 1) }
-}
-
-/** Exchange rates: a rate counts only from its date, so a future one would silently do nothing. Up to a week ahead. */
-export function rateDateRange(today: string = businessToday()): DateRange {
-  return { earliest: EARLIEST_DATE, latest: addDays(today, 7) }
 }
 
 /** The plain sentence when `isoDate` is outside the range, else null. Empty text is left to the "required" rule. */

@@ -34,13 +34,9 @@ export function SalesReports() {
   const o = outcomes.data ? summariseOutcomes(outcomes.data) : null
   const r = repeat.data ? summariseRepeat(repeat.data) : null
   return (
-    <section aria-labelledby="rep-sales" className="grid gap-3">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 id="rep-sales" className="text-lg font-semibold tracking-snug">
-          Enquiries and customers
-        </h3>
-        <span className="text-sm text-fg-2">All time, counts only</span>
-      </header>
+    // The page title (Reports frame h1) already names it: only the scope line here, not the title twice.
+    <section aria-label="Enquiries and customers" className="grid gap-3">
+      <p className="text-sm text-fg-2">All time, counts only</p>
       {o && r ? (
         o.total === 0 && r.customers === 0 ? (
           <p className="rounded border bg-surface px-5 py-4 text-sm text-fg-2">Not enough data yet. These fill in as RFQs are won or closed and orders are placed.</p>
@@ -72,7 +68,7 @@ function Section({ id, title, headline, children }: { id: string; title: string;
     <details id={id} className="group border-t first:border-t-0">
       {/* The question, then its headline, with the chevron on the right of the same line (round 3: on a phone it sat alone above). */}
       <summary className="grid min-h-touch cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-3 hover:bg-sunken md:grid-cols-[minmax(0,1fr)_auto_auto] [&::-webkit-details-marker]:hidden">
-        <h4 className="text-base font-medium">{title}</h4>
+        <h2 className="text-base font-medium">{title}</h2>
         <span className="text-sm text-fg-2 max-md:col-start-1 max-md:row-start-2">{headline}</span>
         <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90 max-md:col-start-2 max-md:row-span-2 max-md:row-start-1" />
       </summary>

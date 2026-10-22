@@ -97,11 +97,42 @@ function ocrAssets(): Plugin {
  */
 const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || Date.now().toString(36)
 
+/*
+ * Minimum app version (owner decision 2026-10-22, src/lib/pwa/minVersion.ts). app-version.json at the repository root holds this
+ * build's `version` (a whole number, raised by hand when a release changes what the server accepts) and `minSupported`, the oldest
+ * version that may still SAVE. The build bakes `version` into the app (__APP_VERSION__) and publishes both as /version.json
+ * (not precached, no-cache in vercel.json). A running app older than the published minSupported keeps reading but refuses saves
+ * and shows "Update needed — tap Reload". Raise both numbers together in the release that needs it.
+ */
+const APP_VERSION = JSON.parse(readFileSync(path.resolve(__dirname, 'app-version.json'), 'utf8')) as { version: number; minSupported: number }
+if (!Number.isInteger(APP_VERSION.version) || !Number.isInteger(APP_VERSION.minSupported) || APP_VERSION.minSupported > APP_VERSION.version) {
+  throw new Error('app-version.json: version and minSupported must be whole numbers, minSupported at most version')
+}
+const versionJson = () => JSON.stringify({ version: APP_VERSION.version, minSupported: APP_VERSION.minSupported, build: BUILD_ID })
+
+function appVersionFile(): Plugin {
+  return {
+    name: 'qtech-app-version',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if ((req.url ?? '').split('?')[0] !== `${server.config.base}version.json`) return next()
+        res.setHeader('Content-Type', 'application/json')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.end(versionJson())
+      })
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: versionJson() })
+    },
+  }
+}
+
 export default defineConfig(({ command, mode }) => ({
-  define: { __APP_BUILD__: JSON.stringify(BUILD_ID), __OCR_DIR__: JSON.stringify(OCR_DIR) },
+  define: { __APP_BUILD__: JSON.stringify(BUILD_ID), __OCR_DIR__: JSON.stringify(OCR_DIR), __APP_VERSION__: JSON.stringify(APP_VERSION.version) },
   plugins: [
     react(),
     ocrAssets(),
+    appVersionFile(),
     supabasePreconnect(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL),
     // Builds src/sw.ts into dist/sw.js and injects the precache list (R21). Build only: the dev server and Vitest
     // run without a worker. The manifest is the hand-written public/manifest.webmanifest.

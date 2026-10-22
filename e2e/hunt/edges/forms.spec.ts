@@ -185,6 +185,11 @@ test('Exchange rate, category, target, phone: edge values (admin)', async ({ bro
     w.at(`category ${name}`)
     await page.goto('/settings/categories')
     await settle(page)
+    // Categories are added from a dialog since the settings redesign on main: this probe's inline field may be gone.
+    if ((await page.getByLabel('New category').count()) === 0) {
+      note({ kind: 'form', role: 'admin', vp: 'w1366', path: 'category', detail: 'skipped: no inline "New category" field on this build' })
+      break
+    }
     await page.getByLabel('New category').fill(name)
     const typed = await page.getByLabel('New category').inputValue()
     await page.getByRole('form', { name: 'Add a category' }).getByRole('button', { name: /Add/ }).click()

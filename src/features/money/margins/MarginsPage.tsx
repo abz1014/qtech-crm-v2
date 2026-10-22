@@ -55,7 +55,8 @@ function MarginFigure({ r, size }: { r: MarginRow; size?: 'lg' }) {
 
 function MarginRowView({ r }: { r: MarginRow }) {
   const unknown = r.state === 'basis_unknown'
-  const pct = marginPct(r)
+  // a percentage of an estimate (often "100%" with no cost yet) misleads: only a final margin gets one
+  const pct = r.state === 'final' ? marginPct(r) : null
   const loss = r.margin !== null && r.margin < 0 && !unknown
   return (
     <li className="border-t first:border-t-0" data-margin-state={r.state}>
@@ -64,7 +65,7 @@ function MarginRowView({ r }: { r: MarginRow }) {
         <div className="flex items-baseline justify-between gap-3">
           <span className="min-w-0 break-words font-medium">
             {r.companyName}{' '}
-            <Link to={`/orders/${r.orderId}`} className="num font-regular text-fg-2 hover:underline">
+            <Link to={`/orders/${r.orderId}`} className="num whitespace-nowrap font-regular text-fg-2 hover:underline">
               {orderRef(r.orderNumber)}
             </Link>
           </span>

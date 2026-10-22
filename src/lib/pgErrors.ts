@@ -31,6 +31,7 @@ export type PgErrorKind =
   | 'reference-missing' // 23503 on insert/update
   | 'reference-in-use' // 23503 on delete
   | 'check' // 23514
+  | 'too-large' // 22003: numeric field overflow
   | 'closed-month' // P0001 closed-month message
   | 'permission' // 42501: row-level security or a missing grant
   | 'not-found' // PGRST116: .single() found no row
@@ -111,10 +112,10 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
         constraint,
       }
     case '22003':
-      // numeric_value_out_of_range: trying again can never work, so the sentence says what to change (hunt HE-7)
+      // numeric_value_out_of_range (HW-10): a quantity or amount bigger than its column holds.
       return {
-        kind: 'check',
-        message: 'That number is too large to save. Check it for an extra digit, then save again. Nothing was saved.',
+        kind: 'too-large',
+        message: 'A number is too large to save. Check the quantities and amounts, then save again.',
       }
     case '42501':
       return { kind: 'permission', message: 'Your role cannot make this change. Nothing was saved. Ask an admin if it needs doing.' }

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { pastedPictures } from '@/features/rfqs/lib/readPdf'
 import type { BrandRef, ParseResult } from '@/features/rfqs/lib/parseItems'
-import { parseQtyCell, type DraftItem } from '@/features/rfqs/lib/intakeModel'
+import { parseQtyCell, qtyProblem, type DraftItem } from '@/features/rfqs/lib/intakeModel'
 import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -34,10 +34,14 @@ const cell =
 function QtyCell({ item, n, onChange }: { item: DraftItem; n: number; onChange: (patch: Partial<DraftItem>) => void }) {
   // While the cell has focus it shows exactly what is typed; the tidy "2 nos" returns when it loses it.
   const [typing, setTyping] = useState<string | null>(null)
-  const shown = item.qty == null ? '' : (qtyText(item.qty, item.unit) ?? String(item.qty))
+  const shown = item.qty == null ? '' : (qtyText(item.qty, item.unit) ?? `${item.qty} ${item.unit}`.trim())
+  // HW-7: a 0 stays on screen as 0 and is marked, never shown (or saved) as 1.
+  const problem = qtyProblem(item)
   return (
     <input
       aria-label={`Quantity of item ${n}`}
+      aria-invalid={problem ? true : undefined}
+      title={problem ?? undefined}
       value={typing ?? shown}
       placeholder="1 no"
       autoComplete="off"
@@ -50,7 +54,7 @@ function QtyCell({ item, n, onChange }: { item: DraftItem; n: number; onChange: 
         onChange(parseQtyCell(e.target.value))
       }}
       onBlur={() => setTyping(null)}
-      className={cn(cell, 'num')}
+      className={cn(cell, 'num', problem && 'border-tone-danger-fg md:border-tone-danger-fg')}
     />
   )
 }

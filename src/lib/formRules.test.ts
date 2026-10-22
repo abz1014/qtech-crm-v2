@@ -10,7 +10,6 @@ import {
   phoneProblem,
   phoneText,
   pkr,
-  rateDateRange,
   storedRate,
 } from '@/lib/formRules'
 
@@ -58,9 +57,6 @@ describe('date ranges (hunt HE-3/HE-9)', () => {
   it('payments and expenses: 1 Jan 2000 to a year from today', () => {
     expect(businessDateRange('2026-10-22')).toEqual({ earliest: '2000-01-01', latest: '2027-10-22' })
     expect(businessDateRange('2028-02-29').latest).toBe('2029-02-28')
-  })
-  it('rates: up to a week ahead', () => {
-    expect(rateDateRange('2026-10-22').latest).toBe('2026-10-29')
   })
   it('names the range when a date is outside it, and leaves good or empty dates alone', () => {
     const r = businessDateRange('2026-10-22')

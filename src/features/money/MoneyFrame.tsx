@@ -82,7 +82,7 @@ export function MoneyFrame({
         {/* The list-page head (spec 5.2): the view's name and the page's one green action (`actions`). */}
         <PageHeader
           title={heading}
-          lede={<span className="max-md:hidden">All amounts in PKR</span>}
+          lede={active === 'reports' ? undefined : <span className="max-md:hidden">All amounts in PKR</span>}
           primary={actions}
           secondary={
             reportsTab ? (
@@ -130,15 +130,26 @@ function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boo
     <Link
       to={to}
       aria-current={on ? 'page' : undefined}
-      aria-label={phone && tab.short !== tab.label ? `${tab.label}${n ? `, ${n} need you` : ''}` : undefined}
       className={cn(
         'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
         phone ? 'min-h-touch min-w-0 flex-auto justify-center gap-1 px-1 text-xs' : 'min-h-control gap-2 px-4 text-sm',
         on ? 'border-fg bg-surface text-fg' : 'border-transparent text-fg-muted hover:text-fg',
       )}
     >
+      {/* The name is the visible words plus, for a short phone label, the full name for screen readers (WCAG 2.5.3 label in name). */}
       <span className="whitespace-nowrap">{phone ? tab.short : tab.label}</span>
-      <NeedsCount n={n} />
+      {phone && tab.short !== tab.label ? <span className="sr-only">{` (${tab.label})`}</span> : null}
+      {phone && n ? (
+        <>
+          {/* Under 360 px four labels and their counts do not fit one row: the count becomes a dot (the name still says it). */}
+          <span className="max-[359px]:sr-only">
+            <NeedsCount n={n} />
+          </span>
+          <i aria-hidden="true" className="hidden size-2 shrink-0 rounded-round bg-tone-warning-fg max-[359px]:block" />
+        </>
+      ) : (
+        <NeedsCount n={n} />
+      )}
     </Link>
   )
 }

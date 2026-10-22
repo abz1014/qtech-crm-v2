@@ -2,7 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/render
 import { formatPaisa } from '@/lib/money'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
 import type { InvoiceDoc } from '@/features/money/invoices/pdf/doc'
-import { COPY_LABEL, qtyText, rateText } from '@/features/money/invoices/pdf/model'
+import { COPY_LABEL, qtyText, rateText, signatureLines } from '@/features/money/invoices/pdf/model'
 
 /*
  * The sales-tax invoice PDF (owner decision 2026-10-20, item 2). A4, Geist, the quotation's letterhead (company_profile and the
@@ -269,8 +269,8 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
               Sales tax invoice issued under section 23 of the Sales Tax Act, 1990. Please quote <Text style={s.mono}>{doc.number}</Text> with your payment.
             </Text>
             <View style={s.signBox}>
-              <Text style={s.muted}>For {companyName}</Text>
-              <Text style={[s.muted, { marginTop: 2 }]}>Authorised signatory and stamp</Text>
+              <Text style={s.muted}>{signatureLines(companyName)[0]}</Text>
+              <Text style={[s.muted, { marginTop: 2 }]}>{signatureLines(companyName)[1]}</Text>
             </View>
           </View>
         </View>

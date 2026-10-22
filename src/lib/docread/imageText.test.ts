@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   cleanPixels,
+  flattenLight,
   imageFailureMessage,
   isImageFile,
   readImageText,
@@ -164,5 +165,20 @@ describe('helpers', () => {
     expect(px[4 * (6 * W + 50)]).toBe(255)
     expect(px[4 * (30 * W + 21)]).toBe(0)
     expect(px[4 * (30 * W + 150)]).toBe(0)
+  })
+})
+
+describe('flattenLight: a shadow across a photo of paper', () => {
+  it('turns shaded paper white and keeps the text dark', () => {
+    const w = 200
+    const h = 100
+    const grey = new Uint8Array(w * h)
+    // Paper from 120 (in shadow, left) to 220 (lit, right), a dark text stroke 60 below the paper on one row.
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) grey[y * w + x] = Math.round(120 + (100 * x) / w) - (y === 50 && x % 10 < 5 ? 60 : 0)
+    flattenLight(grey, w, h)
+    expect(grey[10 * w + 5]).toBeGreaterThan(228)
+    expect(grey[10 * w + 195]).toBeGreaterThan(235)
+    expect(grey[50 * w + 2]).toBeLessThan(150)
+    expect(grey[50 * w + 192]).toBeLessThan(200)
   })
 })

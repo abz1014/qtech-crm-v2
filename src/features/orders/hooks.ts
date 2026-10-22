@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { nullOnInvalidId } from '@/lib/uuid'
+import { seesPrices } from '@/app/session'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/orders/api'
 import type { LegPatch } from '@/features/orders/lib/legModel'
@@ -190,7 +191,8 @@ export function usePastOrder(id: string | undefined) {
 
 /** A8: the ranked quotes of an RFQ. `role` is in the key because the answer differs by role (an engineer's has no selling price or spread). */
 export function useRankedQuotes(rfqId: string | undefined, role: string, enabled = true) {
-  return useQuery({ queryKey: qk.orders.ranked(rfqId ?? '', role), queryFn: () => api.listRankedQuotes(rfqId as string), enabled: enabled && Boolean(rfqId), staleTime: 30_000 })
+  // Never for an engineer: the ranking carries supplier prices (owner decision 2026-10-22).
+  return useQuery({ queryKey: qk.orders.ranked(rfqId ?? '', role), queryFn: () => api.listRankedQuotes(rfqId as string), enabled: enabled && Boolean(rfqId) && seesPrices(role), staleTime: 30_000 })
 }
 
 /** A8 (O09): split a line by quantity onto another or a new leg. */

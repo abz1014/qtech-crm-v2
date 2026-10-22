@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Info } from 'lucide-react'
+import { TriangleAlert, Check, Info } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
@@ -57,7 +57,9 @@ function PaymentLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
         The balance could not be read. Close this and try again. Nothing was recorded.
       </p>
     )
-  if (q.isPending)
+  // HW-44: the amount opens at the balance due, so it must be today's balance, never a cached one (a page reload restores the
+  // cache): an order settled since would open at the old balance and one Save would record that payment twice.
+  if (q.isPending || !q.isFetchedAfterMount)
     return (
       <div className="grid gap-4" aria-busy="true">
         <Skeleton className="h-8" />
@@ -140,9 +142,14 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
         <p
           data-testid="payment-note"
           data-kind={note.kind}
-          className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm text-fg-2"
+          role={note.kind === 'over' ? 'alert' : undefined}
+          className={
+            note.kind === 'over'
+              ? 'flex items-start gap-3 rounded border border-tone-warning-fg/40 bg-tone-warning-bg px-4 py-3 text-sm font-medium text-fg'
+              : 'flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm text-fg-2'
+          }
         >
-          <Icon icon={Info} className="mt-[2px] text-fg-muted" />
+          <Icon icon={note.kind === 'over' ? TriangleAlert : Info} className={note.kind === 'over' ? 'mt-[2px] text-tone-warning-fg' : 'mt-[2px] text-fg-muted'} />
           <span>{note.text}</span>
         </p>
 

@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '@/app/routes'
 import { SessionProvider } from '@/app/SessionProvider'
-import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
+import { AdminOnly, PricesOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { useMobileBarConfig } from '@/app/shell/MobileBarContext'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 
@@ -54,7 +54,14 @@ function at(path: string, role: string) {
             <Route path="company" element={<p>Company screen</p>} />
             <Route path="details" element={<p>Details screen</p>} />
             <Route path="rates" element={<p>Rates screen</p>} />
-            <Route path="exchange-rates" element={<p>Exchange rates screen</p>} />
+            <Route
+              path="exchange-rates"
+              element={
+                <PricesOnly area="Exchange rates">
+                  <p>Exchange rates screen</p>
+                </PricesOnly>
+              }
+            />
             <Route path="password" element={<p>Password screen</p>} />
           </Route>
           <Route path="/no-access" element={null} />
@@ -78,7 +85,9 @@ describe('settings access (A04, A06)', () => {
       expect(await screen.findByText('Settings home')).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Team' })).toBeNull()
       expect(screen.getByRole('link', { name: /Company profile/ })).toHaveTextContent('View only')
-      expect(screen.getByRole('link', { name: 'Exchange rates' })).toBeInTheDocument()
+      // Exchange rates are currency amounts: sales only of the two (owner decision 2026-10-22, engineers see no prices).
+      if (role === 'sales') expect(screen.getByRole('link', { name: 'Exchange rates' })).toBeInTheDocument()
+      else expect(screen.queryByRole('link', { name: 'Exchange rates' })).toBeNull()
       first.unmount()
 
       at('/settings/team', role)
@@ -152,6 +161,17 @@ describe('settings access (A04, A06)', () => {
     r.unmount()
     at('/settings/exchange-rates', 'admin')
     expect(screen.getByTestId('bar')).toHaveTextContent('Exchange rates <- /settings')
+  })
+
+  it('Exchange rates opens for admin and sales; an engineer gets the no-access page (owner decision 2026-10-22)', () => {
+    for (const role of ['admin', 'sales']) {
+      const r = at('/settings/exchange-rates', role)
+      expect(screen.getByText('Exchange rates screen')).toBeInTheDocument()
+      r.unmount()
+    }
+    at('/settings/exchange-rates', 'engineer')
+    expect(screen.queryByText('Exchange rates screen')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Exchange rates is for admins and sales' })).toBeInTheDocument()
   })
 
   it('the real route table mounts Settings inside the shell guard', () => {

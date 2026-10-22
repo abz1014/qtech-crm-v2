@@ -88,12 +88,14 @@ export function BankTickPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm font-medium text-fg-2">Statement month</span>
+        <span className="inline-flex items-center gap-2">
         <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
         <InfoTip label="About matching the bank statement">
           Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement; tap again to undo. Cash items never appear here.
           An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&rsquo;s total
           credits and debits. Ticking changes nothing in the books and stays editable after the month closes.
         </InfoTip>
+        </span>
       </div>
 
       {data.isError ? (
@@ -122,6 +124,7 @@ export function BankTickPage() {
             </Banner>
           ) : null}
           <SumBar
+            className="max-sm:grid-cols-1"
             label="Running ticked totals"
             items={[
               {

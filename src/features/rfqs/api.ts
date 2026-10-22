@@ -307,6 +307,7 @@ export interface QuoteLineRow {
   id: string
   inquiryId: string
   itemId: string
+  /** The supplier's price. 0 when read without prices (an engineer: owner decision 2026-10-22); never shown then. */
   unitPrice: number
   currency: string
   leadTime: string | null
@@ -349,8 +350,15 @@ export interface InquiryRow {
   lines: QuoteLineRow[]
 }
 
-/** One row per supplier asked, with their quote lines, contact and last currency. */
-export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
+/** Quote line columns with prices (admin and sales) and without (an engineer never fetches a price: owner decision 2026-10-22). */
+const QUOTE_LINE_COLS = 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on'
+const QUOTE_LINE_COLS_NO_PRICES = 'id, inquiry_id, rfq_item_id, currency, lead_time, in_stock'
+
+/**
+ * One row per supplier asked, with their quote lines, contact and last currency. `prices` false (an engineer) leaves the price
+ * and the exchange rate out of the request: the line says who quoted which item, with lead time and stock only.
+ */
+export async function listInquiries(rfqId: string, prices = true): Promise<InquiryRow[]> {
   const db = requireSupabase()
   const inq = unwrap(
     await db
@@ -368,7 +376,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
     db.from('contacts').select('company_id, name, phone, email, job_title, created_at').in('company_id', supplierIds).order('created_at'),
     db
       .from('supplier_quote_lines')
-      .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on')
+      .select(prices ? QUOTE_LINE_COLS : QUOTE_LINE_COLS_NO_PRICES)
       .in('inquiry_id', inquiryIds),
     db
       .from('supplier_quote_lines')
@@ -400,17 +408,18 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   }
   for (const l of unwrap(legs)) if (l.currency && !lastCurrency.has(l.supplier_id)) lastCurrency.set(l.supplier_id, l.currency.trim())
   const linesBy = new Map<string, QuoteLineRow[]>()
-  for (const l of unwrap(lines)) {
+  type DbLine = { id: string; inquiry_id: string; rfq_item_id: string; unit_price?: number; currency: string; lead_time: string | null; in_stock: boolean | null; fx_rate_pkr?: number | null; fx_rate_on?: string | null }
+  for (const l of unwrap(lines) as unknown as DbLine[]) {
     const row: QuoteLineRow = {
       id: l.id,
       inquiryId: l.inquiry_id,
       itemId: l.rfq_item_id,
-      unitPrice: Number(l.unit_price),
+      unitPrice: l.unit_price === undefined ? 0 : Number(l.unit_price),
       currency: l.currency.trim(),
       leadTime: l.lead_time,
       inStock: l.in_stock,
-      fxRatePkr: l.fx_rate_pkr === null ? null : Number(l.fx_rate_pkr),
-      fxRateOn: l.fx_rate_on,
+      fxRatePkr: l.fx_rate_pkr === null || l.fx_rate_pkr === undefined ? null : Number(l.fx_rate_pkr),
+      fxRateOn: l.fx_rate_on ?? null,
     }
     linesBy.set(l.inquiry_id, [...(linesBy.get(l.inquiry_id) ?? []), row])
   }

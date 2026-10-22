@@ -262,10 +262,13 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
 
 const fromCard = (c: CheckCard): Row => ({ key: c.key, label: c.label, n: c.n, parts: c.parts, linkLabel: c.linkLabel, to: c.to })
 
-function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: ClosedMonth) => void }) {
+export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: ClosedMonth) => void }) {
   const [all, setAll] = useState(false)
   const through = closedThrough(ctx.closed)
   const shown = all ? ctx.closed : ctx.closed.slice(0, 4)
+  // Owner decision 2026-10-22 (0080): months reopen newest first. Only the latest closed month has Reopen; the others say which
+  // month to reopen before them, so nobody meets the database's refusal.
+  const latest = ctx.closed.reduce<string | null>((m, c) => (m === null || c.key > m ? c.key : m), null)
   return (
     <Panel title="Closed months" meta={through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null} className="max-w-[720px]">
       {/* Closed months only (an open month here contradicted the title); the month on screen says Open or Closed above. */}
@@ -285,9 +288,15 @@ function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: ClosedM
                 {c.note ? ` · ${c.note}` : ''}
               </span>
             </span>
-            <Button size="sm" onClick={() => onReopen(c)} aria-label={`Reopen ${monthKeyLabel(c.key)}`}>
-              Reopen
-            </Button>
+            {c.key === latest ? (
+              <Button size="sm" onClick={() => onReopen(c)} aria-label={`Reopen ${monthKeyLabel(c.key)}`}>
+                Reopen
+              </Button>
+            ) : (
+              <span className="max-w-[16ch] text-right text-sm text-fg-muted" data-testid={`reopen-order-${c.key}`}>
+                Reopen {latest ? monthKeyLabel(latest) : 'the later months'} first
+              </span>
+            )}
           </li>
         ))}
         {ctx.closed.length === 0 ? <li className="px-5 py-4 text-sm text-fg-2">None closed yet.</li> : null}
