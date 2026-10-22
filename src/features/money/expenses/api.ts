@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { businessDaysFromNow } from '@/lib/dates'
 import { orderRef } from '@/lib/refs'
+import { PlainError } from '@/lib/errors/plainError'
 import type { TableRow } from '@/features/dbTypes'
 import { lookupLabels, type Labels } from '@/features/money/lookupLabels'
 import {
@@ -196,8 +197,10 @@ export async function updateExpense(id: string, patch: ExpensePatch): Promise<vo
 export async function deleteExpense(id: string): Promise<void> {
   const db = requireSupabase()
   const files = unwrap(await db.from('attachments').select('path').eq('expense_id', id)) ?? []
-  const { error } = await db.from('expenses').delete().eq('id', id)
+  const { data, error } = await db.from('expenses').delete().eq('id', id).select('id')
   if (error) throw error
+  // Row security hides a row the person may not delete: no error, no row. That is not a delete.
+  if (!data || data.length === 0) throw new PlainError('Not deleted. You may not have permission, or the month is closed.')
   // The rows went with the expense (cascade); the stored photos are removed by the app.
   if (files.length) await db.storage.from(RECEIPT_BUCKET).remove(files.map(f => f.path))
 }
