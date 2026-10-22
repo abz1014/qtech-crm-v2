@@ -133,7 +133,9 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
         // A row that already has its cells (tab separated) is a table of its own: the header words above are stacked headings.
         if (stop(t) || t.includes('\t')) break
         // A sentence under a complete row is the text after the table ("Last date for submission: 3 November").
-        if (hasNeed() && (/[A-Za-z]:\s/.test(t) || t.split(' ').length >= 7)) break
+        // (Complete means its description too: with the description column last, a long description follows the quantity.)
+        const hasDesc = () => place(cells, kinds).out.some((v, x) => v && kinds[x] === 'desc')
+        if (hasNeed() && hasDesc() && (/[A-Za-z]:\s/.test(t) || t.split(' ').length >= 7)) break
         // With no serial column, empty cells at the end of a row ("4" / "NO" / "Panel meter" / "" under Part No) are not
         // written either: a cell that fits no column from here on but fits the first one (a quantity) starts the next row.
         if (!numbered && cells.length && kinds[0] !== 'desc' && kinds[0] !== 'text' && !PLACEHOLDER.test(t)) {

@@ -16,6 +16,7 @@ import { ENQUIRY_TEMPLATES_GEN14, ENQUIRY_TEMPLATES_GEN15, QUOTE_TEMPLATES_GEN14
 import { ENQUIRY_TEMPLATES_GEN16, ENQUIRY_TEMPLATES_GEN17, QUOTE_TEMPLATES_GEN16, QUOTE_TEMPLATES_GEN17 } from './gen16'
 import { ENQUIRY_TEMPLATES_GEN18, ENQUIRY_TEMPLATES_GEN19, QUOTE_TEMPLATES_GEN18, QUOTE_TEMPLATES_GEN19 } from './gen18'
 import { ENQUIRY_TEMPLATES_GEN20, ENQUIRY_TEMPLATES_GEN21, QUOTE_TEMPLATES_GEN20, QUOTE_TEMPLATES_GEN21 } from './gen20'
+import { ENQUIRY_TEMPLATES_GEN22, ENQUIRY_TEMPLATES_GEN23, QUOTE_TEMPLATES_GEN22, QUOTE_TEMPLATES_GEN23 } from './gen22'
 import { QUOTE_TEMPLATES_GEN0, type QuoteTemplate } from './quotes'
 
 export const ENQUIRY_TEMPLATES: Array<{ shape: string; make: EnquiryTemplate; weight: number; gen: number }> = [
@@ -41,6 +42,8 @@ export const ENQUIRY_TEMPLATES: Array<{ shape: string; make: EnquiryTemplate; we
   ...ENQUIRY_TEMPLATES_GEN19.map(t => ({ ...t, gen: 19 })),
   ...ENQUIRY_TEMPLATES_GEN20.map(t => ({ ...t, gen: 20 })),
   ...ENQUIRY_TEMPLATES_GEN21.map(t => ({ ...t, gen: 21 })),
+  ...ENQUIRY_TEMPLATES_GEN22.map(t => ({ ...t, gen: 22 })),
+  ...ENQUIRY_TEMPLATES_GEN23.map(t => ({ ...t, gen: 23 })),
 ]
 
 export const QUOTE_TEMPLATES: Array<{ shape: string; make: QuoteTemplate; weight: number; gen: number }> = [
@@ -66,4 +69,6 @@ export const QUOTE_TEMPLATES: Array<{ shape: string; make: QuoteTemplate; weight
   ...QUOTE_TEMPLATES_GEN19.map(t => ({ ...t, gen: 19 })),
   ...QUOTE_TEMPLATES_GEN20.map(t => ({ ...t, gen: 20 })),
   ...QUOTE_TEMPLATES_GEN21.map(t => ({ ...t, gen: 21 })),
+  ...QUOTE_TEMPLATES_GEN22.map(t => ({ ...t, gen: 22 })),
+  ...QUOTE_TEMPLATES_GEN23.map(t => ({ ...t, gen: 23 })),
 ]

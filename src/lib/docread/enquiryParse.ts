@@ -108,7 +108,7 @@ const INSTRUCTION =
 const COMPANY =
   /\b(?:ltd|limited|pvt|private|inc|llc|corp(?:oration)?|company|co\.|industries|mills|group|enterprises?|traders|associates|sons)\b/i
 const DESIGNATION =
-  /\b(?:engineer|engr\.?|manager|officer|executive|incharge|in-charge|director|assistant|supervisor|coordinator|buyer|purchaser|procurement|purchase|stores?|(?:store\s*)?keeper|storekeeper|clerk|foreman|department|dept\.?|section|ceo|gm|dgm|agm|senior|junior|deputy)\b/i
+  /\b(?:engineer|engr\.?|manager|officer|executive|incharge|in-charge|director|assistant|supervisor|coordinator|buyer|purchaser|procurement|purchase|stores?|(?:store\s*)?keeper|storekeeper|clerk|foreman|department|dept\.?|section|ceo|gm|dgm|agm|senior|junior|deputy|authori[sz]ed\s+signat\w*|signature)\b/i
 const ADDRESS =
   /\b(?:road|rd\.?|street|block|sector|phase|plot|floor|building|bldg|tower|plaza|town|colony|industrial\s+(?:area|estate|zone)|p\.?\s?o\.?\s?box|district|tehsil|karachi|lahore|islamabad|rawalpindi|faisalabad|multan|peshawar|sialkot|gujranwala|hyderabad|quetta|haripur|hattar|sheikhupura|kasur|pakistan|plant\s+site|head\s+office)\b/i
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
@@ -179,7 +179,7 @@ const tidy = (s: string) =>
     .trim()
 
 /** Urdu and English tails that are not part of the item ("... chahiye", "... bhi", "... urgently required"). */
-const TAIL = /[\s,-]+(?:(?:is|are)\s+)?(?:chahiye|chahiyen|chaiye|chahye|bhi|bhej\s*d[ei]+n|bhej\s*do|bhejo|bhejen|required|needed|urgently\s+required|urgent|asap)(?:\s+(?:hai|hain|urgent(?:ly)?|asap))?[\s.!]*$/i
+const TAIL = /[\s,-]+(?:(?:is|are)\s+)?(?:chahiye|chahiyen|chaiye|chahye|bhi|bhej\s*d[ei]+n|bhej\s*do|bhejo|bhejen|required|needed|urgently\s+required|urgent|asap|kitne\s+k[aie]\s+(?:hai|hain|hy|he|milega|milegi|denge)|kya\s+(?:rate|price|qeemat)\s+(?:hai|hy|he)|(?:rate|price)\s+kya\s+(?:hai|hy|he)|(?:rate|price)\s+(?:batao|bata\s*d[ei]+n|plz|pls|please))(?:\s+(?:hai|hain|urgent(?:ly)?|asap))?[\s.!?]*$/i
 const OPENER = /^(?:(?:aur|and|also|plus)\s+|(?:(?:can|could|would|will)\s+you\s+)?(?:please\s+|kindly\s+|pls\s+|plz\s+)?(?:send|share|give|provide|quote|arrange)\s+(?:me|us)\s+(?:your\s+|the\s+)?(?:best\s+|lowest\s+)?(?:prices?|rates?|quotation|quote|offer)\s+(?:for|of)\s+|(?:we|i)\s+(?:need|require|want|are\s+looking\s+for|would\s+like(?:\s+to\s+(?:buy|purchase|procure|order))?)\s+(?:to\s+(?:buy|purchase|procure|order)\s+)?)/i
 
 interface ReadItem {
@@ -267,7 +267,7 @@ function readItem(text: string): ReadItem | null {
         qty = toQty(dec[1] as string)
         unit = unitOf(dec[2])
         description = description.slice(0, dec.index)
-      } else if (dash && !/(?:^|\s)\d+(?:\.\d+)?$/.test(description.slice(0, dash.index))) {
+      } else if (dash && (dash[0].trimStart().startsWith(':') || !/(?:^|\s)\d+(?:\.\d+)?$/.test(description.slice(0, dash.index)))) {
         qty = toQty(dash[1] as string)
         description = description.slice(0, dash.index)
       }
@@ -427,7 +427,7 @@ function findRefs(text: string): RefHit[] {
 // ------------------------------------------------------------------------------------------------ lines
 
 const MARKER =
-  /^\s*(?:(?:item|ltem|tem)\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|[-•*·–®©°«»¢]\s+|\+\s+(?=[A-Za-z])|\[\d{1,3}\]\s*|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
+  /^\s*(?:(?:item|ltem|tem)\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|(?:sr|s\.?\s*no)\.?\s*#?\s*\d{1,3}\s*[:.)-]\s*|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|[-•*·–®©°«»¢]\s+|\+\s+(?=[A-Za-z])|\[\d{1,3}\]\s*|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
 
 /** A line that stops where it cannot end: the next line goes on with it ("..., Model" / "FX4U-48MT/ESS"). */
 /**

@@ -164,6 +164,8 @@ const HEADER_TERM = new RegExp(
       String.raw`s\.?\s*no\.?`,
       String.raw`s\.?\s*#`,
       'menge',
+      String.raw`(?:price|rate|cost)\s*\/\s*(?:unit|pc|pcs|piece|each|ea|no)`,
+      String.raw`unit\s*\/\s*price`,
       String.raw`qty\.?\s*(?:(?:in|on)\s*)?(?:stock|hand)`,
       String.raw`(?:stock|available|balance|on\s*hand)\s*qty\.?`,
       'anzahl',
