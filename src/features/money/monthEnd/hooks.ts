@@ -46,11 +46,11 @@ export const useGstMonths = (enabled = true) =>
 export const useTeamMonth = (month: string, enabled = true) =>
   useQuery({ queryKey: qk.money.monthEnd.team(month), queryFn: () => api.loadTeamMonth(month), enabled, ...live })
 
-/** Close one month, or every open month up to and including it (one request either way). */
+/** Close ONE month (months lock one at a time, oldest first: owner decision 2026-10-22). */
 export function useCloseMonth() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { month: string; through: boolean }) => api.closeMonth(v.month, v.through),
+    mutationFn: (v: { month: string }) => api.closeMonth(v.month),
     onSettled: (_d, _e, v) => invalidateAfter(client, 'month.close', { month: v.month }),
   })
 }

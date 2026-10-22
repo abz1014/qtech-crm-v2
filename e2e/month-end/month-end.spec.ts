@@ -27,6 +27,8 @@ const prevMonth = (back = 1) => {
 }
 const STMT = prevMonth(1)
 const OLDER = prevMonth(2)
+/** "2024-03-01" -> "March 2024", as the screen names a month. */
+const monthLabel = (start: string) => `${new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long' }).format(new Date(`${start}T00:00:00Z`))} ${start.slice(0, 4)}`
 
 const RENT = 'ca7e0000-0000-4000-8000-000000000002'
 const SUPPLIER = 'ca7e0000-0000-4000-8000-000000000011'
@@ -255,24 +257,45 @@ test.describe('month-end (M10)', () => {
 
   // ---- last: close, see the sentence, reopen ------------------------------------------------------------------
 
-  test('close is two taps, the lock holds with the exact sentence, reopen is two taps', async ({ page }) => {
+  test('months close one at a time, oldest first; close is two taps, the lock holds with the exact sentence, reopen is two taps', async ({ page }) => {
     await addExpense({ paid_on: OLDER.day(12), description: 'older month' })
     await addExpense({ description: 'last month' })
+    // Every open month with money in it before last month, oldest first (OLDER at least).
+    const shut = new Set((await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))).map(c => c.month))
+    const pnl = await must(rest<{ month: string }[]>('admin', 'v_month_pnl?select=month'))
+    const before = [...new Set(pnl.map(r => r.month))].filter(m => m < STMT.start && !shut.has(m)).sort()
+    expect(before).toContain(OLDER.start)
+    const oldest = monthLabel(before[0])
     await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
-    const closeBtn = page.getByRole('button', { name: new RegExp(`^Close (through )?${STMT.name}$`) })
+
+    // Owner decision 2026-10-22: one tap never closes more than one month. The button names the oldest open month and closes only it.
+    await expect(page.getByRole('button', { name: /^Close through/ })).toHaveCount(0)
+    const first = page.getByRole('button', { name: `Close ${oldest}`, exact: true })
+    await expect(first).toBeEnabled()
+    await first.click()
+    const firstDialog = page.getByRole('dialog', { name: `Close ${oldest}?` })
+    await expect(firstDialog).toContainText(`This closes ${oldest} only.`)
+    await firstDialog.getByRole('button', { name: `Close ${oldest}`, exact: true }).click()
+    await expect(firstDialog).toBeHidden()
+    const afterFirst = (await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))).map(c => c.month)
+    expect(afterFirst.filter(m => !shut.has(m))).toEqual([before[0]])
+
+    // The other older months one by one (the RPC), then last month on the page: the button (1) and the confirmation (2).
+    for (const m of before.slice(1)) await must(rest('admin', 'rpc/close_month', { method: 'POST', body: { p_month: m }, prefer: 'return=minimal' }))
+    await page.reload()
+    const closeBtn = page.getByRole('button', { name: `Close ${STMT.name}`, exact: true })
     await expect(closeBtn).toBeEnabled()
     await startCounting(page)
     await closeBtn.click()
     const dialog = page.getByRole('dialog', { name: `Close ${STMT.label}?` })
     await expect(dialog.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
     await review(page, 'm10-close-dialog-1440')
-    await dialog.getByRole('button', { name: new RegExp(`^Close (through )?${STMT.name}$`) }).click()
+    await dialog.getByRole('button', { name: `Close ${STMT.name}`, exact: true }).click()
     await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)
     expect(await mouse(page)).toBe(2)
     const closed = await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))
     expect(closed.map(c => c.month)).toContain(STMT.start)
     await review(page, 'm10-closed-1440')
-
     // the database's own sentence, word for word
     const refused = await rest<{ message: string; code: string }>('admin', 'expenses', {
       method: 'POST',
@@ -290,7 +313,7 @@ test.describe('month-end (M10)', () => {
     expect(await mouse(page)).toBe(2)
     const after = await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))
     expect(after.map(c => c.month)).not.toContain(STMT.start)
-    // leave the books as found
-    await rest('admin', 'rpc/reopen_month', { method: 'POST', body: { p_month: OLDER.start }, prefer: 'return=minimal' })
+    // leave the books as found (months reopen newest first, 0080)
+    for (const m of [...before].reverse()) await must(rest('admin', 'rpc/reopen_month', { method: 'POST', body: { p_month: m }, prefer: 'return=minimal' }))
   })
 })

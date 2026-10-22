@@ -89,7 +89,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   const m = await seedMargins()
   const ctx = await roleContext(browser, info, 'admin')
   const sentence = `${STMT.label} is closed. An admin can reopen it.`
-  const closeName = new RegExp(`^Close (through )?${STMT.name}$`)
+  const closeName = `Close ${STMT.name}`
 
   // ---- 1. Burst entry, keyboard only -------------------------------------------------------------------------------------------------
   await test.step('five small spends in a burst: 5 amounts + 6 keys, 0 mouse, one request', async () => {
@@ -180,6 +180,11 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   })
 
   // ---- 4 to 6. Close the month, try an edit, reopen --------------------------------------------------------------------------------------
+  // Months lock one at a time, oldest first (owner decision 2026-10-22): any older open month with money in it is closed first, one by
+  // one, so the button names last month (before the change, one "Close through" tap closed them all).
+  const shut = new Set((await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))).map(c => c.month))
+  const months = [...new Set((await must(rest<{ month: string }[]>('admin', 'v_month_pnl?select=month'))).map(r => r.month))]
+  for (const m of months.filter(x => x < STMT.start && !shut.has(x)).sort()) await must(rest('admin', 'rpc/close_month', { method: 'POST', body: { p_month: m }, prefer: 'return=minimal' }))
   const page = await openPage(ctx, `/money/month-end?month=${STMT.key}`)
 
   await test.step('the checklist knows the bank is ticked; closing the month is 2 taps', async () => {
@@ -187,13 +192,13 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     // nothing left to tick: a clear check is not listed, it is named on the "clear" line
     await expect(page.getByTestId('check-bank_unticked')).toHaveCount(0)
     await expect(page.getByTestId('checks-clear')).toContainText('Not matched to the bank statement')
-    const closeBtn = page.getByRole('button', { name: closeName })
+    const closeBtn = page.getByRole('button', { name: closeName, exact: true })
     await expect(closeBtn).toBeEnabled()
     await resetCount(page)
     await closeBtn.click()
     const d = page.getByRole('dialog', { name: `Close ${STMT.label}?` })
     await expect(d.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
-    await d.getByRole('button', { name: closeName }).click()
+    await d.getByRole('button', { name: closeName, exact: true }).click()
     await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)
     fe2('Close the month (checklist reviewed): the button, then the confirmation', (await readCount(page)).mouse, 2)
     const closed = await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))
