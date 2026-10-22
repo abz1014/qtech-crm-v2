@@ -152,9 +152,9 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
       ) : (
         <section aria-labelledby="exp-where" className="overflow-hidden rounded border bg-surface">
           <header className="flex min-h-[56px] flex-wrap items-center gap-3 border-b px-5 py-2">
-            <h3 id="exp-where" className="text-lg font-semibold">
+            <h2 id="exp-where" className="text-lg font-semibold">
               Where the money went
-            </h3>
+            </h2>
             <span className="flex-1" />
             <SegmentedControl
               aria-label="Show by"
@@ -467,9 +467,9 @@ function Drill({ c, label, onClose }: { c: CategoryLine; label: string; onClose:
   return (
     <section ref={ref} aria-label={`${c.name}, ${label}`} className="grid gap-4 border-t-2 border-brand-green bg-canvas px-5 py-4" data-testid="expense-report-drill">
       <header className="flex flex-wrap items-center gap-3">
-        <h4 className="text-lg font-semibold">
+        <h3 className="text-lg font-semibold">
           {c.name} <span className="num font-normal text-fg-2">· PKR {rupees(c.amount)}</span>
-        </h4>
+        </h3>
         <span className="flex-1" />
         <Button
           size="sm"
@@ -485,7 +485,7 @@ function Drill({ c, label, onClose }: { c: CategoryLine; label: string; onClose:
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         {hasDetails ? (
           <div className="grid content-start gap-1">
-            <h5 className="text-sm font-medium text-fg-2">By detail</h5>
+            <h4 className="text-sm font-medium text-fg-2">By detail</h4>
             <ul className="grid">
               {c.details.map(d => (
                 <li key={d.key} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-3 border-b border-line py-2 text-base last:border-b-0">
@@ -498,7 +498,7 @@ function Drill({ c, label, onClose }: { c: CategoryLine; label: string; onClose:
           </div>
         ) : null}
         <div className={cn('grid content-start gap-1', !hasDetails && 'lg:col-span-2')}>
-          <h5 className="text-sm font-medium text-fg-2">{plural(c.count, 'entry', 'entries')}</h5>
+          <h4 className="text-sm font-medium text-fg-2">{plural(c.count, 'entry', 'entries')}</h4>
           <ul className="grid">
             {c.entries.map(e => (
               <EntryLine key={e.id} e={e} />
@@ -566,9 +566,9 @@ function TopTen({ v }: { v: ExpenseReportView }) {
   return (
     <section aria-labelledby="exp-top" className="overflow-hidden rounded border bg-surface" data-testid="expense-report-top">
       <header className="flex min-h-[56px] items-center border-b px-5">
-        <h3 id="exp-top" className="text-lg font-semibold">
+        <h2 id="exp-top" className="text-lg font-semibold">
           {v.top.length === 10 ? 'The 10 biggest expenses' : `The ${plural(v.top.length, 'expense')}`}
-        </h3>
+        </h2>
       </header>
       <ol className="grid px-5 py-1">
         {v.top.map(e => (

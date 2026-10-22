@@ -105,7 +105,7 @@ for (const role of ['admin', 'sales'] as const) {
     test('is usable at 375 px', async ({ page }) => {
       await seed()
       await page.setViewportSize({ width: 375, height: 812 })
-      await openAs(page, role, '/money/reports')
+      await openAs(page, role, '/money/reports/enquiries')
       await openAll(page)
       await expect(page.getByRole('table', { name: 'Customers who came back' })).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

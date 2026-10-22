@@ -2,7 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { orderRef } from '@/lib/refs'
 import { lookupLabels } from '@/features/money/lookupLabels'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
-import type { GstRow, OrderAmounts } from '@/features/money/invoices/model'
+import { lineMoneyOf, type GstRow, type OrderAmounts } from '@/features/money/invoices/model'
 
 /*
  * Invoices and the GST register (M01): every database call for this area. Admin and sales may read and write invoices
@@ -104,7 +104,7 @@ export async function orderForInvoice(orderId: string): Promise<OrderForInvoice 
   const [company, totals, items, invoices] = await Promise.all([
     db.from('companies').select('name').eq('id', order.company_id).maybeSingle(),
     db.from('v_order_items_total').select('net, gst').eq('order_id', orderId).maybeSingle(),
-    db.from('order_items').select('gst_rate').eq('order_id', orderId),
+    db.from('order_items').select('qty, unit_price_net, gst_rate').eq('order_id', orderId),
     db.from('invoices').select('net_amount, gst_amount, invoice_date').eq('order_id', orderId),
   ])
   const lines = unwrap(items) ?? []
@@ -124,6 +124,7 @@ export async function orderForInvoice(orderId: string): Promise<OrderForInvoice 
       invoicedGst: inv.reduce((s, i) => s + num(i.gst_amount), 0),
       earliestInvoiceDate: inv.reduce<string | null>((m, i) => (i.invoice_date && (m === null || i.invoice_date < m) ? i.invoice_date : m), null),
       paymentTermsDays: order.payment_terms_days === null ? null : Number(order.payment_terms_days),
+      lines: lines.map(l => lineMoneyOf(l.qty, l.unit_price_net, l.gst_rate)),
     },
   }
 }

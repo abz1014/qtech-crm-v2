@@ -464,6 +464,8 @@ export interface OrderMoney {
   grossTarget: number
   settled: number
   balance: number
+  /** Received beyond the gross (v_order_money / order_receivables overpaid_by); 0 when not overpaid (HW-50). */
+  overpaidBy?: number
   paymentState: string
   dueOn: string | null
   /** Admin only: the rest of v_order_money. Null for sales, who read order_receivables() and so get a balance and nothing else. */
@@ -481,12 +483,13 @@ const num = (v: unknown): number | null => (v === null || v === undefined ? null
 export async function getOrderMoney(orderId: string, role: 'admin' | 'sales'): Promise<OrderMoney | null> {
   const db = requireSupabase()
   if (role === 'admin') {
-    const m = unwrap(await db.from('v_order_money').select('order_id, gross_target, settled, receivable, payment_state, due_on, net_sale, actual_cost, expected_cost, costs_state, margin, margin_state').eq('order_id', orderId).maybeSingle()) as unknown as Record<string, unknown> | null
+    const m = unwrap(await db.from('v_order_money').select('order_id, gross_target, settled, receivable, overpaid_by, payment_state, due_on, net_sale, actual_cost, expected_cost, costs_state, margin, margin_state').eq('order_id', orderId).maybeSingle()) as unknown as Record<string, unknown> | null
     if (!m) return null
     return {
       grossTarget: num(m.gross_target) ?? 0,
       settled: num(m.settled) ?? 0,
       balance: num(m.receivable) ?? 0,
+      overpaidBy: num(m.overpaid_by) ?? 0,
       paymentState: (m.payment_state as string | null) ?? 'unpaid',
       dueOn: (m.due_on as string | null) ?? null,
       netSale: num(m.net_sale),
@@ -504,6 +507,7 @@ export async function getOrderMoney(orderId: string, role: 'admin' | 'sales'): P
     grossTarget: num(r.gross_target) ?? 0,
     settled: num(r.settled) ?? 0,
     balance: num(r.balance) ?? 0,
+    overpaidBy: num(r.overpaid_by) ?? 0,
     paymentState: r.payment_state ?? 'unpaid',
     dueOn: r.due_on,
     netSale: null,
