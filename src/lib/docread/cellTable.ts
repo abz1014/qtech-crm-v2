@@ -199,6 +199,9 @@ export function alignSpacedRows(lines: string[]): string[] {
           best = i
         }
       })
+      // A second piece in a column already filled, with an empty column after it, is that column's: a right-aligned
+      // "5 Each" wider than its "Qty" heading starts under the description.
+      if (cells[best] && best + 1 < h.length && !cells[best + 1] && x.a > (h[best + 1] as { a: number }).a - x.t.length) best++
       cells[best] = cells[best] ? `${cells[best]} ${x.t}` : x.t
     }
     return cells.join('\t')

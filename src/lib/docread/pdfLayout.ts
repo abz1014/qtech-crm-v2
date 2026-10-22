@@ -393,7 +393,9 @@ const joinPart =(a: string, b: string) => (a === '' ? b : /[-/]$/.test(a) ? a + 
 function buildRows(lines: RawLine[], cols: Column[]): string[][] {
   // "Item" over 1, 2, 3 beside a Description column is the row-number column.
   const hasDescription = cols.some(c => /desc|particular|specification|product|short\s*text|goods/i.test(c.label))
-  const kinds = cols.map(c => (hasDescription && /^(?:item|itm)\.?(?:\s*(?:no\.?|#))?$/i.test(c.label) ? 'number' : columnKind(c.label)))
+  // (Not when another column numbers the rows: "Item No | Item | Specification" has the item's name under Item.)
+  const otherNumber = cols.some(c => /^(?:item\s*(?:no\.?|#)|s\.?\s*no|sr|sl)\b/i.test(c.label))
+  const kinds = cols.map(c => (hasDescription && /^(?:item|itm)\.?(?:\s*(?:no\.?|#))?$/i.test(c.label) && !(otherNumber && /^item$/i.test(c.label)) ? 'number' : columnKind(c.label)))
   // A number starts a row only in a column made for numbers (S.No, Qty, Price, Date); "186" under Part No is the end of a
   // part number that wrapped ("SN-69M-" / "186").
   const numberKinds = new Set<ColumnKind>(['number', 'qty', 'money', 'date'])

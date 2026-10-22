@@ -202,6 +202,8 @@ function readItem(text: string): ReadItem | null {
   let t = t0
     .replace(asked, '')
     .replace(/\b([Nn])o's\b/g, '$1os')
+    // "two nos", "twelve pcs": a small count in words.
+    .replace(new RegExp(String.raw`\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?=(?:${UNIT_SRC})\.?(?![A-Za-z]))`, 'gi'), (_, w: string) => `${NUMBER_WORDS.indexOf(w.toLowerCase()) + 1} `)
     .replace(OPENER, '')
     .replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
   let qty: number | null = null
@@ -448,6 +450,10 @@ function labelledRow(line: string): string | null {
   return `${desc}${extra ? ` ${extra}` : ''} - ${qty}${unit ? ` ${unit}` : ''}`
 }
 
+const NUMBER_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+/** "Sorry, item 3 qty is 8 pcs, not 9": a correction to an item already listed. */
+const CORRECTION = /^(?:sorry|correction|pardon|my\s+mistake)?[\s,:-]*(?:item|sr\.?|no\.?|#)\s*(\d{1,3})\s*(?:qty|quantity)?\s*(?:is|=|:|should\s+be)\s*(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z.']+)?\s*(?:,?\s*not\s+\d+.*)?$/i
+
 /** A body sentence that points at the subject line for the item. */
 const SUBJECT_ASK = /\b(?:in|as\s+per|per|mentioned\s+in|given\s+in|stated\s+in)\s+(?:the\s+)?subject\b|\bsubject(?:ed)?\s+items?\b/i
 
@@ -502,7 +508,9 @@ function tableHeader(cells: string[]): TableCols | null {
   if (hits < 2 || hits < Math.ceil(filled.length * 0.6)) return null
   const idx = (re: RegExp) => cells.findIndex(c => re.test(c) || re.test(c.replace(/\s+/g, '')))
   let desc = cells.map((c, i) => (/desc|particular|specification|product|item\s*name|short\s*text|item\s*text|goods|special\s*instruction/i.test(c) ? i : -1)).filter(i => i >= 0)
-  if (desc.length === 0) desc = cells.map((c, i) => (/^item$/i.test(c) ? i : -1)).filter(i => i >= 0)
+  // A bare "Item" is the description when the rows are numbered in a column of their own ("Item No | Item | Specification").
+  const numbered = cells.some(c => /^(?:item\s*(?:no\.?|#)|s\.?\s*no|sr|sl)\b/i.test(c))
+  if (desc.length === 0 || numbered) desc = [...desc, ...cells.map((c, i) => (/^item$/i.test(c) ? i : -1)).filter(i => i >= 0)].sort((a, b) => a - b)
   // A heading the picture reader garbled ("C=" for "Description" in "Description of Goods") just before the description
   // column: its column holds the first words of each description.
   if (desc.length && desc[0]! > 0) {
@@ -680,6 +688,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   let blank = false
   /** The email's subject, and whether the body asks for the item it names ("the item in the subject"). */
   let subject: string | null = null
+  const corrections: Array<{ n: number; qty: number; unit: string | null }> = []
   let subjectAsked = false
   /** Inside a chat message we sent ourselves (its sender is our own name): not the customer's words. */
   let ownMessage = false
@@ -1128,6 +1137,13 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         continue
       }
     }
+    const fix = CORRECTION.exec(t.replace(MARKER, ''))
+    if (fix && drafts.length) {
+      corrections.push({ n: Number(fix[1]), qty: toQty(fix[2] as string), unit: fix[3] && new RegExp(String.raw`^(?:${UNIT_SRC})\.?$`, 'i').test(fix[3]) ? unitOf(fix[3]) : null })
+      close()
+      skip(t, 'instruction')
+      continue
+    }
     // "Please quote for the item in the subject": the item is the subject line's.
     if (SUBJECT_ASK.test(work) && !/\d/.test(work)) {
       subjectAsked = true
@@ -1292,6 +1308,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     if (!description) continue
     const qty = r && r.qty !== null ? { qty: r.qty, unit: r.unit } : d.qty
     items.push({ description, qty: qty?.qty ?? 1, unit: (qty ? writtenUnit(d) : null) ?? qty?.unit ?? null })
+  }
+  // "Sorry, item 3 qty is 8 pcs, not 9": the later word counts.
+  for (const c of corrections) {
+    const it = items[c.n - 1]
+    if (it) {
+      it.qty = c.qty
+      if (c.unit) it.unit = c.unit
+    }
   }
   if (subjectAsked && subject && items.length === 0) {
     const named = subject

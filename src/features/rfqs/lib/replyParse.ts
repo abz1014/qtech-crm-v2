@@ -580,6 +580,8 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
 
   // "Relay 12VDC, 2 CO, Model X: Sorry, not available": a regret with only a bare number in it quotes nothing.
   if (f.prices.length && f.prices.every(p => !p.anchored) && REGRET_RE.test(w)) f.prices = []
+  // "Offer 6816 - prices in USD": a line that declares the currency, with only a bare number (the offer's number) in it.
+  if (f.prices.length && f.prices.every(p => !p.anchored) && DECLARE_RE.test(w) && !/\t|\|/.test(w)) f.prices = []
   const priced = f.prices.length > 0
   if (!priced) {
     const d = DECLARE_RE.exec(w)
