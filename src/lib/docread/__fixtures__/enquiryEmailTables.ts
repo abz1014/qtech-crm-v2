@@ -40,7 +40,7 @@ const ROWS: Array<[string, number, string]> = [
 ]
 
 const PARTS: Array<[string, number, string]> = [
-  ['MEMMORY CARD 6ES7954-8LM31-0AA0-01', 6, 'EA'],
+  ['MEMMORY CARD 6ES7960-8LM31-0AA0-01', 6, 'EA'],
   ['DIGITAL INPUT MODULE 6ES7521-1BL00-0AB0-01', 2, 'EA'],
   ['FRONT CONNECTOR 6ES7592-1AM00-0XB0-01', 4, 'EA'],
   ['CABLE PROFIBUS 6XV1830-0EH10', 100, 'MTR'],
