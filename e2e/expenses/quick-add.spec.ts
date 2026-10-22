@@ -158,9 +158,11 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     }
     const before = await must(rest<{ expected_pkr: number }[]>('admin', 'rpc/cash_in_hand', { method: 'POST', body: {} }))
     const start = Number(before[0].expected_pkr)
+    // enough drawn that the count below is a positive number even if other suites on this database spent cash first
+    const draw = Math.max(5000, Math.ceil(2500 - start))
     await line.getByRole('button', { name: 'Cash drawn' }).click()
     const t = page.getByRole('dialog', { name: 'Cash drawn from the bank' })
-    await t.getByRole('textbox', { name: 'Amount drawn, PKR' }).fill('5000')
+    await t.getByRole('textbox', { name: 'Amount drawn, PKR' }).fill(String(draw))
     await t.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(t).toBeHidden()
     // a cash expense through quick add
@@ -172,7 +174,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
     // to the paisa: other suites on this database leave fractional cash, and float noise (18000.300000000004) is refused by the box
     const round2 = (n: number) => Math.round(n * 100) / 100
-    const expected = round2(start + 5000 - 1200)
+    const expected = round2(start + draw - 1200)
     const counted = round2(expected - 300)
     await expect(page.getByTestId('cash-expected')).toContainText(expected.toLocaleString('en-US'))
     // count 300 less than the books expect

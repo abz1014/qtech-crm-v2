@@ -166,7 +166,7 @@ describe('Add expense dialog (M03)', () => {
 
   describe('Delete expense', () => {
     const expense: ListedExpense = {
-      id: 'e1', paidOn: '2026-11-03', amount: 1111, inputTax: 0, categoryId: 'c-rent', paidVia: 'bank', note: null,
+      id: 'e1', paidOn: '2026-11-03', amount: 1111, inputTax: 0, categoryId: 'c-rent', paidVia: 'bank', note: null, period: null,
       orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null,
     }
     const deletes = (db: ReturnType<typeof installFakeDb>) => db.calls.filter(c => c.target === 'expenses' && c.verb === 'delete')
