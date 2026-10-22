@@ -161,6 +161,9 @@ describe('fixOcrWord: letters and digits the engine swaps', () => {
     ['Mode!', 'Model'],
     ['19-OCT-26', '19-OCT-26'],
     ['LCID33G1', 'LC1D33G1'],
+    ['Picces', 'Pieces'],
+    ['MIR', 'MTR'],
+    ['Pieces', 'Pieces'],
   ])('%s -> %s', (from, to) => {
     expect(fixOcrWord(from)).toBe(to)
   })

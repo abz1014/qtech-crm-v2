@@ -1293,10 +1293,13 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   // An ERP form writes every quantity with three decimals ("2.000"): one read from a picture without its point ("2000",
   // "12500") is the same form's 2.000 and 12.500.
   const raws = drafts.map(d => d.fromTable?.rawQty ?? '').filter(Boolean)
-  if (raws.length >= 2 && raws.filter(r => /^\d[\d,]*\.\d{3}$/.test(r)).length >= 0.5 * raws.length) {
+  // (Half of them with the point, or at least one with it and every other one in the 4-digit shape the point's loss leaves.)
+  const pointed = raws.filter(r => /^\d[\d,]*\.\d{3}$/.test(r)).length
+  if (raws.length >= 2 && (pointed >= 0.5 * raws.length || (pointed >= 1 && raws.every(r => /^\d[\d,]*\.\d{3}$/.test(r) || /^\d{1,3},?\d{3}$/.test(r))))) {
     for (const d of drafts) {
       const r = d.fromTable?.rawQty
-      if (d.fromTable && r && /^\d{4,}$/.test(r)) d.fromTable.qty = Number(r) / 1000
+      // ("12,500": the point read as a comma.)
+      if (d.fromTable && r && (/^\d{4,}$/.test(r) || /^\d{1,3},\d{3}$/.test(r))) d.fromTable.qty = Number(r.replace(',', '')) / 1000
     }
   }
   const items: ParsedItem[] = []

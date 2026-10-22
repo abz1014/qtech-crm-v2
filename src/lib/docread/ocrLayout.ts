@@ -86,6 +86,9 @@ export function fixOcrWord(text: string): string {
   t = t.replace(/^(DN|PN|NH)([0-9OSs]{2,4})(?=$|[^A-Za-z0-9])/, (_, a: string, b: string) => a + b.replace(/[Oo]/g, '0').replace(/[Ss]/g, '5'))
   t = t.replace(/^(?:S5|5S|\$5|\$S|55)(3\d\d)/, 'SS$1')
   if (/^Mode[!|1l]$/.test(t)) t = 'Model'
+  // Unit words with one letter misread: "Picces", "Pleces", "MIR", "Nas".
+  const unit = /^(P[il1][ec]c[ec]s|P[il1]eces|Pi[ec]ccs)$/.test(t) ? 'Pieces' : /^(?:P[il1][ec]c[ec]s|P[il1]eces)$/i.test(t) ? 'pieces' : /^M[I1l]R(S?)$/.test(t) ? `MTR${t.endsWith('S') ? 'S' : ''}` : null
+  if (unit) t = unit
   // A date with the month in letters ("19-OCT-26", "0CT" read for OCT): the month, not a code.
   t = t.replace(/^(\d{1,2}[-./]?)0(CT)([-./]?\d{2,4}[.,]?)$/i, '$1O$2$3')
   const date = /^\d{1,2}[-./]?(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[-./]?\d{2,4}[.,]?$/i.test(t)
