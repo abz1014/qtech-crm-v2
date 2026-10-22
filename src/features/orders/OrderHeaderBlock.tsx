@@ -24,7 +24,6 @@ import { StickyActionBar } from '@/ui/StickyActionBar'
 import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
-import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { useInFlight } from '@/lib/useInFlight'
@@ -43,7 +42,7 @@ import { cancellationMessage, sentPoSentence } from '@/features/purchaseOrders/l
 import { copyToClipboard } from '@/lib/clipboard'
 import { COMPANY_NAME } from '@/features/rfqs/lib/chaseCommon'
 import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
-import { lazyShown } from '@/lib/lazyDialog'
+import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
 const CommissioningEditDialog = lazyShown(() => import('@/features/orders/CommissioningPanel').then(m => m.CommissioningEditDialog))
@@ -51,6 +50,8 @@ const IssuePoDialog = lazyShown(() => import('@/features/purchaseOrders/IssuePoD
 const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDialog').then(m => m.GoodsChaseDialog))
 const AddLegDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLegDialog))
 const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog').then(m => m.NewOrderDialog))
+// Record payment from the More menu: its form library (react-hook-form) is not on the order page's first download.
+const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
  * The top of the order page (O03; g2-order-detail.html), reworked by the UX audit of 2026-10-19 (screens.md 8): who it is for, then ONE
