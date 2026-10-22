@@ -22,6 +22,7 @@
 import { businessToday } from '@/lib/dates'
 import { normaliseUnit, parsePaste, type ParsedItem, type ParseResult } from '@/features/rfqs/lib/parseItems'
 import { alignSpacedRows, rebuildCellTables } from './cellTable'
+import { fixOcrWord } from './ocrLayout'
 import { isHeaderCell } from './pdfLayout'
 
 export type EnquiryLineKind = 'item' | 'joined' | 'skipped'
@@ -467,7 +468,14 @@ const DANGLING =/(?:[,/&(:-]|\b(?:with|and|for|of|model|model\s*no\.?|type|qty\.
 
 /** Lines of one item put together: a word broken at its dash ("g5zk-" / "051") is joined without a space. */
 function joinWrapped(texts: string[]): string {
-  return texts.reduce((a, b) => (a === '' ? b : /[A-Za-z0-9]-$/.test(a) && /^[A-Za-z0-9]/.test(b) ? a + b : `${a} ${b}`), '')
+  return texts.reduce((a, b) => {
+    if (a === '' || !(/[A-Za-z0-9]-$/.test(a) && /^[A-Za-z0-9]/.test(b))) return a === '' ? b : `${a} ${b}`
+    // The part number whole again ("6ES7853-8WM79-" / "OETO"): an O at its end is a 0, as on one line.
+    const head = a.slice(0, a.lastIndexOf(' ') + 1)
+    const sp = b.indexOf(' ')
+    const code = a.slice(head.length) + (sp < 0 ? b : b.slice(0, sp))
+    return head + fixOcrWord(code) + (sp < 0 ? '' : b.slice(sp))
+  }, '')
 }
 
 /** A label line that belongs to the item above ("Make: Siemens", "Qty: 2 Nos", "Description: ..."). */
@@ -737,6 +745,15 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   }
   rebuildCellTables(src, t => SIGN_OFF.test(t) || DISCLAIMER.test(t) || findDue(t, today) !== null)
 
+  // A screenshot of a mail app shows the subject as the first line, with no "Subject:" ("Enquiry 1000083843 for maintenance
+  // spares"): its number is the reference, as on a Subject: line.
+  const second = src[1]?.t.trim() ?? ''
+  const firstLine = `${src[0]?.t.trim() ?? ''}${/^\S{4,}$/.test(second) && /\d/.test(second) && !/@/.test(second) ? ` ${second}` : ''}`
+  const firstLineRef =
+    firstLine && !src.some(x => /^subject\s*:/i.test(x.t)) && /^(?:(?:re|fw|fwd)\s*:\s*)*(?:rfq|enquiry|inquiry|request\s+for\s+quotation|quotation\s+request)\b/i.test(firstLine) && !findRefs(firstLine).length
+      ? subjectRef(firstLine)
+      : null
+
   // A closing block of name, title, phone, address and email with no sign-off word is a signature too: a paragraph that has
   // a contact line, no quantity and no product words or model codes.
   const sigLines = new Set<number>()
@@ -801,6 +818,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const lines: EnquiryLine[] = []
   const drafts: Draft[] = []
   const refs: Array<RefHit & { line: string }> = []
+  if (firstLineRef) refs.push({ ...firstLineRef, line: firstLine })
+  else if (/^(?:rfq|enquiry|inquiry|request\s+for\s+quotation|quotation\s+request)\b/i.test(firstLine) && !src.some(x => /^subject\s*:/i.test(x.t))) for (const r of findRefs(firstLine)) refs.push({ ...r, line: firstLine })
   let due: { iso: string; text: string } | null = null
   const emails: Array<{ e: string; rank: number }> = []
   const phones: string[] = []
@@ -818,7 +837,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     const glue = hyphenated.has(d) ? '-' : ' '
     hyphenated.delete(d)
     if (/[A-Za-z0-9]-\s*$/.test(t)) hyphenated.add(d)
-    if (more && it.description.length < MAX_DESCRIPTION) it.description = tidy(`${it.description}${glue}${more}`).slice(0, MAX_DESCRIPTION)
+    if (more && it.description.length < MAX_DESCRIPTION) {
+      // The part number whole again: an O at its end is a 0, as when it was on one line ("8WM79-" / "OETO").
+      const joined = glue === '-' ? joinWrapped([`${it.description}-`, more]) : `${it.description} ${more}`
+      it.description = tidy(joined).slice(0, MAX_DESCRIPTION)
+    }
     lines.push({ text: t, kind: 'joined', reason: null, marker: null })
   }
   const hyphenated = new Set<Draft>()
@@ -939,8 +962,12 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       if (/^subject\s*:/i.test(t)) {
         if (subject === null) subject = t.replace(/^subject\s*:\s*/i, '')
         noteFacts(t)
-        const sr = findRefs(t).length ? null : subjectRef(t)
-        if (sr) refs.push({ ...sr, line: t })
+        // A subject that wrapped in a narrow window: its number on the next line ("Request for Quotation" / "KTM-RFQ-1334").
+        const next = src[k + 1]?.t.trim() ?? ''
+        const whole = /^\S{4,}$/.test(next) && /\d/.test(next) && !/@/.test(next) ? `${t} ${next}` : t
+        const sr = findRefs(whole).length ? null : subjectRef(whole)
+        if (sr) refs.push({ ...sr, line: whole })
+        else if (whole !== t) for (const r of findRefs(whole)) refs.push({ ...r, line: whole })
       }
       skip(t, 'header')
       continue
@@ -1075,6 +1102,32 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         drafts.push(row)
         lines.push({ text: t, kind: 'item', reason: null, marker: null })
         continue
+      }
+      if (row && !cells && row.fromTable) {
+        const ft = row.fromTable
+        // A row whose quantity and unit a picture lost to lines of their own ("BALL VALVE BRASS" / "i" / "PC"): the unit
+        // still goes with it, and a lone "i" or "l" is the 1 it was.
+        if (UNIT_CELL.test(t.trim()) && !/\d/.test(t)) {
+          if (!ft.unit) ft.unit = unitOf(t.trim())
+          lines.push({ text: t, kind: 'joined', reason: null, marker: null })
+          continue
+        }
+        if (/^[iIl|]$/.test(t.trim())) {
+          lines.push({ text: t, kind: 'joined', reason: null, marker: null })
+          continue
+        }
+        // A line that names a product of its own under a row that already has its product and quantity is the next row,
+        // whose quantity the picture lost ("PRESSURE GAUGE 0-10 BAR 63MM DIAL ..." under "SAFETY RELAY ... | 1 | EA").
+        const head = t.trim().split(/\s+/).slice(0, 2).join(' ')
+        // So is a line that ends in the same line code as the row above ("... -01").
+        const lineCode = /\s?-\d{2}$/.test(ft.description) && /\s?-\d{2}$/.test(t.trim()) && t.trim().split(/\s+/).length >= 3
+        const ownProduct = PRODUCT.test(head) && t.trim().split(/\s+/).length >= 3 && PRODUCT.test(ft.description)
+        if (/^[A-Z]/.test(t.trim()) && (ownProduct || lineCode) && ft.qty !== null && continuesRow(t)) {
+          row = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: { description: tidy(t), qty: 1, unit: null } }
+          drafts.push(row)
+          lines.push({ text: t, kind: 'item', reason: null, marker: null })
+          continue
+        }
       }
       if (row && !/^(?:comments?|remarks?|note)\s*:/i.test(t) && !SECTION_ROW.test(t.trim()) && continuesRow(t)) {
         extend(row, cells ? cells.filter(Boolean).join(' ') : t)

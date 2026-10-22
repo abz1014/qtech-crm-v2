@@ -116,7 +116,11 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
     page.evaluate(({ name, args }) => (window as unknown as { __docread: Record<string, (...a: unknown[]) => unknown> }).__docread[name]!(...args), { name, args }) as Promise<Awaited<ReturnType<Docread[K]>>>
 
   const only = process.env.CORPUS_IDS ? new Set(process.env.CORPUS_IDS.split(',')) : null
-  const cases: CorpusCase[] = RUN.flatMap(b => batch(b)).filter(c => (c.medium === 'image' || c.medium === 'scan') && (!only || only.has(c.id)))
+  // CORPUS_SHAPES=outlook_table: the dev cases of those shapes only (to work on one shape).
+  const shapes = process.env.CORPUS_SHAPES ? new Set(process.env.CORPUS_SHAPES.split(',')) : null
+  const cases: CorpusCase[] = RUN.flatMap(b => batch(b)).filter(
+    c => (c.medium === 'image' || c.medium === 'scan') && (!only || only.has(c.id)) && (!shapes || (shapes.has(c.shape) && c.split === 'dev')),
+  )
   const save = process.env.CORPUS_SAVE
   const scores: Scored[] = []
   const texts: Record<string, string> = {}
