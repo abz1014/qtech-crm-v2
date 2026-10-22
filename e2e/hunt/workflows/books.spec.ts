@@ -1198,7 +1198,7 @@ test("HW-18: Targets: typing 'abc' + Enter in a cell that holds a target removes
     await settle(page)
     await sleep(1500)
     const left = await db.rows(`targets?user_id=eq.${USER.engineer}&year=eq.${Y1}&quarter=eq.1&select=id`)
-    test.fail(true, 'HW-18: NumberInput turns text into null and null + Enter removes the target (TargetsPage.tsx CellEditor commit)')
+    // Fixed on fix/hunt-edges (HE-12): only an emptied cell removes a target; unreadable text is refused in place (targetsModel cellIntent).
     expect(left, 'the target is still there after typing text').toHaveLength(1)
   } finally {
     await db.del(`targets?user_id=eq.${USER.engineer}&year=eq.${Y1}`).catch(() => undefined)
