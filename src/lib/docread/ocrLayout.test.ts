@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanWord, deskew, isChromeLine, layoutOcr, pageConfidence, unwrapLines, type OcrLine, type OcrWord } from './ocrLayout'
+import { cleanWord, deskew, fixOcrWord, isChromeLine, layoutOcr, pageConfidence, unwrapLines, type OcrLine, type OcrWord } from './ocrLayout'
 import { linesToText } from './pdfLayout'
 
 // Word boxes as an OCR engine gives them, in pixels: letters 30 px tall, about 16 px per character, a space about 9 px.
@@ -140,5 +140,32 @@ describe('pageConfidence and isChromeLine', () => {
     for (const t of ['9:41', '10:42 am', '4:05 pm VV', '4G 87%', 'LTE 56%', 'online', 'last seen today at 10:02', 'Type a message', 'Today'])
       expect(isChromeLine(t), t).toBe(true)
     for (const t of ['Valve 2 nos', 'Need by 10:30 tomorrow', '87% humidity sensor']) expect(isChromeLine(t), t).toBe(false)
+  })
+})
+
+describe('fixOcrWord: letters and digits the engine swaps', () => {
+  it.each([
+    ['INO+INC', '1NO+1NC'],
+    ['PLUNGERTYPE,INO+INC', 'PLUNGERTYPE,1NO+1NC'],
+    ['TNO+1NC', '1NO+1NC'],
+    ['141/0,24VDC', '14I/O,24VDC'],
+    ['PO98A8460', 'P098A8460'],
+    ['6ES7853-8WM79-OETO', '6ES7853-8WM79-0ET0'],
+    ['Lid', 'Ltd'],
+    ['INCH', 'INCH'],
+    ['24VDC', '24VDC'],
+    ['Pressure', 'Pressure'],
+    ['QUO-2026725', 'QUO-2026725'],
+    ['86794-RFQ-OC', '86794-RFQ-OC'],
+    ['$5304', 'SS304'],
+    ['Mode!', 'Model'],
+    ['19-OCT-26', '19-OCT-26'],
+    ['LCID33G1', 'LC1D33G1'],
+  ])('%s -> %s', (from, to) => {
+    expect(fixOcrWord(from)).toBe(to)
+  })
+
+  it('keeps a well-read word the engine gave no confidence, between sure words', () => {
+    expect(text([line(100, 40, ['10', { t: 'VALVE,BALL;FLANGED', conf: 0 }, 'MODEL', 'FX4U-16MR'])])).toBe('10 VALVE,BALL;FLANGED MODEL FX4U-16MR')
   })
 })

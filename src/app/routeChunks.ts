@@ -79,7 +79,7 @@ export function chunksForPath(pathname: string): ChunkKey[] {
         return key ? ['money', key] : ['money']
       }
       if (n === 3 && sub === 'month-end') return ['money', third === 'bank' ? 'moneyBank' : 'moneyReportPages']
-      if (n === 3 && sub === 'reports') return ['money', third === 'in-out' ? 'moneyInOut' : 'moneyReportPages']
+      if (n === 3 && sub === 'reports') return ['money', third === 'in-out' ? 'moneyInOut' : third === 'enquiries' ? 'moneyReports' : 'moneyReportPages']
       return ['money']
     default:
       return []

@@ -46,6 +46,8 @@ export interface CompanyProfile {
 
 export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'default_payment_terms_days', 'updated_at'].join(', ')
 
+/** 1234567-8, 12345678, 1234567, 35202-1234567-1, 3520212345671. */
+export const NTN_RE = /^(?:\d{7}(?:-?\d)?|\d{5}-?\d{7}-?\d)$/
 
 /** Form values from a row: empty text instead of null, so inputs stay controlled. */
 export function toFormValues(p: CompanyProfile): ProfileValues {
@@ -75,6 +77,27 @@ export function missingForPdf(p: Pick<CompanyProfile, 'legal_name' | 'address'>)
   return out
 }
 
+export type DocumentField = 'legal_name' | 'address' | 'ntn' | 'strn'
+const DOC_LABELS: Record<DocumentField, string> = { legal_name: 'Legal name', address: 'Address', ntn: 'NTN', strn: 'STRN' }
+
+/**
+ * What the documents still need (audit 2026-10-22): the legal name and address for every PDF, and the NTN and STRN for a GST
+ * (sales-tax) invoice, the same four the invoice readiness check asks for (money/invoices/pdf/model.ts). Bank details are not
+ * here: they print only when filled in. `title` is the banner's one line, `detail` says what each gap blocks.
+ */
+export function missingForDocuments(p: Pick<CompanyProfile, DocumentField>): { fields: DocumentField[]; title: string; detail: string } | null {
+  const fields = (['legal_name', 'address', 'ntn', 'strn'] as const).filter(f => !p[f]?.trim())
+  if (fields.length === 0) return null
+  const pdf = fields.some(f => f === 'legal_name' || f === 'address')
+  const gst = fields.some(f => f === 'ntn' || f === 'strn')
+  const detail = [
+    pdf ? 'Quotations, purchase orders and invoices print the legal name and address at the top.' : null,
+    gst ? 'GST invoices also need the NTN and STRN.' : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
+  return { fields: [...fields], title: `Missing for documents: ${fields.map(f => DOC_LABELS[f]).join(', ')}`, detail }
+}
 
 /** What the database falls back to when the profile cannot be read yet (the column default in migration 0059). */
 export const FALLBACK_PAYMENT_TERMS_DAYS = 30

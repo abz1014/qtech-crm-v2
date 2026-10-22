@@ -115,7 +115,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
             aria-label={CAPTURE_LABEL}
             aria-keyshortcuts="C"
             className={cn(
-              'flex h-control items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground 2xl:pr-11',
+              'flex h-control items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground 2xl:pr-[44px]',
               'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
               'max-lg:w-control max-lg:justify-center max-lg:px-0',
             )}

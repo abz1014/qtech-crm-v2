@@ -90,6 +90,16 @@ real output of run 38708549583 (`scripts/fixtures/drift-rls-auto-enable.sql`).
 S15 acceptance: migration list matches; schema drift = none; remote types
 artifact for reference.
 
+## Engineer role and the API pre-request (migration 0081)
+
+Migration 0081 (owner decision 2026-10-22: engineers see no prices) creates the NOLOGIN role `qtech_engineer`, grants it to
+`authenticator`, and sets PostgREST's `db-pre-request` on the `authenticator` role to `qtech_private.pre_request` (then
+`notify pgrst, 'reload config'`). On the hosted project this arrives with the normal remote push. After the push, check in the
+SQL editor: `select rolname, setconfig from pg_db_role_setting s join pg_roles r on r.oid = s.setrole where rolname = 'authenticator';`
+shows `pgrst.db_pre_request=qtech_private.pre_request`, and an engineer's `GET /rest/v1/rfq_items?select=*` answers 403 while
+`select=description` answers 200. Nothing to set in the dashboard. A new table, view, function or policy must be granted to
+`qtech_engineer` as well (pgTAP 0081 fails until it is), unless it is a price.
+
 ## Auth session settings (owner, dashboard)
 
 `supabase/config.toml` configures only the local and CI stack: `supabase db push` does not carry Auth settings to the

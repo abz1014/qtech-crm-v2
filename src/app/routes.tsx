@@ -6,7 +6,7 @@ import { navItems, type NavKey } from '@/app/navConfig'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
-import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
+import { AdminOnly, PricesOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
 import { preloadRouteCode, routeChunks } from '@/app/routeChunks'
 
@@ -177,9 +177,11 @@ function AppRouteTable() {
             <Route
               path="exchange-rates"
               element={
-                <Suspense fallback={null}>
-                  <ExchangeRatesPage />
-                </Suspense>
+                <PricesOnly area="Exchange rates">
+                  <Suspense fallback={null}>
+                    <ExchangeRatesPage />
+                  </Suspense>
+                </PricesOnly>
               }
             />
             <Route

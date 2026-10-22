@@ -49,6 +49,35 @@ export function moveCategory(rows: readonly Category[], id: string, dir: -1 | 1)
   return changes
 }
 
+export const GROUPS: readonly CategoryGroup[] = ['overhead', 'order_cost', 'non_pnl']
+
+/** The list in its three sections (audit 2026-10-22), each in the saved order. A section with nothing in it is left out. */
+export function groupCategories(rows: readonly Category[]): { grp: CategoryGroup; label: string; rows: Category[] }[] {
+  const sorted = sortCategories(rows)
+  return GROUPS.map(grp => ({ grp, label: GROUP_LABEL[grp], rows: sorted.filter(c => c.grp === grp) })).filter(g => g.rows.length > 0)
+}
+
+/**
+ * Move one category up (-1) or down (+1) inside its own group, which is how the page shows them: it swaps places with the
+ * nearest category of the same group in the full order. [] when it is already first or last in its group.
+ */
+export function moveWithinGroup(rows: readonly Category[], id: string, dir: -1 | 1): { id: string; sort: number }[] {
+  const list = sortCategories(rows)
+  const i = list.findIndex(c => c.id === id)
+  if (i < 0) return []
+  let j = i + dir
+  while (j >= 0 && j < list.length && list[j].grp !== list[i].grp) j += dir
+  if (j < 0 || j >= list.length) return []
+  const next = [...list]
+  ;[next[i], next[j]] = [next[j], next[i]]
+  const changes: { id: string; sort: number }[] = []
+  next.forEach((c, k) => {
+    const sort = (k + 1) * SORT_STEP
+    if (c.sort !== sort) changes.push({ id: c.id, sort })
+  })
+  return changes
+}
+
 /** The sort value for a new category: after the last one. */
 export const nextSort = (rows: readonly Pick<Category, 'sort'>[]): number => rows.reduce((m, c) => Math.max(m, c.sort), 0) + SORT_STEP
 

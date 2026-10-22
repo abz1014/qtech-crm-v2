@@ -20,7 +20,9 @@ function divRound(n: bigint, d: bigint): bigint {
 
 /** A decimal as an integer scaled by 10^decimals (the digits beyond are rounded half away from zero). */
 function scaled(value: Amount, decimals: number): bigint {
-  const text = typeof value === 'number' ? value.toFixed(decimals + 2) : value.trim()
+  if (typeof value === 'number' && !Number.isFinite(value)) throw new Error(`Not a decimal amount: "${value}"`)
+  // toFixed switches to exponent notation from 1e21 (HW-2: a 22-digit price crashed the dialog). Numbers that large are whole.
+  const text = typeof value === 'number' ? (Math.abs(value) >= 1e21 ? BigInt(value).toString() : value.toFixed(decimals + 2)) : value.trim()
   const m = /^([+-]?)(\d+)(?:\.(\d+))?$/.exec(text)
   if (!m) throw new Error(`Not a decimal amount: "${text}"`)
   const [, sign, whole, frac = ''] = m

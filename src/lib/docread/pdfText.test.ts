@@ -90,15 +90,53 @@ describe('readPdfText', () => {
   })
 
   it('says a scan is a scan', async () => {
-    const r = await readPdfText(await scanPdf(2))
+    const r = await readPdfText(await scanPdf(2), { ocr: false })
     expect(r).toEqual({ ok: false, reason: 'scan', message: 'This PDF is a scan. Take a screenshot or photo of it and choose that instead, or type or paste the items.', pageCount: 2 })
-    const q = await readPdfText(await scanPdf(1, 'Scanned with CamScanner'), { subject: 'prices' })
+    const q = await readPdfText(await scanPdf(1, 'Scanned with CamScanner'), { subject: 'prices', ocr: false })
     expect(q).toMatchObject({ ok: false, reason: 'scan', message: 'This PDF is a scan. Take a screenshot or photo of it and choose that instead, or type or paste the prices.' })
+  })
+
+  it('reads a scan page by page with the picture reader, with progress, and stops when cancelled', async () => {
+    const seen: number[] = []
+    const reads: number[] = []
+    const opts = {
+      renderPage: async (_p: unknown, scale: number) => {
+        expect(scale).toBeGreaterThanOrEqual(1.5)
+        return new Blob(['png'], { type: 'image/png' })
+      },
+      readImage: async (_b: Blob, o: { onProgress: (p: { percent: number; message: string }) => void }) => {
+        reads.push(reads.length + 1)
+        o.onProgress({ percent: 50, message: '' })
+        const line = reads.length === 1 ? 'Please quote: Pressure gauge 0-10 bar - 2 Nos' : 'Ball valve 1 inch - 3 Nos'
+        return { ok: true as const, text: line, lines: [{ text: line, cells: [line], kind: 'text' as const, page: 1 }], confidence: 88, tableRows: 0 }
+      },
+      onProgress: (p: { percent: number; message: string }) => seen.push(p.percent),
+    }
+    const r = await readPdfText(await scanPdf(2), opts)
+    expect(r).toMatchObject({ ok: true, ocrPages: [1, 2], ocrConfidence: 88, pagesWithoutText: [1, 2] })
+    expect(r.ok && r.text).toBe('Please quote: Pressure gauge 0-10 bar - 2 Nos\n\nBall valve 1 inch - 3 Nos')
+    expect(seen[0]).toBe(0)
+    expect(seen[seen.length - 1]).toBe(100)
+    expect([...seen].sort((a, b) => a - b)).toEqual(seen)
+    // Cancelled while the first page is read: nothing comes back but the cancel.
+    const ctrl = new AbortController()
+    const c = await readPdfText(await scanPdf(2), {
+      ...opts,
+      signal: ctrl.signal,
+      readImage: async () => {
+        ctrl.abort()
+        return { ok: false as const, reason: 'aborted' as const, message: '' }
+      },
+    })
+    expect(c).toMatchObject({ ok: false, reason: 'aborted' })
+    // A picture the reader cannot read clearly: still the scan message, so the person types or pastes instead.
+    const u = await readPdfText(await scanPdf(1), { ...opts, readImage: async () => ({ ok: false as const, reason: 'unclear' as const, message: '' }) })
+    expect(u).toMatchObject({ ok: false, reason: 'scan' })
   })
 
   it('lists scanned pages inside a PDF that has text elsewhere', async () => {
     const text: Placed[] = [{ text: 'Please quote 3 nos solenoid valve 1/2 inch 24VDC', x: 56, y: 80, size: 10 }]
-    const r = await readPdfText(await placedPdf([text, []]))
+    const r = await readPdfText(await placedPdf([text, []]), { ocr: false })
     expect(r).toMatchObject({ ok: true, pagesWithoutText: [2], pagesRead: 2 })
   })
 

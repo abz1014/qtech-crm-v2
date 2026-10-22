@@ -59,6 +59,8 @@ export default tseslint.config(
             'e2e/**/*.{ts,tsx}',
             '**/*.config.{ts,js}',
             'src/test/**',
+            // The reader's fictional corpus (pdf-lib draws its PDFs): run by tests only, never imported by the app.
+            'src/lib/docread/corpus/**',
             'e2e/**',
           ],
           includeInternal: false,

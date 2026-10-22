@@ -3,6 +3,34 @@
 
 import type { FxLatestRow } from '@/features/rfqs/api'
 import { REPLY_CURRENCIES } from '@/features/rfqs/lib/replyCurrency'
+import { formatRate } from '@/lib/money'
+
+/** No currency the app offers is anywhere near this many rupees; a rate above it is a typing slip. */
+export const MAX_RATE_PKR = 10_000
+
+/**
+ * HW-46: what is wrong with a rate typed by hand. `error` blocks Save: no rate, zero or below, absurdly large, or dated in
+ * the future (v_fx_latest ignores a future rate, so it would sit unused). `warning` only asks for a second look: the rate is
+ * far (over half again, or under two thirds) from the latest one for the currency.
+ */
+export function manualRateProblem(p: { text: string; rate: number | null; asOf: string; today: string; last: number | null }): {
+  error: string | null
+  /** The field the error belongs under. */
+  field: 'rate' | 'asOf' | null
+  warning: string | null
+} {
+  const none = { error: null, field: null, warning: null }
+  if (p.asOf && p.asOf > p.today) return { error: 'A rate can’t be dated in the future. Use today or an earlier day.', field: 'asOf', warning: null }
+  if (p.text.trim() === '') return none
+  if (p.rate === null || p.rate <= 0) return { error: 'Enter a rate above zero, for example 281.35.', field: 'rate', warning: null }
+  if (p.rate > MAX_RATE_PKR) {
+    return { error: `That rate is too large: no currency here is above PKR ${MAX_RATE_PKR.toLocaleString('en-US')} for 1 unit.`, field: 'rate', warning: null }
+  }
+  if (p.last && p.last > 0 && (p.rate > p.last * 1.5 || p.rate < p.last / 1.5)) {
+    return { error: null, field: null, warning: `That is far from the latest rate, ${formatRate(p.last)}. Check it before saving.` }
+  }
+  return none
+}
 
 export const CURRENCY_NAMES: Record<string, string> = {
   USD: 'US dollar',
@@ -81,6 +109,15 @@ export function autoRunStamp(createdAt: string): string {
 /** The words for where a rate came from. */
 export function sourceText(source: 'auto' | 'manual' | null): string {
   return source === 'manual' ? 'Entered by hand' : source === 'auto' ? 'Automatic' : 'No rate yet'
+}
+
+const cardDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+
+/** A phone card's one line (audit 2026-10-22): "USD 280.50 · 22 Oct · by hand", "EUR 301.15 · 21 Oct · automatic", "JPY · no rate yet". */
+export function rateCardLine(r: Pick<RateRow, 'currency' | 'ratePkr' | 'asOf' | 'source'>): string {
+  if (r.ratePkr === null || r.asOf === null) return `${r.currency} · no rate yet`
+  const day = cardDay.format(new Date(`${r.asOf.slice(0, 10)}T00:00:00Z`))
+  return `${r.currency} ${formatRate(r.ratePkr)} · ${day} · ${r.source === 'manual' ? 'by hand' : 'automatic'}`
 }
 
 /** The rate bar on the RFQ page: one entry per currency that matters here (has a rate, or appears on a price). */

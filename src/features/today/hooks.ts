@@ -93,9 +93,12 @@ export function useTodayView(
   return { view, data, query }
 }
 
-/** my_target_progress(): the caller's own row. Every active role may call it. */
-export function useMyTarget() {
-  return useQuery({ queryKey: qk.today.target(), queryFn: api.getMyTarget, refetchOnMount: 'always' })
+/**
+ * my_target_progress(): the caller's own row. Every active role may call it, but an engineer's is never asked for: it is PKR
+ * amounts (owner decision 2026-10-22, engineers see no prices) and the tile is not drawn for them.
+ */
+export function useMyTarget(enabled = true) {
+  return useQuery({ queryKey: qk.today.target(), queryFn: api.getMyTarget, refetchOnMount: 'always', enabled })
 }
 
 export function useLegDraft(legId: string | undefined) {

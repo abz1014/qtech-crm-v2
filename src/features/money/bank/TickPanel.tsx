@@ -27,7 +27,7 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
   const [showAllOlder, setShowAllOlder] = useState(false)
   const total = side.ticked.length + side.open.length + side.older.length
   const heading = dir === 'in' ? 'Money in' : 'Money out'
-  const tag = dir === 'in' ? 'Payments received' : 'Bank expenses and FBR deposits'
+  const tag = dir === 'in' ? 'Payments received' : 'Bank expenses and FBR payments'
   const open = side.open.length + side.older.length
 
   const ticked = showAllTicked ? side.ticked : side.ticked.slice(0, COLLAPSED_TICKED)
@@ -43,18 +43,22 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
         </span>
         <span className="flex-1" />
         <span className="text-sm text-fg-muted">
-          <span className="num">{side.ticked.length}</span> of <span className="num">{total}</span> ticked
+          <span className="num">{side.ticked.length}</span> of <span className="num">{total}</span> matched
         </span>
       </header>
       {total === 0 ? (
         <p className="px-5 py-6 text-sm text-fg-muted">
-          {dir === 'in' ? 'No bank payments for this month.' : 'No bank expenses or FBR deposits for this month.'}
+          {dir === 'in' ? 'No bank payments for this month.' : 'No bank expenses or FBR payments for this month.'}
         </p>
       ) : (
         <div>
+          <div aria-hidden="true" className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-5 py-1 text-xs font-medium text-fg-2">
+            <span>On statement? Tick it</span>
+            <span>PKR</span>
+          </div>
           {side.open.length > 0 ? (
             <>
-              <GroupHead label="Not ticked" count={side.open.length} first />
+              <GroupHead label="Not matched yet" count={side.open.length} first />
               {side.open.map(l => (
                 <Row key={l.key} line={l} just={justTicked === l.key} onTick={onTick} />
               ))}
@@ -78,7 +82,7 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
           ) : null}
           {side.ticked.length > 0 ? (
             <>
-              <GroupHead label="Ticked" count={side.ticked.length} first={open === 0} />
+              <GroupHead label="Matched" count={side.ticked.length} first={open === 0} />
               {ticked.map(l => (
                 <Row key={l.key} line={l} just={justTicked === l.key} onTick={onTick} />
               ))}
@@ -128,7 +132,7 @@ function MoreButton({ open, hidden, word, onClick }: { open: boolean; hidden: nu
 
 function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l: BankLine) => void }) {
   const today = businessToday()
-  const sub = line.kind === 'fbr' ? [...line.sub, `deposited ${formatShortDate(line.date, today)}`] : line.sub
+  const sub = line.kind === 'fbr' ? [...line.sub, `paid ${formatShortDate(line.date, today)}`] : line.sub
   const group = line.kind === 'fbr'
   const quiet = line.ticked && !just
   return (
@@ -139,6 +143,7 @@ function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l
         aria-checked={line.ticked}
         data-testid="bank-row"
         data-key={line.key}
+        title={line.psid ? `PSID ${line.psid}` : undefined}
         onClick={() => onTick(line)}
         className={cn(
           'grid min-h-[48px] w-full grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 border-b px-5 py-[6px] text-left transition-colors duration-fast ease-out hover:bg-sunken',

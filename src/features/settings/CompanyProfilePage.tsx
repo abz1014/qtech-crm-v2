@@ -2,7 +2,7 @@ import { useRef, type ReactElement, type ReactNode } from 'react'
 import { CircleDot, Lock, TriangleAlert } from 'lucide-react'
 import { useController, useFormContext, type ControllerRenderProps } from 'react-hook-form'
 import { useSession } from '@/app/session'
-import { missingForPdf, toFormValues, type CompanyProfile } from '@/features/settings/companyProfile'
+import { missingForDocuments, missingForPdf, toFormValues, type CompanyProfile, type DocumentField } from '@/features/settings/companyProfile'
 import { profileSchema, type ProfileValues } from '@/features/settings/companyProfileSchema'
 import { useCompanyProfile, useSaveCompanyProfile } from '@/features/settings/hooks'
 import { Banner } from '@/ui/Banner'
@@ -88,23 +88,23 @@ export function CompanyProfilePage() {
   )
 }
 
-function MissingBanner({ missing, onAdd }: { missing: string[]; onAdd?: () => void }) {
-  if (missing.length === 0) return null
+/** "Missing for documents: STRN": the four fields a document needs, named once at the top (audit 2026-10-22). */
+function MissingBanner({ profile, onAdd }: { profile: Pick<CompanyProfile, DocumentField>; onAdd?: (first: DocumentField) => void }) {
+  const m = missingForDocuments(profile)
+  if (!m) return null
   return (
     <Banner
       tone="warning"
-      title="PDFs can't be issued until legal name and address are set"
+      title={m.title}
       action={
         onAdd ? (
-          <Button size="sm" onClick={onAdd}>
+          <Button size="sm" onClick={() => onAdd(m.fields[0])}>
             Add them
           </Button>
         ) : undefined
       }
     >
-      {onAdd
-        ? 'Quotations and purchase orders print these at the top. Everything else can wait.'
-        : 'Ask an admin to add them in Settings.'}
+      {onAdd ? m.detail : `${m.detail} Ask an admin to add them in Settings.`}
     </Banner>
   )
 }
@@ -121,7 +121,8 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   )
 }
 
-const NEEDED = <span className="ml-2 text-xs font-regular text-fg-muted">Needed for PDFs</span>
+const NEEDED = <span className="ml-2 text-sm font-regular text-fg-muted">Needed for PDFs</span>
+const NEEDED_GST = <span className="ml-2 text-sm font-regular text-fg-muted">Needed for GST invoices</span>
 
 /**
  * The two fields a PDF cannot be issued without. While one is empty it is drawn invalid with its own
@@ -180,11 +181,11 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
     },
   })
   const dirty = Object.keys(sf.form.formState.dirtyFields) as (keyof ProfileValues)[]
-  const missing = missingForPdf({ legal_name: sf.form.watch('legal_name'), address: sf.form.watch('address') })
+  const watched = { legal_name: sf.form.watch('legal_name'), address: sf.form.watch('address'), ntn: sf.form.watch('ntn'), strn: sf.form.watch('strn') }
 
   return (
     <>
-      <MissingBanner missing={missing} onAdd={() => sf.form.setFocus(missing[0] ?? 'legal_name')} />
+      <MissingBanner profile={watched} onAdd={first => sf.form.setFocus(first)} />
       <Form sf={sf} labels={LABELS} className="grid gap-4">
         <Section title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
           <NeededField name="legal_name" label="Legal name" message="Add the legal name before issuing a PDF.">
@@ -206,12 +207,12 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
           </div>
         </Section>
 
-        <Section title="Tax registration" hint="Printed on quotations and purchase orders.">
+        <Section title="Tax registration" hint="Printed on quotations, purchase orders and invoices. A GST invoice needs both.">
           <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-            <FormField name="ntn" label="NTN" requirement="optional">
+            <FormField name="ntn" label={<>NTN{NEEDED_GST}</>}>
               {f => <TextField {...f} className="num" autoComplete="off" />}
             </FormField>
-            <FormField name="strn" label="STRN" requirement="optional">
+            <FormField name="strn" label={<>STRN{NEEDED_GST}</>}>
               {f => <TextField {...f} className="num" autoComplete="off" />}
             </FormField>
           </div>
@@ -241,7 +242,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             help="Days after the invoice date. An order with its own terms keeps them."
             className="sm:max-w-[200px]"
           >
-            {f => <NumberInput {...f} suffix="days" min={0} decimals={0} />}
+            {f => <NumberInput {...f} suffix="days" decimals={0} />}
           </FormField>
         </Section>
 
@@ -255,7 +256,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             help="A new quotation is valid for this many days from its date."
             className="sm:max-w-[200px]"
           >
-            {f => <NumberInput {...f} suffix="days" min={1} decimals={0} />}
+            {f => <NumberInput {...f} suffix="days" decimals={0} />}
           </FormField>
           <FormField name="quotation_terms" label="Quotation terms" requirement="optional">
             {f => <TextArea {...f} rows={5} />}
@@ -266,7 +267,11 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
         </Section>
       </Form>
 
-      <div className="flex flex-wrap items-center gap-3 rounded border bg-surface px-5 py-3">
+      {/* With unsaved changes the bar sticks to the bottom of the screen, so Save is never a long scroll away (audit 2026-10-22). */}
+      <div
+        data-save-bar
+        className={cn('flex flex-wrap items-center gap-3 rounded border bg-surface px-5 py-3', dirty.length > 0 && 'sticky bottom-2 z-10 shadow-pop')}
+      >
         {dirty.length > 0 ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
         <p role="status" className="text-sm text-fg-muted">
           {dirty.length === 0
@@ -283,7 +288,11 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             form={sf.formId}
             busy={sf.pending}
             busyLabel="Saving"
-            disabled={dirty.length === 0}
+            // the screen's one green button stays green; with nothing changed it is aria-disabled and does nothing
+            aria-disabled={dirty.length === 0 || undefined}
+            onClick={e => {
+              if (dirty.length === 0) e.preventDefault()
+            }}
           >
             {sf.failed ? 'Try again' : 'Save changes'}
           </Button>
@@ -296,12 +305,33 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
 /** A phone number, address or site in the read-only profile is a link (call, write, open), so a phone can act on it in one tap. */
 const LINK = 'rounded text-fg underline decoration-line-strong underline-offset-2 hover:decoration-fg max-md:inline-flex max-md:min-h-touch max-md:items-center'
 
-function Row({ label, value, mono, href }: { label: string; value: string | number | null; mono?: boolean; href?: (v: string) => string }) {
+/**
+ * One read-only fact. An empty field a document needs (`needed`: legal name, address, NTN, STRN) is flagged amber "Not set";
+ * an empty optional one (email, website, bank) is a plain dash, not a warning (audit 2026-10-22).
+ */
+function Row({
+  label,
+  value,
+  mono,
+  href,
+  needed,
+}: {
+  label: string
+  value: string | number | null
+  mono?: boolean
+  href?: (v: string) => string
+  needed?: boolean
+}) {
   const empty = value === null || value === ''
   return (
     <>
       <dt className="text-fg-muted">{label}</dt>
-      {empty ? (
+      {empty && !needed ? (
+        <dd className="min-w-0 text-fg-muted">
+          <span aria-hidden="true">—</span>
+          <span className="sr-only">Not given</span>
+        </dd>
+      ) : empty ? (
         <dd className="inline-flex min-w-0 items-center gap-[6px] font-medium text-tone-warning-fg">
           <Icon icon={TriangleAlert} size="sm" />
           Not set
@@ -326,11 +356,11 @@ const KV = 'grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]'
 function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
   return (
     <>
-      <MissingBanner missing={missingForPdf(p)} />
+      <MissingBanner profile={p} />
       <Section title="Business details">
         <dl className={KV}>
-          <Row label="Legal name" value={p.legal_name} />
-          <Row label="Address" value={p.address} />
+          <Row label="Legal name" value={p.legal_name} needed />
+          <Row label="Address" value={p.address} needed />
           <Row label="Phone" value={p.phone} mono href={v => `tel:${v.split(/[,;/]/)[0].replace(/[^\d+]/g, '')}`} />
           <Row label="Email" value={p.email} href={v => `mailto:${v.trim()}`} />
           <Row label="Website" value={p.website} href={v => (/^https?:\/\//i.test(v.trim()) ? v.trim() : `https://${v.trim()}`)} />
@@ -338,8 +368,8 @@ function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
       </Section>
       <Section title="Tax registration">
         <dl className={KV}>
-          <Row label="NTN" value={p.ntn} mono />
-          <Row label="STRN" value={p.strn} mono />
+          <Row label="NTN" value={p.ntn} mono needed />
+          <Row label="STRN" value={p.strn} mono needed />
         </dl>
       </Section>
       <Section title="Bank details">

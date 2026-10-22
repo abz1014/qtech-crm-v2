@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CloseLedger,
   agingAsOf,
+  heldAdvances,
   basisOf,
   cashMonth,
   profitMonth,
@@ -133,7 +134,7 @@ describe('0902 money aging', () => {
   it('bucket edges on 30 June 2025, advances, legacy invoices, the Rs 0.50 residual', () => {
     const a = agingAsOf('2025-06-30', { invoices, payments })
     expect(a.invoices.filter(i => i.orderId === 'A2').sort((x, y) => x.age - y.age).map(i => `${i.age}=${i.bucket}`)).toEqual(['30=0-30', '31=31-60', '60=31-60', '61=61-90', '90=61-90', '91=90+'])
-    expect(a.advances).toEqual([{ orderId: 'A3', held: 500000n }])
+    expect(a.advances).toEqual([{ orderId: 'A3', held: 500000n, cancelled: false }])
     expect(a.invoices.find(i => i.invoiceId === 'old-paid')).toBeUndefined()
     expect(a.invoices.find(i => i.invoiceId === 'old-open')).toMatchObject({ remaining: 59000n, applied: 0n, bucket: '90+' })
     // BUG-M3 (fixed): the order receivables call settled (paid to within Rs 1) has no aging row, here or in aging_as_of
@@ -290,5 +291,41 @@ describe('0079 in vs out', () => {
   it('cancelling the never-invoiced order lets its held cost count in the cancel month', () => {
     const cancelled = { ...books, orders: [o1, { ...o2, cancelledOn: '2020-05-15' }] }
     expect([profitMonth('2020-05', cancelled).orderCosts, profitMonth('2020-05', cancelled).profit].map(rs)).toEqual(['300.00', '-300.00'])
+  })
+})
+
+describe('0080 owner decisions: advances held on cancelled orders', () => {
+  const orders = [
+    order('H1', { cancelledOn: '2025-03-20', terms: 30 }),
+    order('H2', { cancelledOn: '2025-03-20', terms: 30 }),
+    order('H3', { terms: 30 }),
+    order('H4', { cancelledOn: '2025-03-20', terms: 30 }),
+  ]
+  const invoices = [inv('held-h2-1', 'H2', '2025-01-02', '1000', '180')]
+  const payments: Payment[] = [
+    pay('h1', 'H1', '2025-03-10', '700'),
+    { ...pay('h1v', 'H1', '2025-03-12', '100'), voided: true },
+    pay('h2', 'H2', '2025-01-20', '500'),
+    pay('h3', 'H3', '2025-03-10', '300'),
+  ]
+  const books = { orders, invoices, payments, expenses: [], defaultTerms: 30 }
+
+  it('held_advances: only H1, 700.00 (the voided 100.00 left out)', () => {
+    expect(heldAdvances(books).map(h => [h.orderId, rs(h.held)])).toEqual([['H1', '700.00']])
+  })
+
+  it('H1 is not owed; H2 keeps D-MR3 (680.00, overdue)', () => {
+    expect(receivableOf(orders[0], books, '2026-10-22').listed).toBe(false)
+    const h2 = receivableOf(orders[1], books, '2026-10-22')
+    expect([h2.listed, rs(h2.balance), h2.state]).toEqual([true, '680.00', 'overdue'])
+  })
+
+  it('aging: H1 is an advance marked cancelled after 20 March, an ordinary one before; H3 stays not invoiced yet', () => {
+    const live = payments.filter(p => !p.voided)
+    expect(agingAsOf('2025-03-31', { orders, invoices, payments: live }).advances).toEqual([
+      { orderId: 'H1', held: 70000n, cancelled: true },
+      { orderId: 'H3', held: 30000n, cancelled: false },
+    ])
+    expect(agingAsOf('2025-03-15', { orders, invoices, payments: live }).advances.find(a => a.orderId === 'H1')).toEqual({ orderId: 'H1', held: 70000n, cancelled: false })
   })
 })

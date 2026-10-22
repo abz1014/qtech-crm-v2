@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, CircleCheck, ExternalLink, History, Mail, MessageCircle } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -51,6 +51,7 @@ export function ReminderPanel({ row, today }: { row: ReceivableRow | null; today
     return (
       <PanelShell title="Payment reminder" meta={row.companyName}>
         <EmptyNote title="Not invoiced yet." body="A reminder needs an invoice and a due date. Create the invoice first." />
+        {row.state !== 'settled' ? <PayFooter orderId={row.orderId} /> : null}
       </PanelShell>
     )
   }
@@ -108,6 +109,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
   const session = useSession()
   const user = session.status === 'signed-in' ? session.user : null
   const { toast } = useToast()
+  const navigate = useNavigate()
   const client = useQueryClient()
   const jobTitle = useMyJobTitle(user?.id).data
   const draftQ = usePaymentDraft(row.orderId, true)
@@ -286,13 +288,16 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
         </Link>
       </div>
       <div className="px-5 py-4">
-        <div className="mb-3 flex items-center gap-2 border-b pb-3 text-sm text-fg-2">
-          <Icon icon={channel === 'whatsapp' ? MessageCircle : Mail} size="sm" className="text-fg-muted" />
-          <span>
-            To <b className="font-medium">{to}</b>
-          </span>
-          {address ? <span className="num ml-auto text-right text-xs text-fg-muted">{address}</span> : null}
-        </div>
+        {/* With no contact, the one "No contact saved, add one" line is under the copy button (MessageActions); not said twice. */}
+        {draft.contact ? (
+          <div className="mb-3 flex items-center gap-2 border-b pb-3 text-sm text-fg-2">
+            <Icon icon={channel === 'whatsapp' ? MessageCircle : Mail} size="sm" className="text-fg-muted" />
+            <span>
+              To <b className="font-medium">{to}</b>
+            </span>
+            {address ? <span className="num ml-auto text-right text-xs text-fg-muted">{address}</span> : null}
+          </div>
+        ) : null}
         {t.subject ? (
           <p className="mb-3 text-sm text-fg-2">
             <span className="text-fg-muted">Subject </span>
@@ -325,6 +330,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
               variant={opened ? 'secondary' : 'primary'}
               copy={{ label: 'Copy and mark reminded', onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
               onOpen={() => setOpened(true)}
+              onFixContact={() => navigate(`/companies/${row.companyId}`)}
               channel={channel}
               onChannelChange={setChannel}
             />

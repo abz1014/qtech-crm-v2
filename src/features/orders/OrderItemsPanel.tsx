@@ -96,7 +96,10 @@ export function OrderItemsPanel({
     [items],
   )
   const legOf = (r: Row) => legs.find(l => l.id === r.legId)
-  const editable = money && canEdit && !basisUnknown
+  // HW-14: a fully invoiced order's lines are what its invoices (and payments) were made from. Changing a price, quantity or
+  // GST there would silently turn it part-invoiced and owing again, so its lines are locked; Add line stays, for an extra.
+  const invoicedLock = money && order.state?.invoicing === 'fully_invoiced'
+  const editable = money && canEdit && !basisUnknown && !invoicedLock
   const showEdit = editable && editing
   const exempt = money && !basisUnknown && isExemptAll(items.map(i => ({ gstRate: i.gstRate ?? STANDARD_GST })))
   const fail = (title: string) => (err: unknown) => toast({ title, body: mapPgError(err, { entity: 'item' }).message, tone: 'danger' })
@@ -367,6 +370,11 @@ export function OrderItemsPanel({
                 <Button size="sm" variant={editing ? 'secondary' : 'quiet'} icon={editing ? Check : SlidersHorizontal} aria-pressed={editing} onClick={() => setEditing(e => !e)}>
                   {editing ? 'Done editing' : 'Edit GST and lines'}
                 </Button>
+              ) : null}
+              {invoicedLock && canEdit && rows.length > 0 ? (
+                <span className="text-sm text-fg-muted" role="note">
+                  Fully invoiced, so prices and GST are locked to match the invoices. Add a line for anything extra.
+                </span>
               ) : null}
               {money && canEdit ? (
                 <Button size="sm" icon={Plus} onClick={() => setAdding(true)}>

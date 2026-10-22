@@ -54,9 +54,23 @@ export function marginTotals(rows: readonly MarginRow[]): MarginTotals {
   return t
 }
 
-/** Newest first (by order date, then number), as the mockup lists them. */
+/** Problems first (round 3): a negative margin, then no margin at all (is GST included?), then not final, then final. */
+export function marginRank(r: Pick<MarginRow, 'state' | 'margin'>): number {
+  if (r.state !== 'basis_unknown' && r.margin !== null && r.margin < 0) return 0
+  if (r.state === 'basis_unknown') return 1
+  return r.state === 'provisional' ? 2 : 3
+}
+
+/** Problems first (marginRank); inside each, newest first (by order date, then number). */
 export function sortMargins(rows: readonly MarginRow[]): MarginRow[] {
-  return [...rows].sort((a, b) => (b.orderedOn ?? '').localeCompare(a.orderedOn ?? '') || b.orderNumber - a.orderNumber)
+  return [...rows].sort((a, b) => marginRank(a) - marginRank(b) || (b.orderedOn ?? '').localeCompare(a.orderedOn ?? '') || b.orderNumber - a.orderNumber)
+}
+
+/** Margin as a share of the net sale, one decimal ("27.4%"); null with no margin or no sale to compare it with. */
+export function marginPct(r: Pick<MarginRow, 'margin' | 'netSale'>): string | null {
+  if (r.margin === null || r.netSale === null || r.netSale <= 0) return null
+  const tenths = Math.round((r.margin / r.netSale) * 1000)
+  return `${(tenths / 10).toFixed(1)}%`
 }
 
 /** The sentence under the table: what is and is not in the total, in counts. */

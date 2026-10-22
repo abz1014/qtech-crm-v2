@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, FileQuestion, RefreshCw, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
+import { useSeesPrices } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { recordRfqVisit } from '@/lib/capture/recents'
 import { Button } from '@/ui/Button'
@@ -63,6 +64,10 @@ const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog
  *                mark quotation sent (no PDF): 2 taps (More, choose). close or lose: 2 taps (More, choose the reason).
  *
  * A missing exchange rate never blocks anything (BUILD_PLAN A3/A4): the line shows "not compared, no rate".
+ *
+ * An engineer (owner decision 2026-10-22) sees no price on this page and none is fetched: the quote lines come without price or
+ * rate, and the exchange rates, the ranking, the supplier memory and the quotations' lines and totals are never asked for. Who
+ * replied, with lead time and stock, stays. Issue quotation and Mark won (and their ?issue=1 / ?won=1 links) are admin and sales only.
  */
 
 /** The detail page frame (round-2 spec 5.1). `bar`: the phone's sticky action bar shows, so the foot is padded clear of it. */
@@ -121,9 +126,10 @@ export default function RfqDetailScreen() {
 
   // Start the id-only reads now, in the same round as the header, instead of when the panels mount after it (prefetchRfqParts).
   const client = useQueryClient()
+  const prices = useSeesPrices()
   useEffect(() => {
-    if (id) void prefetchRfqParts(client, id)
-  }, [id, client])
+    if (id) void prefetchRfqParts(client, id, prices)
+  }, [id, client, prices])
 
   // Capture offers recently opened RFQs first (R22): note this visit, on this device only.
   const openedId = header.data?.id
@@ -186,6 +192,7 @@ function Loaded({
   inquiries: ReturnType<typeof useRfqInquiries>
 }) {
   const [wonOpen, setWonOpen] = useWonDialog()
+  const prices = useSeesPrices()
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   const itemList = useMemo<RfqItemRow[]>(() => items.data ?? [], [items.data])
@@ -248,6 +255,7 @@ function Loaded({
           quotationCount,
           itemCount: itemList.length,
           chaseable: chaseSuppliers,
+          prices,
         })
   const awaiting = inquiryList.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0).length
   const facts: HeaderFacts = { primary, itemCount: itemList.length, quotationCount, onAsk: () => setFloating(true), awaiting }
@@ -259,7 +267,7 @@ function Loaded({
     <Shell bar={(rfq.state?.outcome ?? 'open') === 'open'}>
       <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
-      {wonOpen && inquiries.data ? (
+      {wonOpen && prices && inquiries.data ? (
         <Suspense fallback={null}>
           <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} />
         </Suspense>

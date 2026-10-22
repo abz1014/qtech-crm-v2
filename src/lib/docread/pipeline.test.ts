@@ -16,8 +16,8 @@ describe('PDF to rows', () => {
     if (!pdf.ok) return
     const r = parseEnquiry(pdf.text, { today: '2026-10-20' })
     expect(r.items).toEqual([
-      { description: 'TRANSMITTER,PRESSURE;0-16BAR Make: Rosemount, Model: 3051TG', qty: 2, unit: 'nos' },
-      { description: 'GAUGE,PRESSURE;0-10BAR,4" DIAL', qty: 6, unit: 'nos' },
+      { description: 'TRANSMITTER,PRESSURE;0-16BAR Make: Rosemount, Model: 3051TG', qty: 2, unit: 'EA' },
+      { description: 'GAUGE,PRESSURE;0-10BAR,4" DIAL', qty: 6, unit: 'EA' },
     ])
     expect(r.facts.customerRef?.value).toBe('4500012345')
     expect(r.facts.dueDate?.iso).toBe('2026-11-11')
@@ -31,9 +31,9 @@ describe('PDF to rows', () => {
     if (!pdf.ok) return
     const r = parseEnquiry(pdf.text, { today: '2026-10-20' })
     expect(r.items.map(i => [i.description.split(' ').slice(0, 2).join(' '), i.qty, i.unit])).toEqual([
-      ['LEVEL SWITCH', 2, 'nos'],
-      ['DOSING PUMP', 1, 'nos'],
-      ['SOLENOID VALVE', 3, 'nos'],
+      ['LEVEL SWITCH', 2, 'EA'],
+      ['DOSING PUMP', 1, 'EA'],
+      ['SOLENOID VALVE', 3, 'EA'],
     ])
     expect(r.items[0]?.description).toContain('Make: Acme Controls')
     expect(r.items[2]?.description).not.toMatch(/TOTAL|GST/)

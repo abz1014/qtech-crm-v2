@@ -163,8 +163,8 @@ test.describe('invoices and the GST register (M01)', () => {
     const bar = page.getByTestId('batch-bar')
     await expect(bar).toContainText('ticked')
     await review(page, 'm01-month-stamping-1440')
-    await bar.getByRole('button', { name: 'Sent by TCS today' }).click() // tap 2
-    await expect(page.getByText(/sent by TCS today/).first()).toBeVisible()
+    await bar.getByRole('button', { name: 'Sent to customer today' }).click() // tap 2
+    await expect(page.getByText(/sent to the customer today/).first()).toBeVisible()
     await page.getByRole('textbox', { name: 'PSID', exact: true }).focus()
     await page.keyboard.press('Control+V') // the one paste
     await page.keyboard.press('Enter')
@@ -190,8 +190,8 @@ test.describe('invoices and the GST register (M01)', () => {
     const inv = await seedInvoice(null, { company_id: co.id })
     await openAs(page, 'admin', '/money/gst-register')
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
-    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent by TCS today' }).click()
-    await expect(page.getByText(/sent by TCS today/).first()).toBeVisible()
+    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent to customer today' }).click()
+    await expect(page.getByText(/sent to the customer today/).first()).toBeVisible()
     await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
     await page.getByRole('button', { name: /^Undo/ }).first().click()
     await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBeNull()
@@ -278,7 +278,9 @@ test.describe('payments in and receivables (M02)', () => {
     const order = await seedOrder(200000)
     await seedInvoice(order, { net_amount: 200000, gst_amount: 36000 })
     await openAs(page, 'admin', '/money/receivables')
-    await page.getByRole('button', { name: `Record payment for ORD-${String(order.number).padStart(4, '0')}` }).click()
+    // Record payment lives in the picked order's panel (round 3): pick the row (its balance cell), then the panel's button
+    await page.getByRole('row').filter({ hasText: `ORD-${String(order.number).padStart(4, '0')}` }).getByRole('cell').nth(1).click()
+    await page.getByTestId('reminder-panel').getByRole('button', { name: 'Record payment' }).click()
     const dialog = page.getByRole('dialog', { name: 'Record payment' })
     const amount = dialog.getByRole('textbox', { name: 'Amount received, PKR' })
     await expect(amount).toHaveValue('236,000')
@@ -305,24 +307,26 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('dialog', { name: 'Record payment' })).toBeVisible()
   })
 
-  test('Money opens on Who owes us; on a phone each card records a payment and opens its order (no detour)', async ({ page }) => {
+  test('Money opens on Who owes us; on a phone a card opens its reminder sheet with Record payment and Open order', async ({ page }) => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000, invoice_date: karachiDay(-60) })
     await openAs(page, 'admin', '/money')
     await expect(page).toHaveURL(/\/money\/receivables$/)
-    await expect(page.getByRole('heading', { name: 'Who owes us', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Who owes us', level: 1 })).toBeAttached()
     await page.setViewportSize({ width: 375, height: 812 })
-    const ref = `ORD-${String(order.number).padStart(4, '0')}`
     const card = page.locator('tr[data-card]').filter({ hasText: order.company.name })
     await expect(card).toBeVisible()
-    await expect(card.getByRole('link', { name: 'Open order' })).toHaveAttribute('href', `/orders/${order.id}`)
     await startCounting(page)
-    await card.getByRole('button', { name: `Record payment for ${ref}` }).click() // tap 1
+    // round 3: one action per card; tapping it opens the order's reminder as a sheet, with Record payment and Open order
+    await card.click() // tap 1
+    const sheet = page.getByRole('dialog', { name: order.company.name })
+    await expect(sheet.getByRole('link', { name: 'Open order' })).toHaveAttribute('href', `/orders/${order.id}`)
+    await sheet.getByRole('button', { name: 'Record payment' }).click() // tap 2
     const dialog = page.getByRole('dialog', { name: 'Record payment' })
     await expect(dialog.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('118,000')
-    await dialog.getByRole('button', { name: 'Save payment' }).click() // tap 2
-    await expect(page.getByRole('dialog')).toBeHidden()
-    expect((await counted(page)).mouse).toBe(2)
+    await dialog.getByRole('button', { name: 'Save payment' }).click() // tap 3
+    await expect(dialog).toBeHidden()
+    expect((await counted(page)).mouse).toBe(3)
     expect(await receivable(order.id)).toMatchObject({ balance: 0, payment_state: 'settled' })
   })
 
@@ -342,11 +346,11 @@ test.describe('payments in and receivables (M02)', () => {
     await review(page, 'm01-gst-register-sales-1440')
     // sales stamp too (Today sends them the TCS and FBR items): the ticks, the toggles and the FBR column stay; Net and GST go
     await expect(page.getByRole('checkbox', { name: `Select ${inv.number}` })).toBeVisible()
-    await expect(page.getByRole('radio', { name: /Not sent by TCS/ })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: /FBR/ })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /Not sent yet/ })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /Next step/ })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Net', exact: true })).toHaveCount(0)
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
-    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent by TCS today' }).click()
+    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent to customer today' }).click()
     await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
     await page.getByRole('link', { name: /^Who owes us/ }).click()
     const row = page.getByRole('row', { name: new RegExp(order.company.name) })
@@ -406,8 +410,8 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await axeViolations(page)).toEqual([])
     await page.goto('/money/receivables')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: 'Who owes us', level: 2 })).toBeVisible()
-    // the four Money tabs wrap: none is off-screen, and nothing scrolls sideways
+    await expect(page.getByRole('heading', { name: 'Balances', level: 2 })).toBeVisible()
+    // round 3: one row of short tabs on a phone (Reports beside the page action): none is off-screen, nothing scrolls sideways
     for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await review(page, 'm02-receivables-375')

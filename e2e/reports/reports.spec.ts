@@ -67,10 +67,15 @@ for (const role of ['admin', 'sales'] as const) {
       const log = watch(page)
       await openAs(page, role, '/reports')
       // five main tabs: Reports is no longer one of them; the old address lands inside Money
-      await expect(page).toHaveURL(/\/money\/reports$/)
+      // round 3: Reports is the fifth Money tab and shows one report at a time (admin opens on Profit and loss)
+      await expect(page).toHaveURL(role === 'admin' ? /\/money\/reports\/pnl$/ : /\/money\/reports\/enquiries$/)
       await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Reports' })).toHaveCount(0)
-      await expect(page.getByRole('heading', { name: 'Reports', level: 2 })).toBeVisible()
-      await expect(page.getByRole('link', { name: 'Reports' }).first()).toHaveAttribute('aria-current', 'page')
+      await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
+      if (role === 'admin') {
+        await expect(page.getByRole('heading', { name: 'Profit and loss', level: 1 })).toBeVisible()
+        await page.getByTestId('report-picker').selectOption('enquiries')
+      }
+      await expect(page.getByRole('heading', { name: 'Enquiries and customers', level: 1 })).toBeVisible()
       await expect(page.getByRole('region', { name: 'At a glance' })).toContainText('Win rate')
       for (const q of QUESTIONS) await expect(page.getByText(q, { exact: true })).toBeVisible()
       await openAll(page)
@@ -80,8 +85,7 @@ for (const role of ['admin', 'sales'] as const) {
       await expect(row).toBeVisible()
       await expect(row).toContainText('Yes')
       await expect(row.getByRole('cell').nth(1)).toHaveText('2')
-      if (role === 'admin') await expect(page.getByRole('list', { name: 'Money reports' })).toBeVisible()
-      else await expect(page.getByRole('list', { name: 'Money reports' })).toHaveCount(0)
+      if (role === 'sales') await expect(page.getByTestId('report-picker')).toHaveCount(0)
       await waitForAnimationsToFinish(page)
       await review(page, `p01-reports-${role}-1440`)
 
@@ -101,7 +105,7 @@ for (const role of ['admin', 'sales'] as const) {
     test('is usable at 375 px', async ({ page }) => {
       await seed()
       await page.setViewportSize({ width: 375, height: 812 })
-      await openAs(page, role, '/money/reports')
+      await openAs(page, role, '/money/reports/enquiries')
       await openAll(page)
       await expect(page.getByRole('table', { name: 'Customers who came back' })).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

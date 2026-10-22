@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { computeReconciliationExceptions } from '@/lib/reconciliation'
+import { openFindings } from '@/features/money/exceptions/checked'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { useGstRegister } from '@/features/money/invoices/hooks'
 import { needsAttention } from '@/features/money/invoices/model'
@@ -30,7 +31,10 @@ export default function MoneyTabCounts({ onCounts }: { onCounts: (counts: MoneyC
   const closed = useClosedMonths(isAdmin)
   const monthOpen = closed.data ? !closed.data.some(c => c.key === monthEnd) : false
   const recon = useReconciliationInput(isAdmin && monthOpen)
-  const things = useMemo(() => (recon.data ? computeReconciliationExceptions(recon.data).length : 0), [recon.data])
+  const things = useMemo(
+    () => (recon.data ? openFindings(session.status === 'signed-in' ? session.user.id : null, computeReconciliationExceptions(recon.data)).length : 0),
+    [recon.data, session],
+  )
   const counts: MoneyCounts = {
     receivables: todayView.view?.active.filter(i => i.rule === 'payment_overdue').length,
     'gst-register': register.data?.filter(needsAttention).length,

@@ -102,6 +102,31 @@ export async function getReceivablesSummary(today: string): Promise<ReceivableTo
   }
 }
 
+/** One advance held on a cancelled, never-invoiced order (held_advances, 0080; admin only): refund it or keep it. */
+export interface HeldAdvance {
+  orderId: string
+  orderNumber: number
+  companyName: string
+  cancelledOn: string | null
+  held: number
+}
+
+/**
+ * Owner decision 2026-10-22: money paid on an order that was then cancelled before any invoice is never owed and never overdue
+ * (order_receivables leaves the order out, D-MR3). The admin sees it apart, as "Advance held — refund or keep".
+ */
+export async function listHeldAdvances(): Promise<HeldAdvance[]> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.rpc('held_advances')) ?? []
+  return rows.map(r => ({
+    orderId: r.order_id,
+    orderNumber: num(r.order_number),
+    companyName: r.company_name ?? 'Customer',
+    cancelledOn: r.cancelled_on ?? null,
+    held: num(r.held),
+  }))
+}
+
 export interface PaymentOrder {
   row: ReceivableRow
   prior: PriorPayment[]

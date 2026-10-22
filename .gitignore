@@ -11,3 +11,4 @@ dist-perf
 test-results
 playwright-report
 *.tsbuildinfo
+.claude/

@@ -172,6 +172,9 @@ export const VISITS: readonly Visit[] = [
   screen('money-team', 'Money: team report', ADMIN, () => '/money/month-end/team'),
   screen('money-margins', 'Money: margins', ADMIN, () => '/money/margins'),
   screen('money-exceptions', 'Money: exceptions (things to check)', ADMIN, () => '/money/exceptions'),
+  // round 3: the two Money screens the audit could not grade from a capture
+  screen('money-in-out', 'Money: money in and out (In vs out)', ADMIN, () => '/money/reports/in-out'),
+  screen('money-add-expenses', 'Money: Add expenses sheet', ADMIN, () => '/money/expenses?burst=1'),
   screen('reports', 'Reports', MONEY, () => '/reports'),
   screen('settings', 'Settings home', ['sales', 'engineer'], () => '/settings'),
   screen('settings-team', 'Settings: team', ADMIN, () => '/settings/team'),
@@ -179,7 +182,7 @@ export const VISITS: readonly Visit[] = [
   screen('settings-categories', 'Settings: expense categories', ADMIN, () => '/settings/categories'),
   screen('settings-company', 'Settings: company profile', ALL, () => '/settings/company'),
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
-  screen('settings-exchange-rates', 'Settings: exchange rates', ALL, () => '/settings/exchange-rates'),
+  screen('settings-exchange-rates', 'Settings: exchange rates', MONEY, () => '/settings/exchange-rates'), // engineers: no currency amounts (2026-10-22)
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
   // Last: it creates an RFQ, which would otherwise show on the lists above.
   newRfq,

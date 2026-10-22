@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { CompanyProfilePage } from '@/features/settings/CompanyProfilePage'
-import { effectiveTerms, missingForPdf, termsLabel, toFormValues, toRow, type CompanyProfile } from '@/features/settings/companyProfile'
+import { effectiveTerms, missingForDocuments, missingForPdf, termsLabel, toFormValues, toRow, type CompanyProfile } from '@/features/settings/companyProfile'
 import { profileSchema } from '@/features/settings/companyProfileSchema'
 import { setSupabaseForTests, type Db } from '@/lib/supabase'
 import { ToastProvider } from '@/ui/Toast'
@@ -96,6 +96,15 @@ describe('company profile rules', () => {
     expect(profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: 2.5 }).success).toBe(false)
   })
 
+  it('HW-47: negative terms say so, and the NTN must look like an NTN', () => {
+    const neg = profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: -5 })
+    expect(neg.success ? [] : neg.error.issues.map(i => i.message)).toEqual(['Payment terms cannot be negative.'])
+    for (const ok of ['', '1234567-8', '12345678', '1234567', '35202-1234567-1', '3520212345671'])
+      expect(profileSchema.safeParse({ ...toFormValues(EMPTY), ntn: ok }).success, ok).toBe(true)
+    for (const bad of ['not-an-ntn !!', '123', '1234567-89', 'NTN 1234567-8'])
+      expect(profileSchema.safeParse({ ...toFormValues(EMPTY), ntn: bad }).success, bad).toBe(false)
+  })
+
   it('own terms on an order win (including 0); with none the company default applies and is labelled', () => {
     expect(effectiveTerms(10, 30)).toEqual({ days: 10, isDefault: false })
     expect(effectiveTerms(0, 30)).toEqual({ days: 0, isDefault: false })
@@ -112,6 +121,13 @@ describe('company profile rules', () => {
     expect(profileSchema.safeParse({ ...toFormValues(EMPTY), email: '' }).success).toBe(true)
   })
 
+  it('documents need the legal name and address, and a GST invoice the NTN and STRN; bank details are never asked for', () => {
+    expect(missingForDocuments(FULL)).toEqual({ fields: ['strn'], title: 'Missing for documents: STRN', detail: 'GST invoices also need the NTN and STRN.' })
+    expect(missingForDocuments({ ...FULL, strn: '17-00' })).toBeNull()
+    expect(missingForDocuments(EMPTY)?.title).toBe('Missing for documents: Legal name, Address, NTN, STRN')
+    expect(missingForDocuments({ ...FULL, address: ' ', strn: 'x' })?.detail).toBe('Quotations, purchase orders and invoices print the legal name and address at the top.')
+  })
+
   it('PDFs need only legal name and address', () => {
     expect(missingForPdf(EMPTY)).toEqual(['legal_name', 'address'])
     expect(missingForPdf({ legal_name: ' ', address: 'x' })).toEqual(['legal_name'])
@@ -125,8 +141,12 @@ describe('Company profile screen', () => {
     expect(await screen.findByLabelText(/Legal name/)).toHaveValue('Q-Tech Solutions (Private) Limited')
     expect(screen.getByLabelText('Quotation validity')).toHaveValue('30')
     expect(screen.getByText('Nothing to save yet')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
-    expect(screen.queryByText("PDFs can't be issued until legal name and address are set")).toBeNull()
+    // green but aria-disabled until something changes (one green button per screen)
+    expect(screen.getByRole('button', { name: 'Save changes' })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('button', { name: 'Save changes' })).toHaveClass('bg-primary')
+    // FULL has no STRN: the one banner names it, and nothing else (audit 2026-10-22)
+    expect(screen.getByText('Missing for documents: STRN')).toBeInTheDocument()
+    expect(screen.getByText('STRN').parentElement).toHaveTextContent('Needed for GST invoices')
   })
 
   it('saves only what is filled, blank fields as null, and names the unsaved change first', async () => {
@@ -134,7 +154,7 @@ describe('Company profile screen', () => {
     h.updated = [{ ...EMPTY, legal_name: 'Q-Tech Solutions', address: 'Karachi' }]
     const user = userEvent.setup()
     mount('admin')
-    expect(await screen.findByText("PDFs can't be issued until legal name and address are set")).toBeInTheDocument()
+    expect(await screen.findByText('Missing for documents: Legal name, Address, NTN, STRN')).toBeInTheDocument()
     await user.type(screen.getByLabelText(/Legal name/), 'Q-Tech Solutions')
     await user.type(screen.getByLabelText(/Address/), 'Karachi')
     expect(screen.getByText('2 unsaved changes: Legal name, Address')).toBeInTheDocument()
@@ -175,10 +195,13 @@ describe('Company profile screen', () => {
     expect(screen.queryByText('Add the legal name before issuing a PDF.')).toBeNull()
   })
 
-  it('keeps the save bar a static card (not sticky) and sets the purchase order terms to 4 rows', async () => {
+  it('the save bar is a static card until something changes, then sticks to the bottom; purchase order terms get 4 rows', async () => {
+    const user = userEvent.setup()
     mount('admin')
     const bar = (await screen.findByText('Nothing to save yet')).parentElement as HTMLElement
     expect(bar.className).not.toContain('sticky')
+    await user.type(screen.getByLabelText(/Phone/), '021')
+    expect(bar.className).toContain('sticky')
     expect(screen.getByLabelText('Purchase order terms')).toHaveAttribute('rows', '4')
     expect(screen.getByLabelText('Quotation terms')).toHaveAttribute('rows', '5')
   })
@@ -219,7 +242,9 @@ describe('Company profile screen', () => {
       expect(screen.getByText('Only an admin can edit')).toBeInTheDocument()
       expect(screen.queryByRole('textbox')).toBeNull()
       expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull()
-      expect(screen.getAllByText('Not set').length).toBeGreaterThan(0) // blank values are flagged, not empty
+      // a blank field a document needs (STRN) is flagged; a blank optional one (phone, email, bank) is a plain dash
+      expect(screen.getAllByText('Not set')).toHaveLength(1)
+      expect(screen.getAllByText('Not given').length).toBeGreaterThan(0)
       expect(screen.queryByText(/Printed in the letterhead/)).toBeNull() // read-only view carries titles only
     })
   }
@@ -227,7 +252,7 @@ describe('Company profile screen', () => {
   it('non-admins are told to ask an admin when the profile is incomplete', async () => {
     h.row = EMPTY
     mount('sales')
-    expect(await screen.findByText('Ask an admin to add them in Settings.')).toBeInTheDocument()
+    expect(await screen.findByText(/Ask an admin to add them in Settings\.$/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add them' })).toBeNull()
   })
 

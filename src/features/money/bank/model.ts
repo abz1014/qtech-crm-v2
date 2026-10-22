@@ -75,6 +75,8 @@ export interface BankLine {
   ticked: boolean
   older: boolean
   kids?: BankKid[]
+  /** An FBR payment's full PSID (the row shows its last four digits). */
+  psid?: string | null
 }
 
 export interface BankSide {
@@ -98,7 +100,15 @@ export interface Totals {
 const sum = (lines: readonly { amount: string }[]): string => paisaToFixed(lines.reduce((n, l) => n + toPaisa(l.amount), 0n))
 const byDateDesc = (a: BankLine, b: BankLine) => (a.date === b.date ? a.key.localeCompare(b.key) : a.date < b.date ? 1 : -1)
 
-const joinTitle = (head: string, tail: string | null | undefined) => (tail ? `${head}, ${tail}` : head)
+/** "Rent, Office rent"; the category alone when the detail only repeats it ("Salaries", not "Salaries, Salaries"). */
+const joinTitle = (head: string, tail: string | null | undefined) =>
+  tail?.trim() && tail.trim().toLowerCase() !== head.trim().toLowerCase() ? `${head}, ${tail.trim()}` : head
+
+/** "PSID …2216": the last four digits, enough to find it on the statement without squeezing the row; the full PSID is in `psid`. */
+export const shortPsid = (psid: string): string => {
+  const digits = psid.replace(/\D/g, '')
+  return digits.length > 4 ? `PSID …${digits.slice(-4)}` : `PSID ${psid}`
+}
 
 /** The text under a line's title for an item dated before the statement month: "September, not ticked then". */
 export const olderNote = (date: string): string => `${monthKeyLabel(date.slice(0, 7)).split(' ')[0]}, not ticked then`
@@ -164,8 +174,9 @@ function depositLines(deps: readonly RawDeposit[], month: string): BankLine[] {
       dir: 'out' as const,
       ids: members.map(m => m.id),
       date,
-      title: psid ? `FBR deposit · PSID ${psid}` : 'FBR deposit · no PSID recorded',
-      sub: [`${members.length} ${members.length === 1 ? 'invoice' : 'invoices'}: ${numbers.join(', ') || 'no number'}`],
+      title: 'FBR payment',
+      psid: psid ?? null,
+      sub: [psid ? shortPsid(psid) : 'no PSID recorded', `${members.length} ${members.length === 1 ? 'invoice' : 'invoices'}: ${numbers.join(', ') || 'no number'}`],
       amount: sum(members),
       ticked,
       older,

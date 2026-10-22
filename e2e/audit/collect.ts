@@ -522,6 +522,8 @@ export function collect(opts: { phone: boolean }): Metrics {
     const painted = [0, 1, 2].map(i => fg[i] * a + bgc[i] * (1 - a))
     const need = el.closest(LABEL_LIKE) ? 4.5 : 7
     const got = ratio(painted, bgc)
+    // Text drawn in its own background colour is hidden on purpose (a column name kept for screen readers): not low contrast.
+    if (got < 1.1) continue
     contrastHi.checked++
     if (got + 0.005 < need) {
       failedEls.add(el)
