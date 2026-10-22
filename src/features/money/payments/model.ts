@@ -26,6 +26,8 @@ export interface ReceivableRow {
   state: PaymentState
   lastRemindedOn: string | null
   reminderCount: number
+  /** Imported from the old CRM (orders.legacy_source): its invoices are not linked to the order yet (owner decision 1b). */
+  imported: boolean
 }
 
 export const isInvoiced = (r: ReceivableRow): boolean => r.invoiceNumbers.length > 0
@@ -69,6 +71,9 @@ export interface ReceivableTotals {
   notYetDue: number
   notInvoicedCount: number
   notInvoiced: number
+  /** Imported and not invoiced: apart from "Not invoiced yet", to review. */
+  importedCount: number
+  imported: number
   gross: number
   settled: number
 }
@@ -102,7 +107,7 @@ export function receivableNextStep(r: ReceivableRow, today: string): ReceivableN
     if (reminderDue(r, today) || !r.lastRemindedOn) return { tone: 'late', label: 'Send a reminder', detail: late }
     return { tone: 'waiting', label: `Reminded ${agoDays(daysBetween(r.lastRemindedOn, today)).toLowerCase()}`, detail: late }
   }
-  if (!r.dueOn) return { tone: 'inert', label: 'Not invoiced yet' }
+  if (!r.dueOn) return { tone: 'inert', label: r.imported && !isInvoiced(r) ? 'Imported, to review' : 'Not invoiced yet' }
   return { tone: 'waiting', label: `Due ${day(r.dueOn)}`, detail: inDays(daysBetween(today, r.dueOn)) }
 }
 
@@ -114,7 +119,8 @@ export function receivableSearchText(r: ReceivableRow): string {
 export function receivableTotals(rows: readonly ReceivableRow[], today: string): ReceivableTotals {
   const open = rows.filter(isOpen)
   const overdue = open.filter(r => r.state === 'overdue')
-  const notInvoiced = open.filter(r => !isInvoiced(r))
+  const notInvoiced = open.filter(r => !isInvoiced(r) && !r.imported)
+  const imported = open.filter(r => !isInvoiced(r) && r.imported)
   const notYetDue = open.filter(r => isInvoiced(r) && r.state !== 'overdue')
   const sum = (l: readonly ReceivableRow[], k: 'balance' | 'gross' | 'settled') => round2(l.reduce((s, r) => s + r[k], 0))
   return {
@@ -127,6 +133,8 @@ export function receivableTotals(rows: readonly ReceivableRow[], today: string):
     notYetDue: sum(notYetDue, 'balance'),
     notInvoicedCount: notInvoiced.length,
     notInvoiced: sum(notInvoiced, 'balance'),
+    importedCount: imported.length,
+    imported: sum(imported, 'balance'),
     gross: sum(open, 'gross'),
     settled: sum(open, 'settled'),
   }

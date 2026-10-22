@@ -30,6 +30,7 @@ const row = (over: Partial<ReceivableRow>): ReceivableRow => ({
   state: 'unpaid',
   lastRemindedOn: null,
   reminderCount: 0,
+  imported: false,
   ...over,
 })
 
@@ -136,5 +137,35 @@ describe('record payment: amount = balance due, date = today', () => {
 
   it('says "payment" rather than "advance" once the order is invoiced', () => {
     expect(paymentNote({ ...facts, invoiced: true }, 1600764).text).toContain('after the payment of 700,000')
+  })
+})
+
+describe('receivables, imported orders (owner decision 1b)', () => {
+  const rows = [
+    row({ orderId: 'a', balance: 500, gross: 500, state: 'overdue', dueOn: '2026-11-01' }),
+    row({ orderId: 'b', balance: 300, gross: 300, state: 'unpaid', dueOn: '2026-12-25' }),
+    row({ orderId: 'c', balance: 200, gross: 200, invoiceNumbers: [], dueOn: null, state: 'unpaid' }),
+    row({ orderId: 'd', balance: 4000, gross: 4000, invoiceNumbers: [], dueOn: null, state: 'unpaid', imported: true }),
+    row({ orderId: 'e', balance: 700, gross: 700, imported: true, state: 'overdue', dueOn: '2026-11-02' }),
+  ]
+  const t = receivableTotals(rows, TODAY)
+
+  it('puts imported, not-invoiced amounts in imported, not in notInvoiced', () => {
+    expect(t.imported).toBe(4000)
+    expect(t.importedCount).toBe(1)
+    expect(t.notInvoiced).toBe(200)
+    expect(t.notInvoicedCount).toBe(1)
+  })
+  it('keeps the totals identity: open = not yet due + overdue + not invoiced + imported', () => {
+    expect(t.outstanding).toBe(t.notYetDue + t.overdue + t.notInvoiced + t.imported)
+    expect(t.openCount).toBe(t.notYetDueCount + t.overdueCount + t.notInvoicedCount + t.importedCount)
+  })
+  it('keeps an overdue invoice in overdue, imported or not', () => {
+    expect(t.overdue).toBe(1200)
+    expect(t.overdueCount).toBe(2)
+  })
+  it('names the next step of an imported, not-invoiced order', () => {
+    expect(receivableNextStep(rows[3], TODAY).label).toBe('Imported, to review')
+    expect(receivableNextStep(rows[2], TODAY).label).toBe('Not invoiced yet')
   })
 })

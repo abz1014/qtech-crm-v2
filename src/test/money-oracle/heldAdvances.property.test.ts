@@ -28,6 +28,7 @@ const toRow = (o: Order, books: Books, today: string): ReceivableRow => {
     state: r.state,
     lastRemindedOn: null,
     reminderCount: 0,
+    imported: false,
   }
 }
 

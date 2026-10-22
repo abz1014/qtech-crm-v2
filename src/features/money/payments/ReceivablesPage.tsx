@@ -72,7 +72,8 @@ const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '').replace(/ 
 function NextStep({ r, today, onInvoice }: { r: ReceivableRow; today: string; onInvoice: (orderId: string) => void }) {
   const s = receivableNextStep(r, today)
   // "Not invoiced yet" is a state, not a step: the step is to create the invoice, one tap from here (round 3).
-  if (r.state !== 'settled' && !isInvoiced(r))
+  // An imported order is grey "Imported, to review": its invoices are not linked yet, so "Create invoice" could be wrong (owner decision 1b).
+  if (r.state !== 'settled' && !isInvoiced(r) && !r.imported)
     return (
       <button
         type="button"
@@ -114,7 +115,8 @@ export function ReceivablesPage() {
   // The four figures are counted on the server (receivables_summary, the same rules); until it answers, from the rows.
   const summary = useReceivablesSummary(today)
   const local = useMemo(() => receivableTotals(rows, today), [rows, today])
-  const totals = summary.data ?? local
+  // Not invoiced and Imported come from the rows (all of them are loaded): the server's summary counts an imported order as not invoiced.
+  const totals = { ...(summary.data ?? local), notInvoicedCount: local.notInvoicedCount, notInvoiced: local.notInvoiced, importedCount: local.importedCount, imported: local.imported }
   const byState = useMemo(() => filterReceivables(rows, filter), [rows, filter])
   const shown = useMemo(() => sortReceivables(byState.filter(r => matchesAllWords(receivableSearchText(r), search))), [byState, search])
   // The panel follows the picked row; before a pick (or when it leaves the list) it follows the most overdue row (E-MN-03), else the first.
@@ -236,12 +238,13 @@ export function ReceivablesPage() {
       </p>
       <SumBar
         className="max-sm:hidden"
-        label="Balance by status"
+        label="Balance by status, includes GST"
         items={[
           { label: 'Outstanding', amount: totals.outstanding, sub: `${totals.openCount} open ${totals.openCount === 1 ? 'order' : 'orders'}` },
           { label: 'Overdue', amount: totals.overdue, tone: totals.overdue > 0 ? 'danger' : undefined, sub: `${totals.overdueCount} ${totals.overdueCount === 1 ? 'order' : 'orders'}${totals.overdueCount ? `, ${reminderPhrase(totals.overdueCount, totals.reminderDueCount)}` : ''}` },
           { label: 'Not yet due', amount: totals.notYetDue, sub: `${totals.notYetDueCount} ${totals.notYetDueCount === 1 ? 'order' : 'orders'}, invoiced` },
           { label: 'Not invoiced yet', amount: totals.notInvoiced, sub: `${totals.notInvoicedCount} ${totals.notInvoicedCount === 1 ? 'order' : 'orders'}, balance from items` },
+          { label: 'Imported, to review', amount: totals.imported, tone: 'muted', sub: `${totals.importedCount} ${totals.importedCount === 1 ? 'order' : 'orders'}, from the old CRM` },
         ]}
       />
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 min-[1360px]:grid-cols-[minmax(0,1fr)_360px]">
@@ -261,6 +264,7 @@ export function ReceivablesPage() {
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <h2 className="text-base font-semibold">Balances</h2>
+                  <span className="text-base text-fg-2">Balance includes GST</span>
                   {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. */}
                   <InfoTip label="About the balance and reminders">
                     The balance is what the customer still owes, gross (GST included), after payments recorded. A reminder is due when an
