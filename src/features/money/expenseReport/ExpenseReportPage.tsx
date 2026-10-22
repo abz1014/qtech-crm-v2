@@ -463,7 +463,10 @@ function Drill({ c, label, onClose }: { c: CategoryLine; label: string; onClose:
   const hasDetails = c.details.some(d => d.detail)
   const ref = useRef<HTMLElement | null>(null)
   // the table can be long: bring the opened category into view (no smooth scroll, so reduced motion is respected)
-  useEffect(() => ref.current?.scrollIntoView?.({ block: 'nearest' }), [c.id])
+  useEffect(() => {
+    // a block body: newer Chromium returns a Promise from scrollIntoView, and an effect must return nothing but a clean-up
+    ref.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [c.id])
   return (
     <section ref={ref} aria-label={`${c.name}, ${label}`} className="grid gap-4 border-t-2 border-brand-green bg-canvas px-5 py-4" data-testid="expense-report-drill">
       <header className="flex flex-wrap items-center gap-3">

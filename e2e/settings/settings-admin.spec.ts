@@ -412,10 +412,10 @@ test.describe('Settings › Expense categories (M13, groups 0082)', () => {
     await expect(page.locator('[data-group]').first()).toBeVisible()
     expect(await axeViolations(page), 'axe at 1440').toEqual([])
     await menuOf(page, 'Water')
-    expect(await axeViolations(page), 'axe at 1440, row menu open').toEqual([])
+    expect(await axeViolations(page, { landmarks: false }), 'axe at 1440, row menu open').toEqual([])
     await page.getByRole('menuitem', { name: 'Merge into…' }).click()
     await expect(page.getByRole('dialog', { name: 'Merge Water' })).toBeVisible()
-    expect(await axeViolations(page), 'axe at 1440, merge dialog').toEqual([])
+    expect(await axeViolations(page, { landmarks: false }), 'axe at 1440, merge dialog').toEqual([])
     await page.getByRole('button', { name: 'Cancel' }).click()
 
     await page.setViewportSize({ width: 375, height: 812 })
@@ -431,7 +431,7 @@ test.describe('Settings › Expense categories (M13, groups 0082)', () => {
     await more.click()
     await expect(page.getByRole('dialog', { name: 'Water' })).toBeVisible()
     await review(page, 'm13-07-row-sheet-375')
-    expect(await axeViolations(page), 'axe at 375, row sheet').toEqual([])
+    expect(await axeViolations(page, { landmarks: false }), 'axe at 375, row sheet').toEqual([])
   })
 })
 

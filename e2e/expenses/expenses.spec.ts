@@ -388,7 +388,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.press('Escape')
     // one month total, in the toolbar beside the month; the rows sit under their groups
     await expect(page.getByTestId('expenses-month-total')).toContainText(/PKR [\d,]+ · \d+ expenses/)
-    await expect(page.getByRole('table', { name: 'Expenses' }).getByText('Order costs', { exact: true })).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Expenses' }).getByRole('cell', { name: /^Order costs · \d+$/ })).toBeVisible()
     // edit (the row's menu)
     await page.getByRole('button', { name: new RegExp(`^More for Rent of ${x1}$`) }).click()
     await page.getByRole('menuitem', { name: 'Edit expense' }).click()
