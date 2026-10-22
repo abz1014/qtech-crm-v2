@@ -1,4 +1,4 @@
--- 0083_expense_book: expense groups (group -> category), the kind each category takes from its group, budgets, the default
+-- 0084_expense_book: expense groups (group -> category), the kind each category takes from its group, budgets, the default
 -- categories, recurring paid_via, and merge_expense_categories (closed months keep every figure). Admin only.
 --
 -- Fixture (July to September 2017, months no other fixture uses), all as the admin:

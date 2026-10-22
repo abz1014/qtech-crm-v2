@@ -211,11 +211,11 @@ function money() {
       receipts: (expenseId: string) => [...expenses, 'receipts', expenseId] as const,
       /** The Detail field's suggestions: the details typed since `since` ("2025-11-01"). */
       details: (since: string) => [...expenses, 'details', since] as const,
-      /** Every expense paid from one month to another (the Expenses report's period, 0083). */
+      /** Every expense paid from one month to another (the Expenses report's period, 0084). */
       range: (from: string, to: string) => [...expenses, 'range', from, to] as const,
     },
     categories: () => [...all, 'expense-categories'] as const,
-    /** The expense groups (0083): the first level of the category list. */
+    /** The expense groups (0084): the first level of the category list. */
     groups: () => [...all, 'expense-groups'] as const,
     /** Settings > Expense categories: what each category had paid in one month ("2026-10"). */
     categoryMonth: (month: string) => [...all, 'expense-categories', 'month', month] as const,

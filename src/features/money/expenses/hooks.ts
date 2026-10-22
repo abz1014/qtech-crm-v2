@@ -28,7 +28,7 @@ export function useRecentDetails(enabled = true) {
 }
 
 /**
- * "Create" in the category picker (owner request 2026-10-20; group 0083): the same name rule and the same request as Settings >
+ * "Create" in the category picker (owner request 2026-10-20; group 0084): the same name rule and the same request as Settings >
  * Expense categories (useCreateCategory, so the same lists refresh), filed under the chosen group (Office running when none is
  * chosen), placed last, paid via as tapped. Resolves once the category lists hold the new one, so the picker shows it straight away.
  */
@@ -55,7 +55,7 @@ export function useInlineCategoryCreate(
   )
 }
 
-/** The expense groups (0083), admin only (`enabled`). */
+/** The expense groups (0084), admin only (`enabled`). */
 export function useGroups(enabled = true) {
   return useQuery({ queryKey: qk.money.groups(), queryFn: api.listGroups, enabled, staleTime: 5 * 60_000 })
 }

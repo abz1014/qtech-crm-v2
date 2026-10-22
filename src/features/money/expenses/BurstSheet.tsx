@@ -75,7 +75,7 @@ import {
  * Enter in the amount goes to the category and the paid-via chip flips Cash and Bank in one tap. "Office water, Rs 500, cash"
  * with a new category: Add expenses, type 500, Enter, type the name, tap Create, tap Save: three taps.
  *
- * 0083 (owner: "expense keeping is utmost priority"): the category list is grouped (Recent, then Office running, Vehicles...) and a
+ * 0084 (owner: "expense keeping is utmost priority"): the category list is grouped (Recent, then Office running, Vehicles...) and a
  * new category can be filed under any group; a row can be marked "Every month": Save then also adds a recurring template (named by
  * the detail, else the category; due on the row's day, 1 to 28; paid as the row) and links this expense to it for its month, so
  * it is not due again. Paid via on a phone is a visible Cash | Bank switch (44 px); the Save button carries the total.
@@ -494,7 +494,7 @@ interface RowProps {
   onCreate: (name: string, paidVia: PaidVia) => Promise<CreateCategoryResult>
   /** Details typed before, for the Detail field's suggestions. */
   details: readonly DetailUse[]
-  /** The expense groups (0083) and the recent categories, for the grouped category list. */
+  /** The expense groups (0084) and the recent categories, for the grouped category list. */
   groups: readonly ExpenseGroup[]
   recent: readonly Category[]
 }

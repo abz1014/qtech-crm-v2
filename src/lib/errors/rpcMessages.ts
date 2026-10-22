@@ -112,7 +112,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^only an admin can (merge brands|merge companies|change who owns an RFQ|change who owns an order|resolve a value basis|change the legacy flags of an order|set legacy flags on an order|set legacy flags|change legacy flags)$/, message: () => ADMIN_ONLY },
   { match: /^the system must keep at least one active admin$/, message: () => 'Make someone else an admin first. The app always keeps one.', action: TEAM },
   { match: /^category "(.+?)" is inactive; pick an active category$/, message: m => `"${m[1]}" is archived. Pick another category, or bring it back in Settings, Expense categories.`, action: CATEGORIES },
-  // 0083: groups, moves and merges (already written for people)
+  // 0084: groups, moves and merges (already written for people)
   { match: /^There is no expense group for this kind of expense\. Add a group first\.$/, action: CATEGORIES },
   { match: /^".+?" has expenses in .+? and that month is closed\. (Moving|Merging) it /, action: CATEGORIES },
   { match: /^The group ".+?" has categories, so its kind cannot change\./ },

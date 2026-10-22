@@ -53,7 +53,7 @@ export async function listCategories(): Promise<Category[]> {
   return rows.map(toCategory)
 }
 
-/** The expense groups (0083), in their saved order. */
+/** The expense groups (0084), in their saved order. */
 export async function listGroups(): Promise<ExpenseGroup[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.from('expense_groups').select('id, name, kind, sort').order('sort').order('name')) ?? []
