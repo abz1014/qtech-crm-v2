@@ -126,7 +126,9 @@ const LABELLED_QTY = new RegExp(
   'i',
 )
 const EXTRA_TRAIL = new RegExp(String.raw`(?:^|[\s,;(–—-])\s*(\d[\d,]*(?:\.\d+)?)\s*(nos?|no's|numbers?|adad|drums?|bags?|boxe?s?|cans?|sheets?|coils?|cartons?|pkts?|packets?|lengths?|kgs?|prs?|pairs?|rolls?|ea|each|pieces?|pcs?|sets?|lots?)\.?\s*\)?\.?$`, 'i')
-const LEAD_UNIT = new RegExp(String.raw`^(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})\.?\s+(?:of\s+)?(?=[A-Za-z])`, 'i')
+const LEAD_UNIT = new RegExp(String.raw`^(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})\.?\s*(?:[-–:]\s*)?(?:of\s+)?(?<=[\s.:-])(?=[A-Za-z])`, 'i')
+/** "Bearing 6308 C3 -- Nos. 10": the unit before the number, after a dash. */
+const UNIT_FIRST_TRAIL = new RegExp(String.raw`\s[-–—:=]{1,2}\s*(${UNIT_SRC})\.?\s+(\d[\d,]*(?:\.\d+)?)$`, 'i')
 const QTY_ONLY = new RegExp(String.raw`^(?:${QTY_WORD}\s*[:=.\-–]?\s*)?(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})?\.?$`, 'i')
 
 function toQty(raw: string): number {
@@ -235,6 +237,7 @@ function readItem(text: string): ReadItem | null {
       qty = old.qty
       unit = old.unit ? unitOf(writtenUnitFor(t, old.qty) ?? old.unit) : null
     } else {
+      const uf = UNIT_FIRST_TRAIL.exec(description)
       const ex = contacts ? null : EXTRA_TRAIL.exec(description)
       // "Siemens 6ES7 231-4HD32-0XB0 – 2": a bare number after a spaced dash, when what is before it is not a number
       // (that would be a range, "0 - 10").
@@ -244,7 +247,11 @@ function readItem(text: string): ReadItem | null {
       // ("0-10 m", "0 to 10 m") or a measurement ("range 20 m").
       const dec0 = /\s(\d+(?:\.\d+)?)\s*(m|mtrs?|meters?|metres?|kgs?|ltrs?|l)\.?$/i.exec(description)
       const dec = dec0 && !/(?:[-–]|\bto|\brange|\blength|\bdepth|\bheight|\bcable\s+length)\s*$/i.test(description.slice(0, dec0.index)) && !/\d\s*$/.test(description.slice(0, dec0.index)) ? dec0 : null
-      if (ex) {
+      if (uf) {
+        qty = toQty(uf[2] as string)
+        unit = unitOf(uf[1])
+        description = description.slice(0, uf.index)
+      } else if (ex) {
         qty = toQty(ex[1] as string)
         unit = unitOf(ex[2])
         description = description.slice(0, ex.index)
@@ -887,7 +894,15 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       skip(t, 'quoted')
       continue
     }
-    if (zone !== 'disclaimer' && DISCLAIMER.test(t)) zone = 'disclaimer'
+    // A notice above the message ("CAUTION: This email originated from outside of the organization ...") is one line to skip;
+    // below the message it starts the disclaimer that runs to the end.
+    if (zone !== 'disclaimer' && DISCLAIMER.test(t)) {
+      if (drafts.length === 0 && contentLines === 0) {
+        skip(t, 'disclaimer')
+        continue
+      }
+      zone = 'disclaimer'
+    }
     if (zone === 'disclaimer') {
       skip(t, 'disclaimer')
       continue

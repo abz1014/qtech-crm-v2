@@ -58,7 +58,8 @@ function wrap(text: string, font: PDFFont, size: number, width: number, breakWor
 
 function draw(c: Ctx, text: string, x: number, yTop: number, size: number, bold = false): void {
   const font = bold ? c.bold : c.regular
-  const clean = text.replace(/[^\x20-\x7e\u00a0-\u00ff]/g, '')
+  // What the standard fonts can draw (WinAnsi): ASCII, Latin-1 and the euro sign.
+  const clean = text.replace(/[^\x20-\x7e\u00a0-\u00ff\u20ac]/g, '')
   if (!clean.trim()) return
   if (c.rotate) {
     // Shown turned a quarter clockwise: page x is the shown y, page y is the shown x.

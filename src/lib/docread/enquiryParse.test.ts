@@ -422,3 +422,20 @@ describe('parseEnquiry: corpus batches 18 and 19 (fictional)', () => {
     expect(rows(text)).toEqual([['Proximity sensor M30', 6, 'nos']])
   })
 })
+
+describe('parseEnquiry: corpus batches 20 and 21 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('skips an external-email caution banner above the request and reads what follows', () => {
+    const text = 'CAUTION: This email originated from outside of the organization. Do not click links.\nDear Sir,\nPlease quote:\n- Timing belt HTD 571: 10 Pieces'
+    expect(rows(text)).toEqual([['Timing belt HTD 571', 10, 'Pieces']])
+  })
+
+  it('reads "(2) 100 Numbers - item" and "item -- Nos. 10"', () => {
+    expect(rows('(1) 100 Numbers - Silicone sealant 280 ml\n(2) 03 Kg - Lubricating grease EP2\n3. Bearing 6308 C3 -- Nos. 10')).toEqual([
+      ['Silicone sealant 280 ml', 100, 'nos'],
+      ['Lubricating grease EP2', 3, 'kg'],
+      ['Bearing 6308 C3', 10, 'nos'],
+    ])
+  })
+})

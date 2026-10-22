@@ -719,28 +719,28 @@ function splitCells(line: string): string[] | null {
   return cells.length >= 2 ? cells : null
 }
 
-const HEADER_WORD = /^(?:#|no\.?|sr\.?|s\/n|sl|item|items|description|desc|product|particulars|qty|quantity|unit\s*price|price|rate|lead\s*time|lead|delivery|total|amount|origin|country|moq|currency|brand|make|model|part\s*(?:no|number)?|validity|remarks?|unit|uom|stock|availability)\b/i
+const HEADER_WORD = /^(?:#|no\.?|sr\.?|s\/n|sl|item|items|description|desc|product|particulars|qty|quantity|unit\s*price|price|rate|lead\s*time|lead|delivery|total|amount|origin|country|moq|currency|brand|make|model|part\s*(?:no|number)?|validity|remarks?|unit|uom|stock|availability|pos|menge|einzelpreis|gesamtpreis|beschreibung|bezeichnung|artikel|lieferzeit)\b/i
 
 function tableHeader(cells: string[]): TableCols | null {
   if (cells.length < 3) return null
   if (cells.filter(c => HEADER_WORD.test(c)).length < 2) return null
   if (cells.some(c => /\d{2,}/.test(c.replace(/\([^)]*\)/g, '')))) return null
   const find = (re: RegExp, not?: RegExp) => cells.findIndex(c => re.test(c) && !(not && not.test(c)))
-  const total = find(/total|amount|ext\b|line\s*value/i)
+  const total = find(/total|amount|ext\b|line\s*value|gesamt/i)
   // With a list price and a discount, the price is the net one ("List Price | Disc. % | Net Price").
-  const PRICE = /price|rate|u\/p|unit\s*cost|unit\s*value/i
+  const PRICE = /price|rate|u\/p|unit\s*cost|unit\s*value|einzelpreis|e-?preis|preis/i
   const net = find(/\bnet\b|after\s*disc|discounted/i, /total|amount/i)
-  const notList = find(PRICE, /total|amount|\blist\b|\bgross\b/i)
-  const price = net >= 0 && PRICE.test(cells[net] ?? '') ? net : notList >= 0 ? notList : find(PRICE, /total|amount/i)
+  const notList = find(PRICE, /total|amount|gesamt|\blist\b|\bgross\b/i)
+  const price = net >= 0 && PRICE.test(cells[net] ?? '') ? net : notList >= 0 ? notList : find(PRICE, /total|amount|gesamt/i)
   if (price < 0 && total < 0) return null
   const priceCell = cells[price] ?? cells[total] ?? ''
-  const leadAt = find(/lead|delivery|dlv|availability|eta|^(?:wks?|weeks?|days)\.?$/i)
+  const leadAt = find(/lead|delivery|dlv|availability|eta|lieferzeit|^(?:wks?|weeks?|days)\.?$/i)
   const leadCell = cells[leadAt] ?? ''
   return {
     n: cells.length,
     price,
     total,
-    qty: find(/^(?:qty|quantity|q'ty|nos)\b/i),
+    qty: find(/^(?:qty|quantity|q'ty|nos|menge|anzahl)\b/i),
     lead: leadAt,
     origin: find(/origin|country/i),
     moq: find(/moq/i),

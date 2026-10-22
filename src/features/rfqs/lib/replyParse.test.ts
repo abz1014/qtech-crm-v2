@@ -591,3 +591,12 @@ describe('a material grade two items share (fictional)', () => {
     expect(one(parseSupplierReply(text, items, { today: '2026-10-20' }).offers, 'b').unitPrice).toBe(8.5)
   })
 })
+
+describe('a German table with prices written 1.250,00 € (fictional)', () => {
+  it('reads Menge and Einzelpreis, not the Gesamtpreis', () => {
+    const text = 'Pos.\tBeschreibung / Description\tMenge\tEinzelpreis\tGesamtpreis\n1\tSITRANS P320 pressure transmitter 0-10 bar\t4\t1.250,00 €\t5.000,00 €'
+    const o = one(parseSupplierReply(text, ITEMS, { today: '2026-10-20' }).offers, 'i1')
+    expect(o.unitPrice).toBe(1250)
+    expect(o.currency).toBe('EUR')
+  })
+})
