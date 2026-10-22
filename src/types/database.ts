@@ -2230,6 +2230,37 @@ isOneToOne: false
               "quoted_number": number,"quoted_on": string,"quoted_price": number,"quoted_revision": number,"quoted_tier": number,"rfq_item_id": string,"sold_on": string,"sold_order_number": number,"sold_price": number,"sold_tier": number
             }[]
                            },
+"delete_company":
+{ Args: { "p_company_id": string }; Returns: undefined
+                           },
+"delete_invoice":
+{ Args: { "p_invoice_id": string }; Returns: {
+              "storage_bucket": string,"storage_path": string
+            }[]
+                           },
+"delete_order":
+{ Args: { "p_order_id": string }; Returns: {
+              "storage_bucket": string,"storage_path": string
+            }[]
+                           },
+"delete_payment":
+{ Args: { "p_payment_id": string }; Returns: undefined
+                           },
+"delete_po_revision":
+{ Args: { "p_po_id": string }; Returns: {
+              "storage_bucket": string,"storage_path": string
+            }[]
+                           },
+"delete_quotation_revision":
+{ Args: { "p_quotation_id": string }; Returns: {
+              "storage_bucket": string,"storage_path": string
+            }[]
+                           },
+"delete_rfq":
+{ Args: { "p_rfq_id": string }; Returns: {
+              "storage_bucket": string,"storage_path": string
+            }[]
+                           },
 "fetch_fx_rates":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
