@@ -108,12 +108,10 @@ export function BoardPage() {
   const step: 'all' | NextStep = show === 'closed' ? 'all' : show
   const shown = useMemo(() => applyQuery(applyStep(byOwner, step), q), [byOwner, step, q])
   const mineCount = useMemo(() => applyOwner(open.data ?? [], 'mine', user?.id ?? null).length, [open.data, user?.id])
-  const overdue = useMemo(() => (open.data ?? []).filter(r => r.isOverdue).length, [open.data])
+  // The header counts the owner's view (Mine or All), like the step counts, so Mine never shows everyone's numbers.
+  const overdue = useMemo(() => byOwner.filter(r => r.isOverdue).length, [byOwner])
   // "Need you": the two steps that wait on our side (ask suppliers, send the quotation); the others wait on someone else.
-  const needYou = useMemo(() => {
-    const c = stepCounts(open.data ?? [])
-    return c.suppliers + c.ready
-  }, [open.data])
+  const needYou = counts.suppliers + counts.ready
 
   const openColumns = useMemo<Column<BoardRow>[]>(
     () => [
@@ -245,9 +243,9 @@ export function BoardPage() {
   )
 
   const lede = open.isSuccess
-    ? total === 0
+    ? byOwner.length === 0
       ? 'Nothing is waiting on you.'
-      : [`${total} open`, needYou ? `${needYou} need you` : null, overdue ? `${overdue} overdue` : null].filter(Boolean).join(' · ')
+      : [`${byOwner.length} open`, needYou ? `${needYou} need you` : null, overdue ? `${overdue} overdue` : null].filter(Boolean).join(' · ')
     : 'Open RFQs, earliest due date first.'
 
   const closedSummary = closed.isSuccess ? pageSummary(page, PAGE_SIZE, closed.data.total) : undefined
@@ -270,6 +268,7 @@ export function BoardPage() {
         {!closedTab ? (
           <DataTable
             label="Open RFQs"
+            sortParam="sort"
             columns={openColumns}
             rows={shown}
             getRowId={r => r.rfqId}
@@ -286,6 +285,7 @@ export function BoardPage() {
           <>
             <DataTable
               label="Closed and won RFQs"
+              sortParam="sort"
               columns={closedColumns}
               rows={closed.data?.rows ?? []}
               getRowId={r => r.rfqId}

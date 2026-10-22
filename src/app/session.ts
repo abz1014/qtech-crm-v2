@@ -60,7 +60,9 @@ export const session = {
     const dev = clearDevRole()
     await forgetDeviceCaptures()
     const supabase = getSupabase()
-    if (supabase) await supabase.auth.signOut()
+    // This device only: with the API refusing ended sessions at once (0086), a global sign-out here would also end the
+    // person's other devices on the spot. Reset password and Deactivate (admin-users) are what end every device.
+    if (supabase) await supabase.auth.signOut({ scope: 'local' })
     // Again once the session has ended: a New RFQ draft kept while the sign-out was on its way does not stay behind.
     forgetIntakeDrafts()
     if (dev) window.location.assign('/login')

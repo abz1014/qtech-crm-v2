@@ -88,6 +88,18 @@ describe('search palette source (R12)', () => {
     expect((await p).some(i => i.id === 'company-new-typed')).toBe(false)
   })
 
+  it('HW-29/37: inner spaces are collapsed before searching, and text too long for a name is not offered as a company', async () => {
+    searchAll.mockResolvedValue([hit('company', 'c1', 'Srch Word')])
+    const p = searchPaletteSource(0).search!('  srch   word  ', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    expect(searchAll.mock.calls[0][0]).toBe('srch word')
+    expect((await p).some(i => i.id === 'company-new-typed')).toBe(false)
+    searchAll.mockResolvedValue([])
+    const long = searchPaletteSource(0).search!('x'.repeat(300), new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    expect((await long).some(i => i.id === 'company-new-typed')).toBe(false)
+  })
+
   it('P02: orders, items, supplier POs and invoices open the order, the order, the order and the invoice', async () => {
     searchAll.mockResolvedValue([
       hit('invoice', 'v1', 'INV-2311', { meta: 'Hazara · ORD-0041', orderId: 'o1' }),
