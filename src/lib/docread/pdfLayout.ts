@@ -168,7 +168,7 @@ const HEADER_TERM = new RegExp(
       String.raw`(?:einzel|gesamt|stück)\s*-?\s*preis`,
       'gesamt',
       String.raw`(?:beschreibung|bezeichnung)(?:\s*\/\s*description)?`,
-      'artikel(?:\s*-?\s*nr\.?)?',
+      String.raw`artikel(?:\s*-?\s*nr\.?)?`,
       'lieferzeit',
       String.raw`order\s*(?:code|no\.?)`,
       String.raw`art(?:icle|\.)?\s*(?:no\.?|code|#)`,
