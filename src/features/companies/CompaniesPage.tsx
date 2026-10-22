@@ -96,8 +96,10 @@ export function CompaniesPage() {
         header: 'Company',
         value: r => r.name,
         sortable: true,
+        // Table cells do not wrap (DataTable), but a long company name must: unwrapped, it ran under the Role badge on a
+        // 768 px tablet (HE-16). It wraps inside its own column instead.
         cell: r => (
-          <div className="grid min-w-0 gap-px">
+          <div className="grid min-w-0 gap-px whitespace-normal">
             <NameLink row={r} />
             <PlaceLine row={r} />
           </div>

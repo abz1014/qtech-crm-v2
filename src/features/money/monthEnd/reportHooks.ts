@@ -38,13 +38,24 @@ interface Report<T> {
   refetch: () => void
 }
 
-const isIso = (s: string | null): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s)
+/**
+ * An as-of day from the address that may be used: a real calendar day (not 2026-02-30), from 2000 on and not after today
+ * (HE-22). Anything else falls back to the default as-of, so a mistyped link still shows the report.
+ */
+export function isUsableAsOf(s: string | null, today: string): s is string {
+  const m = s ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(s) : null
+  if (!m || !s) return false
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const date = new Date(Date.UTC(y, mo - 1, d))
+  const real = date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d
+  return real && s >= '2000-01-01' && s <= today
+}
 
 /** The date aging and "we owe" are read as of: the month's last day (never in the future), or a day the person chose. */
 export function useAsOf(month: string, today: string): { asOf: string; chosen: boolean; setAsOf: (d: string | null) => void } {
   const [params, setParams] = useSearchParams()
   const asked = params.get('asof')
-  const chosen = isIso(asked)
+  const chosen = isUsableAsOf(asked, today)
   const end = monthEnd(month)
   const asOf = chosen ? asked : end > today ? today : end
   const setAsOf = (d: string | null) => {

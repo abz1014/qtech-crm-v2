@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
+import { nullOnInvalidId } from '@/lib/uuid'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/rfqs/api'
 import { searchCompanies } from '@/features/companies/api'
@@ -106,7 +107,7 @@ export function useDraftCheck(draft: { rfqId: string; companyId: string | null; 
 // ================================================================ RFQ detail (R07)
 
 /** The RFQ page's first reads (its hooks, and the app's start reading them ahead of the page: rfqs/prefetch.ts). */
-export const rfqHeaderQuery = (id: string) => ({ queryKey: qk.rfqs.part(id, 'header'), queryFn: () => api.getRfqHeader(id) })
+export const rfqHeaderQuery = (id: string) => ({ queryKey: qk.rfqs.part(id, 'header'), queryFn: () => api.getRfqHeader(id).catch(nullOnInvalidId) })
 export const rfqItemsQuery = (id: string) => ({ queryKey: qk.rfqs.part(id, 'items'), queryFn: () => api.listRfqItems(id) })
 export const rfqInquiriesQuery = (id: string, prices: boolean) => ({
   queryKey: [...qk.rfqs.part(id, 'inquiries'), prices ? 'prices' : 'no-prices'],

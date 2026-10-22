@@ -22,6 +22,19 @@ export const realItems = (items: readonly DraftItem[]): DraftItem[] => items.fil
 
 export const effectiveQty = (i: DraftItem): number => (i.qty != null && Number.isFinite(i.qty) && i.qty > 0 ? i.qty : 1)
 
+/** rfq_items.qty is numeric(12,3): the largest quantity the database can hold (HE-11). */
+export const MAX_ITEM_QTY = 999_999_999.999
+
+/**
+ * The first item (its 1-based row number, as "Description of item N" counts) whose quantity is too large to save, with the
+ * sentence that names it; null when every quantity fits. Checked before float_rfq, so the save never fails on it.
+ */
+export function qtyTooLarge(items: readonly DraftItem[]): { row: number; message: string } | null {
+  const i = items.findIndex(it => it.description.trim() !== '' && effectiveQty(it) > MAX_ITEM_QTY)
+  if (i < 0) return null
+  return { row: i + 1, message: `Item ${i + 1}: the quantity is too large (most 999,999,999). Correct it, then save.` }
+}
+
 /** rfq_items.qty is numeric(12,3): nine whole digits. */
 export const MAX_QTY = 999_999_999
 

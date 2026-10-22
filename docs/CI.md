@@ -9,7 +9,7 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `ci.yml` gallery job (visual + axe) | main, manual, or when `src/ui`, `src/dev`, `src/index.css`, `tailwind.config.ts`, `e2e/gallery*`, `e2e/__screenshots__`, `playwright.config.ts`, `package*.json` change | about 4 min |
 | `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `import/**`, `package*.json` or the workflow changed (its last step is the import load test, I01) | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
-| `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; up to 5 parallel shards, each with its own stack boot, only suites whose paths changed; the final job `E2E` is the one result | about 7 min on a full run (was 20 to 40) |
+| `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; up to 7 parallel shards, each with its own stack boot, only suites whose paths changed; the final job `E2E` is the one result | about 7 min on a full run (was 20 to 40) |
 | `ci.yml` build job, bundle budget step (P04) | every push except docs-only | seconds; fails if the initial JS is over 300 KB gzip, and prints the PDF chunk and service-worker precache sizes in the run summary |
 | `e2e.yml` suite `perf` (P04, registered in `.github/e2e-suites.yml`) | when `e2e/perf/**` or a shared path changes | about 5 min (Lighthouse, 7 screens, desktop and phone) |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
@@ -29,7 +29,7 @@ Rules applied everywhere:
 Suites are defined in ONE file, `.github/e2e-suites.yml`: each key is a Playwright project, its paths say when it runs, an optional `# weight=N`
 (rough seconds) balances shards. The `shared` key (`src/**`, `e2e/support/**`, migrations, seed, config, `playwright.config.ts`, `package*.json`, the workflow,
 this file, `scripts/ci/e2e-*`) runs every suite; anything else runs just the suites whose own paths changed. `dorny/paths-filter` reads that file, then
-`scripts/ci/e2e-matrix.py` packs the chosen suites into up to 5 shards (longest first, about 200 s of tests each). Every shard is its own job
+`scripts/ci/e2e-matrix.py` packs the chosen suites into up to 7 shards (longest first, about 200 s of tests each). Every shard is its own job
 (`E2E shard N`): it boots its own Supabase stack, builds once, and runs its suites one after another with `supabase db reset` between them
 (`scripts/ci/e2e-run.sh`; a failing suite does not stop the others, the shard fails at the end). A final job named `E2E` needs all shards and is the single
 result to read or require (green also when no suite needed to run). Reports upload per shard as `playwright-e2e-shard-N`.

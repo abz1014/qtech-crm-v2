@@ -132,6 +132,12 @@ const VERIFY_DIRS: Record<string, string> = {
   'verify-resilience': 'resilience',
 }
 const VERIFY_SUITES = Object.keys(VERIFY_DIRS)
+/**
+ * The exploratory edge-case hunt (e2e/hunt/edges, branch hunt/edges): records findings and screenshots into review-shots/hunt-edges and
+ * holds the HE-n bug tests. Split in five so each fits a shard: empty states with the bug tests, the forms/states/1,000-rows probes,
+ * the two halves of the every-route x role x viewport sweep, and click-every-button.
+ */
+const HUNT_EDGES = ['hunt-edges', 'hunt-edges-probe', 'hunt-edges-sweep-a', 'hunt-edges-sweep-b', 'hunt-edges-clicks']
 /** The bug-hunt suites (e2e/hunt/workflows/): project -> spec file names (a regex alternation). */
 const HUNT_FILES: Record<string, string> = {
   'hunt-workflows': 'crawl|bugs',
@@ -142,7 +148,7 @@ const HUNT_FILES: Record<string, string> = {
 }
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES)]
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
@@ -442,6 +448,25 @@ export default defineConfig({
         screenshot: 'only-on-failure',
       },
     },
+    // The edge-case hunt (e2e/hunt/edges): see HUNT_EDGES above. Contexts are made per viewport by the specs themselves.
+    ...(
+      [
+        ['hunt-edges', /hunt\/edges\/(a-empty|bugs)\.spec\.ts$/, undefined],
+        // zz-big seeds 1,000+ rows: it stays last in its project, after the forms and states probes.
+        ['hunt-edges-probe', /hunt\/edges\/(forms|states|zz-big)\.spec\.ts$/, undefined],
+        ['hunt-edges-sweep-a', /hunt\/edges\/sweep\.spec\.ts$/, /@ (w1920|w1366|w768)$/],
+        ['hunt-edges-sweep-b', /hunt\/edges\/sweep\.spec\.ts$/, /@ (w375|w320|z200)$/],
+        ['hunt-edges-clicks', /hunt\/edges\/clicks\.spec\.ts$/, undefined],
+      ] as const
+    ).map(([name, testMatch, grep]) => ({
+      name,
+      testMatch,
+      ...(grep ? { grep } : {}),
+      fullyParallel: false,
+      retries: 0,
+      timeout: 900_000,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1366, height: 768 }, screenshot: 'only-on-failure' as const },
+    })),
     // hunt-workflows* (branch hunt/workflows): the exploratory bug hunt, one project per spec so the long files spread over the shards.
     // Findings go to <REVIEW_DIR>/hunt-workflows/ instead of stopping at the first failure; confirmed bugs are test.fail('HW-n') in
     // e2e/hunt/workflows/bugs.spec.ts (project hunt-workflows). No retries: a retry would write every finding twice.

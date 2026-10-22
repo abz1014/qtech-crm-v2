@@ -1,4 +1,5 @@
 import { paisaToFixed, toPaisa } from '@/lib/money'
+import { isMonthKey } from '@/features/money/monthKey'
 import { GROUP_LABEL, monthEnd, monthKeyLabel, monthStart, type CategoryGroup } from '@/features/money/expenses/model'
 
 /*
@@ -260,4 +261,14 @@ export function defaultStatementMonth(today: string): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-export { isMonthKey } from '@/features/money/monthKey'
+export { isMonthKey }
+
+/** The earliest month a Month-end or bank link may open (nothing in the books is older). */
+export const FIRST_OPENABLE_MONTH = '2000-01'
+
+/**
+ * A month from the address that may be opened: well formed, not before 2000 and not after this month (HE-21). A future month
+ * has nothing to check or match, so a link to one falls back to the default month, as Reports does.
+ */
+export const isOpenableMonth = (s: string | null, today: string): s is string =>
+  isMonthKey(s) && s >= FIRST_OPENABLE_MONTH && s <= today.slice(0, 7)

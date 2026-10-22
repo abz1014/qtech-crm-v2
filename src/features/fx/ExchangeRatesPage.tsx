@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { History, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
+import { formatDateText } from '@/lib/dateInput'
+import { storedRate } from '@/lib/formRules'
 import { formatRate } from '@/lib/money'
 import { parseAmount } from '@/lib/number'
 import { mapPgError } from '@/lib/pgErrors'
@@ -257,7 +259,8 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
     if (rate === null || blocked) return
     try {
       await save.mutateAsync({ currency, ratePkr: rate, asOf: asOf || undefined })
-      toast({ title: 'Rate saved', body: `${currency} ${formatRate(rate)} for ${formatDay(asOf)}`, tone: 'success' })
+      // The rate as numeric(14,6) keeps it, and the date with its year (hunt HE-9, HE-10).
+      toast({ title: 'Rate saved', body: `${currency} ${storedRate(rate)} for ${formatDateText(asOf || businessToday())}`, tone: 'success' })
       setRateText('')
     } catch (err) {
       toast({ title: 'Could not save the rate', body: mapPgError(err, { entity: 'rate' }).message, tone: 'danger' })

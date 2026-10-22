@@ -1,7 +1,9 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { useToast } from '@/ui/useToast'
+import { LoadBoundary } from '@/ui/LoadBoundary'
+import { useRetryableLazy } from '@/lib/importWithReload'
 import { blockingOverlayOpen, shortcutsEnabled } from '@/ui/useShortcutsSetting'
 import {
   createCapture,
@@ -16,7 +18,9 @@ import {
 import { RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
 import { CaptureContext, type CaptureApi, type CaptureNotice, type Draft } from '@/app/capture/useCapture'
 
-const CaptureSheet = lazy(() => import('@/features/capture/CaptureSheet'))
+// Loaded when first opened. With no signal the chunk may not be there: the sheet then fails on its own (a toast with Try
+// again), never the whole app; the draft lives here, so nothing typed or added is lost (hunt HE-2).
+const loadCaptureSheet = () => import('@/features/capture/CaptureSheet')
 
 /*
  * Capture provider (R22). One draft for the whole shell, so every way in lands in the same place:
@@ -225,6 +229,22 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     }
   }, [add])
 
+  const sheet = useRetryableLazy(loadCaptureSheet)
+  const retrySheet = sheet.retry
+  const onSheetLoadError = useCallback(
+    (err: unknown) => {
+      setOpen(false)
+      retrySheet()
+      toast({
+        tone: 'danger',
+        title: 'Paste or photo could not open',
+        body: err instanceof Error && err.name === 'StaleAppError' ? err.message : 'Check your signal, then try again.',
+        action: { label: 'Try again', onClick: () => setOpen(true) },
+      })
+    },
+    [toast, retrySheet],
+  )
+
   const api = useMemo<CaptureApi>(
     () => ({ open, draft, notice, dragging, resizing, openCapture, close, setText, add, removeFile, discard, openShared }),
     [open, draft, notice, dragging, resizing, openCapture, close, setText, add, removeFile, discard, openShared],
@@ -234,9 +254,11 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     <CaptureContext.Provider value={api}>
       {children}
       {open ? (
-        <Suspense fallback={null}>
-          <CaptureSheet />
-        </Suspense>
+        <LoadBoundary key={sheet.attempt} onError={onSheetLoadError}>
+          <Suspense fallback={null}>
+            <sheet.Component />
+          </Suspense>
+        </LoadBoundary>
       ) : null}
     </CaptureContext.Provider>
   )

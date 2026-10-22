@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
+import { nullOnInvalidId } from '@/lib/uuid'
 import { buildSupplierRecord, type SupplierRecord } from '@/features/companies/supplierRecord'
 import { useSeesPrices } from '@/app/session'
 import { qk } from '@/features/queryKeys'
@@ -27,7 +28,8 @@ export function useCompanyList() {
 export function useCompany(id: string | undefined) {
   return useQuery({
     queryKey: qk.companies.detail(id ?? ''),
-    queryFn: () => api.getCompany(id as string),
+    // A mistyped link (/companies/zzz) reads as "no such company", not as a failed load (HE-20).
+    queryFn: () => api.getCompany(id as string).catch(nullOnInvalidId),
     enabled: Boolean(id),
   })
 }

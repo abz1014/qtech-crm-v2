@@ -1,6 +1,21 @@
-import { forwardRef, useId, useRef, type ComponentPropsWithoutRef, type ElementRef, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+  type ElementRef,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 import { Check, type LucideIcon } from 'lucide-react'
+import { useBackToClose } from '@/lib/useBackToClose'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { rememberMenuTrigger } from '@/ui/menuTrigger'
@@ -13,7 +28,30 @@ import { rememberMenuTrigger } from '@/ui/menuTrigger'
  *   information  anchored detail that needs more than a tooltip but less than a panel. No form inside.
  * Opens 4px below its trigger. Esc, outside click and selecting an item close it; focus returns to the trigger.
  */
-export const Popover = RadixPopover.Root
+const OpenState = createContext<{ open: boolean; close: () => void } | null>(null)
+
+/**
+ * Radix's Root, with its open state known here so phone Back can close an open menu or popover instead of leaving the
+ * page (hunt HE-19; dialogs and sheets already do this with useBackToClose). Controlled or uncontrolled, as Radix's.
+ */
+export function Popover({ open: openProp, defaultOpen, onOpenChange, ...rest }: ComponentPropsWithoutRef<typeof RadixPopover.Root>) {
+  const [own, setOwn] = useState(defaultOpen ?? false)
+  const open = openProp ?? own
+  const controlled = openProp !== undefined
+  const set = useCallback(
+    (next: boolean) => {
+      if (!controlled) setOwn(next)
+      onOpenChange?.(next)
+    },
+    [controlled, onOpenChange],
+  )
+  const state = useMemo(() => ({ open, close: () => set(false) }), [open, set])
+  return (
+    <OpenState.Provider value={state}>
+      <RadixPopover.Root {...rest} open={open} onOpenChange={set} />
+    </OpenState.Provider>
+  )
+}
 export const PopoverTrigger = RadixPopover.Trigger
 export const PopoverAnchor = RadixPopover.Anchor
 export const PopoverClose = RadixPopover.Close
@@ -32,6 +70,10 @@ export const PopoverContent = forwardRef<ElementRef<typeof RadixPopover.Content>
 ) {
   const isMenu = variant === 'menu'
   const inner = useRef<HTMLDivElement | null>(null)
+  const state = useContext(OpenState)
+  // Phones only: there Back is the way out of a menu; on a desktop an extra history entry per menu would be noise.
+  const phone = useMediaQuery('(max-width: 767.98px)')
+  useBackToClose(Boolean(state?.open), () => state?.close(), { enabled: phone && state !== null })
   const handleKey = (e: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(e)
     if (!isMenu || e.defaultPrevented) return

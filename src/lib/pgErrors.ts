@@ -5,6 +5,7 @@
  *   23505 unique_violation       "already exists"
  *   23503 foreign_key_violation  a linked record is missing, or still in use
  *   23514 check_violation        a value is outside what the table allows
+ *   22003 numeric_value_out_of_range  a number too large for its column ("too large", never "try again")
  *   42501 insufficient_privilege row-level security refused it: trying again will not help
  *   PGRST116                     .single() found no row: it was removed meanwhile
  *   ''    + "TypeError: ..."     postgrest-js resolves a failed fetch as an error object, not a throw

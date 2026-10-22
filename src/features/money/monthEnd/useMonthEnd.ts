@@ -7,7 +7,7 @@ import {
   checksWithItems,
   closeState,
   defaultMonthEndMonth,
-  isMonthKey,
+  isOpenableMonth,
   shiftMonth,
   type CheckCard,
   type CloseState,
@@ -42,7 +42,8 @@ export function useMonthEnd(): MonthEndCtx {
   const today = businessToday()
   const [params, setParams] = useSearchParams()
   const asked = params.get('month')
-  const month = isMonthKey(asked) ? asked : defaultMonthEndMonth(today)
+  // A future month (or one before 2000) from a link falls back to the default month, as Reports does (HE-21).
+  const month = isOpenableMonth(asked, today) ? asked : defaultMonthEndMonth(today)
   const status = useMonthEndStatus(month)
   const details = useMonthEndDetails(month)
   const closedQ = useClosedMonths()

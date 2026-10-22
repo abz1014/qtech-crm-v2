@@ -13,7 +13,7 @@ import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
 import { MonthPager } from '@/features/money/monthEnd/MonthEndFrame'
 import { monthKeyLabel, shiftMonth } from '@/features/money/expenses/model'
 import { useBankMonth, useTickLine } from '@/features/money/bank/hooks'
-import { bankTotals, buildBankView, defaultStatementMonth, isMonthKey, type BankLine } from '@/features/money/bank/model'
+import { bankTotals, buildBankView, defaultStatementMonth, isOpenableMonth, type BankLine } from '@/features/money/bank/model'
 import { TickPanel } from '@/features/money/bank/TickPanel'
 
 /*
@@ -30,7 +30,7 @@ export function BankTickPage() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const asked = params.get('month')
-  const month = isMonthKey(asked) ? asked : defaultStatementMonth(today)
+  const month = isOpenableMonth(asked, today) ? asked : defaultStatementMonth(today)
   const thisMonth = today.slice(0, 7)
 
   const data = useBankMonth(month)
