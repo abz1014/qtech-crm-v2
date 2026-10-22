@@ -257,7 +257,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               costs.data.expenses.map(e => (
                 <div key={e.id} className={ROW}>
                   <span className="flex min-w-0 items-baseline gap-3 text-fg-2">
-                    <span className="num shrink-0 text-xs text-fg-muted">{formatShortDate(e.paidOn, today)}</span>
+                    <span className="num shrink-0 text-stamp text-fg-muted">{formatShortDate(e.paidOn, today)}</span>
                     <span className="min-w-0 [overflow-wrap:anywhere]" title={[categoryName(e.categoryId), e.payeeName ?? e.note].filter(Boolean).join(' · ')}>
                       {[categoryName(e.categoryId), e.payeeName ?? e.note].filter(Boolean).join(' · ')}
                     </span>

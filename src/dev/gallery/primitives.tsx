@@ -294,7 +294,7 @@ export function TextSizeSection() {
     <Section
       id="textsize"
       title="Text size"
-      note="Normal is the default since 2026-10-19 (xs 14, sm 15, base 16; controls 40, rows 48). Smaller restores 12, 13, 14 with 32 and 40, for anyone who picks it under Your details or in the account menu."
+      note="Normal is the default (since 2026-10-22 everything read is 16, timestamps 14; controls 44, rows 56). Smaller restores 12, 13, 14 with 32 and 40, for anyone who picks it under Your details or in the account menu."
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <TextSample />

@@ -388,7 +388,7 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
                 <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium leading-snug">
                   <span className="num">{orderRef(c.number)}</span> · {c.companyName}
                 </b>
-                <span className="min-w-0 [overflow-wrap:anywhere] text-xs leading-snug text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere] text-stamp text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
               </span>
               <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', c.id === chosenId ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
                 {c.id === chosenId ? <span className="size-[6px] rounded-round bg-surface" /> : null}
