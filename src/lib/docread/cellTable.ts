@@ -17,10 +17,13 @@ const NUM = /^\d[\d,]*(?:\.\d+)?$/
 const MONEY = /^(?:[A-Za-z$€¥￥£₨.]{0,4}\s?)?\d[\d,]*(?:\.\d+)?(?:\/-)?(?:\s?[A-Za-z$€]{0,4})?$/
 const PLACEHOLDER = /^[-–—]$|^n\/?a$/i
 
+const STOCK_QTY = /stock|on\s*hand|available|balance|issued|received|consum/i
+
 function headerKind(label: string, hasDesc: boolean): Kind {
   if (/^(?:s\.?\s*no|s\.?\s*#|sr|sl|#|no\.?$|pos|line|itm)/i.test(label) || (hasDesc && /^item(?:\s*no\.?)?$/i.test(label))) return 'number'
   if (/desc|particular|specification|product|item\s*name|short\s*text|goods|^item$/i.test(label)) return 'desc'
-  if (/qty|quantity/i.test(label)) return 'qty'
+  // "Qty in Stock" is what the store holds, not what is asked for.
+  if (/qty|quantity/i.test(label) && !STOCK_QTY.test(label)) return 'qty'
   // "Unit EUR" is a price per unit; "Unit" and "UOM" alone are the unit.
   if (/\b(?:usd|eur|rmb|cny|pkr|aed|gbp|rs)\b|[$€¥￥£]/i.test(label)) return 'money'
   if (/^(?:uom|units?|u\/m|a\s*\/\s*u)\.?$/i.test(label)) return 'unit'
@@ -116,7 +119,11 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
       const cells: string[] = numbered ? [first] : []
       let q = numbered ? j + 1 : j
       const width = numbered ? Infinity : labels.length
-      const hasNeed = () => cells.some((c, x) => x > (numbered ? 1 : 0) && (need === 'qty' ? NUM.test(c) : MONEY.test(c)))
+      // The row has its quantity (or price) once a cell has landed in that column ("0" under Qty in Stock is not it).
+      const hasNeed = () => {
+        const { out } = place(cells, kinds)
+        return out.some((v, x) => v && kinds[x] === need)
+      }
       while (q < src.length && cells.length < width && !(src[q] as T).blankBefore) {
         const t = (src[q] as T).t
         // The next serial number starts the next row (followed by its description, not by another number: a last cell can

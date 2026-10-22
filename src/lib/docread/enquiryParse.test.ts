@@ -439,3 +439,21 @@ describe('parseEnquiry: corpus batches 20 and 21 (fictional)', () => {
     ])
   })
 })
+
+describe('parseEnquiry: corpus batches 22 and 23 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('takes Qty Required, not Qty in Stock', () => {
+    const text = ['S.No', 'Description', 'UOM', 'Qty in Stock', 'Qty Required', '1', 'Butterfly valve DN100, wafer type', 'EA', '0', '2'].join('\n')
+    expect(rows(text)).toEqual([['Butterfly valve DN100, wafer type', 2, 'EA']])
+    expect(rows('S.No\tDescription\tUOM\tQty in Stock\tQty Required\n1\tLimit switch roller lever\tNO\t3\t8')).toEqual([['Limit switch roller lever', 8, 'nos']])
+  })
+
+  it('reads "Item: 12" in a chat and "need 10 item", but not "need 3 phase motor" as three', () => {
+    expect(rows('Sir please share rates\nPressure gauge 0-6 bar 150mm dial: 12\nneed 10 butterfly valve dn150 wafer type')).toEqual([
+      ['Pressure gauge 0-6 bar 150mm dial', 12, null],
+      ['butterfly valve dn150 wafer type', 10, null],
+    ])
+    expect(rows('need 3 phase motor 5.5 kW')[0]?.[1]).toBe(1)
+  })
+})

@@ -193,16 +193,24 @@ interface ReadItem {
 /** One item's text (its own line, plus any wrapped lines) into description, quantity (null when none) and unit. */
 function readItem(text: string): ReadItem | null {
   // "Item: Push button red; Make: X; Qty: 20 Pcs": the label in front is not part of the description.
-  let t = text
+  const t0 = text
     .replace(TAIL, '')
     .replace(/^(?:(?:plz|pls|please)\s+)?(?:quote|rates?(?:\s+(?:pls|plz|please))?|send\s+rates?)\s*[:,-]\s*/i, '')
-    .replace(/^(?:we\s+require|(?:(?:plz|pls|please|kindly)\s+)?quote(?:\s+for)?)\s*[:,-]?\s+(?=\d)/i, '')
+  const asked = /^(?:we\s+require|(?:we\s+|i\s+)?(?:need|want|require)|(?:(?:plz|pls|please|kindly)\s+)?quote(?:\s+for)?)\s*[:,-]?\s+(?=\d)/i
+  // "need 10 butterfly valve": after a request word, a bare number in front is the count (not "3 phase motor", "2 core cable").
+  const count = asked.test(t0) ? /^(\d{1,5})\s+(?!(?:core|pole|phase|way|wire|pin|inch|mm|cm|m|bar|kw|kv|v|a|hp|ppr|co|no|nc)\b)(?=[A-Za-z])/i.exec(t0.replace(asked, '')) : null
+  let t = t0
+    .replace(asked, '')
     .replace(/\b([Nn])o's\b/g, '$1os')
     .replace(OPENER, '')
     .replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
   let qty: number | null = null
   let unit: string | null = null
   const lab = LABELLED_QTY.exec(t)
+  if (count && !lab && !LEAD_UNIT.test(t) && !new RegExp(String.raw`^\d[\d,.]*\s*(?:${UNIT_SRC})\.?(?![A-Za-z])`, 'i').test(t)) {
+    qty = toQty(count[1] as string)
+    t = t.slice(count[0].length)
+  }
   if (lab) {
     qty = toQty(lab[2] as string)
     unit = unitOf(lab[3])
@@ -241,7 +249,7 @@ function readItem(text: string): ReadItem | null {
       const ex = contacts ? null : EXTRA_TRAIL.exec(description)
       // "Siemens 6ES7 231-4HD32-0XB0 – 2": a bare number after a spaced dash, when what is before it is not a number
       // (that would be a range, "0 - 10").
-      const dash = /\s[–-]\s+(\d{1,4})$/.exec(description)
+      const dash = /(?:\s[–-]|:)\s+(\d{1,5})$/.exec(description)
       // "Silicone tube 8mm 0.5 m": a quantity with a decimal point and a length or weight unit at the end.
       // ... or a whole number with a length or weight word ("Cable 7 core 0.75 mm2 shielded 100 m"), not the end of a range
       // ("0-10 m", "0 to 10 m") or a measurement ("range 20 m").
@@ -508,7 +516,12 @@ function tableHeader(cells: string[]): TableCols | null {
   return {
     desc,
     extra,
-    qty: idx(/qty|quantity/i),
+    // "Qty in Stock" beside "Qty Required": the one asked for.
+    qty: (() => {
+      const all = cells.map((c, i) => (/qty|quantity/i.test(c) && !desc.includes(i) ? i : -1)).filter(i => i >= 0)
+      const asked = all.filter(i => !/stock|on\s*hand|available|balance|issued|received|consum/i.test(cells[i] as string))
+      return asked[0] ?? all[0] ?? -1
+    })(),
     unit: idx(/^(?:uom|units?|u\/m|a\s*\/\s*u)\.?$/i),
     n: cells.length,
   }
