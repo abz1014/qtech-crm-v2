@@ -203,6 +203,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       <SumBar
+        className={drawings ? 'max-sm:grid-cols-1' : undefined}
         label="Profit and loss"
         items={[
           {
@@ -280,7 +281,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           {drawings ? (
           <section aria-label="Not in P&L" className="overflow-hidden rounded border border-dashed border-line-input bg-canvas">
             <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
-              <h4 className="text-base font-semibold">Drawings and loan repayment</h4>
+              <h3 className="text-base font-semibold">Drawings and loan repayment</h3>
               <InfoTip label="About drawings">Owner drawings and loan repayment are money out, but not a cost of doing business, so they are not in the profit.</InfoTip>
             </header>
             {v.notInPnl.lines.length === 0 ? null : (
@@ -478,7 +479,7 @@ function CategoriesBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         twoLine
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-base font-semibold">Expenses by category</h3>
+            <h2 className="text-base font-semibold">Expenses by category</h2>
             <ClockTag>By payment date</ClockTag>
             <span className="flex-1" />
             <SegmentedControl
@@ -589,7 +590,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           className={v.advances.length ? 'rounded-b-none' : undefined}
           toolbar={
             <div className="flex flex-wrap items-center gap-3">
-              <h3 className="text-base font-semibold">What customers owe, by how late</h3>
+              <h2 className="text-base font-semibold">What customers owe, by how late</h2>
               <InfoTip label="About overdue by age">
                 As of {asOfLabel}. Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after{' '}
                 {asOfLabel} are left out.
@@ -744,19 +745,17 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       {missing.length ? (
-        <Banner
-          tone="warning"
-          title={`No exchange rate for ${day}, so ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} shown in ${missing.length === 1 ? 'its' : 'their'} own currency`}
-          action={
-            <Link to="/settings/exchange-rates" className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken max-md:h-touch">
-              Add {missing.join(', ')} rates
-            </Link>
-          }
-        >
-          {partPaid ? `${plural(partPaid, 'supplier order is', 'supplier orders are')} part paid in PKR: what is left on ${partPaid === 1 ? 'it' : 'them'} shows once a rate is added.` : null}
+        <Banner tone="warning" title={`No exchange rate for ${day}`}>
+          {/* The link sits in the text, not beside it: a side button squeezed the words into one column on a phone. */}
+          {missing.join(', ')} {missing.length === 1 ? 'is' : 'are'} shown in {missing.length === 1 ? 'its' : 'their'} own currency.
+          {partPaid ? ` ${plural(partPaid, 'supplier order is', 'supplier orders are')} part paid in PKR: what is left shows once a rate is added.` : ''}{' '}
+          <Link to="/settings/exchange-rates" className="inline-flex min-h-touch items-center font-medium text-primary underline md:min-h-0">
+            Add {missing.join(', ')} rates
+          </Link>
         </Banner>
       ) : null}
       <SumBar
+        className="max-sm:grid-cols-1"
         label="What we owe"
         items={[
           missing.length
@@ -777,7 +776,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         footerLabel={plural(v.rows.length, 'supplier order')}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-base font-semibold">What we owe suppliers</h3>
+            <h2 className="text-base font-semibold">What we owe suppliers</h2>
             <InfoTip label="About what we owe">
               As of {asOfLabel}. Owed is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
               paid. A supplier order paid to within 3% counts as paid.
@@ -899,7 +898,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         footerLabel={`${plural(note, 'month')}`}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-base font-semibold">GST and FBR, by invoice month</h3>
+            <h2 className="text-base font-semibold">GST and FBR, by invoice month</h2>
             <ClockTag>By invoice date</ClockTag>
             <InfoTip label="About GST and FBR">
               FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
@@ -1031,7 +1030,7 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         footerLabel="Credited to people"
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-base font-semibold">Net cash credited to each person</h3>
+            <h2 className="text-base font-semibold">Net cash credited to each person</h2>
             <ClockTag>By payment date</ClockTag>
             <InfoTip label="About sales by person">
               The total matches Received after GST on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net

@@ -156,6 +156,9 @@ describe('fixOcrWord: letters and digits the engine swaps', () => {
     ['24VDC', '24VDC'],
     ['Pressure', 'Pressure'],
     ['QUO-2026725', 'QUO-2026725'],
+    ['86794-RFQ-OC', '86794-RFQ-OC'],
+    ['$5304', 'SS304'],
+    ['Mode!', 'Model'],
     ['19-OCT-26', '19-OCT-26'],
     ['LCID33G1', 'LC1D33G1'],
   ])('%s -> %s', (from, to) => {

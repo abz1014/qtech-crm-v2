@@ -1,5 +1,5 @@
 import { monthLabel } from '@/features/money/expenses/model'
-import { divRoundHalfUp, paisaToFixed, toPaisa } from '@/lib/money'
+import { divRoundHalfUp, gstWholeRupeesPaisa, paisaToFixed, productPaisa, toPaisa, type Amount } from '@/lib/money'
 
 /*
  * Invoices and the GST register (M01): the pure rules. No React and no database in here, so each rule can be unit-tested.
@@ -38,6 +38,17 @@ export interface OrderAmounts {
   paymentTermsDays: number | null
   /** The date of the order's earliest dated invoice, if any: the whole order falls due from it (DATA_MODEL section 5). */
   earliestInvoiceDate?: string | null
+  /**
+   * Each order line's own net and GST in paisa (round(qty x price, 2); GST whole rupees per line, DATA_MODEL 2.13), so a part
+   * invoice of whole lines carries exactly those lines' GST (HW-11) and its PDF adds up.
+   */
+  lines?: readonly LineMoney[]
+}
+
+/** One order line's own figures, in whole paisa (plain numbers, so the read can be cached as JSON). */
+export interface LineMoney {
+  net: number
+  gst: number
 }
 
 export interface InvoiceStart {
@@ -50,6 +61,8 @@ export interface InvoiceStart {
   fullyInvoiced: boolean
   /** The whole order (no earlier invoice) as opposed to what is left. */
   wholeOrder: boolean
+  /** The order's lines (OrderAmounts.lines), when known. */
+  lines?: readonly LineMoney[]
 }
 
 /** The amounts a new invoice opens with: what is left of the order's lines after earlier invoices (net and GST pre-filled). */
@@ -66,26 +79,96 @@ export function invoiceStart(a: OrderAmounts): InvoiceStart {
     option,
     fullyInvoiced: net <= 0 && a.itemsNet > 0,
     wholeOrder: a.invoicedNet <= 0 && a.invoicedGst <= 0,
+    lines: a.lines,
   }
 }
 
+/** One order line's own net and GST in paisa, as v_order_items_total works them out (0014). */
+export function lineMoneyOf(qty: Amount, unitPriceNet: Amount, gstRate: Amount): LineMoney {
+  const net = productPaisa(qty, unitPriceNet)
+  return { net: Number(net), gst: Number(Number(gstRate) > 0 ? gstWholeRupeesPaisa(net, gstRate) : 0n) }
+}
+
+/** More priced lines than this are not searched for a set of whole lines (2^20 sums). */
+export const MAX_LINE_SEARCH = 20
+
 /**
- * The GST row when the net amount is typed. The order's GST is rounded per LINE (DATA_MODEL 2.13), so a GST worked out again on
- * the invoice total (round(net x 18%)) can differ from the lines by up to Rs 0.50 a line and the order would never read "fully
+ * The GST of the whole lines whose nets add up to `netPaisa` exactly: the sum of those lines' own GST. Null when no set of whole
+ * lines adds up to it, when two sets do with different GST (the amount alone cannot say which lines), or the order has more
+ * than MAX_LINE_SEARCH priced lines. The PDF (pdf/model.ts matchLines) reads the same lines from the same net.
+ */
+export function gstOfWholeLines(lines: readonly LineMoney[], netPaisa: bigint): bigint | null {
+  const priced = lines
+    .map(l => ({ net: BigInt(l.net), gst: BigInt(l.gst) }))
+    .filter(l => l.net > 0n)
+    .sort((a, b) => (a.net === b.net ? 0 : a.net > b.net ? -1 : 1))
+  if (netPaisa <= 0n || priced.length === 0 || priced.length > MAX_LINE_SEARCH) return null
+  const rest: bigint[] = new Array<bigint>(priced.length + 1).fill(0n)
+  for (let i = priced.length - 1; i >= 0; i--) rest[i] = rest[i + 1] + priced[i].net
+  let found: bigint | null = null
+  let conflict = false
+  const walk = (i: number, sum: bigint, gst: bigint) => {
+    if (conflict) return
+    if (sum === netPaisa) {
+      if (found === null) found = gst
+      else if (found !== gst) conflict = true
+      return
+    }
+    if (i >= priced.length || sum > netPaisa || sum + rest[i] < netPaisa) return
+    walk(i + 1, sum + priced[i].net, gst + priced[i].gst)
+    walk(i + 1, sum, gst)
+  }
+  walk(0, 0n, 0n)
+  return conflict ? null : found
+}
+
+/**
+ * The GST row when the net amount is typed. A net that is exactly a set of whole order lines takes those lines' own GST
+ * (gstOfWholeLines, HW-11), which is what the invoice PDF prints line by line.
+ *
+ * Otherwise: the order's GST is rounded per LINE (DATA_MODEL 2.13), so a GST worked out again on the invoice total (round(net x 18%)) can differ from the lines by up to Rs 0.50 a line and the order would never read "fully
  * invoiced". So whenever there is GST left on the lines and the rate typed is the order's own (18% on an all-18% order, or an
  * order that mixes 18% and exempt), the GST left is shared out in proportion to the net typed: the full net left carries exactly
  * the GST of the lines, half of it carries half (whole rupees, half away from zero, in exact integer arithmetic). Otherwise
  * (exempt, or 18% picked on an order with nothing left) the GST comes from the net.
  */
-export function gstForNet(net: number, option: GstOption | 'mixed', start: Pick<InvoiceStart, 'net' | 'gst'> & { option?: InvoiceStart['option'] }): number {
+export function gstForNet(
+  net: number,
+  option: GstOption | 'mixed',
+  start: Pick<InvoiceStart, 'net' | 'gst'> & { option?: InvoiceStart['option']; lines?: readonly LineMoney[] },
+): number {
   const share = option === 'mixed' || (option === '18' && (start.option ?? '18') === '18' && start.net > 0)
   if (!share) return gstOn(net, option as GstOption)
   if (!(net > 0) || !(start.net > 0)) return 0
   const n = toPaisa(net)
   const left = toPaisa(start.net)
   if (n === left) return start.gst
+  // HW-11: a net that is exactly a set of whole lines carries those lines' own GST (the 18% line of a mixed order keeps its
+  // 1,800, not a share of the order's GST), never more than the GST left.
+  const whole = start.lines ? gstOfWholeLines(start.lines, n) : null
+  if (whole !== null && whole <= toPaisa(start.gst)) return Number(paisaToFixed(whole))
   const rupees = divRoundHalfUp(toPaisa(start.gst) * n, left * 100n)
   return Number(paisaToFixed(rupees * 100n))
+}
+
+/** Rupees allowed over what is left, as in v_order_state's "fully invoiced" (Rs 1 allowance). */
+export const OVER_INVOICE_ALLOWANCE = 1
+
+/**
+ * HW-13: a new invoice may not carry more net than is left to invoice on the order's lines (Rs 1 allowance). Returns the net
+ * that is left when `net` is above it, else null. An order without priced lines has nothing to check against.
+ */
+export function overInvoiced(net: number, start: Pick<InvoiceStart, 'net'>, itemsNet: number): number | null {
+  if (!(itemsNet > 0) || !(net > 0)) return null
+  return net > start.net + OVER_INVOICE_ALLOWANCE ? start.net : null
+}
+
+/** A mixed-rate part invoice whose net is not a set of whole lines: its GST is a share, and its PDF needs the lines ticked. */
+export function gstIsShare(net: number, option: GstOption | 'mixed', start: Pick<InvoiceStart, 'net' | 'lines'>): boolean {
+  if (option !== 'mixed' || !(net > 0) || !start.lines) return false
+  const n = toPaisa(net)
+  if (n === toPaisa(start.net)) return false
+  return gstOfWholeLines(start.lines, n) === null
 }
 
 /** Due date: the invoice date plus the order's payment terms. Null without terms. */

@@ -162,6 +162,21 @@ const HEADER_TERM = new RegExp(
   '^(?:' +
     [
       String.raw`s\.?\s*no\.?`,
+      String.raw`s\.?\s*#`,
+      'menge',
+      String.raw`(?:price|rate|cost)\s*\/\s*(?:unit|pc|pcs|piece|each|ea|no)`,
+      String.raw`unit\s*\/\s*price`,
+      String.raw`qty\.?\s*(?:(?:in|on)\s*)?(?:stock|hand)`,
+      String.raw`(?:stock|available|balance|on\s*hand)\s*qty\.?`,
+      'anzahl',
+      String.raw`(?:einzel|gesamt|stück)\s*-?\s*preis`,
+      'gesamt',
+      String.raw`(?:beschreibung|bezeichnung)(?:\s*\/\s*description)?`,
+      String.raw`artikel(?:\s*-?\s*nr\.?)?`,
+      'lieferzeit',
+      String.raw`order\s*(?:code|no\.?)`,
+      String.raw`art(?:icle|\.)?\s*(?:no\.?|code|#)`,
+      String.raw`cat(?:alog(?:ue)?|\.)?\s*(?:no\.?|#)`,
       String.raw`sr\.?(?:\s*no\.?|\s*#)?`,
       String.raw`sl\.?(?:\s*no\.?)?`,
       '#',
@@ -198,7 +213,9 @@ const HEADER_TERM = new RegExp(
       'origin',
       'moq',
       String.raw`hs\s*code`,
-      String.raw`disc(?:ount)?\.?`,
+      String.raw`disc(?:ount)?\.?\s*%?`,
+      String.raw`(?:list|gross)\s*(?:price|rate)`,
+      String.raw`(?:estimated|est\.?|approx\.?|budget(?:ary)?|target|last\s*purchase)\s*(?:unit\s*)?(?:rate|price|cost|amount|value)`,
       'tax',
       'gst',
       String.raw`sales\s*tax`,
@@ -217,6 +234,10 @@ const HEADER_TERM = new RegExp(
       String.raw`org\.?`,
       String.raw`special\s+instructions?`,
       String.raw`rate\s*\/\s*unit`,
+      String.raw`item\s*name(?:\s*\/\s*spec(?:ification)?s?)?`,
+      String.raw`a\s*\/\s*u`,
+      String.raw`wks?\.?`,
+      String.raw`weeks?`,
     ].join('|') +
     ')$',
   'i',
@@ -363,13 +384,18 @@ interface TableRow {
   hasText: boolean
 }
 
-const joinPart = (a: string, b: string) => (a === '' ? b : /[-/]$/.test(a) ? a + b : `${a} ${b}`)
+/** "A. ELECTRICAL", "B) Instruments", "INSTRUMENTATION ITEMS", "MECHANICAL / OTHERS": a heading over a group of rows. */
+const SECTION_HEADING = /^(?=\D*$)(?:[A-Z][.)]\s+[A-Za-z][A-Za-z &/-]{2,30}|[A-Z][A-Z &/-]{0,30}\b(?:ITEMS?|SPARES|MATERIALS?|PARTS|OTHERS|CONSUMABLES|EQUIPMENTS?|INSTRUMENTS?))$/
+
+const joinPart =(a: string, b: string) => (a === '' ? b : /[-/]$/.test(a) ? a + b : `${a} ${b}`)
 
 /** Lays the lines of one table on its columns. Returns the rows; continuation lines are folded into their row. */
 function buildRows(lines: RawLine[], cols: Column[]): string[][] {
   // "Item" over 1, 2, 3 beside a Description column is the row-number column.
   const hasDescription = cols.some(c => /desc|particular|specification|product|short\s*text|goods/i.test(c.label))
-  const kinds = cols.map(c => (hasDescription && /^(?:item|itm)\.?(?:\s*(?:no\.?|#))?$/i.test(c.label) ? 'number' : columnKind(c.label)))
+  // (Not when another column numbers the rows: "Item No | Item | Specification" has the item's name under Item.)
+  const otherNumber = cols.some(c => /^(?:item\s*(?:no\.?|#)|s\.?\s*no|sr|sl)\b/i.test(c.label))
+  const kinds = cols.map(c => (hasDescription && /^(?:item|itm)\.?(?:\s*(?:no\.?|#))?$/i.test(c.label) && !(otherNumber && /^item$/i.test(c.label)) ? 'number' : columnKind(c.label)))
   // A number starts a row only in a column made for numbers (S.No, Qty, Price, Date); "186" under Part No is the end of a
   // part number that wrapped ("SN-69M-" / "186").
   const numberKinds = new Set<ColumnKind>(['number', 'qty', 'money', 'date'])
@@ -385,6 +411,10 @@ function buildRows(lines: RawLine[], cols: Column[]): string[][] {
       if ((isNumericCell(c.text) && (!anyNumberColumn || numberKinds.has(kinds[i] as ColumnKind) || /^\d{5,}$/.test(c.text))) || kinds[i] === 'number') anchor = true
       else if (kinds[i] === 'text') hasText = true
     }
+    // A section heading inside the table ("INSTRUMENTATION ITEMS", "B. Mechanical") is a row of its own, not the row above
+    // wrapping: the parsers skip it.
+    const filled = cells.filter(p => p.length)
+    if (!anchor && filled.length === 1 && SECTION_HEADING.test((filled[0] as string[]).join(' '))) anchor = true
     return { y: l.y + l.page * 100_000, page: l.page, cells, anchor, hasText }
   })
   const anchors = rows.filter(r => r.anchor)
@@ -508,10 +538,19 @@ export function layoutPages(pages: ReadonlyArray<readonly TextRun[]>): LaidLine[
         const startsLeft = single !== null && !isNumericCell(single.text) && single.x0 < first.x0 - 2 * single.size
         // A sentence written from the table's left edge across two or more columns is a paragraph under the table, not a cell.
         const edgesCrossed = single ? t.cols.slice(1).filter(c => c.x0 > single.x0 + single.size && c.x0 < single.x1).length : 0
-        const paragraph = single !== null && !isNumericCell(single.text) && regionOf(single.x0 + 0.5 * single.size, t.cols) === 0 && edgesCrossed >= 2
+        // Under a serial-number column, words starting in it and running into the next column are a sentence too: a row's
+        // wrapped text does not spill into the serial column ("Rates are in PKR. GST 18% extra.").
+        const serialFirst = /^(?:s\.?\s*(?:no|#)|sr|sl|#|no\.?$|pos|item\s*(?:no|#))/i.test(first.label.trim())
+        const paragraph =
+          single !== null &&
+          !isNumericCell(single.text) &&
+          regionOf(single.x0 + 0.5 * single.size, t.cols) === 0 &&
+          (edgesCrossed >= 2 || (serialFirst && edgesCrossed >= 1 && single.text.split(' ').length >= 3))
         // A line that starts with a closing word ("Bid due:", "Regards,", "Terms") and has no number in a cell of its own.
         const closing = END_OF_TABLE.test((l.cells[0] as Cell).text) && (single !== null || !l.cells.slice(1).some(c => isNumericCell(c.text)))
-        const ends = l.y - t.lastY > Math.max(3.2 * typical, 4 * l.size) || startsLeft || paragraph || closing
+        // A numbered sentence written from the table's left edge ("1. Bid security 2% of the quoted amount."): the terms under it.
+        const numberedNote = single !== null && /^\d{1,2}[.)]\s+[A-Za-z]+(?:\s+\S+){2,}/.test(single.text) && regionOf(single.x0 + 0.5 * single.size, t.cols) === 0
+        const ends = l.y - t.lastY > Math.max(3.2 * typical, 4 * l.size) || startsLeft || paragraph || closing || numberedNote
         if (!ends) {
           t.pitch.push(l.y - t.lastY)
           t.lastY = l.y

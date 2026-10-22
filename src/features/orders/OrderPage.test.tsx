@@ -232,6 +232,22 @@ describe('the items table: five columns, the rest behind "Edit GST and lines"', 
       .map(h => h.textContent?.trim())
     expect(headers).toEqual(['Item', 'Qty', 'Supplier'])
   })
+
+  it('a fully invoiced order locks its prices and GST (HW-14) but still takes an extra line', () => {
+    installFakeDb(() => ({ data: [] }))
+    const invoiced: OrderHeader = { ...order, state: { ...order.state!, invoicing: 'fully_invoiced', invoiced: 730420 } }
+    page('sales', invoiced)
+    expect(screen.queryByRole('button', { name: 'Edit GST and lines' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Edit price/ })).toBeNull()
+    expect(screen.getByRole('note')).toHaveTextContent('Fully invoiced, so prices and GST are locked to match the invoices.')
+    expect(screen.getByRole('button', { name: 'Add line' })).toBeEnabled()
+  })
+
+  it('an overpaid order says by how much, not just Paid (HW-50)', () => {
+    installFakeDb(() => ({ data: [] }))
+    page('admin', order, legs, { ...money, settled: 730920.25, balance: 0, overpaidBy: 500.25, paymentState: 'settled' })
+    expect(screen.getByTestId('order-overpaid')).toHaveTextContent('Overpaid by PKR 500.25')
+  })
 })
 
 describe('supplier orders, in plain words', () => {

@@ -30,7 +30,7 @@ import {
   type DraftItem,
   type EnquiryVariant,
 } from '@/features/rfqs/lib'
-import { fillRfqRef } from '@/features/rfqs/lib/intakeModel'
+import { fillRfqRef, firstQtyProblem, MAX_QTY } from '@/features/rfqs/lib/intakeModel'
 import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/rfqs/ItemsEditor'
 import { asParseResult, parseEnquiry } from '@/lib/docread/enquiryParse'
 import type { SenderHint } from '@/features/companies/api'
@@ -390,8 +390,17 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   }, [saved, captured, toast])
 
   const real = realItems(items)
-  const ready = Boolean(company) && real.length > 0
-  const why = !company ? (real.length ? 'Choose the company first.' : 'Choose the company first, then paste or add an item.') : real.length ? null : 'Paste or add at least one item first.'
+  const badQty = firstQtyProblem(items)
+  const ready = Boolean(company) && real.length > 0 && !badQty
+  const why = !company
+    ? real.length
+      ? 'Choose the company first.'
+      : 'Choose the company first, then paste or add an item.'
+    : !real.length
+      ? 'Paste or add at least one item first.'
+      : badQty
+        ? `Item ${badQty.n}: ${badQty.message}`
+        : null
   const canCreateCompany = user?.role === 'sales' || user?.role === 'admin'
   /** The next step, or (not ready) why not, with the missing field focused. */
   const whenReady = (go: () => void) => () => {
@@ -402,6 +411,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     }
     setBlocked(true)
     if (!company) document.getElementById('intake-company')?.focus()
+    else if (badQty && real.length) document.querySelector<HTMLInputElement>(`input[aria-label="Quantity of item ${badQty.n}"]`)?.focus()
     else zoneRef.current?.focus()
   }
 
@@ -580,6 +590,11 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     if (e?.code === '23505' && /customer_ref/.test(constraintOf(e) ?? e.message ?? '')) {
       const existing = company ? await findRfqByCustomerRef(company.id, customerRef).catch(() => null) : null
       setError({ message: 'This customer already has an RFQ with that reference.', existing, customerRef: true })
+      return
+    }
+    if (e?.code === '22003') {
+      // HW-10: the only numbers an intake saves are the quantities (numeric(12,3)).
+      setError({ message: `A quantity is too large. The most one item can have is ${MAX_QTY.toLocaleString('en-US')}.` })
       return
     }
     setError({ message: mapPgError(err, { entity: 'RFQ' }).message })

@@ -112,6 +112,13 @@ describe('record payment: amount = balance due, date = today', () => {
     expect(defaultPaymentAmount({ ...facts, balance: 0 })).toBeNull()
   })
 
+  it('a paid order opens empty and says nothing is due (HW-44)', () => {
+    const paid = { ...facts, settled: 2300764, balance: 0 }
+    expect(defaultPaymentAmount(paid)).toBeNull()
+    expect(paymentNote(paid, null)).toEqual({ kind: 'none', text: 'Nothing is due on this order: it is paid. Anything recorded here is more than the balance.' })
+    expect(paymentNote(paid, 1000)).toMatchObject({ kind: 'over' })
+  })
+
   it('says what saving does', () => {
     expect(paymentNote(facts, 1600764)).toEqual({
       kind: 'settles',
