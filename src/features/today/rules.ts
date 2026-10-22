@@ -12,6 +12,7 @@ import { addBusinessDays, addDays, businessDaysBetween, daysBetween, longDay, pa
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import { timeText } from '@/features/rfqs/lib/chaseCommon'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
+import { formatShortDate } from '@/lib/formatDay'
 import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { ageWords, dueWord } from '@/lib/timeWords'
@@ -485,6 +486,7 @@ export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
         isPriority: false,
         orderId: l.orderId,
         legId: l.id,
+        ...(l.legacy ? { imported: true } : {}),
         href: `/orders/${l.orderId}`,
         collision: collisionOf(l.lastChasedBy, l.lastChasedOn, ctx),
         number: l.orderNumber,
@@ -517,6 +519,7 @@ export function rulePlacePo(ctx: TodayInputs): Entry[] {
           isPriority: false,
           orderId: l.orderId,
           legId: l.id,
+          ...(l.legacy ? { imported: true } : {}),
           href: `/orders/${l.orderId}`,
           number: l.orderNumber,
         },
@@ -550,6 +553,7 @@ export function rulePlanCommissioning(ctx: TodayInputs): Entry[] {
           badge: ageBadge(o.orderedOn, ctx.today),
           isPriority: false,
           orderId: o.id,
+          ...(o.legacy ? { imported: true } : {}),
           href: `/orders/${o.id}`,
           number: o.number,
         },
@@ -584,6 +588,7 @@ export function ruleToSource(ctx: TodayInputs): Entry[] {
           badge: ageBadge(o.orderedOn, ctx.today),
           isPriority: false,
           orderId: o.id,
+          ...(o.legacy ? { imported: true } : {}),
           href: `/orders/${o.id}`,
           number: o.number,
         },
@@ -649,6 +654,7 @@ export function ruleDeliveredNotInvoiced(ctx: TodayInputs): Entry[] {
           badge: dueBadge(dueOn, ctx.today),
           isPriority: false,
           orderId: o.id,
+          ...(o.legacy ? { imported: true } : {}),
           href: `/orders/${o.id}`,
           number: o.number,
         },
@@ -969,8 +975,17 @@ const byDate = (a: Entry, b: Entry) => {
 
 const byAge = (a: Entry, b: Entry) => a.number - b.number || (a.key < b.key ? -1 : 1)
 
-/** Split into the three active groups and the Waiting group, each in list order. */
-export function groupItems(items: readonly Entry[]): TodayView {
+/**
+ * Split into the three active groups and the Waiting group, each in list order. Order tasks on an imported order (owner
+ * decision 2026-10-22, 1b) go to `imported` instead: out of every group and every count, oldest first, grey, the date in words
+ * ("since 3 Jun 2024"), never "757 days overdue". They come back to the list once Review imported (phase 2) marks the order live.
+ */
+export function groupItems(all: readonly Entry[]): TodayView {
+  const imported = all
+    .filter(i => i.imported)
+    .sort(byDate)
+    .map(i => ({ ...i, waiting: undefined, badge: { text: i.actionDueOn ? `since ${formatShortDate(i.actionDueOn, undefined, true)}` : 'Imported', tone: 'neutral' as Tone } }))
+  const items = all.filter(i => !i.imported)
   const active = items.filter(i => !i.waiting)
   const sorted = (g: TodayGroup) => active.filter(i => i.group === g).sort(byDate)
   const now = sorted('now')
@@ -979,7 +994,7 @@ export function groupItems(items: readonly Entry[]): TodayView {
   const waiting = items
     .filter(i => i.waiting)
     .sort((a, b) => (a.waiting!.nextNudgeOn === b.waiting!.nextNudgeOn ? byAge(a, b) : a.waiting!.nextNudgeOn < b.waiting!.nextNudgeOn ? -1 : 1))
-  return { now, soon, ready, waiting, active: [...now, ...soon, ...ready] }
+  return { now, soon, ready, waiting, active: [...now, ...soon, ...ready], imported }
 }
 
 /** Every rule, in one place, so a test can name them. */
