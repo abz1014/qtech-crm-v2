@@ -139,4 +139,22 @@ export function ocrInInitial(distDir, initial) {
   return [...initial.files.keys()].filter(f => readFileSync(join(distDir, f), 'utf8').includes(OCR_SIGNATURE))
 }
 
+/** A string only SheetJS carries (its banner): if it is in the first load, the spreadsheet reader is no longer lazy. */
+export const SHEETJS_SIGNATURE = 'SheetJS -- http'
+
+/** The spreadsheet reader (SheetJS, src/lib/docread/sheetRuntime.ts): its lazy chunk. Empty until a screen reads spreadsheets. */
+export function sheetReaderFiles(distDir, listing) {
+  return listing
+    .filter(f => /^assets\/sheetRuntime-[\w-]+\.js$/.test(f))
+    .map(f => {
+      const buf = readFileSync(join(distDir, f))
+      return { file: f, raw: buf.length, gzip: gz(buf) }
+    })
+}
+
+/** Initial files that carry SheetJS. */
+export function sheetInInitial(distDir, initial) {
+  return [...initial.files.keys()].filter(f => readFileSync(join(distDir, f), 'utf8').includes(SHEETJS_SIGNATURE))
+}
+
 export const kb = n => `${(n / 1024).toFixed(1)} KB`

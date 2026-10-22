@@ -130,6 +130,7 @@ const EXTRA_TRAIL = new RegExp(String.raw`(?:^|[\s,;(–—-])\s*(\d[\d,]*(?:\.\
 const LEAD_UNIT = new RegExp(String.raw`^(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})\.?\s*(?:[-–:]\s*)?(?:of\s+)?(?<=[\s.:-])(?=[A-Za-z])`, 'i')
 /** "Bearing 6308 C3 -- Nos. 10": the unit before the number, after a dash. */
 const UNIT_FIRST_TRAIL = new RegExp(String.raw`\s[-–—:=]{1,2}\s*(${UNIT_SRC})\.?\s+(\d[\d,]*(?:\.\d+)?)$`, 'i')
+const ADAD_FIRST = /\s(adad)\s+(\d[\d,]*)$/i
 const QTY_ONLY = new RegExp(String.raw`^(?:${QTY_WORD}\s*[:=.\-–]?\s*)?(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})?\.?$`, 'i')
 
 function toQty(raw: string): number {
@@ -252,7 +253,8 @@ function readItem(text: string): ReadItem | null {
       qty = old.qty
       unit = old.unit ? unitOf(writtenUnitFor(t, old.qty) ?? old.unit) : null
     } else {
-      const uf = UNIT_FIRST_TRAIL.exec(description)
+      // "Push button red عدد 4": the Urdu word for pieces before its number (typed right to left).
+      const uf = UNIT_FIRST_TRAIL.exec(description) ?? ADAD_FIRST.exec(description)
       const ex = contacts ? null : EXTRA_TRAIL.exec(description)
       // "Siemens 6ES7 231-4HD32-0XB0 – 2": a bare number after a spaced dash, when what is before it is not a number
       // (that would be a range, "0 - 10").
@@ -369,10 +371,15 @@ const REF_RULES: Array<{ re: RegExp; label: string; rank: number }> = [
   { re: /\btender\s*(?:no\.?|number|#|ref\.?)\s*[:#.-]?\s*/gi, label: 'Tender', rank: 9 },
   { re: /\bcollective\s*(?:no\.?|number|#)\s*[:#.-]?\s*/gi, label: 'Collective No', rank: 7 },
   { re: /\b(?:pr|p\.r\.|purchase\s+requisition|requisition|indent|demand|mr|material\s+requisition)\s*(?:no\.?|number|#)\s*[:#.-]?\s*/gi, label: 'PR', rank: 6 },
-  { re: /\b(?:our\s+ref(?:erence)?|(?<!your\s)ref(?:erence)?\b)\.?\s*(?:no\.?|number|#)?\s*[:#.-]?\s*/gi, label: 'Ref', rank: 5 },
+  // ("Ref: No. ABC/PUR/96/2026": the "No." after the colon is part of the label.)
+  { re: /\b(?:our\s+ref(?:erence)?|(?<!your\s)ref(?:erence)?\b)\.?\s*(?:no\.?|number|#)?\s*[:#.-]?\s*(?:no\.\s*)?/gi, label: 'Ref', rank: 5 },
 ]
 /** A reference written as one word: RFQ-ST-2026-118, PR-2291, ENQ/26/04. */
-const REF_TOKEN = /(?<![A-Za-z0-9/-])((?:RFQ|ENQ|INQ|PR|TND|RFP)[-/][A-Z0-9][A-Z0-9/_.-]*)/gi
+const REF_TOKEN = /(?<![A-Za-z0-9/-])((?:RFQ|ENQ|INQ|PR|TND|RFP)[-/][A-Z0-9][A-Z0-9/_.-]*|(?:RFQ|ENQ|INQ|TND|RFP)\d{3,}[A-Z0-9/_.-]*)/gi
+/** A due-date label alone on its line, the date on the next. */
+const DUE_LABEL_ONLY = /^(?:(?:quotation\s+)?due\s+(?:date|on)|closing\s+date|last\s+date(?:\s+of\s+submission)?|submission\s+deadline|deadline|bid\s+due(?:\s+date)?)\s*:?$/i
+/** A reference label alone on its line, its number on the next ("RFQ No." / "RFQ-2026-118": a boxed form read cell by cell). */
+const REF_LABEL_ONLY = /^(?:rfq|r\.f\.q\.?|enquiry|inquiry|tender|pr|requisition|ref(?:erence)?)\s*(?:no\.?|number|#)\s*[:.]?$/i
 const REF_VALUE = /^([A-Z0-9][A-Z0-9/_.-]*[A-Z0-9]|[A-Z0-9]{3,})/i
 
 function cleanRef(v: string): string | null {
@@ -434,7 +441,7 @@ function findRefs(text: string): RefHit[] {
 // ------------------------------------------------------------------------------------------------ lines
 
 const MARKER =
-  /^\s*(?:(?:item|ltem|tem)\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|(?:sr|s\.?\s*no)\.?\s*#?\s*\d{1,3}\s*[:.)-]\s*|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|[-•*·–®©°«»¢]\s+|\+\s+(?=[A-Za-z])|\[\d{1,3}\]\s*|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
+  /^\s*(?:(?:item|ltem|tem)\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|(?:sr|s\.?\s*no)\.?\s*#?\s*\d{1,3}\s*[:.)-]\s*|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|(?:i{1,3}|iv|vi{0,3}|ix|xi{0,2})\.\s+(?=[A-Za-z0-9])|[-•*·–®©°«»¢]\s+|\+\s+(?=[A-Za-z])|\[\d{1,3}\]\s*|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
 
 /** A line that stops where it cannot end: the next line goes on with it ("..., Model" / "FX4U-48MT/ESS"). */
 /**
@@ -532,7 +539,7 @@ function tableHeader(cells: string[]): TableCols | null {
   if (desc.length === 0) return null
   const extra = cells
     .map((c, i) => ({ i, label: c.replace(/[:.]+$/, ''), codes: /^(?:material|item\s*code|code|material\s*(?:no|code)\.?)$/i.test(c) }))
-    .filter(e => !desc.includes(e.i) && /^(?:part\s*(?:no\.?|number|#)|model(?:\s*no\.?)?|make|brand|cat(?:alogue|alog)?\.?\s*no\.?|material(?:\s*(?:no|code)\.?)?|item\s*code|code|size|type)$/i.test(e.label))
+    .filter(e => !desc.includes(e.i) && /^(?:part\s*(?:no\.?|number|#)|model(?:\s*no\.?)?|make|brand|manufacturer|mfr|(?:make|brand)\s*[/&]\s*model|model\s*[/&]\s*make|cat(?:alogue|alog)?\.?\s*no\.?|material(?:\s*(?:no|code)\.?)?|item\s*code|code|size|type)$/i.test(e.label))
   return {
     desc,
     extra,
@@ -555,7 +562,8 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   const main = parts
     .filter((p, i) => {
       const w = words(p)
-      return !parts.some((q, j) => j !== i && q.length > p.length && [...w].every(x => words(q).has(x)))
+      // (A short name in its own column, "pH sensor" beside "0-14 pH, with temperature sensor", is not a repeat.)
+      return !parts.some((q, j) => j !== i && q.length > p.length && (q.toLowerCase().includes(p.toLowerCase()) || (w.size >= 3 && [...w].every(x => words(q).has(x)))))
     })
     .join(', ')
   if (!main || /^(?:sub\s*-?\s*total|grand\s+total|total|vat|gst|sales\s+tax|freight|discount)\b/i.test(main)) return null
@@ -563,7 +571,7 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
     .map(e => ({ e, v: cell(e.i) }))
     // A Make or Part No the description already names is not written twice.
     // The customer's own store code ("13404632", "IC-4100") under Material / Item Code means nothing to a supplier.
-    .filter(({ e, v }) => v && !(e.codes && /^(?:\d+|[A-Za-z]{1,4}[-/]?\d{3,})$/.test(v)) && !main.toLowerCase().includes(v.toLowerCase()))
+    .filter(({ e, v }) => v && !(e.codes && /^[A-Za-z0-9][A-Za-z0-9./-]*\d[A-Za-z0-9./-]*$/.test(v)) && !main.toLowerCase().includes(v.toLowerCase()))
     .map(({ e, v }) => `${e.label}: ${v}`)
   const q = cell(cols.qty)
   const qm = /^(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z'.]+)?$/.exec(q)
@@ -594,29 +602,53 @@ const CAPS_UNIT = /^(?:EA|EACH|NOS?|PCS?|SETS?|MTRS?|M|KGS?|LOTS?|ROLLS?|BOX(?:E
 const UNIT_CELL = new RegExp(String.raw`^(?:${UNIT_SRC})$`, 'i')
 const NUM_CELL = /^\d[\d,]*(?:\.\d+)?$/
 
-/**
- * A printed RFQ form's item row (an ERP printout: SAP, Oracle): a quantity cell next to a unit cell. Returns the item, with the
- * description from the text cells before the unit (a leading serial or requisition number is dropped). Null for any other row.
- */
-function formRow(cells: string[]): ReadItem | null {
+/** A quantity whose point a picture read as a space ("2 500", "200 000" for 2.500 and 200.000 on an ERP form). */
+const SPACED_QTY = /^\d{1,3} \d{3}$/
+
+/** The text cells of a form row in front of its quantity and unit, the quantity cell and the unit cell. */
+function formCells(cells: string[]): { text: string[]; qty: string; unit: string } | null {
   if (cells.filter(Boolean).length < 3) return null
   for (let i = cells.length - 1; i > 0; i--) {
     const c = cells[i] as string
-    if (!NUM_CELL.test(c)) continue
+    if (!NUM_CELL.test(c) && !SPACED_QTY.test(c)) continue
     const unitAt = UNIT_CELL.test(cells[i - 1] ?? '') ? i - 1 : UNIT_CELL.test(cells[i + 1] ?? '') ? i + 1 : -1
     if (unitAt < 0) continue
     const text = cells.slice(0, Math.min(i, unitAt)).filter(Boolean)
-    // The serial number and the material code in front ("00010", "14292829") are not the description.
-    while (text.length > 1 && /^(?:\d+\s*\.?|\d{4,})$/.test(text[0] as string)) text.shift()
-    const description = tidy(text.join(' ').replace(/^\d{7,9}\s+(?=[A-Z]{3})/, ''))
-    if (!description || !/[A-Za-z]{2}/.test(description)) return null
-    return { description, qty: toQty(c), unit: unitOf(cells[unitAt]), rawQty: c }
+    // The serial number and the material code in front ("00010", "14292829", "3 574051") are not the description; nor is a
+    // store code with a short letter prefix ("ELC-17175", "MEC51117") when a picture lost the table's header.
+    while (text.length > 1 && /^(?:\d+\s*\.?|\d{4,}|\d{1,3}\s+\d{4,})$/.test(text[0] as string)) text.shift()
+    if (text.length > 1 && /^[A-Z]{1,4}[-/]?\d{2,}(?:[-/]\d{2,})*$/.test(text[0] as string) && /\s/.test(text[1] as string)) text.shift()
+    return { text, qty: SPACED_QTY.test(c) ? c.replace(' ', '.') : c, unit: cells[unitAt] as string }
   }
   return null
 }
 
+/**
+ * A printed RFQ form's item row (an ERP printout: SAP, Oracle): a quantity cell next to a unit cell. Returns the item, with the
+ * description from the text cells before the unit (a leading serial or requisition number is dropped). Null for any other row.
+ * `drop`: short words in capitals that fill a column of their own on every row ("PROD", "MECH": a department), left out of the
+ * description when a picture lost the header that names that column.
+ */
+function formRow(cells: string[], drop?: ReadonlySet<string>): ReadItem | null {
+  const f = formCells(cells)
+  if (!f) return null
+  const text = f.text.length > 1 && drop?.has(f.text[f.text.length - 1] as string) ? f.text.slice(0, -1) : f.text
+  const description = tidy(text.join(' ').replace(/^\d{7,9}\s+(?=[A-Z]{3})/, ''))
+  if (!description || !/[A-Za-z]{2}/.test(description)) return null
+  return { description, qty: toQty(f.qty), unit: unitOf(f.unit), rawQty: f.qty }
+}
+
 /** A heading that starts the terms printed under the items ("Terms and Conditions", "Special Instructions :"). */
-const TERMS_HEAD = /^(?:special\s+instructions|(?:general\s+)?terms\s*(?:and|&)\s*conditions|general\s+terms|terms)\s*:?$/i
+const TERMS_HEAD =
+  /^(?:special\s+instructions|(?:general\s+)?terms\s*(?:and|&)\s*conditions|general\s+terms|terms|notes?|important\s+notes?|please\s+note(?:\s+the\s+following)?|(?:kindly|please)\s+(?:also\s+)?(?:mention|confirm|note|include|indicate)\s+the\s+following(?:\s+in\s+your\s+(?:quotation|offer|quote))?)\s*:?$/i
+/**
+ * A rule printed under the items ("Rates should be inclusive of all taxes.", "Incomplete quotations will not be considered."):
+ * a sentence with a modal verb that names no product, code or quantity. A numbered line like this is a term, not an item.
+ */
+const TERM_SENTENCE = /\b(?:should|must|shall|will|would|may|is\s+required|are\s+required|to\s+be)\b/i
+/** A page mark a letter or a form carries between pages ("Contd. on next page", "P.T.O.", "Page 2 of 3", "- 2 -"). */
+// (Spaces optional: a picture reader often loses them, "Contd.onnextpage".)
+const PAGE_MARK = /^(?:page\s*\d+(?:\s*(?:of|\/)\s*\d+)?|-\s*\d+\s*-|contd\.?(?:\s*(?:on\s*)?(?:next\s*page|page\s*\d+|overleaf))?\.*|continued(?:\s*(?:on\s*)?(?:next\s*page|page\s*\d+|overleaf))?\.*|\(\s*continued\s*\)|p\.\s?t\.\s?o\.?)$/i
 /** Continuation text stops at the form's totals. */
 const TOTALS = /\b(?:sub\s*-?\s*total|grand\s+total|total\s+amount|total)\b.*$/i
 const MAX_DESCRIPTION = 400
@@ -672,6 +704,50 @@ function sentences(t: string): string[] {
   return out.filter(Boolean)
 }
 
+/**
+ * A numbered list in one line ("... the following: 1) X - 2 Nos, 2) Y - 4 Nos and 3) Z - 1 No."): the words before it, then
+ * one line per item with its marker. Null unless the markers run 1, 2, 3 ... (at least two of them).
+ */
+function inlineList(line: string): string[] | null {
+  const first = /(?:^|[:\s])(1[.)]\s+)(?=[A-Za-z0-9])/.exec(line)
+  if (!first) return null
+  const start = first.index + first[0].length - (first[1] as string).length
+  const intro = line.slice(0, start).trim()
+  const out: string[] = []
+  let rest = line.slice(start)
+  for (let n = 2; ; n++) {
+    const next = new RegExp(String.raw`(?:\s*[,;]\s*|\s+(?:and|&)\s+|\s+)(?=${n}[.)]\s+[A-Za-z0-9])`).exec(rest)
+    if (!next) break
+    out.push(rest.slice(0, next.index).trim())
+    rest = rest.slice(next.index + next[0].length)
+  }
+  if (out.length === 0) return null
+  out.push(rest.trim())
+  return [...(intro ? [intro] : []), ...out]
+}
+
+/** The digits of a catalogue number's all-digit block, where a picture read letters: O 0, S 5, T 7, I l 1, Z 2, B 8. */
+const asDigits = (s: string) => s.replace(/O/g, '0').replace(/S/g, '5').replace(/T/g, '7').replace(/[Il]/g, '1').replace(/Z/g, '2').replace(/B/g, '8')
+const DIGITISH = '[0-9OSTIlZB]'
+
+/**
+ * Catalogue numbers a picture misread where their shape leaves no doubt: the fixed prefix of a Siemens number ("BES7", "GES7"
+ * for 6ES7; "65L3" for 6SL3), the all-digit blocks of an ABB number ("1SVRST0422R7038" for 1SVR570422R7038), and a "MAKE" or
+ * "MODEL" run into the number before it. A number typed by a person never has these shapes, so pasted text is unchanged.
+ */
+function fixCatalogue(t: string): string {
+  return t
+    .replace(/(^|[\s:(,;/])[BG8]ES7(?=\s?\d{3}-)/g, '$16ES7')
+    .replace(/(^|[\s:(,;/])(?:[6BG]5L|[BG]SL)3(?=\d{3}-)/g, '$16SL3')
+    .replace(/(^|[\s:(,;/])[BG]SE6(?=\d{3}-)/g, '$16SE6')
+    .replace(new RegExp(String.raw`\b(1SVR|1SBL|1SFA|1SAJ)(${DIGITISH}{6})R(${DIGITISH}{4})(?![0-9])`, 'g'), (_, p: string, a: string, b: string) => `${p}${asDigits(a)}R${asDigits(b)}`)
+    .replace(new RegExp(String.raw`\b2CDS2(${DIGITISH}{5})R0(${DIGITISH}{3})(?![0-9])`, 'g'), (_, a: string, b: string) => `2CDS2${asDigits(a)}R0${asDigits(b)}`)
+    .replace(new RegExp(String.raw`\b1SDA0(${DIGITISH}{5})R1(?![0-9])`, 'g'), (_, a: string) => `1SDA0${asDigits(a)}R1`)
+    .replace(/(?<=\d)(MAKE|MODEL)(?=:|\s|[A-Z]{3})/g, ' $1 ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 // ------------------------------------------------------------------------------------------------ main
 
 export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryParse {
@@ -683,10 +759,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     .replace(/[\u200b-\u200d\ufeff]/g, '')
     .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0))
     .replace(/：/g, ':')
+    // "2 (Two) Nos", "12 (Twelve) No", "100 (One Hundred Only) Mtrs": the number again in words, as a letter writes it.
+    .replace(/(\d)\s*\(\s*(?:(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|and)[\s-]*)+(?:only)?\s*\)/gi, '$1')
     // Urdu and Arabic-Indic digits, the Urdu word for "number" (adad) and Urdu request tails ("bhej dein", "chahiye").
     .replace(/[۰-۹]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 48))
     .replace(/[٠-٩]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
-    .replace(/\s*عدد/g, ' adad')
+    // (Spaces only: a tab before it is a table's column, "4 ⇥ عدد".)
+    .replace(/[‎‏؜]/g, '')
+    .replace(/ *عدد/g, ' adad')
     .replace(/\s*(?:بھیج\s*دیں|بھیجیں|بھیج\s*دو|چاہیے|چاہئے|چاہیئے|ضرور|جلدی|بھی)(?=\s|$|[.!؟?،])/g, '')
 
   interface Src {
@@ -735,12 +815,18 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     // signature laid out side by side: "Margalla Mills Ltd    Plot 128-A, ...").
     const gaps = (body.trim().match(/\S {3,}(?=\S)/g) ?? []).length
     const spaced = body.includes('\t') ? body : gaps >= 2 ? body.trim().replace(/ {3,}/g, '\t') : /\S {4,}\S/.test(body.trim()) ? body.trim().replace(/ {4,}/g, '\t') : body
-    const kept = spaced.includes('\t') ? spaced.replace(/[ ]+/g, ' ').replace(/^ +| +$/g, '').replace(/(?:\s*\t\s*)+$/, '') : spaced.replace(/[ ]+/g, ' ').trim()
+    const kept0 = spaced.includes('\t') ? spaced.replace(/[ ]+/g, ' ').replace(/^ +| +$/g, '').replace(/(?:\s*\t\s*)+$/, '') : spaced.replace(/[ ]+/g, ' ').trim()
+    // A table's left border a picture read as a letter in front of a numbered line ("I ⇥ 8. Cable lug ..."): not part of it.
+    const kept = kept0.replace(/^[|Il]\s+(?=\d{1,2}[.)]\s)/, '').replace(/^[|Il]\t+(?=\d{1,2}[.)]?\t|\d{1,2}[.)]\s)/, '')
     if (!kept.replace(/\t/g, '').trim()) {
       blank = true
       continue
     }
-    src.push({ t: kept, indent: /^\s*/.exec(body)?.[0].replace(/\t/g, '    ').length ?? 0, blankBefore: blank, wa })
+    const indent = /^\s*/.exec(body)?.[0].replace(/\t/g, '    ').length ?? 0
+    // "Please quote for the following: 1) X - 2 Nos, 2) Y - 4 Nos and 3) Z - 1 No.": a numbered list written in one sentence.
+    const inline = kept.includes('\t') ? null : inlineList(kept)
+    if (inline) inline.forEach((p, i) => src.push({ t: p, indent, blankBefore: i === 0 && blank, wa }))
+    else src.push({ t: kept, indent, blankBefore: blank, wa })
     blank = false
   }
   rebuildCellTables(src, t => SIGN_OFF.test(t) || DISCLAIMER.test(t) || findDue(t, today) !== null)
@@ -814,6 +900,23 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     const c = splitCells(s.t)
     return c !== null && formRow(c) !== null
   })
+  // A column of short words in capitals at the end of the text cells ("PROD", "MECH", "UTIL": a department), when no header names
+  // it: such a word on most form rows (at least 3), a few words over and over.
+  const deptWords = new Set<string>()
+  if (formMode) {
+    const seen = new Map<string, number>()
+    let rowsSeen = 0
+    for (const s of src) {
+      const c = splitCells(s.t)
+      const f = c ? formCells(c) : null
+      if (!f) continue
+      rowsSeen++
+      const w = f.text.length > 1 ? (f.text[f.text.length - 1] as string) : null
+      if (w && /^[A-Z&]{2,5}\.?$/.test(w)) seen.set(w, (seen.get(w) ?? 0) + 1)
+    }
+    const total = [...seen.values()].reduce((a, b) => a + b, 0)
+    if (total >= 3 && total >= 0.6 * rowsSeen && seen.size < total) for (const w of seen.keys()) deptWords.add(w)
+  }
 
   const lines: EnquiryLine[] = []
   const drafts: Draft[] = []
@@ -900,9 +1003,28 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       table = null
       row = null
     }
+    // "Contd. on next page", "P.T.O.": nothing, and the item above is not over (the list goes on on the next page).
+    if (PAGE_MARK.test(t.trim())) {
+      skip(t, 'header')
+      continue
+    }
+    const nextT = src[k + 1]?.t.trim() ?? ''
+    if (zone !== 'quoted' && REF_LABEL_ONLY.test(t.trim()) && /^[A-Z0-9][A-Z0-9/_.-]{2,}$/i.test(nextT) && /\d/.test(nextT)) {
+      for (const r of findRefs(`${t.trim()} ${nextT}`)) refs.push({ ...r, line: `${t.trim()} ${nextT}` })
+      skip(t, 'reference')
+      continue
+    }
+    // "Due Date" / "09-Nov-2026": the same for the quotation's due date.
+    if (zone !== 'quoted' && !due && DUE_LABEL_ONLY.test(t.trim()) && findDate(nextT, today) && nextT.split(/\s+/).length <= 3) {
+      due = findDue(`${t.trim()} ${nextT}`, today)
+      skip(t, 'date')
+      continue
+    }
     if (zone === 'terms') {
       if (!due) due = findDue(t, today) ?? findDue(`${t} ${src[k + 1]?.t ?? ''}`, today)
       noteContacts(t, 1)
+      // "For Example Mills Ltd" under the terms of a letter.
+      if (isCompanyLine(t) && !own.test(t)) names.push({ n: t, rank: 1 })
       skip(t, 'instruction')
       continue
     }
@@ -1095,7 +1217,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
 
     if (formMode) {
-      const it = cells ? formRow(cells) : null
+      const it = cells ? formRow(cells, deptWords) : null
       if (it) {
         close()
         row = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it }
@@ -1207,7 +1329,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       skip(t, 'instruction')
       continue
     }
-    if (INSTRUCTION.test(work) && !ATTR.test(work)) {
+    const termSentence =
+      TERM_SENTENCE.test(work) &&
+      !PRODUCT.test(work) &&
+      !hasCode(work) &&
+      !LABELLED_QTY.test(work) &&
+      !new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?(?![A-Za-z])`, 'i').test(work) &&
+      work.split(/\s+/).length >= 4
+    if ((INSTRUCTION.test(work) && !ATTR.test(work)) || termSentence) {
       close()
       skip(t, 'instruction')
       continue
@@ -1244,7 +1373,15 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
             if (q && !d.qty) d.qty = { qty: toQty(q[1] as string), unit: unitOf(q[2]) }
           } else if (/^(?:uom|unit)$/i.test(lab)) {
             if (d.qty && !d.qty.unit) d.qty.unit = unitOf(val)
-          } else if (val) d.attrs.push(`${lab}: ${val}`)
+          } else if (val) {
+            // "Make: Endress+Hauser, Qty 2 Nos": the quantity at the end of another label's value.
+            const lq = /^(?:uom|unit)$/i.test(lab) ? null : LABELLED_QTY.exec(val)
+            if (lq && !d.qty && lq.index > 0 && QTY_ONLY.test(val.slice(lq.index).replace(/^[\s,;(|[]+/, '').trim())) {
+              d.qty = { qty: toQty(lq[2] as string), unit: unitOf(lq[3]) }
+              const rest = tidy(val.slice(0, lq.index))
+              if (rest) d.attrs.push(`${lab}: ${rest}`)
+            } else d.attrs.push(`${lab}: ${val}`)
+          }
         }
         lines.push({ text: t, kind: 'joined', reason: null, marker: null })
         continue
@@ -1274,8 +1411,18 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       // leading spaces: "Pressure gauge - 2 Nos" / "   Ball valve - 4 Nos").
       // A word that usually goes on ("type", "with") does not pull in a next line that is an item of its own
       // ("5 x Butterfly valve DN50, wafer type" / "2 x Flow meter ...").
-      const wraps = !d.qtyLine && !(ownQty && curHasQty0()) && (s.indent > d.indent || DANGLING.test(prev))
       const curHasQty = d.qty !== null || (d.texts.length > 0 && readItem(joinWrapped(d.texts))?.qty != null)
+      // A pasted list whose lines start with spaces: an indented line that opens with a capital and names a product of its own
+      // ("Pressure gauge 0-10 bar" / "   Ball valve 2 inch - 4 Nos") is the next item, not the line above wrapping. Wrapped text
+      // goes on in lower case ("with HART"), after a comma or a dangling word, or names no product ("HART PROTOCOL SS316 - 2 NOS").
+      const nextItem =
+        !markerMode &&
+        s.indent > d.indent &&
+        !DANGLING.test(prev) &&
+        /^[A-Z0-9]/.test(work) &&
+        !/^(?:with|and|or|for|including|incl|complete|suitable|having|without|make|brand|model)\b/i.test(work) &&
+        (PRODUCT.test(work.split(/\s+/).slice(0, 4).join(' ')) ? PRODUCT.test(joinWrapped(d.texts)) || curHasQty : curHasQty && (hasCode(work) || ownQty))
+      const wraps = !d.qtyLine && !nextItem && !(ownQty && curHasQty0()) && (s.indent > d.indent || DANGLING.test(prev))
       // In a marked list, an unmarked line naming a product after an item that has its quantity starts a new item (its
       // quantity can follow on the next line: "Insulation tape self amalgamating" / "25 rolls").
       const newItem = markerMode && curHasQty && (PRODUCT.test(work) || hasCode(work)) && !DANGLING.test(prev)
@@ -1366,14 +1513,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const items: ParsedItem[] = []
   for (const d of drafts) {
     if (d.fromTable) {
-      items.push({ description: d.fromTable.description, qty: d.fromTable.qty ?? 1, unit: writtenUnit(d) ?? d.fromTable.unit })
+      items.push({ description: fixCatalogue(d.fromTable.description), qty: d.fromTable.qty ?? 1, unit: writtenUnit(d) ?? d.fromTable.unit })
       continue
     }
     const r = d.texts.length ? readItem(joinWrapped(d.texts)) : null
     const description = tidy([r?.description ?? '', ...d.attrs].filter(Boolean).join(', '))
     if (!description) continue
     const qty = r && r.qty !== null ? { qty: r.qty, unit: r.unit } : d.qty
-    items.push({ description, qty: qty?.qty ?? 1, unit: (qty ? writtenUnit(d) : null) ?? qty?.unit ?? null })
+    items.push({ description: fixCatalogue(description), qty: qty?.qty ?? 1, unit: (qty ? writtenUnit(d) : null) ?? qty?.unit ?? null })
   }
   // "Sorry, item 3 qty is 8 pcs, not 9": the later word counts.
   for (const c of corrections) {

@@ -187,6 +187,13 @@ export const BATCHES: BatchSpec[] = [
   // Fresh batch 30, first try (text and PDF): every field and every shape 100% again: the second fresh batch in a row. Kept held
   // out, run in CI.
   { batch: 30, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28], gate: true },
+  // The two weakest formats as families of their own (gen29.ts): 29 ERP RFQ forms, 30 Word letters; only those two, so each batch
+  // measures them alone. Batch 31 is for development; batch 32 is held out (written together with 31, before the reader was
+  // changed for them, and measured blind). Blind, text and PDF, items precision / recall: batch 31 ERP 75.9% / 75.9%, letters
+  // 81.7% / 86.0%; batch 32 ERP 89.2% / 89.2%, letters 81.2% / 91.1% (numbered terms read as items, "2 (Two) Nos", "iii.",
+  // store codes in the description, a list in one sentence). After fixing on batch 31 only: 31 100%, 32 98.6% and 98.9%.
+  { batch: 31, enquiries: 120, quotes: 0, gens: [29, 30], dev: true, gate: true },
+  { batch: 32, enquiries: 80, quotes: 0, gens: [29, 30], gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {

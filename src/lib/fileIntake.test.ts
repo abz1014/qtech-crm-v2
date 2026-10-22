@@ -27,7 +27,29 @@ describe('fileIntake for RFQ files (R10)', () => {
   })
 
   it('refuses a type that is not on the list, naming the ones that are', async () => {
-    const [doc] = await intakeFiles([new File(['x'], 'sheet.xlsx', { type: 'application/vnd.ms-excel' })], { accept: RFQ_FILE_ACCEPT })
-    expect(doc.error).toBe('Only PNG, JPG, HEIC, HEIF, PDF files can be added.')
+    const [doc] = await intakeFiles([new File(['x'], 'letter.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })], { accept: RFQ_FILE_ACCEPT })
+    expect(doc.error).toBe('Only PNG, JPG, HEIC, HEIF, PDF, XLSX, XLS, CSV files can be added.')
+  })
+
+  it('takes a spreadsheet (.xlsx, .xls, .csv), whatever type the device gives it', async () => {
+    const files = await intakeFiles(
+      [
+        new File(['x'], 'rfq.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        new File(['x'], 'rfq.XLSX', { type: '' }),
+        new File(['x'], 'old.xls', { type: 'application/octet-stream' }),
+        new File(['a,b'], 'items.csv', { type: 'application/vnd.ms-excel' }),
+        new File(['a,b'], 'items2.csv', { type: 'application/csv' }),
+      ],
+      { accept: RFQ_FILE_ACCEPT },
+    )
+    expect(files.map(f => f.error)).toEqual([undefined, undefined, undefined, undefined, undefined])
+    expect(files.map(f => f.file.type)).toEqual([
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      // (Windows names a CSV "application/vnd.ms-excel"; that is kept: the reader goes by the .csv name.)
+      'application/vnd.ms-excel',
+      'text/csv',
+    ])
   })
 })

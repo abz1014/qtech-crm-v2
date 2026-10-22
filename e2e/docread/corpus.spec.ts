@@ -15,7 +15,7 @@ import { scoreEnquiry, scoreQuote, type EnquiryResult, type QuoteResult } from '
  * Content-Security-Policy. The text is parsed there and scored here against the case's truth; every field of every set and
  * shape must stay at or above floor.ocr.json, and a clean screenshot must be read in 3 s or less (median).
  *     E2E_CSP=1 npx playwright test --project=docread e2e/docread/corpus.spec.ts
- *   CORPUS_OCR_BATCHES=0,10,11   batches to run (CI: 0)
+ *   CORPUS_OCR_BATCHES=0,10,11   batches to run (default and CI: 0,32)
  *   CORPUS_OCR_OUT=<file.json>   save every case's text ({ id: text }) for `CORPUS_OCR=<file> npx vitest run src/lib/docread/corpus`
  *   CORPUS_WRITE_FLOOR=1         record this run as the new floors
  *   CORPUS_IDS=e0-003,q0-005     only these cases;  CORPUS_SAVE=<dir>  save each picture there
@@ -36,7 +36,8 @@ interface Docread {
   parseQuote(text: string, rfq: unknown): QuoteResult
 }
 
-const RUN = (process.env.CORPUS_OCR_BATCHES ?? '0').split(',').map(Number)
+// Batch 0, and batch 32: the held-out ERP forms and Word letters (gen29.ts), as phone photos and scans.
+const RUN = (process.env.CORPUS_OCR_BATCHES ?? '0,32').split(',').map(Number)
 const FLOOR_FILE = 'src/lib/docread/corpus/floor.ocr.json'
 const MIME = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' } as const
 
@@ -138,7 +139,8 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
       if (save) writeFileSync(`${save}/${c.id}.${shot.format === 'jpeg' ? 'jpg' : shot.format}`, Buffer.from(pic!.b64, 'base64'))
       read = await api('readImage', pic!.b64, MIME[shot.format])
       // A clean screenshot (not a photo, not a scan) on a laptop or a phone: the 3 s budget. The first read loads the engine.
-      if (!first) times.push({ id: c.id, ms: read.ms, clean: !shot.photo && !shot.tilt })
+      // (Batch 0's screenshots only: the later family batches are whole printed pages, not the screenshots the budget is for.)
+      if (!first && c.batch === 0) times.push({ id: c.id, ms: read.ms, clean: !shot.photo && !shot.tilt })
       first = false
     } else {
       const pics = await develop(page, png, shot, true)
