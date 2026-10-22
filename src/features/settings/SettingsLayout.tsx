@@ -2,10 +2,10 @@ import { Suspense, type ReactNode } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
-import { useSession } from '@/app/session'
+import { useSeesPrices, useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { InstallBanner } from '@/features/settings/InstallBanner'
-import { SETTINGS_GROUPS } from '@/features/settings/settingsLinks'
+import { canOpenSettingsLink, SETTINGS_GROUPS } from '@/features/settings/settingsLinks'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -33,9 +33,11 @@ const usePhone = () => useMediaQuery('(max-width: 767.98px)')
 
 export function SettingsLayout() {
   const isAdmin = useIsAdmin()
+  const session = useSession()
+  const role = session.status === 'signed-in' ? session.user.role : null
   const { pathname } = useLocation()
   const atHome = pathname.replace(/\/+$/, '') === '/settings'
-  const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => isAdmin || !l.adminOnly) }))
+  const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => canOpenSettingsLink(l, role)) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
   return (
     <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[244px_minmax(0,1fr)]">
@@ -112,6 +114,11 @@ export function SettingsHome() {
       <SettingsHomePage />
     </Suspense>
   )
+}
+
+/** Exchange rates: admin and sales. An engineer sees the no-access page (owner decision 2026-10-22: no currency amounts). */
+export function PricesOnly({ area, children }: { area: string; children: ReactNode }) {
+  return useSeesPrices() ? <>{children}</> : <NoAccessPage area={area} roles={['admin', 'sales']} />
 }
 
 /** The Team screen is admin only. Anyone else sees the no-access page inside the shell, never the data (the function refuses them too). */

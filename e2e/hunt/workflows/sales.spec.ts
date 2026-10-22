@@ -1104,7 +1104,6 @@ test('HW-1: typed comma-decimal supplier prices are stored wrong ("1.234,50" -> 
   await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBe(2)
   const lines = await linesOf(r.rfq.id, de.id)
   const stored = r.items.map(it => num(lines.find(l => l.rfq_item_id === it.id)?.unit_price))
-  test.fail(true, 'HW-1: NumberInput/parseAmount drops every comma, so "1.234,50" is stored as 1.2345 and "12,5" as 125 with no warning')
   expect(stored).toEqual([1234.5, 12.5])
   await ctx.close()
 })
@@ -1115,8 +1114,9 @@ test('HW-2: a 22-digit price crashes the Issue quotation dialog', async ({ brows
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
   await dialog(page).getByLabel('Unit price, net PKR, item 1').fill('9999999999999999999999')
   await page.waitForTimeout(800)
-  test.fail(true, 'HW-2: computeTotals throws "Not a decimal amount: 1e+22" while rendering; the dialog is replaced by the error screen')
+  // Fixed (HW-2): the dialog stays, and Issue is refused with a reason (too large, or not a number it can read).
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible({ timeout: 5_000 })
+  await expect(dialog(page).getByRole('button', { name: 'Issue quotation' })).toBeDisabled({ timeout: 3_000 })
   await ctx.close()
 })
 
@@ -1129,10 +1129,15 @@ test('HW-3: a quantity changed while the Issue quotation dialog is open is issue
   expect(shown).toBe('PKR 4,720')
   await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { qty: 5 }) // someone else corrects the quantity
   await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
+  // Fixed (HW-3): the issue is refused with the reason, nothing is issued, and the dialog shows the real total before the next try.
+  await expect(dialog(page).getByText(/changed the quantity/)).toBeVisible({ timeout: 30_000 })
+  expect(await quotationsOf(r.rfq.id)).toHaveLength(0)
+  await expect(dialog(page).getByTestId('total-gross')).toHaveText('PKR 5,900', T)
+  const shownNow = await dialog(page).getByTestId('total-gross').innerText()
+  await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
   await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
   const [q] = await quotationsOf(r.rfq.id)
-  test.fail(true, 'HW-3: the dialog totals use the quantities it loaded, issue_quotation snapshots the stored ones (5 x 1,000 + GST = 5,900), no warning')
-  expect(`PKR ${amount(num(q.net_total) + num(q.gst_total))}`).toBe(shown)
+  expect(`PKR ${amount(num(q.net_total) + num(q.gst_total))}`).toBe(shownNow)
   await ctx.close()
 })
 
@@ -1173,7 +1178,6 @@ test('HW-5: a pasted reply line "price on request" is stored as a price (the "2"
   await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBeGreaterThan(0)
   await page.waitForTimeout(1000)
   const lines = await linesOf(r.rfq.id, de.id)
-  test.fail(true, 'HW-5: "price on request" is read as EUR 2.00 (from "2 core") and ticked by default, so Accept stores it as a price')
   expect(lines.find(l => l.rfq_item_id === r.items[1].id)).toBeUndefined()
   await ctx.close()
 })
@@ -1187,7 +1191,6 @@ test('HW-7: an enquiry quantity of 0 is read as 1 and saved as 1, with no warnin
   await pasteOnPage(page, { text: [`Pressure gauge 0-16 bar ${tag()} - 2 nos`, `Thermowell SS316 ${tag()} - 0 nos`].join('\n') })
   const qty = page.getByRole('textbox', { name: 'Quantity of item 2', exact: true })
   await expect(page.getByRole('textbox', { name: 'Description of item 2', exact: true })).toHaveValue(/Thermowell SS316/, T)
-  test.fail(true, 'HW-7: "0 nos" becomes "1 no" on screen (and qty 1 in the database, effectiveQty) with nothing telling the person')
   await expect(qty).not.toHaveValue('1 no', { timeout: 3_000 })
   await ctx.close()
 })
@@ -1198,8 +1201,9 @@ test('HW-8: a unit price of 0 can be issued on a quotation with no warning', asy
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
   await fillPrice(page, 1, '0')
   await expect(dialog(page).getByTestId('total-net')).toHaveText('PKR 0', T)
-  test.fail(true, 'HW-8: min={0} and quoted_unit_price_net >= 0, so a free line can go out on a customer quotation')
+  // Fixed (HW-8): Issue is refused, and the dialog says why.
   await expect(dialog(page).getByRole('button', { name: 'Issue quotation' })).toBeDisabled({ timeout: 3_000 })
+  await expect(dialog(page).getByTestId('issue-blocked')).toContainText('price of 0')
   await ctx.close()
 })
 
@@ -1211,8 +1215,13 @@ test('HW-9: Back with the Issue quotation dialog open leaves the RFQ page and di
   await fillPrice(page, 1, '125000')
   await page.goBack()
   await settle(page)
-  test.fail(true, 'HW-9: ?issue=1 is set with replace: true, so Back leaves the RFQ page (to /rfqs) and the typed price is lost; a reload loses it too')
+  // Fixed (HW-9): Back closes the dialog and stays on the RFQ page; the typed price is kept as a draft, also over a reload.
   await expect(page).toHaveURL(new RegExp(`/rfqs/${r.rfq.id}`), { timeout: 3_000 })
+  await openIssue(page, info, r.rfq.id, 'HW-9')
+  await expect(dialog(page).getByLabel('Unit price, net PKR, item 1')).toHaveValue('125,000.00', T)
+  await page.reload()
+  await settle(page)
+  await expect(dialog(page).getByLabel('Unit price, net PKR, item 1')).toHaveValue('125,000.00', T)
   await ctx.close()
 })
 
@@ -1228,7 +1237,6 @@ test('HW-10: an over-large intake quantity is refused with only "Nothing was sav
   const said = page.getByText(/Nothing was saved/).first()
   await expect(said).toBeVisible(T)
   const banner = said.locator('xpath=ancestor::div[contains(@class,"rounded")][1]')
-  test.fail(true, 'HW-10: float_rfq answers 22003 numeric field overflow (qty is numeric(12,3)) and the banner does not say the quantity is too large')
   await expect(banner).toContainText(/quantit/i, { timeout: 3_000 })
   await ctx.close()
 })
@@ -1242,14 +1250,21 @@ test('HW-43: a refused Issue quotation still changes the item prices (Mark won t
   await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
   await dialog(page).getByRole('button', { name: 'Done' }).click()
   expect(num((await itemsOf(r.rfq.id))[0].quoted_unit_price_net)).toBe(1300)
-  // Revise at 999,999,999,999: it fits rfq_items (numeric(14,2)) but 2.5 x it overflows quotations.net_total, so the issue is refused.
+  // Revise at 999,999,999,999: it fits rfq_items (numeric(14,2)) but 2.5 x it overflows quotations.net_total. Since the fix the
+  // dialog refuses it before sending, with the reason (and pgTAP 0084 proves the database rolls the prices back on that refusal).
   await openReviseFromMenu(page)
   await fillPrice(page, 1, '999999999999')
+  await expect(dialog(page).getByRole('button', { name: 'Issue revised quotation' })).toBeDisabled(T)
+  await expect(dialog(page).getByTestId('issue-blocked')).toContainText('larger than a quotation can hold')
+  // A refusal the dialog cannot foresee: the issue call fails on the way (connection dropped).
+  await fillPrice(page, 1, '1500')
+  await page.route('**/rest/v1/rpc/issue_quotation*', route => route.abort())
   await dialog(page).getByRole('button', { name: 'Issue revised quotation' }).click()
   await expect(dialog(page).getByText('Could not issue the quotation')).toBeVisible({ timeout: 30_000 })
+  await page.unroute('**/rest/v1/rpc/issue_quotation*')
   expect(await quotationsOf(r.rfq.id)).toHaveLength(1)
   const price = num((await itemsOf(r.rfq.id))[0].quoted_unit_price_net)
-  test.fail(true, 'HW-43: issueQuotation updates rfq_items before the issue_quotation RPC, so a refused issue leaves a price no quotation carries (and Mark won uses it)')
+  // Fixed (HW-43): the prices are written by issue_quotation itself (0084), in the same transaction, so nothing changed.
   expect(price).toBe(1300)
   await ctx.close()
 })

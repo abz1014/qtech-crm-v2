@@ -182,7 +182,7 @@ export const VISITS: readonly Visit[] = [
   screen('settings-categories', 'Settings: expense categories', ADMIN, () => '/settings/categories'),
   screen('settings-company', 'Settings: company profile', ALL, () => '/settings/company'),
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
-  screen('settings-exchange-rates', 'Settings: exchange rates', ALL, () => '/settings/exchange-rates'),
+  screen('settings-exchange-rates', 'Settings: exchange rates', MONEY, () => '/settings/exchange-rates'), // engineers: no currency amounts (2026-10-22)
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
   // Last: it creates an RFQ, which would otherwise show on the lists above.
   newRfq,

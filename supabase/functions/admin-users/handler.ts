@@ -130,7 +130,7 @@ export function createHandler(deps: Deps): (req: Request) => Promise<Response> {
           const err = await store.setPassword(t.id, password)
           if (err) throw new HttpError(500, 'Could not reset the password.')
           // HW-17: "signed out on every device" - end every session now. With the API's pre-request check
-          // (migration 0087) an access token of an ended session is refused at once, not when it expires.
+          // (migration 0086) an access token of an ended session is refused at once, not when it expires.
           const revokeErr = await store.revokeSessions(t.id)
           await audit(t.id, 'update', null, { event: 'reset_password' })
           if (revokeErr) {

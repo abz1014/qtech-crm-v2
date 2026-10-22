@@ -22,6 +22,30 @@ export const realItems = (items: readonly DraftItem[]): DraftItem[] => items.fil
 
 export const effectiveQty = (i: DraftItem): number => (i.qty != null && Number.isFinite(i.qty) && i.qty > 0 ? i.qty : 1)
 
+/** rfq_items.qty is numeric(12,3): nine whole digits. */
+export const MAX_QTY = 999_999_999
+
+/**
+ * HW-7: a quantity that was given but cannot be used (0, or below) is never quietly read as 1: the row says so and the
+ * enquiry is not saved until it is fixed. An empty cell still means 1.
+ */
+export function qtyProblem(i: Pick<DraftItem, 'qty'>): string | null {
+  if (i.qty == null) return null
+  if (!Number.isFinite(i.qty) || i.qty <= 0) return 'The quantity is 0. Enter the real quantity, or remove the item.'
+  return null
+}
+
+/** The first real row whose quantity cannot be used, with its 1-based row number as the grid shows it. */
+export function firstQtyProblem(items: readonly DraftItem[]): { n: number; message: string } | null {
+  for (let k = 0; k < items.length; k++) {
+    const it = items[k] as DraftItem
+    if (it.description.trim() === '') continue
+    const p = qtyProblem(it)
+    if (p) return { n: k + 1, message: p }
+  }
+  return null
+}
+
 export function toSuggestionItems(items: readonly DraftItem[], brands: readonly BrandRef[]): SuggestionItem[] {
   const byId = new Map(brands.map(b => [b.id, b.name]))
   const brandNames = brands.map(b => b.name)

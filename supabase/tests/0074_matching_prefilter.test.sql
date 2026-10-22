@@ -552,7 +552,7 @@ begin
              null::integer as src_no, null::smallint as src_rev, null::date as src_on
       where oi.supplier_unit_price is not null
       union all
-      (select q.unit_price, 'quote'::text, 2, r.number::integer, null::smallint, q.created_at::date
+      (select q.unit_price, 'quote'::text, 2, r.number::integer, null::smallint, (q.created_at at time zone 'Asia/Karachi')::date  -- 0080: the quote's Karachi day, as po_line_prefill now
        from public.supplier_quote_lines q
        join public.supplier_inquiries si on si.id = q.inquiry_id
        join public.rfqs r on r.id = si.rfq_id

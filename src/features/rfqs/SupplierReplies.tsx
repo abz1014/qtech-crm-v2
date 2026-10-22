@@ -13,6 +13,7 @@ import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
+import { useSeesPrices } from '@/app/session'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
 import { InfoTip } from '@/ui/InfoTip'
@@ -56,13 +57,18 @@ import { parseReplyPrice, replyPriceProblem } from '@/features/rfqs/lib/replyPri
  * "Can't quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); a different reason for
  * one item is an option, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
  * Chasing a supplier lives in the Suppliers asked card (SuppliersAsked.tsx), as in the mockup.
+ *
+ * An engineer (owner decision 2026-10-22: no prices anywhere) sees who replied, who is waited on and who cannot quote, read-only:
+ * a reply is prices (supplier_quote_lines.unit_price is required), so no reply opens, and there is no Add or Edit reply, no Paste
+ * reply and no PDF reading for them. Take back on a whole "can't quote" stays (no price in it).
  */
 
 export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiries: InquiryRow[]; rates: RateTable }) {
   // Open by default while a reply is expected; a person's own open or close wins until the reply is saved.
   const [toggled, setToggled] = useState<Readonly<Record<string, boolean>>>({})
   const [focus, setFocus] = useState<OpenReplyDetail | null>(null)
-  const isOpen = (i: InquiryRow) => toggled[i.id] ?? awaitingReply(i)
+  const prices = useSeesPrices()
+  const isOpen = (i: InquiryRow) => prices && (toggled[i.id] ?? awaitingReply(i))
   /** `undefined` forgets the person's choice: the row goes back to its default (open only while a reply is expected). */
   const setOpen = (id: string, open: boolean | undefined) =>
     setToggled(t => {
@@ -102,10 +108,12 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
     <DetailPanel
       title="Replies from suppliers"
       tip={
-        <InfoTip label="How to enter a reply">
-          Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing is
-          compared until it is saved.
-        </InfoTip>
+        prices ? (
+          <InfoTip label="How to enter a reply">
+            Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing
+            is compared until it is saved.
+          </InfoTip>
+        ) : null
       }
       meta={`${replied} of ${inquiries.length} replied`}
       dataSlot="replies"
@@ -125,7 +133,7 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
               />
             </li>
           ) : (
-            <ClosedRow key={i.id} rfq={rfq} inquiry={i} items={items} onOpen={() => setOpen(i.id, true)} />
+            <ClosedRow key={i.id} rfq={rfq} inquiry={i} items={items} onOpen={prices ? () => setOpen(i.id, true) : null} />
           ),
         )}
       </ul>
@@ -142,7 +150,7 @@ function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCount: num
 }
 
 /** One line for a supplier whose reply is not open: who, where it stands, and the one way in. */
-function ClosedRow({ rfq, inquiry, items, onOpen }: { rfq: RfqHeader; inquiry: InquiryRow; items: RfqItemRow[]; onOpen: () => void }) {
+function ClosedRow({ rfq, inquiry, items, onOpen }: { rfq: RfqHeader; inquiry: InquiryRow; items: RfqItemRow[]; onOpen: (() => void) | null }) {
   const { toast } = useToast()
   const noOffer = useSetInquiryNoOffer(rfq.id)
   const declinedAll = Boolean(inquiry.noOfferOn) && inquiry.lines.length === 0
@@ -169,7 +177,7 @@ function ClosedRow({ rfq, inquiry, items, onOpen }: { rfq: RfqHeader; inquiry: I
         <Button size="sm" icon={Undo2} onClick={() => void takeBack()} busy={noOffer.isPending}>
           Take back
         </Button>
-      ) : (
+      ) : onOpen === null ? null : (
         <Button size="sm" icon={inquiry.lines.length > 0 ? Pencil : Plus} onClick={onOpen} aria-label={`${inquiry.lines.length > 0 ? 'Edit reply' : 'Add reply'}, ${inquiry.supplierName}`}>
           {inquiry.lines.length > 0 ? 'Edit reply' : 'Add reply'}
         </Button>

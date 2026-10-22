@@ -249,7 +249,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             help="Days after the invoice date. An order with its own terms keeps them."
             className="sm:max-w-[200px]"
           >
-            {f => <NumberInput {...f} suffix="days" min={0} decimals={0} />}
+            {f => <NumberInput {...f} suffix="days" decimals={0} />}
           </FormField>
         </Section>
 
@@ -263,7 +263,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             help="A new quotation is valid for this many days from its date."
             className="sm:max-w-[200px]"
           >
-            {f => <NumberInput {...f} suffix="days" min={1} decimals={0} />}
+            {f => <NumberInput {...f} suffix="days" decimals={0} />}
           </FormField>
           <FormField name="quotation_terms" label="Quotation terms" requirement="optional">
             {f => <TextArea {...f} rows={5} />}

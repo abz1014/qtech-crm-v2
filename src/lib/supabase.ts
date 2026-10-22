@@ -24,7 +24,7 @@ export function onApiActivity(cb: () => void): () => void {
 
 /**
  * Called at once when the API refuses the token itself (HTTP 401: the session was ended by Reset password, Deactivate or a
- * sign-out elsewhere; supabase/migrations/0087_session_cutoff.sql), so the app signs out and wipes the device now (HW-17, HW-45).
+ * sign-out elsewhere; supabase/migrations/0086_session_cutoff.sql), so the app signs out and wipes the device now (HW-17, HW-45).
  */
 export function onSessionRefused(cb: () => void): () => void {
   refusedListeners.add(cb)

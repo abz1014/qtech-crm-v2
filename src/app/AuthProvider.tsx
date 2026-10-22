@@ -30,7 +30,7 @@ async function resolveUser(userId: string): Promise<Resolved> {
     supabase.from('users').select('id, name').eq('id', userId).maybeSingle(),
     supabase.rpc('current_user_role'),
   ])
-  // The API's pre-request check (0087) refuses a deactivated account outright: that is a deactivation, not a failed lookup.
+  // The API's pre-request check (0086) refuses a deactivated account outright: that is a deactivation, not a failed lookup.
   if (isDeactivatedRefusal(role.error) || isDeactivatedRefusal(row.error)) return { user: null }
   if (role.error) throw role.error
   if (row.error) throw row.error
@@ -40,7 +40,7 @@ async function resolveUser(userId: string): Promise<Resolved> {
 
 /**
  * PostgREST's answers to a token it will not accept, or a role check refused: the session is not valid. PT401 is the
- * pre-request check of 0087_session_cutoff.sql: the session was ended (Reset password, Deactivate, signed out elsewhere).
+ * pre-request check of 0086_session_cutoff.sql: the session was ended (Reset password, Deactivate, signed out elsewhere).
  */
 function isAuthRefusal(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false

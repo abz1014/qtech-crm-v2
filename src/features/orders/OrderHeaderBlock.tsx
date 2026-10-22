@@ -311,6 +311,12 @@ export function OrderHeaderBlock({
                       {/* one danger mark per cell: the Overdue line above carries it */}
                       {m.dueOn && m.balance > 0 ? <span> · due {formatShortDate(m.dueOn, today)}</span> : null}
                     </span>
+                    {/* HW-50: more received than the gross is said, not hidden under "Paid": a refund or a credit may be due */}
+                    {(m.overpaidBy ?? 0) > 0 ? (
+                      <span className="font-medium text-tone-warning-fg" data-testid="order-overpaid">
+                        Overpaid by PKR <span className="num">{formatAmount(m.overpaidBy ?? 0)}</span>
+                      </span>
+                    ) : null}
                   </p>
                 )}
               </Cell>

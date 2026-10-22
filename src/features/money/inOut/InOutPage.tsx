@@ -214,13 +214,13 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       </div>
 
       <section aria-labelledby="in-out-why" className="grid gap-2 rounded border bg-surface px-5 py-4" data-testid="in-out-why">
-        <h3 id="in-out-why" className="flex flex-wrap items-center gap-2 text-base font-semibold">
+        <h2 id="in-out-why" className="flex flex-wrap items-center gap-2 text-base font-semibold">
           Why profit and cash differ in {v.label}
           <InfoTip label="About supplier bills">
             Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We
             owe suppliers report.
           </InfoTip>
-        </h3>
+        </h2>
         <p className="num text-base">
           Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
         </p>
@@ -294,7 +294,7 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
       footerLabel="Money out"
       noun="lines"
       toolbar={
-        <h3 className="text-base font-semibold">Money out by category, {v.label}</h3>
+        <h2 className="text-base font-semibold">Money out by category, {v.label}</h2>
       }
       empty={<EmptyState title="Nothing was paid out">Expenses and supplier payments dated in this period show here.</EmptyState>}
     />
@@ -307,7 +307,7 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
     { id: 'period', header: v.period.kind === 'month' ? 'Month' : 'Quarter', value: t => t.label, cell: t => <span className={cn(t.period.key === v.period.key && 'font-semibold')}>{t.label}</span> },
     { id: 'in', header: 'Money in (PKR)', kind: 'money', value: t => t.in, paisa: 'never' },
     { id: 'out', header: 'Money out (PKR)', kind: 'money', value: t => t.out, paisa: 'never' },
-    { id: 'net', header: 'Cash net (PKR)', kind: 'money', value: t => t.net, paisa: 'never' },
+    { id: 'net', header: 'Cash in minus out (PKR)', kind: 'money', value: t => t.net, paisa: 'never' },
     { id: 'profit', header: 'Profit on invoices (PKR)', kind: 'money', value: t => t.profit, paisa: 'never' },
   ]
   return (
@@ -319,7 +319,7 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
       activeRowId={v.period.key}
       onRowOpen={t => onPick(t.period)}
       summary="Open a row to see that period"
-      toolbar={<h3 className="text-base font-semibold">{title}</h3>}
+      toolbar={<h2 className="text-base font-semibold">{title}</h2>}
       mobileRow={t => (
         <span className="grid gap-1">
           <span className={cn('font-medium', t.period.key === v.period.key && 'font-semibold')}>{t.label}</span>

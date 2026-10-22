@@ -13,6 +13,11 @@ export function useReceivablesSummary(today: string, enabled = true) {
   return useQuery({ queryKey: qk.money.receivables.summary(today), queryFn: () => api.getReceivablesSummary(today), enabled })
 }
 
+/** Advances held on cancelled orders (admin only: pass enabled = isAdmin). */
+export function useHeldAdvances(enabled: boolean) {
+  return useQuery({ queryKey: qk.money.receivables.held(), queryFn: api.listHeldAdvances, enabled })
+}
+
 export function usePaymentOrder(orderId: string | null | undefined) {
   return useQuery({
     queryKey: qk.money.receivables.order(orderId ?? ''),

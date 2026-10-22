@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RatesTable } from '@/features/settings/RatesTable'
 import { rateAgeLabel, ratesStatusLine, sortRates, sourceLabel } from '@/features/settings/ratesModel'
+import { SessionContext } from '@/app/session'
 import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import type { FxLatestRow } from '@/features/rfqs/api'
 
@@ -75,12 +76,16 @@ describe('exchange rate table', () => {
   })
 })
 
+const signedIn = (role: string) => ({ status: 'signed-in' as const, user: { id: 'u1', name: 'Sana', role } })
+
 describe('Settings home', () => {
   it("is today's rates only (the side menu lists the pages), with a status line from the data and one link to add a rate", () => {
     render(
-      <MemoryRouter>
-        <SettingsHomePage />
-      </MemoryRouter>,
+      <SessionContext.Provider value={signedIn('sales')}>
+        <MemoryRouter>
+          <SettingsHomePage />
+        </MemoryRouter>
+      </SessionContext.Provider>,
     )
     expect(screen.getByRole('heading', { name: "Today's exchange rates" })).toBeInTheDocument()
     // RATES: 3 automatic (newest 26 Nov), 1 by hand
@@ -88,6 +93,20 @@ describe('Settings home', () => {
     expect(screen.getByRole('link', { name: /Add a rate or see history/ })).toHaveAttribute('href', '/settings/exchange-rates')
     expect(screen.queryByRole('heading', { name: 'Company profile' })).toBeNull()
     expect(screen.queryByText(/Updated every night/)).toBeNull()
+  })
+
+  it('an engineer gets the company profile link only: no rates shown or read (owner decision 2026-10-22)', () => {
+    render(
+      <SessionContext.Provider value={signedIn('engineer')}>
+        <MemoryRouter>
+          <SettingsHomePage />
+        </MemoryRouter>
+      </SessionContext.Provider>,
+    )
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Today's exchange rates" })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Add a rate or see history/ })).toBeNull()
+    expect(screen.getByRole('link', { name: /View company profile/ })).toHaveAttribute('href', '/settings/company')
   })
 })
 

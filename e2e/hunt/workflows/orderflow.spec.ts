@@ -1249,7 +1249,7 @@ async function invoicePdfDownload(page: Page): Promise<Locator> {
   return dl
 }
 
-test('HW-11: a part invoice of exactly the 18% line of a mixed order gets a proportional GST, and its PDF cannot be printed', async ({ browser }, info) => {
+test('HW-11 (fixed): a part invoice of exactly the 18% line of a mixed order gets that line\'s own GST, and its PDF prints', async ({ browser }, info) => {
   await ensureProfileStrn()
   const cust = await company('Hunt HW11 Customer', { city: 'Lahore' })
   await setBuyerTax(cust)
@@ -1277,12 +1277,12 @@ test('HW-11: a part invoice of exactly the 18% line of a mixed order gets a prop
   expect(num(inv.net_amount)).toBe(10000)
   await page.reload()
   const dl = await invoicePdfDownload(page)
-  test.fail(true, `HW-11: the dialog stored GST ${num(inv.gst_amount)} (1,800 shared over 15,000) for exactly the 18% line, whose own GST is 1,800; the PDF refuses the mismatch`)
+  expect(num(inv.gst_amount)).toBe(1800) // HW-11 fixed: exactly the 18% line carries its own GST (was 1,200, a share)
   await expect(dl).toBeEnabled({ timeout: 5000 })
   await ctx.close()
 })
 
-test('HW-12: the second invoice\'s PDF prints "Payment due" as its own date plus the terms, not the order\'s due date', async ({ browser }, info) => {
+test('HW-12 (fixed): the second invoice\'s PDF prints "Payment due" as the order\'s due date (first invoice + terms)', async ({ browser }, info) => {
   await ensureProfileStrn()
   const cust = await company('Hunt HW12 Customer', { city: 'Karachi' })
   await setBuyerTax(cust)
@@ -1311,12 +1311,12 @@ test('HW-12: the second invoice\'s PDF prints "Payment due" as its own date plus
   const text = pdf ? pdfText(pdf) : null
   test.skip(text === null, 'pdftotext (poppler) is not installed')
   expect(pdfHas(text ?? '', second.number)).toBe(true)
-  test.fail(true, `HW-12: the PDF says Payment due ${pdfDay(addDays(today, 30))} (invoice date + 30); order_receivables, Today and Who owes us say ${orderDue} (first invoice + 30)`)
+  // HW-12 fixed: the PDF prints the order's due date (first invoice + terms), as order_receivables does
   expect(pdfHas(text ?? '', pdfDay(orderDue))).toBe(true)
   await ctx.close()
 })
 
-test('HW-13: Create invoice accepts a net amount above what is left to invoice, with no warning', async ({ browser }, info) => {
+test('HW-13 (fixed): Create invoice refuses a net amount above what is left to invoice', async ({ browser }, info) => {
   const seed = await order({ lines: [{ description: 'Level switch', qty: 1, price: 10000 }], owner: 'sales' })
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await ctx.newPage()
@@ -1330,12 +1330,12 @@ test('HW-13: Create invoice accepts a net amount above what is left to invoice, 
   await d.getByRole('button', { name: 'Create invoice', exact: true }).click()
   await page.waitForTimeout(2500)
   const invoiced = (await invoicesOf(seed.order.id)).reduce((s, x) => s + num(x.net_amount), 0)
-  test.fail(true, 'HW-13: net 20,000 is invoiced on an order of net 10,000; the dialog neither warns nor refuses')
+  // HW-13 fixed: the dialog refuses a net above what is left to invoice
   expect(invoiced).toBeLessThanOrEqual(10000)
   await ctx.close()
 })
 
-test('HW-14: a line of a fully invoiced and settled order can be edited with no warning, and the order flips back to part-invoiced', async ({ browser }, info) => {
+test('HW-14 (fixed): the lines of a fully invoiced and settled order are locked, so it stays fully invoiced', async ({ browser }, info) => {
   // 10,000 at 18% (GST 1,800) and 5,000 exempt: gross 16,800, invoiced and paid in full.
   const seed = await order({
     lines: [
@@ -1361,7 +1361,7 @@ test('HW-14: a line of a fully invoiced and settled order can be edited with no 
   }
   await page.waitForTimeout(2000)
   const st = await stateOf(id)
-  test.fail(true, 'HW-14: the exempt line of an invoiced, settled order was made 18% without a word; the order is now part-invoiced and owes GST again')
+  // HW-14 fixed: a fully invoiced order's lines are locked (Edit GST and lines is not offered)
   expect(st.invoicing_state).toBe('fully_invoiced')
   await ctx.close()
 })

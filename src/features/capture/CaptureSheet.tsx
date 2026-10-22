@@ -8,7 +8,7 @@ import { deleteCapture, safely } from '@/lib/capture/store'
 import { readRecentOrders, readRecents } from '@/lib/capture/recents'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
-import { useSession } from '@/app/session'
+import { seesPrices, useSession } from '@/app/session'
 import { getOrderNotes, getRfqNotes, listCandidates, listOrderCandidates, setOrderNotes, setRfqNotes } from '@/features/capture/api'
 import {
   appendNote,
@@ -477,17 +477,20 @@ export default function CaptureSheet() {
         {empty ? <span className="text-xs text-fg-muted">You choose after you add something.</span> : null}
         {!empty && more ? (
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <button
-              type="button"
-              onClick={() => {
-                setOrderMode(false)
-                choose('reply')
-              }}
-              aria-pressed={dest === 'reply'}
-              className={cn('w-fit rounded text-sm text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
-            >
-              {dest === 'reply' ? 'Reading it as a supplier’s reply' : 'This is a supplier’s reply'}
-            </button>
+            {/* A supplier's reply is prices: admin and sales only (owner decision 2026-10-22, engineers see no prices). */}
+            {seesPrices(user?.role) ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOrderMode(false)
+                  choose('reply')
+                }}
+                aria-pressed={dest === 'reply'}
+                className={cn('w-fit rounded text-sm text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
+              >
+                {dest === 'reply' ? 'Reading it as a supplier’s reply' : 'This is a supplier’s reply'}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => setOrderMode(m => !m)}

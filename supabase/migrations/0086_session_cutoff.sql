@@ -1,4 +1,4 @@
--- 0087_session_cutoff (HW-17, HW-45): "signed out on every device" holds at once, not when the access token expires.
+-- 0086_session_cutoff (HW-17, HW-45): "signed out on every device" holds at once, not when the access token expires.
 --
 -- An access token is a signed JWT: PostgREST checks its signature and expiry, nothing else, so a session ended by Reset
 -- password or Deactivate (admin-users deletes the person's auth.sessions rows; their refresh tokens cascade) kept reading

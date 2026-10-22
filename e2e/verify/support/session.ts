@@ -86,7 +86,8 @@ export function restLog(page: Page): { urls: string[]; requests: Request[] } {
 
 /**
  * The tables, views and functions that carry money an engineer must never ask for (DECISIONS 2026-10-13: money is admin-only;
- * sales see invoices and order balances). Matched against the REST path.
+ * sales see invoices and order balances), plus, since the owner decision of 2026-10-22 (engineers see no prices), every read that
+ * only carries prices or rates. Matched against the REST path.
  */
 export const MONEY_PATHS = [
   '/rest/v1/payments_in',
@@ -103,6 +104,13 @@ export const MONEY_PATHS = [
   '/rest/v1/rpc/month_end_status',
   '/rest/v1/rpc/aging_as_of',
   '/rest/v1/rpc/payables_as_of',
+  '/rest/v1/rpc/rank_item_quotes',
+  '/rest/v1/rpc/customer_price_memory',
+  '/rest/v1/rpc/supplier_item_memory',
+  '/rest/v1/rpc/po_line_prefill',
+  '/rest/v1/rpc/my_target_progress',
+  '/rest/v1/v_fx_latest',
+  '/rest/v1/fx_rates',
 ]
 
 export function moneyRequests(urls: string[]): string[] {

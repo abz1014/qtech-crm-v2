@@ -18,7 +18,7 @@ const h = vi.hoisted(() => ({
   failLookup: false,
   /** The lookup is refused as an invalid token (PostgREST PGRST301). */
   refuse: false,
-  /** What the refusal says: PGRST301 (bad token), or the 0087 pre-request check (PT401) for an ended session or a deactivated account. */
+  /** What the refusal says: PGRST301 (bad token), or the 0086 pre-request check (PT401) for an ended session or a deactivated account. */
   refusal: { message: 'JWT expired', details: '', hint: '', code: 'PGRST301' },
   start: vi.fn(),
   forgetSaved: vi.fn(),

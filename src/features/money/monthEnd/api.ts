@@ -255,6 +255,8 @@ export async function loadAging(asOf: string): Promise<{ rows: AgingRow[]; advan
       orderRef: r.order_number ? orderRef(r.order_number) : null,
       customer: names[r.company_id] ?? 'Customer',
       held: fx(r.advance_held),
+      // 0080 (owner decision 2026-10-22): the order was cancelled by the date: refund or keep, not waiting for an invoice
+      cancelled: r.bucket === 'cancelled',
     }))
   return { rows, advances }
 }

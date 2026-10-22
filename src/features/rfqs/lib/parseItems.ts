@@ -98,7 +98,7 @@ const TRAIL_AMBIG = new RegExp(String.raw`[,;(–-]\s*${NUM}\s*(${AMBIG})\s*\)?\
 
 function toQty(raw: string): number {
   const n = Number(raw.replace(/,/g, ''))
-  return Number.isFinite(n) && n > 0 ? n : 1
+  return Number.isFinite(n) && n >= 0 ? n : 1 // HW-7: a written 0 stays 0 (the intake marks it); never read as 1
 }
 
 export function normaliseUnit(raw: string | null | undefined): string | null {

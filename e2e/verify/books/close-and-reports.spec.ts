@@ -266,7 +266,7 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   await page.goto(BOOKS.monthEnd.owe(monthOf(today).key))
   const row = page.getByRole('row', { name: new RegExp(sup.name) })
   await expect(row).toContainText(amount(2033.25, { always: true }))
-  await expect(row).toContainText(amount(569818))
+  // round 3: five columns; the PKR value of the commitment is the rate tooltip, not a column
   await expect(row).toContainText(amount(300000))
   await expect(row).toContainText(amount(269818))
   await expect(row).toContainText(BOOKS.owe.partPaid)
