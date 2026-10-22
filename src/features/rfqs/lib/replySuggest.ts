@@ -23,6 +23,8 @@ export interface Suggestion {
   itemId: string | null
   itemNumber: number | null
   unitPrice: number | null
+  /** The model the supplier offers when it is not the one asked for (a replacement). */
+  offeredPn: string | null
   /** The currency this price will be saved in (the offer's own, else the row's). */
   currency: string
   /** Where the currency came from: the reply text, or the supplier's pre-fill. */
@@ -55,6 +57,8 @@ export interface SuggestionSet {
   currency: string
   regret: RegretSuggestion | null
   declined: DeclinedSuggestion[]
+  /** The reply only asks something: nothing to accept. */
+  question: string | null
   /** Nothing usable was found in the text. */
   nothingFound: boolean
 }
@@ -80,6 +84,7 @@ function checksFor(o: ReplyOffer): string[] {
   if (o.flags.includes('match_by_position')) out.push('Matched to the item by its position only: check it is the right item')
   if (o.flags.includes('multiple_prices')) out.push('More than one price on this line: check this is the unit price')
   if (o.flags.includes('derived_from_total')) out.push('Worked out from a total: check the unit price')
+  if (o.offeredPn) out.push(`The supplier offers ${o.offeredPn} instead of the item asked for: check it will do`)
   return out
 }
 
@@ -103,7 +108,7 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
     const itemNumber = o.rfqItemId ? (numberOf.get(o.rfqItemId) ?? null) : null
     let blocked: string | null = null
     if (!o.rfqItemId || itemNumber === null) blocked = 'No matching item: enter this one by hand'
-    else if (o.unitPrice === null) blocked = 'No price found on this line'
+    else if (o.unitPrice === null) blocked = o.flags.includes('ambiguous_separator') ? 'The figure could be read two ways (1.234 or 1,234): enter it by hand' : 'No price found on this line'
     else if (!o.currency && !currency) blocked = 'No currency stated: pick the supplier’s currency above first'
     else if (o.currency && currency && o.currency !== currency) blocked = `${o.currency} price: this row is in ${currency}, enter it separately`
     else if (taken.has(o.rfqItemId)) blocked = 'Another price above already covers this item'
@@ -113,6 +118,7 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
       itemId: o.rfqItemId,
       itemNumber,
       unitPrice: o.unitPrice,
+      offeredPn: o.offeredPn,
       currency: o.currency ?? currency,
       currencyFrom: o.currency ? 'reply' : 'supplier',
       leadTimeText: o.leadTimeText,
@@ -129,7 +135,8 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
     .map(d => ({ itemId: d.rfqItemId, itemNumber: numberOf.get(d.rfqItemId) ?? 0, reason: reasonForRegret(d.kind) }))
     .filter(d => d.itemNumber > 0)
   const regret = parsed.regret && suggestions.every(s => !s.selectable) ? { reason: reasonForRegret(parsed.regretKind) } : null
-  return { suggestions, currency, regret, declined, nothingFound: suggestions.length === 0 && !regret && declined.length === 0 }
+  const question = parsed.question ? (parsed.questionSnippet ?? '') : null
+  return { suggestions, currency, regret, declined, question, nothingFound: suggestions.length === 0 && !regret && declined.length === 0 && question === null }
 }
 
 /** The row's draft after accepting the selected suggestions. Currency, prices, and lead time and stock when the row had none. */

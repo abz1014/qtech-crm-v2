@@ -187,6 +187,9 @@ export const BATCHES: BatchSpec[] = [
   // Fresh batch 30, first try (text and PDF): every field and every shape 100% again: the second fresh batch in a row. Kept held
   // out, run in CI.
   { batch: 30, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28], gate: true },
+  // Batch 31 is the EU quotation PDF alone (generation 32, the Italian Preventivo layout): quotes only, text and PDF. It was written
+  // together with the reply reader's Italian labels, so it is dev data (tuned on), run in CI.
+  { batch: 31, enquiries: 0, quotes: 48, gens: [32], dev: true, gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {

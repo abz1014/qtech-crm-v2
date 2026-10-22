@@ -34,6 +34,8 @@ export type OfferFlag =
   | 'derived_from_total'
   | 'match_by_position'
   | 'no_item_match'
+  /** The supplier offers another model than the one asked for (`offeredPn`). */
+  | 'substitute'
 
 export interface ReplyItemRef {
   id: string
@@ -57,6 +59,8 @@ export interface ReplyOffer {
   matchedBy: MatchedBy
   /** 0 to 1: how sure the item match is. */
   matchScore: number
+  /** The model or part number the supplier offers when it is not the one we asked for (a replacement or substitute), else null. */
+  offeredPn: string | null
   unitPrice: number | null
   /** ISO 4217 code read from the text, or null. Never defaulted. */
   currency: ReplyCurrency | null
@@ -104,6 +108,10 @@ export interface ParsedReply {
   regretSnippet: string | null
   /** Items the reply declines. A reply-level regret declines every item. */
   declined: DeclinedItem[]
+  /** The reply only asks something (which size? please confirm the quantity): no price, no regret. Nothing in it is an offer. */
+  question: boolean
+  /** The first question the reply asks, when `question` is set. */
+  questionSnippet: string | null
   /** The currency the reply states in general, or the only one it uses. null when mixed or absent. */
   replyCurrency: ReplyCurrency | null
   /** Non-empty pasted lines. */
@@ -151,6 +159,8 @@ export function parseAmount(raw: string, currency?: string | null): ParsedAmount
   } else if (dots) {
     const parts = s.split('.')
     const last = parts[parts.length - 1] ?? ''
+    // "608.1171.325" is an article number, not 6,081,171,325: thousands groups are three digits each.
+    if (dots > 1 && !parts.slice(1).every(p => p.length === 3)) return null
     if (dots > 1) norm = parts.join('')
     else if (last.length === 3 && (parts[0] ?? '').length >= 1 && (parts[0] ?? '').length <= 3 && parts[0] !== '0') {
       ambiguous = true
@@ -181,16 +191,16 @@ export function normaliseCurrency(raw: string | null | undefined): ReplyCurrency
 }
 
 const CUR_PREFIX_SRC = String.raw`(?<![A-Za-z])(US\s?\$|U\.S\.\s?\$|USD|\$|EUR|€|CNY|RMB|CN¥|¥|￥|AED|Dhs?\.?|GBP|£|PKR|₨|Rs\.?(?!-?\s?(?:485|232|422)\b))\s*`
-const CUR_SUFFIX_SRC = String.raw`(?:\s*(USD|US\$|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|dollars?|euros?|yuan|dirhams?|dhs|pounds?|rupees?|元|块)|(?:\/-)?\s+(Rs\.?))(?![A-Za-z])`
-const CUR_CODE_SRC = String.raw`(US\s?\$|USD|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|Rs\.?|dollars?|euros?|yuan|dirhams?|pounds?|rupees?)`
+const CUR_SUFFIX_SRC = String.raw`(?:[ ]*(USD|US\$|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|dollars?|euros?|yuan|dirhams?|dhs|pounds?|rupees?|元|块)|(?:\/-)?\s+(Rs\.?))(?![A-Za-z])`
+const CUR_CODE_SRC = String.raw`(US\s?\$|USD|\$|EUR|€|CNY|RMB|¥|￥|元|AED|GBP|£|PKR|₨|Rs\.?|dollars?|euros?|yuan|dirhams?|pounds?|rupees?)`
 // An amount: with thousands groups (comma, dot, apostrophe, or space when SP) and up to four decimals, or plain; an optional k.
 // Pakistani (lakh) grouping first: "1,25,000", "12,50,000", "1,00,00,000". A multiplier word may follow: k, lakh / lac, crore.
 const LAKH_GROUPS = String.raw`\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d{1,4})?`
 const MULT_WORD = String.raw`(\s?(?:[kK]|[lL]akhs?|[lL]acs?|[cC]rores?)(?![A-Za-z]))?`
-const AMOUNT_SP = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
+const AMOUNT_SP = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?(?!\d)|\d+(?:[.,]\d{1,4})?(?!\d|[.,]\d))${MULT_WORD}`
 /** The same amount right after a currency written in front of it ("Rs.182,000", "USD890"): no gap needed. */
-const AMOUNT_AFTER_CUR = String.raw`(?<!\d|\d[.,])(${LAKH_GROUPS}|\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
-const AMOUNT = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
+const AMOUNT_AFTER_CUR = String.raw`(?<!\d|\d[.,])(${LAKH_GROUPS}|\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?(?!\d)|\d+(?:[.,]\d{1,4})?(?!\d|[.,]\d))${MULT_WORD}`
+const AMOUNT = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[,.'’]\d{3})+(?:[.,]\d{1,4})?(?!\d)|\d+(?:[.,]\d{1,4})?(?!\d|[.,]\d))${MULT_WORD}`
 // What may follow a price without making it a size or code ("USD 120pcs", "USD 24V" is not a price).
 const AFTER_OK = /^(?:pc|pcs|piece|pieces|each|ea\b|per|only|net|ex\b|fob|cif|cfr|exw|ddp|dap|incl|excl|plus|vat|gst|unit|nos|no\b|set|lot|\/|\+)/i
 
@@ -383,16 +393,22 @@ const REGRET_RE = new RegExp(
     String.raw`\bpass\s+on\b`,
     String.raw`\bdeclin(?:e|ed|ing)\b`,
     String.raw`\b(?:not\s+available|unavailable)\b`,
-    '没有货|无法报价|不能报价',
+    String.raw`\bnot\s+in\s+(?:the\s+)?position\s+to\s+(?:offer|quote|supply|provide)\b`,
+    String.raw`\brefrain(?:ed|ing)?\s+(?:from\s+|in\s+)?(?:sending|quoting|offering|giving)\b`,
+    String.raw`\bnot\s+deal(?:ing|t)?\b`,
+    String.raw`\bexport\s+policy\b`,
+    String.raw`\b(?:model|part|item|number)\s+(?:no\.?\s+)?(?:is\s+)?(?:incorrect|wrong|invalid)\b`,
+    String.raw`\b(?:phased?[\s-]out|out\s+of\s+production|withdrawn\s+from|no\s+longer\s+in\s+(?:production|stock)|not\s+(?:in\s+production|produced|manufactured)\s*(?:any\s*more|anymore|any\s+longer)?)\b`,
+    '没有货|无货|无法报价|不能报价|无法提供|不能提供|不能供货|无法供货|无法供应|不再供应|不供应|已?停产|停止生产|不再生产|已淘汰|被淘汰|无法满足|暂无法',
   ].join('|'),
   'i',
 )
 
 function regretKind(s: string): RegretKind {
-  if (/discontinued|obsolete|end[\s-]of[\s-]life|eol|no\s+longer/i.test(s)) return 'discontinued'
+  if (/discontinued|obsolete|end[\s-]of[\s-]life|eol|no\s+longer|phased?[\s-]out|out\s+of\s+production|not\s+(?:in\s+production|produced|manufactured)|停产|停止生产|不再生产|淘汰/i.test(s)) return 'discontinued'
   if (/scope|range|line|portfolio|carry|handle|deal|supply|sell|manufacture|product/i.test(s) && /not|don|doesn|out of/i.test(s) && !/unable|can(?:'|’)?t|cannot/i.test(s)) return 'not_handled'
   if (/not\s+interested|pass\s+on|declin/i.test(s)) return 'not_interested'
-  if (/not\s+available|unavailable/i.test(s)) return 'unavailable'
+  if (/not\s+available|unavailable|无货|没有货/i.test(s)) return 'unavailable'
   return 'cannot_quote'
 }
 
@@ -420,6 +436,8 @@ interface LineFields {
   qty: number | null
   declaredCurrency: ReplyCurrency | null
   regret: { kind: RegretKind; text: string } | null
+  /** The line asks something. */
+  question: boolean
 }
 
 const blank = (w: string, s: Span) => w.slice(0, s.start) + ' '.repeat(s.end - s.start) + w.slice(s.end)
@@ -442,6 +460,8 @@ function maskNonPrice(w: string): string {
   const masks: RegExp[] = [
     // item numbers: "Item 3", "#2", "Pos 4", and a leading "1)" / "2." / "3 - "
     /\b(?:item|pos|position|sr|line|s\/n)\.?\s*#?\s*\d{1,3}\b/gi,
+    // "Part number: 482917", "QQ: 55500", "Post Code:210044", "Serial number 3105511": an identifier, not a price
+    /\b(?:part|p\/n|serial|model|article|catalog(?:ue)?|cat|ref(?:erence)?|code|order|post|zip|qq|wechat|whatsapp|skype|tel|phone|mob(?:ile)?|fax|pin|id)\b\.?\s*(?:no\.?|number|#|code)?\s*[:#.-]?\s*[A-Z0-9][A-Z0-9-]*\d[A-Z0-9-]*/gi,
     /^\s*#?\d{1,3}\s*(?:[.):](?=\s|$)|\s-\s)/g,
     /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g,
     /(?:https?:\/\/|www\.)\S+/gi,
@@ -449,6 +469,9 @@ function maskNonPrice(w: string): string {
     /(?<![\d.,])0\d{2,3}[- ]?\d{7}(?!\d)/g,
     /\b\d{1,2}:\d{2}(?::\d{2})?\s?(?:[ap]m)?\b/gi,
     /\b\d{4}-\d{2}-\d{2}\b/g,
+    /\b\d{4}[/.]\d{1,2}[/.]\d{1,2}\b/g,
+    /\b(?:iso|din|en|iec|ul|ansi|astm|jis|nema|sae|api)[\s-]?\d+(?:[-/.]\d+)*/gi,
+    /\bincoterms?\s*\(?\s*(?:20\d\d)?\s*\)?/gi,
     /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b/g,
     /\b\d{1,2}(?:st|nd|rd|th)?[\s-]+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?(?:[\s,-]+\d{2,4})?/gi,
     /(?<![A-Za-z0-9])\d+(?:[.,]\d+)?\s?%/g,
@@ -457,6 +480,7 @@ function maskNonPrice(w: string): string {
     /(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?\s*-\s*\d+(?:[.,]\d+)?\s*(?:ma|v|vdc|vac|bar|psi|mpa|kpa|mbar|mm|cm|m|a|hz|°\s?c|c|kw|w|rpm|ohm|kohm|mtr|%)(?![A-Za-z])/gi,
     /(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?\s*(?:ma|vdc|vac|va|bar|psi|mpa|kpa|mbar|mm|cm|kw|hz|rpm|°\s?c|ohm|kohm|kg|inch|amps?|hp|kva|lpm|l\/min|m3\/h|nm|mtr|ltr|mhz|ghz|kb|mb|gb|awg|sqmm)(?![A-Za-z])/gi,
     /(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?(?:v|a|w|c|m|l)(?![A-Za-z0-9])/gi,
+    /(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?\s?V\s?(?:DC|AC)(?![A-Za-z0-9])/gi,
     /(?<![A-Za-z0-9])(?:DN|PN|NPS|NB|BSP|NPT|SCH|IP|IE|G|M|R|Rc|Rp|Class|CL)\s?-?\d+(?:\/\d+)?(?![A-Za-z0-9])/g,
     /\b\d+\/\d+\s?["”]?/g,
     /(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?\s*["”](?!\w)/g,
@@ -514,6 +538,7 @@ function findBarePrices(w: string, anchoredCount: number): PriceCand[] {
   const re = new RegExp(AMOUNT, 'g')
   const found: PriceCand[] = []
   let m: RegExpExecArray | null
+  const lead = /^\s*/.exec(masked)?.[0].length ?? 0
   while ((m = re.exec(masked))) {
     const rest = masked.slice(m.index + m[0].length)
     if (/^[A-Za-z]/.test(rest) && !AFTER_OK.test(rest)) continue
@@ -521,6 +546,8 @@ function findBarePrices(w: string, anchoredCount: number): PriceCand[] {
     if (!amt || amt.value <= 0) continue
     const plainInt = /^\d{4}$/.test(m[1] ?? '') && amt.value >= 2024 && amt.value <= 2035
     if (plainInt && !hasLabel) continue
+    // "Input   1 [tab] USD [tab] USD": a quantity in front of the currency headings of the next columns, not an amount in that currency.
+    if (/^\t\s*(?:USD|EUR|CNY|RMB|AED|GBP|PKR)\b/i.test(masked.slice(m.index + m[0].length))) continue
     found.push({ ...amt, currency: null, anchored: false, start: m.index, end: m.index + m[0].length, kind: 'unknown', forQty: null })
   }
   if (anchoredCount > 0) return []
@@ -529,7 +556,14 @@ function findBarePrices(w: string, anchoredCount: number): PriceCand[] {
     const after = found.filter(f => lab && f.start >= lab.index)
     return (after.length ? after : found).slice(0, 1)
   }
-  return found.length === 1 ? found : []
+  // "1 Flow Totalizer / Recorder": the only number, at the start of a line of words, is its serial number.
+  const only = found[0]
+  if (found.length === 1 && only && !hasLabel && only.start === lead && /^\d{1,3}$/.test(masked.slice(only.start, only.end).trim()) && /^\s+[A-Za-z][A-Za-z]+\s+[A-Za-z]/.test(masked.slice(only.end))) return []
+  if (found.length === 1) return found
+  // "208.00  208.00": a unit price and its total for one piece, written twice (a decimal point in both).
+  const [a, b] = found
+  if (found.length === 2 && a && b && a.value === b.value && /[.,]/.test(masked.slice(a.start, a.end)) && /[.,]/.test(masked.slice(b.start, b.end))) return [a]
+  return []
 }
 
 const NO_PRICE_RE =
@@ -541,7 +575,7 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
   const orig = raw.replace(/\u00a0/g, ' ')
   let w = orig.replace(/[–—−]/g, '-').replace(/×/g, 'x')
   const f: LineFields = {
-    prices: [], lead: null, inStock: null, origin: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null,
+    prices: [], lead: null, inStock: null, origin: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null, question: false,
   }
 
   const v = findValidity(w, orig, today)
@@ -593,14 +627,19 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
   if (f.prices.length && f.prices.every(p => !p.anchored) && REGRET_RE.test(w)) f.prices = []
   // "Offer 6816 - prices in USD": a line that declares the currency, with only a bare number (the offer's number) in it.
   if (f.prices.length && f.prices.every(p => !p.anchored) && DECLARE_RE.test(w) && !/\t|\|/.test(w)) f.prices = []
+  // A question is not an offer: "Is item 2 size 150 ok?" names a size, not a price. A price written with its currency still counts.
+  f.question = asksQuestion(orig)
+  if (f.question && f.prices.every(p => !p.anchored)) f.prices = []
   const priced = f.prices.length > 0
   if (!priced) {
     const d = DECLARE_RE.exec(w)
     if (d) f.declaredCurrency = normaliseCurrency(d[1] ?? d[2] ?? null)
+    // A heading cell that is only a currency ("USD" under the price heading).
+    else if (/^[\s|(]*(?:USD|EUR|CNY|RMB|AED|GBP|PKR)(?:[\s|)]+(?:USD|EUR|CNY|RMB|AED|GBP|PKR))*[\s|)]*$/i.test(w)) f.declaredCurrency = normaliseCurrency(/[A-Za-z]+/.exec(w)?.[0] ?? null)
   }
   const reg = REGRET_RE.exec(w)
   if (reg && !priced && !(f.lead && f.lead.daysMax !== null && !f.lead.exStock)) {
-    f.regret = { kind: regretKind(reg[0]), text: orig.trim() }
+    f.regret = { kind: regretKind(orig), text: orig.trim() }
   }
   return f
 }
@@ -633,13 +672,20 @@ interface ItemIndex {
   id: string
   qty: number | null
   tokens: string[]
+  /** The codes of the item's own model field, when it has one. */
+  own: string[]
   words: Set<string>
 }
 
 function indexItems(items: ReplyItemRef[]): ItemIndex[] {
   return items.map(it => {
     const toks = modelTokens(`${it.description} ${it.model ?? ''}`).filter(t => !SPEC_SHAPE.test(t))
-    return { id: it.id, qty: it.qty ?? null, tokens: toks, words: new Set(words(it.description)) }
+    // A number the RFQ names as the item's model or part number ("482917") identifies it too.
+    const own = (it.model ?? '').replace(/[\s./-]/g, '')
+    if (/^\d{5,}$/.test(own) && !toks.includes(own)) toks.push(own)
+    const ownToks = modelTokens(it.model ?? '').filter(t => !SPEC_SHAPE.test(t))
+    if (/^\d{5,}$/.test(own) && !ownToks.includes(own)) ownToks.push(own)
+    return { id: it.id, qty: it.qty ?? null, tokens: toks, own: ownToks, words: new Set(words(it.description)) }
   })
 }
 
@@ -647,6 +693,8 @@ interface Match {
   idx: number
   by: MatchedBy
   score: number
+  /** Items that match the line equally well (the same model on two RFQ lines): the caller picks by item number or by order. */
+  tied?: number[]
 }
 
 function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
@@ -655,20 +703,30 @@ function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
   // 1. model codes
   let best: Match | null = null
   let tied = false
+  let tiedList: number[] = []
   idx.forEach((it, i) => {
     if (!it.tokens.length) return
+    const found = (t: string) => (t.length >= 6 ? norm.includes(t) : lineToks.has(t))
     let hit = 0
     let total = 0
     for (const t of it.tokens) {
       total += t.length
-      if (t.length >= 6 ? norm.includes(t) : lineToks.has(t)) hit += t.length
+      if (found(t)) hit += t.length
+    }
+    // The model the RFQ names for the item is what the supplier's line is compared with, not the other codes in its description.
+    if (it.own.some(found)) {
+      hit = it.own.filter(found).reduce((n, t) => n + t.length, 0)
+      total = it.own.reduce((n, t) => n + t.length, 0)
     }
     if (!hit) return
     const score = 0.7 + 0.25 * (hit / total)
-    if (best && Math.abs(score - best.score) < 1e-9) tied = true
-    else if (!best || score > best.score) {
+    if (best && Math.abs(score - best.score) < 1e-9) {
+      tied = true
+      tiedList.push(i)
+    } else if (!best || score > best.score) {
       best = { idx: i, by: 'model', score }
       tied = false
+      tiedList = [i]
     }
   })
   // A code that two items share in the same measure ("SS316" in a valve and a level switch) does not pick one: the wording does.
@@ -691,7 +749,44 @@ function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
       bestCommon = common
     }
   })
-  return bestD
+  // Two items share the code: the line's own wording decides only when it says a lot (three or more of an item's words, and that item
+  // is one of the two); else the caller tells them apart by the row's number or quantity.
+  if (best && tied && (!bestD || !tiedList.includes((bestD as Match).idx) || bestCommon < 3)) return { ...(best as Match), tied: tiedList }
+  if (bestD) return bestD
+  // A short but telling wording ("the pressure transmitter, EUR 980"): two of an item's own plain words and no other item shares one.
+  const plain = (xs: Iterable<string>) => [...xs].filter(t => t.length >= 4 && !/^\d/.test(t))
+  const lp = new Set(plain(lw))
+  let top = -1
+  let topN = 0
+  let second = 0
+  idx.forEach((it, i) => {
+    const c = plain(it.words).filter(t => lp.has(t)).length
+    if (c > topN) {
+      second = topN
+      topN = c
+      top = i
+    } else if (c > second) second = c
+  })
+  if (top >= 0 && topN >= 2 && second === 0) return { idx: top, by: 'description', score: 0.5 }
+  if (best && tied) return { ...(best as Match), tied: tiedList }
+  // The supplier's own number for a part we named another way ("XCPL-4410" for our "B 4410"): the same run of four or more digits
+  // inside a code, on exactly one item.
+  const runs = (t: string) => t.match(/\d{4,}/g) ?? []
+  const codeLike = (t: string) => /^[A-Z]{1,6}\d{4,}[A-Z0-9]{0,4}$/.test(t)
+  const lineRuns = new Set([...lineToks].filter(codeLike).flatMap(runs))
+  const core: number[] = []
+  idx.forEach((it, i) => {
+    if (it.tokens.filter(codeLike).some(t => runs(t).some(r => lineRuns.has(r)))) core.push(i)
+  })
+  if (core.length === 1) return { idx: core[0] as number, by: 'model', score: 0.55 }
+  return null
+}
+
+/** Item numbers a line lists: "items 2 and 3", "Item 2, 3 & 4" (0-based). */
+function listedItemNumbers(raw: string, max: number): number[] {
+  const m = /\bitems?\s*(?:no\.?|#)?\s*(\d{1,2}(?:\s*(?:,|and|&|\/|\+|und)\s*\d{1,2})*)/i.exec(raw)
+  if (!m) return []
+  return [...new Set([...(m[1] ?? '').matchAll(/\d{1,2}/g)].map(x => Number(x[0]) - 1))].filter(n => n >= 0 && n < max)
 }
 
 /** An item number written in the reply: "2)", "Item 3", "#4:", "1 - ". */
@@ -815,6 +910,10 @@ function analyseRow(cells: string[], cols: TableCols, today: string | undefined)
   if (p) prices.push({ ...p, kind: 'unit', currency: p.currency ?? curCell })
   if (t) prices.push({ ...t, kind: 'total', currency: t.currency ?? curCell })
   f.prices = prices
+  // "NA." under the price heading: the supplier has no price for this item.
+  if (prices.length === 0 && !f.regret && /^(?:n\.?\/?a\.?|nil|not\s+available|unavailable)$/i.test(cell(cols.price))) {
+    f.regret = { kind: 'unavailable', text: cells.join(' ').trim() }
+  }
   const q = cell(cols.qty)
   if (/^\d+$/.test(q)) f.qty = Number(q)
   if (cols.lead >= 0 && !f.lead) {
@@ -838,9 +937,148 @@ function analyseRow(cells: string[], cols: TableCols, today: string | undefined)
   return f
 }
 
+// ------------------------------------------------------------------------------------------------ our own RFQ quoted below the reply
+
+const HDR_FROM = /^\s*[*_>\s]*(?:from|von|de|da|发件人|寄件者)(?:\s*[:：]|\t)/i
+const HDR_OTHER = /^\s*[*_>\s]*(?:sent|date|datum|gesendet|envoy[eé]|inviato|to|an|à|cc|bcc|subject|betreff|objet|oggetto|发送时间|发送日期|日期|收件人|抄送|主题|主旨)(?:\s*[:：]|\t)/i
+const SEP_LINE = /^\s*(?:[-_=*~]{4,}|[-_=*~]{2,}\s*[^-_=*~\n]{3,40}?\s*[-_=*~]{2,})\s*$/
+const ORIGINAL_MSG = /^\s*[-_=*~]{2,}\s*(?:original\s+(?:message|mail)|reply\s+message|原始邮件|原邮件|原始信息)\s*[-_=*~]{2,}\s*$|^\s*(?:original\s+message|原始邮件)\s*[:：]?\s*$/i
+const FORWARDED_MSG = /^\s*[-_=*~]{2,}\s*(?:forwarded\s+(?:message|mail)|fwd?:|转发邮件|转发的邮件)/i
+const WROTE_END = /(?:\bwrote|\bschrieb|a\s+[eé]crit|ha\s+scritto|escribi[oó]|写道|寫道)\s*[:：]?\s*$/i
+/** A line that introduces a quote ("On Tue, 13 Oct at 09:12, X wrote:", "<x@y> 于2026年10月19日周一 09:41写道："). */
+const WROTE_LINE = /^.{0,240}$/
+
+/** Index of the first quoted line of the reply, or null. Our own RFQ is quoted below the supplier's answer, never above it. */
+function quotedStart(lines: string[]): number | null {
+  const filled = (i: number) => (lines[i] ?? '').trim() !== ''
+  const headerAt = (i: number): boolean => {
+    if (!HDR_FROM.test(lines[i] ?? '')) return false
+    let seen = 0
+    for (let j = i + 1; j < lines.length && j <= i + 8; j++) {
+      if (!filled(j)) continue
+      if (HDR_OTHER.test(lines[j] ?? '')) seen++
+      else if (seen === 0 || !/^\s*[*_>\s]*[\p{L}]+\s*[:：]/u.test(lines[j] ?? '')) break
+    }
+    return seen >= 1
+  }
+  let contentAbove = false
+  let forwarded = false
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i] ?? ''
+    if (!t.trim()) continue
+    if (FORWARDED_MSG.test(t)) {
+      forwarded = true
+      continue
+    }
+    const explicit = ORIGINAL_MSG.test(t)
+    const wrote = WROTE_END.test(t) && WROTE_LINE.test(t)
+    const header = headerAt(i)
+    if (explicit || wrote || header) {
+      if (header && forwarded) {
+        // The header of a forwarded message: what follows is the supplier's own reply, not a quote of ours.
+        forwarded = false
+        let j = i
+        while (j < lines.length && (filled(j) ? HDR_FROM.test(lines[j] ?? '') || HDR_OTHER.test(lines[j] ?? '') || /^\s*[\p{L}]+\s*[:：]/u.test(lines[j] ?? '') : j === i)) j++
+        i = j - 1
+        continue
+      }
+      if (!contentAbove && !explicit) {
+        // The very top is the reply's own header (a forwarded copy): skip the header lines and read on.
+        let j = i
+        while (j < lines.length && filled(j) && /^\s*[*_>\s]*[\p{L}]+\s*[:：]/u.test(lines[j] ?? '')) j++
+        i = Math.max(i, j - 1)
+        continue
+      }
+      let s = i
+      if (wrote && i > 0 && filled(i - 1) && !/[.!?:]\s*$/.test(lines[i - 1] ?? '') && /^\s*(?:on|am|le|il|el)\b/i.test(lines[i - 1] ?? '')) s = i - 1
+      // The separator line or blank lines just above belong to the quote.
+      while (s > 0 && (!filled(s - 1) || SEP_LINE.test(lines[s - 1] ?? ''))) s--
+      return s
+    }
+    if (!SEP_LINE.test(t)) contentAbove = true
+  }
+  return null
+}
+
+/**
+ * The reply without the quoted RFQ below it: cut at an Outlook "From:/Sent:/To:/Subject:" block (also German, French,
+ * Italian and Chinese headings), "-----Original Message-----" or "On ... wrote:"; lines starting with ">" are blanked.
+ * Line numbers of what is kept do not move. A copy whose very top is the reply's own header, or a forwarded message, is
+ * read below that header.
+ */
+export function stripQuotedReply(text: string): string {
+  const lines = (text ?? '').split(/\r?\n/).map(l => (/^\s*>/.test(l) ? '' : l))
+  const cut = quotedStart(lines)
+  return (cut === null ? lines : lines.slice(0, cut)).join('\n')
+}
+
+// ------------------------------------------------------------------------------------------------ questions
+
+const SIGN_OFF = /^\s*(?:(?:with\s+)?(?:best|kind|warm|many|sincere)?\s*(?:regards|wishes)\b|yours\s+(?:sincerely|faithfully|truly)|sincerely\b|thanks?\s*(?:&|and)\s*(?:best\s*)?regards|mit\s+freundlichen|cordiali\s+saluti|cordialement|此致|祝好|顺祝商祺)/i
+/** An amount written with its currency: the only thing read from a signature. */
+const ANCHORED_AMOUNT = /[$€£¥￥]\s*\d|\b(?:USD|EUR|CNY|RMB|AED|GBP|PKR|Rs\.?)\s*\d|\d\s*(?:USD|EUR|CNY|RMB|AED|GBP|PKR|元)\b/i
+/** Contact lines of a signature: telephone, address, messaging ids, web. */
+const CONTACT_LINE = /^\s*[*•-]?\s*(?:tel(?:ephone)?|fax|mob(?:ile)?|cell|phone|add(?:ress)?|post\s*code|zip|qq|wechat|whatsapp|skype|teams|e-?mail|website|web|hotmail|gmail|mailto)\s*[:：.\t]|^\s*(?:www\.|https?:)/i
+const ADDRESS_LINE = /^[^$€£¥￥]*\b(?:building|road|street|lane|district|province|block|floor|room|mansion|tower|avenue|town|village|plaza|industrial|estate|park|strasse|straße)\b[^$€£¥￥]*,[^$€£¥￥]*$/i
+
+const ASK_PLEASE =
+  /\b(?:(?:please|pls|kindly)\s+(?:confirm|advise|clarify|let\s+(?:us|me)\s+know|tell|send|share|provide|specify|revert|help|check)|(?:we|i)\s+(?:need|require)\s+(?:more|further|your|the|some|to\s+know)|can\s+you|could\s+you|would\s+you|do\s+you|did\s+you|are\s+you\s+(?:able|looking)|is\s+it\s+(?:possible|ok|okay)|which\s+(?:size|model|type|brand|one|version|item)|what\s+(?:is|are|size|model|type|quantity|qty|brand)|how\s+many|how\s+much)\b|请问|能否|是否|可否|请确认|请告知|请提供|请补充|请说明|请告诉|麻烦/i
+
+/** The line asks something. A "?" counts (a URL query does not); so do the usual please-confirm and which-size forms. */
+function asksQuestion(raw: string): boolean {
+  const s = raw.replace(/(?:https?:\/\/|www\.)\S+/gi, ' ')
+  return /[?？]/.test(s) || ASK_PLEASE.test(s)
+}
+
+// ------------------------------------------------------------------------------------------------ a substitute model
+
+const CODE_AT = String.raw`(?=[A-Za-z0-9._/-]*[A-Za-z])(?=[A-Za-z0-9._/-]*\d)[A-Za-z0-9][A-Za-z0-9._/-]*[A-Za-z0-9]`
+const SUB_FILL = String.raw`(?:(?:model|type|part\s*(?:no\.?|number)?|p\/n|pn|code|ref(?:erence)?|item|no\.?|is|as|the|a|an|our|new|with|to|by|for|:)\s*[:.-]?\s*)*`
+const SUB_AFTER_RE = new RegExp(
+  String.raw`(?:replac(?:ement|ed\s+(?:by|with)|es?\s+with)|substitut(?:e|ion|ed\s+(?:by|with))|alternativ(?:e|ely)|supersed(?:ed|es)\s+by|successor|upgraded?\s+to|new\s+model|equivalent|instead|(?:we\s+)?(?:can\s+)?(?:offer|quote|suggest|propose|recommend)(?:ed|ing)?|offering|offered|suggested|proposed|替代|替换|代替|改为)[^A-Za-z0-9]{0,12}${SUB_FILL}(${CODE_AT})`,
+  'i',
+)
+const SUB_BEFORE_RE = new RegExp(
+  String.raw`(${CODE_AT})\s*[,(-]?\s*(?:which\s+)?(?:replaces|replacing|supersedes|superseding|to\s+replace|(?:is\s+)?(?:the\s+)?(?:replacement|successor|substitute|alternative|equivalent)\s+(?:of|for|to)|instead\s+of|in\s+place\s+of|substitutes?\s+(?:for)?)`,
+  'i',
+)
+
+/** The model a reply line offers in place of the one asked for ("replacement PT-200", "PT-200 (replaces PT-100)"), else null. */
+function offeredModel(text: string, own: readonly string[]): string | null {
+  const squeeze = (s: string) => s.toUpperCase().replace(/[-./_]/g, '')
+  const mine = new Set(own)
+  for (const re of [SUB_BEFORE_RE, SUB_AFTER_RE]) {
+    const g = new RegExp(re.source, 'gi')
+    let m: RegExpExecArray | null
+    while ((m = g.exec(text))) {
+      const tok = (m[1] ?? '').replace(/[.,;:]+$/, '')
+      const sq = squeeze(tok)
+      if (sq.length < 4 || mine.has(sq) || SPEC_SHAPE.test(sq) || modelTokens(tok).length === 0) continue
+      return tok
+    }
+  }
+  return null
+}
+
 // ------------------------------------------------------------------------------------------------ main
 
+/** "The pump is the only item we can supply." */
+const ONLY_SUPPLY_RE = /\b(?:is|are)\s+the\s+only\s+(?:item|product|one|part)s?\s+(?:that\s+)?(?:we|i)\s+(?:can|could)\s+(?:supply|offer|quote|provide)/i
+const POINTER_RE = /\b(?:pls|please)?\s*see\s+(?:below|next|the\s+next)|\bas\s+below\b|\balternat(?:ive|e)\b/i
+
+/** The first part-number-like word of a line that is not one of the item's own codes (the model a supplier offers in its place). */
+function firstCode(text: string, own: readonly string[]): string | undefined {
+  for (const raw of text.split(/[\s,;|()[\]]+/)) {
+    const tok = raw.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '')
+    const sq = tok.toUpperCase().replace(/[-./_]/g, '')
+    if (sq.length >= 4 && /[A-Z]/.test(sq) && /\d/.test(sq) && !own.includes(sq) && !SPEC_SHAPE.test(sq) && modelTokens(tok).length > 0) return tok
+  }
+  return undefined
+}
+
 interface Draft {
+  /** The model offered in place of the item's (a row that answers a "see below"). */
+  pn?: string
   itemIdx: number | null
   by: MatchedBy
   matchScore: number
@@ -849,6 +1087,7 @@ interface Draft {
   lines: number[]
 }
 
+const PRICE_LABEL_LINE = /^\s*(?:[-•*]\s*)?(?:unit\s*)?(?:price|rate|cost)\b/i
 const GLOBAL_RE = /\b(?:all\s+(?:items|prices|the\s+above)?|every|above|overall|generally|for\s+everything|for\s+all|each\s+item)\b/i
 const LABEL_START = /^\s*(?:[-•*]\s*)?(?:price|unit\s*price|rate|total|lead|delivery|dlv|origin|moq|min|valid|validity|stock|availability|qty|quantity|brand|make|remarks?|note|eta|cost|offer)\b/i
 const GREETING_HEADER = /^\s*(?:from|to|cc|bcc|subject|sent|date|reply-to)\s*:/i
@@ -862,10 +1101,16 @@ interface Line {
 /** Non-empty lines with their numbers; lines like "1) USD 8 2) USD 9" are cut at the markers. */
 function prepare(text: string): Line[] {
   const out: Line[] = []
+  let signed = false
   text.split(/\r?\n/).forEach((l, i) => {
     const t = l.replace(/\u00a0/g, ' ').replace(WA_PREFIX, '').trimEnd()
     if (!t.trim() || /^\s*>/.test(t) || GREETING_HEADER.test(t)) {
       if (!t.trim()) out.push({ n: i + 1, text: '' })
+      return
+    }
+    if (CONTACT_LINE.test(t) || (signed && !ANCHORED_AMOUNT.test(t)) || (ADDRESS_LINE.test(t) && !ANCHORED_AMOUNT.test(t))) return
+    if (SIGN_OFF.test(t) && t.length < 60) {
+      signed = true
       return
     }
     const marks = [...t.matchAll(/(?:^|\s)(\d{1,2})\)\s/g)]
@@ -875,16 +1120,39 @@ function prepare(text: string): Line[] {
       starts.forEach((s, k) => out.push({ n: i + 1, text: t.slice(s, starts[k + 1] ?? t.length).trim() }))
       return
     }
-    out.push({ n: i + 1, text: t })
+    for (const piece of sentences(t)) out.push({ n: i + 1, text: piece })
   })
   return out
 }
+
+const ABBREV = /(?:\b(?:no|nos|rs|approx|min|max|qty|pcs|dhs|ex|ref|inc|incl|excl|ltd|co|dr|mr|mrs|ms|st|fig|tel|vs|etc|est|sr|ph|mob|attn|pos|dia|pkr|usd|eur|cny|rmb|aed|gbp|sec)|\b[A-Za-z])$/i
+
+/** A paragraph of several sentences as one piece each ("USD 120 each. Delivery 3 weeks."), never inside a table row or a price. */
+function sentences(t: string): string[] {
+  if (t.length < 50 || /\t|\|/.test(t)) return [t]
+  const out: string[] = []
+  let from = 0
+  const re = /(?<=[a-z0-9)\]%"'])\.\s+(?=[A-Z])|(?<=[?!])\s+(?=[A-Z])|。\s*/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(t))) {
+    const before = t.slice(from, m.index)
+    if (m[0].startsWith('.') && ABBREV.test(before)) continue
+    const piece = (before + (m[0].startsWith('.') ? '.' : '')).trim()
+    if (piece) out.push(piece)
+    from = m.index + m[0].length
+  }
+  const rest = t.slice(from).trim()
+  if (rest) out.push(rest)
+  return out.length ? out : [t]
+}
+
+export { sentences as splitSentences }
 
 const snip = (s: string) => (s.length > 220 ? `${s.slice(0, 217)}...` : s)
 
 export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts: ParseReplyOptions = {}): ParsedReply {
   const inheritOn = opts.inheritReplyLevel !== false
-  const lines = prepare(text ?? '')
+  const lines = prepare(stripQuotedReply(text ?? ''))
   const idx = indexItems(rfqItems)
   const nonEmpty = lines.filter(l => l.text).length
 
@@ -892,10 +1160,13 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
   const pending: Draft[] = []
   const declined: DeclinedItem[] = []
   const regretLines: Array<{ kind: RegretKind; text: string }> = []
+  const questionLines: string[] = []
   const globals: LineFields = {
-    prices: [], lead: null, inStock: null, origin: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null,
+    prices: [], lead: null, inStock: null, origin: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null, question: false,
   }
   let current: Draft | null = null
+  /** The item of a table row that only points to the next row ("pls see below"). */
+  let pointer: number | null = null
   let blankSince = false
   let cols: TableCols | null = null
 
@@ -929,6 +1200,10 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     }
     const rowCols = cols && cells && cells.length === cols.n ? cols : null
     const f = rowCols && cells ? analyseRow(cells, rowCols, opts.today) : analyse(line.text, opts.today)
+    // A row whose empty cells were trimmed ends in "NA.": no price for this item.
+    if (!f.regret && !rowCols && cells && cells.length >= 3 && f.prices.length === 0 && /^(?:n\.?\/?a\.?|nil|not\s+available|unavailable)$/i.test(cells[cells.length - 1] ?? '')) {
+      f.regret = { kind: 'unavailable', text: line.text.trim() }
+    }
     // A table row with no heading to go by (a picture lost it): quantity × unit price = total names the unit price.
     if (!rowCols && cells) {
       const qpt = qtyPriceTotal(cells)
@@ -938,28 +1213,70 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
         f.qty = qpt.qty
       }
     }
-    const match = matchByContent(line.text, idx)
     const rowNumber = rowCols && cells && rowCols.num >= 0 && /^\d{1,3}$/.test(cells[rowCols.num] ?? '') ? Number(cells[rowCols.num]) - 1 : null
     const numIdx = rowNumber !== null && rowNumber >= 0 && rowNumber < idx.length ? rowNumber : markerNumber(line.text, idx.length)
+    let match = matchByContent(line.text, idx)
+    // The same model on two RFQ lines: the row's own item number decides, else the first of them that has no answer yet.
+    if (match?.tied) {
+      const answered = new Set<number>([...drafts.filter(d => d.itemIdx !== null && hasData(d.f)).map(d => d.itemIdx as number), ...declined.map(d => idx.findIndex(i => i.id === d.rfqItemId))])
+      const sameQty = f.qty === null ? [] : match.tied.filter(k => idx[k]?.qty === f.qty && !answered.has(k))
+      const pick = sameQty.length === 1 ? (sameQty[0] as number) : numIdx !== null && match.tied.includes(numIdx) ? numIdx : (match.tied.find(k => !answered.has(k)) ?? (match.tied[0] as number))
+      match = { idx: pick, by: match.by, score: match.score }
+    }
+
+    // "The pump is the only item we can supply": every other item is declined.
+    if (ONLY_SUPPLY_RE.test(line.text) && idx.length > 1) {
+      if (match) {
+        const keep = match.idx
+        idx.forEach((it, k) => {
+          if (k !== keep && !declined.some(d => d.rfqItemId === it.id)) declined.push({ rfqItemId: it.id, kind: 'cannot_quote', snippet: snip(line.text.trim()) })
+        })
+      }
+      blankSince = false
+      continue
+    }
 
     if (f.regret) {
+      const listed = listedItemNumbers(line.text, idx.length)
       const target = match ?? (numIdx !== null ? { idx: numIdx, by: 'item-number' as MatchedBy, score: 0.6 } : null)
-      if (target) {
-        const it = idx[target.idx]
-        if (it) declined.push({ rfqItemId: it.id, kind: f.regret.kind, snippet: snip(f.regret.text) })
+      const under =
+        current !== null && current.itemIdx !== null && !blankSince && current.f.prices.length === 0 && (/^\s{2,}\S/.test(line.text) || /^\s*[-•*→]\s/.test(line.text))
+          ? current.itemIdx
+          : null
+      const ids = listed.length > 1 ? listed : target ? [target.idx] : under !== null ? [under] : []
+      if (ids.length) {
+        for (const k of ids) {
+          const it = idx[k]
+          if (it && !declined.some(d => d.rfqItemId === it.id)) declined.push({ rfqItemId: it.id, kind: f.regret.kind, snippet: snip(f.regret.text) })
+        }
       } else regretLines.push(f.regret)
+      blankSince = false
+      continue
+    }
+
+    // A reply that only asks ("which size?", "please confirm the quantity") quotes nothing: its numbers are not offers.
+    if (f.question && !f.prices.some(p => p.anchored)) {
+      questionLines.push(line.text.trim())
       blankSince = false
       continue
     }
 
     let m: Match | null = match
     if (!m && numIdx !== null) m = { idx: numIdx, by: 'item-number', score: 0.6 }
+    // "7 | MS495 | 2 | | | pls see below", then a row with no number and another model: the answer for item 7 is that row's part.
+    let altPn: string | undefined
+    if (!m && rowCols && pointer !== null && rowNumber === null && f.prices.some(p => p.anchored)) {
+      m = { idx: pointer, by: 'item-number', score: 0.6 }
+      altPn = firstCode(line.text, idx[pointer]?.tokens ?? [])
+    }
+    pointer = null
 
     if (m) {
-      const d: Draft = { itemIdx: m.idx, by: m.by, matchScore: m.score, f, snippets: [line.text.trim()], lines: [line.n] }
+      const d: Draft = { itemIdx: m.idx, by: m.by, matchScore: m.score, f, snippets: [line.text.trim()], lines: [line.n], pn: altPn }
       drafts.push(d)
       current = d
       blankSince = false
+      if (rowCols && f.prices.length === 0 && POINTER_RE.test(line.text)) pointer = m.idx
       continue
     }
 
@@ -970,8 +1287,11 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     }
 
     const forAll = GLOBAL_RE.test(line.text)
+    // A price label ("Unit price $181") under a block of the item's own lines belongs to that item even across blank lines (a mail client
+    // that double-spaces its text), as long as it is close.
+    const near = current !== null && current.itemIdx !== null && current.f.prices.length === 0 && f.prices.length > 0 && PRICE_LABEL_LINE.test(line.text) && line.n - (current.lines[current.lines.length - 1] ?? 0) <= 14
     const continuation =
-      current !== null && !forAll && !blankSince && (LABEL_START.test(line.text) || /^\s{2,}\S/.test(line.text) || /^\s*[-•*]\s/.test(line.text))
+      current !== null && !forAll && (near || (!blankSince && (LABEL_START.test(line.text) || /^\s{2,}\S/.test(line.text) || /^\s*[-•*]\s/.test(line.text))))
     if (continuation && current) {
       mergeInto(current, f, line)
     } else if (!f.prices.length) {
@@ -1048,14 +1368,21 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
       currencySource = 'reply'
       inherited.push('currency')
     }
+    // "EUR 1.250" is 1.25 or 1,250: the app does not guess. The offer stays (the item, lead time and the line are real) with no price,
+    // flagged, so the engineer types the figure.
     const ambiguous = Boolean(main?.ambiguous)
-    if (ambiguous) flags.push('ambiguous_separator')
+    if (ambiguous) {
+      flags.push('ambiguous_separator')
+      unitPrice = null
+    }
     if (unitCands.length > 1) flags.push('multiple_prices')
     if (main && !main.anchored && !derived) flags.push('bare_number')
     if (unitPrice === null) flags.push('price_missing')
     else if (!currency) flags.push('currency_missing')
     if (d.by === 'position') flags.push('match_by_position')
     if (d.itemIdx === null) flags.push('no_item_match')
+    const offeredPn = unitPrice !== null ? d.pn ?? offeredModel(d.snippets.join(' '), it?.tokens ?? []) : null
+    if (offeredPn) flags.push('substitute')
 
     let lead = d.f.lead
     let inStock = d.f.inStock
@@ -1098,6 +1425,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
       rfqItemId: it?.id ?? null,
       matchedBy: d.itemIdx === null ? 'none' : d.by,
       matchScore: Math.round(d.matchScore * 100) / 100,
+      offeredPn,
       unitPrice,
       currency,
       currencySource,
@@ -1134,6 +1462,8 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     ]
   }
   const firstRegret = regretLines[0] ?? (declined[0] ? { kind: declined[0].kind, text: declined[0].snippet } : null)
+  // Only a question: nothing priced, nothing declined, and the reply asks something.
+  const question = !anyPrice && !regret && finalDeclined.length === 0 && questionLines.length > 0
 
   return {
     offers,
@@ -1141,6 +1471,8 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     regretKind: regret ? firstRegret?.kind ?? 'cannot_quote' : null,
     regretSnippet: regret ? snip(firstRegret?.text ?? '') : null,
     declined: finalDeclined,
+    question,
+    questionSnippet: question ? snip(questionLines[0] ?? '') : null,
     replyCurrency,
     lineCount: nonEmpty,
   }
