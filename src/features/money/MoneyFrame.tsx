@@ -1,22 +1,15 @@
-import { useMemo, type ReactNode } from 'react'
+import { lazy, memo, Suspense, useCallback, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ChartColumn, ChevronLeft } from 'lucide-react'
-import { businessToday } from '@/lib/dates'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
+import { usePageSettled } from '@/app/usePageSettled'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
-import { computeReconciliationExceptions } from '@/lib/reconciliation'
-import { useReconciliationInput } from '@/features/money/hooks'
-import { useGstRegister } from '@/features/money/invoices/hooks'
-import { needsAttention } from '@/features/money/invoices/model'
 import { MONEY_TABS, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
-import { openFindings } from '@/features/money/exceptions/checked'
-import { useClosedMonths, useMonthEndStatus } from '@/features/money/monthEnd/hooks'
-import { buildChecklist, checksWithItems, defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
-import { useBusinessToday, useTodayView } from '@/features/today/hooks'
-import type { Role } from '@/features/today/types'
+import { isMonthKey } from '@/features/money/monthKey'
+import type { MoneyCounts } from '@/features/money/MoneyTabCounts'
 import { NeedsCount } from '@/ui/Tag'
 import { PageHeader } from '@/ui/PageHeader'
 
@@ -34,6 +27,13 @@ import { PageHeader } from '@/ui/PageHeader'
  *   Month end       admin only, while the month that just ended is open: the checks with items, plus Things to check when the
  *                   reconciliation finds something; the same number the checklist page says
  */
+/*
+ * The counts are a component of their own (MoneyTabCounts), loaded once the page has its data (perf/lcp). The last counts this
+ * person saw are kept while they load, so moving between Money's tabs does not make the numbers blink.
+ */
+const MoneyTabCounts = lazy(() => import('@/features/money/MoneyTabCounts').catch(() => ({ default: () => null })))
+let lastCounts: { userId: string; counts: MoneyCounts } | null = null
+
 export function MoneyFrame({
   active,
   actions,
@@ -51,22 +51,19 @@ export function MoneyFrame({
   const month = isMonthKey(params.get('month')) ? params.get('month') : null // a month view's month follows to Reports
   const role = session.status === 'signed-in' ? session.user.role : ''
   const isAdmin = role === 'admin'
-  const money = role === 'admin' || role === 'sales'
   const tabs = MONEY_TABS.filter(t => isAdmin || !t.adminOnly)
-  const today = businessToday()
-  const todayView = useTodayView({ id: session.status === 'signed-in' ? session.user.id : '', role: role as Role }, useBusinessToday())
-  const register = useGstRegister(money)
-  const monthEnd = defaultMonthEndMonth(today)
-  const checks = useMonthEndStatus(monthEnd, isAdmin)
-  const closed = useClosedMonths(isAdmin)
-  const monthOpen = closed.data ? !closed.data.some(c => c.key === monthEnd) : false
-  const recon = useReconciliationInput(isAdmin && monthOpen)
-  const things = useMemo(() => (recon.data ? openFindings(session.status === 'signed-in' ? session.user.id : null, computeReconciliationExceptions(recon.data)).length : 0), [recon.data, session])
-  const counts: Record<string, number | undefined> = {
-    receivables: todayView.view?.active.filter(i => i.rule === 'payment_overdue').length,
-    'gst-register': register.data?.filter(needsAttention).length,
-    'month-end': checks.data && monthOpen ? checksWithItems(buildChecklist(checks.data, monthEnd)) + (things > 0 ? 1 : 0) : undefined,
-  }
+  // The tab counts read Today's list, the register and the month-end checks. They wait for the page's own reads (perf/lcp), so on
+  // a slow connection the page comes first.
+  const settled = usePageSettled()
+  const userId = session.status === 'signed-in' ? session.user.id : ''
+  const [counts, setCountsState] = useState<MoneyCounts>(() => (lastCounts?.userId === userId ? lastCounts.counts : {}))
+  const setCounts = useCallback(
+    (next: MoneyCounts) => {
+      lastCounts = { userId, counts: next }
+      setCountsState(next)
+    },
+    [userId],
+  )
   const heading = title ?? moneyTabLabel(active)
   const toOf = (t: MoneyTab) => (t.key === 'reports' && month ? `${t.to}?month=${month}` : t.to)
   // Five short labels do not fit one row at 320 px: admin's Reports sits beside the page action on a phone instead.
@@ -116,15 +113,22 @@ export function MoneyFrame({
           </nav>
         )}
       </div>
+      {settled ? (
+        <Suspense fallback={null}>
+          <MoneyTabCounts onCounts={setCounts} />
+        </Suspense>
+      ) : null}
       {children}
     </div>
   )
 }
 
-function FrameBar({ title }: { title: string }) {
+// Memo: the frame re-renders when its tab counts arrive (MoneyTabCounts), and a re-run here would replace the bar a sub-page set
+// (Month end's hideTabs) with the plain title. It re-runs only when the title changes.
+const FrameBar = memo(function FrameBar({ title }: { title: string }) {
   useMobileBar({ title })
   return null
-}
+})
 
 /** One Money tab. A plain Link: the lit tab follows `active` (Month end stays lit on the pages reached from it), not the address. */
 function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boolean; n: number | undefined; phone?: boolean }) {

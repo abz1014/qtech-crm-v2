@@ -18,9 +18,8 @@ import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
 import { InfoTip } from '@/ui/InfoTip'
 import { Banner } from '@/ui/Banner'
-import { parseSupplierQuote } from '@/lib/docread/supplierQuoteParse'
 import { PdfPickButton } from '@/features/rfqs/PdfIntake'
-import { readDocument } from '@/features/rfqs/lib/readPdf'
+import type { readDocument as ReadDocument } from '@/features/rfqs/lib/readPdf'
 import { awaitingReply, focusReplyInput, OPEN_REPLY_EVENT, replyInputId, type OpenReplyDetail } from '@/features/rfqs/replyFocus'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
@@ -42,6 +41,10 @@ import {
   type ReplyDraft,
 } from '@/features/rfqs/lib'
 import { parseReplyPrice, replyPriceProblem } from '@/features/rfqs/lib/replyPrice'
+
+// The file and reply readers (src/lib/docread: PDF text, the on-device picture reader, the quote parser) are downloaded the first
+// time a file or a reply is read, not with the RFQ page (perf/lcp).
+const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/lib/readPdf').then(m => m.readDocument(...args))
 
 /*
  * "Replies from suppliers" (R07; reworked by the UX audit of 2026-10-19): one row per supplier asked, with ONE way in on that row.
@@ -335,8 +338,10 @@ function ReplyRow({
   // A whole quotation (an email, or the text of a PDF) is read with its totals, bank and header lines left out (docread).
   const readText = (text: string) => {
     setPdfNote(null)
-    setSuggestions(suggestFromReply(parseSupplierQuote(text, suggestItems, { today: businessToday() }), suggestItems, draft.currency))
-    setPasteMode('suggest')
+    void import('@/lib/docread/supplierQuoteParse').then(({ parseSupplierQuote }) => {
+      setSuggestions(suggestFromReply(parseSupplierQuote(text, suggestItems, { today: businessToday() }), suggestItems, draft.currency))
+      setPasteMode('suggest')
+    })
   }
   const [pdfNote, setPdfNote] = useState<string | null>(null)
   // Capture's "This is a supplier's reply" opens this RFQ with the text and the supplier chosen: read it out as if it had been pasted here.

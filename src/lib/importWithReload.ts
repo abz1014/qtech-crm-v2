@@ -1,4 +1,4 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
+import { createElement, forwardRef, lazy, type ComponentProps, type ComponentType, type LazyExoticComponent } from 'react'
 import { PlainError } from '@/lib/errors/plainError'
 import { hasDirtyForms } from '@/lib/pwa/dirtyForms'
 import { applyUpdate } from '@/lib/pwa/updates'
@@ -108,5 +108,17 @@ export async function importWithReload<T>(load: () => Promise<T>): Promise<T> {
 /** React.lazy with the same recovery. A drop-in for `lazy` in the route table. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the same constraint React.lazy itself uses
 export function lazyWithReload<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>): LazyExoticComponent<T> {
-  return lazy(() => importWithReload(factory))
+  // React.lazy keeps a failed download for good. A part that could not be downloaded (no signal) is tried again the next time it
+  // is drawn (ChunkBoundary draws it again when the phone is back online): each failure swaps in a fresh lazy component.
+  let current: LazyExoticComponent<T>
+  const make = (): LazyExoticComponent<T> =>
+    lazy(() =>
+      importWithReload(factory).catch((err: unknown) => {
+        current = make()
+        throw err
+      }),
+    )
+  current = make()
+  const Retrying = forwardRef<unknown, ComponentProps<T>>((props, ref) => createElement(current, { ...props, ref } as ComponentProps<T>))
+  return Retrying as unknown as LazyExoticComponent<T>
 }

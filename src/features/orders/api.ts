@@ -2,7 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
 import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
-import { mapRankRows, type RankedQuote } from '@/features/orders/lib/ranking'
+import type { RankedQuote } from '@/features/orders/lib/ranking'
 import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { LegPatch } from '@/features/orders/lib/legModel'
 import type { StepLeg } from '@/features/orders/lib/orderSteps'
@@ -352,6 +352,8 @@ export async function listRankedQuotes(rfqId: string): Promise<RankedQuote[]> {
   const ids = [...new Set(rows.map(r => r.supplier_id))]
   const names = new Map<string, string>()
   if (ids.length > 0) for (const c of unwrap(await db.from('companies').select('id, name').in('id', ids))) names.set(c.id, c.name)
+  // The ranking rules (rfqs/lib/ranking) come with the first ranked list, not with every page that reads orders (perf/lcp).
+  const { mapRankRows } = await import('@/features/orders/lib/ranking')
   return mapRankRows(rows as unknown as RankRow[], names)
 }
 

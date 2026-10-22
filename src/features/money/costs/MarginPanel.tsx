@@ -18,9 +18,12 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import type { OrderHeader, OrderMoney } from '@/features/orders/api'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { useCategories } from '@/features/money/expenses/hooks'
-import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
+import { lazyDialog } from '@/lib/lazyDialog'
 import { useFillExpectedCost, useOrderCosts, useSetCostsComplete, useSetExpectedCost } from '@/features/money/costs/hooks'
 import { estimateExpectedCost } from '@/features/money/lib/costEstimate'
+
+// Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
+const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/ExpenseDialog').then(m => m.AddExpenseDialog))
 
 /*
  * The Margin panel of the order page (g2-order-detail.html; M04). ADMIN ONLY: the order page mounts it only for an admin, and

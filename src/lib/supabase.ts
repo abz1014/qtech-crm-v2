@@ -1,5 +1,6 @@
 import type { Database } from '@/types/database'
 import { createLeanClient, type LeanSupabaseClient } from '@/lib/supabaseClient'
+import { whenContentDrawn } from '@/lib/afterContent'
 
 /*
  * The one browser Supabase client. It carries the anon key only (public by design; Row Level
@@ -45,11 +46,25 @@ const activityFetch: typeof fetch = async (input, init) => {
   return res
 }
 
+/*
+ * perf/lcp: on Vercel, database reads and writes go to this site's own /rest/v1/, which vercel.json forwards to the Supabase
+ * project (a rewrite). A phone then opens one connection instead of two, and a request needs no CORS preflight (a cross-origin
+ * request with an Authorization header waits a whole extra round trip for one), so a page's data arrives a round trip or two
+ * sooner on a slow connection. Auth, storage and edge functions still go to Supabase itself. Set at build time
+ * (vite.config.ts: on Vercel, or E2E_SAME_ORIGIN_REST=1 for the perf suite, whose preview server forwards the same way).
+ */
+declare const __REST_SAME_ORIGIN__: boolean | undefined
+const sameOriginRest = typeof __REST_SAME_ORIGIN__ === 'boolean' && __REST_SAME_ORIGIN__ && typeof window !== 'undefined'
+
 export function getSupabase(): AppSupabase | null {
   if (client !== undefined) return client
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-  client = url && key ? createLeanClient<Database>(url, key, { fetch: activityFetch }) : null
+  // A phone that keeps a fresh session fetches Auth once the opening page is drawn (lazyAuth.ts, afterContent.ts: perf/lcp).
+  client =
+    url && key
+      ? createLeanClient<Database>(url, key, { fetch: activityFetch, deferAuth: whenContentDrawn, restOrigin: sameOriginRest ? window.location.origin : undefined })
+      : null
   return client
 }
 

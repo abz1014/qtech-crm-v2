@@ -12,12 +12,15 @@ import { Money } from '@/ui/Money'
 import { useToast } from '@/ui/useToast'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useSetGroupPrice, useSetItemRates, useUpdateItem } from '@/features/orders/hooks'
-import { SplitLineDialog } from '@/features/orders/SplitLineDialog'
 import { groupItems } from '@/features/orders/lib/splitGroups'
-import { AddLineDialog } from '@/features/orders/AddDialogs'
 import { legState, type LegState } from '@/features/orders/lib/legModel'
 import { gstOptions, isExemptAll, lineGstPaisa, lineNetPaisa, STANDARD_GST } from '@/features/orders/lib/orderMath'
 import { formatAmount, formatPaisa } from '@/lib/money'
+import { lazyShown } from '@/lib/lazyDialog'
+
+// Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
+const SplitLineDialog = lazyShown(() => import('@/features/orders/SplitLineDialog').then(m => m.SplitLineDialog))
+const AddLineDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLineDialog))
 
 /*
  * The order's items (O03; g2-order-detail.html "Items"), cut to five columns by the UX audit of 2026-10-19 (screens.md 8): Item, Qty,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { ExternalLink, FilePlus2, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -19,11 +19,14 @@ import { downloadStoredPdf, loadPdfData, type QuotationRow } from '@/features/qu
 import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
 import { InfoTip } from '@/ui/InfoTip'
-import { IssueQuotationDialog } from '@/features/quotations/IssueQuotationDialog'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
 import { profileGaps } from '@/features/quotations/lib/profileGaps'
 import { quotationRef, isExpired } from '@/features/quotations/lib/refs'
 import { sharePdf, downloadBlob } from '@/features/quotations/lib/sharePdf'
+
+// The Issue quotation dialog is downloaded when it is opened, not with the RFQ page (perf/lcp).
+const IssueQuotationDialog = lazyWithReload(() => import('@/features/quotations/IssueQuotationDialog').then(m => ({ default: m.IssueQuotationDialog })))
 
 /*
  * The RFQ page's Quotations block (R19; the slot data-slot="quotations"). Every version with its validity and state, the PDF of
@@ -222,7 +225,11 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
           </div>
         </>
       )}
-      {open && prices ? <IssueQuotationDialog rfq={rfq} inquiries={inquiries} onClose={() => setOpen(false)} /> : null}
+      {open && prices ? (
+        <Suspense fallback={null}>
+          <IssueQuotationDialog rfq={rfq} inquiries={inquiries} onClose={() => setOpen(false)} />
+        </Suspense>
+      ) : null}
     </DetailPanel>
   )
 }

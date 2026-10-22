@@ -1,13 +1,16 @@
-import { useId, useRef, useState, type KeyboardEvent } from 'react'
+import { Suspense, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { Building2, Plus, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CompanyHit, CompanyRole } from '@/features/companies/api'
-import { CreateCompanyInline } from '@/features/companies/CreateCompanyInline'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { useCompanyMatches } from '@/features/rfqs/hooks'
 import { optionMeta } from '@/features/rfqs/lib/intakeModel'
 import { controlClass } from '@/ui/form/fieldContext'
 import { Field } from '@/ui/form/Field'
 import { Icon } from '@/ui/Icon'
+
+// The new-company form (and its form library) is downloaded when it is opened (perf/lcp).
+const CreateCompanyInline = lazyWithReload(() => import('@/features/companies/CreateCompanyInline').then(m => ({ default: m.CreateCompanyInline })))
 
 /*
  * The company picker of the intake screen (g2-intake-float frames 1 and 2). One search field; the matches carry
@@ -156,14 +159,16 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
             ) : null}
           </ul>
           {creating && canCreate ? (
-            <CreateCompanyInline
-              initialName={typed}
-              onCancel={() => {
-                setCreating(false)
-                input.current?.focus()
-              }}
-              onCreated={c => onPick({ id: c.id, name: c.name, country: null, city: c.city ?? null, role: 'prospect' })}
-            />
+            <Suspense fallback={null}>
+              <CreateCompanyInline
+                initialName={typed}
+                onCancel={() => {
+                  setCreating(false)
+                  input.current?.focus()
+                }}
+                onCreated={c => onPick({ id: c.id, name: c.name, country: null, city: c.city ?? null, role: 'prospect' })}
+              />
+            </Suspense>
           ) : null}
         </div>
       ) : null}

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { useSession } from '@/app/session'
+import { whenContentDrawn } from '@/lib/afterContent'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import type { helpPaletteSource } from '@/features/help/helpPalette'
 import { howItWorksFor, howItWorksKey } from '@/features/help/howItWorks'
@@ -39,7 +40,12 @@ export function HelpHost() {
   // The palette group's code comes with the recipes (it searches them), so neither is in the first load (perf/trim).
   const [toSource, setToSource] = useState<{ make: typeof helpPaletteSource } | null>(null)
 
+  // Downloaded once the opening page's content is drawn (perf/lcp, afterContent.ts), or at once when Help is asked for.
+  const [drawn, setDrawn] = useState(false)
+  useEffect(() => whenContentDrawn(() => setDrawn(true)), [])
+  const wanted = drawn || open
   useEffect(() => {
+    if (!wanted) return
     let live = true
     void Promise.all([import('@/features/help/recipes'), import('@/features/help/helpPalette')]).then(([m, p]) => {
       if (!live) return
@@ -49,7 +55,7 @@ export function HelpHost() {
     return () => {
       live = false
     }
-  }, [])
+  }, [wanted])
 
   // Help follows the person to the page a link took them to; Back (POP) and Close (POP or REPLACE) are left alone.
   const lastOpen = useRef<string | null>(null)

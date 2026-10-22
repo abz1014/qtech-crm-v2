@@ -370,7 +370,14 @@ export function PaletteHost({
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (loaded) return;
-    const t = window.setTimeout(() => setLoaded(true), 1200);
+    // Preloaded, then mounted: a download that fails (no signal yet) must not take the shell down (perf/lcp made the first
+    // screen quick enough for that to happen); opening the palette tries again.
+    const t = window.setTimeout(() => {
+      loadPalette().then(
+        () => setLoaded(true),
+        () => {},
+      );
+    }, 1200);
     const onKey = (e: KeyboardEvent) => {
       if (
         (e.metaKey || e.ctrlKey) &&

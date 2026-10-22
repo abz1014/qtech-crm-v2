@@ -11,7 +11,6 @@ import { RoleChip } from '@/features/companies/CompanyParts'
 import { commonCountry } from '@/features/companies/commonCountry'
 import { listPlace } from '@/features/companies/companyMeta'
 import { matchCompany } from '@/features/companies/companySearch'
-import { CreateCompanyDialog } from '@/features/companies/CreateCompanyDialog'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -20,6 +19,10 @@ import { PageHeader } from '@/ui/PageHeader'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
+import { lazyDialog } from '@/lib/lazyDialog'
+
+// Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
+const CreateCompanyDialog = lazyDialog(() => import('@/features/companies/CreateCompanyDialog').then(m => m.CreateCompanyDialog))
 
 /*
  * Companies list (R02). One table of every company, customer or supplier, with the role derived from

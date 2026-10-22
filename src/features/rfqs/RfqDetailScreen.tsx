@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, FileQuestion, RefreshCw, X } from 'lucide-react'
@@ -12,29 +12,36 @@ import { MessageActions } from '@/ui/MessageActions'
 import { useChannelPreference } from '@/lib/useChannelPreference'
 import { rfqRef } from '@/lib/refs'
 import { Skeleton } from '@/ui/Skeleton'
-import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
+import { prefetchRfqParts, useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import * as rfqApi from '@/features/rfqs/api'
-import { qk } from '@/features/queryKeys'
 import { primaryAction, suggestSuppliers, toRateTable, type RfqPrimary, type SuggestionItem } from '@/features/rfqs/lib'
 import { RfqActionBar, RfqHeaderBlock, type HeaderFacts } from '@/features/rfqs/RfqHeaderBlock'
 import { useQuotations } from '@/features/quotations/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
-import { SupplierReplies } from '@/features/rfqs/SupplierReplies'
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
-import { AddItemDialog } from '@/features/rfqs/AddItemDialog'
-import { SuppliersAsked } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
-import { FloatDialog, SuppliersToAskCard } from '@/features/rfqs/SuppliersToAsk'
 import { withShortlist } from '@/features/rfqs/askList'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
-import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
-import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
-import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
-import { ConvertDialog } from '@/features/orders/ConvertDialog'
+import { BelowTheFold } from '@/ui/BelowTheFold'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { useWonDialog } from '@/features/orders/useWonDialog'
+
+// Downloaded when opened, not with the RFQ page (perf/lcp): Mark won's Create order dialog and Add item.
+/*
+ * Below the items (replies, quotations) and the side column (suppliers, questions, files): downloads of their own, fetched once the
+ * RFQ's header and items are drawn (perf/lcp, BelowTheFold). On a phone they are below the first screen.
+ */
+const SupplierReplies = lazyWithReload(() => import('@/features/rfqs/SupplierReplies').then(m => ({ default: m.SupplierReplies })))
+const QuotationsPanel = lazyWithReload(() => import('@/features/quotations/QuotationsPanel').then(m => ({ default: m.QuotationsPanel })))
+const SuppliersAsked = lazyWithReload(() => import('@/features/rfqs/SuppliersAsked').then(m => ({ default: m.SuppliersAsked })))
+const SuppliersToAskCard = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.SuppliersToAskCard })))
+const FloatDialog = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.FloatDialog })))
+const ClarificationsPanel = lazyWithReload(() => import('@/features/rfqs/ClarificationsPanel').then(m => ({ default: m.ClarificationsPanel })))
+const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
+const ConvertDialog = lazyWithReload(() => import('@/features/orders/ConvertDialog').then(m => ({ default: m.ConvertDialog })))
+const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
 
 /*
  * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C; the UX audit of 2026-10-19; round-2 spec 5.3). The header
@@ -117,16 +124,11 @@ export default function RfqDetailScreen() {
   const items = useRfqItems(id)
   const inquiries = useRfqInquiries(id)
 
-  // Start the id-only reads now, in the same round as the header, instead of when the panels mount after it (P04: they were a second and
-  // third wave). The panels read the same query keys, so they find the data already there. Nothing here needs the header's data.
+  // Start the id-only reads now, in the same round as the header, instead of when the panels mount after it (prefetchRfqParts).
   const client = useQueryClient()
   const prices = useSeesPrices()
   useEffect(() => {
-    if (!id) return
-    void client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'clarifications'), queryFn: () => rfqApi.listClarifications(id) })
-    void client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'attachments'), queryFn: () => rfqApi.listAttachments(id) })
-    if (prices) void client.prefetchQuery({ queryKey: qk.fx.latest(), queryFn: rfqApi.listFxLatest, staleTime: 60_000 })
-    void client.prefetchQuery({ queryKey: qk.intake.suppliers(), queryFn: rfqApi.listSupplierCandidates, staleTime: 60_000 })
+    if (id) void prefetchRfqParts(client, id, prices)
   }, [id, client, prices])
 
   // Capture offers recently opened RFQs first (R22): note this visit, on this device only.
@@ -265,7 +267,11 @@ function Loaded({
     <Shell bar={(rfq.state?.outcome ?? 'open') === 'open'}>
       <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
-      {wonOpen && prices && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
+      {wonOpen && prices && inquiries.data ? (
+        <Suspense fallback={null}>
+          <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} />
+        </Suspense>
+      ) : null}
       {loadError ? (
         <p className="mt-3 text-sm text-fg-muted" role="status">
           {`Showing the details saved on this device at ${timeOf(headerAt)}. Replies and questions did not load.`}
@@ -335,10 +341,14 @@ function Loaded({
                 onAddItem={() => setAdding(true)}
                 onCopyEnquiry={(s, item) => void askFrom([s], [item])}
               />
-              <SupplierReplies rfq={rfq} items={itemList} inquiries={inquiryList} rates={rates} />
+              <BelowTheFold fallback={<Skeleton className="h-56 w-full" />}>
+                <SupplierReplies rfq={rfq} items={itemList} inquiries={inquiryList} rates={rates} />
+              </BelowTheFold>
             </>
           )}
-          <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
+          <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+            <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
+          </BelowTheFold>
         </div>
         {/* From 1024 up the side column stays beside what is being read and scrolls on its own, so a busy RFQ (a chase message,
             questions, files) never runs on below the main column (UX audit screens.md 3: "ends up longer than the main column"). */}
@@ -354,34 +364,42 @@ function Loaded({
             <Skeleton className="h-40 w-full" />
           ) : null}
           {lastAsk && !loadError && !loading ? <SendToEachCard rfq={rfq} ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
-          {loadError || loading ? null : nobodyAsked ? (
-            <SuppliersToAskCard
-              suggestions={askList}
-              items={itemList}
-              busy={asking}
-              onAsk={ticked => void askFrom(ticked, itemList)}
-            />
-          ) : (
-            <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} onFloat={() => setFloating(true)} />
-          )}
-          <ClarificationsPanel rfq={rfq} inquiries={inquiryList} />
-          <AttachmentsPanel rfqId={rfq.id} compact />
+          <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+            {loadError || loading ? null : nobodyAsked ? (
+              <SuppliersToAskCard
+                suggestions={askList}
+                items={itemList}
+                busy={asking}
+                onAsk={ticked => void askFrom(ticked, itemList)}
+              />
+            ) : (
+              <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} onFloat={() => setFloating(true)} />
+            )}
+            <ClarificationsPanel rfq={rfq} inquiries={inquiryList} />
+            <AttachmentsPanel rfqId={rfq.id} compact />
+          </BelowTheFold>
         </aside>
       </div>
       <RfqActionBar rfq={rfq} facts={facts} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />
-      {adding ? <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} /> : null}
+      {adding ? (
+        <Suspense fallback={null}>
+          <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} />
+        </Suspense>
+      ) : null}
       {floating ? (
-        <FloatDialog
-          title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
-          suggestions={askList}
-          itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
-          busy={asking}
-          onClose={() => setFloating(false)}
-          onAsk={ticked => {
-            const needing = itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id)))
-            void askFrom(ticked, needing.length > 0 ? needing : itemList).then(r => r.ok && setFloating(false))
-          }}
-        />
+        <Suspense fallback={null}>
+          <FloatDialog
+            title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
+            suggestions={askList}
+            itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
+            busy={asking}
+            onClose={() => setFloating(false)}
+            onAsk={ticked => {
+              const needing = itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id)))
+              void askFrom(ticked, needing.length > 0 ? needing : itemList).then(r => r.ok && setFloating(false))
+            }}
+          />
+        </Suspense>
       ) : null}
     </Shell>
   )

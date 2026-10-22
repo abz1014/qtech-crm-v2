@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import http from 'node:http'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import react from '@vitejs/plugin-react-swc'
@@ -14,11 +15,123 @@ import { defineConfig } from 'vitest/config'
 function previewHeaders(): Record<string, string> | undefined {
   if (!process.env.E2E_CSP) return undefined
   const json = JSON.parse(readFileSync(path.resolve(__dirname, 'vercel.json'), 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
-  const api = new URL(process.env.API_URL ?? 'http://127.0.0.1:54321').origin
+  // E2E_APP_API_URL: the origin the app build talks to when it is not the stack itself (the perf suite's HTTPS proxy).
+  const api = new URL(process.env.E2E_APP_API_URL ?? process.env.API_URL ?? 'http://127.0.0.1:54321').origin
   const all = json.headers.find(h => h.source === '/(.*)')?.headers ?? []
   return Object.fromEntries(
     all.filter(h => h.key !== 'Strict-Transport-Security').map(h => [h.key, h.value.replaceAll('https://yafbphagorydbitfgfmg.supabase.co', api)]),
   )
+}
+
+/*
+ * The rest of vercel.json's headers on the preview server (E2E_CSP=1 only): the per-path rules, such as the year-long
+ * `immutable` cache on /assets/ and `no-cache` on /sw.js, so the e2e suites see the caching production sends. vite preview
+ * already compresses (gzip, about the size Vercel's brotli is for these files: 191 KB against 195 KB for the entry chunk).
+ */
+function vercelPathHeaders(): Plugin {
+  return {
+    name: 'qtech-vercel-path-headers',
+    configurePreviewServer(server) {
+      if (!process.env.E2E_CSP) return
+      const json = JSON.parse(readFileSync(path.resolve(__dirname, 'vercel.json'), 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
+      const rules = json.headers
+        .filter(h => h.source !== '/(.*)')
+        .map(h => ({ test: new RegExp(`^${h.source.replaceAll('.', '\\.').replaceAll('(\\.*)', '.*')}$`), headers: h.headers }))
+      server.middlewares.use((req, res, next) => {
+        const url = (req.url ?? '').split('?')[0] ?? ''
+        for (const rule of rules) if (rule.test.test(url)) for (const h of rule.headers) res.setHeader(h.key, h.value)
+        next()
+      })
+    },
+  }
+}
+
+/*
+ * perf/lcp: database requests go to the site's own /rest/v1/, which vercel.json rewrites to the Supabase project (src/lib/supabase.ts
+ * says why). Built that way on Vercel (VERCEL=1 during its builds) and for the perf suite (E2E_SAME_ORIGIN_REST=1); everywhere else
+ * (the other e2e suites, a local dev server, the Cloudflare fallback) the app talks to Supabase directly, as before.
+ */
+// Owner decision pending (2026-10-23): production stays browser -> Supabase until approved; set QTECH_SAME_ORIGIN_REST=1 in Vercel AND add the /rest/v1 rewrite to vercel.json to switch on.
+const REST_SAME_ORIGIN = process.env.QTECH_SAME_ORIGIN_REST === '1' || process.env.E2E_SAME_ORIGIN_REST === '1'
+
+/*
+ * The preview server does what vercel.json's /rest/v1/ rewrite does, for the perf suite: it forwards those requests to the local stack
+ * (API_URL), so the suite measures the page the way production serves it. Nothing else is forwarded.
+ */
+function vercelRestRewrite(): Plugin {
+  return {
+    name: 'qtech-vercel-rest-rewrite',
+    configurePreviewServer(server) {
+      if (process.env.E2E_SAME_ORIGIN_REST !== '1' || !process.env.API_URL) return
+      const target = new URL(process.env.API_URL)
+      const hop = new Set(['connection', 'keep-alive', 'proxy-connection', 'transfer-encoding', 'upgrade', 'http2-settings', 'te', 'host'])
+      server.middlewares.use((req, res, next) => {
+        if (!(req.url ?? '').startsWith('/rest/v1/')) return next()
+        const headers: Record<string, string | string[]> = { host: target.host }
+        for (const [name, value] of Object.entries(req.headers)) if (value !== undefined && !name.startsWith(':') && !hop.has(name)) headers[name] = value
+        const out = http.request({ hostname: target.hostname, port: target.port, method: req.method, path: req.url, headers }, up => {
+          for (const [name, value] of Object.entries(up.headers)) if (value !== undefined && !hop.has(name)) res.setHeader(name, value)
+          res.statusCode = up.statusCode ?? 502
+          up.pipe(res)
+        })
+        out.on('error', () => {
+          res.statusCode = 502
+          res.end()
+        })
+        req.pipe(out)
+      })
+    },
+  }
+}
+
+/*
+ * perf/lcp: the app's one stylesheet (about 18 KB compressed) goes into index.html as a <style> element instead of a separate
+ * render-blocking request. On a phone the page then needs one round trip less before anything can be drawn, and the page's
+ * code starts downloading straight after the HTML instead of after the stylesheet. The Content-Security-Policy allows inline
+ * styles (style-src 'unsafe-inline'), not inline scripts; the font and image URLs inside are absolute, so they resolve as before.
+ */
+function inlineStylesheet(): Plugin {
+  return {
+    name: 'qtech-inline-stylesheet',
+    apply: 'build',
+    // After every other plugin's generateBundle: the HTML is written and the preload lists are filled in by then.
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const html = bundle['index.html']
+        if (!html || html.type !== 'asset' || typeof html.source !== 'string') return
+        const entry = Object.values(bundle).find(c => c.type === 'chunk' && c.isEntry)
+        if (!entry) return
+        const inlined: string[] = []
+        html.source = html.source.replace(/<link rel="stylesheet"(?: crossorigin)? href="\/(assets\/[^"]+\.css)">/g, (tag, file: string) => {
+          const css = bundle[file]
+          if (!css || css.type !== 'asset') return tag
+          delete bundle[file]
+          inlined.push(file)
+          return `<style>${String(css.source).replaceAll('</style', '<\\/style')}</style>`
+        })
+        // A lazy chunk's preload list names the CSS of the chunks it imports, the entry's included: the preload helper would
+        // fetch the file that is now inline. Each such entry points at the entry chunk instead, which is already loaded (a
+        // no-op), so the list keeps its length and every other index in it.
+        for (const chunk of Object.values(bundle)) {
+          if (chunk.type !== 'chunk') continue
+          for (const file of inlined) chunk.code = chunk.code.replaceAll(`"${file}"`, `"${entry.fileName}"`)
+        }
+      },
+    },
+  }
+}
+
+/*
+ * Production serves the app over HTTPS and HTTP/2 (Vercel). The perf suite (scripts/ci/e2e-run.sh) passes a throwaway
+ * self-signed certificate in E2E_TLS_KEY and E2E_TLS_CERT, and vite preview then serves HTTP/2 over TLS like production:
+ * Lighthouse's simulated Slow 4G models HTTP/1.1 as six connections per origin, each with its own handshake, and HTTP/2 as one
+ * multiplexed connection, so plain HTTP/1.1 measured a page load production never has. Off by default.
+ */
+function previewTls(): { key: Buffer; cert: Buffer } | undefined {
+  const key = process.env.E2E_TLS_KEY
+  const cert = process.env.E2E_TLS_CERT
+  return key && cert ? { key: readFileSync(key), cert: readFileSync(cert) } : undefined
 }
 
 /*
@@ -128,12 +241,20 @@ function appVersionFile(): Plugin {
 }
 
 export default defineConfig(({ command, mode }) => ({
-  define: { __APP_BUILD__: JSON.stringify(BUILD_ID), __OCR_DIR__: JSON.stringify(OCR_DIR), __APP_VERSION__: JSON.stringify(APP_VERSION.version) },
+  define: {
+    __APP_BUILD__: JSON.stringify(BUILD_ID),
+    __OCR_DIR__: JSON.stringify(OCR_DIR),
+    __APP_VERSION__: JSON.stringify(APP_VERSION.version),
+    __REST_SAME_ORIGIN__: JSON.stringify(REST_SAME_ORIGIN),
+  },
   plugins: [
     react(),
     ocrAssets(),
     appVersionFile(),
     supabasePreconnect(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL),
+    vercelPathHeaders(),
+    vercelRestRewrite(),
+    inlineStylesheet(),
     // Builds src/sw.ts into dist/sw.js and injects the precache list (R21). Build only: the dev server and Vitest
     // run without a worker. The manifest is the hand-written public/manifest.webmanifest.
     ...(command === 'build'
@@ -174,7 +295,7 @@ export default defineConfig(({ command, mode }) => ({
         ]
       : []),
   ],
-  preview: { headers: previewHeaders() },
+  preview: { headers: previewHeaders(), https: previewTls() },
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   test: {
     environment: 'jsdom',

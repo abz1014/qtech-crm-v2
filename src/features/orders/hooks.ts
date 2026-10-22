@@ -11,12 +11,23 @@ import type { LegPatch } from '@/features/orders/lib/legModel'
  * `money` is false for an engineer: the price columns and the money part of v_order_state are then never requested.
  */
 
+/** The order page's first reads (its hooks, and the app's start reading them ahead of the page: orders/prefetch.ts). */
+export const orderHeaderQuery = (id: string, money: boolean) => ({ queryKey: qk.orders.part(id, 'header'), queryFn: () => api.getOrderHeader(id, money) })
+export const orderItemsQuery = (id: string, money: boolean) => ({ queryKey: qk.orders.part(id, 'items'), queryFn: () => api.listOrderItems(id, money) })
+export const orderLegsQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'legs'), queryFn: () => api.fetchOrderLegs(id) })
+export const orderEngineersQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'engineers'), queryFn: () => api.listOrderEngineers(id) })
+export const orderMoneyQuery = (id: string, role: 'admin' | 'sales') => ({ queryKey: qk.orders.part(id, 'money'), queryFn: () => api.getOrderMoney(id, role) })
+export const ordersListQuery = (role: 'admin' | 'sales' | 'engineer' | null) => ({
+  queryKey: qk.orders.board(role ?? ''),
+  queryFn: () => api.listOrders(role as 'admin' | 'sales' | 'engineer'),
+})
+
 export function useOrderHeader(id: string | undefined, money: boolean) {
-  return useQuery({ queryKey: qk.orders.part(id ?? '', 'header'), queryFn: () => api.getOrderHeader(id as string, money), enabled: Boolean(id) })
+  return useQuery({ ...orderHeaderQuery(id ?? '', money), enabled: Boolean(id) })
 }
 
 export function useOrderItems(id: string | undefined, money: boolean) {
-  return useQuery({ queryKey: qk.orders.part(id ?? '', 'items'), queryFn: () => api.listOrderItems(id as string, money), enabled: Boolean(id) })
+  return useQuery({ ...orderItemsQuery(id ?? '', money), enabled: Boolean(id) })
 }
 
 /**
@@ -27,15 +38,14 @@ export function useOrderItems(id: string | undefined, money: boolean) {
 export function useOrderLegs(id: string | undefined, items: readonly api.OrderItemRow[] | undefined) {
   const select = useCallback((raw: api.OrderLegsRaw) => api.shapeOrderLegs(raw, items ?? []), [items])
   return useQuery({
-    queryKey: qk.orders.part(id ?? '', 'legs'),
-    queryFn: () => api.fetchOrderLegs(id as string),
+    ...orderLegsQuery(id ?? ''),
     select,
     enabled: Boolean(id) && items !== undefined,
   })
 }
 
 export function useOrderEngineers(id: string | undefined) {
-  return useQuery({ queryKey: qk.orders.part(id ?? '', 'engineers'), queryFn: () => api.listOrderEngineers(id as string), enabled: Boolean(id) })
+  return useQuery({ ...orderEngineersQuery(id ?? ''), enabled: Boolean(id) })
 }
 
 export function useEngineerCandidates(enabled: boolean) {
@@ -122,7 +132,7 @@ export function useMyJobTitle(userId: string | undefined) {
 
 /** Admin and sales only: the caller passes a role only for them, so an engineer never makes this request. */
 export function useOrderMoney(id: string | undefined, role: 'admin' | 'sales' | null) {
-  return useQuery({ queryKey: qk.orders.part(id ?? '', 'money'), queryFn: () => api.getOrderMoney(id as string, role as 'admin' | 'sales'), enabled: Boolean(id) && role !== null })
+  return useQuery({ ...orderMoneyQuery(id ?? '', role as 'admin' | 'sales'), enabled: Boolean(id) && role !== null })
 }
 
 export function useLegPos(id: string | undefined, legIds: readonly string[], money = false) {
@@ -167,7 +177,7 @@ export function useSupplierChoices(enabled: boolean) {
 
 /** O04: the orders list. `role` is in the key because the request itself differs by role. */
 export function useOrdersList(role: 'admin' | 'sales' | 'engineer' | null) {
-  return useQuery({ queryKey: qk.orders.board(role ?? ''), queryFn: () => api.listOrders(role as 'admin' | 'sales' | 'engineer'), enabled: role !== null })
+  return useQuery({ ...ordersListQuery(role), enabled: role !== null })
 }
 
 /** O02: past orders matching what is typed (nothing typed: the most recent). Read only while the dialog is open. */
