@@ -1,5 +1,5 @@
 /*
- * What waits until the opening page's content is drawn (perf/lcp): the Geist web fonts and the service worker.
+ * What waits until the opening page's content is drawn (perf/lcp): the Archivo web fonts and the service worker.
  *
  * On a first visit over a slow connection, both would otherwise compete with the page's own code and data: a browser fetches
  * fonts ahead of scripts, and the service worker's install downloads the whole app shell (about 2 MB). So:

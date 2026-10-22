@@ -20,6 +20,8 @@ export default {
       current: 'currentColor',
       canvas: v('bg-canvas'),
       surface: v('bg-surface'),
+      // Navy chrome: the top bar, the phone bars, the next-step band. Inside, set data-surface="navy" so primitives re-ink.
+      chrome: { DEFAULT: v('bg-chrome'), fg: v('fg-on-chrome'), 'fg-2': v('fg-on-chrome-2'), field: v('chrome-field'), edge: v('chrome-input') },
       sunken: v('bg-sunken'),
       selected: v('bg-selected'),
       scrim: v('bg-scrim'),
@@ -47,6 +49,17 @@ export default {
         'ink-fg': v('tone-ink-fg'),
         'ink-bg': v('tone-ink-bg'),
       },
+      // Colour blocks (direction C): the To do groups. Late is red, Today yellow, This week blue; quiet for the rest.
+      block: {
+        late: v('block-late-bg'),
+        'late-fg': v('block-late-fg'),
+        today: v('block-today-bg'),
+        'today-fg': v('block-today-fg'),
+        week: v('block-week-bg'),
+        'week-fg': v('block-week-fg'),
+        quiet: v('block-quiet-bg'),
+        'quiet-fg': v('block-quiet-fg'),
+      },
       // Read by [data-status="group:value"] (set in tokens.css).
       status: { fg: v('status-fg'), bg: v('status-bg') },
     },
@@ -71,11 +84,15 @@ export default {
       12: v('sp-12'),
       16: v('sp-16'),
     },
-    borderRadius: { none: '0px', DEFAULT: v('radius'), round: v('radius-round') },
+    // Radius ladder (direction C): controls 10, rows drawn as tiles 12, panels and blocks 16, tags and counts fully round.
+    borderRadius: { none: '0px', DEFAULT: v('radius'), row: v('radius-row'), panel: v('radius-panel'), round: v('radius-round') },
     borderWidth: { DEFAULT: v('hairline'), 0: '0px', 2: v('focus-width') },
-    boxShadow: { none: 'none', pop: v('shadow-pop'), modal: v('shadow-modal') },
-    fontFamily: { sans: v('font-sans'), mono: v('font-mono') },
+    boxShadow: { none: 'none', pop: v('shadow-pop'), modal: v('shadow-modal'), 'on-navy': v('shadow-on-navy') },
+    // display: Archivo Wide (118 %), for page titles and block headings; h1 to h3 take it by default (src/index.css).
+    fontFamily: { sans: v('font-sans'), display: v('font-display'), mono: v('font-mono') },
     fontSize: {
+      // 14 px, timestamps only. Everything else read is 16 px or more (xs, sm and base are all 16).
+      stamp: [v('text-stamp'), v('lh-stamp')],
       xs: [v('text-xs'), v('lh-xs')],
       sm: [v('text-sm'), v('lh-sm')],
       base: [v('text-base'), v('lh-base')],
@@ -85,7 +102,7 @@ export default {
       display: [v('text-display'), v('lh-display')],
       table: [v('text-table'), v('lh-table')],
     },
-    fontWeight: { regular: v('weight-regular'), medium: v('weight-medium'), semibold: v('weight-semibold') },
+    fontWeight: { regular: v('weight-regular'), medium: v('weight-medium'), semibold: v('weight-semibold'), heavy: v('weight-heavy') },
     letterSpacing: { normal: '0em', tight: v('tracking-tight'), snug: v('tracking-snug') },
     transitionDuration: { DEFAULT: v('dur-fast'), fast: v('dur-fast'), base: v('dur-base'), slow: v('dur-slow') },
     transitionTimingFunction: { DEFAULT: v('ease-out'), out: v('ease-out'), standard: v('ease-standard') },
