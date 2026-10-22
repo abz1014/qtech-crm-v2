@@ -46,7 +46,7 @@ describe('issueQuotation', () => {
     expect(args.p_item_ids).toEqual(['i1'])
   })
 
-  // HW-43: the prices go to the database inside issue_quotation (0084), never as separate rfq_items writes before it,
+  // HW-43: the prices go to the database inside issue_quotation (0083), never as separate rfq_items writes before it,
   // so a refused issue cannot leave a price that no quotation carries.
   it('writes the prices only through the one issue_quotation call, with the quantity the person saw', async () => {
     const db = installFakeDb(c => (c.target === 'quotations' ? { data: ROW } : { data: 'q2' }))

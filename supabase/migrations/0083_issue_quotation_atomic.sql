@@ -1,4 +1,4 @@
--- 0084_issue_quotation_atomic (bug hunt HW-43, HW-3, HW-8): issuing a quotation writes its prices in the same transaction.
+-- 0083_issue_quotation_atomic (bug hunt HW-43, HW-3, HW-8): issuing a quotation writes its prices in the same transaction.
 --
 -- Before: the app updated rfq_items (price, GST rate, lead time) with one request per item, THEN called issue_quotation.
 -- A refused issue (an overflowing total, a dropped connection) left prices on the RFQ that no quotation carried, and Mark

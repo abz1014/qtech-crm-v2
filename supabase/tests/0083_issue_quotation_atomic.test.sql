@@ -1,7 +1,7 @@
 begin;
 select plan(23);
 
--- 0084: issue_quotation writes the prices and makes the revision in ONE transaction (bug hunt HW-43, HW-3, HW-8).
+-- 0083: issue_quotation writes the prices and makes the revision in ONE transaction (bug hunt HW-43, HW-3, HW-8).
 -- Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02.
 
 select is((select count(*)::int from pg_proc where pronamespace = 'public'::regnamespace and proname = 'issue_quotation'), 1,

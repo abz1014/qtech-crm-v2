@@ -192,7 +192,7 @@ export interface IssueInput {
 }
 
 /**
- * One call (0084): issue_quotation writes the prices into rfq_items and makes the revision in one transaction, so a refused
+ * One call (0083): issue_quotation writes the prices into rfq_items and makes the revision in one transaction, so a refused
  * issue (an overflowing total, a quantity changed meanwhile, a dropped connection) changes no price (HW-43). What was typed
  * is kept by the dialog's draft (issueDraft.ts), not by writing it early.
  */
