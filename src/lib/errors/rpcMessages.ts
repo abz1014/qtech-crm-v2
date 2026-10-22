@@ -77,6 +77,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^which payment a correction replaces cannot be changed$/, internal: true },
   { match: /^settled before cutover is set by the legacy import only$/, internal: true },
   { match: /^legacy_source is set by the legacy import only$/, internal: true },
+  { match: /^\w+ \d{4} has not ended: only months that have ended can be locked as Imported\.$/, internal: true },
+  { match: /^No active admin: the imported months cannot be locked\.$/, internal: true },
   { match: /^payment reminders are for admin and sales only$/, message: () => ADMIN_SALES },
 
   // Quotations and POs

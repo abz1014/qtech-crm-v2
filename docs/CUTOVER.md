@@ -159,6 +159,9 @@ select public.close_months_through(date '2026-10-01');
 
    The same is possible in the app: **Money, Month-end, Checklist**, then **Close <month>**. The warning counts are shown; none
    blocks the close. If earlier months are still open the app offers closing through the chosen month.
+   Migration 0089 locks the imported months (earliest money month through `qtech.imported_through`, August 2026 unless the
+   owner moves it) as "Imported" where imported money rows exist; if it ran before the import, run
+   `select qtech_private.lock_imported_months(date '2026-08-01');` as postgres after the import instead.
 2. **Check:** on the Checklist, "Closed months" lists every month through the last one, each with a **Reopen** button.
 3. Closing freezes payments, expenses and invoices dated in those months. A mistake is fixed with **Reopen** (admin, audited), then close again.
 
