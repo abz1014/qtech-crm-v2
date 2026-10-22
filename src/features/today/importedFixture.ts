@@ -134,7 +134,7 @@ export function importedStyleInputs(): TodayInputs {
     invoiceDate: ago(400 + i * 10),
     courierState: 'delivered_to_client',
     fbrState: i < 26 ? 'deposited' : 'pending',
-    // 0088 (D8): the "deposit without a receipt" exception no longer applies to an imported invoice, so the view says false.
+    // pending DB batch A (D8): the "deposit without a receipt" exception no longer applies to an imported invoice, so the view says false.
     fbrException: false,
     needsFbrAttention: i >= 26,
   }))

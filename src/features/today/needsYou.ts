@@ -11,7 +11,7 @@
 //      on the same person's Today (it is never hidden from the person who has to act). LATE PAYMENTS NEVER GO STALE: money owed
 //      stays at the top until it is paid.
 // History (closed, won, lost, cancelled, settled imported records) never reaches the rules at all (api.ts reads open RFQs and live
-// orders only; a settled imported order raises no costs item; 0088 stops the FBR receipt exception on imported invoices).
+// orders only; a settled imported order raises no costs item; pending owner DB batch A (0088) stops the FBR receipt exception on imported invoices).
 //
 // Colour (plan section (e)): RED only for late money (a payment on a real invoice past its due date, by even one day) and for a
 // promise to a customer that slipped within the last 30 days (the quotation's due date; the commissioning day an engineer was

@@ -35,7 +35,7 @@ export interface RcOrder {
   cancelled: boolean
   /** Legacy flag value_basis_unknown: no net is guessed, so margin and net cash leave it out. */
   basisUnknown: boolean
-  /** Imported from the old CRM (orders.legacy_source is set; 0088). History: no finding is raised on it (redesign phase 0, D10). */
+  /** Imported from the old CRM (orders.legacy_source is set; pending DB batch A). History: no finding is raised on it (redesign phase 0, D10). */
   legacy?: boolean
 }
 
