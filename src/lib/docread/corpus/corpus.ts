@@ -109,10 +109,84 @@ export const BATCHES: BatchSpec[] = [
   { batch: 0, enquiries: 180, quotes: 72, gens: [0], gate: true },
   { batch: 10, enquiries: 120, quotes: 48, gens: [0], dev: true, gate: true },
   { batch: 11, enquiries: 120, quotes: 48, gens: [0], dev: true, gate: true },
-  { batch: 1, enquiries: 120, quotes: 48, gens: [0, 1] },
-  { batch: 2, enquiries: 120, quotes: 48, gens: [0, 1, 2] },
-  { batch: 3, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3] },
-  { batch: 4, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4] },
+  // Fresh batch 1, first try (text and PDF): enquiry items 97.6% / 96.5%, quotes 100% / 99.5%: below 98%, so it became dev data.
+  { batch: 1, enquiries: 120, quotes: 48, gens: [0, 1], dev: true, gate: true },
+  // Fresh batch 2, first try (text and PDF): enquiry items 97.6% / 83.7% (sideways pages, SMS-style lines), quotes 88.1% / 97.5%: dev now.
+  { batch: 2, enquiries: 120, quotes: 48, gens: [0, 1, 2], dev: true, gate: true },
+  // Fresh batch 3, first try (text and PDF): enquiry items 98.5% / 96.0% (items in one sentence), company 66.7%; quotes 98.6% / 100%,
+  // lead time 84.7% (a Wks column): dev now.
+  { batch: 3, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3], dev: true, gate: true },
+  // Fresh batch 4, first try (text and PDF): enquiry items 95.6% / 99.3% (Teams name-and-time lines), quotes 100%: dev now.
+  { batch: 4, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4], dev: true, gate: true },
+  // Fresh batch 5, first try (text and PDF): enquiry items 98.5% / 98.5%, every field >= 98%, quotes 100%, but one shape below 95%
+  // (items in square brackets, 87%): dev now.
+  { batch: 5, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5], dev: true, gate: true },
+  // Fresh batch 6, first try (text and PDF): every field and shape 100%. Kept held out, run in CI.
+  { batch: 6, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6], gate: true },
+  // Fresh batch 7, first try (text and PDF): every field >= 98% (items 99.5%), quotes 100%, but one shape 94.4% (a WhatsApp list
+  // with dashes): dev now.
+  { batch: 7, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7], dev: true, gate: true },
+  // Fresh batch 8, first try (text and PDF): enquiry items 95.2% / 100% (a forwarded WhatsApp list in *bold*), quotes 100%: dev now.
+  { batch: 8, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8], dev: true, gate: true },
+  // Fresh batch 9, first try (text and PDF): enquiry items 98.6% / 98.6%, due 95.5%, count 97.8%; quotes 100%: dev now.
+  { batch: 9, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dev: true, gate: true },
+  // Fresh batch 12, first try (text and PDF): enquiry items 99.4% / 99.0%, count 97.9%, due 100% / 95.8%; quotes offers 80.0% / 97.8%,
+  // price 87.9% / 85.9% (list price, discount and net price columns): dev now.
+  { batch: 12, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dev: true, gate: true },
+  // Fresh batch 13, first try (text and PDF): enquiry items 99.0% / 99.5%, count 97.8% (section rows inside a table), quotes 100%:
+  // dev now.
+  { batch: 13, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dev: true, gate: true },
+  // Fresh batch 14, first try (text and PDF): enquiry items 95.1% / 92.8%, count 87.7%, company 93.4% (portal lines with labels,
+  // quantities in square brackets, an estimate form copied one cell per line); quotes offers 100% / 98.6%, currency 90.5%: dev now.
+  { batch: 14, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dev: true, gate: true },
+  // Fresh batch 15, first try (text and PDF): enquiry items 99.8% / 99.8%, every enquiry field >= 99.8%; quotes 100% / 99.2% (after
+  // correcting the template's incoterm truth to "FOB Shenzhen"), but two shapes below 95% on one case each ("1NO" read as a
+  // quantity; an offer missed in an order-code table): dev now.
+  { batch: 15, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], dev: true, gate: true },
+  // Fresh batch 16, first try (text and PDF): enquiry items 99.3% / 99.6%, count 98.8%, quotes 100%, but one shape at 0% (an item
+  // code column before the item name, one case): dev now.
+  { batch: 16, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dev: true, gate: true },
+  // Fresh batch 17, first try (text and PDF): enquiry items 95.3% / 97.6%, count 85.1% (the item only in the subject line, a
+  // document title over an ERP table, "Also add: 2 sets ..., 1 each ..."), quotes 100%: dev now.
+  { batch: 17, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dev: true, gate: true },
+  // Fresh batch 18, first try (text and PDF): enquiry items 98.1% / 98.1%, qty 96.6% / 94.8%, unit 95.5% / 93.7% ("Brand: X / Qty: 4
+  // Pcs" under each item); quotes offers 90.0% / 97.4% (a VAT-excluded price heading): dev now.
+  { batch: 18, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], dev: true, gate: true },
+  // Fresh batch 19, first try (text and PDF): enquiry items 99.6% / 99.8%, qty 96.8% / 96.6% ("- Qty: 3 Nos" as a sub-bullet),
+  // count 98.9%; quotes offers 99.5% (two items sharing "SS316"): dev now.
+  { batch: 19, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], dev: true, gate: true },
+  // Fresh batch 20, first try (text and PDF): enquiries 100% on every field and shape; quotes offers 100% / 97.6%, price 94.6% /
+  // 92.4% (German column headings Menge / Einzelpreis / Gesamtpreis): dev now.
+  { batch: 20, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], dev: true, gate: true },
+  // Fresh batch 21, first try (text and PDF): enquiry items 98.5% precision / 95.1% recall, count 94.6% (an "external email"
+  // caution banner read as the disclaimer, "Nos 10" with the unit first, "(1) 02 Nos - ..."); quotes 100%: dev now.
+  { batch: 21, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19], dev: true, gate: true },
+  // Fresh batch 22, first try (text and PDF): enquiry items 94.2% precision / 99.5% recall, qty 91.5% (a "Qty in Stock" column
+  // before "Qty Required", "Item: 12" in a chat); quotes 100%: dev now.
+  { batch: 22, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], dev: true, gate: true },
+  // Fresh batch 23, first try (text and PDF): every field >= 99.5%, quotes 100%, but one shape at 33% ("need 10 butterfly valve",
+  // one case): dev now.
+  { batch: 23, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], dev: true, gate: true },
+  // Fresh batch 24, first try (text and PDF): enquiry items 98.4% / 99.4%, count 95.6% ("Sr. 1:" markers, "Authorised signature"
+  // under a form); quotes offers 79.1% / 96.3% ("USD 45" in each price cell): dev now.
+  { batch: 24, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], dev: true, gate: true },
+  // Fresh batch 25, first try (text and PDF): enquiry items 98.0% / 98.0%, every field >= 98%, quotes 100%, but one shape at 0%
+  // ("... 10 ea kitne ka hai?") and one at 66.7% ("Timing belt HTD 838: 2"): dev now.
+  { batch: 25, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], dev: true, gate: true },
+  // Fresh batch 26, first try (text and PDF): enquiry items 95.8% / 95.8% ("Item No | Item | Specification": the item's name
+  // under Item, 0% on that shape), quotes 100%: dev now.
+  { batch: 26, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], dev: true, gate: true },
+  // Fresh batch 27, first try (text and PDF): enquiry items 99.1% / 99.1%, unit 98.6% / 97.7% ("two nos" in words, "5 Each" wider
+  // than its Qty heading, a quantity corrected in a later message); quotes currency 91.0% ("Offer 6816 - prices in USD"): dev now.
+  { batch: 27, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25], dev: true, gate: true },
+  // Fresh batch 28, first try (text and PDF): enquiry items 98.3% / 98.3%, every field >= 98%, quotes 100%, but one shape at 45.5%
+  // ("... 5 pc (urgent)"): dev now.
+  { batch: 28, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26], dev: true, gate: true },
+  // Fresh batch 29, first try (text and PDF): every field and every shape 100%, enquiries and quotes. Kept held out, run in CI.
+  { batch: 29, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gate: true },
+  // Fresh batch 30, first try (text and PDF): every field and every shape 100% again: the second fresh batch in a row. Kept held
+  // out, run in CI.
+  { batch: 30, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28], gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {

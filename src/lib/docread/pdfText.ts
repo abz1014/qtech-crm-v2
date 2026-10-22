@@ -227,15 +227,27 @@ export async function readPdfText(input: Input, opts: ReadPdfOptions = {}): Prom
       const page = await doc.getPage(p)
       const viewport = page.getViewport({ scale: 1 })
       const content = await page.getTextContent()
-      const runs: TextRun[] = []
+      const straight: TextRun[] = []
+      const turned: TextRun[] = []
       for (const item of content.items) {
         if (!('str' in item) || item.str.trim() === '') continue
         const m = pdfjs.Util.transform(viewport.transform, item.transform) as number[]
         const [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0] = m
-        // Turned text (a watermark across the page, a label up the margin) is not part of the reading order.
-        if (Math.abs(b) > Math.abs(a) * 0.2) continue
-        runs.push({ str: item.str, x: e, y: f, w: item.width, size: Math.hypot(c, d) })
+        const size = Math.hypot(c, d)
+        if (Math.abs(b) <= Math.abs(a) * 0.2) {
+          straight.push({ str: item.str, x: e, y: f, w: item.width, size })
+          continue
+        }
+        // Turned text: read in its own direction (u along the line, v to the next line), so a page printed on its side reads
+        // as if it had been turned upright.
+        const n = Math.hypot(a, b) || 1
+        const u = { x: a / n, y: b / n }
+        const v = { x: -u.y, y: u.x }
+        turned.push({ str: item.str, x: e * u.x + f * u.y, y: e * v.x + f * v.y, w: item.width, size })
       }
+      // Mostly turned: the page lies on its side. Otherwise turned text is a watermark or a label up the margin: left out.
+      const chars = (rs: TextRun[]) => rs.reduce((k, r) => k + r.str.length, 0)
+      const runs = chars(turned) > chars(straight) ? turned : straight
       if (pageChars(runs) < MIN_PAGE_CHARS) {
         pagesWithoutText.push(p)
         if (ocrOn) {

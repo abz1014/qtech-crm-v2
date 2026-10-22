@@ -15,6 +15,8 @@ interface Ctx {
   pageW: number
   pageH: number
   rotate: boolean
+  sideways: boolean
+  watermark?: string
   pages: PDFPage[]
   page: PDFPage
   y: number
@@ -56,7 +58,8 @@ function wrap(text: string, font: PDFFont, size: number, width: number, breakWor
 
 function draw(c: Ctx, text: string, x: number, yTop: number, size: number, bold = false): void {
   const font = bold ? c.bold : c.regular
-  const clean = text.replace(/[^\x20-\x7e\u00a0-\u00ff]/g, '')
+  // What the standard fonts can draw (WinAnsi): ASCII, Latin-1 and the euro sign.
+  const clean = text.replace(/[^\x20-\x7e\u00a0-\u00ff\u20ac]/g, '')
   if (!clean.trim()) return
   if (c.rotate) {
     // Shown turned a quarter clockwise: page x is the shown y, page y is the shown x.
@@ -80,8 +83,9 @@ function newPage(c: Ctx): void {
   // A turned page: the MediaBox is portrait, the viewer shows it landscape.
   const size: [number, number] = c.rotate ? [c.pageH, c.pageW] : [c.pageW, c.pageH]
   c.page = c.doc.addPage(size)
-  if (c.rotate) c.page.setRotation(degrees(90))
+  if (c.rotate && !c.sideways) c.page.setRotation(degrees(90))
   c.pages.push(c.page)
+  if (c.watermark) c.page.drawText(c.watermark, { x: c.pageW * 0.2, y: c.pageH * 0.3, size: 110, font: c.bold, color: rgb(0.85, 0.85, 0.85), rotate: degrees(40) })
   c.y = MARGIN + 6
   for (const b of c.letterhead) block(c, b, null)
 }
@@ -199,7 +203,7 @@ export async function docPdf(doc: Doc): Promise<Uint8Array> {
   const fam = doc.page?.font ?? 'helvetica'
   const regular = await pdf.embedFont(fam === 'times' ? StandardFonts.TimesRoman : fam === 'courier' ? StandardFonts.Courier : StandardFonts.Helvetica)
   const bold = await pdf.embedFont(fam === 'times' ? StandardFonts.TimesRomanBold : fam === 'courier' ? StandardFonts.CourierBold : StandardFonts.HelveticaBold)
-  const landscape = Boolean(doc.page?.landscape || doc.page?.rotate)
+  const landscape = Boolean(doc.page?.landscape || doc.page?.rotate || doc.page?.sideways)
   const c = {
     doc: pdf,
     regular,
@@ -207,7 +211,9 @@ export async function docPdf(doc: Doc): Promise<Uint8Array> {
     size: doc.page?.size ?? 9.5,
     pageW: landscape ? 842 : 595,
     pageH: landscape ? 595 : 842,
-    rotate: doc.page?.rotate === 90,
+    rotate: doc.page?.rotate === 90 || Boolean(doc.page?.sideways),
+    sideways: Boolean(doc.page?.sideways),
+    watermark: doc.page?.watermark,
     pages: [],
     y: 0,
     letterhead: doc.page?.letterhead ?? [],
