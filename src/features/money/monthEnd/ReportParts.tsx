@@ -62,7 +62,7 @@ export function Panel({
   return (
     <section className={cn('overflow-hidden rounded border bg-surface', className)}>
       <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b px-5 py-2">
-        <h3 className="text-base font-semibold">{title}</h3>
+        <h2 className="text-base font-semibold">{title}</h2>
         {meta}
         <span className="flex-1" />
         {actions}

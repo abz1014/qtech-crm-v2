@@ -163,8 +163,8 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(d).not.toContainText('Costs complete') // a done state shows no chip (R2-13)
     const p = rowOf(m.prov)
     await expect(p).toContainText(ordRef(m.prov.order.number))
-    await expect(p).toContainText('Margin not final')
-    await expect(p.locator('[data-provisional]')).toHaveCount(2) // cost and margin
+    await expect(p).toContainText('Not final')
+    await expect(p.getByTestId('margin-value')).toContainText('(est.)') // round 3: an estimate, greyed
     // Things to check (the old Exceptions tab) is one row of the Month end checklist: one tap from there.
     await page.goto(`/money/month-end?month=${STMT.key}`)
     const row = page.getByTestId('check-things_to_check')
@@ -192,7 +192,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await resetCount(page)
     await closeBtn.click()
     const d = page.getByRole('dialog', { name: `Close ${STMT.label}?` })
-    await expect(d.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(7)
+    await expect(d.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
     await d.getByRole('button', { name: closeName }).click()
     await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)
     fe2('Close the month (checklist reviewed): the button, then the confirmation', (await readCount(page)).mouse, 2)
