@@ -105,12 +105,13 @@ async function expectNoFalseOverdue(page: Page, where: string): Promise<void> {
   expect(FALSE_OVERDUE.exec(text)?.[0] ?? null, `a false "N days overdue" on ${where}`).toBeNull()
 }
 
-/** Red: the text or one of its few ancestors carries a danger tone class. */
+/** Red: any match of the text (the title or the badge) or one of its few ancestors carries a danger tone class. */
 async function isRed(l: Locator): Promise<boolean> {
-  return l.first().evaluate((el: Element) => {
+  const reds = await l.evaluateAll(els => els.map(el => {
     for (let n: Element | null = el, i = 0; n && i < 6; n = n.parentElement, i++) if (/danger|red/.test(n.getAttribute('class') ?? '')) return true
     return false
-  })
+  }))
+  return reds.some(Boolean)
 }
 
 async function todayReading(page: Page) {
@@ -139,8 +140,8 @@ async function checkToday(page: Page, s: Seeded): Promise<void> {
   // The control is counted, red, "5 days overdue".
   const ctl = page.getByRole('region', { name: 'Overdue or due today' }).locator('li[data-rule="payment_overdue"]').filter({ hasText: s.control.customer })
   await expect(ctl).toBeVisible()
-  const five = ctl.getByText(/\b5 days overdue\b/).first()
-  await expect(five).toBeVisible()
+  const five = ctl.getByText(/\b5 days overdue\b/)
+  await expect(five.first()).toBeVisible()
   expect(await isRed(five), 'the control\'s "5 days overdue" on Today is red').toBe(true)
 
   // Open every fold: still no false count, and every imported item sits inside a fold.
@@ -186,8 +187,8 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
   await expect(page.getByText(s.control.customer).first()).toBeVisible()
   await expectNoFalseOverdue(page, '/money/receivables')
   const row = page.locator('tr, [role="row"]').filter({ hasText: s.control.customer }).first()
-  const five = row.getByText(/\b5 days overdue\b/).first()
-  await expect(five).toBeVisible()
+  const five = row.getByText(/\b5 days overdue\b/)
+  await expect(five.first()).toBeVisible()
   expect(await isRed(five), 'the control\'s "5 days overdue" on Who owes us is red').toBe(true)
   // The imported order is a grey tile, not a debt; the control is in the Overdue total.
   await expect(page.getByText('Imported, to review').first()).toBeVisible()
@@ -203,8 +204,8 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
 async function checkControl(page: Page, s: Seeded): Promise<void> {
   await page.goto(`/orders/${s.control.id}`)
   await expect(page.getByText(s.control.customer).first()).toBeVisible()
-  const five = page.getByText(/\b5 days overdue\b/).first()
-  await expect(five).toBeVisible()
+  const five = page.getByText(/\b5 days overdue\b/)
+  await expect(five.first()).toBeVisible()
   expect(await isRed(five), 'the control\'s "5 days overdue" on its order page is red').toBe(true)
   await expectNoFalseOverdue(page, 'the control order page')
 }
