@@ -457,14 +457,14 @@ isOneToOne: false
                   ]
                 },"expense_categories": {
                   Row: {
-                    "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"monthly_budget_pkr": number | null,"name": string,"sort": number
+                    "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"is_misc": boolean,"monthly_budget_pkr": number | null,"name": string,"sort": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id": string,"grp": string,"id"?: string,"monthly_budget_pkr"?: number | null,"name": string,"sort"?: number
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id": string,"grp": string,"id"?: string,"is_misc"?: boolean,"monthly_budget_pkr"?: number | null,"name": string,"sort"?: number
                   }
                   Update: {
-                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id"?: string,"grp"?: string,"id"?: string,"monthly_budget_pkr"?: number | null,"name"?: string,"sort"?: number
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id"?: string,"grp"?: string,"id"?: string,"is_misc"?: boolean,"monthly_budget_pkr"?: number | null,"name"?: string,"sort"?: number
                   }
                   Relationships: [
                     {
@@ -2335,6 +2335,9 @@ isOneToOne: false
               "description": string,"order_item_id": string,"position": number,"price_source": string,"qty": number,"source_number": number,"source_on": string,"source_revision": number,"unit": string,"unit_price": number
             }[]
                            },
+"promote_misc_title":
+{ Args: { "p_misc_category": string,"p_name": string,"p_title_key": string }; Returns: number
+                           },
 "rank_item_quotes":
 { Args: { "p_rfq_id": string }; Returns: {
               "asked": number,"comparable": boolean,"currency": string,"deliveries": number,"fx_age_days": number,"fx_rate_on": string,"fx_rate_pkr": number,"fx_state": string,"in_stock": boolean,"item_qty": number,"last_order_delivered_after_days": number,"last_order_number": number,"last_order_on": string,"late": number,"lead_time": string,"median_days_late": number,"on_time": number,"orders_count": number,"orders_value_pkr": number,"pct_above_best": number,"pkr_unit_price": number,"price": number,"quote_line_id": string,"rank": number,"reliability_band": number,"replied": number,"rfq_item_id": string,"sell_on": string,"sell_order_number": number,"sell_source": string,"sell_unit_net": number,"spread_total": number,"spread_unit": number,"supplier_id": string,"within_band": boolean
@@ -2413,6 +2416,11 @@ isOneToOne: false
                            },
 "strip_words":
 { Args: { "p_drop": (string)[],"p_norm": string }; Returns: string
+                           },
+"suggest_misc_categories":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "misc_category_id": string,"spent": number,"title": string,"title_key": string,"uses": number
+            }[]
                            },
 "supplier_item_evidence":
 { Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_limit"?: number,"p_supplier_ids": (string)[] }; Returns: {

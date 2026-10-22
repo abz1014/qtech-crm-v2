@@ -131,6 +131,14 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^One of these categories is no longer there\./ },
   { match: /^Pick two different categories to merge\.$/ },
   { match: /^".+?" is archived\. Bring it back first, or merge into another category\.$/ },
+  // 0091: misc ("Other") expenses take a typed title; a repeated title becomes a category
+  { match: /^Write what it was for, e\.g\. Courier from shop to office$/ },
+  { match: /^The "Other" category of a group is where one-off expenses go, / },
+  { match: /^Only an admin can turn a one-off title into a category\.$/, message: () => ADMIN_ONLY },
+  { match: /^No expense under ".+?" has that title any more\./ },
+  { match: /^(Only the Other category of a group has one-off titles to promote\.|Choose which title to turn into a category\.|Give the new category a name\.)$/ },
+  { match: /^".+?" is (the Other category of a group\. Choose a different name|a category of another kind, so these expenses cannot move there)/ },
+  { match: /^".+?" is archived\. Bring it back first, or choose a different name\.$/ },
   // 0087: engineers' "I paid" claims (already written for people)
   { match: /^Only an admin approves an expense claim\.$/, message: () => ADMIN_ONLY },
   { match: /^Choose how it was paid: cash given back, from petty cash, or by bank\.$/ },

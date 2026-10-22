@@ -189,7 +189,7 @@ insert into public.expenses (paid_on, amount_pkr, category_id, description, orde
   ('2025-12-05', 1000, 'ca7e0000-0000-4000-8000-000000000001', null,    null, null, '{}'),                       -- e1 bank, unticked
   ('2025-12-06',  500, 'ca7e0000-0000-4000-8000-000000000002', null,    null, '2025-12-01', '{}'),               -- e2 bank, ticked
   ('2025-12-07',  100, 'ca7e0000-0000-4000-8000-000000000004', null,    null, null, '{}'),                       -- e3 cash (Fuel)
-  ('2025-12-08',   10, 'ca7e0000-0000-4000-8000-000000000010', null,    null, null, '{}'),                       -- e4 Other, no description
+  ('2025-12-08',   10, 'ca7e0000-0000-4000-8000-000000000010', 'Stationery',    null, null, '{}'),                       -- e4 Other, no description
   ('2025-12-09',   20, 'ca7e0000-0000-4000-8000-000000000010', 'Water', null, null, '{}'),                       -- e5 Other with description
   ('2025-12-10',   30, 'ca7e0000-0000-4000-8000-000000000012', null,    null, null, '{}'),                       -- e6 Freight, no order
   ('2025-12-11',   40, 'ca7e0000-0000-4000-8000-000000000012', null,    'a1000000-0000-4000-8000-000000000031', '2025-12-01', '{}'), -- e7 Freight on an order, ticked

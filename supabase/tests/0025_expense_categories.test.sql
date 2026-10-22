@@ -224,7 +224,7 @@ select throws_ok($$insert into public.expense_categories (name, grp) values ('De
 -- ------------------------------------------------------------------ admin through the API
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
-select is((select count(*)::int from public.expense_categories), 24, 'admin reads all 24 categories (17 from 0025, 7 from 0086)');
+select is((select count(*)::int from public.expense_categories), 29, 'admin reads all 29 categories (17 from 0025, 7 from 0086, 5 from 0091)');
 select lives_ok($$insert into public.expenses (id, amount_pkr, category_id)
                   values ('b4000000-0000-4000-8000-0000000000a1', 40, 'ca7e0000-0000-4000-8000-000000000004')$$,
   'admin inserts an expense through the API; the category default is read despite row security');

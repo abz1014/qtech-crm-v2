@@ -326,7 +326,7 @@ insert into public.payments_in (id, order_id, amount, voided_at, voided_by, void
 insert into public.orders (id, company_id, owner_id, cancelled_on) values   -- 0080: a cancelled, never-invoiced order holding an advance
   (pg_temp.f('2e'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', public.today_pkt());
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('2f'), pg_temp.f('2e'), 40);
-insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
+insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
@@ -403,7 +403,7 @@ insert into spec values
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
-  ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000010')$q$),
+  ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000005')$q$),
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0086
