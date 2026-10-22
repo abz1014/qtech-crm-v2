@@ -1115,7 +1115,9 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
 
     // ---- lines that belong to the item above
     const attr = ATTR.exec(work)
-    if (attr && !m) {
+    // A sub-bullet under an item ("• Relay 24VDC" / "    - Qty: 4 Nos"): a dash or bullet of another kind, or further in.
+    const subBullet = m !== null && cur !== null && /^[-–*•○◦▪]$/.test(marker ?? '') && (s.indent > (cur as Draft).indent || marker !== (cur as Draft).marker)
+    if (attr && (!m || subBullet)) {
       const label = (attr[1] as string).trim()
       const value = (attr[2] as string).trim()
       if (/^(?:description|item\s+description|material\s+description|item|product)$/i.test(label)) {
@@ -1131,12 +1133,19 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       }
       if (cur) {
         const d = cur as Draft
-        if (/qty|quantity|q'ty/i.test(label)) {
-          const q = QTY_ONLY.exec(value)
-          if (q && !d.qty) d.qty = { qty: toQty(q[1] as string), unit: unitOf(q[2]) }
-        } else if (/^(?:uom|unit)$/i.test(label)) {
-          if (d.qty && !d.qty.unit) d.qty.unit = unitOf(value)
-        } else if (value) d.attrs.push(`${label}: ${value}`)
+        // "Brand: Kalmar / Qty: 5 Each": several labelled values on one line.
+        const pieces = work.split(/\s+[/|]\s+|\s*;\s+/)
+        const pairs = pieces.length > 1 && pieces.every(p => ATTR.test(p)) ? pieces.map(p => ATTR.exec(p) as RegExpExecArray) : [attr]
+        for (const a of pairs) {
+          const lab = (a[1] as string).trim()
+          const val = (a[2] as string).trim()
+          if (/qty|quantity|q'ty/i.test(lab)) {
+            const q = QTY_ONLY.exec(val)
+            if (q && !d.qty) d.qty = { qty: toQty(q[1] as string), unit: unitOf(q[2]) }
+          } else if (/^(?:uom|unit)$/i.test(lab)) {
+            if (d.qty && !d.qty.unit) d.qty.unit = unitOf(val)
+          } else if (val) d.attrs.push(`${lab}: ${val}`)
+        }
         lines.push({ text: t, kind: 'joined', reason: null, marker: null })
         continue
       }

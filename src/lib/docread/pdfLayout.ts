@@ -373,7 +373,10 @@ interface TableRow {
   hasText: boolean
 }
 
-const joinPart = (a: string, b: string) => (a === '' ? b : /[-/]$/.test(a) ? a + b : `${a} ${b}`)
+/** "A. ELECTRICAL", "B) Instruments", "INSTRUMENTATION ITEMS", "MECHANICAL / OTHERS": a heading over a group of rows. */
+const SECTION_HEADING = /^(?=\D*$)(?:[A-Z][.)]\s+[A-Za-z][A-Za-z &/-]{2,30}|[A-Z][A-Z &/-]{0,30}\b(?:ITEMS?|SPARES|MATERIALS?|PARTS|OTHERS|CONSUMABLES|EQUIPMENTS?|INSTRUMENTS?))$/
+
+const joinPart =(a: string, b: string) => (a === '' ? b : /[-/]$/.test(a) ? a + b : `${a} ${b}`)
 
 /** Lays the lines of one table on its columns. Returns the rows; continuation lines are folded into their row. */
 function buildRows(lines: RawLine[], cols: Column[]): string[][] {
@@ -395,6 +398,10 @@ function buildRows(lines: RawLine[], cols: Column[]): string[][] {
       if ((isNumericCell(c.text) && (!anyNumberColumn || numberKinds.has(kinds[i] as ColumnKind) || /^\d{5,}$/.test(c.text))) || kinds[i] === 'number') anchor = true
       else if (kinds[i] === 'text') hasText = true
     }
+    // A section heading inside the table ("INSTRUMENTATION ITEMS", "B. Mechanical") is a row of its own, not the row above
+    // wrapping: the parsers skip it.
+    const filled = cells.filter(p => p.length)
+    if (!anchor && filled.length === 1 && SECTION_HEADING.test((filled[0] as string[]).join(' '))) anchor = true
     return { y: l.y + l.page * 100_000, page: l.page, cells, anchor, hasText }
   })
   const anchors = rows.filter(r => r.anchor)

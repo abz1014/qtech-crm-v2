@@ -37,7 +37,8 @@ function fits(kind: Kind, c: string): boolean {
     case 'number':
       return /^\d{1,4}\.?$/.test(c)
     case 'qty':
-      return NUM.test(c)
+      // "6 Numbers": the quantity and its unit in one cell.
+      return NUM.test(c) || (/^\d[\d,]*(?:\.\d+)?\s*\S+$/.test(c) && UNIT.test(c.replace(/^\d[\d,]*(?:\.\d+)?\s*/, '')))
     case 'unit':
       return UNIT.test(c)
     case 'code':
@@ -93,7 +94,7 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
     let e = k
     while (e < src.length) {
       const t = (src[e] as T).t
-      if (/\d|\t/.test(t.replace(/\(.*?\)/g, '')) || t.split(' ').length > 4 || !isHeaderCell(t) || (e > k && (src[e] as T).blankBefore)) break
+      if (/\d|\t/.test(t.replace(/\(.*?\)/g, '')) || t.replace(/\(.*?\)/g, '').trim().split(' ').length > 4 || !isHeaderCell(t) || (e > k && (src[e] as T).blankBefore)) break
       e++
     }
     const labels = src.slice(k, e).map(s => s.t)
@@ -138,6 +139,8 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
       }
       const { out } = place(cells, kinds)
       if (!out.some((v, x) => v && kinds[x] === 'desc')) break
+      // With no serial numbers to go by, a row with no quantity is the text after the table (the sender's name).
+      if (!numbered && need === 'qty' && !out.some((v, x) => v && kinds[x] === 'qty')) break
       rows.push(out)
       serial += step
       j = q

@@ -614,7 +614,7 @@ const words = (s: string): string[] => {
 }
 
 /** Spec shapes that look like codes but are sizes or ratings; they must never identify an item. */
-const SPEC_SHAPE = /^(?:DN|PN|NPS|NB|BSP|NPT|SCH|IP|IE|CL|CLASS|G|M|R|RC|RP)\d+$|^\d+(?:V|VAC|VDC|MA|MM|CM|M|KV|KW|W|HZ|BAR|PSI|C|A|VA|KG|MPA|KPA|RPM|HP)$|^\d+X\d+$|^\d+MM\d*$/
+const SPEC_SHAPE = /^(?:DN|PN|NPS|NB|BSP|NPT|SCH|IP|IE|CL|CLASS|G|M|R|RC|RP)\d+$|^\d+(?:V|VAC|VDC|MA|MM|CM|M|KV|KW|W|HZ|BAR|PSI|C|A|VA|KG|MPA|KPA|RPM|HP)$|^\d+X\d+$|^\d+MM\d*$|^(?:SS|AISI|SUS)\d{3}L?$|^\d+(?:PPR|DI|DO|AI|AO|PIN|CORE|UF|NF|PF|NO|NC|CO|P|POLE)$/
 
 interface ItemIndex {
   id: string
@@ -641,6 +641,7 @@ function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
   const lineToks = new Set(raw.toUpperCase().split(/[\s,;|()[\]]+/).map(t => t.replace(/[-./_]/g, '')).filter(Boolean))
   // 1. model codes
   let best: Match | null = null
+  let tied = false
   idx.forEach((it, i) => {
     if (!it.tokens.length) return
     let hit = 0
@@ -651,9 +652,14 @@ function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
     }
     if (!hit) return
     const score = 0.7 + 0.25 * (hit / total)
-    if (!best || score > best.score) best = { idx: i, by: 'model', score }
+    if (best && Math.abs(score - best.score) < 1e-9) tied = true
+    else if (!best || score > best.score) {
+      best = { idx: i, by: 'model', score }
+      tied = false
+    }
   })
-  if (best) return best
+  // A code that two items share in the same measure ("SS316" in a valve and a level switch) does not pick one: the wording does.
+  if (best && !tied) return best
   // 2. description similarity: how much of the item's own wording the line repeats
   const lw = new Set(words(raw))
   let bestD: Match | null = null

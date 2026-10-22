@@ -186,7 +186,8 @@ export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: 
       dropped.push(t)
       continue
     }
-    afterTotal = isTotalRow(t) && !/\d/.test(t)
+    // ("VAT 5%" / "4100.50": the rate is part of the label.)
+    afterTotal = isTotalRow(t) && !/\d/.test(t.replace(/\d+(?:\.\d+)?\s*%/g, ''))
     const first = cells(t).find(Boolean) ?? ''
     const drop =
       isTotalRow(t) ||

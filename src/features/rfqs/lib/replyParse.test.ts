@@ -580,3 +580,14 @@ describe('a table with list price, discount and net price (fictional)', () => {
     expect(o.currency).toBe('USD')
   })
 })
+
+describe('a material grade two items share (fictional)', () => {
+  it('matches by the wording, not by "SS316"', () => {
+    const items: ReplyItemRef[] = [
+      { id: 'a', description: 'Solenoid valve 1/2 inch, SS316', qty: 3 },
+      { id: 'b', description: 'Level switch vibrating fork SS316', qty: 4 },
+    ]
+    const text = 'Item\tDescription\tQty\tUnit Price USD\n1\tLevel switch vibrating fork SS316\t4\t8.50'
+    expect(one(parseSupplierReply(text, items, { today: '2026-10-20' }).offers, 'b').unitPrice).toBe(8.5)
+  })
+})

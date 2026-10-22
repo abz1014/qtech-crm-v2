@@ -406,3 +406,19 @@ describe('parseEnquiry: corpus batches 16 and 17 (fictional)', () => {
     expect(rows(text)).toEqual([['Butterfly valve DN100 wafer type', 2, 'Each']])
   })
 })
+
+describe('parseEnquiry: corpus batches 18 and 19 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('reads "Brand: X / Qty: 5 Each" and a "- Qty:" sub-bullet under an item', () => {
+    expect(rows('1. Encoder 1024 PPR\n   Brand: Polaron / Qty: 4 Each\n• Relay 24VDC\n    - Qty: 3 Nos')).toEqual([
+      ['Encoder 1024 PPR, Brand: Polaron', 4, 'Each'],
+      ['Relay 24VDC', 3, 'nos'],
+    ])
+  })
+
+  it('reads a one-cell-per-line table with the quantity and unit in one cell, and stops at the name under it', () => {
+    const text = ['Item Code', 'Item Name', 'Required Qty', 'IC-4100', 'Proximity sensor M30', '6 Numbers', 'Hira Example', 'Example Steel Industries Limited'].join('\n')
+    expect(rows(text)).toEqual([['Proximity sensor M30', 6, 'nos']])
+  })
+})
