@@ -102,7 +102,8 @@ export function BottomTabs({
             to={item.path}
             className={({ isActive }) =>
               cn(
-                'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] py-2 text-xs font-medium',
+                // Under 360 px six 16 px labels need the tight tracking to share the width (the shell-widths check at 320).
+                'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] py-2 text-xs font-medium max-[359px]:tracking-tight',
                 isActive ? 'text-fg' : 'text-fg-2 hover:text-fg',
               )
             }
