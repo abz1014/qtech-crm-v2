@@ -530,6 +530,7 @@ test.describe('long real-world text (live import, 2026-10-22)', () => {
               overlaps.push(`"${a.node.data.trim().slice(0, 30)}" x "${c.node.data.trim().slice(0, 30)}"`)
           }
         const cut = Array.from(tr.querySelectorAll<HTMLElement>('td, td *')).filter(el => {
+          if (el.closest('.sr-only')) return false // screen-reader text lives in a 1 px clipped box on purpose
           const s = getComputedStyle(el)
           return (s.overflowX === 'hidden' || s.overflowX === 'clip') && s.textOverflow !== 'ellipsis' && el.scrollWidth > el.clientWidth + 1
         }).length
