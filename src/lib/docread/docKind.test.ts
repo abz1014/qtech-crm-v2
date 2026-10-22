@@ -167,7 +167,7 @@ describe('classifyDoc on an email thread', () => {
 
   it('reads mail we wrote as our own enquiry, our own quotation or an internal note', () => {
     const us = { from: 'Q-Tech <sales@q-tech.example>' }
-    expect(classifyDoc('Dear Cathy,\n\nPlease send the price quotation with reseller price of below part.\n\nInductive sensor X1\nQuantity 4 nos', us).kind).toBe('own-rfq')
+    expect(classifyDoc('Dear Ms. Lee,\n\nPlease send the price quotation with reseller price of below part.\n\nInductive sensor X1\nQuantity 4 nos', us).kind).toBe('own-rfq')
     expect(classifyDoc('Dear Sir,\nThank you for considering us. Please find attached our price quotation along with the catalogue.', us).kind).toBe('own-quote')
     expect(classifyDoc('Dear Maggie,\nThank you for sharing the price quote. Please confirm the model is correct.', us).kind).toBe('follow-up')
     const note = 'REMINDER\n\nFrom: Q-Tech <sales@q-tech.example>\nSent: Monday\nTo: buyer@mill.example\nSubject: Re: technical advice\n\nDear Mr. Ali, hope you are fine. Awaiting your reply.'
@@ -177,7 +177,7 @@ describe('classifyDoc on an email thread', () => {
   it('reads a cold sales mail as marketing even when it invites our RFQs, and a customer request as an enquiry', () => {
     const cold = 'Hi dear,\nThis is Max from Acme Trading, an independent distributor of electronic components. We have competitive pricing and stable supply.\nIf you have any current RFQs, please send them to me and I will provide you with our best prices.\nBest regards, Max'
     expect(classifyDoc(cold, { from: 'max@acme.example', subject: 'Industrial parts supply' }).kind).toBe('marketing')
-    expect(classifyDoc('Dear Sir,\nWe kindly request a quotation for Collective No:1000011040 at your earliest convenience.', { from: 'buyer@mill.example', subject: 'Collective No:1000011040' }).kind).toBe('rfq')
+    expect(classifyDoc('Dear Sir,\nWe kindly request a quotation for Request No:2200451 at your earliest convenience.', { from: 'buyer@mill.example', subject: 'Request No:2200451' }).kind).toBe('rfq')
   })
 
   it('reads a fresh supplier mail with a quotation attached as a supplier quotation', () => {
