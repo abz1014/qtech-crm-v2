@@ -575,6 +575,12 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
     w = blank(w, q)
   }
 
+  // A date written with the month's name and a clock time ("Wednesday, October 21, 2026 9:14 AM", a mail header in a
+  // screenshot) holds no price.
+  w = w.replace(
+    /\b(?:(?:mon|tues|wednes|thurs|fri|satur|sun)day,?\s+)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?,?\s+\d{4})(?:,?\s+(?:at\s+)?\d{1,2}:\d{2}(?:\s*[ap]m)?)?/gi,
+    m => ' '.repeat(m.length),
+  )
   if (!skipPrice) {
     const anchored = findAnchoredPrices(w, null)
     for (const c of anchored) w = blank(w, c)
@@ -762,7 +768,31 @@ function tableHeader(cells: string[]): TableCols | null {
   }
 }
 
-const SEPARATOR_ROW = /^[\s|:\-+=_*]{3,}$/
+/**
+ * Three cells of a row, left to right, where the first is a whole quantity and the third is it times the second: the unit
+ * price ("50 | 480 | 24000.00"). Null when no such three are there.
+ */
+function qtyPriceTotal(cells: string[]): { qty: number; price: number } | null {
+  const nums = cells.map((c, i) => {
+    const t = c.trim().replace(/^(?:[A-Za-z$€£¥]{1,4}\.?\s?)/, '')
+    if (!/^\d[\d,]*(?:\.\d+)?$/.test(t)) return null
+    const a = parseAmount(t)
+    return a && a.value > 0 ? { i, v: a.value, whole: /^\d{1,6}$/.test(t) } : null
+  })
+  const ns = nums.filter((n): n is { i: number; v: number; whole: boolean } => n !== null)
+  for (let a = 0; a < ns.length; a++)
+    for (let b = a + 1; b < ns.length; b++)
+      for (let c = b + 1; c < ns.length; c++) {
+        const q = ns[a]!
+        const p = ns[b]!
+        const t = ns[c]!
+        if (!q.whole || q.v > 100000) continue
+        if (Math.abs(q.v * p.v - t.v) <= Math.max(0.011, 0.002 * t.v)) return { qty: q.v, price: p.v }
+      }
+  return null
+}
+
+const SEPARATOR_ROW =/^[\s|:\-+=_*]{3,}$/
 
 function analyseRow(cells: string[], cols: TableCols, today: string | undefined): LineFields {
   const f = analyse(cells.join(' | '), today, true)
@@ -899,6 +929,15 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     }
     const rowCols = cols && cells && cells.length === cols.n ? cols : null
     const f = rowCols && cells ? analyseRow(cells, rowCols, opts.today) : analyse(line.text, opts.today)
+    // A table row with no heading to go by (a picture lost it): quantity × unit price = total names the unit price.
+    if (!rowCols && cells) {
+      const qpt = qtyPriceTotal(cells)
+      if (qpt) {
+        const cur = f.prices.find(p => p.currency)?.currency ?? null
+        f.prices = [{ value: qpt.price, currency: cur, ambiguous: false, anchored: true, kind: 'unit', forQty: null, start: 0, end: 0 }]
+        f.qty = qpt.qty
+      }
+    }
     const match = matchByContent(line.text, idx)
     const rowNumber = rowCols && cells && rowCols.num >= 0 && /^\d{1,3}$/.test(cells[rowCols.num] ?? '') ? Number(cells[rowCols.num]) - 1 : null
     const numIdx = rowNumber !== null && rowNumber >= 0 && rowNumber < idx.length ? rowNumber : markerNumber(line.text, idx.length)
