@@ -228,6 +228,8 @@ const cleanPayment = (s: string) => s.trim().replace(/^(?:is|are|will\s+be|to\s+
 function readFacts(lines: string[], today: string): Omit<QuoteFacts, 'currency'> {
   const f: Omit<QuoteFacts, 'currency'> = { quoteRef: null, quoteDate: null, validity: null, leadTime: null, paymentTerms: null, incoterm: null, moq: null }
   // A paragraph is read a sentence at a time ("... Prices valid 30 days. Our quote ref is SQ-8841.").
+  /** A lead time written inside a sentence counts only when no line of its own ("Lead time: 6-8 weeks") gives one. */
+  let inlineLead: LeadTime | null = null
   for (const line of lines.flatMap(l => splitSentences(l))) {
     const t = line.replace(/\t+/g, ' ').trim()
     if (!t) continue
@@ -262,9 +264,9 @@ function readFacts(lines: string[], today: string): Omit<QuoteFacts, 'currency'>
       }
     }
     if (!f.leadTime && LEAD_LABEL.test(t) && !/terms/i.test(t)) f.leadTime = parseLeadTime(t)
-    if (!f.leadTime) {
+    if (!f.leadTime && !inlineLead) {
       const li = LEAD_INLINE.exec(t)
-      if (li) f.leadTime = parseLeadTime(t.slice(li.index + li[0].length))
+      if (li) inlineLead = parseLeadTime(t.slice(li.index + li[0].length))
     }
     if (!f.paymentTerms) {
       const p = PAYMENT.exec(t) ?? PAYMENT_INLINE.exec(t)
@@ -281,6 +283,7 @@ function readFacts(lines: string[], today: string): Omit<QuoteFacts, 'currency'>
       if (m) f.moq = Number((m[1] as string).replace(/,/g, ''))
     }
   }
+  f.leadTime ??= inlineLead
   return f
 }
 
