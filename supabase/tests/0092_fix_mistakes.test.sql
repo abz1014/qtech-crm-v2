@@ -219,6 +219,11 @@ select is((select array_agg(t.tgrelid::regclass::text order by t.tgrelid::regcla
            where t.tgname like '%guard_entered_by' and not t.tgisinternal),
   array['invoices', 'order_items', 'orders', 'rfq_items', 'rfqs'], 'the guard sits on rfqs, rfq_items, orders, order_items and invoices');
 
+select is((select array_agg(distinct p.proname::text order by p.proname::text) from pg_proc p
+           where p.pronamespace = 'public'::regnamespace and p.prosrc like '%qtech.entered_by_bypass%'),
+  array['issue_purchase_order', 'issue_quotation', 'split_order_item'],
+  'the three workflow RPCs that write prices and quantities of others'' records carry the guard''s bypass marker (keep it when editing them)');
+
 -- ================================================================== guard_entered_by: RFQs
 select is(pg_temp.code_('sales', 'update public.rfqs set company_id = @03 where id = @12 returning 1'), 'E:42501:not_yours',
   'sales cannot change the customer of an RFQ the admin entered');

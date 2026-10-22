@@ -40,7 +40,8 @@ declare
   v_uid     uuid;
   v_mine    boolean;
 begin
-  if current_user not in ('authenticated', 'qtech_engineer') then
+  if current_user not in ('authenticated', 'qtech_engineer')
+     or coalesce(current_setting('qtech.entered_by_bypass', true), '') = 'on' then
     return case when tg_op = 'DELETE' then old else new end;
   end if;
   v_old := to_jsonb(old);
@@ -80,6 +81,45 @@ end;
 $$;
 
 revoke all on function public.guard_entered_by() from public, anon, authenticated;
+
+-- The three workflow RPCs that write protected columns of records somebody else entered, as part of their job, are not limited:
+--   issue_quotation       writes the quoted price, GST rate and lead time of the RFQ's items (0083)
+--   issue_purchase_order  writes the supplier price of the order's lines (0023/0036)
+--   split_order_item      moves quantity between an order's lines and supplier orders (0050)
+-- Each is patched below to set the transaction-local marker qtech.entered_by_bypass = 'on' as its first statement (set_config
+-- is not callable through the data API, so a client cannot set it; one API request is one transaction, so it ends with the
+-- call). Patched from the current definitions, as the month lock is, so a later edit of one of these functions must keep the
+-- line: the 0092 pgTAP test fails if it is lost.
+do $$
+declare
+  f record;
+  def text;
+  patched text;
+  n int := 0;
+begin
+  for f in
+    select p.oid
+    from pg_catalog.pg_proc p
+    where p.pronamespace = 'public'::regnamespace
+      and p.proname in ('issue_quotation', 'issue_purchase_order', 'split_order_item')
+  loop
+    def := pg_catalog.pg_get_functiondef(f.oid);
+    patched := regexp_replace(
+      def, chr(10) || 'begin' || chr(10),
+      chr(10) || 'begin' || chr(10)
+        || '  perform pg_catalog.set_config(''qtech.entered_by_bypass'', ''on'', true);   -- 0092: workflow write, not an edit of somebody''s entry'
+        || chr(10));
+    if patched = def then
+      raise exception '0092: a workflow function was not in the expected shape';
+    end if;
+    execute patched;
+    n := n + 1;
+  end loop;
+  if n <> 3 then
+    raise exception '0092: expected three workflow functions';
+  end if;
+end
+$$;
 
 create trigger rfqs_guard_entered_by before update or delete on public.rfqs
   for each row execute function public.guard_entered_by('company_id', 'site_id', 'contact_id', 'customer_ref', 'received_on');
