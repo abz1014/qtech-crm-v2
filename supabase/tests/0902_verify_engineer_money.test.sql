@@ -301,6 +301,7 @@ insert into money_fns values
   ('customer_price_memory', 'sold_order_number', 'info'), ('customer_price_memory', 'sold_tier', 'info'),
   ('po_line_prefill', 'unit_price', 'supplier'),
   ('search_closed_rfqs', 'total', 'info'),
+  ('record_history', '<return>', 'info'), ('record_history_rows', '<return>', 'info'),   -- 0090: redacted with the engineer's column privileges (0090_record_history.test.sql proves no price comes back)
   ('receivables_list', 'gross_target', 'hidden'), ('receivables_list', 'settled', 'hidden'), ('receivables_list', 'balance', 'hidden'),
   ('receivables_list', 'overpaid_by', 'hidden'),
   ('receivables_summary', 'gross', 'hidden'), ('receivables_summary', 'settled', 'hidden'), ('receivables_summary', 'outstanding', 'hidden'),

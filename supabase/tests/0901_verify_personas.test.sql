@@ -221,6 +221,7 @@ insert into spec values
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0086
+  ('history_sources', '', $q$child_table = 'rfq_items' and parent_table = 'rfqs'$q$, 'label_col', $q$insert into public.history_sources (child_table, parent_table, parent_col, roles) values ('probe', 'probe', 'x', '{admin}')$q$),   -- 0090
   ('expense_claims', '', 'id = @e0', 'note', $q$insert into public.expense_claims (id, amount_pkr) values (@e4, 5)$q$),   -- 0087
   ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
   ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$),   -- 0087
@@ -394,6 +395,8 @@ insert into probes values
   ('receivables_summary', '', 'X', $q$select * from public.receivables_summary() where gross > 0$q$),
   ('today_inquiry_facts', '', 'X', $q$select * from public.today_inquiry_facts()$q$),
   ('lookup_labels', '', 'X', $q$select 1 from (select public.lookup_labels(array[@01], array[@23], array[@20]) j) x where j::text ~ 'M Main|ORD-'$q$),
+  ('record_history', '', 'X', $q$select 1 where public.record_history('rfqs', @15) is not null$q$),   -- 0090
+  ('record_history_rows', '', 'X', $q$select 1 from (select set_config('qtech.history_for', 'rfqs:' || @15::text, true)) m where public.record_history_rows('rfqs', @15) is not null$q$),   -- 0090: with the mark record_history sets
   -- 0087
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),

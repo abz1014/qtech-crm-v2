@@ -695,6 +695,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"history_sources": {
+                  Row: {
+                    "child_table": string,"label_col": string | null,"parent_col": string,"parent_table": string,"roles": (string)[]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "child_table": string,"label_col"?: string | null,"parent_col": string,"parent_table": string,"roles": (string)[]
+                  }
+                  Update: {
+                    "child_table"?: string,"label_col"?: string | null,"parent_col"?: string,"parent_table"?: string,"roles"?: (string)[]
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"inquiry_item_declines": {
                   Row: {
                     "created_at": string,"created_by": string | null,"inquiry_id": string,"reason": string,"rfq_item_id": string
@@ -2352,6 +2366,12 @@ isOneToOne: false
 { Args: { "p_today"?: string }; Returns: {
               "gross": number,"not_invoiced": number,"not_invoiced_count": number,"not_yet_due": number,"not_yet_due_count": number,"open_count": number,"outstanding": number,"overdue": number,"overdue_count": number,"reminder_due_count": number,"settled": number,"settled_count": number
             }[]
+                           },
+"record_history":
+{ Args: { "p_before"?: string,"p_id": string,"p_limit"?: number,"p_table": string }; Returns: Json
+                           },
+"record_history_rows":
+{ Args: { "p_before"?: string,"p_id": string,"p_limit"?: number,"p_table": string }; Returns: Json
                            },
 "reopen_month":
 { Args: { "p_month": string,"p_note"?: string }; Returns: undefined

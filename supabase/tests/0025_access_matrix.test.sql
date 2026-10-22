@@ -169,6 +169,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'receivables_summary',     '',    'X',    'X',    ''),     -- 0074: the Who-owes-us figures in one row; order_receivables() access
   ('function', 'today_inquiry_facts',     '',    'X',    'X',    'X'),    -- 0074: Today's enquiry facts in one call, SECURITY INVOKER, all staff
   ('function', 'lookup_labels',           '',    'X',    'X',    'X'),    -- 0074: names for id lists sent in the body, SECURITY INVOKER, all staff (row security applies)
+  ('function', 'record_history',          '',    'X',    'X',    'X'),    -- 0090: the history of a record the caller can open (SECURITY INVOKER; an engineer gets no price column)
+  ('function', 'record_history_rows',     '',    'X',    'X',    'X'),    -- 0090: the definer reader behind it; refuses unless record_history marked the transaction
   ('function', 'my_target_progress',      '',    'X',    'X',    'X'),    -- s10 "my_target_progress() (definer)"
   ('function', 'my_target_progress_at',   '',    '',     '',     ''),     -- A4: test seam granted to nobody
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
@@ -228,6 +230,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'today_pkt',               '',    'X',    'X',    'X'),    -- NOT in s10: pure date helper
   ('table', 'expense_categories',  '',           'SIUD', '',     ''),     -- A6 s10 "expense_categories": admin only, delete blocked while in use
   ('table', 'expense_groups',      '',           'SIUD', '',     ''),     -- 0086: the first level of the expense list, admin only
+  ('table', 'history_sources',    '',           'S',    'S',    'S'),    -- 0090: which child tables show under a record's history; read-only for all staff
   ('table', 'closed_months',       '',           'S',    '',     ''),     -- A6 s10 "closed_months": admin reads; written only through the admin RPCs
   ('table', 'month_snapshots',     '',           'S',    '',     ''),     -- 0058 (owner decision D-MR2): a closed month's frozen figures; admin reads, written only by the close trigger
   ('table', 'attachments',         'expense',    'SIUD', '',     ''),     -- A6 s10 "attachments (parent is an expense)": admin only
@@ -407,6 +410,7 @@ insert into spec values
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0086
+  ('history_sources', '', $q$child_table = 'rfq_items' and parent_table = 'rfqs'$q$, 'label_col', $q$insert into public.history_sources (child_table, parent_table, parent_col, roles) values ('probe', 'probe', 'x', '{admin}')$q$),   -- 0090
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
   ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
@@ -468,6 +472,8 @@ insert into probes values
   ('receivables_summary', '', 'X', 'select * from public.receivables_summary()'),   -- 0074: one row for admin and sales, none for a deactivated user
   ('today_inquiry_facts', '', 'X', 'select * from public.today_inquiry_facts()'),   -- 0074: @1a is sent and awaiting on the open RFQ @15
   ('lookup_labels', '', 'X', $q$select 1 where public.lookup_labels(array[@01]) -> 'companies' ? @01::text$q$),   -- 0074: row security hides the name from a deactivated user
+  ('record_history', '', 'X', $q$select 1 where public.record_history('rfqs', @15) is not null$q$),   -- 0090
+  ('record_history_rows', '', 'X', $q$select 1 from (select set_config('qtech.history_for', 'rfqs:' || @15::text, true)) m where public.record_history_rows('rfqs', @15) is not null$q$),   -- 0090: with the mark record_history sets
   ('my_target_progress', '', 'X', 'select * from public.my_target_progress()'),
   ('my_target_progress_at', '', 'X', 'select * from public.my_target_progress_at(now())'),
   ('float_rfq', '', 'X', $q$select public.float_rfq(@c0, @01, '[{"description":"x"}]'::jsonb)$q$),
@@ -590,8 +596,8 @@ insert into probes values
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (37)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 37, 'coverage: 37 tables');
+  'coverage: the matrix lists every table in schema public (38)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 38, 'coverage: 38 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

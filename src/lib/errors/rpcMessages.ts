@@ -62,6 +62,10 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // 0085 session cutoff (HW-17/HW-45): already sentences; the app signs the person out on these
   { match: /^Your session has ended\. Sign in again\.$/ },
   { match: /^This account has been deactivated\.$/ },
+  // 0090 record history
+  { match: /^You cannot see the history of this record\.$/ },
+  { match: /^This kind of record has no history page\.$/, internal: true },
+  { match: /^record_history_rows is internal: call record_history$/, internal: true },
   { match: /^The correction of this payment has been changed since\./ },
   { match: /^The date received is required\.$/ },
   { match: /^This payment is already voided\./ },
