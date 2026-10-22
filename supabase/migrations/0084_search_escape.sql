@@ -1,4 +1,4 @@
--- 0085_search_escape (hunt HW-29): two fixes to the palette's search_all (last defined in 0054); nothing else changes.
+-- 0084_search_escape (hunt HW-29): two fixes to the palette's search_all (last defined in 0054); nothing else changes.
 --
 --   1. A backslash in the typed text is escaped for ILIKE. 0054 wrote replace(t, '\', '\'), which does nothing, so a name
 --      with "\" in it could not be found (the lone backslash escaped the next character instead). Now "\" becomes "\\"

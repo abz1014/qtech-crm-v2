@@ -59,7 +59,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Only the person who voided this payment can undo it\./ },
   { match: /^Paid via must be bank or cash\.$/ },
   { match: /^The amount must be above zero\.$/ },
-  // 0086 session cutoff (HW-17/HW-45): already sentences; the app signs the person out on these
+  // 0085 session cutoff (HW-17/HW-45): already sentences; the app signs the person out on these
   { match: /^Your session has ended\. Sign in again\.$/ },
   { match: /^This account has been deactivated\.$/ },
   { match: /^The correction of this payment has been changed since\./ },

@@ -1,4 +1,4 @@
--- 0086_session_cutoff (HW-17, HW-45): "signed out on every device" holds at once, not when the access token expires.
+-- 0085_session_cutoff (HW-17, HW-45): "signed out on every device" holds at once, not when the access token expires.
 --
 -- An access token is a signed JWT: PostgREST checks its signature and expiry, nothing else, so a session ended by Reset
 -- password or Deactivate (admin-users deletes the person's auth.sessions rows; their refresh tokens cascade) kept reading
@@ -49,7 +49,7 @@ $$;
 revoke all on function qtech_guard.check_session() from public;
 grant execute on function qtech_guard.check_session() to anon, authenticated, service_role, qtech_engineer;
 comment on function qtech_guard.check_session() is
-  'HW-17/HW-45 (0086): run by qtech_private.pre_request. Refuses a token whose session was ended (reset password, deactivate, sign-out).';
+  'HW-17/HW-45 (0085): run by qtech_private.pre_request. Refuses a token whose session was ended (reset password, deactivate, sign-out).';
 
 -- 0081's pre-request, with the session check first. Same name, so the authenticator setting is unchanged.
 create or replace function qtech_private.pre_request()
@@ -68,6 +68,6 @@ begin
 end;
 $$;
 comment on function qtech_private.pre_request() is
-  '0081 + 0086: PostgREST db-pre-request. A token of an ended session is refused (qtech_guard.check_session); an engineer''s request runs as qtech_engineer (no prices); everyone else is untouched.';
+  '0081 + 0085: PostgREST db-pre-request. A token of an ended session is refused (qtech_guard.check_session); an engineer''s request runs as qtech_engineer (no prices); everyone else is untouched.';
 
 notify pgrst, 'reload config';

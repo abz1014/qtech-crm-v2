@@ -114,7 +114,7 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
     group: 'Results',
     order: 10,
     search: async (query, signal) => {
-      // Doubled spaces inside the text are one space, as the database search treats them (migration 0085).
+      // Doubled spaces inside the text are one space, as the database search treats them (migration 0084).
       const q = query.trim().replace(/\s+/g, ' ')
       if (!q) return []
       if (!(await pause(debounceMs, signal))) return []
