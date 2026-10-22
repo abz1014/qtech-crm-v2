@@ -120,7 +120,7 @@ const FREE_MAIL = /^(?:gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icl
 // ------------------------------------------------------------------------------------------------ quantities
 
 const UNIT_SRC = String.raw`nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|rolls?|mtrs?|meters?|metres?|m|ltrs?|litres?|liters?|l|kgs?|ft|feet|prs?|adad|rmt?|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?`
-const QTY_WORD = String.raw`(?:qty\.?\s*req(?:uired|d)?\.?|req(?:uired|\.)?\s*qty\.?|required\s+(?:qty\.?|quantity)|quantity\s+required|qty\.?|quantity|q'ty|qnty)`
+const QTY_WORD = String.raw`(?:qty\.?\s*req(?:uired|d)?\.?|req(?:uired|\.)?\s*qty\.?|required\s+(?:qty\.?|quantity)|quantity\s+required|qty\.?|quantity|q'ty|qnty|gty|qtv|oty)`
 const LABELLED_QTY = new RegExp(
   String.raw`(^|[\s,;(|[])${QTY_WORD}\s*[:=.\-–]?\s*(\d[\d,]*(?:\.\d+)?)(?:\s*(${UNIT_SRC}))?(?![A-Za-z0-9])`,
   'i',
@@ -208,6 +208,8 @@ function readItem(text: string): ReadItem | null {
     .replace(new RegExp(String.raw`\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?=(?:${UNIT_SRC})\.?(?![A-Za-z]))`, 'gi'), (_, w: string) => `${NUMBER_WORDS.indexOf(w.toLowerCase()) + 1} `)
     .replace(OPENER, '')
     .replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
+    // A material code that a picture ran into the description ("14292829 VALVE,BUTTERFLY;..."): the customer's store code.
+    .replace(/^\d{7,9}\s+(?=[A-Z]{3})/, '')
   let qty: number | null = null
   let unit: string | null = null
   const lab = LABELLED_QTY.exec(t)
@@ -595,11 +597,10 @@ function formRow(cells: string[]): ReadItem | null {
     if (!NUM_CELL.test(c)) continue
     const unitAt = UNIT_CELL.test(cells[i - 1] ?? '') ? i - 1 : UNIT_CELL.test(cells[i + 1] ?? '') ? i + 1 : -1
     if (unitAt < 0) continue
-    const text = cells
-      .slice(0, Math.min(i, unitAt))
-      .filter(Boolean)
-      .filter((x, k) => !(k === 0 && /^(?:\d+\s*\.?|\d{4,})$/.test(x)))
-    const description = tidy(text.join(' '))
+    const text = cells.slice(0, Math.min(i, unitAt)).filter(Boolean)
+    // The serial number and the material code in front ("00010", "14292829") are not the description.
+    while (text.length > 1 && /^(?:\d+\s*\.?|\d{4,})$/.test(text[0] as string)) text.shift()
+    const description = tidy(text.join(' ').replace(/^\d{7,9}\s+(?=[A-Z]{3})/, ''))
     if (!description || !/[A-Za-z]{2}/.test(description)) return null
     return { description, qty: toQty(c), unit: unitOf(cells[unitAt]), rawQty: c }
   }

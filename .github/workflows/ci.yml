@@ -142,7 +142,18 @@ jobs:
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
         env:
           E2E_CSP: "1"
+          # The text read from each fictional corpus picture, kept as an artifact to work on the reader from (Linux renders the
+          # fonts differently from a developer's machine).
+          CORPUS_OCR_OUT: ocr-texts.json
         run: npx playwright test --project=docread
+      - name: Upload the corpus OCR texts
+        if: ${{ always() && !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ocr-texts
+          path: ocr-texts.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload generated baselines
         if: ${{ always() && (steps.visual.outputs.generated == 'true' || (github.event_name == 'workflow_dispatch' && inputs.update_baselines)) }}
         uses: actions/upload-artifact@v7
