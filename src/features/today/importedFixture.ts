@@ -93,10 +93,10 @@ export function importedStyleInputs(): TodayInputs {
 
   const orders: OrderFact[] = [
     // imported: commissioning never planned
-    order(10, { orderedOn: ago(700), goodsState: 'delivered', commissioningState: 'to_plan', invoicingState: 'fully_invoiced' }),
+    order(10, { orderedOn: ago(700), goodsState: 'delivered', commissioningState: 'to_plan', invoicingState: 'fully_invoiced', legacy: true }),
     // imported: part-invoiced, delivered 757 days ago
     ...Array.from({ length: 5 }, (_, i) =>
-      order(11 + i, { invoicingState: 'part', deliveredOn: ago(757), lastInvoicedOn: ago(757 - i), toInvoice: 150_000 + i * 1_000 }),
+      order(11 + i, { invoicingState: 'part', deliveredOn: ago(757), lastInvoicedOn: ago(757 - i), toInvoice: 150_000 + i * 1_000, legacy: true }),
     ),
     // v2: delivered yesterday, not invoiced
     order(301, { ownerId: FIXTURE_ADMIN, orderedOn: ago(20), invoicingState: 'not_invoiced', deliveredOn: ago(1) }),
