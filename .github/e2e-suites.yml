@@ -18,6 +18,7 @@ shared:
   - 'scripts/ci/e2e-*'
   - 'vercel.json'
   - 'vite.config.ts'
+  - 'app-version.json'
 auth: # weight=35
   - 'e2e/auth/**'
 companies: # weight=70
@@ -63,7 +64,7 @@ pwa: # weight=10 (no database reset)
   - 'vite.config.ts'
   - 'index.html'
   - 'public/**'
-perf: # weight=260 (Lighthouse, 7 screens x 2; installs lighthouse@12.8.2)
+perf: # weight=380 (Lighthouse: accessibility 7 screens x 2, performance 7 phone screens; installs lighthouse@12.8.2)
   - 'e2e/perf/**'
 journeys: # weight=120 (installs poppler; also runs on every change under src/** through `shared`)
   - 'e2e/journeys/**'
@@ -96,3 +97,19 @@ verify-resilience: # weight=120 (workflow verification)
 verify-roles: # weight=240 (every route as every role, the data API per persona, admin-users, data safety)
   - 'e2e/verify-roles/**'
   - 'supabase/functions/admin-users/**'
+hunt-workflows: # weight=700 (exploratory bug hunt, branch hunt/workflows: the crawl and the confirmed bugs)
+  - 'e2e/hunt/workflows/crawl.spec.ts'
+  - 'e2e/hunt/workflows/bugs.spec.ts'
+  - 'e2e/hunt/workflows/support.ts'
+hunt-workflows-sales: # weight=750 (bug hunt: the sales workflow; installs poppler)
+  - 'e2e/hunt/workflows/sales.spec.ts'
+  - 'e2e/hunt/workflows/support.ts'
+hunt-workflows-orders: # weight=750 (bug hunt: orders, invoices, payments; installs poppler)
+  - 'e2e/hunt/workflows/orderflow.spec.ts'
+  - 'e2e/hunt/workflows/support.ts'
+hunt-workflows-books: # weight=700 (bug hunt: expenses, month end, reports, team, settings)
+  - 'e2e/hunt/workflows/books.spec.ts'
+  - 'e2e/hunt/workflows/support.ts'
+hunt-workflows-crosscut: # weight=750 (bug hunt: Today, search, shortcuts, help, lists, offline, tabs)
+  - 'e2e/hunt/workflows/crosscut.spec.ts'
+  - 'e2e/hunt/workflows/support.ts'

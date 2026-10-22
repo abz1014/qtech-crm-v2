@@ -532,6 +532,9 @@ function findBarePrices(w: string, anchoredCount: number): PriceCand[] {
   return found.length === 1 ? found : []
 }
 
+const NO_PRICE_RE =
+  /\b(?:price|prices|rate|cost)\s+(?:(?:on|upon)\s+(?:request|application|enquiry|inquiry)|to\s+(?:follow|be\s+(?:advised|confirmed|quoted))|tba|tbc|later)\b|(?:^|[-:|]\s*)(?:on\s+request|to\s+be\s+(?:advised|confirmed|quoted)|tba|tbc)\s*\.?\s*$|(?<![A-Za-z])P\.?\s?O\.?\s?R(?![A-Za-z])/i
+
 const DECLARE_RE = new RegExp(String.raw`\b(?:prices?|rates?|quot(?:e|ed|ation)s?|currency|amounts?|offers?)\b[^.\n]{0,40}?${CUR_CODE_SRC}(?![A-Za-z])|${CUR_CODE_SRC}(?![A-Za-z])\s+(?:prices?|rates?|basis|only)\b`, 'i')
 
 function analyse(raw: string, today: string | undefined, skipPrice = false): LineFields {
@@ -575,7 +578,9 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
   if (!skipPrice) {
     const anchored = findAnchoredPrices(w, null)
     for (const c of anchored) w = blank(w, c)
-    f.prices = anchored.length ? anchored : findBarePrices(w, 0)
+    // HW-5: "price on request" / "POR" / "TBA" says there is no price on this line, so a bare number on it ("2 core",
+    // "3 way") is part of the item, never a price. A price written with its currency still counts.
+    f.prices = anchored.length ? anchored : NO_PRICE_RE.test(w) ? [] : findBarePrices(w, 0)
   }
 
   // "Relay 12VDC, 2 CO, Model X: Sorry, not available": a regret with only a bare number in it quotes nothing.

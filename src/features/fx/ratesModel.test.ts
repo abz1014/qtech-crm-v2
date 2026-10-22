@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FxLatestRow } from '@/features/rfqs/api'
-import { ageText, autoRunStamp, bandLabel, buildRateBar, buildRateRows, rateBarNote, sourceText, unusableWarning } from './ratesModel'
+import { ageText, autoRunStamp, bandLabel, buildRateBar, buildRateRows, rateBarNote, manualRateProblem, rateCardLine, sourceText, unusableWarning } from './ratesModel'
 
 const row = (currency: string, ratePkr: number, ageDays: number, source = 'auto'): FxLatestRow => ({
   currency,
@@ -56,5 +56,28 @@ describe('rate bar', () => {
 describe('autoRunStamp', () => {
   it('reads the nightly run in Karachi time, as the mockup does', () => {
     expect(autoRunStamp('2026-11-26T21:10:00Z')).toBe('Automatic update ran Fri 27 Nov, 02:10')
+  })
+})
+
+describe('rateCardLine (phone cards)', () => {
+  it('reads "USD 280.50 · 22 Oct · by hand", and says when there is no rate', () => {
+    expect(rateCardLine({ currency: 'USD', ratePkr: 280.5, asOf: '2026-10-22', source: 'manual' })).toBe('USD 280.50 · 22 Oct · by hand')
+    expect(rateCardLine({ currency: 'EUR', ratePkr: 301.15, asOf: '2026-10-21', source: 'auto' })).toBe('EUR 301.15 · 21 Oct · automatic')
+    expect(rateCardLine({ currency: 'JPY', ratePkr: null, asOf: null, source: null })).toBe('JPY · no rate yet')
+  })
+})
+
+describe('HW-46: a rate typed by hand', () => {
+  const at = (text: string, rate: number | null, asOf = '2026-10-22', last: number | null = 74.9) =>
+    manualRateProblem({ text, rate, asOf, today: '2026-10-22', last })
+  it('refuses an absurd rate, a zero and a future date, each under its own field', () => {
+    expect(at('1,000,000,000', 1e9)).toMatchObject({ field: 'rate', error: expect.stringMatching(/too large/) })
+    expect(at('0', 0)).toMatchObject({ field: 'rate', error: expect.stringMatching(/above zero/) })
+    expect(at('75', 75, '2026-11-21')).toMatchObject({ field: 'asOf', error: expect.stringMatching(/future/) })
+  })
+  it('asks for a second look, without blocking, when far from the latest rate', () => {
+    expect(at('750', 750)).toMatchObject({ error: null, warning: expect.stringMatching(/far from the latest rate/) })
+    expect(at('76.2', 76.2)).toEqual({ error: null, field: null, warning: null })
+    expect(at('', null)).toEqual({ error: null, field: null, warning: null })
   })
 })

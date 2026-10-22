@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { InfoTip } from '@/ui/InfoTip'
 import { businessToday } from '@/lib/dates'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
@@ -27,6 +28,7 @@ const items = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`
 export function BankTickPage() {
   const today = businessToday()
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const asked = params.get('month')
   const month = isMonthKey(asked) ? asked : defaultStatementMonth(today)
   const thisMonth = today.slice(0, 7)
@@ -62,7 +64,10 @@ export function BankTickPage() {
   }
 
   const go = (by: number) => setParams({ month: shiftMonth(month, by) }, { replace: true })
+  // The one definition of "to match", the same number Month end's bank check says (bankLinesToMatch).
   const openCount = totals ? totals.openIn.count + totals.openOut.count : undefined
+  const allLines = view ? view.in.ticked.length + view.in.open.length + view.in.older.length + view.out.ticked.length + view.out.open.length + view.out.older.length : 0
+  const back = `/money/month-end?month=${month}`
   const empty =
     view &&
     view.in.ticked.length +
@@ -83,8 +88,14 @@ export function BankTickPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm font-medium text-fg-2">Statement month</span>
+        <span className="inline-flex items-center gap-2">
         <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
-        <span className="text-sm text-fg-muted">Tick each line that is on the bank statement. Cash items never appear here.</span>
+        <InfoTip label="About matching the bank statement">
+          Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement; tap again to undo. Cash items never appear here.
+          An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&rsquo;s total
+          credits and debits. Ticking changes nothing in the books and stays editable after the month closes.
+        </InfoTip>
+        </span>
       </div>
 
       {data.isError ? (
@@ -113,41 +124,33 @@ export function BankTickPage() {
             </Banner>
           ) : null}
           <SumBar
+            className="max-sm:grid-cols-1"
             label="Running ticked totals"
             items={[
               {
-                label: 'Ticked, money in',
+                label: 'Matched, money in',
                 amount: totals.tickedIn.amount,
                 paisa: 'auto', // matched against the statement to the paisa
-                sub: (
-                  <>
-                    <span className="num">{items(totals.tickedIn.count)}</span>. Compare with the statement&rsquo;s total credits.
-                  </>
-                ),
+                sub: <span className="num">{items(totals.tickedIn.count)}</span>,
               },
               {
-                label: 'Ticked, money out',
+                label: 'Matched, money out',
                 amount: totals.tickedOut.amount,
                 paisa: 'auto', // matched against the statement to the paisa
-                sub: (
-                  <>
-                    <span className="num">{items(totals.tickedOut.count)}</span>. Compare with the statement&rsquo;s total debits.
-                  </>
-                ),
+                sub: <span className="num">{items(totals.tickedOut.count)}</span>,
               },
               {
-                label: 'Not ticked, in',
-                amount: totals.openIn.amount,
-                paisa: 'auto', // matched against the statement to the paisa
-                sub: <span className="num">{items(totals.openIn.count)}</span>,
-              },
-              {
-                label: 'Not ticked, out',
-                amount: totals.openOut.amount,
-                paisa: 'auto', // matched against the statement to the paisa
+                label: 'Still to match',
+                count: openCount ?? 0,
                 sub: (
                   <>
-                    <span className="num">{items(totals.openOut.count)}</span>, <span className="num">{totals.openOut.older}</span> older
+                    <span className="num">{totals.openIn.count}</span> in · <span className="num">{totals.openOut.count}</span> out
+                    {totals.openOut.older ? (
+                      <>
+                        {' '}
+                        · <span className="num">{totals.openOut.older}</span> older
+                      </>
+                    ) : null}
                   </>
                 ),
               },
@@ -155,20 +158,38 @@ export function BankTickPage() {
           />
           {empty ? (
             <section className="rounded border bg-surface">
-              <EmptyState title={`Nothing to tick for ${monthKeyLabel(month)}`}>
-                No bank payments, bank expenses or FBR deposits fall in this month. Cash items never appear here.
+              <EmptyState
+                title={`Nothing to tick for ${monthKeyLabel(month)}`}
+                actions={
+                  <Button variant="primary" onClick={() => navigate(back)}>
+                    Back to Month end
+                  </Button>
+                }
+              >
+                No bank payments, bank expenses or FBR payments fall in this month. Cash items never appear here.
               </EmptyState>
             </section>
           ) : (
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-              <TickPanel dir="in" side={view.in} justTicked={just} onTick={onTick} />
-              <TickPanel dir="out" side={view.out} justTicked={just} onTick={onTick} />
-            </div>
+            <>
+              <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+                <TickPanel dir="in" side={view.in} justTicked={just} onTick={onTick} />
+                <TickPanel dir="out" side={view.out} justTicked={just} onTick={onTick} />
+              </div>
+              {/* The page's one green button, always in reach while ticking: how far along, and back to the checklist. */}
+              <div
+                data-testid="bank-progress"
+                className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded border bg-surface px-5 py-3 shadow-pop"
+              >
+                <span className="text-base">
+                  <b className="num font-semibold">{allLines - (openCount ?? 0)}</b> of <span className="num">{allLines}</span> matched
+                </span>
+                <span className="flex-1" />
+                <Button variant="primary" size="touch" onClick={() => navigate(back)}>
+                  Done
+                </Button>
+              </div>
+            </>
           )}
-          <p className="max-w-[100ch] text-sm text-fg-muted">
-            Ticking records that the line appeared on the {monthKeyLabel(month).split(' ')[0]} statement. It changes nothing in the books
-            and stays editable after the month closes. Money out lists bank expenses plus FBR deposits, one row per PSID group.
-          </p>
         </>
       )}
     </MoneyFrame>

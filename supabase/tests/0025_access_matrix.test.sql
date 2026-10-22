@@ -247,6 +247,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'month_is_closed',       '',      '',     '',     ''),     -- A6 A6.1: used by the lock triggers only, granted to nobody
   ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'held_advances',         '',      'X',    '',     ''),     -- 0080 (owner decision 2026-10-22): admin only (zero rows for the others)
   ('function', 'month_end_status',      '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'month_end_check_details', '', 'X',    '',     ''),     -- 0064: admin only (zero rows for the others)
   ('function', 'month_pnl_drift',       '',      'X',    '',     ''),     -- 0058 (D-MR2): helper of v_month_pnl, NULL for non-admins
@@ -254,9 +255,11 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'revoke_user_sessions', '',      '',     '',     ''),     -- A01: service role only (the admin-users Edge Function); no client persona
   ('bucket', 'rfq-files',        '',  'SIUD', 'SIUD', 'SIUD'),           -- s10 "attachments (RFQ/clarification)": bucket rfq-files, same rules
   ('bucket', 'gst-receipts',     '',  'SIUD', 'SIUD', ''),               -- s10 "attachments (invoice)": bucket gst-receipts, admin and sales
-  ('bucket', 'generated-docs',   '',  'SIUD', 'SIU',  'SIU'),            -- s10 "bucket generated-docs" (D admin only, A5)
+  ('bucket', 'generated-docs',   '',  'SIUD', 'SIU',  ''),   -- 0081: engineers none (prices on every page)
+  -- was SIU for the engineer;            -- s10 "bucket generated-docs" (D admin only, A5)
   ('bucket', 'expense-receipts', '',  'SIUD', '',     ''),               -- A6 s10 "attachments (parent is an expense)": bucket expense-receipts, admin only
-  ('bucket', 'generated-docs',   'issued',  'SU', 'S',  'S'),            -- 0057 (H-1): a PDF an issued quotation or PO points at is overwritten by an admin only
+  ('bucket', 'generated-docs',   'issued',  'SU', 'S',  ''),   -- 0081: engineers none
+  -- was S for the engineer;            -- 0057 (H-1): a PDF an issued quotation or PO points at is overwritten by an admin only
   ('table', 'quotations',        'pdf_attached', 'U', '', ''),           -- 0057 (H-1): once a PDF is attached, only an admin re-points or clears pdf_path
   ('table', 'purchase_orders',   'pdf_attached', 'U', '', ''),           -- 0057 (H-1): same for a supplier PO
   ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
@@ -309,6 +312,9 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.payments_in (id, order_id, amount, voided_at, voided_by, void_reason) values   -- 0073: voided just now by the admin
   (pg_temp.f('c0'), pg_temp.f('20'), 50, now(), 'a0000000-0000-4000-8000-000000000001', 'fixture');
+insert into public.orders (id, company_id, owner_id, cancelled_on) values   -- 0080: a cancelled, never-invoiced order holding an advance
+  (pg_temp.f('2e'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', public.today_pkt());
+insert into public.payments_in (id, order_id, amount) values (pg_temp.f('2f'), pg_temp.f('2e'), 40);
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
@@ -496,6 +502,7 @@ insert into probes values
   ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
+  ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080: the cancelled order @2e holds 40
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)

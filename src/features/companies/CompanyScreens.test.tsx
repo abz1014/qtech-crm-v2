@@ -116,24 +116,48 @@ function customerDb(c: FakeCall): FakeResult {
 
 const h2s = (root: HTMLElement) => within(root).getAllByRole('heading', { level: 2 }).map(h => h.textContent)
 
+/** The test DOM matches no media query (a narrow screen); this makes `(min-width: 1024px)` match, as on a laptop. */
+function laptop(): () => void {
+  const real = window.matchMedia
+  window.matchMedia = ((query: string) => ({ ...real(query), matches: query === '(min-width: 1024px)' })) as typeof window.matchMedia
+  return () => {
+    window.matchMedia = real
+  }
+}
+
 describe('supplier page', () => {
-  it('shows the useful history first: Recent quotes, Deliveries, What we know, Recent enquiries', async () => {
-    installFakeDb(supplierDb)
-    mount('/companies/s1', <CompanyPage />)
-    await screen.findByRole('heading', { level: 1, name: /Alpenmark Controls/ })
-    await screen.findByText('Belimo NM24A-SR damper actuator')
-    const main = screen.getByRole('heading', { name: 'Recent quotes' }).closest('div.grid') as HTMLElement
-    expect(h2s(main)).toEqual(['Recent quotes', 'Deliveries', 'What we know', 'Recent enquiries'])
-    const side = screen.getByRole('complementary', { name: 'Company details' })
-    expect(h2s(side)).toEqual(['Contacts', 'Open with them', 'Details'])
-    expect(screen.queryByRole('heading', { name: 'Roles' })).not.toBeInTheDocument()
-    expect(await axeViolations(document.body)).toEqual([])
+  it('on a laptop: Enquiries then Deliveries, sites and details folded under "More about this supplier"; no "What we know"', async () => {
+    const restore = laptop()
+    try {
+      installFakeDb(supplierDb)
+      mount('/companies/s1', <CompanyPage />)
+      await screen.findByRole('heading', { level: 1, name: /Alpenmark Controls/ })
+      await screen.findByText('Belimo NM24A-SR damper actuator')
+      const main = screen.getByRole('heading', { name: 'Enquiries' }).closest('div.grid') as HTMLElement
+      expect(h2s(main).slice(0, 2)).toEqual(['Enquiries', 'Deliveries'])
+      expect(within(main).getByText('More about this supplier').closest('details')).not.toHaveAttribute('open')
+      const side = screen.getByRole('complementary', { name: 'Company details' })
+      expect(h2s(side)).toEqual(['Contacts', 'Open with them'])
+      for (const gone of ['What we know', 'Recent quotes', 'Recent enquiries', 'Roles']) expect(screen.queryByRole('heading', { name: gone })).not.toBeInTheDocument()
+      expect(await axeViolations(document.body)).toEqual([])
+    } finally {
+      restore()
+    }
   })
 
-  it('says the record once in the header, in counts; the role is a Tag in the meta line; New RFQ asks this supplier', async () => {
+  it('on a phone: Contacts and Open with them come straight after the Next step, then the history, then the fold', async () => {
     installFakeDb(supplierDb)
     mount('/companies/s1', <CompanyPage />)
-    await waitFor(() => expect(screen.getByTestId('supplier-record-line')).toHaveTextContent('Replied 5 of 6 · quoted 4 · late 1 of 4'))
+    await screen.findByText('Belimo NM24A-SR damper actuator')
+    const order = screen.getAllByRole('heading', { level: 2 }).map(h => h.textContent)
+    expect(order.slice(0, 4)).toEqual(['Contacts', 'Open with them', 'Enquiries', 'Deliveries'])
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+  })
+
+  it('says the record once in the header, in counts with the reply time and orders; New RFQ asks this supplier', async () => {
+    installFakeDb(supplierDb)
+    mount('/companies/s1', <CompanyPage />)
+    await waitFor(() => expect(screen.getByTestId('supplier-record-line')).toHaveTextContent('Replied 5 of 6 in about 3 days · quoted 4 · 2 orders · late 1 of 4'))
     const h1 = screen.getByRole('heading', { level: 1 })
     expect(h1).toHaveTextContent(/^Alpenmark Controls$/)
     expect(h1.querySelector('[data-status]')).toBeNull()
@@ -145,51 +169,50 @@ describe('supplier page', () => {
     expect(screen.queryByText(/Float/)).not.toBeInTheDocument()
   })
 
-  it('"What we know" is plain counts with no squares and no rule prose; the rules are behind the (i)', async () => {
+  it('the header counts carry no score and no rule prose; the rules are behind its (i)', async () => {
     installFakeDb(supplierDb)
     const user = userEvent.setup()
     mount('/companies/s1', <CompanyPage />)
     await screen.findByRole('button', { name: 'About these numbers' })
-    const what = screen.getByRole('region', { name: 'What we know' })
-    expect(what).toHaveTextContent("Replied 5 of 6 · quoted 4 · couldn't offer 1")
-    expect(what).toHaveTextContent('Late 1 of 4 · about 6 days over')
-    expect(what).toHaveTextContent('About 3 days')
-    expect(what).toHaveTextContent('2 of 4 times')
-    expect(what.querySelector('[role="img"]')).toBeNull()
-    expect(what.textContent).not.toMatch(/score|rating|rank|%/i)
+    const line = screen.getByTestId('supplier-record-line')
+    expect(line.textContent).not.toMatch(/score|rating|rank|%/i)
     expect(document.body.textContent).not.toMatch(/Where this comes from|Middle value of|Original currency first/)
 
-    await user.click(within(what).getByRole('button', { name: 'About these numbers' }))
+    await user.click(within(line).getByRole('button', { name: 'About these numbers' }))
     const tip = await screen.findByRole('dialog', { name: 'About these numbers' })
     expect(tip).toHaveTextContent('Counted from enquiries, quotes, POs and delivery dates. Nothing is typed in.')
     expect(tip).toHaveTextContent('Reply time is the middle of the 5 replies logged here.')
-    expect(tip).toHaveTextContent('Chosen: quoted items later ordered from them.')
+    expect(tip).toHaveTextContent('Chosen: 2 of 4 quoted items were later ordered from them.')
     expect(await axeViolations(tip)).toEqual([])
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'About these numbers' })).toBeNull())
   })
 
-  it('the quotes read item, price (with PKR at the time) and outcome; deliveries keep their PO and result', async () => {
+  it('one Enquiries list reads item, reply time, price (with PKR at the time) and outcome; deliveries keep their PO and result', async () => {
     installFakeDb(supplierDb)
     mount('/companies/s1', <CompanyPage />)
-    const quotes = await screen.findByRole('region', { name: 'Recent quotes' })
+    const quotes = await screen.findByRole('region', { name: 'Enquiries' })
     const row = await within(quotes).findByText('Belimo NM24A-SR damper actuator')
     const li = row.closest('li') as HTMLElement
     expect(li).toHaveTextContent(/EUR\s*214\.00/)
     expect(li).toHaveTextContent(/≈ PKR\s*69,935/)
     expect(li).toHaveTextContent('Lead time: 2 to 3 weeks ex stock')
+    await waitFor(() => expect(li).toHaveTextContent('Replied in 1 day'))
     expect(li).toHaveTextContent('Ordered here')
-    expect(within(quotes).getByRole('link', { name: 'All enquiries' })).toBeInTheDocument()
     const deliveries = screen.getByRole('region', { name: 'Deliveries' })
     expect(deliveries).toHaveTextContent('Delivered 6 days late')
     expect(deliveries).toHaveTextContent(/PO-\d\d-\d{4}/)
-    expect(screen.getByRole('region', { name: 'Open with them' })).toHaveTextContent('Supplier orders')
+    const open = screen.getByRole('region', { name: 'Open with them' })
+    expect(open).toHaveTextContent('Supplier orders')
+    // "Waiting for their reply", not "Enquiries: None open" beside quotes that read "Quoted, RFQ open"
+    expect(open).toHaveTextContent('Waiting for their replyNone')
   })
 
-  it('Details holds the brands carried as tags, with how often each was quoted, and Add and remove', async () => {
+  it('Details (in the fold) holds the brands carried as tags, with how often each was quoted, and Add and remove', async () => {
     installFakeDb(supplierDb)
     const user = userEvent.setup()
     mount('/companies/s1', <CompanyPage />)
+    await user.click(await screen.findByText('More about this supplier'))
     const details = await screen.findByRole('region', { name: 'Details' })
     const brands = within(details).getByRole('region', { name: 'Brands carried' })
     await waitFor(() => expect(within(brands).getByText('Belimo').closest('li')).toHaveTextContent('quoted 3×'))
@@ -204,18 +227,19 @@ describe('supplier page', () => {
   it('no table is locked to the compact density', async () => {
     installFakeDb(supplierDb)
     mount('/companies/s1', <CompanyPage />)
-    await screen.findByRole('table', { name: 'Recent enquiries' })
+    await screen.findByRole('region', { name: 'Enquiries' })
     expect(document.querySelector('[data-density="compact"]')).toBeNull()
   })
 })
 
 describe('customer page', () => {
-  it('keeps its sites as the main column; Details says since when and whether they also supply us, once', async () => {
+  it('keeps its sites as the main column; states in sentence case; Details says since when and whether they also supply us, once', async () => {
     installFakeDb(customerDb)
     mount('/companies/c1', <CompanyPage />)
     const site = await screen.findByRole('region', { name: 'Main plant' })
-    await within(site).findByText('Furnace thermocouples')
-    expect(within(site).getByText(/^quotation due \w{3} \d/)).toBeInTheDocument()
+    await within(site).findAllByText('Furnace thermocouples')
+    expect(within(site).getAllByText(/^Quotation due \d{1,2} \w{3}$/).length).toBeGreaterThan(0)
+    expect(within(site).queryByText(/^quotation due/)).toBeNull()
     expect(document.querySelector('[data-density="compact"]')).toBeNull()
     const details = screen.getByRole('region', { name: 'Details' })
     await waitFor(() => expect(details).toHaveTextContent('Customer since2024'))
@@ -224,6 +248,26 @@ describe('customer page', () => {
     expect(screen.getByRole('button', { name: 'New RFQ' })).toBeInTheDocument()
     expect(screen.queryByTestId('supplier-record-line')).not.toBeInTheDocument()
     expect(await axeViolations(document.body)).toEqual([])
+  })
+
+  it('a contact is first on a phone, with tap to call and WhatsApp', async () => {
+    installFakeDb(customerDb)
+    mount('/companies/c1', <CompanyPage />)
+    await screen.findByText('Naveed Akhtar')
+    expect(screen.getAllByRole('heading', { level: 2 })[0]).toHaveTextContent('Contacts')
+    expect(screen.getByRole('link', { name: 'Call Naveed Akhtar, 0301 5550142' })).toHaveAttribute('href', 'tel:03015550142')
+    expect(screen.getByRole('link', { name: 'WhatsApp Naveed Akhtar' })).toHaveAttribute('href', 'https://wa.me/923015550142')
+  })
+
+  it('the money panel carries no "Admin only" tag (only an admin sees it at all)', async () => {
+    installFakeDb(c =>
+      c.target === 'rpc:receivables_list'
+        ? { data: [{ order_id: 'o1', order_number: 1, gross_target: 1000, settled: 0, balance: 1000, overpaid_by: 0 }] }
+        : customerDb(c),
+    )
+    mount('/companies/c1', <CompanyPage />, 'admin')
+    await screen.findByRole('heading', { name: 'Money with them' })
+    expect(screen.queryByText('Admin only')).not.toBeInTheDocument()
   })
 })
 
@@ -267,8 +311,8 @@ describe('companies list', () => {
     const user = userEvent.setup()
     mount('/companies', <CompaniesPage />)
     await screen.findByRole('link', { name: 'Karachi Glassworks' })
-    const search = screen.getByRole('textbox', { name: 'Search companies' })
-    expect(search).toHaveAttribute('placeholder', 'Search companies')
+    const search = screen.getByRole('textbox', { name: 'Search companies or contacts' })
+    expect(search).toHaveAttribute('placeholder', 'Search companies or contacts')
 
     await user.type(search, 'naveed')
     expect(screen.getByRole('link', { name: 'Karachi Glassworks' }).closest('tr')).toHaveTextContent('Contact: Naveed Akhtar')
@@ -291,7 +335,7 @@ describe('companies list', () => {
     const user = userEvent.setup()
     mount('/companies', <CompaniesPage />)
     await screen.findByRole('link', { name: 'Karachi Glassworks' })
-    await user.type(screen.getByRole('textbox', { name: 'Search companies' }), 'کراچی سیمنٹ')
+    await user.type(screen.getByRole('textbox', { name: 'Search companies or contacts' }), 'کراچی سیمنٹ')
     expect(await screen.findByText('Nothing matches "کراچی سیمنٹ"')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add “کراچی سیمنٹ”' })).toBeInTheDocument()
   })
@@ -299,16 +343,38 @@ describe('companies list', () => {
   it('keeps the search in ?q= and shows each company’s last activity: the later of its last RFQ and its last order (R2-19)', async () => {
     installFakeDb(c =>
       c.target === 'rfqs'
-        ? { data: [{ company_id: 'b', received_on: '2026-03-02' }, { company_id: 'e', received_on: '2026-05-01' }] }
+        ? { data: [{ id: 'r1', company_id: 'b', received_on: '2026-03-02' }, { id: 'r2', company_id: 'e', received_on: '2026-05-01' }] }
         : c.target === 'orders'
-          ? { data: [{ company_id: 'b', ordered_on: '2026-04-10' }] }
+          ? { data: [{ id: 'o1', company_id: 'b', ordered_on: '2026-04-10' }] }
           : listDb(c),
     )
     mount('/companies?q=karachi', <CompaniesPage />)
-    expect(await screen.findByRole('textbox', { name: 'Search companies' })).toHaveValue('karachi')
+    expect(await screen.findByRole('textbox', { name: 'Search companies or contacts' })).toHaveValue('karachi')
     const glass = (await screen.findByRole('link', { name: 'Karachi Glassworks' })).closest('tr') as HTMLElement
     expect(screen.queryByRole('link', { name: 'Alpenmark Controls' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: /Last activity/ })).toBeInTheDocument()
     expect(glass).toHaveTextContent(/10 Apr/)
+  })
+
+  it('a supplier counts the RFQs it was asked about and its supplier orders, not "0 RFQs · 0 orders · No activity yet" (round 3)', async () => {
+    installFakeDb(c =>
+      c.target === 'supplier_inquiries'
+        ? {
+            data: [
+              { supplier_id: 'a', rfq_id: 'r1', sent_on: '2026-09-01' },
+              { supplier_id: 'a', rfq_id: 'r2', sent_on: '2026-09-12' },
+            ],
+          }
+        : c.target === 'supplier_orders'
+          ? { data: [{ supplier_id: 'a', order_id: 'o1', placed_on: '2026-09-20', created_at: '2026-09-18T06:00:00Z' }] }
+          : listDb(c),
+    )
+    mount('/companies', <CompaniesPage />)
+    const alp = (await screen.findByRole('link', { name: 'Alpenmark Controls' })).closest('tr') as HTMLElement
+    const cells = within(alp).getAllByRole('cell').map(td => td.textContent)
+    expect(cells.slice(2)).toEqual(['2', '1', '20 Sep'])
+    // a company with nothing yet is a Prospect (the filter's word), not a bare "No activity yet" in the Role column
+    const lahore = screen.getByRole('link', { name: 'Lahore Mills' }).closest('tr') as HTMLElement
+    expect(within(lahore).getByText('Prospect')).toBeInTheDocument()
   })
 })

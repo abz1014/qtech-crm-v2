@@ -569,6 +569,30 @@ describe('validity date written without a year', () => {
   })
 })
 
+describe('HW-5: "price on request" is not a price', () => {
+  const items: ReplyItemRef[] = [
+    { id: 'm', description: 'Magnetic flow meter DN50', qty: 4 },
+    { id: 'c', description: 'Instrument cable 2 core', qty: 10 },
+  ]
+  const priced = (offers: ReplyOffer[], id: string) => forItem(offers, id).filter(o => o.unitPrice !== null)
+  it('reads no price from a line that says price on request, even with a number in the item name', () => {
+    const r = parseSupplierReply(
+      ['Dear Sir,', 'Our offer:', 'Magnetic flow meter DN50 - EUR 1.234,50 each, delivery 3-4 weeks', 'Instrument cable 2 core - price on request', 'Best regards, Hans'].join('\n'),
+      items,
+    )
+    expect(one(r.offers, 'm').unitPrice).toBe(1234.5)
+    expect(priced(r.offers, 'c')).toHaveLength(0)
+  })
+  it.each(['Instrument cable 2 core - POR', 'Instrument cable 2 core: on request', 'Instrument cable 2 core - TBA', 'Instrument cable 2 core, prices to follow'])('%s', line => {
+    const r = parseSupplierReply(`Magnetic flow meter DN50 - EUR 900\n${line}`, items)
+    expect(priced(r.offers, 'c')).toHaveLength(0)
+  })
+  it('still reads a currency price on a line that also mentions something on request', () => {
+    const r = parseSupplierReply('Instrument cable 2 core - EUR 3.20 per m, test report on request', items)
+    expect(one(r.offers, 'c').unitPrice).toBe(3.2)
+  })
+})
+
 describe('a table with list price, discount and net price (fictional)', () => {
   it('takes the net price as the unit price', () => {
     const text = [

@@ -25,6 +25,8 @@ export function toPaisa(value: Amount): bigint {
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) throw new Error(`Not a finite amount: ${value}`)
     // JSON numbers from numeric(14,2) have at most 2 decimals; toFixed(2) gives the same digits without float drift.
+    // From 1e21 toFixed writes an exponent ("1e+22", HW-2); numbers that large are whole, so BigInt reads them exactly.
+    if (Math.abs(value) >= 1e21) return BigInt(value) * PAISA
     return scaled(value.toFixed(2), 2)
   }
   return scaled(value, 2)

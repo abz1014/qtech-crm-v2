@@ -36,6 +36,35 @@ export function applyUpdate(): ApplyResult {
   return 'applying'
 }
 
+/**
+ * "Update needed — tap Reload" (owner decision 2026-10-22, pwa/minVersion.ts): move this window onto the newest build. A worker
+ * already waiting takes over and the page reloads when it controls; otherwise the browser is asked for the new worker first
+ * (up to `waitMs`), because a plain reload would be answered by the OLD worker's cached shell. With no worker at all (a browser
+ * without service workers, or the dev server) it is a plain reload. The caller decides about unsaved typing first.
+ */
+export async function reloadOntoNewVersion(waitMs = 10_000): Promise<void> {
+  const takeOver = (): boolean => {
+    if (!wb || !ready) return false
+    reloadWanted = true
+    wb.messageSkipWaiting()
+    return true
+  }
+  if (takeOver()) return
+  // No worker controls this page (none registered, or service workers are off): a plain reload already fetches the new build.
+  const controlled = typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller !== null
+  if (wb && controlled) {
+    try {
+      await wb.update()
+    } catch {
+      // offline or the check failed: fall through to the plain reload
+    }
+    const until = Date.now() + waitMs
+    while (!ready && Date.now() < until) await new Promise(r => setTimeout(r, 250))
+    if (takeOver()) return
+  }
+  window.location.reload()
+}
+
 const CHECK_EVERY_MS = 60 * 60 * 1000
 
 export async function registerServiceWorker(): Promise<void> {

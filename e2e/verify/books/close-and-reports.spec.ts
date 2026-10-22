@@ -95,7 +95,8 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
       expect(p.frozen).toBe(false)
       const sum = page.getByRole('region', { name: BOOKS.pnl.sumBar }).first()
       await expect(sum).toContainText(amount(70000))
-      await expect(sum).toContainText(amount(12600))
+      // round 3: two tiles (Received after GST, Profit) plus After drawings when drawn; the 12,600 GST is a line of the statement
+      await expect(page.getByRole('row', { name: /less GST inside the payments/ })).toContainText(amount(12600))
       await expect(sum).toContainText(amount(37654)) // headline figures are whole rupees
       await expect(sum).toContainText(amount(30654))
       await expect(page.getByTestId('pnl-frozen')).toHaveCount(0)
@@ -265,7 +266,7 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   await page.goto(BOOKS.monthEnd.owe(monthOf(today).key))
   const row = page.getByRole('row', { name: new RegExp(sup.name) })
   await expect(row).toContainText(amount(2033.25, { always: true }))
-  await expect(row).toContainText(amount(569818))
+  // round 3: five columns; the PKR value of the commitment is the rate tooltip, not a column
   await expect(row).toContainText(amount(300000))
   await expect(row).toContainText(amount(269818))
   await expect(row).toContainText(BOOKS.owe.partPaid)

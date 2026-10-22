@@ -74,12 +74,11 @@ test.describe('in vs out (owner request 2026-10-20)', () => {
     expect(monthOut).toBeGreaterThanOrEqual(500)
 
     await openAs(page, 'admin', '/money/reports')
-    // Reports opens on the month that just ended; its In vs out line links there. This month is one tap on the arrow.
-    await page.getByRole('link', { name: 'In vs out' }).first().click()
-    await expect(page.getByRole('heading', { name: 'In vs out', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Next month' }).click()
-    await expect(page).toHaveURL(new RegExp(`period=${month}`))
-    await expect(page.getByTestId('in-out-explainer')).toContainText('Profit (invoiced basis)')
+    // Reports shows one report at a time: pick Money in and out in the Report select (it opens on this month).
+    await page.getByTestId('report-picker').selectOption('in-out')
+    await expect(page.getByRole('heading', { name: 'Money in and out', exact: true, level: 1 })).toBeVisible()
+    // it opens on the current month when no month is in the address
+    await expect(page.getByRole('table', { name: 'Profit on invoices' })).toBeVisible()
     await expect(page.getByTestId('cash-out')).toContainText(whole(Number(monthOut)))
     const table = page.getByRole('table', { name: /^Money out by category/ })
     await expect(table.getByText(name)).toBeVisible()

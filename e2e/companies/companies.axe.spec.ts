@@ -69,13 +69,15 @@ for (const { label, width, height } of WIDTHS) {
       const rfq = await createRfq(customer.id)
       await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplier.id, sent_on: karachiDay(-10) } }))
       await openAs(page, 'engineer', `/companies/${supplier.id}`)
-      await expect(page.getByRole('heading', { name: 'What we know' })).toBeVisible()
-      await expect(page.getByRole('row', { name: /RFQ-/ })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Enquiries', exact: true })).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Enquiries' }).getByRole('listitem').filter({ hasText: /RFQ-/ })).toBeVisible()
+      // sites, brands and details fold under "More about this supplier" (round 3): checked open
+      await page.getByText('More about this supplier').click()
       await expect(page.getByRole('region', { name: 'Details', exact: true })).toBeVisible()
       await settle(page)
       expect(await violations(page, true)).toEqual([])
-      // The rules behind the numbers open from the (i) beside "What we know" (a popover, portalled outside <main>).
-      await page.getByRole('region', { name: 'What we know' }).getByRole('button', { name: 'About these numbers' }).click()
+      // The rules behind the numbers open from the (i) beside the counts under the name (a popover, portalled outside <main>).
+      await page.getByTestId('supplier-record-line').getByRole('button', { name: 'About these numbers' }).click()
       await expect(page.getByRole('dialog', { name: 'About these numbers' })).toBeVisible()
       expect(await violations(page, false)).toEqual([])
     })

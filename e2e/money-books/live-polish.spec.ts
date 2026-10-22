@@ -66,7 +66,7 @@ test.describe('a brand-new CRM, as the admin', () => {
   test('Who owes us: ONE info tip beside the header, and an empty list says no balances yet, not "paid in full"', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 })
     await open(page, '/money/receivables')
-    const note = page.getByText('Balance is gross, GST included')
+    const note = page.getByRole('heading', { name: 'Balances', level: 2 })
     await expect(note).toBeVisible()
     expect(await note.locator('xpath=..').locator('[data-infotip]').count()).toBe(1)
     await expect(page.getByText('No balances yet')).toBeVisible()

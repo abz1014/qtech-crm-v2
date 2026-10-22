@@ -3,6 +3,8 @@ import {
   copyText,
   effectiveQty,
   fillRfqRef,
+  firstQtyProblem,
+  qtyProblem,
   itemsWithoutSupplier,
   realItems,
   RFQ_REF_PLACEHOLDER,
@@ -12,7 +14,7 @@ import {
   type DraftItem,
 } from './intakeModel'
 import { suggestSuppliers, type SupplierSuggestion } from './supplierSuggestion'
-import type { BrandRef } from './parseItems'
+import { parsePaste, type BrandRef } from './parseItems'
 
 const row = (key: string, over: Partial<DraftItem> = {}): DraftItem => ({
   key,
@@ -109,5 +111,21 @@ describe('the RFQ number placeholder', () => {
     const t = copyText({ subject: `${RFQ_REF_PLACEHOLDER}: quotation requested`, body: `ref ${RFQ_REF_PLACEHOLDER}` }, 'RFQ-0185')
     expect(t).toBe('Subject: RFQ-0185: quotation requested\n\nref RFQ-0185')
     expect(copyText({ subject: null, body: 'hi' }, 'RFQ-1')).toBe('hi')
+  })
+})
+
+describe('HW-7: a quantity of 0 is never read as 1', () => {
+  const line = (key: string, description: string, qty: number | null): DraftItem => ({ key, description, qty, unit: 'nos', brandId: null, familyId: null })
+  it('marks 0 and leaves an empty cell (1) alone', () => {
+    expect(qtyProblem({ qty: 0 })).toMatch(/quantity is 0/)
+    expect(qtyProblem({ qty: null })).toBeNull()
+    expect(qtyProblem({ qty: 2 })).toBeNull()
+  })
+  it('names the first real row with a 0, by its row number, skipping blank rows', () => {
+    expect(firstQtyProblem([line('a', 'Gauge', 2), line('b', '', 0), line('c', 'Thermowell', 0)])).toEqual({ n: 3, message: expect.stringMatching(/0/) })
+    expect(firstQtyProblem([line('a', 'Gauge', 2), line('b', 'Thermowell', null)])).toBeNull()
+  })
+  it('the paste keeps a written 0 as 0', () => {
+    expect(parsePaste('Thermowell SS316 - 0 nos').items[0]?.qty).toBe(0)
   })
 })

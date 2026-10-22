@@ -32,9 +32,9 @@ describe('companies reads', () => {
         case 'v_company_roles':
           return { data: [{ company_id: 'a', role: 'supplier' }, { company_id: 'b', role: 'customer' }] }
         case 'rfqs':
-          return { data: [{ company_id: 'b', received_on: '2026-09-02' }, { company_id: 'b', received_on: '2026-10-05' }] }
+          return { data: [{ id: 'r1', company_id: 'b', received_on: '2026-09-02' }, { id: 'r2', company_id: 'b', received_on: '2026-10-05' }] }
         case 'orders':
-          return { data: [{ company_id: 'b', ordered_on: '2026-09-20' }] }
+          return { data: [{ id: 'o1', company_id: 'b', ordered_on: '2026-09-20' }] }
         case 'contacts':
           return { data: [{ company_id: 'b', name: 'Naveed Akhtar', phone: '+92 301 555 0142' }, { company_id: 'b', name: 'Front desk', phone: null }] }
         default:

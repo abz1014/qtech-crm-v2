@@ -327,6 +327,7 @@ insert into probes values
   ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
+  ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)

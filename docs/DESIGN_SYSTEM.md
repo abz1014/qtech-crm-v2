@@ -107,7 +107,8 @@ Cool grey, hue about 240 degrees, chroma under 3 percent. Components never refer
 | Hairline | `--border` | neutral-250 (1.66:1 on white, 1.60 on canvas, 1.52 on sunken, 1.44 on selected; up from 1.28 on white) |
 | Hover or popover edge, secondary button | `--border-strong` | neutral-300 (2.08:1) |
 | Form control edge | `--border-input` | neutral-400 (3.42:1) |
-| Primary action, links, green text | `--primary` `#1a7b46` | hover `#166a3b`, active `#115a31` |
+| Primary action fill | `--primary` `#1a7b46` | hover `#166a3b`, active `#115a31` |
+| Links, any green text (`text-primary`) | `--primary-text` `#187242` | 5.96:1 on white, 5.15:1 on selected, 5.07:1 on the lowest tint, 3.16:1 against `--fg` (2026-10-22) |
 | Non-text green | `--brand-green` `#429446` | focus ring, active indicator, selected control fill, progress, logo |
 
 The green rule from BRAND.md stands: green means primary action, active or selected, or focus. Anything else that is green gets its green removed. Nothing in the UI uses brand green for text.
@@ -118,10 +119,10 @@ Five tones, defined by **who acts next**. Every derived state resolves to one of
 
 | Tone | Name in code | Means | Icon (lucide) | Text | Tint | Ratio | Chip | Status text |
 |---|---|---|---|---|---|---|---|---|
-| `warning` | `now` | We act next (you or a colleague) | `CircleArrowRight` | `--tone-warning-fg` `#92400e` | `--tone-warning-bg` `#fef3c7` | 6.37:1 | amber tint | text `fg`, medium; icon amber |
-| `info` | `waiting` | Someone else acts next (supplier, customer, courier) | `Clock` | `--tone-info-fg` `#185f9e` | `--tone-info-bg` `#e3f0fb` | 5.72:1 | blue tint | text `fg-muted`; icon blue |
-| `success` | `done` | Finished | `CircleCheck` | `--tone-success-fg` `#0b625b` | `--tone-success-bg` `#e0f2f1` | 6.23:1 | teal tint | text `fg-muted`; icon teal |
-| `danger` | `late` | Past its date and still open | `CircleAlert` | `--tone-danger-fg` `#b21f1f` | `--tone-danger-bg` `#fde8e8` | 5.75:1 | red tint | text and icon red, medium |
+| `warning` | `now` | We act next (you or a colleague) | `CircleArrowRight` | `--tone-warning-fg` `#7a3408` | `--tone-warning-bg` `#fef3c7` | 8.12:1 | amber tint | text `fg`, medium; icon amber |
+| `info` | `waiting` | Someone else acts next (supplier, customer, courier) | `Clock` | `--tone-info-fg` `#124a7c` | `--tone-info-bg` `#e3f0fb` | 7.89:1 | blue tint | text `fg-muted`; icon blue |
+| `success` | `done` | Finished | `CircleCheck` | `--tone-success-fg` `#0a5049` | `--tone-success-bg` `#e0f2f1` | 8.04:1 | teal tint | text `fg-muted`; icon teal |
+| `danger` | `late` | Past its date and still open | `CircleAlert` | `--tone-danger-fg` `#8f1414` | `--tone-danger-bg` `#fde8e8` | 7.85:1 | red tint | text and icon red, medium |
 | `neutral` | `inert` | Closed, not asked, not needed | `Circle` | `--tone-neutral-fg` `#3d3d44` | `--tone-neutral-bg` `#eeeef1` | 9.30:1 | grey tint | text `fg-muted` |
 
 `ink` is not a status tone. The `--tone-ink-*` tokens stay for emphasis without hue (the month lock bar, avatars, toasts). The step names map to tones through `TONE_OF_STEP` and the shared `StepTone` type in `src/lib/status.ts`.
@@ -210,10 +211,12 @@ Computed from the token values by the build script; every pair below passes. Tex
 | fg-muted on canvas | `#4d4d55` | `#fafafb` | 8.03:1 | 4.5:1 | pass |
 | fg-muted on sunken / hover | `#4d4d55` | `#f4f4f6` | 7.62:1 | 4.5:1 | pass |
 | fg-muted on selected | `#4d4d55` | `#eeeef1` | 7.23:1 | 4.5:1 | pass |
-| primary on surface | `#1a7b46` | `#ffffff` | 5.30:1 | 4.5:1 | pass |
-| primary on canvas | `#1a7b46` | `#fafafb` | 5.08:1 | 4.5:1 | pass |
-| primary on sunken / hover | `#1a7b46` | `#f4f4f6` | 4.82:1 | 4.5:1 | pass |
-| primary on selected | `#1a7b46` | `#eeeef1` | 4.57:1 | 4.5:1 | pass |
+| primary-text (green text) on surface | `#187242` | `#ffffff` | 5.96:1 | 4.5:1 | pass |
+| primary-text on canvas | `#187242` | `#fafafb` | 5.71:1 | 4.5:1 | pass |
+| primary-text on sunken / hover | `#187242` | `#f4f4f6` | 5.42:1 | 4.5:1 | pass |
+| primary-text on selected | `#187242` | `#eeeef1` | 5.15:1 | 4.5:1 | pass |
+| primary-text on the lowest tint (danger) | `#187242` | `#fde8e8` | 5.07:1 | 4.5:1 | pass |
+| primary-text against fg (an inline link in a sentence, axe link-in-text-block) | `#187242` | `#111113` | 3.16:1 | 3:1 | pass |
 | primary-hover on surface | `#166a3b` | `#ffffff` | 6.65:1 | 4.5:1 | pass |
 | primary-hover on canvas | `#166a3b` | `#fafafb` | 6.37:1 | 4.5:1 | pass |
 | primary-hover on sunken / hover | `#166a3b` | `#f4f4f6` | 6.05:1 | 4.5:1 | pass |
@@ -227,28 +230,28 @@ Computed from the token values by the build script; every pair below passes. Tex
 | Pair | Foreground | Background | Ratio | Needs | Result |
 |---|---|---|---|---|---|
 | tone-neutral-fg on tone-neutral-bg | `#3d3d44` | `#eeeef1` | 9.30:1 | 4.5:1 | pass |
-| tone-info-fg on tone-info-bg | `#185f9e` | `#e3f0fb` | 5.72:1 | 4.5:1 | pass |
-| tone-success-fg on tone-success-bg | `#0b625b` | `#e0f2f1` | 6.23:1 | 4.5:1 | pass |
-| tone-warning-fg on tone-warning-bg | `#92400e` | `#fef3c7` | 6.37:1 | 4.5:1 | pass |
-| tone-danger-fg on tone-danger-bg | `#b21f1f` | `#fde8e8` | 5.75:1 | 4.5:1 | pass |
+| tone-info-fg on tone-info-bg | `#124a7c` | `#e3f0fb` | 7.89:1 | 4.5:1 | pass |
+| tone-success-fg on tone-success-bg | `#0a5049` | `#e0f2f1` | 8.04:1 | 4.5:1 | pass |
+| tone-warning-fg on tone-warning-bg | `#7a3408` | `#fef3c7` | 8.12:1 | 4.5:1 | pass |
+| tone-danger-fg on tone-danger-bg | `#8f1414` | `#fde8e8` | 7.85:1 | 4.5:1 | pass |
 | tone-ink-fg on tone-ink-bg | `#ffffff` | `#26262b` | 15.06:1 | 4.5:1 | pass |
 
 **Tone text on page surfaces (inline text, no chip)**
 
 | Pair | Foreground | Background | Ratio | Needs | Result |
 |---|---|---|---|---|---|
-| tone-info-fg on surface | `#185f9e` | `#ffffff` | 6.63:1 | 4.5:1 | pass |
-| tone-info-fg on canvas | `#185f9e` | `#fafafb` | 6.35:1 | 4.5:1 | pass |
-| tone-success-fg on surface | `#0b625b` | `#ffffff` | 7.21:1 | 4.5:1 | pass |
-| tone-success-fg on canvas | `#0b625b` | `#fafafb` | 6.91:1 | 4.5:1 | pass |
-| tone-warning-fg on surface | `#92400e` | `#ffffff` | 7.09:1 | 4.5:1 | pass |
-| tone-warning-fg on canvas | `#92400e` | `#fafafb` | 6.80:1 | 4.5:1 | pass |
-| tone-danger-fg on surface | `#b21f1f` | `#ffffff` | 6.76:1 | 4.5:1 | pass |
-| tone-danger-fg on canvas | `#b21f1f` | `#fafafb` | 6.48:1 | 4.5:1 | pass |
-| tone-info-fg on selected (a chip-coloured word in a selected row) | `#185f9e` | `#eeeef1` | 5.72:1 | 4.5:1 | pass |
-| tone-success-fg on selected | `#0b625b` | `#eeeef1` | 6.23:1 | 4.5:1 | pass |
-| tone-warning-fg on selected (failed at 4.34:1 before 2026-10-19) | `#92400e` | `#eeeef1` | 6.12:1 | 4.5:1 | pass |
-| tone-danger-fg on selected | `#b21f1f` | `#eeeef1` | 5.83:1 | 4.5:1 | pass |
+| tone-info-fg on surface | `#124a7c` | `#ffffff` | 9.15:1 | 7:1 | pass |
+| tone-info-fg on canvas | `#124a7c` | `#fafafb` | 8.77:1 | 7:1 | pass |
+| tone-success-fg on surface | `#0a5049` | `#ffffff` | 9.31:1 | 7:1 | pass |
+| tone-success-fg on canvas | `#0a5049` | `#fafafb` | 8.92:1 | 7:1 | pass |
+| tone-warning-fg on surface | `#7a3408` | `#ffffff` | 9.04:1 | 7:1 | pass |
+| tone-warning-fg on canvas | `#7a3408` | `#fafafb` | 8.67:1 | 7:1 | pass |
+| tone-danger-fg on surface | `#8f1414` | `#ffffff` | 9.22:1 | 7:1 | pass |
+| tone-danger-fg on canvas | `#8f1414` | `#fafafb` | 8.84:1 | 7:1 | pass |
+| tone-info-fg on selected (a chip-coloured word in a selected row) | `#124a7c` | `#eeeef1` | 7.90:1 | 7:1 | pass |
+| tone-success-fg on selected | `#0a5049` | `#eeeef1` | 8.04:1 | 7:1 | pass |
+| tone-warning-fg on selected (failed at 4.34:1 before 2026-10-19) | `#7a3408` | `#eeeef1` | 7.81:1 | 7:1 | pass |
+| tone-danger-fg on selected | `#8f1414` | `#eeeef1` | 7.96:1 | 7:1 | pass |
 
 **Non-text (3:1)**
 
@@ -262,9 +265,9 @@ Computed from the token values by the build script; every pair below passes. Tex
 | border-input on sunken | `#8a8a93` | `#f4f4f6` | 3.11:1 | 3:1 | pass |
 | border (hairline, divider) on surface / canvas / sunken / selected | `#c8c8cf` | `#ffffff` … `#eeeef1` | 1.66 / 1.60 / 1.52 / 1.44 | none (decorative) | pass |
 | border-strong on surface | `#b3b3bb` | `#ffffff` | 2.08:1 | none (decorative) | pass |
-| tone-warning-fg dot on surface | `#92400e` | `#ffffff` | 7.09:1 | 3:1 | pass |
+| tone-warning-fg dot on surface | `#7a3408` | `#ffffff` | 9.04:1 | 3:1 | pass |
 
-Notes: brand green fails 4.5:1 as text on white (3.78:1) and is therefore non-text only. Primary text on `--bg-selected` is 4.57:1, so a selected row may carry a green link, but prefer `--fg`. `--fg-disabled` is exempt under WCAG 1.4.3 (inactive components).
+Notes: brand green fails 4.5:1 as text on white (3.78:1) and is therefore non-text only. Green text reads `--primary-text` (`#187242`), 5.15:1 on `--bg-selected` and 3.16:1 against `--fg` (so a link inside a sentence is told apart without an underline), so a selected row may carry a green link; the button fill `--primary` carries white text only. Tone text is at least 7:1 on white, on the selected and hover rows and on every tint (2026-10-22), so a coloured second line passes the 7:1 secondary-text rule anywhere; `src/lib/a11yContrast.test.tsx` checks every pair. `--fg-disabled` is exempt under WCAG 1.4.3 (inactive components).
 
 ## 8. Focus
 

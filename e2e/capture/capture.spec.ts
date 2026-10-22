@@ -203,7 +203,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await page.goto(`/capture?share=${id}`)
     await expect(sheet(page).getByText('The shared item is no longer on this phone')).toBeVisible()
     await review(page, 'capture-expired-1440')
-    await sheet(page).getByRole('button', { name: 'Paste or add a photo' }).click()
+    await sheet(page).getByRole('button', { name: 'Paste or photo' }).click()
     await expect(sheet(page).getByText('Drop text, photos or files here')).toBeVisible()
   })
 })

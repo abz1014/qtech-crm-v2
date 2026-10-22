@@ -390,16 +390,21 @@ test.describe('R18 company page: What we know', () => {
     const openLeg = await post('supplier_orders', { order_id: order.id, supplier_id: sup.id, currency: 'EUR', placed_on: karachiDay(-2), expected_on: karachiDay(5) })
     void openLeg
 
-    await openAs(page, 'engineer', `/companies/${sup.id}`)
-    const what = page.getByRole('region', { name: 'What we know' })
+    // Sales: the prices are theirs to see. An engineer sees no price or rate here (owner decision 2026-10-22; verify-roles crawls it).
+    await openAs(page, 'sales', `/companies/${sup.id}`)
+    // "What we know" became the counts line under the name (round 3)
+    const what = page.getByTestId('supplier-record-line')
     await expect(what).toBeVisible()
     expect(await what.innerText()).not.toMatch(/score|rating|rank|%/i)
-    // The brands moved into the side column's Details panel (UX audit 9b), each tag with how often it was quoted.
+    // The brands are in the Details panel, folded under "More about this supplier" (round 3), each tag with how often it was quoted.
+    await page.getByText('More about this supplier').click()
     const brands = page.getByRole('region', { name: 'Details', exact: true }).getByRole('region', { name: 'Brands carried' })
     await expect(brands.locator('li', { hasText: brand.name })).toContainText(/quoted 3×/)
     await expect(brands.locator('li', { hasText: listed.name })).not.toContainText('quoted')
 
-    const quotes = page.getByRole('region', { name: 'Recent quotes' })
+    // one Enquiries list (was Recent quotes and Recent enquiries): the latest 5, then "Show all 6"
+    const quotes = page.getByRole('region', { name: 'Enquiries' })
+    await quotes.getByRole('button', { name: 'Show all 6' }).click()
     const rowA = quotes.locator('li', { hasText: 'NM24A-SR' })
     await expect(rowA).toContainText(/EUR\s*214\.00/)
     await expect(rowA).toContainText(/≈\s*PKR\s*69,935/)
@@ -413,7 +418,7 @@ test.describe('R18 company page: What we know', () => {
     await expect(quotes.locator('li', { hasText: 'QAA2030' })).toContainText("Can't quote")
     await expect(quotes.locator('li', { hasText: 'AME435' })).toContainText('No reply')
     await expect(quotes.locator('li', { hasText: 'LR24A-SR' })).toContainText('Waiting for a reply')
-    await expect(quotes.getByRole('link', { name: 'All enquiries' })).toBeVisible()
+    await expect(rowA).toContainText(/Replied in \d+ days?/)
 
     const deliveries = page.getByRole('region', { name: 'Deliveries' })
     await expect(deliveries.locator('li', { hasText: `ORD-${String(order.number).padStart(4, '0')}` }).first()).toBeVisible()
