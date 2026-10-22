@@ -170,19 +170,22 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await qa.getByRole('button', { name: 'Cash' }).click()
     await qa.getByRole('button', { name: 'Save this expense' }).click()
     await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
-    const expected = start + 5000 - 1200
+    // to the paisa: other suites on this database leave fractional cash, and float noise (18000.300000000004) is refused by the box
+    const round2 = (n: number) => Math.round(n * 100) / 100
+    const expected = round2(start + 5000 - 1200)
+    const counted = round2(expected - 300)
     await expect(page.getByTestId('cash-expected')).toContainText(expected.toLocaleString('en-US'))
     // count 300 less than the books expect
     await line.getByRole('button', { name: 'Count cash' }).click()
     const c = page.getByRole('dialog', { name: 'Count cash' })
-    await c.getByRole('textbox', { name: 'Cash in the box, PKR' }).fill(String(expected - 300))
+    await c.getByRole('textbox', { name: 'Cash in the box, PKR' }).fill(String(counted))
     await expect(c.getByTestId('count-difference')).toContainText('Short by PKR 300')
     await review(page, 'p1-count-cash-1440')
     await c.getByRole('button', { name: 'Save count' }).click()
     await expect(c).toBeHidden()
     await expect(line).toContainText('short PKR 300')
     const [last] = await must(rest<{ counted_pkr: number; expected_pkr: number; difference_pkr: number }[]>('admin', 'cash_counts?select=*&order=created_at.desc&limit=1'))
-    expect([Number(last.counted_pkr), Number(last.expected_pkr), Number(last.difference_pkr)]).toEqual([expected - 300, expected, -300])
+    expect([Number(last.counted_pkr), Number(last.expected_pkr), Number(last.difference_pkr)]).toEqual([counted, expected, -300])
     // admin only
     expect((await rest<unknown[]>('sales', 'cash_counts?select=id')).body).toEqual([])
     expect((await rest<unknown[]>('engineer', 'rpc/cash_in_hand', { method: 'POST', body: {} })).body).toEqual([])
