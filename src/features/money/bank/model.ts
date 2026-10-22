@@ -249,4 +249,4 @@ export function defaultStatementMonth(today: string): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-export const isMonthKey = (s: string | null): s is string => !!s && /^\d{4}-(0[1-9]|1[0-2])$/.test(s)
+export { isMonthKey } from '@/features/money/monthKey'

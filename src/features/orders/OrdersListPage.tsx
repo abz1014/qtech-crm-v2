@@ -22,7 +22,7 @@ import { TableFilter } from '@/ui/TableFilter'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
 import type { OrderListRow } from '@/features/orders/api'
 import { useOrdersList } from '@/features/orders/hooks'
-import { NewOrderDialog } from '@/features/orders/NewOrderDialog'
+import { lazyShown } from '@/lib/lazyDialog'
 import { listNextStep, type NextStep } from '@/features/orders/lib/nextStep'
 import {
   ALL,
@@ -37,6 +37,9 @@ import {
   type ListFilters,
   type OwnerFilter,
 } from '@/features/orders/lib/listModel'
+
+// Downloaded the first time it opens, not with the list (perf/lcp, lazyDialog.tsx).
+const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog').then(m => m.NewOrderDialog))
 
 /*
  * Orders list (O04), reworked by the UX audit of 2026-10-19 (screens.md 7): each row leads with the customer and what they ordered, then

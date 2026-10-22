@@ -22,7 +22,9 @@ import { InfoTip } from '@/ui/InfoTip'
 import { NothingYetState } from '@/features/help/FirstUseState'
 import { useReceivables, useReceivablesSummary } from '@/features/money/payments/hooks'
 import { lazyDialog } from '@/lib/lazyDialog'
-import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
+import { BelowTheFold } from '@/ui/BelowTheFold'
+import { lazyWithReload } from '@/lib/importWithReload'
+import { Skeleton } from '@/ui/Skeleton'
 import {
   daysBetween,
   filterReceivables,
@@ -37,6 +39,8 @@ import {
 } from '@/features/money/payments/model'
 
 // Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
+// The reminder panel under the list is a download of its own, fetched once the list is drawn (perf/lcp, BelowTheFold).
+const ReminderPanel = lazyWithReload(() => import('@/features/money/payments/ReminderPanel').then(m => ({ default: m.ReminderPanel })))
 const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
@@ -277,7 +281,9 @@ export function ReceivablesPage() {
           />
         </div>
         <div ref={panelRef} className="scroll-mt-4">
-          <ReminderPanel row={selected} today={today} />
+          <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+            <ReminderPanel row={selected} today={today} />
+          </BelowTheFold>
         </div>
       </div>
       <RecordPaymentDialog open={paying !== null || linkedPay !== null} orderId={paying ?? linkedPay} onOpenChange={o => { if (!o) { setPaying(null); if (linkedPay) closeLinked() } }} />

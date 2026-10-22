@@ -28,9 +28,13 @@ export function todayQuery(user: { id: string; role: Role }, today: string) {
   return { queryKey: qk.today.board(), queryFn: () => api.loadTodayData(user, today) }
 }
 
-/** Read just now (by the app's start, or by a page the extras waited for): a mount does not read it all again. */
+/**
+ * Read just now (by the app's start, or by a page the extras waited for): a mount does not read it all again. A read a save has
+ * made out of date (invalidated) is read again on mount, as always.
+ */
 const JUST_READ_MS = 10_000
-export const unlessJustRead = (query: { state: { dataUpdatedAt: number } }): boolean | 'always' => (Date.now() - query.state.dataUpdatedAt < JUST_READ_MS ? false : 'always')
+export const unlessJustRead = (query: { state: { dataUpdatedAt: number; isInvalidated: boolean } }): boolean | 'always' =>
+  !query.state.isInvalidated && Date.now() - query.state.dataUpdatedAt < JUST_READ_MS ? false : 'always'
 
 /** Start the Today read before the page is drawn (routeChunks.ts). The page's mount then finds it and does not read it again. */
 export function prefetchToday(client: QueryClient, user: { id: string; role: Role }): Promise<void> {

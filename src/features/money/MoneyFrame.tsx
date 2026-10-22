@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ChartColumn, ChevronLeft } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
@@ -7,15 +7,9 @@ import { useSession } from '@/app/session'
 import { usePageSettled } from '@/app/usePageSettled'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
-import { computeReconciliationExceptions } from '@/lib/reconciliation'
-import { useReconciliationInput } from '@/features/money/hooks'
-import { useGstRegister } from '@/features/money/invoices/hooks'
-import { needsAttention } from '@/features/money/invoices/model'
 import { MONEY_TABS } from '@/features/money/moneyTabs'
-import { useClosedMonths, useMonthEndStatus } from '@/features/money/monthEnd/hooks'
-import { buildChecklist, checksWithItems, defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
-import { useBusinessToday, useTodayView } from '@/features/today/hooks'
-import type { Role } from '@/features/today/types'
+import { isMonthKey } from '@/features/money/monthKey'
+import type { MoneyCounts } from '@/features/money/MoneyTabCounts'
 import { NeedsCount } from '@/ui/Tag'
 import { PageHeader } from '@/ui/PageHeader'
 
@@ -30,6 +24,13 @@ import { PageHeader } from '@/ui/PageHeader'
  *   Month end       admin only, while the month that just ended is open: the checks with items, plus Things to check when the
  *                   reconciliation finds something; the same number the checklist page says
  */
+/*
+ * The counts are a component of their own (MoneyTabCounts), loaded once the page has its data (perf/lcp). The last counts this
+ * person saw are kept while they load, so moving between Money's tabs does not make the numbers blink.
+ */
+const MoneyTabCounts = lazy(() => import('@/features/money/MoneyTabCounts').catch(() => ({ default: () => null })))
+let lastCounts: { userId: string; counts: MoneyCounts } | null = null
+
 const longDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
 export function MoneyFrame({ active, actions, children }: { active: string | null; actions?: ReactNode; children: ReactNode }) {
@@ -38,25 +39,20 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
   const month = isMonthKey(params.get('month')) ? params.get('month') : null // a month view's month follows to Reports
   const role = session.status === 'signed-in' ? session.user.role : ''
   const isAdmin = role === 'admin'
-  const money = role === 'admin' || role === 'sales'
   const tabs = MONEY_TABS.filter(t => isAdmin || !t.adminOnly)
   const today = businessToday()
   // The tab counts read Today's list, the register and the month-end checks. They wait for the page's own reads (perf/lcp), so on
-  // a slow connection the page comes first; a page that reads the same data (Invoices & GST, Month end) shares it as before.
+  // a slow connection the page comes first.
   const settled = usePageSettled()
-  const todayView = useTodayView({ id: session.status === 'signed-in' ? session.user.id : '', role: role as Role }, useBusinessToday(), settled)
-  const register = useGstRegister(money && settled)
-  const monthEnd = defaultMonthEndMonth(today)
-  const checks = useMonthEndStatus(monthEnd, isAdmin && settled)
-  const closed = useClosedMonths(isAdmin && settled)
-  const monthOpen = closed.data ? !closed.data.some(c => c.key === monthEnd) : false
-  const recon = useReconciliationInput(isAdmin && monthOpen && settled)
-  const things = useMemo(() => (recon.data ? computeReconciliationExceptions(recon.data).length : 0), [recon.data])
-  const counts: Record<string, number | undefined> = {
-    receivables: todayView.view?.active.filter(i => i.rule === 'payment_overdue').length,
-    'gst-register': register.data?.filter(needsAttention).length,
-    'month-end': checks.data && monthOpen ? checksWithItems(buildChecklist(checks.data, monthEnd)) + (things > 0 ? 1 : 0) : undefined,
-  }
+  const userId = session.status === 'signed-in' ? session.user.id : ''
+  const [counts, setCountsState] = useState<MoneyCounts>(() => (lastCounts?.userId === userId ? lastCounts.counts : {}))
+  const setCounts = useCallback(
+    (next: MoneyCounts) => {
+      lastCounts = { userId, counts: next }
+      setCountsState(next)
+    },
+    [userId],
+  )
   return (
     <div className="grid w-full min-w-0 content-start gap-4 px-4 pb-12 pt-6 md:px-8">
       <div className="grid gap-4">
@@ -110,6 +106,11 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
           })}
         </nav>
       </div>
+      {settled ? (
+        <Suspense fallback={null}>
+          <MoneyTabCounts onCounts={setCounts} />
+        </Suspense>
+      ) : null}
       {children}
     </div>
   )
