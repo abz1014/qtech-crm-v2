@@ -295,7 +295,7 @@ test('RFQ intake: Urdu and emoji items, odd quantities, past due date (sales)', 
       await due.fill('01/01/2020')
       await due.press('Tab')
     }
-    await page.getByRole('button', { name: 'Save without asking' }).click().catch(() => undefined)
+    await page.getByRole('button', { name: /^Save (for later|without asking)/ }).click().catch(() => undefined)
     const o = await OUTCOME(page)
     note({ kind: 'form', role: 'sales', vp: vkey, path: 'intake save', detail: `${JSON.stringify(o)} url=${page.url()}` })
     await shot(page, `form_intake_${vkey}_saved`, true)
