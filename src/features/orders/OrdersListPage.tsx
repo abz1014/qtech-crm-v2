@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CircleCheck, CopyPlus, Users } from 'lucide-react'
 import { useSession } from '@/app/session'
+import { useSharedNavCounts } from '@/app/shell/navCountsContext'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
 import { businessToday } from '@/lib/dates'
 import { resolveStatus, type StatusDimension } from '@/lib/status'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { knownParam } from '@/lib/urlParams'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -142,10 +144,11 @@ export default function OrdersListPage() {
     return {
       tab: isTab(tabParam) ? tabParam : 'active',
       owner: (p.get('owner') === 'all' ? 'all' : p.get('owner') === 'mine' ? 'mine' : defaultOwner(role)) as OwnerFilter,
-      goods: p.get('goods') ?? ALL,
-      commissioning: p.get('commissioning') ?? ALL,
-      invoicing: money ? (p.get('invoicing') ?? ALL) : ALL,
-      payment: money ? (p.get('payment') ?? ALL) : ALL,
+      // HW-24 / HE-1: a value the list does not know (old bookmark, typo) is ignored, not shown as a crash
+      goods: knownParam(p.get('goods'), DIMENSION_VALUES.goods, ALL),
+      commissioning: knownParam(p.get('commissioning'), DIMENSION_VALUES.commissioning, ALL),
+      invoicing: money ? knownParam(p.get('invoicing'), DIMENSION_VALUES.invoicing, ALL) : ALL,
+      payment: money ? knownParam(p.get('payment'), DIMENSION_VALUES.payment, ALL) : ALL,
       text: p.get('q') ?? '',
     }
   }, [query, role, money])
@@ -305,16 +308,20 @@ export default function OrdersListPage() {
     () => filterRows(all, { ...filters, tab: 'active', goods: ALL, commissioning: ALL, invoicing: ALL, payment: ALL, text: '' }, who),
     [all, filters, who],
   )
-  const activeNeed = activeMine.filter(needsAction).length
+  // "Need you" is the Orders badge's number, read from the shell (one rule: the person's Today items about orders), so the
+  // header and the badge never disagree. Outside the shell, or before Today has loaded, the header just counts the orders.
+  const navCounts = useSharedNavCounts()
+  const needYou = navCounts ? (navCounts.orders ?? 0) : null
   const lede = orders.isSuccess
-    ? activeMine.length === 0
+    ? activeMine.length === 0 && !needYou
       ? 'No active orders.'
-      : `${activeNeed} need you · ${activeMine.length - activeNeed} waiting`
+      : [needYou === null ? null : `${needYou} need you`, `${activeMine.length} active`].filter(Boolean).join(' · ')
     : 'From the customer’s PO to delivery and payment.'
 
   const table = (label: string) => (
     <DataTable
       label={label}
+      sortParam="sort"
       columns={columns}
       rows={rows}
       getRowId={r => r.id}
@@ -365,7 +372,7 @@ export default function OrdersListPage() {
         }
       />
 
-      <Tabs className="min-w-0" value={filters.tab} onValueChange={v => change({ tab: v === 'active' ? null : v })}>
+      <Tabs className="min-w-0" value={filters.tab} onValueChange={v => change({ tab: v === 'active' ? null : v, sort: null })}>
         <TabList aria-label="Order lists">
           {TABS.map(t => (
             <Tab key={t.value} value={t.value}>

@@ -3,6 +3,7 @@ import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/rfqs/api'
 import { searchCompanies } from '@/features/companies/api'
+import { useSeesPrices } from '@/app/session'
 
 /*
  * RFQ hooks for intake (R05). Same shape as companies (src/features/README.md): one hook per read, one per write,
@@ -30,11 +31,13 @@ export function useSupplierCandidates(enabled: boolean) {
  * `excludeRfqId` (the RFQ detail page) leaves the open RFQ out of its own memory.
  */
 export function useSupplierMemory(items: readonly api.MemoryQuery[], supplierIds: readonly string[], enabled: boolean, excludeRfqId?: string) {
+  // The memory carries the last quoted, PO and ordered prices: never asked for an engineer (owner decision 2026-10-22).
+  const prices = useSeesPrices()
   const signature = JSON.stringify([items.map(i => [i.key, i.description, i.brandId, i.familyId]), excludeRfqId ? supplierIds.join(',') : supplierIds.length, excludeRfqId ?? null])
   return useQuery({
     queryKey: excludeRfqId ? qk.memory.rfq(excludeRfqId, signature) : qk.intake.memory(signature),
     queryFn: () => api.getSupplierMemory(items, supplierIds, excludeRfqId),
-    enabled: enabled && items.length > 0,
+    enabled: enabled && items.length > 0 && prices,
     staleTime: 60_000,
   })
 }
@@ -110,13 +113,20 @@ export function useRfqItems(id: string | undefined) {
   return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'items'), queryFn: () => api.listRfqItems(id as string), enabled: Boolean(id) })
 }
 
+/** The suppliers asked and their quote lines. An engineer's read carries no price (owner decision 2026-10-22); the key says which. */
 export function useRfqInquiries(id: string | undefined) {
-  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'inquiries'), queryFn: () => api.listInquiries(id as string), enabled: Boolean(id) })
+  const prices = useSeesPrices()
+  return useQuery({
+    queryKey: [...qk.rfqs.part(id ?? '', 'inquiries'), prices ? 'prices' : 'no-prices'],
+    queryFn: () => api.listInquiries(id as string, prices),
+    enabled: Boolean(id),
+  })
 }
 
-/** Today's rate per currency. Read-only here; a missing rate never blocks a price. */
+/** Today's rate per currency. Read-only here; a missing rate never blocks a price. Never read for an engineer (no amounts). */
 export function useFxLatest() {
-  return useQuery({ queryKey: qk.fx.latest(), queryFn: api.listFxLatest, staleTime: 60_000 })
+  const prices = useSeesPrices()
+  return useQuery({ queryKey: qk.fx.latest(), queryFn: api.listFxLatest, staleTime: 60_000, enabled: prices })
 }
 
 export function useSaveReply(rfqId: string) {

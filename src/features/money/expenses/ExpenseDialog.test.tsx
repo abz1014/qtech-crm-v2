@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses/ExpenseDialog'
 import { SUPPLIER_PAYMENT_ID, type ListedExpense } from '@/features/money/expenses/model'
+import { expenseDraftKey } from '@/features/money/expenses/addDraft'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
@@ -121,5 +122,21 @@ describe('Add expense dialog (M03)', () => {
     const call = db.calls.find(c => c.target === 'expenses' && c.verb === 'update')!
     expect(opArgs(call, 'update')?.[0]).toMatchObject({ amount_pkr: 1500, category_id: 'c-rent', paid_on: '2026-11-03' })
     expect(saves(db)).toHaveLength(0)
+  })
+
+  it('keeps a draft of what was typed in this tab, so a reload brings the amount back (HW-23)', async () => {
+    const user = userEvent.setup()
+    const key = expenseDraftKey()
+    setup()
+    const amount = await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    await waitFor(() => expect(amount).toHaveFocus())
+    await user.keyboard('8765')
+    await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem(key) ?? '{}')).toMatchObject({ amount: 8765 }))
+    cleanup() // closing the dialog forgets the draft
+    expect(window.sessionStorage.getItem(key)).toBeNull()
+
+    window.sessionStorage.setItem(key, JSON.stringify({ amount: 8765 })) // as a reload finds it
+    setup()
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('8,765'))
   })
 })

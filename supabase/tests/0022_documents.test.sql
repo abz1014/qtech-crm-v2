@@ -158,8 +158,8 @@ select ok((select qual like '%generated-docs%' and qual like '%admin%' from pg_p
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
 select is((select count(*)::int from public.purchase_orders), 1, 'an engineer can read POs');
-select lives_ok($$insert into storage.objects (bucket_id, name) values ('generated-docs', 'p/eng.pdf')$$,
-  'an engineer can upload to generated-docs');
+select throws_ok($$insert into storage.objects (bucket_id, name) values ('generated-docs', 'p/eng.pdf')$$,
+  '42501', null, '0081: an engineer cannot upload to generated-docs (the PDFs are prices; owner decision 2026-10-22)');
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000004","role":"authenticated"}', true);
 select is((select count(*)::int from public.quotations), 0, 'a deactivated user sees no quotations');
@@ -168,8 +168,8 @@ select throws_ok($$insert into storage.objects (bucket_id, name) values ('genera
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select is(public.t_rows($q$delete from public.quotations where number = 2$q$), 1, 'admin can delete a quotation');
-select is((select count(*)::int from storage.objects where bucket_id = 'generated-docs'), 2,
-  'admin sees what staff uploaded to generated-docs');
+select is((select count(*)::int from storage.objects where bucket_id = 'generated-docs'), 1,
+  'admin sees what sales uploaded to generated-docs (the engineer could not, 0081)');
 
 reset role;
 set local role anon;

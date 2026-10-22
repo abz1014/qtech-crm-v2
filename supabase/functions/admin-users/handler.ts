@@ -129,7 +129,14 @@ export function createHandler(deps: Deps): (req: Request) => Promise<Response> {
           const password = gen()
           const err = await store.setPassword(t.id, password)
           if (err) throw new HttpError(500, 'Could not reset the password.')
+          // HW-17: "signed out on every device" - end every session now. With the API's pre-request check
+          // (migration 0086) an access token of an ended session is refused at once, not when it expires.
+          const revokeErr = await store.revokeSessions(t.id)
           await audit(t.id, 'update', null, { event: 'reset_password' })
+          if (revokeErr) {
+            console.error('admin-users: session revoke after reset failed', { id: t.id, revokeErr })
+            throw new HttpError(500, 'The password was changed, but signing them out of their devices did not finish. Reset it again.')
+          }
           return reply(200, { user_id: t.id, password })
         }
 
@@ -158,7 +165,13 @@ export function createHandler(deps: Deps): (req: Request) => Promise<Response> {
 
         case 'deactivate': {
           const t = await target()
-          if (t.deactivated_at !== null) return reply(200, { user_id: t.id, deactivated_at: t.deactivated_at })
+          if (t.deactivated_at !== null) {
+            // A retry after a ban or revoke that did not finish: finish them (both are idempotent), no second audit row.
+            const banErr = await store.setBan(t.id, true)
+            const revokeErr = await store.revokeSessions(t.id)
+            if (banErr || revokeErr) throw new HttpError(500, 'The person is locked out of the data, but the ban did not finish. Try Deactivate again.')
+            return reply(200, { user_id: t.id, deactivated_at: t.deactivated_at })
+          }
           if (await wouldLoseLastAdmin(t)) throw new HttpError(409, LAST_ADMIN, 'last_admin')
           // The users row first: current_user_role() turns null at once, so RLS locks the person out of
           // all data before the ban and the session revocation land.

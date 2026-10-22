@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
 import { buildSupplierRecord, type SupplierRecord } from '@/features/companies/supplierRecord'
+import { useSeesPrices } from '@/app/session'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/companies/api'
@@ -76,9 +77,11 @@ export function useSupplierActivity(id: string | undefined, enabled = true) {
 
 /** Quotes, deliveries and open items with this supplier (R18). Plain rows; supplierRecord.ts builds the display. */
 export function useSupplierRecord(id: string | undefined, enabled = true) {
+  // An engineer's read has no prices or rates (owner decision 2026-10-22); the key says which.
+  const prices = useSeesPrices()
   return useQuery({
-    queryKey: qk.companies.part(id ?? '', 'supplier-record'),
-    queryFn: () => api.getSupplierRecord(id as string),
+    queryKey: [...qk.companies.part(id ?? '', 'supplier-record'), prices ? 'prices' : 'no-prices'],
+    queryFn: () => api.getSupplierRecord(id as string, prices),
     enabled: Boolean(id) && enabled,
   })
 }
@@ -147,6 +150,10 @@ export function useCreateCompany() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: async (input: api.NewCompany & { contactName?: string | null }) => {
+      // HW-33: the unique index ignores only case and surrounding spaces, so "A  B" or "A B." would slip past it. Check by
+      // the stricter key first; a retry finds its own row (same request id) and carries on. A failed check does not block.
+      const existing = await api.findCompanyByName(input.name).catch(() => null)
+      if (existing && existing.id !== input.id) throw new DuplicateCompanyError(existing)
       try {
         let created: { id: string; name: string }
         try {
@@ -155,7 +162,7 @@ export function useCreateCompany() {
           // A retry reuses the request id: the company is already saved (an earlier attempt failed after it, e.g. on the
           // contact), so carry on with the contact instead of ending as "already saved" without it.
           const e = err as { code?: string; message?: string }
-          if (e?.code === '23505' && /companies_pkey/.test(e.message ?? '')) created = { id: input.id, name: input.name.trim() }
+          if (e?.code === '23505' && /companies_pkey/.test(e.message ?? '')) created = { id: input.id, name: api.tidyCompanyName(input.name) }
           else throw err
         }
         if (input.contactName?.trim()) await api.addContact({ id: crypto.randomUUID(), companyId: created.id, name: input.contactName })
@@ -175,7 +182,8 @@ export function useCreateCompany() {
 export function useUpdateCompany(id: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) => api.updateCompany(id, patch),
+    mutationFn: ({ base, ...patch }: { name?: string; country?: string | null; city?: string | null; notes?: string | null; base?: Parameters<typeof api.updateCompany>[2] }) =>
+      api.updateCompany(id, patch, base),
     onSuccess: () => invalidateAfter(client, 'company.update', { id }),
   })
 }

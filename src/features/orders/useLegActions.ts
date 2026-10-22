@@ -1,6 +1,7 @@
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
+import { useInFlight } from '@/lib/useInFlight'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderLegRow } from '@/features/orders/api'
 import { useSupplierMedianDays, useUpdateLeg } from '@/features/orders/hooks'
@@ -14,6 +15,7 @@ import { before, editPatch, nextStamp, stampPatch, type LegDates, type LegPatch 
 export function useLegActions(order: OrderHeader, leg: OrderLegRow | undefined) {
   const { toast } = useToast()
   const update = useUpdateLeg(order.id)
+  const once = useInFlight() // HW-15: one write per press (a double click on Delivered today sends one PATCH, one toast, one Undo)
   const median = useSupplierMedianDays(leg?.supplierId)
   const medianDays = median.data ?? null
   const today = businessToday()
@@ -21,33 +23,34 @@ export function useLegActions(order: OrderHeader, leg: OrderLegRow | undefined) 
   const stamp = dates ? nextStamp(dates) : null
   const leadHint = leg && leg.leadTimes.length > 0 ? [...leg.leadTimes].sort((a, b) => b.length - a.length)[0] : null
 
-  const run = async (patch: LegPatch & { reference?: string | null }, title: string, body: string) => {
-    if (!leg || !dates) return
-    const prev: LegPatch & { reference?: string | null } = { ...before(dates, patch), ...('reference' in patch ? { reference: leg.reference } : {}) }
-    try {
-      await update.mutateAsync({ id: leg.id, patch })
-      toast({
-        title,
-        body,
-        undo: {
-          onUndo: async () => {
-            await update.mutateAsync({ id: leg.id, patch: prev })
+  const run = (patch: LegPatch & { reference?: string | null }, title: string, body: string) =>
+    once(async () => {
+      if (!leg || !dates) return
+      const prev: LegPatch & { reference?: string | null } = { ...before(dates, patch), ...('reference' in patch ? { reference: leg.reference } : {}) }
+      try {
+        await update.mutateAsync({ id: leg.id, patch })
+        toast({
+          title,
+          body,
+          undo: {
+            onUndo: async () => {
+              await update.mutateAsync({ id: leg.id, patch: prev })
+            },
+            settledTitle: title,
+            undoneTitle: 'Taken back',
           },
-          settledTitle: title,
-          undoneTitle: 'Taken back',
-        },
-      })
-    } catch (err) {
-      toast({ title: 'Could not save', body: mapPgError(err, { entity: 'supplier order' }).message, tone: 'danger' })
-    }
-  }
+        })
+      } catch (err) {
+        toast({ title: 'Could not save', body: mapPgError(err, { entity: 'supplier order' }).message, tone: 'danger' })
+      }
+    })
 
   const doStamp = () => {
-    if (!stamp || !leg || !dates) return
+    if (!stamp || !leg || !dates) return Promise.resolve(undefined)
     const patch = stampPatch(stamp.step, dates, today, leg.leadTimes, medianDays)
     const verb = stamp.step === 'place' ? 'Marked placed' : 'Marked delivered'
     const extra = patch.expected_on ? `expected ${formatDay(patch.expected_on)}, from lead time ${leadHint ?? ''}`.replace(/, from lead time $/, '') : ''
-    void run(patch, verb, [leg.supplierName, extra].filter(Boolean).join(' · '))
+    return run(patch, verb, [leg.supplierName, extra].filter(Boolean).join(' · '))
   }
 
   const saveDate = (field: keyof LegDates, name: string) => (value: string | null) => {

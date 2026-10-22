@@ -33,7 +33,7 @@ import { PaletteContext, type PaletteApi } from "@/app/palette/usePalette";
 import { CAPTURE_LABEL } from "@/app/shell/TopBar";
 import { KEYBOARD_MEDIA } from "@/app/shell/shortcuts";
 import { Kbd } from "@/ui/Kbd";
-import { shortcutsEnabled } from "@/ui/useShortcutsSetting";
+import { blockingOverlayOpen, shortcutsEnabled } from "@/ui/useShortcutsSetting";
 import {
   filterItems,
   type PaletteItem,
@@ -98,12 +98,20 @@ const MONEY_PLACES: ReadonlyArray<{
   },
   {
     id: "money:in-out",
-    label: "In vs out",
+    label: "Money in and out",
     href: "/money/reports/in-out",
     icon: ChartColumn,
     roles: ["admin"],
-    keywords: ["cash flow", "money in", "money out", "quarter", "profit"],
+    keywords: ["in vs out", "cash flow", "money in", "money out", "quarter", "profit"],
   },
+  // round 3: every money report is found by name (each opens in Money > Reports)
+  { id: "money:pnl", label: "Profit and loss", href: "/money/reports/pnl", icon: ChartColumn, roles: ["admin"], keywords: ["p&l", "profit", "result"] },
+  { id: "money:aging", label: "Overdue by age", href: "/money/reports/aging", icon: ChartColumn, roles: ["admin"], keywords: ["aging", "overdue"] },
+  { id: "money:owe", label: "We owe suppliers", href: "/money/reports/owe", icon: ChartColumn, roles: ["admin"], keywords: ["payables", "suppliers", "we owe"] },
+  { id: "money:gst-month", label: "GST and FBR", href: "/money/reports/gst", icon: ChartColumn, roles: ["admin"], keywords: ["fbr", "gst month", "input tax"] },
+  { id: "money:team", label: "Sales by person", href: "/money/reports/team", icon: ChartColumn, roles: ["admin"], keywords: ["team", "targets", "credited"] },
+  { id: "money:categories", label: "Expenses by category", href: "/money/reports/categories", icon: ChartColumn, roles: ["admin"], keywords: ["categories", "spend"] },
+  { id: "money:enquiries", label: "Enquiries and customers", href: "/money/reports/enquiries", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
   {
     id: "money:month-end",
     label: "Month end",
@@ -168,7 +176,10 @@ function placesFor(role: string): PaletteItem[] {
   ];
 }
 
-/** True when a key press belongs to something the person is typing into or a dialog they are in. */
+/**
+ * True when a key press belongs to something the person is typing into, or to a dialog or menu that is open. The desktop
+ * Help panel sits beside the page (non-modal), so it does not stop the page's keys.
+ */
 function isTypingContext(e: KeyboardEvent): boolean {
   const t = e.target;
   if (t instanceof HTMLElement) {
@@ -176,14 +187,12 @@ function isTypingContext(e: KeyboardEvent): boolean {
       return true;
     if (
       t.closest(
-        '[role="textbox"],[role="combobox"],[role="searchbox"],[role="listbox"],[role="menu"]',
+        '[role="textbox"],[role="combobox"],[role="searchbox"],[role="listbox"],[role="menu"],[role="dialog"],[role="alertdialog"]',
       )
     )
       return true;
   }
-  return Boolean(
-    document.querySelector('[role="dialog"],[role="alertdialog"]'),
-  );
+  return blockingOverlayOpen();
 }
 
 /*
@@ -369,6 +378,8 @@ export function PaletteHost({
         e.key.toLowerCase() === "k"
       ) {
         e.preventDefault();
+        // Not on top of an open dialog or menu: its half-typed text stays where it is.
+        if (blockingOverlayOpen()) return;
         setLoaded(true);
         setOpen(true);
       }

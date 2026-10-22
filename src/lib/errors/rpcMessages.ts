@@ -43,6 +43,13 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^(.+?) is closed\. Reopen it first \(Money, Month-end\), then change this payment\.?$/, action: MONTH_END },
   { match: /^(.+?) is still open\. Close earlier months first/, message: m => `Close ${m[1]} first. Months close in order.`, help: 'month-end-close', action: MONTH_END },
   { match: /^The new date is in (.+?), which is closed\./, action: MONTH_END },
+  // 0080 (owner decision 2026-10-22): months reopen newest first.
+  {
+    match: /^(.+?) cannot be reopened while (.+?) is closed\. Reopen (.+?) first\.?$/,
+    message: m => `Reopen ${m[2]} first. Months reopen newest first, so ${m[1]} can be reopened once every month after it is open.`,
+    help: 'month-end-close',
+    action: MONTH_END,
+  },
   { match: /^a month is required$/, message: () => 'Choose a month first.' },
   { match: /^only an admin can (close|reopen) a month$/, message: m => `Only an admin can ${m[1]} a month. Ask an admin if it needs doing.` },
 
@@ -52,6 +59,9 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Only the person who voided this payment can undo it\./ },
   { match: /^Paid via must be bank or cash\.$/ },
   { match: /^The amount must be above zero\.$/ },
+  // 0085 session cutoff (HW-17/HW-45): already sentences; the app signs the person out on these
+  { match: /^Your session has ended\. Sign in again\.$/ },
+  { match: /^This account has been deactivated\.$/ },
   { match: /^The correction of this payment has been changed since\./ },
   { match: /^The date received is required\.$/ },
   { match: /^This payment is already voided\./ },
@@ -70,6 +80,12 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^payment reminders are for admin and sales only$/, message: () => ADMIN_SALES },
 
   // Quotations and POs
+  { match: /^a quoted price above zero is needed for: (.+)$/, message: m => `A quotation can't carry a price of 0. Enter the price for "${m[1]}", or untick it.`, help: 'issue-quotation' },
+  {
+    match: /^the quantity of (.+) changed to (.+) since this quotation was opened$/,
+    message: m => `Someone changed the quantity of "${m[1]}" to ${m[2]} while this was open. Nothing was issued. Check the new total below, then issue again.`,
+    help: 'issue-quotation',
+  },
   { match: /^a quoted price is needed for: (.+)$/, message: m => `Add a price for "${m[1]}", then issue the quotation again.`, help: 'issue-quotation' },
   { match: /^a selling price is needed for: (.+)$/, message: m => `Add a selling price for "${m[1]}", then try again.` },
   { match: /^a price is needed for: (.+)$/, message: m => `Add the supplier price for "${m[1]}", then issue the PO again.`, help: 'issue-po' },

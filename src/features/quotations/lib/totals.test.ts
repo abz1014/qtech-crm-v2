@@ -75,6 +75,14 @@ describe('quotation totals', () => {
   })
 })
 
+describe('very large amounts (HW-2)', () => {
+  it('a 22-digit price is computed, not thrown', () => {
+    const t = computeTotals([{ qty: 1, unitPrice: 1e22, gstRate: 18 }])
+    expect(t.net).toBe(10n ** 22n * 100n)
+    expect(t.gst).toBe(18n * 10n ** 20n * 100n)
+  })
+})
+
 describe('amount in words', () => {
   it('reads the gross of the approved PDF', () => {
     expect(amountInWords(163_194_000n)).toBe('One million six hundred thirty-one thousand nine hundred forty rupees only.')

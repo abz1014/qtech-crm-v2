@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CalendarDays, Check, Download, Plus, Truck, TriangleAlert } from 'lucide-react'
+import { Check, Download, Plus, Truck } from 'lucide-react'
 import { generateCSV, downloadCSV } from '@/lib/csvExport'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -11,13 +11,13 @@ import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
-import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { MoreMenu } from '@/ui/MoreMenu'
 import { NoResults } from '@/ui/NoResults'
 import { MenuItem } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { StatusBadge } from '@/ui/StatusBadge'
+import { StatusText } from '@/ui/StatusText'
+import { Select } from '@/ui/form/Select'
 import { SumBar } from '@/ui/SumBar'
 import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
@@ -29,7 +29,7 @@ import { useGstRegister, useStamps } from '@/features/money/invoices/hooks'
 import { InvoiceDetailDialog } from '@/features/money/invoices/InvoiceDetailDialog'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import {
-  attentionReason,
+  invoiceNextStep,
   cleanPsid,
   matchesSearch,
   needsAttention,
@@ -58,6 +58,16 @@ import {
  * same words as on the order.
  */
 type RegisterView = 'all' | 'attention' | 'tcs'
+
+/** The invoice's one Next step, with why under it when it is late or out of order. */
+function InvoiceStep({ r }: { r: GstRow }) {
+  const s = invoiceNextStep(r)
+  return (
+    <StatusText tone={s.tone} detail={s.detail}>
+      {s.label}
+    </StatusText>
+  )
+}
 
 export function GstRegisterPage() {
   const session = useSession()
@@ -117,20 +127,7 @@ export function GstRegisterPage() {
         kind: 'date',
         sortable: true,
         value: r => r.number,
-        cell: r => {
-          const why = attentionReason(r)
-          return (
-            <span className="inline-flex items-center gap-2">
-              {why ? (
-                <span title={why} className="text-tone-warning-fg">
-                  <Icon icon={TriangleAlert} />
-                  <span className="sr-only">Needs attention: {why}</span>
-                </span>
-              ) : null}
-              {r.number ?? <span className="text-fg-muted">No number</span>}
-            </span>
-          )
-        },
+        cell: r => <span className="num">{r.number ?? <span className="font-sans text-fg-muted">No number</span>}</span>,
       },
       { id: 'date', header: 'Date', kind: 'date', sortable: true, value: r => r.invoiceDate, cell: r => (r.invoiceDate ? formatDay(r.invoiceDate).replace(/^\w+ /, '') : '—') },
       {
@@ -138,21 +135,18 @@ export function GstRegisterPage() {
         header: 'Customer',
         sortable: true,
         value: r => r.companyName,
-        cell: r => {
-          const why = attentionReason(r)
-          return (
-            <span className="grid gap-px">
-              <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName ?? 'No customer'}</span>
-              {why ? <span className={`min-w-0 [overflow-wrap:anywhere] text-xs ${ticked.has(r.invoiceId) ? 'text-fg-2' : 'text-tone-warning-fg'}`}>{why}</span> : r.orderNumber !== null ? <span className="num text-xs text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
-            </span>
-          )
-        },
+        cell: r => (
+          <span className="grid gap-px">
+            <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName ?? 'No customer'}</span>
+            {r.orderNumber !== null ? <span className="num text-xs text-fg-2">{orderRef(r.orderNumber)}</span> : null}
+          </span>
+        ),
       },
       { id: 'net', header: 'Net', kind: 'money', sortable: true, value: r => String(r.net), total: true },
       { id: 'gst', header: 'GST', kind: 'money', sortable: true, value: r => String(r.gst), total: true },
       { id: 'gross', header: 'Gross', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
-      { id: 'tcs', header: 'Sent to customer (TCS)', sortable: false, cell: r => <StatusBadge dimension="tcs" value={r.courierState} /> },
-      { id: 'fbr', header: 'Tax deposited (FBR)', sortable: false, cell: r => <StatusBadge dimension="fbr" value={r.fbrState} /> },
+      // ONE Next step (round 3) in place of the two chip columns, sent to customer and tax deposited.
+      { id: 'next', header: 'Next step', sortable: false, cell: r => <InvoiceStep r={r} /> },
       {
         id: 'pdf',
         header: 'PDF',
@@ -169,13 +163,13 @@ export function GstRegisterPage() {
     // stamps, and only lose the Net and GST columns, which are the admin's filing figures.
     return isAdmin ? cols : cols.filter(c => c.id !== 'net' && c.id !== 'gst')
     // a ticked row has the selected background, where the amber text is below 4.5:1, so it reads in the body colour there
-  }, [ticked, isAdmin])
+  }, [isAdmin])
 
   const stamp = async (kind: StampKind) => {
     if (busy || tickedRows.length === 0) return
     const targets = stampable(tickedRows, kind)
     if (kind !== 'psid' && targets.length === 0) {
-      toast.toast({ title: kind === 'tcs' ? 'Already sent by TCS' : 'Already deposited', body: `Nothing to stamp on the ${tickedRows.length} ticked ${tickedRows.length === 1 ? 'invoice' : 'invoices'}.`, tone: 'neutral' })
+      toast.toast({ title: kind === 'tcs' ? 'Already sent to the customer' : 'Already deposited', body: `Nothing to stamp on the ${tickedRows.length} ticked ${tickedRows.length === 1 ? 'invoice' : 'invoices'}.`, tone: 'neutral' })
       return
     }
     const clean = cleanPsid(psid)
@@ -188,7 +182,7 @@ export function GstRegisterPage() {
       const ids = targets.map(r => r.invoiceId)
       const res = kind === 'tcs' ? await stamps.tcs(ids) : kind === 'deposit' ? await stamps.deposited(ids) : await stamps.psid(ids, clean)
       const word = res.n === 1 ? 'invoice' : 'invoices'
-      const what = kind === 'tcs' ? 'sent by TCS today' : kind === 'deposit' ? 'deposited today' : `given PSID ${clean}`
+      const what = kind === 'tcs' ? 'sent to the customer today' : kind === 'deposit' ? 'deposited today' : `given PSID ${clean}`
       toast.toast({
         title: `Marked ${res.n} ${word} ${what}`,
         body: `Today, ${formatDay(businessToday())}`,
@@ -217,41 +211,38 @@ export function GstRegisterPage() {
     downloadCSV(csv, 'gst-register.csv')
   }
 
+  const viewOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'attention', label: 'Needs attention', needs: attentionCount },
+    { value: 'tcs', label: 'Not sent yet', needs: tcsCount },
+  ]
   const header = (
     <div className="flex flex-wrap items-center gap-3">
       <h2 className="text-base font-semibold">GST register</h2>
-      <span className="inline-flex h-6 items-center gap-[6px] rounded border border-line-strong bg-selected px-2 text-sm text-fg-2">
-        <Icon icon={CalendarDays} size="chip" />
-        By invoice date
-      </span>
-      {all.length > 0 ? <span className="text-sm text-fg-muted">{rangeLabel(all)}</span> : null}
-      <InfoTip label="About TCS, FBR and PSID">
-        <b className="font-medium text-fg">TCS</b> is the courier that takes the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the
-        tax office: the GST on every invoice is deposited with FBR. <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit;
-        one PSID can cover several invoices. Dates here are invoice dates; money actually received is under Who owes us.
+      <InfoTip label="About sending, FBR and PSID">
+        By invoice date{all.length > 0 ? `, ${rangeLabel(all)}` : ''}. <b className="font-medium text-fg">Sent to customer</b> means the TCS courier took
+        the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the tax office: the GST on every invoice is deposited with FBR.{' '}
+        <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit; one PSID can cover several invoices. Money actually
+        received is under Who owes us.
       </InfoTip>
     </div>
   )
   // Toolbar row 2 (spec 3.2): the search, ONE switch (each view matches one stamping job; the needs-you counts as NeedsCount
   // pills), and Export in a More menu for the admin.
   const controls = (
-    <div className="flex flex-wrap items-center gap-3">
-      <TableFilter label="Search invoices" hint="Finds an invoice by invoice number, customer or order number." value={search} onChange={setSearch} />
-      <span className="flex-1" />
-      <SegmentedControl
-        aria-label="Show"
-        value={view}
-        onValueChange={v => setView(v as RegisterView)}
-        options={[
-          { value: 'all', label: 'All' },
-          { value: 'attention', label: 'Needs attention', needs: attentionCount },
-          { value: 'tcs', label: 'Not sent by TCS', needs: tcsCount },
-        ]}
-      />
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap">
+      <TableFilter label="Search invoices" hint="Finds an invoice by invoice number, customer or order number." value={search} onChange={setSearch} className="max-sm:col-span-2" />
+      <span className="flex-1 max-sm:hidden" />
+      {/* A phone gets the same three views as a select: a strip of three would run off a 320 px screen. */}
+      <label className="grid min-w-0 sm:hidden">
+        <span className="sr-only">Show</span>
+        <Select data-testid="register-view" value={view} onChange={e => setView(e.target.value as RegisterView)} options={viewOptions.map(o => ({ value: o.value, label: o.needs ? `${o.label} (${o.needs})` : o.label }))} />
+      </label>
+      <SegmentedControl aria-label="Show" value={view} onValueChange={v => setView(v as RegisterView)} options={viewOptions} className="max-sm:hidden" />
       {isAdmin ? (
         <MoreMenu label="More for the register">
           <MenuItem icon={Download} onClick={exportCsv} disabled={shown.length === 0}>
-            Export
+            Export CSV
           </MenuItem>
         </MoreMenu>
       ) : null}
@@ -286,6 +277,7 @@ export function GstRegisterPage() {
 
       <DataTable
         label="GST register"
+        sortParam="sort"
         columns={columns}
         rows={shown}
         getRowId={r => r.invoiceId}
@@ -301,7 +293,8 @@ export function GstRegisterPage() {
             : null
         }
         toolbar={({ selectedCount }) => (
-          <div className="grid gap-3">
+          // The full width of the card and no wider (min-w-0): on a phone the search and the view select stay on screen.
+          <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
             {header}
             {controls}
             {selectedCount > 0 ? (
@@ -310,8 +303,8 @@ export function GstRegisterPage() {
                   <b className="num font-medium">{selectedCount}</b> {selectedCount === 1 ? 'invoice' : 'invoices'} ticked
                 </span>
                 <span className="flex-1" />
-                <Button size="sm" icon={Truck} onClick={() => void stamp('tcs')} disabled={busy}>
-                  Sent by TCS today
+                <Button size="sm" icon={Truck} onClick={() => void stamp('tcs')} disabled={busy} title="The TCS courier took them today">
+                  Sent to customer today
                 </Button>
                 <span className="inline-flex items-center gap-2">
                   <InfoTip label="About PSID">PSID is the payment slip number FBR gives a tax deposit. Paste it once: it is written to every ticked invoice.</InfoTip>
@@ -347,7 +340,7 @@ export function GstRegisterPage() {
               query={search}
               scope="invoices"
               fields="invoice number, customer and order number"
-              filtersOn={attention ? ['Needs attention'] : tcs ? ['Not sent by TCS'] : []}
+              filtersOn={attention ? ['Needs attention'] : tcs ? ['Not sent yet'] : []}
               onClear={() => {
                 setView('all')
                 setSearch('')
@@ -366,11 +359,7 @@ export function GstRegisterPage() {
               <Money value={r.gross} prefix={false} />
             </div>
             <span className="min-w-0 [overflow-wrap:anywhere] text-sm">{r.companyName}</span>
-            {attentionReason(r) ? <span className="text-sm text-tone-warning-fg">{attentionReason(r)}</span> : null}
-            <div className="flex flex-wrap gap-2">
-              <StatusBadge dimension="tcs" value={r.courierState} />
-              <StatusBadge dimension="fbr" value={r.fbrState} />
-            </div>
+            <InvoiceStep r={r} />
           </div>
         )}
       />

@@ -65,7 +65,7 @@ export function CommissioningPanel({
               <span className="text-xs text-fg-muted">Done on</span>
               <span className={order.doneOn ? 'num text-sm' : 'text-sm text-fg-muted'}>{order.doneOn ? formatDay(order.doneOn) : 'Not yet'}</span>
               {!order.doneOn && canEdit && !isEngineer && !markDoneAbove ? (
-                <Button size="sm" icon={CircleCheck} className="mt-1 justify-self-start" onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
+                <Button size="sm" icon={CircleCheck} className="mt-1 justify-self-start" onClick={markDone.run} busy={markDone.pending} busyLabel="Saving">
                   Mark done today
                 </Button>
               ) : null}

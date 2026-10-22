@@ -51,7 +51,7 @@ function db(extra: (c: FakeCall) => FakeResult | undefined = () => undefined) {
       case 'v_order_items_total':
         return { data: { net: 1949800, gst: 350964 } }
       case 'order_items':
-        return { data: Array.from({ length: 8 }, () => ({ gst_rate: 18 })) }
+        return { data: Array.from({ length: 8 }, () => ({ qty: 1, unit_price_net: 243725, gst_rate: 18 })) }
       case 'payments_in':
         return c.verb === 'insert' ? {} : { data: [{ received_on: '2026-11-09', amount: 700000 }] }
       case 'invoices':
@@ -167,7 +167,7 @@ describe('GST register (M01)', () => {
     expect(screen.getByText('October invoice, tax not deposited')).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /Select all in October 2026/ })) // tap 1: tick the month
     expect(screen.getByTestId('batch-bar')).toHaveTextContent('3 invoices ticked')
-    await user.click(screen.getByRole('button', { name: 'Sent by TCS today' })) // tap 2
+    await user.click(screen.getByRole('button', { name: 'Sent to customer today' })) // tap 2
     await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tcs_sent')).toBe(true))
     expect((opArgs(d.calls.find(c => c.target === 'rpc:stamp_tcs_sent')!, 'args') as { p_invoice_ids: string[] }[])[0].p_invoice_ids.sort()).toEqual(['i1', 'i2', 'i3'])
     await user.click(screen.getByRole('textbox', { name: 'PSID' }))
@@ -184,27 +184,28 @@ describe('GST register (M01)', () => {
     db()
     const a = mount(<GstRegisterPage />)
     await screen.findByText('INV-2299')
-    expect(screen.getByRole('columnheader', { name: /Tax deposited \(FBR\)/ })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /Next step/ })).toBeInTheDocument()
+    for (const h of [/Tax deposited/, /Sent to customer/]) expect(screen.queryByRole('columnheader', { name: h })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'More' }))
-    expect(await screen.findByRole('menuitem', { name: 'Export' })).toBeInTheDocument()
+    expect(await screen.findByRole('menuitem', { name: 'Export CSV' })).toBeInTheDocument()
     await user.keyboard('{Escape}')
     a.unmount()
     const d = db()
     mount(<GstRegisterPage />, 'sales')
     await screen.findByText('INV-2299')
     expect(screen.queryByRole('button', { name: 'More' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('menuitem', { name: 'Export' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Export CSV' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create invoice' })).toBeInTheDocument()
     const table = screen.getByRole('table', { name: 'GST register' })
     for (const h of ['Net', 'GST']) expect(within(table).queryByRole('columnheader', { name: h })).toBeNull()
-    expect(within(table).getByRole('columnheader', { name: /Tax deposited \(FBR\)/ })).toBeInTheDocument()
-    // ONE switch (R2-15): All, Needs attention N, Not sent by TCS N; the counts are needs-you pills
+    expect(within(table).getByRole('columnheader', { name: /Next step/ })).toBeInTheDocument()
+    // ONE switch (R2-15): All, Needs attention N, Not sent yet N; the counts are needs-you pills
     expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()
     expect(screen.getByRole('radio', { name: /Needs attention/ })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: /Not sent by TCS/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Not sent yet/ })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Search invoices' })).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /Select all in October 2026/ }))
-    await user.click(screen.getByRole('button', { name: 'Sent by TCS today' }))
+    await user.click(screen.getByRole('button', { name: 'Sent to customer today' }))
     await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tcs_sent')).toBe(true))
   })
 
@@ -243,29 +244,31 @@ describe('GST register (M01)', () => {
 })
 
 describe('Who owes us (M02)', () => {
-  it('admin sees balances and a Record payment action per open order', async () => {
+  it('admin sees balances, and Record payment in ONE place: the picked order\'s panel (no icon button on every row)', async () => {
     db()
     mount(<ReceivablesPage />)
     expect(await screen.findByText('Indus Textile Mills').catch(() => screen.findAllByText('Punjab Cement Ltd'))).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: /^Record payment for ORD-/ }).length).toBeGreaterThan(0)
-    expect(screen.getByText('Who owes us', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.queryAllByRole('button', { name: /^Record payment for ORD-/ })).toHaveLength(0)
+    expect(screen.queryByRole('columnheader', { name: 'Actions' })).toBeNull()
+    expect(screen.getByText('Balances', { selector: 'h2' })).toBeInTheDocument()
   })
 
   it('sales see the same page under the same name, with no Record payment, and never ask for a payment row', async () => {
     const d = db()
     mount(<ReceivablesPage />, 'sales')
     await screen.findAllByText('Punjab Cement Ltd')
-    expect(screen.getByText('Who owes us', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.getByText('Balances', { selector: 'h2' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Record payment/ })).not.toBeInTheDocument()
     expect(d.calls.filter(c => c.target === 'payments_in')).toHaveLength(0)
     expect(within(screen.getByRole('table', { name: 'Who owes us' })).getAllByRole('row').length).toBeGreaterThan(1)
   })
 
-  it('has ONE info tip beside "Balance is gross, GST included", covering the balance and reminders', async () => {
+  it('has ONE info tip beside the Balances heading, covering the gross balance and reminders', async () => {
     db()
     mount(<ReceivablesPage />)
     await screen.findAllByText('Punjab Cement Ltd')
-    const toolbar = screen.getByText('Balance is gross, GST included').parentElement as HTMLElement
+    expect(screen.queryByText('Balance is gross, GST included')).toBeNull()
+    const toolbar = screen.getByText('Balances', { selector: 'h2' }).parentElement as HTMLElement
     expect(toolbar.querySelectorAll('[data-infotip]')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'About the balance and reminders' })).toBeInTheDocument()
   })

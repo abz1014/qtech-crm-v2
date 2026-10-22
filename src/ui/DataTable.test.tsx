@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { generateCSV } from '@/lib/csvExport'
 import { paisaToFixed, sumPaisa } from '@/lib/money'
-import { tableCsvRows } from '@/ui/dataTableModel'
+import { MemoryRouter, useLocation } from 'react-router-dom'
+import { formatSortParam, parseSortParam, tableCsvRows } from '@/ui/dataTableModel'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { TableFilter } from '@/ui/TableFilter'
 
@@ -370,5 +371,70 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
     const t = el.querySelector<HTMLElement>('tbody td [data-truncate]')!
     expect(t.textContent).toBe('Punjab Cement')
     expect(t.style.maxWidth).toBe('230px')
+  })
+})
+
+describe('DataTable: sort in the address (HW-30)', () => {
+  it('reads and writes ?sort=, leaving the default sort out of the address', () => {
+    expect(parseSortParam('net.desc', ['no', 'net'])).toEqual({ id: 'net', dir: 'desc' })
+    expect(parseSortParam('none', ['no'])).toBeNull()
+    expect(parseSortParam('gone.asc', ['no'])).toBeUndefined()
+    expect(parseSortParam('no.sideways', ['no'])).toBeUndefined()
+    expect(parseSortParam(null, ['no'])).toBeUndefined()
+    expect(formatSortParam({ id: 'no', dir: 'asc' }, { id: 'no', dir: 'asc' })).toBeNull()
+    expect(formatSortParam(null, null)).toBeNull()
+    expect(formatSortParam(null, { id: 'no', dir: 'asc' })).toBe('none')
+    expect(formatSortParam({ id: 'net', dir: 'desc' }, null)).toBe('net.desc')
+  })
+
+  it('keeps the sort in ?sort= so a remount (refresh, Back) lands on the same order', () => {
+    let search = ''
+    const Spy = () => {
+      search = useLocation().search
+      return null
+    }
+    const page = (entry: string) => (
+      <MemoryRouter initialEntries={[entry]}>
+        <DataTable label="x" sortParam="sort" columns={columns} rows={INVOICES} getRowId={r => r.id} />
+        <Spy />
+      </MemoryRouter>
+    )
+    mount(page('/list?owner=all'))
+    const th = () => el.querySelector('th[scope="col"]:nth-child(3)')!
+    act(() => (th().querySelector('button') as HTMLButtonElement).click())
+    expect(th().getAttribute('aria-sort')).toBe('ascending')
+    expect(new URLSearchParams(search).get('sort')).toBe('net.asc')
+    expect(new URLSearchParams(search).get('owner')).toBe('all')
+    act(() => root!.unmount())
+    el.remove()
+    mount(page(`/list${search}`))
+    expect(th().getAttribute('aria-sort')).toBe('ascending')
+    expect(rows().map(r => r.querySelector('td')!.textContent)).toEqual(['INV-2259', 'INV-2250', 'INV-2260'])
+  })
+})
+
+describe('DataTable: wide tables (HW-36, HW-52)', () => {
+  it('scrolls sideways only when wider than its box, and holds the empty state to the visible width', () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.tagName === 'TABLE' ? 900 : 0
+    })
+    const client = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(375)
+    try {
+      mount(<DataTable label="x" columns={columns} rows={[]} getRowId={r => r.id} empty={<p>No invoices yet</p>} />)
+      expect(el.querySelector('table')!.parentElement!.className).toContain('overflow-x-auto')
+      const msg = el.querySelector<HTMLElement>('[data-table-message]')!
+      expect(msg.className).toContain('sticky')
+      expect(msg.style.width).toBe('375px')
+      expect(msg.textContent).toBe('No invoices yet')
+    } finally {
+      width.mockRestore()
+      client.mockRestore()
+    }
+  })
+
+  it('a table that fits has no scroll box of its own, so its sticky header follows the page', () => {
+    mount(<DataTable label="x" columns={columns} rows={INVOICES} getRowId={r => r.id} />)
+    expect(el.querySelector('table')!.parentElement!.className).toBe('')
+    expect(el.querySelector('[data-table-root]')!.className).not.toContain('overflow-hidden')
   })
 })

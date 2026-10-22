@@ -15,3 +15,7 @@
 # The service worker must be re-checked on every visit so a new deploy is noticed.
 /sw.js
   Cache-Control: no-cache
+
+# The minimum app version (owner decision 2026-10-22) must be re-read on every check, never from a cache.
+/version.json
+  Cache-Control: no-cache

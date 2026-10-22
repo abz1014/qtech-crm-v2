@@ -20,13 +20,13 @@ function joinWords(words: string[]): string {
  * missing and who can change it. Names the role. Used for a destination the role cannot reach and for an
  * account with no role.
  */
-export function NoAccessPage({ area }: { area?: string }) {
+export function NoAccessPage({ area, roles }: { area?: string; roles?: readonly string[] }) {
   const session = useSession()
   const navigate = useNavigate()
   const role = session.status === 'signed-in' ? session.user.role : ''
   const home = getHomeRoute(role)
   const known = home !== '/no-access'
-  const allowed = area ? (navItems.find(i => i.label === area)?.roles ?? ['admin']) : []
+  const allowed = area ? (roles ?? navItems.find(i => i.label === area)?.roles ?? ['admin']) : []
   const title = area ? `${area} is for ${joinWords(allowed.map(r => WHO[r] ?? r))}` : 'This account has no access yet'
   const body = known
     ? `Your role is ${ROLE_LABEL[role] ?? role}. Ask an admin ${area ? (NEED[area] ?? `if you need access to ${area}`) : 'if you need access to this page'}.`

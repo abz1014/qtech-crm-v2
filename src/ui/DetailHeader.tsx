@@ -78,17 +78,21 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, more, chips, me
       </div>
       {chips ? <div className="mt-2 flex flex-wrap items-center gap-2">{chips}</div> : null}
       {items.length ? (
-        <p className="mt-2 text-sm text-fg-2">
-          {items.map((m, i) => (
-            <Fragment key={i}>
-              {i ? (
-                <span aria-hidden="true" className="mx-2 text-fg-muted">
-                  ·
-                </span>
-              ) : null}
-              <span className="inline-flex items-center gap-1">{m}</span>
-            </Fragment>
-          ))}
+        // Each item carries the dot before it, as one unit, and the row is pulled 20 px left into a clipped edge: the dot of
+        // an item that starts a wrapped line falls in that edge, so on a phone no line ends (or starts) with a dangling dot.
+        <p className="mt-2 overflow-x-clip text-sm text-fg-2">
+          <span className="-ml-5 flex flex-wrap items-center">
+            {items.map((m, i) => (
+              <span key={i} className={cn('inline-flex min-w-0 items-center', i === 0 && 'pl-5')}>
+                {i ? (
+                  <span aria-hidden="true" className="w-5 shrink-0 text-center text-fg-muted">
+                    ·
+                  </span>
+                ) : null}
+                <span className="inline-flex min-w-0 items-center gap-1">{m}</span>
+              </span>
+            ))}
+          </span>
         </p>
       ) : null}
       {children}

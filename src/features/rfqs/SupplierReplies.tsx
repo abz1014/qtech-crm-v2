@@ -13,6 +13,7 @@ import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
+import { useSeesPrices } from '@/app/session'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
 import { InfoTip } from '@/ui/InfoTip'
@@ -40,6 +41,7 @@ import {
   type SuggestionSet,
   type ReplyDraft,
 } from '@/features/rfqs/lib'
+import { parseReplyPrice, replyPriceProblem } from '@/features/rfqs/lib/replyPrice'
 
 /*
  * "Replies from suppliers" (R07; reworked by the UX audit of 2026-10-19): one row per supplier asked, with ONE way in on that row.
@@ -55,13 +57,18 @@ import {
  * "Can't quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); a different reason for
  * one item is an option, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
  * Chasing a supplier lives in the Suppliers asked card (SuppliersAsked.tsx), as in the mockup.
+ *
+ * An engineer (owner decision 2026-10-22: no prices anywhere) sees who replied, who is waited on and who cannot quote, read-only:
+ * a reply is prices (supplier_quote_lines.unit_price is required), so no reply opens, and there is no Add or Edit reply, no Paste
+ * reply and no PDF reading for them. Take back on a whole "can't quote" stays (no price in it).
  */
 
 export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiries: InquiryRow[]; rates: RateTable }) {
   // Open by default while a reply is expected; a person's own open or close wins until the reply is saved.
   const [toggled, setToggled] = useState<Readonly<Record<string, boolean>>>({})
   const [focus, setFocus] = useState<OpenReplyDetail | null>(null)
-  const isOpen = (i: InquiryRow) => toggled[i.id] ?? awaitingReply(i)
+  const prices = useSeesPrices()
+  const isOpen = (i: InquiryRow) => prices && (toggled[i.id] ?? awaitingReply(i))
   /** `undefined` forgets the person's choice: the row goes back to its default (open only while a reply is expected). */
   const setOpen = (id: string, open: boolean | undefined) =>
     setToggled(t => {
@@ -101,10 +108,12 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
     <DetailPanel
       title="Replies from suppliers"
       tip={
-        <InfoTip label="How to enter a reply">
-          Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing is
-          compared until it is saved.
-        </InfoTip>
+        prices ? (
+          <InfoTip label="How to enter a reply">
+            Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing
+            is compared until it is saved.
+          </InfoTip>
+        ) : null
       }
       meta={`${replied} of ${inquiries.length} replied`}
       dataSlot="replies"
@@ -124,7 +133,7 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
               />
             </li>
           ) : (
-            <ClosedRow key={i.id} rfq={rfq} inquiry={i} items={items} onOpen={() => setOpen(i.id, true)} />
+            <ClosedRow key={i.id} rfq={rfq} inquiry={i} items={items} onOpen={prices ? () => setOpen(i.id, true) : null} />
           ),
         )}
       </ul>
@@ -141,7 +150,7 @@ function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCount: num
 }
 
 /** One line for a supplier whose reply is not open: who, where it stands, and the one way in. */
-function ClosedRow({ rfq, inquiry, items, onOpen }: { rfq: RfqHeader; inquiry: InquiryRow; items: RfqItemRow[]; onOpen: () => void }) {
+function ClosedRow({ rfq, inquiry, items, onOpen }: { rfq: RfqHeader; inquiry: InquiryRow; items: RfqItemRow[]; onOpen: (() => void) | null }) {
   const { toast } = useToast()
   const noOffer = useSetInquiryNoOffer(rfq.id)
   const declinedAll = Boolean(inquiry.noOfferOn) && inquiry.lines.length === 0
@@ -168,7 +177,7 @@ function ClosedRow({ rfq, inquiry, items, onOpen }: { rfq: RfqHeader; inquiry: I
         <Button size="sm" icon={Undo2} onClick={() => void takeBack()} busy={noOffer.isPending}>
           Take back
         </Button>
-      ) : (
+      ) : onOpen === null ? null : (
         <Button size="sm" icon={inquiry.lines.length > 0 ? Pencil : Plus} onClick={onOpen} aria-label={`${inquiry.lines.length > 0 ? 'Edit reply' : 'Add reply'}, ${inquiry.supplierName}`}>
           {inquiry.lines.length > 0 ? 'Edit reply' : 'Add reply'}
         </Button>
@@ -238,6 +247,8 @@ function ReplyRow({
   const [changeCurrency, setChangeCurrency] = useState(false)
   const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
   const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
+  /** What was typed in each price box, for the reason shown when it is not a price (HW-48). */
+  const [priceText, setPriceText] = useState<Record<string, string>>({})
 
   const hasLines = inquiry.lines.length > 0
   const declinedAll = Boolean(inquiry.noOfferOn) && !hasLines
@@ -478,6 +489,8 @@ function ReplyRow({
               const q = qtyText(it.qty, it.unit)
               const reason = inquiry.itemDeclines[it.id]
               const price = draft.prices[it.id]
+              // A number in the draft is fine as it is (a pasted reply or a saved price may have replaced the text typed).
+              const problem = reason || (typeof price === 'number' && price > 0) ? null : replyPriceProblem(priceText[it.id] ?? '')
               return (
                 <li key={it.id} className="grid content-start gap-1">
                   <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_140px]">
@@ -496,8 +509,18 @@ function ReplyRow({
                       <NumberInput
                         id={replyInputId(inquiry.id, it.id)}
                         aria-label={`Price for item ${it.number} from ${inquiry.supplierName}`}
+                        aria-invalid={problem ? true : undefined}
+                        aria-describedby={problem ? `${replyInputId(inquiry.id, it.id)}-problem` : undefined}
                         value={price ?? null}
-                        onChange={v => setDraft(d => ({ ...d, prices: { ...d.prices, [it.id]: v } }))}
+                        // HW-48: the typed text is read here (onInput), so "PKR 1,200/-" counts as 1200 and text that is
+                        // not a price gets a reason below the box; NumberInput's own reading would only say null.
+                        onChange={() => undefined}
+                        onInput={e => {
+                          const text = e.currentTarget.value
+                          const n = parseReplyPrice(text)
+                          setPriceText(t => ({ ...t, [it.id]: text }))
+                          setDraft(d => ({ ...d, prices: { ...d.prices, [it.id]: n !== null && n >= 0 ? n : null } }))
+                        }}
                         prefix={draft.currency}
                         placeholder="Price"
                         min={0}
@@ -510,6 +533,11 @@ function ReplyRow({
                       />
                     )}
                   </div>
+                  {problem ? (
+                    <p id={`${replyInputId(inquiry.id, it.id)}-problem`} className="text-sm font-medium text-tone-danger-fg sm:text-right">
+                      {problem}
+                    </p>
+                  ) : null}
                   {!reason && typeof price === 'number' && price > 0 ? (
                     <div className="sm:pr-[152px]">
                       <PricePreview itemId={it.id} amount={price} currency={draft.currency} others={others} rates={rates} />

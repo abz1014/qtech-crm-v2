@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Download, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
-import { shortcutsEnabled } from '@/ui/useShortcutsSetting'
+import { blockingOverlayOpen, shortcutsEnabled } from '@/ui/useShortcutsSetting'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Money } from '@/ui/Money'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -23,6 +24,8 @@ import {
   sortRows,
   tableCsvRows,
   DEFAULT_ROW_METRICS,
+  formatSortParam,
+  parseSortParam,
   readRowMetrics,
   type Column,
   type Density,
@@ -87,6 +90,12 @@ export interface DataTableProps<T> {
   sort?: SortState | null
   defaultSort?: SortState | null
   onSortChange?: (sort: SortState | null) => void
+  /**
+   * Keep the sort in the address under this search parameter (`?sort=due.asc`), so a refresh or Back keeps it. For the one
+   * page-level list of a route only: a table in a dialog, or a second table on the page, leaves it out (or uses its own name).
+   * Written with replace (no history entry per click), and only while it differs from `defaultSort`. Needs a router.
+   */
+  sortParam?: string
   /** Checkbox column for batch actions. Shift-click ticks a range; the header ticks everything loaded. */
   selection?: {
     selected: ReadonlySet<string>
@@ -129,6 +138,33 @@ export interface DataTableProps<T> {
 }
 
 export function DataTable<T>(props: DataTableProps<T>) {
+  return props.sortParam && props.sort === undefined ? <AddressSortTable {...props} sortParam={props.sortParam} /> : <TableView {...props} />
+}
+
+/** A table whose sort lives in the address (`sortParam`): read on every render, written with replace. */
+function AddressSortTable<T>(props: DataTableProps<T> & { sortParam: string }) {
+  const { sortParam, columns, onSortChange } = props
+  const defaultSort = props.defaultSort ?? null
+  const [params, setParams] = useSearchParams()
+  const fromAddress = parseSortParam(params.get(sortParam), columns.map(c => c.id))
+  const sort = fromAddress === undefined ? defaultSort : fromAddress
+  const change = (next: SortState | null) => {
+    setParams(
+      prev => {
+        const out = new URLSearchParams(prev)
+        const value = formatSortParam(next, defaultSort)
+        if (value === null) out.delete(sortParam)
+        else out.set(sortParam, value)
+        return out
+      },
+      { replace: true },
+    )
+    onSortChange?.(next)
+  }
+  return <TableView {...props} sort={sort} onSortChange={change} />
+}
+
+function TableView<T>(props: DataTableProps<T>) {
   const {
     columns,
     rows,
@@ -219,6 +255,26 @@ export function DataTable<T>(props: DataTableProps<T>) {
   }, [items, rowH, groupH])
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
+  // Sideways scrolling only when the table really is wider than its box: a scroll box of its own would hold the sticky
+  // header, so a list that fits lets the header stick to the page's scroll (#main) instead.
+  const [fit, setFit] = useState<{ wide: boolean; width: number }>({ wide: false, width: 0 })
+  useLayoutEffect(() => {
+    const box = scrollRef.current
+    const table = tableRef.current
+    if (!box || !table || virtual) return
+    const measure = () => {
+      const width = box.clientWidth
+      const wide = table.offsetWidth > width + 1
+      setFit(prev => (prev.wide === wide && prev.width === width ? prev : { wide, width }))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(box)
+    ro.observe(table)
+    return () => ro.disconnect()
+  }, [virtual])
   const [scrollTop, setScrollTop] = useState(0)
   const [viewH, setViewH] = useState(600)
   useLayoutEffect(() => {
@@ -294,7 +350,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
       if (e.key !== '/' || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented || !shortcutsEnabled()) return
       const t = e.target as HTMLElement | null
       if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))) return
-      if (document.querySelector('[role="dialog"],[role="alertdialog"]')) return
+      // A dialog or menu that is open (or has focus) keeps the key; the desktop Help panel beside the page does not.
+      if (t?.closest?.('[role="dialog"],[role="alertdialog"]') || blockingOverlayOpen()) return
       const field = rootRef.current?.querySelector<HTMLInputElement>('[data-table-filter]')
       if (!field) return
       e.preventDefault()
@@ -587,11 +644,23 @@ export function DataTable<T>(props: DataTableProps<T>) {
     )
   }
 
+  // An empty or error message spans the whole table; on a table wider than the screen it is held to the visible width, at
+  // the left edge, so its words start on screen instead of centred in columns scrolled out of view.
+  const pinned = (node: ReactNode) =>
+    fit.wide && fit.width > 0 ? (
+      <div data-table-message className="sticky left-0" style={{ width: fit.width }}>
+        {node}
+      </div>
+    ) : (
+      node
+    )
+
   const body: ReactNode = (() => {
     if (error)
       return (
         <tr>
           <td colSpan={colCount}>
+            {pinned(
             <EmptyState
               mood="error"
               title={error.title ?? `Couldn’t load ${what}`}
@@ -609,7 +678,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
               }
             >
               {error.message ?? ERROR_MESSAGE}
-            </EmptyState>
+            </EmptyState>,
+            )}
           </td>
         </tr>
       )
@@ -636,7 +706,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     if (items.length === 0)
       return (
         <tr>
-          <td colSpan={colCount}>{empty}</td>
+          <td colSpan={colCount}>{pinned(empty)}</td>
         </tr>
       )
     const slice = items.slice(first, last)
@@ -679,7 +749,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
       ref={rootRef}
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
-      className={cn('overflow-hidden rounded border bg-surface', className)}
+      // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
+      className={cn('min-w-0 overflow-clip rounded border bg-surface', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
@@ -711,10 +782,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
         ref={scrollRef}
         data-virtual={virtual ? '' : undefined}
         onScroll={virtual ? e => setScrollTop(e.currentTarget.scrollTop) : undefined}
-        className="overflow-auto"
+        className={virtual ? 'overflow-auto' : fit.wide ? 'overflow-x-auto' : undefined}
         style={virtual ? { maxHeight } : undefined}
       >
         <table
+          ref={tableRef}
           aria-label={label}
           aria-busy={loading || undefined}
           aria-rowcount={virtual ? items.length + 1 : undefined}

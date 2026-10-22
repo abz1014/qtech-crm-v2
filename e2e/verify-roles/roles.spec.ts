@@ -289,11 +289,12 @@ test('engineer network: no hidden money column in any answer, and no request for
   const w = readNet()
   test.skip(!w, 'needs the engineer crawl above')
   if (!w) return
-  info.annotations.push({ type: 'accepted exposure (owner decisions M-3 and (a))', description: [...new Set(w.accepted)].slice(0, 60).join(' ; ') || 'none' })
+  info.annotations.push({ type: 'accepted exposure (none expected since the owner decision of 2026-10-22)', description: [...new Set(w.accepted)].slice(0, 60).join(' ; ') || 'none' })
   expect.soft([...new Set(w.leaks)], 'engineer: money columns (invoice, payment, cost, margin, GST, balance) in API answers').toEqual([])
   expect.soft([...new Set(w.requests)], 'engineer: requests for money tables, views or functions').toEqual([])
 })
 
+// Owner decision 2026-10-22: no route grants an engineer any price, so this is "no selling or supplier price in any answer".
 test('engineer network: no selling or supplier price outside the screens that show them by owner decision', async () => {
   const info = test.info()
   const w = readNet()

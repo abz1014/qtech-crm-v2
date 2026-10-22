@@ -30,6 +30,7 @@ import { addDays, quotationRef } from '@/features/quotations/lib/refs'
 import { profileGaps } from '@/features/quotations/lib/profileGaps'
 import { downloadBlob, sharePdf } from '@/features/quotations/lib/sharePdf'
 import { computeTotals } from '@/features/quotations/lib/totals'
+import { applyIssueDraft, clearIssueDraft, readIssueDraft, writeIssueDraft, type IssueDraft } from '@/features/quotations/lib/issueDraft'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
 
 /*
@@ -64,6 +65,10 @@ const GST_OPTIONS = [
 ]
 
 const money = (n: number) => formatPaisa(BigInt(Math.round(n * 100)), 'auto')
+
+/** numeric(14,2): the largest unit price rfq_items holds and the largest net or GST total a quotation holds. */
+const MAX_AMOUNT = 999_999_999_999.99
+const MAX_PAISA = 99_999_999_999_999n
 
 function LeadHint({ item, inquiries }: { item: QuoteItem; inquiries: InquiryRow[] }) {
   const said = inquiries.flatMap(i => i.lines.filter(l => l.itemId === item.id && l.leadTime?.trim()).map(l => ({ who: i.supplierName, text: l.leadTime as string })))
@@ -131,7 +136,11 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const [error, setError] = useState<string | null>(null)
   const [validEdited, setValidEdited] = useState(false)
   const seeded = useRef(false)
+  const [hydrated, setHydrated] = useState(false)
+  const defaultsSnap = useRef<string | null>(null)
   const claimId = useRef(crypto.randomUUID())
+  /** HW-4: the latest quotation id this dialog was built on (null: none yet). Set at seed time; moved on after a warning. */
+  const builtOn = useRef<string | null>(null)
 
   const byItem = useMemo(() => new Map((memory.data ?? []).map(m => [m.itemId, m] as const)), [memory.data])
 
@@ -152,30 +161,61 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     if (seeded.current || !items.data || !quotations.data || !profile || !contacts.data || !memoryRows) return
     seeded.current = true
     const p = quotations.data[0] ?? null
+    builtOn.current = p?.id ?? null
     const mem = new Map(memoryRows.map(m => [m.itemId, m] as const))
-    setPrices(Object.fromEntries(items.data.map(i => [i.id, i.quotedUnitPriceNet])))
-    // An item is quotable when something prices it: a supplier reply, a chip, or the price from the last issue. The rest start unticked.
-    setIncluded(
-      Object.fromEntries(
+    const known = new Set(contacts.data.map(c => c.id))
+    const wanted = p?.contactId ?? rfq.contactId
+    const defaults: IssueDraft = {
+      prices: Object.fromEntries(items.data.map(i => [i.id, i.quotedUnitPriceNet])),
+      // An item is quotable when something prices it: a supplier reply, a chip, or the price from the last issue. The rest start unticked.
+      included: Object.fromEntries(
         items.data.map(i => {
           const m = mem.get(i.id)
           const quotable = i.quotedUnitPriceNet !== null || hasSupplierPrice(i.id) || Boolean(m?.soldPrice !== null && m?.soldPrice !== undefined) || Boolean(m?.quotedPrice !== null && m?.quotedPrice !== undefined)
           return [i.id, quotable]
         }),
       ),
-    )
-    setRateOf(Object.fromEntries(items.data.map(i => [i.id, Number(i.gstRate) === 0 ? '0' : '18'])))
-    setLeads(Object.fromEntries(items.data.map(i => [i.id, i.quotedLeadTime ?? ''])))
-    setValidUntil(addDays(businessToday(), profile.quotation_validity_days))
-    setDelivery(p?.deliveryText ?? '')
-    setPayment(p?.paymentTerms ?? '')
-    setTerms(p?.notes ?? profile.quotation_terms ?? '')
-    const known = new Set(contacts.data.map(c => c.id))
-    const wanted = p?.contactId ?? rfq.contactId
-    setContactId(wanted && known.has(wanted) ? wanted : '')
+      rateOf: Object.fromEntries(items.data.map(i => [i.id, Number(i.gstRate) === 0 ? '0' : '18'])),
+      leads: Object.fromEntries(items.data.map(i => [i.id, i.quotedLeadTime ?? ''])),
+      validUntil: addDays(businessToday(), profile.quotation_validity_days),
+      contactId: wanted && known.has(wanted) ? wanted : '',
+      delivery: p?.deliveryText ?? '',
+      payment: p?.paymentTerms ?? '',
+      terms: p?.notes ?? profile.quotation_terms ?? '',
+    }
+    // HW-9: what was typed before Back, a reload or an accidental close comes back.
+    const draft = readIssueDraft(rfq.id)
+    const start = applyIssueDraft(defaults, draft, items.data.map(i => i.id))
+    defaultsSnap.current = JSON.stringify(defaults)
+    setPrices(start.prices)
+    setIncluded(start.included)
+    setRateOf(start.rateOf)
+    setLeads(start.leads)
+    setValidUntil(start.validUntil)
+    if (draft && start.validUntil !== defaults.validUntil) setValidEdited(true)
+    setDelivery(start.delivery)
+    setPayment(start.payment)
+    setTerms(start.terms)
+    setContactId(start.contactId && known.has(start.contactId) ? start.contactId : '')
+    setHydrated(true)
     // hasSupplierPrice reads inquiries, which are fixed for the life of the dialog
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.data, quotations.data, profile, contacts.data, memoryRows, rfq.contactId])
+
+  // Keep the draft while it differs from the defaults (HW-9); nothing is stored for a dialog only opened and looked at.
+  const draftNow: IssueDraft = { prices, included, rateOf, leads, validUntil, contactId, delivery, payment, terms }
+  const draftText = JSON.stringify(draftNow)
+  useEffect(() => {
+    if (!hydrated || stage.kind !== 'edit' || defaultsSnap.current === null) return
+    if (draftText === defaultsSnap.current) clearIssueDraft(rfq.id)
+    else writeIssueDraft(rfq.id, JSON.parse(draftText) as IssueDraft)
+  }, [draftText, hydrated, rfq.id, stage.kind])
+
+  /** Closed on purpose (Cancel, Esc, the scrim): the draft goes too. Back and a reload keep it. */
+  const closeOnPurpose = () => {
+    clearIssueDraft(rfq.id)
+    onClose()
+  }
 
   /** A chip is the price in one tap, and it ticks the item. */
   const pick = (id: string, value: number) => {
@@ -191,7 +231,12 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const totals = computeTotals(list.map(i => ({ qty: i.qty, unitPrice: isIn(i.id) ? (prices[i.id] ?? null) : null, gstRate: rateOf[i.id] ?? '18' })))
   const chosen = list.filter(i => isIn(i.id))
   const missing = chosen.filter(i => prices[i.id] === null || prices[i.id] === undefined)
-  const ready = seeded.current && chosen.length > 0 && missing.length === 0 && validUntil !== ''
+  // HW-8: a free line cannot go out on a customer quotation. HW-2: a price or total the database cannot hold is refused here,
+  // with the reason, instead of failing (or crashing) later.
+  const zero = chosen.filter(i => prices[i.id] === 0)
+  const tooBig = chosen.filter(i => (prices[i.id] ?? 0) > MAX_AMOUNT)
+  const totalTooBig = tooBig.length === 0 && (totals.net > MAX_PAISA || totals.gst > MAX_PAISA)
+  const ready = seeded.current && chosen.length > 0 && missing.length === 0 && zero.length === 0 && tooBig.length === 0 && !totalTooBig && validUntil !== ''
   const loading = items.isPending || quotations.isPending || profileQ.isPending || contacts.isPending || memory.isPending
   const loadFailed = items.isError || quotations.isError || profileQ.isError || contacts.isError
   const busy = issue.isPending || storePdf.isPending
@@ -220,6 +265,19 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const submit = async () => {
     setError(null)
     try {
+      // HW-4: a quotation issued from another tab (or by someone else) since this dialog opened is not silently revised over.
+      // Re-read the RFQ's quotations first; when the latest is not the one this dialog was built on, stop and say so. The
+      // refreshed list updates this dialog (it now offers the next revision), so a second press is a deliberate revision.
+      const fresh = await quotations.refetch()
+      if (fresh.isError) throw fresh.error
+      const latest = fresh.data?.[0] ?? null
+      if ((latest?.id ?? null) !== builtOn.current && latest?.id !== claimId.current) {
+        builtOn.current = latest?.id ?? null
+        setError(
+          `${latest ? quotationRef(latest.number, firstYear, latest.revision) : 'A quotation'} was just issued for this RFQ, from another tab or by someone else. Nothing was issued now. Check it first; press Issue again only to make a revision.`,
+        )
+        return
+      }
       const q = await issue.mutateAsync({
         id: claimId.current,
         rfqId: rfq.id,
@@ -228,6 +286,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
           unitPrice: prices[i.id] as number,
           gstRate: Number(rateOf[i.id] ?? 18),
           leadTime: leads[i.id]?.trim() ? leads[i.id].trim() : null,
+          // HW-3: the quantity on screen. If someone changed it meanwhile the server refuses and nothing is issued.
+          qty: i.qty,
         })),
         validUntil,
         contactId: contactId || null,
@@ -235,10 +295,19 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         paymentTerms: payment.trim() || null,
         notes: terms.trim() || null,
       })
+      clearIssueDraft(rfq.id)
       const made = await makePdf(q)
       setStage({ kind: 'done', quotation: q, pdf: made.pdf, pdfError: made.pdfError })
     } catch (err) {
+      const code = typeof err === 'object' && err !== null && 'code' in err ? (err as { code?: unknown }).code : undefined
+      const text = typeof err === 'object' && err !== null && 'message' in err ? String((err as { message?: unknown }).message) : ''
+      if (code === '22003') {
+        setError('The total is larger than a quotation can hold. Nothing was issued and no price was changed. Check the prices and quantities, then issue again.')
+        return
+      }
       setError(mapPgError(err, { entity: 'quotation' }).message)
+      // HW-3: a quantity changed under the dialog. Show the real quantities and total before the next try.
+      if (/^the quantity of .+ changed to /.test(text)) void items.refetch()
     }
   }
 
@@ -378,7 +447,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const addressedOptions = (contacts.data ?? []).map(c => ({ value: c.id, label: [c.name, c.jobTitle].filter(Boolean).join(', ') }))
 
   return (
-    <Dialog open onOpenChange={o => (o ? null : onClose())} busy={busy}>
+    <Dialog open onOpenChange={o => (o ? null : closeOnPurpose())} busy={busy}>
       <DialogContent
         title={title}
         titleChip={
@@ -400,10 +469,10 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         lead="Issuing marks the quotation sent today."
         footer={
           <>
-            <Button data-cancel onClick={onClose} disabled={busy}>
+            <Button data-cancel onClick={closeOnPurpose} disabled={busy}>
               Cancel
             </Button>
-            <Button icon={Eye} onClick={() => void preview()} busy={previewing} busyLabel="Making the preview" disabled={busy || gaps.length > 0 || chosen.length === 0 || missing.length > 0}>
+            <Button icon={Eye} onClick={() => void preview()} busy={previewing} busyLabel="Making the preview" disabled={busy || gaps.length > 0 || chosen.length === 0 || missing.length > 0 || tooBig.length > 0 || totalTooBig}>
               Preview PDF
             </Button>
             <InfoTip label="What issuing does" side="top" align="end">It gets a number and a PDF and cannot be edited. You can always Revise it; the first one stays on record.</InfoTip>
@@ -609,6 +678,18 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             ) : missing.length > 0 ? (
               <p className="text-xs text-fg-muted" role="status">
                 {missing.length === 1 ? '1 ticked item still needs a price.' : `${missing.length} ticked items still need a price.`}
+              </p>
+            ) : zero.length > 0 ? (
+              <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">
+                {`A quotation can't carry a price of 0. Enter the price for item ${zero.map(i => list.indexOf(i) + 1).join(', ')}, or untick it.`}
+              </p>
+            ) : tooBig.length > 0 ? (
+              <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">
+                {`The price of item ${tooBig.map(i => list.indexOf(i) + 1).join(', ')} is too large. A unit price can be at most PKR 999,999,999,999.99.`}
+              </p>
+            ) : totalTooBig ? (
+              <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">
+                The total is larger than a quotation can hold (PKR 999,999,999,999.99 net or GST). Check the prices and quantities.
               </p>
             ) : null}
 

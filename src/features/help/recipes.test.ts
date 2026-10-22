@@ -60,6 +60,10 @@ describe('help recipes (docs/help/*.md)', () => {
     expect(searchRecipes(list, 'money').map(r => r.id)).toEqual(['payment'])
     expect(searchRecipes(list, 'help').map(r => r.id)).toHaveLength(3)
     expect(searchRecipes(list, 'quotation money')).toEqual([])
+    // No searchable word at all is not "everything" (HW-29).
+    expect(searchRecipes(list, '%')).toEqual([])
+    expect(searchRecipes(list, '_')).toEqual([])
+    expect(searchRecipes(list, 'کوٹیشن')).toEqual([])
   })
 
   it('groups recipes by the area of their first screen, in tab order', () => {

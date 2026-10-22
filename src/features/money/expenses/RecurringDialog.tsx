@@ -18,7 +18,7 @@ const schema = z.object({
   categoryId: z.string().min(1, 'Choose a category'),
   amount: z.number({ invalid_type_error: 'Enter the amount', required_error: 'Enter the amount' }).positive('The amount must be above zero'),
   dayOfMonth: z.number().int().min(1, 'Use a day from 1 to 28').max(28, 'Use a day from 1 to 28').nullable(),
-  startMonth: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/, 'Use the form 2026-11'),
+  startMonth: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/, 'Pick the month it starts, written like 2026-11.'),
   active: z.boolean(),
 })
 type Values = z.input<typeof schema>
@@ -71,7 +71,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
           </>
         }
       >
-        <Form sf={sf} labels={{ label: 'Name', categoryId: 'Category', amount: 'Amount' }}>
+        <Form sf={sf} labels={{ label: 'Name', categoryId: 'Category', amount: 'Amount', dayOfMonth: 'Day of the month', startMonth: 'Starts in' }}>
           <FormField<Values, 'label'> name="label" label="Name">
             {f => <TextField {...f} placeholder="Rent" />}
           </FormField>

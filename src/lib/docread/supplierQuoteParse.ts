@@ -17,6 +17,7 @@
 
 import { parseLeadTime, parseSupplierReply, type LeadTime, type ParsedReply, type ParseReplyOptions, type ReplyCurrency, type ReplyItemRef } from '@/features/rfqs/lib/replyParse'
 import { businessToday } from '@/lib/dates'
+import { alignSpacedRows, rebuildCellText } from './cellTable'
 import { findDate } from './enquiryParse'
 
 export interface QuoteFacts {
@@ -56,6 +57,8 @@ export function plainQuoteText(raw: string): string {
     .replace(/）/g, ') ')
     .replace(/．/g, '.')
     .replace(/[～〜]/g, '-')
+    // A word the picture reader broke at its dash ("ex- stock").
+    .replace(/\bex-\s+stock\b/gi, 'ex-stock')
     .replace(/(\d)\s*个?工作日/g, '$1 working days')
     .replace(/(\d)\s*天/g, '$1 days')
     .replace(/(\d)\s*(?:个)?(?:星期|周)/g, '$1 weeks')
@@ -75,6 +78,8 @@ const QUOTE_REF = /\b(?:quotation|quote|offer|proforma(?:\s+invoice)?|p\.?\s?i\.
 const YOUR_REF = /^(?:your|ur)\s+(?:ref|rfq|enquiry|inquiry)\b/i
 /** Terms for the whole quotation: set apart from the item above so they apply to every item. */
 const TERMS = /^(?:price\s+validity|validity|offer\s+valid|quotation\s+valid|valid\s+(?:for|till|until)|payment|terms|delivery\s+terms|incoterms?|price\s+basis|prices?\s+(?:are|is|in|based)|all\s+(?:prices|items|the\s+above)|currency|warranty|remarks?\s*:|notes?\s*:)/i
+
+const TERM_LABEL = /^(?:price\s+)?(?:validity|offer\s+validity|delivery(?:\s+(?:time|period|terms))?|lead\s*time|payment(?:\s+terms)?|terms\s+of\s+payment|incoterms?|price\s+basis|currency|warranty|origin|moq)\s*:?$/i
 
 function cells(line: string): string[] {
   return line.includes('\t') ? line.split('\t').map(c => c.trim()) : line.includes('|') && (line.match(/\|/g) ?? []).length >= 2 ? line.split('|').map(c => c.trim()) : [line.trim()]
@@ -146,15 +151,43 @@ function readFacts(lines: string[], today: string): Omit<QuoteFacts, 'currency'>
 
 export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: ParseReplyOptions = {}): SupplierQuoteParse {
   const today = opts.today ?? businessToday()
-  const lines = plainQuoteText(raw).split('\n')
+  // A letterhead copied from a PDF keeps its two columns on one line ("Your Ref: RFQ-118        Currency: USD"): each labelled
+  // part is a line of its own, so the quotation's own facts are not dropped with our reference.
+  const lines = rebuildCellText(alignSpacedRows(plainQuoteText(raw).split('\n')).join('\n'), t => TOTAL_LABEL.test(t) || BANK.test(t))
+    .split('\n')
+    // Terms written as a two-column table ("Validity | 30 days"): "Validity: 30 days", a line a term reader knows.
+    .map(l => {
+      const c = cells(l).filter(Boolean)
+      return c.length === 2 && TERM_LABEL.test(c[0] as string) && !/\d{3,}/.test(c[0] as string) ? `${(c[0] as string).replace(/[:\s]+$/, '')}: ${c[1]}` : l
+    })
+    .flatMap(l => {
+      const parts = l.includes('\t') ? [l] : l.trim().split(/\s{4,}/)
+      return parts.length === 2 && parts.every(p => /^[A-Za-z][A-Za-z .'/#]{1,30}:/.test(p)) ? parts : [l]
+    })
+    // The same terms copied one cell per line ("Validity" / "45 days"): label and value on one line again.
+    .reduce<string[]>((out, l) => {
+      const prev = out[out.length - 1]
+      if (prev !== undefined && TERM_LABEL.test(prev.trim()) && l.trim() && !TERM_LABEL.test(l.trim())) out[out.length - 1] = `${prev.trim().replace(/:$/, '')}: ${l.trim()}`
+      else out.push(l)
+      return out
+    }, [])
   const kept: string[] = []
   const dropped: string[] = []
+  /** Under a totals label copied one cell per line ("Grand Total" / "53,959.51"): its amount goes with it. */
+  let afterTotal = false
   for (const line of lines) {
     const t = line.trim()
     if (!t) {
       kept.push('')
+      afterTotal = false
       continue
     }
+    if (afterTotal && /^[^A-Za-z]*\d[^A-Za-z]*$/.test(t)) {
+      dropped.push(t)
+      continue
+    }
+    // ("VAT 5%" / "4100.50": the rate is part of the label.)
+    afterTotal = isTotalRow(t) && !/\d/.test(t.replace(/\d+(?:\.\d+)?\s*%/g, ''))
     const first = cells(t).find(Boolean) ?? ''
     const drop =
       isTotalRow(t) ||

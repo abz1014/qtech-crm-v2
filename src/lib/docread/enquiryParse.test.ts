@@ -6,6 +6,7 @@ import { ENQUIRY_FULL_EMAILS } from './__fixtures__/enquiryFullEmails'
 import { ENQUIRY_EMAIL_TABLES } from './__fixtures__/enquiryEmailTables'
 import { CORPUS_TODAY, ENQUIRY_EMAILS, type EnquiryCase } from './__fixtures__/enquiryEmails'
 import { norm, pct, scoreFact, scoreItems, type FactScore } from './__fixtures__/score'
+import { unitFamily } from './corpus/units'
 import { asParseResult, findDate, parseEnquiry, unitOf } from './enquiryParse'
 
 const parse = (text: string) => parseEnquiry(text, { today: CORPUS_TODAY })
@@ -69,7 +70,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
     ['Bearing 6205 2.000 EA', 'Bearing 6205', 2, 'EA'],
     ['Proximity sensor M30 x2', 'Proximity sensor M30', 2, null],
     ['Flame scanner (2 Nos)', 'Flame scanner', 2, 'nos'],
-    ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'drums'],
+    ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'Drums'],
     ['Gear motor 1.5kW, Qty: 2 Nos, Make: SEW', 'Gear motor 1.5kW, Make: SEW', 2, 'nos'],
     ['Siemens 6ES7 231-4HD32-0XB0 – 2', 'Siemens 6ES7 231-4HD32-0XB0', 2, null],
     ['Ultrasonic level transmitter 0-10m qty 3', 'Ultrasonic level transmitter 0-10m', 3, null],
@@ -83,7 +84,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
   })
 
   it('normalises units as the intake does', () => {
-    expect([unitOf('EA'), unitOf("No's"), unitOf('Mtr'), unitOf('No.'), unitOf('Kgs'), unitOf(null)]).toEqual(['nos', 'nos', 'm', 'nos', 'kg', null])
+    expect([unitOf('EA'), unitOf("No's"), unitOf('Mtr'), unitOf('No.'), unitOf('Kgs'), unitOf(null)]).toEqual(['EA', 'nos', 'm', 'nos', 'kg', null])
   })
 })
 
@@ -149,7 +150,9 @@ describe('the enquiry corpus (realistic emails, WhatsApp exports, PDF text)', ()
   })
 
   it('still reads every case of the intake corpus exactly as the old parser does', () => {
-    for (const c of ENQUIRY_CORPUS) expect(parse(c.text).items, c.name).toEqual(c.items)
+    // Same items; the unit is the customer's own now ("pcs" stays pcs), so it is compared by family (corpus/units.ts).
+    const fam = (xs: Array<{ description: string; qty: number; unit: string | null }>) => xs.map(x => ({ ...x, unit: unitFamily(x.unit) === 'pcs' || unitFamily(x.unit) === 'ea' ? 'nos' : unitFamily(x.unit) }))
+    for (const c of ENQUIRY_CORPUS) expect(fam(parse(c.text).items), c.name).toEqual(fam(c.items))
   })
 })
 
@@ -261,7 +264,7 @@ describe('parseEnquiry: the shapes the sales verification found (BUG-SALES-1, BU
     ].join('\n')
     expect(rows(text)).toEqual([
       ['radar level transmitter 0-10 m', 2, 'nos'],
-      ['pressure gauge 0-16 bar', 4, 'nos'],
+      ['pressure gauge 0-16 bar', 4, 'pcs'],
     ])
   })
 
@@ -297,5 +300,160 @@ describe('parseEnquiry: a printed form whose part number breaks at a dash (ficti
     expect(r.items).toHaveLength(1)
     expect(r.items[0]?.description).toContain('6ES7000-1AA00-0AB0')
     expect(r.items[0]?.qty).toBe(2)
+  })
+})
+
+describe('parseEnquiry: edge cases from the bug hunt (2026-10-22)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('keeps a list pasted with leading spaces as one item per line, and still joins a wrapped line', () => {
+    expect(rows('Pressure gauge 0-10 bar - 2 Nos\n    Ball valve 1 inch - 4 Nos\n    Cable gland PG16 - 10 Nos')).toEqual([
+      ['Pressure gauge 0-10 bar', 2, 'nos'],
+      ['Ball valve 1 inch', 4, 'nos'],
+      ['Cable gland PG16', 10, 'nos'],
+    ])
+    expect(rows('Solenoid valve 1/2 inch 24VDC\n    brass body, NC - 2 Nos')).toEqual([['Solenoid valve 1/2 inch 24VDC brass body, NC', 2, 'nos']])
+  })
+
+  it('reads Urdu quantities and request words, and decimal quantities', () => {
+    expect(rows('1. Relay 24VDC - 4 عدد\n2. Thermocouple type K 300mm  ۲ عدد بھیج دیں')).toEqual([
+      ['Relay 24VDC', 4, 'nos'],
+      ['Thermocouple type K 300mm', 2, 'nos'],
+    ])
+    expect(rows('Silicone tube 8mm 0.5 m\nCable 4 core 2.5mm2 - 0.5 m\nTeflon tape 0.5 kg')).toEqual([
+      ['Silicone tube 8mm', 0.5, 'm'],
+      ['Cable 4 core 2.5mm2', 0.5, 'm'],
+      ['Teflon tape', 0.5, 'kg'],
+    ])
+  })
+})
+
+describe('parseEnquiry: corpus batches 12 and 13 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('skips section rows inside a table', () => {
+    const text = [
+      'S.No\tDescription of Material\tUOM\tQty',
+      '\tA. ELECTRICAL\t\t',
+      '1\tBearing 6205 ZZ\tPCS\t5',
+      'INSTRUMENTATION ITEMS',
+      '2\tPressure gauge 0-10 bar\tNOS\t2',
+    ].join('\n')
+    expect(rows(text)).toEqual([
+      ['Bearing 6205 ZZ', 5, 'PCS'],
+      ['Pressure gauge 0-10 bar', 2, 'nos'],
+    ])
+  })
+
+  it('does not pull an item with its own quantity onto a line ending in "type"', () => {
+    expect(rows('5 x Butterfly valve DN50, wafer type\n2 x Flow meter DN25')).toEqual([
+      ['Butterfly valve DN50, wafer type', 5, null],
+      ['Flow meter DN25', 2, null],
+    ])
+  })
+
+  it('reads a portal line with labelled fields, a quantity in square brackets and running metres', () => {
+    const r = parse('Buyer: Example Mills Ltd\nLine 1 | Short text: Relay 24VDC 2 CO | Quantity: 4 EA | Need by: 29/11/2026')
+    expect(r.items).toEqual([{ description: 'Relay 24VDC 2 CO', qty: 4, unit: 'EA' }])
+    expect(r.facts.company?.name).toBe('Example Mills Ltd')
+    expect(rows('1) Fuse glass 5x20 [Qty: 150 Nos.]\n2) Cable 4 core 2.5 mm2, armoured - 25 RM')).toEqual([
+      ['Fuse glass 5x20', 150, 'nos'],
+      ['Cable 4 core 2.5 mm2, armoured', 25, 'm'],
+    ])
+  })
+
+  it('reads "1NO" at the end of an item as its contacts, and takes the quantity from the next line', () => {
+    expect(rows('• Push button red, 1NO\n   Qty: 10 Pcs\n• Relay 24VDC 2NO+2NC - 4 Nos')).toEqual([
+      ['Push button red, 1NO', 10, 'Pcs'],
+      ['Relay 24VDC 2NO+2NC', 4, 'nos'],
+    ])
+  })
+
+  it('ends the table at a signature laid over its columns', () => {
+    expect(rows('SR\tDESCRIPTION\tQTY\tUNIT\n01\tCONTACTOR 9A 220VAC\t5\tPCS\nSTORE\tKEEPER\t\t')).toEqual([['CONTACTOR 9A 220VAC', 5, 'PCS']])
+  })
+
+  it('reads the closing date written just above the signature', () => {
+    const r = parse('1. Relay 24VDC = 4 Nos\n\nQuotations are required before 29 October 2026.\nExample Mills Limited, Maintenance Department')
+    expect(r.facts.dueDate?.iso).toBe('2026-10-29')
+  })
+})
+
+describe('parseEnquiry: corpus batches 16 and 17 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('reads the item from the subject when the body points at it', () => {
+    const r = parse('From: A Buyer <buyer@example-mills.example>\nSubject: RFQ: Butterfly valve DN200, wafer type - 5 Sets\n\nDear Sir,\nPlease quote for the item in the subject.\nRegards')
+    expect(r.items).toEqual([{ description: 'Butterfly valve DN200, wafer type', qty: 5, unit: 'set' }])
+    expect(r.facts.customerRef).toBeNull()
+  })
+
+  it('splits "Also add: 2 sets ..., 1 each ..." into its items', () => {
+    expect(rows('Also add: 2 sets Gasket set for pump 50-200, 1 each Flow meter DN100, 4-20mA')).toEqual([
+      ['Gasket set for pump 50-200', 2, 'set'],
+      ['Flow meter DN100, 4-20mA', 1, 'each'],
+    ])
+  })
+
+  it('skips a document title, the customer\'s own item code and the name under a table', () => {
+    const text = [
+      'Enquiry - Stores & Spares',
+      'Item Code\tItem Name\tRequired Qty',
+      'IC-4100\tButterfly valve DN100 wafer type\t2 Each',
+      'Naveed Example',
+      'Example Sugar Mills (Pvt) Ltd',
+    ].join('\n')
+    expect(rows(text)).toEqual([['Butterfly valve DN100 wafer type', 2, 'Each']])
+  })
+})
+
+describe('parseEnquiry: corpus batches 18 and 19 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('reads "Brand: X / Qty: 5 Each" and a "- Qty:" sub-bullet under an item', () => {
+    expect(rows('1. Encoder 1024 PPR\n   Brand: Polaron / Qty: 4 Each\n• Relay 24VDC\n    - Qty: 3 Nos')).toEqual([
+      ['Encoder 1024 PPR, Brand: Polaron', 4, 'Each'],
+      ['Relay 24VDC', 3, 'nos'],
+    ])
+  })
+
+  it('reads a one-cell-per-line table with the quantity and unit in one cell, and stops at the name under it', () => {
+    const text = ['Item Code', 'Item Name', 'Required Qty', 'IC-4100', 'Proximity sensor M30', '6 Numbers', 'Hira Example', 'Example Steel Industries Limited'].join('\n')
+    expect(rows(text)).toEqual([['Proximity sensor M30', 6, 'nos']])
+  })
+})
+
+describe('parseEnquiry: corpus batches 20 and 21 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('skips an external-email caution banner above the request and reads what follows', () => {
+    const text = 'CAUTION: This email originated from outside of the organization. Do not click links.\nDear Sir,\nPlease quote:\n- Timing belt HTD 571: 10 Pieces'
+    expect(rows(text)).toEqual([['Timing belt HTD 571', 10, 'Pieces']])
+  })
+
+  it('reads "(2) 100 Numbers - item" and "item -- Nos. 10"', () => {
+    expect(rows('(1) 100 Numbers - Silicone sealant 280 ml\n(2) 03 Kg - Lubricating grease EP2\n3. Bearing 6308 C3 -- Nos. 10')).toEqual([
+      ['Silicone sealant 280 ml', 100, 'nos'],
+      ['Lubricating grease EP2', 3, 'kg'],
+      ['Bearing 6308 C3', 10, 'nos'],
+    ])
+  })
+})
+
+describe('parseEnquiry: corpus batches 22 and 23 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('takes Qty Required, not Qty in Stock', () => {
+    const text = ['S.No', 'Description', 'UOM', 'Qty in Stock', 'Qty Required', '1', 'Butterfly valve DN100, wafer type', 'EA', '0', '2'].join('\n')
+    expect(rows(text)).toEqual([['Butterfly valve DN100, wafer type', 2, 'EA']])
+    expect(rows('S.No\tDescription\tUOM\tQty in Stock\tQty Required\n1\tLimit switch roller lever\tNO\t3\t8')).toEqual([['Limit switch roller lever', 8, 'nos']])
+  })
+
+  it('reads "Item: 12" in a chat and "need 10 item", but not "need 3 phase motor" as three', () => {
+    expect(rows('Sir please share rates\nPressure gauge 0-6 bar 150mm dial: 12\nneed 10 butterfly valve dn150 wafer type')).toEqual([
+      ['Pressure gauge 0-6 bar 150mm dial', 12, null],
+      ['butterfly valve dn150 wafer type', 10, null],
+    ])
+    expect(rows('need 3 phase motor 5.5 kW')[0]?.[1]).toBe(1)
   })
 })

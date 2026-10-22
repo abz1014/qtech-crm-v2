@@ -568,3 +568,59 @@ describe('validity date written without a year', () => {
     expect(r.offers[0]?.validityDays).toBe(20)
   })
 })
+
+describe('HW-5: "price on request" is not a price', () => {
+  const items: ReplyItemRef[] = [
+    { id: 'm', description: 'Magnetic flow meter DN50', qty: 4 },
+    { id: 'c', description: 'Instrument cable 2 core', qty: 10 },
+  ]
+  const priced = (offers: ReplyOffer[], id: string) => forItem(offers, id).filter(o => o.unitPrice !== null)
+  it('reads no price from a line that says price on request, even with a number in the item name', () => {
+    const r = parseSupplierReply(
+      ['Dear Sir,', 'Our offer:', 'Magnetic flow meter DN50 - EUR 1.234,50 each, delivery 3-4 weeks', 'Instrument cable 2 core - price on request', 'Best regards, Hans'].join('\n'),
+      items,
+    )
+    expect(one(r.offers, 'm').unitPrice).toBe(1234.5)
+    expect(priced(r.offers, 'c')).toHaveLength(0)
+  })
+  it.each(['Instrument cable 2 core - POR', 'Instrument cable 2 core: on request', 'Instrument cable 2 core - TBA', 'Instrument cable 2 core, prices to follow'])('%s', line => {
+    const r = parseSupplierReply(`Magnetic flow meter DN50 - EUR 900\n${line}`, items)
+    expect(priced(r.offers, 'c')).toHaveLength(0)
+  })
+  it('still reads a currency price on a line that also mentions something on request', () => {
+    const r = parseSupplierReply('Instrument cable 2 core - EUR 3.20 per m, test report on request', items)
+    expect(one(r.offers, 'c').unitPrice).toBe(3.2)
+  })
+})
+
+describe('a table with list price, discount and net price (fictional)', () => {
+  it('takes the net price as the unit price', () => {
+    const text = [
+      'Pos\tDescription\tQty\tList Price USD\tDisc. %\tNet Price USD\tTotal USD',
+      '1\tSITRANS P320 pressure transmitter 0-10 bar\t4\t480.00\t15%\t408.00\t1632.00',
+    ].join('\n')
+    const o = one(parseSupplierReply(text, ITEMS, { today: '2026-10-20' }).offers, 'i1')
+    expect(o.unitPrice).toBe(408)
+    expect(o.currency).toBe('USD')
+  })
+})
+
+describe('a material grade two items share (fictional)', () => {
+  it('matches by the wording, not by "SS316"', () => {
+    const items: ReplyItemRef[] = [
+      { id: 'a', description: 'Solenoid valve 1/2 inch, SS316', qty: 3 },
+      { id: 'b', description: 'Level switch vibrating fork SS316', qty: 4 },
+    ]
+    const text = 'Item\tDescription\tQty\tUnit Price USD\n1\tLevel switch vibrating fork SS316\t4\t8.50'
+    expect(one(parseSupplierReply(text, items, { today: '2026-10-20' }).offers, 'b').unitPrice).toBe(8.5)
+  })
+})
+
+describe('a German table with prices written 1.250,00 € (fictional)', () => {
+  it('reads Menge and Einzelpreis, not the Gesamtpreis', () => {
+    const text = 'Pos.\tBeschreibung / Description\tMenge\tEinzelpreis\tGesamtpreis\n1\tSITRANS P320 pressure transmitter 0-10 bar\t4\t1.250,00 €\t5.000,00 €'
+    const o = one(parseSupplierReply(text, ITEMS, { today: '2026-10-20' }).offers, 'i1')
+    expect(o.unitPrice).toBe(1250)
+    expect(o.currency).toBe('EUR')
+  })
+})
