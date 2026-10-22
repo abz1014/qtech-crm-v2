@@ -6,15 +6,22 @@ import { BurstSheet } from '@/features/money/expenses/BurstSheet'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
+const OFFICE = 'ca7e9000-0000-4000-8000-000000000001'
+const VEHICLES = 'ca7e9000-0000-4000-8000-000000000002'
+const GROUPS = [
+  { id: OFFICE, name: 'Office running', kind: 'overhead', sort: 10 },
+  { id: VEHICLES, name: 'Vehicles', kind: 'overhead', sort: 20 },
+]
 const CATEGORIES = [
-  { id: 'c-snacks', name: 'Office supplies & snacks', grp: 'overhead', default_paid_via: 'cash', sort: 50, active: true },
-  { id: 'c-fuel', name: 'Fuel & travel', grp: 'overhead', default_paid_via: 'cash', sort: 40, active: true },
-  { id: 'c-sal', name: 'Salaries', grp: 'overhead', default_paid_via: 'bank', sort: 10, active: true },
+  { id: 'c-snacks', name: 'Office supplies & snacks', grp: 'overhead', group_id: OFFICE, default_paid_via: 'cash', sort: 50, active: true, monthly_budget_pkr: null },
+  { id: 'c-fuel', name: 'Fuel & travel', grp: 'overhead', group_id: VEHICLES, default_paid_via: 'cash', sort: 40, active: true, monthly_budget_pkr: null },
+  { id: 'c-sal', name: 'Salaries', grp: 'overhead', group_id: OFFICE, default_paid_via: 'bank', sort: 10, active: true, monthly_budget_pkr: null },
 ]
 
 function setup(upsert: () => FakeResult | Promise<FakeResult> = () => ({})) {
   const db = installFakeDb((c: FakeCall) => {
     if (c.target === 'expense_categories') return { data: CATEGORIES }
+    if (c.target === 'expense_groups') return { data: GROUPS }
     if (c.target === 'expenses' && c.verb === 'select')
       return { data: [{ category_id: 'c-snacks', paid_on: '2026-11-01' }, { category_id: 'c-snacks', paid_on: '2026-11-02' }, { category_id: 'c-fuel', paid_on: '2026-11-03' }] }
     if (c.target === 'expenses' && c.verb === 'upsert') return upsert()
@@ -254,10 +261,11 @@ describe('burst entry sheet (M11)', () => {
       const db = installFakeDb((c: FakeCall) => {
         if (c.target === 'expense_categories' && c.verb === 'insert') {
           const row = opArgs(c, 'insert')?.[0] as Record<string, unknown>
-          cats.push({ id: 'c-water', name: String(row.name), grp: String(row.grp), default_paid_via: String(row.default_paid_via), sort: Number(row.sort), active: true })
+          cats.push({ id: 'c-water', name: String(row.name), grp: String(row.grp), group_id: String(row.group_id), default_paid_via: String(row.default_paid_via), sort: Number(row.sort), active: true, monthly_budget_pkr: null })
           return { data: [{ id: 'c-water' }] }
         }
         if (c.target === 'expense_categories') return { data: [...cats] }
+        if (c.target === 'expense_groups') return { data: GROUPS }
         if (c.target === 'expenses' && c.verb === 'select') return { data: [{ category_id: 'c-snacks', paid_on: '2026-11-01' }] }
         if (c.target === 'v_month_cash_out_detail') return { data: [{ category_id: 'c-fuel', detail: 'LEA-1234', expense_count: 3, last_paid_on: '2026-11-02' }] }
         return { data: [] }
@@ -273,7 +281,7 @@ describe('burst entry sheet (M11)', () => {
       return db
     }
 
-    it('typing a name that is no category offers Create, paid in cash first; Enter creates it under Overheads and selects it', async () => {
+    it('typing a name that is no category offers Create, paid in cash first; Enter creates it under Office running and selects it', async () => {
       const user = userEvent.setup()
       const db = setupCreate()
       const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
@@ -281,11 +289,12 @@ describe('burst entry sheet (M11)', () => {
       await user.keyboard('500{Tab}Office water')
       const list = await screen.findByRole('listbox', { name: 'Categories' })
       const options = within(list).getAllByRole('option')
-      expect(options.map(o => o.textContent)).toEqual(['Create “Office water”Overhead · paid in cash', 'Create “Office water”Overhead · paid by bank'])
+      expect(options.map(o => o.textContent)).toEqual(['Create “Office water”paid in cash', 'Create “Office water”paid by bank'])
+      expect(screen.getByText('Office running', { selector: 'b' })).toBeInTheDocument()
       await user.keyboard('{Enter}')
       await waitFor(() => expect(screen.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office water'))
       const insert = db.calls.find(c => c.target === 'expense_categories' && c.verb === 'insert')!
-      expect(opArgs(insert, 'insert')?.[0]).toEqual({ name: 'Office water', grp: 'overhead', default_paid_via: 'cash', sort: 60 })
+      expect(opArgs(insert, 'insert')?.[0]).toEqual({ name: 'Office water', group_id: OFFICE, grp: 'overhead', default_paid_via: 'cash', sort: 60 })
       // the row follows the new category's paid via
       expect(screen.getByRole('combobox', { name: 'Paid via, row 1' })).toHaveValue('cash')
       await user.keyboard('{Control>}{Enter}{/Control}')
@@ -310,5 +319,55 @@ describe('burst entry sheet (M11)', () => {
       await waitFor(() => expect(list?.querySelectorAll('option')).toHaveLength(1))
       expect(list?.querySelector('option')?.getAttribute('value')).toBe('LEA-1234')
     })
+
+    it('a new name sharing a word with a category goes under that group ("Bike fuel": Vehicles); Change group picks another in one tap', async () => {
+      const user = userEvent.setup()
+      const db = setupCreate()
+      const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(amount).toHaveFocus())
+      await user.keyboard('900{Tab}Bike fuel')
+      expect(await screen.findByText('Vehicles', { selector: 'b' })).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Change group' }))
+      await user.click(screen.getByRole('button', { name: 'Office running' }))
+      expect(screen.getByText('Office running', { selector: 'b' })).toBeInTheDocument()
+      await user.click(screen.getByRole('option', { name: /paid in cash/ }))
+      await waitFor(() => expect(db.calls.some(c => c.target === 'expense_categories' && c.verb === 'insert')).toBe(true))
+      const insert = db.calls.find(c => c.target === 'expense_categories' && c.verb === 'insert')!
+      expect(opArgs(insert, 'insert')?.[0]).toMatchObject({ name: 'Bike fuel', group_id: OFFICE, default_paid_via: 'cash' })
+    })
+  })
+
+  it('opened empty, the category list shows Recent first, then each group under its heading', async () => {
+    const user = userEvent.setup()
+    setup()
+    const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+    await waitFor(() => expect(amount).toHaveFocus())
+    await user.click(screen.getByRole('combobox', { name: 'Category, row 1' }))
+    const list = await screen.findByRole('listbox', { name: 'Categories' })
+    const heads = within(list).getAllByRole('presentation').map(h => h.textContent)
+    expect(heads).toEqual(['Recent', 'Office running', 'Vehicles'])
+    // Recent: snacks (used twice) before fuel (once)
+    expect(within(list).getAllByRole('option').slice(0, 2).map(o => o.textContent)).toEqual(['Office supplies & snackscash', 'Fuel & travelcash'])
+  })
+
+  it('"Monthly": Save adds the recurring template first, then the expense linked to it for its month', async () => {
+    const user = userEvent.setup()
+    const db = setup()
+    const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+    await waitFor(() => expect(amount).toHaveFocus())
+    await user.keyboard('85000')
+    await user.type(screen.getByRole('combobox', { name: 'Detail, row 1' }), 'Office rent')
+    await user.click(screen.getByRole('checkbox', { name: 'Monthly' }))
+    await user.click(screen.getByRole('button', { name: /^Save 1 expense/ }))
+    await waitFor(() => expect(saves(db)).toHaveLength(1))
+    const tplCall = db.calls.find(c => c.target === 'recurring_expenses' && c.verb === 'insert')!
+    const tpl = opArgs(tplCall, 'insert')?.[0] as Record<string, unknown>
+    expect(tpl).toMatchObject({ label: 'Office rent', category_id: 'c-snacks', amount: 85000, active: true, paid_via: 'cash' })
+    expect(db.calls.indexOf(tplCall)).toBeLessThan(db.calls.indexOf(saves(db)[0]))
+    const row = (opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[])[0]
+    expect(row.recurring_id).toBe(tpl.id)
+    expect(row.period).toBe(String(row.paid_on).slice(0, 7))
+    expect(tpl.start_month).toBe(row.period)
+    expect(tpl.day_of_month).toBe(Math.min(Number(String(row.paid_on).slice(8, 10)), 28))
   })
 })

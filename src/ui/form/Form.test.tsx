@@ -179,6 +179,34 @@ describe('Form (U07): errors keep the entries and speak plainly', () => {
     expect(save).not.toHaveBeenCalled()
     await waitFor(() => expect(screen.getByLabelText(/Company name/)).toHaveFocus())
   })
+
+  it('HW-21: a field missing from `labels` is named by its FormField label in the summary, never by its code name', async () => {
+    const monthSchema = z.object({ startMonth: z.string().regex(/^\d{4}-\d{2}$/, 'Pick the month it starts.') })
+    function MonthForm() {
+      const sf = useSubmitForm({ schema: monthSchema, entity: 'expense', defaultValues: { startMonth: 'abc' }, onSubmit: vi.fn() })
+      return (
+        <>
+          <Form sf={sf}>
+            <FormField<z.input<typeof monthSchema>, 'startMonth'> name="startMonth" label="Starts in">
+              {f => <TextField {...f} />}
+            </FormField>
+          </Form>
+          <Button type="submit" form={sf.formId}>
+            Save
+          </Button>
+        </>
+      )
+    }
+    const user = userEvent.setup()
+    render(<MonthForm />)
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Fix 1 field to continue')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Starts in' })).toBeInTheDocument()
+    expect(screen.queryByText(/startMonth/)).toBeNull()
+    // HE-6: the summary repeats the field's own message, not a generic "needs a value" (the field has one)
+    expect(screen.getByRole('alert').textContent ?? document.body.textContent).toMatch(/Starts in: Pick the month it starts\./)
+    expect(screen.queryByText(/needs a value/)).toBeNull()
+  })
 })
 
 describe('Form (U07): pre-filled values say where they came from (FE-2)', () => {

@@ -2,7 +2,7 @@
  * Form, FormField, FormSummary: the pieces that render a form built with useSubmitForm
  * (src/ui/form/useSubmitForm.ts holds the guard, the request id and the error mapping).
  */
-import type { KeyboardEvent, ReactElement, ReactNode, SyntheticEvent } from 'react'
+import { createContext, useContext, useLayoutEffect, useRef, type KeyboardEvent, type ReactElement, type ReactNode, type SyntheticEvent } from 'react'
 import {
   FormProvider,
   useController,
@@ -27,12 +27,17 @@ interface FormProps<TIn extends FieldValues, TOut> {
   className?: string
 }
 
+/** Each FormField's plain-text label by field name, so the summary never shows a field's code name. */
+const FieldLabels = createContext<Map<string, string> | null>(null)
+
 export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children, className }: FormProps<TIn, TOut>) {
   const { form } = sf
+  const fieldLabels = useRef(new Map<string, string>()).current
   // Inside a Dialog, changes here make closing ask "Discard what you typed?" (learnability spec 3.3). Elsewhere a no-op.
   useReportDialogDirty(form.formState.isDirty && !sf.pending)
   return (
     <FormProvider {...(form as unknown as UseFormReturn<TIn>)}>
+      <FieldLabels.Provider value={fieldLabels}>
       <form id={sf.formId} noValidate onSubmit={sf.submit} className={className} aria-busy={sf.pending || undefined}>
         {/* While saving, controls are locked but keep focus (WCAG 2.4.3): a disabled fieldset drops focus to <body>. */}
         <fieldset
@@ -47,6 +52,7 @@ export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children,
           {children}
         </fieldset>
       </form>
+      </FieldLabels.Provider>
     </FormProvider>
   )
 }
@@ -68,6 +74,7 @@ export function FormSummary({ labels }: { labels: Partial<Record<string, string>
     formState: { errors, isSubmitted },
     setFocus,
   } = useFormContext()
+  const fieldLabels = useContext(FieldLabels)
   const names = Object.keys(errors).filter(n => errors[n]?.type !== 'server')
   if (!isSubmitted || names.length === 0) return null
   return (
@@ -76,7 +83,7 @@ export function FormSummary({ labels }: { labels: Partial<Record<string, string>
         <span key={n}>
           {i > 0 ? ' ' : ''}
           <button type="button" onClick={() => setFocus(n)} className="rounded text-primary underline decoration-1 underline-offset-2">
-            {labels[n] ?? humaniseFieldName(n)}
+            {labels[n] ?? fieldLabels?.get(n) ?? humaniseFieldName(n)}
           </button>
           {`: ${summaryLine(errors[n]?.message)}`}
         </span>
@@ -119,6 +126,10 @@ export function FormField<TV extends FieldValues, N extends Path<TV> = Path<TV>>
 }: FormFieldProps<TV, N>) {
   const { control } = useFormContext<TV>()
   const { field, fieldState } = useController({ control, name })
+  const fieldLabels = useContext(FieldLabels)
+  useLayoutEffect(() => {
+    if (fieldLabels && typeof label === 'string') fieldLabels.set(name, label)
+  }, [fieldLabels, name, label])
   return (
     <Field
       label={label}

@@ -36,6 +36,19 @@ export function forgetIntakeDrafts(): void {
   }
 }
 
+/** The key prefix of the Add expense drafts in sessionStorage (EXPENSE_DRAFT_PREFIX in features/money/expenses/addDraft.ts). */
+export const EXPENSE_DRAFT_KEYS = 'qtech.expenses.addDraft.'
+
+/** A half-typed Add expense kept in this tab across a reload. */
+export function forgetExpenseDrafts(): void {
+  try {
+    const keys = Object.keys(window.sessionStorage).filter(k => k.startsWith(EXPENSE_DRAFT_KEYS))
+    for (const k of keys) window.sessionStorage.removeItem(k)
+  } catch {
+    /* storage blocked: nothing was kept */
+  }
+}
+
 let wiping: Promise<void> | null = null
 
 /**
@@ -46,6 +59,7 @@ export function forgetDeviceCaptures(opts: { keepShares?: boolean } = {}): Promi
   if (wiping) return wiping
   clearRecents()
   forgetIntakeDrafts()
+  forgetExpenseDrafts()
   forgetPaletteRecents()
   // keepShares: the session ended without Sign out (BUG-RV-06). An item the phone's share sheet handed over is kept for
   // whoever signs in next (the "Your shared item is safe" promise); typed or pasted drafts of the last person are not.

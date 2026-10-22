@@ -39,7 +39,7 @@ create temp table money_relations (rel text) on commit drop;
 grant select on money_relations to authenticated;
 insert into money_relations values
   ('public.payments_in'), ('public.expenses'), ('public.invoices'), ('public.order_costs'), ('public.recurring_expenses'),
-  ('public.expense_categories'), ('public.closed_months'), ('public.month_snapshots'),
+  ('public.expense_categories'), ('public.expense_groups'), ('public.closed_months'), ('public.month_snapshots'),
   ('public.v_order_basis'), ('public.v_payment_net'), ('public.v_order_money'), ('public.v_cash_month'), ('public.v_target_progress'),
   ('public.v_month_pnl'), ('public.v_month_pnl_live'), ('public.v_month_expense_category'), ('public.v_month_team'),
   ('public.v_gst_month'), ('public.v_invoice_state'), ('public.v_gst_register'),

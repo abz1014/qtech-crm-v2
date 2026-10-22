@@ -35,7 +35,7 @@ import { Kbd } from "@/ui/Kbd";
 import { LoadBoundary } from "@/ui/LoadBoundary";
 import { ToastContext } from "@/ui/useToast";
 import { useRetryableLazy } from "@/lib/importWithReload";
-import { shortcutsEnabled } from "@/ui/useShortcutsSetting";
+import { blockingOverlayOpen, shortcutsEnabled } from "@/ui/useShortcutsSetting";
 import {
   filterItems,
   type PaletteItem,
@@ -178,7 +178,10 @@ function placesFor(role: string): PaletteItem[] {
   ];
 }
 
-/** True when a key press belongs to something the person is typing into or a dialog they are in. */
+/**
+ * True when a key press belongs to something the person is typing into, or to a dialog or menu that is open. The desktop
+ * Help panel sits beside the page (non-modal), so it does not stop the page's keys.
+ */
 function isTypingContext(e: KeyboardEvent): boolean {
   const t = e.target;
   if (t instanceof HTMLElement) {
@@ -186,14 +189,12 @@ function isTypingContext(e: KeyboardEvent): boolean {
       return true;
     if (
       t.closest(
-        '[role="textbox"],[role="combobox"],[role="searchbox"],[role="listbox"],[role="menu"]',
+        '[role="textbox"],[role="combobox"],[role="searchbox"],[role="listbox"],[role="menu"],[role="dialog"],[role="alertdialog"]',
       )
     )
       return true;
   }
-  return Boolean(
-    document.querySelector('[role="dialog"],[role="alertdialog"]'),
-  );
+  return blockingOverlayOpen();
 }
 
 /*
@@ -430,6 +431,8 @@ export function PaletteHost({
         e.key.toLowerCase() === "k"
       ) {
         e.preventDefault();
+        // Not on top of an open dialog or menu: its half-typed text stays where it is.
+        if (blockingOverlayOpen()) return;
         openPalette();
       }
     };

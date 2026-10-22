@@ -4,6 +4,7 @@ import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { useToast } from '@/ui/useToast'
 import { LoadBoundary } from '@/ui/LoadBoundary'
 import { useRetryableLazy } from '@/lib/importWithReload'
+import { blockingOverlayOpen, shortcutsEnabled } from '@/ui/useShortcutsSetting'
 import {
   createCapture,
   deleteCapture,
@@ -205,7 +206,9 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== 'c' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.defaultPrevented) return
-      if (isEditable(e.target) || document.querySelector('[role="dialog"]')) return  // also when the sheet is open: C is then just a letter
+      // A single-key shortcut: off when the person turned them off, in a text field, and while a dialog (the sheet itself, the
+      // Help panel too), alert or menu is open: C is then just a letter.
+      if (!shortcutsEnabled() || isEditable(e.target) || blockingOverlayOpen() || document.querySelector('[role="dialog"]')) return
       e.preventDefault()
       setNotice(null)
       setOpen(true)

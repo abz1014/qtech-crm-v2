@@ -5,6 +5,13 @@ import {
   SUPPLIER_PAYMENT_ID,
   burstInserts,
   burstTotals,
+  bySection,
+  guessGroupId,
+  rankCategoryUse,
+  recentCategories,
+  repeatTemplates,
+  sectionTotals,
+  type ExpenseGroup,
   categoryMeta,
   cleanDetail,
   closedMonthOf,
@@ -31,7 +38,7 @@ import {
   type RecurringTemplate,
 } from '@/features/money/expenses/model'
 
-const cat = (id: string, name: string, grp: Category['grp'], via: 'bank' | 'cash', active = true): Category => ({ id, name, grp, defaultPaidVia: via, sort: 0, active })
+const cat = (id: string, name: string, grp: Category['grp'], via: 'bank' | 'cash', active = true): Category => ({ id, name, grp, groupId: grp, defaultPaidVia: via, sort: 0, active, budget: null })
 const CATS: Category[] = [
   cat('snacks', 'Office supplies & snacks', 'overhead', 'cash'),
   cat('fuel', 'Fuel & travel', 'overhead', 'cash'),
@@ -145,7 +152,7 @@ describe('months', () => {
 })
 
 describe('recurring templates', () => {
-  const t = (id: string, over: Partial<RecurringTemplate> = {}): RecurringTemplate => ({ id, label: id, categoryId: 'sal', amount: 1, dayOfMonth: null, active: true, startMonth: null, notes: null, ...over })
+  const t = (id: string, over: Partial<RecurringTemplate> = {}): RecurringTemplate => ({ id, label: id, categoryId: 'sal', amount: 1, dayOfMonth: null, active: true, startMonth: null, notes: null, paidVia: null, ...over })
 
   it('due this month: active, started, and not recorded for the period', () => {
     const list = [t('rent'), t('paused', { active: false }), t('later', { startMonth: '2026-12' }), t('done'), t('now', { startMonth: '2026-11' })]
@@ -210,5 +217,67 @@ describe('the Detail field (owner request 2026-10-20)', () => {
     expect(detailSuggestions(rows, 'util')).toEqual(['office water', 'LEA-1234', 'LEB-777', 'Courier to Lahore'])
     expect(detailSuggestions(rows, 'fuel')).toEqual(['LEA-1234', 'LEB-777', 'office water', 'Courier to Lahore'])
     expect(detailSuggestions(rows, null, 2)).toEqual(['LEA-1234', 'office water'])
+  })
+})
+
+describe('0086: recent categories, Every month rows, the list by group', () => {
+  it('ranks categories by use, ties by the latest; Recent drops archived ones and keeps at most five', () => {
+    const rows = [
+      { category_id: 'fuel', paid_on: '2026-11-01' },
+      { category_id: 'snacks', paid_on: '2026-11-02' },
+      { category_id: 'snacks', paid_on: '2026-11-03' },
+      { category_id: 'old', paid_on: '2026-11-04' },
+      { category_id: 'sal', paid_on: '2026-11-05' },
+    ]
+    expect(rankCategoryUse(rows).map(u => u.id)).toEqual(['snacks', 'sal', 'old', 'fuel'])
+    expect(recentCategories(rankCategoryUse(rows), CATS).map(c => c.id)).toEqual(['snacks', 'sal', 'fuel'])
+    expect(recentCategories(rankCategoryUse(rows), CATS, 1).map(c => c.id)).toEqual(['snacks'])
+  })
+
+  it('an Every month row: a template named by its detail (else its category), due on its day capped at 28, and the expense linked to it', () => {
+    const a: BurstRow = { ...newBurstRow(null, D, 'r1'), amount: 85000, note: '  Office   rent ', date: '2026-10-31', repeat: true, templateId: 't1' }
+    const b: BurstRow = { ...newBurstRow(null, D, 'r2'), amount: 500, categoryId: 'fuel', date: '2026-10-05', repeat: true, templateId: 't2' }
+    const c: BurstRow = { ...newBurstRow(null, D, 'r3'), amount: 90, repeat: false }
+    expect(repeatTemplates([a, b, c], CATS)).toEqual([
+      { newId: 't1', label: 'Office rent', categoryId: 'snacks', amount: 85000, dayOfMonth: 28, startMonth: '2026-10', paidVia: 'cash' },
+      { newId: 't2', label: 'Fuel & travel', categoryId: 'fuel', amount: 500, dayOfMonth: 5, startMonth: '2026-10', paidVia: 'cash' },
+    ])
+    const ins = burstInserts([a, c], CATS)
+    expect(ins[0]).toMatchObject({ id: 'r1', recurring_id: 't1', period: '2026-10' })
+    expect(ins[1]).not.toHaveProperty('recurring_id')
+  })
+
+  it('a new category goes to the group of a category sharing a word (3 letters or more), else nowhere in particular', () => {
+    const groups: ExpenseGroup[] = [
+      { id: 'office', name: 'Office running', kind: 'overhead', sort: 10 },
+      { id: 'vehicles', name: 'Vehicles', kind: 'overhead', sort: 20 },
+    ]
+    const cats: Category[] = [
+      { ...cat('fuel', 'Fuel & travel', 'overhead', 'cash'), groupId: 'vehicles' },
+      { ...cat('water', 'Water', 'overhead', 'cash'), groupId: 'office' },
+      { ...cat('tok', 'Token tax', 'overhead', 'bank', false), groupId: 'vehicles' },
+    ]
+    expect(guessGroupId('Bike fuel', cats, groups)).toBe('vehicles')
+    expect(guessGroupId('water bottles', cats, groups)).toBe('office')
+    expect(guessGroupId('Wat', cats, groups)).toBe('office')
+    expect(guessGroupId('to', cats, groups)).toBeNull() // under 3 letters
+    expect(guessGroupId('Token renewal', cats, groups)).toBeNull() // archived categories do not count
+    expect(guessGroupId('Courier', cats, groups)).toBeNull()
+  })
+
+  it('orders the list by group (their sort) and totals each group', () => {
+    const groups: ExpenseGroup[] = [
+      { id: 'order_cost', name: 'Order costs', kind: 'order_cost', sort: 50 },
+      { id: 'overhead', name: 'Office running', kind: 'overhead', sort: 10 },
+    ]
+    const r = (id: string, categoryId: string, amount: number): ListedExpense => ({
+      id, paidOn: '2026-11-01', amount, inputTax: 0, categoryId, paidVia: 'cash', note: null, orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null,
+    })
+    const rows = [r('a', SUPPLIER_PAYMENT_ID, 380000), r('b', 'snacks', 0.1), r('c', 'fuel', 0.2), r('d', 'gone', 5)]
+    expect(bySection(rows, CATS, groups).map(x => x.id)).toEqual(['b', 'c', 'a', 'd'])
+    const t = sectionTotals(rows, CATS, groups)
+    expect(t.get('overhead')).toEqual({ count: 2, total: 0.3 })
+    expect(t.get('order_cost')).toEqual({ count: 1, total: 380000 })
+    expect(t.get('none')).toEqual({ count: 1, total: 5 })
   })
 })

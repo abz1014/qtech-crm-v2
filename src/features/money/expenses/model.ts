@@ -11,10 +11,84 @@ export type CategoryGroup = 'overhead' | 'order_cost' | 'non_pnl'
 export interface Category {
   id: string
   name: string
+  /** The P&L kind; always the kind of the category's group (0086 keeps them in step). */
   grp: CategoryGroup
+  /** The group it is listed under ("Office running"), 0086. */
+  groupId: string
   defaultPaidVia: PaidVia
   sort: number
+  /** false: archived (hidden from pickers, history kept). */
   active: boolean
+  /** Optional monthly budget in PKR (gross paid), 0086. */
+  budget: number | null
+}
+
+/** The first level of the expense list (0086): "Office running", "Vehicles", "Order costs". Its kind is the P&L place of its categories. */
+export interface ExpenseGroup {
+  id: string
+  name: string
+  kind: CategoryGroup
+  sort: number
+}
+
+/** The seeded groups (0086), by fixed id. */
+export const GROUP_IDS = {
+  office: 'ca7e9000-0000-4000-8000-000000000001',
+  vehicles: 'ca7e9000-0000-4000-8000-000000000002',
+  staff: 'ca7e9000-0000-4000-8000-000000000003',
+  other: 'ca7e9000-0000-4000-8000-000000000004',
+  orderCosts: 'ca7e9000-0000-4000-8000-000000000005',
+  owner: 'ca7e9000-0000-4000-8000-000000000006',
+} as const
+
+/** The P&L kind of a group, in words: where its spending shows in Profit and loss. */
+export const KIND_LABEL: Record<CategoryGroup, string> = { overhead: 'Running costs', order_cost: 'Order costs', non_pnl: 'Not a cost (drawings, loans)' }
+
+export const sortGroups = (groups: readonly ExpenseGroup[]): ExpenseGroup[] =>
+  [...groups].sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+
+export interface GroupedCategories {
+  group: ExpenseGroup
+  categories: Category[]
+}
+
+/**
+ * Categories under their groups, in the saved order (groups by sort, then categories by sort and name). A category whose group
+ * is not in the list (not loaded yet) is left out. `activeOnly` hides archived ones (pickers); empty groups are kept unless `dropEmpty`.
+ */
+export function groupCategories(
+  categories: readonly Category[],
+  groups: readonly ExpenseGroup[],
+  opts: { activeOnly?: boolean; dropEmpty?: boolean; keepId?: string | null } = {},
+): GroupedCategories[] {
+  const byGroup = new Map<string, Category[]>()
+  for (const c of categories) {
+    if (opts.activeOnly && !c.active && c.id !== opts.keepId) continue
+    byGroup.set(c.groupId, [...(byGroup.get(c.groupId) ?? []), c])
+  }
+  return sortGroups(groups)
+    .map(group => ({ group, categories: (byGroup.get(group.id) ?? []).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name)) }))
+    .filter(g => !opts.dropEmpty || g.categories.length > 0)
+}
+
+/**
+ * The group a newly typed category most likely belongs to: the group of an active category one of whose words starts with a
+ * word of the typed name (3 letters or more): "Bike fuel" -> "Fuel & travel" -> Vehicles; "water bottles" -> "Water" -> Office
+ * running. The earliest typed word that finds one decides; null when none does (or the group is not loaded).
+ */
+export function guessGroupId(typed: string, categories: readonly Category[], groups: readonly ExpenseGroup[]): string | null {
+  const words = typed.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3)
+  const known = new Set(groups.map(g => g.id))
+  for (const w of words) {
+    const hit = categories.find(c => c.active && known.has(c.groupId) && c.name.toLowerCase().split(/[^a-z0-9]+/).some(n => n.startsWith(w)))
+    if (hit) return hit.groupId
+  }
+  return null
+}
+
+/** The group new categories go to when none is chosen: Office running, else the first group of running costs. */
+export function defaultGroupId(groups: readonly ExpenseGroup[]): string | null {
+  return groups.find(g => g.id === GROUP_IDS.office)?.id ?? sortGroups(groups).find(g => g.kind === 'overhead')?.id ?? sortGroups(groups)[0]?.id ?? null
 }
 
 export const SUPPLIER_PAYMENT_ID = 'ca7e0000-0000-4000-8000-000000000011'
@@ -28,8 +102,9 @@ export const showsInputTax = (categoryId: string | null | undefined): boolean =>
 export const GROUP_LABEL: Record<CategoryGroup, string> = { overhead: 'Overhead', order_cost: 'Order cost', non_pnl: 'Not in P&L' }
 export const PAID_VIA_LABEL: Record<PaidVia, string> = { bank: 'Bank', cash: 'Cash' }
 
-/** "Overhead · cash": the trailing text of a category in the type-ahead (g2-month-end, Row details). */
-export const categoryMeta = (c: Category): string => `${GROUP_LABEL[c.grp]} · ${c.defaultPaidVia}`
+/** "Office running · cash": the trailing text of a category in the type-ahead (its group, else its kind, and how it is usually paid). */
+export const categoryMeta = (c: Category, groups?: readonly ExpenseGroup[]): string =>
+  `${groups?.find(g => g.id === c.groupId)?.name ?? GROUP_LABEL[c.grp]} · ${c.defaultPaidVia}`
 
 /** Active categories first in their own order; used where only a pick is offered. */
 export const activeCategories = (all: readonly Category[]): Category[] => all.filter(c => c.active).sort((a, b) => a.sort - b.sort)
@@ -38,20 +113,38 @@ export function paidViaFor(categoryId: string, categories: readonly Category[]):
   return categories.find(c => c.id === categoryId)?.defaultPaidVia ?? 'bank'
 }
 
-/** The category used most in a list of recent expenses (ties: the one used last). Null when there are none. */
-export function mostUsedCategory(rows: readonly { category_id: string; paid_on: string }[]): { id: string; count: number } | null {
-  const tally = new Map<string, { count: number; last: string }>()
+export interface CategoryUse {
+  id: string
+  count: number
+  /** The latest date it was used. */
+  last: string
+}
+
+/** Categories by how often they were used in a list of recent expenses, most used first (ties: the one used last). */
+export function rankCategoryUse(rows: readonly { category_id: string; paid_on: string }[]): CategoryUse[] {
+  const tally = new Map<string, CategoryUse>()
   for (const r of rows) {
-    const t = tally.get(r.category_id) ?? { count: 0, last: '' }
+    const t = tally.get(r.category_id) ?? { id: r.category_id, count: 0, last: '' }
     t.count += 1
     if (r.paid_on > t.last) t.last = r.paid_on
     tally.set(r.category_id, t)
   }
-  let best: { id: string; count: number; last: string } | null = null
-  for (const [id, t] of tally) {
-    if (!best || t.count > best.count || (t.count === best.count && t.last > best.last)) best = { id, ...t }
-  }
+  return [...tally.values()].sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0) || a.id.localeCompare(b.id))
+}
+
+/** The category used most in a list of recent expenses (ties: the one used last). Null when there are none. */
+export function mostUsedCategory(rows: readonly { category_id: string; paid_on: string }[]): { id: string; count: number } | null {
+  const best = rankCategoryUse(rows)[0]
   return best ? { id: best.id, count: best.count } : null
+}
+
+/** The "Recent" section of the category picker: up to `limit` active categories, most used in the last 30 days first. */
+export function recentCategories(use: readonly CategoryUse[], categories: readonly Category[], limit = 5): Category[] {
+  const byId = new Map(categories.map(c => [c.id, c]))
+  return use.flatMap(u => {
+    const c = byId.get(u.id)
+    return c && c.active ? [c] : []
+  }).slice(0, limit)
 }
 
 // ------------------------------------------------------------------ months and the closed-month error
@@ -113,6 +206,10 @@ export interface BurstRow {
   orderId: string | null
   /** Text left in the order box that matches no order: the row is unfinished until it is replaced or cleared. */
   orderText?: string
+  /** "Every month": saving also makes a recurring template, and links this expense to it for its month. */
+  repeat?: boolean
+  /** The id the row's recurring template is saved under (made with the row, so a retry adds it once). */
+  templateId?: string
   /** The closed-month sentence for this row after a refused save. */
   error?: string
 }
@@ -135,6 +232,8 @@ export function newBurstRow(prev: BurstRow | null, d: BurstDefaults, id: string 
     photo: null,
     inputTax: null,
     orderId: null,
+    repeat: false,
+    templateId: crypto.randomUUID(),
   }
 }
 
@@ -163,6 +262,9 @@ export interface ExpenseInsert {
   input_tax_pkr: number
   /** Present only when the row was tagged to an order. */
   order_id?: string | null
+  /** Present only for an "Every month" row: its template and the month it pays. */
+  recurring_id?: string
+  period?: string
 }
 
 export function burstInserts(rows: readonly BurstRow[], categories: readonly Category[]): ExpenseInsert[] {
@@ -175,7 +277,33 @@ export function burstInserts(rows: readonly BurstRow[], categories: readonly Cat
     description: cleanDetail(r.note),
     input_tax_pkr: showsInputTax(r.categoryId) ? (r.inputTax ?? 0) : 0,
     ...(r.orderId ? { order_id: r.orderId } : {}),
+    ...(r.repeat && r.templateId ? { recurring_id: r.templateId, period: monthKey(r.date) } : {}),
   }))
+}
+
+/** What an "Every month" row saves as its recurring template: named by its detail (else its category), due on its day (1 to 28). */
+export interface RepeatTemplate {
+  newId: string
+  label: string
+  categoryId: string
+  amount: number
+  dayOfMonth: number
+  startMonth: string
+  paidVia: PaidVia
+}
+
+export function repeatTemplates(rows: readonly BurstRow[], categories: readonly Category[]): RepeatTemplate[] {
+  return rows
+    .filter(r => r.repeat && r.templateId && isSavable(r))
+    .map(r => ({
+      newId: r.templateId as string,
+      label: cleanDetail(r.note) ?? categories.find(c => c.id === r.categoryId)?.name ?? 'Monthly expense',
+      categoryId: r.categoryId,
+      amount: r.amount as number,
+      dayOfMonth: Math.min(Number(r.date.slice(8, 10)) || 1, 28),
+      startMonth: monthKey(r.date),
+      paidVia: effectivePaidVia(r, categories),
+    }))
 }
 
 /**
@@ -230,6 +358,8 @@ export interface RecurringTemplate {
   active: boolean
   startMonth: string | null
   notes: string | null
+  /** How it is usually paid (0086); null follows the category's own default. */
+  paidVia: PaidVia | null
 }
 
 /** Due this month: active, started, and not yet recorded for the period (recurring_id, period is unique). */
@@ -262,7 +392,8 @@ export interface ListedExpense {
 }
 
 export interface ExpenseFilters {
-  group: CategoryGroup | 'all'
+  /** A group id (0086: the group the category is listed under), or 'all'. */
+  group: string | 'all'
   categoryId: string | 'all'
   paidVia: PaidVia | 'all'
 }
@@ -272,7 +403,7 @@ export const NO_FILTERS: ExpenseFilters = { group: 'all', categoryId: 'all', pai
 export function filterExpenses(rows: readonly ListedExpense[], f: ExpenseFilters, categories: readonly Category[]): ListedExpense[] {
   return rows.filter(r => {
     if (f.categoryId !== 'all' && r.categoryId !== f.categoryId) return false
-    if (f.group !== 'all' && categories.find(c => c.id === r.categoryId)?.grp !== f.group) return false
+    if (f.group !== 'all' && categories.find(c => c.id === r.categoryId)?.groupId !== f.group) return false
     if (f.paidVia !== 'all' && r.paidVia !== f.paidVia) return false
     return true
   })
@@ -332,3 +463,42 @@ export function detailSuggestions(rows: readonly DetailUse[], categoryId: string
     .slice(0, limit)
     .map(t => t.shown)
 }
+
+// ------------------------------------------------------------------ the list, by group (0086)
+
+/** The section a listed expense sits in: its category's group ("Office running"), in the groups' saved order. */
+export interface ListSection {
+  key: string
+  name: string
+  sort: number
+}
+
+export function sectionOf(r: Pick<ListedExpense, 'categoryId'>, categories: readonly Category[], groups: readonly ExpenseGroup[]): ListSection {
+  const cat = categories.find(c => c.id === r.categoryId)
+  const g = cat ? groups.find(x => x.id === cat.groupId) : undefined
+  return g ? { key: g.id, name: g.name, sort: g.sort } : { key: 'none', name: 'Other', sort: Number.MAX_SAFE_INTEGER }
+}
+
+/** The rows in section order (groups by their sort, rows keep their order inside each), so a grouped table draws one block per group. */
+export function bySection<T extends Pick<ListedExpense, 'categoryId'>>(rows: readonly T[], categories: readonly Category[], groups: readonly ExpenseGroup[]): T[] {
+  return rows
+    .map((r, i) => ({ r, i, s: sectionOf(r, categories, groups) }))
+    .sort((a, b) => a.s.sort - b.s.sort || a.s.name.localeCompare(b.s.name) || a.i - b.i)
+    .map(x => x.r)
+}
+
+/** Per section: how many and how much (gross), in paisa-safe sums. */
+export function sectionTotals(rows: readonly ListedExpense[], categories: readonly Category[], groups: readonly ExpenseGroup[]): Map<string, { count: number; total: number }> {
+  const out = new Map<string, { count: number; total: number }>()
+  for (const r of rows) {
+    const k = sectionOf(r, categories, groups).key
+    const t = out.get(k) ?? { count: 0, total: 0 }
+    t.count += 1
+    t.total = Math.round((t.total + r.amount) * 100) / 100
+    out.set(k, t)
+  }
+  return out
+}
+
+/** "PKR 2,330,850": whole rupees with separators, paisa only when there are some. */
+export const pkr = (n: number): string => `PKR ${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`

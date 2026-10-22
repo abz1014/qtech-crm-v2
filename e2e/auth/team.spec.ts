@@ -206,8 +206,8 @@ test.describe('Team (A04)', () => {
   })
 
   for (const p of [
-    { email: 'sales@test.invalid', name: 'Test Sales', role: 'sales' },
-    { email: 'engineer@test.invalid', name: 'Test Engineer', role: 'engineer' },
+    { email: 'sales@test.invalid', name: 'Test Sales', role: 'sales', home: "Today's exchange rates" },
+    { email: 'engineer@test.invalid', name: 'Test Engineer', role: 'engineer', home: 'Settings' },
   ]) {
     test(`${p.role} has no Team: not in the menu, and the address shows the no-access page`, async ({ page }) => {
       await signIn(page, p.email)
@@ -217,7 +217,9 @@ test.describe('Team (A04)', () => {
       await expect(page.getByRole('menuitem', { name: 'Team' })).toHaveCount(0)
       await page.getByRole('menuitem', { name: 'Settings' }).click()
       await expect(page).toHaveURL(/\/settings$/)
-      await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
+      // Settings home is today's rates for sales (5f7d305); an engineer, who has no rates, gets a plain Settings page (57c4f28).
+      await expect(page.getByRole('heading', { name: p.home, level: 1 })).toBeVisible()
+      await expect(page.getByRole('navigation', { name: 'Settings' })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Team' })).toHaveCount(0)
 
       await page.goto('/settings/team')

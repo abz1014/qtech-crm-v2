@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useContext, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Building2, Plus, X } from 'lucide-react'
 import { PaletteContext } from '@/app/palette/usePalette'
@@ -52,18 +52,18 @@ export function CompaniesPage() {
   const palette = useContext(PaletteContext)
   const today = businessToday()
   const [creating, setCreating] = useState(false)
-  const [newName, setNewName] = useState('')
-
-  // The palette's "New company" lands here with ?new=1: open the dialog once, then tidy the address.
-  useEffect(() => {
-    if (params.get('new')) {
-      setNewName(params.get('name') ?? '')
-      setCreating(true)
-      const next = new URLSearchParams(params)
-      next.delete('new')
-      setParams(next, { replace: true })
-    }
-  }, [params, setParams])
+  // The palette's "New company" lands here with ?new=1 (and ?name=). The address keeps both while the dialog is open, so a
+  // reload brings the dialog back with the name; closing it takes them off.
+  const linked = params.get('new') !== null
+  const linkedName = linked ? (params.get('name') ?? '') : ''
+  const closeCreate = () => {
+    setCreating(false)
+    if (!linked) return
+    const next = new URLSearchParams(params)
+    next.delete('new')
+    next.delete('name')
+    setParams(next, { replace: true })
+  }
 
   const rows = list.data
   const counts = useMemo(
@@ -239,12 +239,9 @@ export function CompaniesPage() {
       />
 
       <CreateCompanyDialog
-        open={creating}
-        onOpenChange={o => {
-          setCreating(o)
-          if (!o) setNewName('')
-        }}
-        initialName={newName || typedName}
+        open={creating || linked}
+        onOpenChange={o => (o ? setCreating(true) : closeCreate())}
+        initialName={linkedName || typedName}
         onCreated={c => {
           toast({ title: `Added ${c.name}`, body: 'Open it to add sites, contacts and brands when you have them.', tone: 'success' })
           navigate(`/companies/${c.id}`)

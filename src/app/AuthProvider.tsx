@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { SessionContext, SignInNoticeContext, type SessionState, type SessionUser, type SignInNotice } from '@/app/session'
-import { getSupabase, onApiActivity } from '@/lib/supabase'
+import { getSupabase, onApiActivity, onSessionRefused } from '@/lib/supabase'
 import { forgetDeviceCaptures } from '@/lib/capture/forget'
 import { ConnectionContext, holdNetwork, useOnline, type Connection } from '@/lib/connection'
 import { forgetSavedQueries, setCacheOwner, startQueryPersistence } from '@/lib/queryPersist'
@@ -30,17 +30,27 @@ async function resolveUser(userId: string): Promise<Resolved> {
     supabase.from('users').select('id, name').eq('id', userId).maybeSingle(),
     supabase.rpc('current_user_role'),
   ])
+  // The API's pre-request check (0085) refuses a deactivated account outright: that is a deactivation, not a failed lookup.
+  if (isDeactivatedRefusal(role.error) || isDeactivatedRefusal(row.error)) return { user: null }
   if (role.error) throw role.error
   if (row.error) throw row.error
   if (!role.data || !row.data) return { user: null }
   return { user: { id: row.data.id, name: row.data.name, role: role.data } }
 }
 
-/** PostgREST's answers to a token it will not accept, or a role check refused: the session is not valid. */
+/**
+ * PostgREST's answers to a token it will not accept, or a role check refused: the session is not valid. PT401 is the
+ * pre-request check of 0085_session_cutoff.sql: the session was ended (Reset password, Deactivate, signed out elsewhere).
+ */
 function isAuthRefusal(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false
   const code = (err as { code?: unknown }).code
-  return code === 'PGRST301' || code === 'PGRST302' || code === 'PGRST303' || code === '42501'
+  return code === 'PGRST301' || code === 'PGRST302' || code === 'PGRST303' || code === '42501' || code === 'PT401'
+}
+
+/** The pre-request check refused the request because the account is deactivated. */
+function isDeactivatedRefusal(err: unknown): boolean {
+  return Boolean(err) && typeof err === 'object' && (err as { code?: unknown }).code === 'PT401' && (err as { details?: unknown }).details === 'account_deactivated'
 }
 
 /** True once `running` has stayed true for `ms`. */
@@ -140,9 +150,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       last = now
       recheck()
     })
+    // A data request refused for the token itself: check now, not on the next tick (HW-45), so the shell goes at once.
+    // cancelRefetch false: several refused requests at once join the one check instead of restarting it.
+    const stopRefused = onSessionRefused(() => void queryClient.refetchQueries({ queryKey: [...KEY, userId] }, { cancelRefetch: false }))
     window.addEventListener('focus', recheck)
     return () => {
       stop()
+      stopRefused()
       window.removeEventListener('focus', recheck)
     }
   }, [userId, queryClient])
@@ -164,14 +178,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refused = isAuthRefusal(query.error)
   useEffect(() => {
     if (!refused || !supabase) return
-    void forgetDeviceCaptures().finally(() => void supabase.auth.signOut())
+    // local: the server already ended this session; only this device's copy is left to clear
+    void forgetDeviceCaptures().finally(() => void supabase.auth.signOut({ scope: 'local' }))
   }, [refused, supabase])
 
   const deactivated = Boolean(userId) && query.data?.user === null
   useEffect(() => {
     if (!deactivated || !supabase) return
     setDeactivated(true)
-    void forgetDeviceCaptures().finally(() => void supabase.auth.signOut())
+    void forgetDeviceCaptures().finally(() => void supabase.auth.signOut({ scope: 'local' }))
   }, [deactivated, supabase])
 
   // Read on each render: both are small, and both change only around the auth events that re-render this provider.

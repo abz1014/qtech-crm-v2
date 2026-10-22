@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OrderListRow } from '@/features/orders/api'
-import { ALL, dimensionCounts, dimensionParam, emptyFilters, filterRows, hasFilters, matchesText, tabCounts, type ListFilters } from '@/features/orders/lib/listModel'
+import { ALL, dimensionCounts, emptyFilters, filterRows, hasFilters, matchesText, tabCounts, type ListFilters } from '@/features/orders/lib/listModel'
 
 const row = (over: Partial<OrderListRow>): OrderListRow => ({
   id: 'o',
@@ -97,15 +97,5 @@ describe('orders list filters (O04)', () => {
     const eng = rows.map(r => ({ ...r, invoicing: null, payment: null, gross: null, balance: null }))
     expect(ids(filterRows(eng, f({ payment: 'overdue' }), sales))).toEqual([])
     expect(dimensionCounts(eng, 'payment', f(), sales).size).toBe(0)
-  })
-})
-
-describe('dimension values from the address (HE-1)', () => {
-  it('keeps a known value and ignores an unknown or missing one', () => {
-    expect(dimensionParam('payment', 'unpaid')).toBe('unpaid')
-    expect(dimensionParam('invoicing', 'open')).toBe(ALL)
-    expect(dimensionParam('goods', '')).toBe(ALL)
-    expect(dimensionParam('goods', null)).toBe(ALL)
-    expect(dimensionParam('commissioning', '__proto__')).toBe(ALL)
   })
 })

@@ -129,7 +129,8 @@ test.describe('month-end (M10)', () => {
     await addInvoice(order.id)
     const reports: { title: string; key: string; file: string; header: string; shows: RegExp }[] = [
       { title: 'Profit and loss', key: 'pnl', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Profit for ${STMT.name}`) },
-      { title: 'Expenses by category', key: 'categories', file: `expenses-by-category-${STMT.key}.csv`, header: 'Month', shows: /Overheads/ },
+      // the Expenses report (2026-10-22) replaced "Expenses by category"; the select keeps the month (?month=)
+      { title: 'Expenses', key: 'expenses', file: `expenses-${STMT.key}.csv`, header: 'Section', shows: /Where the money went/ },
       { title: 'Overdue by age', key: 'aging', file: `overdue-by-age-${STMT.key}.csv`, header: 'As of', shows: /What customers owe, by how late/ },
       { title: 'We owe suppliers', key: 'owe', file: `we-owe-suppliers-${STMT.key}.csv`, header: 'As of', shows: /What we owe suppliers/ },
       { title: 'GST and FBR', key: 'gst', file: `gst-and-fbr-${STMT.key}.csv`, header: 'Invoice month', shows: /GST and FBR, by invoice month/ },

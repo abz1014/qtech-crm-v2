@@ -139,6 +139,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const [hydrated, setHydrated] = useState(false)
   const defaultsSnap = useRef<string | null>(null)
   const claimId = useRef(crypto.randomUUID())
+  /** HW-4: the latest quotation id this dialog was built on (null: none yet). Set at seed time; moved on after a warning. */
+  const builtOn = useRef<string | null>(null)
 
   const byItem = useMemo(() => new Map((memory.data ?? []).map(m => [m.itemId, m] as const)), [memory.data])
 
@@ -159,6 +161,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     if (seeded.current || !items.data || !quotations.data || !profile || !contacts.data || !memoryRows) return
     seeded.current = true
     const p = quotations.data[0] ?? null
+    builtOn.current = p?.id ?? null
     const mem = new Map(memoryRows.map(m => [m.itemId, m] as const))
     const known = new Set(contacts.data.map(c => c.id))
     const wanted = p?.contactId ?? rfq.contactId
@@ -262,6 +265,19 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const submit = async () => {
     setError(null)
     try {
+      // HW-4: a quotation issued from another tab (or by someone else) since this dialog opened is not silently revised over.
+      // Re-read the RFQ's quotations first; when the latest is not the one this dialog was built on, stop and say so. The
+      // refreshed list updates this dialog (it now offers the next revision), so a second press is a deliberate revision.
+      const fresh = await quotations.refetch()
+      if (fresh.isError) throw fresh.error
+      const latest = fresh.data?.[0] ?? null
+      if ((latest?.id ?? null) !== builtOn.current && latest?.id !== claimId.current) {
+        builtOn.current = latest?.id ?? null
+        setError(
+          `${latest ? quotationRef(latest.number, firstYear, latest.revision) : 'A quotation'} was just issued for this RFQ, from another tab or by someone else. Nothing was issued now. Check it first; press Issue again only to make a revision.`,
+        )
+        return
+      }
       const q = await issue.mutateAsync({
         id: claimId.current,
         rfqId: rfq.id,
