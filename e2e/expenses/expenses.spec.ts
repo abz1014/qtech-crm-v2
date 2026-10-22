@@ -289,7 +289,7 @@ test.describe('expenses (M03, M11)', () => {
     const a = base() + 7
     await page.getByRole('button', { name: 'Add expenses' }).click()
     await page.getByRole('textbox', { name: 'Amount, row 1' }).fill(String(a))
-    await page.locator('input[type=file]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: PNG })
+    await page.getByRole('dialog').locator('input[type=file]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: PNG })
     await expect(page.getByRole('button', { name: 'Remove receipt photo, row 1' })).toBeVisible()
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
