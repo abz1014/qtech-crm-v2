@@ -394,9 +394,10 @@ export default function OrdersListPage() {
       <PageHeader
         title="Orders"
         lede={lede}
-        secondary={
+        // The list's one green action (rubric: exactly one green button per screen), as New RFQ is on the RFQ list.
+        primary={
           money ? (
-            <Button icon={CopyPlus} onClick={() => setCreating(true)}>
+            <Button variant="primary" icon={CopyPlus} onClick={() => setCreating(true)}>
               Repeat a past order
             </Button>
           ) : undefined

@@ -684,6 +684,16 @@ export function collect(opts: CollectOptions): Metrics {
         if (n.parentElement.closest('svg')) continue
         // An ellipsis on the text's own box means the cut is shown.
         if (style(n.parentElement).textOverflow === 'ellipsis') continue
+        // Inside a line clamp (a "first 3 lines" preview with "Show the whole message"): the cut is shown with an ellipsis.
+        let clamped = false
+        for (let p: Element | null = n.parentElement; p && p !== el.parentElement; p = p.parentElement) {
+          const lc = style(p).getPropertyValue('-webkit-line-clamp')
+          if (lc && lc !== 'none') {
+            clamped = true
+            break
+          }
+        }
+        if (clamped) continue
         textWalk.selectNodeContents(n)
         // Down, a glyph box may stick out of a tight line box by a few px without anything being lost.
         const out = Array.from(textWalk.getClientRects()).some(t => {
