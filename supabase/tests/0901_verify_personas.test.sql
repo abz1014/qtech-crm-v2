@@ -120,7 +120,8 @@ insert into public.rfqs (id, company_id, owner_id) values
 insert into public.rfq_items (id, rfq_id, position, description, brand_id, quoted_unit_price_net) values
   (pg_temp.f('17'), pg_temp.f('15'), 0, 'Fixture item', pg_temp.f('13'), 50),
   (pg_temp.f('18'), pg_temp.f('15'), 1, 'Leaf item', null, 50);
-update public.rfq_items set family_id = pg_temp.f('14') where id = pg_temp.f('18');   -- 0093: v_supplier_category_evidence needs an asked item with a category
+insert into public.brands (id, name, kind) values (pg_temp.f('d7'), 'M Category', 'family');   -- 0093: a category no probe deletes
+update public.rfq_items set family_id = pg_temp.f('d7') where id = pg_temp.f('18');   -- 0093: v_supplier_category_evidence needs an asked item with a category
 insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   (pg_temp.f('19'), pg_temp.f('15'), pg_temp.f('03'), public.today_pkt()),
   (pg_temp.f('1a'), pg_temp.f('15'), pg_temp.f('04'), public.today_pkt()),
