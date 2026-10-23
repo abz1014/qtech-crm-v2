@@ -77,7 +77,7 @@ export async function legRowByCcy(p: Page, supplierName: string, ccy: string, co
   const rows = legRows(p, supplierName)
   await rows.nth(count - 1).waitFor({ timeout: 15_000 })
   const texts = await rows.allInnerTexts()
-  const i = texts.findIndex(t => new RegExp(`\b${ccy}\b`).test(t))
+  const i = texts.findIndex(t => t.split(/[^A-Za-z]+/).includes(ccy))
   return rows.nth(Math.max(i, 0))
 }
 

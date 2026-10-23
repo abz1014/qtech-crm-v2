@@ -5,7 +5,7 @@ import { as, db, num, rpcAs, USER } from '../../verify/support/db'
 import { karachiDay, letters, post, postMany, setProfile, setRates } from '../../verify/support/fixtures'
 import { openMarkWon } from '../../verify/support/session'
 import { amount } from '../../verify/support/text'
-import { T, today, slashDate, addDays, flat, same, r2, orderRef, obs, want, totalsOf, newPage, until, toast, undoIn, actions, legRows, legRowByCcy, ITEMS, seedCast, reply, PRICE, standardReplies, SELL, issueQuote, itemsOf, legsOf, orderRow, orderTotal, stateOf, rfqState, posOf, winUi, issueUi, seedImported, seedImportedOrder, liveOrder, issuePoRpc, todayItems, spy, PRICE_STRINGS, repeatVia, type Cast, type RankRow } from './jobflow-support'
+import { T, today, slashDate, addDays, flat, same, r2, orderRef, obs, want, lineMath, totalsOf, newPage, until, toast, undoIn, actions, legRows, legRowByCcy, ITEMS, seedCast, reply, PRICE, standardReplies, SELL, issueQuote, itemsOf, legsOf, orderRow, orderTotal, stateOf, rfqState, posOf, winUi, issueUi, seedImported, seedImportedOrder, liveOrder, issuePoRpc, todayItems, spy, PRICE_STRINGS, repeatVia, type Cast, type RankRow } from './jobflow-support'
 import { ctxAs, layout, probe, settle, shot, visit } from './support'
 
 /*
@@ -857,8 +857,15 @@ test('jobflow S10: invoice: the dialog on a mixed GST order, part and rest, numb
     want(info, 'S10 invoice PDF', pdfIsValid(buf), 'the downloaded invoice is not a valid PDF')
     const text = buf ? pdfText(buf) : null
     if (text) {
-      const first = (await invoicesOf(L.id))[0]
-      for (const needle of ['Sales Tax Invoice', first.number, 'Indus Fibre Mills', amount(totalsOf([lines[0]]).net, { always: true })]) want(info, 'S10 invoice PDF', flat(text).includes(needle), `invoice PDF lacks "${needle}"`)
+      const [one, two] = await invoicesOf(L.id)
+      obs(info, 'S10 invoice PDF', 'pdftotext of the downloaded invoice (for review)', text.slice(0, 1800))
+      const which = flat(text).includes(two.number) ? two : one
+      const mine = which === two ? lines.slice(1) : lines.slice(0, 1)
+      const m = totalsOf(mine)
+      for (const needle of ['Sales Tax Invoice', which.number, 'Indus Fibre Mills', amount(m.net, { always: true }), amount(m.gst, { always: true }), amount(m.gross, { always: true }), 'NTN', '1234567890123', 'Plot 9, Sundar Industrial Estate'])
+        want(info, 'S10 invoice PDF', flat(text).includes(needle), `invoice PDF of ${which.number} lacks "${needle}"`)
+      for (const l of mine) want(info, 'S10 invoice PDF', flat(text).includes(amount(lineMath(l).net, { always: true })), `invoice PDF lacks the line value ${amount(lineMath(l).net, { always: true })}`)
+      want(info, 'S10 invoice PDF', which.number === two.number, `the Print invoice dialog offers ${which.number} first, not the latest ${two.number}`)
     }
   })
   await admin.close()
@@ -881,6 +888,8 @@ test('jobflow S11: cancel an order with a PO sent, the RFQ is open again, Mark w
 
   const admin = await ctxAs(browser, info, 'admin', 'desktop')
   const ap = await newPage(admin, info, 'S11 admin')
+  const outcomes = async () => (await db.view<{ outcome: string; rfqs: number }>('v_report_rfq_outcomes?select=outcome,rfqs')).filter(o => o.outcome === 'won').reduce((n, o) => n + num(o.rfqs), 0)
+  const wonBefore = await outcomes()
   await visit(ap, info, `/orders/${L.id}`)
   await probe(info, ap, 'S11 cancel with a PO sent: the dialog names the PO', async () => {
     await ap.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: T })
@@ -901,8 +910,10 @@ test('jobflow S11: cancel an order with a PO sent, the RFQ is open again, Mark w
     const text = flat(await ap.locator('#main').innerText())
     want(info, 'S11 rfq page', !/Won\./.test(text) && /Mark won/.test(text), 'the RFQ page after the cancel still reads Won or does not offer Mark won', text.slice(0, 300))
     want(info, 'S11 rfq page', !new RegExp(`Open ${orderRef(L.number)}`).test(text), 'the RFQ page still links to the cancelled order as its order')
-    const chip = flat(await ap.locator('[data-slot="rfq-stage"], header').first().innerText().catch(() => ''))
-    obs(info, 'S11 stage chip', `header text after the cancel: ${chip.slice(0, 160)}`)
+    const chips = (await ap.locator('#main [data-status]').allInnerTexts()).map(flat)
+    want(info, 'S11 stage chip', chips.some(c => /Quotation sent/.test(c)) && !chips.some(c => /Won/.test(c)), `the stage chip after the cancel reads ${JSON.stringify(chips)}, expected "Quotation sent"`)
+    const wonAfter = await outcomes()
+    want(info, 'S11 outcomes report', wonAfter === wonBefore - 1, `the RFQ outcomes report counts ${wonBefore} won RFQs before the cancel and ${wonAfter} after it, expected one fewer`)
     await shot(ap, 'S11-rfq-after-cancel')
     const t = await todayItems(admin, info, 'plan_commissioning', orderRef(L.number))
     want(info, 'S11 Today', t.count === 0, `Today still asks to plan the commissioning of the cancelled ${orderRef(L.number)}`)
