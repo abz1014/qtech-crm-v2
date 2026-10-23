@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { createCompany, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 
 /*
@@ -413,6 +413,37 @@ test.describe('expenses (M03, M11)', () => {
     await del()
     await page.getByText('Deleted expense', { exact: true }).locator('xpath=ancestor::*[.//button[@aria-label="Dismiss"]][1]').getByRole('button', { name: 'Dismiss' }).click()
     await expect.poll(async () => (await byNote(`${tag} b`)).length).toBe(0)
+  })
+
+  test('History: an edited amount shows "Amount", the old and new values and who changed it', async ({ page }) => {
+    const tag = `hist-${unique()}`
+    const was = base() + 21
+    await addExpense({ amount_pkr: was, category_id: RENT, paid_via: 'bank', description: tag })
+    const me = (await login('admin')).user as { id: string }
+    const [admin] = await must(rest<{ name: string }[]>('admin', `users?id=eq.${me.id}&select=name`))
+    await openAs(page, 'admin', `/money/expenses?q=${tag}`)
+    const rowMenu = () => page.getByRole('button', { name: new RegExp(`^More for Rent of ${was}$`) })
+    await rowMenu().click()
+    await page.getByRole('menuitem', { name: 'Edit expense' }).click()
+    await page.getByRole('textbox', { name: 'Amount, PKR' }).fill('500')
+    await page.getByRole('button', { name: 'Save expense' }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await expect(page.getByText(tag)).toBeVisible()
+    await page.getByRole('button', { name: /^More for Rent of 500$/ }).click()
+    await page.getByRole('menuitem', { name: 'History' }).click()
+    const panel = page.getByRole('dialog', { name: 'History' })
+    await expect(panel).toBeVisible()
+    const newest = panel.getByTestId('history-entry').first()
+    await expect(newest).toContainText(`Amount: PKR ${was.toLocaleString('en-US')} → PKR 500`)
+    await expect(newest).toContainText(admin.name)
+    await expect(panel.getByText(`Entered by ${admin.name}`)).toBeVisible()
+    await review(page, 'history-panel-1440')
+    expect(await axeViolations(page)).toEqual([])
+    // the same on a phone: a bottom sheet, with its text at 16 px
+    await page.setViewportSize({ width: 375, height: 812 })
+    await expect(newest).toBeVisible()
+    expect(await newest.locator('ul li').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16)
+    await review(page, 'history-panel-375')
   })
 
   test('recurring is one tap, and only once for a month', async ({ page }) => {
