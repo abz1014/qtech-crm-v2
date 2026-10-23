@@ -105,9 +105,7 @@ select throws_ok($$update public.orders set cancelled_on = null, cancel_reason =
 select is(public.create_repeat_order('f9510000-0000-4000-8000-0000000000a5', 'f9510000-0000-4000-8000-000000000005'),
   'f9510000-0000-4000-8000-0000000000a5'::uuid, 'a live order is repeated');
 select is((select array_agg(unit_price_net order by position) from public.order_items where order_id = 'f9510000-0000-4000-8000-0000000000a5'),
-  array[100, 0, 50]::numeric[], 'HW-55: the priced lines keep their price; the line priced 0 is copied empty');
-select ok((select bool_and((legacy_flags = array['price_needed']::text[]) = (unit_price_net = 0)) from public.order_items where order_id = 'f9510000-0000-4000-8000-0000000000a5'),
-  'HW-55: and only the zero-priced line is marked price needed');
+  array[100, 0, 50]::numeric[], 'HW-55: the priced lines keep their price; the line priced 0 stays empty (the order page reads it as Price needed)');
 select throws_ok($$select public.create_repeat_order('f9510000-0000-4000-8000-0000000000a6', 'f9510000-0000-4000-8000-000000000006')$$,
   'P0001', 'This order was cancelled. Repeat it anyway?', 'HW-53: a cancelled order is not repeated without a word');
 select is((select count(*)::int from public.orders where id = 'f9510000-0000-4000-8000-0000000000a6'), 0, 'HW-53: and nothing was made');
@@ -117,8 +115,6 @@ select is(public.create_repeat_order('f9510000-0000-4000-8000-0000000000a7', 'f9
   'f9510000-0000-4000-8000-0000000000a7'::uuid, 'an order whose price basis is unknown is repeated');
 select is((select array_agg(unit_price_net order by position) from public.order_items where order_id = 'f9510000-0000-4000-8000-0000000000a7'),
   array[0]::numeric[], 'HW-54: its figure is not copied as a net price');
-select is((select legacy_flags from public.order_items where order_id = 'f9510000-0000-4000-8000-0000000000a7'),
-  array['price_needed']::text[], 'HW-54: the line is marked price needed instead');
 select is((select legacy_flags from public.orders where id = 'f9510000-0000-4000-8000-0000000000a7'), '{}'::text[],
   'HW-54: and the new order does not claim an unknown basis it never had');
 

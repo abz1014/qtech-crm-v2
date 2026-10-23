@@ -150,7 +150,8 @@ export function OrderItemsPanel({
   /** HW-48: a goods line with no supplier can be given one here (admin and sales; a split item's heading has none). */
   const canChoose = (r: Row) => money && canEdit && r.kind !== 'head' && !r.isService && r.legId === null && order.cancelledOn === null
   /** A repeat left this line at 0 for the person to price (HW-54, HW-55): the price is typed here, once, as for a split item. */
-  const canPrice = (r: Row) => editable && r.kind !== 'head' && r.priceNeeded === true
+  const needsPrice = (r: Row) => money && !basisUnknown && r.kind !== 'head' && r.unitPriceNet === 0
+  const canPrice = (r: Row) => editable && needsPrice(r)
   const canSplit = (r: Row) => editable && r.kind !== 'head' && !r.isService && r.legId !== null && r.qty > 1
   const startGroupEdit = (r: Row) => {
     setGroupDraft(typeof r.groupPrice === 'number' ? r.groupPrice : null)
@@ -259,7 +260,7 @@ export function OrderItemsPanel({
           <span className="text-xs text-fg-muted">
             {r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}
             {/* below 1024 the unit price folds into the item line */}
-            {money && r.priceNeeded ? (
+            {money && needsPrice(r) ? (
               <span className="lg:hidden">
                 {r.isService || r.brandName || r.model ? ' · ' : ''}
                 price needed
@@ -290,7 +291,7 @@ export function OrderItemsPanel({
     value: r => r.unitPriceNet,
     cell: r =>
       r.kind !== 'head' ? (
-        r.priceNeeded ? (
+        needsPrice(r) ? (
           <span className="inline-flex items-center justify-end gap-1">
             <span className="font-medium text-tone-warning-fg">Price needed</span>
             {canPrice(r) && editingGroup !== r.id ? (
@@ -457,7 +458,7 @@ export function OrderItemsPanel({
               <span className="text-sm text-fg-muted">
                 <span className="num">{r.qty}</span>
                 {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''}
-                {money && r.priceNeeded ? <span>{' · price needed'}</span> : money && r.unitPriceNet !== null ? <span className="num">{` × ${formatAmount(r.unitPriceNet)}`}</span> : null}
+                {money && needsPrice(r) ? <span>{' · price needed'}</span> : money && r.unitPriceNet !== null ? <span className="num">{` × ${formatAmount(r.unitPriceNet)}`}</span> : null}
                 {r.isService ? ' · Service' : legOf(r) ? ` · ${legOf(r)?.supplierName}` : ' · No supplier yet'}
               </span>
               {editingGroup === r.id ? groupEditor(r) : null}

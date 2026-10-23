@@ -4,8 +4,8 @@
 --   HW-52  The customer PO key ignores cancelled orders (a customer re-sends a PO after a cancellation and the new order can have it),
 --          and a refusal names the PO and the order that holds it.
 --   HW-53  create_repeat_order refuses a cancelled order unless the caller confirms (p_repeat_cancelled).
---   HW-54  A repeat of an order whose price basis is unknown copies no figure: every line is "price needed", priced 0.
---   HW-55  A repeat copies a line priced 0 as "price needed" (order_items.legacy_flags has 'price_needed'), not as a normal line.
+--   HW-54  A repeat of an order whose price basis is unknown copies no figure: every line is priced 0, and a line priced 0 reads "Price needed".
+--   HW-55  A repeat copies a line priced 0 as priced 0 ("Price needed" on the order page), as it was.
 --   HW-58  Reopening a cancelled order is refused while its RFQ has another live order.
 --   HW-61  issue_purchase_order refuses quantities that no longer match the order lines.
 --   HW-63  issue_purchase_order takes the revision the caller expects and refuses if somebody issued first.
@@ -85,9 +85,10 @@ create trigger orders_rfq_free before update of cancelled_on on public.orders
 
 -- ================================================================ create_repeat_order (HW-53, HW-54, HW-55)
 -- Repeating copies the lines, but the CRM never works out a price: a line the old order carried at 0, and every line of an order whose price
--- basis is unknown (value_basis_unknown: the old CRM did not say if its figures include GST), is copied at 0 and marked 'price_needed' on the
--- line, for the person to type. The new order never carries value_basis_unknown (only an admin sets legacy flags). A cancelled source is
--- refused unless the caller passes p_repeat_cancelled (the dialog asks "Repeat it anyway?" and calls again).
+-- basis is unknown (value_basis_unknown: the old CRM did not say if its figures include GST), is copied at 0; the order page shows a line
+-- priced 0 as "Price needed" and offers Set price. (A flag on the line would need an admin: only an admin may set legacy_flags, 0078.)
+-- The new order never carries value_basis_unknown. A cancelled source is refused unless the caller passes p_repeat_cancelled (the dialog
+-- asks "Repeat it anyway?" and calls again).
 drop function public.create_repeat_order(uuid, uuid, text, date);
 
 create function public.create_repeat_order(
@@ -146,11 +147,10 @@ begin
     returning id
   )
   insert into public.order_items (order_id, position, description, brand_id, family_id, qty, unit,
-                                  unit_price_net, gst_rate, is_service, supplier_order_id, supplier_unit_price, legacy_flags)
+                                  unit_price_net, gst_rate, is_service, supplier_order_id, supplier_unit_price)
   select p_order_id, i.position, i.description, i.brand_id, i.family_id, i.qty, i.unit,
-         case when v_unknown or i.unit_price_net = 0 then 0 else i.unit_price_net end,
-         i.gst_rate, i.is_service, m.new_id, i.supplier_unit_price,
-         case when v_unknown or i.unit_price_net = 0 then array['price_needed']::text[] else '{}'::text[] end
+         case when v_unknown then 0 else i.unit_price_net end,
+         i.gst_rate, i.is_service, m.new_id, i.supplier_unit_price
   from public.order_items i
   left join map m on m.old_id = i.supplier_order_id
   where i.order_id = p_from_order_id;

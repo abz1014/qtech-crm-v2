@@ -136,8 +136,6 @@ export interface OrderItemRow {
   unitPriceNet: number | null
   gstRate: number | null
   supplierUnitPrice: number | null
-  /** A repeat copied this line at 0 for the person to price it (order_items.legacy_flags 'price_needed', still priced 0). Never for an engineer. */
-  priceNeeded?: boolean
 }
 
 export async function listOrderItems(orderId: string, money: boolean): Promise<OrderItemRow[]> {
@@ -146,7 +144,7 @@ export async function listOrderItems(orderId: string, money: boolean): Promise<O
   const rows = unwrap(
     await db
       .from('order_items')
-      .select(money ? `${base}, unit_price_net, gst_rate, supplier_unit_price, legacy_flags` : base)
+      .select(money ? `${base}, unit_price_net, gst_rate, supplier_unit_price` : base)
       .eq('order_id', orderId)
       .order('position')
       .order('created_at'),
@@ -169,7 +167,6 @@ export async function listOrderItems(orderId: string, money: boolean): Promise<O
     unitPriceNet: money ? num(r.unit_price_net) : null,
     gstRate: money ? num(r.gst_rate) : null,
     supplierUnitPrice: money ? num(r.supplier_unit_price) : null,
-    priceNeeded: money && Array.isArray(r.legacy_flags) && (r.legacy_flags as string[]).includes('price_needed') && Number(r.unit_price_net) === 0,
   }))
 }
 
