@@ -356,9 +356,17 @@ export async function listRankedQuotes(rfqId: string): Promise<RankedQuote[]> {
   const ids = [...new Set(rows.map(r => r.supplier_id))]
   const names = new Map<string, string>()
   if (ids.length > 0) for (const c of unwrap(await db.from('companies').select('id, name').in('id', ids))) names.set(c.id, c.name)
+  // Imported quotes carry flags that the ranking does not: Mark won warns on them.
+  const lineIds = rows.map(r => r.quote_line_id)
+  const flagged = new Map<string, string[]>()
+  if (lineIds.length > 0) {
+    for (const l of unwrap(await db.from('supplier_quote_lines').select('id, legacy_flags').in('id', lineIds))) {
+      if (l.legacy_flags?.length) flagged.set(l.id, l.legacy_flags)
+    }
+  }
   // The ranking rules (rfqs/lib/ranking) come with the first ranked list, not with every page that reads orders (perf/lcp).
   const { mapRankRows } = await import('@/features/orders/lib/ranking')
-  return mapRankRows(rows as unknown as RankRow[], names)
+  return mapRankRows(rows as unknown as RankRow[], names).map(q => (flagged.has(q.lineId) ? { ...q, legacyFlags: flagged.get(q.lineId) } : q))
 }
 
 export interface SplitInput {

@@ -172,6 +172,8 @@ export async function quotedRfq(opts: { items: { description: string; qty: numbe
     opts.items.map((it, i) => ({ rfq_id: r.id, position: i, description: it.description, qty: it.qty, unit: 'nos', gst_rate: it.gst ?? 18, quoted_unit_price_net: it.price })),
   )
   items.sort((a, b) => a.position - b.position)
+  // Mark won prices an order from the issued quotation, so the quotation is really issued (the dialog no longer reads rfq_items).
+  await must(rest('admin', 'rpc/issue_quotation', { method: 'POST', body: { p_quotation_id: crypto.randomUUID(), p_rfq_id: r.id } }))
   const sup = await supplier('Verify Lahore Stockist', 'Pakistan')
   await quote(r.id, sup, items.map((it, i) => ({ itemId: it.id, price: opts.items[i].supplierPrice })), 'PKR')
   return { rfq: r, customer, items, supplier: sup }
