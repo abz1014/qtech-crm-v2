@@ -5,7 +5,7 @@ import { as, db, num, rpcAs, USER } from '../../verify/support/db'
 import { karachiDay, letters, post, postMany, setProfile, setRates } from '../../verify/support/fixtures'
 import { openMarkWon } from '../../verify/support/session'
 import { amount } from '../../verify/support/text'
-import { T, today, slashDate, addDays, flat, same, r2, orderRef, obs, want, lineMath, totalsOf, newPage, until, toast, undoIn, actions, legRows, legRowByCcy, ITEMS, seedCast, reply, PRICE, standardReplies, SELL, issueQuote, itemsOf, legsOf, orderRow, orderTotal, stateOf, rfqState, posOf, winUi, issueUi, seedImported, seedImportedOrder, liveOrder, issuePoRpc, todayItems, spy, PRICE_STRINGS, repeatVia, type Cast, type RankRow } from './jobflow-support'
+import { T, today, slashDate, addDays, flat, same, r2, orderRef, obs, want, lineMath, totalsOf, newPage, until, toast, undoIn, actions, legRows, legRowByCcy, ITEMS, seedCast, reply, winRpc, PRICE, standardReplies, SELL, issueQuote, itemsOf, legsOf, orderRow, orderTotal, stateOf, rfqState, posOf, winUi, issueUi, seedImported, seedImportedOrder, liveOrder, issuePoRpc, todayItems, spy, PRICE_STRINGS, repeatVia, type Cast, type RankRow } from './jobflow-support'
 import { ctxAs, layout, probe, settle, shot, visit } from './support'
 
 /*
@@ -130,6 +130,7 @@ test('jobflow S1: a full quote issued in the app, two suppliers in three currenc
     const names = await page.getByRole('listitem', { name: /^Supplier order,/ }).evaluateAll(els => els.map(e => e.getAttribute('aria-label')))
     want(info, 'S1 legs on the page', names.length === 3, `${names.length} supplier order rows on the page`, names)
     if (names.length === 3 && names[1] === names[2]) obs(info, 'S1 legs on the page', 'the USD and EUR supplier orders of Gulf Instrumentation have the same accessible name ("Supplier order, ...", "Issue PO, ...", "Delivered today, ..."): a screen reader or a test cannot tell them apart', names)
+    want(info, 'S1 link to the RFQ', (await page.locator(`#main a[href="/rfqs/${c.rfq.id}"]`).count()) > 0, 'the order page has no link back to the RFQ (or its quotation) it was made from')
     await layout(page, info, 'S1 order page desktop')
     await shot(page, 'S1-order-page')
     const text = flat(await page.locator('#main').innerText())
@@ -205,6 +206,35 @@ test('jobflow S1c: the payment terms in Mark won follow the quotation, else the 
     })
   }
   await sales.close()
+})
+
+// ------------------------------------------------------------------------------------------------ S1d: site and contact
+
+test('jobflow S1d: the customer site and contact on the RFQ follow it to the order and the engineer page', async ({ browser }, info) => {
+  await setProfile(true)
+  await setRates()
+  const c = await seedCast({ items: 2 })
+  const site = await post<{ id: string }>('company_sites', { company_id: c.customer.id, name: 'Fibre plant 2', address: 'Plot 14, Sundar Industrial Estate, Lahore' })
+  const contact = await post<{ id: string }>('contacts', { company_id: c.customer.id, name: 'Mr. Tariq Mehmood', phone: '0300 5551234' })
+  await db.patch(`rfqs?id=eq.${c.rfq.id}`, { site_id: site.id, contact_id: contact.id })
+  await reply(c.rfq.id, c.supA, [{ itemId: c.items[0].id, price: 8200, currency: 'PKR' }])
+  await reply(c.rfq.id, c.supB, [{ itemId: c.items[1].id, price: 520, currency: 'USD' }])
+  const q = await issueQuote(c, { only: [0, 1] })
+  want(info, 'S1d quote', q.status < 300, `issue_quotation refused ${q.status}`)
+  const w = await winRpc(c, { needs: true })
+  want(info, 'S1d won', w.status < 300, `Mark won refused ${w.status} ${JSON.stringify(w.body).slice(0, 200)}`)
+  const o = await db.one<{ site_id: string | null; contact_id: string | null }>(`orders?id=eq.${w.orderId}&select=site_id,contact_id`)
+  want(info, 'S1d site and contact', o.site_id === site.id && o.contact_id === contact.id, `the order has site ${o.site_id} and contact ${o.contact_id}; the RFQ had ${site.id} and ${contact.id}`)
+  await db.insert('order_engineers', [{ order_id: w.orderId, user_id: USER.engineer }])
+  const eng = await ctxAs(browser, info, 'engineer', 'phone')
+  const p = await newPage(eng, info, 'S1d engineer')
+  await probe(info, p, 'S1d the engineer sees the site and the contact phone', async () => {
+    await visit(p, info, `/orders/${w.orderId}`)
+    const text = await p.locator('body').innerText()
+    want(info, 'S1d engineer', /Fibre plant 2/.test(text) && /0300 5551234/.test(text), 'the engineer page does not show the site name and the contact phone', flat(text).slice(0, 400))
+    await shot(p, 'S1d-engineer-site')
+  })
+  await eng.close()
 })
 
 // ------------------------------------------------------------------------------------------------ S2: partial quote R0 (1-4), R1 (1-2)
