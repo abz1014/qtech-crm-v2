@@ -191,7 +191,7 @@ describe('layoutOcr: a ruled grid (a table screenshot with a border on every cel
     cells(150, [[120, '(MODEL:XK40-300 ZENTAR).'], [540, 'Demand For']]),
     cells(175, [[560, 'Deptt.']]),
   ]
-  const second = [cells(230, [[120, 'LEVEL TX LX9Y-'], [540, 'For Electrical']]), cells(255, [[40, '2'], [790, '1'], [855, 'NOS']]), cells(270, [[120, '204KR.'], [560, 'Deptt.']])]
+  const second = [cells(230, [[120, 'LEVEL TX LX9Y-'], [540, 'For Boiler House']]), cells(255, [[40, '2'], [790, '1'], [855, 'NOS']]), cells(270, [[120, '204KR.'], [560, 'Deptt.']])]
 
   it('keeps a wrapped description and its neighbours in their cells, one row per grid row', () => {
     const out = linesToText(layoutOcr([head, ...first, ...second], rules))
