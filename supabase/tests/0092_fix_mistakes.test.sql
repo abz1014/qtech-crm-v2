@@ -129,11 +129,12 @@ insert into public.payments_in (id, order_id, amount, received_on, corrects_paym
 update public.payments_in set voided_at = now(), voided_by = 'a0000000-0000-4000-8000-000000000001', void_reason = '0092 fixture'
 where id = pg_temp.u('48');
 
+-- (batch B: a description, because 0091 requires a title under the Other category)
 -- expenses: 50 on order 60, 51 pays company 04; recurring templates 97 and 9b with expenses in a month that closes below
-insert into public.expenses (id, amount_pkr, category_id, order_id) values
-  (pg_temp.u('50'), 5, 'ca7e0000-0000-4000-8000-000000000010', pg_temp.u('60'));
-insert into public.expenses (id, amount_pkr, category_id, payee_id) values
-  (pg_temp.u('51'), 5, 'ca7e0000-0000-4000-8000-000000000010', pg_temp.u('04'));
+insert into public.expenses (id, amount_pkr, category_id, order_id, description) values
+  (pg_temp.u('50'), 5, 'ca7e0000-0000-4000-8000-000000000010', pg_temp.u('60'), 'fixture 50');
+insert into public.expenses (id, amount_pkr, category_id, payee_id, description) values
+  (pg_temp.u('51'), 5, 'ca7e0000-0000-4000-8000-000000000010', pg_temp.u('04'), 'fixture 51');
 insert into public.recurring_expenses (id, label, category_id, amount) values
   (pg_temp.u('97'), '0092 rent', 'ca7e0000-0000-4000-8000-000000000002', 5),
   (pg_temp.u('9b'), '0092 internet', 'ca7e0000-0000-4000-8000-000000000002', 5);
