@@ -601,21 +601,21 @@ describe('parseEnquiry: a ruled grid read from a screenshot', () => {
   it('takes a Required For column as no part of the description, and UOM after QTY as the unit', () => {
     const text = [
       T(['SR.', 'DESCRIPTION', 'REQUIRED FOR', 'QTY', 'UOM']),
-      T(['1', 'SOFT STARTER - 30KW (MODEL:PSR60-600-70 ABB).', 'Most Urgent Demand For Pu Electrical Deptt.', '2', 'NOS']),
-      T(['2', 'M-S DB (Size - 34" x 34" x 8" x 16-Swg,Power Coated).', 'Most Urgent Demand For Pu Electrical Deptt.', '1', 'NOS']),
-      T(['3', 'PLC MITSUBISHI - FX2N-128MR.', 'For Electrical Deptt.', '1', 'NOS']),
+      T(['1', 'MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR).', 'Needed Soon For Kiln Section Deptt.', '2', 'NOS']),
+      T(['2', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted).', 'Needed Soon For Kiln Section Deptt.', '1', 'NOS']),
+      T(['3', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR.', 'For Boiler House Deptt.', '1', 'NOS']),
     ].join('\n')
-    expect(rows(text)).toEqual(['SOFT STARTER - 30KW (MODEL:PSR60-600-70 ABB) | 2 nos', 'M-S DB (Size - 34" x 34" x 8" x 16-Swg,Power Coated) | 1 nos', 'PLC MITSUBISHI - FX2N-128MR | 1 nos'])
+    expect(rows(text)).toEqual(['MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR) | 2 nos', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted) | 1 nos', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR | 1 nos'])
   })
 
   it('reads every row of a Sr. / Material Name / UOM / QTY grid, wrapped names on one row, though the header lost its UOM and QTY', () => {
     const text = [
       T(['Sr.', 'Material Name']),
-      T(['1', 'Thimble 10x25mm Tin Coated', 'PCS', '24']),
-      T(['2', 'TEMPERATURE CONTROLLER - 96 X 96 MM.(MODEL:DC1040CR-701000-E 0~850C MULTI INPUT HONEYWELL).', 'Pcs', '3']),
-      T(['3', 'MCB S/P 32A (Schneider)', 'PCS', '6']),
-      T(['4', 'Capacitor 3.5Uf (Fuji)', 'Pcs', '12']),
+      T(['1', 'Washer 12x30mm Zinc Plated', 'PCS', '24']),
+      T(['2', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA).', 'Pcs', '3']),
+      T(['3', 'Breaker 1P 25A (Aurion)', 'PCS', '6']),
+      T(['4', 'Capacitor 7.5Uf (Norvalt)', 'Pcs', '12']),
     ].join('\n')
-    expect(rows(text)).toEqual(['Thimble 10x25mm Tin Coated | 24 PCS', 'TEMPERATURE CONTROLLER - 96 X 96 MM.(MODEL:DC1040CR-701000-E 0~850C MULTI INPUT HONEYWELL) | 3 Pcs', 'MCB S/P 32A (Schneider) | 6 PCS', 'Capacitor 3.5Uf (Fuji) | 12 Pcs'])
+    expect(rows(text)).toEqual(['Washer 12x30mm Zinc Plated | 24 PCS', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA) | 3 Pcs', 'Breaker 1P 25A (Aurion) | 6 PCS', 'Capacitor 7.5Uf (Norvalt) | 12 Pcs'])
   })
 })

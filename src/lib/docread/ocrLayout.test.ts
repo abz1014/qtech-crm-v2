@@ -186,20 +186,20 @@ describe('layoutOcr: a ruled grid (a table screenshot with a border on every cel
   const head = cells(40, [[20, 'SR.'], [200, 'DESCRIPTION'], [540, 'REQUIRED FOR'], [770, 'QTY'], [850, 'UOM']])
   // The engine reads a line straight across the cells that share a pixel row, so the rows of neighbouring cells run together.
   const first = [
-    cells(110, [[120, 'SOFT STARTER - 30KW'], [540, 'Most Urgent']]),
+    cells(110, [[120, 'MOTOR STARTER - 22KW'], [540, 'Most Urgent']]),
     cells(135, [[40, '1'], [790, '2'], [855, 'NOS']]),
-    cells(150, [[120, '(MODEL:PSR60-600 ABB).'], [540, 'Demand For']]),
+    cells(150, [[120, '(MODEL:XK40-300 ZENTAR).'], [540, 'Demand For']]),
     cells(175, [[560, 'Deptt.']]),
   ]
-  const second = [cells(230, [[120, 'PLC FX2N-'], [540, 'For Electrical']]), cells(255, [[40, '2'], [790, '1'], [855, 'NOS']]), cells(270, [[120, '128MR.'], [560, 'Deptt.']])]
+  const second = [cells(230, [[120, 'LEVEL TX LX9Y-'], [540, 'For Electrical']]), cells(255, [[40, '2'], [790, '1'], [855, 'NOS']]), cells(270, [[120, '204KR.'], [560, 'Deptt.']])]
 
   it('keeps a wrapped description and its neighbours in their cells, one row per grid row', () => {
     const out = linesToText(layoutOcr([head, ...first, ...second], rules))
     expect(out).toBe(
       [
         'SR.\tDESCRIPTION\tREQUIRED FOR\tQTY\tUOM',
-        '1\tSOFT STARTER - 30KW (MODEL:PSR60-600 ABB).\tMost Urgent Demand For Deptt.\t2\tNOS',
-        '2\tPLC FX2N-128MR.\tFor Electrical Deptt.\t1\tNOS',
+        '1\tMOTOR STARTER - 22KW (MODEL:XK40-300 ZENTAR).\tMost Urgent Demand For Deptt.\t2\tNOS',
+        '2\tLEVEL TX LX9Y-204KR.\tFor Boiler House Deptt.\t1\tNOS',
       ].join('\n'),
     )
   })
@@ -208,14 +208,14 @@ describe('layoutOcr: a ruled grid (a table screenshot with a border on every cel
     const out = linesToText(layoutOcr([line(-40, 20, ['Please', 'quote', 'the', 'items', 'below:']), head, ...first, ...second, line(500, 20, ['Thank', 'you'])], rules))
     expect(out.split('\n')[0]).toBe('Please quote the items below:')
     expect(out.split('\n').at(-1)).toBe('Thank you')
-    expect(out).toContain('2\tPLC FX2N-128MR.\tFor Electrical Deptt.\t1\tNOS')
+    expect(out).toContain('2\tLEVEL TX LX9Y-204KR.\tFor Boiler House Deptt.\t1\tNOS')
   })
 
   it('cuts a heading row off the first row when a filled band left no rule under it, and puts right a heading read a letter off', () => {
     const noHeadRule = { horizontal: [200, 320].map(y => bar(0, y, 940, y + 2)), vertical: rules.vertical }
     const out = linesToText(layoutOcr([cells(40, [[20, 'SR.'], [200, 'DESCRIPTION'], [540, 'REQUIRED FOR'], [770, 'QrY'], [850, 'UOM']]), ...first.map(l => shift(l, 20)), ...second.map(l => shift(l, 20))], noHeadRule))
     expect(out.split('\n')[0]).toBe('SR.\tDESCRIPTION\tREQUIRED FOR\tQty\tUOM')
-    expect(out.split('\n')[1]).toBe('1\tSOFT STARTER - 30KW (MODEL:PSR60-600 ABB).\tMost Urgent Demand For Deptt.\t2\tNOS')
+    expect(out.split('\n')[1]).toBe('1\tMOTOR STARTER - 22KW (MODEL:XK40-300 ZENTAR).\tMost Urgent Demand For Deptt.\t2\tNOS')
   })
 
   it('does not trust a grid whose row rules were missed: a column of numbers, a line each, is not one cell', () => {
