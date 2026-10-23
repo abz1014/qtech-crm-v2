@@ -145,6 +145,7 @@ const HUNT_FILES: Record<string, string> = {
   'hunt-workflows-orders': 'orderflow',
   'hunt-workflows-books': 'books',
   'hunt-workflows-crosscut': 'crosscut',
+  'hunt-workflows-jobflow': 'jobflow',
 }
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.

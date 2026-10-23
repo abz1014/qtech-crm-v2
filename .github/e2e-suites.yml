@@ -131,3 +131,6 @@ hunt-workflows-books: # weight=362 (bug hunt: expenses, month end, reports, team
 hunt-workflows-crosscut: # weight=432 (bug hunt: Today, search, shortcuts, help, lists, offline, tabs)
   - 'e2e/hunt/workflows/crosscut.spec.ts'
   - 'e2e/hunt/workflows/support.ts'
+hunt-workflows-jobflow: # weight=600 (bug hunt: RFQ -> won -> order -> PO -> delivery -> commissioning -> invoice -> payment; installs poppler)
+  - 'e2e/hunt/workflows/jobflow.spec.ts'
+  - 'e2e/hunt/workflows/support.ts'

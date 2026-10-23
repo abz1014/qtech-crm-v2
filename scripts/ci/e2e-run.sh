@@ -5,7 +5,7 @@
 set -u
 fail=0
 first=1
-case " $* " in *" rfq-quotation "*|*" orders "*|*" journeys "*|*" verify-sales "*|*" verify-quotes "*|*" verify-orders "*|*" verify-admin "*|*" hunt-workflows "*|*" hunt-workflows-sales "*|*" hunt-workflows-orders "*)
+case " $* " in *" rfq-quotation "*|*" orders "*|*" journeys "*|*" verify-sales "*|*" verify-quotes "*|*" verify-orders "*|*" verify-admin "*|*" hunt-workflows "*|*" hunt-workflows-sales "*|*" hunt-workflows-orders "*|*" hunt-workflows-jobflow "*)
   command -v pdftoppm >/dev/null && command -v pdftotext >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils) ;;
 esac
 # P04: every suite runs under the production Content-Security-Policy (the preview server reads vercel.json, see vite.config.ts).
