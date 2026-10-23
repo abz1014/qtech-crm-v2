@@ -122,6 +122,7 @@ test('every close reason on the Bid and close menu is stored as itself, and the 
 test('a lost RFQ can still be won: Mark won reopens it and makes the order, and the RFQ reads won with no clash', async ({ browser }, info) => {
   const r = await rfq({ items: [{ description: `Late win item ${letters()}`, qty: 2 }] })
   await db.patch(`rfq_items?rfq_id=eq.${r.rfq.id}`, { quoted_unit_price_net: 15250.75 })
+  await db.adminRpc('issue_quotation', { p_quotation_id: crypto.randomUUID(), p_rfq_id: r.rfq.id })
   await db.patch(`rfqs?id=eq.${r.rfq.id}`, { closed_on: karachiDay(-6), close_reason: 'price' })
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/rfqs/${r.rfq.id}`)

@@ -49,6 +49,8 @@ async function seed(): Promise<Seed> {
     }),
   )
   items.sort((a, b) => a.position - b.position)
+  // Mark won prices the order from the issued quotation, not from rfq_items.
+  await must(rest('admin', 'rpc/issue_quotation', { method: 'POST', body: { p_quotation_id: crypto.randomUUID(), p_rfq_id: rfq.id } }))
   const s1 = await createCompany(uniqueName('Metro Process Controls'), { country: 'UAE' })
   const s2 = await createCompany(uniqueName('Indus Instrumentation'), { country: 'UAE' })
   const s3 = await createCompany(uniqueName('Lahore Process Controls'), { country: 'Pakistan' })

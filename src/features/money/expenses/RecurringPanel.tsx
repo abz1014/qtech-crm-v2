@@ -9,10 +9,9 @@ import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { RecurringDialog } from '@/features/money/expenses/RecurringDialog'
-import { useRecordRecurring, useRecordedRecurring, useRecurring } from '@/features/money/expenses/hooks'
+import { useRecordRecurring, useRecordedBills, useRecurring } from '@/features/money/expenses/hooks'
+import { billPeriod, dueBills } from '@/features/money/expenses/forMonth'
 import {
-  dueThisMonth,
-  monthKey,
   monthKeyLabel,
   paidViaFor,
   recurringPaidOn,
@@ -21,29 +20,33 @@ import {
 } from '@/features/money/expenses/model'
 
 /*
- * Recurring templates (M03): rent, salaries, internet. Each active template that has not been recorded for this month
- * shows "Record" (one tap: one expense, dated its day of the month or today, with (recurring_id, period) so it can only
+ * Recurring templates (M03): rent, salaries, internet. Each active template that has not been recorded for the month its bill is
+ * for shows "Record" (one tap: one expense, dated its day of the month or today, with (recurring_id, period) so it can only
  * exist once), paid the way the template says (0086), else as its category usually is. "Record all N" records every due one.
+ * 0087 for-month: a template paid on day 1 to 10 (salaries on the 5th) pays LAST month's bill, so in October it is due "for
+ * September" and Month end's "monthly bills recorded" check for September agrees with this screen.
  * With none set up the panel is one line (grader: the explanation lives in the (i)). Record is a secondary button: the
  * screen's one green button is Add expenses.
  */
 export function RecurringPanel({ categories, today }: { categories: readonly Category[]; today: string }) {
-  const period = monthKey(today)
   const templates = useRecurring()
-  const recorded = useRecordedRecurring(period)
+  const recorded = useRecordedBills(today)
   const record = useRecordRecurring()
   const toast = useToast()
   const [editing, setEditing] = useState<RecurringTemplate | 'new' | null>(null)
   const [recording, setRecording] = useState<string | null>(null)
 
-  const recordedIds = new Set(recorded.data ?? [])
-  const due = dueThisMonth(templates.data ?? [], recordedIds, period)
-  const dueIds = new Set(due.map(d => d.id))
+  // 0087 for-month: a bill paid on day 1 to 10 (salaries on the 5th) is due for LAST month; any other for this month.
+  const due = dueBills(templates.data ?? [], recorded.data ?? new Map(), today)
+  const periodOf = (t: RecurringTemplate) => billPeriod(t, today)
+  const dueIds = new Set(due.map(d => d.template.id))
+  const months = [...new Set(due.map(d => d.period))].sort()
   const catName = (id: string) => categories.find(c => c.id === id)?.name ?? ''
   const viaOf = (t: RecurringTemplate) => t.paidVia ?? paidViaFor(t.categoryId, categories)
 
   const doRecord = (t: RecurringTemplate) => {
     setRecording(t.id)
+    const period = periodOf(t)
     record.mutate(
       { template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: viaOf(t) },
       {
@@ -66,7 +69,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
     let done = 0
     let total = 0
     const failed: string[] = []
-    for (const t of due) {
+    for (const { template: t, period } of due) {
       try {
         await record.mutateAsync({ template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: viaOf(t) })
         done += 1
@@ -76,7 +79,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
       }
     }
     setRecordingAll(false)
-    if (done > 0) toast.toast({ title: `Recorded ${done} recurring ${done === 1 ? 'expense' : 'expenses'}`, body: `${pkr(total)} · ${monthKeyLabel(period)}`, tone: 'success' })
+    if (done > 0) toast.toast({ title: `Recorded ${done} recurring ${done === 1 ? 'expense' : 'expenses'}`, body: `${pkr(total)} · for ${months.map(monthKeyLabel).join(' and ')}`, tone: 'success' })
     if (failed.length > 0) toast.toast({ title: `Couldn't record ${failed.join(', ')}`, body: 'Nothing else was changed. Try again.', tone: 'danger' })
   }
 
@@ -107,8 +110,8 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
         <h2 id="recurring-h" className="text-base font-semibold">
           Recurring
         </h2>
-        <span className="text-sm text-fg-muted">
-          {loading ? 'Loading' : due.length > 0 ? `${due.length} due for ${monthKeyLabel(period)}` : `All recorded for ${monthKeyLabel(period)}`}
+        <span className="text-base text-fg-2">
+          {loading ? 'Loading' : due.length > 0 ? `${due.length} due, for ${months.map(monthKeyLabel).join(' and ')}` : 'All recorded'}
         </span>
         <span className="flex-1" />
         {due.length > 1 ? (
@@ -138,10 +141,10 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
               {/* the name opens the template (on a phone this is the edit control; the pencil shows from sm up) */}
               <button type="button" onClick={() => setEditing(t)} className="grid min-w-0 gap-px rounded text-left">
                 <span className="min-w-0 [overflow-wrap:anywhere] text-base font-medium">{t.label}</span>
-                <span className="min-w-0 [overflow-wrap:anywhere] text-sm text-fg-muted">
+                <span className="min-w-0 [overflow-wrap:anywhere] text-base text-fg-2">
                   {catName(t.categoryId)}
                   {t.dayOfMonth ? ` · day ${t.dayOfMonth}` : ''} · {viaOf(t) === 'cash' ? 'cash' : 'bank'}
-                  {!t.active ? ' · paused' : ''}
+                  {t.active ? ` · for ${monthKeyLabel(periodOf(t))}` : ' · paused'}
                 </span>
               </button>
               <span className="flex items-center gap-2 sm:gap-3">

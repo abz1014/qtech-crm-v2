@@ -13,6 +13,7 @@ import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
+import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { useSession } from '@/app/session'
 import { openFindings } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
@@ -69,6 +70,8 @@ export function ChecklistPage() {
       </div>
 
       {isClosed ? <LockBar month={ctx.month} /> : null}
+      {/* 0087 (A9, owner: yes): cash in hand, with Count cash, so a missing small cash expense shows before the month is locked */}
+      <CashInHandLine />
 
       {ctx.statusError ? (
         <ReportError title="The checklist did not load" onRetry={ctx.refetch} />

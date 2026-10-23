@@ -105,7 +105,7 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
-insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
+insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
@@ -182,7 +182,7 @@ select pg_temp.add_legacy('order_items', 'id, order_id, description, unit_price_
 select pg_temp.add_legacy('supplier_orders', 'id, order_id, supplier_id', '@ab, @20, @03', 'id = @ab', 'id = @24', '{admin,sales,engineer}');
 select pg_temp.add_legacy('invoices', 'id, order_id, number, net_amount, gst_amount', $v$@ac, @21, 'INV-P', 100, 18$v$, 'id = @ac', 'id = @27', '{admin,sales}');
 select pg_temp.add_legacy('payments_in', 'id, order_id, amount', '@ad, @21, 5', 'id = @ad', 'id = @28', '{admin}');
-select pg_temp.add_legacy('expenses', 'id, amount_pkr, category_id', $v$@ae, 5, 'ca7e0000-0000-4000-8000-000000000010'$v$, 'id = @ae', 'id = @29', '{admin}');
+select pg_temp.add_legacy('expenses', 'id, amount_pkr, category_id', $v$@ae, 5, 'ca7e0000-0000-4000-8000-000000000005'$v$, 'id = @ae', 'id = @29', '{admin}');
 
 -- settled_before_cutover: only on an imported invoice with no order (the CHECK), so the probes use one.
 insert into legacy_probe values

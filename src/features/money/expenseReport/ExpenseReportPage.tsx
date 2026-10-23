@@ -211,6 +211,19 @@ function Summary({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => v
             )}
           </p>
           <CashBank v={v} cashShare={cashShare} />
+          <p className="text-base text-fg-2" data-testid="expense-report-paid">
+            By the month each expense is for (September&apos;s salary paid in October is September&apos;s). Paid in {v.label}, by the day paid:{' '}
+            <b className="num font-semibold text-fg">PKR {rupees(v.paid.amount)}</b>
+            {toPaisa(v.forHerePaidElsewhere) !== 0n || toPaisa(v.paidForOther) !== 0n ? (
+              <span className="num">
+                {' '}
+                (= {rupees(v.total.amount)}
+                {toPaisa(v.forHerePaidElsewhere) !== 0n ? ` − ${rupees(v.forHerePaidElsewhere)} paid in another month` : ''}
+                {toPaisa(v.paidForOther) !== 0n ? ` + ${rupees(v.paidForOther)} paid now for another month` : ''})
+              </span>
+            ) : null}
+            .
+          </p>
           <Link
             to={`/money/reports/in-out?by=${v.period.kind}&period=${v.period.key}`}
             className="inline-flex min-h-touch items-center gap-1 justify-self-start text-sm font-medium text-primary hover:underline md:min-h-0"
@@ -221,7 +234,7 @@ function Summary({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => v
           {toPaisa(v.unexplained) !== 0n ? (
             <p className="flex items-start gap-2 text-sm text-tone-danger-fg" data-testid="expense-report-unexplained">
               <Icon icon={CircleAlert} size="sm" className="mt-[3px]" />
-              In vs out has {signed(v.unexplained)} more paid out than these entries: a closed month was changed after it was closed.
+              In vs out has {signed(v.unexplained)} more paid out than the entries paid in this period: a closed month was changed after it was closed.
             </p>
           ) : null}
         </div>
@@ -281,7 +294,7 @@ function CashBank({ v, cashShare }: { v: ExpenseReportView; cashShare: number })
 function Trend({ bars, kind, onPick }: { bars: TrendBar[]; kind: PeriodKind; onPick: (p: Period) => void }) {
   const max = bars.reduce((m, b) => (toPaisa(b.amount) > m ? toPaisa(b.amount) : m), 0n)
   const h = (a: string) => (max === 0n ? 0 : Math.max(Number((toPaisa(a) * 1000n) / max) / 10, toPaisa(a) > 0n ? 2 : 0))
-  const title = kind === 'month' ? 'Last 6 months' : 'Last 4 quarters'
+  const title = kind === 'month' ? 'Last 6 months, paid out by the day paid' : 'Last 4 quarters, paid out by the day paid'
   return (
     <figure className="grid content-start gap-2" data-testid="expense-report-trend">
       <figcaption className="text-base text-fg-2">{title}</figcaption>

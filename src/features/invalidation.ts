@@ -64,6 +64,8 @@ export interface WriteVars {
   'inquiry.chase': { rfqId: string }
   'rfq.markBidSent': { rfqId: string }
   'rfq.close': { rfqId: string }
+  /** 0092: an admin deleted an RFQ (with its quotations, items, inquiries, clarifications and files). Lists, Today, the nav counts and memory change. */
+  'rfq.delete': { rfqId: string }
   /** R22: Capture appends to, or restores, an RFQ's notes. */
   'rfq.notes': { rfqId: string }
   'clarification.add': { rfqId: string }
@@ -185,6 +187,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Closing also takes the RFQ off Today (Today itself offers "Close as no reply") and changes its outcome in the customer's history.
   // Capture's RFQ list (qk.rfqs.capture, outside lists()) must stop offering a closed RFQ, so the whole RFQ root.
   'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.today.all, qk.companies.all],
+  // The nav counts are read from the RFQ board and Today, so those two keys refresh them. Supplier memory and the company page quote the RFQ's prices and history.
+  'rfq.delete': () => [qk.rfqs.all, qk.today.all, qk.companies.all, qk.memory.all, qk.intake.all],
   'rfq.notes': v => [qk.rfqs.detail(v.rfqId)],
   // Questions and their stamps change the RFQ page, its derived clarification state (header) and the board's chips.
   'clarification.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
@@ -216,7 +220,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // A snooze is read only by Today.
   'today.snooze': () => [qk.today.all],
   // An expense changes every month list, the recent-use tally, the order's own cost panel and Today (a recurring item leaves it).
-  'expense.save': () => [qk.money.expenses.all, qk.money.bank.all, qk.money.recurring.all, qk.money.margins(), qk.money.exceptions(), [...qk.money.all, 'order-costs'] as const, qk.orders.all, qk.today.all],
+  // 0087: claims and the cash box live under expenses; a supplier payment moves We owe suppliers.
+  'expense.save': () => [qk.money.expenses.all, qk.money.bank.all, qk.money.recurring.all, qk.money.margins(), qk.money.exceptions(), [...qk.money.all, 'order-costs'] as const, [...qk.money.monthEnd.all, 'payables'] as const, qk.orders.all, qk.today.all],
   // The expected cost or the costs-complete mark changes the order's margin, the margins list and the exceptions.
   'costs.save': v => [qk.money.orderCosts(v.orderId), qk.money.margins(), qk.money.exceptions(), qk.orders.detail(v.orderId), qk.today.all],
   'expense.receipt': v => [qk.money.expenses.receipts(v.expenseId)],

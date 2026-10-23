@@ -213,6 +213,13 @@ function money() {
       details: (since: string) => [...expenses, 'details', since] as const,
       /** Every expense paid from one month to another (the Expenses report's period, 0086). */
       range: (from: string, to: string) => [...expenses, 'range', from, to] as const,
+      /** 0087: engineers' "I paid" claims: 'pending' (the admin's To approve) or 'mine' (an engineer's own), and one claim's photos. */
+      claims: (scope: 'pending' | 'mine') => [...expenses, 'claims', scope] as const,
+      claimPhotos: (claimId: string) => [...expenses, 'claims', 'photos', claimId] as const,
+      /** 0087: the office cash box (cash in hand), which every cash expense moves. */
+      cash: () => [...expenses, 'cash-in-hand'] as const,
+      /** 0087: what one supplier order still needs, for the Pay dialog. */
+      legPay: (legId: string) => [...expenses, 'leg-pay', legId] as const,
     },
     categories: () => [...all, 'expense-categories'] as const,
     /** The expense groups (0086): the first level of the category list. */
@@ -300,6 +307,12 @@ function onboarding() {
   }
 }
 
+/** The "was X, now Y" history of one record (feat/history-ui). Keyed on (table, id) so any screen can reuse it. */
+function history() {
+  const all = root('history')
+  return { all, record: (table: string, id: string) => [...all, table, id] as const }
+}
+
 export const qk = {
   today: today(),
   settings: settings(),
@@ -314,6 +327,7 @@ export const qk = {
   money: money(),
   reports: reports(),
   onboarding: onboarding(),
+  history: history(),
 }
 
 export type QueryKeyRoot = keyof typeof qk

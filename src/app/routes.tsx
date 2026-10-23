@@ -34,6 +34,8 @@ const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').the
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
 const IntakeScreen = lazy(routeChunks.rfqNew)
+/** 0087: an engineer's "I paid" (their own expense claims). The page itself refuses anyone but an engineer. */
+const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
 const rfqsItem = navItems.find(i => i.key === 'rfqs')
@@ -118,6 +120,14 @@ function AppRouteTable() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          <Route
+            path="my-expenses"
+            element={
+              <Suspense fallback={null}>
+                <MyClaimsPage />
+              </Suspense>
+            }
+          />
           <Route
             path="capture"
             element={

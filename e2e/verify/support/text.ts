@@ -274,13 +274,16 @@ export const BOOKS = {
   },
   owe: {
     moreFor: (supplier: string) => `More for ${supplier}`,
-    /** The supplier order's menu item for its one Add expense (Supplier payment, the supplier as payee). */
+    /** The supplier order's menu item: Pay <supplier>, the one door for a supplier payment (redesign phase 1, 0087). */
     payFor: (supplier: string) => `Pay ${supplier}`,
-    dialog: 'Add expense',
+    /** The Pay dialog is named by the supplier. */
+    dialog: (supplier: string) => `Pay ${supplier}`,
     amount: 'Amount, PKR',
-    category: 'Category',
+    paidIn: (currency: string) => `Paid in ${currency}`,
+    pkrDebited: 'PKR debited from the bank',
+    bankCharges: 'Bank charges, PKR',
     supplierPayment: 'Supplier payment',
-    save: 'Save expense',
+    save: 'Save payment',
     atTodaysRate: (pkr: string) => `≈ PKR ${pkr} at today's rate`,
     partPaid: 'Part paid',
   },

@@ -55,6 +55,18 @@ describe('payload', () => {
       { rfq_item_id: 'i3', unit_price_net: 650, is_service: true },
     ])
   })
+  it('sends the confirmed price for every line, also one the RFQ item already had, and for every part of a split', () => {
+    const p = buildSplitPayload([item('i1', 2, 1000), item('i2', 4, 1000)], { i1: 'L1', i2: 'L2' }, { i1: 1250, i2: 900 }, splits)
+    expect(p).toEqual([
+      { rfq_item_id: 'i1', quote_line_id: 'L1', unit_price_net: 1250 },
+      { rfq_item_id: 'i2', quote_line_id: 'L2', qty: 3, unit_price_net: 900 },
+      { rfq_item_id: 'i2', quote_line_id: 'L9', qty: 1, unit_price_net: 900 },
+    ])
+  })
+  it('sends no price when none was confirmed (zero or empty), leaving the database to refuse it', () => {
+    const p = buildSplitPayload([item('i1', 2)], { i1: 'L1' }, { i1: 0 }, {})
+    expect(p).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'L1' }])
+  })
   it('counts the order lines', () => {
     expect(orderLineCount(items, {})).toBe(3)
     expect(orderLineCount(items, splits)).toBe(4)

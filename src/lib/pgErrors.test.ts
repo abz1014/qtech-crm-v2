@@ -90,6 +90,20 @@ describe('mapPgError (U07)', () => {
     expect(() => mapPgError({ code: 'P0001', message: 42 as unknown as string })).not.toThrow()
   })
 
+  it('0092: a server rule with a HINT passes the hint on, and the sentence is kept', () => {
+    const m = mapPgError({ code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' })
+    expect(m.kind).toBe('permission')
+    expect(m.hint).toBe('not_yours')
+    expect(m.message).toBe('Only the person who entered this, or an admin, can change it.')
+    const o = mapPgError({ code: 'P0001', message: 'This RFQ has an order. Delete the order first, then delete the RFQ.', hint: 'has_order' })
+    expect(o.hint).toBe('has_order')
+    expect(o.message).toMatch(/^This RFQ has an order\./)
+    const b = mapPgError({ code: 'P0001', message: 'This payment is ticked against the March 2026 bank statement. Untick it first (Money, Match bank statement), then delete it.', hint: 'bank_ticked' })
+    expect(b.hint).toBe('bank_ticked')
+    expect(b.action?.href).toBe('/money/month-end/bank')
+    expect(mapPgError({ code: '42501', message: 'only an admin can close a month' }).hint).toBeUndefined()
+  })
+
   it('anything else gets a plain fallback', () => {
     expect(mapPgError({ code: '99999', message: 'boom' }).message).toBe('Something went wrong. Nothing was saved. Try again.')
     expect(mapPgError('nope').kind).toBe('unknown')
