@@ -390,7 +390,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       { id: 'date', header: 'Invoice date', kind: 'date', value: r => r.invoiceDate, cell: r => <span className="num">{formatShortDate(r.invoiceDate, asOf)}</span> },
       { id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays },
       { id: 'gross', header: 'Invoice gross', kind: 'money', value: r => r.gross, ...whole<AgingRow>(r => r.gross), hideBelowMd: true },
-      { id: 'applied', header: 'Paid by then', kind: 'money', value: r => (toPaisa(r.applied) > 0n ? r.applied : null), ...whole<AgingRow>(r => r.applied), hideBelowMd: true },
+      { id: 'applied', header: 'Paid by then', kind: 'money', value: r => (toPaisa(r.applied) > 0n ? r.applied : null), ...whole<AgingRow>(r => r.applied), hideClass: 'hidden min-[1440px]:table-cell' }, // 10 columns at 16 px do not fit a 1366 window: Paid by then waits for 1440
       ...AGING_BUCKETS.map(
         (b): Column<AgingRow> => ({
           id: `b${b}`,

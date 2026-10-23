@@ -50,7 +50,7 @@ export interface BarAction {
 
 /**
  * The sticky "Next step" bar under the steps of New RFQ. Desktop: the summary, a warning, then the buttons in one row, the green
- * one last. Phone (owner audit N1): one slim row (about 62 px) so it never covers the items: the green button at full width and
+ * one last. Phone (owner audit N1): one slim row (about 62 px) that sits in the page after the list, never over it (audit: a sticky bar covered supplier rows at 375): the green button at full width and
  * the rest ("Back", "Save for later") in a ⋯ menu. The summary is not repeated there, and the warning (with its own one-tap fix)
  * sits just above the bar, in the page.
  */
@@ -60,7 +60,7 @@ export function StepBar({ summary, warning, primary, more }: { summary?: ReactNo
     return (
       <>
         {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
-        <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-3 z-10 flex items-center gap-2 rounded border bg-surface p-2 shadow-pop">
+        <div role="region" aria-label="Next step" data-sticky-bar className="flex items-center gap-2 rounded-row border bg-surface p-2">
           {primary ? (
             <Button
               variant="primary"
