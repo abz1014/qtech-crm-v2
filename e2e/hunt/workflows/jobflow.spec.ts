@@ -1332,3 +1332,65 @@ test('jobflow S7b: a line is split in another tab while Issue PO is open: the PO
   })
   await sales.close()
 })
+
+test('jobflow S10b: two people create the invoice for the same order from two screens', async ({ browser }, info) => {
+  await setProfile(true)
+  await setRates()
+  const L = await liveOrder({ service5: true, leaveOut4: true, terms: 30 })
+  for (const leg of [L.A, L.BU, L.BE]) await db.patch(`supplier_orders?id=eq.${leg.id}`, { placed_on: addDays(today, -6), delivered_on: addDays(today, -1), received_on: addDays(today, -1) })
+  const M = totalsOf([
+    { qty: 10, price: SELL[0], gst: 18 },
+    { qty: 1, price: SELL[1], gst: 18 },
+    { qty: 2, price: SELL[2], gst: 18 },
+    { qty: 1, price: SELL[4], gst: 0 },
+  ])
+  const admin = await ctxAs(browser, info, 'admin', 'desktop')
+  const page = await newPage(admin, info, 'S10b admin')
+  await visit(page, info, `/orders/${L.id}`)
+  const invoices = () => db.rows<{ number: string; net_amount: number; gst_amount: number }>(`invoices?order_id=eq.${L.id}&select=number,net_amount,gst_amount&order=created_at`)
+  await probe(info, page, 'S10b the first screen opens Create invoice', async () => {
+    await actions(page).getByRole('button', { name: 'Create invoice' }).click({ timeout: T })
+    await page.getByRole('dialog', { name: 'Create invoice' }).getByRole('textbox', { name: 'Invoice number' }).waitFor({ timeout: T })
+    await page.waitForTimeout(1500)
+  })
+  // the second person creates the same invoice (what the dialog writes)
+  const nextNo = (await db.adminRpc<{ next_number: string }[]>('next_invoice_number', {}))[0].next_number
+  await post('invoices', { order_id: L.id, company_id: L.c.customer.id, number: nextNo, invoice_date: today, net_amount: M.net, gst_amount: M.gst })
+  await probe(info, page, 'S10b the first screen presses Create invoice (its number is now taken)', async () => {
+    const d = page.getByRole('dialog', { name: 'Create invoice' })
+    await d.getByRole('button', { name: 'Create invoice', exact: true }).click()
+    await page.waitForTimeout(2500)
+    obs(info, 'S10b after the first press', `dialog: ${flat(await d.innerText().catch(() => '(closed)')).slice(0, 360)}; invoices ${(await invoices()).length}`)
+    const again = d.getByRole('button', { name: /Try again|Create invoice/ })
+    if (await d.isVisible().catch(() => false)) {
+      await again.last().click().catch(() => undefined)
+      await page.waitForTimeout(2500)
+    }
+    const rows = await invoices()
+    const net = r2(rows.reduce((n, r) => n + num(r.net_amount), 0))
+    want(info, 'S10b duplicate invoice', net <= M.net + 0.5, `the order has ${rows.length} invoices carrying net ${net}; the order is only net ${M.net}: the same job was invoiced twice (${rows.map(r => r.number).join(', ')})`)
+  })
+  await admin.close()
+})
+
+test('jobflow S7c: two people issue the PO for the same supplier order from two screens', async ({ browser }, info) => {
+  await setProfile(true)
+  await setRates()
+  const L = await liveOrder({ service5: true, leaveOut4: true })
+  const sales = await ctxAs(browser, info, 'sales', 'desktop')
+  const page = await newPage(sales, info, 'S7c sales')
+  await visit(page, info, `/orders/${L.id}`)
+  await probe(info, page, 'S7c the first screen opens Issue PO (R0)', async () => {
+    await legRows(page, L.c.supA.name).first().getByRole('button', { name: `Issue PO, ${L.c.supA.name}` }).click({ timeout: T })
+    await page.getByRole('dialog').getByTestId('po-total').waitFor({ timeout: T })
+  })
+  const first = await issuePoRpc(L.A.id, 'admin')
+  want(info, 'S7c other screen', first.status < 300, `the other person's PO refused ${first.status}`)
+  await probe(info, page, 'S7c the first screen presses Issue PO', async () => {
+    await page.getByRole('dialog').getByRole('button', { name: 'Issue PO', exact: true }).click()
+    await page.waitForTimeout(4000)
+    const pos = await posOf(L.A.id)
+    want(info, 'S7c second PO', pos.length === 1, `two people issued the PO for one supplier order: ${pos.length} POs (${pos.map(p => `${p.number} R${p.revision}`).join(', ')}); the second is a silent R1 identical to R0, and nothing told the person that a PO was just issued`)
+  })
+  await sales.close()
+})

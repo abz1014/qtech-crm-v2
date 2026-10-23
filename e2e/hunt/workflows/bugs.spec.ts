@@ -348,3 +348,18 @@ test('HW-61: a line is split in another tab while Issue PO is open: the PO goes 
   expect(pos.length === 0 || num(poQty) === num(now?.qty), `PO quantity ${poQty}, order line quantity ${now?.qty}`).toBe(true)
   await ctx.close()
 })
+
+test('HW-62: an order made by Mark won has no link back to the RFQ (or the quotation) it came from', async ({ browser }, info) => {
+  await setProfile(true)
+  await setRates()
+  const L = await liveOrder({ service5: true, leaveOut4: true })
+  const ctx = await ctxAs(browser, info, 'sales')
+  const page = await ctx.newPage()
+  page.setDefaultTimeout(15_000)
+  await page.goto(`/orders/${L.id}`)
+  await settle(page)
+  const links = await page.locator(`#main a[href="/rfqs/${L.c.rfq.id}"]`).count()
+  test.fail()
+  expect(links, 'a link from the order page to its RFQ').toBeGreaterThan(0)
+  await ctx.close()
+})
