@@ -236,3 +236,33 @@ describe('the RFQ header', () => {
     expect(within(box).queryByRole('button')).toBeNull()
   })
 })
+
+describe('Delete RFQ in the More menu', () => {
+  it('an admin sees it (last, red, after a separator) and it opens the confirm', async () => {
+    const user = userEvent.setup()
+    renderHeader('issue', rfq(), {}, 'admin')
+    await user.click(screen.getByRole('button', { name: /^More/ }))
+    const menu = screen.getByRole('menu', { name: 'More' })
+    const items = within(menu).getAllByRole('menuitem')
+    expect(items[items.length - 1]).toHaveTextContent('Delete RFQ')
+    await user.click(within(menu).getByRole('menuitem', { name: /Delete RFQ/ }))
+    expect(await screen.findByRole('dialog', { name: 'Delete RFQ-0177?' })).toBeInTheDocument()
+  })
+
+  it('sales and engineers do not see it', async () => {
+    const user = userEvent.setup()
+    for (const role of ['sales', 'engineer']) {
+      renderHeader('issue', rfq(), {}, role)
+      await user.click(screen.getByRole('button', { name: /^More/ }))
+      expect(within(screen.getByRole('menu', { name: 'More' })).queryByRole('menuitem', { name: /Delete RFQ/ })).toBeNull()
+      cleanup()
+    }
+  })
+
+  it('a closed RFQ keeps a More menu for an admin, with only Delete RFQ in it', async () => {
+    const user = userEvent.setup()
+    renderHeader('none', rfq({ closedOn: '2026-11-20', closeReason: 'other', state: state({ outcome: 'closed' }) }), {}, 'admin')
+    await user.click(screen.getByRole('button', { name: /^More/ }))
+    expect(within(screen.getByRole('menu', { name: 'More' })).getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Delete RFQ'])
+  })
+})

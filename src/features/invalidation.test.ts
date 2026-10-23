@@ -46,6 +46,7 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'inquiry.chase': { rfqId: 'r1' },
   'rfq.markBidSent': { rfqId: 'r1' },
   'rfq.close': { rfqId: 'r1' },
+  'rfq.delete': { rfqId: 'r1' },
   'rfq.notes': { rfqId: 'r1' },
   'clarification.add': { rfqId: 'r1' },
   'clarification.ask': { rfqId: 'r1' },

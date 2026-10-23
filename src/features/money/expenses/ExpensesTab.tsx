@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChartColumn, ChevronLeft, ChevronRight, Ellipsis, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
+import { ChartColumn, ChevronLeft, ChevronRight, Ellipsis, History, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
@@ -16,6 +16,7 @@ import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { TableFilter } from '@/ui/TableFilter'
 import { Tag } from '@/ui/Tag'
 import { Select } from '@/ui/form/Select'
+import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
 import { useClosedMonths } from '@/features/money/monthEnd/hooks'
 import type { ExpenseListing } from '@/features/money/expenses/api'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
@@ -66,6 +67,8 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const [filters, setFilters] = useState<ExpenseFilters>(NO_FILTERS)
   const [q, setQ] = useQueryParamText()
   const [editing, setEditing] = useState<ListedExpense | null>(null)
+  /** The expense whose History panel is open. */
+  const [history, setHistory] = useState<ListedExpense | null>(null)
 
   const cats = useCategories()
   const groupsQ = useGroups()
@@ -93,7 +96,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const onDelete = deleteFlow.ask
 
   const columns = useMemo(
-    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete }),
+    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete, onHistory: setHistory }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [categories, list.data, showTax, monthClosed],
   )
@@ -199,7 +202,26 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
         />
       </section>
 
-      {editing ? <AddExpenseDialog open expense={editing} onOpenChange={o => !o && setEditing(null)} /> : null}
+      {editing ? (
+        <AddExpenseDialog
+          open
+          expense={editing}
+          onOpenChange={o => !o && setEditing(null)}
+          onHistory={() => {
+            setHistory(editing)
+            setEditing(null)
+          }}
+        />
+      ) : null}
+      {history ? (
+        <LazyHistoryPanel
+          open
+          onOpenChange={o => !o && setHistory(null)}
+          table="expenses"
+          id={history.id}
+          context={`${categories.find(c => c.id === history.categoryId)?.name ?? 'Expense'} · ${formatShortDate(history.paidOn, undefined, true)}`}
+        />
+      ) : null}
       {deleteFlow.node}
     </div>
   )
@@ -275,7 +297,7 @@ function describe(r: ListedExpense, categories: readonly Category[], l: ExpenseL
 function buildColumns(
   categories: readonly Category[],
   listing: ExpenseListing | undefined,
-  act: { showTax: boolean; locked: boolean; onEdit: (r: ListedExpense) => void; onDelete: (r: ListedExpense) => void },
+  act: { showTax: boolean; locked: boolean; onEdit: (r: ListedExpense) => void; onDelete: (r: ListedExpense) => void; onHistory: (r: ListedExpense) => void },
 ): Column<ListedExpense>[] {
   const today = businessToday()
   const cols: Column<ListedExpense>[] = [
@@ -342,6 +364,9 @@ function buildColumns(
             <PopoverContent variant="menu" align="end">
               <MenuItem icon={Pencil} onClick={() => act.onEdit(r)}>
                 Edit expense
+              </MenuItem>
+              <MenuItem icon={History} onClick={() => act.onHistory(r)}>
+                History
               </MenuItem>
               <MenuItem icon={Trash2} onClick={() => act.onDelete(r)}>
                 Delete expense
