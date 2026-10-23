@@ -274,7 +274,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       )}
 
       {item.collision && data.names[item.collision.by] ? (
-        <p data-collision className="flex items-center gap-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm text-tone-warning-fg">
+        <p data-collision className="flex items-center gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm text-tone-warning-fg">
           <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before you chase it again.
         </p>
       ) : null}

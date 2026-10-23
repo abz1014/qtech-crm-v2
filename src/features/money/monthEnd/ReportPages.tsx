@@ -809,7 +809,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           }
         >
           <div className="grid gap-4 px-5 py-4">
-            <div className="grid divide-y rounded border md:grid-cols-2 md:divide-x md:divide-y-0">
+            <div className="grid divide-y rounded-panel border md:grid-cols-2 md:divide-x md:divide-y-0">
               <div className="grid gap-1 px-4 py-3">
                 <span className="text-xs text-fg-2">Output GST, {name} invoices</span>
                 <span className="num text-base">

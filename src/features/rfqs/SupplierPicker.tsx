@@ -24,7 +24,7 @@ import { Icon } from '@/ui/Icon'
  * delivery) is in the History card (the memory card), so a row is the name, the reason and one record line. The whole row is the tap target.
  */
 
-const pill = 'inline-flex h-5 shrink-0 items-center gap-[6px] whitespace-nowrap rounded border border-line-strong bg-surface px-[6px] text-xs text-fg-2'
+const pill = 'inline-flex min-h-chip shrink-0 items-center gap-[6px] whitespace-nowrap rounded border border-line-strong bg-surface px-[6px] text-xs text-fg-2'
 
 export function ItemChips({ items }: { items: readonly DraftItem[] }) {
   return (
@@ -97,9 +97,9 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
   const n = s.coversItemIds.length
   return (
     <li className={cn('relative grid gap-1 border-t px-5 py-3 first:border-t-0', ticked && 'bg-selected')} data-ticked={ticked || undefined}>
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         <Checkbox id={id} checked={ticked} onCheckedChange={v => onToggle(s.supplierId, v === true)} aria-label={s.name} />
-        <label htmlFor={id} className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
+        <label htmlFor={id} className="flex min-w-[9rem] flex-1 flex-wrap items-baseline gap-x-2 text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
           <span className="min-w-0">{s.name}</span>
           {s.city ? <span className="text-xs font-regular text-fg-muted">{s.city}</span> : null}
         </label>

@@ -291,6 +291,16 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
         }
       }}
       groupStyle="big"
+      // Phone: one line per detail (name, count, amount), so the table never scrolls sideways at 375.
+      mobileRow={r => (
+        <span className="flex min-w-0 items-baseline justify-between gap-3">
+          <span className={cn('min-w-0 [overflow-wrap:anywhere]', r.detail ? 'text-fg' : 'text-fg-muted')}>
+            {r.detail ?? 'No detail'}
+            {r.count > 0 ? <span className="text-fg-muted"> · <span className="num">{r.count}</span></span> : null}
+          </span>
+          <span className="num shrink-0 font-medium">{rupees(r.amount)}</span>
+        </span>
+      )}
       footerLabel="Money out"
       noun="lines"
       toolbar={

@@ -266,13 +266,13 @@ function Leg({
       <div className="grid min-w-0 content-start gap-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="min-w-0 break-words font-medium">{name}</span>
-          {ccy ? <span className="num inline-flex h-5 items-center rounded border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
+          {ccy ? <span className="num inline-flex h-chip items-center rounded-round border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
           <span data-testid={`leg-${letter}-state`}>
             <StatusBadge dimension="goods" value={STATE_DIM[state]} />
           </span>
           {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
           {po || !pastPo ? (
-          <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-5 items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
+          <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-chip items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
           ) : null}

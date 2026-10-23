@@ -78,7 +78,7 @@ function MyClaims() {
     <div className="mx-auto grid w-full max-w-[720px] grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
       <PageHeader title="I paid" lede={<span className="text-base">Money you paid yourself for work. The office pays you back once it is approved.</span>} />
       <form
-        className="grid gap-4 rounded border bg-surface p-4 text-base"
+        className="grid gap-4 rounded-panel border bg-surface p-4 text-base"
         autoComplete="off"
         onSubmit={e => {
           e.preventDefault()
@@ -158,11 +158,11 @@ function MyClaims() {
           {pending.length > 0 ? <span className="font-regular text-fg-2"> · {pending.length} waiting</span> : null}
         </h2>
         {claims.isPending ? (
-          <div className="h-16 animate-pulse rounded border bg-sunken" aria-busy="true" />
+          <div className="h-16 animate-pulse rounded-row border bg-sunken" aria-busy="true" />
         ) : (claims.data ?? []).length === 0 ? (
           <EmptyState title="Nothing yet">What you send shows here, with whether it was approved.</EmptyState>
         ) : (
-          <ul className="divide-y rounded border bg-surface">
+          <ul className="divide-y rounded-panel border bg-surface">
             {(claims.data ?? []).map(c => (
               <ClaimLine key={c.id} claim={c} onWithdraw={() => withdraw.mutate(c.id, { onSuccess: () => toast.toast({ title: 'Claim taken back', body: pkr(c.amount), tone: 'neutral' }) })} busy={withdraw.isPending} />
             ))}
