@@ -72,6 +72,13 @@ export const toast = (p: Page, text: string | RegExp) => p.getByRole('status').f
 export const undoIn = (l: Locator) => l.getByRole('button', { name: /^Undo/ }).first()
 export const actions = (p: Page) => p.locator('[data-slot="order-actions"]')
 export const legRows = (p: Page, supplierName: string) => p.getByRole('listitem', { name: `Supplier order, ${supplierName}` })
+/** The supplier order row of `supplierName` that carries the currency chip `ccy` (one supplier may have two supplier orders, USD and EUR). */
+export async function legRowByCcy(p: Page, supplierName: string, ccy: string): Promise<Locator> {
+  const rows = legRows(p, supplierName)
+  const texts = await rows.allInnerTexts()
+  const i = texts.findIndex(t => new RegExp(`\b${ccy}\b`).test(t))
+  return rows.nth(Math.max(i, 0))
+}
 
 // ------------------------------------------------------------------------------------------------ the cast and the seeding
 
@@ -396,7 +403,7 @@ export function spy(page: Page) {
       for (const row of rows) {
         for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
           if (v === null || v === undefined || v === 0 || v === '0' || v === '') continue
-          if (/^(gst_rate)$/.test(k)) continue
+          if (/^(gst_rate|prices_hidden)$/.test(k)) continue
           if (typeof v === 'number' && /(price|cost|amount|total|net|gross|sell|sold|margin|balance|paid|spread|pkr|rate_pkr)/i.test(k) && !/(items_|_count|count_|_quoted|_days|qty|rank|position|number|revision|tier|age_)/i.test(k)) leaks.push(`${obj}.${k}=${v}`)
           if (typeof v === 'object') for (const key of moneyKeysIn(v)) if (!/gst_rate/.test(key)) leaks.push(`${obj}.${k}${key}`)
         }
@@ -423,4 +430,26 @@ export async function repeatVia(page: Page, info: TestInfo, where: string, sourc
     id = /orders\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? null
   })
   return id
+}
+
+/** What the import writes for an old order whose price basis it could not prove: a marker, flags, one supplier order with no currency, a price and a 0. */
+export async function seedImportedOrder() {
+  const customer = await company('Indus Fibre Mills', { city: 'Faisalabad' })
+  const sup = await supplier('Lahore Switchgear', 'Pakistan')
+  const o = await db.add<{ id: string; number: number }>('orders', {
+    company_id: customer.id,
+    owner_id: USER.sales,
+    ordered_on: karachiDay(-300),
+    customer_po_number: `OLD-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+    payment_terms_days: 30,
+    needs_commissioning: false,
+    legacy_flags: ['value_basis_unknown', 'dates_estimated'],
+    legacy_source: MARK('orders'),
+  })
+  const leg = await db.add<{ id: string }>('supplier_orders', { order_id: o.id, supplier_id: sup.id, placed_on: karachiDay(-290), delivered_on: karachiDay(-280), received_on: karachiDay(-280), currency: null, legacy_flags: ['dates_estimated'], legacy_source: MARK('orders') })
+  await db.insert('order_items', [
+    { order_id: o.id, position: 0, description: 'Schneider LC1D25 contactor', qty: 1, unit_price_net: 125000, gst_rate: 18, is_service: false, supplier_order_id: leg.id, legacy_flags: [], legacy_source: MARK('orders') },
+    { order_id: o.id, position: 1, description: 'Siemens S7-1200 PLC', qty: 1, unit_price_net: 0, gst_rate: 18, is_service: false, supplier_order_id: leg.id, legacy_flags: [], legacy_source: MARK('orders') },
+  ])
+  return { id: o.id, number: o.number, customer, supplier: sup }
 }
