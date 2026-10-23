@@ -218,7 +218,7 @@ export function deskew(lines: readonly OcrLine[], typical: number | null = typic
  * right edge of the lines around it, the next line starts at the same left edge right under it, its first word would not have
  * fitted on the first line, and it is a tail ("5", "nos", "and gaskets") rather than a new item ("2. Contactor", "Cable gland").
  */
-export function unwrapLines(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines)): OcrLine[] {
+export function unwrapLines(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines), around: readonly OcrLine[] = lines): OcrLine[] {
   const sorted = [...lines].sort((a, b) => a.bbox.y0 - b.bbox.y0 || a.bbox.x0 - b.bbox.x0)
   const out: OcrLine[] = []
   for (const l of sorted) {
@@ -230,7 +230,7 @@ export function unwrapLines(lines: readonly OcrLine[], typical: number | null = 
     if (prev && first && prevLast && prevWords.length >= 2) {
       const size = lineSize(prev, typical)
       const right = Math.max(
-        ...sorted.filter(o => Math.abs(o.bbox.x0 - prev.bbox.x0) < size && Math.abs(o.bbox.y0 - prev.bbox.y0) < 8 * size).map(o => o.bbox.x1),
+        ...around.filter(o => Math.abs(o.bbox.x0 - prev.bbox.x0) < size && Math.abs(o.bbox.y0 - prev.bbox.y0) < 8 * size).map(o => o.bbox.x1),
       )
       const firstText = cleanWord(first) as string
       const under = Math.abs(l.bbox.x0 - prev.bbox.x0) < 0.8 * size && l.bbox.y0 > prev.bbox.y0 && l.bbox.y0 - prev.bbox.y1 < 0.7 * size
@@ -411,7 +411,14 @@ export function ruledGrids(rules: TableRules, typical: number | null): RuledGrid
     // (Two column borders only are the frame of a page or a box, not a table of columns.)
     if (cols.length < 3 || rows.length < 2) continue
     // The grid reaches from the top of its column borders to the bottom of them.
-    out.push({ rows: rows.map(r => r.pos), cols: cols.map(c => c.pos), top: Math.min(...cols.map(c => c.from), ...rows.map(r => r.pos)), bottom: Math.max(...cols.map(c => c.to), ...rows.map(r => r.pos)) })
+    // (The usual column border's reach, not the longest: one border that runs on, a page's edge or a shadow, is not the table's top.)
+    const mid = (xs: number[]) => [...xs].sort((p, q) => p - q)[Math.floor(xs.length / 2)] as number
+    out.push({
+      rows: rows.map(r => r.pos),
+      cols: cols.map(c => c.pos),
+      top: Math.min(mid(cols.map(c => c.from)), ...rows.map(r => r.pos)),
+      bottom: Math.max(mid(cols.map(c => c.to)), ...rows.map(r => r.pos)),
+    })
   }
   return out
 }
@@ -666,10 +673,12 @@ export function layoutOcr(lines: readonly OcrLine[], rules?: TableRules): LaidLi
   const level = skewAngle(lines, typical) === 0
   // A part number broken over two lines of a cell is whole again only now ("PMC33-" / "UMY4HO"): its words are fixed again.
   const fixCell = (c: string) => c.split(' ').map(fixOcrWord).join(' ')
+  // (The page's slant is the page's: a part of it, laid out apart from a table, is turned by the page's angle, not its own.)
+  const turn = (ls: readonly OcrLine[]) => (level ? [...ls] : deskew(ls, typical))
   const plain = (ls: readonly OcrLine[]): LaidLine[] =>
     ls.length === 0
       ? []
-      : layoutPages([wordsToRuns(unwrapLines(deskew(ls, typical), typical), typical, level ? rules : undefined)]).map(l => {
+      : layoutPages([wordsToRuns(unwrapLines(turn(ls), typical, turn(lines)), typical, level ? rules : undefined)]).map(l => {
           const cells = l.cells.map(fixCell)
           return { ...l, cells, text: l.kind === 'text' && cells.length <= 1 ? fixCell(l.text) : cells.join('\t') }
         })
