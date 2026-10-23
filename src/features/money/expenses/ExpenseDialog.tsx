@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Camera, Check, Lock, Trash2 } from 'lucide-react'
+import { Camera, Check, History as HistoryIcon, Lock, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
@@ -95,9 +95,11 @@ interface AddExpenseDialogProps {
   /** Editing this expense instead of adding one. */
   expense?: ListedExpense
   onSaved?: () => void
+  /** Editing: offers a History button that calls this (the caller closes this dialog and opens the History panel). */
+  onHistory?: () => void
 }
 
-export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved, onHistory }: AddExpenseDialogProps) {
   const [busy, setBusy] = useState(false)
   const fromLeg = !!context?.legId
   const orderLabel = context?.orderLabel
@@ -117,6 +119,7 @@ export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved
               onSaved?.()
             }}
             onCancel={() => onOpenChange(false)}
+            onHistory={onHistory}
           />
         ) : null}
       </DialogContent>
@@ -148,6 +151,7 @@ interface FormProps {
   onBusy: (b: boolean) => void
   onDone: () => void
   onCancel: () => void
+  onHistory?: () => void
 }
 
 /** Loads what the pre-fills need, then mounts the form once with them (a form's defaults are read once). */
@@ -181,6 +185,7 @@ function ExpenseFormReady({
   onBusy,
   onDone,
   onCancel,
+  onHistory,
 }: FormProps & { categories: Category[]; mostUsed: { id: string; count: number } | null; lastForOrder: string | null }) {
   const toast = useToast()
   const client = useQueryClient()
@@ -560,6 +565,11 @@ function ExpenseFormReady({
               Delete expense
             </Button>
           )
+        ) : null}
+        {expense && onHistory ? (
+          <Button variant="quiet" size="lg" icon={HistoryIcon} onClick={onHistory}>
+            History
+          </Button>
         ) : null}
         <Button variant="quiet" onClick={onCancel} data-cancel>
           Cancel
