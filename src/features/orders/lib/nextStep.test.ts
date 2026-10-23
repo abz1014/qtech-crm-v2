@@ -11,7 +11,7 @@ const step = (over: Partial<OrderListRow>, role = 'admin') => listNextStep(listR
 describe('the orders list "Next step" column', () => {
   it('says what is late first: an overdue payment with its days and amount, then late goods naming the supplier and the days', () => {
     expect(step({ payment: 'overdue', dueOn: '2026-11-08', balance: 630420, goods: 'late' })).toMatchObject({ text: 'Chase payment: 12 days overdue · PKR 630,420', tone: 'late' })
-    expect(step({ goods: 'late', legs: [leg({ placedOn: '2026-11-01', expectedOn: '2026-11-17', supplierName: 'Dubai Instrumentation' })] })).toMatchObject({ text: 'Chase Dubai Instrumentation: goods 3 days late', tone: 'late' })
+    expect(step({ goods: 'late', legs: [leg({ placedOn: '2026-11-01', expectedOn: '2026-11-17', supplierName: 'Dubai Instrumentation' })] })).toMatchObject({ text: 'Chase Dubai Instrumentation: goods 3 days late', tone: 'now' }) // amber: our own pace (redesign phase 0)
     // a late supplier order shows even when the view's single goods state says something else
     expect(step({ goods: 'to_place', legs: [leg({ id: 'a' }), leg({ id: 'b', placedOn: '2026-11-01', expectedOn: '2026-11-19', supplierName: 'Dubai' })] }).text).toBe('Chase Dubai: goods 1 day late')
   })
@@ -66,5 +66,15 @@ describe('the orders list "Next step" column', () => {
   it('ranks late before now before waiting before done, so sorting the column puts the urgent first', () => {
     const ranks = [step({ goods: 'late' }), step({ goods: 'to_place' }), step({ goods: 'on_order' }), step({ lifecycle: 'done', goods: 'delivered', invoicing: 'fully_invoiced', payment: 'settled', balance: 0, costsState: 'complete' })].map(s => s.rank)
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks)
+  })
+})
+
+describe('imported rows in the list', () => {
+  it('say "Imported, to review" instead of a late count, but money still wins', () => {
+    const l = leg({ placedOn: '2025-01-01', expectedOn: '2025-02-01' })
+    expect(step({ imported: true, goods: 'late', legs: [l] }).text).toBe('Imported, to review')
+    expect(step({ imported: true, goods: 'late', legs: [l], payment: 'overdue', dueOn: '2025-03-01', balance: 5 }).kind).toBe('chase-payment')
+    expect(step({ goods: 'late', legs: [l] }).text).not.toMatch(/\b([3-9]\d|\d{3,}) days (overdue|late)\b/)
+    expect(step({ imported: true, goods: 'late', legs: [l] }, 'engineer').text).toBe('Imported, to review')
   })
 })

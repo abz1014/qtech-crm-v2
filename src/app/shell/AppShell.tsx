@@ -58,6 +58,8 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   const [nav, setNav] = useState<{ counts: NavCounts; ready: boolean }>({ counts: {}, ready: false })
   const settled = usePageSettled()
   const counts = { ...nav.counts, ...given }
+  // One badge (redesign phase 0, plan section (c)): Today's. The other numbers still reach the pages (NavCountsContext).
+  const badges = { today: counts.today }
   useEffect(() => {
     if (settled) markContentDrawn()
   }, [settled])
@@ -79,7 +81,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       >
         Skip to content
       </a>
-      <TopBar user={user} counts={counts} onSearch={palette.open} onCapture={openCapture} />
+      <TopBar user={user} counts={badges} onSearch={palette.open} onCapture={openCapture} />
       <MobileBar user={user} title={title} onSearch={palette.open} onCapture={openCapture} />
       <main id="main" tabIndex={-1} className="min-h-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
@@ -88,7 +90,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
           </NavCountsContext.Provider>
         </ErrorBoundary>
       </main>
-      <BottomTabs role={user.role} counts={counts} />
+      <BottomTabs role={user.role} counts={badges} />
       <HelpHost />
       {settled ? (
         <Suspense fallback={null}>

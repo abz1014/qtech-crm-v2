@@ -666,6 +666,8 @@ export interface OrderListRow {
   companyId: string
   companyName: string
   siteName: string | null
+  /** Imported from the old CRM (orders.legacy_source is set). */
+  imported: boolean
   /** v_order_state, which every staff role may read. */
   lifecycle: string
   goods: string
@@ -704,7 +706,7 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
   const db = requireSupabase()
   const money = role !== 'engineer'
   const stateCols = money ? 'order_id, lifecycle, goods_state, commissioning_state, data_trust, invoicing_state, gross' : 'order_id, lifecycle, goods_state, commissioning_state, data_trust'
-  const [orders, states, users, assigned, pay, pos] = await Promise.all([
+  const [orders, states, users, assigned, pay, pos, importedRows] = await Promise.all([
     fetchAll(
       (from, to) =>
         db
@@ -749,7 +751,10 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
           .order('number')
           .range(from, to) as unknown as PromiseLike<{ data: ListPoRow[] | null; error: { code?: string; message: string } | null }>,
     ),
+    // Which orders came from the old CRM: the ids only (legacy_source itself may hold old prices, so it is never read here).
+    fetchAll((from, to) => db.from('orders').select('id').not('legacy_source', 'is', null).order('id').range(from, to)),
   ])
+  const importedIds = new Set(importedRows.map(r => r.id))
   const names = new Map(unwrap(users).map(u => [u.id, u.name]))
   const posBy = new Map<string, string[]>()
   for (const p of pos) {
@@ -774,6 +779,7 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
       companyId: o.company_id,
       companyName: one(o.companies)?.name ?? 'Unknown company',
       siteName: one(o.company_sites)?.name ?? null,
+      imported: importedIds.has(o.id),
       lifecycle: (s?.lifecycle as string | undefined) ?? 'active',
       goods: (s?.goods_state as string | undefined) ?? 'n_a',
       commissioning: (s?.commissioning_state as string | undefined) ?? 'n_a',

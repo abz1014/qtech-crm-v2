@@ -15,7 +15,7 @@ import { useToast } from '@/ui/useToast'
 import { invalidateAfter } from '@/features/invalidation'
 import { chaseClipboardText, COMPANY_NAME } from '@/features/rfqs/lib'
 import { daysBetween as daysBetweenText } from '@/features/rfqs/lib/dateText'
-import { agoDays } from '@/lib/timeWords'
+import { agoDays, overdueWords } from '@/lib/timeWords'
 import { usePaymentDraft, performChase } from '@/features/today/hooks'
 import { buildPaymentDraft } from '@/features/today/chaseDraft'
 import { useMyJobTitle } from '@/features/orders/hooks'
@@ -201,11 +201,11 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
   const days = Math.max(0, daysBetweenText(row.dueOn as string, today))
   const toneText = draft.firm ? (
     <>
-      Firmer wording, because the invoice is <span className="num">{days}</span> days overdue
+      Firmer wording, because the invoice is overdue ({overdueWords(days, row.dueOn as string)})
     </>
   ) : (
     <>
-      Standard wording, <span className="num">{days}</span> days overdue
+      Standard wording, <span className="num">{overdueWords(days, row.dueOn as string)}</span>
     </>
   )
   const stamps = draftQ.data.invoices

@@ -110,11 +110,15 @@ export interface QuoteRow {
   imported: boolean
 }
 
+/** An imported purchase-order leg past its date that was never marked delivered: not known to be late. */
+export const IMPORTED_NOT_DELIVERED = 'Imported, not marked delivered'
+
 export type DeliveryResult =
   | { kind: 'ontime'; days: number; text: string }
   | { kind: 'late'; days: number; text: string }
   | { kind: 'overdue'; days: number; text: string }
   | { kind: 'expected'; days: number; text: string }
+  | { kind: 'imported'; days: number; text: string }
   | { kind: 'undated'; days: number; text: string }
 
 export interface DeliveryRow {
@@ -275,7 +279,8 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
       result = d > 0 ? { kind: 'late', days: d, text: `Delivered ${daysLate(d)}` } : { kind: 'ontime', days: Math.max(0, -d), text: 'On time' }
     } else if (leg.expectedOn) {
       const over = daysBetween(leg.expectedOn, today)
-      result = over > 0 ? { kind: 'overdue', days: over, text: daysOverdue(over) } : { kind: 'expected', days: Math.max(0, -over), text: 'Not delivered yet' }
+      // an imported leg past its date was probably delivered and never marked: no day count, neutral (owner decision 1b)
+      result = leg.legacy && over > 0 ? { kind: 'imported', days: 0, text: IMPORTED_NOT_DELIVERED } : over > 0 ? { kind: 'overdue', days: over, text: daysOverdue(over) } : { kind: 'expected', days: Math.max(0, -over), text: 'Not delivered yet' }
     } else {
       result = { kind: 'undated', days: 0, text: 'No expected date' }
     }
@@ -308,7 +313,9 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
         legId: l.id,
         orderRef: orderRef(l.orderNumber),
         text: l.expectedOn
-          ? late > 0
+          ? late > 0 && l.legacy
+            ? `expected ${formatShortDate(l.expectedOn, today)}, ${IMPORTED_NOT_DELIVERED.toLowerCase()}`
+            : late > 0
             ? `expected ${formatShortDate(l.expectedOn, today)}, ${plural(late, 'day')} late`
             : `expected ${formatShortDate(l.expectedOn, today)}`
           : l.placedOn

@@ -54,3 +54,32 @@ export function ageWords(n: number): string {
   const d = Math.floor(Math.max(0, n))
   return d === 0 ? 'New' : `${days(d)} old`
 }
+
+/**
+ * Redesign phase 0 (owner decision 2026-10-22): a day count above 30 says nothing ("995 days overdue" reads as a broken screen),
+ * so past this many days the words name the date instead: "since 31 Jan 2025".
+ */
+export const COUNT_WORDS_MAX_DAYS = 30
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "31 Jan 2025" (always with the year: an old date is the point). */
+export function dateWords(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+  return m ? `${+m[3]} ${MONTHS[+m[2] - 1]} ${m[1]}` : iso
+}
+
+/** "since 31 Jan 2025". */
+export function sinceWords(iso: string): string {
+  return `since ${dateWords(iso)}`
+}
+
+/** "3 days overdue" up to 30 days; after that "since 31 Jan 2025" (`since` is the date it fell due). */
+export function overdueWords(n: number, since: string): string {
+  return whole(n) > COUNT_WORDS_MAX_DAYS ? sinceWords(since) : daysOverdue(n)
+}
+
+/** "5 days old" up to 30 days; after that "since 31 Jan 2025". */
+export function ageOrSince(n: number, since: string): string {
+  return Math.floor(Math.max(0, n)) > COUNT_WORDS_MAX_DAYS ? sinceWords(since) : ageWords(n)
+}

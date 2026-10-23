@@ -11,7 +11,7 @@ import type { Role } from '../../support/stack'
  * Cross-cutting daily use (hunt round 1). Everything is recorded with probe()/note(), nothing stops at the first failure.
  * Desktop is 1366x768, phone is 375x812 with touch. What is probed:
  *
- *   today        per role and size: the "N need you" header, the rows on the list and the nav badges (Today = RFQs + Orders + Money)
+ *   today        per role and size: the "N need you" header, the rows due now on the list and the one nav badge (Today's)
  *                agree; a customer chase (copy and mark chased) stamps once, Undo puts the count back and the row stays; after the
  *                Undo window the row moves to Waiting and every count drops by one; Snooze hides the row, Undo brings it back (DB).
  *   palette      Ctrl+K / Search button; company, partial words, contact, RFQ-0001 style refs, bare numbers, ORD refs, the customer PO,
@@ -76,12 +76,15 @@ async function until<T>(read: () => Promise<T>, ok: (v: T) => boolean, ms = 10_0
   return v
 }
 
-/** The numbers the screen shows: Today's header, active rows, and each nav badge (parsed from the ", N need you" words). */
+/**
+ * The numbers the screen shows: Today's header, the rows that need you (the "Overdue or due today" group: redesign phase 0, one
+ * definition), and each nav badge (parsed from the ", N need you" words; only Today has one now).
+ */
 async function todayNumbers(page: Page) {
   const text = await mainText(page)
   const m = /(\d+)\s+need you/.exec(text)
   const header = m ? Number(m[1]) : null
-  const rows = await page.locator('#main li[data-rule]:not([data-waiting])').count()
+  const rows = await page.getByRole('region', { name: 'Overdue or due today' }).locator('li[data-rule]').count()
   const links = await page
     .getByRole('navigation', { name: 'Main' })
     .filter({ visible: true })
@@ -99,10 +102,10 @@ async function todayNumbers(page: Page) {
 
 async function checkParity(page: Page, info: TestInfo, where: string) {
   const n = await todayNumbers(page)
-  const sections = (n.nav.RFQs ?? 0) + (n.nav.Orders ?? 0) + (n.nav.Money ?? 0)
-  if (n.header !== null && n.header !== n.rows) note(info, { kind: 'observation', where, what: `Today header says ${n.header} need you but the list has ${n.rows} active rows`, detail: n })
+  const others = (n.nav.RFQs ?? 0) + (n.nav.Orders ?? 0) + (n.nav.Money ?? 0)
+  if (n.header !== null && n.header !== n.rows) note(info, { kind: 'observation', where, what: `Today header says ${n.header} need you but the list has ${n.rows} rows due now`, detail: n })
   if (n.header !== null && n.nav.Today !== undefined && n.nav.Today !== n.header) note(info, { kind: 'observation', where, what: `Today nav badge ${n.nav.Today} differs from the header ${n.header}`, detail: n })
-  if (n.nav.Today !== undefined && sections !== n.nav.Today) note(info, { kind: 'observation', where, what: `nav badges RFQs+Orders+Money = ${sections}, Today badge = ${n.nav.Today}`, detail: n })
+  if (others > 0) note(info, { kind: 'observation', where, what: `a nav badge other than Today's shows a number (${others})`, detail: n })
   return n
 }
 
@@ -1281,7 +1284,7 @@ test('HW-30: list sort (RFQ board, Orders) is lost on Back and on refresh', asyn
   await expect(due()).toHaveAttribute('aria-sort', 'ascending')
 })
 
-test("HW-31: the RFQ board header 'need you / overdue' counts everyone's RFQs while Mine is selected", async ({ browser }, info) => {
+test("HW-31: the RFQ board's 'need you' is the person's own (Today's RFQ items), the same with Mine and All", async ({ browser }, info) => {
   // One RFQ of the salesperson's (so Mine has a list) and one owned by the admin that needs suppliers: in All, not in Mine.
   await rfq({ customer: await company(`Hunt HW31 mine ${T}`), items: [{ description: `Hunt hw31 own gauge ${T}`, qty: 1 }], owner: 'sales' })
   await rfq({ customer: await company(`Hunt HW31 ${T}`), items: [{ description: `Hunt hw31 gauge ${T}`, qty: 1 }], owner: 'admin' })
@@ -1296,26 +1299,32 @@ test("HW-31: the RFQ board header 'need you / overdue' counts everyone's RFQs wh
   const all = await lede()
   const allShown = showing(await mainText(page))
   expect(mineShown).toBeLessThan(allShown)
+  // Redesign phase 0: one definition of "needs you" (features/today/needsYou.ts). The board's number is the RFQ items on this
+  // person's own Today (their own RFQ that needs suppliers today), whichever owner filter the list shows, and no "overdue" count.
   expect(need(all)).toBeGreaterThan(0)
-  expect(need(mine)).toBeLessThan(need(all))
+  expect(need(mine)).toBe(need(all))
+  expect(all).not.toMatch(/overdue/)
 })
 
-test("HW-32: the Orders page's 'need you' and the Orders nav badge count different things", async ({ browser }, info) => {
+test("HW-32: the Orders page's 'need you' is the order rows on the person's Today (one definition, redesign phase 0)", async ({ browser }, info) => {
   const { page } = await pin(browser, info, 'sales')
-  const read = async () => {
+  // An order of the salesperson's whose goods are 6 days late: a goods row on their Today, due now.
+  const sup = await supplier(`Hunt HW32 supplier ${T}`, 'Germany')
+  const o = await order({ suppliers: [{ supplier: sup }], lines: [{ description: `Hunt hw32 gauge ${T}`, qty: 1, price: 100000, leg: 0 }], owner: 'sales', orderedOn: karachiDay(-20) })
+  await db.patch(`supplier_orders?id=eq.${o.legs[0].id}`, { placed_on: karachiDay(-15), expected_on: karachiDay(-6) })
+  const ORDER_RULES = ['goods_late', 'place_po', 'plan_commissioning', 'to_source', 'job_commissioning', 'job_on_site']
+  await expect(async () => {
+    await land(page, '/today')
+    const rows = await page
+      .getByRole('region', { name: 'Overdue or due today' })
+      .locator('li[data-rule]')
+      .evaluateAll((ls, rules) => ls.filter(l => rules.includes(l.getAttribute('data-rule') ?? '')).length, ORDER_RULES)
+      .catch(() => 0)
     await land(page, '/orders')
     const n = Number(/(\d+) need you/.exec(await mainText(page))?.[1] ?? 0)
-    const nav = (await todayNumbers(page)).nav
-    return { page: n, badge: nav.Orders ?? 0 }
-  }
-  const before = await read()
-  // An order of the salesperson's whose payment is 15 days overdue: the Orders page's next step is "Chase payment".
-  const o = await order({ lines: [{ description: `Hunt hw32 service visit ${T}`, qty: 1, price: 100000, service: true }], owner: 'sales', terms: 30, orderedOn: karachiDay(-50) })
-  await post('invoices', { order_id: o.order.id, company_id: o.customer.id, number: `HW32-${TU}`, invoice_date: karachiDay(-45), net_amount: 100000, gst_amount: 18000 })
-  const after = await read()
-  void before
-  expect(after.page).toBeGreaterThan(0)
-  expect(after.badge, `Orders badge vs the Orders page's "${after.page} need you"`).toBe(after.page)
+    expect(n, `the Orders page's "${n} need you" vs ${rows} order rows due now on Today`).toBe(rows)
+    expect((await todayNumbers(page)).nav.Orders ?? 0).toBe(0) // no Orders badge any more
+  }).toPass({ timeout: 60_000 })
 })
 
 test("HW-33: near-duplicate company names are accepted ('A  B' with doubled spaces, a trailing full stop)", async ({ browser }, info) => {

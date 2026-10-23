@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ageWords, agoDays, days, daysLate, daysOverdue, dueWord, inDays } from '@/lib/timeWords'
+import { ageOrSince, ageWords, agoDays, days, daysLate, daysOverdue, dueWord, inDays, overdueWords, sinceWords } from '@/lib/timeWords'
 
 describe('time words (DESIGN_SYSTEM section 6, rule 8)', () => {
   it('counts days in words, singular for one', () => {
@@ -13,6 +13,14 @@ describe('time words (DESIGN_SYSTEM section 6, rule 8)', () => {
     expect(daysOverdue(1)).toBe('1 day overdue')
     expect(daysOverdue(0)).toBe('1 day overdue')
     expect(daysLate(3)).toBe('3 days late')
+  })
+
+  it('never counts past 30 days: it names the date instead (redesign phase 0)', () => {
+    expect(overdueWords(30, '2026-09-22')).toBe('30 days overdue')
+    expect(overdueWords(995, '2024-01-31')).toBe('since 31 Jan 2024')
+    expect(ageOrSince(5, '2026-10-17')).toBe('5 days old')
+    expect(ageOrSince(700, '2024-11-21')).toBe('since 21 Nov 2024')
+    expect(sinceWords('2025-06-03')).toBe('since 3 Jun 2025')
   })
 
   it('says when something is due', () => {
