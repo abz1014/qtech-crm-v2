@@ -419,6 +419,10 @@ test('jobflow S5: a 5 day old rate prices in PKR, a 40 day old rate leaves the q
       want(info, 'S5a Margin', text.includes('114,800'), 'the order page (admin) does not show the PKR cost 114,800 of the USD supplier order', text.match(/Margin[^]{0,400}/)?.[0])
       await visit(ap, info, '/money/margins')
       await shot(ap, 'S5a-margins')
+      await visit(ap, info, `/money/month-end/owe?month=${today.slice(0, 7)}`)
+      const owe = flat(await ap.locator('#main').innerText())
+      want(info, 'S5a We owe page', owe.includes(usdLeg ? c.supB.name : '') && /410/.test(owe) && owe.includes('114,800'), 'the We owe suppliers page does not show the USD supplier order as USD 410 and PKR 114,800', owe.slice(0, 500))
+      await shot(ap, 'S5a-we-owe')
       await admin.close()
     })
   }
