@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   cleanPixels,
+  clearBorderDark,
   flattenLight,
   imageFailureMessage,
   isImageFile,
@@ -165,6 +166,49 @@ describe('helpers', () => {
     expect(px[4 * (6 * W + 50)]).toBe(255)
     expect(px[4 * (30 * W + 21)]).toBe(0)
     expect(px[4 * (30 * W + 150)]).toBe(0)
+  })
+})
+
+describe('clearBorderDark: the desk, not the rules of a tight table', () => {
+  const W = 200
+  const H = 200
+  const make = () => new Uint8Array(W * H).fill(255)
+  const ink = (g: Uint8Array, x0: number, y0: number, x1: number, y1: number) => {
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) g[y * W + x] = 0
+  }
+  it('wipes a thick dark wedge that reaches the edge', () => {
+    const g = make()
+    ink(g, 0, 0, 60, 200)
+    clearBorderDark(g, W, H)
+    expect(g[100 * W + 30]).toBe(255)
+  })
+
+  it('leaves the rules of a table whose border touches the edge of the picture', () => {
+    const g = make()
+    for (const x of [0, 70, 140, 198]) ink(g, x, 0, x + 2, 200)
+    for (const y of [0, 66, 132, 198]) ink(g, 0, y, 200, y + 2)
+    clearBorderDark(g, W, H)
+    expect(g[100 * W + 70]).toBe(0)
+    expect(g[66 * W + 100]).toBe(0)
+  })
+})
+
+describe('removeRules: light grey rules', () => {
+  it('finds a light rule that runs far, over a few lighter pixels where it crosses another rule, and keeps a short light stroke', () => {
+    const W = 400
+    const H = 300
+    const px = new Uint8ClampedArray(W * H * 4).fill(255)
+    const put = (x: number, y: number, v: number) => px.fill(v, 4 * (y * W + x), 4 * (y * W + x) + 3)
+    // A vertical rule at light grey (215), the full height, lighter (250) for 3 px at two crossings.
+    for (let y = 0; y < H; y++) put(150, y, (y >= 98 && y < 101) || (y >= 200 && y < 203) ? 250 : 215)
+    // The table's row rules, dark (a light column rule is only taken in a table whose rows were found).
+    for (const y of [20, 120, 220]) for (let x = 0; x < W; x++) put(x, y, 0)
+    // A short light stroke (a letter): not a rule.
+    for (let y = 40; y < 100; y++) put(300, y, 215)
+    const rules = removeRules(px, W, H)
+    expect(rules.vertical.some(v => v.x0 <= 150 && v.x1 >= 150 && v.y1 - v.y0 >= 290)).toBe(true)
+    expect(px[4 * (50 * W + 150)]).toBe(255)
+    expect(px[4 * (60 * W + 300)]).toBe(215)
   })
 })
 

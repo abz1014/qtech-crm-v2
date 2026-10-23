@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanWord, deskew, fixOcrWord, isChromeLine, layoutOcr, pageConfidence, unwrapLines, type OcrLine, type OcrWord } from './ocrLayout'
+import { cleanWord, deskew, fixOcrWord, isChromeLine, layoutOcr, pageConfidence, snapUnitColumn, unwrapLines, type OcrLine, type OcrWord } from './ocrLayout'
 import { linesToText } from './pdfLayout'
 
 // Word boxes as an OCR engine gives them, in pixels: letters 30 px tall, about 16 px per character, a space about 9 px.
@@ -170,5 +170,82 @@ describe('fixOcrWord: letters and digits the engine swaps', () => {
 
   it('keeps a well-read word the engine gave no confidence, between sure words', () => {
     expect(text([line(100, 40, ['10', { t: 'VALVE,BALL;FLANGED', conf: 0 }, 'MODEL', 'FX4U-16MR'])])).toBe('10 VALVE,BALL;FLANGED MODEL FX4U-16MR')
+  })
+})
+
+/** A line moved down by dy pixels. */
+const shift = (l: OcrLine, dy: number): OcrLine => ({ ...l, bbox: { ...l.bbox, y0: l.bbox.y0 + dy, y1: l.bbox.y1 + dy }, words: l.words.map(w => ({ ...w, bbox: { ...w.bbox, y0: w.bbox.y0 + dy, y1: w.bbox.y1 + dy } })) })
+
+describe('layoutOcr: a ruled grid (a table screenshot with a border on every cell)', () => {
+  // Columns: Sr (to x 100), Description (to 520), Required for (to 760), Qty (to 840), Unit. Rows: header (to y 60), then bands of 120.
+  const bar = (x0: number, y0: number, x1: number, y1: number) => ({ x0, y0, x1, y1 })
+  const rules = {
+    horizontal: [60, 180, 300, 420].map(y => bar(0, y, 940, y + 2)),
+    vertical: [100, 520, 760, 840].map(x => bar(x, 0, x + 2, 420)),
+  }
+  const head = cells(40, [[20, 'SR.'], [200, 'DESCRIPTION'], [540, 'REQUIRED FOR'], [770, 'QTY'], [850, 'UOM']])
+  // The engine reads a line straight across the cells that share a pixel row, so the rows of neighbouring cells run together.
+  const first = [
+    cells(110, [[120, 'SOFT STARTER - 30KW'], [540, 'Most Urgent']]),
+    cells(135, [[40, '1'], [790, '2'], [855, 'NOS']]),
+    cells(150, [[120, '(MODEL:PSR60-600 ABB).'], [540, 'Demand For']]),
+    cells(175, [[560, 'Deptt.']]),
+  ]
+  const second = [cells(230, [[120, 'PLC FX2N-'], [540, 'For Electrical']]), cells(255, [[40, '2'], [790, '1'], [855, 'NOS']]), cells(270, [[120, '128MR.'], [560, 'Deptt.']])]
+
+  it('keeps a wrapped description and its neighbours in their cells, one row per grid row', () => {
+    const out = linesToText(layoutOcr([head, ...first, ...second], rules))
+    expect(out).toBe(
+      [
+        'SR.\tDESCRIPTION\tREQUIRED FOR\tQTY\tUOM',
+        '1\tSOFT STARTER - 30KW (MODEL:PSR60-600 ABB).\tMost Urgent Demand For Deptt.\t2\tNOS',
+        '2\tPLC FX2N-128MR.\tFor Electrical Deptt.\t1\tNOS',
+      ].join('\n'),
+    )
+  })
+
+  it('leaves the words above and below the grid to the ordinary layout', () => {
+    const out = linesToText(layoutOcr([line(-40, 20, ['Please', 'quote', 'the', 'items', 'below:']), head, ...first, ...second, line(500, 20, ['Thank', 'you'])], rules))
+    expect(out.split('\n')[0]).toBe('Please quote the items below:')
+    expect(out.split('\n').at(-1)).toBe('Thank you')
+    expect(out).toContain('2\tPLC FX2N-128MR.\tFor Electrical Deptt.\t1\tNOS')
+  })
+
+  it('cuts a heading row off the first row when a filled band left no rule under it, and puts right a heading read a letter off', () => {
+    const noHeadRule = { horizontal: [200, 320].map(y => bar(0, y, 940, y + 2)), vertical: rules.vertical }
+    const out = linesToText(layoutOcr([cells(40, [[20, 'SR.'], [200, 'DESCRIPTION'], [540, 'REQUIRED FOR'], [770, 'QrY'], [850, 'UOM']]), ...first.map(l => shift(l, 20)), ...second.map(l => shift(l, 20))], noHeadRule))
+    expect(out.split('\n')[0]).toBe('SR.\tDESCRIPTION\tREQUIRED FOR\tQty\tUOM')
+    expect(out.split('\n')[1]).toBe('1\tSOFT STARTER - 30KW (MODEL:PSR60-600 ABB).\tMost Urgent Demand For Deptt.\t2\tNOS')
+  })
+
+  it('does not trust a grid whose row rules were missed: a column of numbers, a line each, is not one cell', () => {
+    const few = { horizontal: [60, 420].map(y => bar(0, y, 940, y + 2)), vertical: rules.vertical }
+    const stacked = [1, 2, 3, 4].flatMap((n, i) => [cells(110 + 40 * i, [[40, String(n)], [120, 'Valve ' + n], [790, String(2 * n)], [855, 'NOS']])])
+    const out = linesToText(layoutOcr([head, ...stacked], few))
+    expect(out.split(String.fromCharCode(10))).toHaveLength(5)
+    expect(out).toContain('2' + String.fromCharCode(9) + 'Valve 2')
+  })
+
+  it('is no grid when the rules are one underline or two lines', () => {
+    expect(linesToText(layoutOcr([line(100, 40, ['Valve', 'Brass'])], { horizontal: [bar(0, 120, 400, 122)], vertical: [] }))).toBe('Valve Brass')
+  })
+})
+
+describe('snapUnitColumn: a unit the engine misread in a column of units', () => {
+  const row = (...cs: string[]) => ({ cells: cs, kind: 'row' as const, page: 1, text: cs.join('\t') })
+  it('takes the unit the column writes, in the column\'s case', () => {
+    const rows = [row('1', 'Thimble', 'PCS', '24'), row('2', 'Capacitor', 'Pcs', '12'), row('3', 'MCB', 'PCS', '6'), row('4', 'Thimble 8x25', 'PG', '12'), row('5', 'Relay', 'PCS', '4')]
+    snapUnitColumn(rows)
+    expect(rows.map(r => r.cells[2])).toEqual(['PCS', 'Pcs', 'PCS', 'PCS', 'PCS'])
+    expect(rows[3]!.text).toBe('4\tThimble 8x25\tPCS\t12')
+  })
+
+  it('leaves a column that is not units, and a word that is nothing like a unit of the column', () => {
+    const notUnits = [row('1', 'a', 'Boiler', '2'), row('2', 'b', 'Kiln', '2'), row('3', 'c', 'Utilities', '2'), row('4', 'd', 'Packing', '2')]
+    snapUnitColumn(notUnits)
+    expect(notUnits.map(r => r.cells[2])).toEqual(['Boiler', 'Kiln', 'Utilities', 'Packing'])
+    const odd = [row('1', 'a', 'PCS', '2'), row('2', 'b', 'PCS', '2'), row('3', 'c', 'PCS', '2'), row('4', 'd', 'Urgent', '2')]
+    snapUnitColumn(odd)
+    expect(odd[3]!.cells[2]).toBe('Urgent')
   })
 })
