@@ -44,6 +44,41 @@ select ok(exists (select 1 from public.brands where name = 'MCCB' and id = 'ca7e
 select ok(exists (select 1 from public.brands where name = 'Commissioning service' and id = 'ca7e0000-0000-4000-8000-000000000046'),
   'and position 46 is Commissioning service');
 
+-- ================================================================== item matching is unchanged by the seed
+-- "Before 0093" = the 0036 definition over the brands rows that are not the seeded categories (on this database: none yet).
+create function pg_temp.words_before() returns text[] language sql as $f$
+  select coalesce(array_agg(distinct x.w order by x.w), '{}'::text[])
+  from (select unnest(string_to_array(public.item_text_norm(b.name), ' ')) as w from public.brands b where b.id::text not like 'ca7e0000-%') x
+  where x.w <> ''
+$f$;
+create temp table words_start as select pg_temp.words_before() as w, public.brand_tokens() as t;
+select is(public.brand_words(), (select w from words_start), 'the stripped word set after the seed equals the set without the 46 categories (no category word added)');
+select is(public.brand_tokens(), (select t from words_start), 'and the brand tokens (0035) are unchanged too');
+
+-- other brands and families are still stripped, as before; a matched legacy family keeps its old behaviour
+insert into public.brands (id, name, kind) values
+  ('b0930000-0000-4000-8000-0000000000c1', 'E+H', 'brand'),
+  ('b0930000-0000-4000-8000-0000000000c2', 'Legacy Actuators', 'family');
+select ok(public.brand_words() @> array['actuators', 'legacy', 'h'], 'a brand and an imported family are still stripped');
+select ok(public.brand_words() = pg_temp.words_before(), 'and it is still exactly the 0036 definition over those rows');
+
+-- two fixture descriptions: the same text normalised, stripped and scored with and without the seeded categories
+create temp table sim as select
+  public.item_text_norm('Pressure transmitter 0-10 bar E+H cerabar series') as a,
+  public.item_text_norm('Pressure transmitter 0-16 bar E+H cerabar series') as b;
+select is(public.strip_words((select a from sim), public.brand_words()), public.strip_words((select a from sim), pg_temp.words_before()),
+  'the stripped description is the same with and without the seeded categories');
+select is(extensions.similarity(public.strip_words((select a from sim), public.brand_words()), public.strip_words((select b from sim), public.brand_words())),
+          extensions.similarity(public.strip_words((select a from sim), pg_temp.words_before()), public.strip_words((select b from sim), pg_temp.words_before())),
+  'the similarity score of the two pressure transmitter descriptions is unchanged');
+select ok(public.strip_words((select a from sim), public.brand_words()) like 'pressure transmitter%',
+  'and "pressure transmitter" is still in the stripped text');
+select is(public.similar_enough(public.strip_words((select a from sim), public.brand_words()), public.strip_words((select b from sim), public.brand_words()), 0.45),
+          public.similar_enough(public.strip_words((select a from sim), pg_temp.words_before()), public.strip_words((select b from sim), pg_temp.words_before()), 0.45),
+  'the tier 1 decision (>= 0.45) is unchanged');
+select ok(public.item_text_norm('Pressure transmitter 0-10 bar E+H') like 'pressure transmitter%', 'item_text_norm itself is unchanged (a pure function)');
+delete from public.brands where id in ('b0930000-0000-4000-8000-0000000000c1', 'b0930000-0000-4000-8000-0000000000c2');
+
 create temp table seed_before as select count(*)::int as n, md5(string_agg(id::text || name || kind || curated::text, ',' order by id)) as h from public.brands;
 select is((select row(s.inserted, s.matched)::text from qtech_private.seed_curated_categories() s), '(0,0)',
   'running the seed again inserts nothing and matches nothing new');
@@ -57,6 +92,7 @@ select is((select curated from public.brands where id = 'b0930000-0000-4000-8000
 select is((select row(s.inserted, s.matched)::text from qtech_private.seed_curated_categories() s), '(0,1)',
   'a same-named family is matched (0 added, 1 marked)');
 select is((select count(*)::int from public.brands where lower(btrim(name)) = 'timers'), 1, 'it is not duplicated');
+select ok(public.brand_words() @> array['timers'], 'a matched legacy family keeps being stripped from descriptions, as before');
 select is((select name || '|' || curated::text from public.brands where id = 'b0930000-0000-4000-8000-0000000000a1'), 'TIMERS |true',
   'it is marked curated and its name is left alone');
 select is((select count(*)::int from public.brands where curated and kind = 'family'), 46, 'still 46 curated categories');

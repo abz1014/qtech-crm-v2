@@ -80,6 +80,27 @@ begin
 end
 $$;
 
+-- ================================================================ the seeded categories must not change item matching
+-- brand_words() (0036) lists the words of EVERY brands row, brand and family alike (the 0036 header: "brand and family words are
+-- removed from both descriptions before similarity is measured"); the imported families have always been part of it. Seeding the
+-- 46 categories would add words such as "pressure", "cables" or "relays" and so change the "same item" (tier 1) similarity of
+-- existing quotes. So the rows seeded here (fixed ids 'ca7e0000-...') are left out. Nothing else changes: a legacy family that
+-- only got curated = true (a same-named match) stays in, exactly as before, which is why the rule is the seed id range and not
+-- the curated flag. Same query as 0036 otherwise; create or replace keeps the grants.
+create or replace function public.brand_words()
+returns text[]
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select coalesce(array_agg(distinct x.w order by x.w), '{}'::text[])
+  from (select unnest(string_to_array(public.item_text_norm(b.name), ' ')) as w
+        from public.brands b
+        where b.id::text not like 'ca7e0000-%') x
+  where x.w <> ''
+$$;
+
 -- ================================================================ v_supplier_category_evidence
 -- One row per (supplier, category) that was asked or ordered. Counts only.
 --   asked          sent inquiries (sent_on set) with at least one item of the category: one per inquiry, not per item
