@@ -69,6 +69,14 @@ goes to `readPdfText`, a picture to `readImageText`; both give text for the same
   text reads it too. Items fill the rows, the customer reference and due date fill when empty ("From the photo").
 - A supplier's reply: "Read a PDF or photo", and Paste or photo's "This is a supplier's reply" with a picture and no text: the
   prices are read with `parseSupplierQuote`.
+- A spreadsheet (.xlsx, .xls, .csv) chosen with the same button (or added to Capture and taken to New RFQ) is read on the device
+  by SheetJS (`src/lib/docread/sheetText.ts`; SheetJS 0.20.3 from the SheetJS CDN, its own lazy chunk `sheetRuntime-*.js`, about
+  120 KB gzip, never in the first load or the precache; the bundle budget fails otherwise). The item table is found by its header
+  row (the first row naming a description and a quantity, under any title, RFQ number or due-date rows) and its columns mapped to
+  S.No, Description, Specification, Part No, Make, Qty and Unit; store codes, rates, amounts, dates and remarks are left out. The
+  rows above (reference, due date, company) and below (terms) come through as text. A CSV is read as typed (no US dates, "1,000"
+  kept). The result goes through `parseEnquiry` like a paste ("From the spreadsheet"), so the items are checked before anything
+  is saved. A supplier's price sheet keeps every column, for the quote parser. RFQ files and Capture now accept the three types.
 - Photos sent as a clarification answer or as attachments are not read: they are pictures of parts, not text.
 - The paste zone on a touch screen shows a Paste button (the clipboard read where the browser allows it, else "Tap and hold in
   the box, then Paste"), never "Press Ctrl V".
@@ -89,7 +97,7 @@ goes to `readPdfText`, a picture to `readImageText`; both give text for the same
 ## The reader corpus (accuracy gate)
 
 `src/lib/docread/corpus/` generates fictional enquiries and supplier quotations (every name, part and number invented; no
-customer data in the repository) from templates in 29 generations, as the text a person pastes, as PDFs (multi-page, wrapped,
+customer data in the repository) from templates in 31 generations, as the text a person pastes, as PDFs (multi-page, wrapped,
 turned, two-column headers, watermarks) and as pictures (screenshots at 100-150%, dark mode, phone chats, JPEG, blur, 3-8° tilt,
 low contrast, shadows, scanned PDFs). `score.ts` scores every field per case (items, description, quantity, the customer's unit,
 part number, reference, due date, company; price, currency, lead time, validity, payment, incoterm per quotation line) and
@@ -99,8 +107,15 @@ per shape.
   generation written before the reader saw it, and checked once, first try. A fresh batch below 98% on any field or 95% on any
   shape became dev data and was fixed; batches 6, 29 and 30 passed first try and stay held out.
 - `corpus.test.ts` (Vitest, in CI) reads text and PDF and fails on any value below `floor.text.json`.
-- `e2e/docread/corpus.spec.ts` (CI job "e2e") renders the picture and scan cases in Chromium, reads them with the real OCR and
-  fails below `floor.ocr.json` or when a clean screenshot's median read time passes 3 s. The OCR floors are measured on CI's
+- ERP RFQ forms and Word letters, the two weakest formats, are families of their own (feat/reader-gaps, `gen29.ts`): generation
+  29, ERP forms (letterhead, boxed header, S.No / Item Code / Description / UOM / Qty / Required Date and four other column sets,
+  ERP quantities "2.000" / "1,000.000" / "0.500", Siemens / E+H / ABB-shaped part numbers, header repeated on each page, a
+  signature footer under each page, terms after the last); generation 30, Word letters (Ref and Date, "To, The Sales Manager",
+  Subject, items as "1)", "(a)", "i.", "Item No. 1:", Make / Model / Qty lines under an item, dot leaders, "2 (Two) Nos", a list in
+  one sentence, a Word table, numbered terms after the items, a second page). Batch 31 (dev) and batch 32 (held out) hold only
+  these two; both were written before the reader was changed for them and measured blind first.
+- `e2e/docread/corpus.spec.ts` (CI job "e2e", batches 0 and 32) renders the picture and scan cases in Chromium, reads them with
+  the real OCR and fails below `floor.ocr.json` or when a clean screenshot's median read time (batch 0's screenshots) passes 3 s. The OCR floors are measured on CI's
   Linux browser (fonts render differently from Windows or Mac); the run prints `OCR_VALUES {...}` to set them from.
 - Re-measure locally: `CORPUS_BATCHES=0,1,... CORPUS_OUT=report.md npx vitest run src/lib/docread/corpus`;
   `CORPUS_WRITE_FLOOR=1` writes the floors after a change that improves them.

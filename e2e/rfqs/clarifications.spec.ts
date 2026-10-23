@@ -337,8 +337,9 @@ test.describe('files (R10)', () => {
     expect(await attsOf(s.rfq.id)).toHaveLength(0)
 
     // A type that is not on the list is refused too, naming the ones that are.
-    await fileInput(page).setInputFiles({ name: 'sheet.xlsx', mimeType: 'application/vnd.ms-excel', buffer: Buffer.from('x') })
-    await expect(page.getByRole('list', { name: 'Files that were not added' })).toContainText('Only PNG, JPG, HEIC, HEIF, PDF files can be added.')
+    // (Spreadsheets are on the list since feat/reader-gaps; a Word file is not.)
+    await fileInput(page).setInputFiles({ name: 'letter.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('x') })
+    await expect(page.getByRole('list', { name: 'Files that were not added' })).toContainText('Only PNG, JPG, HEIC, HEIF, PDF, XLSX, XLS, CSV files can be added.')
     expect(await attsOf(s.rfq.id)).toHaveLength(0)
   })
 })

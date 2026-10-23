@@ -57,7 +57,7 @@ export function isSplit(parts: readonly Part[] | undefined): parts is readonly P
 }
 
 /**
- * The p_items of convert_rfq_to_order with splits. An item that is not split is exactly what buildPayload sends today, except that an
+ * The p_items of convert_rfq_to_order with splits. `typedPrices` holds the confirmed selling price of every item. An item that is not split is exactly what buildPayload sends today, except that an
  * item left on its rank-1 line may name it: the database would infer the same line, but naming it keeps what the person saw and what
  * is written the same. Every part of a split names its quote line and its quantity.
  */
@@ -70,10 +70,10 @@ export function buildSplitPayload(
   const out: ConvertPayloadLine[] = []
   for (const it of items) {
     const price: Pick<ConvertPayloadLine, 'unit_price_net'> = {}
-    if (it.quotedUnitPriceNet === null) {
-      const typed = typedPrices[it.id]
-      if (typed !== null && typed !== undefined && typed > 0) price.unit_price_net = typed
-    }
+    // The price the person confirmed in the dialog is always sent, for an unsplit item and for every part of a split one:
+    // never the RFQ item's working price, which a later quotation revision may have dropped or changed.
+    const typed = typedPrices[it.id]
+    if (typed !== null && typed !== undefined && typed > 0) price.unit_price_net = typed
     const parts = splits[it.id]
     if (isSplit(parts)) {
       const qtys = partQuantities(it.qty, parts)

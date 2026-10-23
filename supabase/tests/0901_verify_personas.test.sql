@@ -145,7 +145,8 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
-insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
+insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
+insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
@@ -157,6 +158,9 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
   (pg_temp.f('3f'), 'rfq-files', 'm/4.jpg', 'd.jpg', 'image/jpeg', 10, pg_temp.f('20'));
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
 insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M Group', 'overhead');   -- 0086
+insert into public.expense_claims (id, created_by, amount_pkr) values (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5);   -- 0087
+insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);   -- 0087
+insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);   -- 0087
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
@@ -218,6 +222,10 @@ insert into spec values
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0086
+  ('history_sources', '', $q$child_table = 'rfq_items' and parent_table = 'rfqs'$q$, 'label_col', $q$insert into public.history_sources (child_table, parent_table, parent_col, roles) values ('probe', 'probe', 'x', '{admin}')$q$),   -- 0090
+  ('expense_claims', '', 'id = @e0', 'note', $q$insert into public.expense_claims (id, amount_pkr) values (@e4, 5)$q$),   -- 0087
+  ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
+  ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$),   -- 0087
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
   ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
@@ -281,6 +289,8 @@ insert into probes values
   ('merge_companies', '', 'X', 'select public.merge_companies(@01, @02)'),
   ('merge_brands', '', 'X', 'select public.merge_brands(@13, @14)'),
   ('merge_expense_categories', '', 'X', $q$select public.merge_expense_categories(@3d, 'ca7e0000-0000-4000-8000-000000000010')$q$),   -- 0086: the fixture category into Other (both overheads)
+  ('suggest_misc_categories', '', 'X', 'select 1 where (select count(*) from public.suggest_misc_categories()) >= 0'),   -- 0091: refused for everyone but an admin
+  ('promote_misc_title', '', 'X', $q$select 1 from (select public.promote_misc_title('ca7e0000-0000-4000-8000-000000000031', 'probe title', 'Probe category') r) x where r > 0$q$),   -- 0091: the fixture expense below
   ('resolve_value_basis', '', 'X', $q$select public.resolve_value_basis(@21, 'net')$q$),
   ('model_tokens', '', 'X', $q$select public.model_tokens('ABC123')$q$),
   ('item_text_norm', '', 'X', $q$select public.item_text_norm('ABC 123')$q$),
@@ -387,13 +397,32 @@ insert into probes values
   ('receivables_list', '', 'X', $q$select * from public.receivables_list(null, null, null, true)$q$),
   ('receivables_summary', '', 'X', $q$select * from public.receivables_summary() where gross > 0$q$),
   ('today_inquiry_facts', '', 'X', $q$select * from public.today_inquiry_facts()$q$),
-  ('lookup_labels', '', 'X', $q$select 1 from (select public.lookup_labels(array[@01], array[@23], array[@20]) j) x where j::text ~ 'M Main|ORD-'$q$);
+  ('lookup_labels', '', 'X', $q$select 1 from (select public.lookup_labels(array[@01], array[@23], array[@20]) j) x where j::text ~ 'M Main|ORD-'$q$),
+  ('record_history', '', 'X', $q$select 1 where public.record_history('rfqs', @15) is not null$q$),   -- 0090
+  ('record_history_rows', '', 'X', $q$select 1 from (select set_config('qtech.history_for', 'rfqs:' || @15::text, true)) m where public.record_history_rows('rfqs', @15) is not null$q$),   -- 0090: with the mark record_history sets
+  -- 0087
+  ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
+  ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),
+  ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$),
+  ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
+  ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
+  ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
+  ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
+  ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
+  ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
 
 -- 0074 receivables: money, so an engineer is refused too (they run order_receivables()).
 select is(pg_temp.actual(f, '', 'engineer'), '', format('engineer gets nothing from %s', f))
 from unnest(array['receivables_list', 'receivables_summary']) f;
 select is(pg_temp.actual(f, '', 'sales'), 'X', format('precondition: sales get %s', f))
 from unnest(array['receivables_list', 'receivables_summary']) f;
+
+-- 0092 (owner decision: delete is permanent and admin only): the seven delete RPCs refuse sales and engineers inside the function.
+select is(pg_temp.actual(f, '', p.persona), '', format('%s is refused %s', p.persona, f))
+from unnest(array['delete_rfq', 'delete_order', 'delete_invoice', 'delete_payment', 'delete_quotation_revision',
+                  'delete_po_revision', 'delete_company']) f
+cross join (values ('sales'), ('engineer'), ('deactivated')) p (persona);
 
 -- ------------------------------------------------------------------ coverage: every object has probes
 select is((select coalesce(array_agg(t.tablename::text order by t.tablename), '{}') from pg_tables t
@@ -487,8 +516,8 @@ select is((select array_agg(p.proname::text order by p.proname::text) from pg_pr
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
           array['close_month', 'close_months_through', 'current_user_role', 'my_target_progress', 'order_receivables',
-                'receipt_locked', 'reopen_month'],
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed seven');
+                'receipt_locked', 'record_history_rows', 'reopen_month'],
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed eight (0090: record_history_rows, refused unless record_history marked the transaction)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

@@ -52,6 +52,7 @@ const toRow = (o: Order, books: Books, today: string): ReceivableRow => {
     state: r.state,
     lastRemindedOn: null,
     reminderCount: 0,
+    imported: false,
   }
 }
 
@@ -337,6 +338,7 @@ describe('record payment and receivables (money/payments/model) against the orac
           state: 'overdue',
           lastRemindedOn: reminded,
           reminderCount: 1,
+          imported: false,
         }
         const ctx = {
           today,

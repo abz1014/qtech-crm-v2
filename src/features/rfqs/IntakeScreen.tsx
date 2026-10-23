@@ -258,12 +258,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const filled = useRef({ customerRef, dueOn })
   filled.current = { customerRef, dueOn }
   const takePaste = useCallback(
-    (text: string, from: 'pdf' | 'photo' | 'paste' = 'paste') => {
+    (text: string, from: 'pdf' | 'photo' | 'sheet' | 'paste' = 'paste') => {
       const read = parseEnquiry(text)
       const result = asParseResult(read)
       setPasted({ result })
       if (result.items.length > 0) addItems(result.items, brandsRef.current)
-      const label = from === 'pdf' ? 'From the PDF' : from === 'photo' ? 'From the photo' : 'From the paste'
+      const label = from === 'pdf' ? 'From the PDF' : from === 'photo' ? 'From the photo' : from === 'sheet' ? 'From the spreadsheet' : 'From the paste'
       const { customerRef: refNow, dueOn: dueNow } = filled.current
       if (!refNow.trim() && read.facts.customerRef) {
         setCustomerRef(read.facts.customerRef.value)

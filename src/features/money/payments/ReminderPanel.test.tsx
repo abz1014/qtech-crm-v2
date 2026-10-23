@@ -35,6 +35,7 @@ const row = (o: Partial<ReceivableRow> = {}): ReceivableRow => ({
   state: 'overdue',
   lastRemindedOn: daysAgo(13),
   reminderCount: 2,
+  imported: false,
   ...o,
 })
 
@@ -84,7 +85,8 @@ describe('Payment-reminder panel (M09)', () => {
     expect(text.textContent).toContain('INV-2256')
     expect(text.textContent).toContain('PKR 1,111,600')
     expect(text.textContent).toContain('after your payment of PKR 800,000')
-    expect(text.textContent).toContain('38 days overdue')
+    expect(text.textContent).toContain('and is still unpaid')
+    expect(text.textContent).not.toMatch(/d+ days overdue/)
     expect(screen.getByText(/To/, { selector: 'span' }).textContent).toContain('Mr. Faisal Qureshi, Accounts')
     expect(screen.getByText('0300 555 0118')).toBeInTheDocument()
     expect(screen.getByTestId('reminder-state').textContent).toMatch(/Reminded 2× · last .* · 13 days ago/)
@@ -102,7 +104,7 @@ describe('Payment-reminder panel (M09)', () => {
     expect(t).toContain('Invoice total: PKR 1,911,600')
     expect(t).toContain('Received: PKR 800,000')
     expect(t).toContain('Outstanding: PKR 1,111,600')
-    expect(t).toContain('Days overdue: 38')
+    expect(t).not.toContain('Days overdue')
     expect(screen.getByText('faisal.q@indus-textile.example')).toBeInTheDocument()
   })
 

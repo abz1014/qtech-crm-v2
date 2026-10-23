@@ -125,6 +125,13 @@ export interface LegFact {
   lastChasedOn: string | null
   lastChasedBy?: string | null
   chaseCount: number
+  /**
+   * Imported from the old CRM (orders.legacy_source is set). Owner decision 2026-10-22 (1b): its order and invoicing tasks are
+   * not today's work until the one-off "Review imported" (phase 2) says the order is still live, because the imported invoices
+   * are not linked to their orders yet (so "still to invoice" is not true). They sit in Today's grey "Imported, to review" fold,
+   * never counted. A late payment on a v2 order is not one of them: it stays (on an imported order it waits in the fold, with its amount).
+   */
+  legacy?: boolean
 }
 
 /**
@@ -151,6 +158,13 @@ export interface OrderFact {
   lastInvoicedOn: string | null
   /** The latest leg delivered_on, or the commissioning done date: the day the order became deliverable-complete. Null when unknown. */
   deliveredOn: string | null
+  /**
+   * Imported from the old CRM (orders.legacy_source is set). Owner decision 2026-10-22 (1b): its order and invoicing tasks are
+   * not today's work until the one-off "Review imported" (phase 2) says the order is still live, because the imported invoices
+   * are not linked to their orders yet (so "still to invoice" is not true). They sit in Today's grey "Imported, to review" fold,
+   * never counted. A late payment on a v2 order is not one of them: it stays (on an imported order it waits in the fold, with its amount).
+   */
+  legacy?: boolean
 }
 
 export interface ReceivableFact {
@@ -165,6 +179,8 @@ export interface ReceivableFact {
   isOverdue: boolean
   lastRemindedOn: string | null
   reminderCount: number
+  /** The order was imported from the old CRM (owner decision 2026-10-22, 1): its late payment waits in the Imported fold, with its amount. v2 orders: false or absent. */
+  legacy?: boolean
 }
 
 export interface MonthEndFact {
@@ -191,6 +207,8 @@ export interface CostFact {
   basisUnknown: boolean
   /** The order was cancelled. */
   cancelled: boolean
+  /** Imported from the old CRM (orders.legacy_source is set): a settled imported order is history and raises nothing. */
+  legacy?: boolean
 }
 
 /** M08: one invoice, as v_invoice_state describes it. Admin and sales only. */
@@ -322,6 +340,10 @@ export interface TodayItem {
   collision?: { by: string; at: string }
   /** Number the list breaks ties with (RFQ or order number). */
   number: number
+  /** About an order imported from the old CRM (OrderFact.legacy): listed in the "Imported, to review" fold, never counted. */
+  imported?: boolean
+  /** Money still owed, on a payment_overdue item only (the Imported fold header sums it). */
+  amount?: number
 }
 
 export interface TodayView {
@@ -330,6 +352,13 @@ export interface TodayView {
   soon: TodayItem[]
   ready: TodayItem[]
   waiting: TodayItem[]
-  /** All active items in list order (now, soon, ready). */
+  /** All active items in list order (now, soon, ready). Never a stale item. */
   active: TodayItem[]
+  /**
+   * Older than 30 days (needsYou.ts, redesign phase 0): out of the active groups and never counted, but still listed for the
+   * person, in a grey fold ("Older than 30 days"). A late payment is never stale.
+   */
+  stale: TodayItem[]
+  /** Order tasks on imported orders (owner decision 2026-10-22, 1b): out of every group and every count, in a grey fold. */
+  imported: TodayItem[]
 }

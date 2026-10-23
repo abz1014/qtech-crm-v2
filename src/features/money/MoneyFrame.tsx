@@ -1,16 +1,13 @@
-import { lazy, memo, Suspense, useCallback, useState, type ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ChartColumn, ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
-import { usePageSettled } from '@/app/usePageSettled'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
 import { MONEY_TABS, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
 import { isMonthKey } from '@/features/money/monthKey'
-import type { MoneyCounts } from '@/features/money/MoneyTabCounts'
-import { NeedsCount } from '@/ui/Tag'
 import { PageHeader } from '@/ui/PageHeader'
 
 /*
@@ -19,21 +16,9 @@ import { PageHeader } from '@/ui/PageHeader'
  * tab, so every report page lights a tab). Desktop: one row of tabs. Phone (below 768): ONE row of short labels
  * ("Owed · Invoices · Expenses · Month end"), never a grid and never a sideways strip. Five do not fit at 320 px, so admin's
  * Reports sits beside the page action on a phone (lit when open); the phone bar names the view. No date line: the month
- * views carry their own month. A count beside a tab means "needs you", nothing else:
- *   Who owes us     exactly Today's payment items for this person: overdue, not reminded for 7 working days, routed by owner
- *                   (sales see their own orders; admin the rest), snoozes respected. It reads Today's list, which the top bar
- *                   already loads.
- *   Invoices & GST  invoices that need attention (tax not deposited after the month, a step out of order), admin and sales
- *   Month end       admin only, while the month that just ended is open: the checks with items, plus Things to check when the
- *                   reconciliation finds something; the same number the checklist page says
+ * views carry their own month. No tab carries a number (redesign phase 0, plan section (c)): the one "needs you" count is
+ * Today's, and a late payment is a row on Today (features/today/needsYou.ts).
  */
-/*
- * The counts are a component of their own (MoneyTabCounts), loaded once the page has its data (perf/lcp). The last counts this
- * person saw are kept while they load, so moving between Money's tabs does not make the numbers blink.
- */
-const MoneyTabCounts = lazy(() => import('@/features/money/MoneyTabCounts').catch(() => ({ default: () => null })))
-let lastCounts: { userId: string; counts: MoneyCounts } | null = null
-
 export function MoneyFrame({
   active,
   actions,
@@ -52,18 +37,6 @@ export function MoneyFrame({
   const role = session.status === 'signed-in' ? session.user.role : ''
   const isAdmin = role === 'admin'
   const tabs = MONEY_TABS.filter(t => isAdmin || !t.adminOnly)
-  // The tab counts read Today's list, the register and the month-end checks. They wait for the page's own reads (perf/lcp), so on
-  // a slow connection the page comes first.
-  const settled = usePageSettled()
-  const userId = session.status === 'signed-in' ? session.user.id : ''
-  const [counts, setCountsState] = useState<MoneyCounts>(() => (lastCounts?.userId === userId ? lastCounts.counts : {}))
-  const setCounts = useCallback(
-    (next: MoneyCounts) => {
-      lastCounts = { userId, counts: next }
-      setCountsState(next)
-    },
-    [userId],
-  )
   const heading = title ?? moneyTabLabel(active)
   const toOf = (t: MoneyTab) => (t.key === 'reports' && month ? `${t.to}?month=${month}` : t.to)
   // Five short labels do not fit one row at 320 px: admin's Reports sits beside the page action on a phone instead.
@@ -102,36 +75,31 @@ export function MoneyFrame({
         {phone ? (
           <nav aria-label="Money views" className="flex min-w-0 gap-[2px] rounded bg-selected p-[2px]" data-testid="money-tabs-phone">
             {phoneTabs.map(t => (
-              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} n={counts[t.key]} phone />
+              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} phone />
             ))}
           </nav>
         ) : (
           <nav aria-label="Money views" className="inline-flex max-w-full gap-[2px] justify-self-start rounded bg-selected p-[2px]" data-testid="money-tabs">
             {tabs.map(t => (
-              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} n={counts[t.key]} />
+              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
             ))}
           </nav>
         )}
       </div>
-      {settled ? (
-        <Suspense fallback={null}>
-          <MoneyTabCounts onCounts={setCounts} />
-        </Suspense>
-      ) : null}
       {children}
     </div>
   )
 }
 
-// Memo: the frame re-renders when its tab counts arrive (MoneyTabCounts), and a re-run here would replace the bar a sub-page set
-// (Month end's hideTabs) with the plain title. It re-runs only when the title changes.
+// Memo: a re-render of the frame must not replace the bar a sub-page set (Month end's hideTabs) with the plain title. It re-runs
+// only when the title changes.
 const FrameBar = memo(function FrameBar({ title }: { title: string }) {
   useMobileBar({ title })
   return null
 })
 
 /** One Money tab. A plain Link: the lit tab follows `active` (Month end stays lit on the pages reached from it), not the address. */
-function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boolean; n: number | undefined; phone?: boolean }) {
+function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolean; phone?: boolean }) {
   return (
     <Link
       to={to}
@@ -145,17 +113,6 @@ function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boo
       {/* The name is the visible words plus, for a short phone label, the full name for screen readers (WCAG 2.5.3 label in name). */}
       <span className="whitespace-nowrap">{phone ? tab.short : tab.label}</span>
       {phone && tab.short !== tab.label ? <span className="sr-only">{` (${tab.label})`}</span> : null}
-      {phone && n ? (
-        <>
-          {/* Under 360 px four labels and their counts do not fit one row: the count becomes a dot (the name still says it). */}
-          <span className="max-[359px]:sr-only">
-            <NeedsCount n={n} />
-          </span>
-          <i aria-hidden="true" className="hidden size-2 shrink-0 rounded-round bg-tone-warning-fg max-[359px]:block" />
-        </>
-      ) : (
-        <NeedsCount n={n} />
-      )}
     </Link>
   )
 }

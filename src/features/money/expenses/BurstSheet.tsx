@@ -37,6 +37,7 @@ import { InputTax } from '@/features/money/expenses/InputTax'
 import { OrderTagPicker } from '@/features/money/expenses/OrderTagPicker'
 import {
   PAID_VIA_LABEL,
+  SUPPLIER_PAYMENT_ID,
   burstInserts,
   burstTotals,
   clearRowErrors,
@@ -105,7 +106,8 @@ export function BurstSheet({ open, onOpenChange }: BurstSheetProps) {
 function BurstContent({ onClose }: { onClose: () => void }) {
   const cats = useCategories()
   const used = useMostUsedCategory()
-  const categories = cats.data
+  // Redesign phase 1: no supplier payment here (one door: Pay on the supplier order, so We owe suppliers goes down).
+  const categories = useMemo(() => cats.data?.filter(c => c.id !== SUPPLIER_PAYMENT_ID), [cats.data])
   const ready = !!categories && !used.isPending
   const today = businessToday()
   const compact = useMediaQuery('(max-width: 1023px)')
@@ -125,7 +127,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
 
   const defaults = useMemo(() => {
     const first = categories?.filter(c => c.active).sort((a, b) => a.sort - b.sort)[0]
-    return { categoryId: used.data?.id ?? first?.id ?? '', today }
+    const fav = used.data && used.data.id !== SUPPLIER_PAYMENT_ID ? used.data.id : null
+    return { categoryId: fav ?? first?.id ?? '', today }
   }, [categories, used.data, today])
 
   const [rows, setRowsState] = useState<BurstRow[]>([])

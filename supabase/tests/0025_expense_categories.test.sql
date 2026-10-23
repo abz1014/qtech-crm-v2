@@ -18,8 +18,8 @@ $f$;
 
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'expense_categories',
-  array['id', 'created_at', 'created_by', 'name', 'grp', 'default_paid_via', 'sort', 'active', 'group_id', 'monthly_budget_pkr'],
-  'expense_categories has the A6.1 columns (and 0086: group_id, monthly_budget_pkr)');
+  array['id', 'created_at', 'created_by', 'name', 'grp', 'default_paid_via', 'sort', 'active', 'group_id', 'monthly_budget_pkr', 'is_misc'],
+  'expense_categories has the A6.1 columns (and 0086: group_id, monthly_budget_pkr; 0091: is_misc)');
 select hasnt_column('public', 'expenses', 'category', 'expenses.category (text) is gone');
 select hasnt_column('public', 'recurring_expenses', 'category', 'recurring_expenses.category (text) is gone');
 select col_not_null('public', 'expenses', 'category_id', 'expenses.category_id is required');
@@ -224,7 +224,7 @@ select throws_ok($$insert into public.expense_categories (name, grp) values ('De
 -- ------------------------------------------------------------------ admin through the API
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
-select is((select count(*)::int from public.expense_categories), 24, 'admin reads all 24 categories (17 from 0025, 7 from 0086)');
+select is((select count(*)::int from public.expense_categories), 29, 'admin reads all 29 categories (17 from 0025, 7 from 0086, 5 from 0091)');
 select lives_ok($$insert into public.expenses (id, amount_pkr, category_id)
                   values ('b4000000-0000-4000-8000-0000000000a1', 40, 'ca7e0000-0000-4000-8000-000000000004')$$,
   'admin inserts an expense through the API; the category default is read despite row security');

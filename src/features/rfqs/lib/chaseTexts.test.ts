@@ -276,7 +276,7 @@ describe('payment reminder', () => {
     variant: 'whatsapp',
   }
 
-  it('writes the firmer wording as mocked once more than 30 days overdue', () => {
+  it('writes the firmer wording (without a day count) once more than 30 days overdue', () => {
     const t = generatePaymentReminder(base)
     expect(t.firm).toBe(true)
     expect(t.daysOverdue).toBe(38)
@@ -285,7 +285,7 @@ describe('payment reminder', () => {
         'Assalamu alaikum Mr. Faisal,',
         '',
         'I hope you are well.',
-        'Our records show that Sales Tax Invoice INV-2256 dated 20 September 2026 (your PO 251992) still has an outstanding balance of PKR 1,111,600 (after your payment of PKR 800,000). It was due on 20 October 2026 and is now 38 days overdue. We have reminded you twice, most recently on 14 November.',
+        'Our records show that Sales Tax Invoice INV-2256 dated 20 September 2026 (your PO 251992) still has an outstanding balance of PKR 1,111,600 (after your payment of PKR 800,000). It fell due on 20 October 2026 and is still unpaid. We have reminded you twice, most recently on 14 November.',
         '',
         'We request you to treat this as a priority and confirm the payment date by return. If there is a query on the invoice, or a document you are waiting for from us, please tell us today so that we can resolve it at once.',
         '',

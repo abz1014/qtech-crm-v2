@@ -274,6 +274,8 @@ describe('the orders list: one Next step column', () => {
     { order_id: 'b', lifecycle: 'active', goods_state: 'late', commissioning_state: 'n_a', data_trust: 'ok', invoicing_state: 'not_invoiced', gross: 1000 },
   ]
   const fake = (c: FakeCall) => {
+    // the id-only read of imported orders (legacy_source is not null): none of these are
+    if (c.target === 'orders' && c.ops.some(([m]) => m === 'not')) return { data: [] }
     if (c.target === 'orders') return { data: listRows }
     if (c.target === 'v_order_state') return { data: states }
     if (c.target === 'users') return { data: [{ id: 'u', name: 'Ayesha' }] }

@@ -37,6 +37,7 @@ import {
 } from '@/features/money/monthEnd/reportHooks'
 import {
   AGING_BUCKETS,
+  IMPORTED_GROUP_LABEL,
   BUCKET_LABEL,
   BUCKET_TITLE,
   advanceLabel,
@@ -395,10 +396,10 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           id: `b${b}`,
           header: BUCKET_LABEL[b],
           kind: 'money',
-          value: r => (r.bucket === b ? r.remaining : null),
-          ...whole<AgingRow>(r => (r.bucket === b ? r.remaining : null)),
+          value: r => (r.bucket === b && !r.importedUnlinked ? r.remaining : null),
+          ...whole<AgingRow>(r => (r.bucket === b && !r.importedUnlinked ? r.remaining : null)),
           cell: r =>
-            r.bucket === b ? (
+            r.bucket === b && !r.importedUnlinked ? (
               <span className={cn('-mx-2 inline-block rounded px-2 py-[2px]', b === '61-90' && 'bg-tone-warning-bg', b === '90+' && 'bg-tone-danger-bg')}>
                 <Money value={r.remaining} prefix={false} paisa="never" />
               </span>
@@ -407,6 +408,21 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             ),
         }),
       ),
+      {
+        id: 'imported',
+        header: IMPORTED_GROUP_LABEL,
+        kind: 'money',
+        value: r => (r.importedUnlinked ? r.remaining : null),
+        ...whole<AgingRow>(r => (r.importedUnlinked ? r.remaining : null)),
+        cell: r =>
+          r.importedUnlinked ? (
+            <span className="text-fg-2">
+              <Money value={r.remaining} prefix={false} paisa="never" />
+            </span>
+          ) : (
+            <span className="text-fg-muted">{'—'}</span>
+          ),
+      },
     ],
     [asOf],
   )
@@ -424,7 +440,21 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           sub: <>
             <Num>{v.totals[b].count}</Num> {v.totals[b].count === 1 ? 'invoice' : 'invoices'}
           </>,
-        }))}
+        })).concat(
+          v.imported.count
+            ? [
+                {
+                  label: IMPORTED_GROUP_LABEL,
+                  amount: v.imported.amount,
+                  sub: (
+                    <>
+                      <Num>{v.imported.count}</Num> {v.imported.count === 1 ? 'invoice' : 'invoices'}, not counted as late
+                    </>
+                  ),
+                },
+              ]
+            : [],
+        )}
       />
       <div className="grid">
         <DataTable
@@ -456,7 +486,8 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <span className="text-sm text-fg-2">
                 <Num>{r.invoiceNumber}</Num>
                 {r.orderRef ? <> · <Num>{r.orderRef}</Num></> : null} ·{' '}
-                <span className={cn(r.bucket === '61-90' && 'text-tone-warning-fg', r.bucket === '90+' && 'font-medium text-tone-danger-fg')}>
+                <span className={cn(!r.importedUnlinked && r.bucket === '61-90' && 'text-tone-warning-fg', !r.importedUnlinked && r.bucket === '90+' && 'font-medium text-tone-danger-fg')}>
+                  {r.importedUnlinked ? <>{IMPORTED_GROUP_LABEL}, </> : null}
                   <Num>{r.ageDays}</Num> days old
                 </span>
               </span>

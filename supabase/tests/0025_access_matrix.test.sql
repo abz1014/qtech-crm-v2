@@ -118,7 +118,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'brands',              '',           'SIUD', 'SIU',  'SIU'),  -- s10 "brands"
   ('table', 'company_brands',      '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "company_brands"
   ('table', 'rfqs',                '',           'SIUD', 'SIU',  'SIU'),  -- s10 "rfqs"
-  ('table', 'rfq_items',           '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "rfq_items"
+  ('table', 'rfq_items',           '',           'SIUD', 'SIUD', 'SIU'),  -- s10 "rfq_items"; 0092: staff delete an item of an RFQ they entered or own (the fixture RFQ is the sales person's), an engineer's delete of someone else's is refused
   ('table', 'supplier_inquiries',  'unsent',     'SIUD', 'SIUD', 'SIUD'), -- s10 "supplier_inquiries" note 1: staff delete while sent_on is empty
   ('table', 'supplier_inquiries',  'sent',       'SIUD', 'SIU',  'SIU'),  -- s10 "supplier_inquiries": SIU + D only while sent_on is empty
   ('table', 'supplier_quote_lines','',           'SIUD', 'SIUD', 'SIUD'), -- s10 "supplier_quote_lines"
@@ -169,6 +169,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'receivables_summary',     '',    'X',    'X',    ''),     -- 0074: the Who-owes-us figures in one row; order_receivables() access
   ('function', 'today_inquiry_facts',     '',    'X',    'X',    'X'),    -- 0074: Today's enquiry facts in one call, SECURITY INVOKER, all staff
   ('function', 'lookup_labels',           '',    'X',    'X',    'X'),    -- 0074: names for id lists sent in the body, SECURITY INVOKER, all staff (row security applies)
+  ('function', 'record_history',          '',    'X',    'X',    'X'),    -- 0090: the history of a record the caller can open (SECURITY INVOKER; an engineer gets no price column)
+  ('function', 'record_history_rows',     '',    'X',    'X',    'X'),    -- 0090: the definer reader behind it; refuses unless record_history marked the transaction
   ('function', 'my_target_progress',      '',    'X',    'X',    'X'),    -- s10 "my_target_progress() (definer)"
   ('function', 'my_target_progress_at',   '',    '',     '',     ''),     -- A4: test seam granted to nobody
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
@@ -179,6 +181,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'merge_companies',         '',    'X',    '',     ''),     -- s10 "RPCs merge_companies, merge_brands, resolve_value_basis"
   ('function', 'merge_brands',            '',    'X',    '',     ''),     -- s10 (same row)
   ('function', 'merge_expense_categories', '',   'X',    '',     ''),     -- 0086: admin only (42501 for everyone else)
+  ('function', 'suggest_misc_categories', '',    'X',    '',     ''),     -- 0091: admin only (42501 for everyone else)
+  ('function', 'promote_misc_title',      '',    'X',    '',     ''),     -- 0091: admin only (42501 for everyone else)
   ('function', 'resolve_value_basis',     '',    'X',    '',     ''),     -- s10 (same row)
   ('function', 'model_tokens',            '',    'X',    'X',    'X'),    -- s10 "model_tokens()"
   ('function', 'item_text_norm',          '',    'X',    'X',    'X'),    -- A5: helper, all staff
@@ -228,6 +232,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'today_pkt',               '',    'X',    'X',    'X'),    -- NOT in s10: pure date helper
   ('table', 'expense_categories',  '',           'SIUD', '',     ''),     -- A6 s10 "expense_categories": admin only, delete blocked while in use
   ('table', 'expense_groups',      '',           'SIUD', '',     ''),     -- 0086: the first level of the expense list, admin only
+  ('table', 'history_sources',    '',           'S',    'S',    'S'),    -- 0090: which child tables show under a record's history; read-only for all staff
   ('table', 'closed_months',       '',           'S',    '',     ''),     -- A6 s10 "closed_months": admin reads; written only through the admin RPCs
   ('table', 'month_snapshots',     '',           'S',    '',     ''),     -- 0058 (owner decision D-MR2): a closed month's frozen figures; admin reads, written only by the close trigger
   ('table', 'attachments',         'expense',    'SIUD', '',     ''),     -- A6 s10 "attachments (parent is an expense)": admin only
@@ -267,7 +272,23 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
   ('table', 'orders',            'owner_id', 'U', '', ''),               -- 0065 (M-2): who owns an order (and gets its payments' credit) is changed by an admin
   ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
-  ('function', 'receipt_locked', '', 'X', 'X', '');                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
+  ('function', 'receipt_locked', '', 'X', 'X', ''),                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
+  ('table', 'expense_claims',    'own',   'SUD',  '',     'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; sales nothing
+  ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
+  ('table', 'cash_topups',       '',      'SIUD', '',     ''),            -- 0087: cash drawn from the bank, admin only
+  ('table', 'cash_counts',       '',      'SID',  '',     ''),            -- 0087: cash counts, admin only, never edited (delete and count again)
+  ('function', 'approve_expense_claim', '', 'X',  '',     ''),            -- 0087: admin only (42501 for everyone else)
+  ('function', 'cash_in_hand',   '',      'X',    '',     ''),            -- 0087: admin only (no row for the others)
+  ('function', 'claim_object_ok', '',     'X',    '',     'X'),           -- 0087: storage helper; true for the admin and for the engineer on their own pending claim
+  ('function', 'delete_rfq',            '',    'X',    '',     ''),     -- 0092 (owner decision): permanent delete, admin only (42501 inside for everyone else)
+  ('function', 'delete_order',          '',    'X',    '',     ''),     -- 0092: admin only
+  ('function', 'delete_invoice',        '',    'X',    '',     ''),     -- 0092: admin only
+  ('function', 'delete_payment',        '',    'X',    '',     ''),     -- 0092: admin only
+  ('function', 'delete_quotation_revision', '', 'X',  '',     ''),     -- 0092: admin only
+  ('function', 'delete_po_revision',    '',    'X',    '',     ''),     -- 0092: admin only
+  ('function', 'delete_company',        '',    'X',    '',     ''),     -- 0092: admin only
+  ('bucket', 'claim-receipts',   'own',   'SID',  '',     'SID'),         -- 0087: receipt photos under <claim id>/: the admin, and the engineer on their own pending claim
+  ('bucket', 'claim-receipts',   'other', 'SID',  '',     '');            -- 0087: another person's claim photos are closed to an engineer
 
 -- ------------------------------------------------------------------ fixtures (as the table owner, admin claims)
 -- Row ids are written in hex and appear in the probes as @NN (same two hex digits).
@@ -317,7 +338,8 @@ insert into public.payments_in (id, order_id, amount, voided_at, voided_by, void
 insert into public.orders (id, company_id, owner_id, cancelled_on) values   -- 0080: a cancelled, never-invoiced order holding an advance
   (pg_temp.f('2e'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', public.today_pkt());
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('2f'), pg_temp.f('2e'), 40);
-insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
+insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
+insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
@@ -330,6 +352,14 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
 insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M Group', 'overhead');   -- 0086
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
+-- 0087: a pending claim of the engineer (@e0) and one of the admin's (@e1), cash drawn and an opening count, and their photos
+insert into public.expense_claims (id, created_by, amount_pkr, note) values
+  (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5, 'engineer claim'),
+  (pg_temp.f('e1'), 'a0000000-0000-4000-8000-000000000001', 5, 'other claim');
+insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);
+insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);
+insert into storage.objects (bucket_id, name) values
+  ('claim-receipts', pg_temp.f('e0')::text || '/r.jpg'), ('claim-receipts', pg_temp.f('e1')::text || '/r.jpg');
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
 select u, 'r', pg_temp.f('2d'), public.today_pkt() + 3
@@ -386,10 +416,11 @@ insert into spec values
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
-  ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000010')$q$),
+  ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000005')$q$),
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0086
+  ('history_sources', '', $q$child_table = 'rfq_items' and parent_table = 'rfqs'$q$, 'label_col', $q$insert into public.history_sources (child_table, parent_table, parent_col, roles) values ('probe', 'probe', 'x', '{admin}')$q$),   -- 0090
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
   ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
@@ -406,7 +437,11 @@ insert into spec values
   ('fx_fetch_log', '', 'id = @3e', 'detail', $q$insert into public.fx_fetch_log (kind, detail) values ('info', 'probe')$q$),   -- R23 (0038)
   ('quotations', '', 'id = @3a', 'pdf_path', $q$insert into public.quotations (id, rfq_id, number, revision, valid_until, lines) values (@b4, @16, 7101, 0, current_date + 1, '[{"qty":1,"unit_price_net":1,"gst_rate":0}]')$q$),
   ('purchase_orders', '', 'id = @3b', 'pdf_path', $q$insert into public.purchase_orders (id, supplier_order_id, number, revision, currency, total, lines) values (@b5, @24, 7102, 0, 'USD', 0, '[{"qty":1,"unit_price":1}]')$q$),
-  ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$);
+  ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$),
+  ('expense_claims', 'own', 'id = @e0', 'note', $q$insert into public.expense_claims (id, amount_pkr) values (@e4, 5)$q$),   -- 0087
+  ('expense_claims', 'other', 'id = @e1', 'note', null),   -- 0087: a claim is always the caller's own, so "someone else's" cannot be inserted
+  ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
+  ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$);   -- 0087
 
 
 insert into probes
@@ -447,6 +482,8 @@ insert into probes values
   ('receivables_summary', '', 'X', 'select * from public.receivables_summary()'),   -- 0074: one row for admin and sales, none for a deactivated user
   ('today_inquiry_facts', '', 'X', 'select * from public.today_inquiry_facts()'),   -- 0074: @1a is sent and awaiting on the open RFQ @15
   ('lookup_labels', '', 'X', $q$select 1 where public.lookup_labels(array[@01]) -> 'companies' ? @01::text$q$),   -- 0074: row security hides the name from a deactivated user
+  ('record_history', '', 'X', $q$select 1 where public.record_history('rfqs', @15) is not null$q$),   -- 0090
+  ('record_history_rows', '', 'X', $q$select 1 from (select set_config('qtech.history_for', 'rfqs:' || @15::text, true) as s) m where public.record_history_rows('rfqs', @15, null, case when m.s is null then 50 else 50 end) is not null$q$),   -- 0090: with the mark record_history sets
   ('my_target_progress', '', 'X', 'select * from public.my_target_progress()'),
   ('my_target_progress_at', '', 'X', 'select * from public.my_target_progress_at(now())'),
   ('float_rfq', '', 'X', $q$select public.float_rfq(@c0, @01, '[{"description":"x"}]'::jsonb)$q$),
@@ -457,6 +494,8 @@ insert into probes values
   ('merge_companies', '', 'X', 'select public.merge_companies(@01, @02)'),
   ('merge_brands', '', 'X', 'select public.merge_brands(@13, @14)'),
   ('merge_expense_categories', '', 'X', $q$select public.merge_expense_categories(@3d, 'ca7e0000-0000-4000-8000-000000000010')$q$),   -- 0086: the fixture category into Other (both overheads)
+  ('suggest_misc_categories', '', 'X', 'select 1 where (select count(*) from public.suggest_misc_categories()) >= 0'),   -- 0091: refused for everyone but an admin
+  ('promote_misc_title', '', 'X', $q$select 1 from (select public.promote_misc_title('ca7e0000-0000-4000-8000-000000000031', 'probe title', 'Probe category') r) x where r > 0$q$),   -- 0091: the fixture expense below
   ('resolve_value_basis', '', 'X', $q$select public.resolve_value_basis(@21, 'net')$q$),
   ('model_tokens', '', 'X', $q$select public.model_tokens('ABC123')$q$),
   ('item_text_norm', '', 'X', $q$select public.item_text_norm('ABC 123')$q$),
@@ -515,7 +554,17 @@ insert into probes values
   ('revoke_user_sessions', '', 'X', $q$select public.revoke_user_sessions(gen_random_uuid())$q$),   -- A01
   ('void_payment', '', 'X', $q$select public.void_payment(@28, 'probe')$q$),   -- 0073
   ('correct_payment', '', 'X', $q$select public.correct_payment(@28, 100, public.today_pkt(), 'bank', null, 'probe')$q$),   -- 0073
-  ('restore_payment', '', 'X', $q$select public.restore_payment(@c0)$q$);   -- 0073: @c0 was voided by the admin in this transaction
+  ('restore_payment', '', 'X', $q$select public.restore_payment(@c0)$q$),   -- 0073: @c0 was voided by the admin in this transaction
+  ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),   -- 0087
+  ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),   -- 0087: one row for the admin, none for the others
+  ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', true)$q$),   -- 0087
+  ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
+  ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
+  ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
+  ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
+  ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
+  ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
 
 -- ------------------------------------------------------------------ probes: storage buckets
 -- Storage refuses a direct SQL DELETE on storage.objects for every role (its protect_delete guard fires before row
@@ -536,6 +585,21 @@ select b, '', 'D', format($q$select 1 from storage.objects where bucket_id = '%s
   (select string_agg('(' || coalesce(pl.qual, 'false') || ')', ' or ') from pg_policies pl
    where pl.schemaname = 'storage' and pl.tablename = 'objects' and pl.cmd = 'DELETE'))
 from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts']) b;
+-- 0087: claim-receipts holds files under <claim id>/; "own" is the engineer's pending claim @e0, "other" the admin's @e1.
+insert into probes
+select 'claim-receipts', v, 'S', format($q$select 1 from storage.objects where bucket_id = 'claim-receipts' and name = %s::text || '/r.jpg'$q$, c)
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c)
+union all
+select 'claim-receipts', v, 'I', format($q$insert into storage.objects (bucket_id, name) values ('claim-receipts', %s::text || '/p.jpg')$q$, c)
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c)
+union all
+select 'claim-receipts', v, 'U', format($q$update storage.objects set name = name where bucket_id = 'claim-receipts' and name = %s::text || '/r.jpg'$q$, c)
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c)
+union all
+select 'claim-receipts', v, 'D', format($q$select 1 from storage.objects where bucket_id = 'claim-receipts' and name = %s::text || '/r.jpg' and (%s)$q$, c,
+  (select string_agg('(' || coalesce(pl.qual, 'false') || ')', ' or ') from pg_policies pl
+   where pl.schemaname = 'storage' and pl.tablename = 'objects' and pl.cmd = 'DELETE'))
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c);
 
 -- 0057 (H-1): issued PDFs and attached pdf_path values.
 insert into probes values
@@ -551,8 +615,8 @@ insert into probes values
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (34)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 34, 'coverage: 34 tables');
+  'coverage: the matrix lists every table in schema public (38)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 38, 'coverage: 38 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

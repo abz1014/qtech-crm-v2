@@ -30,7 +30,7 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     const sales = page(header(), both, items, 'sales')
     expect(sales.primary).toMatchObject({ kind: 'chase-goods', label: 'Chase goods', supplierName: 'Dubai Instrumentation' })
     expect(sales.text).toBe('Goods from Dubai Instrumentation are 3 days late')
-    expect(sales.step.tone).toBe('late')
+    expect(sales.step.tone).toBe('now') // amber: late goods are our own pace; red is for late money and promises (redesign phase 0)
     expect(page(header(), both, items, 'engineer').primary).toMatchObject({ kind: 'deliver', label: 'Delivered today' })
   })
 
@@ -121,5 +121,14 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
 
   it('a cancelled order has no primary step', () => {
     expect(page(header({ cancelledOn: '2026-11-19' }), [legRow('a')], [item('1', 'a')]).primary).toBeNull()
+  })
+})
+
+describe('the order page for an imported order', () => {
+  it('has no green button and says it is to review', () => {
+    const r = page(header({ imported: true }, { goods: 'to_place' }), [legRow('a')], [item('1', 'a')])
+    expect(r.step.kind).toBe('review-imported')
+    expect(r.primary).toBeNull()
+    expect(r.text).toBe('Imported, to review')
   })
 })

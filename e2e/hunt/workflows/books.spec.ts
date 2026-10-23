@@ -145,6 +145,15 @@ const signedInApp = async (page: Page) => !new URL(page.url()).pathname.startsWi
 async function closedMonths(): Promise<string[]> {
   return (await db.rows<{ month: string }>('closed_months?select=month')).map(r => r.month)
 }
+/**
+ * Months lock one at a time, oldest first (owner decision 2026-10-22): close every open month with money in it before `month`,
+ * one by one, so the Month-end button for `month` names `month`. reopenSince undoes it.
+ */
+async function closeOlderThan(month: string): Promise<void> {
+  const shut = await closedMonths()
+  const months = [...new Set((await db.view<{ month: string }>('v_month_pnl?select=month')).map(r => r.month))]
+  for (const m of months.filter(x => x < month && !shut.includes(x)).sort()) await db.adminRpc('close_month', { p_month: m })
+}
 /** Reopen every month closed since `before`, latest first. */
 async function reopenSince(before: string[]): Promise<void> {
   const now = await closedMonths()
@@ -622,6 +631,7 @@ test('books: two admins, one closes last month while the other has Add expense o
       await bd.getByRole('button', { name: 'Add a detail' }).click()
       await bd.getByRole('combobox', { name: 'Detail' }).fill(descC)
     })
+    await closeOlderThan(M1.start)
     // admin C: a Month-end page opened now, used after A has closed (stale)
     const c = await open(ctxC, info, `/money/month-end?month=${M1.key}`, 'admin C', [400])
 
@@ -629,12 +639,12 @@ test('books: two admins, one closes last month while the other has Add expense o
       await visit(a, info, `/money/month-end?month=${M1.key}`, 'month-end A')
       await layout(a, info, 'month-end desktop open')
       await shot(a, 'books-month-end-open')
-      await a.getByRole('button', { name: new RegExp(`^Close (through )?${M1.name}$`) }).click({ timeout: 10_000 })
+      await a.getByRole('button', { name: `Close ${M1.name}`, exact: true }).click({ timeout: 10_000 })
       const dlg = a.getByRole('dialog', { name: `Close ${M1.label}?` })
       await dlg.waitFor({ timeout: 10_000 })
       await layout(a, info, 'close dialog')
       await shot(a, 'books-close-dialog')
-      await dlg.getByRole('button', { name: new RegExp(`^Close (through )?${M1.name}$`) }).dblclick()
+      await dlg.getByRole('button', { name: `Close ${M1.name}`, exact: true }).dblclick()
       await a.getByTestId('lock-bar').waitFor({ timeout: 15_000 })
       if ((await a.getByText('The month was not closed').count()) > 0) note(info, { kind: 'observation', where: 'close double-click', what: 'an error banner after a double-click on Close' })
       if (!(await closedMonths()).includes(M1.start)) throw new Error('the month is not in closed_months')
@@ -654,11 +664,11 @@ test('books: two admins, one closes last month while the other has Add expense o
     })
 
     await probe(info, c, 'admin C on a stale Month-end page presses Close', async () => {
-      const btn = c.getByRole('button', { name: new RegExp(`^Close (through )?${M1.name}$`) })
+      const btn = c.getByRole('button', { name: `Close ${M1.name}`, exact: true })
       if (!(await btn.isVisible({ timeout: 3_000 }).catch(() => false))) return
       await btn.click()
       const dlg = c.getByRole('dialog', { name: `Close ${M1.label}?` })
-      await dlg.getByRole('button', { name: new RegExp(`^Close (through )?${M1.name}$`) }).click({ timeout: 10_000 })
+      await dlg.getByRole('button', { name: `Close ${M1.name}`, exact: true }).click({ timeout: 10_000 })
       await sleep(2000)
       note(info, { kind: 'observation', where: 'stale close', what: `a second admin closing an already-closed month sees: ${(await c.locator('body').innerText()).replace(/\s+/g, ' ').match(/(closed|could not|went wrong)[^.]*\./gi)?.slice(0, 3).join(' | ') ?? 'nothing'}` })
       await c.keyboard.press('Escape')

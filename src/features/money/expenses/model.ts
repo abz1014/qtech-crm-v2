@@ -173,6 +173,15 @@ export function shiftMonth(key: string, by: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
+/**
+ * The month a monthly bill paid on `paidOn` is for (0087 for-month): last month when paid on day 1 to 10 (September's salary on
+ * 5 October), else the month paid ("2026-10-05" -> "2026-09", "2026-10-22" -> "2026-10").
+ */
+export function forMonthOf(paidOn: string): string {
+  const day = Number(paidOn.slice(8, 10))
+  return day >= 1 && day <= 10 ? shiftMonth(monthKey(paidOn), -1) : monthKey(paidOn)
+}
+
 /** "2026-11" to "November 2026". */
 export const monthKeyLabel = (key: string): string => monthLabel(monthStart(key))
 export const monthKeyShort = (key: string): string => `${monthLabel(monthStart(key)).slice(0, 3)} ${key.slice(0, 4)}`
@@ -264,7 +273,8 @@ export interface ExpenseInsert {
   order_id?: string | null
   /** Present only for an "Every month" row: its template and the month it pays. */
   recurring_id?: string
-  period?: string
+  /** The month it is for: an "Every month" row's, or a monthly bill's (0087 for-month). */
+  period?: string | null
 }
 
 export function burstInserts(rows: readonly BurstRow[], categories: readonly Category[]): ExpenseInsert[] {
@@ -277,7 +287,8 @@ export function burstInserts(rows: readonly BurstRow[], categories: readonly Cat
     description: cleanDetail(r.note),
     input_tax_pkr: showsInputTax(r.categoryId) ? (r.inputTax ?? 0) : 0,
     ...(r.orderId ? { order_id: r.orderId } : {}),
-    ...(r.repeat && r.templateId ? { recurring_id: r.templateId, period: monthKey(r.date) } : {}),
+    // 0087: a bill paid by the 10th is for last month, the month its template is then due for (billPeriod)
+    ...(r.repeat && r.templateId ? { recurring_id: r.templateId, period: forMonthOf(r.date) } : {}),
   }))
 }
 
@@ -301,7 +312,7 @@ export function repeatTemplates(rows: readonly BurstRow[], categories: readonly 
       categoryId: r.categoryId,
       amount: r.amount as number,
       dayOfMonth: Math.min(Number(r.date.slice(8, 10)) || 1, 28),
-      startMonth: monthKey(r.date),
+      startMonth: forMonthOf(r.date),
       paidVia: effectivePaidVia(r, categories),
     }))
 }
@@ -389,6 +400,8 @@ export interface ListedExpense {
   payeeId: string | null
   recurringId: string | null
   bankMonth: string | null
+  /** The month a monthly bill is for ("2026-09", 0087 for-month); null: the month it was paid in. */
+  period: string | null
 }
 
 export interface ExpenseFilters {

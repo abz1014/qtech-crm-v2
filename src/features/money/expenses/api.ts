@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { businessDaysFromNow } from '@/lib/dates'
 import { orderRef } from '@/lib/refs'
+import { PlainError } from '@/lib/errors/plainError'
 import type { TableRow } from '@/features/dbTypes'
 import { lookupLabels, type Labels } from '@/features/money/lookupLabels'
 import {
@@ -66,12 +67,13 @@ export async function listGroups(): Promise<ExpenseGroup[]> {
  */
 export async function listExpensesBetween(fromMonth: string, toMonth: string): Promise<ExpenseListing> {
   const db = requireSupabase()
+  // 0087: also the bills paid outside the months but FOR them (September's salary paid on 5 October), which the report counts in
+  // the month they are for.
   const raw = await fetchAll<TableRow<'expenses'>>((from, to) =>
     db
       .from('expenses')
       .select('*')
-      .gte('paid_on', monthStart(fromMonth))
-      .lte('paid_on', monthEnd(toMonth))
+      .or(`and(paid_on.gte.${monthStart(fromMonth)},paid_on.lte.${monthEnd(toMonth)}),and(period.gte.${fromMonth},period.lte.${toMonth})`)
       .order('paid_on', { ascending: true })
       .order('created_at', { ascending: true })
       .range(from, to),
@@ -96,6 +98,7 @@ const toListed = (r: TableRow<'expenses'>): ListedExpense => ({
   payeeId: r.payee_id,
   recurringId: r.recurring_id,
   bankMonth: r.bank_month,
+  period: r.period,
 })
 
 export interface ExpenseListing {
@@ -162,7 +165,7 @@ export async function lastCategoryForOrder(orderId: string): Promise<string | nu
  * One atomic bulk insert. Every row carries its client id and the request is an upsert that ignores duplicates, so a
  * double submit (or a retry after a dropped reply) adds nothing twice. The month lock refuses the whole request.
  */
-export async function insertExpenses(rows: readonly (ExpenseInsert & Partial<TagColumns>)[]): Promise<void> {
+export async function insertExpenses(rows: readonly (ExpenseInsert & Partial<TagColumns> & { fx_currency?: string; fx_amount?: number })[]): Promise<void> {
   const db = requireSupabase()
   const { error } = await db.from('expenses').upsert([...rows], { onConflict: 'id', ignoreDuplicates: true })
   if (error) throw error
@@ -176,6 +179,8 @@ export interface TagColumns {
 }
 
 export interface ExpensePatch {
+  /** 0087: the month a monthly bill is for; null for the month paid. Left out: unchanged. */
+  period?: string | null
   amount_pkr: number
   category_id: string
   paid_on: string
@@ -196,8 +201,10 @@ export async function updateExpense(id: string, patch: ExpensePatch): Promise<vo
 export async function deleteExpense(id: string): Promise<void> {
   const db = requireSupabase()
   const files = unwrap(await db.from('attachments').select('path').eq('expense_id', id)) ?? []
-  const { error } = await db.from('expenses').delete().eq('id', id)
+  const { data, error } = await db.from('expenses').delete().eq('id', id).select('id')
   if (error) throw error
+  // Row security hides a row the person may not delete: no error, no row. That is not a delete.
+  if (!data || data.length === 0) throw new PlainError('Not deleted. You may not have permission, or the month is closed.')
   // The rows went with the expense (cascade); the stored photos are removed by the app.
   if (files.length) await db.storage.from(RECEIPT_BUCKET).remove(files.map(f => f.path))
 }
@@ -299,13 +306,21 @@ export interface LegOption {
   label: string
   supplierId: string
   supplierName: string
+  /** The supplier order's currency (Pay asks the amount in it); null when not set. */
+  currency: string | null
 }
 
 export async function listLegOptions(orderId: string): Promise<LegOption[]> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('supplier_orders').select('id, supplier_id, created_at').eq('order_id', orderId).order('created_at')) ?? []
+  const rows = unwrap(await db.from('supplier_orders').select('id, supplier_id, created_at, currency').eq('order_id', orderId).order('created_at')) ?? []
   const names = await companyNames([...new Set(rows.map(r => r.supplier_id))])
-  return rows.map((r, i) => ({ id: r.id, label: `supplier order ${String.fromCharCode(65 + i)}`, supplierId: r.supplier_id, supplierName: names[r.supplier_id] ?? '' }))
+  return rows.map((r, i) => ({
+    id: r.id,
+    label: `supplier order ${String.fromCharCode(65 + i)}`,
+    supplierId: r.supplier_id,
+    supplierName: names[r.supplier_id] ?? '',
+    currency: r.currency ?? null,
+  }))
 }
 
 // ------------------------------------------------------------------ recurring templates
@@ -326,6 +341,45 @@ export async function listRecurring(): Promise<RecurringTemplate[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.from('recurring_expenses').select('*').order('label')) ?? []
   return rows.map(toTemplate)
+}
+
+/** Template ids already recorded, per period, for the periods asked ("2026-09", "2026-10"): what Monthly bills and quick add read. */
+export async function recordedRecurringFor(periods: readonly string[]): Promise<Map<string, Set<string>>> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('expenses').select('recurring_id, period').in('period', [...periods]).not('recurring_id', 'is', null)) ?? []
+  const out = new Map<string, Set<string>>(periods.map(p => [p, new Set<string>()]))
+  for (const r of rows) if (r.period && r.recurring_id) out.get(r.period)?.add(r.recurring_id)
+  return out
+}
+
+/**
+ * What a supplier order still needs, for the Pay dialog: its committed amount and currency and the PKR still owed (We owe suppliers,
+ * payables_as_of), and what was already paid in its own currency. Null fields when the order is not placed or not priced yet.
+ */
+export interface LegPayState {
+  currency: string | null
+  committed: number | null
+  owedPkr: number | null
+  paidFx: number
+  paidPkr: number
+}
+
+export async function legPayState(legId: string, today: string): Promise<LegPayState> {
+  const db = requireSupabase()
+  const [owe, paid] = await Promise.all([
+    db.rpc('payables_as_of', { p_date: today }).eq('supplier_order_id', legId),
+    db.from('expenses').select('amount_pkr, input_tax_pkr, fx_amount, fx_currency').eq('supplier_order_id', legId).eq('category_id', 'ca7e0000-0000-4000-8000-000000000011'),
+  ])
+  const row = (unwrap(owe) ?? [])[0]
+  const payments = unwrap(paid) ?? []
+  const currency = row?.currency ?? null
+  return {
+    currency,
+    committed: row?.committed === null || row?.committed === undefined ? null : Number(row.committed),
+    owedPkr: row?.owed_pkr === null || row?.owed_pkr === undefined ? null : Number(row.owed_pkr),
+    paidFx: payments.filter(p => currency && p.fx_currency === currency).reduce((s, p) => s + Number(p.fx_amount ?? 0), 0),
+    paidPkr: payments.reduce((s, p) => s + Number(p.amount_pkr) - Number(p.input_tax_pkr), 0),
+  }
 }
 
 /** Template ids already recorded for a period ("2026-11"). */

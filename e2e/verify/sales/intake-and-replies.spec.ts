@@ -186,6 +186,7 @@ test('prices in three currencies are stored with the rate of the day and ranked 
   await setRates({ EUR: 300.5, USD: 280.25 })
   const r = await rfq({ items: [{ description: `Hart pressure transmitter 0-40 bar ${letters()}`, qty: 2, unit: 'nos' }] })
   await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { quoted_unit_price_net: 36500 })
+  await db.adminRpc('issue_quotation', { p_quotation_id: crypto.randomUUID(), p_rfq_id: r.rfq.id })
   const germany = await supplier('Verify Keller Messtechnik', 'Germany')
   const lahore = await supplier('Verify Lahore Instruments', 'Pakistan')
   const houston = await supplier('Verify Houston Controls', 'United States')

@@ -1,7 +1,7 @@
 import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
 import { STATUS, type StepTone } from '@/lib/status'
-import { daysOverdue, dueWord } from '@/lib/timeWords'
+import { COUNT_WORDS_MAX_DAYS, daysOverdue, dueWord } from '@/lib/timeWords'
 
 /*
  * The RFQ board's pure rules (R06, then the UX audit of 2026-10-19): what is sorted first, what the one filter keeps, how a due
@@ -219,7 +219,8 @@ export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'> &
   const n = r.daysToDue
   // The Next step column already says "Quotation sent · Sent Thu 22 Oct": the date stands alone, neutral.
   if (r.quotedOn) return { date, hint: '', tone: 'normal' }
-  if (r.isOverdue) return { date, hint: daysOverdue(n ?? 0), tone: 'danger' }
+  // Red only for a promise to the customer that slipped within the last 30 days (redesign phase 0); older reads plain, no count.
+  if (r.isOverdue) return -(n ?? 0) > COUNT_WORDS_MAX_DAYS ? { date, hint: 'Over 30 days late', tone: 'normal' } : { date, hint: daysOverdue(n ?? 0), tone: 'danger' }
   if (n === null) return { date, hint: '', tone: 'normal' }
   if (n <= 1) return { date, hint: dueWord(Math.max(0, n)), tone: 'warning' }
   return { date, hint: dueWord(n), tone: 'normal' }

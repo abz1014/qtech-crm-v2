@@ -430,11 +430,13 @@ const UNIT_AFTER_RE = /^\s*(?:\/\s*(?:pc|pcs|piece|unit|no|nos|ea|each|set|m|mtr
 const FOR_QTY_RE = /^\s*(?:for|x|×)\s*(\d+)\s*(?:pcs|pc|nos|no|units|sets|set|pieces)?\b/i
 
 function findQty(w: string): { value: number } & Span | null {
-  let m = /(?:\bqty|\bquantity|\bq'ty)\s*[:=]?\s*(\d+)\b/i.exec(w)
-  if (!m) m = /(?<![A-Za-z0-9.,])(\d{1,5})\s*(?:pcs|pc|nos|units|sets|set|pieces)\b/i.exec(w)
+  // "Qty: 1,000", "Qty 2.5", "1,000 pcs", "4 adad" (Urdu, pieces), and a length or weight with its point ("0.5 m", "2.5 kg").
+  let m = /(?:\bqty|\bquantity|\bq'ty)\s*[:=]?\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?![\d,])/i.exec(w)
+  if (!m) m = /(?<![A-Za-z0-9.,])(\d{1,3}(?:,\d{3})+|\d{1,5})\s*(?:pcs|pc|nos|units|sets|set|pieces|adad)\b/i.exec(w)
+  if (!m) m = /(?<![A-Za-z0-9.,/-])(\d{1,4}\.\d{1,3}|\d{1,5})\s*(?:mtrs?|meters?|metres?|kgs?)\b/i.exec(w)
   if (!m) m = /(?<![A-Za-z0-9])[x×]\s*(\d{1,5})\b(?!\s*[x×\d])/i.exec(w)
   if (!m) return null
-  return { value: Number(m[1]), start: m.index, end: m.index + m[0].length }
+  return { value: Number((m[1] as string).replace(/,/g, '')), start: m.index, end: m.index + m[0].length }
 }
 
 /** Replaces codes, sizes, dates, phone numbers and percentages with spaces so their digits are not read as prices. */
@@ -816,7 +818,7 @@ function analyseRow(cells: string[], cols: TableCols, today: string | undefined)
   if (t) prices.push({ ...t, kind: 'total', currency: t.currency ?? curCell })
   f.prices = prices
   const q = cell(cols.qty)
-  if (/^\d+$/.test(q)) f.qty = Number(q)
+  if (/^(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d{1,3})?)$/.test(q)) f.qty = Number(q.replace(/,/g, ''))
   if (cols.lead >= 0 && !f.lead) {
     const lc = cell(cols.lead)
     const direct = findLeadTime(lc.replace(/[–—−]/g, '-'), lc)

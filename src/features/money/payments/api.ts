@@ -52,7 +52,7 @@ export async function fetchReceivablesList(args: ReceivablesListArgs = {}): Prom
   )
 }
 
-export const toReceivableRow = (r: ReceivablesListRow): ReceivableRow => ({
+export const toReceivableRow = (r: ReceivablesListRow, imported = false): ReceivableRow => ({
   orderId: r.order_id,
   orderNumber: Number(r.order_number),
   companyId: r.company_id,
@@ -68,6 +68,7 @@ export const toReceivableRow = (r: ReceivablesListRow): ReceivableRow => ({
   state: (r.payment_state as PaymentState) ?? 'unpaid',
   lastRemindedOn: r.last_reminded_on,
   reminderCount: num(r.reminder_count),
+  imported,
 })
 
 /**
@@ -76,7 +77,21 @@ export const toReceivableRow = (r: ReceivablesListRow): ReceivableRow => ({
  * real; owner decision 2026-10-19), so this list and Today's "payment overdue" agree.
  */
 export async function listReceivables(): Promise<ReceivableRow[]> {
-  return (await fetchReceivablesList({ p_with_value: true })).map(toReceivableRow)
+  const [rows, imported] = await Promise.all([fetchReceivablesList({ p_with_value: true }), fetchImportedOrderIds()])
+  return rows.map(r => toReceivableRow(r, imported.has(r.order_id)))
+}
+
+/** Ids of orders imported from the old CRM (legacy_source set), id only: their invoices are not linked to them yet (owner decision 1b). */
+export async function fetchImportedOrderIds(): Promise<Set<string>> {
+  const db = requireSupabase()
+  const rows = await fetchAll<{ id: string }>(
+    (from, to) =>
+      db.from('orders').select('id').not('legacy_source', 'is', null).order('id').range(from, to) as unknown as PromiseLike<{
+        data: { id: string }[] | null
+        error: { code?: string; message: string } | null
+      }>,
+  )
+  return new Set(rows.map(r => r.id))
 }
 
 /**
@@ -97,6 +112,8 @@ export async function getReceivablesSummary(today: string): Promise<ReceivableTo
     notYetDue: num(r?.not_yet_due),
     notInvoicedCount: num(r?.not_invoiced_count),
     notInvoiced: num(r?.not_invoiced),
+    importedCount: 0,
+    imported: 0,
     gross: num(r?.gross),
     settled: num(r?.settled),
   }
@@ -142,7 +159,7 @@ export async function getPaymentOrder(orderId: string): Promise<PaymentOrder | n
   const raw = rows[0]
   if (!raw) return null
   return {
-    row: toReceivableRow(raw),
+    row: toReceivableRow(raw, (await fetchImportedOrderIds()).has(raw.order_id)),
     prior: (unwrap(payments) ?? []).map(p => ({ receivedOn: p.received_on, amount: Number(p.amount) })),
   }
 }

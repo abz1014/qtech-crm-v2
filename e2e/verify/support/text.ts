@@ -160,7 +160,7 @@ export const ORDERS = {
   today: {
     path: '/today',
     heading: 'Today',
-    loaded: /\d+ due now/,
+    loaded: /\d+ need you/,
   },
   invoice: {
     create: 'Create invoice',
@@ -242,8 +242,8 @@ export const BOOKS = {
     team: (month: string) => `/money/month-end/team?month=${month}`,
     aging: (month: string, asOf: string) => `/money/month-end/aging?month=${month}&asof=${asOf}`,
     owe: (month: string) => `/money/month-end/owe?month=${month}`,
-    /** "Close October" or "Close through October" (the screen picks one from the months with money in them). */
-    closeButton: (monthName: string) => new RegExp(`^Close (through )?${monthName}$`),
+    /** "Close October": one month at a time (owner decision 2026-10-22); there is no "Close through". */
+    closeButton: (monthName: string) => new RegExp(`^Close ${monthName}$`),
     closeDialog: (label: string) => `Close ${label}?`,
     closedBar: (label: string) => `${label} is closed.`,
     reopenButton: (label: string) => `Reopen ${label}`,
@@ -274,13 +274,16 @@ export const BOOKS = {
   },
   owe: {
     moreFor: (supplier: string) => `More for ${supplier}`,
-    /** The supplier order's menu item for its one Add expense (Supplier payment, the supplier as payee). */
+    /** The supplier order's menu item: Pay <supplier>, the one door for a supplier payment (redesign phase 1, 0087). */
     payFor: (supplier: string) => `Pay ${supplier}`,
-    dialog: 'Add expense',
+    /** The Pay dialog is named by the supplier. */
+    dialog: (supplier: string) => `Pay ${supplier}`,
     amount: 'Amount, PKR',
-    category: 'Category',
+    paidIn: (currency: string) => `Paid in ${currency}`,
+    pkrDebited: 'PKR debited from the bank',
+    bankCharges: 'Bank charges, PKR',
     supplierPayment: 'Supplier payment',
-    save: 'Save expense',
+    save: 'Save payment',
     atTodaysRate: (pkr: string) => `≈ PKR ${pkr} at today's rate`,
     partPaid: 'Part paid',
   },

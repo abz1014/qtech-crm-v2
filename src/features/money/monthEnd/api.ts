@@ -25,7 +25,8 @@ import type {
  * Month-end (M10): every database call for this area. The reports are the views and functions of migration 0028
  * (admin only, enforced twice: the explicit role check inside each and Row Level Security under it), so a non-admin
  * gets zero rows even if a request is made; the hooks pass `enabled` and no request is made at all.
- * Closing and reopening are the admin RPCs of migration 0027 (close_month, close_months_through, reopen_month).
+ * Closing and reopening are the admin RPCs of migration 0027 (close_month, reopen_month). The app closes ONE month per tap
+ * (owner decision 2026-10-22, redesign decision 5): it never calls close_months_through, which stays for the cutover runbook only.
  *
  * A CLOSED month is frozen (owner decision 2026-10-19, migration 0058): its P&L comes from v_month_pnl, which serves the snapshot,
  * and every other report of the month (payments, categories, how paid, team, aging and we owe as of its last day, the GST
@@ -99,9 +100,10 @@ export async function loadClosedMonths(): Promise<ClosedMonth[]> {
   return rows.map(r => ({ key: monthOf(r.month), closedAt: r.closed_at, closedBy: names[r.closed_by] ?? null, note: r.note }))
 }
 
-export async function closeMonth(month: string, through: boolean): Promise<void> {
+/** Closes exactly one month. The database refuses it while an earlier month with money in it is still open (0027). */
+export async function closeMonth(month: string): Promise<void> {
   const db = requireSupabase()
-  const res = through ? await db.rpc('close_months_through', { p_month: monthStart(month) }) : await db.rpc('close_month', { p_month: monthStart(month) })
+  const res = await db.rpc('close_month', { p_month: monthStart(month) })
   if (res.error) throw res.error
 }
 
@@ -234,9 +236,17 @@ export async function loadAging(asOf: string): Promise<{ rows: AgingRow[]; advan
   const snap = await snapshotAsOf(asOf)
   const data: AgingRaw[] = snap ? snap.aging : (unwrap(await db.rpc('aging_as_of', { p_date: asOf })) ?? [])
   const names = await companyNames([...new Set(data.map(r => r.company_id).filter((x): x is string => !!x))])
+  // Imported invoices not linked to an order (owner decision 1b): aging_as_of does not say which are imported, so ask for the ids.
+  const unlinked = data.filter(r => r.kind === 'invoice' && !r.order_id).map(r => r.invoice_id)
+  const importedIds = new Set<string>()
+  for (let i = 0; i < unlinked.length; i += 200) {
+    const part = unwrap(await db.from('invoices').select('id').in('id', unlinked.slice(i, i + 200)).not('legacy_source', 'is', null))
+    for (const x of part ?? []) importedIds.add(x.id)
+  }
   const rows: AgingRow[] = data
     .filter(r => r.kind === 'invoice')
     .map(r => ({
+      importedUnlinked: !r.order_id && importedIds.has(r.invoice_id),
       invoiceId: r.invoice_id,
       customer: names[r.company_id] ?? 'Customer',
       invoiceNumber: r.invoice_number,

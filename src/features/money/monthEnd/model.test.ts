@@ -16,6 +16,7 @@ import {
   closeButtonLabel,
   closeState,
   closedThrough,
+  closeTarget,
   defaultMonthEndMonth,
   gstCsv,
   payablesCsv,
@@ -113,17 +114,29 @@ describe('closing', () => {
   })
   it('an open month after closed ones closes on its own', () => {
     const s = closeState('2026-10', '2026-11-06', closed, ['2026-08', '2026-09', '2026-10'])
-    expect(s).toEqual({ kind: 'open', through: false, earlier: [] })
+    expect(s).toEqual({ kind: 'open', target: '2026-10', earlier: [] })
     expect(closeButtonLabel('2026-10', s)).toBe('Close October')
+    expect(closeTarget('2026-10', s)).toBe('2026-10')
   })
-  it('an earlier open month with money in it turns the button into Close through', () => {
+  it('an earlier open month with money in it is closed first, on its own, and the button names it (one month at a time)', () => {
     const s = closeState('2026-10', '2026-11-06', new Set(['2026-08']), ['2026-08', '2026-09', '2026-10'])
-    expect(s).toEqual({ kind: 'open', through: true, earlier: ['2026-09'] })
-    expect(closeButtonLabel('2026-10', s)).toBe('Close through October')
+    expect(s).toEqual({ kind: 'open', target: '2026-09', earlier: ['2026-09'] })
+    expect(closeButtonLabel('2026-10', s)).toBe('Close September 2026')
+  })
+  it('with two years of imported history open, the button closes only the oldest month, never all of them', () => {
+    const history = Array.from({ length: 24 }, (_, i) => `${2024 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`)
+    const s = closeState('2026-09', '2026-10-22', new Set(), [...history, '2026-09'])
+    expect(s).toMatchObject({ kind: 'open', target: '2024-01' })
+    expect(closeButtonLabel('2026-09', s)).toBe('Close January 2024')
+    expect(closeButtonLabel('2026-09', s)).not.toMatch(/through/i)
   })
   it('an earlier open month with no money in it does not matter', () => {
     const s = closeState('2026-10', '2026-11-06', new Set(), ['2026-10'])
-    expect(s).toMatchObject({ kind: 'open', through: false })
+    expect(s).toMatchObject({ kind: 'open', target: '2026-10', earlier: [] })
+  })
+  it('a closed or not-ended month has no other target', () => {
+    expect(closeTarget('2026-11', closeState('2026-11', '2026-11-06', new Set(), ['2026-01']))).toBe('2026-11')
+    expect(closeTarget('2026-09', null)).toBe('2026-09')
   })
   it('names the latest closed month', () => {
     expect(closedThrough([{ key: '2026-08', closedAt: '', closedBy: null, note: null }, { key: '2026-09', closedAt: '', closedBy: null, note: null }])).toBe('September')
@@ -251,10 +264,23 @@ describe('aging', () => {
   })
   it('the CSV lists advances apart, never as negative aging', () => {
     const csv = agingCsv(v)
-    expect(csv.headers.slice(-4)).toEqual(['0 to 30', '31 to 60', '61 to 90', '90+'])
+    expect(csv.headers.slice(-5)).toEqual(['0 to 30', '31 to 60', '61 to 90', '90+', 'Imported, not linked to an order'])
     const adv = csv.rows.at(-1)!
     expect(adv[2]).toBe('Advance held, not invoiced yet')
-    expect(adv.slice(-4)).toEqual(['', '', '', ''])
+    expect(adv.slice(-5)).toEqual(['', '', '', '', ''])
+    expect(adv).toHaveLength(csv.headers.length)
+  })
+  it('imported invoices with no order leave the 90+ bucket for their own group, and the grand total is unchanged', () => {
+    const imp = A({ invoiceId: 'z', bucket: '90+', remaining: '250000.00', orderRef: null, invoiceNumber: 'INV-0009', importedUnlinked: true })
+    const w = buildAging('2026-10-31', [...rows, imp], [])
+    expect(w.totals['90+']).toEqual({ amount: '322500.00', count: 1 })
+    expect(w.imported).toEqual({ amount: '250000.00', count: 1 })
+    expect(w.outstanding).toBe('2236340.00')
+    expect(buildAging('2026-10-31', [...rows, { ...imp, importedUnlinked: false }], []).outstanding).toBe(w.outstanding)
+    expect(v.imported).toEqual({ amount: '0.00', count: 0 })
+    const csv = agingCsv(w)
+    const row = csv.rows.find(r => r[2] === 'INV-0009')!
+    expect(row.slice(-5)).toEqual(['', '', '', '', 250000])
   })
   it('an advance on a cancelled order says refund or keep, never "not invoiced yet" (owner decision 2026-10-22)', () => {
     const w = buildAging('2026-10-31', [], [{ orderId: 'x', orderRef: 'ORD-0099', customer: 'C', held: '5000.00', cancelled: true }])

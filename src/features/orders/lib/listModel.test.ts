@@ -7,6 +7,7 @@ const row = (over: Partial<OrderListRow>): OrderListRow => ({
   number: 1,
   customerPo: null,
   orderedOn: '2026-11-01',
+  imported: false,
   ownerId: 'u-sales',
   ownerName: 'Ayesha',
   companyId: 'c',

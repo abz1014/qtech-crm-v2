@@ -174,7 +174,7 @@ test.describe('open RFQs', () => {
     await review(page, 'board-all-1440')
   })
 
-  test('the one next-step filter narrows the rows, its needs-you counts follow the owner switch, and it lives in the address', async ({ page }) => {
+  test('the one next-step filter narrows the rows, carries no counts, and lives in the address', async ({ page }) => {
     await openAs(page, 'admin', '/rfqs') // admin opens on All
     await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeChecked()
     await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
@@ -189,13 +189,12 @@ test.describe('open RFQs', () => {
     await expect(row(page, 'partly')).toBeVisible()
     await expect(row(page, 'covered')).toHaveCount(0)
 
-    // Only the steps that wait on us carry a number ("needs you"); it equals the rows the choice shows.
+    // No step carries a number (redesign phase 0: the one "needs you" count is Today's)
     await expect(page.getByRole('radio', { name: 'Waiting for prices' })).toBeVisible()
-    const label = await page.getByRole('radio', { name: /^Needs suppliers/ }).innerText()
-    const n = Number(/(\d+)/.exec(label)?.[1])
+    await expect(page.getByRole('radio', { name: 'Needs suppliers', exact: true })).toBeVisible()
+    await expect(page.getByRole('radiogroup', { name: 'Show RFQs' }).locator('[data-needs-count]')).toHaveCount(0)
 
     await show(page, 'Needs suppliers', 'suppliers')
-    await expect(page.getByRole('table', { name: 'Open RFQs' }).locator('tbody tr[data-di]')).toHaveCount(n)
     await expect(row(page, 'toask')).toBeVisible()
     await expect(row(page, 'nooffer')).toBeVisible()
     await expect(row(page, 'awaiting')).toHaveCount(0)
@@ -237,19 +236,18 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
       await noSidewaysScroll(page)
 
       if (w >= 1280) {
-        // The top bar reads "RFQs <n>", named "RFQs, n need you": a count means "needs you", so n is the RFQ items on the
-        // admin's own Today, never more than the open RFQs the board lists (its lede: "12 open · 4 need you · 3 overdue").
-        const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs\s?, \d+ need you$/ })
-        await expect(link).toBeVisible()
-        const needs = Number(/(\d+) need you/.exec((await link.textContent()) ?? '')?.[1])
+        // Redesign phase 0: the top bar has ONE number, Today's. RFQs carries none; the board's lede says "N need you" (the RFQ
+        // items on the admin's own Today, due now) and never an "overdue" count. "12 open · 4 need you".
+        const nav = page.getByRole('navigation', { name: 'Main' }).first()
+        await expect(nav.getByRole('link', { name: 'RFQs', exact: true })).toBeVisible()
+        await expect(nav.getByRole('link', { name: /^Today\s?, \d+ need you$/ })).toBeVisible()
         await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
-        const lede = page.getByText(/^\d+ open( · \d+ need you)?( · \d+ overdue)?$/)
+        const lede = page.getByText(/^\d+ open( · \d+ need you)?$/)
         await expect(lede).toBeVisible()
         const open = Number(/^(\d+) open/.exec(await lede.innerText())?.[1])
+        const needs = Number(/(\d+) need you/.exec(await lede.innerText())?.[1] ?? 0)
         expect(open).toBeGreaterThanOrEqual(6)
-        expect(needs).toBeGreaterThan(0)
         expect(needs).toBeLessThanOrEqual(open)
-        await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Today\s?, \d+ need you$/ })).toBeVisible()
       } else {
         // A phone gets the same one filter as a select, not a strip that scrolls sideways; Mine or All is in the Filters sheet.
         await expect(page.getByRole('combobox', { name: 'Show RFQs' })).toBeVisible()
@@ -505,7 +503,8 @@ test.describe('long real-world text (live import, 2026-10-22)', () => {
       const r = page.getByRole('row').filter({ hasText: `Board long ${tag}` }).first()
       await r.scrollIntoViewIfNeeded()
       await expect(r).toBeVisible()
-      await expect(r.getByText('601 days overdue')).toBeVisible()
+      // past 30 days: no count, no red (redesign phase 0); the date column still shows the date
+      await expect(r.getByText('Over 30 days late')).toBeVisible()
       const found = await r.evaluate(tr => {
         // Every painted text box in the row, from the text nodes themselves (an element can clip while its text overflows).
         const boxes: { x: number; y: number; r: number; b: number; node: Text }[] = []

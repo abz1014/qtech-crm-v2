@@ -51,6 +51,8 @@ import { chaseMemo, clockText, excerptOf, forgetChase, rememberChase } from '@/f
 import { performChase, useLegDraft, usePaymentDraft, useRefreshAfterChase, useSnooze, useUnsnooze, type ChaseSpec } from '@/features/today/hooks'
 import { SNOOZE_RULE, type TodayItem } from '@/features/today/types'
 import { agoText, distanceText } from '@/features/today/text'
+import { COUNT_WORDS_MAX_DAYS, sinceWords } from '@/lib/timeWords'
+import { daysBetween } from '@/features/rfqs/lib/dateText'
 
 /*
  * The context pane (direction B, g2-today-b2). Selecting a row shows what explains it and, for a chase, the message
@@ -519,6 +521,11 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   )
 }
 
+/** "3 days" for "Late by" / "Overdue by"; past 30 days a count says nothing, so "since 5 Jan 2025" (redesign phase 0). */
+function lateBy(dueOn: string, today: string): string {
+  return daysBetween(dueOn, today) > COUNT_WORDS_MAX_DAYS ? sinceWords(dueOn) : distanceText(dueOn, today).replace(' late', '')
+}
+
 function pending(...qs: Array<{ isPending: boolean; fetchStatus?: string }>): boolean {
   return qs.some(q => q.isPending && q.fetchStatus !== 'idle')
 }
@@ -700,7 +707,7 @@ function factsFor(
     }
     case 'goods_late': {
       const l = c.legFact
-      const late: Fact | null = l?.expectedOn ? { label: 'Late by', icon: Clock, value: distanceText(l.expectedOn, today).replace(' late', ''), tone: 'danger' } : null
+      const late: Fact | null = l?.expectedOn ? { label: 'Late by', icon: Clock, value: lateBy(l.expectedOn, today), tone: 'danger' } : null
       const expected: Fact | null = l?.expectedOn ? { label: 'Expected', icon: CalendarDays, value: formatDay(l.expectedOn) } : null
       if (c.justChased && item.waiting) {
         out.push(late, expected, chased('supplier', l?.chaseCount ?? 1, item.waiting.chasedOn), nextNudge(item.waiting.nextNudgeOn))
@@ -717,7 +724,7 @@ function factsFor(
     case 'payment_overdue': {
       const r = c.receivable
       const balance: Fact | null = r ? { label: 'Balance', value: `PKR ${formatAmount(r.balance)}`, sub: 'GST included' } : null
-      const over: Fact | null = r?.dueOn ? { label: 'Overdue by', icon: Clock, value: distanceText(r.dueOn, today).replace(' late', ''), tone: 'danger' } : null
+      const over: Fact | null = r?.dueOn ? { label: 'Overdue by', icon: Clock, value: lateBy(r.dueOn, today), tone: 'danger' } : null
       if (c.justChased && item.waiting) {
         out.push(balance, over, chased('customer', r?.reminderCount ?? 1, item.waiting.chasedOn), nextNudge(item.waiting.nextNudgeOn))
         break

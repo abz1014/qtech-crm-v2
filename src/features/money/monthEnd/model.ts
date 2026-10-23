@@ -301,8 +301,12 @@ export type CloseState =
   | { kind: 'closed' }
   /** The month is the current month or later: the database refuses, so the button waits. */
   | { kind: 'not-ended' }
-  /** An earlier month with money in it is still open: the button reads "Close through", one tap for all of them. */
-  | { kind: 'open'; through: boolean; earlier: string[] }
+  /**
+   * The month can be closed. Owner decision 2026-10-22 (redesign, decision 5): months lock ONE AT A TIME, oldest first. `target` is
+   * the one month the button closes: the oldest open month with money in it before this one (`earlier[0]`), else this month.
+   * There is no "close through": one tap never closes more than one month.
+   */
+  | { kind: 'open'; target: string; earlier: string[] }
 
 /**
  * Whether a month can be closed now. `moneyMonths` are the months that have any payment or expense (the months of
@@ -312,12 +316,19 @@ export function closeState(month: string, today: string, closed: ReadonlySet<str
   if (closed.has(month)) return { kind: 'closed' }
   if (month >= today.slice(0, 7)) return { kind: 'not-ended' }
   const earlier = moneyMonths.filter(m => m < month && !closed.has(m)).sort()
-  return { kind: 'open', through: earlier.length > 0, earlier }
+  return { kind: 'open', target: earlier[0] ?? month, earlier }
 }
 
+/** The one month the close button would close: the target when open, else the month on screen. */
+export const closeTarget = (month: string, state: CloseState | null): string => (state?.kind === 'open' ? state.target : month)
+
+/**
+ * The close button names the one month it closes: "Close October" for the month on screen, "Close March 2024" (with the year)
+ * when an older month must be closed first.
+ */
 export function closeButtonLabel(month: string, state: CloseState): string {
-  const name = monthName(month)
-  return state.kind === 'open' && state.through ? `Close through ${name}` : `Close ${name}`
+  const target = closeTarget(month, state)
+  return target === month ? `Close ${monthName(month)}` : `Close ${monthKeyLabel(target)}`
 }
 
 /** "Closed through September" for the closed list header: the latest closed month. */
@@ -566,6 +577,8 @@ export interface AgingRow {
   applied: string
   remaining: string
   bucket: '0-30' | '31-60' | '61-90' | '90+'
+  /** Imported from the old CRM and not linked to an order: kept out of the age buckets (owner decision 1b), still in the grand total. */
+  importedUnlinked?: boolean
 }
 
 export interface AdvanceRow {
@@ -585,11 +598,15 @@ export type AgingBucket = (typeof AGING_BUCKETS)[number]
 export const BUCKET_LABEL: Record<AgingBucket, string> = { '0-30': '0 to 30', '31-60': '31 to 60', '61-90': '61 to 90', '90+': '90+' }
 export const BUCKET_TITLE: Record<AgingBucket, string> = { '0-30': '0 to 30 days', '31-60': '31 to 60 days', '61-90': '61 to 90 days', '90+': 'Over 90 days' }
 
+export const IMPORTED_GROUP_LABEL = 'Imported, not linked to an order'
+
 export interface AgingView {
   asOf: string
   rows: AgingRow[]
   advances: AdvanceRow[]
   totals: Record<AgingBucket, { amount: string; count: number }>
+  /** Imported invoices with no order: outside every age bucket, inside `outstanding`. */
+  imported: { amount: string; count: number }
   gross: string
   applied: string
   outstanding: string
@@ -600,15 +617,17 @@ export function buildAging(asOf: string, rows: readonly AgingRow[], advances: re
   const sorted = [...rows].sort((a, b) => b.ageDays - a.ageDays || a.invoiceNumber.localeCompare(b.invoiceNumber))
   const totals = Object.fromEntries(
     AGING_BUCKETS.map(b => {
-      const mine = sorted.filter(r => r.bucket === b)
+      const mine = sorted.filter(r => r.bucket === b && !r.importedUnlinked)
       return [b, { amount: sum(mine.map(r => r.remaining)), count: mine.length }]
     }),
   ) as AgingView['totals']
+  const importedRows = sorted.filter(r => r.importedUnlinked)
   return {
     asOf,
     rows: sorted,
     advances: [...advances],
     totals,
+    imported: { amount: sum(importedRows.map(r => r.remaining)), count: importedRows.length },
     gross: sum(sorted.map(r => r.gross)),
     applied: sum(sorted.map(r => r.applied)),
     outstanding: sum(sorted.map(r => r.remaining)),
@@ -618,7 +637,7 @@ export function buildAging(asOf: string, rows: readonly AgingRow[], advances: re
 
 export function agingCsv(v: AgingView): { headers: string[]; rows: unknown[][] } {
   return {
-    headers: ['As of', 'Customer', 'Invoice', 'Order', 'Invoice date', 'Days', 'Invoice gross', 'Paid by then', ...AGING_BUCKETS.map(b => BUCKET_LABEL[b])],
+    headers: ['As of', 'Customer', 'Invoice', 'Order', 'Invoice date', 'Days', 'Invoice gross', 'Paid by then', ...AGING_BUCKETS.map(b => BUCKET_LABEL[b]), IMPORTED_GROUP_LABEL],
     rows: [
       ...v.rows.map(r => [
         v.asOf,
@@ -629,9 +648,10 @@ export function agingCsv(v: AgingView): { headers: string[]; rows: unknown[][] }
         r.ageDays,
         csvNum(r.gross),
         csvNum(r.applied),
-        ...AGING_BUCKETS.map(b => (r.bucket === b ? csvNum(r.remaining) : '')),
+        ...AGING_BUCKETS.map(b => (r.bucket === b && !r.importedUnlinked ? csvNum(r.remaining) : '')),
+        r.importedUnlinked ? csvNum(r.remaining) : '',
       ]),
-      ...v.advances.map(a => [v.asOf, a.customer, advanceLabel(a), a.orderRef ?? '', '', '', '', csvNum(a.held), '', '', '', '']),
+      ...v.advances.map(a => [v.asOf, a.customer, advanceLabel(a), a.orderRef ?? '', '', '', '', csvNum(a.held), '', '', '', '', '']),
     ],
   }
 }

@@ -16,7 +16,7 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
 const CreateCompanyInline = lazyWithReload(() => import('@/features/companies/CreateCompanyInline').then(m => ({ default: m.CreateCompanyInline })))
 
 /*
- * PDFs, pictures and the sender, for New RFQ and a supplier's reply (owner decision 2026-10-20, item 3; pictures: owner priority
+ * PDFs, pictures, spreadsheets and the sender, for New RFQ and a supplier's reply (owner decision 2026-10-20, item 3; pictures: owner priority
  * the same day). A PDF or a picture (a screenshot, a photo taken now with the phone's camera) is read on this device
  * (src/lib/docread, nothing is uploaded to read it) and its text goes where a paste goes. A scan, a locked or a damaged file, a
  * picture that could not be read clearly gets the reader's own plain sentence. The file itself is kept and attached as before.
@@ -37,7 +37,7 @@ export function PdfPickButton({
 }: {
   label: string
   subject: PdfSubject
-  onText: (text: string, from: 'pdf' | 'photo') => void
+  onText: (text: string, from: 'pdf' | 'photo' | 'sheet') => void
   onFile?: (file: File) => void
   onMessage: (message: string | null) => void
   size?: 'sm'
@@ -50,7 +50,7 @@ export function PdfPickButton({
       <input
         ref={input}
         type="file"
-        accept="application/pdf,.pdf,image/*"
+        accept={PICK_ACCEPT}
         className="sr-only"
         tabIndex={-1}
         aria-hidden="true"
@@ -61,7 +61,7 @@ export function PdfPickButton({
           if (!file) return
           const ctrl = new AbortController()
           reading.current = ctrl
-          setBusy(file.type === 'application/pdf' || /\.pdf$/i.test(file.name) ? 'Reading the PDF' : 'Reading the image…')
+          setBusy(file.type === 'application/pdf' || /\.pdf$/i.test(file.name) ? 'Reading the PDF' : isSheetName(file) ? 'Reading the spreadsheet' : 'Reading the image…')
           onMessage(null)
           try {
             onFile?.(file)
@@ -77,7 +77,7 @@ export function PdfPickButton({
       <Button size={size} icon={FileText} busy={busy !== null} busyLabel={<span aria-live="polite">{busy}</span>} onClick={() => input.current?.click()}>
         {label}
       </Button>
-      {busy !== null && busy !== 'Reading the PDF' ? (
+      {busy !== null && busy !== 'Reading the PDF' && busy !== 'Reading the spreadsheet' ? (
         <Button size={size} variant="quiet" onClick={() => reading.current?.abort()}>
           Cancel
         </Button>
@@ -85,6 +85,10 @@ export function PdfPickButton({
     </>
   )
 }
+
+/** PDFs, pictures (on a phone: the camera and the gallery) and spreadsheets (.xlsx, .xls, .csv). */
+const PICK_ACCEPT = 'application/pdf,.pdf,image/*,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv'
+const isSheetName = (f: File) => /\.(?:xlsx|xlsm|xls|csv)$/i.test(f.name) || /spreadsheetml|ms-excel|text\/csv/.test(f.type)
 
 const WHY = { email: 'Their email is on file', domain: 'Their email domain is on file', phone: 'Their phone number is on file', name: 'Same name on file' } as const
 

@@ -3,6 +3,7 @@
 //
 // The first step that applies is THE next step:
 //    cancelled                      nothing to do (an admin can still answer "Is GST included?", see the page)
+//    review-imported      inert     an imported order that is not done: nothing is late or due until someone reviews it (money still wins)
 //    resolve-basis        now       admin: an imported order whose price basis is unknown
 //    chase-payment        late      admin and sales: the payment is overdue (before "done": sales count an invoiced order as done)
 //    goods-late           late      a supplier order is past its expected date and not delivered
@@ -24,6 +25,7 @@ import type { StepTone } from '@/lib/status'
 export type StepKind =
   | 'cancelled'
   | 'resolve-basis'
+  | 'review-imported'
   | 'chase-payment'
   | 'goods-late'
   | 'add-supplier'
@@ -60,6 +62,8 @@ export interface OrderFacts {
   /** v_order_state.lifecycle: active, done, cancelled. */
   lifecycle: string | null
   basisUnknown: boolean
+  /** Imported from the old CRM (orders.legacy_source is set): open work waits for a one-off "Review imported" (owner decision 1b, 2026-10-22). */
+  imported?: boolean
   /** v_order_state.goods_state: to_source, to_place, late, on_order, partly_delivered, received, delivered, n_a. */
   goods: string | null
   /** v_order_state.commissioning_state: to_plan, planned, done, n_a. */
@@ -100,17 +104,22 @@ export function nextOrderStep(f: OrderFacts): OrderStep {
   const money = isMoney(f.role)
   const engineer = f.role === 'engineer'
   if (f.lifecycle === 'cancelled') return { kind: 'cancelled', tone: 'inert', rank: 90 }
+  const chase: OrderStep | null =
+    money && f.payment === 'overdue' && (f.balance ?? 1) > 0
+      ? { kind: 'chase-payment', tone: 'late', rank: 0, lateDays: f.dueOn ? Math.max(0, daysBetween(f.dueOn, f.today)) : undefined }
+      : null
+  // Owner decision 1b: an imported order with open work is not "late" or "due" on old dates; it waits for a one-off review. Late money still shows.
+  if (f.imported && f.lifecycle !== 'done') return chase ?? { kind: 'review-imported', tone: 'inert', rank: 60 }
   if (f.role === 'admin' && f.basisUnknown) return { kind: 'resolve-basis', tone: 'now', rank: 10 }
-  if (money && f.payment === 'overdue' && (f.balance ?? 1) > 0) {
-    return { kind: 'chase-payment', tone: 'late', rank: 0, lateDays: f.dueOn ? Math.max(0, daysBetween(f.dueOn, f.today)) : undefined }
-  }
+  if (chase) return chase
 
   const open = f.legs.filter(l => l.placedOn && !l.deliveredOn)
   const late = open.filter(l => l.expectedOn && l.expectedOn < f.today)
   if (late.length > 0 || f.goods === 'late') {
     // the longest late first
     const leg = late.length > 0 ? soonest(late) : soonest(open)
-    return { kind: 'goods-late', tone: 'late', rank: 1, leg, lateDays: leg?.expectedOn ? Math.max(0, daysBetween(leg.expectedOn, f.today)) : undefined }
+    // Amber, not red (redesign phase 0): late goods are our own pace slipping; red is kept for late money and promises to customers.
+    return { kind: 'goods-late', tone: 'now', rank: 1, leg, lateDays: leg?.expectedOn ? Math.max(0, daysBetween(leg.expectedOn, f.today)) : undefined }
   }
 
   if (f.goods === 'to_source') return engineer ? { kind: 'wait-supplier', tone: 'waiting', rank: 43 } : { kind: 'add-supplier', tone: 'now', rank: 11 }

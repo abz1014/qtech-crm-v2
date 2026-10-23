@@ -4,6 +4,7 @@ import { enquiryResult, quoteResult } from '@/lib/docread/corpus/results'
 import { parseEnquiry } from '@/lib/docread/enquiryParse'
 import { readImageText, type ImageTextResult } from '@/lib/docread/imageText'
 import { readPdfText } from '@/lib/docread/pdfText'
+import { readSheetText } from '@/lib/docread/sheetText'
 import { parseSupplierQuote } from '@/lib/docread/supplierQuoteParse'
 
 /*
@@ -71,6 +72,16 @@ export default function DocreadLab() {
     if (ctrl.current === c) setResult({ ...r, ms: Math.round(performance.now() - t0) })
   }
 
+  // A spreadsheet (.xlsx, .xls, .csv): its item table as text, shown the same way (e2e/docread/sheet.spec.ts).
+  const readSheetFile = async (file: File | undefined) => {
+    if (!file) return
+    setResult(null)
+    const t0 = performance.now()
+    const r = await readSheetText(file)
+    const shown: ImageTextResult = r.ok ? { ok: true, text: r.text, lines: [], confidence: 100, tableRows: 0 } : { ok: false, reason: 'unclear', message: r.message }
+    setResult({ ...shown, ms: Math.round(performance.now() - t0) })
+  }
+
   // A PDF (a scan is read page by page by the picture reader), shown the same way.
   const readPdfFile = async (file: File | undefined) => {
     if (!file) return
@@ -93,6 +104,9 @@ export default function DocreadLab() {
       </label>
       <label className="block">
         PDF <input type="file" accept="application/pdf" onChange={e => void readPdfFile(e.target.files?.[0])} />
+      </label>
+      <label className="block">
+        Spreadsheet <input type="file" accept=".xlsx,.xls,.csv" onChange={e => void readSheetFile(e.target.files?.[0])} />
       </label>
       <button type="button" className="underline" onClick={() => ctrl.current?.abort()}>
         Cancel

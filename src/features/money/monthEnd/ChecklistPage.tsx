@@ -13,6 +13,7 @@ import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
+import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { useSession } from '@/app/session'
 import { openFindings } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
@@ -21,7 +22,7 @@ import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFr
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 import { ReportError, Panel } from '@/features/money/monthEnd/ReportParts'
 import { closeWindowDay, formatClosedAt, formatClosedDay } from '@/features/money/monthEnd/format'
-import { closeButtonLabel, closedThrough, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
+import { closeButtonLabel, closedThrough, closeTarget, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
 
 /*
  * Money › Month end (M10; admin only). Owner decision 2026-10-19: the phone layout everywhere. The month and its Close button
@@ -69,6 +70,8 @@ export function ChecklistPage() {
       </div>
 
       {isClosed ? <LockBar month={ctx.month} /> : null}
+      {/* 0087 (A9, owner: yes): cash in hand, with Count cash, so a missing small cash expense shows before the month is locked */}
+      <CashInHandLine />
 
       {ctx.statusError ? (
         <ReportError title="The checklist did not load" onRetry={ctx.refetch} />
@@ -128,6 +131,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const withItems = ctx.withItems + (extra > 0 ? 1 : 0)
   const day = closeWindowDay(ctx.month, ctx.today)
   const name = monthName(ctx.month)
+  const target = closeTarget(ctx.month, state)
   const phone = useMediaQuery('(max-width: 767px)')
   // The sticky bar replaces the bottom tabs on a phone (StickyActionBar's contract); the bar's back arrow leads out.
   useMobileBar({ title: 'Month end', back: 'history', fallback: '/money/receivables', hideTabs: true })
@@ -147,7 +151,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
     <InfoTip label="About closing a month">
       {state?.kind === 'not-ended' ? <>{name} can be closed once it has ended. </> : null}
       Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. You can reopen
-      it any time; both are written to the audit log. An earlier open month with money in it is closed in the same step.
+      it any time; both are written to the audit log. Months close one at a time, oldest first: the button always names the one month it closes.
     </InfoTip>
   )
   return (
@@ -168,6 +172,12 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
           )}
         </p>
         {/* Only a fact that matters: when it was closed, or how far into the 10-day close window we are. No bare date. */}
+        {state?.kind === 'open' && target !== ctx.month ? (
+          // One month at a time (owner decision 2026-10-22): an older open month is closed first, and the button names it.
+          <span className="text-sm text-fg-2" data-testid="close-order">
+            {monthKeyLabel(target)} is still open. Months close one at a time, oldest first, so close {monthKeyLabel(target)} before {name}.
+          </span>
+        ) : null}
         {closed && ctx.closedEntry ? (
           <span className="text-sm text-fg-muted">Closed {formatClosedAt(ctx.closedEntry.closedAt)}</span>
         ) : day ? (
