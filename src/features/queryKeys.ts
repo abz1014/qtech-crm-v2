@@ -300,6 +300,12 @@ function onboarding() {
   }
 }
 
+/** The "was X, now Y" history of one record (feat/history-ui). Keyed on (table, id) so any screen can reuse it. */
+function history() {
+  const all = root('history')
+  return { all, record: (table: string, id: string) => [...all, table, id] as const }
+}
+
 export const qk = {
   today: today(),
   settings: settings(),
@@ -314,6 +320,7 @@ export const qk = {
   money: money(),
   reports: reports(),
   onboarding: onboarding(),
+  history: history(),
 }
 
 export type QueryKeyRoot = keyof typeof qk
