@@ -245,7 +245,9 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
   test('phone 320 and 375: Expenses with quick add does not scroll sideways and its inputs are 16 px', async ({ page }) => {
     for (const width of [375, 320]) {
       await page.setViewportSize({ width, height: 800 })
-      await openAs(page, 'admin', '/money/expenses')
+      // sign in once; the second width reloads the page already signed in (a second sign-in has no Email box to fill)
+      if (width === 375) await openAs(page, 'admin', '/money/expenses')
+      else await page.goto('/money/expenses')
       await expect(page.getByTestId('quick-add')).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `no sideways scroll at ${width}`).toBe(true)
       const sizes = await page.getByTestId('quick-add').evaluate(el => Array.from(el.querySelectorAll('input:not([type=file]):not([type=checkbox]), select, button:not([role=checkbox])')).map(e => parseFloat(getComputedStyle(e).fontSize)))
