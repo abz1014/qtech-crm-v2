@@ -226,6 +226,14 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(price(dialog, 1)).toHaveValue('')
     await expect(dialog).toContainText('Type the selling price from your costing sheet')
     await shot(page, 'a1-markwon-owner-shape-1440')
+    expect(await dialogViolations(page)).toEqual([])
+    // the same dialog on a phone: the price input stacks under its label, nothing scrolls sideways
+    await page.setViewportSize({ width: 375, height: 812 })
+    await expect(price(dialog, 1)).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+    expect(await dialogViolations(page)).toEqual([])
+    await shot(page, 'a1-markwon-owner-shape-375')
+    await page.setViewportSize({ width: 1440, height: 900 })
     // not stuck: Create order is pressable and says what is missing, then takes the person to the field
     await dialog.getByRole('button', { name: 'Create order' }).click()
     await expect(dialog).toContainText('Type a selling price for line 1.')
