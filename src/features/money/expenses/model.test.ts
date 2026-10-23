@@ -168,7 +168,7 @@ describe('recurring templates', () => {
 
 describe('list filters and totals', () => {
   const e = (id: string, categoryId: string, amount: number, paidVia: 'bank' | 'cash', inputTax = 0): ListedExpense => ({
-    id, paidOn: '2026-11-03', amount, inputTax, categoryId, paidVia, note: null, orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null,
+    id, paidOn: '2026-11-03', amount, inputTax, categoryId, paidVia, note: null, orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null, period: null,
   })
   const rows = [e('1', 'snacks', 450, 'cash'), e('2', 'sal', 100000, 'bank'), e('3', SUPPLIER_PAYMENT_ID, 590000, 'bank', 90000)]
 
@@ -240,11 +240,13 @@ describe('0086: recent categories, Every month rows, the list by group', () => {
     const c: BurstRow = { ...newBurstRow(null, D, 'r3'), amount: 90, repeat: false }
     expect(repeatTemplates([a, b, c], CATS)).toEqual([
       { newId: 't1', label: 'Office rent', categoryId: 'snacks', amount: 85000, dayOfMonth: 28, startMonth: '2026-10', paidVia: 'cash' },
-      { newId: 't2', label: 'Fuel & travel', categoryId: 'fuel', amount: 500, dayOfMonth: 5, startMonth: '2026-10', paidVia: 'cash' },
+      // 0087 for-month: paid on the 5th, so it is last month's bill and the template starts there
+      { newId: 't2', label: 'Fuel & travel', categoryId: 'fuel', amount: 500, dayOfMonth: 5, startMonth: '2026-09', paidVia: 'cash' },
     ])
-    const ins = burstInserts([a, c], CATS)
+    const ins = burstInserts([a, b, c], CATS)
     expect(ins[0]).toMatchObject({ id: 'r1', recurring_id: 't1', period: '2026-10' })
-    expect(ins[1]).not.toHaveProperty('recurring_id')
+    expect(ins[1]).toMatchObject({ id: 'r2', recurring_id: 't2', period: '2026-09' })
+    expect(ins[2]).not.toHaveProperty('recurring_id')
   })
 
   it('a new category goes to the group of a category sharing a word (3 letters or more), else nowhere in particular', () => {
@@ -271,7 +273,7 @@ describe('0086: recent categories, Every month rows, the list by group', () => {
       { id: 'overhead', name: 'Office running', kind: 'overhead', sort: 10 },
     ]
     const r = (id: string, categoryId: string, amount: number): ListedExpense => ({
-      id, paidOn: '2026-11-01', amount, inputTax: 0, categoryId, paidVia: 'cash', note: null, orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null,
+      id, paidOn: '2026-11-01', amount, inputTax: 0, categoryId, paidVia: 'cash', note: null, orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null, period: null,
     })
     const rows = [r('a', SUPPLIER_PAYMENT_ID, 380000), r('b', 'snacks', 0.1), r('c', 'fuel', 0.2), r('d', 'gone', 5)]
     expect(bySection(rows, CATS, groups).map(x => x.id)).toEqual(['b', 'c', 'a', 'd'])

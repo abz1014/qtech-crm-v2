@@ -35,9 +35,12 @@ import {
   useOrderOptions,
   useReceipts,
   useRecentDetails,
+  useRecurring,
   useUpdateExpense,
   useUploadReceipt,
 } from '@/features/money/expenses/hooks'
+import { forMonthChoices, isMonthlyBill } from '@/features/money/expenses/forMonth'
+import { Checkbox } from '@/ui/form/Checkbox'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { clearExpenseDraft, expenseDraftKey, loadExpenseDraft, saveExpenseDraft } from '@/features/money/expenses/addDraft'
 import {
@@ -45,13 +48,17 @@ import {
   SUPPLIER_PAYMENT_ID,
   cleanDetail,
   detailSuggestions,
+  forMonthOf,
   paidViaFor,
   recentCategories,
   showsInputTax,
   type Category,
   type ListedExpense,
   type PaidVia,
+  type RecurringTemplate,
 } from '@/features/money/expenses/model'
+
+const NO_TEMPLATES: readonly RecurringTemplate[] = []
 
 /*
  * The one "Add expense" dialog (M03): opened on its own from Money, or with context from an order or a leg (O03, O07).
@@ -177,6 +184,7 @@ function ExpenseFormReady({
 }: FormProps & { categories: Category[]; mostUsed: { id: string; count: number } | null; lastForOrder: string | null }) {
   const toast = useToast()
   const client = useQueryClient()
+  const templates = useRecurring().data ?? NO_TEMPLATES
   const insert = useInsertExpenses()
   const update = useUpdateExpense()
   const uploadReceipt = useUploadReceipt()
@@ -210,16 +218,20 @@ function ExpenseFormReady({
     // The month lock answers about the date, so the sentence sits under the date and everything typed stays.
     routeError: e => (e.kind === 'closed-month' ? { field: 'paidOn' } : undefined),
     onSubmit: async (v, { requestId }) => {
+      const showFor = isMonthlyBill(v.categoryId, templates) || !!expense?.period
       const base = {
         amount_pkr: v.amount,
         category_id: v.categoryId,
         paid_on: v.paidOn,
         paid_via: v.paidVia as PaidVia,
         description: cleanDetail(v.note),
-        input_tax_pkr: showsInputTax(v.categoryId) ? (v.inputTax ?? 0) : 0,
+        // 0087: any category can carry input tax once "Has a GST invoice" is ticked (it was Supplier payment, Freight and Clearing only)
+        input_tax_pkr: showsInputTax(v.categoryId) || gstTick ? (v.inputTax ?? 0) : 0,
         order_id: v.orderId,
         supplier_order_id: v.legId,
         payee_id: v.payeeId,
+        // 0087 for-month: a monthly bill says which month it is for; an expense that is not one keeps its own month
+        ...(showFor ? { period: forChoice ?? expense?.period ?? forMonthOf(v.paidOn) } : expense ? { period: null } : {}),
       }
       if (expense) {
         await update.mutateAsync({ id: expense.id, patch: base })
@@ -251,6 +263,8 @@ function ExpenseFormReady({
   )
 
   const { form } = sf
+  const [gstTick, setGstTick] = useState(!!expense?.inputTax && !showsInputTax(expense.categoryId))
+  const [forChoice, setForChoice] = useState<string | null>(null)
   const [photo, setPhoto] = useState<AddedFile | null>(null)
   const [paidViaTouched, setPaidViaTouched] = useState(false)
   const [showNote, setShowNote] = useState(!!expense?.note)
@@ -302,7 +316,14 @@ function ExpenseFormReady({
   const groupsQ = useGroups()
   const createCategory = useInlineCategoryCreate(categories, groupsQ.data)
   const useQ = useCategoryUse()
-  const recent = useMemo(() => recentCategories(useQ.data ?? [], categories), [useQ.data, categories])
+  // Redesign phase 1: Supplier payment is not offered here (one door: Pay on the supplier order); only an expense that is one keeps it.
+  const pickerCategories = useMemo(
+    () => (fromLeg || expense?.categoryId === SUPPLIER_PAYMENT_ID ? categories : categories.filter(c => c.id !== SUPPLIER_PAYMENT_ID)),
+    [categories, fromLeg, expense?.categoryId],
+  )
+  const recent = useMemo(() => recentCategories(useQ.data ?? [], pickerCategories), [useQ.data, pickerCategories])
+  const paidOnNow = form.watch('paidOn')
+  const showFor = isMonthlyBill(categoryId, templates) || !!expense?.period
   const recentDetails = useRecentDetails(showNote)
   const detailOptions = useMemo(() => detailSuggestions(recentDetails.data ?? [], categoryId), [recentDetails.data, categoryId])
 
@@ -351,7 +372,7 @@ function ExpenseFormReady({
           <FormField<Values, 'categoryId'> name="categoryId" label="Category" source={categorySource ? { label: categorySource } : undefined}>
             {f => (
               <CategoryPicker
-                categories={categories}
+                categories={pickerCategories}
                 value={f.value}
                 onChange={f.onChange}
                 onCreate={createCategory}
@@ -376,6 +397,26 @@ function ExpenseFormReady({
           {amountField}
           {dateField}
         </div>
+
+        {showFor && paidOnNow ? (
+          <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-info-fg/25 bg-tone-info-bg px-3 py-2 text-base">
+            <span className="font-medium">This bill is for</span>
+            <select
+              value={forChoice ?? expense?.period ?? forMonthOf(paidOnNow)}
+              onChange={e => setForChoice(e.target.value)}
+              className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
+            >
+              {forMonthChoices(paidOnNow)
+                .concat(expense?.period && !forMonthChoices(paidOnNow).some(o => o.value === expense.period) ? [{ value: expense.period, label: expense.period }] : [])
+                .map(o => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+            </select>
+            <span className="text-fg-2">Reports count it in that month.</span>
+          </label>
+        ) : null}
 
         {showNote ? (
           <FormField<Values, 'note'> name="note" label="Detail" requirement="optional">
@@ -428,11 +469,13 @@ function ExpenseFormReady({
           </div>
         ) : null}
 
-        {showsInputTax(categoryId) ? (
+        {showsInputTax(categoryId) || gstTick ? (
           <FormField<Values, 'inputTax'> name="inputTax" label={<span className="sr-only">Input tax</span>}>
-            {f => <InputTax amount={typeof amount === 'number' ? amount : null} value={f.value ?? null} onChange={f.onChange} defaultOpen={!!expense?.inputTax} />}
+            {f => <InputTax amount={typeof amount === 'number' ? amount : null} value={f.value ?? null} onChange={f.onChange} defaultOpen={!!expense?.inputTax || gstTick} />}
           </FormField>
-        ) : null}
+        ) : (
+          <Checkbox label={<span className="text-base">More: has a GST invoice</span>} checked={gstTick} onCheckedChange={c => setGstTick(c === true)} className="w-fit" />
+        )}
 
         {showPaidVia ? (
           <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" source={paidViaTouched ? undefined : { label: 'From the category' }}>
