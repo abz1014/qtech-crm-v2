@@ -64,6 +64,8 @@ export interface WriteVars {
   'inquiry.chase': { rfqId: string }
   'rfq.markBidSent': { rfqId: string }
   'rfq.close': { rfqId: string }
+  /** 0092: an admin deleted an RFQ (with its quotations, items, inquiries, clarifications and files). Lists, Today, the nav counts and memory change. */
+  'rfq.delete': { rfqId: string }
   /** R22: Capture appends to, or restores, an RFQ's notes. */
   'rfq.notes': { rfqId: string }
   'clarification.add': { rfqId: string }
@@ -185,6 +187,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Closing also takes the RFQ off Today (Today itself offers "Close as no reply") and changes its outcome in the customer's history.
   // Capture's RFQ list (qk.rfqs.capture, outside lists()) must stop offering a closed RFQ, so the whole RFQ root.
   'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.today.all, qk.companies.all],
+  // The nav counts are read from the RFQ board and Today, so those two keys refresh them. Supplier memory and the company page quote the RFQ's prices and history.
+  'rfq.delete': () => [qk.rfqs.all, qk.today.all, qk.companies.all, qk.memory.all, qk.intake.all],
   'rfq.notes': v => [qk.rfqs.detail(v.rfqId)],
   // Questions and their stamps change the RFQ page, its derived clarification state (header) and the board's chips.
   'clarification.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
