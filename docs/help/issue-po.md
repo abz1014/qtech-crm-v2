@@ -6,7 +6,7 @@ keywords: purchase order, po, order goods, supplier, placed, buy
 screens: /orders
 related: goods-delivered
 ---
-1. Open the order. A line with no supplier yet? The green button is [Add supplier]: choose one first.
+1. Open the order. A line with no supplier yet? The green button is [Choose supplier]: pick a supplier order for each such line first.
 2. While a supplier is not ordered from yet, the green button is [Issue PO].
 3. Check the prices, the [Currency] and the terms. Tap [Preview PDF] to see it.
 4. Tap [Issue PO], then send the PDF to the supplier.

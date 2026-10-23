@@ -84,6 +84,8 @@ export interface IssueInput {
   deliveryTerms: string | null
   paymentTerms: string | null
   shipTo: string | null
+  /** The revision the dialog said it would issue (R0 for a new PO): the database refuses if somebody issued first (HW-63). */
+  expectedRevision?: number
 }
 
 export async function issuePurchaseOrder(input: IssueInput): Promise<LegPoRow> {
@@ -95,6 +97,7 @@ export async function issuePurchaseOrder(input: IssueInput): Promise<LegPoRow> {
     p_delivery_terms: input.deliveryTerms ?? undefined,
     p_payment_terms: input.paymentTerms ?? undefined,
     p_ship_to: input.shipTo ?? undefined,
+    p_expected_revision: input.expectedRevision,
   })
   if (error) throw error
   const rows = unwrap(await requireSupabase().from('purchase_orders').select('id, number, revision, issued_on, currency, total, pdf_path').eq('id', input.id).limit(1))

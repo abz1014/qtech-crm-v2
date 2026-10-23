@@ -50,6 +50,8 @@ export type { StepTone }
 export interface StepLeg {
   id: string
   supplierName: string
+  /** supplierName, with the currency added when the order has two supplier orders of this supplier (HW-59). */
+  label?: string
   placedOn: string | null
   expectedOn: string | null
   deliveredOn: string | null

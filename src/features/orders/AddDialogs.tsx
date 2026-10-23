@@ -12,8 +12,9 @@ import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
-import { useAddItem, useAddLeg, useSupplierChoices } from '@/features/orders/hooks'
+import { useAddItem, useAddLeg, useOrderItems, useSupplierChoices, useUpdateItem } from '@/features/orders/hooks'
 import { gstOptions, STANDARD_GST } from '@/features/orders/lib/orderMath'
+import { legLabel } from '@/features/orders/lib/legModel'
 
 /*
  * "Add line" and "Add leg" on the order page (g2-order-detail.html: the buttons in the Items and Procurement legs headers).
@@ -213,6 +214,144 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
           </Field>
           {error ? (
             <Banner tone="danger" title="Couldn't add the supplier">
+              {error}
+            </Banner>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * "Choose supplier" (HW-48): gives one goods line that has no supplier its supplier, either on a supplier order the order already has or on
+ * a new one (a supplier and the currency it bills in). Once it is saved the order's goods state is read again, so "to source" goes when
+ * the last unsourced line is done. Without `itemId` it takes the first goods line with no supplier (the green next step opens it so);
+ * the "Choose supplier" button on a line passes that line.
+ *
+ * FE-2 entry burden: required, the supplier order (or the supplier on a new one). Everything else is pre-filled: the first supplier order
+ * of the order, and for a new one the currency that supplier last used. At most 2 taps and one choice.
+ */
+const NEW_LEG = 'new'
+
+export function ChooseSupplierDialog({ order, legs, itemId, onClose }: { order: OrderHeader; legs: readonly OrderLegRow[]; itemId?: string; onClose: () => void }) {
+  const { toast } = useToast()
+  const items = useOrderItems(order.id, true)
+  const addLeg = useAddLeg(order.id)
+  const update = useUpdateItem(order.id)
+  const choices = useSupplierChoices(true)
+  const newLegId = useRef(crypto.randomUUID())
+  const sending = useRef(false)
+  const [pick, setPick] = useState<string | null>(null)
+  const [supplierId, setSupplierId] = useState('')
+  const [currency, setCurrency] = useState('PKR')
+  const [touched, setTouched] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const item = (items.data ?? []).find(i => (itemId ? i.id === itemId : !i.isService && i.legId === null))
+  const remaining = (items.data ?? []).filter(i => !i.isService && i.legId === null).length
+  const choice = pick ?? (legs.length > 0 ? legs[0].id : NEW_LEG)
+  const isNew = choice === NEW_LEG
+  const chosen = choices.data?.find(c => c.id === supplierId)
+
+  useEffect(() => {
+    if (chosen && !touched) setCurrency(chosen.lastCurrency ?? 'PKR')
+  }, [chosen, touched])
+
+  const sameLeg = isNew ? legs.find(l => l.supplierId === supplierId && l.currency === currency) : undefined
+  const ready = Boolean(item) && (isNew ? supplierId !== '' : true)
+  const busy = addLeg.isPending || update.isPending
+
+  const save = async () => {
+    if (!item || !ready || sending.current) return
+    sending.current = true
+    setError(null)
+    try {
+      let legId = isNew ? sameLeg?.id : choice
+      if (isNew && !legId) {
+        await addLeg.mutateAsync({ id: newLegId.current, supplierId, currency })
+        legId = newLegId.current
+      }
+      await update.mutateAsync({ id: item.id, patch: { supplier_order_id: legId as string } })
+      const leg = legs.find(l => l.id === legId)
+      toast({ title: 'Supplier chosen', body: `${item.description} · ${leg ? legLabel(leg, legs) : (chosen?.name ?? '')}` })
+      onClose()
+    } catch (err) {
+      setError(mapPgError(err, { entity: 'line' }).message)
+    } finally {
+      sending.current = false
+    }
+  }
+
+  return (
+    <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
+      <DialogContent
+        title="Choose supplier"
+        context={`${orderRef(order.number)} · ${order.companyName}`}
+        icon={Truck}
+        footer={
+          <>
+            <Button data-cancel onClick={onClose} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="primary" busy={busy} busyLabel="Saving" disabled={!ready} onClick={() => void save()}>
+              Use this supplier
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          {items.isPending ? (
+            <p className="text-base text-fg-2" role="status">
+              Loading the lines
+            </p>
+          ) : item ? (
+            <>
+              <p className="text-base" data-testid="choose-supplier-line">
+                <span className="text-fg-muted">Line {item.number}: </span>
+                <span className="font-medium">{item.description}</span>
+                {remaining > 1 ? <span className="text-fg-muted">{` · ${remaining - 1} more with no supplier`}</span> : null}
+              </p>
+              <Field label="Supplier order" requirement="required" help="A supplier order is one supplier in one currency.">
+                <Select
+                  value={choice}
+                  onChange={e => setPick(e.target.value)}
+                  options={[...legs.map(l => ({ value: l.id, label: l.currency ? `${l.supplierName} (${l.currency})` : l.supplierName })), { value: NEW_LEG, label: 'A new supplier order' }]}
+                />
+              </Field>
+              {isNew ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Supplier" requirement="required" help="Suppliers you have asked, ordered from or carry a brand for.">
+                    <Select
+                      value={supplierId}
+                      onChange={e => setSupplierId(e.target.value)}
+                      placeholder={choices.isPending ? 'Loading suppliers' : 'Choose a supplier'}
+                      options={(choices.data ?? []).map(c => ({ value: c.id, label: c.name }))}
+                    />
+                  </Field>
+                  <Field
+                    label="Currency"
+                    source={chosen && !touched ? (chosen.lastCurrency ? `${chosen.name} last used ${chosen.lastCurrency}` : 'PKR unless you change it') : undefined}
+                    edited={touched}
+                    help={sameLeg ? 'This order already has this supplier in this currency: the line goes on it.' : undefined}
+                  >
+                    <Select
+                      value={currency}
+                      onChange={e => {
+                        setTouched(true)
+                        setCurrency(e.target.value)
+                      }}
+                      options={CURRENCIES.map(c => ({ value: c, label: c }))}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-base text-fg-2">Every goods line on this order has a supplier.</p>
+          )}
+          {error ? (
+            <Banner tone="danger" title="Couldn't choose the supplier">
               {error}
             </Banner>
           ) : null}

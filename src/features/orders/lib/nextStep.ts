@@ -63,7 +63,7 @@ export function listText(step: OrderStep, f: OrderFacts): string {
       return supplier ? `Chase ${supplier}: ${late}` : `Chase the supplier: ${late}`
     }
     case 'add-supplier':
-      return 'Add a supplier for the goods'
+      return 'Choose a supplier for each goods line'
     case 'wait-supplier':
       return 'Waiting for a supplier to be chosen'
     case 'place':

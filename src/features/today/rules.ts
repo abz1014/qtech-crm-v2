@@ -585,7 +585,7 @@ export function ruleToSource(ctx: TodayInputs): Entry[] {
           rule: 'to_source',
           subjectId: o.id,
           tab: tabFor('to_source'),
-          title: o.unsourced === 1 ? '1 item still needs a supplier' : `${o.unsourced} items still need a supplier`,
+          title: o.unsourced === 1 ? 'Choose a supplier for 1 item' : `Choose a supplier for ${o.unsourced} items`,
           ref: orderRef(o.number),
           party: o.customerName,
           actionDueOn: o.orderedOn,

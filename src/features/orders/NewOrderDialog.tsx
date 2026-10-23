@@ -43,6 +43,8 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
   const [po, setPo] = useState('')
   const [orderedOn, setOrderedOn] = useState(businessToday())
   const [error, setError] = useState<string | null>(null)
+  /** HW-53: the source order was cancelled; the database asked "Repeat it anyway?" and the next press is the yes. */
+  const [cancelledAsked, setCancelledAsked] = useState(false)
   const orderId = useRef(crypto.randomUUID())
   const submitting = useRef(false)
   const today = businessToday()
@@ -64,11 +66,13 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
     submitting.current = true
     setError(null)
     try {
-      const id = await create.mutateAsync({ orderId: orderId.current, fromOrderId: chosen.id, customerPo: po.trim() || null, orderedOn: orderedOn && orderedOn !== today ? orderedOn : null, companyId: chosen.companyId })
+      const id = await create.mutateAsync({ orderId: orderId.current, fromOrderId: chosen.id, customerPo: po.trim() || null, orderedOn: orderedOn && orderedOn !== today ? orderedOn : null, companyId: chosen.companyId, repeatCancelled: cancelledAsked })
       toast({ title: 'Order created', body: `Copied from ${orderRef(chosen.number)} · ${chosen.companyName}` })
       navigate(`/orders/${id}`)
     } catch (err) {
-      setError(mapPgError(err, { entity: 'order' }).message)
+      const message = mapPgError(err, { entity: 'order' }).message
+      setCancelledAsked(/^This order was cancelled\./.test(message))
+      setError(message)
       submitting.current = false
     }
   }
@@ -93,7 +97,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
               Cancel
             </Button>
             <Button variant="primary" icon={CopyPlus} busy={busy} busyLabel="Creating" disabled={!chosen} onClick={() => void submit()}>
-              Create order
+              {cancelledAsked ? 'Repeat it anyway' : 'Create order'}
             </Button>
           </>
         }
@@ -124,8 +128,8 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
               </Field>
             </div>
             {error ? (
-              <Banner tone="danger" title="Couldn't create the order">
-                {error} Nothing was created twice: pressing Create order again is safe.
+              <Banner tone={cancelledAsked ? 'warning' : 'danger'} title={cancelledAsked ? 'Repeat a cancelled order?' : "Couldn't create the order"}>
+                {error} {cancelledAsked ? 'Nothing was created.' : 'Nothing was created twice: pressing Create order again is safe.'}
               </Banner>
             ) : null}
           </div>

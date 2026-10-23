@@ -155,6 +155,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         deliveryTerms: delivery.trim() || null,
         paymentTerms: payment.trim() || null,
         shipTo: shipTo.trim() || null,
+        expectedRevision: revision,
       })
       // The leg is placed (the RPC stamped today if it was not placed yet). Suggest the expected date from the lead time, once, when it has none.
       const expected = expectedAfterIssue(leg, today)
@@ -192,6 +193,9 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
     } catch (err) {
       setError(mapPgError(err, { entity: 'purchase order' }).message)
       submitting.current = false
+      // somebody else issued, or a line changed, while this was open (HW-61, HW-63): read both again so the dialog shows what is true now
+      void existing.refetch()
+      void prefill.refetch()
     }
   }
 

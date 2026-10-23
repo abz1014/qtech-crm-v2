@@ -20,6 +20,7 @@ import { lazyShown } from '@/lib/lazyDialog'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
 const SplitLineDialog = lazyShown(() => import('@/features/orders/SplitLineDialog').then(m => m.SplitLineDialog))
+const ChooseSupplierDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.ChooseSupplierDialog))
 const AddLineDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLineDialog))
 
 /*
@@ -77,6 +78,8 @@ export function OrderItemsPanel({
   const setGroupPrice = useSetGroupPrice(orderId)
   const [adding, setAdding] = useState(false)
   const [splitting, setSplitting] = useState<OrderItemRow | null>(null)
+  /** HW-48: the goods line being given a supplier. */
+  const [choosing, setChoosing] = useState<OrderItemRow | null>(null)
   /** "Edit GST and lines": the per-line controls are shown only while this is on. */
   const [editing, setEditing] = useState(false)
   /** The split item whose selling price is being edited (once for all its parts). */
@@ -135,15 +138,19 @@ export function OrderItemsPanel({
     return p === null ? null : p / 100
   }
   const saveGroup = async (r: Row) => {
-    if (groupDraft === null || groupDraft <= 0 || !r.members) return setEditingGroup(null)
+    if (groupDraft === null || groupDraft <= 0) return setEditingGroup(null)
     try {
-      await setGroupPrice.mutateAsync({ ids: r.members.map(m => m.id), unitPriceNet: groupDraft })
+      await setGroupPrice.mutateAsync({ ids: (r.members ?? [r]).map(m => m.id), unitPriceNet: groupDraft })
       toast({ title: 'Selling price changed', body: `${r.description}: ${formatAmount(groupDraft)} before GST on every part` })
       setEditingGroup(null)
     } catch (err) {
       fail('Could not change the price')(err)
     }
   }
+  /** HW-48: a goods line with no supplier can be given one here (admin and sales; a split item's heading has none). */
+  const canChoose = (r: Row) => money && canEdit && r.kind !== 'head' && !r.isService && r.legId === null && order.cancelledOn === null
+  /** A repeat left this line at 0 for the person to price (HW-54, HW-55): the price is typed here, once, as for a split item. */
+  const canPrice = (r: Row) => editable && r.kind !== 'head' && r.priceNeeded === true
   const canSplit = (r: Row) => editable && r.kind !== 'head' && !r.isService && r.legId !== null && r.qty > 1
   const startGroupEdit = (r: Row) => {
     setGroupDraft(typeof r.groupPrice === 'number' ? r.groupPrice : null)
@@ -155,7 +162,17 @@ export function OrderItemsPanel({
     if (r.kind === 'head') return <span className="text-fg-muted">{`${r.members?.length ?? 0} suppliers`}</span>
     if (r.isService) return <span className="text-fg-muted">Service</span>
     const leg = legOf(r)
-    if (!leg) return <span className="text-fg-muted">No supplier yet</span>
+    if (!leg)
+      return canChoose(r) ? (
+        <span className="grid justify-items-start gap-1">
+          <span className="text-fg-muted">No supplier yet</span>
+          <Button size="sm" variant="secondary" icon={Plus} aria-label={`Choose supplier, line ${r.no}`} onClick={() => setChoosing(r)}>
+            Choose supplier
+          </Button>
+        </span>
+      ) : (
+        <span className="text-fg-muted">No supplier yet</span>
+      )
     const st = legState({ placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }, today)
     return (
       <span className="grid min-w-[140px] max-w-[260px] gap-px whitespace-normal">
@@ -238,10 +255,16 @@ export function OrderItemsPanel({
       ) : (
         <span className="grid min-w-0 gap-px">
           <span className="break-words">{r.description}</span>
+          {editingGroup === r.id ? groupEditor(r) : null}
           <span className="text-xs text-fg-muted">
             {r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}
             {/* below 1024 the unit price folds into the item line */}
-            {money && r.unitPriceNet !== null ? (
+            {money && r.priceNeeded ? (
+              <span className="lg:hidden">
+                {r.isService || r.brandName || r.model ? ' · ' : ''}
+                price needed
+              </span>
+            ) : money && r.unitPriceNet !== null ? (
               <span className="num lg:hidden">
                 {r.isService || r.brandName || r.model ? ' · ' : ''}
                 {formatAmount(r.unitPriceNet)} each{basisUnknown ? ', as typed' : ''}
@@ -267,7 +290,18 @@ export function OrderItemsPanel({
     value: r => r.unitPriceNet,
     cell: r =>
       r.kind !== 'head' ? (
-        <Money value={r.unitPriceNet} prefix={false} />
+        r.priceNeeded ? (
+          <span className="inline-flex items-center justify-end gap-1">
+            <span className="font-medium text-tone-warning-fg">Price needed</span>
+            {canPrice(r) && editingGroup !== r.id ? (
+              <Button size="sm" variant="quiet" icon={Pencil} aria-label={`Set price, ${r.description}`} onClick={() => startGroupEdit(r)}>
+                Set price
+              </Button>
+            ) : null}
+          </span>
+        ) : (
+          <Money value={r.unitPriceNet} prefix={false} />
+        )
       ) : (
         <span className="inline-flex items-center justify-end gap-1">
           {groupPriceText(r)}
@@ -318,11 +352,20 @@ export function OrderItemsPanel({
             Edit price
           </Button>
         )
-      ) : canSplit(r) ? (
-        <Button size="sm" variant="quiet" icon={Split} aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
-          Split line
-        </Button>
-      ) : null,
+      ) : (
+        <span className="flex flex-wrap items-center justify-end gap-2">
+          {canChoose(r) ? (
+            <Button size="sm" variant="secondary" icon={Plus} aria-label={`Choose supplier, line ${r.no}`} onClick={() => setChoosing(r)}>
+              Choose supplier
+            </Button>
+          ) : null}
+          {canSplit(r) ? (
+            <Button size="sm" variant="quiet" icon={Split} aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
+              Split line
+            </Button>
+          ) : null}
+        </span>
+      ),
   }
   const base: Column<Row>[] = [
     { id: 'item', header: 'Item', value: r => r.description, cell: itemCell },
@@ -414,9 +457,20 @@ export function OrderItemsPanel({
               <span className="text-sm text-fg-muted">
                 <span className="num">{r.qty}</span>
                 {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''}
-                {money && r.unitPriceNet !== null ? <span className="num">{` × ${formatAmount(r.unitPriceNet)}`}</span> : null}
+                {money && r.priceNeeded ? <span>{' · price needed'}</span> : money && r.unitPriceNet !== null ? <span className="num">{` × ${formatAmount(r.unitPriceNet)}`}</span> : null}
                 {r.isService ? ' · Service' : legOf(r) ? ` · ${legOf(r)?.supplierName}` : ' · No supplier yet'}
               </span>
+              {editingGroup === r.id ? groupEditor(r) : null}
+              {canPrice(r) && editingGroup !== r.id ? (
+                <Button size="sm" variant="quiet" icon={Pencil} className="justify-self-start" aria-label={`Set price, ${r.description}`} onClick={() => startGroupEdit(r)}>
+                  Set price
+                </Button>
+              ) : null}
+              {canChoose(r) ? (
+                <Button size="sm" variant="secondary" icon={Plus} className="justify-self-start" aria-label={`Choose supplier, line ${r.no}`} onClick={() => setChoosing(r)}>
+                  Choose supplier
+                </Button>
+              ) : null}
               {showEdit && canSplit(r) ? (
                 <Button size="sm" variant="quiet" icon={Split} className="justify-self-start" aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
                   Split line
@@ -428,6 +482,7 @@ export function OrderItemsPanel({
         empty={<p className="px-4 py-6 text-sm text-fg-muted">This order has no lines yet. Add one to start.</p>}
       />
       {adding ? <AddLineDialog order={order} items={items} legs={legs} onClose={() => setAdding(false)} /> : null}
+      {choosing ? <ChooseSupplierDialog order={order} legs={legs} itemId={choosing.id} onClose={() => setChoosing(null)} /> : null}
       {splitting ? <SplitLineDialog order={order} item={items.find(i => i.id === splitting.id) ?? splitting} legs={legs} pos={pos} onClose={() => setSplitting(null)} /> : null}
     </section>
   )

@@ -24,6 +24,8 @@ export interface OrderHeader {
   companyName: string
   rfqId: string | null
   customerPo: string | null
+  /** orders.created_at: which quotation was the latest when the order was made. */
+  createdAt?: string
   orderedOn: string | null
   paymentTermsDays: number | null
   needsCommissioning: boolean
@@ -88,6 +90,7 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
     companyName: company?.name ?? 'Unknown company',
     rfqId: o.rfq_id,
     customerPo: o.customer_po_number,
+    createdAt: o.created_at,
     orderedOn: o.ordered_on,
     paymentTermsDays: o.payment_terms_days,
     needsCommissioning: o.needs_commissioning,
@@ -133,6 +136,8 @@ export interface OrderItemRow {
   unitPriceNet: number | null
   gstRate: number | null
   supplierUnitPrice: number | null
+  /** A repeat copied this line at 0 for the person to price it (order_items.legacy_flags 'price_needed', still priced 0). Never for an engineer. */
+  priceNeeded?: boolean
 }
 
 export async function listOrderItems(orderId: string, money: boolean): Promise<OrderItemRow[]> {
@@ -141,7 +146,7 @@ export async function listOrderItems(orderId: string, money: boolean): Promise<O
   const rows = unwrap(
     await db
       .from('order_items')
-      .select(money ? `${base}, unit_price_net, gst_rate, supplier_unit_price` : base)
+      .select(money ? `${base}, unit_price_net, gst_rate, supplier_unit_price, legacy_flags` : base)
       .eq('order_id', orderId)
       .order('position')
       .order('created_at'),
@@ -164,6 +169,7 @@ export async function listOrderItems(orderId: string, money: boolean): Promise<O
     unitPriceNet: money ? num(r.unit_price_net) : null,
     gstRate: money ? num(r.gst_rate) : null,
     supplierUnitPrice: money ? num(r.supplier_unit_price) : null,
+    priceNeeded: money && Array.isArray(r.legacy_flags) && (r.legacy_flags as string[]).includes('price_needed') && Number(r.unit_price_net) === 0,
   }))
 }
 
@@ -952,12 +958,37 @@ export async function getPastOrder(id: string): Promise<PastOrder | null> {
   return (await hydratePastOrders(rows))[0] ?? null
 }
 
+/** Where an order came from: its RFQ and the quotation that was the latest when it was won (Mark won makes the order from it). */
+export interface OrderSource {
+  rfqId: string
+  rfqNumber: number
+  quotation: { number: number; revision: number; issuedOn: string } | null
+}
+
+/** The RFQ (and its quotation) of a Mark won order, for "From RFQ-0123 · QT-26-0007 R1". Admin and sales only: a quotation carries prices. */
+export async function getOrderSource(rfqId: string, orderCreatedAt: string | undefined): Promise<OrderSource | null> {
+  const db = requireSupabase()
+  const [rfqs, quotes] = await Promise.all([
+    db.from('rfqs').select('number').eq('id', rfqId).limit(1),
+    db.from('quotations').select('number, revision, issued_on, created_at').eq('rfq_id', rfqId).order('revision', { ascending: false }),
+  ])
+  const rfq = unwrap(rfqs)[0]
+  if (!rfq) return null
+  const all = unwrap(quotes)
+  const q = (orderCreatedAt ? all.find(x => x.created_at <= orderCreatedAt) : undefined) ?? all[all.length - 1] ?? null
+  // issued_on of the first issue names the year (QT-YY-NNNN): revisions keep the number, so the first revision's date is used
+  const first = all.length ? all.reduce((a, x) => (x.revision < a.revision ? x : a), all[0]) : null
+  return { rfqId, rfqNumber: Number(rfq.number), quotation: q && first ? { number: q.number, revision: q.revision, issuedOn: first.issued_on } : null }
+}
+
 export interface RepeatInput {
   /** Client-generated: a second call with the same id returns the same order and writes nothing, so a double submit makes one order. */
   orderId: string
   fromOrderId: string
   customerPo: string | null
   orderedOn: string | null
+  /** The person confirmed repeating an order that was cancelled (the database asks first). */
+  repeatCancelled?: boolean
 }
 
 /** create_repeat_order: copies the source order's company, site, contact, terms, lines with their last prices, and the legs that supplied them. */
@@ -967,6 +998,7 @@ export async function createRepeatOrder(input: RepeatInput): Promise<string> {
     p_from_order_id: input.fromOrderId,
     ...(input.customerPo ? { p_customer_po_number: input.customerPo } : {}),
     ...(input.orderedOn ? { p_ordered_on: input.orderedOn } : {}),
+    ...(input.repeatCancelled ? { p_repeat_cancelled: true } : {}),
   })
   if (error) throw error
   return (data as string | null) ?? input.orderId

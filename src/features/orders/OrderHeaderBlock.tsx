@@ -1,11 +1,13 @@
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Icon } from '@/ui/Icon'
 import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, CopyPlus, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
-import { orderRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
+import { quotationRef } from '@/features/quotations/lib/refs'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -25,7 +27,7 @@ import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
-import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
+import { useCancelOrder, useOrderSource, useUpdateOrder } from '@/features/orders/hooks'
 import { useInFlight } from '@/lib/useInFlight'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
@@ -33,7 +35,7 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { CopyReminderButton } from '@/features/orders/CopyReminderButton'
-import { legState } from '@/features/orders/lib/legModel'
+import { legLabel, legState } from '@/features/orders/lib/legModel'
 import { orderFacts, pageStep, recordPaymentPlace, type PrimaryAction } from '@/features/orders/lib/primaryAction'
 import type { OrderStep } from '@/features/orders/lib/orderSteps'
 import { useLegActions } from '@/features/orders/useLegActions'
@@ -48,7 +50,7 @@ import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
 const CommissioningEditDialog = lazyShown(() => import('@/features/orders/CommissioningPanel').then(m => m.CommissioningEditDialog))
 const IssuePoDialog = lazyShown(() => import('@/features/purchaseOrders/IssuePoDialog').then(m => m.IssuePoDialog))
 const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDialog').then(m => m.GoodsChaseDialog))
-const AddLegDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLegDialog))
+const ChooseSupplierDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.ChooseSupplierDialog))
 const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog').then(m => m.NewOrderDialog))
 // Record payment from the More menu: its form library (react-hook-form) is not on the order page's first download.
 const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
@@ -79,6 +81,29 @@ export interface NextForPage {
   step: OrderStep
   primary: PrimaryAction | null
   text: string
+}
+
+/** HW-62: "From RFQ-0123 · QT-26-0007 R1": the way back to the RFQ and the quotation an order was won from. Admin and sales (a quotation has prices). */
+function OrderSourceLine({ order }: { order: OrderHeader }) {
+  const src = useOrderSource(order.id, order.rfqId, order.createdAt, true)
+  const rfqHref = `/rfqs/${order.rfqId}`
+  const link = 'inline-flex min-h-11 items-center rounded underline underline-offset-4 hover:text-fg'
+  return (
+    <p className="mt-1 text-base text-fg-2" data-testid="order-source">
+      From{' '}
+      <Link to={rfqHref} className={link}>
+        {src.data ? rfqRef(src.data.rfqNumber) : 'the RFQ'}
+      </Link>
+      {src.data?.quotation ? (
+        <>
+          {' · '}
+          <Link to={rfqHref} className={link}>
+            {quotationRef(src.data.quotation.number, src.data.quotation.issuedOn, src.data.quotation.revision)}
+          </Link>
+        </>
+      ) : null}
+    </p>
+  )
 }
 
 function Cell({ title, icon, children, action }: { title: string; icon: LucideIcon; children: ReactNode; action?: ReactNode }) {
@@ -263,6 +288,7 @@ export function OrderHeaderBlock({
           money ? <span data-testid="order-terms">{termsText}</span> : null,
         ]}
       />
+      {money && order.rfqId ? <OrderSourceLine order={order} /> : null}
       {cancelled ? (
         <Banner tone="warning" title={`Cancelled ${order.cancelledOn ? formatDay(order.cancelledOn) : ''}`} className="mt-4">
           {cancelReasonLabel(order.cancelReason) ? `${cancelReasonLabel(order.cancelReason)}. ` : ''}Nothing on this order can be changed while it is cancelled.
@@ -545,7 +571,7 @@ function PrimaryButton({
   const [open, setOpen] = useState(false)
   const cls = 'max-sm:w-full'
   // a supplier-order step names its supplier for assistive tech, as the same button on the supplier order's row does
-  const aria = action.supplierName ? `${action.label}, ${action.supplierName}` : undefined
+  const aria = action.supplierName ? `${action.label}, ${action.legLabel ?? action.supplierName}` : undefined
   switch (action.kind) {
     case 'resolve-basis':
       return (
@@ -565,13 +591,13 @@ function PrimaryButton({
           {action.label}
         </Button>
       )
-    case 'add-supplier':
+    case 'choose-supplier':
       return (
         <>
           <Button variant="primary" icon={Plus} className={cls} onClick={() => setOpen(true)}>
             {action.label}
           </Button>
-          {open ? <AddLegDialog order={order} legs={legs} onClose={() => setOpen(false)} /> : null}
+          {open ? <ChooseSupplierDialog order={order} legs={legs} onClose={() => setOpen(false)} /> : null}
         </>
       )
     case 'plan-commissioning':
@@ -613,7 +639,7 @@ function PrimaryButton({
     case 'mark-placed':
     case 'deliver':
       return leg && legActions.stamp ? (
-        <Button variant="primary" icon={Truck} className={cls} onClick={legActions.doStamp} busy={legActions.pending} busyLabel="Saving" aria-label={`${legActions.stamp.label}, ${leg.supplierName}`}>
+        <Button variant="primary" icon={Truck} className={cls} onClick={legActions.doStamp} busy={legActions.pending} busyLabel="Saving" aria-label={`${legActions.stamp.label}, ${legLabel(leg, legs)}`}>
           {legActions.stamp.label}
         </Button>
       ) : null

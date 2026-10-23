@@ -78,7 +78,8 @@ export function constraintOf(err: PgLikeError): string | undefined {
 }
 
 export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
-  const exists = opts.entity ? `A ${opts.entity} with these details already exists.` : 'That already exists.'
+  // "An order", "A company" (HW-52): the article follows the first letter of the noun
+  const exists = opts.entity ? `${/^[aeiou]/i.test(opts.entity) ? 'An' : 'A'} ${opts.entity} with these details already exists.` : 'That already exists.'
   if (err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false)) return { ...NETWORK }
   if (err instanceof PlainError) return { kind: 'unknown', message: err.message, code: err.code }
   if (!isPgLike(err)) {
@@ -87,7 +88,7 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
   const text = typeof err.message === 'string' ? err.message : ''
   if (!err.code && FETCH_FAILED.test(text)) return { ...NETWORK }
   const constraint = constraintOf({ ...err, message: text })
-  const rpc = ['22023', '22004', 'P0001', 'P0002', '23514', '42501', '', undefined].includes(err.code) ? rpcMessage(text) : null
+  const rpc = ['22023', '22004', 'P0001', 'P0002', '23505', '23514', '42501', '', undefined].includes(err.code) ? rpcMessage(text) : null
   if (rpc && !(err.code === 'P0001' && CLOSED_MONTH.test(text.trim()))) {
     const kind: PgErrorKind = err.code === '23514' ? 'check' : err.code === '42501' ? 'permission' : 'unknown'
     const hint = typeof err.hint === 'string' && err.hint ? err.hint : undefined

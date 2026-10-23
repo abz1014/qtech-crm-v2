@@ -429,9 +429,9 @@ describe('rule: to source (a won order with items that have no supplier)', () =>
   const toSource = (o: Partial<OrderFact> = {}) => ord({ goodsState: 'to_source', unsourced: 3, invoicingState: null, ...o })
   it('says how many items still need a supplier, as ready to move with the order age', () => {
     const [e] = ruleToSource(ctx({ orders: [toSource()] }))
-    expect(e).toMatchObject({ rule: 'to_source', title: '3 items still need a supplier', ref: 'ORD-0038', party: 'Karachi Glassworks', group: 'ready', tab: 'sourcing', orderId: 'ord1', href: '/orders/ord1' })
+    expect(e).toMatchObject({ rule: 'to_source', title: 'Choose a supplier for 3 items', ref: 'ORD-0038', party: 'Karachi Glassworks', group: 'ready', tab: 'sourcing', orderId: 'ord1', href: '/orders/ord1' })
     expect(e.badge.text).toBe('17 days old')
-    expect(ruleToSource(ctx({ orders: [toSource({ unsourced: 1 })] }))[0].title).toBe('1 item still needs a supplier')
+    expect(ruleToSource(ctx({ orders: [toSource({ unsourced: 1 })] }))[0].title).toBe('Choose a supplier for 1 item')
   })
   it('is not raised once every item has a leg, for services-only orders, or when the count is zero', () => {
     for (const goodsState of ['to_place', 'on_order', 'delivered', 'n_a']) expect(ruleToSource(ctx({ orders: [toSource({ goodsState })] }))).toEqual([])

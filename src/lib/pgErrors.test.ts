@@ -9,6 +9,17 @@ describe('mapPgError (U07)', () => {
     expect(m.constraint).toBe('companies_name_key')
   })
 
+  it('23505 unique violation: "An order", not "A order" (HW-52)', () => {
+    const m = mapPgError({ code: '23505', message: 'duplicate key value violates unique constraint "orders_company_po_key"' }, { entity: 'order' })
+    expect(m.message).toBe('An order with these details already exists. Open the existing one instead of adding a second.')
+    expect(mapPgError({ code: '23505', message: 'x' }, { entity: 'invoice' }).message).toMatch(/^An invoice /)
+  })
+
+  it('23505 from the PO check names the PO and the order (HW-52)', () => {
+    const m = mapPgError({ code: '23505', message: 'PO 4500123 is already on order ORD-0042. Open that order instead of adding a second.' }, { entity: 'order' })
+    expect(m.message).toBe('PO 4500123 is already on order ORD-0042. Open that order instead of adding a second.')
+  })
+
   it('23505 on the primary key means the first attempt already arrived', () => {
     expect(mapPgError({ code: '23505', message: 'duplicate key value violates unique constraint "orders_pkey"' }).kind).toBe('already-saved')
   })

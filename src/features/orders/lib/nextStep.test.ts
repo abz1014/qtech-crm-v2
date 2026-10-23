@@ -25,7 +25,7 @@ describe('the orders list "Next step" column', () => {
 
   it('then what can be done now, naming the supplier where it can', () => {
     expect(step({ dataTrust: 'basis_unknown', goods: 'to_place' }).text).toMatch(/Is GST included/)
-    expect(step({ goods: 'to_source' }).text).toBe('Add a supplier for the goods')
+    expect(step({ goods: 'to_source' }).text).toBe('Choose a supplier for each goods line')
     expect(step({ goods: 'to_place', legs: [leg({})] }).text).toBe('Place the order with Alpenmark Controls')
     expect(step({ goods: 'to_place' }).text).toBe('Place the supplier order')
     expect(step({ goods: 'delivered', commissioning: 'to_plan' }).text).toBe('Plan commissioning')

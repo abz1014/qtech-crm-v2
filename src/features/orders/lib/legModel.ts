@@ -14,6 +14,15 @@ export interface LegDates {
   deliveredOn: string | null
 }
 
+/**
+ * The name a supplier order goes by in buttons and rows for assistive tech and tests (HW-59): the supplier alone, and with the currency
+ * ("Gulf Instrumentation (USD)") when the order has another supplier order of the same supplier, so "Issue PO, X" never names two buttons.
+ */
+export function legLabel(leg: { id: string; supplierId: string; supplierName: string; currency: string | null }, legs: ReadonlyArray<{ id: string; supplierId: string }>): string {
+  const shared = legs.some(l => l.id !== leg.id && l.supplierId === leg.supplierId)
+  return shared ? `${leg.supplierName} (${leg.currency ?? 'no currency'})` : leg.supplierName
+}
+
 export type LegStep = 'place' | 'deliver'
 
 export interface LegStamp {

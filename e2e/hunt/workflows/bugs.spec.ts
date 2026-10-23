@@ -2,7 +2,7 @@ import { expect, test, type Browser, type TestInfo } from '@playwright/test'
 import { db, num, rpcAs } from '../../verify/support/db'
 import { invoice, letters, order, setProfile, setRates } from '../../verify/support/fixtures'
 import { openMarkWon } from '../../verify/support/session'
-import { addDays, issuePoRpc, issueQuote, ITEMS, itemsOf, legsOf, liveOrder, PRICE, reply, rfqState, seedCast, seedImported, seedImportedOrder, standardReplies, today, winRpc, type Cast } from './jobflow-support'
+import { addDays, issuePoRpc, issueQuote, ITEMS, itemsOf, legsOf, liveOrder, PRICE, reply, rfqState, seedCast, seedImported, seedImportedOrder, standardReplies, stateOf, today, winRpc, type Cast } from './jobflow-support'
 import { ctxAs, settle, shot, tag } from './support'
 
 /*
@@ -123,21 +123,29 @@ test('HW-47: "Not sourced yet" chosen in the Mark won dialog is ignored: the ord
   await ctx.close()
 })
 
-test('HW-48: a goods line left "Not sourced yet" has no way to be given a supplier on the order page, so the order stays at "to source" and its next step is a button that does not fix it', async ({ browser }, info) => {
+test('HW-48 (fixed): a goods line left "Not sourced yet" is given a supplier by "Choose supplier" on the order page, and the order leaves "to source"', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true })
+  expect((await stateOf(L.id)).goods_state, 'the order starts with a goods line no supplier has').toBe('to_source')
   const ctx = await ctxAs(browser, info, 'sales')
   const page = await ctx.newPage()
   page.setDefaultTimeout(15_000)
   await page.goto(`/orders/${L.id}`)
   await settle(page)
+  // the next step and its words point at the control
+  await expect(page.getByRole('button', { name: 'Choose supplier', exact: true })).toBeVisible()
+  await expect(page.locator('[data-slot="order-actions"]')).toContainText(/no supplier yet: choose one for each line/)
+  // the line itself has it too, in edit mode as well
   await page.getByRole('button', { name: 'Edit GST and lines' }).click()
   const row = page.getByRole('table', { name: 'Order items' }).getByRole('row').filter({ hasText: 'Level switch' })
-  const buttons = await row.getByRole('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label') || (e as HTMLElement).innerText))
-  const selects = await row.getByRole('combobox', { name: /supplier|source/i }).count()
-  test.fail()
-  expect(selects > 0 || buttons.some(b => /supplier|assign|source/i.test(b ?? '')), `a control to give the Level switch line a supplier (buttons: ${buttons.join(' | ')})`).toBe(true)
+  await row.getByRole('button', { name: /^Choose supplier, line/ }).click()
+  const d = page.getByRole('dialog')
+  await expect(d.getByTestId('choose-supplier-line')).toContainText('Level switch')
+  await d.getByLabel('Supplier order').selectOption({ index: 0 })
+  await d.getByRole('button', { name: 'Use this supplier' }).click()
+  await expect.poll(async () => (await itemsOf(L.id)).find(i => i.description.includes('Level switch'))?.supplier_order_id ?? null).not.toBeNull()
+  await expect.poll(async () => (await stateOf(L.id)).goods_state).not.toBe('to_source')
   await ctx.close()
 })
 
@@ -172,18 +180,17 @@ test('HW-50: Mark won turns an imported supplier price whose currency was never 
   await ctx.close()
 })
 
-test('HW-51: issuing a PO on a supplier order that was already delivered sets Placed to today, after the Delivered date', async () => {
+test('HW-51 (fixed): issuing a PO on a supplier order that was already delivered places it on or before the Delivered date', async () => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
   await db.patch(`supplier_orders?id=eq.${L.A.id}`, { delivered_on: addDays(today, -3), received_on: addDays(today, -3) })
   expect((await issuePoRpc(L.A.id)).status).toBeLessThan(300)
   const leg = (await legsOf(L.id)).find(l => l.id === L.A.id)!
-  test.fail()
   expect(leg.placed_on && leg.delivered_on && leg.placed_on <= leg.delivered_on, `placed ${leg.placed_on}, delivered ${leg.delivered_on}`).toBe(true)
 })
 
-test('HW-52: a customer who sends the same PO again after the order was cancelled cannot be won again: "A order with these details already exists. Open the existing one", with no word that the cancelled order holds the PO', async ({ browser }, info) => {
+test('HW-52 (fixed): a customer who sends the same PO again after the order was cancelled can be won again, with the PO on the new order', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const PO = `PO-${letters(5).toUpperCase()}`
@@ -194,23 +201,25 @@ test('HW-52: a customer who sends the same PO again after the order was cancelle
   await d.getByRole('button', { name: 'Create order' }).click()
   await page.waitForTimeout(3000)
   const message = (await d.getByRole('alert').innerText().catch(() => '')).replace(/\s+/g, ' ')
-  const made = (await db.rows(`orders?rfq_id=eq.${L.c.rfq.id}&cancelled_on=is.null&select=id`)).length === 1
-  test.fail()
-  expect(made || /cancel|ORD-\d{4}|\bPO\b/i.test(message.replace(/^Couldn't create the order/, '')), `the order is made, or the refusal names the PO or the cancelled order: "${message}"`).toBe(true)
+  const live = await db.rows<{ id: string; customer_po_number: string | null }>(`orders?rfq_id=eq.${L.c.rfq.id}&cancelled_on=is.null&select=id,customer_po_number`)
+  expect(live.length, `the new order is made (the page said: "${message}")`).toBe(1)
+  expect(live[0].customer_po_number, 'the re-sent PO is on the new order').toBe(PO)
   await ctx.close()
 })
 
-test('HW-53: Repeat order copies a CANCELLED order without a check or a word (create_repeat_order; the company page offers Repeat order on it)', async () => {
+test('HW-53 (fixed): Repeat order of a CANCELLED order asks first ("This order was cancelled. Repeat it anyway?") and copies it only when confirmed', async () => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
   await db.patch(`orders?id=eq.${L.id}`, { cancelled_on: today, cancel_reason: 'customer_cancelled' })
   const r = await rpcAs<string>('sales', 'create_repeat_order', { p_order_id: crypto.randomUUID(), p_from_order_id: L.id })
-  test.fail()
   expect(r.status, 'create_repeat_order from a cancelled order').toBeGreaterThanOrEqual(400)
+  expect(JSON.stringify(r.body)).toContain('This order was cancelled. Repeat it anyway?')
+  const again = await rpcAs<string>('sales', 'create_repeat_order', { p_order_id: crypto.randomUUID(), p_from_order_id: L.id, p_repeat_cancelled: true })
+  expect(again.status, 'with the confirmation').toBeLessThan(300)
 })
 
-test('HW-54: Repeat order from an imported order whose price basis is unknown copies the old figure as a plain net price and drops the "is GST included?" flag', async () => {
+test('HW-54 (fixed): Repeat order from an imported order whose price basis is unknown copies no figure as a net price: the lines are "price needed"', async () => {
   await setProfile(true)
   const imp = await seedImportedOrder()
   const id = crypto.randomUUID()
@@ -218,18 +227,21 @@ test('HW-54: Repeat order from an imported order whose price basis is unknown co
   expect(r.status).toBeLessThan(300)
   const copy = await db.one<{ legacy_flags: string[] }>(`orders?id=eq.${id}&select=legacy_flags`)
   const items = await itemsOf(id)
-  test.fail()
   expect(!items.some(i => num(i.unit_price_net) === 125000) || copy.legacy_flags.includes('value_basis_unknown'), `the copy carries 125,000 as a net price with flags ${JSON.stringify(copy.legacy_flags)}`).toBe(true)
+  const flags = await db.rows<{ legacy_flags: string[] }>(`order_items?order_id=eq.${id}&select=legacy_flags`)
+  expect(flags.every(f => f.legacy_flags.includes('price_needed')), 'every line of the copy is marked price needed').toBe(true)
 })
 
-test('HW-55: Repeat order from an imported order copies a line priced 0 as a normal line of the new order', async () => {
+test('HW-55 (fixed): Repeat order copies a line priced 0 as a "price needed" line, not as a normal line of the new order', async () => {
   await setProfile(true)
   const imp = await seedImportedOrder()
   const id = crypto.randomUUID()
   expect((await rpcAs<string>('sales', 'create_repeat_order', { p_order_id: id, p_from_order_id: imp.id })).status).toBeLessThan(300)
   const items = await itemsOf(id)
-  test.fail()
-  expect(items.some(i => num(i.unit_price_net) === 0), `the copy has a line priced 0: ${items.map(i => `${i.description} ${i.unit_price_net}`).join(', ')}`).toBe(false)
+  const flags = await db.rows<{ description: string; unit_price_net: number; legacy_flags: string[] }>(`order_items?order_id=eq.${id}&select=description,unit_price_net,legacy_flags`)
+  const zero = flags.filter(f => num(f.unit_price_net) === 0)
+  expect(zero.length, `the copy's lines: ${items.map(i => `${i.description} ${i.unit_price_net}`).join(', ')}`).toBeGreaterThan(0)
+  expect(zero.every(f => f.legacy_flags.includes('price_needed')), 'every line priced 0 is marked price needed').toBe(true)
 })
 
 test('HW-56: a second tab that presses Create order on an RFQ just won in the first tab opens the first tab\'s order and drops the customer PO typed there without a word', async ({ browser }, info) => {
@@ -269,7 +281,7 @@ test('HW-57: the Mark won dialog opens by the address (?won=1) on an RFQ that al
   await ctx.close()
 })
 
-test('HW-58: Reopen order is allowed on a cancelled order while its RFQ already has a new live order: two live orders for one RFQ, both owing the suppliers', async ({ browser }, info) => {
+test('HW-58 (fixed): Reopen order is refused on a cancelled order while its RFQ already has a new live order ("RFQ-x already has live order ORD-y.")', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
@@ -284,12 +296,12 @@ test('HW-58: Reopen order is allowed on a cancelled order while its RFQ already 
   await page.getByRole('menuitem', { name: 'Reopen order' }).click()
   await page.waitForTimeout(2000)
   const live = await db.rows(`orders?rfq_id=eq.${L.c.rfq.id}&cancelled_on=is.null&select=id`)
-  test.fail()
   expect(live.length, 'live orders for one RFQ after Reopen order').toBe(1)
+  await expect(page.getByRole('alert').filter({ hasText: /RFQ-\d{4} already has live order ORD-\d{4}\./ })).toBeVisible()
   await ctx.close()
 })
 
-test('HW-59: the USD and the EUR supplier orders of one supplier have the same accessible name, so "Issue PO, <supplier>" and "Delivered today, <supplier>" name two different buttons alike', async ({ browser }, info) => {
+test('HW-59 (fixed): the USD and the EUR supplier orders of one supplier have different accessible names ("Issue PO, <supplier> (USD)")', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
@@ -301,8 +313,10 @@ test('HW-59: the USD and the EUR supplier orders of one supplier have the same a
   await page.getByRole('listitem', { name: /^Supplier order,/ }).nth(2).waitFor()
   const names = await page.getByRole('button', { name: /^(Issue PO|Delivered today|Mark placed|Chase goods|More for),? / }).evaluateAll(els => els.map(e => e.getAttribute('aria-label')))
   const rows = await page.getByRole('listitem', { name: /^Supplier order,/ }).evaluateAll(els => els.map(e => e.getAttribute('aria-label')))
-  test.fail()
   expect(new Set(rows).size, `supplier order rows ${JSON.stringify(rows)} (buttons: ${JSON.stringify(names)})`).toBe(rows.length)
+  expect(rows.some(r => /\(USD\)$/.test(r ?? '')) && rows.some(r => /\(EUR\)$/.test(r ?? '')), `the two supplier orders of one supplier carry the currency: ${JSON.stringify(rows)}`).toBe(true)
+  const buttonNames = names.filter((n): n is string => n !== null)
+  expect(new Set(buttonNames).size, `button names ${JSON.stringify(buttonNames)}`).toBe(buttonNames.length)
   await ctx.close()
 })
 
@@ -325,7 +339,7 @@ test('HW-60: the quotation is revised (and a quantity changed) in another tab wh
   await ctx.close()
 })
 
-test('HW-61: a line is split in another tab while Issue PO is open: the PO goes to the supplier at the old quantity (10 asked, the order line now has 6)', async ({ browser }, info) => {
+test('HW-61 (fixed): a line is split in another tab while Issue PO is open: the PO is refused ("The order lines changed. Review again."), not sent at the old quantity', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
@@ -344,12 +358,12 @@ test('HW-61: a line is split in another tab while Issue PO is open: the PO goes 
   const pos = await db.rows<{ lines: { order_item_id: string; qty: number }[] }>(`purchase_orders?supplier_order_id=eq.${L.A.id}&select=lines`)
   const poQty = pos[0]?.lines.find(l => l.order_item_id === L.items[0].id)?.qty
   const now = (await itemsOf(L.id)).find(i => i.id === L.items[0].id)
-  test.fail()
   expect(pos.length === 0 || num(poQty) === num(now?.qty), `PO quantity ${poQty}, order line quantity ${now?.qty}`).toBe(true)
+  await expect(page.getByRole('dialog').getByText('The order lines changed. Review again.')).toBeVisible()
   await ctx.close()
 })
 
-test('HW-62: an order made by Mark won has no link back to the RFQ (or the quotation) it came from', async ({ browser }, info) => {
+test('HW-62 (fixed): an order made by Mark won links back to the RFQ and the quotation it came from', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
@@ -359,12 +373,12 @@ test('HW-62: an order made by Mark won has no link back to the RFQ (or the quota
   await page.goto(`/orders/${L.id}`)
   await settle(page)
   const links = await page.locator(`#main a[href="/rfqs/${L.c.rfq.id}"]`).count()
-  test.fail()
   expect(links, 'a link from the order page to its RFQ').toBeGreaterThan(0)
+  await expect(page.getByTestId('order-source')).toContainText(/From RFQ-\d{4} · QT-\d{2}-\d{4} R\d+/)
   await ctx.close()
 })
 
-test('HW-63: two people issue the PO for one supplier order from two screens: the second press silently issues an identical R1 (the dialog said "New PO, R0")', async ({ browser }, info) => {
+test('HW-63 (fixed): two people issue the PO for one supplier order from two screens: the second press is refused ("PO R0 was just issued by X. Revise instead?"), not an identical R1', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
@@ -379,8 +393,8 @@ test('HW-63: two people issue the PO for one supplier order from two screens: th
   await page.getByRole('dialog').getByRole('button', { name: 'Issue PO', exact: true }).click()
   await page.waitForTimeout(4000)
   const pos = await db.rows<{ number: number; revision: number }>(`purchase_orders?supplier_order_id=eq.${L.A.id}&select=number,revision&order=revision`)
-  test.fail()
   expect(pos.length, `POs for one supplier order: ${pos.map(p => `${p.number} R${p.revision}`).join(', ')}`).toBe(1)
+  await expect(page.getByRole('dialog').getByText(/PO R0 was just issued by .+\. Revise instead\?/)).toBeVisible()
   await ctx.close()
 })
 

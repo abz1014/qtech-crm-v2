@@ -16,7 +16,7 @@ import { toRateTable } from '@/features/rfqs/lib'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGroups'
 import { poChange } from '@/features/orders/lib/poChange'
-import { defaultExpected, legLetter, legState, legSupplierTotal, type LegDates } from '@/features/orders/lib/legModel'
+import { defaultExpected, legLabel, legLetter, legState, legSupplierTotal, type LegDates } from '@/features/orders/lib/legModel'
 import { useLegActions } from '@/features/orders/useLegActions'
 import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
 import { useOrderCosts } from '@/features/money/costs/hooks'
@@ -116,6 +116,7 @@ export function LegsPanel({
               key={leg.id}
               order={order}
               leg={leg}
+              legName={legLabel(leg, legs)}
               letter={legLetter(i)}
               items={items.filter(it => it.legId === leg.id)}
               fromSplit={isFreshSplitLeg(items.filter(it => it.legId === leg.id), splitRfqItemIds(items), pos.some(p => p.legId === leg.id), leg.placedOn !== null)}
@@ -145,6 +146,7 @@ export function LegsPanel({
 function Leg({
   order,
   leg,
+  legName,
   letter,
   items,
   fromSplit,
@@ -163,6 +165,8 @@ function Leg({
 }: {
   order: OrderHeader
   leg: OrderLegRow
+  /** HW-59: the supplier's name for assistive tech; with the currency added when the order has two supplier orders of this supplier. */
+  legName: string
   /** Only for the test ids (leg-A, leg-B): the letters are no longer shown. */
   letter: string
   items: OrderItemRow[]
@@ -206,7 +210,7 @@ function Leg({
   const date = (label: string, field: keyof LegDates, hint?: string) => (
     <span className="inline-flex flex-wrap items-baseline gap-x-1">
       <span className="text-fg-muted">{label}</span>
-      <TapDate value={dates[field]} label={`${label} date, ${name}`} today={today} disabled={!canEdit} onSave={actions.saveDate(field, label)} />
+      <TapDate value={dates[field]} label={`${label} date, ${legName}`} today={today} disabled={!canEdit} onSave={actions.saveDate(field, label)} />
       {hint ? <span className="text-xs text-fg-muted">{hint}</span> : null}
     </span>
   )
@@ -239,7 +243,7 @@ function Leg({
 
   if (folded) {
     return (
-      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="px-4 py-1 md:px-5">
+      <li aria-label={`Supplier order, ${legName}`} data-testid={`leg-${letter}`} className="px-4 py-1 md:px-5">
         <button
           type="button"
           aria-expanded={false}
@@ -262,7 +266,7 @@ function Leg({
   }
 
   return (
-    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="grid gap-3 px-4 py-4 md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6">
+    <li aria-label={`Supplier order, ${legName}`} data-testid={`leg-${letter}`} className="grid gap-3 px-4 py-4 md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6">
       <div className="grid min-w-0 content-start gap-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="min-w-0 break-words font-medium">{name}</span>
@@ -283,7 +287,7 @@ function Leg({
             </span>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm" role="group" aria-label={`Dates, ${name}`}>
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm" role="group" aria-label={`Dates, ${legName}`}>
           {date('Placed', 'placedOn')}
           {date('Expected', 'expectedOn', expectedHint)}
           {date('Delivered', 'deliveredOn')}
@@ -291,7 +295,7 @@ function Leg({
             <span className="text-fg-muted">Ref</span>
             <TapText
               value={leg.reference}
-              label={`Reference, ${name}`}
+              label={`Reference, ${legName}`}
               empty="add"
               placeholder="Our PO or the supplier's PI"
               disabled={!canEdit}
@@ -311,7 +315,7 @@ function Leg({
               <span className="text-fg-2">{changed.notes.join('. ')}. The PO still lists the earlier lines.</span>
             </span>
             {canEdit ? (
-              <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Revise PO, ${name}`}>
+              <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Revise PO, ${legName}`}>
                 Revise PO
               </Button>
             ) : null}
@@ -333,27 +337,27 @@ function Leg({
         {canEdit ? (
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {stamp && !placeInMenu ? (
-              <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
+              <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${legName}`}>
                 {stampLabel}
               </Button>
             ) : null}
             {/* data-slot="issue-po" (O07): Issue PO opens the dialog (1 tap, then Issue PO in it: 2 taps). Admin and sales only: a PO carries prices. */}
             {issueOnRow ? (
               <span data-slot="issue-po" className="contents">
-                <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Issue PO, ${name}`}>
+                <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Issue PO, ${legName}`}>
                   Issue PO
                 </Button>
               </span>
             ) : null}
             {canChase && late ? (
-              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${name}`}>
+              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${legName}`}>
                 Chase goods
               </Button>
             ) : null}
             {menu ? (
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button size="sm" variant="quiet" icon={Ellipsis} aria-label={`More for ${name}`} />
+                  <Button size="sm" variant="quiet" icon={Ellipsis} aria-label={`More for ${legName}`} />
                 </PopoverTrigger>
                 <PopoverContent variant="menu" align="end">
                   {money && po ? (
@@ -391,7 +395,7 @@ function Leg({
             ) : null}
           </div>
         ) : money && po ? (
-          <Button size="sm" variant="quiet" icon={FileText} onClick={onViewPo} busy={viewingPo} busyLabel="Opening" aria-label={`View PO, ${name}`}>
+          <Button size="sm" variant="quiet" icon={FileText} onClick={onViewPo} busy={viewingPo} busyLabel="Opening" aria-label={`View PO, ${legName}`}>
             View PO
           </Button>
         ) : null}

@@ -53,6 +53,11 @@ export function useEngineerCandidates(enabled: boolean) {
   return useQuery({ queryKey: qk.orders.engineers(), queryFn: api.listEngineerCandidates, enabled, staleTime: 60_000 })
 }
 
+/** HW-62: the RFQ and quotation the order was made from. Admin and sales only. */
+export function useOrderSource(orderId: string, rfqId: string | null | undefined, createdAt: string | undefined, enabled: boolean) {
+  return useQuery({ queryKey: qk.orders.part(orderId, 'source'), queryFn: () => api.getOrderSource(rfqId as string, createdAt), enabled: enabled && Boolean(rfqId), staleTime: 300_000 })
+}
+
 export function useOrdersForRfq(rfqId: string | undefined) {
   return useQuery({ queryKey: qk.orders.forRfq(rfqId ?? ''), queryFn: () => api.listOrdersForRfq(rfqId as string), enabled: Boolean(rfqId) })
 }

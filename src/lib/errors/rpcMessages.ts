@@ -101,6 +101,12 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'Add at least one item first.' },
   // 0077: already plain; Create order opens that order instead (existingOrderOf in src/features/orders/api.ts).
   { match: /^This RFQ is already order ORD-.+\.$/ },
+  // 0095: order, PO and repeat-order fixes (already written for people)
+  { match: /^PO (.+) is already on order (ORD-.+?)\. Open that order instead of adding a second\.$/ },
+  { match: /^RFQ-.+ already has live order ORD-.+\.$/ },
+  { match: /^This order was cancelled\. Repeat it anyway\?$/ },
+  { match: /^The order lines changed\. Review again\.$/ },
+  { match: /^PO R.+ was just issued by .+\. Revise instead\?$/ },
   { match: /^the supplier order has no goods lines to issue$/, message: () => 'Add at least one goods line to this supplier order, then issue the PO.' },
   { match: /^the chosen quote line is not a quote for the item: (.+)$/, message: m => `The chosen supplier quote does not belong to "${m[1]}". Choose the quote again.` },
   { match: /^an item (to quote )?does not belong to this RFQ$/, message: () => RELOAD },

@@ -6,7 +6,7 @@
 //   resolve-basis       admin: "Is GST included?"
 //   chase-payment       admin: Record payment; sales: Copy reminder (the payment reminder text, on the clipboard)
 //   goods-late          admin and sales: Chase goods; an engineer: Delivered today (they are the ones on site)
-//   add-supplier        admin and sales: Add supplier
+//   add-supplier        admin and sales: Choose supplier (gives the first unsourced goods line a supplier: an existing supplier order or a new one)
 //   place               admin and sales: Issue PO (Mark placed when its PO already exists); an engineer waits for the admin
 //   plan-commissioning  admin and sales: Plan commissioning (the Commissioning dialog)
 //   deliver             everyone: Delivered today
@@ -21,9 +21,10 @@ import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import { daysLate, overdueWords, COUNT_WORDS_MAX_DAYS, sinceWords } from '@/lib/timeWords'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney } from '@/features/orders/api'
+import { legLabel } from '@/features/orders/lib/legModel'
 import { nextOrderStep, type OrderFacts, type OrderStep, type StepLeg } from '@/features/orders/lib/orderSteps'
 
-export type PrimaryKind = 'resolve-basis' | 'record-payment' | 'chase-goods' | 'deliver' | 'add-supplier' | 'issue-po' | 'mark-placed' | 'plan-commissioning' | 'mark-done' | 'create-invoice' | 'copy-reminder' | 'repeat-order'
+export type PrimaryKind = 'resolve-basis' | 'record-payment' | 'chase-goods' | 'deliver' | 'choose-supplier' | 'issue-po' | 'mark-placed' | 'plan-commissioning' | 'mark-done' | 'create-invoice' | 'copy-reminder' | 'repeat-order'
 
 export interface PrimaryAction {
   kind: PrimaryKind
@@ -32,6 +33,8 @@ export interface PrimaryAction {
   /** For a supplier-order step: which one (its name goes into the button's accessible name). */
   legId?: string
   supplierName?: string
+  /** With two supplier orders of one supplier, the name that tells them apart ("Gulf Instrumentation (USD)"). */
+  legLabel?: string
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -51,7 +54,7 @@ export function orderFacts(
   // Only supplier orders that supply a goods line count, as v_order_state counts them: one added with no lines yet is not a step.
   const goodsLegs: StepLeg[] = legs
     .filter(l => items.some(i => i.legId === l.id && !i.isService))
-    .map(l => ({ id: l.id, supplierName: l.supplierName, placedOn: l.placedOn, expectedOn: l.expectedOn, deliveredOn: l.deliveredOn, hasPo: pos.some(p => p.legId === l.id) }))
+    .map(l => ({ id: l.id, supplierName: l.supplierName, label: legLabel(l, legs), placedOn: l.placedOn, expectedOn: l.expectedOn, deliveredOn: l.deliveredOn, hasPo: pos.some(p => p.legId === l.id) }))
   return {
     role,
     lifecycle: order.cancelledOn !== null ? 'cancelled' : (s?.lifecycle ?? 'active'),
@@ -77,7 +80,7 @@ export function pagePrimary(step: OrderStep, f: OrderFacts): PrimaryAction | nul
   const money = f.role === 'admin' || f.role === 'sales'
   const admin = f.role === 'admin'
   const leg = step.leg
-  const onLeg = (kind: PrimaryKind, label: string): PrimaryAction | null => (leg ? { kind, label, legId: leg.id, supplierName: leg.supplierName } : null)
+  const onLeg = (kind: PrimaryKind, label: string): PrimaryAction | null => (leg ? { kind, label, legId: leg.id, supplierName: leg.supplierName, legLabel: leg.label } : null)
   switch (step.kind) {
     case 'resolve-basis':
       return admin ? { kind: 'resolve-basis', label: 'Is GST included?' } : null
@@ -87,7 +90,7 @@ export function pagePrimary(step: OrderStep, f: OrderFacts): PrimaryAction | nul
     case 'goods-late':
       return money ? onLeg('chase-goods', 'Chase goods') : onLeg('deliver', 'Delivered today')
     case 'add-supplier':
-      return money ? { kind: 'add-supplier', label: 'Add supplier' } : null
+      return money ? { kind: 'choose-supplier', label: 'Choose supplier' } : null
     case 'place':
       return money ? (leg?.hasPo ? onLeg('mark-placed', 'Mark placed') : onLeg('issue-po', 'Issue PO')) : null
     case 'plan-commissioning':
@@ -125,7 +128,7 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
       return `Goods from ${supplier} are ${late}`
     }
     case 'add-supplier':
-      return f.unsourced && f.unsourced > 0 ? `${plural(f.unsourced, 'goods line has', 'goods lines have')} no supplier yet` : 'Some goods have no supplier yet'
+      return f.unsourced && f.unsourced > 0 ? `${plural(f.unsourced, 'goods line has', 'goods lines have')} no supplier yet: choose one for each line` : 'Some goods have no supplier yet: choose one for each line'
     case 'wait-supplier':
       return 'Waiting for a supplier to be chosen'
     case 'place':

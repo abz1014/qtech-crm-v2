@@ -40,8 +40,8 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
 
   it('goods lines with no supplier are a step of their own, and never "Everything is delivered" (finding 2)', () => {
     const r = page(header({}, { goods: 'to_source' }), [], [item('1', null), item('2', null)], 'sales')
-    expect(r.primary).toMatchObject({ kind: 'add-supplier', label: 'Add supplier' })
-    expect(r.text).toBe('2 goods lines have no supplier yet')
+    expect(r.primary).toMatchObject({ kind: 'choose-supplier', label: 'Choose supplier' })
+    expect(r.text).toBe('2 goods lines have no supplier yet: choose one for each line')
     expect(page(header({}, { goods: 'to_source' }), [], [item('1', null)], 'engineer').primary).toBeNull()
   })
 
