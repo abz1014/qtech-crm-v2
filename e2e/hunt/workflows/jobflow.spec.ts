@@ -1246,3 +1246,59 @@ test('jobflow S14: double click Create order, two tabs on one RFQ, reload and Ba
   await phone.close()
   await sales.close()
 })
+
+test('jobflow S14b: the quotation is revised and a quantity changed in another tab while Mark won is open: the order is made at figures the dialog never showed', async ({ browser }, info) => {
+  await setProfile(true)
+  await setRates()
+  const c = await seedCast({ items: 3 })
+  await standardReplies(c)
+  await issueQuote(c, { only: [0, 1, 2] })
+  const sales = await ctxAs(browser, info, 'sales', 'desktop')
+  const p1 = await newPage(sales, info, 'S14b tab 1')
+  await visit(p1, info, `/rfqs/${c.rfq.id}`)
+  let shownNet = ''
+  await probe(info, p1, 'S14b tab 1 opens Mark won', async () => {
+    await openMarkWon(p1)
+    const d = p1.getByRole('dialog')
+    await d.getByRole('group', { name: 'Order totals' }).waitFor({ timeout: T })
+    shownNet = flat(await d.getByRole('group', { name: 'Order totals' }).innerText())
+  })
+  // another tab: a revised quotation with new prices, then a quantity edited on the RFQ
+  const r1 = await issueQuote(c, { only: [0, 1, 2], prices: { 0: 10000, 1: 200000, 2: 220000 } })
+  want(info, 'S14b R1', r1.status < 300, `R1 refused ${r1.status}`)
+  await db.patch(`rfq_items?id=eq.${c.items[0].id}`, { qty: 12 })
+  await probe(info, p1, 'S14b tab 1 presses Create order', async () => {
+    await p1.getByRole('dialog').getByRole('button', { name: 'Create order' }).click()
+    await p1.waitForURL(/\/orders\/[0-9a-f-]{36}$/, { timeout: 30_000 })
+    const id = /orders\/([0-9a-f-]{36})/.exec(p1.url())?.[1] as string
+    const t = await orderTotal(id)
+    want(info, 'S14b stale dialog', shownNet.includes(amount(t.net)) && shownNet.includes(amount(t.gross)), `the dialog showed "${shownNet}" but the order was made at net ${t.net} gross ${t.gross} (prices of the revision, quantity 12): nothing warned that the quotation had changed`)
+  })
+  await sales.close()
+})
+
+test('jobflow S7b: a line is split in another tab while Issue PO is open: the PO is issued at the old quantity', async ({ browser }, info) => {
+  await setProfile(true)
+  await setRates()
+  const L = await liveOrder({ service5: true, leaveOut4: true })
+  const sales = await ctxAs(browser, info, 'sales', 'desktop')
+  const page = await newPage(sales, info, 'S7b sales')
+  await visit(page, info, `/orders/${L.id}`)
+  await probe(info, page, 'S7b open Issue PO on the Lahore supplier order', async () => {
+    const row = legRows(page, L.c.supA.name).first()
+    await row.getByRole('button', { name: `Issue PO, ${L.c.supA.name}` }).click({ timeout: T })
+    await page.getByRole('dialog').getByTestId('po-total').waitFor({ timeout: T })
+  })
+  // another tab splits the contactor line: 4 of the 10 go to Gulf (USD)
+  const split = await rpcAs<string>('sales', 'split_order_item', { p_item_id: L.items[0].id, p_qty: 4, p_supplier_id: L.c.supB.id, p_currency: 'USD', p_supplier_unit_price: 31 })
+  want(info, 'S7b split', split.status < 300, `split refused ${split.status} ${JSON.stringify(split.body).slice(0, 160)}`)
+  await probe(info, page, 'S7b press Issue PO in the stale dialog', async () => {
+    await page.getByRole('dialog').getByRole('button', { name: 'Issue PO', exact: true }).click()
+    await page.waitForTimeout(3500)
+    const pos = await posOf(L.A.id)
+    const now = (await itemsOf(L.id)).find(i => i.id === L.items[0].id)
+    const poQty = pos[0]?.lines?.find(l => l.order_item_id === L.items[0].id)?.qty
+    want(info, 'S7b stale PO', pos.length === 0 || num(poQty) === num(now?.qty), `the PO to the supplier was issued for quantity ${poQty} of the contactor; the order line now has ${now?.qty} (4 moved to another supplier): the supplier is asked for ${num(poQty) - num(now?.qty)} too many`)
+  })
+  await sales.close()
+})
