@@ -58,7 +58,7 @@ test.describe('delete an RFQ', () => {
 
     const dialog = page.getByRole('dialog', { name: `Delete ${rfqRef(rfq.number)}?` })
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByText(/Also deletes:/)).toContainText('1 file')
+    await expect(dialog.locator('[data-slot="delete-also"]')).toContainText('1 file')
     await expect(dialog.getByText('This can’t be undone.')).toBeVisible()
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
     // Red, never green; 44px high.
