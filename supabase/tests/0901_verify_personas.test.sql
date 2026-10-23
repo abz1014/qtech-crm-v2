@@ -120,6 +120,7 @@ insert into public.rfqs (id, company_id, owner_id) values
 insert into public.rfq_items (id, rfq_id, position, description, brand_id, quoted_unit_price_net) values
   (pg_temp.f('17'), pg_temp.f('15'), 0, 'Fixture item', pg_temp.f('13'), 50),
   (pg_temp.f('18'), pg_temp.f('15'), 1, 'Leaf item', null, 50);
+update public.rfq_items set family_id = pg_temp.f('14') where id = pg_temp.f('18');   -- 0093: v_supplier_category_evidence needs an asked item with a category
 insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   (pg_temp.f('19'), pg_temp.f('15'), pg_temp.f('03'), public.today_pkt()),
   (pg_temp.f('1a'), pg_temp.f('15'), pg_temp.f('04'), public.today_pkt()),
@@ -498,8 +499,8 @@ select is((select array_agg(p.proname::text order by p.proname::text) from pg_pr
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
           array['close_month', 'close_months_through', 'current_user_role', 'my_target_progress', 'order_receivables',
-                'receipt_locked', 'reopen_month'],
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed seven');
+                'receipt_locked', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed eight');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')
