@@ -73,8 +73,9 @@ export const undoIn = (l: Locator) => l.getByRole('button', { name: /^Undo/ }).f
 export const actions = (p: Page) => p.locator('[data-slot="order-actions"]')
 export const legRows = (p: Page, supplierName: string) => p.getByRole('listitem', { name: `Supplier order, ${supplierName}` })
 /** The supplier order row of `supplierName` that carries the currency chip `ccy` (one supplier may have two supplier orders, USD and EUR). */
-export async function legRowByCcy(p: Page, supplierName: string, ccy: string): Promise<Locator> {
+export async function legRowByCcy(p: Page, supplierName: string, ccy: string, count = 1): Promise<Locator> {
   const rows = legRows(p, supplierName)
+  await rows.nth(count - 1).waitFor({ timeout: 15_000 })
   const texts = await rows.allInnerTexts()
   const i = texts.findIndex(t => new RegExp(`\b${ccy}\b`).test(t))
   return rows.nth(Math.max(i, 0))
@@ -222,8 +223,8 @@ export interface OLeg {
 }
 export const legsOf = (orderId: string) => db.rows<OLeg>(`supplier_orders?order_id=eq.${orderId}&select=id,supplier_id,currency,inquiry_id,placed_on,expected_on,delivered_on,received_on&order=created_at,id`)
 export const orderRow = (id: string) =>
-  db.one<{ id: string; number: number; rfq_id: string | null; payment_terms_days: number | null; needs_commissioning: boolean; cancelled_on: string | null; cancel_reason: string | null; commissioning_planned_on: string | null; commissioning_done_on: string | null; owner_id: string | null; company_id: string }>(
-    `orders?id=eq.${id}&select=id,number,rfq_id,payment_terms_days,needs_commissioning,cancelled_on,cancel_reason,commissioning_planned_on,commissioning_done_on,owner_id,company_id`,
+  db.one<{ id: string; number: number; rfq_id: string | null; customer_po_number: string | null; payment_terms_days: number | null; needs_commissioning: boolean; cancelled_on: string | null; cancel_reason: string | null; commissioning_planned_on: string | null; commissioning_done_on: string | null; owner_id: string | null; company_id: string }>(
+    `orders?id=eq.${id}&select=id,number,rfq_id,customer_po_number,payment_terms_days,needs_commissioning,cancelled_on,cancel_reason,commissioning_planned_on,commissioning_done_on,owner_id,company_id`,
   )
 export const orderTotal = async (id: string) => {
   const t = (await db.view<{ net: number; gst: number; gross: number }>(`v_order_items_total?order_id=eq.${id}&select=net,gst,gross`))[0]

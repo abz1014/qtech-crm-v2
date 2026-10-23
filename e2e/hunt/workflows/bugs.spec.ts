@@ -2,7 +2,7 @@ import { expect, test, type Browser, type TestInfo } from '@playwright/test'
 import { db, num, rpcAs } from '../../verify/support/db'
 import { invoice, letters, order, setProfile, setRates } from '../../verify/support/fixtures'
 import { openMarkWon } from '../../verify/support/session'
-import { addDays, issuePoRpc, issueQuote, ITEMS, itemsOf, legsOf, liveOrder, PRICE, reply, rfqState, seedCast, seedImported, seedImportedOrder, standardReplies, today, type Cast } from './jobflow-support'
+import { addDays, issuePoRpc, issueQuote, ITEMS, itemsOf, legsOf, liveOrder, PRICE, reply, rfqState, seedCast, seedImported, seedImportedOrder, standardReplies, today, winRpc, type Cast } from './jobflow-support'
 import { ctxAs, settle, shot, tag } from './support'
 
 /*
@@ -266,5 +266,25 @@ test('HW-57: the Mark won dialog opens by the address (?won=1) on an RFQ that al
   await page.waitForTimeout(1500)
   test.fail()
   expect(await page.getByRole('dialog').filter({ hasText: 'Mark won' }).count(), 'a Mark won dialog on a won RFQ').toBe(0)
+  await ctx.close()
+})
+
+test('HW-58: Reopen order is allowed on a cancelled order while its RFQ already has a new live order: two live orders for one RFQ, both owing the suppliers', async ({ browser }, info) => {
+  await setProfile(true)
+  await setRates()
+  const L = await liveOrder({ service5: true, leaveOut4: true })
+  await db.patch(`orders?id=eq.${L.id}`, { cancelled_on: today, cancel_reason: 'customer_cancelled' })
+  expect((await winRpc(L.c, { service: [4], leftOut: [3] })).status).toBeLessThan(300)
+  const ctx = await ctxAs(browser, info, 'admin')
+  const page = await ctx.newPage()
+  page.setDefaultTimeout(15_000)
+  await page.goto(`/orders/${L.id}`)
+  await settle(page)
+  await page.getByRole('button', { name: /^More( actions)?$/ }).first().click()
+  await page.getByRole('menuitem', { name: 'Reopen order' }).click()
+  await page.waitForTimeout(2000)
+  const live = await db.rows(`orders?rfq_id=eq.${L.c.rfq.id}&cancelled_on=is.null&select=id`)
+  test.fail()
+  expect(live.length, 'live orders for one RFQ after Reopen order').toBe(1)
   await ctx.close()
 })
