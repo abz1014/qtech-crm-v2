@@ -42,14 +42,14 @@ export interface Entry {
 
 // ---------------------------------------------------------------- formatting
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const stampFmt = new Intl.DateTimeFormat('en-GB', {
+const stampFmt = new Intl.DateTimeFormat('en-US', {
   timeZone: 'Asia/Karachi',
   day: 'numeric',
   month: 'numeric',
   year: 'numeric',
   hour: 'numeric',
   minute: '2-digit',
-  hour12: true,
+  hourCycle: 'h12',
 })
 
 /** "12 Oct 2026, 3:40 pm" in Karachi time, whatever the device's own zone. */
