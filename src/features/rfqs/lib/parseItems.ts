@@ -79,8 +79,10 @@ function fromSheetRow(line: string): string | null {
 /** Units as written -> the unit stored. Safe units may follow a number after a space; ambiguous ones need a separator. */
 const SAFE_UNITS: Record<string, string> = {
   no: 'nos', nos: 'nos', pc: 'nos', pcs: 'nos', piece: 'nos', pieces: 'nos', unit: 'nos', units: 'nos', each: 'nos', ea: 'nos',
+  // Urdu "adad" (عدد, pieces), written in Latin letters or read from the Urdu word (see urduDigits).
+  adad: 'nos',
   set: 'set', sets: 'set', lot: 'lot', lots: 'lot', pair: 'pair', pairs: 'pair', roll: 'roll', rolls: 'roll',
-  mtr: 'm', mtrs: 'm', meter: 'm', meters: 'm', metre: 'm', metres: 'm',
+  mtr: 'm', mtrs: 'm', meter: 'm', meters: 'm', metre: 'm', metres: 'm', kgs: 'kg',
   ltr: 'l', ltrs: 'l', litre: 'l', litres: 'l', liter: 'l', liters: 'l',
 }
 const AMBIGUOUS_UNITS: Record<string, string> = { m: 'm', kg: 'kg', g: 'g', l: 'l', ft: 'ft', km: 'km' }
@@ -91,10 +93,27 @@ const AMBIG = Object.keys(AMBIGUOUS_UNITS).join('|')
 const ANY_UNIT = `${SAFE}|${AMBIG}`
 
 const LEADING = new RegExp(String.raw`^${NUM}\s*(?:x|×|(${SAFE}))\b\.?\s*[-:,]?\s*(.+)$`, 'i')
+/** "0.5 m PU tube", "2.5 kg grease": a length or weight in front, then the item's words. */
+const LEADING_MEASURE = /^(\d[\d,]*(?:\.\d+)?)\s*(m|kg|l|ft)\.?\s+(?=[A-Za-z])(.+)$/i
 const TRAIL_QTY = new RegExp(String.raw`(?:^|[\s,;(–-])(?:qty|quantity|q'ty)\s*[:=]?\s*${NUM}\s*(${ANY_UNIT})?\s*\)?\s*[.;]?\s*$`, 'i')
 const TRAIL_X = new RegExp(String.raw`(?:^|\s)[x×]\s*${NUM}\s*(${ANY_UNIT})?\s*\)?\s*[.;]?\s*$`, 'i')
 const TRAIL_SAFE = new RegExp(String.raw`(?:^|[\s,;(–-])\s*${NUM}\s*(${SAFE})\s*\)?\s*[.;]?\s*$`, 'i')
 const TRAIL_AMBIG = new RegExp(String.raw`[,;(–-]\s*${NUM}\s*(${AMBIG})\s*\)?\s*[.;]?\s*$`, 'i')
+/**
+ * "Silicone tube 8mm 0.5 m", "Copper wire 2.5 kg": a length or weight at the end after a plain space. Decimals are allowed (a
+ * length or a weight can be part of one); not the end of a range ("0-10 m", "0 to 10 m") or a measurement ("range 20 m").
+ */
+const TRAIL_MEASURE = /\s(\d[\d,]*(?:\.\d+)?)\s*(m|kg|l|ft)\.?\s*$/i
+const MEASURE_BEFORE = /(?:[-–]|\bto|\brange|\blength|\bdepth|\bheight|\bdia(?:meter)?|\bhead|\bstroke)\s*$/i
+
+/** Urdu and Arabic-Indic digits as ASCII, and the Urdu word for pieces (عدد) as "adad". */
+export function urduDigits(s: string): string {
+  return s
+    .replace(/[۰-۹]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 48))
+    .replace(/[٠-٩]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[‎‏؜]/g, '')
+    .replace(/ *عدد/g, ' adad')
+}
 
 function toQty(raw: string): number {
   const n = Number(raw.replace(/,/g, ''))
@@ -111,11 +130,13 @@ const tidy = (s: string) => s.replace(/\s+/g, ' ').replace(/[\s\-–,;:(]+$/, ''
 
 /** One item line (marker already removed) into description, quantity and unit. */
 export function parseItemLine(line: string): ParsedItem {
-  const text = line.trim()
+  const text = urduDigits(line).trim()
   const lead = LEADING.exec(text)
   if (lead && lead[3]) {
     return { description: tidy(lead[3]), qty: toQty(lead[1]), unit: lead[2] ? normaliseUnit(lead[2]) : null }
   }
+  const leadM = LEADING_MEASURE.exec(text)
+  if (leadM && tidy(leadM[3])) return { description: tidy(leadM[3]), qty: toQty(leadM[1]), unit: normaliseUnit(leadM[2]) }
   for (const re of [TRAIL_QTY, TRAIL_X, TRAIL_SAFE, TRAIL_AMBIG]) {
     const m = re.exec(text)
     if (m && m.index !== undefined) {
@@ -123,11 +144,17 @@ export function parseItemLine(line: string): ParsedItem {
       if (rest) return { description: rest, qty: toQty(m[1]), unit: normaliseUnit(m[2]) }
     }
   }
+  const meas = TRAIL_MEASURE.exec(text)
+  if (meas) {
+    const before = text.slice(0, meas.index)
+    const rest = tidy(before)
+    if (rest && !MEASURE_BEFORE.test(before) && !/\d\s*$/.test(before)) return { description: rest, qty: toQty(meas[1]), unit: normaliseUnit(meas[2]) }
+  }
   return { description: tidy(text), qty: 1, unit: null }
 }
 
 export function parsePaste(raw: string): ParseResult {
-  const lines = raw
+  const lines = urduDigits(raw)
     .split(/\r?\n/)
     .map(fromSheetRow)
     .map(l => (l ?? '').replace(/\s+/g, ' ').trim())

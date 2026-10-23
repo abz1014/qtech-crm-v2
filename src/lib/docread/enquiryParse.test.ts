@@ -487,3 +487,109 @@ describe('parseEnquiry: an Outlook table read from a screenshot (fictional OCR t
     expect(parse('Request for Quotation\nT-2026-11A\nA Buyer <a@example-mills.example>\nDear Sir').facts.customerRef?.value).toBe('T-2026-11A')
   })
 })
+
+describe('parseEnquiry: reader gaps (feat/reader-gaps)', () => {
+  const rows = (t: string) => parse(t).items.map(i => `${i.description} | ${i.qty} ${i.unit ?? '-'}`)
+
+  it('a pasted line that starts with spaces is the next item, not the line above wrapping', () => {
+    expect(rows('Pressure gauge 0-10 bar 100mm dial\n   Ball valve 2 inch SS316 - 4 Nos')).toEqual(['Pressure gauge 0-10 bar 100mm dial | 1 -', 'Ball valve 2 inch SS316 | 4 nos'])
+    expect(rows('Pressure gauge 0-10 bar - 2 Nos\n   Ball valve 2 inch SS316')).toEqual(['Pressure gauge 0-10 bar | 2 nos', 'Ball valve 2 inch SS316 | 1 -'])
+    expect(rows('Please quote:\nSiemens contactor 3RT2026-1BB40\n   Schneider MCB C16 2 pole\n   Omron relay MY2N 24VDC')).toEqual([
+      'Siemens contactor 3RT2026-1BB40 | 1 -',
+      'Schneider MCB C16 2 pole | 1 -',
+      'Omron relay MY2N 24VDC | 1 -',
+    ])
+  })
+
+  it('still joins a description that wraps onto an indented line', () => {
+    expect(rows('Pressure transmitter Rosemount 3051 0-10 bar\n   with HART, 1/2" NPT - 2 Nos')).toEqual(['Pressure transmitter Rosemount 3051 0-10 bar with HART, 1/2" NPT | 2 nos'])
+    expect(rows('Pressure transmitter 0-10 bar, 4-20mA,\n   SS316 diaphragm - 2 Nos')).toEqual(['Pressure transmitter 0-10 bar, 4-20mA, SS316 diaphragm | 2 nos'])
+    expect(rows('1. PRESSURE TRANSMITTER 0-10 BAR 4-20MA\n   HART PROTOCOL SS316 - 2 NOS\n2. BALL VALVE 2" - 4 NOS')).toEqual(['PRESSURE TRANSMITTER 0-10 BAR 4-20MA HART PROTOCOL SS316 | 2 nos', 'BALL VALVE 2" | 4 nos'])
+    expect(rows('Siemens PLC CPU S7-1200 1214C DC/DC/DC\n   6ES7214-1AG40-0XB0 - 1 No')).toEqual(['Siemens PLC CPU S7-1200 1214C DC/DC/DC 6ES7214-1AG40-0XB0 | 1 nos'])
+    expect(rows('1) Electromagnetic flow meter DN50\n   Make: Endress+Hauser, Qty 2 Nos\n2) Level switch vibrating fork - 1 No')).toEqual(['Electromagnetic flow meter DN50, Make: Endress+Hauser | 2 nos', 'Level switch vibrating fork | 1 nos'])
+  })
+
+  it('reads 4 عدد, 0.5 m, 2.5 kg and 1,000 nos in every place a quantity goes', () => {
+    const shapes = [
+      (q: string) => `Silicone tube 8mm ${q}\nPressure gauge 0-10 bar 2 Nos`,
+      (q: string) => `1. Silicone tube 8mm - ${q}\n2. Pressure gauge 0-10 bar - 2 Nos`,
+      (q: string) => `${q} Silicone tube 8mm\n2 Nos Pressure gauge 0-10 bar`,
+      (q: string) => `Silicone tube 8mm\t${q.replace(' ', '\t')}\nPressure gauge 0-10 bar\t2\tNos`,
+      (q: string) => `S.No\tDescription\tUOM\tQty\n1\tSilicone tube 8mm\t${q.split(' ').reverse().join('\t')}\n2\tPressure gauge 0-10 bar\tNos\t2`,
+      (q: string) => `20/10/2026, 10:42 am - Ali: Silicone tube 8mm ${q}\n20/10/2026, 10:43 am - Ali: Pressure gauge 0-10 bar 2 nos`,
+    ]
+    const want: Array<[string, number, string]> = [
+      ['4 عدد', 4, 'nos'],
+      ['۴ عدد', 4, 'nos'],
+      ['0.5 m', 0.5, 'm'],
+      ['2.5 kg', 2.5, 'kg'],
+      ['1,000 nos', 1000, 'nos'],
+      ['12.5 MTR', 12.5, 'm'],
+    ]
+    for (const shape of shapes)
+      for (const [q, qty, unit] of want) {
+        const r = parse(shape(q))
+        expect(r.items, `${shape(q)}`).toHaveLength(2)
+        const it0 = r.items.find(i => /silicone/i.test(i.description))
+        expect([it0?.description, it0?.qty, unitFamily(it0?.unit)], `${shape(q)}`).toEqual(['Silicone tube 8mm', qty, unit])
+      }
+    expect(rows('Push button red عدد 4')).toEqual(['Push button red | 4 nos'])
+  })
+
+  it('a letter: "2 (Two) Nos", roman numbers, a list in one sentence, numbered terms after the items, a page mark', () => {
+    const letter = [
+      'Ref: No. ZPI/PROC/39/2026        Date: 17 October 2026',
+      'Dear Sir,',
+      'Please quote for the following: 1) Miniature circuit breaker 3 pole, B10, 6kA - 12 No and 2) Analog input module 4 AI - 1 No.',
+      '',
+      'Thanking you,',
+    ].join('\n')
+    const r = parse(letter)
+    expect(r.items.map(i => `${i.description} | ${i.qty}`)).toEqual(['Miniature circuit breaker 3 pole, B10, 6kA | 12', 'Analog input module 4 AI | 1'])
+    expect(r.facts.customerRef?.value).toBe('ZPI/PROC/39/2026')
+    const list = [
+      'Please quote your most competitive rates for the following material:',
+      'i. PLC CPU 24 DI/16 DO 24VDC PROFINET - 2 (Two) EA',
+      'ii. Control cable 7 core x 2.5 mm2, PVC/PVC - 50 Mtrs',
+      'iii. pH sensor with temperature sensor - 12 (Twelve) No',
+      'Contd. on next page',
+      '',
+      '1. Rates should be inclusive of all taxes.',
+      '2. Incomplete quotations will not be considered.',
+      '',
+      'Kindly also mention the following in your quotation:',
+      '1. Delivery period',
+      '2. Country of origin',
+    ].join('\n')
+    expect(rows(list)).toEqual(['PLC CPU 24 DI/16 DO 24VDC PROFINET | 2 EA', 'Control cable 7 core x 2.5 mm2, PVC/PVC | 50 m', 'pH sensor with temperature sensor | 12 nos'])
+  })
+
+  it('an ERP form read from a picture: a department column with no header, a store code in front, a point read as a space', () => {
+    const text = [
+      'REQUEST FOR QUOTATION',
+      '1\tELC-17175\tWelding electrode E7018 3.2 mm\tMECH\tKGS\t20 000\t23.12.2026',
+      '2\tMEC-51117\tpH sensor 0-14 pH CPS92E-CJ0DZY7\tUTIL\tPC\t2.000\t25.12.2026',
+      '3\tINS-85604\tCable tie 370 mm nylon black\tPROD\tNOS\t500.000\t28.11.2026',
+      '4\tCON-37783\tInstrument cable 1 pair x 1.5 mm2\tPROD\tMTR\t12 500\t06.12.2026',
+    ].join('\n')
+    expect(rows(text)).toEqual([
+      'Welding electrode E7018 3.2 mm | 20 kg',
+      'pH sensor 0-14 pH CPS92E-CJ0DZY7 | 2 PC',
+      'Cable tie 370 mm nylon black | 500 nos',
+      'Instrument cable 1 pair x 1.5 mm2 | 12.5 m',
+    ])
+  })
+
+  it('puts right the fixed shapes of catalogue numbers a picture misread, and leaves typed text alone', () => {
+    expect(rows('1\tModule digital output BES7865-4XK94-0EP0\tEA\t1')[0]).toBe('Module digital output 6ES7865-4XK94-0EP0 | 1 EA')
+    expect(rows('Timer relay 1SVRST0422R7038 - 4 Nos')[0]).toBe('Timer relay 1SVR570422R7038 | 4 nos')
+    expect(rows('Drive 65L3210-1KE21-3UF1 - 1 No')[0]).toBe('Drive 6SL3210-1KE21-3UF1 | 1 nos')
+    expect(rows('Relay 1SVR405613R3000 - 2 Nos')[0]).toBe('Relay 1SVR405613R3000 | 2 nos')
+  })
+
+  it('reads a reference whose label and number a boxed form put on two lines', () => {
+    const r = parse('RFQ No.\nRFQ26602\nRFQ Date\n20-Oct-2026\nDue Date\n09-Nov-2026')
+    expect(r.facts.customerRef?.value).toBe('RFQ26602')
+    expect(r.facts.dueDate?.iso).toBe('2026-11-09')
+  })
+})

@@ -132,7 +132,17 @@ export function relayText(input: { rfqRef: string; contactName: string | null; l
 // ---------------------------------------------------------------- files
 
 /** What an RFQ file may be (R10). HEIC and HEIF are phone photos; they are kept as they are when the browser cannot shrink them. */
-export const RFQ_FILE_ACCEPT = ['image/png', 'image/jpeg', 'image/heic', 'image/heif', 'application/pdf'] as const
+// Spreadsheets too (.xlsx, .xls, .csv): a customer's RFQ often comes as one; New RFQ reads it (src/lib/docread/sheetText.ts).
+export const RFQ_FILE_ACCEPT = [
+  'image/png',
+  'image/jpeg',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'text/csv',
+] as const
 
 const EXT_BY_MIME: Record<string, string> = {
   'image/png': 'png',

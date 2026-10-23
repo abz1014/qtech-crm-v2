@@ -8,6 +8,19 @@ import { compressIfImage } from '@/lib/imageCompress'
  */
 export const DEFAULT_MAX_BYTES = 5 * 1024 * 1024
 export const DEFAULT_ACCEPT = ['image/png', 'image/jpeg', 'application/pdf']
+/** A customer's spreadsheet (.xlsx, .xls, .csv): an RFQ file, read on New RFQ like a PDF (src/lib/docread/sheetText.ts). */
+export const SHEET_ACCEPT = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'text/csv',
+] as const
+
+const TYPE_LABEL: Record<string, string> = {
+  'application/pdf': 'PDF',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+  'application/vnd.ms-excel': 'XLS',
+  'text/csv': 'CSV',
+}
 
 export interface AddedFile {
   id: string
@@ -24,10 +37,19 @@ export function formatBytes(n: number): string {
 }
 
 export const acceptLabel = (accept: readonly string[]) =>
-  accept.map(t => (t === 'application/pdf' ? 'PDF' : t.replace('image/', '').replace('jpeg', 'jpg').toUpperCase())).join(', ')
+  accept.map(t => TYPE_LABEL[t] ?? t.replace('image/', '').replace('jpeg', 'jpg').toUpperCase()).join(', ')
 
-/** Phones often hand over a HEIC photo with no type (or a generic one). The extension then says what it is. */
+/**
+ * Phones often hand over a HEIC photo with no type (or a generic one), and a spreadsheet comes with no type, a generic one or
+ * "application/csv" depending on the device. The extension then says what it is.
+ */
 function withKnownType(file: File): File {
+  const sheet = /\.(xlsx|xlsm|xls|csv)$/i.exec(file.name)
+  if (sheet && !(SHEET_ACCEPT as readonly string[]).includes(file.type)) {
+    const ext = (sheet[1] as string).toLowerCase()
+    const type = ext === 'csv' ? 'text/csv' : ext === 'xls' ? 'application/vnd.ms-excel' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    return new File([file], file.name, { type, lastModified: file.lastModified })
+  }
   if (file.type && file.type !== 'application/octet-stream') return file
   const m = /\.(heic|heif)$/i.exec(file.name)
   return m ? new File([file], file.name, { type: `image/${m[1].toLowerCase()}`, lastModified: file.lastModified }) : file

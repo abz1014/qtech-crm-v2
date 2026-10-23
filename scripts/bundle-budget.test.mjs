@@ -2,7 +2,20 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { hasSupabaseClient, initialJs, OCR_SIGNATURE, ocrInInitial, ocrReaderFiles, pdfjsInInitial, pdfReaderFiles, PDFJS_SIGNATURE, staticJsRefs } from './bundle-budget.lib.mjs'
+import {
+  hasSupabaseClient,
+  initialJs,
+  OCR_SIGNATURE,
+  ocrInInitial,
+  ocrReaderFiles,
+  pdfjsInInitial,
+  pdfReaderFiles,
+  PDFJS_SIGNATURE,
+  SHEETJS_SIGNATURE,
+  sheetInInitial,
+  sheetReaderFiles,
+  staticJsRefs,
+} from './bundle-budget.lib.mjs'
 
 describe('bundle budget helpers', () => {
   it('reads script and modulepreload refs from the html', () => {
@@ -73,5 +86,18 @@ describe('bundle budget helpers', () => {
     expect(ocrInInitial(dist, initialJs(dist))).toEqual([])
     writeFileSync(join(dist, 'assets', 'index-A.js'), 'import"./ocrRuntime-Q1.js";')
     expect(ocrInInitial(dist, initialJs(dist))).toEqual(['assets/ocrRuntime-Q1.js'])
+  })
+
+  it('finds the spreadsheet reader chunk and tells when SheetJS is in the first load', () => {
+    const dist = mkdtempSync(join(tmpdir(), 'budget-'))
+    mkdirSync(join(dist, 'assets'))
+    writeFileSync(join(dist, 'index.html'), '<script type="module" src="/assets/index-A.js"></script>')
+    writeFileSync(join(dist, 'assets', 'index-A.js'), 'import("./sheetRuntime-Z9.js");')
+    writeFileSync(join(dist, 'assets', 'sheetRuntime-Z9.js'), `/*! ${SHEETJS_SIGNATURE}://sheetjs.com */var x=1;`)
+    const listing = ['assets/index-A.js', 'assets/sheetRuntime-Z9.js']
+    expect(sheetReaderFiles(dist, listing).map(f => f.file)).toEqual(['assets/sheetRuntime-Z9.js'])
+    expect(sheetInInitial(dist, initialJs(dist))).toEqual([])
+    writeFileSync(join(dist, 'assets', 'index-A.js'), 'import"./sheetRuntime-Z9.js";')
+    expect(sheetInInitial(dist, initialJs(dist))).toEqual(['assets/sheetRuntime-Z9.js'])
   })
 })
