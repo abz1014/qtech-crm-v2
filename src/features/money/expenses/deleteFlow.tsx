@@ -1,9 +1,7 @@
 import { useState, type ReactNode } from 'react'
-import { Trash2 } from 'lucide-react'
 import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
-import { Button } from '@/ui/Button'
-import { Dialog, DialogContent } from '@/ui/Dialog'
+import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { useToast } from '@/ui/useToast'
 import { useDeleteExpense } from '@/features/money/expenses/hooks'
 import { pkr, type ListedExpense } from '@/features/money/expenses/model'
@@ -24,69 +22,37 @@ export function useDeleteExpenseFlow(categoryName: (r: ListedExpense) => string,
   const del = useDeleteExpense()
   const toast = useToast()
   const [target, setTarget] = useState<ListedExpense | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   const confirm = async () => {
     if (!target) return
-    try {
-      await del.mutateAsync(target.id)
-    } catch (e) {
-      // The row stays; the sentence is on the confirm so it is read where the tap was.
-      setError(deleteErrorMessage(e))
-      toast.toast({ title: "Couldn't delete the expense", body: deleteErrorMessage(e), tone: 'danger' })
-      return
-    }
     const r = target
-    setTarget(null)
+    await del.mutateAsync(r.id)
     toast.toast({ title: 'Expense deleted', body: `${categoryName(r)} · ${pkr(r.amount)}`, tone: 'success' })
     onDeleted?.(r)
   }
 
-  const close = (open: boolean) => {
-    if (open || del.isPending) return
-    setTarget(null)
-    setError(null)
-  }
-
   const node: ReactNode = target ? (
-    <Dialog open onOpenChange={close} busy={del.isPending}>
-      <DialogContent
-        title="Delete this expense?"
-        icon={Trash2}
-        tone="danger"
-        size="sm"
-        footer={
-          <>
-            <Button size="lg" data-cancel onClick={() => close(false)} disabled={del.isPending}>
-              Cancel
-            </Button>
-            <Button size="lg" variant="secondary" className="border-tone-danger-fg text-tone-danger-fg" onClick={() => void confirm()} busy={del.isPending} busyLabel="Deleting">
-              Delete
-            </Button>
-          </>
-        }
-      >
-        <div className="grid gap-2 text-base">
-          <p className="font-medium" data-testid="delete-expense-what">
-            {categoryName(target)} · {pkr(target.amount)} · {formatShortDate(target.paidOn, undefined, true)}
-          </p>
-          <p>This can’t be undone.</p>
-          {error ? (
-            <p role="alert" className="text-tone-danger-fg">
-              {error}
-            </p>
-          ) : null}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDelete
+      open
+      onOpenChange={open => {
+        if (!open) setTarget(null)
+      }}
+      thing="this expense"
+      summary={
+        <span data-testid="delete-expense-what">
+          {categoryName(target)} · {pkr(target.amount)} · {formatShortDate(target.paidOn, undefined, true)}
+        </span>
+      }
+      onConfirm={confirm}
+      errorMessage={deleteErrorMessage}
+      // The row stays; the sentence is on the confirm so it is read where the tap was, and again as a toast.
+      onError={e => toast.toast({ title: "Couldn't delete the expense", body: deleteErrorMessage(e), tone: 'danger' })}
+    />
   ) : null
 
   return {
     /** Opens the confirm for this expense. */
-    ask: (r: ListedExpense) => {
-      setError(null)
-      setTarget(r)
-    },
+    ask: (r: ListedExpense) => setTarget(r),
     node,
   }
 }

@@ -203,7 +203,7 @@ select is(pg_temp.as_('engineer', $q$with i as (insert into public.rfq_items (rf
             values ('d0000000-0000-4000-8000-000000000a81', 1, '0081 added by the engineer', 1) returning description) select description from i$q$),
   '0081 added by the engineer', 'the engineer adds an item to an RFQ (Add item)');
 select is(pg_temp.as_('engineer', $q$with u as (update public.rfq_items set description = '0081 renamed' where id = 'e0000000-0000-4000-8000-000000000a81' returning id) select count(*)::text from u$q$),
-  '1', 'and edits an item''s description');
+  'E:42501', 'but not the description of an item someone else entered (0092: an engineer edits what they entered; their own is covered in the 0092 test)');
 
 select is(pg_temp.as_('engineer', $q$with u as (update public.orders set legacy_source = '{"forged": true}'::jsonb where id = 'a1000000-0000-4000-8000-000000000a81' returning 1) select count(*)::text from u$q$),
   'E:42501', 'the legacy-column guard (0078) still refuses the engineer');

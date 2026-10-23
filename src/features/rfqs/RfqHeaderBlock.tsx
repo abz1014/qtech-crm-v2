@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Package,
   RotateCcw,
+  Trash2,
   UserRound,
   Users,
   type LucideIcon,
@@ -34,6 +35,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { StickyActionBar } from '@/ui/StickyActionBar'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
+import { useDeleteRfqFlow } from '@/features/rfqs/deleteFlow'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { useWonDialog } from '@/features/orders/useWonDialog'
@@ -202,7 +204,7 @@ function useMainActions(rfq: RfqHeader, facts: HeaderFacts) {
 }
 
 /** The "More" menu: everything that is not the green button. */
-function MoreItems({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions }) {
+function MoreItems({ rfq, facts, actions, onDelete }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void }) {
   const main = useMainActions(rfq, facts)
   const sent = quotationSent({ bidState: rfq.state?.bid_state, quotationCount: facts.quotationCount })
   const noItems = facts.itemCount === 0
@@ -241,15 +243,29 @@ function MoreItems({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts
           {r.label}
         </MenuItem>
       ))}
+      <DeleteItem onDelete={onDelete} separator />
+    </>
+  )
+}
+
+/** "Delete RFQ": admin only (`onDelete` is undefined for everyone else, and then nothing is drawn). It only opens the confirm. */
+function DeleteItem({ onDelete, separator = false }: { onDelete?: () => void; separator?: boolean }) {
+  if (!onDelete) return null
+  return (
+    <>
+      {separator ? <MenuSeparator /> : null}
+      <MenuItem icon={Trash2} danger onClick={onDelete}>
+        Delete RFQ
+      </MenuItem>
     </>
   )
 }
 
 /** The page's More menu (src/ui/MoreMenu): the "More" text button on desktop, the Ellipsis in the phone bar. */
-function RfqMoreMenu({ rfq, facts, actions, touch = false }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; touch?: boolean }) {
+function RfqMoreMenu({ rfq, facts, actions, onDelete, touch = false }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; touch?: boolean }) {
   return (
     <MoreMenu touch={touch} side={touch ? 'top' : undefined} label={touch ? 'More actions' : 'More'} menuClassName="min-w-[300px]">
-      <MoreItems rfq={rfq} facts={facts} actions={actions} />
+      <MoreItems rfq={rfq} facts={facts} actions={actions} onDelete={onDelete} />
     </MoreMenu>
   )
 }
@@ -431,6 +447,7 @@ function Meta({
 
 export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFacts }) {
   const actions = useQuoteAndClose(rfq)
+  const del = useDeleteRfqFlow(rfq)
   const main = useMainActions(rfq, facts)
   const s = rfq.state
   const ref = rfqRef(rfq.number)
@@ -463,7 +480,16 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       nameHref={`/companies/${rfq.company.id}`}
       code={ref}
       breadcrumb={[{ label: 'RFQs', to: '/rfqs' }, { label: ref, mono: true }]}
-      more={open ? <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} /> : undefined}
+      // A closed or won RFQ has no other actions, but an admin can still delete a mistake: a More menu with only that.
+      more={
+        open ? (
+          <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} />
+        ) : del.ask ? (
+          <MoreMenu label="More" menuClassName="min-w-[200px]">
+            <DeleteItem onDelete={del.ask} />
+          </MoreMenu>
+        ) : undefined
+      }
       chips={
         <>
           <span data-stage className="contents">
@@ -488,6 +514,15 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       ]}
     >
       <RfqNextStep rfq={rfq} facts={facts} actions={actions} />
+      {/* The header's More menu is hidden on a phone, and a closed RFQ has no action bar: so the delete is a button here. */}
+      {!open && del.ask ? (
+        <div className="mt-3 md:hidden">
+          <Button size="touch" icon={Trash2} onClick={del.ask}>
+            Delete RFQ
+          </Button>
+        </div>
+      ) : null}
+      {del.node}
 
       <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>
@@ -557,9 +592,11 @@ function scrollTo(slot: string) {
  */
 export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rfq: RfqHeader; facts: HeaderFacts; chaseSuppliers: number; chaseCustomer: number }) {
   const actions = useQuoteAndClose(rfq)
+  const del = useDeleteRfqFlow(rfq)
   if ((rfq.state?.outcome ?? 'open') !== 'open') return null
   return (
-    <StickyActionBar
+    <>
+      <StickyActionBar
       label="RFQ actions"
       primary={facts.primary === 'none' ? undefined : <PrimaryButton rfq={rfq} facts={facts} size="touch" className="flex-1" />}
       secondary={
@@ -577,7 +614,9 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
           </PopoverContent>
         </Popover>
       }
-      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} touch />}
+      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} touch />}
     />
+      {del.node}
+    </>
   )
 }

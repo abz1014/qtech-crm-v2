@@ -47,7 +47,7 @@ const e = (paidOn: string, amount: number, categoryId: string, paidVia: 'cash' |
   legId: null,
   payeeId: null,
   recurringId: null,
-  bankMonth: null,
+  bankMonth: null, period: null,
 })
 const ROWS = [
   e('2026-09-03', 1150, 'water', 'cash', 'Office water'),

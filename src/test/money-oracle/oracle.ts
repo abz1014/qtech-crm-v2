@@ -229,6 +229,31 @@ export interface Expense {
   orderId: string | null
   legId: string | null
   supplierPayment: boolean
+  /** 0087 for-month: the month a monthly bill is for ("2026-09"); absent or null: the month it was paid in. */
+  period?: string | null
+}
+
+/** 0087: the month an expense is FOR (its period when set, else the month paid). Only the Expenses report reads it. */
+export const forMonthOfExpense = (e: Pick<Expense, 'date' | 'period'>): string => e.period ?? e.date.slice(0, 7)
+
+/**
+ * 0087: the Expenses report's months, by the month each expense is for, written independently of the app: gross, net per P&L
+ * kind and input tax, plus the two bridges to cash (paid in these months for other months; for these months but paid outside).
+ */
+export function expensesFor(months: readonly string[], books: Pick<Books, 'expenses'>) {
+  const inFor = books.expenses.filter(e => months.includes(forMonthOfExpense(e)))
+  const paidHere = books.expenses.filter(e => months.includes(e.date.slice(0, 7)))
+  const net = (g: Group) => sumP(inFor.filter(e => e.grp === g).map(e => e.amount - e.inputTax))
+  return {
+    amount: sumP(inFor.map(e => e.amount)),
+    count: inFor.length,
+    overheads: net('overhead'),
+    orderCosts: net('order_cost'),
+    nonPnl: net('non_pnl'),
+    inputTax: sumP(inFor.map(e => e.inputTax)),
+    paidForOther: sumP(paidHere.filter(e => !months.includes(forMonthOfExpense(e))).map(e => e.amount)),
+    forHerePaidElsewhere: sumP(inFor.filter(e => !months.includes(e.date.slice(0, 7))).map(e => e.amount)),
+  }
 }
 
 export interface Basis {

@@ -1843,6 +1843,42 @@ PL/pgSQL, SECURITY INVOKER, fixed `search_path`. Admin only (42501 otherwise). M
 
 No new view. The Expenses report (Money > Reports > Expenses; `/money/reports/categories` now opens it) reads the period's `expenses` rows and `v_month_cash_flow` (trend). Its total equals `v_month_cash_flow.money_out` and `v_month_pnl.cash_out_total`; its running costs, order costs and "not a cost" equal `v_month_pnl` overheads, order costs and non-P&L out (net of input tax), and with input tax add up to the total; cash plus bank equals the total (pgTAP 0086, money oracle `expenseReport.property.test.ts`).
 
-### Proposal, not built: cash in hand (petty cash)
+### Built in 0087 (owner said yes on 2026-10-22): see Amendment A10 below
+
+### The original proposal: cash in hand (petty cash)
 
 DATA_MODEL and DECISIONS do not cover petty cash: `paid_via = 'cash'` says how an expense left, not from which box. A minimal design for the owner to approve: one table `cash_topups` (date, amount, note: cash drawn from the bank into the office box) and an opening balance on `company_profile` (`cash_opening_pkr`, `cash_opening_on`). Per month: cash in hand = opening + top-ups to date - cash expenses to date, shown on the Expenses list beside the month total and in the Expenses report ("Cash in hand on 31 October: PKR 12,400"). A top-up is not an expense (money moves between our own boxes), so it stays out of every cost and of In vs out; it is ticked on the bank statement like a bank expense. Later, if wanted: a monthly counted figure and the difference. Not built until the owner says yes.
+
+## Amendment A10: expense gaps (migration 0087, redesign phase 1, owner approval 2026-10-22)
+
+Three new tables, two new columns on `expenses`, three functions, one private bucket. No figure of an existing report changes: In vs out, Profit and loss and Month end still count every expense by the day it was paid; only the Expenses report counts by the month an expense is FOR, and it shows the bridge.
+
+### `expenses` (changed)
+
+- `fx_currency text NULL` CHECK `^[A-Z]{3}$` and not PKR; `fx_amount numeric(14,2) NULL` CHECK > 0; both or neither. A supplier payment made in the supplier's currency: `amount_pkr` is the PKR actually debited, bank charges are their own expense (Bank charges). Written only by Pay <supplier>.
+- `period` (exists since 0010) is now also the **for-month** of a monthly bill that is not linked to a template: a bill paid on day 1 to 10 is for the month before. NULL means the month it was paid in.
+- `payables_as_of()` (re-created): a leg's payments with `fx_currency` = its currency settle that much of it in its own currency; only the rest is converted at the rate, less the PKR of payments without it. A leg paid in full in its currency is `settled` at any rate.
+
+### `expense_claims` [std] (new): an engineer's "I paid"
+
+| Field | Type | Null | Default | Purpose |
+|---|---|---|---|---|
+| spent_on | date | no | today | When they paid. |
+| amount_pkr | numeric(14,2) | no | — | > 0. What they typed. |
+| note | text | yes | — | What for, at most 200. |
+| order_id | uuid FK orders SET NULL | yes | — | The job, optional. |
+| status | text | no | pending | pending, approved, rejected. Approved exactly when `expense_id` is set. |
+| decided_at, decided_by | | yes | — | Stamped on a status change. |
+| paid_how | text | yes | — | cash_back, petty_cash (both cash), bank. |
+| reject_reason | text | yes | — | At most 200; the engineer reads it. |
+| expense_id | uuid FK expenses SET NULL, unique | yes | — | The expense approving wrote; deleting it puts the claim back to pending. |
+
+Not an expense: no view, report or total reads it. Section 10: admin S U D; engineer S (own), I (own, pending only), D (own, pending); sales none. `approve_expense_claim(p_claim, p_category, p_paid_how, p_paid_on default null) returns uuid`: admin only (42501), refuses Supplier payment (one door) and a decided claim; dated today (cash given back, bank) or the day spent (petty cash). Photos: private bucket `claim-receipts`, objects under `<claim id>/`, through `claim_object_ok(name, write)`: the admin; the claim's engineer (write only while pending); nobody else.
+
+### `cash_topups` [std] (new) and `cash_counts` [std] (new): cash in hand
+
+`cash_topups`: `drawn_on date`, `amount_pkr numeric(14,2) > 0`, `note`. Cash taken from the bank into the office box; not an expense. Admin only, all four.
+
+`cash_counts`: `counted_on date`, `counted_pkr >= 0`, `expected_pkr` (set by the database, never by the client), `difference_pkr` (generated: counted - expected), `is_opening`, `note`. The first row is always the opening balance (cash at the start of `counted_on`); a later count is dated today and stores what the books expected at that moment. Admin S I D (a count is never edited). `created_at` is `clock_timestamp()` on both tables, so "since the count" is exact within a day.
+
+`cash_in_hand()` (admin; no row for anyone else): the latest count or opening + cash drawn since - cash expenses (`paid_via = 'cash'`) since = `expected_pkr`, with the parts and the last difference.

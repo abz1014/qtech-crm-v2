@@ -61,7 +61,7 @@ select is((select coalesce(array_agg(x.name order by x.name), '{}') from (
              where v.schemaname = 'public'
                and v.definition ~ '\mpayments_in\M' and v.definition !~ '\mvoided_at\M'
            ) x),
-  array['close_month', 'close_months_through', 'enforce_month_lock', 'take_month_snapshot'],
+  array['close_month', 'close_months_through', 'enforce_month_lock', 'record_history', 'take_month_snapshot'],
   'every other view and function that reads payments_in leaves voided payments out');
 
 -- ================================================================== fixtures (table owner, admin claims)
