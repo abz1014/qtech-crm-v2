@@ -268,7 +268,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.supplierB.name)
     await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
     await expect(dialog.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.supplierA.name)
-    await expect(dialog.getByRole('button', { name: 'Supplier for line 3' })).toContainText('Not sourced yet')
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 3' })).toContainText('Service, no supplier')
     for (const [n, v] of [['1', '1000'], ['2', '2000'], ['3', '500']]) await t.typed(price(dialog, Number(n)), v)
 
     await t.doubleTap(dialog.getByRole('button', { name: 'Create order' }))

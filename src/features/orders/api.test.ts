@@ -58,11 +58,11 @@ describe('orders api: convert and search', () => {
     expect(opArgs(second, 'args')?.[0]).toMatchObject({ p_customer_po_number: 'PO-9', p_payment_terms_days: 45 })
   })
 
-  it('returns the existing order when the RFQ was already won by someone else (0077)', async () => {
+  it('says so, with that order, when the RFQ was already won by someone else (0077, HW-56)', async () => {
     const other = '0b6c1f2e-1111-4222-8333-444455556666'
     const db = installFakeDb(() => ({ data: null, error: { code: 'P0001', message: 'This RFQ is already order ORD-0038.', hint: `rfq_has_order:${other}` } }))
     uninstall = db.uninstall
-    expect(await convertRfqToOrder({ orderId: 'order-3', rfqId: 'r1', items: [], customerPo: null, paymentTermsDays: null })).toBe(other)
+    await expect(convertRfqToOrder({ orderId: 'order-3', rfqId: 'r1', items: [], customerPo: 'PO-1', paymentTermsDays: null })).rejects.toMatchObject({ name: 'RfqAlreadyConvertedError', orderId: other })
     expect(existingOrderOf({ hint: 'something else' })).toBeNull()
   })
 

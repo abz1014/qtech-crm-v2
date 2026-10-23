@@ -21,14 +21,15 @@ import { readIssueDraft } from '@/features/quotations/lib/issueDraft'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { FALLBACK_PAYMENT_TERMS_DAYS } from '@/features/settings/companyProfile'
 import { daysFromTermsText } from '@/features/orders/lib/termsDays'
-import { useConvertRfq, useLastTerms, useNextOrderNumber, useRankedQuotes } from '@/features/orders/hooks'
+import { RfqAlreadyConvertedError } from '@/features/orders/api'
+import { useConvertRfq, useLastTerms, useNextOrderNumber, useOrderBrief, useRankedQuotes, useUpdateOrder } from '@/features/orders/hooks'
 import { useQuotations } from '@/features/quotations/hooks'
 import { quotationRef } from '@/features/quotations/lib/refs'
 import { RankedPicker } from '@/features/orders/RankedPicker'
-import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
+import { guessCommissioning, looksLikeService, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
 import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
 import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
-import { forItem, priceTexts, rankOne, type RankedQuote } from '@/features/orders/lib/ranking'
+import { forItem, legacyNote, priceTexts, rankOne, type RankedQuote } from '@/features/orders/lib/ranking'
 import { buildSplitPayload, checkSplit, isSplit, nextRanked, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
 import { orderRef } from '@/lib/refs'
 
@@ -78,6 +79,9 @@ export function ConvertDialog(props: Props) {
   return sees ? <ConvertDialogBody {...props} /> : null
 }
 
+const revisionOf = (rows: readonly { revision: number }[] | undefined): number | null => (rows && rows.length > 0 ? Math.max(...rows.map(r => r.revision)) : null)
+const qtysOf = (rows: readonly { id: string; qty: number }[] | undefined): Record<string, number> => Object.fromEntries((rows ?? []).map(r => [r.id, r.qty]))
+
 const MAX_AMOUNT = 999_999_999_999.99
 const MAX_PAISA = 99_999_999_999_999
 
@@ -120,6 +124,17 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
   const [typed, setTyped] = useState<Record<string, number | null>>({})
   /** Set by the first press of Create order that finds something missing; the message then follows the form as it is fixed. */
   const [pressed, setPressed] = useState(false)
+  /** HW-56: another tab or person already made the order for this RFQ. */
+  const [already, setAlready] = useState<string | null>(null)
+  /**
+   * HW-60: the latest quotation revision and the quantities as this dialog first showed them. Create order sends them and the database
+   * refuses if they moved on. Taken again after a refusal, once the lines were reloaded.
+   */
+  const [seen, setSeen] = useState<{ revision: number | null; qtys: Record<string, number> } | null>(null)
+  const settled = itemsQ.isSuccess && quotesQ.isSuccess && !itemsQ.isFetching && !quotesQ.isFetching
+  useEffect(() => {
+    if (seen === null && settled) setSeen({ revision: revisionOf(quotesQ.data), qtys: qtysOf(itemsQ.data) })
+  }, [seen, settled, quotesQ.data, itemsQ.data])
 
   /** Payment terms typed once: the days written on the latest quotation win over the last order's (entry-burden J5/J7). */
   const quotedDays = daysFromTermsText(quotesQ.data?.[0]?.paymentTerms)
@@ -132,7 +147,12 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
   /** What an item is assigned to when nobody chooses: its rank-1 quote; a lone quote that cannot be ranked; otherwise nothing yet. */
   const defaultOf = (id: string): SupplierChoice => {
     const qs = byItem[id] ?? []
-    return rankOne(qs)?.lineId ?? (qs.length === 1 ? qs[0].lineId : 'none')
+    const ranked1 = rankOne(qs)?.lineId ?? (qs.length === 1 ? qs[0].lineId : null)
+    if (ranked1) return ranked1
+    // HW-49: work nobody quoted (Commissioning, installation...) starts as "Service, no supplier", not as goods to be sourced.
+    const it = items.find(x => x.id === id)
+    if (qs.length === 0 && it && looksLikeService(it.description, it.familyName)) return 'service'
+    return 'none'
   }
   const choiceOf = (id: string): SupplierChoice => choices[id] ?? defaultOf(id)
   const effective = Object.fromEntries(items.map(i => [i.id, choiceOf(i.id)])) as Record<string, SupplierChoice>
@@ -258,14 +278,25 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
       const id = await convert.mutateAsync({
         orderId: orderId.current,
         rfqId: rfq.id,
-        items: buildSplitPayload(ordered, effective, confirmed, splits),
+        items: buildSplitPayload(ordered, effective, confirmed, splits).map(l => (seen && l.rfq_item_id in seen.qtys ? { ...l, expected_qty: seen.qtys[l.rfq_item_id] } : l)),
         customerPo: po.trim() || null,
         paymentTermsDays: terms,
         needsCommissioning: needs,
+        expectedRevision: seen?.revision ?? null,
       })
       navigate(`/orders/${id}`)
     } catch (err) {
+      if (err instanceof RfqAlreadyConvertedError) {
+        setAlready(err.orderId)
+        return
+      }
       setError(mapPgError(err, { entity: 'order' }).message)
+      // HW-60: the quotation or a quantity moved on. Nothing was created. Reload the lines so the next look is at the real figures.
+      if ((err as { hint?: string | null } | null)?.hint === 'convert_stale') {
+        const [it, qu] = await Promise.all([itemsQ.refetch(), quotesQ.refetch(), rankQ.refetch()])
+        setSeen({ revision: revisionOf(qu.data), qtys: qtysOf(it.data) })
+      }
+    } finally {
       submitting.current = false
     }
   }
@@ -290,6 +321,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
           {priceTexts(q).price}
           <br />
           <span className="text-xs text-fg-muted">{priceTexts(q).pkr}</span>
+          {legacyNote(q) ? <span className="block font-sans text-base text-tone-warning-fg">{legacyNote(q)}</span> : null}
         </>
       ) : (
         <span className="text-fg-muted">—</span>
@@ -354,7 +386,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
             <Button data-cancel onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button variant="primary" icon={FileCheck2} busy={busy} busyLabel="Creating" disabled={!ready || anyIncomplete} onClick={() => void submit()}>
+            <Button variant="primary" icon={FileCheck2} busy={busy} busyLabel="Creating" disabled={!ready || anyIncomplete || already !== null} onClick={() => void submit()}>
               Create order
             </Button>
           </>
@@ -625,13 +657,65 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
             />
           </Field>
 
+          {already ? <AlreadyConverted orderId={already} po={po.trim()} onOpen={id => navigate(`/orders/${id}`)} /> : null}
+
           {error ? (
-            <Banner tone="danger" title="Couldn't create the order">
-              {error} Nothing was created twice: pressing Create order again is safe.
+            <Banner tone="danger" title="Couldn't create the order" className="text-base">
+              {error} {error.startsWith('The quotation changed') ? 'The lines above are reloaded.' : 'Nothing was created twice: pressing Create order again is safe.'}
             </Banner>
           ) : null}
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * HW-56: a second tab (or person) pressed Create order on an RFQ that was just won. The first order stands. This says so, and if the
+ * customer PO typed here is not on it, offers to add it, instead of opening that order and dropping the PO without a word.
+ */
+function AlreadyConverted({ orderId, po, onOpen }: { orderId: string; po: string; onOpen: (id: string) => void }) {
+  const brief = useOrderBrief(orderId)
+  const update = useUpdateOrder(orderId)
+  const [failed, setFailed] = useState<string | null>(null)
+  const name = brief.data ? orderRef(brief.data.number) : 'an order'
+  const there = brief.data?.customerPo ?? null
+  const canAdd = brief.isSuccess && po !== '' && there === null
+  const add = async () => {
+    setFailed(null)
+    try {
+      await update.mutateAsync({ customer_po_number: po })
+      onOpen(orderId)
+    } catch (err) {
+      setFailed(mapPgError(err, { entity: 'order' }).message)
+    }
+  }
+  return (
+    <Banner tone="warning" title={`Already converted to ${name}`} className="text-base">
+      <span className="grid gap-2">
+        <span>
+          {brief.isPending
+            ? 'Checking that order.'
+            : po === ''
+              ? 'This RFQ was won a moment ago, from another tab or by another person. Nothing new was created.'
+              : there === null
+                ? `This RFQ was won a moment ago. ${name} has no customer PO yet, and the one typed here (${po}) was not saved.`
+                : there === po
+                  ? `This RFQ was won a moment ago, with the same customer PO (${po}).`
+                  : `This RFQ was won a moment ago. ${name} already has the customer PO ${there}. The one typed here (${po}) was not saved.`}
+        </span>
+        {failed ? <span className="text-tone-danger-fg">{failed}</span> : null}
+        <span className="flex flex-wrap gap-2">
+          {canAdd ? (
+            <Button variant="primary" busy={update.isPending} busyLabel="Adding" onClick={() => void add()}>
+              {`Add PO ${po} to ${name}`}
+            </Button>
+          ) : null}
+          <Button onClick={() => onOpen(orderId)} disabled={update.isPending}>
+            {`Open ${name}`}
+          </Button>
+        </span>
+      </span>
+    </Banner>
   )
 }

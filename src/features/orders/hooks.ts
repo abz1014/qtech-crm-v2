@@ -70,6 +70,11 @@ export function useConvertRfq(rfqId: string) {
   })
 }
 
+/** The number and customer PO of the order that already won this RFQ (HW-56). */
+export function useOrderBrief(orderId: string | null) {
+  return useQuery({ queryKey: ['order-brief', orderId ?? ''], queryFn: () => api.getOrderBrief(orderId as string), enabled: orderId !== null, staleTime: 0 })
+}
+
 export function useUpdateOrder(orderId: string) {
   const client = useQueryClient()
   return useMutation({

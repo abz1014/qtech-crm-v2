@@ -2228,7 +2228,7 @@ isOneToOne: false
 { Args: { "p_month": string }; Returns: number
                            },
 "convert_rfq_to_order":
-{ Args: { "p_customer_po_number"?: string,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
+{ Args: { "p_customer_po_number"?: string,"p_expected_revision"?: number,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
                            },
 "correct_payment":
 { Args: { "p_amount": number,"p_new_id"?: string,"p_paid_via": string,"p_payment_id": string,"p_reason": string,"p_received_on": string,"p_reference": string }; Returns: string

@@ -88,6 +88,10 @@ interface World {
   ranks?: ReturnType<typeof rank>[]
   quotations?: ReturnType<typeof quotation>[]
   flags?: Record<string, string[]>
+  /** What convert_rfq_to_order answers (default: the order id). */
+  convert?: FakeResult
+  /** The order that already won the RFQ, as getOrderBrief reads it. */
+  brief?: { number: number; customer_po_number: string | null }
 }
 
 function setup(w: World = {}, role = 'sales', onClose = () => {}) {
@@ -105,7 +109,9 @@ function setup(w: World = {}, role = 'sales', onClose = () => {}) {
       case 'supplier_quote_lines':
         return { data: Object.entries(w.flags ?? {}).map(([id, legacy_flags]) => ({ id, legacy_flags })) }
       case 'rpc:convert_rfq_to_order':
-        return { data: 'order-1' }
+        return w.convert ?? { data: 'order-1' }
+      case 'orders':
+        return { data: w.brief ? [w.brief] : [] }
       case 'company_profile':
         return { data: { id: 1, default_payment_terms_days: 30 } }
       default:
@@ -155,7 +161,7 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
     fireEvent.change(price, { target: { value: '120,000' } })
     fireEvent.click(create)
     await waitFor(() => expect(payload(db)).not.toBeNull())
-    expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 120000 }])
+    expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 120000, expected_qty: 2 }])
   })
 
   it('a price of 0 is not a price', async () => {
@@ -194,7 +200,7 @@ describe('Mark won with an issued quotation', () => {
     await waitFor(() => expect(price).toHaveValue('1,500'))
     expect(screen.getAllByText(/from QT-26-0058 R0/).length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
-    await waitFor(() => expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1500 }]))
+    await waitFor(() => expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1500, expected_qty: 2 }]))
   })
 
   it('partial revision: the item R1 dropped starts unticked and is not ordered', async () => {
@@ -208,7 +214,7 @@ describe('Mark won with an issued quotation', () => {
     expect(screen.getByTestId('convert-item-2-not-in')).toHaveTextContent('Not in QT-26-0058 R1')
     // R0's 700 for item 2 is not sent
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
-    await waitFor(() => expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1500 }]))
+    await waitFor(() => expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1500, expected_qty: 2 }]))
   })
 
   it('ticking a dropped item without a price asks for one', async () => {
@@ -242,6 +248,76 @@ describe('imported and stale quotes', () => {
     fireEvent.change(screen.getByLabelText('Selling price, line 1'), { target: { value: '90,000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     await waitFor(() => expect(payload(db)).not.toBeNull())
+  })
+})
+
+describe('Mark won, the conversion fixes (0094)', () => {
+  const alreadyWon = (other: string): FakeResult => ({ data: null, error: { code: 'P0001', message: 'This RFQ is already order ORD-0038.', hint: `rfq_has_order:${other}` } }) as unknown as FakeResult
+
+  it('HW-47: Not sourced yet is sent as an explicit marker, not left to the database to infer', async () => {
+    const db = setup({ ranks: [rank('i1', 'l1'), rank('i1', 'l2', { supplier_id: 's2', rank: 2, price: 450 })] })
+    await screen.findByLabelText('Selling price, line 1')
+    fireEvent.click(await screen.findByRole('button', { name: /Supplier for line 1/ }))
+    fireEvent.click(await screen.findByRole('option', { name: /^Not sourced yet/ }))
+    fireEvent.change(screen.getByLabelText('Selling price, line 1'), { target: { value: '90,000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    await waitFor(() => expect(payload(db)).not.toBeNull())
+    expect(payload(db)).toEqual([{ rfq_item_id: 'i1', not_sourced: true, unit_price_net: 90000, expected_qty: 2 }])
+  })
+
+  it('HW-49: a commissioning line nobody quoted starts as Service, no supplier', async () => {
+    const db = setup({ items: [{ ...item('i1', 1), description: 'Commissioning and loop check' }], ranks: [] })
+    await screen.findByLabelText('Selling price, line 1')
+    expect(await screen.findByRole('button', { name: /Supplier for line 1/ })).toHaveTextContent('Service, no supplier')
+    fireEvent.change(screen.getByLabelText('Selling price, line 1'), { target: { value: '85,000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    await waitFor(() => expect(payload(db)).not.toBeNull())
+    expect(payload(db)).toEqual([{ rfq_item_id: 'i1', is_service: true, unit_price_net: 85000, expected_qty: 2 }])
+  })
+
+  it('HW-50: an imported quote shows its warning in the supplier picker and beside the price, as the default too', async () => {
+    setup({ flags: { l1: ['currency_unverified', 'item_guessed'] } })
+    const picker = await screen.findByRole('button', { name: /Supplier for line 1/ })
+    await waitFor(() => expect(picker).toHaveTextContent('Imported quote: the currency was not confirmed and it may belong to another item. Check it.'))
+    fireEvent.click(picker)
+    expect((await screen.findAllByTestId('imported-quote-note')).length).toBeGreaterThan(0)
+  })
+
+  it('HW-60: a refused stale order says so, reloads the lines and sent the revision and quantity the dialog showed', async () => {
+    const db = setup({
+      quotations: [quotation(0, ['i1'])],
+      convert: { data: null, error: { code: 'P0001', message: 'The quotation changed since you opened this. Review again.', hint: 'convert_stale' } } as unknown as FakeResult,
+    })
+    await screen.findByLabelText('Selling price, line 1')
+    await waitFor(() => expect(screen.getByLabelText('Selling price, line 1')).toHaveValue('1,500'))
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    expect(await screen.findByText(/The quotation changed since you opened this\. Review again\./)).toBeInTheDocument()
+    const args = db.calls.find(c => c.target === 'rpc:convert_rfq_to_order')?.ops[0][1][0] as Record<string, unknown>
+    expect(args.p_expected_revision).toBe(0)
+    expect((args.p_items as Array<Record<string, unknown>>)[0].expected_qty).toBe(2)
+    expect(screen.getByRole('button', { name: 'Create order' })).toBeEnabled()
+  })
+
+  it('HW-56: an RFQ won in another tab says Already converted, keeps the typed PO, and offers to add it', async () => {
+    const db = setup({ brief: { number: 38, customer_po_number: null }, convert: alreadyWon('0b6c1f2e-1111-4222-8333-444455556666') })
+    fireEvent.change(await screen.findByLabelText(/^Customer PO number/), { target: { value: 'PO-777' } })
+    fireEvent.change(screen.getByLabelText('Selling price, line 1'), { target: { value: '90,000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    expect(await screen.findByText('Already converted to ORD-0038')).toBeInTheDocument()
+    const add = await screen.findByRole('button', { name: 'Add PO PO-777 to ORD-0038' })
+    expect(screen.getByRole('button', { name: 'Open ORD-0038' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create order' })).toBeDisabled()
+    fireEvent.click(add)
+    await waitFor(() => expect(db.calls.some(c => c.target === 'orders' && JSON.stringify(c.ops).includes('PO-777'))).toBe(true))
+  })
+
+  it('HW-56: when that order has a different PO, it is shown and the typed one is not offered', async () => {
+    setup({ brief: { number: 38, customer_po_number: 'TAB-ONE' }, convert: alreadyWon('0b6c1f2e-1111-4222-8333-444455556666') })
+    fireEvent.change(await screen.findByLabelText(/^Customer PO number/), { target: { value: 'TAB-TWO' } })
+    fireEvent.change(screen.getByLabelText('Selling price, line 1'), { target: { value: '90,000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    expect(await screen.findByText(/already has the customer PO TAB-ONE/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Add PO/ })).toBeNull()
   })
 })
 

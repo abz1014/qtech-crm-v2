@@ -38,6 +38,16 @@ export function mapRankRows(rows: readonly RankRow[], supplierNames: ReadonlyMap
   }))
 }
 
+/**
+ * What an imported supplier quote needs checked before an order is built on it (HW-50): null for a quote typed in the app.
+ * Shown beside the quote everywhere it can be chosen, and as the default, so the warning is never missing when it is used.
+ */
+export function legacyNote(q: Pick<RankedQuote, 'legacyFlags'>): string | null {
+  const f = q.legacyFlags ?? []
+  const parts = [f.includes('currency_unverified') ? 'the currency was not confirmed' : null, f.includes('item_guessed') ? 'it may belong to another item' : null].filter(Boolean)
+  return parts.length > 0 ? 'Imported quote: ' + parts.join(' and ') + '. Check it.' : null
+}
+
 export const forItem = (all: readonly RankedQuote[], itemId: string): RankedQuote[] => all.filter(q => q.itemId === itemId)
 
 /** The rank-1 line of an item: what Create order takes when nobody chooses. */

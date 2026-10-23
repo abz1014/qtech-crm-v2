@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
-import { longReason, priceTexts, shortReason, type RankedQuote } from '@/features/orders/lib/ranking'
+import { legacyNote, longReason, priceTexts, shortReason, type RankedQuote } from '@/features/orders/lib/ranking'
 import { rovingKeyDown, rovingTabIndex } from '@/ui/roving'
 
 /*
@@ -45,6 +45,7 @@ export function RankedOptionRow({ q, among, className }: { q: RankedQuote; among
       <span className="grid min-w-0">
         <b className="text-sm font-medium leading-[18px]">{q.supplierName}</b>
         <span className="text-xs text-fg-muted">{longReason(q, among)}</span>
+        {legacyNote(q) ? <span className="text-base text-tone-warning-fg" data-testid="imported-quote-note">{legacyNote(q)}</span> : null}
       </span>
       <span className="num text-right text-xs">
         {p.price}
@@ -95,6 +96,7 @@ export function RankedPicker({
             <span className="sr-only">{label}: </span>
             <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{chosen ? chosen.supplierName : (extra?.label ?? 'Choose a supplier')}</b>
             {chosen ? <span className="text-pretty text-xs text-fg-muted">{shortReason(chosen, quotes)}</span> : null}
+            {chosen && legacyNote(chosen) ? <span className="text-pretty text-base text-tone-warning-fg">{legacyNote(chosen)}</span> : null}
           </span>
           <Icon icon={ChevronDown} size="sm" className="text-fg-muted" />
         </button>

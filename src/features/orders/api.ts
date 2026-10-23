@@ -318,6 +318,23 @@ export interface ConvertInput {
   paymentTermsDays: number | null
   /** orders.needs_commissioning: the plan-commissioning and engineer-done rules depend on it. */
   needsCommissioning?: boolean
+  /** The latest quotation revision the dialog was opened on (0094): the database refuses the order if it has moved on. Null/absent = no check. */
+  expectedRevision?: number | null
+}
+
+/**
+ * Someone else already won this RFQ (0077 refusal, hint rfq_has_order:<uuid>). Never the caller's own retry: the same order id
+ * returns its own order. The dialog says so and offers to open that order or add the PO typed here to it (HW-56), instead of
+ * opening it silently and dropping the PO.
+ */
+export class RfqAlreadyConvertedError extends Error {
+  constructor(
+    readonly orderId: string,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'RfqAlreadyConvertedError'
+  }
 }
 
 export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
@@ -328,14 +345,22 @@ export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
     ...(input.customerPo ? { p_customer_po_number: input.customerPo } : {}),
     ...(input.paymentTermsDays !== null ? { p_payment_terms_days: input.paymentTermsDays } : {}),
     ...(input.needsCommissioning !== undefined ? { p_needs_commissioning: input.needsCommissioning } : {}),
+    ...(input.expectedRevision !== undefined && input.expectedRevision !== null ? { p_expected_revision: input.expectedRevision } : {}),
   })
   if (error) {
-    // 0077 (BUG-CONC-1): someone else already won this RFQ. Their order is the answer, so it is returned instead of an error.
+    // 0077 (BUG-CONC-1): someone else already won this RFQ. HW-56: that is told, not hidden.
     const existing = existingOrderOf(error)
-    if (existing) return existing
+    if (existing) throw new RfqAlreadyConvertedError(existing, error.message)
     throw error
   }
   return (data as string | null) ?? input.orderId
+}
+
+/** An order's number and customer PO, for "Already converted to ORD-0038". */
+export async function getOrderBrief(orderId: string): Promise<{ number: number; customerPo: string | null } | null> {
+  const rows = unwrap(await requireSupabase().from('orders').select('number, customer_po_number').eq('id', orderId).limit(1))
+  const r = rows[0]
+  return r ? { number: r.number, customerPo: r.customer_po_number } : null
 }
 
 /** The order id in convert_rfq_to_order's "This RFQ is already order ORD-…" refusal (hint "rfq_has_order:<uuid>"), else null. */

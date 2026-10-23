@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { guessCommissioning } from '@/features/orders/lib/convert'
+import { guessCommissioning, looksLikeService } from '@/features/orders/lib/convert'
 import { defaultExpected, leadTimeUpperDays, medianDeliveryDays, suggestExpected } from '@/features/orders/lib/leadTime'
 import { before, editPatch, expectedAfterIssue, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, type LegDates } from '@/features/orders/lib/legModel'
 import { isExemptAll, lineGstPaisa, orderTotals } from '@/features/orders/lib/orderMath'
@@ -127,8 +127,8 @@ describe('convert: supplier per line from the lowest comparable quote (O01)', ()
     expect(payload).toEqual([
       { rfq_item_id: 'i1', quote_line_id: 'a1' },
       { rfq_item_id: 'i2', is_service: true },
-      { rfq_item_id: 'i3', unit_price_net: 125 },
-      { rfq_item_id: 'i4' },
+      { rfq_item_id: 'i3', unit_price_net: 125, not_sourced: true },
+      { rfq_item_id: 'i4', not_sourced: true },
     ])
   })
   it('a line without a selling price blocks until one above zero is typed', () => {
@@ -201,4 +201,10 @@ describe('commissioning guess for the convert toggle', () => {
   it('is off for plain goods', () => {
     expect(guessCommissioning([{ number: 1, description: 'Pressure transmitter 0 to 10 bar' }], { a: 'q1' }, ids)).toEqual({ needs: false, reason: null })
   })
+})
+
+describe('looksLikeService (HW-49)', () => {
+  it.each(['Commissioning and loop check', 'Installation of the PLC panel', 'Site acceptance test', 'Start-up support', 'Final commissioning of the line'])('%s is work', d => expect(looksLikeService(d)).toBe(true))
+  it.each(['Calibration gas cylinder', 'Siemens S7-1200 PLC', 'Level switch'])('%s is goods', d => expect(looksLikeService(d)).toBe(false))
+  it('a service family counts too', () => expect(looksLikeService('Site visit', 'Commissioning service')).toBe(true))
 })

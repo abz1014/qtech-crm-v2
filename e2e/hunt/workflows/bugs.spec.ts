@@ -46,18 +46,17 @@ async function openWon(browser: Browser, info: TestInfo, rfqId: string) {
   return { ctx, page, d }
 }
 
-test('HW-44: an imported RFQ marked quotation sent opens a Mark won dialog that cannot make an order and does not say how to go on', async ({ browser }, info) => {
+test('HW-44 (fixed): an imported RFQ marked quotation sent opens a Mark won dialog that asks for the selling prices and can make the order', async ({ browser }, info) => {
   await setProfile(true)
   const imp = await seedImported(1)
   const { ctx, d } = await openWon(browser, info, imp.rfq.id)
   const text = await d.innerText()
   const way = (await d.getByRole('button', { name: 'Create order' }).isEnabled()) || (await d.getByRole('textbox', { name: /price/i }).count()) > 0 || /issue (a )?quotation/i.test(text)
-  test.fail()
-  expect(way, `a way to go on from Mark won (every line reads "Left out of the order", Create order is disabled): ${text.slice(0, 160)}`).toBe(true)
+  expect(way, `a way to go on from Mark won: ${text.slice(0, 160)}`).toBe(true)
   await ctx.close()
 })
 
-test('HW-45: a quotation marked sent in the app without a PDF (a verbal one) cannot be won: no line has a selling price and Create order is disabled', async ({ browser }, info) => {
+test('HW-45 (fixed): a quotation marked sent in the app without a PDF (a verbal one) can be won: the dialog asks for the selling prices', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const c = await seedCast({ items: 3 })
@@ -77,12 +76,11 @@ test('HW-45: a quotation marked sent in the app without a PDF (a verbal one) can
   await d.getByRole('group', { name: 'Suppliers by line' }).waitFor()
   const text = await d.innerText()
   const way = (await d.getByRole('button', { name: 'Create order' }).isEnabled()) || (await d.getByRole('textbox', { name: /price/i }).count()) > 0 || /issue (a )?quotation/i.test(text)
-  test.fail()
   expect(way, `a way to go on from Mark won after Mark quotation sent: ${text.slice(0, 160)}`).toBe(true)
   await ctx.close()
 })
 
-test('HW-46: a revision that quotes fewer items leaves the dropped items on the order at their old prices (Mark won makes 4 lines from a 2 line quotation)', async ({ browser }, info) => {
+test('HW-46 (fixed): a revision that quotes fewer items drops the others: they lose their old prices and Mark won makes 2 lines from a 2 line quotation', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const c = await seedCast({ items: 4 })
@@ -94,14 +92,15 @@ test('HW-46: a revision that quotes fewer items leaves the dropped items on the 
   await reply(c.rfq.id, c.supB, [{ itemId: c.items[1].id, price: 520, currency: 'USD' }])
   expect((await issueQuote(c, { only: [0, 1, 2, 3] })).status).toBeLessThan(300)
   expect((await issueQuote(c, { only: [0, 1], prices: { 0: 9500, 1: 185000 } })).status).toBeLessThan(300)
+  const prices = await db.rows<{ position: number; quoted_unit_price_net: number | null }>(`rfq_items?rfq_id=eq.${c.rfq.id}&select=position,quoted_unit_price_net&order=position`)
+  expect(prices.map(r => (r.quoted_unit_price_net === null ? null : Number(r.quoted_unit_price_net))), 'the dropped items 3 and 4 keep no price').toEqual([9500, 185000, null, null])
   const { ctx, d } = await openWon(browser, info, c.rfq.id)
   const text = await d.innerText()
-  test.fail()
   expect(text, 'the dialog for the R1 quotation (items 1 and 2)').toContain('Creates 2 order lines')
   await ctx.close()
 })
 
-test('HW-47: "Not sourced yet" chosen in the Mark won dialog is ignored: the order line gets the rank-1 supplier anyway', async ({ browser }, info) => {
+test('HW-47 (fixed): "Not sourced yet" chosen in the Mark won dialog is honoured: the order line gets no supplier', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const c = await seedCast({ items: 2 })
@@ -118,8 +117,8 @@ test('HW-47: "Not sourced yet" chosen in the Mark won dialog is ignored: the ord
   await page.waitForURL(/\/orders\/[0-9a-f-]{36}$/)
   const id = /orders\/([0-9a-f-]{36})/.exec(page.url())?.[1] as string
   const items = await itemsOf(id)
-  test.fail()
   expect(items[0].supplier_order_id, 'line 1 was left "Not sourced yet" in the dialog').toBeNull()
+  expect(items[0].supplier_unit_price, 'and has no supplier price').toBeNull()
   await ctx.close()
 })
 
@@ -141,7 +140,7 @@ test('HW-48: a goods line left "Not sourced yet" has no way to be given a suppli
   await ctx.close()
 })
 
-test('HW-49: the Mark won dialog reads "Commissioning and loop check" as commissioning (it switches the toggle on) but saves the line as a goods line with no supplier', async ({ browser }, info) => {
+test('HW-49 (fixed): the Mark won dialog reads "Commissioning and loop check" as commissioning: the toggle is on and the line starts as "Service, no supplier" and is saved as a service', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const c = await seedCast({ items: 5 })
@@ -149,17 +148,18 @@ test('HW-49: the Mark won dialog reads "Commissioning and loop check" as commiss
   expect((await issueQuote(c, { gst: { 4: 0 } })).status).toBeLessThan(300)
   const { ctx, page, d } = await openWon(browser, info, c.rfq.id)
   await expect(d.getByRole('checkbox', { name: /Needs commissioning/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(d.getByRole('button', { name: /Supplier for line 5/ })).toContainText('Service, no supplier')
   await d.getByRole('button', { name: 'Create order' }).click()
   await page.waitForURL(/\/orders\/[0-9a-f-]{36}$/)
   const id = /orders\/([0-9a-f-]{36})/.exec(page.url())?.[1] as string
   const items = await itemsOf(id)
   const commissioning = items.find(i => /Commissioning and loop check/.test(i.description))
-  test.fail()
   expect(commissioning?.is_service, 'the commissioning line is a service').toBe(true)
+  expect(commissioning?.supplier_order_id, 'with no supplier order').toBeNull()
   await ctx.close()
 })
 
-test('HW-50: Mark won turns an imported supplier price whose currency was never verified into a real supplier order, and the dialog says nothing about it', async ({ browser }, info) => {
+test('HW-50 (fixed): Mark won says, in the supplier picker, that an imported supplier price has a currency that was never verified', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const imp = await seedImported(3)
@@ -167,7 +167,7 @@ test('HW-50: Mark won turns an imported supplier price whose currency was never 
   expect((await issueQuote(cast, { only: [0] })).status).toBeLessThan(300)
   const { ctx, d } = await openWon(browser, info, imp.rfq.id)
   const text = await d.innerText()
-  test.fail()
+  expect(await d.getByRole('button', { name: /Supplier for line 1/ }).innerText(), 'the picker button carries the warning of the quote it defaults to').toMatch(/Imported quote: the currency was not confirmed/)
   expect(text, 'a sign that the supplier price is imported, its currency unverified and its item guessed').toMatch(/unverified|check the currency|guess|legacy|imported/i)
   await ctx.close()
 })
@@ -232,7 +232,7 @@ test('HW-55: Repeat order from an imported order copies a line priced 0 as a nor
   expect(items.some(i => num(i.unit_price_net) === 0), `the copy has a line priced 0: ${items.map(i => `${i.description} ${i.unit_price_net}`).join(', ')}`).toBe(false)
 })
 
-test('HW-56: a second tab that presses Create order on an RFQ just won in the first tab opens the first tab\'s order and drops the customer PO typed there without a word', async ({ browser }, info) => {
+test('HW-56 (fixed): a second tab that presses Create order on an RFQ just won in the first tab is told "Already converted to ORD-n" and can add the customer PO it typed to that order', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const c = await seedCast({ items: 3 })
@@ -241,20 +241,24 @@ test('HW-56: a second tab that presses Create order on an RFQ just won in the fi
   const one = await openWon(browser, info, c.rfq.id)
   const two = await openWon(browser, info, c.rfq.id)
   await two.d.getByLabel(/^Customer PO number/).fill('TAB-TWO-PO')
-  await one.d.getByLabel(/^Customer PO number/).fill('TAB-ONE-PO')
   await one.d.getByRole('button', { name: 'Create order' }).click()
   await one.page.waitForURL(/\/orders\/[0-9a-f-]{36}$/)
   await two.d.getByRole('button', { name: 'Create order' }).click()
+  await expect(two.d.getByText(/^Already converted to ORD-\d{4}$/)).toBeVisible()
+  expect(two.page.url(), 'the second tab stays on the dialog').not.toMatch(/\/orders\//)
+  const before = await db.rows<{ id: string; customer_po_number: string | null }>(`orders?rfq_id=eq.${c.rfq.id}&select=id,customer_po_number`)
+  expect(before, 'one RFQ, one order').toHaveLength(1)
+  expect(before[0].customer_po_number, 'the first tab typed no PO').toBeNull()
+  await two.d.getByRole('button', { name: /^Add PO TAB-TWO-PO to ORD-\d{4}$/ }).click()
   await two.page.waitForURL(/\/orders\/[0-9a-f-]{36}$/)
-  const told = (await two.page.getByRole('status').allInnerTexts()).join(' ')
-  const orders = await db.rows<{ customer_po_number: string | null }>(`orders?rfq_id=eq.${c.rfq.id}&select=customer_po_number`)
-  test.fail()
-  expect(/already|TAB-ONE|PO/i.test(told) || orders[0]?.customer_po_number === 'TAB-TWO-PO', `a sign that the PO typed here was not used (toasts: "${told}")`).toBe(true)
+  const after = await db.rows<{ id: string; customer_po_number: string | null }>(`orders?rfq_id=eq.${c.rfq.id}&select=id,customer_po_number`)
+  expect(after).toHaveLength(1)
+  expect(after[0].customer_po_number, 'the PO typed in the second tab is on the order').toBe('TAB-TWO-PO')
   await one.ctx.close()
   await two.ctx.close()
 })
 
-test('HW-57: the Mark won dialog opens by the address (?won=1) on an RFQ that already has an order, although the page offers no Mark won', async ({ browser }, info) => {
+test('HW-57 (fixed): ?won=1 on an RFQ that already has an order opens that order, with a message, not a Mark won dialog', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const L = await liveOrder({ service5: true, leaveOut4: true })
@@ -262,9 +266,9 @@ test('HW-57: the Mark won dialog opens by the address (?won=1) on an RFQ that al
   const page = await ctx.newPage()
   page.setDefaultTimeout(15_000)
   await page.goto(`/rfqs/${L.c.rfq.id}?won=1`)
+  await page.waitForURL(new RegExp(`/orders/${L.id}`))
   await settle(page)
-  await page.waitForTimeout(1500)
-  test.fail()
+  await expect(page.getByRole('status').filter({ hasText: /already exists for this RFQ/ })).toBeVisible()
   expect(await page.getByRole('dialog').filter({ hasText: 'Mark won' }).count(), 'a Mark won dialog on a won RFQ').toBe(0)
   await ctx.close()
 })
@@ -306,7 +310,7 @@ test('HW-59: the USD and the EUR supplier orders of one supplier have the same a
   await ctx.close()
 })
 
-test('HW-60: the quotation is revised (and a quantity changed) in another tab while Mark won is open: Create order makes the order at figures the dialog never showed, with no warning', async ({ browser }, info) => {
+test('HW-60 (fixed): the quotation is revised (and a quantity changed) in another tab while Mark won is open: Create order refuses, reloads, and the order is made at the figures then shown', async ({ browser }, info) => {
   await setProfile(true)
   await setRates()
   const c = await seedCast({ items: 3 })
@@ -317,11 +321,16 @@ test('HW-60: the quotation is revised (and a quantity changed) in another tab wh
   expect((await issueQuote(c, { only: [0, 1, 2], prices: { 0: 10000, 1: 200000, 2: 220000 } })).status).toBeLessThan(300)
   await db.patch(`rfq_items?id=eq.${c.items[0].id}`, { qty: 12 })
   await d.getByRole('button', { name: 'Create order' }).click()
+  await expect(d.getByText(/The quotation changed since you opened this\. Review again\./)).toBeVisible()
+  expect(page.url(), 'no order page').not.toMatch(/\/orders\//)
+  expect(await db.rows(`orders?rfq_id=eq.${c.rfq.id}&select=id`), 'nothing was created').toHaveLength(0)
+  await expect.poll(async () => (await d.getByRole('group', { name: 'Order totals' }).innerText()).replace(/\s+/g, ' '), { message: 'the dialog reloaded the new figures' }).not.toBe(shown)
+  const reviewed = (await d.getByRole('group', { name: 'Order totals' }).innerText()).replace(/\s+/g, ' ')
+  await d.getByRole('button', { name: 'Create order' }).click()
   await page.waitForURL(/\/orders\/[0-9a-f-]{36}$/)
   const id = /orders\/([0-9a-f-]{36})/.exec(page.url())?.[1] as string
   const t = (await db.view<{ net: number; gross: number }>(`v_order_items_total?order_id=eq.${id}&select=net,gross`))[0]
-  test.fail()
-  expect(shown, `the dialog showed "${shown}"; the order was made at net ${t.net}, gross ${t.gross}`).toContain(Number(t.net).toLocaleString('en-US', { maximumFractionDigits: 2 }))
+  expect(reviewed, `the dialog showed "${reviewed}"; the order was made at net ${t.net}, gross ${t.gross}`).toContain(Number(t.net).toLocaleString('en-US', { maximumFractionDigits: 2 }))
   await ctx.close()
 })
 

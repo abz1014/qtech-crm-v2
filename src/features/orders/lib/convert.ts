@@ -80,12 +80,16 @@ export interface ConvertPayloadLine {
   unit_price_net?: number
   qty?: number
   is_service?: boolean
+  /** "Not sourced yet", chosen or true by default: the database then gives the line no supplier instead of inferring the rank-1 quote (0094, HW-47). */
+  not_sourced?: boolean
+  /** The RFQ quantity the dialog showed: the database refuses the order if it changed since (0094, HW-60). */
+  expected_qty?: number
 }
 
 /**
  * The p_items of convert_rfq_to_order. `typedPrices` holds a selling price for items the quotation never priced. A line with a
- * single quote and the choice of that quote sends no quote_line_id (the database picks the only one); "Not sourced yet" on a line
- * with several quotes sends none, which leaves it unsourced.
+ * single quote and the choice of that quote sends no quote_line_id (the database picks the only one); "Not sourced yet" sends
+ * not_sourced: true, which the database honours (no supplier), whatever quotes the item has.
  */
 export function buildPayload(
   items: readonly ConvertItem[],
@@ -97,12 +101,24 @@ export function buildPayload(
     const c = choices[it.id] ?? 'none'
     if (c === 'service') line.is_service = true
     else if (c !== 'none') line.quote_line_id = c
+    else line.not_sourced = true
     if (it.quotedUnitPriceNet === null) {
       const typed = typedPrices[it.id]
       if (typed !== null && typed !== undefined && typed > 0) line.unit_price_net = typed
     }
     return line
   })
+}
+
+/**
+ * A line that is work, not goods: nobody quoted it and it reads as commissioning, installation, start-up or similar (or its family is a
+ * service one, "Commissioning service"). Mark won then starts it on "Service, no supplier" instead of "Not sourced yet" (HW-49).
+ * A line a supplier quoted is goods, whatever it says. Narrow on purpose: "Calibration gas" is goods, "Commissioning and loop check" is not.
+ */
+const SERVICE_START = /^\s*(commissioning|installation|installing|site acceptance|start[-\s]?up|loop check|supervision|training)\b/i
+const SERVICE_FAMILY = /\b(commissioning|service)s?\b/i
+export function looksLikeService(description: string, familyName?: string | null): boolean {
+  return SERVICE_START.test(description) || /\bcommissioning\b/i.test(description) || Boolean(familyName && SERVICE_FAMILY.test(familyName))
 }
 
 /** Items that still have no selling price (the quotation did not price them and none was typed). */

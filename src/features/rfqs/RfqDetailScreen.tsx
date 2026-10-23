@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Suspense, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, FileQuestion, RefreshCw, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
@@ -29,6 +29,8 @@ import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/use
 import { BelowTheFold } from '@/ui/BelowTheFold'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { useWonDialog } from '@/features/orders/useWonDialog'
+import { ToastContext } from '@/ui/useToast'
+import { orderRef } from '@/lib/refs'
 
 // Downloaded when opened, not with the RFQ page (perf/lcp): Mark won's Create order dialog and Add item.
 /*
@@ -247,6 +249,20 @@ function Loaded({
   // The one green button (owner decision 2026-10-19): chosen by state. Until the items and replies are in, there is none.
   const quotations = useQuotations(rfq.id)
   const orders = useOrdersForRfq(rfq.id)
+  // HW-57: ?won=1 on an RFQ that already has an order opens that order, with a word, instead of a Mark won dialog that cannot work.
+  // Checked once, when the orders first arrive: an order made later by this very dialog is its own navigation, not a redirect.
+  const navigate = useNavigate()
+  const toast = useContext(ToastContext)?.toast
+  const [wonChecked, setWonChecked] = useState(false)
+  useEffect(() => {
+    if (wonChecked || orders.isPending) return
+    setWonChecked(true)
+    const live = (orders.data ?? []).find(o => !o.cancelledOn)
+    if (wonOpen && live) {
+      toast?.({ title: `${orderRef(live.number)} already exists for this RFQ`, body: 'Mark won is for an RFQ without an order, so the order is open instead.' })
+      navigate(`/orders/${live.id}`, { replace: true })
+    }
+  }, [wonChecked, orders.isPending, orders.data, wonOpen, toast, navigate])
   const quotationCount = quotations.data?.length ?? 0
   const primary: RfqPrimary =
     loading || loadError
@@ -287,7 +303,7 @@ function Loaded({
     <Shell bar={(rfq.state?.outcome ?? 'open') === 'open'}>
       <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
-      {wonOpen && prices && inquiries.data ? (
+      {wonOpen && wonChecked && prices && inquiries.data ? (
         <Suspense fallback={null}>
           <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} />
         </Suspense>

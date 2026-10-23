@@ -84,6 +84,7 @@ export function buildSplitPayload(
     const c = choices[it.id] ?? 'none'
     if (c === 'service') line.is_service = true
     else if (c !== 'none') line.quote_line_id = c
+    else line.not_sourced = true
     out.push(line)
   }
   return out
