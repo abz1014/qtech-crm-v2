@@ -7,6 +7,7 @@
  *   23514 check_violation        a value is outside what the table allows
  *   22003 numeric_value_out_of_range  a number too large for its column ("too large", never "try again")
  *   42501 insufficient_privilege row-level security refused it: trying again will not help
+ *                                A server rule that raises 42501 with a HINT (0092: not_yours, admin_only) is passed on as `hint`.
  *   PGRST116                     .single() found no row: it was removed meanwhile
  *   ''    + "TypeError: ..."     postgrest-js resolves a failed fetch as an error object, not a throw
  *   P0001 raise_exception        the month-lock trigger: "<Month YYYY> is closed. An admin can
@@ -42,6 +43,8 @@ export interface MappedError {
   kind: PgErrorKind
   /** Plain sentence for a banner or a field line. */
   message: string
+  /** The HINT of a server rule (not_yours, has_order, bank_ticked, in_use, ...), so a screen can branch on it (0092). */
+  hint?: string
   /** The server's own code for a PlainError (email_taken, last_admin), so a form can route it. */
   code?: string
   /** Constraint name when Postgres gave one, so a form can route the message to a field. */
@@ -87,7 +90,8 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
   const rpc = ['22023', '22004', 'P0001', 'P0002', '23514', '42501', '', undefined].includes(err.code) ? rpcMessage(text) : null
   if (rpc && !(err.code === 'P0001' && CLOSED_MONTH.test(text.trim()))) {
     const kind: PgErrorKind = err.code === '23514' ? 'check' : err.code === '42501' ? 'permission' : 'unknown'
-    return { kind, ...rpc, ...(constraint ? { constraint } : {}) }
+    const hint = typeof err.hint === 'string' && err.hint ? err.hint : undefined
+    return { kind, ...rpc, ...(constraint ? { constraint } : {}), ...(hint ? { hint } : {}) }
   }
   switch (err.code) {
     case '23505':

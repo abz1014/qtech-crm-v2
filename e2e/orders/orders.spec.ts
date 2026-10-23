@@ -405,7 +405,8 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
 
 test.describe('O03: items', () => {
   test('GST per line, exempt the whole order, and the service flag', async ({ page }) => {
-    const s = await seedOrder()
+    // 0092 (owner decision): sales change the money fields (GST, prices, quantities) of an order they entered or own, so this order is the sales person's
+    const s = await seedOrder({ owner_id: 'a0000000-0000-4000-8000-000000000002' })
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await expect(page.getByRole('table', { name: 'Order items' })).toBeVisible()
     // the per-line controls are behind one toggle: the table shows five columns until then
