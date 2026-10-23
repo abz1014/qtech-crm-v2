@@ -26,6 +26,7 @@ for line in open(sys.argv[1], encoding="utf-8"):
 
 changed = json.loads(os.environ.get("CHANGED") or "[]")
 chosen = suites if os.environ.get("RUN_ALL") == "true" else [s for s in suites if s in changed]
+chosen = [s for s in chosen if s in ("hunt-workflows-jobflow", "hunt-workflows")]  # TEMP-HUNT (hunt/jobflow only): remove before the final run
 
 total = sum(weights[s] for s in chosen)
 n = min(SHARDS_MAX, len(chosen), max(1, math.ceil(total / TARGET_SECONDS))) if chosen else 0

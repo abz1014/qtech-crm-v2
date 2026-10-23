@@ -119,6 +119,7 @@ hunt-workflows: # weight=351 (exploratory bug hunt, branch hunt/workflows: the c
   - 'e2e/hunt/workflows/crawl.spec.ts'
   - 'e2e/hunt/workflows/bugs.spec.ts'
   - 'e2e/hunt/workflows/support.ts'
+  - 'e2e/hunt/workflows/jobflow-support.ts'
 hunt-workflows-sales: # weight=371 (bug hunt: the sales workflow; installs poppler)
   - 'e2e/hunt/workflows/sales.spec.ts'
   - 'e2e/hunt/workflows/support.ts'
@@ -133,4 +134,5 @@ hunt-workflows-crosscut: # weight=432 (bug hunt: Today, search, shortcuts, help,
   - 'e2e/hunt/workflows/support.ts'
 hunt-workflows-jobflow: # weight=600 (bug hunt: RFQ -> won -> order -> PO -> delivery -> commissioning -> invoice -> payment; installs poppler)
   - 'e2e/hunt/workflows/jobflow.spec.ts'
+  - 'e2e/hunt/workflows/jobflow-support.ts'
   - 'e2e/hunt/workflows/support.ts'
