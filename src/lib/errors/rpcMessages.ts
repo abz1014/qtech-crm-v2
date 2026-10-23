@@ -102,6 +102,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^an item (to quote )?does not belong to this RFQ$/, message: () => RELOAD },
   { match: /^every item needs a description$/, message: () => 'Every item needs a description. Fill in the empty ones, then save.' },
   { match: /^invoice numbers are for admin and sales only$/, message: () => ADMIN_SALES },
+  { match: /^supplier categories are tagged by admin and sales only$/, message: () => ADMIN_SALES },   // 0093
   { match: /^(FBR|TCS) stamping is for admin and sales only$/, message: () => ADMIN_SALES },
   { match: /^prices, quantities and GST on an order are changed by admin and sales only$/, message: () => ADMIN_SALES },
 

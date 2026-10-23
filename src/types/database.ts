@@ -131,14 +131,14 @@ isOneToOne: false
                   ]
                 },"brands": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"kind": string,"name": string
+                    "created_at": string,"created_by": string | null,"curated": boolean,"id": string,"kind": string,"name": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: string,"name": string
+                    "created_at"?: string,"created_by"?: string | null,"curated"?: boolean,"id"?: string,"kind"?: string,"name": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: string,"name"?: string
+                    "created_at"?: string,"created_by"?: string | null,"curated"?: boolean,"id"?: string,"kind"?: string,"name"?: string
                   }
                   Relationships: [
                     {
@@ -2160,6 +2160,14 @@ isOneToOne: false
       referencedColumns: ["supplier_id"]
     }
                   ]
+                },"v_supplier_category_evidence": {
+                  Row: {
+                    "asked": number | null,"family_id": string | null,"last_asked_on": string | null,"no_offer": number | null,"ordered": number | null,"quoted": number | null,"replied": number | null,"supplier_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_supplier_stats": {
                   Row: {
                     "asked": number | null,"brand_ids": (string)[] | null,"brand_names": (string)[] | null,"chosen": number | null,"chosen_of": number | null,"deliveries": number | null,"last_contact": string | null,"late": number | null,"legacy_asked": number | null,"median_days_late": number | null,"median_reply_days": number | null,"no_offer": number | null,"orders_count": number | null,"prices_hidden": number | null,"quoted": number | null,"replied": number | null,"reply_days_n": number | null,"supplier_id": string | null
@@ -2413,6 +2421,11 @@ isOneToOne: false
                            },
 "strip_words":
 { Args: { "p_drop": (string)[],"p_norm": string }; Returns: string
+                           },
+"supplier_category_price_wins":
+{ Args: { "p_family_ids": (string)[] }; Returns: {
+              "family_id": string,"of_ranked": number,"supplier_id": string,"wins": number
+            }[]
                            },
 "supplier_item_evidence":
 { Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_limit"?: number,"p_supplier_ids": (string)[] }; Returns: {

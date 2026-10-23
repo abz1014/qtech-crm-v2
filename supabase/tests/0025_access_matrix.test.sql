@@ -164,6 +164,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_fx_latest',         '',           'S',    'S',    'S'),    -- s10 "v_fx_latest, v_supplier_activity, v_supplier_stats, supplier_item_memory()"
   ('view',  'v_supplier_activity', '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_supplier_stats',    '',           'S',    'S',    'S'),    -- s10 (same row)
+  ('view',  'v_supplier_category_evidence', '',  'S',    'S',    'S'),    -- 0093: counts only (asked, replied, quoted, no_offer, ordered) per supplier and category, all staff
   ('function', 'order_receivables',       '',    'X',    'X',    ''),     -- s10 "order_receivables() (definer)"
   ('function', 'receivables_list',        '',    'X',    'X',    ''),     -- 0074: order_receivables() rows with names, filtered on the server; its access
   ('function', 'receivables_summary',     '',    'X',    'X',    ''),     -- 0074: the Who-owes-us figures in one row; order_receivables() access
@@ -198,6 +199,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'restore_payment',         '',    'X',    '',     ''),     -- 0073: Undo of a void, by the admin who voided, within 10 minutes
   ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'rank_item_quotes',       '',    'X',    'X',    'X'),    -- A8 (0049): supplier quote ranking, all staff; the selling price and spread inside it are NULL for engineers (own pgTAP test)
+  ('function', 'supplier_category_price_wins', '', 'X', 'X', 'X'),   -- 0093: category price wins; SECURITY DEFINER with a role check inside, the counts are NULL for an engineer (own pgTAP test)
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'po_line_prefill',         '',    'X',    'X',    'X'),    -- O07 (0043): what Issue PO would pre-fill, SECURITY INVOKER, all staff; writes nothing
@@ -454,7 +456,7 @@ insert into probes
 select v, '', 'S', format('select 1 from public.%s limit 1', v)
 from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_state','v_invoice_state','v_gst_register',
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
-                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
+                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
@@ -494,6 +496,7 @@ insert into probes values
   ('money_exceptions_input', '', 'X', 'select 1 from public.money_exceptions_input() j where j is not null'),   -- P9 (0066): NULL unless admin
   ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
   ('rank_item_quotes', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.rank_item_quotes(@15)) >= 0'),   -- A8 (0049): same shape as the customer_price_memory probe (the fixture RFQ must be visible; a deactivated user sees none)
+  ('supplier_category_price_wins', '', 'X', 'select 1 where exists (select 1 from public.companies where id = @03) and (select count(*) from public.supplier_category_price_wins(array[@13])) >= 0'),   -- 0093: same shape as rank_item_quotes (a deactivated user sees no company)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
   ('po_line_prefill', '', 'X', 'select 1 where exists (select 1 from public.supplier_orders where id = @23) and (select count(*) from public.po_line_prefill(@23)) >= 0'),   -- O07: read-only; needs the leg to be visible, so a deactivated user is denied
