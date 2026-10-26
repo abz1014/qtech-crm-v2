@@ -55,6 +55,14 @@ export function PasteReplyPanel({
         <p className="text-xs text-fg-muted">Nothing is saved until you accept.</p>
       </div>
 
+      {set.question !== null ? (
+        <div className="rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm" data-reply-question="">
+          <p className="font-medium">They are asking you something, not quoting.</p>
+          {set.question ? <p className="mt-1 break-words text-fg-2">{set.question}</p> : null}
+          <p className="mt-1 text-fg-muted">Nothing here is a price. Answer them, then paste their next reply.</p>
+        </div>
+      ) : null}
+
       {set.nothingFound ? (
         <p className="text-sm text-fg-2">No price, lead time or refusal could be read from that text. Type the prices in above instead.</p>
       ) : null}
@@ -135,7 +143,7 @@ export function PasteReplyPanel({
         <Button data-cancel onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
-        {!set.nothingFound && !(set.regret && count === 0 && set.declined.length === 0) ? (
+        {!set.nothingFound && set.question === null && !(set.regret && count === 0 && set.declined.length === 0) ? (
           <Button
             variant="primary"
             icon={Check}

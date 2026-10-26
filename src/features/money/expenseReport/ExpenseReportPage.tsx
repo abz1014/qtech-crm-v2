@@ -388,10 +388,13 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
       header: 'Group and category',
       value: r => r.name,
       cell: r => (
-        <span className="inline-flex items-center gap-2">
-          <Icon icon={ChevronRight} size="sm" className={cn('shrink-0 text-fg-muted', r.count === 0 && 'invisible', openId === r.id && 'rotate-90')} />
-          <span className="font-medium">{r.name}</span>
-          {r.archived ? <span className="text-sm text-fg-muted">archived</span> : null}
+        <span className="grid gap-1">
+          <span className="inline-flex items-center gap-2">
+            <Icon icon={ChevronRight} size="sm" className={cn('shrink-0 text-fg-muted', r.count === 0 && 'invisible', openId === r.id && 'rotate-90')} />
+            <span className="font-medium">{r.name}</span>
+            {r.archived ? <span className="text-sm text-fg-muted">archived</span> : null}
+          </span>
+          {r.isMisc ? <MiscTitles c={r} /> : null}
         </span>
       ),
     },
@@ -453,7 +456,10 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
         className="rounded-none border-0"
         mobileRow={r => (
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-[2px] py-1">
-            <span className="min-w-0 font-medium">{r.name}</span>
+            <span className="min-w-0 font-medium">
+              {r.name}
+              {r.isMisc ? <MiscTitles c={r} /> : null}
+            </span>
             <span className="num text-right">{r.count === 0 ? '—' : rupees(r.amount)}</span>
             <span className="num col-span-2 text-sm text-fg-muted">
               {r.share}% · was {rupees(r.prev)}
@@ -468,6 +474,32 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
       />
       {opened ? <Drill c={opened} label={v.label} onClose={() => setOpenId(null)} /> : null}
     </div>
+  )
+}
+
+/**
+ * 0091: under an "Other", what the one-off spends were, by the title typed ("Courier from shop 3 x, 1,500"), biggest first; the
+ * rest are counted. Nothing is left as one lump of "Other".
+ */
+function MiscTitles({ c }: { c: CategoryLine }) {
+  const titled = c.details.filter(d => d.detail)
+  if (titled.length === 0) return null
+  const shown = titled.slice(0, 4)
+  const rest = titled.length - shown.length
+  return (
+    <ul className="grid gap-[2px] pl-7 text-base text-fg-2" data-testid="misc-titles" aria-label={`${c.name}, by title`}>
+      {shown.map(d => (
+        <li key={d.key} className="[overflow-wrap:anywhere]">
+          {d.detail}
+          <span className="num text-fg-muted">
+            {' · '}
+            {d.count > 1 ? `${d.count} times, ` : ''}
+            {rupees(d.amount)}
+          </span>
+        </li>
+      ))}
+      {rest > 0 ? <li className="text-fg-muted">and {rest} more, open this row</li> : null}
+    </ul>
   )
 }
 

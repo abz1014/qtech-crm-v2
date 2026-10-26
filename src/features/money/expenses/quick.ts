@@ -1,4 +1,14 @@
-import { cleanDetail, SUPPLIER_PAYMENT_ID, type Category, type CategoryUse, type ExpenseInsert, type PaidVia } from '@/features/money/expenses/model'
+import {
+  cleanDetail,
+  defaultGroupId,
+  miscCategories,
+  SUPPLIER_PAYMENT_ID,
+  type Category,
+  type CategoryUse,
+  type ExpenseGroup,
+  type ExpenseInsert,
+  type PaidVia,
+} from '@/features/money/expenses/model'
 
 /*
  * Quick add (redesign phase 1): amount, tap a category, Save; the row stays open for the next one. Pure rules only.
@@ -23,18 +33,31 @@ export const EVERYDAY_IDS: readonly string[] = [
 /** Active categories a person may pick for an ordinary expense: everything but Supplier payment. */
 export const pickableCategories = (categories: readonly Category[]): Category[] => categories.filter(c => c.active && c.id !== SUPPLIER_PAYMENT_ID)
 
-/** The quick-add buttons: most used in the last 30 days first, then the everyday ones, then the rest in their order; `limit` in all. */
-export function topCategories(use: readonly CategoryUse[], categories: readonly Category[], limit = 6): Category[] {
-  const ok = new Map(pickableCategories(categories).map(c => [c.id, c]))
+/**
+ * The quick-add buttons: most used in the last 30 days first, then the everyday ones, then the rest in their order; `limit` in all.
+ * "Other" (0091, the misc category of the default group) is always the last one when the books have one, so a one-off spend
+ * never needs a new category: the others fill `limit - 1` places.
+ */
+export function topCategories(use: readonly CategoryUse[], categories: readonly Category[], limit = 6, groups: readonly ExpenseGroup[] = []): Category[] {
+  const other = defaultOther(categories, groups)
+  const ok = new Map(pickableCategories(categories).filter(c => !c.isMisc).map(c => [c.id, c]))
+  const size = other ? limit - 1 : limit
   const out: Category[] = []
   const add = (id: string) => {
     const c = ok.get(id)
-    if (c && !out.includes(c) && out.length < limit) out.push(c)
+    if (c && !out.includes(c) && out.length < size) out.push(c)
   }
   for (const u of use) add(u.id)
   for (const id of EVERYDAY_IDS) add(id)
   for (const c of [...ok.values()].sort((a, b) => a.sort - b.sort)) add(c.id)
-  return out
+  return other ? [...out, other] : out
+}
+
+/** The "Other" button's category: the misc category of Office running (the default group), else the first one there is. */
+export function defaultOther(categories: readonly Category[], groups: readonly ExpenseGroup[]): Category | null {
+  const miscs = miscCategories(categories, groups).filter(c => c.id !== SUPPLIER_PAYMENT_ID)
+  const gid = defaultGroupId(groups)
+  return miscs.find(c => c.groupId === gid) ?? miscs[0] ?? null
 }
 
 export interface QuickEntry {
@@ -52,12 +75,13 @@ export interface QuickEntry {
   inputTax: number
 }
 
-export type QuickProblem = 'amount' | 'category' | 'tax'
+export type QuickProblem = 'amount' | 'category' | 'title' | 'tax'
 
 /** What stops a quick entry from saving, in the order the person meets the fields; null when it can be saved. */
-export function quickProblem(e: Pick<QuickEntry, 'amount' | 'categoryId' | 'inputTax'>): QuickProblem | null {
+export function quickProblem(e: Pick<QuickEntry, 'amount' | 'categoryId' | 'inputTax'> & { titleMissing?: boolean }): QuickProblem | null {
   if (!(e.amount > 0) || !Number.isFinite(e.amount)) return 'amount'
   if (!e.categoryId || e.categoryId === SUPPLIER_PAYMENT_ID) return 'category'
+  if (e.titleMissing) return 'title'
   if (e.inputTax < 0 || e.inputTax > e.amount) return 'tax'
   return null
 }
