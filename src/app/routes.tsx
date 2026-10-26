@@ -8,7 +8,7 @@ import { OldAddress } from '@/app/oldAddresses'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
-import { AdminOnly, PricesOnly } from '@/features/settings/settingsGuards'
+import { AdminOnly, PricesOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
 import { preloadRouteCode, routeChunks } from '@/app/routeChunks'
 
@@ -34,9 +34,6 @@ const OldRfqs = lazy(routeChunks.rfqs)
 const OldOrders = lazy(routeChunks.orders)
 
 /** The weekly owner review (redesign phase 3): /todo/review, admin only. */
-// Settings' list and home are not on the first screen (perf/trim).
-const SettingsLayout = lazy(() => import('@/features/settings/SettingsLayout').then(m => ({ default: m.SettingsLayout })))
-const SettingsHome = lazy(() => import('@/features/settings/SettingsLayout').then(m => ({ default: m.SettingsHome })))
 const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
