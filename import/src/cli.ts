@@ -109,7 +109,7 @@ async function main(): Promise<number> {
 
   const summary = await loadLegacy({ db, result, storageDir: parsed.storageDir, log: line => console.log(line) })
   writeReport(out, { ...result, review: [...result.review, ...summary.review] })
-  console.log(JSON.stringify({ deleted: summary.deleted, inserted: summary.inserted, reused: summary.reused, auditRowsRemoved: summary.auditRowsRemoved, storage: summary.storage }, null, 2))
+  console.log(JSON.stringify({ deleted: summary.deleted, inserted: summary.inserted, reused: summary.reused, skippedDeleted: summary.skippedDeleted, auditRowsRemoved: summary.auditRowsRemoved, storage: summary.storage }, null, 2))
   if (summary.mismatches.length) {
     console.error(`READ-BACK MISMATCH:\n  - ${summary.mismatches.join('\n  - ')}`)
     return 1

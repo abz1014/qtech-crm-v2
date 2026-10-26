@@ -108,6 +108,102 @@ const REMAP_COLUMNS: { table: string; col: string; kind: 'company' | 'brand' | '
   { table: 'expenses', col: 'payee_id', kind: 'company' },
 ]
 
+/**
+ * "Deleted in v2, skipped" (W13). A person may delete an imported record in v2 (0092: delete_rfq, delete_order, delete_invoice,
+ * delete_payment...). The audit trigger keeps a DELETE row for it with the person in changed_by. A re-import would bring the
+ * record back, because it rebuilds every imported row from the old CRM. So the loader reads those DELETE rows first and leaves
+ * the matching rows out of the load: the id of an imported row is the version 5 UUID made from the legacy row's id, and the
+ * audit row's record_id is that same id. The import's own deletes have changed_by null and are not counted.
+ * Children that went with the deleted record (items of a deleted RFQ or order...) are left out too, whether or not the audit
+ * kept a row of their own.
+ */
+export const DELETED_IN_V2_LIST = 'deleted_in_v2'
+export const DELETED_IN_V2_DETAIL = 'deleted in v2, skipped'
+
+/** Foreign keys whose child goes with its parent (on delete cascade): a child of a skipped parent is skipped too. */
+const CASCADE_EDGES: { child: ImportTable; col: string; parent: ImportTable }[] = [
+  { child: 'company_sites', col: 'company_id', parent: 'companies' },
+  { child: 'contacts', col: 'company_id', parent: 'companies' },
+  { child: 'company_brands', col: 'company_id', parent: 'companies' },
+  { child: 'rfq_items', col: 'rfq_id', parent: 'rfqs' },
+  { child: 'supplier_inquiries', col: 'rfq_id', parent: 'rfqs' },
+  { child: 'supplier_quote_lines', col: 'inquiry_id', parent: 'supplier_inquiries' },
+  { child: 'supplier_quote_lines', col: 'rfq_item_id', parent: 'rfq_items' },
+  { child: 'supplier_orders', col: 'order_id', parent: 'orders' },
+  { child: 'order_items', col: 'order_id', parent: 'orders' },
+  { child: 'attachments', col: 'rfq_id', parent: 'rfqs' },
+  { child: 'attachments', col: 'order_id', parent: 'orders' },
+  { child: 'attachments', col: 'invoice_id', parent: 'invoices' },
+  { child: 'attachments', col: 'expense_id', parent: 'expenses' },
+]
+
+/** The ids a person deleted in v2, by table, read from the audit log. Version 5 ids only: a v2-made record is never the import's business. */
+export async function fetchDeletedInV2(db: Db): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>()
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db
+      .from('audit_log')
+      .select('table_name,record_id')
+      .eq('action', 'delete')
+      .not('changed_by', 'is', null)
+      .in('table_name', [...IMPORT_TABLES])
+      .order('changed_at')
+      .order('id')
+      .range(from, from + PAGE - 1)
+    if (error) fail('read audit_log', error)
+    const page = (data ?? []) as { table_name: string; record_id: string }[]
+    for (const r of page) {
+      if (!isLegacyId(String(r.record_id))) continue
+      const set = out.get(r.table_name) ?? new Set<string>()
+      set.add(String(r.record_id))
+      out.set(r.table_name, set)
+    }
+    if (page.length < PAGE) break
+  }
+  return out
+}
+
+/** Pure: removes the deleted rows (and what cascades from them) from `tables` in place; returns what was skipped, for the report. */
+export function skipDeletedInV2(
+  tables: Record<ImportTable, NewRow[]>,
+  deleted: ReadonlyMap<string, ReadonlySet<string>>,
+): { skipped: Record<ImportTable, NewRow[]>; review: ReviewItem[] } {
+  const skipped = Object.fromEntries(IMPORT_TABLES.map(t => [t, [] as NewRow[]])) as Record<ImportTable, NewRow[]>
+  const gone = (t: ImportTable) => new Set(skipped[t].map(r => String(r['id'])))
+  const take = (t: ImportTable, drop: (r: NewRow) => boolean) => {
+    const keep: NewRow[] = []
+    let n = 0
+    for (const r of tables[t]) {
+      if (drop(r)) {
+        skipped[t].push(r)
+        n++
+      } else keep.push(r)
+    }
+    tables[t] = keep
+    return n
+  }
+  for (const t of IMPORT_TABLES) {
+    const ids = deleted.get(t)
+    if (ids?.size) take(t, r => ids.has(String(r['id'])))
+  }
+  // Children of a skipped parent, until nothing more goes (a deleted RFQ takes its inquiries, then their quote lines).
+  for (let again = true; again; ) {
+    again = false
+    for (const e of CASCADE_EDGES) {
+      const parents = gone(e.parent)
+      if (parents.size && take(e.child, r => parents.has(String(r[e.col])))) again = true
+    }
+  }
+  const review: ReviewItem[] = []
+  for (const t of IMPORT_TABLES) {
+    for (const r of skipped[t]) {
+      const label = [r['number'], r['name'], r['description'], r['customer_ref'], r['customer_po_number']].find(v => typeof v === 'string' || typeof v === 'number')
+      review.push({ list: DELETED_IN_V2_LIST, table: t, oldId: String(r['id']), label: label === undefined ? '' : String(label), detail: DELETED_IN_V2_DETAIL })
+    }
+  }
+  return { skipped, review }
+}
+
 export class LoadError extends Error {
   constructor(message: string) {
     super(message)
@@ -157,6 +253,8 @@ export interface LoadSummary {
   deleted: Record<string, number>
   inserted: Record<string, number>
   reused: { companies: number; brands: number; sites: number }
+  /** Imported rows a person deleted in v2, left out of the load (by table; tables with none left out). */
+  skippedDeleted: Record<string, number>
   auditRowsRemoved: number
   storage: { copied: number; missing: number; removed: number }
   review: ReviewItem[]
@@ -217,6 +315,12 @@ export async function loadLegacy(opts: LoadOptions): Promise<LoadSummary> {
       `REFUSED, nothing was deleted: rows made in v2 depend on imported rows.\n  - ${conflicts.join('\n  - ')}\nA re-import would change or delete them. Resolve those first.`,
     )
   }
+
+  // ---------------------------------------------------------------- 1b. what a person deleted in v2 stays deleted
+  const { skipped, review: deletedReview } = skipDeletedInV2(tables, await fetchDeletedInV2(db))
+  review.push(...deletedReview)
+  const skippedDeleted = Object.fromEntries(IMPORT_TABLES.filter(t => skipped[t].length > 0).map(t => [t, skipped[t].length]))
+  if (deletedReview.length) log(`skipping ${deletedReview.length} imported row(s) deleted in v2: ${Object.entries(skippedDeleted).map(([t, n]) => `${n} ${t}`).join(', ')}`)
 
   // ---------------------------------------------------------------- 2. remove what the previous run left
   const deleted: Record<string, number> = {}
@@ -394,12 +498,12 @@ export async function loadLegacy(opts: LoadOptions): Promise<LoadSummary> {
   }
 
   // ---------------------------------------------------------------- 9. read it back
-  const mismatches = await verify(db, tables, result)
-  return { deleted, inserted, reused, auditRowsRemoved, storage, review, mismatches }
+  const mismatches = await verify(db, tables, result, skipped)
+  return { deleted, inserted, reused, skippedDeleted, auditRowsRemoved, storage, review, mismatches }
 }
 
 /** Counts and money totals as the database holds them now, against what the transform said it produced. */
-export async function verify(db: Db, tables: Record<ImportTable, NewRow[]>, result: TransformResult): Promise<string[]> {
+export async function verify(db: Db, tables: Record<ImportTable, NewRow[]>, result: TransformResult, skipped?: Record<ImportTable, NewRow[]>): Promise<string[]> {
   const bad: string[] = []
   const count = async (table: string) => {
     const ids = await fetchAll(db, table, 'id')
@@ -411,11 +515,13 @@ export async function verify(db: Db, tables: Record<ImportTable, NewRow[]>, resu
   }
   const sum = async (table: string, col: string) =>
     money((await fetchAll(db, table, `id,${col}`)).filter(r => isLegacyId(String(r['id']))).reduce((s, r) => s + Number(r[col]), 0))
+  // What was left out because a person deleted it in v2 is not expected back (W13).
+  const left = (t: ImportTable, col: string) => (skipped?.[t] ?? []).reduce((acc, r) => acc + Number(r[col] ?? 0), 0)
   const checks: [string, number, number][] = [
-    ['payments_in.amount', await sum('payments_in', 'amount'), Math.round((result.recon.payments.neu + result.recon.paymentsFromStatus.neu) * 100) / 100],
-    ['expenses.amount_pkr', await sum('expenses', 'amount_pkr'), result.recon.expensesTotal.neu],
-    ['invoices.net_amount', await sum('invoices', 'net_amount'), result.recon.invoiceNet.neu],
-    ['invoices.gst_amount', await sum('invoices', 'gst_amount'), result.recon.invoiceGst.neu],
+    ['payments_in.amount', await sum('payments_in', 'amount'), money(Math.round((result.recon.payments.neu + result.recon.paymentsFromStatus.neu) * 100) / 100 - left('payments_in', 'amount'))],
+    ['expenses.amount_pkr', await sum('expenses', 'amount_pkr'), money(result.recon.expensesTotal.neu - left('expenses', 'amount_pkr'))],
+    ['invoices.net_amount', await sum('invoices', 'net_amount'), money(result.recon.invoiceNet.neu - left('invoices', 'net_amount'))],
+    ['invoices.gst_amount', await sum('invoices', 'gst_amount'), money(result.recon.invoiceGst.neu - left('invoices', 'gst_amount'))],
   ]
   for (const [name, got, want] of checks) if (got !== want) bad.push(`${name}: database ${got}, transform ${want}`)
   // settled before cutover (owner decision 2026-10-19): exactly the invoices the transform marked, no more, no fewer
