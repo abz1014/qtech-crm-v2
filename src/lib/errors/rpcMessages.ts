@@ -157,6 +157,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // (not_yours, admin_only, not_found, has_order, has_invoice, has_payment, has_expense, has_po, bank_ticked, voided,
   // correction_chain, not_latest, in_use, linked_to_order) that mapPgError passes on as `hint`.
   { match: /^Only the person who entered this, or an admin, can change it\.$/ },
+  // 0101: an engineer's visit time and type, on a site assigned to them only (HINT not_assigned)
+  { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'You can set the visit time and type only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
   { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
   { match: /^This RFQ has an order\. / },
