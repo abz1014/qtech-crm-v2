@@ -129,11 +129,12 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
       // Doubled spaces inside the text are one space, as the database search treats them (migration 0084).
       const q = query.trim().replace(/\s+/g, ' ')
       if (!q) return []
+      // The jobs code is downloaded while the search waits and runs, not after it (perf: first-load JS).
+      const jobsCode = Promise.all([import('@/features/jobs/api'), import('@/features/jobs/lib/stages')])
       if (!(await pause(debounceMs, signal))) return []
       const hits = await searchAll(q, signal, FETCH_LIMIT)
       if (signal.aborted) return []
-      // The jobs code is downloaded with the first search, not with the app (perf: first-load JS).
-      const [{ findJobs }, { stageModel }] = await Promise.all([import('@/features/jobs/api'), import('@/features/jobs/lib/stages')])
+      const [{ findJobs }, { stageModel }] = await jobsCode
       const jobs = await findJobs(q, signal, hits).catch(() => [] as JobRow[])
       if (signal.aborted) return []
       const jobItems: PaletteItem[] = [
