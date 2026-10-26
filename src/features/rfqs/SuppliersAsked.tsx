@@ -458,7 +458,7 @@ function ChaseCard({
             items this supplier has not priced, and never names the customer or our price.
           </ChaseNote>
         ) : null}
-        <div className="grid gap-2 border-t bg-sunken px-4 py-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t bg-sunken px-4 py-3">
           <div ref={actionsRef} className="flex flex-wrap items-start gap-2">
             {both.whatsapp && both.email ? (
               <MessageActions
