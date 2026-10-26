@@ -272,6 +272,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
   ('table', 'orders',            'owner_id', 'U', '', ''),               -- 0065 (M-2): who owns an order (and gets its payments' credit) is changed by an admin
   ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
+  ('table', 'supplier_inquiries', 'sent_confirmed', 'SU', 'SU', 'SU'),   -- 0097: "Did you send it? Yes, sent": every active role stamps an inquiry it can see
+  ('table', 'snoozes',           'until_change', 'SU', 'SU', 'SU'),      -- 0097: "Not ours to chase": each role flips it on its own snoozes
   ('function', 'receipt_locked', '', 'X', 'X', ''),                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
   ('table', 'expense_claims',    'own',   'SUD',  '',     'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; sales nothing
   ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
@@ -609,6 +611,10 @@ insert into probes values
   ('purchase_orders', 'pdf_attached', 'U', $q$update public.purchase_orders set pdf_path = 'm/other.pdf' where id = @3b$q$),
   ('orders', 'legacy_flags', 'U', $q$update public.orders set legacy_flags = '{}' where id = @21$q$),   -- 0065
   ('orders', 'owner_id', 'U', $q$update public.orders set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @21$q$),
+  ('supplier_inquiries', 'sent_confirmed', 'S', 'select sent_confirmed_at from public.supplier_inquiries where id = @1a'),   -- 0097
+  ('supplier_inquiries', 'sent_confirmed', 'U', 'update public.supplier_inquiries set sent_confirmed_at = now() where id = @1a'),
+  ('snoozes', 'until_change', 'S', $q$select until_change from public.snoozes where user_id = '{uid}'$q$),   -- 0097
+  ('snoozes', 'until_change', 'U', $q$update public.snoozes set until_change = true where user_id = '{uid}'$q$),
   ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
   ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$);
 
