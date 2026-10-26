@@ -144,13 +144,9 @@ function JobView({ facts }: { facts: JobFacts }) {
     }
     select(1)
   }
-<<<<<<< HEAD
-  const button = onRfq || orderTarget || inPlace !== null ? (
-=======
   // An engineer's one green button is on the site card (EngineerActions: Delivered today, Installed today, Add photo or note), so the
   // band's "Open the order" is not a second one; the card has the link.
-  const button = role !== 'engineer' && (onRfq || orderTarget) ? (
->>>>>>> origin/develop
+  const button = role !== 'engineer' && (onRfq || orderTarget || inPlace !== null) ? (
     <Button variant="primary" size={phone ? 'touch' : 'lg'} onClick={act}>
       {next.button}
     </Button>
