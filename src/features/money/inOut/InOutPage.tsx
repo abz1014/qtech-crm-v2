@@ -189,7 +189,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   return (
     <>
       {empty ? (
-        <section className="rounded border bg-surface">
+        <section className="rounded-panel border bg-surface">
           <EmptyState title={`Nothing in ${v.label} yet`}>No payment, expense or invoice is dated in it. The trend below still shows the periods before.</EmptyState>
         </section>
       ) : null}
@@ -213,7 +213,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
         </Panel>
       </div>
 
-      <section aria-labelledby="in-out-why" className="grid gap-2 rounded border bg-surface px-5 py-4" data-testid="in-out-why">
+      <section aria-labelledby="in-out-why" className="grid gap-2 rounded-panel border bg-surface px-5 py-4" data-testid="in-out-why">
         <h2 id="in-out-why" className="flex flex-wrap items-center gap-2 text-base font-semibold">
           Why profit and cash differ in {v.label}
           <InfoTip label="About supplier bills">
@@ -291,6 +291,16 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
         }
       }}
       groupStyle="big"
+      // Phone: one line per detail (name, count, amount), so the table never scrolls sideways at 375.
+      mobileRow={r => (
+        <span className="flex min-w-0 items-baseline justify-between gap-3">
+          <span className={cn('min-w-0 [overflow-wrap:anywhere]', r.detail ? 'text-fg' : 'text-fg-muted')}>
+            {r.detail ?? 'No detail'}
+            {r.count > 0 ? <span className="text-fg-muted"> · <span className="num">{r.count}</span></span> : null}
+          </span>
+          <span className="num shrink-0 font-medium">{rupees(r.amount)}</span>
+        </span>
+      )}
       footerLabel="Money out"
       noun="lines"
       toolbar={

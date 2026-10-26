@@ -566,7 +566,7 @@ export function collect(opts: CollectOptions): Metrics {
     return (x + 0.05) / (y + 0.05)
   }
   // The highlighted backgrounds, read from the app's own classes so a token change is followed.
-  const HIGHLIGHT_CLASSES = ['bg-selected', 'bg-sunken', 'bg-tone-neutral-bg', 'bg-tone-info-bg', 'bg-tone-success-bg', 'bg-tone-warning-bg', 'bg-tone-danger-bg']
+  const HIGHLIGHT_CLASSES = ['bg-selected', 'bg-sunken', 'bg-tone-neutral-bg', 'bg-tone-info-bg', 'bg-tone-success-bg', 'bg-tone-warning-bg', 'bg-tone-danger-bg', 'bg-block-late', 'bg-block-today', 'bg-block-week', 'bg-chrome']
   const highlight = new Map<string, string>()
   for (const cls of HIGHLIGHT_CLASSES) {
     const p = document.createElement('div')

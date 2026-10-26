@@ -49,18 +49,26 @@ export function PasteReplyPanel({
     })
 
   return (
-    <section aria-label={`Read from the reply of ${supplierName}`} className="grid gap-3 rounded border bg-sunken p-3">
+    <section aria-label={`Read from the reply of ${supplierName}`} className="grid gap-3 rounded-panel border bg-sunken p-3">
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h4 className="text-sm font-semibold">Read from their reply</h4>
         <p className="text-xs text-fg-muted">Nothing is saved until you accept.</p>
       </div>
+
+      {set.question !== null ? (
+        <div className="rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm" data-reply-question="">
+          <p className="font-medium">They are asking you something, not quoting.</p>
+          {set.question ? <p className="mt-1 break-words text-fg-2">{set.question}</p> : null}
+          <p className="mt-1 text-fg-muted">Nothing here is a price. Answer them, then paste their next reply.</p>
+        </div>
+      ) : null}
 
       {set.nothingFound ? (
         <p className="text-sm text-fg-2">No price, lead time or refusal could be read from that text. Type the prices in above instead.</p>
       ) : null}
 
       {set.regret ? (
-        <div className="flex flex-wrap items-center gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
           <span className="min-w-0 flex-1 basis-[14rem]">{`They say they can't quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
           <Button variant="primary" size="sm" busy={busy} busyLabel="Saving" onClick={() => onCantQuote(set.regret!.reason)}>
             {"Mark can't quote"}
@@ -135,7 +143,7 @@ export function PasteReplyPanel({
         <Button data-cancel onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
-        {!set.nothingFound && !(set.regret && count === 0 && set.declined.length === 0) ? (
+        {!set.nothingFound && set.question === null && !(set.regret && count === 0 && set.declined.length === 0) ? (
           <Button
             variant="primary"
             icon={Check}
@@ -156,7 +164,7 @@ export function PasteReplyPanel({
 export function PasteBox({ onRead, onCancel }: { onRead: (text: string) => void; onCancel: () => void }) {
   const [text, setText] = useState('')
   return (
-    <section aria-label="Paste their reply" className="grid gap-2 rounded border bg-sunken p-3">
+    <section aria-label="Paste their reply" className="grid gap-2 rounded-panel border bg-sunken p-3">
       <label className="grid gap-1 text-sm font-medium">
         Paste what they sent
         <TextArea

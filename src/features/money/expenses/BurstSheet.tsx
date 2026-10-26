@@ -36,6 +36,8 @@ import {
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { OrderTagPicker } from '@/features/money/expenses/OrderTagPicker'
 import {
+  MISC_TITLE_ERROR,
+  MISC_TITLE_LABEL,
   PAID_VIA_LABEL,
   SUPPLIER_PAYMENT_ID,
   burstInserts,
@@ -49,6 +51,7 @@ import {
   newBurstRow,
   recentCategories,
   repeatTemplates,
+  rowsMissingTitle,
   showsInputTax,
   type BurstRow,
   type Category,
@@ -176,7 +179,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   }, [rows])
 
   const patch = useCallback((id: string, p: Partial<BurstRow>) => {
-    setRows(list => list.map(r => (r.id === id ? { ...r, ...p, error: p.error ?? undefined } : r)))
+    // a closed-month sentence goes with the next change; the title error goes when the Detail or the category changes
+    setRows(list => list.map(r => (r.id === id ? { ...r, ...p, error: p.error ?? undefined, noteError: 'note' in p || 'categoryId' in p ? undefined : r.noteError } : r)))
     setBanner(null)
   }, [setRows])
 
@@ -229,6 +233,14 @@ function BurstContent({ onClose }: { onClose: () => void }) {
       const first = noCategory[0] ?? noOrder[0] ?? unsavable[0]
       const target = first.categoryText ? '[role="combobox"]' : first.orderText ? '[data-cell="order"]' : '[data-cell="date"]'
       requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(`[data-row="${first.id}"] ${target}`)?.focus())
+      return
+    }
+    const untitled = rowsMissingTitle(settled, categories)
+    if (untitled.length > 0) {
+      // 0091: an "Other" says what it was for; the error sits on that row's Detail, and nothing is saved until every one has it
+      setRows(settled.map(r => (untitled.some(u => u.id === r.id) ? { ...r, noteError: MISC_TITLE_ERROR } : r)))
+      setBanner(untitled.length === 1 ? 'One row is an Other with no title. Write what it was for, then save.' : `${untitled.length} rows are an Other with no title. Write what each was for, then save.`)
+      requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(`[data-row="${untitled[0].id}"] [data-cell="detail"]`)?.focus())
       return
     }
     lock.current = true
@@ -322,11 +334,12 @@ function BurstContent({ onClose }: { onClose: () => void }) {
           }}
           onInteractOutside={e => e.preventDefault()}
           aria-describedby="burst-desc"
+          aria-modal="true"
           className={cn(
             'grid w-full grid-rows-[auto_minmax(0,1fr)_auto] bg-surface focus:outline-none',
             compact
               ? 'min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto]'
-              : 'mb-10 max-w-[calc(100vw-2rem)] rounded shadow-modal md:w-[1320px]',
+              : 'mb-10 max-w-[calc(100vw-2rem)] rounded-panel shadow-modal md:w-[1320px]',
           )}
         >
           {compact ? (
@@ -433,7 +446,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </div>
             )}
             {banner ? (
-              <p role="alert" className="mx-6 mb-4 flex items-center gap-2 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-sm text-tone-danger-fg max-lg:mx-4">
+              <p role="alert" className="mx-6 mb-4 flex items-center gap-2 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-sm text-tone-danger-fg max-lg:mx-4">
                 <Icon icon={CircleAlert} />
                 {banner}
               </p>
@@ -450,7 +463,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
             <footer className="flex flex-wrap items-center gap-4 rounded-b border-t bg-sunken px-6 py-3">
               <span className="flex-1" />
               {badCount > 0 ? (
-                <span className="inline-flex h-5 items-center gap-[5px] rounded border border-tone-warning-fg/25 bg-tone-warning-bg pl-[6px] pr-2 text-xs font-medium text-tone-warning-fg">
+                <span className="inline-flex h-chip items-center gap-[5px] rounded-round border border-tone-warning-fg/25 bg-tone-warning-bg pl-[6px] pr-2 text-xs font-medium text-tone-warning-fg">
                   <Icon icon={TriangleAlert} size="chip" />
                   {badCount} {badCount === 1 ? 'row needs' : 'rows need'} a change
                 </span>
@@ -520,6 +533,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
+  const isOther = !!categories.find(c => c.id === row.categoryId)?.isMisc
   return (
     <div data-row={row.id} role="group" aria-label={`Row ${index}`} onKeyDown={onKey} className={cn(GRID, 'py-2', err && 'bg-tone-danger-bg/40')}>
       <div className="num grid h-[36px] place-items-center text-xs text-fg-muted" aria-hidden="true">
@@ -542,6 +556,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}
+        onMisc={(c, text) => onPatch({ categoryId: c.id, categorySource: 'typed', categoryText: undefined, note: text })}
         groups={groups}
         recent={recent}
       />
@@ -566,14 +581,18 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
       </div>
       <div className="min-w-0">
         <TextField
+          data-cell="detail"
           aria-label={`Detail, row ${index}`}
-          placeholder="e.g. LESCO bill, LEA-1234"
+          placeholder={isOther ? MISC_TITLE_LABEL : 'e.g. LESCO bill, LEA-1234'}
           list={`detail-${row.id}`}
           autoComplete="off"
           value={row.note}
+          aria-invalid={row.noteError ? true : undefined}
+          aria-required={isOther || undefined}
           onChange={e => onPatch({ note: e.target.value })}
-          className="h-[36px]"
+          className={cn('h-[36px]', row.noteError && 'border-tone-danger-fg bg-tone-danger-bg')}
         />
+        {row.noteError ? <p className="mt-1 text-base text-tone-danger-fg">{row.noteError}</p> : null}
         <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       </div>
       <OrderTagPicker
@@ -656,7 +675,7 @@ function ClosedError({ message, others }: { message: string; others: number }) {
   return (
     <div
       role="alert"
-      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
+      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
     >
       <Icon icon={CircleAlert} className="mt-[2px] text-tone-danger-fg" />
       <div className="grid gap-0">
@@ -788,6 +807,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
   const fileRef = useRef<HTMLInputElement | null>(null)
   const categoryRef = useRef<HTMLInputElement | null>(null)
   const hasPhoto = !!row.photo && !row.photo.error
+  const isOther = !!categories.find(c => c.id === row.categoryId)?.isMisc
   const dateText = row.date === today ? 'Today' : row.date ? formatShortDate(row.date, today) : 'Choose a date'
   const err = row.error
   return (
@@ -796,7 +816,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
       role="group"
       aria-label={`Expense ${index}`}
       onKeyDown={onKey}
-      className={cn('grid gap-3 rounded border bg-surface px-3 pb-4 pt-3', err && 'border-tone-danger-fg/45')}
+      className={cn('grid gap-3 rounded-row border bg-surface px-3 pb-4 pt-3', err && 'border-tone-danger-fg/45')}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-3">
         <label className="flex h-[44px] items-center gap-2 rounded border border-line-input px-3 focus-within:border-fg">
@@ -862,10 +882,11 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}
+        onMisc={(c, text) => onPatch({ categoryId: c.id, categorySource: 'typed', categoryText: undefined, note: text })}
         groups={groups}
         recent={recent}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <label
           className={cn(
             'relative inline-flex h-touch min-w-0 items-center gap-2 rounded border px-3 text-sm text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
@@ -895,14 +916,21 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         />
       </div>
       <input
+        data-cell="detail"
         aria-label={`Detail, expense ${index}`}
-        placeholder="Detail: LESCO bill, LEA-1234"
+        placeholder={isOther ? MISC_TITLE_LABEL : 'Detail: LESCO bill, LEA-1234'}
         list={`detail-${row.id}`}
         autoComplete="off"
         value={row.note}
+        aria-invalid={row.noteError ? true : undefined}
+        aria-required={isOther || undefined}
         onChange={e => onPatch({ note: e.target.value })}
-        className="h-touch w-full rounded border border-line-input bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg"
+        className={cn(
+          'h-touch w-full rounded border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg',
+          row.noteError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
+        )}
       />
+      {row.noteError ? <p className="text-base text-tone-danger-fg">{row.noteError}</p> : null}
       <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       <OrderTagPicker
         orders={orders}
@@ -932,7 +960,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         ) : null}
       </div>
       {err ? (
-        <div role="alert" className="flex gap-2 rounded bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
+        <div role="alert" className="flex gap-2 rounded-row bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
           <Icon icon={CircleAlert} size="sm" className="mt-[1px] text-tone-danger-fg" />
           <span>
             <b className="font-medium text-tone-danger-fg">{err}</b> This row keeps what you typed.

@@ -59,7 +59,7 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, more, chips, me
     <header className={cn('grid grid-cols-[minmax(0,1fr)]', className)}>
       {breadcrumb?.length ? <Breadcrumb items={breadcrumb} className="mb-2 max-md:hidden" /> : null}
       <div className="flex items-start justify-between gap-4">
-        <h1 className="min-w-0 text-2xl font-semibold tracking-tight text-pretty max-md:text-xl">
+        <h1 className="min-w-0 text-2xl font-heavy tracking-tight text-pretty max-md:text-xl">
           {nameHref ? (
             <Link to={nameHref} className="rounded underline-offset-4 hover:underline">
               {name}

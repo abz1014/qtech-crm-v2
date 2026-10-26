@@ -248,7 +248,7 @@ export function DialogContent({
             openerRef.current.focus()
           }}
           className={cn(
-            'relative grid max-h-[calc(100dvh-64px)] w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
+            'relative grid max-h-[calc(100dvh-64px)] w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-panel bg-surface shadow-modal',
             // A short window (a laptop at 400% zoom): the whole sheet scrolls, so the title and Close are never pushed off the top.
             '[@media(max-height:480px)]:grid-rows-[auto_auto_auto] [@media(max-height:480px)]:overflow-y-auto',
             'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none',
@@ -266,7 +266,7 @@ export function DialogContent({
             ) : null}
             <div className="grid min-w-0 flex-1 gap-[2px]">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <RadixDialog.Title className="text-lg font-semibold tracking-snug">{title}</RadixDialog.Title>
+                <RadixDialog.Title className="text-xl font-heavy">{title}</RadixDialog.Title>
                 {titleChip}
               </div>
               {context ? (

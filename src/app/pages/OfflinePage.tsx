@@ -39,7 +39,7 @@ export function OfflineBanner({ connection }: { connection: Exclude<Connection, 
 function Frame({ children }: { children: ReactNode }) {
   return (
     <main className="grid min-h-dvh place-items-center bg-canvas px-4 py-8 max-sm:items-start max-sm:bg-surface max-sm:px-0 max-sm:py-6">
-      <div className="grid w-full max-w-[360px] gap-5 rounded border border-line bg-surface px-8 pb-6 pt-8 max-sm:max-w-none max-sm:border-0 max-sm:px-4">
+      <div className="grid w-full max-w-[360px] gap-5 rounded-panel border border-line bg-surface px-8 pb-6 pt-8 max-sm:max-w-none max-sm:border-0 max-sm:px-4">
         <img src="/brand/logo-wordmark.png" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
         {children}
       </div>

@@ -113,7 +113,7 @@ test.describe('a brand-new CRM, as the admin', () => {
         expect(s.numeric, `font-variant-numeric on ${path}`).toContain('tabular-nums')
         expect(s.numeric, `font-variant-numeric on ${path}`).not.toContain('slashed-zero')
         expect(s.features, `font-feature-settings on ${path}`).not.toMatch(/zero/)
-        expect(s.family, `font family on ${path}`).not.toMatch(/Geist Mono/)
+        expect(s.family, `font family on ${path}`).not.toMatch(/Mono|monospace/)
       }
     }
   })

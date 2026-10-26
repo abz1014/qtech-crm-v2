@@ -146,11 +146,11 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
     <>
       <Summary v={v} onPick={onPick} />
       {v.total.count === 0 && v.prev.count === 0 ? (
-        <section className="rounded border bg-surface">
+        <section className="rounded-panel border bg-surface">
           <EmptyState title={`No expenses in ${v.label}`}>Expenses dated in this period show here. The columns above still show the periods before.</EmptyState>
         </section>
       ) : (
-        <section aria-labelledby="exp-where" className="overflow-hidden rounded border bg-surface">
+        <section aria-labelledby="exp-where" className="overflow-hidden rounded-panel border bg-surface">
           <header className="flex min-h-[56px] flex-wrap items-center gap-3 border-b px-5 py-2">
             <h2 id="exp-where" className="text-lg font-semibold">
               Where the money went
@@ -182,7 +182,7 @@ function Summary({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => v
   const cashShare = toPaisa(v.total.amount) === 0n ? 0 : Number((toPaisa(v.total.cash) * 1000n) / toPaisa(v.total.amount)) / 10
   const frozen = v.frozenMonths === 0 ? null : v.frozenMonths === v.months ? 'Closed: figures frozen' : `${plural(v.frozenMonths, 'month')} closed: figures frozen`
   return (
-    <section aria-label={`Spent in ${v.label}`} className="overflow-hidden rounded border bg-surface">
+    <section aria-label={`Spent in ${v.label}`} className="overflow-hidden rounded-panel border bg-surface">
       <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
         <div className="grid content-start gap-3">
           <p className="text-base text-fg-2">
@@ -388,10 +388,13 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
       header: 'Group and category',
       value: r => r.name,
       cell: r => (
-        <span className="inline-flex items-center gap-2">
-          <Icon icon={ChevronRight} size="sm" className={cn('shrink-0 text-fg-muted', r.count === 0 && 'invisible', openId === r.id && 'rotate-90')} />
-          <span className="font-medium">{r.name}</span>
-          {r.archived ? <span className="text-sm text-fg-muted">archived</span> : null}
+        <span className="grid gap-1">
+          <span className="inline-flex items-center gap-2">
+            <Icon icon={ChevronRight} size="sm" className={cn('shrink-0 text-fg-muted', r.count === 0 && 'invisible', openId === r.id && 'rotate-90')} />
+            <span className="font-medium">{r.name}</span>
+            {r.archived ? <span className="text-sm text-fg-muted">archived</span> : null}
+          </span>
+          {r.isMisc ? <MiscTitles c={r} /> : null}
         </span>
       ),
     },
@@ -453,7 +456,10 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
         className="rounded-none border-0"
         mobileRow={r => (
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-[2px] py-1">
-            <span className="min-w-0 font-medium">{r.name}</span>
+            <span className="min-w-0 font-medium">
+              {r.name}
+              {r.isMisc ? <MiscTitles c={r} /> : null}
+            </span>
             <span className="num text-right">{r.count === 0 ? '—' : rupees(r.amount)}</span>
             <span className="num col-span-2 text-sm text-fg-muted">
               {r.share}% · was {rupees(r.prev)}
@@ -468,6 +474,32 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
       />
       {opened ? <Drill c={opened} label={v.label} onClose={() => setOpenId(null)} /> : null}
     </div>
+  )
+}
+
+/**
+ * 0091: under an "Other", what the one-off spends were, by the title typed ("Courier from shop 3 x, 1,500"), biggest first; the
+ * rest are counted. Nothing is left as one lump of "Other".
+ */
+function MiscTitles({ c }: { c: CategoryLine }) {
+  const titled = c.details.filter(d => d.detail)
+  if (titled.length === 0) return null
+  const shown = titled.slice(0, 4)
+  const rest = titled.length - shown.length
+  return (
+    <ul className="grid gap-[2px] pl-7 text-base text-fg-2" data-testid="misc-titles" aria-label={`${c.name}, by title`}>
+      {shown.map(d => (
+        <li key={d.key} className="[overflow-wrap:anywhere]">
+          {d.detail}
+          <span className="num text-fg-muted">
+            {' · '}
+            {d.count > 1 ? `${d.count} times, ` : ''}
+            {rupees(d.amount)}
+          </span>
+        </li>
+      ))}
+      {rest > 0 ? <li className="text-fg-muted">and {rest} more, open this row</li> : null}
+    </ul>
   )
 }
 
@@ -580,7 +612,7 @@ function ByDetail({ v }: { v: ExpenseReportView }) {
 function TopTen({ v }: { v: ExpenseReportView }) {
   const names = new Map(v.groups.flatMap(g => g.categories.map(c => [c.id, c.name] as const)))
   return (
-    <section aria-labelledby="exp-top" className="overflow-hidden rounded border bg-surface" data-testid="expense-report-top">
+    <section aria-labelledby="exp-top" className="overflow-hidden rounded-panel border bg-surface" data-testid="expense-report-top">
       <header className="flex min-h-[56px] items-center border-b px-5">
         <h2 id="exp-top" className="text-lg font-semibold">
           {v.top.length === 10 ? 'The 10 biggest expenses' : `The ${plural(v.top.length, 'expense')}`}

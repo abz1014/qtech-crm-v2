@@ -43,7 +43,7 @@ export function CommissioningPanel({
   const [editingNotes, setEditingNotes] = useState(false)
 
   return (
-    <section aria-label="Commissioning" className="min-w-0 rounded border bg-surface">
+    <section aria-label="Commissioning" className="min-w-0 rounded-panel border bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Commissioning</h2>
         {/* no state chip: the status strip above already says it (consistency spec 1.5) */}

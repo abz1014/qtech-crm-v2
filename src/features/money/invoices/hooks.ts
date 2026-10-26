@@ -52,6 +52,15 @@ export function useUpdateInvoice(invoiceId: string) {
   })
 }
 
+/** Delete an invoice (admin). The same lists as a new invoice go stale: the register, the order's invoicing state and balance, receivables, Today. */
+export function useDeleteInvoice() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (invoiceId: string) => api.deleteInvoice(invoiceId),
+    onSuccess: () => invalidateAfter(client, 'invoice.create', {}),
+  })
+}
+
 export function useUploadInvoiceReceipt(invoiceId: string, psid?: string | null) {
   const client = useQueryClient()
   return useMutation({

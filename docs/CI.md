@@ -9,7 +9,7 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `ci.yml` gallery job (visual + axe) | main, manual, or when `src/ui`, `src/dev`, `src/index.css`, `tailwind.config.ts`, `e2e/gallery*`, `e2e/__screenshots__`, `playwright.config.ts`, `package*.json` change | about 4 min |
 | `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `import/**`, `package*.json` or the workflow changed (its last step is the import load test, I01) | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
-| `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; up to 8 parallel shards, each with its own stack boot, only suites whose paths changed; the final job `E2E` is the one result | about 20 min on a full run (planned shards 20.0 to 20.2 min; job timeout 40 min) |
+| `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | pushes to `main` and `hotfix/**` only (path-gated; all suites on main), or by dispatch; up to 8 parallel shards, each with its own stack boot, only suites whose paths changed; the final job `E2E` is the one result | about 20 min on a full run (planned shards 20.0 to 20.2 min; job timeout 40 min) |
 | `ci.yml` build job, bundle budget step (P04) | every push except docs-only | seconds; fails if the initial JS is over 300 KB gzip, and prints the PDF chunk and service-worker precache sizes in the run summary |
 | `e2e.yml` suite `perf` (P04, registered in `.github/e2e-suites.yml`) | when `e2e/perf/**` or a shared path changes | about 5 min (Lighthouse, 7 screens, desktop and phone) |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
@@ -53,6 +53,15 @@ Locally, several at once: `E2E_SUITE=db npx playwright test --project=auth --pro
 - **Accessibility:** the `perf` suite runs the real Lighthouse accessibility category (lighthouse 12.8.2, installed with `npm i --no-save` in that step so it is not a project dependency) on Today, RFQ board, RFQ detail, order detail, Money GST register, Month-end and Settings, desktop and phone, and fails below 95. Lighthouse cannot sign in, so Playwright signs in inside a persistent Chromium profile with the debugging port open and Lighthouse attaches to it with storage kept. The axe checks (WCAG 2.2 AA plus best practice) in every other suite stay as they were.
 - **CSP:** `scripts/ci/e2e-run.sh` exports `E2E_CSP=1` for every suite, so every suite runs under the production Content-Security-Policy (see docs/HOSTING.md).
 - Locally: `npm i --no-save lighthouse@12.8.2`, then `E2E_CSP=1 E2E_SUITE=perf npx playwright test --project=perf` against a stack-backed build.
+
+## Branches and the fast gate
+
+- `main` is live. `develop` is the integration branch. Work happens on lane branches that merge into `develop`.
+- Fast gate for a lane before it merges into `develop`: `ci.yml` (every push on every branch except docs-only) plus `db.yml` when `supabase/` changed (also every branch). `e2e.yml` does NOT run on lane or develop pushes.
+- Checkpoints: full E2E on `develop` runs only when dispatched (Actions, E2E, Run workflow, ref `develop`), then `develop` is promoted to `main`; a push to `main` (or `hotfix/**`) runs E2E on its own.
+- `suites` dispatch input (E2E): comma-separated suite keys from `.github/e2e-suites.yml`, for example `auth,companies`. Empty runs every suite. Only those suites run, sharded as usual by `scripts/ci/e2e-matrix.py` (env `SUITES`); an unknown key fails the `changes` job. A new dispatch on the same ref cancels the previous run.
+- `.gitattributes` sets `merge=union` on `docs/DECISIONS.md`, so lanes appending decision lines do not conflict.
+- Screen audit defaults to `1440x900 375x812 320x640`; axe runs at every viewport listed (the rig has no per-viewport axe switch), so add `1920x1080` to the input when wanted.
 
 ## Forcing a full run
 

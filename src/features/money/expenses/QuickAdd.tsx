@@ -20,15 +20,29 @@ import {
   useUploadReceipt,
 } from '@/features/money/expenses/hooks'
 import { forMonthChoices, forMonthOf, isMonthlyBill, templateToSettle } from '@/features/money/expenses/forMonth'
-import { listTotals, monthKey, monthKeyLabel, pkr, sortGroups, type Category, type PaidVia } from '@/features/money/expenses/model'
+import {
+  listTotals,
+  MISC_TITLE_ERROR,
+  MISC_TITLE_LABEL,
+  miscCategories,
+  miscFor,
+  monthKey,
+  monthKeyLabel,
+  needsTitle,
+  pkr,
+  sortGroups,
+  type Category,
+  type PaidVia,
+} from '@/features/money/expenses/model'
 import { pickableCategories, quickInsert, quickProblem, sessionTotal, topCategories } from '@/features/money/expenses/quick'
 
 /*
  * Quick add (redesign phase 1, owner: expenses are "utmost priority"). One row on the Expenses screen, open all the time:
  *   amount -> tap a category -> Save. The row stays open for the next one; the category stays chosen, so a second spend of the
  *   same kind is amount + Enter. "Office water Rs 500 cash": tap the amount, type 500, tap Water, tap Save (3 taps).
- * The six buttons are the categories used most in the last 30 days, then the everyday spends; "More" lists every other one by
- * group. Cash or bank comes from the category (one tap flips it). Date, detail, a receipt photo and "Has a GST invoice" (input tax,
+ * The six buttons are the categories used most in the last 30 days, then the everyday spends, and always "Other" (0091: a one-off
+ * spend with a title typed in Detail, "What was it for?"). Typing what it was finds a category, or, when none matches, offers
+ * Other: '<text>' under the group the words suggest. "More" lists every other one by group. Cash or bank comes from the category (one tap flips it). Date, detail, a receipt photo and "Has a GST invoice" (input tax,
  * 0025) are there but optional. A monthly bill (salaries, rent, a category with a monthly template) shows "This bill is for",
  * pre-filled with last month up to the 10th (expenses.period), and settles that month's template so it is not due again.
  * Supplier payments are not offered: Pay on the supplier order is their one door. The line above the row counts what was added
@@ -49,10 +63,11 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
   const month = useExpenseMonth(monthKey(today))
   const templates = useMemo(() => templatesQ.data ?? [], [templatesQ.data])
 
-  const top = useMemo(() => topCategories(useQ.data ?? [], categories), [useQ.data, categories])
+  const top = useMemo(() => topCategories(useQ.data ?? [], categories, 6, groupsQ.data ?? []), [useQ.data, categories, groupsQ.data])
+  const others = useMemo(() => miscCategories(categories, groupsQ.data ?? []), [categories, groupsQ.data])
   const more = useMemo(() => {
     const shown = new Set(top.map(c => c.id))
-    const rest = pickableCategories(categories).filter(c => !shown.has(c.id))
+    const rest = pickableCategories(categories).filter(c => !shown.has(c.id) && !c.isMisc)
     return sortGroups(groupsQ.data ?? [])
       .map(g => ({ group: g, items: rest.filter(c => c.groupId === g.id).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name)) }))
       .filter(g => g.items.length > 0)
@@ -64,6 +79,9 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
   const [via, setVia] = useState<PaidVia | null>(null)
   const [paidOn, setPaidOn] = useState(today)
   const [detail, setDetail] = useState('')
+  /** What is typed in "Or type what it was", and the field error on Detail of an Other with no title. */
+  const [typed, setTyped] = useState('')
+  const [titleError, setTitleError] = useState<string | null>(null)
   /** The For box, once changed: kept only for the date and category it was chosen for (it follows them otherwise). */
   const [forChoice, setForChoice] = useState<{ key: string; value: string } | null>(null)
   const [hasGst, setHasGst] = useState(false)
@@ -75,6 +93,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
   /** Bumped after each Save: the effect below puts the focus back on the (fresh) amount box once it is in the page. */
   const [refocus, setRefocus] = useState(0)
   const amountRef = useRef<HTMLInputElement | null>(null)
+  const detailRef = useRef<HTMLInputElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   const category = categories.find(c => c.id === categoryId)
@@ -83,16 +102,36 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
   const forKey = `${paidOn}|${categoryId}`
   const period = monthly ? (forChoice?.key === forKey ? forChoice.value : forMonthOf(paidOn)) : null
 
+  const isOther = !!category?.isMisc
+  const matches = useMemo(() => {
+    const q = typed.trim().toLowerCase()
+    if (!q) return []
+    const words = (c: Category) => c.name.toLowerCase().split(/[^a-z0-9]+/)
+    return pickableCategories(categories)
+      .filter(c => !c.isMisc && (c.name.toLowerCase().includes(q) || words(c).some(w => w.startsWith(q))))
+      .slice(0, 5)
+  }, [typed, categories])
+  const otherFor = typed.trim() ? miscFor(typed, categories, groupsQ.data ?? []) : null
+
   const pick = (id: string) => {
     setCategoryId(id)
     setVia(null)
     setProblem(null)
+    setTitleError(null)
+    setTyped('')
+    // an Other is filed under a title: the cursor goes to it (a typed word has already been put there)
+    if (categories.find(c => c.id === id)?.isMisc) requestAnimationFrame(() => detailRef.current?.focus({ preventScroll: true }))
+  }
+  const pickOther = (c: Category, text: string) => {
+    pick(c.id)
+    setDetail(text.trim().replace(/\s+/g, ' '))
   }
 
   const reset = () => {
     setEntryId(crypto.randomUUID())
     setAmount(null)
     setDetail('')
+    setTitleError(null)
     setHasGst(false)
     setTax(null)
     setPhoto(null)
@@ -116,7 +155,12 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
   const save = async () => {
     if (busy) return
     const inputTax = hasGst ? (tax ?? 0) : 0
-    const p = quickProblem({ amount: amount ?? 0, categoryId, inputTax })
+    const p = quickProblem({ amount: amount ?? 0, categoryId, inputTax, titleMissing: needsTitle(category, detail) })
+    if (p === 'title') {
+      setTitleError(MISC_TITLE_ERROR)
+      detailRef.current?.focus()
+      return
+    }
     if (p) {
       setProblem(p === 'amount' ? 'Type the amount first.' : p === 'category' ? 'Tap what it was for.' : 'The GST cannot be more than the amount.')
       if (p === 'amount') amountRef.current?.focus()
@@ -142,6 +186,10 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
       reset()
     } catch (err) {
       const m = mapPgError(err, { entity: 'expense' })
+      if (m.message.startsWith('Write what it was for')) {
+        setTitleError(MISC_TITLE_ERROR)
+        return
+      }
       setProblem(m.kind === 'already-saved' ? 'That one was already added.' : `${m.message} Nothing was saved; what you typed is still here.`)
       if (m.kind === 'already-saved') reset()
     } finally {
@@ -214,14 +262,14 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
                 <button
                   key={c.id}
                   type="button"
-                  aria-pressed={categoryId === c.id}
+                  aria-pressed={c.isMisc ? isOther : categoryId === c.id}
                   onClick={() => pick(c.id)}
                   className={cn(
                     'min-h-touch rounded border px-4 text-base font-medium transition-colors',
-                    categoryId === c.id ? 'border-fg bg-selected text-fg' : 'border-line-strong bg-surface text-fg hover:bg-sunken',
+                    (c.isMisc ? isOther : categoryId === c.id) ? 'border-fg bg-selected text-fg' : 'border-line-strong bg-surface text-fg hover:bg-sunken',
                   )}
                 >
-                  {c.name}
+                  {c.isMisc ? 'Other' : c.name}
                 </button>
               ))}
               <select
@@ -245,8 +293,62 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
                 ))}
               </select>
             </div>
+            <div className="grid gap-2" data-testid="quick-find">
+              <label htmlFor={`${uid}-find`} className="text-base text-fg-2">
+                Or type what it was
+              </label>
+              <input
+                id={`${uid}-find`}
+                value={typed}
+                maxLength={80}
+                placeholder="e.g. courier, tea, tyre"
+                onChange={e => setTyped(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key !== 'Enter') return
+                  e.preventDefault()
+                  if (matches[0]) pick(matches[0].id)
+                  else if (otherFor) pickOther(otherFor, typed)
+                }}
+                className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base placeholder:text-fg-muted sm:max-w-sm"
+              />
+              {typed.trim() ? (
+                <div className="flex flex-wrap gap-2">
+                  {matches.map(c => (
+                    <button key={c.id} type="button" onClick={() => pick(c.id)} className="min-h-touch rounded border border-line-strong bg-surface px-4 text-base font-medium hover:bg-sunken">
+                      {c.name}
+                    </button>
+                  ))}
+                  {matches.length === 0 && otherFor ? (
+                    <button type="button" onClick={() => pickOther(otherFor, typed)} className="min-h-touch rounded border border-dashed border-fg bg-surface px-4 text-base font-medium hover:bg-sunken">
+                      {`Other: '${typed.trim().replace(/\s+/g, ' ')}'`}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </fieldset>
         </div>
+
+        {isOther && others.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-base" data-testid="quick-other-group">
+            <label htmlFor={`${uid}-other`} className="font-medium">
+              Filed under
+            </label>
+            <select
+              id={`${uid}-other`}
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+              className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
+            >
+              {others.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-fg-2">Reports show it by what you write.</span>
+          </div>
+        ) : null}
 
         {monthly && period ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-info-fg/25 bg-tone-info-bg px-4 py-3 text-base" data-testid="quick-for-month">
@@ -293,16 +395,37 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
           </div>
           <div className="grid min-w-0 gap-2 lg:flex-1">
             <label htmlFor={`${uid}-detail`} className="text-base font-medium">
-              Detail <span className="font-regular text-fg-muted">optional</span>
+              {isOther ? (
+                MISC_TITLE_LABEL
+              ) : (
+                <>
+                  Detail <span className="font-regular text-fg-muted">optional</span>
+                </>
+              )}
             </label>
             <input
               id={`${uid}-detail`}
+              ref={detailRef}
               value={detail}
               maxLength={200}
-              placeholder="e.g. Office water, LEA-1234"
-              onChange={e => setDetail(e.target.value)}
-              className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base placeholder:text-fg-muted"
+              aria-required={isOther || undefined}
+              aria-invalid={titleError ? true : undefined}
+              aria-describedby={titleError ? `${uid}-detail-err` : undefined}
+              placeholder={isOther ? 'e.g. Courier from shop to office' : 'e.g. Office water, LEA-1234'}
+              onChange={e => {
+                setDetail(e.target.value)
+                setTitleError(null)
+              }}
+              className={cn(
+                'min-h-touch w-full min-w-0 rounded border bg-surface px-3 text-base placeholder:text-fg-muted',
+                titleError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
+              )}
             />
+            {titleError ? (
+              <p id={`${uid}-detail-err`} className="text-base text-tone-danger-fg">
+                {titleError}
+              </p>
+            ) : null}
           </div>
           <div className="flex items-end gap-2">
             {photo && !photo.error ? (
@@ -339,7 +462,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
         <div className="grid gap-3">
           <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} className="w-fit" />
           {hasGst ? (
-            <div className="flex flex-wrap items-center gap-3 rounded border bg-canvas px-4 py-3 text-base">
+            <div className="flex flex-wrap items-center gap-3 rounded-row border bg-canvas px-4 py-3 text-base">
               <label htmlFor={`${uid}-tax`} className="font-medium">
                 GST on this bill (input tax), PKR
               </label>
@@ -353,7 +476,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
         </div>
 
         {problem ? (
-          <p role="alert" className="flex items-center gap-2 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
+          <p role="alert" className="flex items-center gap-2 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
             <Icon icon={CircleAlert} />
             {problem}
           </p>

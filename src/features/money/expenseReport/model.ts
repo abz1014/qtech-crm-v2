@@ -134,6 +134,8 @@ export interface CategoryLine {
   groupId: string
   name: string
   archived: boolean
+  /** 0091: an "Other": its spends are told apart by title (`details`), shown under it. */
+  isMisc: boolean
   amount: string
   count: number
   prev: string
@@ -274,6 +276,7 @@ export function buildExpenseReport({ period, entries, categories, groups, flows 
       groupId: c && groupById.has(c.groupId) ? c.groupId : OTHER_GROUP,
       name: c?.name ?? 'Category removed',
       archived: c ? !c.active : false,
+      isMisc: !!c?.isMisc,
       amount: t.amount,
       count: t.count,
       prev: p.amount,
@@ -293,6 +296,7 @@ export function buildExpenseReport({ period, entries, categories, groups, flows 
       groupId: groupById.has(c.groupId) ? c.groupId : OTHER_GROUP,
       name: c.name,
       archived: false,
+      isMisc: !!c.isMisc,
       amount: '0.00',
       count: 0,
       prev: '0.00',

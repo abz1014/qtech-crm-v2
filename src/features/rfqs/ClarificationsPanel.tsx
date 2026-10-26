@@ -192,7 +192,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
         ) : rows.length === 0 ? null : (
           <>
             {relays.map(({ inq, answered }) => (
-              <div key={inq.id} className="mx-4 mb-3 mt-3 flex flex-wrap items-center gap-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
+              <div key={inq.id} className="mx-4 mb-3 mt-3 flex flex-wrap items-center gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
                 <Icon icon={Send} className="text-tone-warning-fg" />
                 <span className="min-w-0 flex-1 basis-[10rem]">
                   <b className="font-medium">{inq.supplierName}</b> is waiting for <span className="num">{answered.length}</span> {answered.length === 1 ? 'answer' : 'answers'}.
@@ -413,7 +413,7 @@ function ChaseGroup({
           {dueNote ? <p className="text-sm text-tone-warning-fg">{dueNote}</p> : null}
         </div>
       ) : (
-      <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded border bg-surface">
+      <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded-panel border bg-surface">
         {/* The questions are listed just above, so the message itself waits under "Show the whole message" (the rail stays short). */}
         {whole ? (
           <div id={wholeId} className="grid">

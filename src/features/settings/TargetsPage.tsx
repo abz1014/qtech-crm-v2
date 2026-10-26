@@ -205,7 +205,7 @@ export function TargetsPage() {
           {(targetsA.error ?? targetsB.error ?? team.error) instanceof Error ? ((targetsA.error ?? targetsB.error ?? team.error) as Error).message : 'Check your connection, then try again.'}
         </Banner>
       ) : loading ? (
-        <div role="status" className="grid gap-px overflow-hidden rounded border bg-line" aria-busy="true" aria-label="Loading targets">
+        <div role="status" className="grid gap-px overflow-hidden rounded-panel border bg-line" aria-busy="true" aria-label="Loading targets">
           {[0, 1, 2].map(i => (
             <div key={i} className="bg-surface p-4">
               <Skeleton className="h-10 w-full" />
@@ -218,7 +218,7 @@ export function TargetsPage() {
         <div
           role="table"
           aria-label={mode === 'now' ? 'Quarterly targets, this quarter and next' : `Quarterly targets for ${year}`}
-          className="overflow-hidden rounded border bg-surface"
+          className="overflow-hidden rounded-panel border bg-surface"
         >
           <div role="row" className={cn('grid border-b bg-sunken text-sm font-medium text-fg-muted max-md:sr-only', cols)}>
             <div role="columnheader" className="px-4 py-2">

@@ -36,6 +36,15 @@ export function useCorrectPayment(orderId: string) {
   })
 }
 
+/** Delete a payment (admin): the same lists as a void go stale. */
+export function useDeletePayment(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (paymentId: string) => api.deletePayment(paymentId),
+    onSuccess: () => invalidateAfter(client, 'payment.void', { orderId }),
+  })
+}
+
 /** Undo of a void or a correction: pass the id of the payment that was voided (for a correction, the original). */
 export function useRestorePayment(orderId: string) {
   const client = useQueryClient()

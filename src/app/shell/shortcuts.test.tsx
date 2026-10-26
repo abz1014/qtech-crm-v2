@@ -188,11 +188,11 @@ describe('phone bar (A-82)', () => {
 
 describe('Avatar sizes (A-84)', () => {
   it.each([
-    ['sm', 'size-[24px]'],
-    ['md', 'size-[28px]'],
-    ['lg', 'size-[32px]'],
-    ['xl', 'size-[36px]'],
-    ['2xl', 'size-[40px]'],
+    ['sm', 'size-[28px]'],
+    ['md', 'size-[32px]'],
+    ['lg', 'size-[36px]'],
+    ['xl', 'size-[40px]'],
+    ['2xl', 'size-[44px]'],
   ] as const)('%s is %s', (size, cls) => {
     render(<Avatar name="Ayesha Rana" size={size} />)
     expect(screen.getByRole('img', { name: 'Ayesha Rana' }).className).toContain(cls)

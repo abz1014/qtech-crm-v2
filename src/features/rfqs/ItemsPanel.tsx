@@ -17,6 +17,7 @@ import { agoDays, days } from '@/lib/timeWords'
 import { useToast } from '@/ui/useToast'
 import { LastPriceChipView } from '@/features/rfqs/LastPriceChip'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
+import { ItemMenu } from '@/features/rfqs/ItemEdit'
 import { RateBar } from '@/features/rfqs/RateBar'
 import { InfoTip } from '@/ui/InfoTip'
 import { focusReplyInput } from '@/features/rfqs/replyFocus'
@@ -419,6 +420,10 @@ export function ItemsPanel({
                   </div>
                   {cov.value ? <StatusBadge dimension="item-price" value={cov.value} detail={cov.detail} /> : null}
                   {foldable ? <Icon icon={ChevronDown} className={cn('mt-[2px] shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} /> : null}
+                  {/* Above the phone header's whole-width tap target (z-10), so the menu is its own button. */}
+                  <span className="relative z-10 -my-2 shrink-0">
+                    <ItemMenu rfq={rfq} item={item} />
+                  </span>
                 </header>
 
                 {folded ? null : (

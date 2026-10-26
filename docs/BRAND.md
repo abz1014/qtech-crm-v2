@@ -1,6 +1,6 @@
 # Q-Tech CRM brand and UI tokens
 
-Direction: an instrument panel, not a dashboard. Light theme is the default. Surfaces are flat and neutral, borders are hairlines, and brand green appears only where it carries meaning. Tokens live in `src/index.css` (HSL channels, shadcn convention) and are wired in `tailwind.config.ts`.
+Direction C, **Colour blocks** (owner decision 2026-10-22, DECISIONS.md): a navy top bar, white tiles on a quiet blue-grey field, Late / Today / This week as red, yellow and blue blocks, the next step in a navy band holding the one green button, Archivo with a wide cut for titles, rounded corners. Light theme only. Brand green still appears only where it carries meaning. Tokens live in `docs/design/tokens.css` (copied into `src/index.css`) and are wired in `tailwind.config.ts`; `docs/DESIGN_SYSTEM.md` explains the rules. Sections 2 and 3 below are the original 2026-10 logo study; the live values are in tokens.css and DESIGN_SYSTEM section 5.
 
 ## 1. Colours sampled from the logos
 
@@ -33,7 +33,21 @@ Dominant pixel clusters (anti-aliased edges ignored) from `public/brand/logo-wor
 
 Semantic colours are always paired with an icon or text label, never colour alone. Success is teal so it cannot be mistaken for the green primary action.
 
-Dark theme (`.dark`) is provided but not the default: background `#0e0e0e`, card `#171717`, border `#262626`, text `#ededed`. Primary becomes brand green `#429446` with black text (5.52:1).
+**Direction C additions** (2026-10-22; values and ratios in DESIGN_SYSTEM 5 and 7):
+
+| Role | Hex | Use |
+|---|---|---|
+| Navy `--bg-chrome` | `#132a4c` | Top bar, phone bars, the next-step band, a selected segment. White text 14.35:1 |
+| Quiet field `--bg-canvas` | `#eef2f7` | Behind the white tiles; the quiet block |
+| Late block | `#fbe1dd`, ink `#8a1010` | Only late money or a broken promise |
+| Today block | `#ffeab0`, ink `#693400` | Due now |
+| This week block | `#e1eaf6`, ink navy | The next five days; also the identifier plate |
+| Ink `--fg` | `#0c1526` | Body text (18.25:1 on white) |
+| Indicator on navy | `#4caf52` | The active tab bar and focus ring on the navy only (5.17:1); `#429446` everywhere else |
+
+The green button on the navy band carries a 2px white ring: green against navy alone is 2.71:1, below the 3:1 a control's edge needs.
+
+There is no dark theme: tokens.css is light only (`color-scheme: light`). A dark set for direction C would be its own decision.
 
 ## 3. Contrast (WCAG 2.x, computed)
 
@@ -67,18 +81,20 @@ Brand green fails AA for text in both directions (3.78:1). So:
 
 ## 5. Typography
 
-- UI: system sans stack (`font-sans`). No webfont, so nothing to load.
-- Numbers and codes use `font-mono` with tabular figures. Tailwind class `num` = mono + `tabular-nums`; `tabular` is tabular figures only (for sans text in table columns).
+- UI: **Archivo** (SIL OFL, free), self-hosted from `@fontsource-variable/archivo`, subset by `scripts/fonts/subset-archivo.py`: the UI face (weight 400 to 700) and **Archivo Wide** (width 118 %, weight 600 to 800) for page titles, section titles and block headings, at weight 750. CSP keeps `font-src 'self'`. The system sans is the fallback and shows first on a slow first visit.
+- 16 px is the smallest text anyone reads; 14 px for timestamps only.
+- Numbers and codes use the sans with tabular figures: Tailwind class `num` (Archivo's `tnum`, plain zero). Geist Mono is retired from the app.
+- The PDFs (quotation, PO, invoice, expense report) still use Geist (`src/features/quotations/pdf/fonts.ts`); moving them to Archivo is a separate decision, since the printed documents are already with customers.
 - Apply `num` to: PO, invoice, RFQ, quotation and challan numbers; PKR amounts; quantities; dates in tables; phone numbers; NTN/STRN.
 - Right-align numeric columns. Amounts show `PKR` prefix or column header, with thousands separators.
-- Radius is 4px (`--radius`). Borders 1px hairline; no shadows beyond a single subtle one on floating layers (popovers, dialogs).
+- Radius is a ladder: 10px controls, 12px rows drawn as tiles, 16px panels and blocks, fully round chips, tags and counts. Colour blocks and white tiles separate, hairlines only where two tiles meet; shadows only on floating layers (popovers, dialogs) and the white ring on the green button over navy.
 
 ## 6. Logo usage
 
 | File | Use |
 |---|---|
-| `public/brand/logo-wordmark.png` | Login page, printed documents (quotes, invoices), app header at 28 to 32px height on white. Keep clear space equal to the height of the "Q". |
-| `public/brand/logo-mark.png` | Square contexts: collapsed sidebar, avatars, PWA/app icon sources. |
+| `public/brand/logo-wordmark.png` | Login page, printed documents (quotes, invoices), app header at 30px height. In the navy top bar it sits on its own white plate (10px corners, 8px side padding), never directly on the navy. Keep clear space equal to the height of the "Q". |
+| `public/brand/logo-mark.png` | Square contexts: the top bar below 1280 px and the phone bar (directly on the navy: it is its own green square), avatars, PWA/app icon sources. |
 | `public/favicon.ico`, `favicon-32.png` | Browser tab (generated from the mark). |
 | `public/apple-touch-icon.png` (180) | iOS home screen. |
 &
@@ -90,10 +106,11 @@ Do not recolour, stretch, outline or place the wordmark on a coloured or photogr
 
 ## 7. Never
 
-- No gradients, anywhere.
+- No gradients, anywhere. Colour is flat blocks.
 - No glass, blur or translucent frosted panels.
 - No glow, neon or coloured shadows.
-- No decorative green: no green headers, green card tints, green hover rows, green icons that do not mean action/active/focus.
+- No decorative green: no green headers, green card tints, green hover rows, green icons that do not mean action/active/focus. The blocks are red, yellow and blue, never green.
+- No red block for anything but late money or a broken promise, and no empty block: an empty group draws nothing.
 - No green text in brand green `#429446` on white.
 - No colour-only status; always icon or text too.
 - No proportional digits in tables or on documents.

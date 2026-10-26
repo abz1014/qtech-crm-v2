@@ -11,6 +11,7 @@ import {
   MapPin,
   MessageCircle,
   Package,
+  Pencil,
   RotateCcw,
   Trash2,
   UserRound,
@@ -36,6 +37,7 @@ import { StickyActionBar } from '@/ui/StickyActionBar'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useDeleteRfqFlow } from '@/features/rfqs/deleteFlow'
+import { useEditRfqFlow } from '@/features/rfqs/useEditRfqFlow'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { useWonDialog } from '@/features/orders/useWonDialog'
@@ -204,12 +206,15 @@ function useMainActions(rfq: RfqHeader, facts: HeaderFacts) {
 }
 
 /** The "More" menu: everything that is not the green button. */
-function MoreItems({ rfq, facts, actions, onDelete }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void }) {
+function MoreItems({ rfq, facts, actions, onDelete, onEdit }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; onEdit: () => void }) {
   const main = useMainActions(rfq, facts)
   const sent = quotationSent({ bidState: rfq.state?.bid_state, quotationCount: facts.quotationCount })
   const noItems = facts.itemCount === 0
   return (
     <>
+      <MenuItem icon={Pencil} onClick={onEdit}>
+        Edit RFQ details
+      </MenuItem>
       {facts.primary !== 'ask' ? (
         <MenuItem icon={Copy} disabled={noItems} hint={noItems ? 'add an item first' : undefined} onClick={main.ask}>
           {main.askLabel}
@@ -262,10 +267,10 @@ function DeleteItem({ onDelete, separator = false }: { onDelete?: () => void; se
 }
 
 /** The page's More menu (src/ui/MoreMenu): the "More" text button on desktop, the Ellipsis in the phone bar. */
-function RfqMoreMenu({ rfq, facts, actions, onDelete, touch = false }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; touch?: boolean }) {
+function RfqMoreMenu({ rfq, facts, actions, onDelete, onEdit, touch = false }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; onEdit: () => void; touch?: boolean }) {
   return (
     <MoreMenu touch={touch} side={touch ? 'top' : undefined} label={touch ? 'More actions' : 'More'} menuClassName="min-w-[300px]">
-      <MoreItems rfq={rfq} facts={facts} actions={actions} onDelete={onDelete} />
+      <MoreItems rfq={rfq} facts={facts} actions={actions} onDelete={onDelete} onEdit={onEdit} />
     </MoreMenu>
   )
 }
@@ -448,6 +453,7 @@ function Meta({
 export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFacts }) {
   const actions = useQuoteAndClose(rfq)
   const del = useDeleteRfqFlow(rfq)
+  const edit = useEditRfqFlow(rfq)
   const main = useMainActions(rfq, facts)
   const s = rfq.state
   const ref = rfqRef(rfq.number)
@@ -483,12 +489,15 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       // A closed or won RFQ has no other actions, but an admin can still delete a mistake: a More menu with only that.
       more={
         open ? (
-          <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} />
-        ) : del.ask ? (
+          <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} />
+        ) : (
           <MoreMenu label="More" menuClassName="min-w-[200px]">
-            <DeleteItem onDelete={del.ask} />
+            <MenuItem icon={Pencil} onClick={edit.ask}>
+              Edit RFQ details
+            </MenuItem>
+            <DeleteItem onDelete={del.ask} separator />
           </MoreMenu>
-        ) : undefined
+        )
       }
       chips={
         <>
@@ -523,6 +532,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
         </div>
       ) : null}
       {del.node}
+      {edit.node}
 
       <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>
@@ -593,6 +603,7 @@ function scrollTo(slot: string) {
 export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rfq: RfqHeader; facts: HeaderFacts; chaseSuppliers: number; chaseCustomer: number }) {
   const actions = useQuoteAndClose(rfq)
   const del = useDeleteRfqFlow(rfq)
+  const edit = useEditRfqFlow(rfq)
   if ((rfq.state?.outcome ?? 'open') !== 'open') return null
   return (
     <>
@@ -614,9 +625,10 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
           </PopoverContent>
         </Popover>
       }
-      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} touch />}
+      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} touch />}
     />
       {del.node}
+      {edit.node}
     </>
   )
 }

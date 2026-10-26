@@ -44,6 +44,8 @@ import { Checkbox } from '@/ui/form/Checkbox'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { clearExpenseDraft, expenseDraftKey, loadExpenseDraft, saveExpenseDraft } from '@/features/money/expenses/addDraft'
 import {
+  MISC_TITLE_ERROR,
+  MISC_TITLE_LABEL,
   PAID_VIA_LABEL,
   SUPPLIER_PAYMENT_ID,
   cleanDetail,
@@ -138,9 +140,12 @@ const schema = z
     orderId: z.string().nullable(),
     legId: z.string().nullable(),
     payeeId: z.string().nullable(),
+    /** Set from the chosen category: an "Other" (0091) must say what it was for, so Detail is required (a field error, not a server one). */
+    titleRequired: z.boolean(),
   })
   // Only against a usable amount: a negative amount is the amount's problem, not the input tax's (hunt HE-18).
   .refine(v => !v.inputTax || !(v.amount > 0) || v.inputTax <= v.amount, { path: ['inputTax'], message: 'Input tax cannot be more than what was paid' })
+  .refine(v => !v.titleRequired || v.note.trim() !== '', { path: ['note'], message: MISC_TITLE_ERROR })
 
 type Values = z.input<typeof schema>
 
@@ -219,9 +224,10 @@ function ExpenseFormReady({
       orderId: expense?.orderId ?? context?.orderId ?? null,
       legId: expense?.legId ?? context?.legId ?? null,
       payeeId: expense?.payeeId ?? context?.payeeId ?? null,
+      titleRequired: !!categories.find(c => c.id === pre.categoryId)?.isMisc,
     } satisfies Partial<Values>,
     // The month lock answers about the date, so the sentence sits under the date and everything typed stays.
-    routeError: e => (e.kind === 'closed-month' ? { field: 'paidOn' } : undefined),
+    routeError: e => (e.kind === 'closed-month' ? { field: 'paidOn' } : e.message.startsWith('Write what it was for') ? { field: 'note' } : undefined),
     onSubmit: async (v, { requestId }) => {
       const showFor = isMonthlyBill(v.categoryId, templates) || !!expense?.period
       const base = {
@@ -310,6 +316,7 @@ function ExpenseFormReady({
   }, [draftKey, form])
 
   const categoryId = form.watch('categoryId')
+  const isOther = !!categories.find(c => c.id === categoryId)?.isMisc
   const amount = form.watch('amount')
   const paidVia = form.watch('paidVia')
   const orderId = form.watch('orderId')
@@ -331,6 +338,12 @@ function ExpenseFormReady({
   const showFor = isMonthlyBill(categoryId, templates) || !!expense?.period
   const recentDetails = useRecentDetails(showNote)
   const detailOptions = useMemo(() => detailSuggestions(recentDetails.data ?? [], categoryId), [recentDetails.data, categoryId])
+
+  // An "Other" needs its title (0091): the form says so as a field error, and the Detail box is open for it.
+  useEffect(() => {
+    form.setValue('titleRequired', isOther)
+    if (isOther) setShowNote(true)
+  }, [isOther, form])
 
   // Paid via follows the category until the person picks one.
   useEffect(() => {
@@ -381,6 +394,11 @@ function ExpenseFormReady({
                 value={f.value}
                 onChange={f.onChange}
                 onCreate={createCategory}
+                onMisc={(c, text) => {
+                  f.onChange(c.id)
+                  form.setValue('note', text, { shouldDirty: true })
+                  setShowNote(true)
+                }}
                 groups={groupsQ.data}
                 recent={recent}
                 chevron
@@ -390,7 +408,7 @@ function ExpenseFormReady({
           {lockedPayee ? (
             <div className="grid min-w-0 content-start gap-[6px]">
               <span className="text-sm font-medium text-fg">Payee</span>
-              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" role="group" aria-label="Payee, from the supplier order">
+              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded-row border border-line-strong bg-sunken px-3 text-sm text-fg-2" role="group" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
                 </span>
@@ -404,7 +422,7 @@ function ExpenseFormReady({
         </div>
 
         {showFor && paidOnNow ? (
-          <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-info-fg/25 bg-tone-info-bg px-3 py-2 text-base">
+          <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border border-tone-info-fg/25 bg-tone-info-bg px-3 py-2 text-base">
             <span className="font-medium">This bill is for</span>
             <select
               value={forChoice ?? expense?.period ?? forMonthOf(paidOnNow)}
@@ -424,10 +442,10 @@ function ExpenseFormReady({
         ) : null}
 
         {showNote ? (
-          <FormField<Values, 'note'> name="note" label="Detail" requirement="optional">
+          <FormField<Values, 'note'> name="note" label={isOther ? MISC_TITLE_LABEL : 'Detail'} requirement={isOther ? 'required' : 'optional'}>
             {f => (
               <>
-                <TextField {...f} placeholder="e.g. LESCO bill, office water, LEA-1234" list="expense-detail-options" autoComplete="off" />
+                <TextField {...f} placeholder={isOther ? 'e.g. Courier from shop to office' : 'e.g. LESCO bill, office water, LEA-1234'} list="expense-detail-options" autoComplete="off" />
                 <datalist id="expense-detail-options">
                   {detailOptions.map(d => (
                     <option key={d} value={d} />
@@ -499,7 +517,7 @@ function ExpenseFormReady({
 
         {photo ? <FileRow item={photo} onRemove={() => setPhoto(null)} /> : null}
         {(receipts.data ?? []).map(r => (
-          <div key={r.id} className="flex items-center justify-between gap-3 rounded border border-line-strong px-3 py-2 text-sm">
+          <div key={r.id} className="flex items-center justify-between gap-3 rounded-row border border-line-strong px-3 py-2 text-sm">
             <span className="truncate">{r.fileName}</span>
             <Button size="sm" variant="quiet" onClick={() => deleteReceipt.mutate(r)} aria-label={`Remove ${r.fileName}`}>
               Remove

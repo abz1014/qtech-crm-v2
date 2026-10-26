@@ -102,7 +102,7 @@ export function ExceptionsPage() {
           </button>
         }
       />
-      <section aria-labelledby="exceptions-h" className="min-w-0 rounded border bg-surface">
+      <section aria-labelledby="exceptions-h" className="min-w-0 rounded-panel border bg-surface">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-5 py-4">
           <h3 id="exceptions-h" className="text-base font-semibold">
             What does not add up

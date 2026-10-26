@@ -37,7 +37,7 @@ export function ChangePasswordPage() {
     <div className="grid content-start gap-4">
       <PageHeader title="Change password" lede="Change the password for your own sign-in. You stay signed in on this device." />
       <Form sf={sf} labels={LABELS} className="grid gap-4">
-        <section className="grid gap-4 rounded border bg-surface p-5">
+        <section className="grid gap-4 rounded-panel border bg-surface p-5">
           <div className="grid gap-4 sm:max-w-[480px]">
             <FormField name="current" label="Current password">
               {f => <TextField {...f} type="password" autoComplete="current-password" />}
@@ -51,7 +51,7 @@ export function ChangePasswordPage() {
           </div>
         </section>
       </Form>
-      <div className="flex items-center gap-3 rounded border bg-surface px-5 py-3">
+      <div className="flex items-center gap-3 rounded-panel border bg-surface px-5 py-3">
         <div className="ml-auto flex gap-2">
           <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Changing">
             {sf.failed ? 'Try again' : 'Change password'}

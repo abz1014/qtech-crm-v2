@@ -46,7 +46,7 @@ export function DateRailSection() {
     <Section id="rail" title="DateRail" note="Where today sits between the day something started and the day it is due. Six states; dates are always real days.">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {RAILS.map(r => (
-          <div key={r.title} className="grid content-start gap-3 rounded border bg-surface p-4">
+          <div key={r.title} className="grid content-start gap-3 rounded-panel border bg-surface p-4">
             <div className="grid gap-1">
               <p className="text-sm font-medium">{r.title}</p>
               <p className="text-xs text-fg-muted">{r.note}</p>
@@ -122,7 +122,7 @@ function ReplyRow({ reply, start, error, saving }: { reply: Reply; start: 'resti
 function InlineEditDemo() {
   const head = 'grid h-9 items-center gap-2 bg-sunken px-3 text-xs font-medium text-fg-muted'
   return (
-    <div className="overflow-hidden rounded border bg-surface">
+    <div className="overflow-hidden rounded-panel border bg-surface">
       <div className={head} style={{ gridTemplateColumns: [...IE_COLS.map(c => c.width), '60px'].join(' ') }} aria-hidden="true">
         <span>Supplier</span>
         <span className="text-right">Price</span>
@@ -254,7 +254,7 @@ export function TooltipVariants() {
 function TextSample({ small }: { small?: boolean }) {
   const [filter, setFilter] = useState('all')
   return (
-    <div data-text={small ? 'small' : undefined} className="grid min-w-0 content-start gap-4 rounded border bg-surface p-4 text-base">
+    <div data-text={small ? 'small' : undefined} className="grid min-w-0 content-start gap-4 rounded-panel border bg-surface p-4 text-base">
       <h3 className="text-lg font-semibold tracking-snug">{small ? 'Smaller' : 'Normal (default)'}</h3>
       <p className="text-sm text-fg-2">
         RFQ-0177 for Indus Textile Mills is due <span className="num">Tue 1 Dec</span>. Two of four suppliers have sent prices.
@@ -294,7 +294,7 @@ export function TextSizeSection() {
     <Section
       id="textsize"
       title="Text size"
-      note="Normal is the default since 2026-10-19 (xs 14, sm 15, base 16; controls 40, rows 48). Smaller restores 12, 13, 14 with 32 and 40, for anyone who picks it under Your details or in the account menu."
+      note="Normal is the default (since 2026-10-22 everything read is 16, timestamps 14; controls 44, rows 56). Smaller restores 12, 13, 14 with 32 and 40, for anyone who picks it under Your details or in the account menu."
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <TextSample />
@@ -307,7 +307,7 @@ export function TextSizeSection() {
 export function TooltipSection() {
   return (
     <Section id="tooltip" title="Tooltip variants" note="Hover for 400 ms or focus. The same five are photographed one at a time as scenes (Tooltip variants).">
-      <div className="rounded border bg-surface p-6 pb-24">
+      <div className="rounded-panel border bg-surface p-6 pb-24">
         <TooltipVariants />
       </div>
     </Section>

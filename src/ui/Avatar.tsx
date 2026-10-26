@@ -2,16 +2,16 @@ import { cn } from '@/lib/utils'
 import { initials } from '@/lib/initials'
 
 const SIZE = {
-  sm: 'size-[24px] text-xs',
-  md: 'size-[28px] text-xs',
-  lg: 'size-[32px] text-xs',
-  xl: 'size-[36px] text-xs',
-  '2xl': 'size-[40px] text-sm',
+  sm: 'size-[28px] text-stamp',
+  md: 'size-[32px] text-xs',
+  lg: 'size-[36px] text-xs',
+  xl: 'size-[40px] text-xs',
+  '2xl': 'size-[44px] text-sm',
 } as const
 
 interface AvatarProps {
   name: string
-  /** sm 24 (key-figures row), md 28 (top bar, lists), lg 32 (who-row), xl 36 (phone row), 2xl 40 (avatar-lg, text-sm). */
+  /** sm 28 (key-figures row; initials at 14 px, a picture of a name, not text to read: the name is the label), md 32 (top bar, lists), lg 36 (who-row), xl 40 (phone row), 2xl 44 (avatar-lg). */
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   className?: string
 }
@@ -24,7 +24,7 @@ export function Avatar({ name, size = 'md', className }: AvatarProps) {
       aria-label={name}
       title={name}
       className={cn(
-        'inline-grid shrink-0 place-items-center rounded-round bg-tone-ink-bg font-medium tracking-[0.02em] text-tone-ink-fg',
+        'inline-grid shrink-0 place-items-center rounded-round bg-tone-ink-bg font-semibold text-tone-ink-fg',
         SIZE[size],
         className,
       )}

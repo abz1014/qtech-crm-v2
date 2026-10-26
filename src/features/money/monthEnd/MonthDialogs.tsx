@@ -106,7 +106,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
           </Banner>
         ) : null}
         {cards ? (
-          <ul aria-label="Warnings" className="grid overflow-hidden rounded border bg-surface">
+          <ul aria-label="Warnings" className="grid overflow-hidden rounded-panel border bg-surface">
             {cards.map(c => (
               <li key={c.key} className="flex items-center gap-3 border-t px-4 py-[10px] first:border-t-0">
                 <Icon icon={c.clear ? CircleCheck : TriangleAlert} size="md" className={c.clear ? 'text-tone-success-fg' : 'text-tone-warning-fg'} />
@@ -125,7 +125,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
             Loading the checks for {label}…
           </p>
         )}
-        <div className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm">
+        <div className="flex items-start gap-3 rounded-row bg-sunken px-4 py-3 text-sm">
           <Icon icon={Info} className="mt-[2px] text-fg-muted" />
           <p>
             <span className="font-medium text-fg">These are warnings, not blockers.</span> Closing locks {label}: payments, expenses and invoices dated in it are

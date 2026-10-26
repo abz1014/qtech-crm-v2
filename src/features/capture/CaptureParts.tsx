@@ -193,7 +193,7 @@ export function CaptureArea({
 
   if (dragging > 0) {
     return (
-      <div className="grid min-h-[300px] content-center justify-items-center gap-2 rounded border-2 border-dashed border-brand-green bg-surface px-5 py-8 text-center text-sm" aria-live="polite">
+      <div className="grid min-h-[300px] content-center justify-items-center gap-2 rounded-panel border-2 border-dashed border-brand-green bg-surface px-5 py-8 text-center text-sm" aria-live="polite">
         <span className="grid size-[40px] place-items-center rounded bg-selected text-fg-2">
           <Icon icon={Upload} size="lg" />
         </span>
@@ -215,7 +215,7 @@ export function CaptureArea({
           <p className="text-xs text-fg-muted">Photos are resized before saving. Each file can be up to 5 MB.</p>
         </Section>
         {/* Desktop: drop, or paste anywhere. */}
-        <div className="hidden min-h-[300px] content-center justify-items-center gap-3 rounded border border-dashed border-line-input bg-sunken px-5 py-8 text-center text-sm md:grid">
+        <div className="hidden min-h-[300px] content-center justify-items-center gap-3 rounded-panel border border-dashed border-line-input bg-sunken px-5 py-8 text-center text-sm md:grid">
           <span className="grid size-[40px] place-items-center rounded bg-selected text-fg-2">
             <Icon icon={Upload} size="lg" />
           </span>
@@ -239,7 +239,7 @@ export function CaptureArea({
           </li>
         ))}
         {resizing.map(r => (
-          <li key={r.id} className="flex items-center gap-3 rounded border border-line-strong bg-surface px-3 py-2 text-sm">
+          <li key={r.id} className="flex items-center gap-3 rounded-row border border-line-strong bg-surface px-3 py-2 text-sm">
             <span aria-hidden="true" className="size-[40px] shrink-0 rounded border bg-selected" />
             <span className="grid min-w-0 flex-1">
               <b className="min-w-0 [overflow-wrap:anywhere] break-all font-medium">{r.name}</b>
@@ -309,7 +309,7 @@ export function RfqPicker({ list, chosenId, now, onPick }: { list: readonly Cand
   }
   return (
     <Section title="On which RFQ" aside="Recent, and yours with open questions">
-      <div className="overflow-hidden rounded border bg-surface">
+      <div className="overflow-hidden rounded-panel border bg-surface">
         <h4 className="flex items-center justify-between border-b bg-sunken px-3 py-2 text-xs font-semibold text-fg-muted">
           <span>Recent</span>
           <span>
@@ -362,7 +362,7 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
   }
   return (
     <Section title="On which order" aside="Recently opened">
-      <div className="overflow-hidden rounded border bg-surface">
+      <div className="overflow-hidden rounded-panel border bg-surface">
         <h4 className="flex items-center justify-between border-b bg-sunken px-3 py-2 text-xs font-semibold text-fg-muted">
           <span>Recent</span>
           <span>
@@ -388,7 +388,7 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
                 <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium leading-snug">
                   <span className="num">{orderRef(c.number)}</span> · {c.companyName}
                 </b>
-                <span className="min-w-0 [overflow-wrap:anywhere] text-xs leading-snug text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere] text-stamp text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
               </span>
               <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', c.id === chosenId ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
                 {c.id === chosenId ? <span className="size-[6px] rounded-round bg-surface" /> : null}
@@ -428,7 +428,7 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
 /** The open questions of the chosen RFQ, ticked [q-pick]: the question and when it was asked. */
 export function QuestionPick({ open, ticked, onToggle }: { open: readonly OpenQuestion[]; ticked: ReadonlySet<string>; onToggle: (id: string, on: boolean) => void }) {
   return (
-    <ul className="grid overflow-hidden rounded border bg-surface" aria-label="Open questions">
+    <ul className="grid overflow-hidden rounded-panel border bg-surface" aria-label="Open questions">
       {open.map(q => (
         <li key={q.id} className={cn('border-t first:border-t-0', ticked.has(q.id) && 'bg-selected')}>
           <label className="grid cursor-pointer grid-cols-[16px_1fr] gap-3 p-3 text-sm leading-5 hover:bg-sunken">
@@ -447,7 +447,7 @@ export function QuestionPick({ open, ticked, onToggle }: { open: readonly OpenQu
 /** One line per question, numbered, with a tick [split-rows]. */
 export function SplitRows({ lines, off, onToggle }: { lines: readonly string[]; off: ReadonlySet<string>; onToggle: (line: string, on: boolean) => void }) {
   return (
-    <ul className="grid overflow-hidden rounded border bg-surface" aria-label="Questions to add">
+    <ul className="grid overflow-hidden rounded-panel border bg-surface" aria-label="Questions to add">
       {lines.map((l, i) => (
         <li key={l} className="border-t first:border-t-0">
           <label className={cn('grid cursor-pointer grid-cols-[16px_22px_minmax(0,1fr)] items-start gap-2 px-3 py-2 text-sm leading-5', off.has(l) && 'text-fg-muted line-through')}>
@@ -486,7 +486,7 @@ export function SavedPanel({
       </span>
       <h2 className="text-xl font-semibold tracking-snug text-fg">{title}</h2>
       <p className="max-w-[34ch] text-pretty text-sm text-fg-muted">{summary}</p>
-      <dl className="grid w-full max-w-[420px] gap-2 rounded border bg-surface px-4 py-3 text-left text-sm">
+      <dl className="grid w-full max-w-[420px] gap-2 rounded-row border bg-surface px-4 py-3 text-left text-sm">
         <div className="flex justify-between gap-3">
           <dt className="text-fg-muted">{rfqLabel}</dt>
           <dd className="min-w-0 text-right">{rfq}</dd>

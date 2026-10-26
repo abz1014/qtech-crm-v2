@@ -99,7 +99,7 @@ export function BankTickPage() {
       </div>
 
       {data.isError ? (
-        <div className="mx-auto mt-12 max-w-[520px] rounded border bg-surface p-6">
+        <div className="mx-auto mt-12 max-w-[520px] rounded-panel border bg-surface p-6">
           <EmptyState
             mood="error"
             title="The bank statement lines did not load"
@@ -157,7 +157,7 @@ export function BankTickPage() {
             ]}
           />
           {empty ? (
-            <section className="rounded border bg-surface">
+            <section className="rounded-panel border bg-surface">
               <EmptyState
                 title={`Nothing to tick for ${monthKeyLabel(month)}`}
                 actions={
@@ -178,7 +178,7 @@ export function BankTickPage() {
               {/* The page's one green button, always in reach while ticking: how far along, and back to the checklist. */}
               <div
                 data-testid="bank-progress"
-                className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded border bg-surface px-5 py-3 shadow-pop"
+                className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3 shadow-pop"
               >
                 <span className="text-base">
                   <b className="num font-semibold">{allLines - (openCount ?? 0)}</b> of <span className="num">{allLines}</span> matched
@@ -208,7 +208,7 @@ function StateChip({ open }: { open: number }) {
 function Loading() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading the bank statement lines" className="grid gap-4">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded border bg-line md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-cols-4">
         {[0, 1, 2, 3].map(i => (
           <div key={i} className="grid gap-2 bg-surface px-5 py-4">
             <Skeleton className="h-3 w-24" />

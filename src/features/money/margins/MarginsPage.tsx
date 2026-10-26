@@ -152,7 +152,7 @@ export function MarginsPage() {
           ) : null
         }
       />
-      <section aria-labelledby="margins-h" className="min-w-0 rounded border bg-surface">
+      <section aria-labelledby="margins-h" className="min-w-0 rounded-panel border bg-surface">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-5 py-3">
           <h3 id="margins-h" className="text-base font-semibold">
             Every order

@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-/** Tag: a mono identifier (ORD-0038, RFQ-0177) or brand tag. Dashed when the value is not firm. */
+/** Tag: an identifier (ORD-0038, RFQ-0177) or brand tag, as a round blue plate (direction C). Dashed when the value is not firm. */
 export function Tag({ children, dashed, className }: { children: ReactNode; dashed?: boolean; className?: string }) {
   return (
     <span
       className={cn(
-        'num inline-flex min-h-chip items-center whitespace-nowrap rounded border px-[6px] py-px text-xs leading-none',
-        dashed ? 'border-dashed border-line-strong text-fg-muted' : 'border-line-strong bg-surface text-fg-2',
+        'num inline-flex min-h-chip items-center whitespace-nowrap rounded-round border px-[10px] py-px text-xs font-medium leading-none',
+        dashed ? 'border-dashed border-line-strong text-fg-muted' : 'border-transparent bg-tone-info-bg text-block-week-fg',
         className,
       )}
     >
