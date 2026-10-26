@@ -537,6 +537,8 @@ export async function getOrderMoney(orderId: string, role: 'admin' | 'sales'): P
 }
 
 export interface LegPo {
+  /** purchase_orders.id of this (the latest) revision: its history, and its delete. */
+  id?: string
   legId: string
   number: number
   revision: number
@@ -560,9 +562,9 @@ function poLines(json: unknown): LegPo['lines'] {
 export async function listLegPos(legIds: readonly string[], money = false): Promise<LegPo[]> {
   if (legIds.length === 0) return []
   const db = requireSupabase()
-  const rows: Array<{ supplier_order_id: string; number: number; revision: number; issued_on: string; lines?: unknown }> = money
-    ? unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on, lines').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
-    : unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
+  const rows: Array<{ id?: string; supplier_order_id: string; number: number; revision: number; issued_on: string; lines?: unknown }> = money
+    ? unwrap(await db.from('purchase_orders').select('id, supplier_order_id, number, revision, issued_on, lines').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
+    : unwrap(await db.from('purchase_orders').select('id, supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
   const seen = new Set<string>()
   const first = new Map<string, { revision: number; issuedOn: string }>()
   for (const r of rows) {
@@ -574,7 +576,7 @@ export async function listLegPos(legIds: readonly string[], money = false): Prom
     if (seen.has(r.supplier_order_id)) continue
     seen.add(r.supplier_order_id)
     const firstIssuedOn = first.get(r.supplier_order_id)?.issuedOn ?? r.issued_on
-    out.push({ legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on, firstIssuedOn, lines: 'lines' in r ? poLines(r.lines) : [] })
+    out.push({ id: r.id, legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on, firstIssuedOn, lines: 'lines' in r ? poLines(r.lines) : [] })
   }
   return out
 }

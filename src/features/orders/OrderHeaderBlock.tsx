@@ -27,6 +27,8 @@ import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
+import { LastChanged } from '@/features/history/LastChanged'
+import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import { useInFlight } from '@/lib/useInFlight'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
@@ -270,6 +272,7 @@ export function OrderHeaderBlock({
           {cancelReasonLabel(order.cancelReason) ? `${cancelReasonLabel(order.cancelReason)}. ` : ''}Nothing on this order can be changed while it is cancelled.
         </Banner>
       ) : null}
+      {isEngineer ? null : <LastChanged table="orders" id={order.id} className="mt-3 text-base text-fg-2" />}
       {!entry.can && !isEngineer && !cancelled && entry.note ? (
         <p className="mt-3 text-base text-fg-2" role="note" data-slot="not-yours">
           {`The customer PO number is closed. ${entry.note}.`}
@@ -405,6 +408,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
   const today = businessToday()
+  const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
 
   const reopen = () =>
     once(async () => {
@@ -432,6 +436,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
   return (
     <>
       <MoreMenu touch={touch} label="More actions">
+          {history.item}
           {recordPayment ? (
             <MenuItem icon={Banknote} onClick={() => setPaying(true)}>
               Record payment
@@ -447,6 +452,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
             </MenuItem>
           )}
       </MoreMenu>
+      {history.node}
       {recordPayment ? <RecordPaymentDialog open={paying} onOpenChange={setPaying} orderId={order.id} /> : null}
       {cancelling ? (
         <CancelDialog
