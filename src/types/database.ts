@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "attachments": {
                   Row: {
-                    "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"expense_id": string | null,"file_name": string,"id": string,"invoice_id": string | null,"mime_type": string,"order_id": string | null,"path": string,"rfq_id": string | null,"size_bytes": number
+                    "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"expense_id": string | null,"file_name": string,"has_prices": boolean,"id": string,"invoice_id": string | null,"mime_type": string,"order_id": string | null,"path": string,"rfq_id": string | null,"size_bytes": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "bucket": string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name": string,"id"?: string,"invoice_id"?: string | null,"mime_type": string,"order_id"?: string | null,"path": string,"rfq_id"?: string | null,"size_bytes": number
+                    "bucket": string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name": string,"has_prices"?: boolean,"id"?: string,"invoice_id"?: string | null,"mime_type": string,"order_id"?: string | null,"path": string,"rfq_id"?: string | null,"size_bytes": number
                   }
                   Update: {
-                    "bucket"?: string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name"?: string,"id"?: string,"invoice_id"?: string | null,"mime_type"?: string,"order_id"?: string | null,"path"?: string,"rfq_id"?: string | null,"size_bytes"?: number
+                    "bucket"?: string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name"?: string,"has_prices"?: boolean,"id"?: string,"invoice_id"?: string | null,"mime_type"?: string,"order_id"?: string | null,"path"?: string,"rfq_id"?: string | null,"size_bytes"?: number
                   }
                   Relationships: [
                     {
@@ -1029,14 +1029,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string
+                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1081,6 +1081,36 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     },{
       foreignKeyName: "orders_rfq_id_fkey"
       columns: ["rfq_id"]
@@ -1832,6 +1862,14 @@ isOneToOne: false
       referencedColumns: ["order_id"]
     }
                   ]
+                },"v_jobs": {
+                  Row: {
+                    "cancelled_orders": number | null,"company_id": string | null,"is_history": boolean | null,"items_summary": string | null,"job_key": string | null,"kind": string | null,"last_activity_on": string | null,"order_id": string | null,"owner_id": string | null,"repeat_of_job_key": string | null,"rfq_id": string | null,"site_id": string | null,"stage": string | null,"stage_detail": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_month_cash_flow": {
                   Row: {
                     "expenses_count": number | null,"frozen": boolean | null,"money_in": number | null,"money_out": number | null,"month": string | null,"payments_count": number | null
@@ -2204,6 +2242,9 @@ isOneToOne: false
 "approve_expense_claim":
 { Args: { "p_category": string,"p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
                            },
+"attachment_is_priced":
+{ Args: { "p_bucket": string,"p_name": string }; Returns: boolean
+                           },
 "brand_tokens":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
@@ -2309,6 +2350,11 @@ isOneToOne: false
                            },
 "item_text_norm":
 { Args: { "t": string }; Returns: string
+                           },
+"job_stage":
+{ Args: { "p_order_id": string,"p_rfq_id": string }; Returns: {
+              "is_history": boolean,"last_activity_on": string,"stage": string,"stage_detail": string
+            }[]
                            },
 "lead_time_upper_days":
 { Args: { "p_text": string }; Returns: number
