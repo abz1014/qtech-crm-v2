@@ -97,8 +97,8 @@ select is(pg_temp.as_('sales', $q$select count(*)::text from public.attachments 
 select is(pg_temp.as_('sales', $q$select count(*)::text from public.attachments where path like 'hp/%'$q$), '6', 'sales reads all six files');
 select is(pg_temp.as_('engineer', $q$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id) values ('rfq-files', 'hp/new.jpg', 'new.jpg', 'image/jpeg', 10, 'b1000000-0000-4000-8000-000000000010') returning id::text$q$) not like 'E:%',
   true, 'an engineer can still attach a photo (untagged by default)');
-select is(pg_temp.as_('engineer', $q$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices) values ('rfq-files', 'hp/tagged.jpg', 'tagged.jpg', 'image/jpeg', 10, 'b1000000-0000-4000-8000-000000000010', true) returning id::text$q$),
-  'E:42501', 'an engineer cannot tag an attachment');
+select is(pg_temp.as_('engineer', $q$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices) values ('rfq-files', 'hp/tagged.jpg', 'tagged.jpg', 'image/jpeg', 10, 'b1000000-0000-4000-8000-000000000010', true) returning has_prices::text$q$),
+  'false', 'an engineer cannot tag an attachment (0103: the row is stored untagged)');
 select is(pg_temp.as_('engineer', $q$update public.attachments set has_prices = true where id = 'b1000000-0000-4000-8000-000000000032' returning id::text$q$),
   'E:42501', 'nor tag an existing one');
 select is(pg_temp.as_('engineer', $q$update public.attachments set file_name = 'x.pdf' where id = 'b1000000-0000-4000-8000-000000000030' returning id::text$q$),

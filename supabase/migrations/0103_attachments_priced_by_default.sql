@@ -34,5 +34,5 @@ create trigger attachments_engineer_untagged
 comment on column public.attachments.has_prices is
   '0100/0103: the file shows a price (customer PO, supplier quote, enquiry with prices, our quotation or PO, a receipt). An engineer reads no such row or file. Default true (a forgotten tag hides, never exposes); an engineer''s own uploads are stored false by trigger. Set by admin and sales, never by an engineer.';
 
-revoke all on function public.attachments_engineer_untagged() from public, anon;
-grant execute on function public.attachments_engineer_untagged() to authenticated, qtech_engineer;
+-- a trigger function: no client or PUBLIC grant (the 0065 rule); a trigger fires whoever is inserting
+revoke all on function public.attachments_engineer_untagged() from public, anon, authenticated, qtech_engineer;
