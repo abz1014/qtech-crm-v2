@@ -20,7 +20,7 @@ on:
       viewports:
         description: Viewports as WIDTHxHEIGHT (space separated)
         required: false
-        default: 1366x768 1920x1080 375x812 320x640
+        default: 1440x900 375x812 320x640
       screens:
         description: Only visits or screens whose id matches this regular expression (empty for all)
         required: false
