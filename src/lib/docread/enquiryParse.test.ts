@@ -841,3 +841,10 @@ describe('parseEnquiry: a legal form alone is no company name (R-W6b)', () => {
     expect(r.facts.company?.name ?? null).toBeNull()
   })
 })
+
+describe('parseEnquiry: a forwarding note is no item (round 2)', () => {
+  it('"@Name for necessary action" above a forwarded enquiry', () => {
+    const r = parse('@AB for necessary action.\nFrom: Buyer <b@example-mills.example>\nSent: Friday, October 16, 2026 2:38 PM\nSubject: Quotation\n\nPlease quote 2 nos valve')
+    expect(r.items.map(i => i.description)).toEqual(['valve'])
+  })
+})

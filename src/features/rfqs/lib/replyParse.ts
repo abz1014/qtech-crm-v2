@@ -513,10 +513,22 @@ function findAnchoredPrices(w: string, hintCurrency: ReplyCurrency | null): Pric
   // currency first: "USD 1,234.50", "US$120", "Rs. 4 500", "RMB350"
   const pre = new RegExp(CUR_PREFIX_SRC + AMOUNT_AFTER_CUR, 'gi')
   let m: RegExpExecArray | null
-  while ((m = pre.exec(w))) accept(m, 2, 3, m[1] ?? '', m.index, m.index + m[0].length, m.index + m[0].length)
+  const found: Array<{ m: RegExpExecArray; numIdx: number; kIdx: number; cur: string; start: number; end: number; gap: number }> = []
+  while ((m = pre.exec(w))) {
+    const cur = m[1] ?? ''
+    found.push({ m, numIdx: 2, kIdx: 3, cur, start: m.index, end: m.index + m[0].length, gap: (/^\s*/.exec(m[0].slice(cur.length))?.[0].length ?? 0) })
+  }
   // amount first: "120 USD", "350元", "1.2k usd"
   const suf = new RegExp(AMOUNT_SP + CUR_SUFFIX_SRC, 'gi')
-  while ((m = suf.exec(w))) accept(m, 1, 2, m[3] ?? m[4] ?? '', m.index, m.index + m[0].length, m.index + m[0].length)
+  while ((m = suf.exec(w))) {
+    const cur = m[3] ?? m[4] ?? ''
+    const amountEnd = (m[1] ?? '').length + (m[2] ?? '').length
+    found.push({ m, numIdx: 1, kIdx: 2, cur, start: m.index, end: m.index + m[0].length, gap: m[0].slice(amountEnd, m[0].length - cur.length).replace(/[^ ]/g, '').length })
+  }
+  // Where the two readings overlap, the currency written right against its amount wins: "69,87USD 1 In stock" is 69.87 USD (and a
+  // quantity 1), not "USD 1"; "70  $294" is $294 (and a 70), not "70 $".
+  found.sort((x, y) => x.gap - y.gap || y.numIdx - x.numIdx || x.start - y.start)
+  for (const f of found) accept(f.m, f.numIdx, f.kIdx, f.cur, f.start, f.end, f.end)
   out.sort((a, b) => a.start - b.start)
   // classify each by the words around it
   for (const c of out) {
@@ -640,7 +652,9 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
     else if (/^[\s|(]*(?:USD|EUR|CNY|RMB|AED|GBP|PKR)(?:[\s|)]+(?:USD|EUR|CNY|RMB|AED|GBP|PKR))*[\s|)]*$/i.test(w)) f.declaredCurrency = normaliseCurrency(/[A-Za-z]+/.exec(w)?.[0] ?? null)
   }
   const reg = REGRET_RE.exec(w)
-  if (reg && !priced && !(f.lead && f.lead.daysMax !== null && !f.lead.exStock)) {
+  // "If you have no orders, we will be unable to quote again": a condition, not a refusal of this enquiry.
+  const conditional = /^\s*(?:if|unless|in\s+case|should)\b/i.test(orig)
+  if (reg && !priced && !conditional && !(f.lead && f.lead.daysMax !== null && !f.lead.exStock)) {
     f.regret = { kind: regretKind(orig), text: orig.trim() }
   }
   return f
@@ -869,6 +883,52 @@ function tableHeader(cells: string[]): TableCols | null {
  * Three cells of a row, left to right, where the first is a whole quantity and the third is it times the second: the unit
  * price ("50 | 480 | 24000.00"). Null when no such three are there.
  */
+/**
+ * A row that has fewer cells than the heading (a mail client does not write an empty cell: "6 | 265 | 0.1 kg | France" under
+ * "Qty | Price | Delivery | Weight | Origin"): the empty cells are put back where the cells fit the columns best. Null when the
+ * row is not short by one or two cells, or no placement is clearly best and gives the price column a number.
+ */
+function alignShortRow(cells: string[], cols: TableCols): string[] | null {
+  const missing = cols.n - cells.length
+  if (missing < 1 || missing > 2 || cols.n > 14) return null
+  const isNum = (c: string) => /^[\D]{0,4}\d[\d,.]*\D{0,4}$/.test(c) && /\d/.test(c)
+  const fit = (c: string, i: number): number => {
+    const empty = c === ''
+    if (i === cols.num) return /^\d{1,3}$/.test(c) ? 2 : -2
+    if (i === cols.price || i === cols.total) return empty ? -1 : isNum(c) ? 2 : -2
+    if (i === cols.qty) return empty ? -1 : /^\d+(?:\.\d+)?$/.test(c) ? 2 : -2
+    if (i === cols.lead) return empty ? 0 : findLeadTime(c, c) ? 2 : -1
+    if (i === cols.origin) return empty ? 0 : /^[A-Za-z][A-Za-z .&/-]*$/.test(c) && !/\d/.test(c) ? 1 : -1
+    if (i === cols.moq) return empty ? 0 : /^\d+$/.test(c) ? 1 : -1
+    if (i === cols.cur) return empty ? 0 : normaliseCurrency(c) ? 1 : -1
+    return 0
+  }
+  let best: string[] | null = null
+  let bestScore = -Infinity
+  let ties = 0
+  const place = (k: number, out: string[], from: number, score: number, left: number) => {
+    if (k === cols.n) {
+      if (left !== 0) return
+      if (score > bestScore) {
+        best = [...out]
+        bestScore = score
+        ties = 0
+      } else if (score === bestScore) ties++
+      return
+    }
+    const cellsLeft = cells.length - from
+    // keep the next cell here
+    if (cellsLeft > 0) place(k + 1, [...out, cells[from] as string], from + 1, score + fit(cells[from] as string, k), left)
+    // or leave this column empty
+    if (left > 0) place(k + 1, [...out, ''], from, score + fit('', k), left - 1)
+  }
+  place(0, [], 0, 0, missing)
+  const filled = best as string[] | null
+  if (!filled || ties > 0) return null
+  const pc = cols.price >= 0 ? cols.price : cols.total
+  return pc >= 0 && isNum(filled[pc] ?? '') ? filled : null
+}
+
 function qtyPriceTotal(cells: string[]): { qty: number; price: number } | null {
   const nums = cells.map((c, i) => {
     const t = c.trim().replace(/^(?:[A-Za-z$€£¥]{1,4}\.?\s?)/, '')
@@ -1020,7 +1080,7 @@ const SIGN_OFF = /^\s*(?:(?:with\s+)?(?:best|kind|warm|many|sincere)?\s*(?:regar
 /** An amount written with its currency: the only thing read from a signature. */
 const ANCHORED_AMOUNT = /[$€£¥￥]\s*\d|\b(?:USD|EUR|CNY|RMB|AED|GBP|PKR|Rs\.?)\s*\d|\d\s*(?:USD|EUR|CNY|RMB|AED|GBP|PKR|元)\b/i
 /** Contact lines of a signature: telephone, address, messaging ids, web. */
-const CONTACT_LINE = /^\s*[*•-]?\s*(?:tel(?:ephone)?|fax|mob(?:ile)?|cell|phone|add(?:ress)?|post\s*code|zip|qq|wechat|whatsapp|skype|teams|e-?mail|website|web|hotmail|gmail|mailto)\s*[:：.\t]|^\s*(?:www\.|https?:)/i
+const CONTACT_LINE = /^\s*[*•-]?\s*(?:tel(?:ephone)?|fax|mob(?:ile)?|cell|phone|add(?:ress)?|post\s*code|zip|qq|wechat|whatsapp|skype|teams|e-?mail|website|web|hotmail|gmail|mailto)\s*\d?\s*[:：.\t]|^\s*(?:www\.|https?:)/i
 const ADDRESS_LINE = /^[^$€£¥￥]*\b(?:building|road|street|lane|district|province|block|floor|room|mansion|tower|avenue|town|village|plaza|industrial|estate|park|strasse|straße)\b[^$€£¥￥]*,[^$€£¥￥]*$/i
 
 const ASK_PLEASE =
@@ -1109,6 +1169,11 @@ function prepare(text: string): Line[] {
     if (!t.trim() || /^\s*>/.test(t) || GREETING_HEADER.test(t)) {
       if (!t.trim()) out.push({ n: i + 1, text: '' })
       return
+    }
+    // A "Best regards" in the middle of a mail (a template's greeting above the quotation table): the table's heading ends it.
+    if (signed) {
+      const hc = t.includes('	') ? splitCells(t) : null
+      if (hc && tableHeader(hc)) signed = false
     }
     if (CONTACT_LINE.test(t) || (signed && !ANCHORED_AMOUNT.test(t)) || (ADDRESS_LINE.test(t) && !ANCHORED_AMOUNT.test(t))) return
     if (SIGN_OFF.test(t) && t.length < 60) {
@@ -1200,8 +1265,13 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
       cols = header
       continue
     }
-    const rowCols = cols && cells && cells.length === cols.n ? cols : null
-    const f = rowCols && cells ? analyseRow(cells, rowCols, opts.today) : analyse(line.text, opts.today)
+    // A row a mail client left short (its empty cells are not written) is put back under the heading it belongs to.
+    const aligned = cols && cells && cells.length < cols.n ? alignShortRow(cells, cols) : null
+    const rowCells = aligned ?? cells
+    const rowCols = cols && rowCells && rowCells.length === cols.n ? cols : null
+    // A list number in front of a sentence ("3.) Payment terms: ...") is a list number, not a price.
+    const analysable = cells ? line.text : line.text.replace(/^\s*\d{1,2}\s*[.)]+\s*(?=[A-Za-z])/, '')
+    const f = rowCols && rowCells ? analyseRow(rowCells, rowCols, opts.today) : analyse(analysable, opts.today)
     // A row whose empty cells were trimmed ends in "NA.": no price for this item.
     if (!f.regret && !rowCols && cells && cells.length >= 3 && f.prices.length === 0 && /^(?:n\.?\/?a\.?|nil|not\s+available|unavailable)$/i.test(cells[cells.length - 1] ?? '')) {
       f.regret = { kind: 'unavailable', text: line.text.trim() }
@@ -1215,7 +1285,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
         f.qty = qpt.qty
       }
     }
-    const rowNumber = rowCols && cells && rowCols.num >= 0 && /^\d{1,3}$/.test(cells[rowCols.num] ?? '') ? Number(cells[rowCols.num]) - 1 : null
+    const rowNumber = rowCols && rowCells && rowCols.num >= 0 && /^\d{1,3}$/.test(rowCells[rowCols.num] ?? '') ? Number(rowCells[rowCols.num]) - 1 : null
     const numIdx = rowNumber !== null && rowNumber >= 0 && rowNumber < idx.length ? rowNumber : markerNumber(line.text, idx.length)
     let match = matchByContent(line.text, idx)
     // The same model on two RFQ lines: the row's own item number decides, else the first of them that has no answer yet.
@@ -1282,6 +1352,14 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
       continue
     }
 
+    // A numbered sentence that names no item ("3) Handling charge: USD 12.00", "4) For orders under 500 EUR a surcharge") is a term of
+    // the offer, not an offer.
+    if (!cells && /^\s*\d{1,2}\s*[.)]+\s*[A-Za-z]/.test(line.text) && line.text.trim().split(/\s+/).length >= 3) {
+      if (f.declaredCurrency) globals.declaredCurrency ??= f.declaredCurrency
+      blankSince = false
+      continue
+    }
+
     if (!hasData(f)) {
       if (f.declaredCurrency) globals.declaredCurrency ??= f.declaredCurrency
       blankSince = false
@@ -1292,8 +1370,13 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     // A price label ("Unit price $181") under a block of the item's own lines belongs to that item even across blank lines (a mail client
     // that double-spaces its text), as long as it is close.
     const near = current !== null && current.itemIdx !== null && current.f.prices.length === 0 && f.prices.length > 0 && PRICE_LABEL_LINE.test(line.text) && line.n - (current.lines[current.lines.length - 1] ?? 0) <= 14
+    // The price line straight under a line that named the item and gave no price ("1) XQ-100 Maker - NEW" / "Timing relay ...
+    // 69,87USD 1 In stock"), and a line that only repeats that price as the total ("5-7 days  69,87USD").
+    const headerUnder = current !== null && current.itemIdx !== null && current.f.prices.length === 0 && !blankSince && f.prices.length > 0 && line.n - (current.lines[current.lines.length - 1] ?? 0) <= 2
+    const repeatsPrice =
+      current !== null && current.itemIdx !== null && !blankSince && f.prices.length > 0 && f.prices.every(p => current!.f.prices.some(c => Math.abs(c.value - p.value) < 0.005)) && line.n - (current.lines[current.lines.length - 1] ?? 0) <= 2
     const continuation =
-      current !== null && !forAll && (near || (!blankSince && (LABEL_START.test(line.text) || /^\s{2,}\S/.test(line.text) || /^\s*[-•*]\s/.test(line.text))))
+      current !== null && !forAll && (near || headerUnder || repeatsPrice || (!blankSince && (LABEL_START.test(line.text) || /^\s{2,}\S/.test(line.text) || /^\s*[-•*]\s/.test(line.text))))
     if (continuation && current) {
       mergeInto(current, f, line)
     } else if (!f.prices.length) {
