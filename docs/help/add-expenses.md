@@ -13,4 +13,4 @@ related: expense-categories, expense-report, pay-supplier, cash-in-hand, approve
 5. Optional: [Paid on], a [Detail] like "LEA-1234", a [Receipt] photo, or tick [Has a GST invoice] for the GST.
 6. Many receipts at once? Tap [Add expenses] for one row each, then [Save N expenses].
 
-Tip: A supplier is paid with Pay on the supplier order, not here. A wrong expense: open its ⋯ menu and delete it (Undo is offered). A closed month's expenses are locked.
+Tip: A supplier is paid with Pay on the supplier order, not here. A wrong expense: open its ⋯ menu and delete it (Undo is offered). A closed month's expenses are locked, but [History] beside the lock still shows who changed what.
