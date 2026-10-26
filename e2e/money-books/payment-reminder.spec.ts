@@ -277,7 +277,6 @@ test.describe('Today v3 money rules (M08)', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await openAs(page, 'admin', '/todo')
     await showAllTodo(page)
-    await page.getByRole('radio', { name: /^Money/ }).click()
     await expect(page.locator(tcs)).toHaveCount(1)
     await review(page, 'm08-today-money-375')
     expect(await axeViolations(page)).toEqual([])
