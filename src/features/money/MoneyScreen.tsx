@@ -7,7 +7,7 @@ import { MONTH_REPORT_KEYS } from '@/features/money/monthEnd/reportList'
 import { defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
 import { businessToday } from '@/lib/dates'
 
-// One download per page (perf/lcp): opening Who owes us does not bring the month-end reports, the expense sheet and the rest.
+// One download per page (perf/lcp): opening To collect does not bring the month-end reports, the expense sheet and the rest.
 const MoneyHome = lazy(() => import('@/features/money/home/MoneyHome').then(m => ({ default: m.MoneyHome })))
 const GstToFbrPage = lazy(() => import('@/features/money/accounts/GstToFbrPage').then(m => ({ default: m.GstToFbrPage })))
 const ReceivablesPage = lazy(() => import('@/features/money/payments/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })))
@@ -30,10 +30,10 @@ const EnquiriesReportPage = lazy(() => import('@/features/reports/ReportsPage').
 /**
  * Everything under /money (owner decision 2026-10-19: four tabs, two levels).
  *   (index)          Money home, admin only (P6-A: four numbers); sales open on receivables
- *   receivables      Who owes us: admin and sales
- *   gst-register     Invoices & GST: admin and sales (sales get the simpler list)
+ *   receivables      To collect: admin and sales
+ *   gst-register     Invoices: admin and sales (sales get the simpler list)
  *   expenses         admin only
- *   month-end        the checklist, admin only; from it: month-end/bank (Match bank statement), margins, exceptions (Mistakes to fix)
+ *   month-end        the checklist, admin only; from it: month-end/bank (Bank check), margins, exceptions (Mistakes to fix)
  *   reports          the one Reports view: admin and sales (each sees the reports their role may read); reports/<key> opens one
  * The old addresses keep working: /money/month-end/{pnl,categories,aging,owe,gst,team} open the same report under Reports, with
  * the month kept. Sales see the no-access page on admin views; engineers never reach Money at all (RequireRole).
@@ -50,8 +50,8 @@ export default function MoneyScreen() {
       <Route path="receivables" element={<ReceivablesPage />} />
       <Route path="gst-register" element={<GstRegisterPage />} />
       <Route path="expenses" element={adminOnly(<ExpensesPage />, 'Expenses')} />
-      <Route path="month-end" element={adminOnly(<ChecklistPage />, 'Month end')} />
-      <Route path="month-end/bank" element={adminOnly(<BankTickPage />, 'Match bank statement')} />
+      <Route path="month-end" element={adminOnly(<ChecklistPage />, 'Lock a month')} />
+      <Route path="month-end/bank" element={adminOnly(<BankTickPage />, 'Bank check')} />
       {MONTH_REPORT_KEYS.map(key => (
         <Route key={key} path={`month-end/${key}`} element={<OldReportAddress report={key} />} />
       ))}
@@ -72,7 +72,7 @@ function OldReportAddress({ report }: { report: string }) {
 
 /**
  * /money/reports/categories?month=2026-09 (the old "Expenses by category", replaced by the Expenses report on 2026-10-22) opens
- * /money/reports/expenses?by=month&period=2026-09; with no month, the month Month end shows (the one that just ended).
+ * /money/reports/expenses?by=month&period=2026-09; with no month, the month Lock a month shows (the one that just ended).
  */
 function OldCategoriesAddress() {
   const { search } = useLocation()

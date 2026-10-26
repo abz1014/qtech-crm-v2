@@ -5,7 +5,7 @@ import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
- * M09 (payment-reminder panel beside Who owes us, the old Receivables) and M08 (Today v3 money rules), end to end on the local CI stack.
+ * M09 (payment-reminder panel beside To collect, the old Receivables) and M08 (Today v3 money rules), end to end on the local CI stack.
  *
  * FE-2 target asserted here: "Copy and mark reminded" is ONE tap (one mouse press, no key) and stamps every invoice of the
  * order; Undo inside 10 seconds puts the old values back; the order then moves to Waiting on Today; an engineer can neither
@@ -191,7 +191,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(panel.getByTestId('reminder-text')).toHaveCount(0)
   })
 
-  test('sales get the panel on Who owes us (one name for both roles)', async ({ page }) => {
+  test('sales get the panel on To collect (one name for both roles)', async ({ page }) => {
     const s = await seedOverdue()
     await openAs(page, 'sales', '/money/receivables')
     await pick(page, s)
@@ -237,17 +237,17 @@ test.describe('Today v3 money rules (M08)', () => {
   const tcs = 'li[data-rule="tcs_not_sent"]'
 
   test('admin sees the TCS item as one rolled-up row that opens the register', async ({ page }) => {
-    // An invoice from 10 days ago with no courier date: "n invoices not sent by TCS" (one rolled-up item).
+    // An invoice from 10 days ago with no courier date: "n invoices not posted" (one rolled-up item).
     await seedOverdue({ invoiceDate: karachiDay(-10) })
     await openAs(page, 'admin', '/todo')
     await showAllTodo(page)
     await expect(page.locator(tcs)).toHaveCount(1)
-    await expect(page.locator(tcs)).toContainText(/\d+ invoices? not sent by TCS/)
+    await expect(page.locator(tcs)).toContainText(/\d+ invoices? not posted/)
     // Redesign phase 0: a roll-up chore is listed, not counted, and Money carries no number (the one badge is Today's)
     await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Money', exact: true })).toBeVisible()
     await review(page, 'm08-today-money-1440')
     await page.locator(`${tcs} button`).first().click()
-    await expect(page.getByRole('button', { name: /Open Invoices & GST/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Open Invoices/ })).toBeVisible()
     await review(page, 'm08-today-money-pane-1440')
   })
 

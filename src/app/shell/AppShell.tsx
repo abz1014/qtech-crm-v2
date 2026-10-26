@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
-import { navItemForPath, type NavKey } from '@/app/navConfig'
+import { navItemForPath, type CountKey } from '@/app/navConfig'
 import { useSession, type SessionUser } from '@/app/session'
 import { ToastProvider } from '@/ui/Toast'
 import { useSearchPaletteSource } from '@/features/search/paletteSource'
@@ -28,7 +28,7 @@ const NavCountsSource = lazy(() => import('@/app/shell/useNavCounts').catch(() =
 
 interface AppShellProps {
   /** Counts beside the destinations. Today and RFQs are read from the shared cache; a value passed here wins. */
-  counts?: Partial<Record<NavKey, number>>
+  counts?: Partial<Record<CountKey, number>>
 }
 
 /**
@@ -54,12 +54,14 @@ export function AppShell({ counts }: AppShellProps) {
   )
 }
 
-function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
+function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Record<CountKey, number>> }) {
   const [nav, setNav] = useState<{ counts: NavCounts; ready: boolean }>({ counts: {}, ready: false })
   const settled = usePageSettled()
   const counts = { ...nav.counts, ...given }
   // One badge (redesign phase 0, plan section (c)): Today's. The other numbers still reach the pages (NavCountsContext).
   const badges = { today: counts.today }
+  // ...and Money's red dot while an invoice is late (no number anywhere else)
+  const dots = { money: nav.counts.moneyLate === true }
   useEffect(() => {
     if (settled) markContentDrawn()
   }, [settled])
@@ -81,7 +83,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       >
         Skip to content
       </a>
-      <TopBar user={user} counts={badges} onSearch={palette.open} onCapture={openCapture} />
+      <TopBar user={user} counts={badges} dots={dots} onSearch={palette.open} onCapture={openCapture} />
       <MobileBar user={user} title={title} onSearch={palette.open} onCapture={openCapture} />
       <main id="main" tabIndex={-1} className="min-h-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
@@ -90,7 +92,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
           </NavCountsContext.Provider>
         </ErrorBoundary>
       </main>
-      <BottomTabs role={user.role} counts={badges} />
+      <BottomTabs role={user.role} counts={badges} dots={dots} />
       <HelpHost />
       {settled ? (
         <Suspense fallback={null}>

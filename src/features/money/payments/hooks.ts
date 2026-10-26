@@ -9,7 +9,7 @@ export function useReceivables(enabled = true) {
   return useQuery({ ...receivablesQuery(), enabled })
 }
 
-/** Who owes us totals, counted on the server (receivables_summary). */
+/** To collect totals, counted on the server (receivables_summary). */
 export const receivablesSummaryQuery = (today: string) => ({ queryKey: qk.money.receivables.summary(today), queryFn: () => api.getReceivablesSummary(today) })
 export function useReceivablesSummary(today: string, enabled = true) {
   return useQuery({ ...receivablesSummaryQuery(today), enabled })

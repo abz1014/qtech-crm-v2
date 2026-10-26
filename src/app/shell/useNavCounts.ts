@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
-import type { NavKey } from '@/app/navConfig'
+import type { CountKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { navSectionOf, type NavSection } from '@/features/today/rules'
 import { needsYouItems } from '@/features/today/needsYou'
 import type { Role, TodayView } from '@/features/today/types'
 
-export type NavCounts = Partial<Record<NavKey, number>>
+/** The numbers per share of the one list, plus whether an invoice is late (Money's red dot: the only badge besides To do's number). */
+export type NavCounts = Partial<Record<CountKey, number>> & { moneyLate?: boolean }
 
 /**
  * The "needs you" numbers, all from ONE definition (features/today/needsYou.ts, redesign phase 0): the items on the person's own
@@ -23,6 +24,9 @@ export function navCountsFrom(view: TodayView, role: string): NavCounts {
   const some = (n: number) => (n > 0 ? n : undefined) // nothing waiting: no number, no nag
   const section = (key: NavSection) => some(items.filter(i => navSectionOf(i) === key).length)
   const counts: NavCounts = { today: some(items.length), rfqs: section('rfqs'), orders: section('orders') }
+  // Money's red dot: a payment past its due date on a real (not imported) invoice, chased or not. A number is never drawn there.
+  const late = [...view.active, ...view.waiting].some(i => i.rule === 'payment_overdue')
+  if (role === 'admin' || role === 'sales') counts.moneyLate = late
   if (role === 'admin' || role === 'sales') counts.money = section('money')
   return counts
 }

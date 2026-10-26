@@ -14,7 +14,7 @@ import { PageHeader } from '@/ui/PageHeader'
  * The frame every Money view sits in: the title (the tab's own name, so the page always says where you are), the page's one
  * green action and the Money tabs (owner decision 2026-10-19: two levels, never a third strip; round 3: Reports is the fifth
  * tab, so every report page lights a tab). Desktop: one row of tabs. Phone (below 768): ONE row of short labels
- * ("Owed · Invoices · Expenses · Month end"), never a grid and never a sideways strip. Five do not fit at 320 px, so admin's
+ * ("Owed · Invoices · Expenses · Lock a month"), never a grid and never a sideways strip. Five do not fit at 320 px, so admin's
  * Reports sits beside the page action on a phone (lit when open); the phone bar names the view. No date line: the month
  * views carry their own month. No tab carries a number (redesign phase 0, plan section (c)): the one "needs you" count is
  * Today's, and a late payment is a row on Today (features/today/needsYou.ts).
@@ -91,14 +91,14 @@ export function MoneyFrame({
   )
 }
 
-// Memo: a re-render of the frame must not replace the bar a sub-page set (Month end's hideTabs) with the plain title. It re-runs
+// Memo: a re-render of the frame must not replace the bar a sub-page set (Lock a month's hideTabs) with the plain title. It re-runs
 // only when the title changes.
 const FrameBar = memo(function FrameBar({ title }: { title: string }) {
   useMobileBar({ title })
   return null
 })
 
-/** One Money tab. A plain Link: the lit tab follows `active` (Month end stays lit on the pages reached from it), not the address. */
+/** One Money tab. A plain Link: the lit tab follows `active` (Lock a month stays lit on the pages reached from it), not the address. */
 function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolean; phone?: boolean }) {
   return (
     <Link
@@ -118,7 +118,7 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
 }
 
 /**
- * The heading of a view reached from a Money tab rather than being one (Match bank statement, Margins, Mistakes to fix): a
+ * The heading of a view reached from a Money tab rather than being one (Bank check, Margins, Mistakes to fix): a
  * back link to where it was opened from, the title and its actions. It replaces the old third strip of tabs.
  * On a phone the back link is the phone bar's own back arrow (one bar, UX audit 2026-10-19), so it is not drawn twice, and
  * the title is the phone bar's (not repeated as a heading).

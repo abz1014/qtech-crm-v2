@@ -71,10 +71,10 @@ describe('the checklist', () => {
     expect(checksWithItems(cards)).toBe(0)
   })
 
-  // Round 3: Month end said "5 not matched" while Match bank statement said "7 to match" for the same September. Both now
+  // Round 3: Lock a month said "5 not matched" while Bank check said "7 to match" for the same September. Both now
   // count statement LINES: the audit's month had 1 payment in + 4 expenses out (bank_unticked 5) and 2 FBR invoices in 2 PSID
   // groups (fbr_deposits_unticked 2, groups 2): 1 + 4 + 2 = 7, the bank page's 1 in + 6 out.
-  it('says the same "to match" as Match bank statement: an FBR payment is one line per PSID', () => {
+  it('says the same "to match" as Bank check: an FBR payment is one line per PSID', () => {
     const sept = buildChecklist(
       [
         { check_key: 'bank_unticked', n: 5 },
@@ -456,7 +456,7 @@ describe('the checklist data lines (migration 0064, g2-month-end "Checklist")', 
   it('opens the one order a single unresolved payment belongs to', () => {
     expect(cards[5].linkLabel).toBe('Open ORD-0012')
     expect(cards[5].to).toBe('/orders/o-12')
-    expect(cards[0].linkLabel).toBe('Match bank statement')
+    expect(cards[0].linkLabel).toBe('Bank check')
   })
   it('lists the commonest few and says how many more', () => {
     const more = buildChecklist([{ check_key: 'provisional_margins', n: 5 }], '2026-10', { provisional_margins: { numbers: [9, 8, 7] } })
@@ -467,7 +467,7 @@ describe('the checklist data lines (migration 0064, g2-month-end "Checklist")', 
   it('falls back to the fixed wording when the figures did not load', () => {
     const plainCards = buildChecklist(STATUS, '2026-10')
     expect(plainCards[0].sub).toMatch(/^Bank payments, bank expenses and FBR payments dated up to month end/)
-    expect(plainCards[5].linkLabel).toBe('Open Who owes us')
+    expect(plainCards[5].linkLabel).toBe('Open To collect')
   })
 })
 

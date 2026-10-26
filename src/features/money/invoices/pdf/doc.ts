@@ -47,7 +47,7 @@ export interface InvoiceDoc {
   copy: InvoiceCopy
   /**
    * The order's due date: its EARLIEST invoice plus the payment terms (else the company default), the date order_receivables,
-   * Today and Who owes us use (HW-12). A second or part invoice does not move it later. Null without terms.
+   * Today and To collect use (HW-12). A second or part invoice does not move it later. Null without terms.
    */
   dueOn: string | null
   orderRef: string | null

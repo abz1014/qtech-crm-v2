@@ -3,7 +3,7 @@ id: fix-rfq
 title: Fix a mistake on an RFQ
 roles: sales, admin, engineer
 keywords: fix, edit, change, correct, mistake, wrong, customer, site, contact, item, remove item
-screens: /rfqs
+screens: /rfqs, /jobs
 related: find-old-rfq
 ---
 1. Open the RFQ and tap [More], then [Edit RFQ details].

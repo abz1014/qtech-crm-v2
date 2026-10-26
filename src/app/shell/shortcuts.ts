@@ -38,7 +38,7 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
   return [
     // Anywhere outside a text field
     { group: 'Anywhere', keys: [mod, 'K'], what: 'Search or jump to', where: 'Also works inside a text box', handles: ['k'] },
-    { group: 'Anywhere', keys: ['N'], what: 'New RFQ', handles: ['n'] },
+    { group: 'Anywhere', keys: ['N'], what: 'New enquiry', handles: ['n'] },
     { group: 'Anywhere', keys: ['E'], what: 'Add an expense', where: 'Admin', handles: ['e'] },
     { group: 'Anywhere', keys: ['O'], what: 'Order without enquiry', where: 'Admin and sales', handles: ['o'] },
     { group: 'Anywhere', keys: ['C'], what: 'Paste or photo', handles: ['c'] },

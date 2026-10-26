@@ -24,7 +24,7 @@ import { useCategories, useGroups, useLegOptions, useOrderOptions } from '@/feat
  */
 export function ExpensesPage() {
   const [params, setParams] = useSearchParams()
-  // /money/expenses?burst=1 opens the sheet straight away (the Month end empty state links here).
+  // /money/expenses?burst=1 opens the sheet straight away (the Lock a month empty state links here).
   const [burst, setBurst] = useState(() => params.get('burst') !== null)
   const linked = params.get('add') !== null
   const orderId = params.get('order')

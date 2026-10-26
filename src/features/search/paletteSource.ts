@@ -54,7 +54,7 @@ const LIST_NAME: Record<SearchKind, string> = {
   order: 'Orders',
   item: 'Orders',
   po: 'Orders',
-  invoice: 'Invoices & GST',
+  invoice: 'Invoices',
 }
 
 /**

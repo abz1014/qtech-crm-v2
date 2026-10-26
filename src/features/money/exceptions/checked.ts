@@ -52,7 +52,7 @@ function subscribe(notify: () => void) {
   }
 }
 
-/** The findings still open for this person (Month end's count and row read this too, so a checked finding leaves both). */
+/** The findings still open for this person (Lock a month's count and row read this too, so a checked finding leaves both). */
 export const openFindings = (userId: string | null, list: readonly ReconciliationException[]): ReconciliationException[] =>
   userId ? list.filter(e => !isChecked(checkedKey(userId, e))) : [...list]
 

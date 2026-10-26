@@ -321,7 +321,7 @@ test('HE-20 a mistyped record link (/companies/zzz) says "Check your connection"
   await context.close()
 })
 
-test('HE-21 Month end opens for a future month from the link (?month=2030-01) and lists bank lines "to match" for January 2030', async ({ browser }, info) => {
+test('HE-21 Lock a month opens for a future month from the link (?month=2030-01) and lists bank lines "to match" for January 2030', async ({ browser }, info) => {
   const context = await contextAs(browser, info, 'admin', vp('w1366'))
   const page = await context.newPage()
   await page.goto('/money/month-end?month=2030-01')

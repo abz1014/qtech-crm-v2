@@ -17,14 +17,17 @@ describe('phone tabs: the top bar counts as badges', () => {
   it('a count shows on the icon and is read with the label; no badge for zero or no count', () => {
     render(
       <MemoryRouter initialEntries={['/todo']}>
-        <BottomTabs role="admin" counts={{ today: 9, rfqs: 140, orders: 0 }} />
+        <BottomTabs role="admin" counts={{ today: 140 }} dots={{ money: true }} />
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: /^To do\s?, 9 need you$/ })).toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: /^RFQs\s?, 140 need you$/ })).toHaveTextContent('99+')
-    expect(within(nav).getByRole('link', { name: 'Orders' }).querySelector('[data-needs-count]')).toBeNull()
+    expect(within(nav).getByRole('link', { name: /^To do\s?, 140 need you$/ })).toHaveTextContent('99+')
+    expect(within(nav).getByRole('link', { name: 'Jobs' }).querySelector('[data-needs-count]')).toBeNull()
     expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
+    // Money has no number, only a red dot while an invoice is late, and its name says so
+    const money = within(nav).getByRole('link', { name: /^Money\s?, an invoice is late$/ })
+    expect(money.querySelector('[data-needs-count]')).toBeNull()
+    expect(money.querySelector('[data-late-dot]')).not.toBeNull()
   })
 
   it('every column is at least as wide as its label, so a long label never clips', () => {
@@ -161,9 +164,9 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     }
   })
 
-  it('the Money pages follow the Money tabs: sales find Who owes us and Invoices & GST, only admins the rest', async () => {
-    const admin = ['Who owes us', 'Invoices & GST', 'Reports', 'Expenses', 'Add expenses', 'Month end', 'Match bank statement', 'Order margins', 'Mistakes to fix']
-    for (const [role, want] of [['admin', admin], ['sales', ['Who owes us', 'Invoices & GST', 'Reports']], ['engineer', []]] as const) {
+  it('the Money pages follow the Money tabs: sales find To collect and Invoices, only admins the rest', async () => {
+    const admin = ['To collect', 'Invoices', 'Reports', 'Expenses', 'Add expenses', 'Lock a month', 'Bank check', 'Order margins', 'Mistakes to fix']
+    for (const [role, want] of [['admin', admin], ['sales', ['To collect', 'Invoices', 'Reports']], ['engineer', []]] as const) {
       const u = userEvent.setup()
       shell(role)
       const dlg = await search(u, 'money')

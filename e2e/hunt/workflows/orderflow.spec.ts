@@ -28,14 +28,14 @@ import { ctxAs, layout, note, OUT, probe, settle, shot, tag, visit, watch } from
  *   C  money on a mixed 18%/exempt order: Create invoice double click; the Sales Tax invoice PDF (download; NTN, STRN, GST 18%,
  *      exempt supplies, totals, amount in words, payment due) vs DB; Record payment part (1,234.56) / rest / over (double click Save,
  *      the toast's figure); Void (double click) + toast Undo; Correct + Undo; Remove (void) + Undo from the Voided list; after every
- *      step the order page, Who owes us and order_receivables must agree; a stale sales page editing a line of a fully invoiced order.
+ *      step the order page, To collect and order_receivables must agree; a stale sales page editing a line of a fully invoiced order.
  *   D  part invoices: Today payment_overdue; the payment reminder copy + mark reminded + Undo (DB and Today); two people: admin records
  *      a payment while sales has the page open stale and invoices the rest from it (no double invoicing, the stale balance updates);
  *      the second invoice's PDF (its lines and its "Payment due" vs the order's due date in the DB); a part invoice on a mixed order
  *      (is its PDF printable?); typing more than is left to invoice (any warning?).
  *   E  cancel/reopen: Back and reload with Record payment / Cancel dialogs open; cancel with a PO already sent (copy cancellation
  *      message), double click Cancel order, Undo, Today items of a cancelled order, Reopen + its Undo, the balance of a cancelled
- *      invoiced order; admin on the phone records a payment from the sticky bar; phone layouts of the order page and Who owes us.
+ *      invoiced order; admin on the phone records a payment from the sticky bar; phone layouts of the order page and To collect.
  */
 
 // ------------------------------------------------------------------------------------------------ helpers
@@ -189,7 +189,7 @@ async function todayItems(ctx: BrowserContext, info: TestInfo, rule: string, tex
   }
 }
 
-/** The balance the order page shows (reloaded), Who owes us and order_receivables(): all three must agree. */
+/** The balance the order page shows (reloaded), To collect and order_receivables(): all three must agree. */
 async function threeWay(info: TestInfo, orderPage: Page, rp: Page, orderId: string, customer: string, where: string): Promise<void> {
   const r = await rec(orderId)
   if (!r) {
@@ -211,10 +211,10 @@ async function threeWay(info: TestInfo, orderPage: Page, rp: Page, orderId: stri
   const row = rp.getByRole('row').filter({ hasText: customer }).filter({ has: rp.getByRole('link', { name: /^Open ORD-\d+/ }) })
   const n = await row.count()
   if (r.state === 'settled') {
-    want(info, where, n === 0, `Who owes us (Open) still lists the order although the DB says settled (balance ${r.balance})`, await row.first().innerText().catch(() => ''))
-  } else if (want(info, where, n === 1, `Who owes us lists ${n} rows for the order (DB state ${r.state}, balance ${r.balance})`)) {
+    want(info, where, n === 0, `To collect (Open) still lists the order although the DB says settled (balance ${r.balance})`, await row.first().innerText().catch(() => ''))
+  } else if (want(info, where, n === 1, `To collect lists ${n} rows for the order (DB state ${r.state}, balance ${r.balance})`)) {
     const text = await row.innerText()
-    want(info, where, flat(text).includes(amount(r.balance)), `Who owes us row does not show the DB balance ${amount(r.balance)}`, flat(text))
+    want(info, where, flat(text).includes(amount(r.balance)), `To collect row does not show the DB balance ${amount(r.balance)}`, flat(text))
   }
 }
 
@@ -904,7 +904,7 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
     } else obs(info, 'C stale page', `the GST change on an invoiced order was refused or not saved (rates ${rate.join(',')})`, flat(await sp.getByRole('alert').allInnerTexts().then(a => a.join(' | '))))
   })
 
-  await probe(info, null, 'C Who owes us at phone size (admin)', async () => {
+  await probe(info, null, 'C To collect at phone size (admin)', async () => {
     const ctx = await ctxAs(browser, info, 'admin', 'phone')
     const p = await newPage(ctx, info, 'C admin phone receivables')
     await visit(p, info, `/money/receivables?q=${encodeURIComponent(cust.name)}`)
@@ -1018,7 +1018,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     want(info, 'D PDF', pdfHas(text, `PKR ${amount(M.per[1].gst, { always: true })}`), `the second invoice PDF lacks its GST ${amount(M.per[1].gst, { always: true })}`)
     const pdfDue = pdfDay(addDays(today, 30))
     if (r?.dueOn && pdfHas(text, pdfDue) && !pdfHas(text, pdfDay(r.dueOn)))
-      obs(info, 'D PDF due date', `the second invoice's PDF says "Payment due ${pdfDue}" (its own date + 30) but the order is due ${r.dueOn} (first invoice + 30) in order_receivables, Today and Who owes us`)
+      obs(info, 'D PDF due date', `the second invoice's PDF says "Payment due ${pdfDue}" (its own date + 30) but the order is due ${r.dueOn} (first invoice + 30) in order_receivables, Today and To collect`)
     else if (r?.dueOn) want(info, 'D PDF due date', pdfHas(text, pdfDay(r.dueOn)), `the PDF's Payment due is neither ${pdfDue} nor the DB's ${r.dueOn}`)
   })
 
@@ -1220,7 +1220,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     await ctx.close()
   })
 
-  await probe(info, null, 'E sales on the phone: order page and Who owes us', async () => {
+  await probe(info, null, 'E sales on the phone: order page and To collect', async () => {
     const ctx = await ctxAs(browser, info, 'sales', 'phone')
     const p = await newPage(ctx, info, 'E sales phone')
     await visit(p, info, `/orders/${id}`)
@@ -1230,7 +1230,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     await visit(p, info, `/money/receivables?q=${encodeURIComponent(cust.name)}`)
     const txt = flat(await p.locator('#main').innerText())
     const r = await rec(id)
-    if (r) want(info, 'E sales phone', txt.includes(amount(r.balance)), `sales phone Who owes us does not show the balance ${amount(r.balance)}`)
+    if (r) want(info, 'E sales phone', txt.includes(amount(r.balance)), `sales phone To collect does not show the balance ${amount(r.balance)}`)
     await layout(p, info, 'E sales phone receivables')
     await shot(p, 'E-sales-phone-receivables')
     await ctx.close()

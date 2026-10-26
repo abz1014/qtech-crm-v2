@@ -117,12 +117,12 @@ beforeEach(() => {
   })
 })
 
-describe('Match bank statement (M12, the old Bank tick)', () => {
-  it('is reached from Month end with a back link, never a third strip of tabs', async () => {
+describe('Bank check (M12, the old Bank tick)', () => {
+  it('is reached from Lock a month with a back link, never a third strip of tabs', async () => {
     mount()
     await screen.findByTestId('bank-out')
-    expect(screen.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to Month end' })).toHaveAttribute('href', '/money/month-end?month=2026-10')
+    expect(screen.getByRole('heading', { name: 'Bank check', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to Lock a month' })).toHaveAttribute('href', '/money/month-end?month=2026-10')
     expect(screen.queryByRole('navigation', { name: 'Month-end views' })).toBeNull()
   })
 

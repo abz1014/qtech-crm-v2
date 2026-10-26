@@ -147,7 +147,7 @@ export const ROUTES: readonly RouteSpec[] = [
   },
   { path: '/companies/{supplier}', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^About the prices$/] },
   // ------------------------------------------------------------------ Money (two levels after the restructure)
-  { path: '/money', admin: 'ok', sales: 'ok', engineer: 'no', landsOn: /\/money(\/(gst-register|receivables))?$/, note: 'admin opens Money home, sales Who owes us' },
+  { path: '/money', admin: 'ok', sales: 'ok', engineer: 'no', landsOn: /\/money(\/(gst-register|receivables))?$/, note: 'admin opens Money home, sales To collect' },
   { path: '/money/gst-register', admin: 'ok', sales: 'ok', engineer: 'no', openers: [{ name: /^Create invoice$/, roles: AS }, { name: /^More$/, roles: A, open: false, optional: true }] },
   { path: '/money/gst-register?invoice={invoice}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: invoice detail dialog' },
   { path: '/money/gst-register?new=1&order={order}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: Create invoice dialog' },
@@ -194,7 +194,7 @@ export const ROUTES: readonly RouteSpec[] = [
 ]
 
 /** Engineer: words a screen uses for money of the business. Allowed nowhere for an engineer (journeys P03 list, extended). */
-export const ENGINEER_MONEY_WORDS = /\b(Invoic\w*|Margins?|Receivables?|Spread|Selling price|Who owes us|Balance|Profit|Payments? (in|received)|Record payment|Expenses?)\b/
+export const ENGINEER_MONEY_WORDS = /\b(Invoic\w*|Margins?|Receivables?|Spread|Selling price|To collect|Balance|Profit|Payments? (in|received)|Record payment|Expenses?)\b/
 /**
  * Engineer: an amount of money in text (Money renders "PKR1,234" with no space; plain strings use "PKR 1,234", "≈ PKR", "Rs"). "Rs" must
  * start a word: a fixture's random name suffix ("VRs37s5xf0") is not rupees.

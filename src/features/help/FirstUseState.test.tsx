@@ -98,7 +98,7 @@ describe('first-use empty states', () => {
     expect(screen.getByTestId('at')).toHaveTextContent('/rfqs')
   })
 
-  it('NothingYetState for Who owes us has no primary button, only "Show me how"', () => {
+  it('NothingYetState for To collect has no primary button, only "Show me how"', () => {
     mount(<NothingYetState screen="receivables" />)
     expect(screen.getByText('No balances yet')).toBeInTheDocument()
     expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(['Show me how'])

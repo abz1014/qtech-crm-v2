@@ -3,7 +3,7 @@ id: something-wrong
 title: Something on an order looks wrong
 roles: engineer, sales
 keywords: wrong, mistake, error, incorrect, fix, problem, owner
-screens: /orders, /rfqs
+screens: /orders, /rfqs, /jobs
 related: paste-or-photo
 ---
 1. Do not change prices or customers yourself.

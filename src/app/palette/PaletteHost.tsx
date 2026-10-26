@@ -44,13 +44,21 @@ import {
   type PaletteSource,
 } from "@/ui/paletteSources";
 
+/** The old destination names, kept as search words: RFQs and Orders are Jobs now; Who owes us is To collect (a Money page). */
+const NAV_SYNONYMS: Record<string, string[]> = {
+  today: ["today", "tasks"],
+  jobs: ["rfqs", "rfq", "orders", "order", "enquiries", "enquiry", "quotations"],
+  money: ["payments", "invoices", "expenses"],
+  companies: ["customers", "suppliers"],
+};
+
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = "/rfqs/new";
 const TODAY_ROUTE = "/todo";
 const NEW_ORDER_ROUTE = "/orders?new=1";
 
 /**
- * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see Who owes us, Invoices & GST and
+ * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see To collect, Invoices and
  * Reports; the rest is admin only, as the Money tabs are. "Add expenses" opens the burst sheet straight away.
  */
 const MONEY_PLACES: ReadonlyArray<{
@@ -64,19 +72,19 @@ const MONEY_PLACES: ReadonlyArray<{
 }> = [
   {
     id: "money:receivables",
-    label: "Who owes us",
+    label: "To collect",
     href: "/money/receivables",
     icon: HandCoins,
     roles: ["admin", "sales"],
-    keywords: ["receivables", "balances"],
+    keywords: ["who owes us", "receivables", "balances", "outstanding"],
   },
   {
     id: "money:gst",
-    label: "Invoices & GST",
+    label: "Invoices",
     href: "/money/gst-register",
     icon: Receipt,
     roles: ["admin", "sales"],
-    keywords: ["gst register", "invoices"],
+    keywords: ["invoices & gst", "gst register", "gst"],
   },
   {
     id: "money:reports",
@@ -119,18 +127,19 @@ const MONEY_PLACES: ReadonlyArray<{
   { id: "money:enquiries", label: "Enquiries and customers", href: "/money/reports/enquiries", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
   {
     id: "money:month-end",
-    label: "Month end",
+    label: "Lock a month",
     href: "/money/month-end",
     icon: CalendarCheck,
     roles: ["admin"],
+    keywords: ["month end", "close month", "close through"],
   },
   {
     id: "money:bank",
-    label: "Match bank statement",
+    label: "Bank check",
     href: "/money/month-end/bank",
     icon: Landmark,
     roles: ["admin"],
-    keywords: ["bank tick"],
+    keywords: ["match bank statement", "bank tick", "bank statement"],
   },
   {
     id: "money:margins",
@@ -205,7 +214,7 @@ function isTypingContext(e: KeyboardEvent): boolean {
  * shell, the registry of sources, and the built-in "Go to" source (the role's
  * destinations, so a role never sees a place it cannot open). Features add their
  * own sources with usePaletteSource(): R12 registers search (companies, contacts,
- * RFQ numbers), screens register their actions ("New RFQ") while they are mounted.
+ * job and RFQ numbers), screens register their actions while they are mounted.
  */
 // The palette (and cmdk) load after the first screen: on idle, or at once when it is opened (bundle budget, P04).
 // Both load through useRetryableLazy inside <LoadBoundary>: with no signal, a chunk that was never downloaded fails only
@@ -292,6 +301,8 @@ export function PaletteHost({
         icon: n.icon,
         meta: "Go to",
         href: n.path,
+        // the old words still find their new home (redesign phase 5: one door per action, plus Search)
+        keywords: NAV_SYNONYMS[n.key],
       })),
       ...placesFor(role),
     ];
@@ -328,8 +339,9 @@ export function PaletteHost({
     const items: PaletteItem[] = [
       {
         id: "new-rfq",
-        label: "New RFQ",
+        label: "New enquiry",
         meta: "Go to intake",
+        keywords: ["new rfq", "rfq", "paste", "photo"],
         icon: Plus,
         shortcut: ["N"],
         href: INTAKE_ROUTE,

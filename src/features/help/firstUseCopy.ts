@@ -23,7 +23,7 @@ export interface FirstUseCopy {
   title: string
   /** At most two short lines. */
   body: string
-  /** The one button. A list with nothing to point at yet (Who owes us on a new CRM) has none; "Show me how" still shows. */
+  /** The one button. A list with nothing to point at yet (To collect on a new CRM) has none; "Show me how" still shows. */
   action?: FirstUseAction
   /** A second, quiet button opening this Help recipe. */
   recipe?: string

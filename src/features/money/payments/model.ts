@@ -93,7 +93,7 @@ export interface ReceivableNextStep {
 }
 
 /**
- * The ONE Next step of a Who owes us row (round-2 R2-06), in place of the old Payment chip and Last reminder columns:
+ * The ONE Next step of a To collect row (round-2 R2-06), in place of the old Payment chip and Last reminder columns:
  *   late     "Send a reminder" · "12 days overdue"     overdue and a reminder is due (the same rule as Today)
  *   waiting  "Reminded 3 days ago" · "12 days overdue"  overdue, reminded within the wait
  *   waiting  "Due 3 Nov" · "In 4 days"                  invoiced, not yet due

@@ -3,7 +3,7 @@ id: paste-or-photo
 title: Save a photo, a file or a message
 roles: engineer, sales, admin
 keywords: photo, picture, camera, capture, paste, attach, file, pdf, note, whatsapp, share
-screens: /todo, /rfqs, /orders
+screens: /todo, /rfqs, /orders, /jobs
 ---
 1. Tap [Paste or photo]. Or share a photo or WhatsApp text to the app from your phone.
 2. Tap [Choose photos], or [Tap and hold here, then tap Paste] for copied text.

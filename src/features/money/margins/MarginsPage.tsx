@@ -20,8 +20,8 @@ import { useOrderMargins } from '@/features/money/hooks'
 import { isPaidProvisional, marginPct, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
 /*
- * Money > Month end > Margins (g2-money board "Admin: order margins"; M04). Whole-life margin per order, from v_order_money. Admin
- * only. Reached from the Month end checklist ("Margin not final") and from Reports (?from=reports), with a back link to either.
+ * Money > Lock a month > Margins (g2-money board "Admin: order margins"; M04). Whole-life margin per order, from v_order_money. Admin
+ * only. Reached from the Lock a month checklist ("Margin not final") and from Reports (?from=reports), with a back link to either.
  * Only orders with costs marked complete are totalled. A provisional margin is shown with the dashed mark and not added up;
  * an order with an unknown price basis has no margin, is labelled, and is left out of every total.
  * Round 2 (R2-13): the margin sits beside the customer, bigger; the cost is ONE line (what the margin uses: the actual cost,
@@ -135,7 +135,7 @@ export function MarginsPage() {
   return (
     <MoneyFrame active={fromReports ? 'reports' : 'month-end'}>
       <MoneySubHeader
-        back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Month end' }}
+        back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Lock a month' }}
         title="Order margins"
         meta={
           <InfoTip label="About margins">

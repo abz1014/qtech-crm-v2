@@ -9,7 +9,7 @@ import { axeViolations } from '../support/axe'
  * FE-2 targets asserted here (BUILD_PLAN M01, M02):
  *   Create invoice                 2 taps (open, Create), nothing typed; the number is the next in the series, the date is today
  *   Record payment, full           2 taps (open, Save), nothing typed; the amount is the balance due, the date is today
- *   Month stamping                 at most 3 taps + 1 PSID paste (tick the month, Sent by TCS, [paste PSID + Enter], Deposited)
+ *   Month stamping                 at most 3 taps + 1 PSID paste (tick the month, Invoice posted, [paste PSID + Enter], Deposited)
  * plus: GST is 18% or exempt, a refused number, the receipt upload, sales seeing the register and balances but no payment rows,
  * the engineer seeing none of it (network log and RLS), and axe (WCAG 2.2 AA) at 1440 and 375.
  */
@@ -163,7 +163,7 @@ test.describe('invoices and the GST register (M01)', () => {
     const bar = page.getByTestId('batch-bar')
     await expect(bar).toContainText('ticked')
     await review(page, 'm01-month-stamping-1440')
-    await bar.getByRole('button', { name: 'Sent to customer today' }).click() // tap 2
+    await bar.getByRole('button', { name: 'Invoice posted today' }).click() // tap 2
     await expect(page.getByText(/sent to the customer today/).first()).toBeVisible()
     await page.getByRole('textbox', { name: 'PSID', exact: true }).focus()
     await page.keyboard.press('Control+V') // the one paste
@@ -190,7 +190,7 @@ test.describe('invoices and the GST register (M01)', () => {
     const inv = await seedInvoice(null, { company_id: co.id })
     await openAs(page, 'admin', '/money/gst-register')
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
-    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent to customer today' }).click()
+    await page.getByTestId('batch-bar').getByRole('button', { name: 'Invoice posted today' }).click()
     await expect(page.getByText(/sent to the customer today/).first()).toBeVisible()
     await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
     await page.getByRole('button', { name: /^Undo/ }).first().click()
@@ -274,7 +274,7 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await receivable(order.id)).toMatchObject({ balance: 0, payment_state: 'settled' })
   })
 
-  test('a smaller amount is a part payment, from Who owes us, and says what stays due', async ({ page }) => {
+  test('a smaller amount is a part payment, from To collect, and says what stays due', async ({ page }) => {
     const order = await seedOrder(200000)
     await seedInvoice(order, { net_amount: 200000, gst_amount: 36000 })
     await openAs(page, 'admin', '/money/receivables')
@@ -291,7 +291,7 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await receivable(order.id)).toMatchObject({ balance: 136000, settled: 100000, payment_state: 'part' })
   })
 
-  test('Who owes us shows balances by status with the figures on top, and a deep link opens Record payment', async ({ page }) => {
+  test('To collect shows balances by status with the figures on top, and a deep link opens Record payment', async ({ page }) => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000, invoice_date: karachiDay(-60) })
     await openAs(page, 'admin', '/money/receivables')
@@ -307,14 +307,14 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('dialog', { name: 'Record payment' })).toBeVisible()
   })
 
-  test('Money home opens on four numbers and To collect leads to Who owes us; on a phone a card opens its reminder sheet with Record payment and Open order', async ({ page }) => {
+  test('Money home opens on four numbers and To collect leads to To collect; on a phone a card opens its reminder sheet with Record payment and Open order', async ({ page }) => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000, invoice_date: karachiDay(-60) })
     await openAs(page, 'admin', '/money')
     await expect(page.getByTestId('money-blocks')).toBeVisible()
     await page.getByRole('link', { name: /^To collect/ }).click()
     await expect(page).toHaveURL(/\/money\/receivables$/)
-    await expect(page.getByRole('heading', { name: 'Who owes us', level: 1 })).toBeAttached()
+    await expect(page.getByRole('heading', { name: 'To collect', level: 1 })).toBeAttached()
     await page.setViewportSize({ width: 375, height: 812 })
     const card = page.locator('tr[data-card]').filter({ hasText: order.company.name })
     await expect(card).toBeVisible()
@@ -352,9 +352,9 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('columnheader', { name: /Next step/ })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Net', exact: true })).toHaveCount(0)
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
-    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent to customer today' }).click()
+    await page.getByTestId('batch-bar').getByRole('button', { name: 'Invoice posted today' }).click()
     await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
-    await page.getByRole('link', { name: /^Who owes us/ }).click()
+    await page.getByRole('link', { name: /^To collect/ }).click()
     const row = page.getByRole('row', { name: new RegExp(order.company.name) })
     await expect(row).toContainText('88,000') // the balance: 118,000 less 30,000
     await expect(page.getByRole('button', { name: /Record payment/ })).toHaveCount(0)

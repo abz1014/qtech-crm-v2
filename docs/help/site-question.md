@@ -3,7 +3,7 @@ id: site-question
 title: Pass on a question from the site
 roles: engineer, sales
 keywords: question, site, customer asked, clarification, query, ask
-screens: /rfqs, /todo
+screens: /rfqs, /todo, /jobs
 related: paste-or-photo
 ---
 1. Tap [Paste or photo]. Paste or photograph the customer's question.

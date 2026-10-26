@@ -43,7 +43,7 @@ describe('rpcMessages (learnability spec 3.4)', () => {
 })
 
 describe('mapPgError uses the table', () => {
-  it('P0001 month still open says the fix and links to Month end', () => {
+  it('P0001 month still open says the fix and links to Lock a month', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is still open. Close earlier months first (close_months_through closes them all).' })
     expect(m.message).toBe('Close March 2026 first. Months close in order.')
     expect(m.action?.href).toBe('/money/month-end')

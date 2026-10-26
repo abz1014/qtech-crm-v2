@@ -27,8 +27,8 @@ export interface RpcMessage {
   action?: RpcAction
 }
 
-const MONTH_END: RpcAction = { label: 'Open Month end', href: '/money/month-end' }
-const BANK: RpcAction = { label: 'Open Match bank statement', href: '/money/month-end/bank' }
+const MONTH_END: RpcAction = { label: 'Open Lock a month', href: '/money/month-end' }
+const BANK: RpcAction = { label: 'Open Bank check', href: '/money/month-end/bank' }
 const CATEGORIES: RpcAction = { label: 'Open categories', href: '/settings/categories' }
 const TEAM: RpcAction = { label: 'Open Team', href: '/settings/team' }
 

@@ -19,7 +19,7 @@ import type { CashInHand as CashState } from '@/features/money/expenses/claimsAp
  * Count cash". Expected = the last count (or the opening balance) + cash drawn from the bank since - cash expenses since. "Count
  * cash" records what is in the box; the database keeps what the books expected then, and the difference shows at once (short or
  * over). "Cash drawn" records cash taken from the bank into the box (not an expense). The first count is the opening balance.
- * Shown on Expenses and on Month end. 16 px text, 44 px taps.
+ * Shown on Expenses and on Lock a month. 16 px text, 44 px taps.
  */
 export function CashInHandLine({ compact = false }: { compact?: boolean }) {
   const q = useCashInHand()

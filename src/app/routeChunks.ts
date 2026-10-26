@@ -59,18 +59,19 @@ export function chunksForPath(pathname: string): ChunkKey[] {
     case 'todo':
     case 'today': // the old address: it redirects to /todo
       return ['today']
+    // /rfqs and /orders open Jobs now (src/app/oldAddresses.tsx): the first visit needs the Jobs downloads, not the old pages'
+    // (?old=1 loads those on demand). New RFQ keeps its own address.
     case 'rfqs':
-      if (n === 1) return ['rfqs', 'rfqsBoard']
-      if (n === 2) return sub === 'new' ? ['rfqNew'] : ['rfqs', 'rfq']
-      return ['rfqs']
+      if (n === 2 && sub === 'new') return ['rfqNew']
+      return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
     case 'orders':
-      return n === 1 ? ['orders', 'ordersList'] : n === 2 ? ['orders', 'order'] : ['orders']
+      return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
     case 'jobs':
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
     case 'companies':
       return n === 1 ? ['companies', 'companiesList'] : n === 2 ? ['companies', 'company'] : ['companies']
     case 'money':
-      if (n === 1) return ['money', 'moneyReceivables'] // /money opens Who owes us
+      if (n === 1) return ['money', 'moneyReceivables'] // /money opens To collect
       if (n === 2) {
         const page: Partial<Record<string, ChunkKey>> = {
           receivables: 'moneyReceivables',

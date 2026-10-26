@@ -8,11 +8,12 @@ import { chunksForPath } from '@/app/routeChunks'
 describe('chunksForPath', () => {
   it('maps each main screen to its screen and page', () => {
     expect(chunksForPath('/today')).toEqual(['today'])
-    expect(chunksForPath('/rfqs')).toEqual(['rfqs', 'rfqsBoard'])
-    expect(chunksForPath('/rfqs/abc')).toEqual(['rfqs', 'rfq'])
+    // the old addresses open Jobs, so they fetch the Jobs pages
+    expect(chunksForPath('/rfqs')).toEqual(['jobs', 'jobsList'])
+    expect(chunksForPath('/rfqs/abc')).toEqual(['jobs', 'job'])
     expect(chunksForPath('/rfqs/new')).toEqual(['rfqNew'])
-    expect(chunksForPath('/orders')).toEqual(['orders', 'ordersList'])
-    expect(chunksForPath('/orders/abc')).toEqual(['orders', 'order'])
+    expect(chunksForPath('/orders')).toEqual(['jobs', 'jobsList'])
+    expect(chunksForPath('/orders/abc')).toEqual(['jobs', 'job'])
     expect(chunksForPath('/companies/abc')).toEqual(['companies', 'company'])
     expect(chunksForPath('/money')).toEqual(['money', 'moneyReceivables'])
     expect(chunksForPath('/money/receivables')).toEqual(['money', 'moneyReceivables'])
@@ -22,8 +23,8 @@ describe('chunksForPath', () => {
   })
 
   it('an address no page owns gets its screen only (it draws Not found), so no page data is read ahead', () => {
-    expect(chunksForPath('/rfqs/abc/extra')).toEqual(['rfqs'])
-    expect(chunksForPath('/orders/abc/extra')).toEqual(['orders'])
+    expect(chunksForPath('/rfqs/abc/extra')).toEqual(['jobs'])
+    expect(chunksForPath('/orders/abc/extra')).toEqual(['jobs'])
     expect(chunksForPath('/money/nowhere')).toEqual(['money'])
     expect(chunksForPath('/settings')).toEqual([])
     expect(chunksForPath('/')).toEqual([])

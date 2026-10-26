@@ -76,14 +76,14 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     await import('@/ui/CommandPalette')
   }, 60_000)
 
-  it('idle lists Actions: New RFQ (N), Paste or photo (C), Go to To do (G T)', async () => {
+  it('idle lists Actions: New enquiry (N), Paste or photo (C), Go to To do (G T)', async () => {
     const user = userEvent.setup()
     shell()
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Paste or photoActionC', 'Go to To doG T']))
+    expect(text).toEqual(expect.arrayContaining(['New enquiryGo to intakeN', 'Paste or photoActionC', 'Go to To doG T']))
   })
 
   it('N opens intake, C opens the capture surface, G then T goes to To do', async () => {

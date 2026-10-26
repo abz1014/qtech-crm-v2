@@ -28,7 +28,7 @@ export interface SegmentOption {
    * Only a needs-you count: a total ("All 9") is never drawn here; write it in words (consistency spec 2.1).
    */
   needs?: number
-  /** 'danger' for critical items (Things to check). */
+  /** 'danger' for critical items (Mistakes to fix). */
   needsVariant?: 'warning' | 'danger'
   disabled?: boolean
 }

@@ -18,8 +18,8 @@ export function InfoTipExamples() {
         <p className="text-xs text-fg-muted">Beside a panel heading</p>
         {/* A <p> here so the scene (h1, then this) keeps a valid heading order; on a screen it is the panel's own heading. */}
         <p className="flex items-center gap-1 text-base font-semibold">
-          Who owes us
-          <InfoTip label="About Who owes us">
+          To collect
+          <InfoTip label="About To collect">
             What customers still owe on invoices we have sent, oldest first. An invoice leaves the list when its payment is recorded.
           </InfoTip>
         </p>

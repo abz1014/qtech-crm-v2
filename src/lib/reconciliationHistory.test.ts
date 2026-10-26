@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { computeReconciliationExceptions, type RcInvoice, type RcMoney, type RcOrder, type ReconciliationInput } from './reconciliation'
 
-// Redesign phase 0 (plan D10): "Things to check" lists real mistakes in live data only. An imported order or invoice is history:
+// Redesign phase 0 (plan D10): "Mistakes to fix" lists real mistakes in live data only. An imported order or invoice is history:
 // no finding is raised about it. The same mistakes on a v2 record are still found. Fictional data.
 const order = (o: Partial<RcOrder> = {}): RcOrder => ({ id: 'o1', number: 38, orderedOn: '2026-07-01', cancelled: false, basisUnknown: false, ...o })
 const money = (m: Partial<RcMoney> = {}): RcMoney => ({
@@ -13,7 +13,7 @@ const invoice = (g: Partial<RcInvoice> = {}): RcInvoice => ({
 const run = (o: Partial<ReconciliationInput>) =>
   computeReconciliationExceptions({ orders: [], money: [], payments: [], expenses: [], invoices: [], legs: [], pos: [], ...o })
 
-describe('Things to check skips imported records (D10)', () => {
+describe('Mistakes to fix skips imported records (D10)', () => {
   it('an overpaid imported order raises nothing; the same v2 order is still critical', () => {
     expect(run({ orders: [order({ legacy: true })], money: [money()] })).toEqual([])
     expect(run({ orders: [order()], money: [money()] }).map(e => e.category)).toContain('Payments exceed total')
