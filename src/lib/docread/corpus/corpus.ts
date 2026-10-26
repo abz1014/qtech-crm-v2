@@ -194,6 +194,11 @@ export const BATCHES: BatchSpec[] = [
   // store codes in the description, a list in one sentence). After fixing on batch 31 only: 31 100%, 32 98.6% and 98.9%.
   { batch: 31, enquiries: 120, quotes: 0, gens: [29, 30], dev: true, gate: true },
   { batch: 32, enquiries: 80, quotes: 0, gens: [29, 30], gate: true },
+  // Ruled grid screenshots (gen31.ts: "Sr. | Material Name | UOM | QTY" and a "Required For" column, wrapped cells), the shape of the
+  // owner's two enquiries of 2026-10-23; only that generation. Batch 33 is for development; batch 34 is held out (written together
+  // with 33, before the picture reader was changed for grids, and measured blind).
+  { batch: 33, enquiries: 80, quotes: 0, gens: [31], dev: true, gate: true },
+  { batch: 34, enquiries: 60, quotes: 0, gens: [31], gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {

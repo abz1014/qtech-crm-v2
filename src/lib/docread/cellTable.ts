@@ -17,6 +17,9 @@ const NUM = /^\d[\d,]*(?:\.\d+)?$/
 const MONEY = /^(?:[A-Za-z$€¥￥£₨.]{0,4}\s?)?\d[\d,]*(?:\.\d+)?(?:\/-)?(?:\s?[A-Za-z$€]{0,4})?$/
 const PLACEHOLDER = /^[-–—]$|^n\/?a$/i
 
+/** A unit of measure on its own ("Nos", "PCS", "Mtr"). */
+export const isUnitWord = (t: string): boolean => UNIT.test(t.trim())
+
 const STOCK_QTY = /stock|on\s*hand|available|balance|issued|received|consum/i
 
 function headerKind(label: string, hasDesc: boolean): Kind {

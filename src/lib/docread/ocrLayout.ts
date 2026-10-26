@@ -11,7 +11,8 @@
 //    "online", the time and ticks under each chat bubble, "Type a message". Those lines are dropped, so they never reach the
 //    parser as items.
 
-import { layoutPages, type LaidLine, type TextRun } from './pdfLayout'
+import { isUnitWord } from './cellTable'
+import { isHeaderCell, layoutPages, type LaidLine, type TextRun } from './pdfLayout'
 
 export interface OcrBox {
   x0: number
@@ -217,7 +218,7 @@ export function deskew(lines: readonly OcrLine[], typical: number | null = typic
  * right edge of the lines around it, the next line starts at the same left edge right under it, its first word would not have
  * fitted on the first line, and it is a tail ("5", "nos", "and gaskets") rather than a new item ("2. Contactor", "Cable gland").
  */
-export function unwrapLines(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines)): OcrLine[] {
+export function unwrapLines(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines), around: readonly OcrLine[] = lines): OcrLine[] {
   const sorted = [...lines].sort((a, b) => a.bbox.y0 - b.bbox.y0 || a.bbox.x0 - b.bbox.x0)
   const out: OcrLine[] = []
   for (const l of sorted) {
@@ -229,7 +230,7 @@ export function unwrapLines(lines: readonly OcrLine[], typical: number | null = 
     if (prev && first && prevLast && prevWords.length >= 2) {
       const size = lineSize(prev, typical)
       const right = Math.max(
-        ...sorted.filter(o => Math.abs(o.bbox.x0 - prev.bbox.x0) < size && Math.abs(o.bbox.y0 - prev.bbox.y0) < 8 * size).map(o => o.bbox.x1),
+        ...around.filter(o => Math.abs(o.bbox.x0 - prev.bbox.x0) < size && Math.abs(o.bbox.y0 - prev.bbox.y0) < 8 * size).map(o => o.bbox.x1),
       )
       const firstText = cleanWord(first) as string
       const under = Math.abs(l.bbox.x0 - prev.bbox.x0) < 0.8 * size && l.bbox.y0 > prev.bbox.y0 && l.bbox.y0 - prev.bbox.y1 < 0.7 * size
@@ -335,6 +336,300 @@ function applyRules(runs: TextRun[], rules: TableRules): void {
   }
 }
 
+// ------------------------------------------------------------------------------------------------ ruled grids
+
+/** One border of a ruled grid: where it lies (y for a row border, x for a column border) and how much of the grid it spans. */
+interface Divider {
+  pos: number
+  cover: number
+  from: number
+  to: number
+}
+
+/** The rules lying on one line (within `tol` of each other, a double rule being one) joined into borders, with what they span. */
+function dividersOf(boxes: readonly OcrBox[], across: 'x' | 'y', tol: number): Divider[] {
+  const at = (b: OcrBox) => (across === 'y' ? (b.y0 + b.y1) / 2 : (b.x0 + b.x1) / 2)
+  const sorted = [...boxes].sort((a, b) => at(a) - at(b))
+  const groups: OcrBox[][] = []
+  let lastPos = -Infinity
+  for (const b of sorted) {
+    const p = at(b)
+    if (groups.length && p - lastPos <= tol) (groups[groups.length - 1] as OcrBox[]).push(b)
+    else groups.push([b])
+    lastPos = p
+  }
+  return groups.map(g => {
+    const spans = g.map(b => (across === 'y' ? [b.x0, b.x1] : [b.y0, b.y1]) as [number, number]).sort((a, b) => a[0] - b[0])
+    let cover = 0
+    let cur = spans[0] as [number, number]
+    for (const s of spans.slice(1)) {
+      // A rule broken where it crosses another (a few px) is one rule.
+      if (s[0] - cur[1] <= Math.max(10, 0.4 * tol)) cur = [cur[0], Math.max(cur[1], s[1])]
+      else {
+        cover += cur[1] - cur[0]
+        cur = s
+      }
+    }
+    cover += cur[1] - cur[0]
+    return { pos: g.reduce((a, b) => a + at(b), 0) / g.length, cover, from: Math.min(...spans.map(s => s[0])), to: Math.max(...spans.map(s => s[1])) }
+  })
+}
+
+export interface RuledGrid {
+  /** Row borders (y), top to bottom. */
+  rows: number[]
+  /** Column borders (x), left to right. */
+  cols: number[]
+  top: number
+  bottom: number
+}
+
+/**
+ * The cell grids of the ruled tables of a picture (a screenshot of an Excel range, a Word table, an Outlook table with borders, a
+ * printed form with several tables), one per table: the borders that run across most of the table, as they were found on the picture
+ * (imageText.ts removeRules). A table is a stretch of column borders that run on without a gap, so two tables one under the other
+ * (a form's item table and its signature table, the page break between) are two. Nothing for rules that are no grid (an underline,
+ * one divider, a box round a paragraph): at least two column borders and two row borders are needed.
+ */
+export function ruledGrids(rules: TableRules, typical: number | null): RuledGrid[] {
+  const size = typical ?? 24
+  const tol = Math.max(6, 0.5 * size)
+  const keep = (ds: Divider[]) => {
+    const widest = Math.max(0, ...ds.map(d => d.cover))
+    return ds.filter(d => d.cover >= 0.6 * widest)
+  }
+  const spans: Array<[number, number]> = []
+  for (const v of [...rules.vertical].sort((a, b) => a.y0 - b.y0)) {
+    const last = spans[spans.length - 1]
+    if (last && v.y0 - last[1] <= 1.5 * size) last[1] = Math.max(last[1], v.y1)
+    else spans.push([v.y0, v.y1])
+  }
+  const out: RuledGrid[] = []
+  for (const [y0, y1] of spans) {
+    const cols = keep(dividersOf(rules.vertical.filter(v => v.y1 > y0 && v.y0 < y1), 'x', tol))
+    const rows = keep(dividersOf(rules.horizontal.filter(h => (h.y0 + h.y1) / 2 >= y0 - tol && (h.y0 + h.y1) / 2 <= y1 + tol), 'y', tol))
+    // (Two column borders only are the frame of a page or a box, not a table of columns.)
+    if (cols.length < 3 || rows.length < 2) continue
+    // The grid reaches from the top of its column borders to the bottom of them.
+    // (The usual column border's reach, not the longest: one border that runs on, a page's edge or a shadow, is not the table's top.)
+    const mid = (xs: number[]) => [...xs].sort((p, q) => p - q)[Math.floor(xs.length / 2)] as number
+    out.push({
+      rows: rows.map(r => r.pos),
+      cols: cols.map(c => c.pos),
+      top: Math.min(mid(cols.map(c => c.from)), ...rows.map(r => r.pos)),
+      bottom: Math.max(mid(cols.map(c => c.to)), ...rows.map(r => r.pos)),
+    })
+  }
+  return out
+}
+
+/** A cell's words in reading order: its lines top to bottom, each left to right. A part number cut at a hyphen is rejoined. */
+function cellText(words: ReadonlyArray<{ text: string; box: OcrBox }>, size: number): string {
+  return joinLines(cellLines(words, size))
+}
+
+/** A cell's lines, top to bottom, each its words left to right. */
+function cellLines(words: ReadonlyArray<{ text: string; box: OcrBox }>, size: number): string[] {
+  const sorted = [...words].sort((a, b) => a.box.y0 + a.box.y1 - (b.box.y0 + b.box.y1))
+  const rowsOfWords: Array<{ y: number; words: typeof sorted }> = []
+  for (const w of sorted) {
+    const y = (w.box.y0 + w.box.y1) / 2
+    const last = rowsOfWords[rowsOfWords.length - 1]
+    if (last && Math.abs(y - last.y) <= 0.6 * size) {
+      last.words.push(w)
+      last.y = (last.y * (last.words.length - 1) + y) / last.words.length
+    } else rowsOfWords.push({ y, words: [w] })
+  }
+  return rowsOfWords.map(row =>
+    row.words
+      .sort((a, b) => a.box.x0 - b.box.x0)
+      .map(w => w.text)
+      .join(' '),
+  )
+}
+
+function joinLines(lines: readonly string[]): string {
+  let out = ''
+  for (const line of lines) {
+    // "FX2N-" then "128MR.": a part number cut at its hyphen at the end of a line (a hyphen with a space before it is a dash).
+    out = out === '' ? line : /\S-$/.test(out) && /^[A-Za-z0-9]/.test(line) && !/\s-$/.test(out) ? out + line : out + ' ' + line
+  }
+  return out
+}
+
+type Cells = Map<string, Array<{ text: string; box: OcrBox }>>
+
+/**
+ * The table rows of the ruled grids, one per row of a grid: every word goes to the cell its centre lies in, so a description that
+ * wraps over two or three lines stays in its cell and the neighbouring cells' lines (the same pixel rows) are not read across it.
+ * A row's cells are in column order, empty cells kept so they line up with the header. The words outside the grids come back apart,
+ * still as lines, for the ordinary layout: the result is the page from top to bottom, those lines and the rows of each grid in turn.
+ * Null when the picture holds no usable grid.
+ */
+function gridRows(lines: readonly OcrLine[], grids: readonly RuledGrid[], typical: number | null): Array<{ lines: OcrLine[] } | { rows: LaidLine[] }> | null {
+  const size = typical ?? 24
+  const slack = 0.4 * size
+  const tableOf = (cy: number) => grids.findIndex(g => cy >= g.top - slack && cy <= g.bottom + slack)
+  const cells: Cells[] = grids.map(() => new Map())
+  const between: OcrLine[][] = Array.from({ length: grids.length + 1 }, () => [])
+  const inside = grids.map(() => 0)
+  let outside = 0
+  for (const l of lines) {
+    const out: OcrWord[][] = Array.from({ length: grids.length + 1 }, () => [])
+    for (const k of lineWords(l)) {
+      const w = k.word
+      const cx = (w.bbox.x0 + w.bbox.x1) / 2
+      const cy = (w.bbox.y0 + w.bbox.y1) / 2
+      const t = tableOf(cy)
+      if (t >= 0) {
+        const g = grids[t] as RuledGrid
+        const key = `${g.rows.filter(y => y < cy).length}:${g.cols.filter(x => x < cx).length}`
+        const m = cells[t] as Cells
+        m.set(key, [...(m.get(key) ?? []), { text: k.text, box: w.bbox }])
+        inside[t] = (inside[t] as number) + 1
+      } else {
+        // Which stretch of the page between the tables it lies in.
+        ;(out[grids.filter(g => g.bottom + slack < cy).length] as OcrWord[]).push(w)
+        outside++
+      }
+    }
+    out.forEach((ws, i) => ws.length && (between[i] as OcrLine[]).push({ ...l, words: ws }))
+  }
+  // Grids that hold few of the picture's words are boxes round something else, not tables.
+  const total = inside.reduce((a, b) => a + b, 0)
+  if (total < 4 || total < outside) return null
+  const tables = grids.map((_, i) => ((inside[i] as number) >= 4 ? tableRows(cells[i] as Cells, size) : null))
+  // A grid that is no table (its words are read as the rest of the page is) is left out, and the page divided again without it.
+  if (tables.some(t => !t)) {
+    const valid = grids.filter((_, i) => tables[i])
+    return valid.length ? gridRows(lines, valid, typical) : null
+  }
+  const parts: Array<{ lines: OcrLine[] } | { rows: LaidLine[] }> = []
+  for (let i = 0; i <= grids.length; i++) {
+    parts.push({ lines: between[i] as OcrLine[] })
+    if (i < grids.length) parts.push({ rows: tables[i] as LaidLine[] })
+  }
+  return parts
+}
+
+/** The rows of one table from its cells (keyed "row:column" by the grid's borders), or null when it is no table. */
+function tableRows(cell: Cells, size: number): LaidLine[] | null {
+  splitHeaderBand(cell, size)
+  const used = [...cell.keys()].map(k => k.split(':').map(Number) as [number, number])
+  const rowIds = [...new Set(used.map(u => u[0]))].sort((a, b) => a - b)
+  const colIds = [...new Set(used.map(u => u[1]))].sort((a, b) => a - b)
+  if (rowIds.length < 2 || colIds.length < 2) return null
+  // Rows the rules did not separate (a table with its row rules faint or missing) come out as one band holding a column of serial
+  // numbers or quantities, a line each: no table cell wraps a number onto three lines. Such a grid is not trusted.
+  for (const r of rowIds) {
+    for (const c of colIds) {
+      const lines = cellLines(cell.get(`${r}:${c}`) ?? [], size)
+      if (lines.length >= 3 && lines.every(l => /^(?:\d[\d.,]*|[A-Za-z]{1,6}\.?)$/.test(l))) return null
+    }
+  }
+  const fixCell = (c: string) => c.split(' ').map(fixOcrWord).join(' ')
+  const rows: LaidLine[] = []
+  for (const r of rowIds) {
+    const cells = repairHeader(colIds.map(c => fixCell(cellText(cell.get(`${r}:${c}`) ?? [], size))))
+    while (cells.length > 1 && cells[cells.length - 1] === '') cells.pop()
+    const filled = cells.filter(Boolean)
+    if (filled.length === 0) continue
+    const header = filled.length >= 2 && !filled.some(c => /\d{2,}/.test(c.replace(/\(.*?\)/g, ''))) && filled.filter(isHeaderCell).length >= Math.ceil(filled.length * 0.6)
+    // One filled cell is a heading or a stray line of the sheet, not a table row.
+    const kind = header ? 'header' : filled.length >= 2 ? 'row' : 'text'
+    rows.push({ cells, kind, page: 1, text: kind === 'text' ? (filled[0] as string) : cells.join('\t') })
+  }
+  snapUnitColumn(rows)
+  return rows
+}
+
+/**
+ * A heading row on a filled band (grey, blue) has no rule of its own under it that can be told from the fill: its words come in the
+ * first row of the grid with the first row of the table. When the first line of the first band is made of heading words only, and
+ * more lines follow it, it is a row of its own (the band is cut at the line: row -1).
+ */
+function splitHeaderBand(cell: Cells, size: number): void {
+  const keys = [...cell.keys()]
+  const first = Math.min(...keys.map(k => Number(k.split(':')[0])))
+  const inBand = keys.filter(k => Number(k.split(':')[0]) === first)
+  const all = inBand.flatMap(k => (cell.get(k) ?? []).map(w => ({ k, w, y: (w.box.y0 + w.box.y1) / 2 })))
+  if (all.length < 4) return
+  const top = Math.min(...all.map(x => x.y))
+  const head = all.filter(x => Math.abs(x.y - top) <= 0.6 * size)
+  const rest = all.filter(x => !head.includes(x))
+  if (!rest.length || Math.min(...rest.map(x => x.y)) - top < 0.9 * size) return
+  const cols = [...new Set(head.map(x => x.k))]
+  if (cols.length < 2) return
+  const texts = cols.map(k => head.filter(x => x.k === k).sort((u, v) => u.w.box.x0 - v.w.box.x0).map(x => x.w.text).join(' '))
+  const repaired = repairHeader(texts.length >= 3 ? texts : [...texts, '', ''])
+  if (!repaired.filter(Boolean).every(t => isHeaderCell(t))) return
+  for (const x of head) {
+    const [, c] = x.k.split(':')
+    const nk = `-1:${c}`
+    cell.set(x.k, (cell.get(x.k) ?? []).filter(w => w !== x.w))
+    cell.set(nk, [...(cell.get(nk) ?? []), x.w])
+  }
+}
+
+/** Header words a table reader needs to find its columns by, as a heading is written. */
+const HEADINGS = ['QTY', 'QUANTITY', 'UOM', 'UNIT', 'DESCRIPTION', 'PARTICULARS', 'MATERIAL', 'SPECIFICATION']
+
+/**
+ * A heading row the engine misread by a letter ("Qry" for "Qty", "Uom" for "UOM", "Descriptlon"): each word of it that is one letter
+ * off a heading a table has is put right, so the table's columns are found. Only a row of three or more cells that already holds
+ * a heading word and no number, and only a single word of letters.
+ */
+export function repairHeader(cells: string[]): string[] {
+  const filled = cells.filter(Boolean)
+  if (filled.length < 3 || filled.some(c => /\d/.test(c)) || !filled.some(isHeaderCell)) return cells
+  return cells.map(c => {
+    if (!/^[A-Za-z]{2,13}$/.test(c) || isHeaderCell(c)) return c
+    const hit = HEADINGS.find(h => Math.abs(h.length - c.length) <= 1 && editDistance(c.toUpperCase(), h) <= (h.length > 5 ? 2 : 1))
+    if (!hit) return c
+    return c === c.toUpperCase() ? hit : hit.charAt(0) + hit.slice(1).toLowerCase()
+  })
+}
+
+/** The number of single-letter edits (insert, delete, change) between two words. */
+function editDistance(a: string, b: string): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min((prev[j] as number) + 1, (cur[j - 1] as number) + 1, (prev[j - 1] as number) + (a[i - 1] === b[j - 1] ? 0 : 1))
+    prev = cur
+  }
+  return prev[b.length] as number
+}
+
+/**
+ * A unit column of a grid (most of its cells are units: "PCS", "Nos") whose cell the engine misread ("PG" for "PCS") takes the
+ * unit the column says: the unit it is nearest to (two letters off at most), written the way the column writes it. A cell that
+ * is nothing like a unit of the column is left alone. In place.
+ */
+export function snapUnitColumn(rows: LaidLine[]): void {
+  const body = rows.filter(r => r.kind === 'row')
+  const width = Math.max(0, ...body.map(r => r.cells.length))
+  for (let c = 0; c < width; c++) {
+    const cells = body.map(r => r.cells[c] ?? '').filter(Boolean)
+    const units = cells.filter(isUnitWord)
+    if (cells.length < 4 || units.length < 0.6 * cells.length) continue
+    const seen = new Map<string, number>()
+    for (const u of units) seen.set(u, (seen.get(u) ?? 0) + 1)
+    for (const r of body) {
+      const t = r.cells[c]
+      if (!t || isUnitWord(t) || !/^[\p{L}]{1,5}\.?$/u.test(t)) continue
+      const caps = t === t.toUpperCase()
+      const near = [...seen.entries()]
+        .map(([u, n]) => ({ u, n, d: editDistance(t.toLowerCase(), u.toLowerCase()), same: caps === (u === u.toUpperCase()) }))
+        .filter(x => x.d <= 2 && x.d < Math.max(t.length, x.u.length))
+        .sort((x, y) => x.d - y.d || Number(y.same) - Number(x.same) || y.n - x.n)[0]
+      if (!near) continue
+      r.cells[c] = near.u
+      r.text = r.cells.join('\t')
+    }
+  }
+}
+
 /** Mean confidence of the kept words, weighted by their letters; and how many letters there are. */
 export function pageConfidence(lines: readonly OcrLine[]): { confidence: number; letters: number } {
   let sum = 0
@@ -378,10 +673,19 @@ export function layoutOcr(lines: readonly OcrLine[], rules?: TableRules): LaidLi
   const level = skewAngle(lines, typical) === 0
   // A part number broken over two lines of a cell is whole again only now ("PMC33-" / "UMY4HO"): its words are fixed again.
   const fixCell = (c: string) => c.split(' ').map(fixOcrWord).join(' ')
-  const laid = layoutPages([wordsToRuns(unwrapLines(deskew(lines, typical), typical), typical, level ? rules : undefined)]).map(l => {
-    const cells = l.cells.map(fixCell)
-    return { ...l, cells, text: l.kind === 'text' && cells.length <= 1 ? fixCell(l.text) : cells.join('\t') }
-  })
+  // (The page's slant is the page's: a part of it, laid out apart from a table, is turned by the page's angle, not its own.)
+  const turn = (ls: readonly OcrLine[]) => (level ? [...ls] : deskew(ls, typical))
+  const plain = (ls: readonly OcrLine[]): LaidLine[] =>
+    ls.length === 0
+      ? []
+      : layoutPages([wordsToRuns(unwrapLines(turn(ls), typical, turn(lines)), typical, level ? rules : undefined)]).map(l => {
+          const cells = l.cells.map(fixCell)
+          return { ...l, cells, text: l.kind === 'text' && cells.length <= 1 ? fixCell(l.text) : cells.join('\t') }
+        })
+  // A ruled grid (borders found on the picture): its cells are read by their borders, not by where the lines of text fall.
+  const grids = level && rules ? ruledGrids(rules, typical) : []
+  const table = grids.length ? gridRows(lines, grids, typical) : null
+  const laid = table ? table.flatMap(part => ('rows' in part ? part.rows : plain(part.lines))) : plain(lines)
   const kept: LaidLine[] = []
   for (const l of laid) {
     if (l.kind === 'text' && PRESENCE.test(l.text.trim())) {
