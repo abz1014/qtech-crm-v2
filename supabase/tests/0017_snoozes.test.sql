@@ -16,7 +16,7 @@ $f$;
 
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'snoozes',
-  array['id', 'user_id', 'rule', 'subject_id', 'until_on', 'created_at'],
+  array['id', 'user_id', 'rule', 'subject_id', 'until_on', 'created_at', 'until_change'],
   'snoozes has the section 2.21 columns');
 select ok((select relrowsecurity from pg_class where oid = 'public.snoozes'::regclass), 'RLS is enabled on snoozes');
 select is((select array_agg(policyname::text order by policyname) from pg_policies
