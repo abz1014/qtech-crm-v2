@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EyeOff, FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
-import { useSession } from '@/app/session'
+import { FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
+import { useSession, useSeesPrices } from '@/app/session'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
@@ -11,12 +11,13 @@ import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
 import { Checkbox } from '@/ui/form/Checkbox'
-import { Field } from '@/ui/form/Field'
+import { Field, SourceNote } from '@/ui/form/Field'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { TextField } from '@/ui/form/TextField'
 import { Skeleton } from '@/ui/Skeleton'
 import type { RfqHeader } from '@/features/rfqs/api'
-import { useQuoteItems } from '@/features/quotations/hooks'
+import { usePriceMemory, useQuoteItems } from '@/features/quotations/hooks'
+import { readIssueDraft } from '@/features/quotations/lib/issueDraft'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { FALLBACK_PAYMENT_TERMS_DAYS } from '@/features/settings/companyProfile'
 import { daysFromTermsText } from '@/features/orders/lib/termsDays'
@@ -26,6 +27,7 @@ import { quotationRef } from '@/features/quotations/lib/refs'
 import { RankedPicker } from '@/features/orders/RankedPicker'
 import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
 import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
+import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
 import { forItem, priceTexts, rankOne, type RankedQuote } from '@/features/orders/lib/ranking'
 import { buildSplitPayload, checkSplit, isSplit, nextRanked, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
 import { orderRef } from '@/lib/refs'
@@ -39,7 +41,9 @@ import { orderRef } from '@/lib/refs'
  * record, then order history), with the reason printed under the supplier. Splitting an item's quantity across suppliers is opt-in.
  *
  * FE-2 entry burden, listed for the commit:
- *   required     nothing. A line the quotation never priced was never sold, so it is left out of the order (as g2-ranking-split draws it).
+ *   required     nothing when a price is known. Every ticked line is sold at a price confirmed here, pre-filled from the latest issued
+ *                quotation, else the Issue quotation draft or the customer's price memory (sellPrefill.ts). A ticked line with no price
+ *                asks for one, typed from the owner's costing sheet; the CRM never computes a sell price. Typed prices are not written back.
  *   pre-filled   the supplier on each line (its rank-1 quote), the payment terms (the company's last order), prices, delivery and the
  *                rest from the RFQ, the date (today) and the owner (the RFQ's).
  *   optional     the customer PO number (it can be added from the order later), a different supplier on any line, splitting an item.
@@ -58,13 +62,26 @@ type Props = {
 }
 
 // Sized for 16px text: the quantity, a supplier price with its currency, and our net price fit their tracks (UX foundation review).
-const GRID = 'lg:grid lg:grid-cols-[26px_minmax(0,1.25fr)_72px_minmax(0,1.55fr)_148px_128px] lg:items-start lg:gap-x-3'
+const GRID = 'lg:grid lg:grid-cols-[26px_minmax(0,1.25fr)_72px_minmax(0,1.55fr)_148px_216px] lg:items-start lg:gap-x-3'
 const EXTRAS = [
   { value: 'none', label: 'Not sourced yet' },
   { value: 'service', label: 'Service, no supplier' },
 ]
 
-export function ConvertDialog({ rfq, onClose }: Props) {
+export function ConvertDialog(props: Props) {
+  // Prices are for admin and sales; an engineer can reach ?won=1 by address, and gets nothing.
+  const sees = useSeesPrices()
+  const { onClose } = props
+  useEffect(() => {
+    if (!sees) onClose()
+  }, [sees, onClose])
+  return sees ? <ConvertDialogBody {...props} /> : null
+}
+
+const MAX_AMOUNT = 999_999_999_999.99
+const MAX_PAISA = 99_999_999_999_999
+
+function ConvertDialogBody({ rfq, onClose }: Props) {
   const navigate = useNavigate()
   const session = useSession()
   const role = session.status === 'signed-in' ? session.user.role : ''
@@ -74,6 +91,9 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const profileQ = useCompanyProfile()
   const defaultTerms = profileQ.data?.default_payment_terms_days ?? FALLBACK_PAYMENT_TERMS_DAYS
   const quotesQ = useQuotations(rfq.id)
+  const memoryQ = usePriceMemory(rfq.id, true)
+  /** Prices typed in Issue quotation and never issued, kept by this tab. */
+  const draftPrices = useMemo(() => readIssueDraft(rfq.id)?.prices ?? null, [rfq.id])
   const nextNo = useNextOrderNumber(true)
   const convert = useConvertRfq(rfq.id)
   /** Made once per open dialog and kept for any retry: the database returns the same order for the same id. */
@@ -95,6 +115,11 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   /** null until the person taps it: the toggle then follows the guess from the lines. */
   const [needsTouched, setNeedsTouched] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** What the person ticked or typed over the pre-fill. A line absent here follows sellPrefill. */
+  const [ticks, setTicks] = useState<Record<string, boolean>>({})
+  const [typed, setTyped] = useState<Record<string, number | null>>({})
+  /** Set by the first press of Create order that finds something missing; the message then follows the form as it is fixed. */
+  const [pressed, setPressed] = useState(false)
 
   /** Payment terms typed once: the days written on the latest quotation win over the last order's (entry-burden J5/J7). */
   const quotedDays = daysFromTermsText(quotesQ.data?.[0]?.paymentTerms)
@@ -114,12 +139,65 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const checks: Record<string, SplitCheck | null> = Object.fromEntries(items.map(i => [i.id, isSplit(splits[i.id]) ? checkSplit(i.qty, splits[i.id]) : null]))
   const anyIncomplete = Object.values(checks).some(c => c?.incomplete)
 
-  /** Only quoted lines are ordered. An item the quotation never priced is shown and left out: the database refuses a line with no selling price. */
-  const ordered = items.filter(it => it.quotedUnitPriceNet !== null)
   const gstOf = (id: string) => itemsQ.data?.find(q => q.id === id)?.gstRate ?? 18
-  const unitOf = (it: ConvertItem) => it.quotedUnitPriceNet ?? 0
-  const totals = orderTotals(items.filter(it => unitOf(it) > 0).map(it => ({ qty: checks[it.id]?.total ?? it.qty, unitPriceNet: unitOf(it), gstRate: gstOf(it.id) })))
+
+  /** The latest issued quotation revision the order follows: "QT-26-0058 R1", with its lines. */
+  const latest = (() => {
+    const qs = quotesQ.data ?? []
+    if (qs.length === 0) return null
+    const last = qs.reduce((x, y) => (y.revision > x.revision ? y : x))
+    const first = qs.find(q => q.revision === 0) ?? last
+    return { ref: quotationRef(last.number, first.issuedOn, last.revision), lines: last.lines }
+  })()
+  const latestQuote = latest?.ref ?? null
+
+  /** The quote an item is assigned to (a split item: its first part), as sellPrefill reads it. */
+  const quoteOf = (id: string): PrefillQuote | undefined => {
+    const lineId = isSplit(splits[id]) ? splits[id][0].lineId : choiceOf(id)
+    const q = (byItem[id] ?? []).find(x => x.lineId === lineId)
+    return q ? { currency: q.currency, price: q.price, pkrUnitPrice: q.row.pkr_unit_price ?? null, legacyFlags: q.legacyFlags } : undefined
+  }
+  const pre = prefillLines({
+    items: items.map(i => ({ id: i.id, qty: i.qty })),
+    latest,
+    draft: draftPrices,
+    memory: (memoryQ.data ?? []).map(m => ({
+      itemId: m.itemId,
+      quotedPrice: m.quotedPrice,
+      quotedRef: m.quotedNumber !== null && m.quotedOn ? quotationRef(m.quotedNumber, m.quotedOn, m.quotedRevision ?? undefined) : null,
+      quotedOn: m.quotedOn,
+      soldPrice: m.soldPrice,
+      soldOrderNumber: m.soldOrderNumber,
+      soldOn: m.soldOn,
+    })),
+    quoteOf,
+  })
+  const included = (id: string) => ticks[id] ?? pre[id]?.include ?? false
+  const priceOf = (id: string): number | null => (id in typed ? typed[id] : (pre[id]?.price ?? null))
+  /** Only ticked lines are ordered, each at the price confirmed here. */
+  const ordered = items.filter(it => included(it.id))
+  const confirmed = Object.fromEntries(items.map(it => [it.id, priceOf(it.id)])) as Record<string, number | null>
+  const totals = orderTotals(ordered.filter(it => (confirmed[it.id] ?? 0) > 0).map(it => ({ qty: checks[it.id]?.total ?? it.qty, unitPriceNet: confirmed[it.id] as number, gstRate: gstOf(it.id) })))
   const lineCount = orderLineCount(ordered, splits)
+
+  const setPrice = (id: string, v: number | null) => {
+    setTyped(t => ({ ...t, [id]: v }))
+    if (v !== null && v > 0 && !included(id)) setTicks(t => ({ ...t, [id]: true }))
+  }
+
+  /** What stops Create order, in the order the person meets it: the message, and the control to take them to. */
+  const problem = ((): { message: string; focusId?: string; line?: string } | null => {
+    if (ordered.length === 0) return { message: 'Tick at least one line to create the order.', focusId: items[0] ? `convert-include-${items[0].id}` : undefined }
+    for (const it of ordered) {
+      const n = items.indexOf(it) + 1
+      const price = confirmed[it.id]
+      if (price === null || price === undefined || !(price > 0)) return { message: `Type a selling price for line ${n}.`, focusId: `convert-price-${it.id}`, line: it.id }
+      if (price > MAX_AMOUNT) return { message: `The price of line ${n} is too large. A unit price can be at most PKR 999,999,999,999.99.`, focusId: `convert-price-${it.id}`, line: it.id }
+    }
+    if (totals.net * 100 > MAX_PAISA || totals.gst * 100 > MAX_PAISA) return { message: 'The order total is too large. Check the prices and quantities.' }
+    if (anyIncomplete) return { message: 'Type a quantity for every part of a split item.' }
+    return null
+  })()
 
   /** The legs this will make: one per supplier and currency. */
   const legs: string[] = (() => {
@@ -140,16 +218,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
     Object.fromEntries(items.map((it, i) => [i + 1, it.id])),
   )
   const needs = needsTouched ?? guess.needs
-  /** The latest quotation revision the order follows: "QT-26-0058 R1". */
-  const latestQuote = (() => {
-    const qs = quotesQ.data ?? []
-    if (qs.length === 0) return null
-    const last = qs.reduce((a, b) => (b.revision > a.revision ? b : a))
-    const first = qs.find(q => q.revision === 0) ?? last
-    return quotationRef(last.number, first.issuedOn, last.revision)
-  })()
-
-  const ready = itemsQ.isSuccess && ordered.length > 0 && rankQ.isSuccess && !anyIncomplete
+  const ready = itemsQ.isSuccess && rankQ.isSuccess
   const busy = convert.isPending
 
   const split = (itemId: string) => {
@@ -175,13 +244,21 @@ export function ConvertDialog({ rfq, onClose }: Props) {
 
   const submit = async () => {
     if (!ready || submitting.current) return
+    if (problem) {
+      setPressed(true)
+      if (problem.focusId) {
+        const id = problem.focusId
+        requestAnimationFrame(() => document.getElementById(id)?.focus())
+      }
+      return
+    }
     submitting.current = true
     setError(null)
     try {
       const id = await convert.mutateAsync({
         orderId: orderId.current,
         rfqId: rfq.id,
-        items: buildSplitPayload(ordered, effective, {}, splits),
+        items: buildSplitPayload(ordered, effective, confirmed, splits),
         customerPo: po.trim() || null,
         paymentTermsDays: terms,
         needsCommissioning: needs,
@@ -195,7 +272,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
 
   const context = (
     <>
-      {rfq.company.name} · {ordered.length} quoted {ordered.length === 1 ? 'line' : 'lines'}
+      {rfq.company.name} · {ordered.length} {ordered.length === 1 ? 'line' : 'lines'}
       {totals.gross > 0 ? (
         <>
           {' '}
@@ -205,29 +282,63 @@ export function ConvertDialog({ rfq, onClose }: Props) {
     </>
   )
 
-  /** The price columns of a line: what we pay (in the quote's currency, then PKR) and what we sell at. */
-  const priceCells = (it: ConvertItem, q: RankedQuote | undefined) => (
-    <>
-      <div className="num text-sm lg:text-right">
-        {q ? (
-          <>
-            {priceTexts(q).price}
-            <br />
-            <span className="text-xs text-fg-muted">{priceTexts(q).pkr}</span>
-          </>
-        ) : (
-          <span className="text-fg-muted">—</span>
-        )}
-      </div>
-      <div className="num text-sm lg:text-right">
-        {it.quotedUnitPriceNet !== null ? (
-          formatAmount(it.quotedUnitPriceNet)
-        ) : (
-          <span className="text-fg-muted">No selling price</span>
-        )}
-      </div>
-    </>
+  /** What we pay for the line, in the quote's currency, then PKR. */
+  const supplierCell = (q: RankedQuote | undefined) => (
+    <div className="num text-sm lg:text-right">
+      {q ? (
+        <>
+          {priceTexts(q).price}
+          <br />
+          <span className="text-xs text-fg-muted">{priceTexts(q).pkr}</span>
+        </>
+      ) : (
+        <span className="text-fg-muted">—</span>
+      )}
+    </div>
   )
+
+  /** What we sell at: one confirmed price per item, typed over a pre-fill that says where it came from. */
+  const sellCell = (it: ConvertItem, n: number) => {
+    const p = pre[it.id]
+    const on = included(it.id)
+    const edited = it.id in typed
+    const price = confirmed[it.id]
+    const empty = price === null || !(price > 0)
+    const bad = pressed && problem?.line === it.id
+    const warns = on ? [...(p?.warnings ?? []), ...priceWarnings(price, quoteOf(it.id))] : []
+    return (
+      <div className="grid min-w-0 gap-1">
+        <label htmlFor={`convert-price-${it.id}`} className="text-sm font-medium lg:sr-only">
+          Sell at, net
+        </label>
+        <NumberInput
+          id={`convert-price-${it.id}`}
+          value={price}
+          onChange={v => setPrice(it.id, v)}
+          aria-label={`Selling price, line ${n}`}
+          aria-invalid={bad || undefined}
+          prefix={<span className="text-sm text-fg-muted">PKR</span>}
+          placeholder="Type it"
+          data-testid={`convert-price-${n}`}
+        />
+        {!on && p?.notIn ? <span className="text-base text-fg-2" data-testid={`convert-item-${n}-not-in`}>{p.notIn}. Tick it to add it.</span> : null}
+        {on && empty ? <span className="text-base text-fg-2">{edited ? 'Type the selling price.' : p?.sourceText ?? ''}</span> : null}
+        {!empty && p?.source !== 'none' ? (
+          <span className="text-base" data-testid={`convert-price-${n}-source`}>
+            <SourceNote source={p?.sourceText ?? ''} edited={edited} />
+          </span>
+        ) : null}
+        {!empty && edited ? <span className="sr-only">Typed by you</span> : null}
+        {p?.qtyNote && on ? <span className="text-base text-fg-2">{p.qtyNote}</span> : null}
+        {warns.map(w => (
+          <span key={w} className="flex items-start gap-[6px] text-base text-tone-warning-fg" data-testid={`convert-item-${n}-warning`}>
+            <Icon icon={TriangleAlert} size="sm" className="mt-[3px] shrink-0" />
+            <span>{w}</span>
+          </span>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
@@ -243,7 +354,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             <Button data-cancel onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button variant="primary" icon={FileCheck2} busy={busy} busyLabel="Creating" disabled={!ready} onClick={() => void submit()}>
+            <Button variant="primary" icon={FileCheck2} busy={busy} busyLabel="Creating" disabled={!ready || anyIncomplete} onClick={() => void submit()}>
               Create order
             </Button>
           </>
@@ -288,7 +399,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
           ) : (
             <div className="overflow-hidden rounded border" role="group" aria-label="Suppliers by line">
               <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-snug text-fg-muted', GRID)}>
-                <span />
+                <span className="sr-only">Include</span>
                 <span>Item</span>
                 <span className="text-right">Qty</span>
                 <span>Buy from, ranked</span>
@@ -297,22 +408,6 @@ export function ConvertDialog({ rfq, onClose }: Props) {
               </div>
               {items.map((it, idx) => {
                 const n = idx + 1
-                if (it.quotedUnitPriceNet === null)
-                  return (
-                    <div key={it.id} className="border-t border-line-strong first:border-t-0" data-testid={`convert-item-${n}`}>
-                      <div className={cn('grid gap-2 bg-canvas px-4 py-3 text-sm leading-5 text-fg-muted', GRID)}>
-                        <span className="num pt-px">{n}</span>
-                        <b className="font-medium">{it.description}</b>
-                        <span className="num lg:pt-1.5 lg:text-right">{it.qty}</span>
-                        <span className="flex items-center gap-[6px] text-xs lg:pt-1" data-testid={`convert-item-${n}-left-out`}>
-                          <Icon icon={EyeOff} size="sm" />
-                          Not in the quotation. Left out of the order.
-                        </span>
-                        <span className="lg:text-right">—</span>
-                        <span className="lg:text-right">No selling price</span>
-                      </div>
-                    </div>
-                  )
                 const qs = byItem[it.id] ?? []
                 const parts = splits[it.id]
                 const isSplitItem = isSplit(parts)
@@ -323,9 +418,20 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                 return (
                   <div key={it.id} className="border-t border-line-strong first:border-t-0" data-testid={`convert-item-${n}`}>
                     <div className={cn('grid gap-2 px-4 py-3 text-sm leading-5', GRID)}>
-                      <span className="num pt-px text-fg-muted">{n}</span>
+                      <div className="flex items-start gap-2 lg:contents">
+                        <Checkbox
+                          id={`convert-include-${it.id}`}
+                          aria-label={`Include line ${n}`}
+                          checked={included(it.id)}
+                          onCheckedChange={v => setTicks(t => ({ ...t, [it.id]: v === true }))}
+                        />
+                        <span className="num pt-px text-fg-muted lg:hidden">{n}</span>
+                      </div>
                       <div className="grid min-w-0 gap-0.5">
-                        <b className="font-medium">{it.description}</b>
+                        <b className="font-medium">
+                          <span className="num hidden text-fg-muted lg:inline">{n}. </span>
+                          {it.description}
+                        </b>
                         {[it.brandName, it.familyName].filter(Boolean).length > 0 ? <span className="text-xs text-fg-muted">{[it.brandName, it.familyName].filter(Boolean).join(' · ')}</span> : null}
                         {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}
                       </div>
@@ -339,7 +445,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                             Parts below must add up to <span className="num">{it.qty}</span>
                           </span>
                           <span />
-                          <span />
+                          {sellCell(it, n)}
                         </>
                       ) : (
                         <>
@@ -350,7 +456,8 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                             extras={EXTRAS.filter(e => e.value === 'service' || qs.length !== 1)}
                             onChange={v => setChoices(c => ({ ...c, [it.id]: v }))}
                           />
-                          {priceCells(it, q)}
+                          {supplierCell(q)}
+                          {sellCell(it, n)}
                         </>
                       )}
                     </div>
@@ -395,7 +502,11 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                                 header={`Ranked quotes for item ${n}, with the reason`}
                                 onChange={v => patchPart(it.id, p.key, { lineId: v })}
                               />
-                              {priceCells(it, pq)}
+                              {supplierCell(pq)}
+                              <div className="num text-sm lg:text-right">
+                                {confirmed[it.id] ? formatAmount(confirmed[it.id] as number) : <span className="text-fg-muted">—</span>}
+                                <span className="block text-xs text-fg-muted">same price</span>
+                              </div>
                             </div>
                           )
                         })
@@ -456,6 +567,12 @@ export function ConvertDialog({ rfq, onClose }: Props) {
               </div>
             </div>
           )}
+
+          {pressed && problem ? (
+            <Banner tone="danger" title={problem.message} className="text-base">
+              Nothing was created.
+            </Banner>
+          ) : null}
 
           {itemsQ.isSuccess && rankQ.isSuccess && legs.length > 0 ? (
             <p className="flex items-center gap-2 text-xs text-fg-muted">

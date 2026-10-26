@@ -15,6 +15,8 @@ export interface RankedQuote {
   rank: number | null
   comparable: boolean
   inStock: boolean
+  /** supplier_quote_lines.legacy_flags: 'item_guessed' and 'currency_unverified' mark an imported quote that may be misplaced or in the wrong currency. */
+  legacyFlags?: readonly string[]
   /** The database row. Every reason string comes from src/features/rfqs/lib/ranking/reasons.ts, the one module that words them. */
   row: RankRow
 }

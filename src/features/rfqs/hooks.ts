@@ -361,3 +361,21 @@ export function useMySignature(userId: string | undefined) {
 export function useUserNames() {
   return useQuery({ queryKey: qk.rfqs.userNames(), queryFn: api.listUserNames, staleTime: 10 * 60_000 })
 }
+
+// ================================================================ Delete an RFQ (0092)
+
+/** What goes with the RFQ, read when the confirm opens. Never cached: the counts must be the ones at the moment of the question. */
+export function useRfqDeleteCounts(rfqId: string, enabled: boolean) {
+  return useQuery({ queryKey: [...qk.rfqs.detail(rfqId), 'delete-counts'], queryFn: () => api.getRfqDeleteCounts(rfqId), enabled, staleTime: 0, gcTime: 0 })
+}
+
+/** The delete itself. It does not refresh anything: the flow navigates away first, then calls `refreshAfterRfqDelete`. */
+export function useDeleteRfq() {
+  return useMutation({ mutationFn: (rfqId: string) => api.deleteRfq(rfqId) })
+}
+
+/** After the page is left: drop the deleted RFQ's cached pages and refresh the lists, Today and the nav counts. */
+export function refreshAfterRfqDelete(client: QueryClient, rfqId: string): Promise<void> {
+  client.removeQueries({ queryKey: qk.rfqs.detail(rfqId) })
+  return invalidateAfter(client, 'rfq.delete', { rfqId })
+}

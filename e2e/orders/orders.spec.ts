@@ -30,6 +30,11 @@ function tapper() {
       await target.dblclick()
       taps++
     },
+    /** Typing a value is an interaction too. */
+    typed: async (target: Locator, value: string) => {
+      await target.fill(value)
+      taps++
+    },
     get count() {
       return taps
     },
@@ -58,7 +63,7 @@ interface RfqSeed {
 }
 
 /** A customer with an earlier order on 45-day terms, and an RFQ of three priced items quoted by two suppliers. */
-async function seedRfq(): Promise<RfqSeed> {
+async function seedRfq(opts: { prices?: boolean } = {}): Promise<RfqSeed> {
   const tag = Math.random().toString(36).slice(2, 6)
   const customer = await createCompany(uniqueName('Convert Customer'))
   await must(rest('admin', 'orders', { method: 'POST', body: { company_id: customer.id, ordered_on: karachiDay(-30), payment_terms_days: 45 } }))
@@ -68,9 +73,9 @@ async function seedRfq(): Promise<RfqSeed> {
     rest<{ id: string; description: string; position: number }[]>('admin', 'rfq_items', {
       method: 'POST',
       body: [
-        { rfq_id: rfq.id, position: 0, description: `Damper actuator ${tag}`, qty: 2, quoted_unit_price_net: 1000 },
-        { rfq_id: rfq.id, position: 1, description: `Pressure transmitter ${tag}`, qty: 1, quoted_unit_price_net: 2000 },
-        { rfq_id: rfq.id, position: 2, description: `Commissioning ${tag}`, qty: 3, quoted_unit_price_net: 500 },
+        { rfq_id: rfq.id, position: 0, description: `Damper actuator ${tag}`, qty: 2, ...(opts.prices ? { quoted_unit_price_net: 1000 } : {}) },
+        { rfq_id: rfq.id, position: 1, description: `Pressure transmitter ${tag}`, qty: 1, ...(opts.prices ? { quoted_unit_price_net: 2000 } : {}) },
+        { rfq_id: rfq.id, position: 2, description: `Commissioning ${tag}`, qty: 3, ...(opts.prices ? { quoted_unit_price_net: 500 } : {}) },
       ],
     }),
   )
@@ -191,8 +196,63 @@ const leg = (page: Page, letter: string) => page.getByTestId(`leg-${letter}`)
 
 // ------------------------------------------------------------------------------------------------ O01 convert
 
+/** Issues a real quotation (R0, then R1 on a second call) of just these items, as the Issue quotation dialog does. */
+const issueQuotation = (rfqId: string, lines: { id: string; unit_price: number; qty: number }[]) =>
+  must(
+    rest('admin', 'rpc/issue_quotation', {
+      method: 'POST',
+      body: { p_quotation_id: crypto.randomUUID(), p_rfq_id: rfqId, p_lines: lines.map(l => ({ ...l, gst_rate: 18, lead_time: null })) },
+    }),
+  )
+
+const price = (dialog: Locator, line: number) => dialog.getByLabel(`Selling price, line ${line}`)
+const rfqItemPrices = (rfqId: string) => get<{ quoted_unit_price_net: number | null }>(`rfq_items?rfq_id=eq.${rfqId}&select=quoted_unit_price_net&order=position`)
+
 test.describe('O01: Mark won creates the order', () => {
-  test('2 taps, nothing typed: suppliers come from the lowest quote, terms from the last order, and a double submit makes one order', async ({ page }) => {
+  test("the owner's shape (marked sent by phone, one supplier reply, no quotation): the line is ticked, the price is typed once, and nothing is written back to the RFQ", async ({ page }) => {
+    const tag = Math.random().toString(36).slice(2, 6)
+    const customer = await createCompany(uniqueName('Owner Shape Customer'))
+    const supplier = await createCompany(uniqueName('Alpenmark'), { country: 'Germany' })
+    const rfq = await createRfq(customer.id, { due_on: karachiDay(6), customer_ref: `RFQ-${tag}`, quoted_on: karachiDay(-1) })
+    const [item] = await must(rest<{ id: string }[]>('admin', 'rfq_items', { method: 'POST', body: [{ rfq_id: rfq.id, position: 0, description: `Hart level transmitter ${tag}`, qty: 2 }] }))
+    const inquiry = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplier.id, sent_on: karachiDay(-3) } })))[0]
+    await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: inquiry.id, rfq_item_id: item.id, unit_price: 412, currency: 'USD', lead_time: '3 wks' }, prefer: 'return=minimal' }))
+
+    await openAs(page, 'sales', `/rfqs/${rfq.id}`)
+    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('heading', { name: 'Mark won' })).toBeVisible()
+    await expect(dialog.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked()
+    await expect(price(dialog, 1)).toHaveValue('')
+    await expect(dialog).toContainText('Type the selling price from your costing sheet')
+    await shot(page, 'a1-markwon-owner-shape-1440')
+    expect(await dialogViolations(page)).toEqual([])
+    // the same dialog on a phone: the price input stacks under its label, nothing scrolls sideways
+    await page.setViewportSize({ width: 375, height: 812 })
+    await expect(price(dialog, 1)).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+    expect(await dialogViolations(page)).toEqual([])
+    await shot(page, 'a1-markwon-owner-shape-375')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    // not stuck: Create order is pressable and says what is missing, then takes the person to the field
+    await dialog.getByRole('button', { name: 'Create order' }).click()
+    await expect(dialog).toContainText('Type a selling price for line 1.')
+    await expect(price(dialog, 1)).toBeFocused()
+    expect(await get(`orders?rfq_id=eq.${rfq.id}&select=id`)).toHaveLength(0)
+
+    await price(dialog, 1).fill('120,000')
+    await expect(dialog).toContainText('gross PKR 283,200')
+    await dialog.getByRole('button', { name: 'Create order' }).click()
+    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${rfq.id}&select=id`)
+    const items = await get<{ unit_price_net: number; supplier_unit_price: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price&order=position`)
+    expect(items.map(i => [Number(i.unit_price_net), Number(i.supplier_unit_price)])).toEqual([[120000, 412]])
+    // the typed price makes no quotation and is not written to the RFQ item
+    expect((await rfqItemPrices(rfq.id)).map(i => i.quoted_unit_price_net)).toEqual([null])
+    expect(await get(`quotations?rfq_id=eq.${rfq.id}&select=id`)).toHaveLength(0)
+  })
+
+  test('typing every price: suppliers come from the ranking, terms from the last order, and a double submit makes one order', async ({ page }) => {
     const s = await seedRfq()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
@@ -201,37 +261,32 @@ test.describe('O01: Mark won creates the order', () => {
     await t.tap(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByRole('heading', { name: 'Mark won' })).toBeVisible()
-    // pre-filled, nothing to type: the PO is empty and optional, the terms come from the customer's last order
     await expect(dialog.getByLabel('Customer PO number')).toHaveValue('')
     await expect(dialog.getByLabel('Payment terms in days')).toHaveValue('45')
     await expect(dialog).toContainText('from the last order')
-    // the item called "Commissioning ..." makes the toggle start on, so nothing is tapped to plan the job
     await expect(dialog.getByRole('checkbox', { name: 'Needs commissioning' })).toBeChecked()
-    // supplier per line is its rank-1 quote (B, 40 USD, beats A, 50 USD), with the reason under the name; the person may change it
     await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.supplierB.name)
     await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
     await expect(dialog.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.supplierA.name)
     await expect(dialog.getByRole('button', { name: 'Supplier for line 3' })).toContainText('Not sourced yet')
-    await shot(page, 'o01-convert-dialog-1440')
+    for (const [n, v] of [['1', '1000'], ['2', '2000'], ['3', '500']]) await t.typed(price(dialog, Number(n)), v)
 
-    // a double submit: two clicks in the same gesture; the client-made order id makes it one order
     await t.doubleTap(dialog.getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
-    expect(t.count).toBe(2) // Mark won, Create order
+    expect(t.count).toBe(1 + 3 + 1) // Mark won, three prices typed, Create order
 
-    const orders = await get<{ id: string; number: number; customer_po_number: string | null; payment_terms_days: number | null; owner_id: string | null }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,number,customer_po_number,payment_terms_days,owner_id`)
+    const orders = await get<{ id: string; customer_po_number: string | null; payment_terms_days: number | null }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,customer_po_number,payment_terms_days`)
     expect(orders).toHaveLength(1)
     expect(orders[0].customer_po_number).toBeNull()
     expect(orders[0].payment_terms_days).toBe(45)
     expect((await get<{ needs_commissioning: boolean }>(`orders?id=eq.${orders[0].id}&select=needs_commissioning`))[0].needs_commissioning).toBe(true)
-    const items = await get<{ description: string; supplier_order_id: string | null; unit_price_net: number; supplier_unit_price: number | null; is_service: boolean }>(
-      `order_items?order_id=eq.${orders[0].id}&select=description,supplier_order_id,unit_price_net,supplier_unit_price,is_service&order=position`,
+    const items = await get<{ supplier_order_id: string | null; unit_price_net: number; supplier_unit_price: number | null }>(
+      `order_items?order_id=eq.${orders[0].id}&select=supplier_order_id,unit_price_net,supplier_unit_price&order=position`,
     )
     expect(items.map(i => Number(i.unit_price_net))).toEqual([1000, 2000, 500])
-    expect(items[0].supplier_order_id).not.toBeNull()
     expect(Number(items[0].supplier_unit_price)).toBe(40)
     expect(items[2].supplier_order_id).toBeNull()
-    const legs = await get<{ id: string; supplier_id: string; currency: string }>(`supplier_orders?order_id=eq.${orders[0].id}&select=id,supplier_id,currency`)
+    const legs = await get<{ id: string; supplier_id: string }>(`supplier_orders?order_id=eq.${orders[0].id}&select=id,supplier_id`)
     expect(legs.map(l => l.supplier_id).sort()).toEqual([s.supplierA.id, s.supplierB.id].sort())
     expect(items[0].supplier_order_id).toBe(legs.find(l => l.supplier_id === s.supplierB.id)!.id)
 
@@ -239,24 +294,23 @@ test.describe('O01: Mark won creates the order', () => {
     const again = await rest<string>('sales', 'rpc/convert_rfq_to_order', { method: 'POST', body: { p_order_id: orders[0].id, p_rfq_id: s.rfq.id } })
     expect(again.status).toBeLessThan(300)
     expect(await get(`orders?rfq_id=eq.${s.rfq.id}&select=id`)).toHaveLength(1)
-
-    // afterwards the order is open and the RFQ page points at it
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(s.customer.name)
     await page.goto(`/rfqs/${s.rfq.id}`)
     await expect(page.locator('[data-slot="mark-won"]').getByRole('link', { name: /Open ORD-\d{4}/ })).toBeVisible()
   })
 
-  test('the supplier on a line can be changed, the customer PO is kept, and a line the quotation never priced is left out of the order', async ({ page }) => {
+  test('a partial quotation: the line it left out starts unticked, a supplier can be changed, the customer PO is kept', async ({ page }) => {
     const s = await seedRfq()
-    await must(rest('admin', `rfq_items?id=eq.${s.items[2].id}`, { method: 'PATCH', body: { quoted_unit_price_net: null }, prefer: 'return=minimal' }))
+    await issueQuotation(s.rfq.id, [
+      { id: s.items[0].id, unit_price: 1000, qty: 2 },
+      { id: s.items[1].id, unit_price: 2000, qty: 1 },
+    ])
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
     const dialog = page.getByRole('dialog')
-    // the unpriced line was never sold: it is shown, marked left out, and asks for nothing
-    await expect(dialog.getByTestId('convert-item-3-left-out')).toContainText('Left out of the order')
+    await expect(price(dialog, 1)).toHaveValue('1,000')
+    await expect(dialog.getByRole('checkbox', { name: 'Include line 3' })).not.toBeChecked()
+    await expect(dialog.getByTestId('convert-item-3-not-in')).toContainText(/Not in QT-\d\d-\d{4}/)
     await expect(dialog.getByText('Creates 2 order lines.')).toBeVisible()
-    await expect(dialog.getByRole('button', { name: 'Create order' })).toBeEnabled()
-    // line 1: take supplier A instead of the lowest
     await dialog.getByRole('button', { name: 'Supplier for line 1' }).click()
     await page.getByRole('option', { name: new RegExp(s.supplierA.name) }).click()
     await dialog.getByLabel('Customer PO number').fill(`CPO-${s.tag}`)
@@ -264,14 +318,99 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     const [order] = await get<{ id: string; customer_po_number: string }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,customer_po_number`)
     expect(order.customer_po_number).toBe(`CPO-${s.tag}`)
-    const items = await get<{ unit_price_net: number; supplier_unit_price: number; supplier_order_id: string }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price,supplier_order_id&order=position`)
+    const items = await get<{ unit_price_net: number; supplier_unit_price: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price&order=position`)
+    expect(items.map(i => Number(i.unit_price_net))).toEqual([1000, 2000])
     expect(Number(items[0].supplier_unit_price)).toBe(50)
-    expect(items).toHaveLength(2)
-    await expect(page.getByText(`CPO-${s.tag}`).first()).toBeVisible()
+  })
+
+  test('partial revision: R0 priced items 1 and 2, R1 dropped item 2 and repriced item 1; the order follows R1 and R0 is not resurrected', async ({ page }) => {
+    const s = await seedRfq()
+    await issueQuotation(s.rfq.id, [
+      { id: s.items[0].id, unit_price: 1000, qty: 2 },
+      { id: s.items[1].id, unit_price: 2000, qty: 1 },
+    ])
+    await issueQuotation(s.rfq.id, [{ id: s.items[0].id, unit_price: 1100, qty: 2 }])
+    // rfq_items still holds R0's 2,000 for item 2: that is the stale value the old dialog ordered
+    expect((await rfqItemPrices(s.rfq.id)).map(i => i.quoted_unit_price_net && Number(i.quoted_unit_price_net))).toEqual([1100, 2000, null])
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(price(dialog, 1)).toHaveValue('1,100')
+    await expect(dialog.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked()
+    await expect(dialog.getByRole('checkbox', { name: 'Include line 2' })).not.toBeChecked()
+    await expect(dialog.getByTestId('convert-item-2-not-in')).toContainText(/R1/)
+    await dialog.getByRole('button', { name: 'Create order' }).click()
+    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${s.rfq.id}&select=id`)
+    const items = await get<{ unit_price_net: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net&order=position`)
+    expect(items.map(i => Number(i.unit_price_net))).toEqual([1100])
+  })
+
+  test('imported, with legacy flags: the guessed supplier price warns, nothing is priced from it, and the typed price goes through', async ({ page }) => {
+    const tag = Math.random().toString(36).slice(2, 6)
+    const customer = await createCompany(uniqueName('Imported Customer'))
+    const supplierA = await createCompany(uniqueName('Alpenmark'), { country: 'Germany' })
+    const supplierB = await createCompany(uniqueName('Dubai Instrumentation'), { country: 'UAE' })
+    const rfq = await createRfq(customer.id, { due_on: karachiDay(6), customer_ref: `RFQ-${tag}`, quoted_on: karachiDay(-1) })
+    const items = await must(
+      rest<{ id: string; position: number }[]>('admin', 'rfq_items', {
+        method: 'POST',
+        body: [
+          { rfq_id: rfq.id, position: 0, description: `Pressure transmitter ${tag}`, qty: 2 },
+          { rfq_id: rfq.id, position: 1, description: `Flow meter ${tag}`, qty: 1 },
+        ],
+      }),
+    )
+    items.sort((a, b) => a.position - b.position)
+    const inq = async (supplierId: string) => (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplierId, sent_on: karachiDay(-3) } })))[0].id
+    // the importer attached every supplier quote to item 1 and marked it
+    await must(
+      rest('admin', 'supplier_quote_lines', {
+        method: 'POST',
+        body: [
+          { inquiry_id: await inq(supplierA.id), rfq_item_id: items[0].id, unit_price: 50, currency: 'USD', legacy_flags: ['item_guessed', 'currency_unverified'] },
+          { inquiry_id: await inq(supplierB.id), rfq_item_id: items[0].id, unit_price: 40, currency: 'USD', legacy_flags: ['item_guessed', 'currency_unverified'] },
+        ],
+        prefer: 'return=minimal',
+      }),
+    )
+    await openAs(page, 'sales', `/rfqs/${rfq.id}`)
+    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('may belong to another item')
+    await expect(dialog.getByTestId('convert-item-1')).toContainText('currency of this supplier quote was not confirmed')
+    await expect(price(dialog, 1)).toHaveValue('')
+    await price(dialog, 1).fill('1500')
+    await price(dialog, 2).fill('3000')
+    await dialog.getByRole('button', { name: 'Create order' }).click()
+    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${rfq.id}&select=id`)
+    const lines = await get<{ unit_price_net: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net&order=position`)
+    expect(lines.map(i => Number(i.unit_price_net))).toEqual([1500, 3000])
+  })
+
+  test('a stale exchange rate: the warning names it, the rest of the dialog works, and the price is typed', async ({ page }) => {
+    const tag = Math.random().toString(36).slice(2, 6)
+    // SEK has one rate, 45 days old: older than the 30 days the ranking will use, so the supplier price has no PKR value
+    await must(rest('admin', 'fx_rates?on_conflict=currency,as_of,source', { method: 'POST', body: { currency: 'SEK', rate_pkr: 26, as_of: karachiDay(-45), source: 'manual' }, prefer: 'resolution=merge-duplicates,return=minimal' }))
+    const customer = await createCompany(uniqueName('Stale Rate Customer'))
+    const supplier = await createCompany(uniqueName('Nordmark'), { country: 'Sweden' })
+    const rfq = await createRfq(customer.id, { due_on: karachiDay(6), customer_ref: `RFQ-${tag}`, quoted_on: karachiDay(-1) })
+    const [item] = await must(rest<{ id: string }[]>('admin', 'rfq_items', { method: 'POST', body: [{ rfq_id: rfq.id, position: 0, description: `Radar level sensor ${tag}`, qty: 1 }] }))
+    const inquiry = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplier.id, sent_on: karachiDay(-3) } })))[0]
+    await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: inquiry.id, rfq_item_id: item.id, unit_price: 9000, currency: 'SEK' }, prefer: 'return=minimal' }))
+    await openAs(page, 'sales', `/rfqs/${rfq.id}`)
+    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('No current SEK rate: pick the supplier')
+    await expect(dialog.getByRole('button', { name: 'Create order' })).toBeEnabled()
+    await price(dialog, 1).fill('300000')
+    await dialog.getByRole('button', { name: 'Create order' }).click()
+    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
   })
 
   test('Mark won once the quotation is issued: 2 taps', async ({ page }) => {
-    const s = await seedRfq()
+    const s = await seedRfq({ prices: true })
     await must(rest('admin', 'rpc/issue_quotation', { method: 'POST', body: { p_quotation_id: crypto.randomUUID(), p_rfq_id: s.rfq.id } }))
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
@@ -405,7 +544,8 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
 
 test.describe('O03: items', () => {
   test('GST per line, exempt the whole order, and the service flag', async ({ page }) => {
-    const s = await seedOrder()
+    // 0092 (owner decision): sales change the money fields (GST, prices, quantities) of an order they entered or own, so this order is the sales person's
+    const s = await seedOrder({ owner_id: 'a0000000-0000-4000-8000-000000000002' })
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await expect(page.getByRole('table', { name: 'Order items' })).toBeVisible()
     // the per-line controls are behind one toggle: the table shows five columns until then

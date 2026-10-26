@@ -604,7 +604,7 @@ from generate_series(1, 9) g;
 insert into public.expenses (paid_on, amount_pkr, input_tax_pkr, category_id, description, order_id, supplier_order_id, payee_id, paid_via, bank_month)
 select e.paid_on, 500 + g % 90000, case when e.cat in (11, 12) then (500 + g % 90000) * 0.1 else 0 end,
        ('ca7e0000-0000-4000-8000-0000000000' || lpad(e.cat::text, 2, '0'))::uuid,
-       case when g % 13 = 0 then null else 'Perf expense ' || g end,
+       case when g % 13 = 0 and e.cat <> 10 then null else 'Perf expense ' || g end,   -- 0091: the Other category (10) takes a title
        case when e.cat in (11, 12, 13) then pg_temp.u('a0000000', 1 + g % 2000) end,
        case when e.cat = 11 and g % 3 = 0 then pg_temp.u('a1000000', (1 + g % 2000) * 2) end,
        case when e.cat = 11 then pg_temp.u('c0000000', 1001 + g % 150) end,

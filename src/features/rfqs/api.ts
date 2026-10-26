@@ -897,3 +897,65 @@ export async function listUserNames(): Promise<Record<string, string>> {
   const rows = unwrap(await db.from('users').select('id, name'))
   return Object.fromEntries(rows.map(r => [r.id, r.name]))
 }
+
+// ================================================================ Delete an RFQ (0092)
+
+export interface RfqDeleteCounts {
+  /** Issued quotations, oldest first. */
+  quotations: { number: number; revision: number; issuedOn: string }[]
+  items: number
+  /** Supplier prices (quote lines) on the RFQ's inquiries. */
+  supplierPrices: number
+  /** Files that will be removed from storage: the RFQ's attachments and the PDFs of its quotations. */
+  files: number
+}
+
+/** What delete_rfq would take with the RFQ, for the confirm. Admin-only screens call it; row security answers for anyone else. */
+export async function getRfqDeleteCounts(rfqId: string): Promise<RfqDeleteCounts> {
+  const db = requireSupabase()
+  const [quotes, items, prices, attachments] = await Promise.all([
+    db.from('quotations').select('number, revision, issued_on, pdf_path').eq('rfq_id', rfqId).order('number').order('revision'),
+    db.from('rfq_items').select('id', { count: 'exact', head: true }).eq('rfq_id', rfqId),
+    db.from('supplier_quote_lines').select('id, supplier_inquiries!inner(rfq_id)', { count: 'exact', head: true }).eq('supplier_inquiries.rfq_id', rfqId),
+    db.from('attachments').select('id', { count: 'exact', head: true }).eq('rfq_id', rfqId),
+  ])
+  const q = unwrap(quotes) ?? []
+  for (const r of [items, prices, attachments]) if (r.error) throw r.error
+  return {
+    quotations: q.map(r => ({ number: r.number, revision: r.revision, issuedOn: r.issued_on })),
+    items: items.count ?? 0,
+    supplierPrices: prices.count ?? 0,
+    files: (attachments.count ?? 0) + q.filter(r => r.pdf_path).length,
+  }
+}
+
+export interface StoredFile {
+  bucket: string
+  path: string
+}
+
+/** delete_rfq: the rows are gone when this resolves; the files it names are the caller's to remove from storage. */
+export async function deleteRfq(rfqId: string): Promise<StoredFile[]> {
+  const rows = unwrap(await requireSupabase().rpc('delete_rfq', { p_rfq_id: rfqId })) ?? []
+  return rows.map(r => ({ bucket: r.storage_bucket, path: r.storage_path }))
+}
+
+/**
+ * Removes stored files, one call per bucket. A file that will not go must not undo a delete that already happened, so this never
+ * throws: it returns the files it could not remove.
+ */
+export async function removeStoredFiles(files: readonly StoredFile[]): Promise<StoredFile[]> {
+  const byBucket = new Map<string, string[]>()
+  for (const f of files) byBucket.set(f.bucket, [...(byBucket.get(f.bucket) ?? []), f.path])
+  const failed: StoredFile[] = []
+  for (const [bucket, paths] of byBucket) {
+    try {
+      const { error } = await requireSupabase().storage.from(bucket).remove(paths)
+      if (error) throw error
+    } catch (e) {
+      console.error(`Could not remove ${paths.length} file(s) from ${bucket} after deleting an RFQ`, e)
+      failed.push(...paths.map(path => ({ bucket, path })))
+    }
+  }
+  return failed
+}

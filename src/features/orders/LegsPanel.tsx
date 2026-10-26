@@ -30,7 +30,8 @@ const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDia
 const AddLegDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLegDialog))
 
 // Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
-const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/ExpenseDialog').then(m => m.AddExpenseDialog))
+// Pay <supplier> (redesign phase 1): the one door for a supplier payment, in the supplier's currency with bank charges apart.
+const PayDialog = lazyDialog(() => import('@/features/money/expenses/PayDialog').then(m => m.PayDialog))
 
 /*
  * Supplier orders (O03; g2-order-detail.html "Procurement legs"; called "legs" in the database and the code, "supplier orders" on screen
@@ -396,10 +397,10 @@ function Leg({
         ) : null}
       </div>
       {addingExpense ? (
-        <AddExpenseDialog
+        <PayDialog
           open
           onOpenChange={o => !o && setAddingExpense(false)}
-          context={{ orderId: order.id, orderLabel: orderRef(order.number), legId: leg.id, payeeId: leg.supplierId, payeeName: leg.supplierName, amount: owed?.amount, amountNote: owed?.note }}
+          context={{ orderId: order.id, orderLabel: orderRef(order.number), legId: leg.id, supplierId: leg.supplierId, supplierName: leg.supplierName, currency: leg.currency, amount: owed?.amount, amountNote: owed?.note }}
         />
       ) : null}
     </li>

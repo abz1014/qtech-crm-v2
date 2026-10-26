@@ -1,20 +1,25 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Rows3 } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { BurstSheet } from '@/features/money/expenses/BurstSheet'
+import { CashInHandLine } from '@/features/money/expenses/CashInHand'
+import { ClaimsReview } from '@/features/money/expenses/ClaimsReview'
 import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses/ExpenseDialog'
 import { ExpensesTab } from '@/features/money/expenses/ExpensesTab'
-import { useLegOptions, useOrderOptions } from '@/features/money/expenses/hooks'
+import { PayDialog } from '@/features/money/expenses/PayDialog'
+import { QuickAdd } from '@/features/money/expenses/QuickAdd'
+import { useCategories, useGroups, useLegOptions, useOrderOptions } from '@/features/money/expenses/hooks'
 
 /**
- * Money › Expenses: the frame, ONE way to add ("Add expenses": the burst sheet, which is just as quick for a single row; owner
- * decision 2026-10-19), and the list.
+ * Money › Expenses. From the top: "To approve" (engineers' "I paid", only while there are some), Quick add (amount, tap a category,
+ * Save; it stays open: redesign phase 1), cash in hand, then the monthly bills and the month's list. "Add expenses" (the 0086
+ * multi-row sheet) stays for a batch of receipts; Quick add's Save is the page's one green button.
  *
- * `/money/expenses?add=1[&order=<id>[&leg=<id>]][&amount=384497][&note=Still owed on leg A]` opens the one Add expense
- * dialog with the context pre-filled (A3), so an order or a leg can offer "Add expense" as a plain link, and the screen
- * behind it is the Expenses list.
+ * `/money/expenses?add=1[&order=<id>][&amount=384497][&note=...]` opens the one Add expense dialog with the context pre-filled (A3).
+ * With `&leg=<id>` it opens Pay <supplier> instead: supplier payments have one door (Pay on the supplier order or on We owe
+ * suppliers), and that is the dialog both open.
  */
 export function ExpensesPage() {
   const [params, setParams] = useSearchParams()
@@ -25,22 +30,20 @@ export function ExpensesPage() {
   const legId = params.get('leg')
   const orders = useOrderOptions(linked && !!orderId)
   const legs = useLegOptions(linked ? orderId : null)
+  const cats = useCategories()
+  const groups = useGroups()
 
+  const leg = legId ? legs.data?.find(l => l.id === legId) : undefined
   const context = useMemo<ExpenseContext | undefined>(() => {
     if (!orderId) return undefined
-    const leg = legId ? legs.data?.find(l => l.id === legId) : undefined
     const amount = Number(params.get('amount'))
     return {
       orderId,
       orderLabel: orders.data?.find(o => o.id === orderId)?.ref,
-      legId: leg?.id,
-      legLabel: leg?.label,
-      payeeId: leg?.supplierId,
-      payeeName: leg?.supplierName,
       amount: amount > 0 ? amount : undefined,
       amountNote: params.get('note') ?? undefined,
     }
-  }, [orderId, legId, orders.data, legs.data, params])
+  }, [orderId, orders.data, params])
 
   const linkReady = linked && (!orderId || (orders.isSuccess && (!legId || legs.isSuccess)))
   const closeLinked = () => {
@@ -53,11 +56,14 @@ export function ExpensesPage() {
     <MoneyFrame
       active="expenses"
       actions={
-        <Button variant="primary" icon={Plus} onClick={() => setBurst(true)}>
+        <Button icon={Rows3} onClick={() => setBurst(true)} className="text-base">
           Add expenses
         </Button>
       }
     >
+      {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
+      {cats.data ? <QuickAdd categories={cats.data} /> : <div className="h-[220px] animate-pulse rounded border bg-sunken" aria-hidden="true" />}
+      <CashInHandLine />
       <ExpensesTab />
       <BurstSheet
         open={burst}
@@ -70,7 +76,15 @@ export function ExpensesPage() {
           }
         }}
       />
-      {linkReady ? <AddExpenseDialog open context={context} onOpenChange={o => !o && closeLinked()} /> : null}
+      {linkReady && leg && context ? (
+        <PayDialog
+          open
+          onOpenChange={o => !o && closeLinked()}
+          context={{ orderId: context.orderId as string, orderLabel: context.orderLabel, legId: leg.id, supplierId: leg.supplierId, supplierName: leg.supplierName, currency: leg.currency, amount: context.amount, amountNote: context.amountNote }}
+        />
+      ) : linkReady && !legId ? (
+        <AddExpenseDialog open context={context} onOpenChange={o => !o && closeLinked()} />
+      ) : null}
     </MoneyFrame>
   )
 }
