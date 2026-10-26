@@ -118,7 +118,7 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
 }
 
 /**
- * The heading of a view reached from a Money tab rather than being one (Match bank statement, Margins, Things to check): a
+ * The heading of a view reached from a Money tab rather than being one (Match bank statement, Margins, Mistakes to fix): a
  * back link to where it was opened from, the title and its actions. It replaces the old third strip of tabs.
  * On a phone the back link is the phone bar's own back arrow (one bar, UX audit 2026-10-19), so it is not drawn twice, and
  * the title is the phone bar's (not repeated as a heading).

@@ -162,7 +162,7 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
   })
 
   it('the Money pages follow the Money tabs: sales find Who owes us and Invoices & GST, only admins the rest', async () => {
-    const admin = ['Who owes us', 'Invoices & GST', 'Reports', 'Expenses', 'Add expenses', 'Month end', 'Match bank statement', 'Order margins', 'Things to check']
+    const admin = ['Who owes us', 'Invoices & GST', 'Reports', 'Expenses', 'Add expenses', 'Month end', 'Match bank statement', 'Order margins', 'Mistakes to fix']
     for (const [role, want] of [['admin', admin], ['sales', ['Who owes us', 'Invoices & GST', 'Reports']], ['engineer', []]] as const) {
       const u = userEvent.setup()
       shell(role)

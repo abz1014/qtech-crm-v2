@@ -58,7 +58,7 @@ test('overpayment and advance: an advance before the invoice, then more than is 
     expect((await payments()).map(p => Number(p.amount))).toEqual([40000])
   })
 
-  await test.step('more than the balance is allowed, the dialog says by how much, and Things to check raises it', async () => {
+  await test.step('more than the balance is allowed, the dialog says by how much, and Mistakes to fix raises it', async () => {
     const d = await record('100,000') // 78,000 is due: 22,000 too much
     await expect(d.getByTestId('payment-note')).toHaveAttribute('data-kind', 'over')
     await expect(d.getByTestId('payment-note')).toContainText('This is PKR 22,000 more than the balance due on this order.')
@@ -66,7 +66,7 @@ test('overpayment and advance: an advance before the invoice, then more than is 
     await expect(page.getByRole('dialog')).toBeHidden()
     expect((await payments()).map(p => Number(p.amount))).toEqual([40000, 100000])
     await page.goto('/money/exceptions')
-    const item = page.getByRole('list', { name: 'Things to check' }).getByRole('listitem').filter({ hasText: ordRef(o.order.number) }).filter({ hasText: 'Payments exceed total' })
+    const item = page.getByRole('list', { name: 'Mistakes to fix' }).getByRole('listitem').filter({ hasText: ordRef(o.order.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(item).toContainText('Customer payments (140,000) exceed the order')
     await expect(item.getByRole('link', { name: 'View order' })).toHaveAttribute('href', `/orders/${o.order.id}`)
   })

@@ -11,8 +11,8 @@ import { cleanWord, typicalRowHeight, type OcrBox, type OcrLine } from './ocrLay
 const INK = 190
 /** Words read at least this sure cover their ink; less sure ones are read again when a box overlaps them. */
 const TRUSTED = 60
-/** At most this many boxes are read again (time on a slow phone). */
-export const MAX_RECOVER_BOXES = 40
+/** At most this many boxes are read again (time on a slow phone): a table of 30 rows has a serial number and a quantity to find in each. */
+export const MAX_RECOVER_BOXES = 120
 
 const overlapY = (a: OcrBox, b: OcrBox) => Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0))
 
@@ -80,7 +80,13 @@ export function findMissedBoxes(px: Uint8ClampedArray, width: number, height: nu
     const w = box.x1 - box.x0
     if (h < 0.45 * rh || h > 2.2 * rh || w < 0.3 * rh || w > 30 * rh) continue
     // Only on a row that has words: a cell beside cells that were read, not an icon in empty space.
-    const row = lines.some(l => l.words.some(wd => wd.confidence >= TRUSTED) && overlapY(l.bbox, box) >= 0.5 * Math.min(h, l.bbox.y1 - l.bbox.y0))
+    // (A cell centred in a tall row of a wrapped table sits between the lines of its neighbour: within half a row of one counts.)
+    const mid = (box.y0 + box.y1) / 2
+    const row = lines.some(
+      l =>
+        l.words.some(wd => wd.confidence >= TRUSTED) &&
+        (overlapY(l.bbox, box) >= 0.5 * Math.min(h, l.bbox.y1 - l.bbox.y0) || (mid >= l.bbox.y0 - 0.6 * rh && mid <= l.bbox.y1 + 0.6 * rh)),
+    )
     if (row) boxes.push(box)
   }
   return boxes.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0).slice(0, MAX_RECOVER_BOXES)
