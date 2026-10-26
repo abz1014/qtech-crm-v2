@@ -105,9 +105,10 @@ select ok(not has_table_privilege('qtech_engineer', 'public.v_fx_latest', 'selec
 select is((select coalesce(array_agg(p.proname::text order by p.proname), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace
              and p.proname in ('rank_item_quotes', 'customer_price_memory', 'supplier_item_memory', 'po_line_prefill', 'issue_quotation',
-                               'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate')
+                               'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate',
+                               'link_imported_invoices', 'link_imported_invoice', 'unlink_imported_invoice', 'set_legacy_review')
              and has_function_privilege('qtech_engineer', p.oid, 'execute')),
-          '{}'::text[], 'qtech_engineer cannot run the price RPCs nor the pricing actions');
+          '{}'::text[], 'qtech_engineer cannot run the price RPCs nor the pricing actions, nor 0096''s linking and review of imported money');
 
 -- coverage: whatever authenticated may do in public, qtech_engineer may do too, except the prices above (a new object fails here)
 select is((select coalesce(array_agg(x order by x), '{}') from (
@@ -132,8 +133,9 @@ select is((select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}'
              and has_function_privilege('authenticated', p.oid, 'execute')
              and not has_function_privilege('qtech_engineer', p.oid, 'execute')
              and p.proname not in ('rank_item_quotes', 'customer_price_memory', 'supplier_item_memory', 'po_line_prefill', 'issue_quotation',
-                                   'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate')),
-          '{}'::text[], 'coverage: qtech_engineer runs every function authenticated runs (the price ones excepted)');
+                                   'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate',
+                                   'link_imported_invoices', 'link_imported_invoice', 'unlink_imported_invoice', 'set_legacy_review')),   -- 0096: money, admin only
+          '{}'::text[], 'coverage: qtech_engineer runs every function authenticated runs (the price ones and 0096''s money RPCs excepted)');
 select is((select coalesce(array_agg(format('%s on %s', pol.polname, c.relname) order by 1), '{}')
            from pg_policy pol join pg_class c on c.oid = pol.polrelid
            where c.relnamespace = 'public'::regnamespace

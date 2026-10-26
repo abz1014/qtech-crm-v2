@@ -277,6 +277,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
   ('table', 'cash_topups',       '',      'SIUD', '',     ''),            -- 0087: cash drawn from the bank, admin only
   ('table', 'cash_counts',       '',      'SID',  '',     ''),            -- 0087: cash counts, admin only, never edited (delete and count again)
+  ('function', 'link_imported_invoices',  '', 'X', '',     ''),           -- 0096: admin only (42501 for everyone else)
+  ('function', 'link_imported_invoice',   '', 'X', '',     ''),           -- 0096: admin only
+  ('function', 'unlink_imported_invoice', '', 'X', '',     ''),           -- 0096: admin only
+  ('function', 'set_legacy_review',       '', 'X', '',     ''),           -- 0096: admin only
   ('function', 'approve_expense_claim', '', 'X',  '',     ''),            -- 0087: admin only (42501 for everyone else)
   ('function', 'cash_in_hand',   '',      'X',    '',     ''),            -- 0087: admin only (no row for the others)
   ('function', 'claim_object_ok', '',     'X',    '',     'X'),           -- 0087: storage helper; true for the admin and for the engineer on their own pending claim
@@ -358,6 +362,12 @@ insert into public.expense_claims (id, created_by, amount_pkr, note) values
   (pg_temp.f('e1'), 'a0000000-0000-4000-8000-000000000001', 5, 'other claim');
 insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);
 insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);
+insert into public.orders (id, company_id, owner_id, legacy_source) values   -- 0096: an imported order, an unlinked imported invoice and a linked one
+  (pg_temp.f('e7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"sheet":"orders"}');
+insert into public.invoices (id, company_id, number, net_amount, gst_amount, legacy_source) values
+  (pg_temp.f('e8'), pg_temp.f('01'), 'INV-M96-A', 100, 0, '{"sheet":"gst"}');
+insert into public.invoices (id, order_id, company_id, number, net_amount, gst_amount, legacy_source) values
+  (pg_temp.f('e9'), pg_temp.f('e7'), pg_temp.f('01'), 'INV-M96-B', 100, 0, '{"sheet":"gst"}');
 insert into storage.objects (bucket_id, name) values
   ('claim-receipts', pg_temp.f('e0')::text || '/r.jpg'), ('claim-receipts', pg_temp.f('e1')::text || '/r.jpg');
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
@@ -547,6 +557,10 @@ insert into probes values
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
   ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080: the cancelled order @2e holds 40
+  ('link_imported_invoices', '', 'X', 'select 1 where (select count(*) from public.link_imported_invoices()) >= 0'),   -- 0096: refused for everyone but an admin
+  ('link_imported_invoice', '', 'X', 'select public.link_imported_invoice(@e8, @e7)'),   -- 0096: the unlinked imported invoice onto the imported order (same customer)
+  ('unlink_imported_invoice', '', 'X', 'select public.unlink_imported_invoice(@e9)'),   -- 0096
+  ('set_legacy_review', '', 'X', $q$select public.set_legacy_review('order', @e7, 'live')$q$),   -- 0096
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
