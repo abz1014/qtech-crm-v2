@@ -161,6 +161,9 @@ function tabFor(rule: RuleKey): TodayTab {
     case 'fbr_attention':
     case 'tcs_not_sent':
     case 'recurring_due':
+    case 'gst_fbr':
+    case 'claims_to_approve':
+    case 'weekly_review':
       return 'money'
     case 'job_commissioning':
     case 'job_on_site':
@@ -1005,6 +1008,74 @@ export function groupItems(all: readonly Entry[]): TodayView {
 }
 
 /**
+ * GST to FBR (redesign phase 3, P3-D; owner default Q8: pay by the 15th, file the return by the 18th). Admin only. ONE chore row for
+ * last month's GST, from the 1st until every one of that month's invoices has its tax deposit recorded:
+ *   1st to 12th   grey, "Pay by 15 Oct" (in This week, not counted: nothing is due yet)
+ *   13th to 15th  amber, the days to the 15th (due today on the 15th, which counts)
+ *   after the 15th red, "N days overdue" (the payment day has gone), and it still says return by the 18th
+ * The amount is not worked out here (GST charged less GST paid on purchases is the Money screen's); the row says how many invoices.
+ */
+export const GST_DAYS = { amberAfter: 12, payBy: 15, returnBy: 18 } as const
+
+export function ruleGstFbr(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role !== 'admin' || !ctx.gst || ctx.gst.undeposited === 0) return []
+  const day = parseDay(ctx.today)?.d ?? 1
+  const month = ctx.today.slice(0, 7)
+  const payOn = `${month}-${GST_DAYS.payBy}`
+  const returnOn = `${month}-${GST_DAYS.returnBy}`
+  const early = day <= GST_DAYS.amberAfter
+  const name = MONTH_NAMES[Number(ctx.gst.month.slice(5, 7)) - 1]
+  const n = ctx.gst.undeposited
+  const due = dueBadge(payOn, ctx.today, 'gst_fbr')
+  return [
+    build(
+      {
+        rule: 'gst_fbr',
+        subjectId: `00000000-0000-4000-8002-${ctx.gst.month.slice(0, 7).replace('-', '').padStart(12, '0')}`,
+        tab: tabFor('gst_fbr'),
+        title: `GST to FBR: ${name}, ${n} ${n === 1 ? 'invoice' : 'invoices'} to pay`,
+        ref: 'GST to FBR',
+        party: `Pay by ${formatShortDate(payOn)} · return by ${formatShortDate(returnOn)}`,
+        // grey and ready from the 1st; from the 13th the 15th is its date, so it is due soon, then due, then late
+        actionDueOn: early ? today1(ctx.today) : payOn,
+        group: early ? 'ready' : groupFor(payOn, ctx.today),
+        badge: early ? { text: `Pay by ${formatShortDate(payOn)}`, tone: 'neutral' } : { text: due.text, tone: day > GST_DAYS.payBy ? 'danger' : 'warning' },
+        isPriority: false,
+        href: '/money/gst-register',
+        number: 0,
+      },
+      ctx.today,
+    ),
+  ]
+}
+
+/** "I paid: N to approve" (0087): engineers' claims waiting for the admin, one weekly-ish row. Admin only. */
+export function ruleClaimsToApprove(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role !== 'admin' || !ctx.claims || ctx.claims.pending === 0) return []
+  const n = ctx.claims.pending
+  const since = ctx.claims.oldestOn ?? ctx.today
+  return [
+    build(
+      {
+        rule: 'claims_to_approve',
+        subjectId: '00000000-0000-4000-8003-000000000001',
+        tab: tabFor('claims_to_approve'),
+        title: `I paid: ${n} to approve`,
+        ref: 'Expense claims',
+        party: n === 1 ? 'From an engineer' : 'From engineers',
+        actionDueOn: since,
+        group: 'now',
+        badge: ageBadge(since, ctx.today),
+        isPriority: false,
+        href: '/money/expenses',
+        number: 0,
+      },
+      ctx.today,
+    ),
+  ]
+}
+
+/**
  * The weekly owner review (redesign phase 3, P3-C1): one row for the admin every Monday, "Weekly review: 7 to decide", that opens
  * /todo/review. Only when there is something to decide. Never for sales or an engineer: the owner decides what is closed as lost.
  */
@@ -1055,6 +1126,8 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   job_commissioning: ruleJobCommissioning,
   job_on_site: ruleJobOnSite,
   weekly_review: ruleWeeklyReview,
+  gst_fbr: ruleGstFbr,
+  claims_to_approve: ruleClaimsToApprove,
 }
 
 /**
@@ -1103,6 +1176,8 @@ export const NAV_SECTION: Record<RuleKey, NavSection> = {
   job_commissioning: 'orders',
   job_on_site: 'orders',
   weekly_review: 'money', // an admin chore
+  gst_fbr: 'money',
+  claims_to_approve: 'money',
 }
 
 export const navSectionOf = (item: Pick<TodayItem, 'rule'>): NavSection => NAV_SECTION[item.rule]

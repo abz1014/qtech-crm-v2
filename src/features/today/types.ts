@@ -25,6 +25,8 @@ export type RuleKey =
   | 'job_commissioning'
   | 'job_on_site'
   | 'weekly_review'
+  | 'gst_fbr'
+  | 'claims_to_approve'
 
 /** The rule key written to snoozes.rule (DATA_MODEL 2.21 gives `chase_customer_clarification` as the example). */
 export const SNOOZE_RULE: Record<RuleKey, string> = {
@@ -48,6 +50,8 @@ export const SNOOZE_RULE: Record<RuleKey, string> = {
   job_commissioning: 'job_commissioning',
   job_on_site: 'job_on_site',
   weekly_review: 'weekly_review',
+  gst_fbr: 'gst_fbr',
+  claims_to_approve: 'claims_to_approve',
 }
 
 export type TodayTab = 'bids' | 'sourcing' | 'money'
@@ -249,6 +253,22 @@ export interface JobFact {
   legacy?: boolean
 }
 
+/**
+ * P3-D, admin only: last month's GST to FBR. `month` is the first of the month the GST is for (the previous one), `invoices` how many
+ * of its invoices carry GST (not imported), `undeposited` how many of those have no tax deposit recorded yet. Paid = none left.
+ */
+export interface GstFact {
+  month: string
+  invoices: number
+  undeposited: number
+}
+
+/** P3-D, admin only: engineers' "I paid" claims waiting for approval (0087), and the day the oldest was made. */
+export interface ClaimsFact {
+  pending: number
+  oldestOn: string | null
+}
+
 /** M08: one recurring expense template and whether this month's expense exists. Admin only. */
 export interface RecurringFact {
   id: string
@@ -283,6 +303,10 @@ export interface TodayInputs {
   receivables: readonly ReceivableFact[]
   /** Admin only; null otherwise. */
   monthEnd: MonthEndFact | null
+  /** P3-D. Admin only: last month's GST to FBR. Absent or null for everyone else (never requested). */
+  gst?: GstFact | null
+  /** P3-D. Admin only: engineers' claims to approve. Absent or null for everyone else (never requested). */
+  claims?: ClaimsFact | null
   /** M08. Admin only: paid orders whose costs are provisional. Absent or empty for everyone else (never requested). */
   costs?: readonly CostFact[]
   /** M08. Admin and sales only: the invoices the FBR and TCS rules read. Absent or empty for an engineer (never requested). */

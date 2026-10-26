@@ -21,6 +21,8 @@ function data(): TodayData {
   const base = importedStyleInputs()
   return {
     ...base,
+    gst: null,
+    claims: null,
     clarifications: [],
     legs: [],
     jobs: [],

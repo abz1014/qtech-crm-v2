@@ -621,6 +621,10 @@ function howTo(item: TodayItem): string {
       return 'You are an engineer on this order. Open it to see the site contact and the notes, then "Mark done today" when the commissioning is finished, or change the planned date.'
     case 'job_on_site':
       return 'The goods have reached the site and the commissioning has no date yet. Open the order and set the planned date.'
+    case 'gst_fbr':
+      return 'Last month GST is paid to FBR by the 15th and the return is filed by the 18th. Open Invoices & GST, deposit the tax and record the payment slip number (PSID).'
+    case 'claims_to_approve':
+      return 'An engineer paid for something and asked to be paid back. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':
       return 'Quotations nobody decided, enquiries nobody asked suppliers about, goods and payments far past their date. Decide each one: still live, chase, or close as lost.'
     case 'recurring_due':

@@ -47,6 +47,8 @@ export const ACTION_LABEL: Record<RuleKey, string> = {
   job_commissioning: 'Open job',
   job_on_site: 'Set date',
   weekly_review: 'Start review',
+  gst_fbr: 'Open GST',
+  claims_to_approve: 'Approve',
 }
 
 /** Rules whose button opens the prepared message (the context pane holds Copy, Open in WhatsApp and Mark chased). */

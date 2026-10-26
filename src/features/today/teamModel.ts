@@ -45,6 +45,8 @@ export function buildTeam(data: TodayData, today: string, selfId: string, rows: 
         orders: data.orders,
         receivables: data.receivables,
         monthEnd: data.monthEnd,
+        gst: data.gst,
+        claims: data.claims,
         costs: data.costs,
         invoices: data.invoices,
         recurring: data.recurring,
