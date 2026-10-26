@@ -279,6 +279,8 @@ export function useDeleteRecurring() {
     mutationFn: (id: string) => api.deleteRecurring(id),
     onSuccess: () => invalidateAfter(client, 'recurring.record', {}),
   })
+}
+
 /** 0091: one-off titles used 3+ times in 90 days (admin only: `enabled` is the admin check). */
 export function useMiscSuggestions(enabled = true) {
   return useQuery({ queryKey: [...qk.money.expenses.all, 'misc-suggestions'] as const, queryFn: api.listMiscSuggestions, enabled, staleTime: 60_000 })

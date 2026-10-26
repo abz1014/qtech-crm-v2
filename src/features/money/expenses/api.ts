@@ -458,6 +458,8 @@ export async function deleteRecurring(id: string): Promise<void> {
   const db = requireSupabase()
   const { error } = await db.from('recurring_expenses').delete().eq('id', id)
   if (error) throw error
+}
+
 // ------------------------------------------------------------------ 0091: one-off ("Other") titles that repeat
 
 export interface MiscSuggestion {
