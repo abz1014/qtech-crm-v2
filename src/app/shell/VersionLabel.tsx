@@ -10,7 +10,7 @@ import { Icon } from '@/ui/Icon'
  * menu. Tapping it is "Check for update now": it asks which build is live, fetches its worker and, when a newer build is
  * waiting, switches to it (a form with unsaved edits blocks it; src/lib/pwa/updates.ts checkForUpdateNow).
  */
-export const CHECK_TEXT: Record<CheckResult | 'checking', string> = {
+const CHECK_TEXT: Record<CheckResult | 'checking', string> = {
   checking: 'Checking…',
   latest: 'You have the latest version.',
   updating: 'Updating to the newest version…',
@@ -37,7 +37,6 @@ export function VersionLabel({ check = checkForUpdateNow }: { check?: () => Prom
       <button
         type="button"
         onClick={run}
-        aria-label={`${versionLabel()}. Check for update now`}
         className="grid min-h-touch justify-items-start gap-[2px] rounded text-left hover:text-fg"
       >
         <span>{versionLabel()}</span>
@@ -61,10 +60,18 @@ export function VersionMenuItem({ check = checkForUpdateNow }: { check?: () => P
       icon={RefreshCw}
       keepOpen
       onClick={run}
-      aria-label={`${versionLabel()}. Check for update now`}
       className="h-auto min-h-control py-2"
     >
-      <span className="block whitespace-normal">{state ? CHECK_TEXT[state] : versionLabel()}</span>
+      <span className="block whitespace-normal">
+        {state ? (
+          CHECK_TEXT[state]
+        ) : (
+          <>
+            {versionLabel()}
+            <span className="sr-only">. Check for update now</span>
+          </>
+        )}
+      </span>
     </MenuItem>
   )
 }
