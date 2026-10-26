@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { useToast } from '@/ui/useToast'
 import { LoadBoundary } from '@/ui/LoadBoundary'
@@ -32,6 +32,11 @@ const loadCaptureSheet = () => import('@/features/capture/CaptureSheet')
  */
 const emptyDraft = (): Draft => ({ id: crypto.randomUUID(), source: 'pick', text: '', files: [] })
 
+/** The intake screens read what is pasted or dropped themselves: New RFQ and New enquiry. */
+const onIntake = (path: string) => path.startsWith('/rfqs/new') || path.startsWith('/enquiries/new')
+/** To do and the Jobs list take a dropped file straight to New enquiry (P4-A). */
+const takesDrops = (path: string) => path === '/todo' || path === '/jobs' || path === '/todo/' || path === '/jobs/'
+
 const isEditable = (t: EventTarget | null) => {
   const el = t as HTMLElement | null
   return Boolean(el && (el.isContentEditable || /^(input|textarea|select)$/i.test(el.tagName)))
@@ -49,6 +54,9 @@ async function toFiles(item: CaptureItem): Promise<AddedFile[]> {
 
 export function CaptureProvider({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [notice, setNotice] = useState<CaptureNotice>(null)
@@ -173,7 +181,7 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
   // Paste, drop and the C key, anywhere in the app.
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
-      if (e.defaultPrevented || isEditable(e.target) || pathRef.current.startsWith('/rfqs/new')) return
+      if (e.defaultPrevented || isEditable(e.target) || onIntake(pathRef.current)) return
       if (otherDialogOpen()) return
       const files = [...(e.clipboardData?.files ?? [])]
       const text = e.clipboardData?.getData('text/plain') ?? ''
@@ -185,12 +193,12 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     const hasFiles = (e: DragEvent) => Boolean(e.dataTransfer?.types.includes('Files'))
     let depth = 0
     const onEnter = (e: DragEvent) => {
-      if (!hasFiles(e) || inFileDrop(e.target) || pathRef.current.startsWith('/rfqs/new')) return
+      if (!hasFiles(e) || inFileDrop(e.target) || onIntake(pathRef.current)) return
       depth += 1
       setDragging(e.dataTransfer?.items.length || 1)
     }
     const onOver = (e: DragEvent) => {
-      if (!hasFiles(e) || inFileDrop(e.target) || pathRef.current.startsWith('/rfqs/new')) return
+      if (!hasFiles(e) || inFileDrop(e.target) || onIntake(pathRef.current)) return
       e.preventDefault()
     }
     const onLeave = () => {
@@ -200,9 +208,15 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     const onDrop = (e: DragEvent) => {
       depth = 0
       setDragging(0)
-      if (!hasFiles(e) || inFileDrop(e.target) || pathRef.current.startsWith('/rfqs/new')) return
+      if (!hasFiles(e) || inFileDrop(e.target) || onIntake(pathRef.current)) return
       e.preventDefault()
-      add({ files: [...(e.dataTransfer?.files ?? [])] }, 'drop')
+      const dropped = [...(e.dataTransfer?.files ?? [])]
+      // A file dropped on To do or on the Jobs list starts a New enquiry with it; anywhere else it still goes to Paste or photo.
+      if (takesDrops(pathRef.current) && dropped.length > 0) {
+        navigateRef.current('/enquiries/new', { state: { capture: { id: crypto.randomUUID(), text: '', files: dropped } } })
+        return
+      }
+      add({ files: dropped }, 'drop')
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== 'c' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.defaultPrevented) return

@@ -45,7 +45,7 @@ import {
 } from "@/ui/paletteSources";
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
-const INTAKE_ROUTE = "/rfqs/new";
+const INTAKE_ROUTE = "/enquiries/new";
 const TODAY_ROUTE = "/todo";
 const NEW_ORDER_ROUTE = "/orders?new=1";
 
@@ -328,11 +328,13 @@ export function PaletteHost({
     const items: PaletteItem[] = [
       {
         id: "new-rfq",
-        label: "New RFQ",
+        label: "New enquiry",
         meta: "Go to intake",
         icon: Plus,
         shortcut: ["N"],
         href: INTAKE_ROUTE,
+        // the old names stay findable: RFQ, and the top-bar button this replaced (P4-A)
+        keywords: ["new rfq", "rfq", "paste or photo", "photo", "pdf", "enquiry"],
       },
       captureItem,
       ...(role === "admin"

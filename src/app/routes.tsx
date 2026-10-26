@@ -41,6 +41,8 @@ const IntakeScreen = lazy(routeChunks.rfqNew)
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
+/** New enquiry (P4-A): the document beside what was read; wraps the intake. */
+const NewEnquiryPage = lazy(() => import('@/features/enquiry/NewEnquiryPage'))
 /** /jobs (redesign phase 5): reachable by address only until the navigation switch (P5-F, lane L1) adds Jobs to navConfig. Every staff role. */
 const JobsScreen = lazy(routeChunks.jobs)
 const jobsItem: NavItem = { key: 'orders', label: 'Jobs', path: '/jobs', icon: Package, roles: ['admin', 'sales', 'engineer'] }
@@ -228,6 +230,18 @@ function AppRouteTable() {
             />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
+          {rfqsItem ? (
+            <Route
+              path="enquiries/new"
+              element={
+                <RequireRole item={rfqsItem}>
+                  <Suspense fallback={null}>
+                    <NewEnquiryPage />
+                  </Suspense>
+                </RequireRole>
+              }
+            />
+          ) : null}
           {rfqsItem ? (
             <Route
               path="rfqs/new"

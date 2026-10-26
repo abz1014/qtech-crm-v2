@@ -15,7 +15,7 @@ async function pressOnNavLink(page: Page, key: string): Promise<void> {
 }
 
 test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside text fields', async ({ page }) => {
-  test.info().annotations.push({ type: 'behaviour', description: 'N -> /rfqs/new, C -> Capture sheet, G T -> /todo, / -> table filter; active with focus on any link or button' })
+  test.info().annotations.push({ type: 'behaviour', description: 'N -> /enquiries/new, C -> Capture sheet, G T -> /todo, / -> table filter; active with focus on any link or button' })
   await open(page, '/todo')
   await pressOnNavLink(page, 'n')
   await expect(page).toHaveURL(/\/rfqs\/new$/)
@@ -53,7 +53,7 @@ test('a single printable key never acts unless the person can turn it off (WCAG 
   await open(page, '/todo')
   await pressOnNavLink(page, 'n')
   await page.waitForTimeout(500)
-  expect(new URL(page.url()).pathname, 'N moved the page with no way to turn it off').not.toBe('/rfqs/new')
+  expect(new URL(page.url()).pathname, 'N moved the page with no way to turn it off').not.toBe('/enquiries/new')
 })
 
 test('? opens the keyboard shortcuts sheet on a computer; a phone shows no key hints (consistency spec 4.4)', async ({ page }) => {
