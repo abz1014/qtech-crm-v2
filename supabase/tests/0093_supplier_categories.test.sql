@@ -125,14 +125,16 @@ create temp table cat as
 insert into public.rfqs (id, company_id, owner_id) values
   ('d0930000-0000-4000-8000-000000000001', 'c0930000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002'),
   ('d0930000-0000-4000-8000-000000000002', 'c0930000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002'),
-  ('d0930000-0000-4000-8000-000000000003', 'c0930000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002');
+  ('d0930000-0000-4000-8000-000000000003', 'c0930000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002'),
+  ('d0930000-0000-4000-8000-000000000004', 'c0930000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000003');
 insert into public.rfq_items (id, rfq_id, position, description, qty, family_id) values
   ('e0930000-0000-4000-8000-000000000001', 'd0930000-0000-4000-8000-000000000001', 0, '0093 transmitter one', 1, (select a from cat)),
   ('e0930000-0000-4000-8000-000000000002', 'd0930000-0000-4000-8000-000000000001', 1, '0093 transmitter two', 1, (select a from cat)),
   ('e0930000-0000-4000-8000-000000000003', 'd0930000-0000-4000-8000-000000000001', 2, '0093 fuse', 1, (select b from cat)),
   ('e0930000-0000-4000-8000-000000000004', 'd0930000-0000-4000-8000-000000000002', 0, '0093 transmitter three', 1, (select a from cat)),
   ('e0930000-0000-4000-8000-000000000005', 'd0930000-0000-4000-8000-000000000003', 0, '0093 transmitter four', 1, (select a from cat)),
-  ('e0930000-0000-4000-8000-000000000006', 'd0930000-0000-4000-8000-000000000003', 1, '0093 uncategorised', 1, null);
+  ('e0930000-0000-4000-8000-000000000006', 'd0930000-0000-4000-8000-000000000003', 1, '0093 uncategorised', 1, null),
+  ('e0930000-0000-4000-8000-000000000007', 'd0930000-0000-4000-8000-000000000004', 0, '0093 engineer item', 1, null);
 
 -- rfq1: asked of S1, S2 (10 days ago) and S3 (declined). rfq2: S1 and S2 (3 days ago). rfq3: S3 only (yesterday), unanswered.
 insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on, no_offer_on) values
@@ -265,11 +267,15 @@ $f$;
 select is(pg_temp.as_('sales', format('select pg_temp.learn_check(%L::uuid)', (select a from ids))), 'true',
   'a quote line still tags the supplier with its category (the definer trigger is not limited by the guard)');
 
--- any staff member sets the category of an RFQ item (rfq_items.family_id)
+-- the category of an RFQ item (rfq_items.family_id) follows 0092: the person who entered or owns the RFQ, or an admin
+select is(pg_temp.as_('engineer', format($q$update public.rfq_items set family_id = %L where id = 'e0930000-0000-4000-8000-000000000007' returning family_id::text$q$, (select b from ids))),
+  (select b from ids), 'an engineer can set the category of an item on their own RFQ');
 select is(pg_temp.as_('engineer', format($q$update public.rfq_items set family_id = %L where id = 'e0930000-0000-4000-8000-000000000006' returning family_id::text$q$, (select b from ids))),
-  (select b from ids), 'an engineer can set the category of an RFQ item');
+  'E:42501', 'but not on somebody else''s RFQ (0092)');
 select is(pg_temp.as_('sales', format($q$update public.rfq_items set family_id = %L where id = 'e0930000-0000-4000-8000-000000000006' returning family_id::text$q$, (select b from ids))),
-  (select b from ids), 'so can sales');
+  (select b from ids), 'sales can on their own RFQ');
+select is(pg_temp.as_('admin', format($q$update public.rfq_items set family_id = %L where id = 'e0930000-0000-4000-8000-000000000007' returning family_id::text$q$, (select b from ids))),
+  (select b from ids), 'an admin can on any');
 select is(pg_temp.as_('deactivated', format($q$update public.rfq_items set family_id = %L where id = 'e0930000-0000-4000-8000-000000000006' returning family_id::text$q$, (select b from ids))),
   '<none>', 'a deactivated person cannot');
 

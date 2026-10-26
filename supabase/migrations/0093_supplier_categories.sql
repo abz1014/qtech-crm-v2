@@ -15,7 +15,8 @@
 --   guard_supplier_category_tagging        inserting, changing or deleting a company_brands row whose brand is a family
 --                                          (= tagging a supplier with a category) is for admin and sales only.
 --
--- Not changed: rfq_items.family_id. Any staff member may set it (rfq_items_update_staff, 0007), as before.
+-- Not changed: rfq_items.family_id. Who may set it is as before: 0007 row security plus the 0092 "whose is it" guard (the person
+-- who entered or owns the RFQ, or an admin).
 --
 -- Money safety (0081, owner decision 2026-10-22): the engineer has no price. The view holds counts only and is granted to
 -- qtech_engineer. The function reads prices through rank_item_quotes, which an engineer may not run, so it is SECURITY DEFINER
