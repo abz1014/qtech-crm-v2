@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { API_URL } from '../support/stack'
-import { api, karachiToday, moneyIn, readSchema, SERVICE_KEY, type Persona } from './lib'
+import { api, karachiToday, moneyIn, readSchema, service, SERVICE_KEY, type Persona } from './lib'
 import { IDS, seedWorld, type World } from './fixtures'
 
 /*
@@ -254,6 +254,39 @@ test('engineer: no GST receipt or expense receipt can be listed or downloaded', 
   expect(sign.status, 'engineer signs a GST receipt URL').toBeGreaterThanOrEqual(400)
   const salesDl = await api('sales', `/storage/v1/object/gst-receipts/${path}`)
   expect(salesDl.status, 'precondition: sales download it').toBe(200)
+})
+
+test('0100: a file tagged has_prices (customer PO, supplier quote) is closed to an engineer as a row and as a download; sales and admin keep it', async () => {
+  const name = 'customer-po.pdf'
+  const path = `${world.tag}/${name}`
+  const up = await fetch(`${API_URL}/storage/v1/object/rfq-files/${path}`, {
+    method: 'POST',
+    headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/pdf' },
+    body: Buffer.from('%PDF-1.4' + String.fromCharCode(10) + '%verify-roles 0100' + String.fromCharCode(10)),
+  })
+  expect(up.status, 'fixture customer PO uploaded').toBeLessThan(300)
+  const row = await service('/rest/v1/attachments', {
+    method: 'POST',
+    body: { bucket: 'rfq-files', path, file_name: name, mime_type: 'application/pdf', size_bytes: 24, rfq_id: world.rfq.id, has_prices: true },
+    prefer: 'return=representation',
+  })
+  expect(row.status, 'fixture attachment row tagged has_prices').toBeLessThan(300)
+  const mine = await api('engineer', `/rest/v1/attachments?has_prices=eq.true&select=id`)
+  expect(mine.body, 'engineer reads no has_prices row').toEqual([])
+  const byPath = await api('engineer', `/rest/v1/attachments?path=eq.${encodeURIComponent(path)}&select=id`)
+  expect(byPath.body, 'nor the one by its path').toEqual([])
+  const salesRow = await api('sales', `/rest/v1/attachments?path=eq.${encodeURIComponent(path)}&select=id`)
+  expect((salesRow.body as unknown[]).length, 'precondition: sales read it').toBe(1)
+  const list = await api('engineer', '/storage/v1/object/list/rfq-files', { method: 'POST', body: { prefix: world.tag, limit: 100 } })
+  expect((Array.isArray(list.body) ? (list.body as { name: string }[]) : []).map(o => o.name), 'engineer lists no tagged file').not.toContain(name)
+  const dl = await api('engineer', `/storage/v1/object/rfq-files/${path}`)
+  expect(dl.status, 'engineer downloads the customer PO').toBeGreaterThanOrEqual(400)
+  const sign = await api('engineer', `/storage/v1/object/sign/rfq-files/${path}`, { method: 'POST', body: { expiresIn: 60 } })
+  expect(sign.status, 'engineer signs a URL for it').toBeGreaterThanOrEqual(400)
+  for (const p of ['sales', 'admin'] as const) {
+    const ok = await api(p, `/storage/v1/object/rfq-files/${path}`)
+    expect(ok.status, `precondition: ${p} download it`).toBe(200)
+  }
 })
 
 test('BUG-RV-01: the engineer reads no legacy order value or cost through the API', async () => {

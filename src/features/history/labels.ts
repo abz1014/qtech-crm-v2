@@ -30,7 +30,7 @@ const paidVia = (label = 'Paid via'): ColumnSpec => ({ kind: 'enum', label, word
 const ticked: ColumnSpec = { kind: 'date', label: 'Ticked in bank', month: true, empty: 'Not ticked' }
 
 /** Columns that mean the same on every table, and are never shown. */
-export const ALWAYS_HIDDEN = ['id', 'created_at', 'created_by', 'updated_at', 'updated_by', 'model_tokens', 'legacy_source', 'legacy_flags'] as const
+export const ALWAYS_HIDDEN = ['id', 'created_at', 'created_by', 'updated_at', 'updated_by', 'model_tokens', 'legacy_source', 'legacy_flags', 'legacy_review'] as const
 
 /** The child tables shown under a record (0090 history_sources). */
 export const HISTORY_CHILD_TABLES = [
@@ -77,6 +77,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     ordered_on: d('Order date'),
     owner_id: r('Owner'),
     payment_terms_days: t('Payment terms (days)'),
+    repeat_of_order_id: hide,
     rfq_id: hide,
     site_id: r('Site'),
     visit_type: { kind: 'enum', label: 'Visit type', words: { installation: 'Installation', survey: 'Survey', service: 'Service' } },
@@ -239,6 +240,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     clarification_id: hide,
     expense_id: hide,
     file_name: t('File'),
+    has_prices: hide,
     invoice_id: hide,
     mime_type: hide,
     order_id: hide,

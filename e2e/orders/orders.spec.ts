@@ -330,8 +330,8 @@ test.describe('O01: Mark won creates the order', () => {
       { id: s.items[1].id, unit_price: 2000, qty: 1 },
     ])
     await issueQuotation(s.rfq.id, [{ id: s.items[0].id, unit_price: 1100, qty: 2 }])
-    // rfq_items still holds R0's 2,000 for item 2: that is the stale value the old dialog ordered
-    expect((await rfqItemPrices(s.rfq.id)).map(i => i.quoted_unit_price_net && Number(i.quoted_unit_price_net))).toEqual([1100, 2000, null])
+    // R1 left item 2 out: 0094 clears the R0 price it would otherwise keep (HW-46)
+    expect((await rfqItemPrices(s.rfq.id)).map(i => i.quoted_unit_price_net && Number(i.quoted_unit_price_net))).toEqual([1100, null, null])
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
     const dialog = page.getByRole('dialog')

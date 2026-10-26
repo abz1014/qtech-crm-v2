@@ -6,7 +6,7 @@ import type { Block, ChatMsg, Doc, Shot } from './model'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-function tableHtml(b: Extract<Block, { k: 'table' }>, ui: Shot['ui']): string {
+function tableHtml(b: Extract<Block, { k: 'table' }>, ui: Shot['ui'], dark: boolean): string {
   const al = (i: number) => (b.align[i] === 'r' ? 'right' : b.align[i] === 'c' ? 'center' : 'left')
   const total = 1
   // Only the description column is given a width; the others take their contents' width.
@@ -16,11 +16,13 @@ function tableHtml(b: Extract<Block, { k: 'table' }>, ui: Shot['ui']): string {
   const head = b.head ? `<tr class="h">${b.head.map((c, i) => `<th style="text-align:${al(i)};white-space:nowrap">${esc(c)}</th>`).join('')}</tr>` : ''
   const rows = b.rows.map((r, k) => `<tr${b.shaded && k % 2 === 1 ? ' class="alt"' : ''}>${r.map((c, i) => `<td style="text-align:${al(i)};${ws(i)}">${esc(c)}</td>`).join('')}</tr>`).join('')
   const foot = (b.foot ?? []).map(r => `<tr class="f">${r.map((c, i) => `<td style="text-align:${al(i)};${ws(i)}">${esc(c)}</td>`).join('')}</tr>`).join('')
-  const width = ui === 'outlook' || ui === 'gmail' ? (b.head ? '100%' : '78%') : '100%'
-  return `<table class="${cls}" style="width:${width}"><colgroup>${col}</colgroup>${head}${rows}${foot}</table>`
+  const width = b.maxWidth ? `${b.maxWidth}px` : ui === 'outlook' || ui === 'gmail' ? (b.head ? '100%' : '78%') : '100%'
+  // (A dark screen draws its rules light: a black rule on a dark page would not be seen by anyone.)
+  const rule = b.ruleColor && !dark ? `;--rule:${b.ruleColor}` : ''
+  return `<table class="${cls}" style="width:${width}${rule}"><colgroup>${col}</colgroup>${head}${rows}${foot}</table>`
 }
 
-function blocksHtml(blocks: Block[], ui: Shot['ui']): string {
+function blocksHtml(blocks: Block[], ui: Shot['ui'], dark = false): string {
   return blocks
     .map(b => {
       switch (b.k) {
@@ -31,7 +33,7 @@ function blocksHtml(blocks: Block[], ui: Shot['ui']): string {
         case 'pair':
           return `<div class="pair"><span>${esc(b.left)}</span><span>${esc(b.right)}</span></div>`
         case 'table':
-          return tableHtml(b, ui)
+          return tableHtml(b, ui, dark)
         case 'chat':
           return ''
         case 'pagebreak':
@@ -113,8 +115,8 @@ export function docHtml(doc: Doc, shot: Shot): string {
     const e = doc.email
     header = `<div class="gh"><div class="subj">${esc(e.subject)}</div><div class="meta"><b>${esc(e.from.replace(/\s*<.*>/, ''))}</b> ${esc(/<.*>/.exec(e.from)?.[0] ?? '')}<br>to ${esc(e.to)}<br>${esc(e.sent)}</div></div>`
   }
-  const lh = blocksHtml(doc.page?.letterhead ?? [], shot.ui)
-  const body = blocksHtml(doc.blocks, shot.ui)
+  const lh = blocksHtml(doc.page?.letterhead ?? [], shot.ui, dark)
+  const body = blocksHtml(doc.blocks, shot.ui, dark)
   const paper = shot.ui === 'paper'
   const sheet = shot.ui === 'excel'
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -128,7 +130,7 @@ export function docHtml(doc: Doc, shot: Shot): string {
     .pair span:last-child { min-width: 38%; }
     table { border-collapse: collapse; margin: 8px 0 12px; }
     td, th { padding: ${sheet ? '1px 5px' : '3px 7px'}; vertical-align: top; word-wrap: break-word; }
-    table.ruled td, table.ruled th { border: 1px solid ${sheet ? '#d4d4d4' : line}; }
+    table.ruled td, table.ruled th { border: 1px solid var(--rule, ${sheet ? '#d4d4d4' : line}); }
     tr.h th { background: ${dark ? '#333' : sheet ? '#ddebf7' : '#eef1f5'}; font-weight: bold; }
     tr.alt td { background: ${dark ? '#2a2f36' : '#dce6f1'}; }
     tr.f td { font-weight: bold; }

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { Check, Pencil, Plus, SlidersHorizontal, Split } from 'lucide-react'
+import { Check, Pencil, Plus, SlidersHorizontal, Split, Trash2 } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,7 @@ import { useEntryAccess } from '@/features/records/useEntryAccess'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
 const SplitLineDialog = lazyShown(() => import('@/features/orders/SplitLineDialog').then(m => m.SplitLineDialog))
+const RemoveLineConfirm = lazyShown(() => import('@/features/orders/RemoveLine').then(m => m.RemoveLineConfirm))
 const AddLineDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLineDialog))
 
 /*
@@ -78,6 +79,7 @@ export function OrderItemsPanel({
   const setGroupPrice = useSetGroupPrice(orderId)
   const [adding, setAdding] = useState(false)
   const [splitting, setSplitting] = useState<OrderItemRow | null>(null)
+  const [removing, setRemoving] = useState<OrderItemRow | null>(null)
   /** "Edit GST and lines": the per-line controls are shown only while this is on. */
   const [editing, setEditing] = useState(false)
   /** The split item whose selling price is being edited (once for all its parts). */
@@ -322,11 +324,18 @@ export function OrderItemsPanel({
             Edit price
           </Button>
         )
-      ) : canSplit(r) ? (
-        <Button size="sm" variant="quiet" icon={Split} aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
-          Split line
-        </Button>
-      ) : null,
+      ) : (
+        <span className="inline-flex flex-wrap items-center gap-2">
+          {canSplit(r) ? (
+            <Button size="sm" variant="quiet" icon={Split} aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
+              Split line
+            </Button>
+          ) : null}
+          <Button size="sm" variant="quiet" icon={Trash2} aria-label={`Remove line ${r.no}`} onClick={() => setRemoving(r)}>
+            Remove line
+          </Button>
+        </span>
+      ),
   }
   const base: Column<Row>[] = [
     { id: 'item', header: 'Item', value: r => r.description, cell: itemCell },
@@ -436,12 +445,18 @@ export function OrderItemsPanel({
                   Split line
                 </Button>
               ) : null}
+              {showEdit ? (
+                <Button size="sm" variant="quiet" icon={Trash2} className="justify-self-start" aria-label={`Remove line ${r.no}`} onClick={() => setRemoving(r)}>
+                  Remove line
+                </Button>
+              ) : null}
             </span>
           )
         }
         empty={<p className="px-4 py-6 text-sm text-fg-muted">This order has no lines yet. Add one to start.</p>}
       />
       {adding ? <AddLineDialog order={order} items={items} legs={legs} onClose={() => setAdding(false)} /> : null}
+      {removing ? <RemoveLineConfirm orderId={orderId} line={removing} lineCount={items.length} onClose={() => setRemoving(null)} /> : null}
       {splitting ? <SplitLineDialog order={order} item={items.find(i => i.id === splitting.id) ?? splitting} legs={legs} pos={pos} onClose={() => setSplitting(null)} /> : null}
     </section>
   )
