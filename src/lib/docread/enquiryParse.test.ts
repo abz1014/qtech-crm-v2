@@ -649,3 +649,77 @@ describe('parseEnquiry: a letter in the body of the email (R-W2)', () => {
     expect(r.items).toEqual([{ description: 'Valve actuator AX-210', qty: 2, unit: 'nos' }])
   })
 })
+
+describe('parseEnquiry: a ruled grid read from a screenshot', () => {
+  const T = (cs: string[]) => cs.join('\t')
+  const rows = (text: string) => parse(text).items.map(i => `${i.description} | ${i.qty} ${i.unit ?? ''}`.trim())
+
+  it('takes a Required For column as no part of the description, and UOM after QTY as the unit', () => {
+    const text = [
+      T(['SR.', 'DESCRIPTION', 'REQUIRED FOR', 'QTY', 'UOM']),
+      T(['1', 'MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR).', 'Needed Soon For Kiln Section Deptt.', '2', 'NOS']),
+      T(['2', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted).', 'Needed Soon For Kiln Section Deptt.', '1', 'NOS']),
+      T(['3', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR.', 'For Boiler House Deptt.', '1', 'NOS']),
+    ].join('\n')
+    expect(rows(text)).toEqual(['MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR) | 2 nos', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted) | 1 nos', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR | 1 nos'])
+  })
+
+  it('reads every row of a Sr. / Material Name / UOM / QTY grid, wrapped names on one row, though the header lost its UOM and QTY', () => {
+    const text = [
+      T(['Sr.', 'Material Name']),
+      T(['1', 'Washer 12x30mm Zinc Plated', 'PCS', '24']),
+      T(['2', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA).', 'Pcs', '3']),
+      T(['3', 'Breaker 1P 25A (Aurion)', 'PCS', '6']),
+      T(['4', 'Capacitor 7.5Uf (Norvalt)', 'Pcs', '12']),
+    ].join('\n')
+    expect(rows(text)).toEqual(['Washer 12x30mm Zinc Plated | 24 PCS', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA) | 3 Pcs', 'Breaker 1P 25A (Aurion) | 6 PCS', 'Capacitor 7.5Uf (Norvalt) | 12 Pcs'])
+  })
+})
+
+describe('parseEnquiry: an ERP RFQ form that prints its header before every item (R-W3)', () => {
+  const HEAD = 'S.No.\tMaterial Description\tPur. Req.\tPlant\tUOM\tQuantity\tRate/Unit\tAmount'
+  const form = [
+    'EXAMPLE CEMENT COMPANY LIMITED',
+    'REQUEST FOR QUOTATION',
+    'SUPPLIER:\t7700000\tRFQ # : 1000099001',
+    'SUPPLIER NAME: COLLECTIVE NO.: 1000099000',
+    'RFQ DATE:\t14.10.2026',
+    'REPLY DUE DATE: 23.10.2026',
+    HEAD,
+    '1 .\tSOV TYP.AB-5-1/2,ACME\t1000099000\tPlant North\tEA\t12.00\t\t',
+    'SOLENOID VALVE (5-port)',
+    'Type: AB-5-1/2',
+    'Art No. 310477',
+    'Make ACME (Holland).',
+    HEAD,
+    '2 .\tFILTER SILENCER SIZE: 1/2",ACME\t1000099000\tPlant North\t***\t30.00\t\t',
+    'FILTER SILENCER (Material:',
+    'BRASS) FOR',
+    'SOV AB-5-1/2, Art No. 310477,',
+    'Make: ACME',
+    HEAD,
+    '3 .\tCPU XR30 7XY1 418-2QT55-1BB7,MAKER\t1000099000\tPlant\tEA\t2.00\t\t',
+    'SMART\tCPU XR30,CPU,\t\tNorth',
+    'AC/DC/relay, onboard I/O. Part # 7XY1',
+    'TOTAL AMOUNT:',
+    'Page: 1',
+    'of 2',
+    HEAD,
+    '4 . LEVEL\tCONTROLLER TYPE: KZ-9021,\t1000099000\tPlant\tEA\t2.00\t\t',
+    'MAKER\t\t\tNorth',
+    'Type: Floatless Liquid Level Control Relay',
+    'Make;MAKER',
+    'TOTAL AMOUNT:',
+    'Terms and Conditions',
+    '1. Please reply within due date.',
+  ].join('\n')
+
+  it('keeps every wrapped line with its own item: four rows, no extra items, "***" is no unit', () => {
+    const r = parse(form)
+    expect(r.items.map(i => [i.qty, i.unit])).toEqual([[12, 'EA'], [30, null], [2, 'EA'], [2, 'EA']])
+    expect(r.items).toHaveLength(4)
+    expect(r.items[0]?.description).toContain('310477')
+    expect(r.items[1]?.description).toContain('Art No. 310477')
+    expect(r.items[3]?.description).toMatch(/^LEVEL CONTROLLER/)
+  })
+})

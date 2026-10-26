@@ -34,6 +34,14 @@ describe('findMissedBoxes', () => {
   const icon = { x0: 300, y0: 150, x1: 330, y1: 175 }
   const px = picture([...read.map(w => w.bbox), qty, unit, icon])
 
+  it('finds a cell centred between the two lines of a wrapped neighbour', () => {
+    // A two-line description (y 40-64 and y 70-94); the serial number, read by no word, sits in the middle (y 56-78).
+    const two = [word('SWITCH', { x0: 20, y0: 40, x1: 130, y1: 64 }), word('MODEL', { x0: 20, y0: 70, x1: 110, y1: 94 })]
+    const serial = { x0: 420, y0: 56, x1: 444, y1: 80 }
+    const boxes = findMissedBoxes(picture([...two.map(w => w.bbox), serial]), W, H, two.map(w => lineOf([w])))
+    expect(boxes).toHaveLength(1)
+  })
+
   it('finds the skipped cells on a row that was read, one box each, and not the icon on no row', () => {
     const boxes = findMissedBoxes(px, W, H, [lineOf(read)])
     expect(boxes).toHaveLength(2)

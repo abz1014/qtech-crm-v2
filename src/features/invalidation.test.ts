@@ -13,7 +13,10 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'company.create': { id: 'c1' },
   'company.update': { id: 'c1' },
   'company.merge': { keepId: 'k', dropId: 'd' },
+<<<<<<< HEAD
   'company.delete': { id: 'c1' },
+=======
+>>>>>>> origin/develop
   'site.add': { companyId: 'c1' },
   'contact.add': { companyId: 'c1' },
   'site.update': { companyId: 'c1' },
@@ -61,7 +64,10 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'attachment.delete': { rfqId: 'r1' },
   'order.files': { orderId: 'o1' },
   'quotation.issue': { rfqId: 'r1' },
+<<<<<<< HEAD
   'quotation.delete': { rfqId: 'r1' },
+=======
+>>>>>>> origin/develop
   'quotation.pdf': { rfqId: 'r1' },
   'order.convert': { rfqId: 'r1' },
   'order.repeat': { companyId: 'c1' },
@@ -69,7 +75,10 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'order.cancel': { orderId: 'o1' },
   'order.delete': { orderId: 'o1' },
   'po.issue': { orderId: 'o1' },
+<<<<<<< HEAD
   'po.delete': { orderId: 'o1' },
+=======
+>>>>>>> origin/develop
   'po.pdf': { orderId: 'o1' },
   'today.chase': {},
   'today.snooze': {},

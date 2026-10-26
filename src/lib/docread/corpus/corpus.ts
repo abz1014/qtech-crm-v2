@@ -197,6 +197,11 @@ export const BATCHES: BatchSpec[] = [
   // Batch 33 is the EU quotation PDF alone (generation 32, the Italian Preventivo layout): quotes only, text and PDF. It was written
   // together with the reply reader's Italian labels, so it is dev data (tuned on), run in CI.
   { batch: 33, enquiries: 0, quotes: 48, gens: [32], dev: true, gate: true },
+  // Ruled grid screenshots (gen33.ts: "Sr. | Material Name | UOM | QTY" and a "Required For" column, wrapped cells), the shape of the
+  // owner's two enquiries of 2026-10-23; only that generation. Batch 35 is for development; batch 34 is held out (written together
+  // with 35, before the picture reader was changed for grids, and measured blind).
+  { batch: 35, enquiries: 80, quotes: 0, gens: [33], dev: true, gate: true },
+  { batch: 34, enquiries: 60, quotes: 0, gens: [33], gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {
