@@ -1,4 +1,5 @@
 import { createContext, useSyncExternalStore } from 'react'
+import { swapKeepingFocus } from '@/ui/keepFocus'
 import type * as Impl from '@/ui/popoverImpl'
 
 /* The state shared by Popover (light) and popoverImpl (Radix): see src/ui/Popover.tsx. */
@@ -14,7 +15,7 @@ export function preloadPopover(): Promise<void> {
   loading ??= import('@/ui/popoverImpl').then(
     m => {
       impl = m
-      listeners.forEach(l => l())
+      swapKeepingFocus(() => listeners.forEach(l => l()))
     },
     () => {
       loading = null // a failed download is tried again next time

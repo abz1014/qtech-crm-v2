@@ -1,4 +1,5 @@
 import { createContext, useSyncExternalStore } from 'react'
+import { swapKeepingFocus } from '@/ui/keepFocus'
 import type * as Impl from '@/ui/dialogImpl'
 
 /* The state shared by Dialog (light) and dialogImpl (Radix): see src/ui/Dialog.tsx. */
@@ -23,7 +24,7 @@ export function preloadDialog(): Promise<void> {
   loading ??= import('@/ui/dialogImpl').then(
     m => {
       impl = m
-      listeners.forEach(l => l())
+      swapKeepingFocus(() => listeners.forEach(l => l()))
     },
     () => {
       loading = null // a failed download is tried again next time
