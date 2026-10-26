@@ -593,3 +593,47 @@ describe('parseEnquiry: reader gaps (feat/reader-gaps)', () => {
     expect(r.facts.dueDate?.iso).toBe('2026-11-09')
   })
 })
+
+describe('parseEnquiry: a buyer cover email around an attached form (R-W2)', () => {
+  const cover = (body: string) => parse(body).items.map(i => i.description)
+
+  it('reads the buyer terms bullets as instructions, not items', () => {
+    expect(
+      cover(
+        [
+          'Enclosed please find inquiry for your URGENT QUOTATION with shortest delivery time of required items.',
+          'Note:',
+          '*\tThe Quotation(s) “with ready stock” will be given preference for ordering.',
+          '*\tPl share picture and datasheet of offered model(s)',
+          '*\tPl mention origin country of offered item(s)',
+          '*\tOrder will be issued in favor of the best competitive offered price(s) and sharp delivery time',
+          'Regards,',
+        ].join('\n'),
+      ),
+    ).toEqual([])
+    expect(cover('Prices inclusive of GST\nValidity of the offer\nMention delivery period in weeks')).toEqual([])
+  })
+
+  it('a line that names a product or a quantity is still an item next to such terms', () => {
+    const r = parse('Note:\n* Pl mention origin country\n2 nos proximity sensor M18\nPrices inclusive of GST')
+    expect(r.items).toEqual([{ description: 'proximity sensor M18', qty: 2, unit: 'nos' }])
+  })
+
+  it('Outlook header blocks of a forward (From / Sent / To / Subject / Importance) and closing courtesy are no items', () => {
+    const r = parse(
+      [
+        'From: Buyer Name [mailto:buyer@example-mills.example]',
+        'Sent: Wednesday, June 10, 2026 11:27 AM',
+        'To: Sales Desk <sales@example-sup.example>',
+        'Subject: PURCHASE INQUIRY-12345',
+        'Importance: High',
+        '',
+        'FYI/R',
+        '',
+        'We look forward to your valued order and continued business relationship',
+        'Regards,',
+      ].join('\n'),
+    )
+    expect(r.items).toEqual([])
+  })
+})

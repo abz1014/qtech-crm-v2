@@ -81,7 +81,7 @@ const PRODUCT =
   /\b(?:valves?|gauges?|transmitters?|sensors?|switch(?:es)?|meters?|pumps?|motors?|cables?|relays?|contactors?|breakers?|mcbs?|mccbs?|plcs?|hmis?|vfds?|drives?|inverters?|encoders?|actuators?|positioners?|controllers?|indicators?|thermocouples?|rtds?|pt100|bearings?|seals?|gaskets?|hoses?|fittings?|glands?|lugs?|trays?|panels?|transformers?|detectors?|analy[sz]ers?|recorders?|timers?|counters?|modules?|cpus?|ups|batter(?:y|ies)|lamps?|fans?|filters?|regulators?|cylinders?|solenoids?|manifolds?|thermowells?|probes?|electrodes?|scanners?|hooters?|sirens?|annunciators?|enclosures?|terminals?|connectors?|couplings?|belts?|chains?|gears?|gearbox(?:es)?|fuses?|isolators?|starters?|capacitors?|calibrators?|multimeters?|testers?|thermostats?|thermometers?|spares?)\b/i
 
 const COURTESY =
-  /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you|finds?\s+you\s+well|trust\s+(?:this|you))\b/i
+  /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you|finds?\s+you\s+well|trust\s+(?:this|you)|look(?:ing)?\s+forward|valued\s+order|business\s+relationship|possible\s+cooperation|appreciate|reminder)\b/i
 /** A sentence that only greets ("Hi Ali, hope you are well."). */
 const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|respected|asalam\w*|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
 
@@ -92,7 +92,7 @@ const DISCLAIMER =
   /^(?:\**\s*disclaimer|confidentiality\s+notice|this\s+(?:e-?mail|message)\s+(?:and\s+any|is\s+(?:confidential|intended)|may\s+contain|contains)|the\s+information\s+(?:contained|in\s+this)|if\s+you\s+(?:are\s+not|have\s+received)|please\s+consider\s+the\s+environment|caution\s*:|this\s+email\s+has\s+been\s+scanned)/i
 const REPLY_SEP = /^(?:-{2,}\s*original\s+message\s*-{2,}|_{5,}|-{5,})$|^on\s.{4,160}\swrote:?$/i
 const FORWARD_SEP = /^(?:-{2,}\s*forwarded\s+message\s*-{2,}|begin\s+forwarded\s+message:?)$/i
-const HEADER_LINE = /^(?:from|to|cc|bcc|sent|date|subject|reply-to|attachments?)\s*:/i
+const HEADER_LINE = /^(?:from|to|cc|bcc|sent|date|subject|reply-to|attachments?|importance|priority|sensitivity|categories|received|organi[sz]ation)\s*:/i
 const WA_PREFIX = /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?\]?\s*(?:-\s*)?(?:[^:\d][^:]{0,40}:\s)?/i
 /** WhatsApp Web's copy of several messages puts the time first: "[10:42, 19/10/2026] Name: ". */
 const WA_WEB_PREFIX = /^\s*\[\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?,\s*\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\]\s*(?:[^:\d][^:]{0,40}:\s)?/i
@@ -104,7 +104,15 @@ const CHAT_MEDIA =
 /** A chat reply that only acknowledges ("Noted", "Ok sir, will share today", "Sure, checking"). */
 const ACK = /^(?:ok(?:ay)?|noted|sure|done|received|thanks?|thank\s+you|thx|jee|ji|g\b|acha|theek|right|alright|great|will\s+(?:do|share|send|check|revert|update))\b/i
 const INSTRUCTION =
-  /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|please\s+(?:mention|confirm|include|specify|indicate|note|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note)|partial\s+(?:quotations?|offers?)|bid\s+security|earnest\s+money|performance\s+(?:bond|guarantee|security)|tender\s+(?:fee|documents?)|sealed\s+bids?|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
+  /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|(?:please|pl|plz|pls)\s+(?:mention|confirm|include|specify|indicate|note|share|advise|attach|send\s+(?:the\s+)?(?:datasheets?|pictures?|catalogue)|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note|share|advise)|partial\s+(?:quotations?|offers?)|bid\s+security|earnest\s+money|performance\s+(?:bond|guarantee|security)|tender\s+(?:fee|documents?)|sealed\s+bids?|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
+
+/**
+ * What a buyer's cover email asks of every quotation, in a bullet or a sentence ("Quotations with ready stock will be preferred",
+ * "mention the origin country", "datasheet of the offered model", "prices inclusive of GST", "validity", "delivery period"): terms
+ * for the offer, not items. Applied only to a line with no product word, model code or quantity of its own.
+ */
+const BUYER_TERM =
+  /\b(?:ready\s+stock|(?:given|gets?)\s+(?:the\s+)?preference|preference\s+(?:for|will|to)|data\s?sheets?|origin\s+countr(?:y|ies)|country\s+of\s+origin|(?:mention|state|specify|indicate|confirm|advise|share)\s+(?:the\s+|your\s+)?(?:origin|brand|make|delivery|lead\s+time|validity|price\s+basis|payment|warranty|picture|photo)|best\s+competitive|sharp\s+delivery|shortest\s+delivery|validity|gst|sales\s+tax|(?:in|ex)clusive\s+of|payment\s+terms?|delivery\s+(?:period|time|terms?|schedule))\b/i
 
 const COMPANY =
   /\b(?:ltd|limited|pvt|private|inc|llc|corp(?:oration)?|company|co\.|industries|mills|group|enterprises?|traders|associates|sons)\b/i
@@ -1336,7 +1344,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       !LABELLED_QTY.test(work) &&
       !new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?(?![A-Za-z])`, 'i').test(work) &&
       work.split(/\s+/).length >= 4
-    if ((INSTRUCTION.test(work) && !ATTR.test(work)) || termSentence) {
+    const buyerTerm =
+      BUYER_TERM.test(work) &&
+      work.split(/\s+/).length >= 2 &&
+      !PRODUCT.test(work) &&
+      !hasCode(work) &&
+      !LABELLED_QTY.test(work) &&
+      !new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?(?![A-Za-z])`, 'i').test(work)
+    if ((INSTRUCTION.test(work) && !ATTR.test(work)) || termSentence || buyerTerm) {
       close()
       skip(t, 'instruction')
       continue
