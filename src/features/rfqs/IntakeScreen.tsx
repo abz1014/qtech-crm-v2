@@ -714,7 +714,21 @@ function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMo
     if (!enquiry || !saved || opened.current || step !== 'saved') return
     opened.current = true
     toast({ title: `Created job ${saved.number}`, body: company?.name, tone: 'success' })
-    navigate(`/jobs/${saved.number}`)
+    // The leave guard takes its extra Back entry off (history.back()) as the save turns it off. A push made before that traversal
+    // finishes is undone by it (the page stayed on New enquiry), so the job is opened once the traversal has settled.
+    let done = false
+    const go = () => {
+      if (done) return
+      done = true
+      window.removeEventListener('popstate', go)
+      navigate(`/jobs/${saved.number}`)
+    }
+    window.addEventListener('popstate', go)
+    const t = window.setTimeout(go, 250)
+    return () => {
+      // (kept running on purpose: leaving this screen must not cancel the move to the job)
+      void t
+    }
   }, [enquiry, saved, step, company?.name, navigate, toast])
 
   async function copyAgain() {

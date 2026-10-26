@@ -8,7 +8,7 @@ import { fe2, ordRef, openPage, pastePage, PNG_B64, readCount, resetCount, roleC
 /*
  * P03, the engineer journey: a working day on the phone-sized core of the app, and not one rupee anywhere.
  *
- *   Today shows the order that needs its commissioning planned -> open it -> add a photo and a note to the job ->
+ *   To do shows the planned commissioning, under Tomorrow -> open it -> add a photo and a note to the job ->
  *   mark commissioning done -> mark the goods delivered -> Today no longer lists it.
  *
  * FE-2 targets held at each step:
@@ -65,7 +65,7 @@ async function seed() {
     await must(
       rest<{ id: string; number: number }[]>('admin', 'orders', {
         method: 'POST',
-        body: { company_id: customer.id, owner_id: ENGINEER, ordered_on: karachiDay(-6), needs_commissioning: true, payment_terms_days: 30, notes: 'Gate pass needed 2 days ahead.' },
+        body: { company_id: customer.id, owner_id: ENGINEER, ordered_on: karachiDay(-6), needs_commissioning: true, commissioning_planned_on: karachiDay(1), payment_terms_days: 30, notes: 'Gate pass needed 2 days ahead.' },
       }),
     )
   )[0]
@@ -104,12 +104,13 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
 
   // ---- 1. Today shows the commissioning to plan -------------------------------------------------------------------------------------
   const page = await openPage(ctx, '/todo')
-  await test.step('Today lists the order whose commissioning is to plan, with 0 taps', async () => {
+  await test.step('To do lists the planned commissioning under Tomorrow, with 0 taps', async () => {
     await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+    await showAllTodo(page)
     await resetCount(page)
-    const row = page.locator('li[data-rule="plan_commissioning"]').filter({ hasText: ref })
+    const row = page.getByRole('region', { name: 'Tomorrow' }).locator('li[data-rule="job_commissioning"]').filter({ hasText: ref })
     await expect(row).toBeVisible()
-    await expect(row).toContainText('Plan commissioning')
+    await expect(row).toContainText('Commissioning')
     await expect(row).toContainText(s.customer.name)
     fe2('Today: taps to see the engineer\'s work', (await readCount(page)).mouse, 0)
     await expect(page.getByRole('radio', { name: /^Money/ })).toHaveCount(0) // no Money tab on Today
@@ -189,7 +190,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     await showAllTodo(page)
     await page.locator('#main').waitFor()
     await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
-    await expect(page.locator('li[data-rule="plan_commissioning"]').filter({ hasText: ref })).toHaveCount(0)
+    await expect(page.locator('li[data-rule="job_commissioning"]').filter({ hasText: ref })).toHaveCount(0)
     await noMoneyOnScreen(page, 'Today at the end of the day')
   })
 

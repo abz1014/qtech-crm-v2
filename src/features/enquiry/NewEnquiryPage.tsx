@@ -15,7 +15,7 @@ import IntakeScreen from '@/features/rfqs/IntakeScreen'
  *     a file dropped on this page's own zone: all of them hand the file to the intake the way Capture's "Start a new RFQ" does
  *     (navigation state `capture`), so the intake reads it exactly as it read a captured file;
  *   - pasted text is mirrored on the left so the source stays in view while it is checked.
- * A PDF is shown in the browser's own viewer, a picture as a picture; a spreadsheet has no preview, only its name (it is read on
+ * A PDF is drawn page by page by pdf.js (the CSP blocks a PDF frame), a picture is shown as a picture; a spreadsheet has no preview, only its name (it is read on
  * the device, nothing is uploaded to read it).
  */
 type Capture = { id: string; text: string; files: File[] }
@@ -80,22 +80,55 @@ export default function NewEnquiryPage() {
 
 function Preview({ file }: { file: File }) {
   const [url, setUrl] = useState<string | null>(null)
+  const [pages, setPages] = useState<{ urls: string[]; more: number } | 'failed' | null>(null)
+  const pdf = isPdfFile(file)
+  const image = isImageFile(file)
+  // A picture is shown as it is (img-src allows blob:). A PDF cannot go in a frame (the CSP blocks blob: frames): its first pages are
+  // drawn by pdf.js (pdfPreview.ts).
   useEffect(() => {
-    if (typeof URL.createObjectURL !== 'function') return
+    if (!image || typeof URL.createObjectURL !== 'function') return
     const u = URL.createObjectURL(file)
     setUrl(u)
     return () => URL.revokeObjectURL(u)
-  }, [file])
-  const pdf = isPdfFile(file)
-  const image = isImageFile(file)
+  }, [file, image])
+  useEffect(() => {
+    if (!pdf) return
+    let live = true
+    let drawn: string[] = []
+    const ctl = new AbortController()
+    void import('@/features/enquiry/pdfPreview').then(m => m.renderPdfPreview(file, { signal: ctl.signal })).then(r => {
+      if (!live) {
+        r?.urls.forEach(u => URL.revokeObjectURL(u))
+        return
+      }
+      drawn = r?.urls ?? []
+      setPages(r ?? 'failed')
+    })
+    return () => {
+      live = false
+      ctl.abort()
+      drawn.forEach(u => URL.revokeObjectURL(u))
+    }
+  }, [file, pdf])
   return (
     <figure className="m-0 grid gap-2" data-testid="source-file">
       <figcaption className="flex min-w-0 items-center gap-2 text-base font-medium">
         <Icon icon={pdf ? FileText : image ? ImageIcon : FileSpreadsheet} className="shrink-0 text-fg-muted" />
         <span className="min-w-0 [overflow-wrap:anywhere]">{file.name}</span>
       </figcaption>
-      {url && pdf ? (
-        <iframe src={url} title={`Preview of ${file.name}`} className="h-[60vh] w-full rounded-row border bg-surface lg:h-[78vh]" />
+      {pdf ? (
+        pages === null ? (
+          <p className="rounded-row border bg-surface px-4 py-3 text-base text-fg-2">Drawing the first page…</p>
+        ) : pages === 'failed' ? (
+          <p className="rounded-row border bg-surface px-4 py-3 text-base text-fg-2">The preview could not be drawn. The items are read on the right.</p>
+        ) : (
+          <div className="grid max-h-[78vh] gap-2 overflow-auto rounded-row border bg-surface p-1">
+            {pages.urls.map((u, i) => (
+              <img key={u} src={u} alt={`${file.name}, page ${i + 1}`} className="w-full" />
+            ))}
+            {pages.more > 0 ? <p className="px-3 py-2 text-base text-fg-2">{pages.more === 1 ? '1 more page' : `${pages.more} more pages`} not shown. All of it is read.</p> : null}
+          </div>
+        )
       ) : url && image ? (
         <img src={url} alt={`The photo ${file.name}`} className="max-h-[78vh] w-full rounded-row border bg-surface object-contain" />
       ) : (
