@@ -104,6 +104,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
     await openStage(page, /^Invoice/)
     await page.getByRole('button', { name: 'Create invoice' }).first().click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
+    await expect(d, 'the dialog opens (its code is a download of its own)').toBeVisible({ timeout: 45_000 })
     await expect(d, 'the dialog shows the gross').toContainText(amount(GROSS))
     await d.getByRole('button', { name: 'Create invoice' }).click()
     await expect(d).toBeHidden()

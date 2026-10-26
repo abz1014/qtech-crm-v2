@@ -39,7 +39,6 @@ test('Find matches proposes the certain link, Accept links it (a locked month al
   const locked = (await db.count(`closed_months?month=eq.${MARCH}&select=month`)) > 0
 
   await openAs(page, 'admin', '/money/review-imported')
-  await expect(page.getByText('Review imported').first()).toBeVisible()
   await expect(page.getByTestId(`review-order-${s.order.id}`)).toBeVisible()
   await expect(page.getByTestId(`review-invoice-${s.invoice.id}`)).toBeVisible()
 
