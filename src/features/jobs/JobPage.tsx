@@ -1,3 +1,4 @@
+import { NoPrimary } from '@/ui/NoPrimary'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CloudOff } from 'lucide-react'
@@ -161,6 +162,7 @@ function JobView({ facts }: { facts: JobFacts }) {
 
   return (
     <Shell bar>
+      {role === 'engineer' ? <NoPrimary /> : null}
       <DetailHeader
         name={job.companyName}
         nameHref={`/companies/${job.companyId}`}

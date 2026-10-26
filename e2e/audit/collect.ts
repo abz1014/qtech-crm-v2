@@ -17,7 +17,9 @@ export interface Metrics {
   /** Height of the whole page if nothing scrolled inside it (document or <main>). */
   contentHeight: number
   /** Visible elements with role button or link. mainAboveFold: those inside <main> that can be seen without scrolling. */
-  actions: { total: number; aboveFold: number; buttons: number; links: number; mainAboveFold?: number }
+  actions: { total: number; aboveFold: number; buttons: number; links: number; mainAboveFold?: number; rowActionsAboveFold?: number; mainLabels?: string[] }
+  /** The screen carries data-no-primary: it has no single next step, so zero green buttons is allowed (two or more never is). */
+  noPrimary?: boolean
   /**
    * Primary-variant buttons and links (class bg-primary, data-variant="primary" or the primary background colour). inMain counts the
    * enabled ones in <main>; disabled ones (drawn grey) are counted in disabledInMain; the top bar's are inChrome.
@@ -309,7 +311,14 @@ export function collect(opts: CollectOptions): Metrics {
     else actions.links++
     const fold = inFold(el)
     if (fold) actions.aboveFold++
-    if (fold && main?.contains(el)) actions.mainAboveFold = (actions.mainAboveFold ?? 0) + 1
+    // Per-row actions of a list ([data-row-actions]) are not page-level actions: counted apart, left out of the 8-action target.
+    if (fold && main?.contains(el)) {
+      if (el.closest('[data-row-actions]')) actions.rowActionsAboveFold = (actions.rowActionsAboveFold ?? 0) + 1
+      else {
+        actions.mainAboveFold = (actions.mainAboveFold ?? 0) + 1
+        if ((actions.mainLabels?.length ?? 0) < 30) (actions.mainLabels ??= []).push(label(el))
+      }
+    }
     if (!isPrimary(el)) continue
     const inMain = Boolean(main?.contains(el))
     const disabled = (el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true'
@@ -769,6 +778,7 @@ export function collect(opts: CollectOptions): Metrics {
     viewport: { width: vw, height: vh },
     contentHeight,
     actions,
+    noPrimary: Boolean(main?.querySelector('[data-no-primary]') || main?.matches('[data-no-primary]')),
     primary,
     chips,
     tables,

@@ -67,6 +67,11 @@ describe('screen audit report', () => {
     expect(s.text14).toEqual({ value: 94, pass: false })
     expect(s.greenAll).toEqual({ value: 2, pass: false })
     expect(s.mainActionsFold).toEqual({ value: 12, pass: false })
+    // no green is a pass only where the screen says it has no single next step; two or more never pass
+    const none = (noPrimary, inMain) => score(cap('admin', 'todo', '1366x768', { noPrimary, primary: { inMain, inMainAboveFold: 0, disabledInMain: 0, inChrome: 0, labels: [] } })).greenAll
+    expect(none(true, 0)).toEqual({ value: 0, pass: true })
+    expect(none(false, 0)).toEqual({ value: 0, pass: false })
+    expect(none(true, 2)).toEqual({ value: 2, pass: false })
     expect(s.overlap.pass).toBe(false)
     expect(s.strips.pass).toBe(false)
     expect(s.contrastHi.pass).toBe(false)

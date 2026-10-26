@@ -50,7 +50,8 @@ import { pickableCategories, quickInsert, quickProblem, sessionTotal, topCategor
  */
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
 
-export function QuickAdd({ categories }: { categories: readonly Category[] }) {
+/** sheetOpen: the Add expenses sheet is open over this form; its Save expenses is then the one green button, so this Save is drawn quiet. */
+export function QuickAdd({ categories, sheetOpen = false }: { categories: readonly Category[]; sheetOpen?: boolean }) {
   const today = businessToday()
   const toast = useToast()
   const uid = useId()
@@ -452,7 +453,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
                 setPhoto(one)
               }}
             />
-            <Button type="submit" variant="primary" size="touch" icon={Check} busy={busy} busyLabel="Saving" className="min-w-[112px] text-base">
+            <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="min-w-[112px] text-base">
               Save
               <span className="sr-only"> this expense</span>
             </Button>

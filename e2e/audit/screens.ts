@@ -217,6 +217,10 @@ const issueQuotation: Visit = {
           await dialog.waitFor({ timeout: 10_000 })
         }
         await settle(page)
+        // The dialog opens with no selling price (the CRM never works one out), so its Issue quotation is grey. A person types the prices
+        // before issuing: do the same, so the screen is measured in the state where its one green button is live.
+        const prices = dialog.getByLabel(/^Unit price, net PKR, item/)
+        for (let i = 0, n = await prices.count(); i < n; i++) await prices.nth(i).fill(String(1000 + i * 250))
       })
       await capture('issue-quotation', { root: DIALOG })
     } finally {
@@ -247,6 +251,20 @@ const markWon: Visit = {
 }
 
 export const VISITS: readonly Visit[] = [
+  // The Jobs screens (redesign phases 4 to 7). The rfq-* and order-* captures below open the same Job pages through the old addresses and are
+  // kept until 2026-11-09, so a before and after can be compared; after that date they can go.
+  screen('jobs-list', 'Jobs list, open', ALL, () => '/jobs'),
+  screen('jobs-history', 'Jobs list, history', ALL, () => '/jobs?chip=history'),
+  screen('job-not-sent', 'Job page: enquiry, not sent to suppliers', ALL, fx => `/rfqs/${fx.rfq.notSent}`),
+  screen('job-waiting', 'Job page: enquiry, waiting for prices', ALL, fx => `/rfqs/${fx.rfq.waiting}`),
+  screen('job-prices-in', 'Job page: enquiry, prices in', ALL, fx => `/rfqs/${fx.rfq.pricesIn}`),
+  screen('job-quoted', 'Job page: quotation sent', ALL, fx => `/rfqs/${fx.rfq.quoted}`),
+  screen('job-po-issued', 'Job page: order, PO issued', ALL, fx => `/orders/${fx.order.poIssued}`),
+  screen('job-delivered', 'Job page: order, delivered, not invoiced', ALL, fx => `/orders/${fx.order.delivered}`),
+  screen('job-paid', 'Job page: order, paid', ALL, fx => `/orders/${fx.order.paid}`),
+  screen('job-commissioning', 'Job page: 3 supplier orders, commissioning', ALL, fx => `/orders/${fx.order.multiLeg}`),
+  screen('enquiry-new', 'New enquiry', MONEY, () => '/enquiries/new'),
+  screen('review-imported', 'Money: Review imported', ADMIN, () => '/money/review-imported'),
   screen('today', 'Today, with items', ALL, () => '/todo'),
   screen('rfqs-open', 'RFQ list, open', ALL, () => '/rfqs'),
   screen('rfqs-closed', 'RFQ list, closed', ALL, () => '/rfqs?tab=closed'),
