@@ -237,6 +237,9 @@ test.describe('desktop: paste and drop anywhere', () => {
   test('dropping files anywhere opens Capture with them; Add to notes keeps them with the RFQ', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
+    // On To do and the Jobs list a dropped file starts a New enquiry (P4-A); anywhere else it still opens Capture.
+    await page.goto(`/rfqs/${s.rfq.id}`)
+    await page.locator('#main').waitFor()
     await page.evaluate(b64 => {
       const dt = new DataTransfer()
       dt.items.add(new File([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], 'site-photo.png', { type: 'image/png' }))
