@@ -53,6 +53,11 @@ export async function getInvoice(id: string): Promise<InvoiceRow | null> {
 }
 
 export interface InvoicePatch {
+  /** The invoice's own figures (W11): only an admin, or the person who entered it, in a month that is open. */
+  number: string
+  invoice_date: string
+  net_amount: number
+  gst_amount: number
   copy_received_on: string | null
   tcs_sent_on: string | null
   tcs_number: string | null
@@ -306,4 +311,12 @@ export async function signReceipt(path: string, seconds = 600): Promise<string> 
   const { data, error } = await db.storage.from(RECEIPT_BUCKET).createSignedUrl(path, seconds)
   if (error) throw error
   return data.signedUrl
+}
+
+// ------------------------------------------------------------------ delete (0092)
+
+/** delete_invoice (admin only, permanent): the rows are gone when this resolves; the receipt files it names are the caller's to remove. */
+export async function deleteInvoice(invoiceId: string): Promise<{ bucket: string; path: string }[]> {
+  const rows = unwrap(await requireSupabase().rpc('delete_invoice', { p_invoice_id: invoiceId })) ?? []
+  return rows.map(r => ({ bucket: r.storage_bucket, path: r.storage_path }))
 }
