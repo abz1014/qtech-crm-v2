@@ -3,7 +3,7 @@ import { History as HistoryIcon } from 'lucide-react'
 import { MenuItem } from '@/ui/Popover'
 import { useSeesPrices } from '@/app/session'
 import { useRecordHistory, type HistoryTable } from '@/features/history/api'
-import { lastChangedLine } from '@/features/history/model'
+import { lastChangedLine } from '@/features/history/lastChangedLine'
 
 /** The "History" item of a record's More menu. The caller owns the open state and draws <LazyHistoryPanel>. */
 export function HistoryMenuItem({ onOpen }: { onOpen: () => void }) {

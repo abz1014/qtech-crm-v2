@@ -7,7 +7,7 @@ import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { useToast } from '@/ui/useToast'
 import * as api from '@/features/rfqs/api'
 import { refreshAfterRfqDelete, useDeleteRfq, useRfqDeleteCounts } from '@/features/rfqs/hooks'
-import { useOrdersForRfq } from '@/features/orders/hooks'
+import { useOrdersForRfq } from '@/features/orders/forRfq'
 import { alsoDeletes, NEEDS_ORDER_FIRST } from '@/features/rfqs/deleteFlow'
 
 /* The delete-RFQ confirm (see deleteFlow.tsx): downloaded when an admin opens it, not with the RFQ page (perf: the page's LCP). */

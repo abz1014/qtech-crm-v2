@@ -7,7 +7,7 @@ import { useSession } from '@/app/session'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useAddInquiries, useMarkInquiriesSent, useRemoveInquiries } from '@/features/rfqs/hooks'
-import { generateEnquiryDraft } from '@/features/rfqs/lib'
+import { generateEnquiryDraft } from '@/features/rfqs/lib/enquiryDraft'
 
 /*
  * Asking more suppliers from the RFQ page (g2-rfq-detail: "Copy enquiry for 2 suppliers", "Copy enquiry text", "Float to another

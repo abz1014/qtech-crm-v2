@@ -12,7 +12,9 @@ import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
-import { toRateTable, quotationSent, type SuggestionItem } from '@/features/rfqs/lib'
+import { toRateTable } from '@/features/rfqs/lib/comparePrices'
+import { quotationSent } from '@/features/rfqs/lib/nextAction'
+import type { SuggestionItem } from '@/features/rfqs/lib/supplierSuggestion'
 import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
 import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
@@ -20,7 +22,7 @@ import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/use
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { useQuotations } from '@/features/quotations/hooks'
-import { useOrdersForRfq } from '@/features/orders/hooks'
+import { useOrdersForRfq } from '@/features/orders/forRfq'
 
 /*
  * The enquiry side of the job, on the job page (redesign P5-D1): ask suppliers, enter their prices, send the quotation, Mark won.
