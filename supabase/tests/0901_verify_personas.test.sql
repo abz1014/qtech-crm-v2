@@ -161,6 +161,13 @@ insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M G
 insert into public.expense_claims (id, created_by, amount_pkr) values (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5);   -- 0087
 insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);   -- 0087
 insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);   -- 0087
+insert into public.checked_findings (finding_key, message_hash) values ('probe-key', 'probe-hash');   -- 0102
+insert into public.orders (id, company_id, owner_id, legacy_source) values   -- 0096: an imported order, an unlinked imported invoice and a linked one
+  (pg_temp.f('e7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"sheet":"orders"}');
+insert into public.invoices (id, company_id, number, net_amount, gst_amount, legacy_source) values
+  (pg_temp.f('e8'), pg_temp.f('01'), 'INV-M96-A', 100, 0, '{"sheet":"gst"}');
+insert into public.invoices (id, order_id, company_id, number, net_amount, gst_amount, legacy_source) values
+  (pg_temp.f('e9'), pg_temp.f('e7'), pg_temp.f('01'), 'INV-M96-B', 100, 0, '{"sheet":"gst"}');
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
@@ -226,6 +233,7 @@ insert into spec values
   ('expense_claims', '', 'id = @e0', 'note', $q$insert into public.expense_claims (id, amount_pkr) values (@e4, 5)$q$),   -- 0087
   ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
   ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$),   -- 0087
+  ('checked_findings', '', $q$finding_key = 'probe-key'$q$, 'message_hash', $q$insert into public.checked_findings (finding_key, message_hash) values ('probe-2', 'probe-hash')$q$),   -- 0102
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
   ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
@@ -341,6 +349,10 @@ insert into probes values
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
   ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080
+  ('link_imported_invoices', '', 'X', 'select 1 where (select count(*) from public.link_imported_invoices()) >= 0'),   -- 0096: refused for everyone but an admin
+  ('link_imported_invoice', '', 'X', 'select public.link_imported_invoice(@e8, @e7)'),   -- 0096: the unlinked imported invoice onto the imported order (same customer)
+  ('unlink_imported_invoice', '', 'X', 'select public.unlink_imported_invoice(@e9)'),   -- 0096
+  ('set_legacy_review', '', 'X', $q$select public.set_legacy_review('order', @e7, 'live')$q$),   -- 0096
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)

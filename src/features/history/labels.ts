@@ -30,7 +30,7 @@ const paidVia = (label = 'Paid via'): ColumnSpec => ({ kind: 'enum', label, word
 const ticked: ColumnSpec = { kind: 'date', label: 'Ticked in bank', month: true, empty: 'Not ticked' }
 
 /** Columns that mean the same on every table, and are never shown. */
-export const ALWAYS_HIDDEN = ['id', 'created_at', 'created_by', 'updated_at', 'updated_by', 'model_tokens', 'legacy_source', 'legacy_flags'] as const
+export const ALWAYS_HIDDEN = ['id', 'created_at', 'created_by', 'updated_at', 'updated_by', 'model_tokens', 'legacy_source', 'legacy_flags', 'legacy_review'] as const
 
 /** The child tables shown under a record (0090 history_sources). */
 export const HISTORY_CHILD_TABLES = [
