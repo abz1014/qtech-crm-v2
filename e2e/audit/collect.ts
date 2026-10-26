@@ -312,10 +312,10 @@ export function collect(opts: CollectOptions): Metrics {
     const fold = inFold(el)
     if (fold) actions.aboveFold++
     // Not page-level actions, so left out of the 8-action target and counted apart: per-row actions of a list (a [data-row-actions]
-    // container, any table row or column header, any list item), and navigation (a nav landmark or tab list: the Money and Settings menus), and the
+    // container, any table row or column header, any list item), and navigation and choice controls (a nav landmark, tab list, [data-nav-strip], a button group such as a month pager, a toggle or radio), and the
     // (i) tips that explain a heading ([data-infotip]).
     if (fold && main?.contains(el)) {
-      if (el.closest('[data-row-actions], tr, li, [role="row"], thead, nav, [role="tablist"], [data-infotip]')) actions.rowActionsAboveFold = (actions.rowActionsAboveFold ?? 0) + 1
+      if (el.closest('[data-row-actions], tr, li, [role="row"], thead, nav, [role="tablist"], [role="group"], [role="radiogroup"], [data-nav-strip], [aria-pressed], [role="radio"], [data-infotip]')) actions.rowActionsAboveFold = (actions.rowActionsAboveFold ?? 0) + 1
       else {
         actions.mainAboveFold = (actions.mainAboveFold ?? 0) + 1
         if ((actions.mainLabels?.length ?? 0) < 30) (actions.mainLabels ??= []).push(label(el))

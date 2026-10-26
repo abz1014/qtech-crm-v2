@@ -285,6 +285,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle }: { fac
               ) : (
                 <button
                   type="button"
+                  data-nav-strip=""
                   aria-expanded={isOpen}
                   aria-controls={`stage-body-${s.index}`}
                   onClick={() => onToggle(s.index)}

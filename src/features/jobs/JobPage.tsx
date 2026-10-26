@@ -162,7 +162,7 @@ function JobView({ facts }: { facts: JobFacts }) {
 
   return (
     <Shell bar>
-      {role === 'engineer' ? <NoPrimary /> : null}
+      {role === 'engineer' || !button ? <NoPrimary /> : null}
       <DetailHeader
         name={job.companyName}
         nameHref={`/companies/${job.companyId}`}
