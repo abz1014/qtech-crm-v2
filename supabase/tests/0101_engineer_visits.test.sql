@@ -55,9 +55,8 @@ select lives_ok($$update public.orders set visit_type = 'service' where id = 'a1
 select lives_ok($$update public.orders set visit_type = null where id = 'a1000000-0000-4000-8000-000000010101'$$, 'and it can be cleared');
 
 -- ------------------------------------------------------------------ an engineer on an assigned order
-select is(pg_temp.as_('engineer', $q$with u as (update public.orders set commissioning_time = '10:00', visit_type = 'survey' where id = 'a1000000-0000-4000-8000-000000010101' returning 1) select count(*)::text from u$q$),
-  '1', 'an engineer sets the visit time and type on an order assigned to them');
-select is((select commissioning_time::text || '|' || visit_type from public.orders where id = 'a1000000-0000-4000-8000-000000010101'), '10:00:00|survey', 'and they are stored');
+select is(pg_temp.as_('engineer', $q$with u as (update public.orders set commissioning_time = '10:00', visit_type = 'survey' where id = 'a1000000-0000-4000-8000-000000010101' returning commissioning_time, visit_type) select commissioning_time::text || '|' || visit_type from u$q$),
+  '10:00:00|survey', 'an engineer sets the visit time and type on an order assigned to them, and reads them back');
 select is(pg_temp.as_('engineer', $q$with u as (update public.orders set notes = 'engineer note' where id = 'a1000000-0000-4000-8000-000000010101' returning 1) select count(*)::text from u$q$),
   '1', 'other writes on the assigned order are as before');
 
@@ -77,13 +76,12 @@ select is(pg_temp.as_('engineer', $q$select unit_price_net::text from public.ord
   'E:42501', 'nor read one');
 
 -- ------------------------------------------------------------------ admin and sales are unchanged
-select is(pg_temp.as_('admin', $q$with u as (update public.orders set commissioning_time = '09:30', visit_type = 'installation' where id = 'a1000000-0000-4000-8000-000000010102' returning 1) select count(*)::text from u$q$),
-  '1', 'the admin sets them on any order');
-select is(pg_temp.as_('sales', $q$with u as (update public.orders set commissioning_time = '14:00', visit_type = 'service' where id = 'a1000000-0000-4000-8000-000000010102' returning 1) select count(*)::text from u$q$),
-  '1', 'sales set them on any order');
+select is(pg_temp.as_('admin', $q$with u as (update public.orders set commissioning_time = '09:30', visit_type = 'installation' where id = 'a1000000-0000-4000-8000-000000010102' returning commissioning_time, visit_type) select commissioning_time::text || '|' || visit_type from u$q$),
+  '09:30:00|installation', 'the admin sets them on any order');
+select is(pg_temp.as_('sales', $q$with u as (update public.orders set commissioning_time = '14:00', visit_type = 'service' where id = 'a1000000-0000-4000-8000-000000010102' returning commissioning_time, visit_type) select commissioning_time::text || '|' || visit_type from u$q$),
+  '14:00:00|service', 'sales set them on any order');
 select is(pg_temp.as_('deactivated', $q$with u as (update public.orders set visit_type = 'survey' where id = 'a1000000-0000-4000-8000-000000010102' returning 1) select count(*)::text from u$q$),
   '0', 'a deactivated person sets nothing');
-select is((select commissioning_time::text || '|' || visit_type from public.orders where id = 'a1000000-0000-4000-8000-000000010102'), '14:00:00|service', 'the last allowed write stands');
 
 -- ------------------------------------------------------------------ the guard is not callable
 select is(pg_temp.as_('sales', 'select public.guard_order_visit_fields()::text'), 'E:42501', 'nobody can call the guard function');

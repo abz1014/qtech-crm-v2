@@ -216,10 +216,8 @@ select is(pg_temp.as_('engineer', $q$with u as (update public.rfq_items set quot
   'E:42501', 'nor set a quoted price on an RFQ item and read it back');
 
 -- 0097: the To do columns carry no price, so the engineer reads and writes them (the stamp and the snooze flag)
-select is(pg_temp.as_('engineer', $q$with u as (update public.supplier_inquiries set sent_confirmed_at = now() where id = 'f0000000-0000-4000-8000-000000000a81' returning 1) select count(*)::text from u$q$),
-  '1', 'an engineer can stamp sent_confirmed_at (0097)');
-select is(pg_temp.as_('engineer', $q$select count(*)::text from public.supplier_inquiries where sent_confirmed_at is not null$q$),
-  '1', 'and read it back with select * style access to the table (0097)');
+select is(pg_temp.as_('engineer', $q$with u as (update public.supplier_inquiries set sent_confirmed_at = now() where id = 'f0000000-0000-4000-8000-000000000a81' returning sent_confirmed_at) select (sent_confirmed_at is not null)::text from u$q$),
+  'true', 'an engineer can stamp sent_confirmed_at and read it back (0097)');
 select is(pg_temp.as_('engineer', $q$with u as (update public.snoozes set until_change = true where user_id = auth.uid() returning 1) select count(*)::text from u$q$),
   '1', 'an engineer can mark their own snooze until_change (0097)');
 

@@ -92,9 +92,11 @@ select is(pg_temp.n('r_leg'), 0::bigint, 'a change to the supplier order ends it
 select is(pg_temp.as_('sales', 'select public.clear_until_change_snoozes()::text'), 'E:42501', 'nobody can call the trigger function');
 
 -- ------------------------------------------------------------------ sent_confirmed_at: an engineer stamps a visible inquiry
-select is(pg_temp.as_('engineer', $q$with u as (update public.supplier_inquiries set sent_confirmed_at = now() where id = 'f0000000-0000-4000-8000-000000009701' returning 1) select count(*)::text from u$q$),
-  '1', 'an engineer stamps "Yes, sent" on an inquiry they can see');
-select is((select sent_confirmed_at is not null from public.supplier_inquiries where id = 'f0000000-0000-4000-8000-000000009701'), true, 'and it is stored');
+select is(pg_temp.as_('engineer', $q$with u as (update public.supplier_inquiries set sent_confirmed_at = now() where id = 'f0000000-0000-4000-8000-000000009701' returning sent_confirmed_at) select (sent_confirmed_at is not null)::text from u$q$),
+  'true', 'an engineer stamps "Yes, sent" on an inquiry they can see, and the stamp is there');
+-- as_ rolls each statement back, so the owner writes the stamp the later checks read
+update public.supplier_inquiries set sent_confirmed_at = now() where id = 'f0000000-0000-4000-8000-000000009701';
+select is((select sent_confirmed_at is not null from public.supplier_inquiries where id = 'f0000000-0000-4000-8000-000000009701'), true, 'and it can be stored');
 select is(pg_temp.as_('engineer', $q$select (sent_confirmed_at is not null)::text from public.supplier_inquiries where id = 'f0000000-0000-4000-8000-000000009701'$q$),
   'true', 'an engineer reads the stamp');
 select is(pg_temp.as_('sales', $q$with u as (update public.supplier_inquiries set sent_confirmed_at = now() where id = 'f0000000-0000-4000-8000-000000009701' returning 1) select count(*)::text from u$q$),
