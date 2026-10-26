@@ -14,8 +14,6 @@ export type FirstUseScreen = 'today' | 'rfqs' | 'orders'
 export type FirstUseAction =
   /** A route to open. */
   | { kind: 'link'; label: string; to: string }
-  /** Opens the Paste or photo sheet. */
-  | { kind: 'capture'; label: string }
   /** The screen's own "show everyone's" switch; the screen passes the handler and the count. */
   | { kind: 'everyone'; label: string }
 
@@ -39,8 +37,8 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
     },
     engineer: {
       title: 'Your jobs show up here',
-      body: 'When an order needs you on site, the admin adds you to it and it appears here with its date. You can already save a site photo or note to any RFQ or order.',
-      action: { kind: 'capture', label: 'Paste or photo' },
+      body: 'When an order needs you on site, the admin adds you to it and it appears here with its date. You can already save a site photo or note to any job: open it and use Add to this job.',
+      action: { kind: 'link', label: 'Open Jobs', to: '/jobs' },
       recipe: 'paste-or-photo',
     },
     admin: {

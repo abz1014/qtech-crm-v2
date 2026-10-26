@@ -21,7 +21,7 @@ export const HOW_IT_WORKS: Record<HelpRole, HowItWorksStep[]> = {
   ],
   engineer: [
     { text: '**To do** lists your site jobs and their dates.', recipe: 'today-jobs' },
-    { text: 'On site, **Paste or photo** saves a photo or note to the RFQ or order. No forms.', recipe: 'paste-or-photo' },
+    { text: 'On site, **Add to this job** saves a photo or note on the job. No forms.', recipe: 'paste-or-photo' },
     { text: 'One tap when done: **Delivered today**, **Mark done today**. Wrong tap? **Undo**.', recipe: 'goods-delivered' },
   ],
   admin: [

@@ -3,7 +3,6 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { CaptureContext, type CaptureApi } from '@/app/capture/useCapture'
 import { FIRST_USE_COPY, NOTHING_YET } from '@/features/help/firstUseCopy'
 import { FirstUseState, NothingYetState } from '@/features/help/FirstUseState'
 import { axeViolations } from '@/test/axe'
@@ -13,14 +12,12 @@ function Where() {
   return <p data-testid="at">{`${loc.pathname}${loc.search}`}</p>
 }
 
-function mount(ui: ReactNode, capture?: Partial<CaptureApi>) {
+function mount(ui: ReactNode) {
   return render(
-    <CaptureContext.Provider value={(capture ?? null) as CaptureApi | null}>
-      <MemoryRouter initialEntries={['/today']}>
-        {ui}
-        <Where />
-      </MemoryRouter>
-    </CaptureContext.Provider>,
+    <MemoryRouter initialEntries={['/today']}>
+      {ui}
+      <Where />
+    </MemoryRouter>,
   )
 }
 
@@ -51,12 +48,11 @@ describe('first-use empty states', () => {
     expect(screen.getByTestId('at')).toHaveTextContent('/today?help=mark-won')
   })
 
-  it('Today, engineer: the one button opens Paste or photo', async () => {
+  it('Today, engineer: the one button opens Jobs, where Add to this job takes a photo or a note', async () => {
     const user = userEvent.setup()
-    const openCapture = vi.fn()
-    mount(<FirstUseState screen="today" role="engineer" />, { openCapture })
-    await user.click(screen.getByRole('button', { name: 'Paste or photo' }))
-    expect(openCapture).toHaveBeenCalledTimes(1)
+    mount(<FirstUseState screen="today" role="engineer" />)
+    await user.click(screen.getByRole('button', { name: 'Open Jobs' }))
+    expect(screen.getByTestId('at')).toHaveTextContent('/jobs')
   })
 
   it('Today, admin alone on the team: the one button adds people', async () => {

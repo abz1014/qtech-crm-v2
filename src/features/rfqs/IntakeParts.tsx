@@ -162,7 +162,7 @@ export function DraftOffer({
         <h2 className="font-semibold">You have a draft from {draftAge(draft.savedAt)}</h2>
         <p className="text-fg-2">
           {draftSummary(draft)}. It is kept on this device until you save it or start new; Start new forgets it.
-          {keepsCapture ? ' If you continue it, the pasted message stays in Paste or photo.' : ''}
+          {keepsCapture ? ' If you continue it, the message you brought is not added.' : ''}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">

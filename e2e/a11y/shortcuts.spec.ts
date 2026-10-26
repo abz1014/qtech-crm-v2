@@ -18,14 +18,7 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
   test.info().annotations.push({ type: 'behaviour', description: 'N -> /enquiries/new, C -> Capture sheet, G T -> /todo, / -> table filter; active with focus on any link or button' })
   await open(page, '/todo')
   await pressOnNavLink(page, 'n')
-  await expect(page).toHaveURL(/\/rfqs\/new$/)
-
-  await open(page, '/todo')
-  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
-  await page.keyboard.press('c')
-  await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeHidden()
+  await expect(page).toHaveURL(/\/enquiries\/new$/)
 
   await open(page, '/rfqs')
   await pressOnNavLink(page, 'g')

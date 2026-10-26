@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FileSpreadsheet, FileText, ImageIcon, Upload } from 'lucide-react'
+import { pastedText } from '@/lib/docread/htmlTable'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import IntakeScreen from '@/features/rfqs/IntakeScreen'
@@ -37,7 +38,7 @@ export default function NewEnquiryPage() {
   // The pasted message is read by the intake itself (it listens for paste); this only shows it beside the result.
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
-      const text = e.clipboardData?.getData('text/plain') ?? ''
+      const text = e.clipboardData ? pastedText(e.clipboardData) : ''
       if (text.trim().length > 20) setPasted(text)
     }
     document.addEventListener('paste', onPaste)

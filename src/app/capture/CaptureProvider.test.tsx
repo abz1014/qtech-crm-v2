@@ -1,97 +1,73 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
-import { useCapture } from '@/app/capture/useCapture'
-import { createCapture } from '@/lib/capture/store'
-import { ToastContext } from '@/ui/useToast'
-import type { AddedFile } from '@/lib/fileIntake'
 
-// Turning the kept item's files back into draft files is slow on a phone (photos are decoded and shrunk); hold it open.
-const intake = vi.hoisted(() => ({ release: [] as (() => void)[] }))
-vi.mock('@/lib/fileIntake', async importOriginal => {
-  const real = await importOriginal<typeof import('@/lib/fileIntake')>()
-  return {
-    ...real,
-    intakeFiles: (files: readonly File[]) =>
-      new Promise<AddedFile[]>(resolve => intake.release.push(() => resolve(files.map(f => ({ id: crypto.randomUUID(), file: f, originalSize: f.size }))))),
-  }
-})
-
-let typeText: (t: string) => void = () => {}
-function Probe() {
-  const cap = useCapture()
-  typeText = cap.setText
-  return <output aria-label="draft">{cap.draft.text}</output>
+/*
+ * What a paste or a drop does outside a field (P4): on To do and the Jobs list it starts a New enquiry with it; on a job's page
+ * "Add to this job" listens for it itself; on the intake screens the intake reads it; anywhere else nothing reacts.
+ */
+function Where() {
+  const l = useLocation()
+  const s = l.state as { capture?: { text: string; files: File[] } } | null
+  return (
+    <>
+      <output aria-label="where">{l.pathname}</output>
+      <output aria-label="carried">{s?.capture ? `${s.capture.text}|${s.capture.files.map(f => f.name).join(',')}` : ''}</output>
+    </>
+  )
 }
 
-beforeEach(() => {
-  ;(globalThis as { indexedDB?: IDBFactory }).indexedDB = new IDBFactory()
-  intake.release = []
-})
-afterEach(() => {
-  delete (globalThis as { indexedDB?: IDBFactory }).indexedDB
-})
+function mount(at: string) {
+  return render(
+    <MemoryRouter initialEntries={[at]}>
+      <CaptureProvider>
+        <Where />
+      </CaptureProvider>
+    </MemoryRouter>,
+  )
+}
 
-describe('Capture provider: picking up the kept item on start', () => {
-  it('does not overwrite what the person typed while the kept item was still loading', async () => {
-    await createCapture({ source: 'share', text: 'old shared text', files: [{ name: 'a.jpg', type: 'image/jpeg', size: 1, blob: new Blob(['x']) }] })
-    render(
-      <MemoryRouter>
-        <ToastContext.Provider value={{ toast: vi.fn(() => 't'), dismiss: vi.fn() }}>
-          <CaptureProvider>
-            <Probe />
-          </CaptureProvider>
-        </ToastContext.Provider>
-      </MemoryRouter>,
-    )
-    await waitFor(() => expect(intake.release).toHaveLength(1))
-    act(() => typeText('typed just now'))
-    await act(async () => intake.release[0]())
-    expect(screen.getByLabelText('draft')).toHaveTextContent('typed just now')
-  })
-})
+const drop = (file: File) => {
+  const e = new Event('drop', { bubbles: true, cancelable: true }) as Event & { dataTransfer?: unknown }
+  e.dataTransfer = { types: ['Files'], files: [file], items: [file] }
+  document.dispatchEvent(e)
+  return e
+}
+const paste = (text: string) => {
+  const e = new Event('paste', { bubbles: true, cancelable: true }) as Event & { clipboardData?: unknown }
+  e.clipboardData = { files: [], getData: (t: string) => (t === 'text/plain' ? text : '') }
+  document.dispatchEvent(e)
+  return e
+}
 
-describe('Capture provider: a dropped file (P4-A)', () => {
-  function Where() {
-    const l = useLocation()
-    return <output aria-label="where">{l.pathname}</output>
-  }
-  function mount(at: string) {
-    return render(
-      <MemoryRouter initialEntries={[at]}>
-        <ToastContext.Provider value={{ toast: vi.fn(() => 't'), dismiss: vi.fn() }}>
-          <CaptureProvider>
-            <Where />
-            <Probe />
-          </CaptureProvider>
-        </ToastContext.Provider>
-      </MemoryRouter>,
-    )
-  }
-  const drop = (file: File) => {
-    const e = new Event('drop', { bubbles: true, cancelable: true }) as Event & { dataTransfer?: unknown }
-    e.dataTransfer = { types: ['Files'], files: [file], items: [file] }
-    document.dispatchEvent(e)
-    return e
-  }
-
-  it('on To do or the Jobs list it opens New enquiry with the file', async () => {
+describe('Capture provider', () => {
+  it('a dropped file on To do or the Jobs list opens New enquiry with the file', async () => {
     const file = new File(['%PDF'], 'enquiry.pdf', { type: 'application/pdf' })
     for (const at of ['/todo', '/jobs']) {
       const view = mount(at)
       act(() => void drop(file))
       await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/enquiries/new'))
+      expect(screen.getByLabelText('carried')).toHaveTextContent('|enquiry.pdf')
       view.unmount()
     }
   })
 
-  it('on the intake screens it leaves the drop to them, and elsewhere it still goes to Paste or photo', async () => {
+  it('a message pasted on To do opens New enquiry with the text', async () => {
+    mount('/todo')
+    act(() => void paste('Please quote 2 nos level switch'))
+    await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/enquiries/new'))
+    expect(screen.getByLabelText('carried')).toHaveTextContent('Please quote 2 nos level switch|')
+  })
+
+  it('does nothing on a job page (Add to this job listens there), on the intake screens, or anywhere else', () => {
     const file = new File(['%PDF'], 'enquiry.pdf', { type: 'application/pdf' })
-    mount('/enquiries/new')
-    const e = drop(file)
-    expect(e.defaultPrevented).toBe(false)
-    expect(screen.getByLabelText('where')).toHaveTextContent('/enquiries/new')
+    for (const at of ['/jobs/139', '/enquiries/new', '/rfqs/new', '/money/expenses', '/companies']) {
+      const view = mount(at)
+      expect(drop(file).defaultPrevented).toBe(false)
+      expect(paste('some text').defaultPrevented).toBe(false)
+      expect(screen.getByLabelText('where')).toHaveTextContent(at)
+      view.unmount()
+    }
   })
 })

@@ -189,22 +189,7 @@ test('HE-12 Targets: typing junk ("abc") over a saved target and pressing Enter 
   await context.close()
 })
 
-test('HE-13 the "Paste or photo" (Capture) dialog at 1366: Tab moves focus out of the open dialog', async ({ browser }, info) => {
-  const context = await contextAs(browser, info, 'admin', vp('w1366'))
-  const page = await context.newPage()
-  await page.goto('/todo')
-  await settle(page)
-  await page.getByRole('button', { name: /Paste or photo/ }).first().click()
-  const d = page.getByRole('dialog', { name: /Paste or photo/ })
-  await expect(d).toBeVisible()
-  for (let i = 0; i < 6; i++) {
-    await page.keyboard.press('Tab')
-    const inside = await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))
-    expect(inside, `Tab ${i + 1} left the dialog`).toBe(true)
-  }
-  await context.close()
-})
-
+// HE-13 (Tab leaving the Paste or photo dialog) is gone with the dialog: the sheet was retired by New enquiry and Add to this job (P4).
 test('HE-14 closing Help (Account menu > Help) with Esc drops focus on the page body', async ({ browser }, info) => {
   const context = await contextAs(browser, info, 'admin', vp('w1366'))
   const page = await context.newPage()
