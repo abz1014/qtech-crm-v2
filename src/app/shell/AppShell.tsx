@@ -16,6 +16,7 @@ import type { NavCounts } from '@/app/shell/useNavCounts'
 import { usePageSettled } from '@/app/usePageSettled'
 import { markContentDrawn, whenContentDrawn } from '@/lib/afterContent'
 import { preloadPopover } from '@/ui/popoverStore'
+import { preloadDialog } from '@/ui/dialogStore'
 import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
 
@@ -70,7 +71,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   useEffect(() => {
     let t: number | undefined
     whenContentDrawn(() => {
-      t = window.setTimeout(() => void preloadPopover(), 1500)
+      t = window.setTimeout(() => { void preloadPopover(); void preloadDialog() }, 1500)
     })
     return () => window.clearTimeout(t)
   }, [])

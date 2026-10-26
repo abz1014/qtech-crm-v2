@@ -269,8 +269,45 @@ export async function getJobFacts(key: string): Promise<JobFacts | null> {
         .eq('number', number)
         .maybeSingle()
   const [view, headRes] = await Promise.all([db.from('v_jobs').select(JOB_COLUMNS).eq('job_key', key).maybeSingle(), head])
+  return factsOf(unwrap(view) as JobView | null, unwrap(headRes) as unknown as HeadJoin | null, direct !== null, number)
+}
+
+/**
+ * The same facts for an old address (/rfqs/<id>, /orders/<id>) in ONE round: the view by the RFQ's or order's id beside the enquiry
+ * (or the order, with its enquiry embedded), so the redirect to the Job page costs no extra round trip (perf/lcp). Null when it cannot
+ * say (a cancelled order, an unknown id, a direct order): the caller then asks for the key the slow way.
+ */
+export async function getJobFactsFromOld(kind: 'rfq' | 'order', id: string): Promise<JobFacts | null> {
+  const db = requireSupabase()
+  const person = (t: string) =>
+    `company:companies!${t}_company_id_fkey(id, name), site:company_sites!${t}_site_id_fkey(name, address), contact:contacts!${t}_contact_id_fkey(name, phone, email, job_title), owner:users!${t}_owner_id_fkey(id, name)`
+  if (kind === 'rfq') {
+    const [view, head] = await Promise.all([
+      db.from('v_jobs').select(JOB_COLUMNS).eq('rfq_id', id).limit(1).maybeSingle(),
+      db
+        .from('rfqs')
+        .select(`id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')}`)
+        .eq('id', id)
+        .maybeSingle(),
+    ])
+    const v = unwrap(view) as JobView | null
+    return factsOf(v, unwrap(head) as unknown as HeadJoin | null, false, null)
+  }
+  const [view, ord] = await Promise.all([
+    db.from('v_jobs').select(JOB_COLUMNS).eq('order_id', id).limit(1).maybeSingle(),
+    db
+      .from('orders')
+      .select(`rfq:rfqs!orders_rfq_id_fkey(id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')})`)
+      .eq('id', id)
+      .maybeSingle(),
+  ])
   const v = unwrap(view) as JobView | null
-  const h = unwrap(headRes) as unknown as HeadJoin | null
+  const o = unwrap(ord) as unknown as { rfq: One<HeadJoin> } | null
+  const head = one(o?.rfq)
+  return head && v && v.kind !== 'direct' ? factsOf(v, head, false, null) : null
+}
+
+function factsOf(v: JobView | null, h: HeadJoin | null, direct: boolean, number: number | null): JobFacts | null {
   if (!v || !h || !v.job_key || !v.company_id) return null
   const company = one(h.company)
   const site = one(h.site)

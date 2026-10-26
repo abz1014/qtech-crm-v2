@@ -9,6 +9,8 @@ afterEach(() => cleanup())
 // The Radix half of Popover is a lazy chunk in the app (src/ui/Popover.tsx); here it is loaded up front, so a popover is the real one from the first render.
 const { preloadPopover } = await import('@/ui/popoverStore')
 await preloadPopover()
+const { preloadDialog } = await import('@/ui/dialogStore')
+await preloadDialog()
 
 /*
  * findBy*, waitFor and waitForElementToBeRemoved give up after 1000 ms by default. Vitest runs ~200 jsdom files in parallel

@@ -1,6 +1,7 @@
 import type { Prefetch } from '@/app/routeChunks'
 import { cancelledOrdersQuery, jobFactsQuery, jobInvoicesQuery, jobsListQuery } from '@/features/jobs/hooks'
 import { qk } from '@/features/queryKeys'
+import { resolveOldAddress } from '@/features/jobs/oldAddress'
 import { listOrderAttachments } from '@/features/rfqs/api'
 import { prefetchRfqParts, rfqInquiriesQuery, rfqItemsQuery } from '@/features/rfqs/hooks'
 import { orderEngineersQuery, orderHeaderQuery, orderItemsQuery, orderLegsQuery, orderMoneyQuery } from '@/features/orders/hooks'
@@ -17,10 +18,14 @@ const roleOf = (role: string): Role | null => (role === 'admin' || role === 'sal
  * at once, on the same query keys the panels use, so they find the data (or the request on its way) and never ask twice.
  * An engineer's reads carry no price (the same hooks, the same `money` switch).
  */
-export const prefetchJob: Prefetch = async ({ client, user, id }) => {
+export const prefetchJob: Prefetch = async ({ client, user, id, pathname }) => {
   const role = roleOf(user.role)
   if (!id || !role) return
-  const key = decodeURIComponent(id)
+  // An old RFQ or order address (the Job page opens for it): the key and the job's facts come back in one round, then the panels as below.
+  const old = pathname ? /^\/(rfqs|orders)\/[^/]+\/?$/.exec(pathname) : null
+  const found = old ? await resolveOldAddress(client, old[1] === 'rfqs' ? 'rfq' : 'order', id).catch(() => null) : null
+  if (old && !found) return
+  const key = found ?? decodeURIComponent(id)
   const money = role !== 'engineer'
   const facts = await client.fetchQuery(jobFactsQuery(key))
   if (!facts) return

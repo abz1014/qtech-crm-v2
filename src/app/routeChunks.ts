@@ -106,6 +106,8 @@ export interface PrefetchContext {
   client: QueryClient
   user: SessionUser
   id: string | undefined
+  /** The address being opened (an old /rfqs/<id> or /orders/<id> opens the Job page: features/jobs/prefetch.ts). */
+  pathname?: string
 }
 export type Prefetch = (ctx: PrefetchContext) => Promise<unknown>
 
@@ -160,7 +162,7 @@ export function preloadRoute(pathname: string, sessionUserId: string | null): bo
           if (!supabase || !user || user.id !== sessionUserId || !navigator.onLine) return
           const { data: auth } = await supabase.auth.getSession()
           if (auth.session?.user.id !== user.id) return
-          await prefetch({ client: queryClient, user, id })
+          await prefetch({ client: queryClient, user, id, pathname })
         })
         .catch(() => {})
     : Promise.resolve()
