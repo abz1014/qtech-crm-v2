@@ -97,7 +97,8 @@ describe('Issue quotation dialog', () => {
     )
     setup(() => ({ data: [] }))
     await waitFor(() => expect(screen.getByTestId('total-net')).toHaveTextContent('PKR 3,000'))
-    expect(screen.getByLabelText('Unit price, net PKR, item 1')).toHaveValue('1,500.00')
+    // the field shows the formatted draft a beat after the total (flaked in CI when asserted at once)
+    await waitFor(() => expect(screen.getByLabelText('Unit price, net PKR, item 1')).toHaveValue('1,500.00'))
   })
 
   it('HW-4: does not issue over a quotation another tab issued since the dialog opened, and says so', async () => {
