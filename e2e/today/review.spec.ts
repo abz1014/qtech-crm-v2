@@ -37,6 +37,7 @@ test('the review lists a stuck enquiry; Still live and Close as lost both have a
   const ctx = await browser.newContext()
   const p2 = await ctx.newPage()
   await openAs(p2, 'sales', '/todo/review')
-  await expect(p2.getByRole('heading', { name: 'Weekly review', level: 1 })).toHaveCount(0)
+  await expect(p2.locator('main')).toContainText(/access/i)
+  await expect(p2.locator('[data-review]')).toHaveCount(0)
   await ctx.close()
 })

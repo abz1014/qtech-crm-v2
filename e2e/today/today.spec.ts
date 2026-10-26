@@ -357,31 +357,28 @@ test.describe('Today: role-aware', () => {
     await expect(rowOf(page, p.customer).getByText(/Payment \d+ days overdue/)).toBeVisible()
     await expect(rowOf(page, mine.ref).first()).toBeVisible()
     await expect(rowOf(page, theirs.ref)).toHaveCount(0)
-    await expect(page.getByRole('radio', { name: /^Money/ })).toBeVisible()
-    // the tabs in plain words (owner glossary 2026-10-19)
-    await expect(page.getByRole('radio', { name: /^Quotations/ })).toBeVisible()
-    await expect(page.getByRole('radio', { name: /^Suppliers/ })).toBeVisible()
-    await expect(page.getByRole('radio', { name: /^(Bids|Sourcing)/ })).toHaveCount(0)
+    // the topic tabs are gone (one list); the admin alone has Mine / Team
+    await expect(page.getByRole('radiogroup', { name: 'Show' })).toHaveCount(0)
+    await expect(page.getByRole('radiogroup', { name: 'Whose list' }).getByRole('radio', { name: 'Team' })).toBeVisible()
     await review(page, 'today-07-admin-1440')
   })
 })
 
-test.describe('Today: the tab strip fits', () => {
-  for (const [width, height] of [[1366, 768], [1024, 768], [800, 1024], [375, 812]] as const) {
-    test(`at ${width} px every tab is on screen and nothing scrolls sideways`, async ({ page }) => {
+test.describe('To do: fits every width, with 44 px buttons', () => {
+  for (const [width, height] of [[1440, 900], [1366, 768], [1024, 768], [800, 1024], [375, 812], [320, 640]] as const) {
+    test(`at ${width} px nothing scrolls sideways and every row button is 44 px tall`, async ({ page }) => {
       await seedOverdueOrder(ADMIN)
       await page.setViewportSize({ width, height })
       await openAs(page, 'admin', '/todo')
       await showAllTodo(page)
-      const strip = page.getByRole('radiogroup', { name: 'Show' })
-      await expect(strip.getByRole('radio', { name: /^Money/ })).toBeVisible()
-      for (const tab of await strip.getByRole('radio').all()) await expect(tab).toBeInViewport({ ratio: 1 })
-      expect(await strip.evaluate(el => el.scrollWidth <= el.clientWidth + 1), 'the strip scrolls sideways').toBe(true)
-      if (width >= 1024) {
-        const tops = await strip.getByRole('radio').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)))
-        expect(new Set(tops).size, 'All, Quotations, Suppliers and Money sit on one line').toBe(1)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'the page scrolls sideways').toBe(true)
+      for (const b of await page.locator('li[data-due] [data-row-actions] button, li[data-due] button[aria-label="Snooze"]').all()) {
+        expect((await b.boundingBox())?.height ?? 0, 'a row button is shorter than 44 px').toBeGreaterThanOrEqual(43.5)
       }
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      // the colour blocks: Late is red, Today yellow, This week blue, and an empty block is not drawn
+      for (const block of await page.locator('section[data-block="late"], section[data-block="today"], section[data-block="week"]').all()) {
+        expect(await block.locator('li[data-rule]').count()).toBeGreaterThan(0)
+      }
     })
   }
 })
