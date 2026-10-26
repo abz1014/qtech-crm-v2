@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
+import { SessionContext } from '@/app/session'
 import { HistoryPanel } from '@/features/history/HistoryPanel'
 import { LastChanged } from '@/features/history/LastChanged'
 import { CATEGORY_FUEL, CATEGORY_RENT, ev, page } from '@/features/history/fixtures'
@@ -99,7 +100,9 @@ describe('LastChanged', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={client}>
-        <LastChanged table="expenses" id="e1" />
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Me', role: 'admin' } }}>
+          <LastChanged table="expenses" id="e1" />
+        </SessionContext.Provider>
       </QueryClientProvider>,
     )
     expect(await screen.findByTestId('last-changed')).toHaveTextContent(/^Last changed by Ayesha, 3 days ago$/)
