@@ -8,7 +8,7 @@ import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
 import { useApproveClaim, useClaimPhotos, usePendingClaims, useRejectClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, signClaimPhoto, type Claim, type PaidHow } from '@/features/money/expenses/claimsApi'
-import { pkr, sortGroups, type Category, type ExpenseGroup } from '@/features/money/expenses/model'
+import { miscCategories, pkr, sortGroups, type Category, type ExpenseGroup } from '@/features/money/expenses/model'
 import { pickableCategories } from '@/features/money/expenses/quick'
 
 /*
@@ -57,6 +57,9 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
       .filter(x => x.items.length > 0)
   }, [categories, groups])
   const busy = approve.isPending || reject.isPending
+  const others = useMemo(() => miscCategories(categories, groups), [categories, groups])
+  const isOther = !!categories.find(c => c.id === categoryId)?.isMisc
+  const title = [claim.note?.trim(), claim.byName].filter(Boolean).join(' · ')
   const label = `${claim.byName}, ${pkr(claim.amount)}`
 
   const openPhoto = async (path: string) => {
@@ -139,6 +142,11 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
               ))}
             </select>
           </label>
+          {others.length > 0 && !isOther ? (
+            <Button size="touch" variant="quiet" onClick={() => setCategoryId(others[0].id)} className="text-base" aria-label={`File under Other: ${label}`}>
+              Other
+            </Button>
+          ) : null}
           <label className="grid min-w-0 gap-2">
             <span className="font-medium">Paid back</span>
             <select
@@ -181,6 +189,11 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
           </span>
         </div>
       )}
+      {isOther && !rejecting ? (
+        <p className="text-base text-fg-2" data-testid="claim-other-title">
+          It is an Other, so it shows in the reports as <b className="font-medium text-fg">{title || 'no title'}</b>.
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="flex items-center gap-2 text-tone-danger-fg">
           <Icon icon={X} />
