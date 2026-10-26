@@ -83,7 +83,8 @@ describe('account menu (U03, on Popover)', () => {
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Help' })).toHaveFocus())
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
-    expect(trigger).toHaveFocus()
+    // the plain avatar is swapped for the real menu's when it arrives: focus returns to the avatar that is there now
+    expect(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0]).toHaveFocus()
   })
 })
 

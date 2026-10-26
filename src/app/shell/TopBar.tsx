@@ -8,7 +8,6 @@ import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { NeedsCount } from '@/ui/Tag'
-import { Tooltip } from '@/ui/Tooltip'
 import { cn } from '@/lib/utils'
 import { searchKeyHint } from '@/ui/paletteSources'
 
@@ -79,10 +78,10 @@ export function TopBar({ user, counts, onSearch, items: given }: TopBarProps) {
           a button must be part of its name (axe label-content-name-mismatch at 2xl, where the hint shows); the name stays the action, the
           key is aria-keyshortcuts. Below 2xl the hint hides, so the tooltip carries the key (consistency spec 4.3). */}
       <div className="relative ml-auto shrink-0">
-        <Tooltip content="Search or jump to" shortcut={hint}>
         <button
           type="button"
           onClick={onSearch}
+          title={`Search or jump to (${hint})`}
           aria-label="Search or jump to"
           aria-keyshortcuts={hint === '⌘K' ? 'Meta+K' : 'Control+K'}
           className={cn(
@@ -99,7 +98,6 @@ export function TopBar({ user, counts, onSearch, items: given }: TopBarProps) {
             Search or jump to
           </span>
         </button>
-        </Tooltip>
         <Kbd aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 max-2xl:hidden">
           {hint}
         </Kbd>
