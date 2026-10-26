@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from 'react'
 import type { ReconciliationException } from '@/lib/reconciliation'
 
 /*
- * "Mark as checked" for Things to check (round 3: without it an item never left the month-end list). An admin looked at a
+ * "Mark as checked" for Mistakes to fix (round 3: without it an item never left the month-end list). An admin looked at a
  * finding and it is fine (a deliberate overpayment, a cost known to be higher). Kept on this device, per person, keyed by the
  * finding AND its message: when the figures behind it change, the message changes and the finding comes back by itself.
  * Storage can be missing or refuse writes (private windows): every access is guarded, and a refused write still hides the item

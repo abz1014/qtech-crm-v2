@@ -33,7 +33,7 @@ export const GROUPS: readonly Group[] = [
   { keep: 'Export CSV', others: ['Export'] },
   { keep: 'Chase again', others: ['Chase again now'] },
   { keep: 'Who owes us', others: ['Receivables', 'Order balances'] },
-  { keep: 'Things to check', others: ['Exceptions'] },
+  { keep: 'Mistakes to fix', others: ['Things to check', 'Exceptions'] },
   { keep: 'Revise quotation', others: ['Issue R2'] },
   { keep: 'Supplier orders', others: ['Procurement legs', 'Legs'] },
   { keep: 'Add supplier', others: ['Add leg'] },
