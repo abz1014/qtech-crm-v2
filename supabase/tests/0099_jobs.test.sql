@@ -169,8 +169,8 @@ select ok(exists (select 1 from pg_index i join pg_class c on c.oid = i.indexrel
       and exists (select 1 from pg_index i join pg_class c on c.oid = i.indexrelid
                   where c.relname in ('orders_job_key_idx') and i.indrelid = 'public.orders'::regclass),
   'the job_key lookups have their expression indexes');
-select ok(pg_get_function_identity_arguments('public.create_repeat_order(uuid, uuid, text, date)'::regprocedure)
-          = 'p_order_id uuid, p_from_order_id uuid, p_customer_po_number text, p_ordered_on date',
+select ok(pg_get_function_identity_arguments('public.create_repeat_order(uuid, uuid, text, date, boolean)'::regprocedure)
+          = 'p_order_id uuid, p_from_order_id uuid, p_customer_po_number text, p_ordered_on date, p_repeat_cancelled boolean',
   'create_repeat_order keeps its signature');
 
 -- ------------------------------------------------------------------ (b) the rows
