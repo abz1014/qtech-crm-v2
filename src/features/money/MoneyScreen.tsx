@@ -8,6 +8,7 @@ import { defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/mode
 import { businessToday } from '@/lib/dates'
 
 // One download per page (perf/lcp): opening Who owes us does not bring the month-end reports, the expense sheet and the rest.
+const ReviewImportedPage = lazy(() => import('@/features/money/review/ReviewImportedPage').then(m => ({ default: m.ReviewImportedPage })))
 const ReceivablesPage = lazy(() => import('@/features/money/payments/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })))
 const GstRegisterPage = lazy(() => import('@/features/money/invoices/GstRegisterPage').then(m => ({ default: m.GstRegisterPage })))
 const ExpensesPage = lazy(() => import('@/features/money/expenses/ExpensesPage').then(m => ({ default: m.ExpensesPage })))
@@ -42,6 +43,7 @@ export default function MoneyScreen() {
   return (
     <Routes>
       <Route index element={<Navigate to="receivables" replace />} />
+      <Route path="review-imported" element={adminOnly(<ReviewImportedPage />, 'Review imported')} />
       <Route path="receivables" element={<ReceivablesPage />} />
       <Route path="gst-register" element={<GstRegisterPage />} />
       <Route path="expenses" element={adminOnly(<ExpensesPage />, 'Expenses')} />

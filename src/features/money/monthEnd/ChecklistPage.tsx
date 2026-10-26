@@ -14,8 +14,7 @@ import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
-import { useSession } from '@/app/session'
-import { openFindings } from '@/features/money/exceptions/checked'
+import { openFindings, useCheckedSet } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
@@ -48,8 +47,8 @@ export function ChecklistPage() {
   const [reopen, setReopen] = useState<ClosedMonth | null>(null)
   const isClosed = ctx.state?.kind === 'closed'
   const recon = useReconciliationInput(true)
-  const session = useSession()
-  const things = useMemo(() => (recon.data ? openFindings(session.status === 'signed-in' ? session.user.id : null, computeReconciliationExceptions(recon.data)) : null), [recon.data, session])
+  const checkedTicks = useCheckedSet()
+  const things = useMemo(() => (recon.data ? openFindings(checkedTicks, computeReconciliationExceptions(recon.data)) : null), [recon.data, checkedTicks])
 
   return (
     <MoneyFrame active="month-end">
