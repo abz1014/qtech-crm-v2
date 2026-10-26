@@ -27,7 +27,16 @@ export interface Visit {
   /** The screen ids this visit captures, in order (a flow has several). */
   screens: readonly string[]
   run: (page: Page, fx: Fixture, capture: Capture) => Promise<void>
+  /**
+   * The old RFQ and Orders pages, kept until 2026-11-09 so a before and after can be compared (the e2e sign-in turns them on: e2e/support/stack.ts).
+   * They are captured and shown but not scored: they are being removed. The Jobs screens are the ones held to the targets.
+   */
+  legacy?: boolean
 }
+
+/** `?old=1` keeps the old RFQ and Orders pages, `?old=0` opens the Jobs page for the same address (src/app/oldAddresses.tsx). */
+const withOld = (path: string, old: '0' | '1'): string => `${path}${path.includes('?') ? '&' : '?'}old=${old}`
+const LEGACY = /^(rfqs-open|rfqs-closed|rfq-not-sent|rfq-waiting|rfq-prices-in|rfq-quoted|rfq-won|rfq-compare|orders|order-.+)$/
 
 const ALL = ['admin', 'sales', 'engineer'] as const
 const MONEY = ['admin', 'sales'] as const
@@ -49,13 +58,16 @@ export async function open(page: Page, path: string): Promise<void> {
 }
 
 function screen(id: string, title: string, roles: readonly Role[], path: (fx: Fixture) => string, opts?: CaptureOptions): Visit {
+  const legacy = LEGACY.test(id)
+  const mode = legacy ? '1' : id.startsWith('job') ? '0' : null
   return {
     id,
     title,
     roles,
     screens: [id],
+    legacy,
     run: async (page, fx, capture) => {
-      await open(page, path(fx))
+      await open(page, mode ? withOld(path(fx), mode) : path(fx))
       await capture(id, opts)
     },
   }
@@ -203,7 +215,7 @@ const issueQuotation: Visit = {
     const dialog = page.locator(DIALOG).first()
     try {
       await bounded(60_000, 'open Issue quotation', async () => {
-        await open(page, `/rfqs/${fx.rfq.pricesIn}`)
+        await open(page, withOld(`/rfqs/${fx.rfq.pricesIn}`, '0'))
         await closeDialogs(page)
         const pressed = await tryPress(page, [/^issue quotation$/i, /^(make|write|send) (a )?quotation$/i, /issue quotation/i], 'Issue quotation')
         const shown =
@@ -213,7 +225,7 @@ const issueQuotation: Visit = {
             () => false,
           ))
         if (!shown) {
-          await open(page, `/rfqs/${fx.rfq.pricesIn}?issue=1`)
+          await open(page, withOld(`/rfqs/${fx.rfq.pricesIn}?issue=1`, '0'))
           await dialog.waitFor({ timeout: 10_000 })
         }
         await settle(page)
@@ -221,6 +233,13 @@ const issueQuotation: Visit = {
         // before issuing: do the same, so the screen is measured in the state where its one green button is live.
         const prices = dialog.getByLabel(/^Unit price, net PKR, item/)
         for (let i = 0, n = await prices.count(); i < n; i++) await prices.nth(i).fill(String(1000 + i * 250))
+        // the button wakes up once the prices are read; measure it awake
+        await page
+          .waitForFunction(() => {
+            const b = Array.from(document.querySelectorAll('[role="dialog"] button')).find(x => /^issue quotation$/i.test((x.textContent ?? '').trim()))
+            return !!b && !(b as HTMLButtonElement).disabled
+          }, undefined, { timeout: 8_000 })
+          .catch(() => undefined)
       })
       await capture('issue-quotation', { root: DIALOG })
     } finally {
@@ -239,7 +258,7 @@ const markWon: Visit = {
     const dialog = page.locator(DIALOG).first()
     try {
       await bounded(60_000, 'open Mark won', async () => {
-        await open(page, `/rfqs/${fx.rfq.quoted}?won=1`)
+        await open(page, withOld(`/rfqs/${fx.rfq.quoted}?won=1`, '0'))
         await dialog.waitFor({ timeout: 15_000 })
         await settle(page)
       })
@@ -274,13 +293,14 @@ export const VISITS: readonly Visit[] = [
   screen('rfq-quoted', 'RFQ page: quotation sent', ALL, fx => `/rfqs/${fx.rfq.quoted}`),
   {
     id: 'rfq-won',
+    legacy: true,
     title: 'RFQ page: won, made into an order',
     roles: ALL,
     screens: ['rfq-won'],
     run: async (page, fx, capture) => {
       // seed.json from before the won RFQ was seeded has no id for it: delete it (and reset the database) to seed again.
       if (!fx.rfq.won) throw new Error('the seed has no won RFQ (an older seed.json); reseed to capture it')
-      await open(page, `/rfqs/${fx.rfq.won}`)
+      await open(page, withOld(`/rfqs/${fx.rfq.won}`, '1'))
       await capture('rfq-won')
     },
   },
