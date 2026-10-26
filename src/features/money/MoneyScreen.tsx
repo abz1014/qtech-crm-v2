@@ -8,6 +8,7 @@ import { defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/mode
 import { businessToday } from '@/lib/dates'
 
 // One download per page (perf/lcp): opening Who owes us does not bring the month-end reports, the expense sheet and the rest.
+const MoneyHome = lazy(() => import('@/features/money/home/MoneyHome').then(m => ({ default: m.MoneyHome })))
 const ReceivablesPage = lazy(() => import('@/features/money/payments/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })))
 const GstRegisterPage = lazy(() => import('@/features/money/invoices/GstRegisterPage').then(m => ({ default: m.GstRegisterPage })))
 const ExpensesPage = lazy(() => import('@/features/money/expenses/ExpensesPage').then(m => ({ default: m.ExpensesPage })))
@@ -27,7 +28,8 @@ const EnquiriesReportPage = lazy(() => import('@/features/reports/ReportsPage').
 
 /**
  * Everything under /money (owner decision 2026-10-19: four tabs, two levels).
- *   receivables      Who owes us: admin and sales; where Money opens for everyone
+ *   (index)          Money home, admin only (P6-A: four numbers); sales open on receivables
+ *   receivables      Who owes us: admin and sales
  *   gst-register     Invoices & GST: admin and sales (sales get the simpler list)
  *   expenses         admin only
  *   month-end        the checklist, admin only; from it: month-end/bank (Match bank statement), margins, exceptions (Things to check)
@@ -41,7 +43,7 @@ export default function MoneyScreen() {
   const adminOnly = (el: JSX.Element, area: string) => (isAdmin ? el : <NoAccessPage area={area} />)
   return (
     <Routes>
-      <Route index element={<Navigate to="receivables" replace />} />
+      <Route index element={isAdmin ? <MoneyHome /> : <Navigate to="receivables" replace />} />
       <Route path="receivables" element={<ReceivablesPage />} />
       <Route path="gst-register" element={<GstRegisterPage />} />
       <Route path="expenses" element={adminOnly(<ExpensesPage />, 'Expenses')} />
