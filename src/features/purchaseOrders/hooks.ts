@@ -65,3 +65,12 @@ export function useSetLegCurrency(orderId: string) {
     onSuccess: () => invalidateAfter(client, 'order.update', { orderId }, { wait: 'all' }),
   })
 }
+
+/** Delete the latest PO revision (admin). The order page, the PO lists and the money refresh; the PDF is removed from storage by the caller. */
+export function useDeletePoRevision(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (poId: string) => api.deletePoRevision(poId),
+    onSuccess: () => invalidateAfter(client, 'po.delete', { orderId }),
+  })
+}

@@ -40,6 +40,7 @@ import { Money } from '@/ui/Money'
 import { MoreMenu } from '@/ui/MoreMenu'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
+import { useDeleteCompanyFlow } from '@/features/companies/deleteFlow'
 import { NextStepBox } from '@/ui/NextStepBox'
 import { MenuItem } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
@@ -213,6 +214,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   // The "More" menu: Edit, Copy link, New RFQ asking them (a customer that also supplies us), Merge (admin). On a phone it is the
   // one bar's right slot; from tablet up the "More" text button beside the name.
+  const del = useDeleteCompanyFlow({ id: company.id, name: company.name }, { rfqs: rfqCount, orders: orderCount }, () => setDialog('merge'))
   const recordHistory = useHistoryPanel({ table: 'companies', id: company.id, context: company.name })
   const moreMenu = (touch: boolean) => (
     <MoreMenu touch={touch} label="More actions" menuClassName="min-w-[280px]">
@@ -231,6 +233,11 @@ function Loaded({ company }: { company: CompanyDetail }) {
       {isAdmin ? (
         <MenuItem icon={GitMerge} onClick={() => setDialog('merge')}>
           Merge into another company
+        </MenuItem>
+      ) : null}
+      {del.ask ? (
+        <MenuItem icon={Trash2} danger onClick={del.ask}>
+          Delete company
         </MenuItem>
       ) : null}
     </MoreMenu>
@@ -373,6 +380,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
         )}
       </div>
 
+      {del.node}
       <EditCompanyDialog open={dialog === 'edit'} onOpenChange={close} company={company} />
       <SiteDialog open={dialog === 'site'} onOpenChange={close} companyId={company.id} companyName={company.name} site={editSite} />
       <ContactDialog open={dialog === 'contact'} onOpenChange={close} companyId={company.id} companyName={company.name} sites={sites.data ?? []} contact={editContact} />

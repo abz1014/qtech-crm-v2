@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, TriangleAlert, Truck } from 'lucide-react'
+import { ChevronDown, Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, Trash2, TriangleAlert, Truck } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
@@ -15,6 +15,7 @@ import { useFxLatest } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
+import { DeletePoRevisionConfirm } from '@/features/purchaseOrders/DeleteRevision'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGroups'
 import { poChange } from '@/features/orders/lib/poChange'
@@ -199,6 +200,7 @@ function Leg({
   const rate = ccy && ccy !== 'PKR' ? rates[ccy] : undefined
   const pkr = rate && rate.staleness !== 'unusable' && total.priced > 0 ? convertToPaisa(total.total, rate.rate) : null
   const name = leg.supplierName
+  const [deletingPo, setDeletingPo] = useState(false)
   const poHistory = useHistoryPanel({ table: 'purchase_orders', id: po?.id ?? '', context: po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision} · ${name}` : name })
   /** A8 (O09): the latest PO revision lists lines this supplier order no longer matches (a split moved quantity). Admin and sales only: a PO carries prices. */
   const changed = money && po ? poChange(po.lines, items.map(it => ({ id: it.id, description: it.description, qty: it.qty, isService: it.isService }))) : null
@@ -386,6 +388,11 @@ function Leg({
                       Chase goods
                     </MenuItem>
                   ) : null}
+                  {isAdmin && po?.id ? (
+                    <MenuItem icon={Trash2} danger onClick={() => setDeletingPo(true)}>
+                      {`Delete latest PO revision (R${po.revision})`}
+                    </MenuItem>
+                  ) : null}
                   {isAdmin ? (
                     <MenuItem icon={Receipt} onClick={() => setAddingExpense(true)}>
                       {`Pay ${name}`}
@@ -402,6 +409,7 @@ function Leg({
         ) : null}
       </div>
       {money && po?.id ? poHistory.node : null}
+      {deletingPo && po?.id ? <DeletePoRevisionConfirm orderId={order.id} po={{ id: po.id, number: po.number, revision: po.revision, firstIssuedOn: po.firstIssuedOn }} supplierName={name} onClose={() => setDeletingPo(false)} /> : null}
       {addingExpense ? (
         <PayDialog
           open
