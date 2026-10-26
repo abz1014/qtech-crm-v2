@@ -273,6 +273,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_report_float', 'items_quoted', 'info', null), ('v_report_float', 'items_total', 'info', null),
   ('v_rfq_state', 'items_quoted', 'info', null), ('v_rfq_state', 'items_total', 'info', null),
   ('v_supplier_stats', 'quoted', 'info', null), ('v_supplier_stats', 'prices_hidden', 'info', null),
+  ('v_jobs', 'cancelled_orders', 'info', null),   -- 0099: a count; v_jobs has no price, amount or rate column (its stage is a word, from job_stage)
   ('v_target_progress', 'target_net', 'hidden', null), ('v_target_progress', 'achieved_net', 'hidden', null),
   ('v_target_progress', 'on_pace_net', 'hidden', null);
 

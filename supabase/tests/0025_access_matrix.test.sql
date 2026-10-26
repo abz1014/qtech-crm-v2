@@ -164,6 +164,9 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_fx_latest',         '',           'S',    'S',    'S'),    -- s10 "v_fx_latest, v_supplier_activity, v_supplier_stats, supplier_item_memory()"
   ('view',  'v_supplier_activity', '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_supplier_stats',    '',           'S',    'S',    'S'),    -- s10 (same row)
+  ('view',  'v_jobs',              '',           'S',    'S',    'S'),    -- 0099: one row per job (an RFQ with its live order, or an order with no RFQ); no price column; security_invoker, granted to qtech_engineer
+  ('function', 'job_stage',               '',    'X',    'X',    'X'),    -- 0099: the stage, detail, history flag and last activity of one job (SECURITY DEFINER: words and a date, no amount); nothing for a deactivated user
+  ('function', 'attachment_is_priced',    '',    'X',    'X',    'X'),    -- 0100: storage policy helper (SECURITY DEFINER); NULL for anyone without a role
   ('function', 'order_receivables',       '',    'X',    'X',    ''),     -- s10 "order_receivables() (definer)"
   ('function', 'receivables_list',        '',    'X',    'X',    ''),     -- 0074: order_receivables() rows with names, filtered on the server; its access
   ('function', 'receivables_summary',     '',    'X',    'X',    ''),     -- 0074: the Who-owes-us figures in one row; order_receivables() access
@@ -489,7 +492,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
-                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
+                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
 -- Each call is valid for an authorised caller and rolled back. A call counts as allowed when it returns rows (or a
@@ -640,7 +643,9 @@ insert into probes values
   ('orders', 'visit_other', 'U', $q$update public.orders set commissioning_time = '10:00', visit_type = 'survey' where id = @21$q$),
   ('snoozes', 'until_change', 'U', $q$update public.snoozes set until_change = true where user_id = '{uid}'$q$),
   ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
-  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$);
+  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$),
+  ('job_stage', '', 'X', $q$select 1 from public.job_stage(@15, null)$q$),   -- 0099: a row for staff, none for a deactivated user
+  ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'm/1.pdf') is not null$q$);   -- 0100: NULL for anyone without a role
 
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),

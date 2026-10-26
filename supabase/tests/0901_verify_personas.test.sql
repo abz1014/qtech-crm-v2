@@ -280,7 +280,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
-                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
+                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
 -- Each call is valid for an authorised caller and rolled back. A call counts as allowed when it returns rows (or a
@@ -388,7 +388,9 @@ insert into probes values
   ('orders', 'legacy_flags', 'U', $q$update public.orders set legacy_flags = '{}' where id = @21$q$),   -- 0065
   ('orders', 'owner_id', 'U', $q$update public.orders set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @21$q$),
   ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
-  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$);
+  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$),
+  ('job_stage', '', 'X', $q$select 1 from public.job_stage(@15, null)$q$),   -- 0099
+  ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'fixture.txt') is not null$q$);   -- 0100
 
 
 -- ------------------------------------------------------------------ 0901: extra probes (privilege escalation through users)
@@ -527,9 +529,9 @@ from (values ('anon'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['close_month', 'close_months_through', 'current_user_role', 'my_target_progress', 'order_receivables',
-                'receipt_locked', 'record_history_rows', 'reopen_month'],
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed eight (0090: record_history_rows, refused unless record_history marked the transaction)');
+          array['attachment_is_priced', 'close_month', 'close_months_through', 'current_user_role', 'job_stage', 'my_target_progress',
+                'order_receivables', 'receipt_locked', 'record_history_rows', 'reopen_month'],
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed ten (0090: record_history_rows, refused unless record_history marked the transaction; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')
