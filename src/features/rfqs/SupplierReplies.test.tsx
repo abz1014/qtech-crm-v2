@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -132,5 +132,43 @@ describe('SupplierReplyDialog', () => {
     expect(screen.getByRole('button', { name: 'Save reply' })).toBeEnabled()
     await user.tab()
     expect(box).toHaveValue('1,200')
+  })
+
+  it('warns when the pasted document is an enquiry or our own quotation, takes no prices, and reads it anyway when asked', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    renderDialog()
+    await user.click(screen.getByRole('button', { name: 'Paste reply' }))
+    const enquiry = ['Dear Sir, please quote:', '1) Hach HQ1110 meter - 1 no', 'Regards, K'].join('\n')
+    fireEvent.paste(await screen.findByRole('textbox', { name: 'Paste what they sent' }), { clipboardData: { getData: () => enquiry } })
+    const title = await screen.findByText('This looks like an enquiry, not a quotation from Orient Analytical.')
+    expect(title.closest('[role="status"]')?.className).toMatch(/text-base/)
+    expect(screen.getByText(/No prices were taken from it/)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Paste what they sent' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Read as a quotation anyway' }))
+    await waitFor(() => expect(screen.queryByText(/This looks like an enquiry/)).toBeNull())
+    expect(screen.queryByRole('button', { name: 'Read as a quotation anyway' })).toBeNull()
+  })
+
+  it('does not warn about a paste it cannot place (unknown)', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    renderDialog()
+    await user.click(screen.getByRole('button', { name: 'Paste reply' }))
+    fireEvent.paste(await screen.findByRole('textbox', { name: 'Paste what they sent' }), { clipboardData: { getData: () => 'ok, noted' } })
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Paste what they sent' })).toBeNull())
+    expect(screen.queryByText(/This looks like/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Read as a quotation anyway' })).toBeNull()
+  })
+
+  it("does not warn about a supplier's quotation", async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    renderDialog()
+    await user.click(screen.getByRole('button', { name: 'Paste reply' }))
+    const quote = ['Dear Wasif,', 'Our offer as below:', '1. Hach HQ1110 meter USD 95 /pc', 'Delivery: 3-5 days', 'Offer valid for 15 days'].join('\n')
+    fireEvent.paste(await screen.findByRole('textbox', { name: 'Paste what they sent' }), { clipboardData: { getData: () => quote } })
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Paste what they sent' })).toBeNull())
+    expect(screen.queryByText(/This looks like/)).toBeNull()
   })
 })
