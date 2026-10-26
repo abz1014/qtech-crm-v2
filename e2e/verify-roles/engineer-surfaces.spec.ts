@@ -46,7 +46,8 @@ function watch(page: Page): Watch {
     const u = new URL(r.url())
     if (!/\/rest\/v1\//.test(u.pathname) || !(r.headers()['content-type'] ?? '').includes('json')) return
     const body = await r.json().catch(() => null)
-    for (const key of moneyKeysIn(body)) w.leaks.push(`${u.pathname}${key}`)
+    // items_total is a COUNT of items (v_rfq_state), not an amount
+    for (const key of moneyKeysIn(body)) if (!/\.items_total$/.test(key)) w.leaks.push(`${u.pathname}${key}`)
   })
   return w
 }
@@ -85,7 +86,9 @@ test('engineer: the palette finds the job and the customer, and shows no invoice
     const answered = page.waitForResponse(r => r.url().includes('/rpc/search_all') && (r.request().postData() ?? '').includes(secret))
     await input.fill(secret)
     await answered
-    await expect(dialog.getByRole('option', { name: new RegExp(`Invoices|${secret}`) }), `engineer: "${secret}" finds nothing`).toHaveCount(0)
+    // the palette's own "Add “…” as a new company" action echoes the typed text: that is not a finding
+    const found = dialog.getByRole('option').filter({ hasNotText: /as a new company|^New RFQ for/ })
+    await expect(found, `engineer: "${secret}" finds nothing (no invoice, no order)`).toHaveCount(0)
   }
   expect(w.requests, 'no request for a money table, view or function').toEqual([])
   expect([...new Set(w.leaks)], 'no money key with a value in any answer').toEqual([])
