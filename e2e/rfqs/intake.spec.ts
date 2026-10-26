@@ -255,7 +255,7 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     expect(await rfqsOf(s.customer.id)).toHaveLength(0) // nothing was saved to the database
 
     // Back on New RFQ: the draft is offered, and Continue brings it all back.
-    await page.getByRole('button', { name: 'New RFQ' }).click()
+    await page.goto('/rfqs/new') // the Jobs list is where leaving goes now; New enquiry has its own address
     await expect(page.getByText(/You have a draft from .* today/)).toBeVisible()
     await expect(page.getByText(`${s.customer.name}, 2 items. It is kept on this device until you save it or start new; Start new forgets it.`)).toBeVisible()
     await review(page, 'intake-draft-offer-1440')
