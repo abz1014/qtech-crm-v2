@@ -28,11 +28,13 @@ const summary = (md: string) => {
 interface Seed {
   rfqId: string
   orderId: string
+  /** The RFQ's job key (v_jobs.job_key): the Job page's address. */
+  jobKey: string
 }
 
 async function seed(): Promise<Seed> {
   const customer = await createCompany(uniqueName('Perf Customer'))
-  const [rfq] = await must(rest<{ id: string }[]>('admin', 'rfqs', { method: 'POST', body: { company_id: customer.id, due_on: karachiDay(7), customer_ref: 'PERF-1' } }))
+  const [rfq] = await must(rest<{ id: string; number: number }[]>('admin', 'rfqs', { method: 'POST', body: { company_id: customer.id, due_on: karachiDay(7), customer_ref: 'PERF-1' } }))
   await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Flow meter DN50', qty: 2 }, prefer: 'return=minimal' }))
   const [order] = await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id, payment_terms_days: 30, ordered_on: karachiDay(-3) } }))
   await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Pressure transmitter', qty: 3, unit_price_net: 100000, gst_rate: 18 }, prefer: 'return=minimal' }))
@@ -43,7 +45,7 @@ async function seed(): Promise<Seed> {
       prefer: 'return=minimal',
     }),
   )
-  return { rfqId: rfq.id, orderId: order.id }
+  return { rfqId: rfq.id, orderId: order.id, jobKey: String(rfq.number) }
 }
 
 const screens = (s: Seed): Array<[string, string]> => [
@@ -51,6 +53,8 @@ const screens = (s: Seed): Array<[string, string]> => [
   ['RFQ board', '/rfqs'],
   ['RFQ detail', `/rfqs/${s.rfqId}`],
   ['Order detail', `/orders/${s.orderId}`],
+  ['Jobs', '/jobs'],
+  ['Job page', `/jobs/${s.jobKey}`],
   ['Money: GST register', '/money/gst-register'],
   ['Money: Month-end', '/money/month-end/bank'],
   ['Settings', '/settings'],
@@ -156,6 +160,8 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
       ['RFQ page', `/rfqs/${s.rfqId}`],
       ['Orders list', '/orders'],
       ['Order page', `/orders/${s.orderId}`],
+      ['Jobs list', '/jobs'],
+      ['Job page', `/jobs/${s.jobKey}`],
       ['Who owes us', '/money/receivables'],
       ['Companies', '/companies'],
     ]

@@ -148,7 +148,7 @@ const HUNT_FILES: Record<string, string> = {
 }
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'jobs', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
@@ -287,6 +287,14 @@ export default defineConfig({
     {
       name: 'search',
       testMatch: /search\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
+    {
+      // Jobs (redesign phase 5): the list, the job page and the one search shared with the command palette.
+      name: 'jobs',
+      testMatch: /jobs\/.*\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },

@@ -8,6 +8,7 @@ import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
 import type { AttachmentRow } from '@/features/rfqs/api'
 import { useDeleteAttachment } from '@/features/rfqs/hooks'
+import { HasPricesToggle } from '@/features/rfqs/HasPricesToggle'
 import { canPreview } from '@/features/rfqs/lib'
 
 /*
@@ -55,6 +56,7 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
   }
 
   return (
+    <div className="grid gap-1">
     <div className="flex min-w-0 items-center gap-2 rounded border border-line bg-surface p-1">
       {previewable ? (
         <button type="button" className={openClass} onClick={() => setViewing(true)}>
@@ -120,6 +122,8 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
           <p className="text-sm text-fg-2">It is removed from this RFQ and cannot be brought back. A question it answered stays answered.</p>
         </DialogContent>
       </Dialog>
+    </div>
+    <HasPricesToggle att={att} rfqId={rfqId} orderId={orderId} />
     </div>
   )
 }

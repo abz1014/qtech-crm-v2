@@ -313,7 +313,27 @@ function history() {
   return { all, record: (table: string, id: string) => [...all, table, id] as const }
 }
 
+/** Jobs (redesign phase 5): the read-only view v_jobs and what one job page reads. Any write in the app makes these stale (invalidateAfter). */
+function jobs() {
+  const all = root('jobs')
+  return {
+    all,
+    /** Every job with its customer and owner names (an engineer's has no money in it, and v_jobs has none for anyone). */
+    list: (role: string) => [...all, 'list', role] as const,
+    /** The jobs a search finds: the same function the command palette calls. */
+    search: (text: string) => [...all, 'search', text.trim().toLowerCase()] as const,
+    /** One job by its key ('139', 'O-45'). */
+    detail: (key: string) => [...all, 'detail', key] as const,
+    /** One slice of a job page. */
+    part: (key: string, slice: JobPart) => [...all, 'detail', key, slice] as const,
+    /** Signed links for the files on a job's page. */
+    fileUrls: (signature: string) => [...all, 'file-urls', signature] as const,
+  }
+}
+export type JobPart = 'facts' | 'cancelled' | 'invoices'
+
 export const qk = {
+  jobs: jobs(),
   today: today(),
   settings: settings(),
   companies: companies(),

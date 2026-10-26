@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
 import { nullOnInvalidId } from '@/lib/uuid'
 import { buildSupplierRecord, type SupplierRecord } from '@/features/companies/supplierRecord'
@@ -268,6 +268,17 @@ export function useCarryBrand(companyId: string) {
     },
     onSuccess: () => invalidateAfter(client, 'brand.link', { companyId }),
   })
+}
+
+/** The delete itself. It does not refresh anything: the flow leaves the page first, then calls `refreshAfterCompanyDelete`. */
+export function useDeleteCompany() {
+  return useMutation({ mutationFn: (companyId: string) => api.deleteCompany(companyId) })
+}
+
+/** After the page is left: forget the deleted company and refresh the lists and every picker that offers companies. */
+export function refreshAfterCompanyDelete(client: QueryClient, companyId: string): Promise<void> {
+  client.removeQueries({ queryKey: qk.companies.detail(companyId) })
+  return invalidateAfter(client, 'company.delete', { id: companyId })
 }
 
 export function useMergeCompanies() {
