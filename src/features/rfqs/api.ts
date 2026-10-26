@@ -891,6 +891,13 @@ export async function updateRfqItem(id: string, p: RfqItemPatch): Promise<void> 
   if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
 }
 
+/** C4: set (or clear, with null) the product category of one item. The 0092 guard lets the person who entered the RFQ, its owner or an admin do it. */
+export async function setRfqItemCategory(id: string, familyId: string | null): Promise<void> {
+  const { data, error } = await requireSupabase().from('rfq_items').update({ family_id: familyId }).eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
+}
+
 /** Remove an item. An item an order line is based on is refused by the database (HINT linked_to_order). */
 export async function removeRfqItem(id: string): Promise<void> {
   const { data, error } = await requireSupabase().from('rfq_items').delete().eq('id', id).select('id')

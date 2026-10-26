@@ -31,6 +31,7 @@ const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
+const ProductCategoriesPage = lazy(() => import('@/features/settings/productCategories/ProductCategoriesPage').then(m => ({ default: m.ProductCategoriesPage })))
 const CategoriesPage = lazy(() => import('@/features/settings/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
 const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
 const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').then(m => ({ default: m.MyDetailsPage })))
@@ -188,6 +189,16 @@ function AppRouteTable() {
                 <AdminOnly area="Expense categories">
                   <Suspense fallback={null}>
                     <CategoriesPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="product-categories"
+              element={
+                <AdminOnly area="Product categories">
+                  <Suspense fallback={null}>
+                    <ProductCategoriesPage />
                   </Suspense>
                 </AdminOnly>
               }

@@ -58,6 +58,15 @@ export function useCompanyBrands(id: string | undefined) {
   })
 }
 
+/** The categories this supplier has been asked about, quoted in or been ordered from (counts). Refreshed by a tag or untag (brand.link). */
+export function useSupplierCategoryEvidence(id: string | undefined) {
+  return useQuery({
+    queryKey: qk.companies.part(id ?? '', 'category-evidence'),
+    queryFn: () => api.listSupplierCategoryEvidence(id as string),
+    enabled: Boolean(id),
+  })
+}
+
 export function useBrands(enabled = true) {
   return useQuery({ queryKey: qk.brands.list(), queryFn: api.listBrands, enabled })
 }
