@@ -44,6 +44,8 @@ import { Checkbox } from '@/ui/form/Checkbox'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { clearExpenseDraft, expenseDraftKey, loadExpenseDraft, saveExpenseDraft } from '@/features/money/expenses/addDraft'
 import {
+  MISC_TITLE_ERROR,
+  MISC_TITLE_LABEL,
   PAID_VIA_LABEL,
   SUPPLIER_PAYMENT_ID,
   cleanDetail,
@@ -138,9 +140,12 @@ const schema = z
     orderId: z.string().nullable(),
     legId: z.string().nullable(),
     payeeId: z.string().nullable(),
+    /** Set from the chosen category: an "Other" (0091) must say what it was for, so Detail is required (a field error, not a server one). */
+    titleRequired: z.boolean(),
   })
   // Only against a usable amount: a negative amount is the amount's problem, not the input tax's (hunt HE-18).
   .refine(v => !v.inputTax || !(v.amount > 0) || v.inputTax <= v.amount, { path: ['inputTax'], message: 'Input tax cannot be more than what was paid' })
+  .refine(v => !v.titleRequired || v.note.trim() !== '', { path: ['note'], message: MISC_TITLE_ERROR })
 
 type Values = z.input<typeof schema>
 
@@ -219,9 +224,10 @@ function ExpenseFormReady({
       orderId: expense?.orderId ?? context?.orderId ?? null,
       legId: expense?.legId ?? context?.legId ?? null,
       payeeId: expense?.payeeId ?? context?.payeeId ?? null,
+      titleRequired: !!categories.find(c => c.id === pre.categoryId)?.isMisc,
     } satisfies Partial<Values>,
     // The month lock answers about the date, so the sentence sits under the date and everything typed stays.
-    routeError: e => (e.kind === 'closed-month' ? { field: 'paidOn' } : undefined),
+    routeError: e => (e.kind === 'closed-month' ? { field: 'paidOn' } : e.message.startsWith('Write what it was for') ? { field: 'note' } : undefined),
     onSubmit: async (v, { requestId }) => {
       const showFor = isMonthlyBill(v.categoryId, templates) || !!expense?.period
       const base = {
@@ -310,6 +316,7 @@ function ExpenseFormReady({
   }, [draftKey, form])
 
   const categoryId = form.watch('categoryId')
+  const isOther = !!categories.find(c => c.id === categoryId)?.isMisc
   const amount = form.watch('amount')
   const paidVia = form.watch('paidVia')
   const orderId = form.watch('orderId')
@@ -331,6 +338,12 @@ function ExpenseFormReady({
   const showFor = isMonthlyBill(categoryId, templates) || !!expense?.period
   const recentDetails = useRecentDetails(showNote)
   const detailOptions = useMemo(() => detailSuggestions(recentDetails.data ?? [], categoryId), [recentDetails.data, categoryId])
+
+  // An "Other" needs its title (0091): the form says so as a field error, and the Detail box is open for it.
+  useEffect(() => {
+    form.setValue('titleRequired', isOther)
+    if (isOther) setShowNote(true)
+  }, [isOther, form])
 
   // Paid via follows the category until the person picks one.
   useEffect(() => {
@@ -381,6 +394,11 @@ function ExpenseFormReady({
                 value={f.value}
                 onChange={f.onChange}
                 onCreate={createCategory}
+                onMisc={(c, text) => {
+                  f.onChange(c.id)
+                  form.setValue('note', text, { shouldDirty: true })
+                  setShowNote(true)
+                }}
                 groups={groupsQ.data}
                 recent={recent}
                 chevron
@@ -424,10 +442,10 @@ function ExpenseFormReady({
         ) : null}
 
         {showNote ? (
-          <FormField<Values, 'note'> name="note" label="Detail" requirement="optional">
+          <FormField<Values, 'note'> name="note" label={isOther ? MISC_TITLE_LABEL : 'Detail'} requirement={isOther ? 'required' : 'optional'}>
             {f => (
               <>
-                <TextField {...f} placeholder="e.g. LESCO bill, office water, LEA-1234" list="expense-detail-options" autoComplete="off" />
+                <TextField {...f} placeholder={isOther ? 'e.g. Courier from shop to office' : 'e.g. LESCO bill, office water, LEA-1234'} list="expense-detail-options" autoComplete="off" />
                 <datalist id="expense-detail-options">
                   {detailOptions.map(d => (
                     <option key={d} value={d} />

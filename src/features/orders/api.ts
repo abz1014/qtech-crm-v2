@@ -24,6 +24,8 @@ export interface OrderHeader {
   companyName: string
   rfqId: string | null
   customerPo: string | null
+  /** Who entered it (orders.created_by): the whose-is-it rule of 0092 reads this and the owner. */
+  createdBy?: string | null
   orderedOn: string | null
   paymentTermsDays: number | null
   needsCommissioning: boolean
@@ -88,6 +90,7 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
     companyName: company?.name ?? 'Unknown company',
     rfqId: o.rfq_id,
     customerPo: o.customer_po_number,
+    createdBy: o.created_by ?? null,
     orderedOn: o.ordered_on,
     paymentTermsDays: o.payment_terms_days,
     needsCommissioning: o.needs_commissioning,
