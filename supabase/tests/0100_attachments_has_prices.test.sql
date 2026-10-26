@@ -54,8 +54,8 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id, has_prices) values
   (pg_temp.f('33'), 'rfq-files', 'hp/sq.pdf', 'our-quotation.pdf', 'application/pdf', 10, pg_temp.f('20'), true),
   (pg_temp.f('34'), 'rfq-files', 'hp/engineer.jpg', 'engineer.jpg', 'image/jpeg', 10, pg_temp.f('20'), false);
-insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values   -- the default
-  (pg_temp.f('35'), 'rfq-files', 'hp/default.pdf', 'default.pdf', 'application/pdf', 10, pg_temp.f('10'));
+insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices) values   -- explicitly untagged (0103: the default is now true; see its own test)
+  (pg_temp.f('35'), 'rfq-files', 'hp/default.pdf', 'default.pdf', 'application/pdf', 10, pg_temp.f('10'), false);
 insert into storage.objects (bucket_id, name) values
   ('rfq-files', 'hp/po.pdf'), ('rfq-files', 'hp/quote.pdf'), ('rfq-files', 'hp/site.jpg'), ('rfq-files', 'hp/sq.pdf'),
   ('rfq-files', 'hp/engineer.jpg'), ('rfq-files', 'hp/default.pdf'), ('rfq-files', 'hp/unlisted.pdf'),
@@ -64,8 +64,8 @@ insert into storage.objects (bucket_id, name) values
 -- ------------------------------------------------------------------ (a) structure
 select is((select data_type || '|' || is_nullable || '|' || column_default from information_schema.columns
            where table_schema = 'public' and table_name = 'attachments' and column_name = 'has_prices'),
-  'boolean|NO|false', 'attachments.has_prices is boolean, not null, default false');
-select is((select has_prices from public.attachments where id = pg_temp.f('35')), false, 'a new attachment is untagged until the app tags it');
+  'boolean|NO|true', 'attachments.has_prices is boolean, not null, default true (0103; 0100 had false)');
+select is((select has_prices from public.attachments where id = pg_temp.f('35')), false, 'an attachment inserted untagged stays untagged');
 select is((select p.polpermissive::text || '|' || p.polcmd::text from pg_policy p
            where p.polname = 'attachments_hide_priced_from_engineers' and p.polrelid = 'public.attachments'::regclass),
   'false|*', 'attachments_hide_priced_from_engineers is a restrictive policy for every command');

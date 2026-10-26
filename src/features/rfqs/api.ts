@@ -806,6 +806,8 @@ export async function uploadAttachment(input: { rfqId?: string; orderId?: string
       rfq_id: input.rfqId ?? null,
       order_id: input.orderId ?? null,
       clarification_id: input.clarificationId,
+      // Without this the column default applies and a customer PO stays readable by an engineer (migration 0100).
+      has_prices: input.hasPrices,
     })
     .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices')
     .single()

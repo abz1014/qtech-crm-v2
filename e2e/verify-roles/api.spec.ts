@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { API_URL } from '../support/stack'
-import { api, karachiToday, moneyIn, readSchema, service, SERVICE_KEY, type Persona } from './lib'
+import { api, karachiToday, moneyIn, readSchema, service, SERVICE_KEY, tokenFor, type Persona } from './lib'
 import { IDS, seedWorld, type World } from './fixtures'
 
 /*
@@ -286,6 +286,31 @@ test('0100: a file tagged has_prices (customer PO, supplier quote) is closed to 
   for (const p of ['sales', 'admin'] as const) {
     const ok = await api(p, `/storage/v1/object/rfq-files/${path}`)
     expect(ok.status, `precondition: ${p} download it`).toBe(200)
+  }
+})
+
+test('0100/0103: a customer PO uploaded by SALES through the app is closed to an engineer, whether the app tags it or the tag is forgotten', async () => {
+  const sales = await tokenFor('sales')
+  const up = async (name: string) => {
+    const r = await fetch(`${API_URL}/storage/v1/object/rfq-files/${world.tag}/${name}`, {
+      method: 'POST',
+      headers: { apikey: SERVICE_KEY, authorization: `Bearer ${sales?.access_token}`, 'content-type': 'application/pdf' },
+      body: Buffer.from('%PDF-1.4 verify-roles sales upload'),
+    })
+    expect(r.status, `sales uploads ${name}`).toBeLessThan(300)
+  }
+  // (a) what uploadAttachment now writes: the tag. (b) the old bug: an insert that never says has_prices must still land closed (0103 flips the default to true).
+  for (const [name, tag] of [['po-tagged.pdf', true], ['po-untagged.pdf', undefined]] as const) {
+    await up(name)
+    const path = `${world.tag}/${name}`
+    const row = await api('sales', '/rest/v1/attachments', { method: 'POST', body: { bucket: 'rfq-files', path, file_name: name, mime_type: 'application/pdf', size_bytes: 33, rfq_id: world.rfq.id, ...(tag === undefined ? {} : { has_prices: tag }) }, prefer: 'return=representation' })
+    expect(row.status, `sales records ${name}`).toBeLessThan(300)
+    expect((row.body as { has_prices: boolean }[])[0].has_prices, `${name} is stored tagged`).toBe(true)
+    expect(((await api('engineer', `/rest/v1/attachments?path=eq.${encodeURIComponent(path)}&select=id`)).body as unknown[]).length, `engineer lists ${name}`).toBe(0)
+    const list = await api('engineer', '/storage/v1/object/list/rfq-files', { method: 'POST', body: { prefix: world.tag, limit: 100 } })
+    expect((Array.isArray(list.body) ? (list.body as { name: string }[]) : []).map(o => o.name), `engineer lists the file ${name}`).not.toContain(name)
+    expect((await api('engineer', `/storage/v1/object/rfq-files/${path}`)).status, `engineer downloads ${name}`).toBeGreaterThanOrEqual(400)
+    expect((await api('sales', `/storage/v1/object/rfq-files/${path}`)).status, `precondition: sales download ${name}`).toBe(200)
   }
 })
 
