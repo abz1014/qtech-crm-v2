@@ -243,7 +243,9 @@ test.describe('Today: role-aware', () => {
     await openAs(page, 'engineer', '/todo')
     await showAllTodo(page)
     const job = page.locator('li[data-rule="job_commissioning"]').filter({ hasText: planned.ref })
-    await expect(job).toContainText('Commissioning tomorrow')
+    // by day (redesign phase 7): the job is under Tomorrow, the row says the customer and the kind of visit
+    await expect(page.getByRole('region', { name: 'Tomorrow' }).locator('li[data-rule="job_commissioning"]').filter({ hasText: planned.ref })).toHaveCount(1)
+    await expect(job).toContainText('Commissioning')
     await expect(job).toContainText(planned.customer)
     await expect(page.locator('li[data-rule="job_on_site"]').filter({ hasText: onSite.ref })).toContainText('Goods delivered to site: set the commissioning date')
     // one list for an engineer: no Quotations / Suppliers / Money tabs
@@ -254,30 +256,21 @@ test.describe('Today: role-aware', () => {
     await review(page, 'today-13-engineer-jobs-1440')
   })
 
-  test('engineer: goods and chases for their own records, never a money item or tab, and no receivables request', async ({ page }) => {
+  test('engineer: no sales or money item reaches the list, even for their own records, and no receivables request', async ({ page }) => {
     const g = await seedLateGoods(ENGINEER)
     await seedOverdueOrder(ENGINEER)
     const requests: string[] = []
     page.on('request', r => requests.push(r.url()))
     await openAs(page, 'engineer', '/todo')
     await showAllTodo(page)
-    const goods = rowOf(page, g.reference)
-    await expect(goods.getByText(/Goods \d+ days late from supplier/)).toBeVisible()
+    // phase 7: an engineer's list is their assigned jobs only; a supplier chase or a late payment is not theirs to act on
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(rowOf(page, g.reference)).toHaveCount(0)
     await expect(page.getByRole('radio', { name: /^Money/ })).toHaveCount(0)
     await expect(page.locator('li[data-rule="payment_overdue"]')).toHaveCount(0)
+    await expect(page.locator('li[data-rule="goods_late"]')).toHaveCount(0)
     await expect(page.locator('li[data-rule="close_month"]')).toHaveCount(0)
     expect(requests.some(u => u.includes('order_receivables') || u.includes('month_end_status') || u.includes('/rest/v1/invoices'))).toBe(false)
-
-    // the goods chase text carries the supplier_orders reference, and is stamped by the same 1 tap
-    await goods.getByRole('button').first().click()
-    const pane = paneFor(page, g.reference)
-    await expect(pane.getByTestId('draft-text')).toContainText(g.reference)
-    await resetClipboard(page)
-    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'marked chased' })).toBeVisible()
-    const leg = (await must(rest<{ chase_count: number }[]>('admin', `supplier_orders?id=eq.${g.leg.id}&select=chase_count`)))[0]
-    expect(leg.chase_count).toBe(1)
-    await readClipboardWhen(page, g.reference)
     await review(page, 'today-05-engineer-goods-1440')
   })
 

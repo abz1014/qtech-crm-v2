@@ -289,6 +289,21 @@ test('0100: a file tagged has_prices (customer PO, supplier quote) is closed to 
   }
 })
 
+test('0101 (phase 7): an engineer sets the visit time and type on their own site only, and the engineer view of an order still holds no money', async () => {
+  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { commissioning_time: '10:00', visit_type: 'installation' }, prefer: 'return=representation' })
+  expect(mine.status, 'the assigned engineer sets time and type').toBeLessThan(300)
+  const back = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,commissioning_time,visit_type`)
+  expect(back.body).toEqual([{ id: world.order.id, commissioning_time: '10:00:00', visit_type: 'installation' }])
+  const theirs = await api('engineer', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
+  expect(theirs.status, 'an engineer not assigned to the site is refused').toBeGreaterThanOrEqual(400)
+  expect(JSON.stringify(theirs.body)).toContain('not_assigned')
+  const sales = await api('sales', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey', commissioning_time: '09:30' }, prefer: 'return=representation' })
+  expect(sales.status, 'sales set them on any order').toBeLessThan(300)
+  const money = await api('engineer', `/rest/v1/v_jobs?select=*`)
+  const keys = new Set((Array.isArray(money.body) ? (money.body as Record<string, unknown>[]) : []).flatMap(r => Object.keys(r)))
+  expect([...keys].filter(k => /(price|cost|value|amount|gst|gross|sell|net|margin)/i.test(k)), 'the jobs view has no money column for an engineer').toEqual([])
+})
+
 test('BUG-RV-01: the engineer reads no legacy order value or cost through the API', async () => {
   const got: string[] = []
   for (const [t, filter] of [['orders', `id=eq.${world.legacyOrder.id}`], ['order_items', `order_id=eq.${world.legacyOrder.id}`], ['supplier_orders', `order_id=eq.${world.legacyOrder.id}`]] as const) {

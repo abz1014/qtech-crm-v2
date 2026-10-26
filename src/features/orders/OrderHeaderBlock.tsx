@@ -47,6 +47,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { COMPANY_NAME } from '@/features/rfqs/lib/chaseCommon'
 import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
 import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
+import { VisitButton } from '@/features/orders/VisitDialog'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
 const CommissioningEditDialog = lazyShown(() => import('@/features/orders/CommissioningPanel').then(m => m.CommissioningEditDialog))
@@ -694,7 +695,7 @@ function EngineerJob({
           </span>
           {order.needsCommissioning ? (
             <>
-              <span className="font-medium">{order.doneOn ? `Done ${formatShortDate(order.doneOn, today)}` : order.plannedOn ? `Planned ${formatDay(order.plannedOn)}` : 'No date yet'}</span>
+              <span className="font-medium">{order.doneOn ? `Done ${formatShortDate(order.doneOn, today)}` : order.plannedOn ? `Planned ${formatDay(order.plannedOn)}${order.visitTime ? ` at ${order.visitTime}` : ''}` : 'No date yet'}</span>
               {engineers.length ? <span className="text-sm text-fg-2">With {engineers.map(e => e.name).join(' and ')}</span> : null}
             </>
           ) : (
@@ -719,6 +720,7 @@ function EngineerJob({
             </Button>
           ) : null}
           {open ? <TapDate value={order.plannedOn} label="Planned date" today={today} onSave={setPlanned} button={{ text: 'Change planned date', icon: CalendarDays }} /> : null}
+          {open ? <VisitButton order={order} /> : null}
         </div>
       ) : null}
     </section>

@@ -15,6 +15,8 @@ import { useToast } from '@/ui/useToast'
 import type { OrderHeader, PersonRow } from '@/features/orders/api'
 import { useAddEngineer, useEngineerCandidates, useRemoveEngineer, useUpdateOrder } from '@/features/orders/hooks'
 import { useMarkDone } from '@/features/orders/commissioningActions'
+import { VisitFields } from '@/features/orders/VisitDialog'
+import { VISIT_TYPE_LABEL, isVisitType, visitChanged, visitPatch, visitValueOf, type VisitValue } from '@/features/orders/lib/visit'
 
 /*
  * Commissioning (O03; g2-order-detail.html "Commissioning"): planned on, done on, the engineers, and the order notes and site contact.
@@ -56,10 +58,18 @@ export function CommissioningPanel({
 
       <div className="grid gap-5 px-4 py-4 md:px-5">
         {order.needsCommissioning ? (
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-4">
             <div className="grid content-start gap-1">
               <span className="text-xs text-fg-muted">Planned on</span>
               <span className={order.plannedOn ? 'num text-sm' : 'text-sm text-fg-muted'}>{order.plannedOn ? formatDay(order.plannedOn) : 'Not planned'}</span>
+            </div>
+            <div className="grid content-start gap-1">
+              <span className="text-xs text-fg-muted">Visit</span>
+              <span className={order.visitTime || order.visitType ? 'text-sm' : 'text-sm text-fg-muted'} data-testid="visit-line">
+                {order.visitTime || order.visitType
+                  ? [order.visitTime, isVisitType(order.visitType) ? VISIT_TYPE_LABEL[order.visitType] : null].filter(Boolean).join(' · ')
+                  : 'Time and type not set'}
+              </span>
             </div>
             <div className="grid content-start gap-1">
               <span className="text-xs text-fg-muted">Done on</span>
@@ -135,13 +145,19 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
   const candidates = useEngineerCandidates(true)
   const [needs, setNeeds] = useState(order.needsCommissioning)
   const [planned, setPlanned] = useState(order.plannedOn ?? '')
+  const startVisit = visitValueOf(order)
+  const [visit, setVisit] = useState<VisitValue>(startVisit)
   const free = (candidates.data ?? []).filter(c => !engineers.some(e => e.id === c.id))
   const fail = (title: string) => (err: unknown) => toast({ title, body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-  const changed = needs !== order.needsCommissioning || (planned || null) !== order.plannedOn
+  const changed = needs !== order.needsCommissioning || (planned || null) !== order.plannedOn || (needs && visitChanged(visit, startVisit))
 
   const save = async () => {
     try {
-      await update.mutateAsync({ needs_commissioning: needs, commissioning_planned_on: needs ? planned || null : order.plannedOn })
+      await update.mutateAsync({
+        needs_commissioning: needs,
+        commissioning_planned_on: needs ? planned || null : order.plannedOn,
+        ...(needs && visitChanged(visit, startVisit) ? visitPatch(visit) : {}),
+      })
       onClose()
     } catch (err) {
       fail('Could not save')(err)
@@ -171,6 +187,7 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
               <Field label="Planned on" requirement="optional">
                 <DateInput value={planned} onChange={setPlanned} defaultToday={false} />
               </Field>
+              <VisitFields value={visit} onChange={setVisit} />
               <div className="grid gap-2">
                 <span className="text-sm font-medium">Engineers</span>
                 {engineers.length === 0 ? <span className="text-sm text-fg-muted">None assigned</span> : null}

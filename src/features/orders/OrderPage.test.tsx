@@ -35,6 +35,8 @@ const order: OrderHeader = {
   paymentTermsDays: 30,
   needsCommissioning: true,
   plannedOn: day(10),
+  visitTime: null,
+  visitType: null,
   doneOn: null,
   cancelledOn: null,
   cancelReason: null,

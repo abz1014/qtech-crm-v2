@@ -750,3 +750,30 @@ describe('parseEnquiry: reference rules (R-W4)', () => {
     expect(ref('Subject: RFQ for PLC spares 40512-RFQ-OC\n\nPlease quote 4 nos')[0]).toBe('40512-RFQ-OC')
   })
 })
+
+describe('parseEnquiry: the company from the signature (R-W5)', () => {
+  const co = (t: string) => parse(t).facts.company
+  const sig = [
+    'Dear Sir,',
+    'Please quote 4 nos ball valve 1 inch',
+    'Regards,',
+    'Asad Ali',
+    'Deputy Manager | Purchase',
+    ' <https://shorturl.at/Ab1cD>  <https://www.linkedin.com/company/examplemills/> ',
+    'Mobile : +923001234567  | Ext. 6776',
+    'Example Finishing Mills Limited, Tower Centre, 2nd Floor, 73-E Main Road, Lahore 54000, Pakistan',
+    'www.examplemills.example <http://www.examplemills.example/>',
+  ].join('\n')
+
+  it('never takes a link, a link shortener or a LinkedIn page; prefers the line with a legal suffix', () => {
+    const c = co(sig)
+    expect(c?.name).toBe('Example Finishing Mills Limited')
+    expect(c?.domain ?? '').not.toMatch(/shorturl|linkedin/)
+  })
+
+  it('a bare legal suffix is no name, and with no company line the sender domain is the fallback', () => {
+    const c = co('From: Asad Ali <asad@examplemills.example>\nSubject: RFQ 4455\n\nPlease quote 4 nos ball valve 1 inch\nLIMITED')
+    expect(c?.name ?? null).toBeNull()
+    expect(c?.domain).toBe('examplemills.example')
+  })
+})

@@ -18,7 +18,7 @@ export interface FakeResult {
   data?: unknown
   /** The exact row count a `{ count: 'exact' }` read returns. */
   count?: number | null
-  error?: { code?: string; message: string; details?: string | null } | null
+  error?: { code?: string; message: string; details?: string | null; hint?: string | null } | null
 }
 
 const WRITES = ['insert', 'update', 'upsert', 'delete']
