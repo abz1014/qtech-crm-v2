@@ -16,7 +16,7 @@ select columns_are('public', 'contacts',
   array['id', 'created_at', 'created_by', 'company_id', 'site_id', 'name', 'phone', 'email', 'notes', 'job_title'],
   'contacts has the section 2.4 columns (job_title from A7, 0039)');
 select columns_are('public', 'brands',
-  array['id', 'created_at', 'created_by', 'name', 'kind'],
+  array['id', 'created_at', 'created_by', 'name', 'kind', 'curated'],   -- curated: 0093
   'brands has the section 2.5 columns');
 select columns_are('public', 'company_brands',
   array['company_id', 'brand_id', 'created_at', 'created_by'],
@@ -103,7 +103,7 @@ select throws_ok($$insert into public.brands (name) values ('BELIMO')$$,
 select is((select kind from public.brands where name = 'Belimo'), 'brand', 'brand kind defaults to brand');
 select throws_ok($$insert into public.brands (name, kind) values ('X', 'maker')$$,
   '23514', null, 'brand kind CHECK rejects unknown values');
-select lives_ok($$insert into public.brands (name, kind) values ('Flow meters', 'family')$$,
+select lives_ok($$insert into public.brands (name, kind) values ('Flow rate meters', 'family')$$,
   'a family brand is accepted');
 select throws_ok($$insert into public.company_brands (company_id, brand_id)
                     values ('c0000000-0000-4000-8000-000000000001', 'c3000000-0000-4000-8000-000000000001')$$,

@@ -131,14 +131,14 @@ isOneToOne: false
                   ]
                 },"brands": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"kind": string,"name": string
+                    "created_at": string,"created_by": string | null,"curated": boolean,"id": string,"kind": string,"name": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: string,"name": string
+                    "created_at"?: string,"created_by"?: string | null,"curated"?: boolean,"id"?: string,"kind"?: string,"name": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: string,"name"?: string
+                    "created_at"?: string,"created_by"?: string | null,"curated"?: boolean,"id"?: string,"kind"?: string,"name"?: string
                   }
                   Relationships: [
                     {
@@ -2174,6 +2174,14 @@ isOneToOne: false
       referencedColumns: ["supplier_id"]
     }
                   ]
+                },"v_supplier_category_evidence": {
+                  Row: {
+                    "asked": number | null,"family_id": string | null,"last_asked_on": string | null,"no_offer": number | null,"ordered": number | null,"quoted": number | null,"replied": number | null,"supplier_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_supplier_stats": {
                   Row: {
                     "asked": number | null,"brand_ids": (string)[] | null,"brand_names": (string)[] | null,"chosen": number | null,"chosen_of": number | null,"deliveries": number | null,"last_contact": string | null,"late": number | null,"legacy_asked": number | null,"median_days_late": number | null,"median_reply_days": number | null,"no_offer": number | null,"orders_count": number | null,"prices_hidden": number | null,"quoted": number | null,"replied": number | null,"reply_days_n": number | null,"supplier_id": string | null
@@ -2228,13 +2236,13 @@ isOneToOne: false
 { Args: { "p_month": string }; Returns: number
                            },
 "convert_rfq_to_order":
-{ Args: { "p_customer_po_number"?: string,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
+{ Args: { "p_customer_po_number"?: string,"p_expected_revision"?: number,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
                            },
 "correct_payment":
 { Args: { "p_amount": number,"p_new_id"?: string,"p_paid_via": string,"p_payment_id": string,"p_reason": string,"p_received_on": string,"p_reference": string }; Returns: string
                            },
 "create_repeat_order":
-{ Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string }; Returns: string
+{ Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string,"p_repeat_cancelled"?: boolean }; Returns: string
                            },
 "current_user_role":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -2299,7 +2307,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "issue_purchase_order":
-{ Args: { "p_delivery_terms"?: string,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
+{ Args: { "p_delivery_terms"?: string,"p_expected_revision"?: number,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
                            },
 "issue_quotation":
 { Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_item_ids"?: (string)[],"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
@@ -2471,6 +2479,11 @@ isOneToOne: false
 "suggest_misc_categories":
 { Args: Record<PropertyKey, never>; Returns: {
               "misc_category_id": string,"spent": number,"title": string,"title_key": string,"uses": number
+            }[]
+                           },
+"supplier_category_price_wins":
+{ Args: { "p_family_ids": (string)[] }; Returns: {
+              "family_id": string,"of_ranked": number,"supplier_id": string,"wins": number
             }[]
                            },
 "supplier_item_evidence":
