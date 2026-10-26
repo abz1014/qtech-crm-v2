@@ -1,3 +1,4 @@
+import { pastedText } from '@/lib/docread/htmlTable'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, Copy, Plus, Save, TriangleAlert } from 'lucide-react'
@@ -341,7 +342,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       const t = e.target as HTMLElement | null
       const editable = t?.closest?.('input, textarea, select, [contenteditable="true"]')
       if (editable && editable !== zoneRef.current) return
-      const text = e.clipboardData?.getData('text/plain') ?? ''
+      const text = pastedText(e.clipboardData)
       if (!text.trim()) {
         const pictures = e.defaultPrevented ? [] : pastedPictures(e.clipboardData)
         if (pictures.length === 0) return

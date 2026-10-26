@@ -1,3 +1,4 @@
+import { readClipboardText } from '@/lib/docread/htmlTable'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
@@ -284,7 +285,7 @@ export function SupplierReplyDialog({
   const startPaste = async () => {
     let text = ''
     try {
-      text = await navigator.clipboard.readText()
+      text = await readClipboardText()
     } catch {
       text = ''
     }

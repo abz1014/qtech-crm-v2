@@ -6,13 +6,13 @@
 // Each row starts at its serial number when the first column is "S.No" / "#" / "Item"; empty cells are not written by most
 // copies, so a row's cells are placed by what they are: a number under Qty or Price, a unit under UOM, a code under Part No,
 // "-" anywhere. The next serial number starts the next row once this row has its quantity (a quantity can equal the next
-// serial: "5" / "Limit switch" / "6" / "PC" / "6" / ...).
+// serial: "5" / "Float switch" / "6" / "PC" / "6" / ...).
 
 import { isHeaderCell } from './pdfLayout'
 
 type Kind = 'number' | 'desc' | 'qty' | 'unit' | 'code' | 'make' | 'date' | 'money' | 'text'
 
-const UNIT = /^(?:nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|prs?|rolls?|mtrs?|meters?|metres?|m|rmt?|ltrs?|litres?|l|kgs?|ft|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?|adad)$/i
+const UNIT = /^(?:nos's|nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|prs?|rolls?|mtrs?|meters?|metres?|m|rmt?|ltrs?|litres?|l|kgs?|ft|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?|adad)$/i
 const NUM = /^\d[\d,]*(?:\.\d+)?$/
 const MONEY = /^(?:[A-Za-z$€¥￥£₨.]{0,4}\s?)?\d[\d,.]*(?:\/-)?(?:\s?[A-Za-z$€]{0,4})?$/
 const PLACEHOLDER = /^[-–—]$|^n\/?a$/i
@@ -61,10 +61,25 @@ function fits(kind: Kind, c: string): boolean {
 }
 
 /** Each cell goes to the first column from the last placed one on that it fits; a cell that fits none goes on the text before. */
-function place(cells: string[], kinds: Kind[]): { out: string[]; col: number } {
+function place(cells: string[], kinds: Kind[], stackDesc = false): { out: string[]; col: number } {
   const out: string[] = kinds.map(() => '')
   let col = 0
+  // A description that runs over several lines ("Float switch" / "QX-77 AV" / "Make: Acme") before the quantity: while
+  // the quantity column is still empty, a cell that is no quantity belongs to the description (nothing sits between the two
+  // but free-text columns, which an item's own lines fill in the same way).
+  const di = kinds.indexOf('desc')
+  const qi = kinds.indexOf('qty')
+  const stacked = stackDesc && di >= 0 && qi > di && kinds.slice(di + 1, qi).every(k => k === 'text' || k === 'desc')
   for (const c of cells) {
+    if (stacked && col > di && col <= qi && !fits('qty', c)) {
+      out[di] = out[di] ? `${out[di]} ${c}` : c
+      continue
+    }
+    if (stacked && col > di && col <= qi) {
+      out[qi] = c
+      col = qi + 1
+      continue
+    }
     let at = -1
     for (let x = col; x < kinds.length; x++) {
       // An order or material code before the description can be all digits ("10" / "9248471" / "Butterfly valve ...").
@@ -94,13 +109,15 @@ export interface CellLine {
  * Rebuilds one-cell-per-line tables in place. `stop` ends a row early (a sign-off, a disclaimer). Lines that are not such a
  * table are left as they are.
  */
-export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string) => boolean = () => false): boolean {
+export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string) => boolean = () => false, opts: { ignoreBlank?: boolean } = {}): boolean {
+  // A mail client that puts a blank line after every cell (an Outlook copy): the blank lines say nothing about where a row ends.
+  const bb = (s: T) => !opts.ignoreBlank && s.blankBefore
   let changed = false
   for (let k = 0; k < src.length; k++) {
     let e = k
     while (e < src.length) {
       const t = (src[e] as T).t
-      if (/\d|\t/.test(t.replace(/\(.*?\)/g, '')) || t.replace(/\(.*?\)/g, '').trim().split(' ').length > 4 || !isHeaderCell(t) || (e > k && (src[e] as T).blankBefore)) break
+      if (/\d|\t/.test(t.replace(/\(.*?\)/g, '')) || t.replace(/\(.*?\)/g, '').trim().split(' ').length > 4 || !isHeaderCell(t) || (e > k && bb(src[e] as T))) break
       e++
     }
     const labels = src.slice(k, e).map(s => s.t)
@@ -118,38 +135,38 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
     let serial = step
     while (j < src.length) {
       const first = (src[j] as T).t
-      if ((numbered && first.replace(/\.$/, '') !== String(serial)) || first.includes('\t')) break
+      if ((numbered && !(/^\d{1,4}\.?$/.test(first) && Number(first.replace(/\.$/, '')) === serial)) || first.includes('\t')) break
       const cells: string[] = numbered ? [first] : []
       let q = numbered ? j + 1 : j
       const width = numbered ? Infinity : labels.length
       // The row has its quantity (or price) once a cell has landed in that column ("0" under Qty in Stock is not it).
       const hasNeed = () => {
-        const { out } = place(cells, kinds)
+        const { out } = place(cells, kinds, !!opts.ignoreBlank)
         return out.some((v, x) => v && kinds[x] === need)
       }
-      while (q < src.length && cells.length < width && !(src[q] as T).blankBefore) {
+      while (q < src.length && cells.length < width && !bb(src[q] as T)) {
         const t = (src[q] as T).t
         // The next serial number starts the next row (followed by its description, not by another number: a last cell can
         // equal the next serial, "... 6240.00 / 2 / 2 / Amerix ...").
         const after = (src[q + 1] as T | undefined)?.t ?? ''
-        if (numbered && hasNeed() && t.replace(/\.$/, '') === String(serial + step) && !NUM.test(after)) break
+        if (numbered && hasNeed() && /^\d{1,4}\.?$/.test(t) && Number(t.replace(/\.$/, '')) === serial + step && !NUM.test(after)) break
         // A row that already has its cells (tab separated) is a table of its own: the header words above are stacked headings.
         if (stop(t) || t.includes('\t')) break
         // A sentence under a complete row is the text after the table ("Last date for submission: 3 November").
         // (Complete means its description too: with the description column last, a long description follows the quantity.)
-        const hasDesc = () => place(cells, kinds).out.some((v, x) => v && kinds[x] === 'desc')
+        const hasDesc = () => place(cells, kinds, !!opts.ignoreBlank).out.some((v, x) => v && kinds[x] === 'desc')
         if (hasNeed() && hasDesc() && (/[A-Za-z]:\s/.test(t) || t.split(' ').length >= 7)) break
         // With no serial column, empty cells at the end of a row ("4" / "NO" / "Panel meter" / "" under Part No) are not
         // written either: a cell that fits no column from here on but fits the first one (a quantity) starts the next row.
         if (!numbered && cells.length && kinds[0] !== 'desc' && kinds[0] !== 'text' && !PLACEHOLDER.test(t)) {
-          const { out, col } = place(cells, kinds)
+          const { out, col } = place(cells, kinds, !!opts.ignoreBlank)
           if (out.some((v, x) => v && kinds[x] === 'desc') && fits(kinds[0] as Kind, t) && kinds.slice(col).every(k => !fits(k, t))) break
         }
         cells.push(t)
         q++
-        if (numbered && cells.length >= labels.length) break
+        if (numbered && !opts.ignoreBlank && cells.length >= labels.length) break
       }
-      const { out } = place(cells, kinds)
+      const { out } = place(cells, kinds, !!opts.ignoreBlank)
       if (!out.some((v, x) => v && kinds[x] === 'desc')) break
       // With no serial numbers to go by, a row with no quantity is the text after the table (the sender's name).
       if (!numbered && need === 'qty' && !out.some((v, x) => v && kinds[x] === 'qty')) break
@@ -312,4 +329,41 @@ export function foldWrappedTables(lines: string[]): string[] {
     i = j - 1
   }
   return out
+}
+
+/**
+ * A list copied with one cell per line and no heading: "SOLDERING IRON TQ95-01" / "2" / "EA", repeated. Each run of
+ * description, quantity (and unit) lines becomes tab rows, so the unit is read and is not a junk item of its own. A run needs
+ * at least two rows, every description with letters and a quantity line of its own; anything else is left as it is.
+ */
+export function rebuildHeaderlessLists<T extends CellLine>(src: T[], opts: { ignoreBlank?: boolean } = {}): boolean {
+  const bb = (s: T) => !opts.ignoreBlank && s.blankBefore
+  const isText = (t: string) => /[A-Za-z]{3}/.test(t) && !NUM.test(t) && !UNIT.test(t) && !t.includes('\t') && t.length <= 160
+  let changed = false
+  for (let k = 0; k < src.length; k++) {
+    const rows: string[] = []
+    let j = k
+    let withUnit = 0
+    while (j + 1 < src.length) {
+      const d = (src[j] as T).t
+      const q = (src[j + 1] as T).t
+      if (!isText(d) || !/^\d[\d,]*(?:\.\d+)?$/.test(q) || (j > k && bb(src[j] as T) && !opts.ignoreBlank)) break
+      const u = (src[j + 2] as T | undefined)?.t
+      if (u !== undefined && UNIT.test(u)) {
+        rows.push(`${d}\t${q}\t${u}`)
+        withUnit++
+        j += 3
+      } else {
+        rows.push(`${d}\t${q}`)
+        j += 2
+      }
+    }
+    // A plain description/quantity list is read as it is already; the rows are rebuilt only when a unit line is there to place.
+    if (rows.length < 2 || withUnit === 0) continue
+    const base = src[k] as T
+    src.splice(k, j - k, ...rows.map((r, i) => ({ ...base, t: r, blankBefore: i === 0 ? base.blankBefore : false })))
+    k += rows.length - 1
+    changed = true
+  }
+  return changed
 }
