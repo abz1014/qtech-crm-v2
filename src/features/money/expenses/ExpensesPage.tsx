@@ -8,6 +8,7 @@ import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { ClaimsReview } from '@/features/money/expenses/ClaimsReview'
 import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses/ExpenseDialog'
 import { ExpensesTab } from '@/features/money/expenses/ExpensesTab'
+import { MiscPromoteBanners } from '@/features/money/expenses/MiscPromote'
 import { PayDialog } from '@/features/money/expenses/PayDialog'
 import { QuickAdd } from '@/features/money/expenses/QuickAdd'
 import { useCategories, useGroups, useLegOptions, useOrderOptions } from '@/features/money/expenses/hooks'
@@ -63,6 +64,7 @@ export function ExpensesPage() {
     >
       {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
       {cats.data ? <QuickAdd categories={cats.data} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
+      <MiscPromoteBanners />
       <CashInHandLine />
       <ExpensesTab />
       <BurstSheet
