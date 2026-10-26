@@ -155,17 +155,6 @@ const newRfq: Visit = {
   },
 }
 
-/** A supplier's reply as it arrives on WhatsApp (to the waiting RFQ KRS-MM-0457): what people paste most. */
-const SUPPLIER_REPLY = [
-  'Dear Sir,',
-  'Ref your enquiry KRS-MM-0457, please find our best prices:',
-  '1) Rosemount 3051CD DP transmitter - GBP 1,840 each, 4 weeks ex-works',
-  '2) Rosemount 644 temperature transmitter - GBP 385 each, ex-stock',
-  '3) Danfoss MBS 3000 - regret, cannot quote',
-  'Validity 30 days. Payment 100% advance.',
-  'Regards, Oliver Grant, Midlands Valves Ltd',
-].join('\n')
-
 /** Fails with `what` if `step` has not finished within `ms`: a step can never hang a visit (the runner then records an error and moves on). */
 export async function bounded<T>(ms: number, what: string, step: () => Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -202,70 +191,6 @@ async function closeDialogs(page: Page): Promise<void> {
     .catch(() => undefined)
   if (await gone(3_000)) return
   await open(page, '/todo').catch(() => undefined)
-}
-
-/**
- * The Paste or photo sheet (the top-bar button, or the phone bar's): empty, then with a supplier's reply pasted in.
- *
- * Empty, the sheet shows its "Pasted text" box only on a phone; on a desktop it is a drop zone and the phone's box is in the page but
- * hidden. Filling that hidden box waited for it to show for the whole test timeout (run 39676918821: 17 minutes per role, then the
- * closed page failed every visit after it). So only a visible box is filled; on a desktop the text arrives as a paste, as Ctrl+V does.
- */
-const pasteOrPhoto: Visit = {
-  id: 'paste-or-photo',
-  title: 'Paste or photo',
-  roles: ALL,
-  screens: ['paste-or-photo-empty', 'paste-or-photo-pasted'],
-  run: async (page, _fx, capture) => {
-    const dialog = page.locator(DIALOG).first()
-    const box = page.locator(DIALOG).getByRole('textbox', { name: /pasted text/i }).filter({ visible: true }).first()
-    /** Empties the draft kept on the device (IndexedDB): an emptied draft is deleted from it (debounced 300 ms). */
-    const empty = async () => {
-      if ((await box.count()) && (await box.inputValue({ timeout: 3_000 })) !== '') {
-        await box.fill('', { timeout: 5_000 })
-        await page.waitForTimeout(800)
-      }
-    }
-    try {
-      await bounded(45_000, 'open Paste or photo', async () => {
-        await open(page, '/todo')
-        await closeDialogs(page)
-        await press(page, [/^paste or photo$/i, /paste or photo/i, /^capture$/i], 'open Paste or photo')
-        await dialog.waitFor({ timeout: 10_000 })
-        // A draft from an earlier, interrupted run is emptied first: the empty state is what is graded.
-        await empty()
-        await settle(page)
-      })
-      await capture('paste-or-photo-empty', { root: DIALOG })
-
-      await bounded(30_000, 'paste a supplier reply', async () => {
-        if (await box.count()) {
-          await box.fill(SUPPLIER_REPLY, { timeout: 5_000 })
-        } else {
-          // The sheet listens for a paste anywhere; this is what Ctrl+V with nothing focused delivers.
-          await page.evaluate(t => {
-            const dt = new DataTransfer()
-            dt.setData('text/plain', t)
-            document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
-          }, SUPPLIER_REPLY)
-        }
-        await page.waitForFunction(
-          () => Array.from(document.querySelectorAll<HTMLTextAreaElement>('[role="dialog"] textarea')).some(t => t.offsetParent !== null && t.value.trim() !== ''),
-          undefined,
-          { timeout: 5_000 },
-        )
-        await page.waitForTimeout(500)
-        await settle(page)
-      })
-      await capture('paste-or-photo-pasted', { root: DIALOG })
-    } finally {
-      // Leave nothing behind: the draft emptied (so it is gone from the device), the sheet closed.
-      await bounded(20_000, 'close Paste or photo', async () => {
-        await empty().catch(() => undefined)
-        await closeDialogs(page)
-      }).catch(() => undefined)
-    }
-  },
 }
 
 /** The Issue quotation dialog, opened from an RFQ with prices in (the green button; its ?issue=1 address if no button is found). */
@@ -379,7 +304,6 @@ export const VISITS: readonly Visit[] = [
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
   screen('settings-exchange-rates', 'Settings: exchange rates', MONEY, () => '/settings/exchange-rates'), // engineers: no currency amounts (2026-10-22)
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
-  pasteOrPhoto,
   issueQuotation,
   markWon,
   // Last: it creates an RFQ, which would otherwise show on the lists above.

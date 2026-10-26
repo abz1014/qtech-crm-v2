@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
+import { ToastProvider } from '@/ui/Toast'
 import { qk } from '@/features/queryKeys'
 import type { JobFacts, JobRow } from '@/features/jobs/api'
 import JobsScreen from '@/features/jobs/JobsScreen'
@@ -49,11 +50,11 @@ function mount(j: JobRow, role: 'admin' | 'sales' | 'engineer') {
   return render(
     <QueryClientProvider client={client}>
       <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Faizan', role } }}>
-        <MemoryRouter initialEntries={[`/jobs/${j.key}`]}>
+        <ToastProvider><MemoryRouter initialEntries={[`/jobs/${j.key}`]}>
           <Routes>
             <Route path="/jobs/*" element={<JobsScreen />} />
           </Routes>
-        </MemoryRouter>
+        </MemoryRouter></ToastProvider>
       </SessionProvider>
     </QueryClientProvider>,
   )
@@ -124,11 +125,11 @@ describe('Job page', () => {
     render(
       <QueryClientProvider client={client}>
         <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'F', role: 'admin' } }}>
-          <MemoryRouter initialEntries={['/jobs/9999']}>
+          <ToastProvider><MemoryRouter initialEntries={['/jobs/9999']}>
             <Routes>
               <Route path="/jobs/*" element={<JobsScreen />} />
             </Routes>
-          </MemoryRouter>
+          </MemoryRouter></ToastProvider>
         </SessionProvider>
       </QueryClientProvider>,
     )
@@ -147,12 +148,12 @@ describe('Job page: the enquiry-side actions stay on the page (P5-D1)', () => {
     return render(
       <QueryClientProvider client={client}>
         <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Faizan', role } }}>
-          <MemoryRouter initialEntries={[`/jobs/${j.key}`]}>
+          <ToastProvider><MemoryRouter initialEntries={[`/jobs/${j.key}`]}>
             <Where />
             <Routes>
               <Route path="/jobs/*" element={<JobsScreen />} />
             </Routes>
-          </MemoryRouter>
+          </MemoryRouter></ToastProvider>
         </SessionProvider>
       </QueryClientProvider>,
     )

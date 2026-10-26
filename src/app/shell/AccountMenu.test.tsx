@@ -96,7 +96,7 @@ describe('search button and Cmd/Ctrl+K open the palette (U08)', () => {
     const rows = await within(dlg).findAllByRole('option')
     // Idle: the Actions of the mockup (A-89); the destinations answer when typed.
     expect(rows.map(r => r.textContent)).toEqual(
-      expect.arrayContaining([expect.stringContaining('New RFQ'), expect.stringContaining('Paste or photo'), expect.stringContaining('Go to To do')]),
+      expect.arrayContaining([expect.stringContaining('New enquiry'), expect.stringContaining('Go to To do')]),
     )
     await user.keyboard('rfq{Enter}')
     expect(await screen.findByText('RFQs page')).toBeInTheDocument()

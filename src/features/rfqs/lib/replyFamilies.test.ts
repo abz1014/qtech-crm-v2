@@ -293,3 +293,41 @@ describe('structure seen in real mail (shapes only, invented content)', () => {
     expect(offerFor(r.offers, 'valve')).toMatchObject({ unitPrice: 187 })
   })
 })
+
+describe('round 2: shapes the first dev set did not have', () => {
+  const items = [
+    { id: 'XQ-100', description: 'Timing relay XQ-100' },
+    { id: 'WP-2000', description: 'Pressure switch WP-2000' },
+  ]
+  const priced = (t: string) => parseSupplierReply(t, items, { today: '2026-10-20' }).offers.map(o => [o.rfqItemId, o.unitPrice, o.currency])
+
+  it('numbered terms and contact lines are no offers, and a list number is no price', () => {
+    const r = priced(['XQ-100 Unit price: 310,00€ 4 weeks', '2.) Prices are based on the quantity quoted.', '3.) For orders under 500EUR we charge 20EUR handling.', '4) Handling charge: USD12.00', 'Skype 1: someone.sales', 'Skype 2: another.sales'].join('\n'))
+    expect(r).toEqual([['XQ-100', 310, 'EUR']])
+  })
+
+  it('a price with its currency written against it keeps a quantity after it out of the price', () => {
+    expect(priced('XQ-100 relay 8A 69,87USD 1 In stock')).toEqual([['XQ-100', 69.87, 'USD']])
+    expect(priced('XQ-100 US$ 235.00 each')).toEqual([['XQ-100', 235, 'USD']])
+  })
+
+  it('an item line with no price, the price on the line under it, and a line that repeats the price as a total', () => {
+    const text = ['ITEM\tUNI\tQTY\tDELIVERY\t\tPRICE', '1) XQ-100 Maker - NEW', 'Modular timing relay, 8A, 1 CO, 24...240V\t69,87USD\t1\tIn stock', '5-7 days\t\t69,87USD', '2) WP-2000 Maker - NEW', 'Pressure switch 0-10 bar\t90,26USD\t1\tIn stock', '7-10 days\t\t90,26USD'].join('\n')
+    expect(priced(text)).toEqual([['XQ-100', 69.87, 'USD'], ['WP-2000', 90.26, 'USD']])
+  })
+
+  it('a "Best regards" in a template above the quotation table does not hide the table', () => {
+    const text = ['Good day,', 'Please find our proposal.', 'Best regards', 'ITEM\tQTY\tPRICE', '1) XQ-100 Maker', 'Timing relay\t1\t45,00USD', '2) WP-2000 Maker', 'Pressure switch\t1\t60,00USD'].join('\n')
+    expect(priced(text)).toEqual([['XQ-100', 45, 'USD'], ['WP-2000', 60, 'USD']])
+  })
+
+  it('a table row the mail client wrote short (its empty Delivery cell missing) is put back under its heading', () => {
+    const text = ['SL\tProduct Description\tQty\tUnit Price (RMB)\tDelivery Time\tWeight\tOrigin', '1\tModel: XQ-100 Brand: Maker\t6\t250\t1-2 weeks\t0.2 kg\tFrance', '2\tModel: WP-2000 Brand: Maker\t4\t480\t0.3 kg\tIndia'].join('\n')
+    expect(priced(text)).toEqual([['XQ-100', 250, 'CNY'], ['WP-2000', 480, 'CNY']])
+  })
+
+  it('"If you have no orders, we will be unable to quote again" is a condition, not a refusal', () => {
+    const r = parseSupplierReply('Do you have any order?\nIf you have no orders, we will be unable to provide further price quotes for you.', items)
+    expect(r.regret).toBe(false)
+  })
+})

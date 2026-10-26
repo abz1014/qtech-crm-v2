@@ -1,7 +1,5 @@
-import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Banknote, CalendarCheck, CircleHelp, FileText, Package, type LucideIcon } from 'lucide-react'
-import { CaptureContext } from '@/app/capture/useCapture'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { firstUseCopy, NOTHING_YET, type FirstUseCopy, type FirstUseScreen, type NothingYetScreen } from '@/features/help/firstUseCopy'
@@ -60,16 +58,11 @@ function FirstUseCard({
   className?: string
 }) {
   const navigate = useNavigate()
-  const openCapture = useContext(CaptureContext)?.openCapture
   const { openHelp } = useHelp()
 
   const a = copy.action
   const primary = !a ? null : a.kind === 'link' ? (
       <Button variant="primary" onClick={() => navigate(a.to)}>
-        {a.label}
-      </Button>
-    ) : a.kind === 'capture' && openCapture ? (
-      <Button variant="primary" onClick={openCapture}>
         {a.label}
       </Button>
     ) : a.kind === 'everyone' && onEveryone ? (

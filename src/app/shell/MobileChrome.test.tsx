@@ -37,21 +37,15 @@ describe('phone tabs: the top bar counts as badges', () => {
   })
 })
 
-describe('Paste or photo (was Capture; plain-words glossary)', () => {
-  it('the top bar and the phone bar both name the action "Paste or photo" and run it', async () => {
-    let opened = 0
-    const u = userEvent.setup()
+describe('Paste or photo (retired by New enquiry and Add to this job, P4)', () => {
+  it('neither the top bar nor the phone bar has a Paste or photo button any more', () => {
     render(
       <MemoryRouter>
-        <TopBar user={user} onCapture={() => opened++} />
-        <MobileBar user={user} title="Today" onCapture={() => opened++} />
+        <TopBar user={user} />
+        <MobileBar user={user} title="Today" />
       </MemoryRouter>,
     )
-    const buttons = screen.getAllByRole('button', { name: 'Paste or photo' })
-    expect(buttons).toHaveLength(2)
-    for (const b of buttons) await u.click(b)
-    expect(opened).toBe(2)
-    expect(screen.queryByRole('button', { name: /Capture/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Paste or photo|Capture/ })).toBeNull()
   })
 })
 
@@ -151,12 +145,12 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     expect(within(dlg).queryByRole('option', { name: /Targets/ })).toBeNull()
   })
 
-  it('"capture" and "paste" still find Paste or photo', async () => {
-    for (const q of ['capture', 'paste']) {
+  it('"paste or photo", "capture" and "paste" still find New enquiry', async () => {
+    for (const q of ['paste or photo', 'capture', 'paste']) {
       const u = userEvent.setup()
       shell('sales')
       const dlg = await search(u, q)
-      expect(await within(dlg).findByRole('option', { name: /Paste or photo/ })).toBeInTheDocument()
+      expect(await within(dlg).findByRole('option', { name: /New enquiry/ })).toBeInTheDocument()
       cleanup()
     }
   })

@@ -15,7 +15,6 @@ import {
   ChartColumn,
   CircleAlert,
   HandCoins,
-  Import,
   Keyboard,
   Landmark,
   Percent,
@@ -29,9 +28,7 @@ import {
 } from "lucide-react";
 import { navItemsForRole } from "@/app/navConfig";
 import { settingsLinksFor } from "@/features/settings/settingsLinks";
-import { CaptureContext } from "@/app/capture/useCapture";
 import { PaletteContext, type PaletteApi } from "@/app/palette/usePalette";
-import { CAPTURE_LABEL } from "@/app/shell/TopBar";
 import { KEYBOARD_MEDIA } from "@/app/shell/shortcuts";
 import { Kbd } from "@/ui/Kbd";
 import { LoadBoundary } from "@/ui/LoadBoundary";
@@ -45,7 +42,7 @@ import {
 } from "@/ui/paletteSources";
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
-const INTAKE_ROUTE = "/rfqs/new";
+const INTAKE_ROUTE = "/enquiries/new";
 const TODAY_ROUTE = "/todo";
 const NEW_ORDER_ROUTE = "/orders?new=1";
 
@@ -276,7 +273,6 @@ export function PaletteHost({
   const openRef = useRef(open);
   openRef.current = open;
   const seq = useRef(0);
-  const openCapture = useContext(CaptureContext)?.openCapture;
 
   const register = useCallback((source: PaletteSource) => {
     const tagged = { ...source, id: `${source.id}#${seq.current++}` };
@@ -305,16 +301,6 @@ export function PaletteHost({
 
   // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T, ?.
   const actions = useMemo<PaletteSource>(() => {
-    // "capture" and "paste" still find it: the old name, and the word people reach for.
-    const captureItem: PaletteItem = {
-      id: "capture",
-      label: CAPTURE_LABEL,
-      meta: "Action",
-      keywords: ["capture", "paste"],
-      icon: Import,
-      shortcut: ["C"],
-      onSelect: () => openCapture?.(),
-    };
     // Desktop only (a keyboard is likely); found by "keys" or "shortcuts" too.
     const shortcutsItem: PaletteItem = {
       id: "shortcuts",
@@ -328,13 +314,14 @@ export function PaletteHost({
     const items: PaletteItem[] = [
       {
         id: "new-rfq",
-        label: "New RFQ",
+        label: "New enquiry",
         meta: "Go to intake",
         icon: Plus,
         shortcut: ["N"],
         href: INTAKE_ROUTE,
+        // the old names stay findable: RFQ, and the top-bar button this replaced (P4-A)
+        keywords: ["new rfq", "rfq", "paste or photo", "paste", "capture", "photo", "pdf", "enquiry"],
       },
-      captureItem,
       ...(role === "admin"
         ? [{ id: "new-expense", label: "Add an expense", meta: "Quick add", icon: ReceiptText, shortcut: ["E"], onSelect: openQuickExpense } satisfies PaletteItem]
         : []),
@@ -355,7 +342,7 @@ export function PaletteHost({
         href: "/companies?new=1",
       },
     ];
-    // Typing "paste", "photo" or "capture" finds the paste-or-photo action, "keys" or "shortcuts" the shortcuts sheet; the
+    // Typing "paste", "photo" or "capture" finds New enquiry (what Paste or photo became), "keys" or "shortcuts" the shortcuts sheet; the
     // other actions are idle-only (destinations answer typed text).
     return {
       id: "actions",
@@ -363,9 +350,9 @@ export function PaletteHost({
       order: 90,
       idle: () => (hasKeyboard() ? [...items, shortcutsItem] : items),
       search: (q) =>
-        filterItems(hasKeyboard() ? [captureItem, shortcutsItem] : [captureItem], q),
+        filterItems(hasKeyboard() ? [items[0], shortcutsItem] : [items[0]], q),
     };
-  }, [openCapture, openShortcuts, openQuickExpense, role]);
+  }, [openShortcuts, openQuickExpense, role]);
 
   useEffect(() => {
     let armedAt = 0;
