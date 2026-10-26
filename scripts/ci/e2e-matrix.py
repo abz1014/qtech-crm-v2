@@ -2,7 +2,8 @@
 """Pick the E2E suites to run and balance them across parallel shards.
 
 Reads .github/e2e-suites.yml (suite keys and optional "# weight=N"), the JSON list of changed suite
-names from dorny/paths-filter (CHANGED), and RUN_ALL ("true" runs every suite). Writes two GitHub outputs:
+names from dorny/paths-filter (CHANGED), RUN_ALL ("true" runs every suite) and SUITES (optional, comma or space separated suite
+keys: run only those, whatever else is set; an unknown key is an error). Writes two GitHub outputs:
   any     "true" when at least one suite runs
   matrix  {"include":[{"shard":1,"suites":"a b c"}, ...]}  (longest-first greedy balancing)
 """
@@ -25,7 +26,14 @@ for line in open(sys.argv[1], encoding="utf-8"):
     weights[name] = int(w.group(1)) if w else 50
 
 changed = json.loads(os.environ.get("CHANGED") or "[]")
-chosen = suites if os.environ.get("RUN_ALL") == "true" else [s for s in suites if s in changed]
+wanted = [x for x in re.split(r"[,\s]+", os.environ.get("SUITES") or "") if x]
+if wanted:
+    unknown = [x for x in wanted if x not in suites]
+    if unknown:
+        sys.exit(f"Unknown suite key(s): {', '.join(unknown)}. Known: {', '.join(suites)}")
+    chosen = [s for s in suites if s in wanted]
+else:
+    chosen = suites if os.environ.get("RUN_ALL") == "true" else [s for s in suites if s in changed]
 
 total = sum(weights[s] for s in chosen)
 n = min(SHARDS_MAX, len(chosen), max(1, math.ceil(total / TARGET_SECONDS))) if chosen else 0
