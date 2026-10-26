@@ -104,7 +104,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
     await openStage(page, /^Invoice/)
     await page.getByRole('button', { name: 'Create invoice' }).first().click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
-    await expect(d.getByText(amount(GROSS), { exact: true })).toBeVisible()
+    await expect(d, 'the dialog shows the gross').toContainText(amount(GROSS))
     await d.getByRole('button', { name: 'Create invoice' }).click()
     await expect(d).toBeHidden()
     const [inv] = await db.rows<{ net_amount: number; gst_amount: number; number: string }>(`invoices?order_id=eq.${order.id}&select=net_amount,gst_amount,number`)

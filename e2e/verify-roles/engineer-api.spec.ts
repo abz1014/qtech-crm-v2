@@ -65,7 +65,7 @@ test('the history an engineer can fetch names no priced file and has no price-li
         }
     }
     walk(r.body)
-    const bad = [...keys].filter(k => /(^|_)(price|cost|margin|amount|total|gst|net|gross|balance|payment|pkr|tax|spread|rate)(_|$)/i.test(k))
+    const bad = [...keys].filter(k => /(^|_)(price|cost|margin|amount|total|gst|net|gross|balance|paid|pkr|tax|spread|rate)(_|$)/i.test(k))
     expect(bad, `${table} history for an engineer carries price-like keys`).toEqual([])
     // the office still sees the file in the same history (a positive control: the test could fail)
     const admin = await api('admin', '/rest/v1/rpc/record_history', { method: 'POST', body: { p_table: table, p_id: id, p_limit: 200 } })

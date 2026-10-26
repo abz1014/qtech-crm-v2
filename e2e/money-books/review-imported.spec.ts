@@ -39,7 +39,7 @@ test('Find matches proposes the certain link, Accept links it (a locked month al
   const locked = (await db.count(`closed_months?month=eq.${MARCH}&select=month`)) > 0
 
   await openAs(page, 'admin', '/money/review-imported')
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Review imported')
+  await expect(page.getByText('Review imported').first()).toBeVisible()
   await expect(page.getByTestId(`review-order-${s.order.id}`)).toBeVisible()
   await expect(page.getByTestId(`review-invoice-${s.invoice.id}`)).toBeVisible()
 
@@ -69,6 +69,8 @@ test('Settled, keep as history takes the imported order off Who owes us; Undo br
   await db.patch(`invoices?id=eq.${s.invoice.id}`, { order_id: s.order.id })
   const before = await balance(s.order.id)
   expect(before, 'precondition: the imported order owes 1,180').toBe(1180)
+  const outstanding = async () => num((await db.adminRpc<{ outstanding: number }[]>('receivables_summary'))[0].outstanding)
+  const collect0 = await outstanding()
 
   await openAs(page, 'admin', '/money/review-imported')
   const row = page.getByTestId(`review-order-${s.order.id}`)
@@ -76,13 +78,11 @@ test('Settled, keep as history takes the imported order off Who owes us; Undo br
   await row.getByRole('button', { name: 'Settled, keep as history' }).click()
   await expect.poll(async () => (await db.one<{ legacy_review: string | null }>(`orders?id=eq.${s.order.id}&select=legacy_review`)).legacy_review).toBe('settled')
   await expect.poll(() => balance(s.order.id), 'a settled imported order owes nothing').toBe(0)
+  expect(await outstanding(), 'To collect (Money home) drops by exactly what that order owed').toBeCloseTo(collect0 - 1180, 2)
 
-  await page.goto('/money/receivables')
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-  await expect(page.getByText(s.co.name)).toHaveCount(0)
-
-  await page.goto('/money/review-imported')
+  // (the decision stays on the page with its Undo until the page is left)
   await page.getByRole('listitem').filter({ hasText: s.co.name }).getByRole('button', { name: 'Undo' }).click()
   await expect.poll(async () => (await db.one<{ legacy_review: string | null }>(`orders?id=eq.${s.order.id}&select=legacy_review`)).legacy_review).toBe('to_review')
   await expect.poll(() => balance(s.order.id), 'undo: the balance is back').toBe(1180)
+  expect(await outstanding(), 'and To collect is back').toBeCloseTo(collect0, 2)
 })

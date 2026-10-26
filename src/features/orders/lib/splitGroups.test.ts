@@ -36,3 +36,13 @@ describe('split groups', () => {
     expect(mixed.kind === 'head' && mixed.unitPriceNet).toBe('mixed')
   })
 })
+
+describe('Remove line on a split item (END-CHECKLIST 42)', () => {
+  it('removing every part but one leaves a plain numbered line, not a lone part under a split heading', () => {
+    const before = groupItems([it_('a', 'r1', 2), it_('b', 'r2', 3), it_('d', 'r2', 1), it_('c', 'r3', 2)])
+    expect(before.map(r => `${r.kind}:${r.no}`)).toEqual(['row:1', 'head:2', 'part:2a', 'part:2b', 'row:3'])
+    const after = groupItems([it_('a', 'r1', 2), it_('b', 'r2', 3), it_('c', 'r3', 2)]) // part d removed
+    expect(after.map(r => `${r.kind}:${r.no}`)).toEqual(['row:1', 'row:2', 'row:3'])
+    expect(splitRfqItemIds([it_('b', 'r2', 3)]).size).toBe(0)
+  })
+})
