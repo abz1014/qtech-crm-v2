@@ -208,8 +208,8 @@ describe('months', () => {
   })
 })
 
-describe('one definition of "to match" (round 3: Month end said 5, this page said 7)', () => {
-  it('the not-ticked lines here equal Month end: bank items + one line per PSID', () => {
+describe('one definition of "to match" (round 3: Lock a month said 5, this page said 7)', () => {
+  it('the not-ticked lines here equal Lock a month: bank items + one line per PSID', () => {
     // The audit's September, by hand: 1 payment in; 4 bank expenses out; 2 FBR invoices under 2 PSIDs; plus a 3rd invoice
     // sharing the first PSID (one bank debit) and a cash-free ticked line that must not count.
     const raw: RawBank = {

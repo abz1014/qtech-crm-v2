@@ -167,7 +167,7 @@ describe('GST register (M01)', () => {
     expect(screen.getByText('October invoice, tax not deposited')).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /Select all in October 2026/ })) // tap 1: tick the month
     expect(screen.getByTestId('batch-bar')).toHaveTextContent('3 invoices ticked')
-    await user.click(screen.getByRole('button', { name: 'Sent to customer today' })) // tap 2
+    await user.click(screen.getByRole('button', { name: 'Invoice posted today' })) // tap 2
     await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tcs_sent')).toBe(true))
     expect((opArgs(d.calls.find(c => c.target === 'rpc:stamp_tcs_sent')!, 'args') as { p_invoice_ids: string[] }[])[0].p_invoice_ids.sort()).toEqual(['i1', 'i2', 'i3'])
     await user.click(screen.getByRole('textbox', { name: 'PSID' }))
@@ -185,7 +185,7 @@ describe('GST register (M01)', () => {
     const a = mount(<GstRegisterPage />)
     await screen.findByText('INV-2299')
     expect(screen.getByRole('columnheader', { name: /Next step/ })).toBeInTheDocument()
-    for (const h of [/Tax deposited/, /Sent to customer/]) expect(screen.queryByRole('columnheader', { name: h })).toBeNull()
+    for (const h of [/GST paid to FBR/, /Invoice posted/]) expect(screen.queryByRole('columnheader', { name: h })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'More' }))
     expect(await screen.findByRole('menuitem', { name: 'Export CSV' })).toBeInTheDocument()
     await user.keyboard('{Escape}')
@@ -205,7 +205,7 @@ describe('GST register (M01)', () => {
     expect(screen.getByRole('radio', { name: /Not sent yet/ })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Search invoices' })).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /Select all in October 2026/ }))
-    await user.click(screen.getByRole('button', { name: 'Sent to customer today' }))
+    await user.click(screen.getByRole('button', { name: 'Invoice posted today' }))
     await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tcs_sent')).toBe(true))
   })
 
@@ -243,7 +243,7 @@ describe('GST register (M01)', () => {
   })
 })
 
-describe('Who owes us (M02)', () => {
+describe('To collect (M02)', () => {
   it('admin sees balances, and Record payment in ONE place: the picked order\'s panel (no icon button on every row)', async () => {
     db()
     mount(<ReceivablesPage />)
@@ -260,7 +260,7 @@ describe('Who owes us (M02)', () => {
     expect(screen.getByText('Balances', { selector: 'h2' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Record payment/ })).not.toBeInTheDocument()
     expect(d.calls.filter(c => c.target === 'payments_in')).toHaveLength(0)
-    expect(within(screen.getByRole('table', { name: 'Who owes us' })).getAllByRole('row').length).toBeGreaterThan(1)
+    expect(within(screen.getByRole('table', { name: 'To collect' })).getAllByRole('row').length).toBeGreaterThan(1)
   })
 
   it('has ONE info tip beside the Balances heading, covering the gross balance and reminders', async () => {
@@ -288,7 +288,7 @@ describe('Who owes us (M02)', () => {
     expect(screen.getByText(/Every order is paid in full/)).toBeInTheDocument()
   })
 
-  it('the filter carries no counts: Overdue is not a needs-you count (the Who owes us tab carries the to-remind one)', async () => {
+  it('the filter carries no counts: Overdue is not a needs-you count (the To collect tab carries the to-remind one)', async () => {
     db()
     mount(<ReceivablesPage />)
     await screen.findAllByText('Punjab Cement Ltd')
@@ -302,7 +302,7 @@ describe('Who owes us (M02)', () => {
     db()
     mount(<ReceivablesPage />)
     await screen.findAllByText('Punjab Cement Ltd')
-    const table = screen.getByRole('table', { name: 'Who owes us' })
+    const table = screen.getByRole('table', { name: 'To collect' })
     expect(within(table).getByRole('columnheader', { name: /Next step/ })).toBeInTheDocument()
     for (const h of [/^Payment/, /Last reminder/]) expect(within(table).queryByRole('columnheader', { name: h })).toBeNull()
     expect(table.querySelector('[data-status-text], [data-tone]')).not.toBeNull()

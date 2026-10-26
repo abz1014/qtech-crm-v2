@@ -244,7 +244,7 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await expect(page.getByText('2 items found').first()).toBeVisible()
 
     // A tab in the top bar: the screen asks first, and Stay keeps everything.
-    const rfqsTab = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs/ })
+    const rfqsTab = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Jobs/ })
     await rfqsTab.click()
     const ask = page.getByRole('dialog', { name: 'Leave this new RFQ?' })
     await expect(ask).toContainText(`${s.customer.name}, 2 items`)
@@ -253,11 +253,11 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toBeVisible()
     await rfqsTab.click()
     await page.getByRole('dialog', { name: 'Leave this new RFQ?' }).getByRole('button', { name: 'Leave, keep the draft' }).click()
-    await expect(page).toHaveURL(/\/rfqs$/)
+    await expect(page).toHaveURL(/\/jobs/)
     expect(await rfqsOf(s.customer.id)).toHaveLength(0) // nothing was saved to the database
 
     // Back on New RFQ: the draft is offered, and Continue brings it all back.
-    await page.getByRole('button', { name: 'New RFQ' }).click()
+    await page.goto('/rfqs/new') // the Jobs list is where leaving goes now; New enquiry has its own address
     await expect(page.getByText(/You have a draft from .* today/)).toBeVisible()
     await expect(page.getByText(`${s.customer.name}, 2 items. It is kept on this device until you save it or start new; Start new forgets it.`)).toBeVisible()
     await review(page, 'intake-draft-offer-1440')
@@ -270,8 +270,8 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await expect(page.getByText(/is saved/)).toBeVisible()
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
     await rfqsTab.click()
-    await expect(page).toHaveURL(/\/rfqs$/)
-    await page.getByRole('button', { name: 'New RFQ' }).click()
+    await expect(page).toHaveURL(/\/jobs/)
+    await page.goto('/rfqs/new')
     await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
     await expect(page.getByText(/You have a draft/)).toHaveCount(0)
   })
@@ -283,9 +283,9 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await expect(page.getByText('2 items found').first()).toBeVisible()
-    await page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs/ }).click()
+    await page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Jobs/ }).click()
     await page.getByRole('dialog', { name: 'Leave this new RFQ?' }).getByRole('button', { name: 'Leave, keep the draft' }).click()
-    await expect(page).toHaveURL(/\/rfqs$/)
+    await expect(page).toHaveURL(/\/jobs/)
 
     await page.goto(`/companies/${other.id}`)
     await page.locator('#main').getByRole('button', { name: 'New RFQ', exact: true }).click()

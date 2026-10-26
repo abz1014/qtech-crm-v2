@@ -3,7 +3,7 @@ id: delete-revision
 title: Delete the latest quotation or PO revision sent by mistake
 roles: admin
 keywords: delete revision, wrong quotation, wrong PO, remove revision, latest revision
-screens: /rfqs, /orders
+screens: /rfqs, /orders, /jobs
 related: revise-quotation
 ---
 1. For a quotation: open the RFQ, tap the three dots on the latest revision, then [Delete revision].

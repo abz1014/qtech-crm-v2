@@ -24,7 +24,7 @@ import {
  * for shows "Record" (one tap: one expense, dated its day of the month or today, with (recurring_id, period) so it can only
  * exist once), paid the way the template says (0086), else as its category usually is. "Record all N" records every due one.
  * 0087 for-month: a template paid on day 1 to 10 (salaries on the 5th) pays LAST month's bill, so in October it is due "for
- * September" and Month end's "monthly bills recorded" check for September agrees with this screen.
+ * September" and Lock a month's "monthly bills recorded" check for September agrees with this screen.
  * With none set up the panel is one line (grader: the explanation lives in the (i)). Record is a secondary button: the
  * screen's one green button is Add expenses.
  */

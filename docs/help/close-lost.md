@@ -3,7 +3,7 @@ id: close-lost
 title: Close an RFQ that was lost
 roles: sales, admin
 keywords: close, lost, no reply, cancel, reason, dead, reopen
-screens: /rfqs, /todo
+screens: /rfqs, /todo, /jobs
 ---
 1. Open the RFQ. Quotation already sent? Tap [Mark lost] beside [Mark won]. Otherwise tap [More].
 2. Pick the reason (in [More] it is under [Close the RFQ because]).

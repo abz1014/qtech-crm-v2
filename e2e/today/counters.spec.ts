@@ -57,17 +57,17 @@ test('no two counters disagree: Today badge = header = rows due now; the board a
     expect(t.header, 'Today header vs the top-bar badge').toBe(t.badge)
     expect(t.rows, 'rows in Late + Today vs the header').toBe(t.header)
     // In-app navigation, as a person moves: the pages read the shell's numbers (a reload would draw the lede before they load)
-    await nav(page).getByRole('link', { name: /^RFQs/ }).click()
+    await page.goto('/rfqs') // the old RFQ board (kept on this device by openAs): it still says the RFQ share of the one count
     await expect(page.getByRole('heading', { name: 'RFQs', level: 1 })).toBeVisible()
     await expect(page.getByText(t.rfqRows ? new RegExp(`^\\d+ open · ${t.rfqRows} need you$`) : /^\d+ open$/), 'the RFQ board\'s "need you" vs the RFQ rows due now on Today').toBeVisible({ timeout: 5_000 })
     expect(await ledeNeed(page)).toBe(t.rfqRows)
-    await nav(page).getByRole('link', { name: /^Orders/ }).click()
+    await page.goto('/orders')
     await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
     await expect(page.getByText(new RegExp(`^${t.orderRows} need you · \\d+ active$`)), 'the Orders page\'s "need you" vs the order rows due now on Today').toBeVisible({ timeout: 5_000 })
   }).toPass({ timeout: 90_000 })
 
-  // One badge only: RFQs, Orders and Money carry no number
-  for (const name of ['RFQs', 'Orders', 'Money']) await expect(nav(page).getByRole('link', { name, exact: true })).toBeVisible()
+  // One badge only: Jobs, Money and Companies carry no number
+  for (const name of ['Jobs', 'Money', 'Companies']) await expect(nav(page).getByRole('link', { name, exact: true })).toBeVisible()
   await expect(nav(page).locator('[data-needs-count]')).toHaveCount(1)
 
   // The fresh RFQ is due now; the 400-day-old one is not counted: it waits in the grey fold, its date in words

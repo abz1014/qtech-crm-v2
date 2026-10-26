@@ -60,13 +60,13 @@ interface CheckDef {
 
 /**
  * The checks, in the order of the approved mockup (g2-month-end "Checklist"), named in plain words (owner glossary
- * 2026-10-19: Bank tick is "Match bank statement", Provisional margin is "Margin not final", Unresolved payments are
+ * 2026-10-19: Bank tick is "Bank check", Provisional margin is "Margin not final", Unresolved payments are
  * "Payments not split"). Each links to the screen where it is fixed.
  *
- * ONE definition of "to match" (round 3; it used to say 5 here and 7 on Match bank statement): a line on the bank statement
+ * ONE definition of "to match" (round 3; it used to say 5 here and 7 on Bank check): a line on the bank statement
  * not ticked yet and dated up to the month's end, where an FBR payment is ONE line per PSID (one bank debit, however many
  * invoices it covers). So the bank card counts bank payments in, bank expenses out AND the FBR payment lines, exactly the lines
- * Match bank statement lists as not ticked (`bankLinesToMatch`). The database still answers two rows (bank_unticked: payments
+ * Bank check lists as not ticked (`bankLinesToMatch`). The database still answers two rows (bank_unticked: payments
  * and expenses; fbr_deposits_unticked: invoices, with their PSID groups in the details); `buildChecklist` adds them up.
  */
 export const CHECKS: readonly CheckDef[] = [
@@ -76,7 +76,7 @@ export const CHECKS: readonly CheckDef[] = [
     unit: ['item', 'items'],
     has: () => 'Bank payments, bank expenses and FBR payments dated up to month end and not ticked yet.',
     none: () => 'Every bank item is matched to a statement.',
-    linkLabel: 'Match bank statement',
+    linkLabel: 'Bank check',
     to: m => `/money/month-end/bank?month=${m}`,
     glyph: 'landmark',
   },
@@ -116,7 +116,7 @@ export const CHECKS: readonly CheckDef[] = [
     unit: ['invoice', 'invoices'],
     has: m => `Invoices dated up to the end of ${monthName(m)} with no FBR deposit date.`,
     none: () => 'Every invoice has its FBR deposit.',
-    linkLabel: 'Open Invoices & GST',
+    linkLabel: 'Open Invoices',
     to: () => '/money/gst-register',
     glyph: 'file-check',
   },
@@ -126,7 +126,7 @@ export const CHECKS: readonly CheckDef[] = [
     unit: ['payment', 'payments'],
     has: () => 'Counted in gross but not yet split into net and GST, because nobody has said whether GST is included in the order price.',
     none: () => 'Every payment is split into net and GST.',
-    linkLabel: 'Open Who owes us',
+    linkLabel: 'Open To collect',
     to: () => '/money/receivables',
     glyph: 'circle-dashed',
   },
@@ -243,7 +243,7 @@ const plain = (parts: readonly Fact[]): string => parts.map(p => (typeof p === '
 
 /**
  * The one definition of "to match" for a statement month: the bank items not ticked (payments in, expenses out) plus the FBR
- * payment LINES not ticked, one per PSID (an invoice with no PSID is its own line). Month end's bank card and Match bank
+ * payment LINES not ticked, one per PSID (an invoice with no PSID is its own line). Lock a month's bank card and Match bank
  * statement's "N to match" both say this number.
  */
 export const bankLinesToMatch = (bankItems: number, fbrLines: number): number => bankItems + fbrLines

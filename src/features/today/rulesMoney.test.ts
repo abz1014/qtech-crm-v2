@@ -141,7 +141,7 @@ describe('M08 TCS not sent (admin and sales)', () => {
   it('is one item with a count and the age of the oldest', () => {
     const e = ruleTcsNotSent(ctx({ invoices: [inv(), inv({ id: 'i2', invoiceDate: '2026-11-10', courierState: 'copy_received' })] }))
     expect(e).toHaveLength(1)
-    expect(e[0]).toMatchObject({ rule: 'tcs_not_sent', title: '2 invoices not sent by TCS', party: 'Oldest invoice 17 days ago', group: 'ready' })
+    expect(e[0]).toMatchObject({ rule: 'tcs_not_sent', title: '2 invoices not posted', party: 'Oldest invoice 17 days ago', group: 'ready' })
   })
   it('ignores invoices already sent, delivered, undated, or older than 60 days', () => {
     expect(ruleTcsNotSent(ctx({ invoices: [inv({ courierState: 'sent' }), inv({ id: 'a', courierState: 'delivered_to_client' }), inv({ id: 'b', invoiceDate: null }), inv({ id: 'c', invoiceDate: '2026-09-01' })] }))).toEqual([])

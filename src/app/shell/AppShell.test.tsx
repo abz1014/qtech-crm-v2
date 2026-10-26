@@ -50,42 +50,38 @@ function navs() {
 }
 
 describe('page shell navigation, per role', () => {
-  it('admin: all five, in order, on both bars', () => {
+  it('admin: all four, in order, on both bars', () => {
     render(signedIn('admin'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
         "To do -> /todo",
-        "RFQs -> /rfqs",
-        "Orders -> /orders",
-        "Companies -> /companies",
+        "Jobs -> /jobs",
         "Money -> /money",
+        "Companies -> /companies",
       ]
     `)
     expect(navs()[1]).toEqual(navs()[0])
   })
 
-  it('sales: all five, in order, on both bars', () => {
+  it('sales: all four, in order, on both bars', () => {
     render(signedIn('sales'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
         "To do -> /todo",
-        "RFQs -> /rfqs",
-        "Orders -> /orders",
-        "Companies -> /companies",
+        "Jobs -> /jobs",
         "Money -> /money",
+        "Companies -> /companies",
       ]
     `)
     expect(navs()[1]).toEqual(navs()[0])
   })
 
-  it('engineer: four, never Money (top bar or tab bar)', () => {
+  it('engineer: To do and Jobs only, never Money or Companies (top bar or tab bar)', () => {
     render(signedIn('engineer'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
         "To do -> /todo",
-        "RFQs -> /rfqs",
-        "Orders -> /orders",
-        "Companies -> /companies",
+        "Jobs -> /jobs",
       ]
     `)
     expect(navs()[1]).toEqual(navs()[0])
@@ -140,7 +136,22 @@ describe('routing and role landing', () => {
   })
 
   it('a sub-route keeps its section active', () => {
-    render(signedIn('admin'), '/rfqs/177')
-    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/rfqs')
+    render(signedIn('admin'), '/jobs/177')
+    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/jobs')
+  })
+})
+
+describe('the engineer\'s phone bar (P7-C)', () => {
+  it('only an engineer has the Photo or note button and I paid; admin and sales have neither', () => {
+    render(signedIn('engineer'), '/todo')
+    expect(el.querySelector('[data-engineer-fab]')).not.toBeNull()
+    act(() => root?.unmount())
+    el.remove()
+    render(signedIn('admin'), '/todo')
+    expect(el.querySelector('[data-engineer-fab]')).toBeNull()
+    act(() => root?.unmount())
+    el.remove()
+    render(signedIn('sales'), '/todo')
+    expect(el.querySelector('[data-engineer-fab]')).toBeNull()
   })
 })

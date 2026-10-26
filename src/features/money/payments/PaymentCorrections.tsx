@@ -46,7 +46,7 @@ import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
  */
 export const VOID_QUICK_REASONS = ['Typed twice', 'Wrong order', 'Cheque bounced'] as const
 
-const BANK_TIP = 'Ticked against the bank statement. Untick it first in Match bank statement, then change it.'
+const BANK_TIP = 'Ticked against the bank statement. Untick it first in Bank check, then change it.'
 
 /** The refusal sentence, with a way forward for a closed month or a bank tick. */
 export function CorrectionError({ error, line }: { error: unknown; line?: PaymentLine }) {
@@ -57,7 +57,7 @@ export function CorrectionError({ error, line }: { error: unknown; line?: Paymen
   if (m.code === 'bank_ticked')
     link = (
       <Link to={month ? `/money/month-end/bank?month=${month}` : '/money/month-end/bank'} className="font-medium text-primary underline">
-        Open Match bank statement
+        Open Bank check
       </Link>
     )
   return (

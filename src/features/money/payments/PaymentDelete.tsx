@@ -18,7 +18,7 @@ import { useDeletePayment } from '@/features/money/payments/correctionHooks'
  * the confirm instead of Delete (the server's same sentence still shows if one arrives anyway):
  *   voided            kept as history (void is how a payment is taken out; it cannot be deleted)
  *   correction_chain  part of a correction, kept as history
- *   bank_ticked       ticked against a bank statement: untick it in Match bank statement, then delete
+ *   bank_ticked       ticked against a bank statement: untick it in Bank check, then delete
  */
 export const DELETE_BLOCK_TEXT: Record<Exclude<DeleteBlock, 'bank_ticked'>, string> = {
   voided: 'This payment is voided and kept as history. It cannot be deleted.',
@@ -32,7 +32,7 @@ export function paymentBlockedNode(block: DeleteBlock, line: Pick<PaymentLine, '
       <>
         This payment is ticked against the {month ? monthKeyLabel(month) : ''} bank statement. Untick it first, then delete it.{' '}
         <Link to={month ? `/money/month-end/bank?month=${month}` : '/money/month-end/bank'} className="font-medium text-primary underline">
-          Open Match bank statement
+          Open Bank check
         </Link>
       </>
     )
@@ -74,7 +74,7 @@ export function useDeletePaymentFlow(line: PaymentLine, orderNumber: number, inC
       }
       blocked={block ? paymentBlockedNode(block, line) : null}
       onConfirm={confirm}
-      errorMessage={e => mapPgError(e, { entity: 'payment' }).message.replace(/An admin can reopen it\.?$/, 'Reopen it on Month end first.')}
+      errorMessage={e => mapPgError(e, { entity: 'payment' }).message.replace(/An admin can reopen it\.?$/, 'Reopen the month first, in Lock a month.')}
     />
   ) : null
 

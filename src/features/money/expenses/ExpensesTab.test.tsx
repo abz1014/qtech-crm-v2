@@ -97,14 +97,14 @@ describe('Expenses list (0086)', () => {
     await user.click(screen.getByRole('button', { name: 'More for Water of 500' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete expense' }))
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
-    expect((await screen.findAllByText('September 2026 is closed. Reopen it on Month end first.')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('September 2026 is closed. Reopen the month first, in Lock a month.')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Expense deleted')).not.toBeInTheDocument()
     expect(screen.getByTestId('expenses-month-total')).toHaveTextContent('3 expenses')
   })
 
   it('a closed month: one line says so, every row is locked and nothing opens for editing', async () => {
     setup(['2026-09'])
-    expect(await screen.findByTestId('expenses-closed')).toHaveTextContent('September 2026 is closed. Month closed. Reopen it on Month end to change or delete.')
+    expect(await screen.findByTestId('expenses-closed')).toHaveTextContent('September 2026 is closed. Month closed. Reopen the month first, in Lock a month, to change or delete.')
     await screen.findByTestId('expenses-month-total')
     expect(screen.queryByRole('button', { name: /^More for/ })).not.toBeInTheDocument()
     expect(screen.getAllByText('Locked, the month is closed').length).toBe(3)

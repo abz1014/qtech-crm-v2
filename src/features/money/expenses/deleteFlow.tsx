@@ -11,11 +11,11 @@ import { pkr, type ListedExpense } from '@/features/money/expenses/model'
  * and is permanent (the audit log keeps the row). "Expense deleted" shows only after the server confirms; on an error the
  * server's sentence is shown and the row stays. Used by the dialog's Delete button and the row's "⋯" menu, on phone and desktop.
  */
-export const CLOSED_MONTH_LINE = 'Month closed. Reopen it on Month end to change or delete.'
+export const CLOSED_MONTH_LINE = 'Month closed. Reopen the month first, in Lock a month, to change or delete.'
 
 /** The database says "An admin can reopen it."; the screen says where. */
 export function deleteErrorMessage(e: unknown): string {
-  return mapPgError(e, { entity: 'expense' }).message.replace(/An admin can reopen it\.?$/, 'Reopen it on Month end first.')
+  return mapPgError(e, { entity: 'expense' }).message.replace(/An admin can reopen it\.?$/, 'Reopen the month first, in Lock a month.')
 }
 
 export function useDeleteExpenseFlow(categoryName: (r: ListedExpense) => string, onDeleted?: (r: ListedExpense) => void) {

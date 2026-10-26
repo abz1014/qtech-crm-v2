@@ -600,8 +600,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
           <Field
             label="Payment terms"
             requirement="optional"
-            // Who owes us is a money page the engineer never sees (DECISIONS 2026-10-13), so it is not named to them.
-            help={`Days the customer has to pay after the invoice.${role === 'engineer' ? '' : ' Who owes us marks it late after that.'}`}
+            // To collect is a money page the engineer never sees (DECISIONS 2026-10-13), so it is not named to them.
+            help={`Days the customer has to pay after the invoice.${role === 'engineer' ? '' : ' To collect marks it late after that.'}`}
             source={
               quotedDays !== null && !termsTouched
                 ? 'from the quotation'

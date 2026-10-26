@@ -33,7 +33,7 @@ export interface ReceivablesListArgs {
   p_state?: 'open' | 'unpaid' | 'part' | 'overdue' | 'settled'
   p_company_id?: string
   p_order_id?: string
-  /** Only orders with a gross above 0 (what Who owes us lists). */
+  /** Only orders with a gross above 0 (what To collect lists). */
   p_with_value?: boolean
 }
 
@@ -95,7 +95,7 @@ export async function fetchImportedOrderIds(): Promise<Set<string>> {
 }
 
 /**
- * The Who owes us figures (receivableTotals' rules) in one row from receivables_summary() (0076: 7 working days). Null when the
+ * The To collect figures (receivableTotals' rules) in one row from receivables_summary() (0076: 7 working days). Null when the
  * function answers no row (a deactivated user): the page then counts from the rows it has.
  */
 export async function getReceivablesSummary(today: string): Promise<ReceivableTotals | null> {

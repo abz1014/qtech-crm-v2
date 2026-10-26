@@ -25,7 +25,7 @@ function usePaymentDraft(orderId: string) {
 
 /*
  * Sales' one green button on an invoiced order the customer still owes on (UX audit P1): the payment reminder in the approved wording
- * (rfqs/lib/paymentReminder.ts, the same text Today and Who owes us copy), put on the clipboard for WhatsApp. One tap, nothing typed.
+ * (rfqs/lib/paymentReminder.ts, the same text Today and To collect copy), put on the clipboard for WhatsApp. One tap, nothing typed.
  * It only copies: marking the reminder sent stays on Today and Money ("Copy and mark reminded"). Admin and sales only (the invoices it
  * reads are refused to an engineer, who never sees this button).
  */

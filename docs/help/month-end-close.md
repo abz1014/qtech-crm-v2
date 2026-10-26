@@ -6,7 +6,7 @@ keywords: month end, close, closing, checklist, freeze, books, reopen
 screens: /money/month-end
 related: match-bank, month-reports
 ---
-1. Tap [Money], then [Month end]. Today reminds you in the first 10 days of the month.
+1. Tap [Money], then [Lock a month]. Today reminds you in the first 10 days of the month.
 2. Only the checks with something to look at are listed. Tap one to fix it.
 3. None of them blocks. Tap [Close <month>], then confirm. One tap closes one month only.
 4. Months close one at a time, oldest first. If an older month is still open, the button names that month. Close it, then tap again for the next.

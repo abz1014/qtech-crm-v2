@@ -6,9 +6,9 @@ keywords: invoice, edit, change, number, date, net, gst, delete, remove, wrong a
 screens: /money/gst-register
 related: create-invoice, remove-payment, correct-payment, tcs-fbr
 ---
-1. Tap [Invoices & GST], then the invoice. Change [Invoice number], [Invoice date], [Net amount, PKR] or [GST, PKR].
+1. Tap [Invoices], then the invoice. Change [Invoice number], [Invoice date], [Net amount, PKR] or [GST, PKR].
 2. If it says the month's GST return may already be filed, tick [I understand], then tap [Save]. File a revised return with FBR.
 3. Tap [History] to see who changed what, and when.
 4. An admin can tap [Delete invoice]. It cannot be undone. A payment is deleted from its ⋯ menu on the order, with [Delete…].
 
-Tip: A month that is closed must be reopened in [Month end] first. An invoice or payment ticked in [Match bank statement] must be unticked first. A voided payment or one in a correction is kept as history.
+Tip: A month that is closed must be reopened in [Lock a month] first. An invoice or payment ticked in [Bank check] must be unticked first. A voided payment or one in a correction is kept as history.

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Briefcase, Building2, FileText, List as ListIcon, Package, Plus, Receipt, ShoppingCart, UserRound, Wrench } from 'lucide-react'
 import { usePaletteSource } from '@/app/palette/usePalette'
+import { useSession } from '@/app/session'
 import type { JobRow } from '@/features/jobs/api'
 import type { stageModel as StageModel } from '@/features/jobs/lib/stages'
 import { searchAll, type SearchHit, type SearchKind, type SearchRole } from '@/features/search/api'
@@ -36,8 +37,9 @@ const JOBS = 'Jobs'
  * Jobs (redesign phase 5): the same jobs the Jobs page's search box finds, because both call features/jobs/api.ts findJobs (the
  * palette hands over the search_all answer it already has). A job that cannot be read never breaks the rest of the palette.
  */
-function jobItem(j: JobRow, stageModel: typeof StageModel): PaletteItem {
-  const stands = stageModel({ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind }).label
+function jobItem(j: JobRow, office: boolean, stageModel: typeof StageModel): PaletteItem {
+  // an engineer's words leave out the money states ("advance received") and call the Invoice stop Billing
+  const stands = stageModel({ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind, office }).label
   return { id: `job-${j.key}`, group: JOBS, label: `Job ${j.key} · ${j.companyName}`, meta: [j.items, stands].filter(Boolean).join(' · ') || undefined, icon: Briefcase, href: `/jobs/${encodeURIComponent(j.key)}` }
 }
 
@@ -54,7 +56,7 @@ const LIST_NAME: Record<SearchKind, string> = {
   order: 'Orders',
   item: 'Orders',
   po: 'Orders',
-  invoice: 'Invoices & GST',
+  invoice: 'Invoices',
 }
 
 /**
@@ -120,7 +122,7 @@ function toItem(h: SearchHit): PaletteItem {
   return { id: `rfq-${h.id}`, group, label: h.label, meta: h.meta ?? undefined, icon: FileText, href: `/rfqs/${h.id}` }
 }
 
-export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
+export function searchPaletteSource(debounceMs = DEBOUNCE_MS, office = false): PaletteSource {
   return {
     id: 'search',
     group: 'Results',
@@ -138,7 +140,7 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
       const jobs = await findJobs(q, signal, hits).catch(() => [] as JobRow[])
       if (signal.aborted) return []
       const jobItems: PaletteItem[] = [
-        ...jobs.slice(0, SHOWN_PER_KIND).map(j => jobItem(j, stageModel)),
+        ...jobs.slice(0, SHOWN_PER_KIND).map(j => jobItem(j, office, stageModel)),
         ...(jobs.length > SHOWN_PER_KIND ? [{ id: 'see-all-jobs', group: JOBS, label: `See all ${jobs.length >= 200 ? '200+' : jobs.length} results`, meta: 'In Jobs', icon: ListIcon, href: `/jobs?q=${encodeURIComponent(q)}` }] : []),
       ]
       const items = kindOrder(q).flatMap(kind => {
@@ -163,6 +165,8 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
 
 /** Register the search source for as long as the caller is mounted (the app shell mounts it for the whole session). */
 export function useSearchPaletteSource() {
-  const source = useMemo(() => searchPaletteSource(), [])
+  const session = useSession()
+  const office = session.status === 'signed-in' && session.user.role === 'engineer'
+  const source = useMemo(() => searchPaletteSource(DEBOUNCE_MS, office), [office])
   usePaletteSource(source)
 }

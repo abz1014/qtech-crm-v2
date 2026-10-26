@@ -3,7 +3,7 @@ import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } fro
 import { axeViolations } from '../support/axe'
 
 /*
- * M12 end to end, against the local CI stack: Money > Month end > Match bank statement (the old Bank tick) for the admin, through
+ * M12 end to end, against the local CI stack: Money > Lock a month > Bank check (the old Bank tick) for the admin, through
  * the real login form. It is reached from the checklist; the page has a back link, never a strip of month-end tabs.
  *
  * FE-2 targets asserted here (BUILD_PLAN A6.5):
@@ -211,7 +211,7 @@ test.describe('bank tick (M12)', () => {
       })
       await openAs(page, role, '/money/month-end/bank')
       await expect(
-        page.getByRole('heading', { name: role === 'sales' ? 'Match bank statement is for admins' : 'Money is for admins and sales' }),
+        page.getByRole('heading', { name: role === 'sales' ? 'Bank check is for admins' : 'Money is for admins and sales' }),
       ).toBeVisible()
       await expect(page.getByTestId('bank-in')).toHaveCount(0)
       expect(seen, `${role} must not fetch bank data`).toEqual([])
@@ -234,8 +234,8 @@ test.describe('bank tick (M12)', () => {
     await addDeposit(order.id, `PSID ${Math.floor(Math.random() * 1e8)}`, 12000)
     await openAs(page, 'admin', '/money/month-end/bank')
     await expect(page.getByTestId('bank-state')).toContainText(/\d+ to match/)
-    await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Back to Month end' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bank check', level: 2 })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Back to Lock a month' })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Month-end views' })).toHaveCount(0)
     await page.waitForLoadState('networkidle')
     await review(page, 'm12-bank-tick-1440')

@@ -60,14 +60,14 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
   ('b1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'INV-1', 100, 18);
 
 -- ------------------------------------------------------------------ table constraints
-select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id)
+select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices)
                   values ('e0000000-0000-4000-8000-000000000001', 'rfq-files', 'rfq1/a.jpg', 'a.jpg', 'image/jpeg',
-                          1000, 'd0000000-0000-4000-8000-000000000001')$$,
+                          1000, 'd0000000-0000-4000-8000-000000000001', false)$$,
   'an RFQ attachment is accepted');
 select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id,
-                                                  clarification_id)
+                                                  clarification_id, has_prices)
                   values ('e0000000-0000-4000-8000-000000000002', 'rfq-files', 'rfq1/b.jpg', 'b.jpg', 'image/jpeg',
-                          5242880, 'd0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001')$$,
+                          5242880, 'd0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', false)$$,
   'a clarification attachment of exactly 5 MB is accepted');
 select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id)
                   values ('e0000000-0000-4000-8000-000000000003', 'gst-receipts', 'inv1/a.pdf', 'a.pdf',
@@ -104,8 +104,8 @@ select throws_ok($$insert into public.attachments (bucket, path, file_name, mime
                    values ('rfq-files', 'rfq1/a.jpg', 'a2.jpg', 'image/jpeg', 1,
                            'd0000000-0000-4000-8000-000000000001')$$,
   '23505', null, 'a (bucket, path) pair is unique');
-select lives_ok($$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id)
-                  values ('rfq-files', 'rfq2/a.jpg', 'a.jpg', 'image/jpeg', 1, 'd0000000-0000-4000-8000-000000000002')$$,
+select lives_ok($$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices)
+                  values ('rfq-files', 'rfq2/a.jpg', 'a.jpg', 'image/jpeg', 1, 'd0000000-0000-4000-8000-000000000002', false)$$,
   'the same file name under another path is accepted');
 select throws_ok($$insert into public.attachments (bucket, path, mime_type, size_bytes, rfq_id)
                    values ('rfq-files', 'rfq2/z.jpg', 'image/jpeg', 1, 'd0000000-0000-4000-8000-000000000002')$$,

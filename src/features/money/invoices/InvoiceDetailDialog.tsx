@@ -35,7 +35,7 @@ import { pkr } from '@/features/money/expenses/model'
  * (uploaded to gst-receipts) and a note. Nothing here is required; the monthly stamps on the register do the usual work and this
  * is where a single step is corrected or filled in ("Client received" is set here, when the customer confirms).
  * W11: the invoice number, date, net and GST are edited here too, in an open month (a closed month shows them as text and the
- * lock line: reopen it on Month end first; the database refuses a change there as well). A change, or a delete, of an invoice whose
+ * lock line: reopen it on Lock a month first; the database refuses a change there as well). A change, or a delete, of an invoice whose
  * GST return may already be filed (an FBR GST payment or PSID on that month, or past the 18th of the next month) warns with a tick
  * and goes on: never a block. Delete (admin) is permanent; History shows who changed what.
  */
@@ -260,7 +260,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         <fieldset className="grid gap-4 md:grid-cols-2">
           <legend className="mb-2 text-sm font-semibold">Courier (TCS)</legend>
           {date('copyReceivedOn', 'Copy received')}
-          {date('tcsSentOn', 'Sent by TCS')}
+          {date('tcsSentOn', 'Invoice posted')}
           <FormField<Values, 'tcsNumber'> name="tcsNumber" label="Consignment number" requirement="optional">
             {f => <TextField {...f} autoComplete="off" className="num" />}
           </FormField>
@@ -272,7 +272,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
             {f => <TextField {...f} autoComplete="off" spellCheck={false} className="num" />}
           </FormField>
           {date('receiptOn', 'Receipt received')}
-          {date('depositedOn', 'Tax deposited')}
+          {date('depositedOn', 'GST paid to FBR')}
           <FormField<Values, 'depositAmount'> name="depositAmount" label="Deposit amount, PKR" requirement="optional" help="Defaults to the GST amount when you stamp the month.">
             {f => <NumberInput {...f} />}
           </FormField>

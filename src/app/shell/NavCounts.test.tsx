@@ -12,7 +12,7 @@ import { installFakeDb } from '@/test/fakeSupabase'
 /*
  * E-SH-01, revised by the owner's redesign approval of 2026-10-22 (phase 0, "stop the noise"): ONE number in the top bar, on
  * Today, and it means "needs you" by the one definition (features/today/needsYou.ts): due today or late, not Waiting, not older
- * than 30 days. RFQs, Orders and Money carry no number any more. Every number still comes from the person's own Today list.
+ * than 30 days. Jobs, Money and Companies carry no number any more. Every number still comes from the person's own Today list.
  */
 const twoDaysAgo = addDays(businessToday(), -2) as string
 const open = (n: number, receivedOn = twoDaysAgo) => ({ rfq_id: `r${n}`, number: n, company_id: 'c', owner_id: null as string | null, received_on: receivedOn, due_on: null, outcome: 'open', sourcing_state: 'not_floated', clarification_state: 'none', bid_state: 'to_bid', companies: { name: 'Acme' }, users: null })
@@ -45,12 +45,11 @@ describe('the top bar has one number: Today\'s "needs you"', () => {
     expect(fake.calls.some(c => c.target === 'v_order_state' && /head|count/.test(JSON.stringify(c)))).toBe(false)
   })
 
-  it('Today counts the items due today or late (three RFQs nobody asked suppliers about); RFQs, Orders and Money carry no number', async () => {
+  it('Today counts the items due today or late (three RFQs nobody asked suppliers about); Jobs, Money and Companies carry no number', async () => {
     const { bar } = mount('admin', [open(1), open(2), open(3)])
     expect(await within(bar).findByRole('link', { name: /^To do\s?, 3 need you$/ })).toBeInTheDocument()
     // "Plan commissioning" and the FBR roll-up are ready-to-move chores: listed on Today, never counted
-    expect(within(bar).getByRole('link', { name: 'RFQs' })).toBeInTheDocument()
-    expect(within(bar).getByRole('link', { name: 'Orders' })).toBeInTheDocument()
+    expect(within(bar).getByRole('link', { name: 'Jobs' })).toBeInTheDocument()
     expect(within(bar).getByRole('link', { name: 'Money' })).toBeInTheDocument()
     expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
   })

@@ -51,7 +51,7 @@ export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled:
     <>
       {bankTickedSentence(ticked || invoice.invoice_date || '')}{' '}
       <Link to={`/money/month-end/bank?month=${ticked.slice(0, 7)}`} className="font-medium text-primary underline">
-        Open Match bank statement
+        Open Bank check
       </Link>
     </>
   ) : null
@@ -72,7 +72,7 @@ export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled:
       blocked={blocked}
       tick={opts.gstMayBeFiled ? { warning: GST_FILED_WARNING, label: 'I understand' } : undefined}
       onConfirm={confirm}
-      errorMessage={e => mapPgError(e, { entity: 'invoice' }).message.replace(/An admin can reopen it\.?$/, 'Reopen it on Month end first.')}
+      errorMessage={e => mapPgError(e, { entity: 'invoice' }).message.replace(/An admin can reopen it\.?$/, 'Reopen the month first, in Lock a month.')}
     />
   ) : null
 

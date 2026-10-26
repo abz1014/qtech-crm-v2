@@ -145,7 +145,7 @@ describe('Delete a payment (0092)', () => {
     await user.click(await screen.findByRole('menuitem', { name: 'Delete…' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText(/ticked against the October 2026 bank statement/)).toBeInTheDocument()
-    expect(within(dialog).getByRole('link', { name: 'Open Match bank statement' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('link', { name: 'Open Bank check' })).toBeInTheDocument()
     expect(within(dialog).queryByRole('button', { name: 'Delete' })).toBeNull()
   })
 

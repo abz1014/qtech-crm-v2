@@ -126,7 +126,7 @@ function CostsLine({ actual, expected }: { actual: number; expected: number | nu
           Costs <span className="num">{formatAmount(actual)}</span>
         </>
       ) : (
-        'No costs yet'
+        'Costs not entered yet'
       )}
       {expected !== null ? (
         <>
