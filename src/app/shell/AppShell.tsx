@@ -69,6 +69,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   }, [settled])
   // The Radix half of every popover and menu is downloaded once the content is drawn (src/ui/Popover.tsx), not with the first page.
   useEffect(() => {
+    if (import.meta.env.MODE === 'test') return // loaded up front by src/test/setup.ts
     let t: number | undefined
     whenContentDrawn(() => {
       t = window.setTimeout(() => { void preloadPopover(); void preloadDialog() }, 1500)

@@ -14,6 +14,8 @@ export function useUpgrade(load: () => Promise<unknown>) {
   const [on, setOn] = useState(false)
   const [openFirst, setOpenFirst] = useState(false)
   useEffect(() => {
+    // Tests make the swap themselves (a click): a timer firing in the middle of another test's wait only adds a lazy import to a busy machine.
+    if (import.meta.env.MODE === 'test') return
     let t: number | undefined
     whenContentDrawn(() => {
       t = window.setTimeout(() => setOn(true), READY_AFTER_MS)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { History as HistoryIcon } from 'lucide-react'
 import { MenuItem } from '@/ui/Popover'
 import { useSeesPrices } from '@/app/session'
+import { whenContentDrawn } from '@/lib/afterContent'
 import { useRecordHistory, type HistoryTable } from '@/features/history/api'
 import { lastChangedLine } from '@/features/history/lastChangedLine'
 
@@ -22,13 +23,16 @@ export function LastChanged({ table, id, className }: { table: HistoryTable; id:
   // Asked for once the page has drawn, never in the page's first round of reads (perf: the RFQ and order pages' LCP).
   const [ready, setReady] = useState(false)
   useEffect(() => {
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (h: number) => void }
-    if (w.requestIdleCallback) {
-      const h = w.requestIdleCallback(() => setReady(true), { timeout: 1500 })
-      return () => w.cancelIdleCallback?.(h)
+    // After the page's content is drawn and a beat more: the browser is idle long before that, and the read would still be in the page's first round.
+    let t: number | undefined
+    let live = true
+    whenContentDrawn(() => {
+      if (live) t = window.setTimeout(() => setReady(true), import.meta.env.MODE === 'test' ? 0 : 1500)
+    })
+    return () => {
+      live = false
+      window.clearTimeout(t)
     }
-    const t = window.setTimeout(() => setReady(true), 400)
-    return () => window.clearTimeout(t)
   }, [])
   // An engineer is not offered history: an RFQ item's event carries its GST rate, which the engineer rule keeps from them (verify-roles).
   const prices = useSeesPrices()
