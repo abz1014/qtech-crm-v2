@@ -25,6 +25,8 @@ export interface WriteVars {
   'company.create': { id: string }
   'company.update': { id: string }
   'company.merge': { keepId: string; dropId: string }
+  /** 0092: an admin deleted a company nothing refers to. */
+  'company.delete': { id: string }
   'site.add': { companyId: string }
   'contact.add': { companyId: string }
   'site.update': { companyId: string }
@@ -85,6 +87,8 @@ export interface WriteVars {
   'order.files': { orderId: string }
   /** R19: issuing a quotation (or attaching its PDF) changes the RFQ page, the board and Today (quoted_on is stamped). */
   'quotation.issue': { rfqId: string }
+  /** 0092: an admin deleted the latest quotation revision (rfqs.quoted_on goes back to the one before). */
+  'quotation.delete': { rfqId: string }
   'quotation.pdf': { rfqId: string }
   /** O01: converting an RFQ creates an order and legs, and the RFQ becomes won. */
   'order.convert': { rfqId: string }
@@ -98,6 +102,8 @@ export interface WriteVars {
   'order.delete': { orderId: string }
   /** O07: issuing a supplier PO stamps the leg placed, writes the prices back to the order lines and moves Today's place-PO rule. */
   'po.issue': { orderId: string }
+  /** 0092: an admin deleted the latest PO revision. */
+  'po.delete': { orderId: string }
   /** O07: attaching a PO's PDF changes only the PO chips and View PO. */
   'po.pdf': { orderId: string }
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
@@ -138,6 +144,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'company.create': () => [qk.companies.lists()],
   'company.update': v => [qk.companies.lists(), qk.companies.detail(v.id)],
   // The dropped company is gone; everything that pointed at it now points at the kept one.
+  'company.delete': () => [qk.companies.all, qk.intake.all, qk.today.all, qk.onboarding.all, qk.memory.all],
   'company.merge': v => [qk.companies.all, qk.rfqs.all, qk.orders.all, qk.companies.detail(v.keepId), qk.today.all, qk.intake.all, qk.memory.all, qk.purchaseOrders.all, qk.money.all],
   // Adding a site changes the page only (the roster does not show sites). A contact changes the page AND the roster: the Companies
   // search matches contact names and phone numbers (2026-10-20), so a contact just saved must be findable at once.
@@ -213,6 +220,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
   'order.files': v => [qk.orders.part(v.orderId, 'files')],
   // Issuing also writes the quoted selling price, which the ranked quotes return as sell_net.
+  'quotation.delete': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all, qk.orders.rankedFor(v.rfqId)],
   'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all, qk.orders.rankedFor(v.rfqId)],
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
@@ -225,6 +233,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all, qk.money.receivables.all],
   // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
   // The prices written back are the Margin panel's supplier-price inputs.
+  'po.delete': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all, qk.companies.all, qk.money.orderCosts(v.orderId), qk.money.margins()],
   'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all, qk.companies.all, qk.money.orderCosts(v.orderId), qk.money.margins()],
   'po.pdf': v => [qk.orders.part(v.orderId, 'pos'), qk.purchaseOrders.all],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.

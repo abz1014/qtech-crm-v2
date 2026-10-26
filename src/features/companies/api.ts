@@ -921,3 +921,9 @@ export async function mergeCompanies(keepId: string, dropId: string): Promise<vo
   const { error } = await db.rpc('merge_companies', { p_keep: keepId, p_drop: dropId })
   if (error) throw error
 }
+
+/** delete_company (0092, admin only): only a company nothing refers to. Otherwise refused with HINT in_use (merge it instead). */
+export async function deleteCompany(companyId: string): Promise<void> {
+  const { error } = await requireSupabase().rpc('delete_company', { p_company_id: companyId })
+  if (error) throw error
+}

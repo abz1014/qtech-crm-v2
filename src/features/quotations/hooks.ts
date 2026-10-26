@@ -63,3 +63,12 @@ export function useStorePdf(rfqId: string) {
     onSuccess: () => invalidateAfter(client, 'quotation.pdf', { rfqId }),
   })
 }
+
+/** Delete the latest revision (admin). The RFQ's page, lists and Today refresh; the PDF is removed from storage by the caller. */
+export function useDeleteQuotationRevision(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (quotationId: string) => api.deleteQuotationRevision(quotationId),
+    onSuccess: () => invalidateAfter(client, 'quotation.delete', { rfqId }),
+  })
+}
