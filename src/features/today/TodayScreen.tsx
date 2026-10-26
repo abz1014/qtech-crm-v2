@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
@@ -9,6 +9,7 @@ import { pkr } from '@/features/money/expenses/model'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
+import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { FirstUseState } from '@/features/help/FirstUseState'
 import { HowItWorksCard } from '@/features/help/HowItWorksCard'
@@ -18,6 +19,7 @@ import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { needsYouItems } from '@/features/today/needsYou'
 import { SnoozeMenu } from '@/features/today/SnoozeMenu'
 import { TargetTile } from '@/features/today/TargetTile'
+import { TeamView } from '@/features/today/TeamView'
 import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
@@ -98,6 +100,13 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const navigate = useNavigate()
   const { view, data, query } = useTodayView(user, today)
   const wide = useMediaQuery('(min-width: 768px)')
+  const [params, setParams] = useSearchParams()
+  // Admin only: Mine (the list) or Team (each person's list and late count, read only). Kept in the address, so it can be linked.
+  const team = user.role === 'admin' && params.get('view') === 'team'
+  const setView = (v: string) => setParams(p => { const n = new URLSearchParams(p); if (v === 'team') n.set('view', 'team'); else n.delete('view'); return n }, { replace: true })
+  const switcher = user.role === 'admin' ? (
+    <SegmentedControl aria-label="Whose list" className="mt-2 justify-self-start" value={team ? 'team' : 'mine'} onValueChange={setView} options={[{ value: 'mine', label: 'Mine' }, { value: 'team', label: 'Team' }]} />
+  ) : null
   const [selected, setSelected] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState<ReadonlySet<string>>(new Set())
@@ -190,6 +199,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             </>
           ) : null}
         </p>
+        {switcher}
         <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />
       </header>
 
@@ -296,6 +306,19 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
       )}
     </div>
   )
+
+  if (team) {
+    return (
+      <div className="min-h-full bg-surface" data-user={name}>
+        <header className="grid gap-1 px-5 pb-1 pt-5">
+          <h1 className="text-2xl font-heavy tracking-tight">To do</h1>
+          <p className="text-base text-fg-muted">{headerDate(today)} · the team</p>
+          {switcher}
+        </header>
+        {data ? <TeamView data={data} today={today} selfId={user.id} /> : query.isPending ? <div role="status" aria-busy="true" aria-label="Loading the team" className="p-5"><Skeleton className="h-4 w-2/3" /></div> : <EmptyState mood="error" title="The team could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>Nothing was changed.</EmptyState>}
+      </div>
+    )
+  }
 
   return (
     // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
