@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeAll, describe, expect, it } from 'vitest'
@@ -8,7 +8,7 @@ import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { TopBar } from '@/app/shell/TopBar'
-import { SETTINGS_LINKS, settingsLinksFor } from '@/features/settings/settingsLinks'
+import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { installFakeDb } from '@/test/fakeSupabase'
 
 const user = { id: 'u1', name: 'Farhan Mirza', role: 'admin' }
@@ -113,9 +113,15 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
       shell(role)
       const dlg = await search(u, 'settings')
       const want = settingsLinksFor(role).map(l => l.label)
-      for (const label of want) expect(await within(dlg).findByRole('option', { name: new RegExp(`^${label}`) })).toBeInTheDocument()
-      for (const l of SETTINGS_LINKS.filter(x => !want.includes(x.label)))
-        expect(within(dlg).queryByRole('option', { name: new RegExp(`^${l.label}`) })).toBeNull()
+      // Only the Jump to group: other groups (Actions, Help) rightly match the word "settings" too ("Add "settings" as a new company",
+      // help articles), and they load later, so counting every row in the dialog was the flake.
+      // The "Settings" row itself plus one row per page the role may open; asserted together so rows re-rendered mid-typing are retried.
+      await waitFor(() => {
+        const jump = within(dlg).getByRole('group', { name: 'Jump to' })
+        const names = within(jump).getAllByRole('option').map(o => o.textContent ?? '')
+        expect(names.filter(n => n.endsWith('Settings')).sort()).toEqual(want.map(l => `${l}Settings`).sort())
+        expect(names).toHaveLength(want.length + 1)
+      })
       cleanup()
     }
   })
