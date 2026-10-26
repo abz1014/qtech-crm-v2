@@ -637,3 +637,15 @@ describe('parseEnquiry: a buyer cover email around an attached form (R-W2)', () 
     expect(r.items).toEqual([])
   })
 })
+
+describe('parseEnquiry: a letter in the body of the email (R-W2)', () => {
+  it('a long sentence about an order or a delivery is prose, not an item; a short item line with a code still is', () => {
+    const r = parse(
+      [
+        'Upon detailed verification, we confirm that the supplied unit RX-4410 is exactly as specified in your order and the issue is not on our side.',
+        'Valve actuator AX-210 - 2 nos',
+      ].join('\n'),
+    )
+    expect(r.items).toEqual([{ description: 'Valve actuator AX-210', qty: 2, unit: 'nos' }])
+  })
+})

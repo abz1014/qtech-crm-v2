@@ -89,7 +89,7 @@ const SIGN_OFF =
   /^(?:(?:best|kind|warm|warmest|with)\s+regards?|regards?|thanks?(?:\s*(?:&|and)\s*(?:best\s+|kind\s+)?regards?)?|thank\s+you(?:\s+(?:and|&)\s+regards)?|thankyou|many\s+thanks|sincerely|yours\s+(?:sincerely|faithfully|truly)|br|cheers|allah\s+hafiz|jazak\s*allah(?:\s+khair)?|shukriya|shukria|thnx|thx|tks)[\s,.!]*$/i
 const SENT_FROM = /^sent\s+from\s+my\b/i
 const DISCLAIMER =
-  /^(?:\**\s*disclaimer|confidentiality\s+notice|this\s+(?:e-?mail|message)\s+(?:and\s+any|is\s+(?:confidential|intended)|may\s+contain|contains)|the\s+information\s+(?:contained|in\s+this)|if\s+you\s+(?:are\s+not|have\s+received)|please\s+consider\s+the\s+environment|caution\s*:|this\s+email\s+has\s+been\s+scanned)/i
+  /^(?:\**\s*disclaimer|confidentiality\s+notice|this\s+(?:e-?mail|message)\s+(?:and\s+any|is\s+(?:confidential|intended)|may\s+contain|contains)|the\s+information\s+(?:contained|in\s+this)|if\s+you\s+(?:are\s+not|have\s+received)|please\s+(?:consider\s+the\s+environment|(?:help\s+)?(?:save|think\s+before|think\s+of)\b[^.]{0,30}\b(?:tree|trees|printing|environment|paper))|caution\s*:|this\s+email\s+has\s+been\s+scanned)/i
 const REPLY_SEP = /^(?:-{2,}\s*original\s+message\s*-{2,}|_{5,}|-{5,})$|^on\s.{4,160}\swrote:?$/i
 const FORWARD_SEP = /^(?:-{2,}\s*forwarded\s+message\s*-{2,}|begin\s+forwarded\s+message:?)$/i
 const HEADER_LINE = /^(?:from|to|cc|bcc|sent|date|subject|reply-to|attachments?|importance|priority|sensitivity|categories|received|organi[sz]ation)\s*:/i
@@ -1068,6 +1068,24 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       skip(t, 'quoted')
       continue
     }
+    // A bare name over a job title ("ABUBAKAR" / "PURCHASE OFFICER"): a signature, whatever the layout.
+    if (
+      zone === 'content' &&
+      t.split(' ').length <= 3 &&
+      !/\d/.test(t) &&
+      !PRODUCT.test(t) &&
+      !hasCode(t) &&
+      !isCourtesy(t) &&
+      !COMPANY.test(t) &&
+      !DESIGNATION.test(t) &&
+      DESIGNATION.test(nextT) &&
+      nextT.split(' ').length <= 4 &&
+      !/\d/.test(nextT) &&
+      !PRODUCT.test(nextT)
+    ) {
+      skip(t, 'signature')
+      continue
+    }
     if (/^>/.test(t)) {
       skip(t, 'quoted')
       continue
@@ -1351,7 +1369,16 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       !hasCode(work) &&
       !LABELLED_QTY.test(work) &&
       !new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?(?![A-Za-z])`, 'i').test(work)
-    if ((INSTRUCTION.test(work) && !ATTR.test(work)) || termSentence || buyerTerm) {
+    // A sentence of a letter (twelve words or more, a pronoun or a helping verb, no quantity and unit): prose about an order or a
+    // delivery, never one item.
+    const prose =
+      work.split(/\s+/).length >= 12 &&
+      /\b(?:we|you|your|our|has|have|been|is|are|was|were|would|could|should|please)\b/i.test(work) &&
+      !/(?:\s|-)\d[\d,]*(?:\s+[A-Za-z.']{1,10})?[.\s]*$/.test(work) &&
+      !LABELLED_QTY.test(work) &&
+      !new RegExp(String.raw`\d\s*(?:${UNIT_SRC}|x)\.?(?![A-Za-z])`, 'i').test(work) &&
+      !t.includes('\t')
+    if ((INSTRUCTION.test(work) && !ATTR.test(work)) || termSentence || buyerTerm || prose) {
       close()
       skip(t, 'instruction')
       continue
