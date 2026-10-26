@@ -62,6 +62,10 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // 0085 session cutoff (HW-17/HW-45): already sentences; the app signs the person out on these
   { match: /^Your session has ended\. Sign in again\.$/ },
   { match: /^This account has been deactivated\.$/ },
+  // 0090 record history
+  { match: /^You cannot see the history of this record\.$/ },
+  { match: /^This kind of record has no history page\.$/, internal: true },
+  { match: /^record_history_rows is internal: call record_history$/, internal: true },
   { match: /^The correction of this payment has been changed since\./ },
   { match: /^The date received is required\.$/ },
   { match: /^This payment is already voided\./ },
@@ -132,6 +136,14 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^One of these categories is no longer there\./ },
   { match: /^Pick two different categories to merge\.$/ },
   { match: /^".+?" is archived\. Bring it back first, or merge into another category\.$/ },
+  // 0091: misc ("Other") expenses take a typed title; a repeated title becomes a category
+  { match: /^Write what it was for, e\.g\. Courier from shop to office$/ },
+  { match: /^The "Other" category of a group is where one-off expenses go, / },
+  { match: /^Only an admin can turn a one-off title into a category\.$/, message: () => ADMIN_ONLY },
+  { match: /^No expense under ".+?" has that title any more\./ },
+  { match: /^(Only the Other category of a group has one-off titles to promote\.|Choose which title to turn into a category\.|Give the new category a name\.)$/ },
+  { match: /^".+?" is (the Other category of a group\. Choose a different name|a category of another kind, so these expenses cannot move there)/ },
+  { match: /^".+?" is archived\. Bring it back first, or choose a different name\.$/ },
   // 0087: engineers' "I paid" claims (already written for people)
   { match: /^Only an admin approves an expense claim\.$/, message: () => ADMIN_ONLY },
   { match: /^Choose how it was paid: cash given back, from petty cash, or by bank\.$/ },
@@ -141,6 +153,24 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^the order has no unresolved value basis$/, message: () => 'This order has no value basis left to resolve. Reload the page.' },
   { match: /^basis must be net or gross$/, message: () => 'Choose net or gross.' },
   { match: /^a PSID is required$/, message: () => 'Enter the PSID, then save.' },
+
+  // 0092 (owner decisions): fixing and removing mistakes. The server texts are already plain; each carries a HINT
+  // (not_yours, admin_only, not_found, has_order, has_invoice, has_payment, has_expense, has_po, bank_ticked, voided,
+  // correction_chain, not_latest, in_use, linked_to_order) that mapPgError passes on as `hint`.
+  { match: /^Only the person who entered this, or an admin, can change it\.$/ },
+  { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
+  { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
+  { match: /^This RFQ has an order\. / },
+  { match: /^This order has an invoice\. / },
+  { match: /^This order has a payment recorded against it, a voided one included, / },
+  { match: /^This order has an expense recorded against it\. / },
+  { match: /^This order has an issued purchase order\. / },
+  { match: /^This invoice has its tax deposit ticked against the (.+?) bank statement\. /, action: BANK },
+  { match: /^This payment is part of a correction, so it is kept as history\./ },
+  { match: /^Only the latest revision can be deleted\. / },
+  { match: /^This company is used by RFQs, orders, invoices or expenses, / },
+  { match: /^An order line is based on this item, / },
+  { match: /^0092: /, internal: true },
 
   // Not found
   { match: /^(RFQ|inquiry|order|order line|supplier order) (.+?) not found$/, message: () => RELOAD },

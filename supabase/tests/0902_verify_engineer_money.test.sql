@@ -126,7 +126,7 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
-insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
+insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
@@ -302,6 +302,7 @@ insert into money_fns values
   ('customer_price_memory', 'sold_order_number', 'info'), ('customer_price_memory', 'sold_tier', 'info'),
   ('po_line_prefill', 'unit_price', 'supplier'),
   ('search_closed_rfqs', 'total', 'info'),
+  ('record_history', '<return>', 'info'), ('record_history_rows', '<return>', 'info'),   -- 0090: redacted with the engineer's column privileges (0090_record_history.test.sql proves no price comes back)
   ('receivables_list', 'gross_target', 'hidden'), ('receivables_list', 'settled', 'hidden'), ('receivables_list', 'balance', 'hidden'),
   ('receivables_list', 'overpaid_by', 'hidden'),
   ('receivables_summary', 'gross', 'hidden'), ('receivables_summary', 'settled', 'hidden'), ('receivables_summary', 'outstanding', 'hidden'),

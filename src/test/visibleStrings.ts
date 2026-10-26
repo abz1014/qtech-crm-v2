@@ -150,6 +150,8 @@ export const SCREEN_ENTRIES: Record<string, readonly string[]> = {
   orders: ['features/orders/OrdersScreen.tsx'],
   companies: ['features/companies/CompaniesScreen.tsx'],
   money: ['features/money/MoneyScreen.tsx'],
+  /** 0087: an engineer's "I paid" (src/app/routes.tsx, my-expenses). */
+  'my-expenses': ['features/money/expenses/MyClaimsPage.tsx'],
   settings: [
     'features/settings/SettingsLayout.tsx',
     'features/settings/TeamPage.tsx',

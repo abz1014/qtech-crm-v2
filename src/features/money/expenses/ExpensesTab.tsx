@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChartColumn, ChevronLeft, ChevronRight, Ellipsis, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
+import { ChartColumn, ChevronLeft, ChevronRight, Ellipsis, History, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
@@ -16,12 +16,14 @@ import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { TableFilter } from '@/ui/TableFilter'
 import { Tag } from '@/ui/Tag'
 import { Select } from '@/ui/form/Select'
+import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
 import { useClosedMonths } from '@/features/money/monthEnd/hooks'
 import type { ExpenseListing } from '@/features/money/expenses/api'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
 import { CLOSED_MONTH_LINE, useDeleteExpenseFlow } from '@/features/money/expenses/deleteFlow'
 import { useCategories, useExpenseMonth, useGroups } from '@/features/money/expenses/hooks'
 import { RecurringPanel } from '@/features/money/expenses/RecurringPanel'
+import { forMonthNote } from '@/features/money/expenses/forMonth'
 import {
   NO_FILTERS,
   PAID_VIA_LABEL,
@@ -65,6 +67,8 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const [filters, setFilters] = useState<ExpenseFilters>(NO_FILTERS)
   const [q, setQ] = useQueryParamText()
   const [editing, setEditing] = useState<ListedExpense | null>(null)
+  /** The expense whose History panel is open. */
+  const [history, setHistory] = useState<ListedExpense | null>(null)
 
   const cats = useCategories()
   const groupsQ = useGroups()
@@ -92,7 +96,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const onDelete = deleteFlow.ask
 
   const columns = useMemo(
-    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete }),
+    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete, onHistory: setHistory }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [categories, list.data, showTax, monthClosed],
   )
@@ -165,7 +169,8 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
                   </span>
                   <InfoTip label="About this total">
-                    What was paid in {monthKeyLabel(month)}, by payment date, input tax included (what left the bank or the cash box).
+                    What was paid in {monthKeyLabel(month)}, by the day paid, input tax included (what left the bank or the cash box). A monthly bill
+                    paid this month for last month is in this total; the Expenses report counts it in the month it is for.
                     {totals.inputTax > 0 ? ` Input tax ${pkr(totals.inputTax)} of it is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
                   </InfoTip>
                 </span>
@@ -197,7 +202,26 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
         />
       </section>
 
-      {editing ? <AddExpenseDialog open expense={editing} onOpenChange={o => !o && setEditing(null)} /> : null}
+      {editing ? (
+        <AddExpenseDialog
+          open
+          expense={editing}
+          onOpenChange={o => !o && setEditing(null)}
+          onHistory={() => {
+            setHistory(editing)
+            setEditing(null)
+          }}
+        />
+      ) : null}
+      {history ? (
+        <LazyHistoryPanel
+          open
+          onOpenChange={o => !o && setHistory(null)}
+          table="expenses"
+          id={history.id}
+          context={`${categories.find(c => c.id === history.categoryId)?.name ?? 'Expense'} · ${formatShortDate(history.paidOn, undefined, true)}`}
+        />
+      ) : null}
       {deleteFlow.node}
     </div>
   )
@@ -265,14 +289,15 @@ function describe(r: ListedExpense, categories: readonly Category[], l: ExpenseL
   const cat = categories.find(c => c.id === r.categoryId)
   const name = cat?.name ?? 'Category removed'
   const note = r.note && r.note.trim().toLowerCase() !== name.toLowerCase() ? r.note : null
-  const parts = [r.payeeId ? l?.payees[r.payeeId] : null, r.orderId ? l?.orders[r.orderId] : null, note].filter(Boolean) as string[]
+  // 0087: "for September" when a monthly bill is for another month than the one it was paid in
+  const parts = [forMonthNote(r.paidOn, r.period), r.payeeId ? l?.payees[r.payeeId] : null, r.orderId ? l?.orders[r.orderId] : null, note].filter(Boolean) as string[]
   return { name, detail: parts.join(' · '), inactive: cat ? !cat.active : false }
 }
 
 function buildColumns(
   categories: readonly Category[],
   listing: ExpenseListing | undefined,
-  act: { showTax: boolean; locked: boolean; onEdit: (r: ListedExpense) => void; onDelete: (r: ListedExpense) => void },
+  act: { showTax: boolean; locked: boolean; onEdit: (r: ListedExpense) => void; onDelete: (r: ListedExpense) => void; onHistory: (r: ListedExpense) => void },
 ): Column<ListedExpense>[] {
   const today = businessToday()
   const cols: Column<ListedExpense>[] = [
@@ -339,6 +364,9 @@ function buildColumns(
             <PopoverContent variant="menu" align="end">
               <MenuItem icon={Pencil} onClick={() => act.onEdit(r)}>
                 Edit expense
+              </MenuItem>
+              <MenuItem icon={History} onClick={() => act.onHistory(r)}>
+                History
               </MenuItem>
               <MenuItem icon={Trash2} onClick={() => act.onDelete(r)}>
                 Delete expense

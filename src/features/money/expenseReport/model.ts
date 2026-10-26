@@ -5,11 +5,13 @@ import { cashTotals, periodLabel, periodMonths, periodShort, shiftPeriod, type F
 /*
  * The Expenses report (owner request 2026-10-22: "expense category, expense keeping and expense report are utmost priority"), the
  * pure part. Admin only. A month or a calendar quarter (the In vs out period), read from the expenses themselves, so every
- * figure here is a sum of the entries the drill-down lists:
- *   total      gross paid (input tax included, every category): the same money out as In vs out (v_month_cash_flow) and the
- *              Profit and loss report's "cash out" (v_month_pnl.cash_out_total)
- *   kinds      net of input tax per P&L kind: running costs = P&L overheads, order costs = P&L order costs, not a cost = P&L
- *              "not in P&L" (drawings, loan repayments); total = running + order + not a cost + input tax, to the paisa
+ * figure here is a sum of the entries the drill-down lists. 0087 (redesign phase 1): an expense counts in the month it is FOR
+ * (a monthly bill's period: September's salary paid on 5 October is September's), else the month it was paid in:
+ *   total      gross (input tax included, every category) of the expenses for the period
+ *   kinds      net of input tax per P&L kind, for the period; total = running + order + not a cost + input tax, to the paisa
+ *   paid       the same period by the day PAID: the same money out as In vs out (v_month_cash_flow) and the Profit and loss
+ *              report's "cash out" (v_month_pnl.cash_out_total); paidKinds equal the P&L lines (running costs = overheads,
+ *              order costs = order costs, not a cost = "not in P&L"). The bridge: total - forHerePaidElsewhere + paidForOther = paid
  *   breakdown  group -> category -> detail, each with % of the total, the previous period and the budget (monthly budget x months)
  *   trend      the last 6 months or 4 quarters of money out, from v_month_cash_flow (a closed month answers frozen there)
  * A closed month cannot change (month lock), so its entries add up to its frozen money out; if they ever differ, the difference
@@ -30,6 +32,8 @@ export interface ReportEntry {
   detail: string | null
   /** Payee or order beside the detail ("Alpenmark Controls GmbH · ORD-0038"), for the drill-down; null when none. */
   who: string | null
+  /** 0087: the month it is FOR ("2026-09"): a monthly bill's period, else the month paid. The report groups by this. */
+  forMonth: string
 }
 
 const fx = (p: bigint) => paisaToFixed(p)
@@ -48,6 +52,7 @@ export function toEntries(rows: readonly ListedExpense[], labels?: { payees: Rec
       paidVia: r.paidVia,
       detail: cleanDetail(r.note),
       who: who || null,
+      forMonth: r.period ?? r.paidOn.slice(0, 7),
     }
   })
 }
@@ -188,8 +193,20 @@ export interface ExpenseReportView {
   trend: TrendBar[]
   /** Closed months in the period (figures frozen), out of `months`. */
   frozenMonths: number
-  /** Money out as In vs out has it (v_month_cash_flow) less the entries' total: 0 unless a closed month differs from the books. */
+  /** Money out as In vs out has it (v_month_cash_flow) less what the entries paid IN the period: 0 unless a closed month differs from the books. */
   unexplained: string
+  /**
+   * 0087 for-month. The report counts each expense in the month it is FOR (a monthly bill's period, else the month paid); the cash
+   * figures (In vs out, Profit and loss, Money's "paid out") count it in the month PAID. `paid` is the period by the day paid (its
+   * total is In vs out's money out and its kinds are the P&L lines). The bridge, to the paisa:
+   *   total (for) - forHerePaidElsewhere + paidForOther = paid.amount
+   */
+  paid: Totals
+  paidKinds: KindTotals
+  /** Paid in the period for another month (September's salary paid on 5 October, seen from October). */
+  paidForOther: string
+  /** For the period but paid outside it (September's salary paid on 5 October, seen from September). */
+  forHerePaidElsewhere: string
   /** Every category's monthly budget summed, x months; null when no category has one. */
   budget: string | null
 }
@@ -209,7 +226,13 @@ export interface ReportInput {
   flows: readonly FlowRow[]
 }
 
+/** 0087: in the period by the month it is FOR (the report's basis). */
 const inPeriod = (p: Period) => {
+  const ms = new Set(periodMonths(p))
+  return (e: ReportEntry) => ms.has(e.forMonth)
+}
+/** In the period by the day PAID (the cash basis of In vs out and Profit and loss). */
+const paidInPeriod = (p: Period) => {
   const ms = new Set(periodMonths(p))
   return (e: ReportEntry) => ms.has(e.paidOn.slice(0, 7))
 }
@@ -328,6 +351,10 @@ export function buildExpenseReport({ period, entries, categories, groups, flows 
   }))
   const cash = cashTotals(period, flows)
   const budgets = categories.filter(c => c.active && c.budget)
+  const paidNow = entries.filter(paidInPeriod(period))
+  const paid = totalsOf(paidNow)
+  const isFor = inPeriod(period)
+  const isPaid = paidInPeriod(period)
   return {
     period,
     label: periodLabel(period),
@@ -343,7 +370,11 @@ export function buildExpenseReport({ period, entries, categories, groups, flows 
     byDetail,
     trend,
     frozenMonths: cash.frozenMonths,
-    unexplained: fx(P(cash.out) - P(total.amount)),
+    unexplained: fx(P(cash.out) - P(paid.amount)),
+    paid,
+    paidKinds: kindTotals(paidNow, kindOf),
+    paidForOther: totalsOf(paidNow.filter(e => !isFor(e))).amount,
+    forHerePaidElsewhere: totalsOf(now.filter(e => !isPaid(e))).amount,
     budget: budgets.length ? fx(budgets.reduce((s, c) => s + P(c.budget as number), 0n) * BigInt(months)) : null,
   }
 }
@@ -360,6 +391,12 @@ export function expenseReportCsv(v: ExpenseReportView): { headers: string[]; row
     ['Profit and loss', v.label, 'Not a cost (drawings, loan repayments)', '', '', n(v.kinds.notCost), '', '', ''],
     ['Profit and loss', v.label, 'Input tax (claimed back)', '', '', n(v.kinds.inputTax), '', '', ''],
   ]
+  // 0087: the bridge from "for the period" to "paid in the period" (In vs out and Profit and loss count by the day paid)
+  rows.push(
+    ['By the day paid', v.label, 'For this period, paid outside it', '', '', n(v.forHerePaidElsewhere), '', '', ''],
+    ['By the day paid', v.label, 'Paid in this period for other months', '', '', n(v.paidForOther), '', '', ''],
+    ['By the day paid', v.label, 'Paid in this period (In vs out money out)', '', v.paid.count, n(v.paid.amount), '', '', ''],
+  )
   if (P(v.unexplained) !== 0n) rows.push(['Total', v.label, 'Changed after the month was closed', '', '', n(v.unexplained), '', '', ''])
   for (const g of v.groups) {
     rows.push(['Group', v.label, g.name, '', g.count, n(g.amount), n(g.prev), g.share, g.budget === null ? '' : n(g.budget)])
