@@ -209,3 +209,33 @@ describe('a one-line price pasted as a reply (R-0 follow-up)', () => {
     }
   })
 })
+
+describe('round 2: threads and introductions', () => {
+  const ours = { from: 'Sales <sales@q-tech.example>', subject: 'RE: RFQ 1234' }
+  const theirs = { from: 'Buyer <buyer@example-mills.example>', subject: 'RE: Quotation for relay' }
+  const thread = ['From: sales@q-tech.example', 'Sent: Monday, October 19, 2026 12:11 PM', 'Subject: RE: Quotation for relay', '', 'Dear Sir, please find our attached quotation.'].join('\n')
+
+  it('a customer thanking us for a quotation with a remark is a follow-up, not an enquiry', () => {
+    expect(classifyDoc(`Thanks for your quotation. Pl mention the country of origin also.\nRegards\n${thread}`, theirs).kind).toBe('follow-up')
+  })
+
+  it('a customer who thanks us and asks for more items with a quantity is still an enquiry', () => {
+    expect(classifyDoc(`Thanks for your quotation. Also please quote 4 nos relay XQ-100.\nRegards\n${thread}`, theirs).kind).toBe('rfq')
+  })
+
+  it('our own message that asks a supplier for a price with a quantity is our enquiry, even after thanking for a quotation', () => {
+    const body = 'Thank you for sending the price quote.\nPlease send the reseller price of the following relay.\nOrder Code: XQ-100\nQuantity: 1\nRegards'
+    expect(classifyDoc(body, ours).kind).toBe('own-rfq')
+  })
+
+  it('our message about a purchase order and a delivery, with no price, is a follow-up, not our quotation', () => {
+    const body = 'Thank you for the Purchase Order. We expect delivery on time as per our quotation.\nRegards'
+    expect(classifyDoc(body, ours).kind).toBe('follow-up')
+  })
+
+  it('a company introduction that ends "reply with your needs or RFQ" is marketing', () => {
+    const body = ['Dear Sir,', 'We specialize in electronic components and industrial supplies, helping customers solve sourcing challenges.', 'Many of our partners struggled to find parts.', 'Just reply with your component needs or RFQ, and I\u2019ll send a tailored quote within 24 hours.', 'Best regards', 'Luna'].join('\n')
+    expect(classifyDoc(body, { from: 'Luna <luna@example-parts.example>', subject: 'Introduction' }).kind).toBe('marketing')
+    expect(classifyDoc('We specialize in PLC and PCB. Products including: PLC, PCB. Brands including: A, B.\nDo you have any inquiry to quote?\nBest regards', { from: 'O <o@example-parts.example>' }).kind).toBe('marketing')
+  })
+})
