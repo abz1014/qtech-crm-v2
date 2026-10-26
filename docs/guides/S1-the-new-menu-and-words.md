@@ -59,7 +59,7 @@ The old word still works in Search.
 
 ## Shortcuts (computer, outside a text box)
 
-**N** new enquiry, **E** add an expense (admin), **O** an order without an enquiry, **C** paste or photo, **G then T** to-do, **/** jump to a list's search, **?** the full list.
+**N** new enquiry, **E** add an expense (admin), **O** an order without an enquiry, **G then T** to-do, **/** jump to a list's search, **?** the full list.
 
 ## Text size
 

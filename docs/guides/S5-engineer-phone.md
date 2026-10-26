@@ -23,12 +23,12 @@ Two places and a big button:
 2. **Goods arrived?** Open the job and tap **[Delivered today]**. You ordered from the supplier yourself? **[I placed this order]**.
 3. **Plan the visit:** tap **[Change planned date]**, pick the **[Planned date]**, save.
 4. **Job finished?** Tap **[Mark done today]**. One tap. Wrong tap? **[Undo]** at the bottom.
-5. **Site photo or note:** tap **[Photo or note]**, take the photo or type, pick the job, save.
+5. **Site photo or note:** tap **[Photo or note]** and pick the job, or open the job and use the **[On site]** card: **[Add photo or note]**, then **[Take or choose a photo]** or type a note and tap **[Save note]**. On the same card, **[Delivered today]** and **[Installed today]** are one tap each.
 6. **Paid for something?** Tap **[I paid]**: **[How much, PKR]**, **[What for]**, the **[Job]**, **[Photo of the receipt]**, then **[Send for approval]**. The office approves it and pays you back.
 
 ## Something looks wrong on a job
 
-Do not change it. Tap **[Photo or note]**, save a short note or a photo on the job, and tell the owner.
+Do not change it. Tap **[Photo or note]**, pick the job, save a short note or a photo on the job, and tell the owner.
 
 ## No signal
 
