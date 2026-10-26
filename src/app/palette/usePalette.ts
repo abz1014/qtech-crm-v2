@@ -9,6 +9,8 @@ export interface PaletteApi {
    * provides it; optional only so test doubles of this API need not.
    */
   openShortcuts?: () => void
+  /** Opens Quick add expense in a dialog (the E key, + New > Expense). Admin only: absent for everyone else. */
+  openQuickExpense?: () => void
   register: (source: PaletteSource) => () => void
 }
 export const PaletteContext = createContext<PaletteApi | null>(null)

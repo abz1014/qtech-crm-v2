@@ -79,6 +79,9 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
           <MenuItem keepOpen checked={textSize === 'small'} onClick={() => setTextSize('small')}>
             Smaller
           </MenuItem>
+          <MenuItem keepOpen checked={textSize === 'large'} onClick={() => setTextSize('large')}>
+            Larger
+          </MenuItem>
         </MenuGroup>
         {canPrompt ? (
           <MenuItem icon={Download} onClick={() => void promptInstall()}>

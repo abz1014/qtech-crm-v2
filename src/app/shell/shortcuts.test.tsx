@@ -20,7 +20,6 @@ const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }
 vi.mock('@/features/capture/CaptureSheet', () => ({ default: () => <div role="dialog" aria-label="Capture" /> }))
 vi.mock('@/features/search/api', () => ({ searchAll: () => Promise.resolve([]) }))
 
-const signedIn: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }
 
 function Where() {
   const { pathname, search } = useLocation()
@@ -32,10 +31,11 @@ function BarPage() {
   return <p>Bar page</p>
 }
 
-function shell(path = '/todo') {
+function shell(path = '/todo', role: 'admin' | 'sales' | 'engineer' = 'sales') {
+  const session: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }
   return render(
     <QueryClientProvider client={client}>
-    <SessionProvider value={signedIn}>
+    <SessionProvider value={session}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route
@@ -49,6 +49,7 @@ function shell(path = '/todo') {
             <Route path="/todo" element={<input aria-label="Notes" />} />
             <Route path="/rfqs/new" element={<p>Intake</p>} />
             <Route path="/rfqs" element={<p>RFQs page</p>} />
+            <Route path="/orders" element={<p>Orders page</p>} />
             <Route path="/bar" element={<BarPage />} />
           </Route>
         </Routes>
@@ -97,6 +98,45 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     press('c', document.body)
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(screen.getByTestId('where').textContent).toBe('/todo')
+  })
+
+  it('O starts an order without an enquiry (admin and sales)', () => {
+    shell('/todo', 'sales')
+    press('o')
+    expect(screen.getByTestId('where').textContent).toBe('/orders?new=1')
+  })
+
+  it('O does nothing for an engineer', () => {
+    shell('/todo', 'engineer')
+    press('o')
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
+  })
+
+  it('E opens Quick add expense for the admin, anywhere; sales and engineers get nothing', async () => {
+    const { unmount } = shell('/rfqs', 'admin')
+    press('e')
+    expect(await screen.findByRole('dialog', { name: 'Add an expense' })).toBeInTheDocument()
+    expect(screen.getByTestId('where').textContent).toBe('/rfqs')
+    unmount()
+    shell('/rfqs', 'sales')
+    press('e')
+    expect(screen.queryByRole('dialog', { name: 'Add an expense' })).toBeNull()
+  })
+
+  it('E, O and N never fire while typing in a field or in a rich-text box', () => {
+    shell('/todo', 'admin')
+    const field = screen.getByRole('textbox', { name: 'Notes' })
+    for (const k of ['e', 'o', 'n']) press(k, field)
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
+    expect(screen.queryByRole('dialog', { name: 'Add an expense' })).toBeNull()
+    const editable = document.createElement('div')
+    editable.contentEditable = 'true'
+    // jsdom does not implement isContentEditable: the shortcut code reads it, so give the node the same answer a browser would
+    Object.defineProperty(editable, 'isContentEditable', { value: true })
+    document.body.appendChild(editable)
+    for (const k of ['e', 'o', 'n']) press(k, editable)
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
+    editable.remove()
   })
 
   it('T alone does nothing, and typing in a field never triggers a shortcut', async () => {

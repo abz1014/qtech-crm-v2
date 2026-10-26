@@ -1,4 +1,6 @@
+import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { PaletteContext } from '@/app/palette/usePalette'
 import { Plus } from 'lucide-react'
 import { newEntries } from '@/app/shell/newEntries'
 import { Button } from '@/ui/Button'
@@ -11,10 +13,12 @@ import { cn } from '@/lib/utils'
  *   admin     New enquiry (N) · Expense · Payment received · Order without enquiry
  *   sales     New enquiry (N) · Order without enquiry           payments are admin only (0010): no "Payment received"
  *   engineer  none: the menu is not drawn (an engineer's own button is Photo or note, on the job)
- * The key letters are shown, and they work only outside a text field (PaletteHost, shortcuts.ts).
+ * Expense opens Quick add in a dialog (the E key does too). The key letters are shown, and they work only outside a text field
+ * and outside a dialog (PaletteHost, shortcuts.ts).
  */
 export function NewMenu({ role, className, labelClass, iconOnly = false, size = 'md' }: { role: string; className?: string; labelClass?: string; iconOnly?: boolean; size?: 'md' | 'touch' }) {
   const navigate = useNavigate()
+  const quickExpense = useContext(PaletteContext)?.openQuickExpense
   const entries = newEntries(role)
   if (entries.length === 0) return null
   return (
@@ -27,7 +31,7 @@ export function NewMenu({ role, className, labelClass, iconOnly = false, size = 
       </PopoverTrigger>
       <PopoverContent variant="menu" align="end" aria-label="New">
         {entries.map(e => (
-          <MenuItem key={e.id} icon={e.icon} onClick={() => navigate(e.to)} hint={e.key ? <Kbd aria-hidden className="max-md:hidden">{e.key}</Kbd> : undefined}>
+          <MenuItem key={e.id} icon={e.icon} onClick={() => (e.id === 'expense' && quickExpense ? quickExpense() : navigate(e.to))} hint={e.key ? <Kbd aria-hidden className="max-md:hidden">{e.key}</Kbd> : undefined}>
             {e.label}
           </MenuItem>
         ))}

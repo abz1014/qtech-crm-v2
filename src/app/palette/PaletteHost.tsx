@@ -21,7 +21,9 @@ import {
   Percent,
   Plus,
   Receipt,
+  ReceiptText,
   Settings,
+  ShoppingCart,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -45,6 +47,7 @@ import {
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = "/rfqs/new";
 const TODAY_ROUTE = "/todo";
+const NEW_ORDER_ROUTE = "/orders?new=1";
 
 /**
  * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see Who owes us, Invoices & GST and
@@ -209,6 +212,11 @@ function isTypingContext(e: KeyboardEvent): boolean {
 // search (or the sheet), with a "Try again", never the whole app and what is being typed (hunt HE-2).
 const loadPalette = () =>
   import("@/ui/CommandPalette").then((m) => ({ default: m.CommandPalette }));
+// Quick add expense (the E key) loads only when someone asks for it: it brings the whole Quick add.
+const loadQuickExpense = () =>
+  import("@/app/shell/QuickExpenseDialog").then((m) => ({
+    default: m.QuickExpenseDialog,
+  }));
 // The Keyboard shortcuts sheet loads only when someone asks for it (?, the account menu, the palette action).
 const loadShortcuts = () =>
   import("@/app/shell/ShortcutsSheet").then((m) => ({
@@ -246,6 +254,14 @@ export function PaletteHost({
   const openShortcuts = useCallback(() => {
     setShortcutsLoaded(true);
     setShortcutsOpen(true);
+  }, []);
+  // Quick add expense, admin only: mounted from the first time it opens, so it closes with its own animation.
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickLoaded, setQuickLoaded] = useState(false);
+  const quick = useRetryableLazy(loadQuickExpense);
+  const openQuickExpense = useCallback(() => {
+    setQuickLoaded(true);
+    setQuickOpen(true);
   }, []);
   const onPaletteOpenChange = useCallback((next: boolean) => {
     if (!next) setInitialQuery("");
@@ -319,6 +335,12 @@ export function PaletteHost({
         href: INTAKE_ROUTE,
       },
       captureItem,
+      ...(role === "admin"
+        ? [{ id: "new-expense", label: "Add an expense", meta: "Quick add", icon: ReceiptText, shortcut: ["E"], onSelect: openQuickExpense } satisfies PaletteItem]
+        : []),
+      ...(role === "admin" || role === "sales"
+        ? [{ id: "new-order", label: "Order without enquiry", meta: "Go to Orders", icon: ShoppingCart, shortcut: ["O"], href: NEW_ORDER_ROUTE } satisfies PaletteItem]
+        : []),
       {
         id: "go-today",
         label: "Go to To do",
@@ -343,7 +365,7 @@ export function PaletteHost({
       search: (q) =>
         filterItems(hasKeyboard() ? [captureItem, shortcutsItem] : [captureItem], q),
     };
-  }, [openCapture, openShortcuts]);
+  }, [openCapture, openShortcuts, openQuickExpense, role]);
 
   useEffect(() => {
     let armedAt = 0;
@@ -369,6 +391,14 @@ export function PaletteHost({
       if (k === "n") {
         e.preventDefault();
         navigate(INTAKE_ROUTE);
+      } else if (k === "e" && role === "admin") {
+        // Quick add expense from anywhere (admin only: expenses are admin only, 0010)
+        e.preventDefault();
+        openQuickExpense();
+      } else if (k === "o" && (role === "admin" || role === "sales")) {
+        // An order without an enquiry: the new-order dialog on the Orders list
+        e.preventDefault();
+        navigate(NEW_ORDER_ROUTE);
       } else if (k === "?") {
         e.preventDefault();
         openShortcuts();
@@ -379,7 +409,7 @@ export function PaletteHost({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate, openShortcuts]);
+  }, [navigate, openShortcuts, openQuickExpense, role]);
 
   // Until the palette has loaded, Ctrl+K here opens it (and loads it); after that the palette's own key handles it.
   const [loaded, setLoaded] = useState(false);
@@ -464,9 +494,10 @@ export function PaletteHost({
         openPalette();
       },
       openShortcuts,
+      openQuickExpense: role === "admin" ? openQuickExpense : undefined,
       register,
     }),
-    [register, openShortcuts, openPalette],
+    [register, openShortcuts, openQuickExpense, openPalette, role],
   );
 
   return (
@@ -495,6 +526,13 @@ export function PaletteHost({
             }
           />
         </Suspense>
+        </LoadBoundary>
+      ) : null}
+      {quickLoaded && role === "admin" ? (
+        <LoadBoundary key={quick.attempt}>
+          <Suspense fallback={null}>
+            <quick.Component open={quickOpen} onOpenChange={setQuickOpen} />
+          </Suspense>
         </LoadBoundary>
       ) : null}
       {shortcutsLoaded ? (

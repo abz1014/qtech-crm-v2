@@ -176,6 +176,12 @@ describe('account menu: Text size (DECISIONS 2026-10-19)', () => {
     expect(await axeViolations(menu)).toEqual([])
     await user.click(normal)
     expect(document.documentElement.hasAttribute('data-text')).toBe(false)
+    // Larger (18 px) is a third choice in the same group
+    await user.click(within(group).getByRole('menuitemradio', { name: 'Larger' }))
+    expect(document.documentElement.dataset.text).toBe('large')
+    expect(window.localStorage.getItem('qtech.text-size')).toBe('large')
+    expect(within(group).getByRole('menuitemradio', { name: 'Larger' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(normal)
   })
 
   it('the arrow keys reach the text size choices like any other item', async () => {
@@ -183,8 +189,8 @@ describe('account menu: Text size (DECISIONS 2026-10-19)', () => {
     shell()
     await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
     await screen.findByRole('menu', { name: 'Account' })
-    await user.keyboard('{End}{ArrowUp}{ArrowUp}')
-    // The last item is Sign out; above it (no Install app in jsdom) Smaller, then Normal.
+    await user.keyboard('{End}{ArrowUp}{ArrowUp}{ArrowUp}')
+    // The last item is Sign out; above it (no Install app in jsdom) Larger, Smaller, then Normal.
     expect(screen.getByRole('menuitemradio', { name: 'Normal' })).toHaveFocus()
   })
 
