@@ -26,6 +26,7 @@ import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/Order
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
+import { useEntryAccess } from '@/features/records/useEntryAccess'
 import { useInFlight } from '@/lib/useInFlight'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
@@ -169,6 +170,7 @@ export function OrderHeaderBlock({
   const profileQ = useCompanyProfile()
   const termsText = termsLabel(order.paymentTermsDays, profileQ.data?.default_payment_terms_days)
   const update = useUpdateOrder(order.id)
+  const entry = useEntryAccess({ createdBy: order.createdBy ?? null, ownerId: order.owner?.id ?? null })
   const [resolving, setResolving] = useState(false)
   const s = order.state
   const cancelled = order.cancelledOn !== null
@@ -207,7 +209,7 @@ export function OrderHeaderBlock({
         label="Customer PO number"
         empty="add"
         placeholder="Not yet received"
-        disabled={isEngineer || cancelled}
+        disabled={isEngineer || cancelled || !entry.can}
         render={v => <span className="num">{v}</span>}
         onSave={async v => {
           try {
@@ -267,6 +269,11 @@ export function OrderHeaderBlock({
         <Banner tone="warning" title={`Cancelled ${order.cancelledOn ? formatDay(order.cancelledOn) : ''}`} className="mt-4">
           {cancelReasonLabel(order.cancelReason) ? `${cancelReasonLabel(order.cancelReason)}. ` : ''}Nothing on this order can be changed while it is cancelled.
         </Banner>
+      ) : null}
+      {!entry.can && !isEngineer && !cancelled && entry.note ? (
+        <p className="mt-3 text-base text-fg-2" role="note" data-slot="not-yours">
+          {`The customer PO number is closed. ${entry.note}.`}
+        </p>
       ) : null}
 
         {/* An unknown price basis is asked even on a cancelled order (its invoices and payments still need the net split): the admin's

@@ -58,6 +58,12 @@ export interface WriteVars {
   'rfq.setFloated': { rfqId: string }
   'fx.set': Record<string, never>
   'item.add': { rfqId: string }
+  /** W9: an item's description, quantity or unit fixed. */
+  'item.edit': { rfqId: string }
+  /** W9: an item removed (refused while an order line is based on it). */
+  'item.remove': { rfqId: string }
+  /** W9: the RFQ's customer, site, contact, customer ref or received date fixed. */
+  'rfq.edit': { rfqId: string }
   'inquiry.add': { rfqId: string }
   'quote.save': { rfqId: string }
   'inquiry.cantQuote': { rfqId: string }
@@ -174,6 +180,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'fx.set': () => [qk.fx.all, qk.rfqs.all, qk.orders.rankedAll()],
   // A new item changes the page, the board's counts and the coverage.
   'item.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId)],
+  'item.edit': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId), qk.memory.all],
+  'item.remove': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId), qk.memory.all],
+  // A new customer, site or contact moves the RFQ between customers: the customer pages, Today and the orders that read the RFQ.
+  'rfq.edit': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.rfqs.all, qk.companies.all, qk.today.all, qk.orders.all],
   // Asking another supplier adds an inquiry: the page, the board and the supplier's own counts.
   // Today offers "ask more suppliers" from a supplier-chase item, so its list changes too.
   'inquiry.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.today.all],

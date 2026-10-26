@@ -259,10 +259,10 @@ describe('Delete RFQ in the More menu', () => {
     }
   })
 
-  it('a closed RFQ keeps a More menu for an admin, with only Delete RFQ in it', async () => {
+  it('a closed RFQ keeps a More menu for an admin, with Edit RFQ details and Delete RFQ in it', async () => {
     const user = userEvent.setup()
     renderHeader('none', rfq({ closedOn: '2026-11-20', closeReason: 'other', state: state({ outcome: 'closed' }) }), {}, 'admin')
     await user.click(screen.getByRole('button', { name: /^More/ }))
-    expect(within(screen.getByRole('menu', { name: 'More' })).getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Delete RFQ'])
+    expect(within(screen.getByRole('menu', { name: 'More' })).getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Edit RFQ details', 'Delete RFQ'])
   })
 })
