@@ -155,9 +155,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'contact.update': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   'contact.remove': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   // Dropping the last brand can end a supplier's role, so the roster refreshes too.
-  'brand.unlink': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
+  'brand.unlink': v => [qk.companies.detail(v.companyId), qk.companies.lists(), qk.intake.all],
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.
-  'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
+  'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists(), qk.intake.all],
   'brand.create': () => [qk.brands.all],
   // Every change to a person is read back from the admin-users function, the source of truth for the list.
   'team.create': () => [qk.settings.team(), qk.onboarding.all],

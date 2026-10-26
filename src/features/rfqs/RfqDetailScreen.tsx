@@ -14,7 +14,7 @@ import { rfqRef } from '@/lib/refs'
 import { Skeleton } from '@/ui/Skeleton'
 import { prefetchRfqParts, useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { primaryAction, quotationSent, suggestSuppliers, toRateTable, type RfqPrimary, type SuggestionItem } from '@/features/rfqs/lib'
+import { primaryAction, quotationSent, coverageLine, suggestSuppliers, toRateTable, type RfqPrimary, type SuggestionItem } from '@/features/rfqs/lib'
 import { RfqActionBar, RfqHeaderBlock, type HeaderFacts } from '@/features/rfqs/RfqHeaderBlock'
 import { useQuotations } from '@/features/quotations/hooks'
 import type { QuotationRow } from '@/features/quotations/api'
@@ -25,6 +25,7 @@ import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { withShortlist } from '@/features/rfqs/askList'
+import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
 import { SentConfirm } from '@/features/rfqs/SentConfirm'
 import { BelowTheFold } from '@/ui/BelowTheFold'
@@ -226,10 +227,13 @@ function Loaded({
     [inquiryList, candidateList],
   )
   const memory = useSupplierMemory(memoryItems, memorySuppliers, memorySuppliers.length > 0 && itemList.length > 0 && candidates.isSuccess, rfq.id)
-  const suggestions = useMemo(
-    () => (candidates.isSuccess ? suggestSuppliers(suggestionItems, { suppliers: candidateList, memory: memory.data ?? {} }, { today }).suppliers : undefined),
-    [candidates.isSuccess, suggestionItems, candidateList, memory.data, today],
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess)
+  const suggestResult = useMemo(
+    () => (candidates.isSuccess ? suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
+    [candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
   )
+  const suggestions = suggestResult?.suppliers
+  const coverage = suggestResult ? coverageLine(suggestResult.uncovered) : null
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
 
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
@@ -384,6 +388,7 @@ function Loaded({
             {loadError || loading ? null : nobodyAsked ? (
               <SuppliersToAskCard
                 suggestions={askList}
+ coverage={coverage}
                 items={itemList}
                 busy={asking}
                 onAsk={ticked => void askFrom(ticked, itemList)}
@@ -407,6 +412,7 @@ function Loaded({
           <FloatDialog
             title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
             suggestions={askList}
+ coverage={coverage}
             itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
             busy={asking}
             onClose={() => setFloating(false)}

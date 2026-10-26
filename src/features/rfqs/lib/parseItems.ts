@@ -11,6 +11,8 @@
 //    "10 nos cable"). A model code or a size ("DN50", "0-10 bar", "24V") is never taken for a quantity.
 //  - No quantity found: 1, and no unit (the screen says qty defaults to 1; DATA_MODEL rfq_items.qty).
 
+import { inferCategory } from '@/lib/categories/dictionary'
+
 export interface ParsedItem {
   description: string
   qty: number
@@ -224,6 +226,12 @@ export function guessBrandFamily(
 ): { brandId: string | null; familyId: string | null } {
   let brand: BrandRef | null = null
   let family: BrandRef | null = null
+  // A confident dictionary hit ("MCB") is looked up by its canonical family name; otherwise the exact-name match below applies.
+  const inferred = inferCategory(description)
+  const canonical =
+    inferred.confidence === 'sure' && inferred.name
+      ? brands.find(b => b.kind === 'family' && b.name.trim().toLowerCase() === inferred.name!.toLowerCase())
+      : undefined
   for (const b of brands) {
     if (b.kind === 'brand') {
       if (mentions(description, b.name) && (!brand || b.name.length > brand.name.length)) brand = b
@@ -231,7 +239,7 @@ export function guessBrandFamily(
       family = b
     }
   }
-  return { brandId: brand?.id ?? null, familyId: family?.id ?? null }
+  return { brandId: brand?.id ?? null, familyId: (canonical ?? family)?.id ?? null }
 }
 
 // ------------------------------------------------------------------------------------------------ model codes
