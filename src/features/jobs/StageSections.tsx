@@ -77,7 +77,6 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   const inquiries = d.inquiries.data ?? []
   const quotes = d.quotations.data ?? []
   const order = d.order.data ?? null
-  const orderItems = d.orderItems.data ?? []
   const legs = d.legs.data ?? []
   const invoices = d.invoices.data ?? []
   const m = d.orderMoney.data ?? null
@@ -149,17 +148,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         {ctx.money && order?.customerPo ? `Customer's order no. ${order.customerPo}. ` : ''}
         {ctx.money && order?.paymentTermsDays != null ? `Payment terms ${order.paymentTermsDays} days. ` : ''}
       </p>
-      {orderItems.length ? (
-        <Table
-          head={ctx.money ? ['Item', 'Qty', 'Each, PKR'] : ['Item', 'Qty']}
-          label="Items on the order"
-          rows={orderItems.map(i => [
-            i.description,
-            <span key="q" className="num">{`${i.qty}${i.unit ? ` ${i.unit}` : ''}`}</span>,
-            ...(ctx.money ? [i.unitPriceNet === null ? dash : <Money key="p" value={i.unitPriceNet} prefix={false} />] : []),
-          ])}
-        />
-      ) : null}
+      {/* the order lines, Edit GST and lines and Remove line are the slot below (orders/jobSlots/OrderWork) */}
       {orderLink(job.orderId, 'Open the order page')}
     </div>
   )
@@ -168,27 +157,11 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
     <Note>Starts once the order is placed.</Note>
   ) : legs.length ? (
     <div className="grid gap-2">
-      <Table
-        head={['Supplier order', 'Placed', 'Expected', 'Delivered']}
-        label="Supplier orders"
-        rows={legs.map(l => [
-          <span key="s" className="grid"><span className="font-medium">{l.supplierName}</span>{l.reference ? <span className="text-fg-muted">{l.reference}</span> : null}</span>,
-          l.placedOn ? day(l.placedOn) : <span className="text-fg-muted">Not placed</span>,
-          l.expectedOn ? (
-            <span key="e" className={cn(!l.deliveredOn && !l.receivedOn && l.expectedOn < today && 'font-medium text-tone-danger-fg')}>
-              {day(l.expectedOn)}
-              {!l.deliveredOn && !l.receivedOn && l.expectedOn < today ? <span className="block">late</span> : null}
-            </span>
-          ) : (
-            dash
-          ),
-          l.deliveredOn ? day(l.deliveredOn) : l.receivedOn ? <span key="r">Here, {day(l.receivedOn)}</span> : dash,
-        ])}
-      />
+      {/* the supplier orders and their buttons are the slot below (orders/jobSlots/SupplierOrderWork) */}
       {orderLink(job.orderId, 'Open the order page')}
     </div>
   ) : (
-    <Note>No supplier order yet. Items to source and orders to place are on the order page.</Note>
+    <Note>No supplier order yet. Choose a supplier for each line below.</Note>
   )
 
   const deliveryBody = !job.orderId ? (

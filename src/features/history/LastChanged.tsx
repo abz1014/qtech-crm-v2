@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { History as HistoryIcon } from 'lucide-react'
 import { MenuItem } from '@/ui/Popover'
+import { useSeesPrices } from '@/app/session'
 import { useRecordHistory, type HistoryTable } from '@/features/history/api'
 import { lastChangedLine } from '@/features/history/model'
 
@@ -29,7 +30,9 @@ export function LastChanged({ table, id, className }: { table: HistoryTable; id:
     const t = window.setTimeout(() => setReady(true), 400)
     return () => window.clearTimeout(t)
   }, [])
-  const q = useRecordHistory(table, id, ready)
+  // An engineer is not offered history: an RFQ item's event carries its GST rate, which the engineer rule keeps from them (verify-roles).
+  const prices = useSeesPrices()
+  const q = useRecordHistory(table, id, ready && prices)
   const text = lastChangedLine(q.data?.pages[0]?.events[0])
   if (!text) return null
   return (

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useSeesPrices } from '@/app/session'
 import { HistoryMenuItem } from '@/features/history/LastChanged'
 import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
 import type { HistoryTable } from '@/features/history/api'
@@ -11,10 +12,12 @@ import type { HistoryTable } from '@/features/history/api'
  */
 export function useHistoryPanel(o: { table: HistoryTable; id: string; context?: string; imported?: boolean }): { item: ReactNode; node: ReactNode; ask: () => void } {
   const [open, setOpen] = useState(false)
+  // An engineer has no History: an RFQ item's event carries its GST rate (see LastChanged).
+  const prices = useSeesPrices()
   const ask = () => setOpen(true)
   return {
     ask,
-    item: <HistoryMenuItem onOpen={ask} />,
+    item: prices ? <HistoryMenuItem onOpen={ask} /> : null,
     node: <LazyHistoryPanel open={open} onOpenChange={setOpen} table={o.table} id={o.id} context={o.context} imported={o.imported} />,
   }
 }
