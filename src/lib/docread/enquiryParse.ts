@@ -50,6 +50,8 @@ export interface EnquiryLine {
 export interface EnquiryFacts {
   /** The customer's own reference for this enquiry. */
   customerRef: { value: string; label: string; line: string } | null
+  /** The other reference numbers the text carries (a collective number, the subject's number, the rest of "PR # a, b & c"), best first. */
+  alsoRefs: string[]
   /** The date the quotation is due (YYYY-MM-DD). Never a delivery date. */
   dueDate: { iso: string; text: string } | null
   /** Who sent it, as far as the text says. The screen matches it against the companies and contacts on file. */
@@ -392,7 +394,11 @@ const REF_LABEL_ONLY = /^(?:rfq|r\.f\.q\.?|enquiry|inquiry|tender|pr|requisition
 const REF_VALUE = /^([A-Z0-9][A-Z0-9/_.-]*[A-Z0-9]|[A-Z0-9]{3,})/i
 
 function cleanRef(v: string): string | null {
-  const s = v.replace(/[.,;:)]+$/, '')
+  // Edge punctuation is never part of a number ("-41873" cut at a hyphen, "52130)." closing a bracket); a label glued to a bare
+  // number ("Inq-52390") is the number.
+  const s = v
+    .replace(/^[\s.,;:(\-–—/]+|[\s.,;:)\-–—/]+$/g, '')
+    .replace(/^(?:inq(?:uiry)?|enq(?:uiry)?)[-/](?=\d{4,}$)/i, '')
   if (s.length < 3 || s.length > 40 || !/\d/.test(s)) return null
   if (/^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(s)) return null // a date
   if (/^0\d{9,11}$/.test(s)) return null // a phone number
@@ -413,7 +419,16 @@ function subjectRef(line: string): RefHit | null {
   // A subject that names a product ("RFQ: Butterfly valve DN200 - 5 Sets") has its specs as codes: only the code right after
   // the word counts there.
   const itemSubject = PRODUCT.test(body) && new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?\s*$`, 'i').test(body)
-  const pick = isCode(after) ? after : itemSubject ? undefined : [...tokens].reverse().find(isCode)
+  // A subject that names a product ("RFQ Inductive Sensor ABX M12AB1-PQ10Z Maker") has a model code in it, not a reference:
+  // there, a code counts only when it is shaped like a reference (digits only, or letters and a number: "EML-RFQ-2210").
+  const refShaped = (w: string) => {
+    const seg = w.split(/[-/]/)
+    // Every part is letters only or digits (one trailing letter): "T-26-88A", "EML-RFQ-2210", "87338-RFQ-OC". A letter-digit mix
+    // inside a part ("M12AB1", "ABC010RB", "6205-2RS") is a model code.
+    return seg.every(x => /^(?:[A-Za-z]{1,6}|\d{1,12}[A-Za-z]?)$/.test(x)) && seg.some(x => /\d/.test(x)) && (seg.length > 1 || /^\d{4,}[A-Za-z]?$/.test(w))
+  }
+  const hasProduct = PRODUCT.test(body)
+  const pick = isCode(after) ? after : itemSubject ? undefined : [...tokens].reverse().find(w => isCode(w) && (!hasProduct || refShaped(w)))
   const value = pick ? cleanRef(pick) : null
   return value ? { value, label: 'Subject', rank: 4 } : null
 }
@@ -441,6 +456,15 @@ function findRefs(text: string): RefHit[] {
       const whole = tokens.find(k => k.value.endsWith(value) && k.value.length > value.length)
       if (whole) whole.rank = Math.max(whole.rank, rule.rank)
       else out.push({ value, label: rule.label, rank: rule.rank })
+      // "PR # 601001, 601002 & 601003": the whole list is this enquiry's, in the order written.
+      if (v && rule.label === 'PR') {
+        let rest = line.slice(m.index + m[0].length + v[0].length)
+        for (let more = /^\s*(?:,|&|and|\/|;)\s*(\d[A-Z0-9/_.-]{3,})/i.exec(rest); more; more = /^\s*(?:,|&|and|\/|;)\s*(\d[A-Z0-9/_.-]{3,})/i.exec(rest)) {
+          const extra = cleanRef(more[1] as string)
+          if (extra && !out.some(o => o.value === extra)) out.push({ value: extra, label: rule.label, rank: rule.rank })
+          rest = rest.slice(more[0].length)
+        }
+      }
     }
   }
   for (const k of tokens) if (!out.some(o => o.value.includes(k.value))) out.push(k)
@@ -1638,6 +1662,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     lineCount: src.length,
     facts: {
       customerRef: ref ? { value: ref.value, label: ref.label, line: ref.line } : null,
+      alsoRefs: [...new Set(refs.filter(r => r.rank > 0 && r !== ref && r.value !== ref?.value && !own.test(r.line.replace(/\bq[\s-]?tech\b.*?:/i, ''))).map(r => r.value))].slice(0, 5),
       dueDate: due,
       company,
     },

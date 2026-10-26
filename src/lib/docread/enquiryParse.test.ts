@@ -697,3 +697,30 @@ describe('parseEnquiry: an ERP RFQ form that prints its header before every item
     expect(r.items[3]?.description).toMatch(/^LEVEL CONTROLLER/)
   })
 })
+
+describe('parseEnquiry: reference rules (R-W4)', () => {
+  const ref = (t: string) => {
+    const f = parse(t).facts
+    return [f.customerRef?.value ?? null, f.alsoRefs]
+  }
+
+  it('the printed form RFQ number wins; the collective number and the subject number are also-refs', () => {
+    expect(ref('Subject: Collective No:7000123B, Due Date :23-10-2026\nREQUEST FOR QUOTATION\nSUPPLIER:\t5500000\tRFQ # : 7000456\nSUPPLIER NAME: COLLECTIVE NO.: 7000123')).toEqual(['7000456', ['7000123B', '7000123']])
+  })
+
+  it('strips punctuation at the edge of a number ("-41873" is 41873) and a label glued to a bare number', () => {
+    expect(ref('Subject: RE: PO # 310288: PURCHASE INQUIRY-41873')[0]).toBe('41873')
+    expect(ref('Dear Sir,\n(Inq-52390)\nPlease quote the items in the attached PDF.\nRegards')[0]).toBe('52390')
+  })
+
+  it('"PR # a, b & c" keeps all three', () => {
+    expect(ref('Subject: Quotation required\nPR # 601001, 601002 & 601003\nPlease quote 4 nos ball valve 1 inch')).toEqual(['601001', ['601002', '601003']])
+  })
+
+  it('a subject that names a product has a model code in it, not a reference; a reference-shaped code still counts', () => {
+    expect(ref('Subject: RFQ Inductive Sensor BES M18AB1-PSC10Z-S04G Maker\n\nPlease quote 4 nos')[0]).toBeNull()
+    expect(ref('Subject: Urgent RFQ - Replacement for ABC010RB/8 Level Transmitter\n\n1 no')[0]).toBeNull()
+    expect(ref('Subject: RFQ FOR THE DRIVE SPARES REQUIRED T-26-88A\n\nPlease quote 4 nos')[0]).toBe('T-26-88A')
+    expect(ref('Subject: RFQ for PLC spares 40512-RFQ-OC\n\nPlease quote 4 nos')[0]).toBe('40512-RFQ-OC')
+  })
+})
