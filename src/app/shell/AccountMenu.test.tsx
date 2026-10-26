@@ -189,8 +189,8 @@ describe('account menu: Text size (DECISIONS 2026-10-19)', () => {
     shell()
     await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
     await screen.findByRole('menu', { name: 'Account' })
-    await user.keyboard('{End}{ArrowUp}{ArrowUp}{ArrowUp}')
-    // The last item is Sign out; above it (no Install app in jsdom) Larger, Smaller, then Normal.
+    await user.keyboard('{End}{ArrowUp}{ArrowUp}{ArrowUp}{ArrowUp}')
+    // The last item is Sign out; above it the version row, then (no Install app in jsdom) Larger, Smaller, then Normal.
     expect(screen.getByRole('menuitemradio', { name: 'Normal' })).toHaveFocus()
   })
 
