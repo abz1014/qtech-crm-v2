@@ -56,6 +56,8 @@ and viewport).
 
 ## What is visited
 
+The Jobs screens (2026-10-26): the Jobs list (open and history), a Job page in each stage (`job-not-sent`, `job-waiting`, `job-prices-in`, `job-quoted`, `job-po-issued`, `job-delivered`, `job-paid`, `job-commissioning`; the engineer's Job page is the same screens run as an engineer), New enquiry (`enquiry-new`) and Money > Review imported (`review-imported`). The older `rfq-*` and `order-*` captures open the same Job pages through the old addresses and stay until 2026-11-09, then they can go.
+
 `e2e/audit/screens.ts` is the one list (routes and button names change as the UX work lands; adjust it there). Per role, as far as
 the role can reach: Today (with items); RFQ list open and closed; an RFQ in each stage (not sent to suppliers, waiting for prices,
 prices in, quotation sent, won and made into an order: `rfq-won`); the supplier comparison (4 suppliers in 3 currencies, scrolled to the ranked prices); Orders list; an order
@@ -94,8 +96,8 @@ All counts are of **visible** elements: a box larger than 1 px that `checkVisibi
 | Clipped text | Elements whose own text is wider or taller than their box with overflow hidden or clipped, or an ellipsis | 0 |
 | Text cut or off screen | Text nodes cut off by an overflow hidden/clip box with no ellipsis or line clamp (either axis; a few px of glyph overhang down is allowed), plus text and controls running past the viewport's right edge while the page itself does not scroll sideways (a filter strip whose search box is cut off at 375 px) | 0 |
 | Sideways scrollers | Info: boxes other than `<main>` and form fields that scroll sideways on their own (`scrollWidth > clientWidth`, overflow-x auto or scroll), listed with how much they hide | - |
-| Green buttons, whole screen | Primary buttons in the page plus the top bar (`inMain + inChrome`) | exactly 1 (rubric-10) |
-| Actions above the fold in the page | Buttons and links inside `<main>` that can be seen without scrolling (the top bar and tabs left out) | at most 8 (rubric-10) |
+| Green buttons, whole screen | Primary buttons in the page plus the top bar (`inMain + inChrome`). **Exactly 1.** A screen with no single next step (To do, Settings, a report, an engineer's Job page whose action is in the On site card, an engineer's Jobs list) marks itself with `<NoPrimary />` (`src/ui/NoPrimary.tsx`, a hidden `data-no-primary` element); the audit then accepts 0. Two or more always fail, marker or not | exactly 1, or 0 on a `data-no-primary` screen (rubric-10; 2026-10-26) |
+| Actions above the fold in the page | Page-level buttons and links inside `<main>` that can be seen without scrolling (the top bar and tabs left out): the header, toolbar, filters, the next-step band. Per-row actions are left out: a list wraps its rows in a `data-row-actions` container (`DataTable`'s body does, as do To do's rows) and the audit counts those apart (`rowActionsAboveFold`). The report lists the labels it counted | at most 8 (rubric-10; row actions excluded 2026-10-26) |
 | Text over text | Two visible text lines on the same layer (the page, one dialog or popover, one fixed or sticky bar) whose painted boxes, clipped to what can be seen, cross by more than 3 px each way and 15% of the smaller box | 0 |
 | Boxes that scroll sideways (phones) | Elements with `overflow-x: auto` or `scroll` whose content is wider than they are (a filter strip, a table wrapper), outside text fields | 0 |
 | Highlighted-row contrast | Text whose nearest opaque background is a highlight (`bg-selected`, `bg-sunken` or a tone tint, read from the app's classes): 4.5:1 for a control label or a heading, 7:1 for everything else; disabled controls exempt | 0 (rubric-10) |
