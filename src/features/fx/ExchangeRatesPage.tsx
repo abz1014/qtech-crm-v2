@@ -116,14 +116,24 @@ const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '')
 
 function RowActions({ r, onAdd, onHistory, touch }: { r: RateRow; onAdd: (c: string) => void; onHistory: (c: string) => void; touch?: boolean }) {
   const size = touch ? 'touch' : 'sm'
+  // In the table the two actions are icon buttons (a name and a tooltip each) so the Actions column stays narrow; on a phone they are words.
   return (
     <span className="inline-flex flex-wrap items-center justify-end gap-1">
-      <Button size={size} variant="quiet" icon={Plus} onClick={() => onAdd(r.currency)} aria-label={`Add rate for ${r.currency}`}>
-        Add rate
-      </Button>
-      <Button size={size} variant="quiet" icon={History} onClick={() => onHistory(r.currency)} aria-label={`History of ${r.currency}`}>
-        History
-      </Button>
+      {touch ? (
+        <>
+          <Button size={size} variant="quiet" icon={Plus} onClick={() => onAdd(r.currency)} aria-label={`Add rate for ${r.currency}`}>
+            Add rate
+          </Button>
+          <Button size={size} variant="quiet" icon={History} onClick={() => onHistory(r.currency)} aria-label={`History of ${r.currency}`}>
+            History
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button size="sm" variant="quiet" icon={Plus} onClick={() => onAdd(r.currency)} aria-label={`Add rate for ${r.currency}`} title="Add rate" />
+          <Button size="sm" variant="quiet" icon={History} onClick={() => onHistory(r.currency)} aria-label={`History of ${r.currency}`} title="History" />
+        </>
+      )}
     </span>
   )
 }
@@ -131,7 +141,13 @@ function RowActions({ r, onAdd, onHistory, touch }: { r: RateRow; onAdd: (c: str
 function AgeCell({ r }: { r: RateRow }) {
   if (r.staleness === null || r.ageDays === null) return <span className="text-fg-muted">—</span>
   if (r.staleness === 'fresh') return <span className="num text-fg-2">{ageText(r.ageDays)}</span>
-  return <StatusBadge dimension="fx" value={r.staleness} detail={bandDetail(r.ageDays)} />
+  // the badge and, under it, how old: one line each, so a stale rate does not widen the table
+  return (
+    <span className="grid justify-items-start gap-px">
+      <StatusBadge dimension="fx" value={r.staleness} />
+      <span className="text-sm text-fg-muted">{bandDetail(r.ageDays)}</span>
+    </span>
+  )
 }
 
 function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: string) => void; onHistory: (c: string) => void }) {
@@ -154,17 +170,22 @@ function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: st
       value: r => r.ratePkr,
       cell: r => (r.ratePkr === null ? <span className="font-sans text-fg-muted">No rate yet</span> : <span className="num">{formatRate(r.ratePkr)}</span>),
     },
-    { id: 'asof', header: 'As of', kind: 'date', value: r => r.asOf, cell: r => (r.asOf ? <span className="num">{shortDay(r.asOf)}</span> : <span className="text-fg-muted">—</span>) },
     {
-      id: 'source',
-      header: 'Source',
-      hideBelowMd: true,
-      value: r => r.source,
+      // The source sits under the date (it was a column of its own, which made the table scroll sideways in the Settings box).
+      id: 'asof',
+      header: 'As of',
+      kind: 'date',
+      value: r => r.asOf,
       cell: r =>
-        r.source ? (
-          <span className="inline-flex items-center gap-1 text-fg-2">
-            <Icon icon={r.source === 'manual' ? Pencil : RefreshCw} size="sm" className="text-fg-muted" />
-            {sourceText(r.source)}
+        r.asOf ? (
+          <span className="grid">
+            <span className="num">{shortDay(r.asOf)}</span>
+            {r.source ? (
+              <span className="inline-flex items-center gap-1 text-sm text-fg-muted">
+                <Icon icon={r.source === 'manual' ? Pencil : RefreshCw} size="sm" />
+                {sourceText(r.source)}
+              </span>
+            ) : null}
           </span>
         ) : (
           <span className="text-fg-muted">—</span>
@@ -175,7 +196,6 @@ function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: st
       id: 'action',
       header: 'Actions', // read by assistive tech only; the header text is hidden by the table's className below
       align: 'right',
-      width: 220,
       cell: r => <RowActions r={r} onAdd={onAdd} onHistory={onHistory} />,
     },
   ]

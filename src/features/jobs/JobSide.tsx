@@ -5,6 +5,7 @@ import { FileText, MessageCircle, Phone } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
+import { cancelReasonLabel } from '@/features/orders/lib/cancel'
 import { waLink } from '@/lib/messageLinks'
 import { isFinalMargin } from '@/lib/money'
 import { Money } from '@/ui/Money'
@@ -168,7 +169,7 @@ export function CancelledOrders({ data }: { data: JobData }) {
             <Link to={`/orders/${o.id}`} className="num inline-flex min-h-touch items-center rounded font-medium text-primary hover:underline">
               {orderRef(o.number)}
             </Link>{' '}
-            <span className="text-fg-2">cancelled {formatShortDate(o.cancelledOn, today)}</span>
+            <span className="text-fg-2">{`cancelled ${formatShortDate(o.cancelledOn, today)}${cancelReasonLabel(o.reason) ? `: ${cancelReasonLabel(o.reason)}` : ''}`}</span>
           </li>
         ))}
       </ul>

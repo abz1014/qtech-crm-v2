@@ -12,9 +12,9 @@ afterEach(() => cleanup())
  * CPU-bound: on a contended machine (a busy laptop, a shared CI runner) it passes 1 s and the lookup fails although the app
  * is fine. The failures were always "Unable to find role=..." on a screen still mid-render, never a wrong result. This only
  * raises the ceiling of a lookup that is still failing: a lookup that succeeds returns at once, and a real regression still
- * fails (after 5 s, well inside the 30 s testTimeout).
+ * fails (after 10 s, well inside the 30 s testTimeout). 5 s was still not enough when three full runs shared one machine (NavCounts).
  */
-configure({ asyncUtilTimeout: 5000 })
+configure({ asyncUtilTimeout: 10_000 })
 
 // jsdom lacks these; Radix and cmdk call them.
 class ResizeObserverStub {
