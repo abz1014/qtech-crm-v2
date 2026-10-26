@@ -291,7 +291,7 @@ describe('the supplier comparison', () => {
     try {
       renderPanel([{ ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }])
       const one = screen.getByRole('article', { name: 'Item 1' })
-      expect(within(one).queryByRole('button')).toBeNull()
+      expect(within(one).queryByRole('button', { name: /^(?!More for item)/ })).toBeNull()
       expect(one.querySelector('[data-waiting]')).toBeNull()
     } finally {
       undo()
@@ -321,7 +321,7 @@ describe('the supplier comparison', () => {
     expect(screen.queryByText(/Cheapest/)).toBeNull()
     expect(document.querySelector('[data-own-price], [data-cheapest-tag], [data-cheapest], [data-price-detail]')).toBeNull()
     expect(screen.queryByRole('button', { name: /Show details for/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: /More for/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /More for (?!item)/ })).toBeNull()
     expect(screen.queryByRole('button', { name: 'How are prices compared?' })).toBeNull()
   })
 

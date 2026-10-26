@@ -102,7 +102,7 @@ export interface FloatInput {
   /** Client-generated: a second call with the same id changes nothing, so a double tap cannot duplicate. */
   id: string
   companyId: string
-  siteId: string | null
+  siteId?: string | null
   contactId: string | null
   customerRef: string
   dueOn: string | null
@@ -209,6 +209,8 @@ export interface RfqHeader {
   /** The bid deadline's time (HH:MM), when one was given. */
   dueTime?: string | null
   isPriority: boolean
+  /** Who entered it (rfqs.created_by); the whose-is-it rule of 0092 reads this and owner. */
+  createdBy?: string | null
   quotedOn: string | null
   closedOn: string | null
   closeReason: string | null
@@ -216,6 +218,7 @@ export interface RfqHeader {
   notes: string | null
   company: { id: string; name: string; country: string | null; city?: string | null; createdAt: string | null }
   site: { name: string; address: string | null } | null
+  siteId?: string | null
   contactId: string | null
   contact: { name: string; phone: string | null; email?: string | null; jobTitle?: string | null } | null
   owner: { id: string; name: string; role: string; phone?: string | null } | null
@@ -231,7 +234,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const [rfqRes, stateRes] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
+      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, created_by, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
       .eq('id', id)
       .maybeSingle(),
     db.from('v_rfq_state').select('*').eq('rfq_id', id).maybeSingle(),
@@ -254,12 +257,14 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     dueOn: r.due_on,
     dueTime: r.due_time ? r.due_time.slice(0, 5) : null,
     isPriority: r.is_priority,
+    createdBy: r.created_by,
     quotedOn: r.quoted_on,
     closedOn: r.closed_on,
     closeReason: r.close_reason,
     closeNote: r.close_note,
     notes: r.notes,
     company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, createdAt: c?.created_at ?? null },
+    siteId: r.site_id,
     contactId: r.contact_id,
     site: unwrap(site as Maybe<{ name: string; address: string | null }>),
     contact: ct0 ? { name: ct0.name, phone: ct0.phone, email: ct0.email, jobTitle: ct0.job_title } : null,
@@ -787,6 +792,48 @@ export async function addRfqItem(input: { id: string; rfqId: string; description
     { onConflict: 'id', ignoreDuplicates: true },
   )
   if (error) throw error
+}
+
+export interface RfqHeaderPatch {
+  companyId: string
+  siteId?: string | null
+  contactId: string | null
+  customerRef: string | null
+  receivedOn: string
+}
+
+/** Fix the RFQ's header. The database refuses someone else's entry (HINT not_yours) and a closed month. */
+export async function updateRfqHeader(rfqId: string, p: RfqHeaderPatch): Promise<void> {
+  const { data, error } = await requireSupabase()
+    .from('rfqs')
+    .update({ company_id: p.companyId, site_id: p.siteId, contact_id: p.contactId, customer_ref: p.customerRef?.trim() || null, received_on: p.receivedOn })
+    .eq('id', rfqId)
+    .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
+}
+
+export interface RfqItemPatch {
+  description: string
+  qty: number
+  unit: string | null
+}
+
+export async function updateRfqItem(id: string, p: RfqItemPatch): Promise<void> {
+  const { data, error } = await requireSupabase()
+    .from('rfq_items')
+    .update({ description: p.description.trim(), qty: p.qty, unit: p.unit?.trim() || null })
+    .eq('id', id)
+    .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
+}
+
+/** Remove an item. An item an order line is based on is refused by the database (HINT linked_to_order). */
+export async function removeRfqItem(id: string): Promise<void> {
+  const { data, error } = await requireSupabase().from('rfq_items').delete().eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
 }
 
 /** Remove one supplier's price for one item. The row is returned so an Undo can put it back exactly as it was. */

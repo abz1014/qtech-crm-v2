@@ -305,6 +305,31 @@ export function useAddRfqItem(rfqId: string) {
   })
 }
 
+/** Edit the RFQ's header (customer, site, contact, customer ref, received date). */
+export function useUpdateRfqHeader(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (patch: api.RfqHeaderPatch) => api.updateRfqHeader(rfqId, patch),
+    onSuccess: () => invalidateAfter(client, 'rfq.edit', { rfqId }),
+  })
+}
+
+export function useUpdateRfqItem(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; patch: api.RfqItemPatch }) => api.updateRfqItem(v.id, v.patch),
+    onSuccess: () => invalidateAfter(client, 'item.edit', { rfqId }),
+  })
+}
+
+export function useRemoveRfqItem(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.removeRfqItem(id),
+    onSuccess: () => invalidateAfter(client, 'item.remove', { rfqId }),
+  })
+}
+
 export function useRemoveQuoteLine(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
@@ -358,8 +383,8 @@ export function useMySignature(userId: string | undefined) {
 }
 
 /** Everyone's name by id, for the collision line. Cached for the session; the line is absent while it loads. */
-export function useUserNames() {
-  return useQuery({ queryKey: qk.rfqs.userNames(), queryFn: api.listUserNames, staleTime: 10 * 60_000 })
+export function useUserNames(enabled = true) {
+  return useQuery({ queryKey: qk.rfqs.userNames(), queryFn: api.listUserNames, staleTime: 10 * 60_000, enabled })
 }
 
 // ================================================================ Delete an RFQ (0092)
