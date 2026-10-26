@@ -18,7 +18,7 @@ import { useOrderMargins, useReconciliationInput } from '@/features/money/hooks'
 import { useUnchecked } from '@/features/money/exceptions/checked'
 
 /*
- * Money > Month end > Things to check (M07; was "Exceptions", owner glossary 2026-10-19): the reconciliation checks over the money
+ * Money > Month end > Mistakes to fix (M07; was "Exceptions", owner glossary 2026-10-19): the reconciliation checks over the money
  * views, for an admin, reached from the Month end checklist. Each line is one fact with the customer and order it is about,
  * by severity. It is not a data-quality score: it lists what needs a human look, and says "all in balance" when nothing does.
  * Always checks everything (no period filter): an old mistake is still a mistake.
@@ -82,9 +82,9 @@ export function ExceptionsPage() {
     <MoneyFrame active="month-end">
       <MoneySubHeader
         back={{ to: '/money/month-end', label: 'Month end' }}
-        title="Things to check"
+        title="Mistakes to fix"
         meta={
-          <InfoTip label="About things to check">
+          <InfoTip label="About mistakes to fix">
             Checked, in every month: customer payments against the order total, invoices against the order, costs against the expected cost
             and the POs, dates in sequence, the GST on each invoice, sending to the customer and the tax deposit, and orders where nobody has
             said whether GST is included in the price. Mark as checked hides a finding on this device until its figures change.
@@ -149,7 +149,7 @@ export function ExceptionsPage() {
             {checked.length ? 'Nothing left to check.' : 'Nothing to check. Orders, payments, invoices and costs are in balance and in sequence.'}
           </p>
         ) : (
-          <ul aria-label="Things to check">
+          <ul aria-label="Mistakes to fix">
             {open.map(e => (
               <Row key={e.key} e={e} customer={e.orderId ? (customerOf.get(e.orderId) ?? null) : null} first={e.key === firstWithOrder} onCheck={() => mark(e, true)} />
             ))}

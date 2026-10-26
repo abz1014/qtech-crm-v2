@@ -9,6 +9,7 @@ import { businessToday } from '@/lib/dates'
 
 // One download per page (perf/lcp): opening Who owes us does not bring the month-end reports, the expense sheet and the rest.
 const MoneyHome = lazy(() => import('@/features/money/home/MoneyHome').then(m => ({ default: m.MoneyHome })))
+const GstToFbrPage = lazy(() => import('@/features/money/accounts/GstToFbrPage').then(m => ({ default: m.GstToFbrPage })))
 const ReceivablesPage = lazy(() => import('@/features/money/payments/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })))
 const GstRegisterPage = lazy(() => import('@/features/money/invoices/GstRegisterPage').then(m => ({ default: m.GstRegisterPage })))
 const ExpensesPage = lazy(() => import('@/features/money/expenses/ExpensesPage').then(m => ({ default: m.ExpensesPage })))
@@ -32,7 +33,7 @@ const EnquiriesReportPage = lazy(() => import('@/features/reports/ReportsPage').
  *   receivables      Who owes us: admin and sales
  *   gst-register     Invoices & GST: admin and sales (sales get the simpler list)
  *   expenses         admin only
- *   month-end        the checklist, admin only; from it: month-end/bank (Match bank statement), margins, exceptions (Things to check)
+ *   month-end        the checklist, admin only; from it: month-end/bank (Match bank statement), margins, exceptions (Mistakes to fix)
  *   reports          the one Reports view: admin and sales (each sees the reports their role may read); reports/<key> opens one
  * The old addresses keep working: /money/month-end/{pnl,categories,aging,owe,gst,team} open the same report under Reports, with
  * the month kept. Sales see the no-access page on admin views; engineers never reach Money at all (RequireRole).
@@ -44,6 +45,8 @@ export default function MoneyScreen() {
   return (
     <Routes>
       <Route index element={isAdmin ? <MoneyHome /> : <Navigate to="receivables" replace />} />
+      <Route path="accounts" element={<Navigate to="/money" replace />} />
+      <Route path="accounts/gst" element={adminOnly(<GstToFbrPage />, 'GST to FBR')} />
       <Route path="receivables" element={<ReceivablesPage />} />
       <Route path="gst-register" element={<GstRegisterPage />} />
       <Route path="expenses" element={adminOnly(<ExpensesPage />, 'Expenses')} />
@@ -53,7 +56,7 @@ export default function MoneyScreen() {
         <Route key={key} path={`month-end/${key}`} element={<OldReportAddress report={key} />} />
       ))}
       <Route path="margins" element={adminOnly(<MarginsPage />, 'Margins')} />
-      <Route path="exceptions" element={adminOnly(<ExceptionsPage />, 'Things to check')} />
+      <Route path="exceptions" element={adminOnly(<ExceptionsPage />, 'Mistakes to fix')} />
       <Route path="reports" element={<ReportsPage />} />
       <Route path="reports/:report" element={<ReportRoute isAdmin={isAdmin} />} />
       <Route path="*" element={<NotFoundPage />} />

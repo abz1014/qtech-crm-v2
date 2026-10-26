@@ -183,15 +183,15 @@ test.describe('Money > Margins (admin)', () => {
   })
 })
 
-test.describe('Money > Month end > Things to check (admin)', () => {
+test.describe('Money > Month end > Mistakes to fix (admin)', () => {
   test('lists what the reconciliation finds, links the order, and exports CSV', async ({ page }) => {
     const o = await seedOrder({ lines: [{ qty: 1, net: 10000, supplierPrice: null }] }) // gross 11,800
     await post('payments_in', { order_id: o.id, amount: 15000, received_on: today() })
     const unknown = await seedOrder({ flags: ['value_basis_unknown'], lines: [{ qty: 1, net: 1000, supplierPrice: null }] })
 
     await openAs(page, 'admin', '/money/exceptions')
-    await expect(page.getByRole('heading', { name: 'Things to check', level: 2 })).toBeVisible()
-    const list = page.getByRole('list', { name: 'Things to check' })
+    await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeVisible()
+    const list = page.getByRole('list', { name: 'Mistakes to fix' })
     const over = list.getByRole('listitem').filter({ hasText: ordRef(o.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
     await expect(over).toContainText('Critical.')
@@ -253,7 +253,7 @@ test.describe('who sees money', () => {
 
 for (const width of [1440, 375]) {
   test.describe(`axe at ${width}`, () => {
-    test('the Margin panel, Margins and Things to check have no violations', async ({ page }) => {
+    test('the Margin panel, Margins and Mistakes to fix have no violations', async ({ page }) => {
       await setEurRate()
       const o = await seedOrder()
       await expense(o.id, 4000)
@@ -269,8 +269,8 @@ for (const width of [1440, 375]) {
       expect(await axeViolations(page), 'margins').toEqual([])
       await shot(page, `m04-money-margins-${width}`)
       await page.goto('/money/exceptions')
-      await expect(page.getByRole('heading', { name: 'Things to check', level: 2 })).toBeVisible()
-      await expect(page.getByRole('list', { name: 'Things to check' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeVisible()
+      await expect(page.getByRole('list', { name: 'Mistakes to fix' })).toBeVisible()
       expect(await axeViolations(page), 'exceptions').toEqual([])
       await shot(page, `m07-money-exceptions-${width}`)
     })
