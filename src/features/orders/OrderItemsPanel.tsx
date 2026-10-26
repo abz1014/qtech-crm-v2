@@ -17,6 +17,7 @@ import { legState, type LegState } from '@/features/orders/lib/legModel'
 import { gstOptions, isExemptAll, lineGstPaisa, lineNetPaisa, STANDARD_GST, unitWord } from '@/features/orders/lib/orderMath'
 import { formatAmount, formatPaisa } from '@/lib/money'
 import { lazyShown } from '@/lib/lazyDialog'
+import { useEntryAccess } from '@/features/records/useEntryAccess'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
 const SplitLineDialog = lazyShown(() => import('@/features/orders/SplitLineDialog').then(m => m.SplitLineDialog))
@@ -99,7 +100,10 @@ export function OrderItemsPanel({
   // HW-14: a fully invoiced order's lines are what its invoices (and payments) were made from. Changing a price, quantity or
   // GST there would silently turn it part-invoiced and owing again, so its lines are locked; Add line stays, for an extra.
   const invoicedLock = money && order.state?.invoicing === 'fully_invoiced'
-  const editable = money && canEdit && !basisUnknown && !invoicedLock
+  // Whose entry it is (0092): somebody else's order keeps its prices and GST closed to this person, and says why instead of failing on save.
+  const entry = useEntryAccess({ createdBy: order.createdBy ?? null, ownerId: order.owner?.id ?? null })
+  const notYours = money && canEdit && !basisUnknown && !invoicedLock && !entry.can
+  const editable = money && canEdit && !basisUnknown && !invoicedLock && entry.can
   const showEdit = editable && editing
   const exempt = money && !basisUnknown && isExemptAll(items.map(i => ({ gstRate: i.gstRate ?? STANDARD_GST })))
   const fail = (title: string) => (err: unknown) => toast({ title, body: mapPgError(err, { entity: 'item' }).message, tone: 'danger' })
@@ -370,6 +374,16 @@ export function OrderItemsPanel({
                 <Button size="sm" variant={editing ? 'secondary' : 'quiet'} icon={editing ? Check : SlidersHorizontal} aria-pressed={editing} onClick={() => setEditing(e => !e)}>
                   {editing ? 'Done editing' : 'Edit GST and lines'}
                 </Button>
+              ) : null}
+              {notYours && rows.length > 0 && entry.note ? (
+                <>
+                  <span className="text-base text-fg-2" role="note" data-slot="not-yours">
+                    {entry.note}
+                  </span>
+                  <Button size="sm" variant="quiet" icon={SlidersHorizontal} disabled>
+                    Edit GST and lines
+                  </Button>
+                </>
               ) : null}
               {invoicedLock && canEdit && rows.length > 0 ? (
                 <span className="text-sm text-fg-muted" role="note">

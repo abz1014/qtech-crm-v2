@@ -266,3 +266,14 @@ export function useAddCashTopup() {
   const client = useQueryClient()
   return useMutation({ mutationFn: claims.addCashTopup, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
 }
+
+/** 0091: one-off titles used 3+ times in 90 days (admin only: `enabled` is the admin check). */
+export function useMiscSuggestions(enabled = true) {
+  return useQuery({ queryKey: [...qk.money.expenses.all, 'misc-suggestions'] as const, queryFn: api.listMiscSuggestions, enabled, staleTime: 60_000 })
+}
+
+/** "Make it a category": re-files the expenses with that title (the same lists as a category merge refresh). */
+export function usePromoteMiscTitle() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: api.promoteMiscTitle, onSuccess: () => invalidateAfter(client, 'category.merge', {}) })
+}

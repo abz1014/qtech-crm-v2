@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { controlClass, useControlProps } from '@/ui/form/fieldContext'
-import { categoryMeta, defaultGroupId, guessGroupId, sortGroups, type Category, type ExpenseGroup, type PaidVia } from '@/features/money/expenses/model'
+import { categoryMeta, defaultGroupId, guessGroupId, miscFor, sortGroups, type Category, type ExpenseGroup, type PaidVia } from '@/features/money/expenses/model'
 
 /*
  * CategoryPicker (M03, M11; g2-month-end "Category type-ahead"; grouped 0086). Opened empty, the list shows the categories used
@@ -20,7 +20,7 @@ import { categoryMeta, defaultGroupId, guessGroupId, sortGroups, type Category, 
  * list: 'Create "Office water"', paid in cash or by bank (one tap each, cash first: the small spends). It is filed under the
  * group of a category that shares a word with it ("Bike fuel" goes with Fuel & travel under Vehicles), else the closest match's,
  * else Office running; "Change group" under it picks another in one more tap. With no match, the
- * first of the two is highlighted, so Enter creates it; Tab and leaving the field never create anything.
+ * first of the two is highlighted, so Enter creates it (with `onMisc`, the first row is "Other: '<text>'" instead, above them: 0091); Tab and leaving the field never create anything.
  */
 export type CreateCategoryResult = { id: string } | { error: string }
 
@@ -49,9 +49,14 @@ interface CategoryPickerProps {
   groups?: readonly ExpenseGroup[]
   /** The "Recent" section: the most used categories of the last 30 days (up to 5). */
   recent?: readonly Category[]
+  /**
+   * 0091: typed text that matches no category is offered as "Other: '<text>'". Picking it calls this with the Other of the group the
+   * words suggest and the text, which the caller puts in Detail ("What was it for?").
+   */
+  onMisc?: (category: Category, text: string) => void
 }
 
-type Item = { kind: 'category'; c: Category } | { kind: 'create'; via: PaidVia }
+type Item = { kind: 'category'; c: Category } | { kind: 'misc'; c: Category } | { kind: 'create'; via: PaidVia }
 const CREATE_VIAS: readonly PaidVia[] = ['cash', 'bank']
 const squash = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
 
@@ -81,7 +86,7 @@ function Highlight({ label, q }: { label: string; q: string }) {
 }
 
 export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(function CategoryPicker(
-  { categories, value, onChange, prefilled, size = 'field', id: idProp, disabled, className, chevron, onUnmatched, onCreate, groups, recent, ...rest },
+  { categories, value, onChange, prefilled, size = 'field', id: idProp, disabled, className, chevron, onUnmatched, onCreate, onMisc, groups, recent, ...rest },
   ref,
 ) {
   const a11y = useControlProps({ id: idProp })
@@ -137,9 +142,18 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
   // Vehicles), else the closest match's, else Office running
   const createGroupId = chosenGroup ?? guessGroupId(typed, options, groups ?? []) ?? (q ? matches[0]?.groupId : undefined) ?? defaultGroupId(groups ?? [])
   const createGroupName = sortedGroups.find(g => g.id === createGroupId)?.name
+  // 0091: no category matches and nothing has exactly that name: offer "Other: '<text>'" under the group the words suggest
+  const misc = useMemo(
+    () => (onMisc && typed !== '' && matches.length === 0 ? miscFor(typed, categories, groups ?? []) : null),
+    [onMisc, typed, matches.length, categories, groups],
+  )
   const items: Item[] = useMemo(
-    () => [...matches.map(c => ({ kind: 'category' as const, c })), ...(canCreate ? CREATE_VIAS.map(via => ({ kind: 'create' as const, via })) : [])],
-    [matches, canCreate],
+    () => [
+      ...matches.map(c => ({ kind: 'category' as const, c })),
+      ...(misc ? [{ kind: 'misc' as const, c: misc }] : []),
+      ...(canCreate ? CREATE_VIAS.map(via => ({ kind: 'create' as const, via })) : []),
+    ],
+    [matches, misc, canCreate],
   )
   const activeIndex = Math.min(active, Math.max(items.length - 1, 0))
   /** The highlighted category, or the first match while a create row is highlighted (Tab and leaving never create). */
@@ -170,7 +184,12 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
       close()
     } else setCreateError(r.error)
   }
-  const choose = (item: Item) => (item.kind === 'category' ? pick(item.c) : void create(item.via))
+  const pickMisc = (c: Category) => {
+    onMisc?.(c, typed.replace(/\s+/g, ' '))
+    onUnmatched?.(null)
+    close()
+  }
+  const choose = (item: Item) => (item.kind === 'category' ? pick(item.c) : item.kind === 'misc' ? pickMisc(item.c) : void create(item.via))
   // Leaving the field (a click on Save, on another cell) is the same as Tab: a highlighted match is accepted. Text that
   // matches nothing is never dropped quietly: the box keeps showing it and the caller is told.
   const leave = () => {
@@ -311,14 +330,32 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                   <span className="text-xs text-fg-muted">{q ? categoryMeta(c, groups) : c.defaultPaidVia}</span>
                 </li>,
               ])}
-              {matches.length === 0 && !canCreate ? (
+              {misc ? (
+                <li
+                  id={optionId(matches.length)}
+                  role="option"
+                  aria-selected={false}
+                  data-active={matches.length === activeIndex || undefined}
+                  onMouseMove={() => setActive(matches.length)}
+                  onClick={() => pickMisc(misc)}
+                  className={cn(
+                    'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded px-2 text-sm font-medium text-primary',
+                    rowHeight,
+                    matches.length === activeIndex && 'bg-selected',
+                  )}
+                >
+                  <span className="truncate">Other: ‘{typed}’</span>
+                  <span className="text-xs font-normal text-fg-muted">{sortedGroups.find(g => g.id === misc.groupId)?.name ?? misc.name}</span>
+                </li>
+              ) : null}
+              {matches.length === 0 && !canCreate && !misc ? (
                 <li role="presentation" className="flex h-[36px] items-center px-2 text-sm text-fg-muted">
                   No category matches “{typed}”
                 </li>
               ) : null}
               {canCreate
                 ? CREATE_VIAS.map((via, k) => {
-                    const i = matches.length + k
+                    const i = matches.length + (misc ? 1 : 0) + k
                     return (
                       <li
                         key={via}
