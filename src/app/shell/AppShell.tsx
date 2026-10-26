@@ -9,7 +9,6 @@ import { PaletteHost } from '@/app/palette/PaletteHost'
 import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
-import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
 import { TopBar } from '@/app/shell/TopBar'
 import type { NavCounts } from '@/app/shell/useNavCounts'
@@ -17,12 +16,14 @@ import { usePageSettled } from '@/app/usePageSettled'
 import { markContentDrawn } from '@/lib/afterContent'
 import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
-import { HelpHost } from '@/features/help/HelpHost'
 
 /*
  * The top bar's counts read the whole Today list (a dozen requests). They load, with the Today rules, once the page has its
  * data (perf/lcp). A failed download only means no numbers, never a broken shell.
  */
+// Help and the install/update toasts are not on the first screen: downloaded once the page has settled (perf: first-load JS).
+const HelpHost = lazy(() => import('@/features/help/HelpHost').then(m => ({ default: m.HelpHost })))
+const PwaPrompts = lazy(() => import('@/app/shell/PwaPrompts').then(m => ({ default: m.PwaPrompts })))
 const NavCountsSource = lazy(() => import('@/app/shell/useNavCounts').catch(() => ({ default: () => null })))
 
 interface AppShellProps {
@@ -41,7 +42,6 @@ export function AppShell({ counts }: AppShellProps) {
   if (session.status !== 'signed-in') return null
   return (
     <ToastProvider>
-      <PwaPrompts />
       <CaptureProvider>
         <PaletteHost role={session.user.role} personId={session.user.id}>
           <MobileBarProvider>
@@ -89,9 +89,10 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
         </ErrorBoundary>
       </main>
       <BottomTabs role={user.role} counts={badges} />
-      <HelpHost />
       {settled ? (
         <Suspense fallback={null}>
+          <HelpHost />
+          <PwaPrompts />
           <NavCountsSource user={user} onCounts={setNav} />
         </Suspense>
       ) : null}

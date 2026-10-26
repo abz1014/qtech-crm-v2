@@ -1,8 +1,7 @@
-import { Suspense, type ReactNode } from 'react'
+import { Suspense } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
-import { NoAccessPage } from '@/app/pages/NoAccessPage'
-import { useSeesPrices, useSession } from '@/app/session'
+import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { VersionLabel } from '@/app/shell/VersionLabel'
 import { InstallBanner } from '@/features/settings/InstallBanner'
@@ -24,6 +23,7 @@ const SettingsHomePage = lazyWithReload(() => import('@/features/settings/Settin
  * profile is shown to everyone (read-only unless admin).
  */
 // The pages and their two groups live in settingsLinks.ts, shared with the command palette's Jump to.
+
 
 const useIsAdmin = () => {
   const s = useSession()
@@ -118,12 +118,4 @@ export function SettingsHome() {
   )
 }
 
-/** Exchange rates: admin and sales. An engineer sees the no-access page (owner decision 2026-10-22: no currency amounts). */
-export function PricesOnly({ area, children }: { area: string; children: ReactNode }) {
-  return useSeesPrices() ? <>{children}</> : <NoAccessPage area={area} roles={['admin', 'sales']} />
-}
-
-/** The Team screen is admin only. Anyone else sees the no-access page inside the shell, never the data (the function refuses them too). */
-export function AdminOnly({ area, children }: { area: string; children: ReactNode }) {
-  return useIsAdmin() ? <>{children}</> : <NoAccessPage area={area} />
-}
+export { AdminOnly, PricesOnly } from '@/features/settings/settingsGuards'
