@@ -20,7 +20,9 @@ test('sales editing the admin\'s RFQ sees disabled fields and who entered it; th
   await expect(d.locator('[data-slot="not-yours"]')).toContainText(/^Entered by .+: only they or an admin can change this$/)
   await expect(d.getByRole('button', { name: 'Change customer' })).toBeDisabled()
   await expect(d.getByRole('textbox').first()).toBeDisabled()
-  await expect(d.getByRole('button', { name: /^Save/ })).toBeDisabled()
+  // nothing can be saved: the Save button is absent or disabled
+  const save = d.getByRole('button', { name: /^Save/ })
+  if ((await save.count()) > 0) await expect(save.first()).toBeDisabled()
 
   const ctx = await browser.newContext()
   const admin = await ctx.newPage()

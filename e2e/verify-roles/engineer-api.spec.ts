@@ -39,15 +39,15 @@ test.beforeAll(async () => {
 })
 
 test('an engineer cannot change the owner or the legacy flags of an order, through the real API path', async () => {
-  const before = await api('admin', `/rest/v1/orders?id=eq.${world.order.id}&select=owner_id,legacy_flags`)
-  const was = (before.body as Array<{ owner_id: string; legacy_flags: string[] }>)[0]
+  const before = await api('admin', `/rest/v1/orders?id=eq.${world.order.id}&select=owner_id,legacy_flags,created_by`)
+  const was = (before.body as Array<{ owner_id: string; legacy_flags: string[]; created_by: string | null }>)[0]
   for (const patch of [{ owner_id: IDS.engineer }, { legacy_flags: ['owner_unknown'] }, { created_by: IDS.engineer }]) {
     const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: patch, prefer: 'return=representation' })
-    const changed = r.status < 300 && Array.isArray(r.body) && r.body.length > 0
-    expect(changed, `engineer PATCH ${JSON.stringify(patch)} must change nothing (got ${r.status} ${r.text.slice(0, 120)})`).toBe(false)
+    // PostgREST answers a PATCH with the row even when a trigger kept the old value, so the proof is the stored value below
+    test.info().annotations.push({ type: `engineer PATCH ${Object.keys(patch)[0]}`, description: `${r.status}` })
   }
-  const after = await api('admin', `/rest/v1/orders?id=eq.${world.order.id}&select=owner_id,legacy_flags`)
-  expect((after.body as Array<{ owner_id: string; legacy_flags: string[] }>)[0], 'the order is as it was').toEqual(was)
+  const after = await api('admin', `/rest/v1/orders?id=eq.${world.order.id}&select=owner_id,legacy_flags,created_by`)
+  expect((after.body as Array<{ owner_id: string; legacy_flags: string[]; created_by: string | null }>)[0], 'the order is as it was').toEqual(was)
 })
 
 test('the history an engineer can fetch names no priced file and has no price-like key', async () => {

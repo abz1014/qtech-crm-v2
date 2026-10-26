@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test'
 import { createCompany, openAs, uniqueName } from '../support/stack'
 import { db, num } from '../verify/support/db'
 
+const ADMIN = 'a0000000-0000-4000-8000-000000000001'
+
 /*
  * Review imported (redesign phase 2, migration 0096), end to end with fictional data written the way the import writes it (the
  * service role, legacy_source set):
@@ -18,7 +20,7 @@ async function seed() {
   const tag = Math.random().toString(36).slice(2, 7).toUpperCase()
   const po = `RV-PO-${tag}`
   const order = await db.add<{ id: string; number: number }>('orders', {
-    company_id: co.id, ordered_on: '2026-03-02', customer_po_number: po, payment_terms_days: 30, legacy_source: { sheet: 'orders', row: tag },
+    company_id: co.id, owner_id: ADMIN, ordered_on: '2026-03-02', customer_po_number: po, payment_terms_days: 30, legacy_source: { sheet: 'orders', row: tag },
   })
   await db.insert('order_items', { order_id: order.id, position: 0, description: `Imported item ${tag}`, qty: 1, unit: 'ea', unit_price_net: 1000, gst_rate: 18 })
   const invoice = await db.add<{ id: string }>('invoices', {
