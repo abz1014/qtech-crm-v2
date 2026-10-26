@@ -241,7 +241,9 @@ test.describe('two people on the same record', () => {
     await expect(pa).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     const first = pa.url().split('/orders/')[1]
     await pb.getByRole('dialog').getByRole('button', { name: R.rfq.createOrder }).click()
-    // BUG-CONC-1 (fixed in 0077): the second person is taken to the order the first one made, not shown an error.
+    // BUG-CONC-1 (0077) and HW-56 (0094): the second person is told the RFQ is already converted and can open that order.
+    await expect(pb.getByRole('dialog').getByText(/^Already converted to ORD-\d{4}$/)).toBeVisible()
+    await pb.getByRole('dialog').getByRole('button', { name: /^Open ORD-\d{4}$/ }).click()
     await expect(pb).toHaveURL(new RegExp(`/orders/${first}$`))
     const orders = await db.rows<{ id: string }>(`orders?rfq_id=eq.${seed.rfq.id}&select=id`)
     expect(orders.map(o => o.id), 'one RFQ is won once').toEqual([first])
