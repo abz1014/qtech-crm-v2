@@ -78,8 +78,8 @@ describe('update flow', () => {
 
   it('Reload is blocked while a form is dirty, and goes ahead once it is saved', async () => {
     const { updates, dirty, handlers, messageSkipWaiting } = await setup()
+    dirty.setFormDirty('form', true) // typing, so the worker is not switched to by itself either
     handlers.waiting()
-    dirty.setFormDirty('form', true)
     expect(updates.applyUpdate()).toBe('blocked')
     expect(messageSkipWaiting).not.toHaveBeenCalled()
     dirty.setFormDirty('form', false)
@@ -87,8 +87,9 @@ describe('update flow', () => {
     expect(messageSkipWaiting).toHaveBeenCalledTimes(1)
   })
 
-  it('a controller change without a Reload press never reloads the page', async () => {
-    const { handlers } = await setup()
+  it('a controller change without a switch being asked for (typing blocks the safe moment) never reloads the page', async () => {
+    const { handlers, dirty } = await setup()
+    dirty.setFormDirty('form', true)
     const reload = vi.fn()
     Object.defineProperty(window, 'location', { value: { ...window.location, reload }, configurable: true })
     handlers.waiting()

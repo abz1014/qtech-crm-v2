@@ -23,3 +23,20 @@ export function useDirtyFlag(isDirty: boolean): void {
     return () => setFormDirty(id, false)
   }, [id, isDirty])
 }
+
+/** A dialog, sheet or alert dialog is open on screen (Radix marks them role="dialog" / "alertdialog"; menus are role="menu" and do not count). */
+export function hasOpenDialog(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.querySelector('[role="dialog"],[role="alertdialog"],[aria-modal="true"],dialog[open]') !== null
+}
+
+/** The person is in the middle of typing: a text field, text area or editable area has the focus and holds something. */
+export function isTypingNow(): boolean {
+  if (typeof document === 'undefined') return false
+  const el = document.activeElement as HTMLElement | null
+  if (!el) return false
+  if (el.isContentEditable) return (el.textContent ?? '').length > 0
+  if (el instanceof HTMLTextAreaElement) return el.value.length > 0
+  if (el instanceof HTMLInputElement) return /^(text|search|email|tel|url|number|password|)$/i.test(el.type) && el.value.length > 0
+  return false
+}

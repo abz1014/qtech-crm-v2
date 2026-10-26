@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { IOS_HINT_KEY, readFlag, useInstall, writeFlag } from '@/lib/pwa/install'
-import { applyUpdate, useUpdateReady } from '@/lib/pwa/updates'
+import { applyUpdate, isApplyingUpdate, useUpdateReady } from '@/lib/pwa/updates'
 import { useToast } from '@/ui/useToast'
 
 /**
  * Two quiet toasts, both from the PWA layer (R21). Renders nothing itself.
- *  - A new deploy is waiting: "New version available" with Reload. Reload never discards typing: with unsaved
- *    edits on screen it says so and offers Reload again, and nothing reloads on its own.
+ *  - A new deploy is waiting and the app could not switch by itself (typing, or a dialog open: src/lib/pwa/updates.ts):
+ *    "New version ready. Reload to update (your typing is kept)." with Reload. Reload never discards typing: with unsaved
+ *    edits on screen it says so and offers Reload again. It switches by itself at the next safe moment.
  *  - iPhone Safari, once per device: how to add the app to the home screen.
  */
 export function PwaPrompts() {
@@ -16,7 +17,8 @@ export function PwaPrompts() {
   const announced = useRef(false)
 
   useEffect(() => {
-    if (!updateReady || announced.current) return
+    // Already switching (a safe moment came first): nothing to ask.
+    if (!updateReady || announced.current || isApplyingUpdate()) return
     announced.current = true
     const offer = (title: string, body?: string) =>
       toast({
@@ -30,7 +32,7 @@ export function PwaPrompts() {
           },
         },
       })
-    offer('New version available')
+    offer('New version ready', 'Reload to update (your typing is kept).')
   }, [updateReady, toast])
 
   useEffect(() => {
