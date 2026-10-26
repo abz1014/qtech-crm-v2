@@ -24,6 +24,12 @@ export interface MarginRow {
   paymentState?: string
 }
 
+/**
+ * No cost has been entered and the costs are not marked complete (P2-C, plan D6): the margin would be the whole sale, so the screens say
+ * "Costs not entered yet" instead. An order reviewed as settled has its costs marked complete (set_legacy_review, 0096), so it is final and never matches.
+ */
+export const noCostsYet = (r: Pick<MarginRow, 'state' | 'actualCost'>): boolean => r.state === 'provisional' && !(r.actualCost > 0)
+
 /** An order paid in full whose costs are still provisional (the Today item "Costs not marked complete" lists these). */
 export const isPaidProvisional = (r: Pick<MarginRow, 'state' | 'paymentState'>): boolean => r.state === 'provisional' && r.paymentState === 'settled'
 

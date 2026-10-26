@@ -173,10 +173,10 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               <span>{unknown ? 'Margin' : 'Margin so far'}</span>
               <span className="text-xs text-fg-muted">{unknown ? 'Not calculated' : 'Sale less costs paid'}</span>
             </div>
-            {/* No cost yet: a margin would be the whole sale (100 %), which says nothing (UX audit P5). "Not final" is the header chip, once. */}
+            {/* No cost yet: a margin would be the whole sale (100 %), which says nothing (UX audit P5; plan D6: "Costs not entered yet"). A settled imported order has its costs marked complete, so it never says this. */}
             {!unknown && !complete && actual <= 0 ? (
               <p className="text-sm text-fg-2" data-testid="margin-no-costs">
-                No costs yet. Margin appears when the first cost is recorded.
+                Costs not entered yet. The margin appears when the first cost is recorded.
               </p>
             ) : (
               <>

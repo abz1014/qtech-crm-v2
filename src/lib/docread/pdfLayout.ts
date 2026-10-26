@@ -260,6 +260,8 @@ const HEADER_TERM = new RegExp(
       String.raw`a\s*\/\s*u`,
       String.raw`wks?\.?`,
       String.raw`weeks?`,
+      String.raw`reference(?:\s*(?:#|no\.?|number))?`,
+      String.raw`ref\.?\s*(?:#|no\.?)`,
     ].join('|') +
     ')$',
   'i',

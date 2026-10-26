@@ -44,7 +44,7 @@ import {
   type PaletteSource,
 } from "@/ui/paletteSources";
 
-/** The old destination names, kept as search words: RFQs and Orders are Jobs now; Who owes us is To collect (a Money page). */
+/** The old destination names, kept as search words: RFQs and Orders are Jobs now; To collect is To collect (a Money page). */
 const NAV_SYNONYMS: Record<string, string[]> = {
   today: ["today", "tasks"],
   jobs: ["rfqs", "rfq", "orders", "order", "enquiries", "enquiry", "quotations"],

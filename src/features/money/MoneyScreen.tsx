@@ -8,6 +8,7 @@ import { defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/mode
 import { businessToday } from '@/lib/dates'
 
 // One download per page (perf/lcp): opening To collect does not bring the month-end reports, the expense sheet and the rest.
+const ReviewImportedPage = lazy(() => import('@/features/money/review/ReviewImportedPage').then(m => ({ default: m.ReviewImportedPage })))
 const MoneyHome = lazy(() => import('@/features/money/home/MoneyHome').then(m => ({ default: m.MoneyHome })))
 const GstToFbrPage = lazy(() => import('@/features/money/accounts/GstToFbrPage').then(m => ({ default: m.GstToFbrPage })))
 const ReceivablesPage = lazy(() => import('@/features/money/payments/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })))
@@ -44,6 +45,7 @@ export default function MoneyScreen() {
   const adminOnly = (el: JSX.Element, area: string) => (isAdmin ? el : <NoAccessPage area={area} />)
   return (
     <Routes>
+      <Route path="review-imported" element={adminOnly(<ReviewImportedPage />, 'Review imported')} />
       <Route index element={isAdmin ? <MoneyHome /> : <Navigate to="receivables" replace />} />
       <Route path="accounts" element={<Navigate to="/money" replace />} />
       <Route path="accounts/gst" element={adminOnly(<GstToFbrPage />, 'GST to FBR')} />

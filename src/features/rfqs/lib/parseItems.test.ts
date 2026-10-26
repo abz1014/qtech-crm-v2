@@ -171,3 +171,22 @@ describe('modelTokens (mirrors the database function)', () => {
     expect(modelTokens('Hach HQ1110 portable meter', ['Hach'])).toEqual(['HQ1110'])
   })
 })
+
+describe('parsePaste: ranges and plural units (R-W6b)', () => {
+  it('"0-10 m" and "0 to 10 m" are a range in the description, not ten metres', () => {
+    expect(parsePaste('Pressure transmitter 0-10 m').items[0]).toMatchObject({ description: 'Pressure transmitter 0-10 m', qty: 1, unit: null })
+    expect(parsePaste('Level probe 0 to 10 m').items[0]).toMatchObject({ qty: 1, unit: null })
+    expect(parsePaste('Silicone tube 8mm, 10 m').items[0]).toMatchObject({ qty: 10, unit: 'm' })
+  })
+
+  it('"nos\'s" and "no\'s" are nos', () => {
+    expect(parsePaste("Ball valve 1 inch - 4 nos's").items[0]).toMatchObject({ qty: 4, unit: 'nos' })
+    expect(parsePaste("Ball valve 1 inch - 4 no's").items[0]).toMatchObject({ qty: 4, unit: 'nos' })
+  })
+})
+
+describe('parsePaste: a curly apostrophe (R-W6b)', () => {
+  it('"4 no\u2019s" is 4 nos', () => {
+    expect(parsePaste('Capacitive sensor M18 - 4 no\u2019s').items[0]).toMatchObject({ qty: 4, unit: 'nos' })
+  })
+})
