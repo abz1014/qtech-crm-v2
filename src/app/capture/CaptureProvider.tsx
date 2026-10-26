@@ -1,3 +1,4 @@
+import { pastedText } from '@/lib/docread/htmlTable'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
@@ -176,7 +177,7 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
       if (e.defaultPrevented || isEditable(e.target) || pathRef.current.startsWith('/rfqs/new')) return
       if (otherDialogOpen()) return
       const files = [...(e.clipboardData?.files ?? [])]
-      const text = e.clipboardData?.getData('text/plain') ?? ''
+      const text = pastedText(e.clipboardData)
       if (files.length && document.querySelector('[aria-label="Add files"]') && !openRef.current) return
       if (!files.length && !text.trim()) return
       e.preventDefault()

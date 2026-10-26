@@ -1,3 +1,4 @@
+import { htmlTableText, pastedText } from '@/lib/docread/htmlTable'
 import { useEffect, useState, type RefObject } from 'react'
 import { ClipboardPaste, Plus, Scissors, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -136,6 +137,11 @@ export function PasteZone({
             onPicture(new File([blob], `pasted.${picture.split('/')[1] ?? 'png'}`, { type: picture }))
             return
           }
+          const fromHtml = item.types.includes('text/html') ? htmlTableText(await (await item.getType('text/html')).text()) : null
+          if (fromHtml?.trim()) {
+            onText(fromHtml)
+            return
+          }
           if (item.types.includes('text/plain')) {
             const text = await (await item.getType('text/plain')).text()
             if (text.trim()) {
@@ -178,7 +184,7 @@ export function PasteZone({
         onPaste={e => {
           // Parsed straight from the clipboard, so one paste is one action. The page-level listener does the same
           // for a paste made with nothing focused.
-          const text = e.clipboardData.getData('text/plain')
+          const text = pastedText(e.clipboardData)
           const pictures = pastedPictures(e.clipboardData)
           if (!text.trim() && pictures.length && onPicture) {
             e.preventDefault()

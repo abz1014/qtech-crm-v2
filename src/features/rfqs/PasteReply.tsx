@@ -1,3 +1,4 @@
+import { pastedText } from '@/lib/docread/htmlTable'
 import { useState } from 'react'
 import { Check, TriangleAlert } from 'lucide-react'
 import { formatAmount } from '@/lib/money'
@@ -173,7 +174,7 @@ export function PasteBox({ onRead, onCancel }: { onRead: (text: string) => void;
           value={text}
           onChange={e => setText(e.target.value)}
           onPaste={e => {
-            const pasted = e.clipboardData.getData('text/plain')
+            const pasted = pastedText(e.clipboardData)
             if (pasted) {
               e.preventDefault()
               onRead(pasted)
