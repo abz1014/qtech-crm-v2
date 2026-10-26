@@ -77,18 +77,18 @@ describe('ticks and the item with no supplier', () => {
   )
   const s: readonly SupplierSuggestion[] = result.suppliers
 
-  it('only "supplied this item before" starts ticked', () => {
-    expect(tickedIds(s, {})).toEqual(['sOrient'])
+  it('the top three that usually answer, or carry a tag for the category, start ticked (C3)', () => {
+    expect(tickedIds(s, {})).toEqual(['sKarachi', 'sOrient', 'sLahore'])
   })
 
-  it('a hand tick adds a supplier and a hand untick removes a pre-ticked one', () => {
-    expect(tickedIds(s, { sLahore: true }).sort()).toEqual(['sLahore', 'sOrient'])
-    expect(tickedIds(s, { sOrient: false })).toEqual([])
+  it('a hand untick removes a pre-ticked one, a hand tick adds one', () => {
+    expect(tickedIds(s, { sOrient: false })).toEqual(['sKarachi', 'sLahore'])
+    expect(tickedIds(s, { sOrient: false, sLahore: false })).toEqual(['sKarachi'])
   })
 
   it('a supplier added by hand is ticked until the person unticks it', () => {
-    expect(tickedIds(s, {}, ['sX'])).toEqual(['sOrient', 'sX'])
-    expect(tickedIds(s, { sX: false }, ['sX'])).toEqual(['sOrient'])
+    expect(tickedIds(s, {}, ['sX'])).toEqual(['sKarachi', 'sOrient', 'sLahore', 'sX'])
+    expect(tickedIds(s, { sX: false }, ['sX'])).toEqual(['sKarachi', 'sOrient', 'sLahore'])
   })
 
   it('flags the item that no ticked supplier is asked about, and clears it when one is ticked', () => {

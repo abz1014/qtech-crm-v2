@@ -159,7 +159,7 @@ describe('invalidation map (R01)', () => {
     for (const w of ['contact.update', 'contact.remove'] as const) {
       expect(keysFor(w, { companyId: 'c1' })).toEqual([qk.companies.detail('c1'), qk.companies.lists()])
     }
-    expect(keysFor('brand.unlink', { companyId: 'c1' })).toEqual([qk.companies.detail('c1'), qk.companies.lists()])
+    expect(keysFor('brand.unlink', { companyId: 'c1' })).toEqual([qk.companies.detail('c1'), qk.companies.lists(), qk.intake.all])
   })
 
   it('adding a site refreshes that company only; adding a contact also refreshes the roster', () => {

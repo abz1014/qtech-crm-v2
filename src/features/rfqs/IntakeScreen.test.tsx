@@ -204,7 +204,7 @@ describe('intake screen', () => {
         return {
           data: [
             { supplier_id: 's-orient', asked: 8, replied: 7, no_offer: 0, median_reply_days: 1, last_contact: '2026-11-03', brand_ids: [], brand_names: [] },
-            { supplier_id: 's-zeta', asked: 2, replied: 1, no_offer: 0, median_reply_days: 3, last_contact: '2026-10-03', brand_ids: ['b-hach'], brand_names: ['Hach'] },
+            { supplier_id: 's-zeta', asked: 2, replied: 0, no_offer: 0, median_reply_days: 3, last_contact: '2026-10-03', brand_ids: ['b-hach'], brand_names: ['Hach'] },
           ],
         }
       if (call.target === 'companies' && !call.ops.some(([n]) => n === 'ilike' || n === 'maybeSingle' || n === 'limit'))
