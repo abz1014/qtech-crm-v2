@@ -14,7 +14,7 @@ type Kind = 'number' | 'desc' | 'qty' | 'unit' | 'code' | 'make' | 'date' | 'mon
 
 const UNIT = /^(?:nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|prs?|rolls?|mtrs?|meters?|metres?|m|rmt?|ltrs?|litres?|l|kgs?|ft|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?|adad)$/i
 const NUM = /^\d[\d,]*(?:\.\d+)?$/
-const MONEY = /^(?:[A-Za-z$€¥￥£₨.]{0,4}\s?)?\d[\d,]*(?:\.\d+)?(?:\/-)?(?:\s?[A-Za-z$€]{0,4})?$/
+const MONEY = /^(?:[A-Za-z$€¥￥£₨.]{0,4}\s?)?\d[\d,.]*(?:\/-)?(?:\s?[A-Za-z$€]{0,4})?$/
 const PLACEHOLDER = /^[-–—]$|^n\/?a$/i
 
 const STOCK_QTY = /stock|on\s*hand|available|balance|issued|received|consum/i
@@ -49,7 +49,7 @@ function fits(kind: Kind, c: string): boolean {
     case 'date':
       return /\d{1,4}[./-]\d{1,2}[./-]\d{1,4}|\d{1,2}\s+[A-Za-z]{3}/.test(c)
     case 'money':
-      return MONEY.test(c)
+      return MONEY.test(c) || NO_PRICE_WORD.test(c)
     case 'make':
       return !/\d/.test(c) && c.split(' ').length <= 3
     default:
@@ -222,4 +222,91 @@ export function rebuildCellText(text: string, stop?: (t: string) => boolean): st
   }
   if (!rebuildCellTables(src, stop)) return text
   return src.map((s, i) => `${s.blankBefore && i > 0 ? '\n' : ''}${s.t}`).join('\n')
+}
+
+// ------------------------------------------------------------------------------------------------ tables copied with cells that wrap
+
+const cellsOf = (l: string) => l.split('\t').map(c => c.trim()).filter(Boolean)
+const isRowStart = (l: string, n: number) => new RegExp(String.raw`^\s*${n}\s*[.)]?\t`).test(l)
+const NO_PRICE_WORD = /^(?:n\.?\/?a\.?|nil|not\s+available|unavailable|the\s+model\s+is\s+(?:incorrect|wrong)\.?)$/i
+
+/**
+ * A table copied from a mail client whose cells wrap onto further lines ("Unit Price" / "(RMB)" in the heading; a description
+ * of "Model: X" / "Brand: Y" in a row; a price with a note under it): one tab row per item again, so the table reader sees
+ * the columns it knows. Only a table whose heading wraps is touched; a table with one line per row is left as it is.
+ */
+export function foldWrappedTables(lines: string[]): string[] {
+  const out: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const head = cellsOf(lines[i] ?? '')
+    const startsTable = head.length >= 3 && (lines[i] ?? '').includes('\t') && head.filter(isHeaderCell).length >= 3 && headerKind(head[0] as string, true) === 'number'
+    if (!startsTable) {
+      out.push(lines[i] as string)
+      continue
+    }
+    // The heading goes on until the line that starts row 1.
+    let j = i + 1
+    const tokens = [...head]
+    while (j < lines.length && j <= i + 6 && !isRowStart(lines[j] ?? '', 1)) {
+      tokens.push(...cellsOf(lines[j] ?? ''))
+      j++
+    }
+    if (j >= lines.length || j === i + 1 || !isRowStart(lines[j] ?? '', 1)) {
+      out.push(lines[i] as string)
+      continue
+    }
+    // "(RMB)" under "Unit Price" is part of that heading.
+    const labels: string[] = []
+    for (const t of tokens) {
+      if (/^[(（]/.test(t) && labels.length) labels[labels.length - 1] = `${labels[labels.length - 1]} ${t}`
+      else labels.push(t)
+    }
+    const hasDesc = labels.some(l => headerKind(l, false) === 'desc')
+    const kinds = labels.map(l => headerKind(l, hasDesc))
+    if (!kinds.includes('desc') || !(kinds.includes('qty') || kinds.includes('money'))) {
+      out.push(lines[i] as string)
+      continue
+    }
+    const rows: string[] = []
+    let serial = 1
+    while (j < lines.length && isRowStart(lines[j] ?? '', serial)) {
+      const toks = cellsOf(lines[j] as string)
+      let k = j + 1
+      let seenData = false
+      while (k < lines.length && !isRowStart(lines[k] ?? '', serial + 1)) {
+        const t = lines[k] as string
+        if (!t.trim()) {
+          k++
+          continue
+        }
+        // The sentence under the table ("If you have any questions, feel free to reach out.") ends the last row.
+        if (t.trim().split(/\s+/).length >= 6 && !t.includes('\t')) break
+        if (seenData && !t.includes('\t') && toks.length >= labels.length) break
+        toks.push(...cellsOf(t))
+        if (t.includes('\t')) seenData = true
+        k++
+      }
+      // serial, then the description (as many lines as it takes: up to the first number), then the other cells.
+      const [no, first, ...rest] = toks
+      const descParts = [first ?? '']
+      while (rest.length && !/^\d[\d,.]*$/.test(rest[0] as string) && !NO_PRICE_WORD.test(rest[0] as string)) descParts.push(rest.shift() as string)
+      const cells: string[] = []
+      for (const t of rest) {
+        // A note under a price ("(Validity: 1 week)") goes with the description: the row reader finds it there.
+        if (/^[(（]/.test(t)) descParts.push(t)
+        else cells.push(t)
+      }
+      const placed = place([no ?? '', descParts.join(' '), ...cells], kinds).out
+      rows.push(placed.join('\t'))
+      serial++
+      j = k
+    }
+    if (rows.length === 0) {
+      out.push(lines[i] as string)
+      continue
+    }
+    out.push(labels.join('\t'), ...rows)
+    i = j - 1
+  }
+  return out
 }

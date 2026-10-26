@@ -622,4 +622,55 @@ describe('the New RFQ draft (kept on this device)', () => {
     const customer = screen.getByRole('region', { name: 'Customer' })
     expect(within(customer).getByRole('textbox', { name: 'Customer reference' })).toBeInTheDocument()
   })
+
+  describe('a document that is not an enquiry', () => {
+    const PO = ['Example Mills Ltd', 'PURCHASE ORDER', 'PO No: EM-PO-20114', 'Vendor: Q-Tech Engineering', 'Payment Terms: 30 days', '1) Hach HQ1110 portable meter - 1 no', '2) 24V actuator for ball valve x 2', 'Terms and Conditions: please acknowledge receipt of this order.', 'Authorised Signatory'].join('\n')
+    const OWN_QUOTE = ['Q-Tech Engineering', 'Quotation', 'Quotation no. QT-26-0042', '#\tDescription\tQty\tUnit Pr. (PKR)\tTotal (PKR)', '1\tHach HQ1110 portable meter\t1\t4,500.00\t4,500.00', '2\tActuator 24V\t2\t9,000.00\t18,000.00', 'Sub Total\t22,500.00'].join('\n')
+
+    it('warns about a purchase order, adds no items, and reads it as an enquiry when asked', async () => {
+      installFakeDb(respond)
+      const user = setup()
+      renderScreen()
+      fireEvent.paste(document.body, { clipboardData: { getData: () => PO } })
+      expect(await screen.findByText('This looks like a purchase order, not an enquiry.')).toBeInTheDocument()
+      expect(screen.getByText(/No items were added/)).toBeInTheDocument()
+      expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
+      expect(screen.queryByText(/items? found/)).toBeNull()
+      // Plain text, 16px or larger: the warning and its button use the large text size.
+      expect(screen.getByRole('status', { name: '' }).className).toMatch(/text-base/)
+      await user.click(screen.getByRole('button', { name: 'Read as an enquiry anyway' }))
+      expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
+      expect(screen.queryByText('This looks like a purchase order, not an enquiry.')).toBeNull()
+    })
+
+    it('says so when it is our own quotation, not the header cells as items', async () => {
+      installFakeDb(respond)
+      setup()
+      renderScreen()
+      fireEvent.paste(document.body, { clipboardData: { getData: () => OWN_QUOTE } })
+      expect(await screen.findByText('This looks like your own quotation, not an enquiry.')).toBeInTheDocument()
+      expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Read as an enquiry anyway' })).toBeInTheDocument()
+    })
+
+    it('a paste it cannot place (unknown) shows no warning and is never held back', async () => {
+      installFakeDb(respond)
+      setup()
+      renderScreen()
+      fireEvent.paste(document.body, { clipboardData: { getData: () => 'hello, call me when you are free' } })
+      await screen.findByRole('textbox', { name: 'Customer reference' })
+      expect(screen.queryByText(/This looks like/)).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Read as an enquiry anyway' })).toBeNull()
+    })
+
+    it('a real enquiry shows no warning', async () => {
+      installFakeDb(respond)
+      setup()
+      renderScreen()
+      fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
+      expect(await screen.findByText('2 items found')).toBeInTheDocument()
+      expect(screen.queryByText(/This looks like/)).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Read as an enquiry anyway' })).toBeNull()
+    })
+  })
 })
