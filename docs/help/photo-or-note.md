@@ -1,13 +1,15 @@
 ---
 id: photo-or-note
-title: Send a site photo or note, or a receipt, from your phone
-roles: engineer
-keywords: photo, note, site, receipt, i paid, expense, claim, camera, phone, bottom bar
-screens: /todo, /jobs
-related: something-wrong, call-contact
+title: Add a photo or note from site
+roles: engineer, sales, admin
+keywords: photo, note, site, picture, camera, delivered, installed, job
+screens: /jobs
+related: commissioning-done
 ---
-1. At the bottom of the screen, tap the big [Photo or note] button. It is always there.
-2. Take the photo or type the note, pick the job, and save.
-3. Paid for something yourself? Tap [I paid] next to it, type the amount, take a photo of the receipt and save. The office approves it.
+1. Open the job. The [On site] card has three big buttons.
+2. Tap [Delivered today] when the goods reach the site, or [Installed today] when the work is done.
+3. Tap [Add photo or note]. Then [Take or choose a photo], or type a note and tap [Save note].
 
-Tip: The bottom bar has only [To do] and [Jobs]. You never see prices.
+Tip: with no signal nothing is sent. The card says "Needs signal to save. Your typing is kept." Try again when the signal is back.
+
+Safe to try: tapped by mistake? Tap [Undo] on the message at the bottom.

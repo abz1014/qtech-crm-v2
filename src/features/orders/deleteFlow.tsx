@@ -41,7 +41,8 @@ export function orderAlsoDeletes(f: OrderDeleteFacts): string[] {
   ].filter((x): x is string => x !== null)
 }
 
-export function useDeleteOrderFlow(order: Pick<OrderHeader, 'id' | 'number' | 'companyName'>) {
+/** `to`: where the person lands after the delete (the order list; the job page passes the jobs list). */
+export function useDeleteOrderFlow(order: Pick<OrderHeader, 'id' | 'number' | 'companyName'>, to = '/orders') {
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const client = useQueryClient()
@@ -68,7 +69,7 @@ export function useDeleteOrderFlow(order: Pick<OrderHeader, 'id' | 'number' | 'c
     const files = await del.mutateAsync(order.id)
     // The rows are gone. Nothing below may throw into the confirm, or the person would be told the delete failed.
     const failed = await removeStoredFiles(files)
-    navigate('/orders')
+    navigate(to)
     void refreshAfterOrderDelete(client, order.id)
     toast({ title: `${ref} deleted`, body: order.companyName, tone: 'success' })
     if (failed.length > 0) {

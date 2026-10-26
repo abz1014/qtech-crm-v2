@@ -244,7 +244,7 @@ test.describe('Today v3 money rules (M08)', () => {
     await expect(page.locator(tcs)).toHaveCount(1)
     await expect(page.locator(tcs)).toContainText(/\d+ invoices? not posted/)
     // Redesign phase 0: a roll-up chore is listed, not counted, and Money carries no number (the one badge is Today's)
-    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Money', exact: true })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money/ })).toBeVisible() // a red dot (never a number) says an invoice is late
     await review(page, 'm08-today-money-1440')
     await page.locator(`${tcs} button`).first().click()
     await expect(page.getByRole('button', { name: /Open Invoices/ })).toBeVisible()

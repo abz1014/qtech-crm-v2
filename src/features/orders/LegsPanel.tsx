@@ -50,6 +50,8 @@ const PayDialog = lazyDialog(() => import('@/features/money/expenses/PayDialog')
  * goods" once the goods are late. The rest is in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Pay <supplier> (admin; the M03 dialog with this supplier as
  * the payee and Supplier payment as the category: the one Add expense per supplier order).
  */
+export type LegsPart = 'all' | 'order' | 'delivery'
+
 const STATE_DIM: Record<string, string> = { 'to-place': 'to-place', 'on-order': 'on-order', late: 'late', received: 'received', delivered: 'delivered' }
 
 export function LegsPanel({
@@ -60,6 +62,7 @@ export function LegsPanel({
   money,
   isAdmin,
   canEdit,
+  part = 'all',
 }: {
   order: OrderHeader
   legs: readonly OrderLegRow[]
@@ -68,6 +71,12 @@ export function LegsPanel({
   money: boolean
   isAdmin: boolean
   canEdit: boolean
+  /**
+   * Which actions this panel carries. The order page draws 'all'. The job page splits them over two stages (P5-D2): 'order' is
+   * choosing and placing (Add supplier, Mark placed, Issue and Revise PO, Pay supplier), 'delivery' is the goods coming in
+   * (Delivered today, Chase goods, the dates). "Delivered today" is on exactly one of the two, never both.
+   */
+  part?: LegsPart
 }) {
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
@@ -94,14 +103,14 @@ export function LegsPanel({
   const imported = order.imported
 
   return (
-    <section aria-label="Supplier orders" className="min-w-0 rounded-panel border bg-surface">
+    <section aria-label={part === 'delivery' ? 'Deliveries' : 'Supplier orders'} className="min-w-0 rounded-panel border bg-surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 md:px-5">
-        <h2 className="text-base font-semibold">Supplier orders</h2>
+        <h2 className="text-base font-semibold">{part === 'delivery' ? 'Deliveries' : 'Supplier orders'}</h2>
         <InfoTip label="About supplier orders">One supplier's part of this order: their PO, when it was placed, received and delivered.</InfoTip>
         <span className="text-sm text-fg-muted">{legs.length === 0 ? (imported ? 'None recorded for imported orders' : 'None yet') : legs.length === 1 ? '1 supplier' : `${legs.length} suppliers`}</span>
         {/* data-slot="add-leg": adds a supplier by hand. */}
         <span data-slot="add-leg" className="ml-auto contents">
-          {money && canEdit ? (
+          {money && canEdit && part !== 'delivery' ? (
             <Button icon={Plus} size="sm" className="ml-auto" onClick={() => setAdding(true)}>
               Add supplier
             </Button>
@@ -130,6 +139,7 @@ export function LegsPanel({
               owed={owedByLeg.get(leg.id)}
               today={today}
               collapsible={legs.length > 1}
+              part={part}
               onChase={() => setChasing(leg)}
               onIssue={() => setIssuing(leg)}
               onViewPo={() => void poPdf.open(leg.id)}
@@ -163,6 +173,7 @@ function Leg({
   onViewPo,
   viewingPo,
   collapsible,
+  part,
 }: {
   order: OrderHeader
   leg: OrderLegRow
@@ -185,6 +196,7 @@ function Leg({
   viewingPo: boolean
   /** With two or more suppliers, one already delivered when the page opened folds to one line (UX audit P9). */
   collapsible: boolean
+  part: LegsPart
 }) {
   const actions = useLegActions(order, leg)
   // Folded only if it was delivered when the page opened: stamping "Delivered today" keeps the row open, with its dates, for the Undo.
@@ -307,7 +319,7 @@ function Leg({
           </span>
         </div>
         {lines ? <p className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{lines}</p> : null}
-        {changed && po ? (
+        {changed && po && part !== 'delivery' ? (
           <div role="status" data-testid={`leg-${letter}-changed`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
             <Icon icon={TriangleAlert} className="text-tone-warning-fg" />
             <span className="min-w-0 flex-1 text-pretty">
@@ -338,62 +350,62 @@ function Leg({
         ) : null}
         {canEdit ? (
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            {stamp && !placeInMenu ? (
+            {stamp && !placeInMenu && (part === 'all' || (part === 'order' ? stamp.step === 'place' : stamp.step !== 'place')) ? (
               <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
                 {stampLabel}
               </Button>
             ) : null}
             {/* data-slot="issue-po" (O07): Issue PO opens the dialog (1 tap, then Issue PO in it: 2 taps). Admin and sales only: a PO carries prices. */}
-            {issueOnRow ? (
+            {issueOnRow && part !== 'delivery' ? (
               <span data-slot="issue-po" className="contents">
                 <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Issue PO, ${name}`}>
                   Issue PO
                 </Button>
               </span>
             ) : null}
-            {canChase && late ? (
+            {canChase && late && part !== 'order' ? (
               <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${name}`}>
                 Chase goods
               </Button>
             ) : null}
-            {menu ? (
+            {menu && (part !== 'delivery' || (canChase && !late)) ? (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button size="sm" variant="quiet" icon={Ellipsis} aria-label={`More for ${name}`} />
                 </PopoverTrigger>
                 <PopoverContent variant="menu" align="end">
-                  {money && po?.id ? poHistory.item : null}
-                  {money && po ? (
+                  {money && po?.id && part !== 'delivery' ? poHistory.item : null}
+                  {money && po && part !== 'delivery' ? (
                     <MenuItem icon={FileText} onClick={onViewPo} disabled={viewingPo}>
                       View PO
                     </MenuItem>
                   ) : null}
-                  {money && po ? (
+                  {money && po && part !== 'delivery' ? (
                     <MenuItem icon={RefreshCw} onClick={onIssue}>
                       {`Revise PO (R${po.revision + 1})`}
                     </MenuItem>
                   ) : null}
-                  {issueInMenu ? (
+                  {issueInMenu && part !== 'delivery' ? (
                     <MenuItem icon={FileText} onClick={onIssue}>
                       Issue PO
                     </MenuItem>
                   ) : null}
-                  {placeInMenu ? (
+                  {placeInMenu && part !== 'delivery' ? (
                     <MenuItem icon={Truck} onClick={actions.doStamp} disabled={actions.pending}>
                       Mark placed, no PO
                     </MenuItem>
                   ) : null}
-                  {canChase && !late ? (
+                  {canChase && !late && part !== 'order' ? (
                     <MenuItem icon={MessageSquareWarning} onClick={onChase}>
                       Chase goods
                     </MenuItem>
                   ) : null}
-                  {isAdmin && po?.id ? (
+                  {isAdmin && po?.id && part !== 'delivery' ? (
                     <MenuItem icon={Trash2} danger onClick={() => setDeletingPo(true)}>
                       {`Delete latest PO revision (R${po.revision})`}
                     </MenuItem>
                   ) : null}
-                  {isAdmin ? (
+                  {isAdmin && part !== 'delivery' ? (
                     <MenuItem icon={Receipt} onClick={() => setAddingExpense(true)}>
                       {`Pay ${name}`}
                     </MenuItem>

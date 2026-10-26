@@ -291,7 +291,7 @@ describe('the supplier comparison', () => {
     try {
       renderPanel([{ ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }])
       const one = screen.getByRole('article', { name: 'Item 1' })
-      expect(within(one).queryByRole('button', { name: /^(?!More for item)/ })).toBeNull()
+      expect(within(one).queryByRole('button', { name: /^(?!More for item|Category of item)/ })).toBeNull()
       expect(one.querySelector('[data-waiting]')).toBeNull()
     } finally {
       undo()

@@ -1,3 +1,4 @@
+import { pastedText } from '@/lib/docread/htmlTable'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, Copy, Plus, Save, TriangleAlert } from 'lucide-react'
@@ -22,6 +23,7 @@ import {
   qtyTooLarge,
   realItems,
   RFQ_REF_PLACEHOLDER,
+  coverageLine,
   suggestSuppliers,
   tickedIds,
   toEnquiryItems,
@@ -45,6 +47,7 @@ import { repeatedNote, skipRepeats } from '@/features/rfqs/lib/skipRepeats'
 import { useChannelPreference } from '@/lib/useChannelPreference'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { InfoTip } from '@/ui/InfoTip'
+import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { ItemChips, SupplierPicker, type ManualSupplier } from '@/features/rfqs/SupplierPicker'
 import { CompanyPicker, type IntakeCompany } from '@/features/rfqs/CompanyPicker'
 import { Avatar } from '@/ui/Avatar'
@@ -59,6 +62,7 @@ import { Icon } from '@/ui/Icon'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 import { attachmentHasPrices } from '@/features/rfqs/lib/attachmentPrices'
+import { useNextJobNumber } from '@/features/enquiry/useNextJobNumber'
 
 /*
  * New RFQ: intake and asking suppliers on one screen (R05; g2-intake-float.html; plain words of 2026-10-19). Company and a paste,
@@ -115,7 +119,14 @@ const TEAM_COMPANY = 'Q-Tech Solutions'
 let keySeq = 0
 const newKey = () => `i${++keySeq}`
 
-export default function IntakeScreen() {
+/**
+ * `mode="enquiry"` is New enquiry (P4-A, /enquiries/new): the same form and the same save, worded as a job. The one green button
+ * is "Create job N" (save without asking anyone), "Find suppliers" is the step after it, fields read from the document say
+ * "Check this", and a saved enquiry opens its Job page. The default is the New RFQ screen as it was.
+ */
+export type IntakeMode = 'rfq' | 'enquiry'
+
+export default function IntakeScreen({ mode = 'rfq' }: { mode?: IntakeMode } = {}) {
   const [round, setRound] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
@@ -129,16 +140,20 @@ export default function IntakeScreen() {
   return (
     <IntakeForm
       key={`${round}|${captureId}|${companyParam}|${supplierParam}`}
+      mode={mode}
       onAnother={() => {
         // A fresh form does not take again what the last one arrived with (a company, a supplier, a captured message).
-        if (captureId || companyParam || supplierParam) navigate('/rfqs/new', { replace: true })
+        if (captureId || companyParam || supplierParam) navigate(mode === 'enquiry' ? '/enquiries/new' : '/rfqs/new', { replace: true })
         setRound(r => r + 1)
       }}
     />
   )
 }
 
-function IntakeForm({ onAnother }: { onAnother: () => void }) {
+function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMode }) {
+  const enquiry = mode === 'enquiry'
+  const navigate = useNavigate()
+  const nextJob = useNextJobNumber(enquiry)
   const session = useSession()
   const uploaderRole = session.status === 'signed-in' ? session.user.role : 'engineer'
   const signedIn = session.status === 'signed-in'
@@ -341,7 +356,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       const t = e.target as HTMLElement | null
       const editable = t?.closest?.('input, textarea, select, [contenteditable="true"]')
       if (editable && editable !== zoneRef.current) return
-      const text = e.clipboardData?.getData('text/plain') ?? ''
+      const text = pastedText(e.clipboardData)
       if (!text.trim()) {
         const pictures = e.defaultPrevented ? [] : pastedPictures(e.clipboardData)
         if (pictures.length === 0) return
@@ -515,10 +530,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     candidateList.map(c => c.id),
     wantSuppliers && candidates.isSuccess,
   )
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess)
   const suggestions = useMemo(
-    () => suggestSuppliers(suggestionItems, { suppliers: candidateList, memory: memory.data ?? {} }, { today }),
-    [suggestionItems, candidateList, memory.data, today],
+    () => suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }),
+    [extras.items, extras.extra, candidateList, memory.data, today],
   )
+  const coverage = coverageLine(suggestions.uncovered)
   const memoryContext = useMemo(
     () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description, brandId: i.brandId ?? null, familyId: i.familyId ?? null, brandName: i.brandName ?? null, familyName: i.familyName ?? null })), today }),
     [memory.data, suggestionItems, today],
@@ -690,6 +707,30 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     }
   }
 
+  // New enquiry: the job exists, so the next step is on its page (Ask suppliers). After the save has been committed to state, so the
+  // leave guard (items on the form, nothing saved) no longer applies.
+  const opened = useRef(false)
+  useEffect(() => {
+    if (!enquiry || !saved || opened.current || step !== 'saved') return
+    opened.current = true
+    toast({ title: `Created job ${saved.number}`, body: company?.name, tone: 'success' })
+    // The leave guard takes its extra Back entry off (history.back()) as the save turns it off. A push made before that traversal
+    // finishes is undone by it (the page stayed on New enquiry), so the job is opened once the traversal has settled.
+    let done = false
+    const go = () => {
+      if (done) return
+      done = true
+      window.removeEventListener('popstate', go)
+      navigate(`/jobs/${saved.number}`)
+    }
+    window.addEventListener('popstate', go)
+    const t = window.setTimeout(go, 250)
+    return () => {
+      // (kept running on purpose: leaving this screen must not cancel the move to the job)
+      void t
+    }
+  }, [enquiry, saved, step, company?.name, navigate, toast])
+
   async function copyAgain() {
     await copyToClipboard(copiedText).then(ok => setCopied(ok))
   }
@@ -841,8 +882,10 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 {why}
               </span>
             ) : undefined,
-          primary: { label: 'Looks right: find suppliers', next: true, onClick: whenReady(() => setStep('suppliers')) },
-          more: [saveAction],
+          primary: enquiry
+            ? { label: nextJob ? `Create job ${nextJob}` : 'Create job', icon: Save, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Creating' }
+            : { label: 'Looks right: find suppliers', next: true, onClick: whenReady(() => setStep('suppliers')) },
+          more: enquiry ? [{ label: 'Find suppliers first', next: true, quiet: true, onClick: whenReady(() => setStep('suppliers')) }] : [saveAction],
         }
       : {
           summary: (
@@ -874,11 +917,11 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
           <header className="grid gap-1">
             <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-fg-muted">
-              <Link to="/rfqs" className="hover:text-fg">RFQs</Link>
+              <Link to={enquiry ? '/jobs' : '/rfqs'} className="hover:text-fg">{enquiry ? 'Jobs' : 'RFQs'}</Link>
               <Icon icon={ChevronRight} size="sm" />
-              <span aria-current="page">New RFQ</span>
+              <span aria-current="page">{enquiry ? 'New enquiry' : 'New RFQ'}</span>
             </nav>
-            <h1 className="text-2xl font-semibold tracking-tight">New RFQ</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{enquiry ? 'New enquiry' : 'New RFQ'}</h1>
             <p className="max-w-prose text-sm text-fg-muted">{lede}</p>
             {step === 'build' && !offer && presetSupplier ? (
               <p className="max-w-prose text-sm text-fg-2" data-preset-supplier>
@@ -909,7 +952,10 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
           {step === 'build' && !offer ? (
             <>
               <section aria-labelledby="h-customer" className="grid gap-3">
-                <h2 id="h-customer" className="text-lg font-semibold tracking-snug">Customer</h2>
+                <h2 id="h-customer" className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-snug">
+                  Customer
+                  {enquiry && !company && sender ? <Tag dashed>Check this</Tag> : null}
+                </h2>
                 {restoreNote ? <Banner tone="warning" title={restoreNote} /> : null}
                 {!company && sender ? (
                   <SenderSuggestion
@@ -934,7 +980,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {/* Their own number for the request: it is how the RFQ is found again later, so it sits with the company. */}
-                  <Field label="Customer reference" requirement="optional" help="Their RFQ or enquiry number. Search finds the RFQ by it." source={refSource ?? undefined}>
+                  <Field label="Customer reference" requirement="optional" help="Their RFQ or enquiry number. Search finds the RFQ by it." source={refSource ? (enquiry ? `${refSource}, check this` : refSource) : undefined}>
                     <TextField
                       value={customerRef}
                       onChange={e => {
@@ -982,7 +1028,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               <section aria-labelledby="h-items" className="grid gap-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
-                  <p className="text-sm text-fg-muted">{pasted ? 'Split from the pasted text' : 'Paste once. We split it.'}</p>
+                  <p className="text-sm text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. We split it.'}</p>
                 </div>
                 {heldDoc ? (
                   <Banner
@@ -1041,7 +1087,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   label="Quotation due"
                   requirement="optional"
                   help="The customer's deadline for our quotation. Today warns you two days before."
-                  source={dueSource ?? undefined}
+                  source={dueSource ? (enquiry ? `${dueSource}, check this` : dueSource) : undefined}
                 >
                   <DateInput
                     value={dueOn}
@@ -1083,14 +1129,16 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                       Suppliers
                     </h2>
                     <InfoTip label="How is this list ordered?">
-                      By the reason first (same model, same item, same brand), then the track record: on time or not, how often we have ordered, how often they reply, then
-                      the most recent contact. A supplier marked late is still listed. Only suppliers who supplied the item before are ticked.
+                      Suppliers who deal in the item's category come first, then those who carry its brand. Inside a group: how often we have ordered, how often they
+                      answered in this category, then overall, then price wins, then the most recent contact. A supplier that said no offer on 2 of its last 3 asks goes last.
+                      Up to three are ticked: those who usually answer, or that you tagged for the category.
                     </InfoTip>
                   </span>
-                  <p className="text-sm text-fg-muted">Ticked: supplied this item before. The rest is your call.</p>
+                  <p className="text-sm text-fg-muted">Ticked: the three most likely to answer. The rest is your call.</p>
                 </div>
                 <SupplierPicker
                   groups={suggestions.groups}
+                  coverage={coverage}
                   ticked={tickedSet}
                   onToggle={toggleSupplier}
                   manual={manualList}

@@ -38,6 +38,7 @@ const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
+const ProductCategoriesPage = lazy(() => import('@/features/settings/productCategories/ProductCategoriesPage').then(m => ({ default: m.ProductCategoriesPage })))
 const CategoriesPage = lazy(() => import('@/features/settings/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
 const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
 const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').then(m => ({ default: m.MyDetailsPage })))
@@ -48,6 +49,8 @@ const IntakeScreen = lazy(routeChunks.rfqNew)
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
+/** New enquiry (P4-A): the document beside what was read; wraps the intake. */
+const NewEnquiryPage = lazy(() => import('@/features/enquiry/NewEnquiryPage'))
 /** The old pages keep the access they had: every staff role. */
 const oldItem = (label: string, path: string): NavItem => ({ key: 'jobs', label, path, icon: Briefcase, roles: ['admin', 'sales', 'engineer'] })
 const rfqsItem = oldItem('RFQs', '/rfqs')
@@ -200,6 +203,16 @@ function AppRouteTable() {
               }
             />
             <Route
+              path="product-categories"
+              element={
+                <AdminOnly area="Product categories">
+                  <Suspense fallback={null}>
+                    <ProductCategoriesPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
               path="company"
               element={
                 <Suspense fallback={null}>
@@ -235,6 +248,16 @@ function AppRouteTable() {
             />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
+          <Route
+            path="enquiries/new"
+            element={
+              <RequireRole item={rfqsItem}>
+                <Suspense fallback={null}>
+                  <NewEnquiryPage />
+                </Suspense>
+              </RequireRole>
+            }
+          />
           <Route
             path="rfqs/new"
             element={

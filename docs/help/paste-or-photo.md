@@ -1,17 +1,17 @@
 ---
 id: paste-or-photo
-title: Save a photo, a file or a message
+title: Add a photo, a file or a message to a job
 roles: engineer, sales, admin
-keywords: photo, picture, camera, capture, paste, attach, file, pdf, note, whatsapp, share
-screens: /todo, /rfqs, /orders, /jobs
+keywords: paste or photo, photo, picture, camera, capture, paste, attach, file, pdf, note, whatsapp, share, supplier price, customer answer, add to job
+screens: /jobs, /capture
+related: new-enquiry
 ---
-1. Tap [Paste or photo]. Or share a photo or WhatsApp text to the app from your phone.
-2. Tap [Choose photos], or [Tap and hold here, then tap Paste] for copied text.
-3. Pick where it goes: [On which RFQ] or [On which order]. Search by customer if it is not listed.
-4. Tap [Save]. There are no other fields.
-5. A supplier's prices? Tap [Something else], pick [A supplier’s prices], then [Read the reply]. The RFQ opens with the prices read out.
-6. A customer's PDF enquiry? Tap [Something else], pick [Start a new RFQ], then [Continue to New RFQ]. The items are read from the PDF.
+1. Open the job. In [Add to this job], paste the message under [Paste here], or tap [Take a photo] or [Choose a file].
+2. It says what it looks like: a supplier price, the customer's answer, a site photo or a note. Wrong guess? Tap the right one.
+3. A supplier's prices: tap [Accept N prices]. The prices go on that supplier's row.
+4. A photo or a note: tap [Add photo] or [Add note]. There are no other fields.
+5. Sharing from WhatsApp on your phone? Share to Q-Tech CRM, then pick [New enquiry] or [Add to job…].
 
-Tip: The button grey? The reason is written beside it. No signal? It is kept on this phone.
+Tip: An engineer can add a photo or a note. Prices are for sales and the owner.
 
-Safe to try: saved in the wrong place? Tap [Undo] on the message at the bottom.
+Safe to try: added to the wrong job? Tap Undo on the message at the bottom.

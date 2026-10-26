@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { BottomTabs } from '@/app/shell/MobileChrome'
 import { EngineerFab } from '@/app/shell/EngineerFab'
 
@@ -8,11 +8,11 @@ import { EngineerFab } from '@/app/shell/EngineerFab'
 function Where() {
   return <p data-testid="where">{useLocation().pathname}</p>
 }
-const bar = (onPhoto = vi.fn()) =>
+const bar = () =>
   render(
     <MemoryRouter initialEntries={['/todo']}>
       <Routes>
-        <Route path="*" element={<><BottomTabs role="engineer" fab={<EngineerFab onPhoto={onPhoto} />} /><Where /></>} />
+        <Route path="*" element={<><BottomTabs role="engineer" fab={<EngineerFab />} /><Where /></>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -25,11 +25,10 @@ describe('the engineer phone bar', () => {
     expect(within(nav).queryByRole('link', { name: /Money|Companies/ })).toBeNull()
   })
 
-  it('Photo or note opens the capture sheet in one tap; I paid goes to the engineer\'s claims', () => {
-    const onPhoto = vi.fn()
-    bar(onPhoto)
+  it('Photo or note opens the job picker in one tap; I paid goes to the engineer\'s claims', () => {
+    bar()
     fireEvent.click(screen.getByRole('button', { name: 'Photo or note' }))
-    expect(onPhoto).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('where').textContent).toBe('/capture')
     fireEvent.click(screen.getByRole('button', { name: 'I paid' }))
     expect(screen.getByTestId('where').textContent).toBe('/my-expenses')
   })

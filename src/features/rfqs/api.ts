@@ -2,7 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
 import type { EvidenceFeedRow } from '@/features/rfqs/lib/ranking/reasons'
-import type { SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
+import type { AskOutcome, CategoryEvidenceRow, CategoryOption, PriceWinsRow, SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
  * RFQs: every database call for the intake screen (R05). This is the only file that names an RFQ table or
@@ -33,6 +33,56 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
       city: c.city ?? c.country,
       stats: { ...s, supplier_id: s.supplier_id },
     })
+  }
+  return out
+}
+
+/** The curated product categories (0093: brands of kind family with curated = true), by name. */
+export async function listCuratedCategories(): Promise<CategoryOption[]> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('brands').select('id, name').eq('kind', 'family').eq('curated', true).order('name')) ?? []
+  return rows.map(r => ({ id: r.id, name: r.name }))
+}
+
+/** v_supplier_category_evidence for these categories (counts only: every role reads the same). */
+export async function getCategoryEvidence(familyIds: readonly string[], supplierIds: readonly string[]): Promise<CategoryEvidenceRow[]> {
+  if (familyIds.length === 0 || supplierIds.length === 0) return []
+  const db = requireSupabase()
+  const rows = await fetchAll((from, to) => db.from('v_supplier_category_evidence').select('*').in('family_id', [...familyIds]).range(from, to))
+  const keep = new Set(supplierIds)
+  const out: CategoryEvidenceRow[] = []
+  for (const r of rows) {
+    if (!r.supplier_id || !r.family_id || !keep.has(r.supplier_id)) continue
+    out.push({ supplier_id: r.supplier_id, family_id: r.family_id, asked: r.asked ?? 0, replied: r.replied ?? 0, quoted: r.quoted ?? 0, no_offer: r.no_offer ?? 0, ordered: r.ordered ?? 0, last_asked_on: r.last_asked_on })
+  }
+  return out
+}
+
+/** supplier_category_price_wins (0093). Admin and sales only: the caller never asks for an engineer, and the database returns NULL counts to one. */
+export async function getCategoryPriceWins(familyIds: readonly string[]): Promise<PriceWinsRow[]> {
+  if (familyIds.length === 0) return []
+  const rows = unwrap(await requireSupabase().rpc('supplier_category_price_wins', { p_family_ids: [...familyIds] })) ?? []
+  return rows.map(r => ({ supplier_id: r.supplier_id, family_id: r.family_id, wins: r.wins, of_ranked: r.of_ranked }))
+}
+
+/**
+ * How each supplier's last asks ended, newest first, three at most: the demotion rule reads "no offer on 2 of the last 3".
+ * The last year of sent inquiries is read; a no offer is an inquiry marked so (no_offer_on).
+ */
+export async function getRecentAsks(supplierIds: readonly string[], today: string): Promise<Record<string, AskOutcome[]>> {
+  const out: Record<string, AskOutcome[]> = {}
+  if (supplierIds.length === 0) return out
+  const db = requireSupabase()
+  const since = new Date(new Date(`${today}T00:00:00Z`).getTime() - 365 * 86_400_000).toISOString().slice(0, 10)
+  for (let i = 0; i < supplierIds.length; i += 50) {
+    const chunk = supplierIds.slice(i, i + 50)
+    const rows = await fetchAll((from, to) =>
+      db.from('supplier_inquiries').select('supplier_id, sent_on, no_offer_on, created_at').in('supplier_id', chunk).not('sent_on', 'is', null).gte('sent_on', since).order('sent_on', { ascending: false }).order('created_at', { ascending: false }).range(from, to),
+    )
+    for (const r of rows) {
+      const list = (out[r.supplier_id] ??= [])
+      if (list.length < 3) list.push(r.no_offer_on ? 'no_offer' : 'other')
+    }
   }
   return out
 }
@@ -756,6 +806,8 @@ export async function uploadAttachment(input: { rfqId?: string; orderId?: string
       rfq_id: input.rfqId ?? null,
       order_id: input.orderId ?? null,
       clarification_id: input.clarificationId,
+      // Without this the column default applies and a customer PO stays readable by an engineer (migration 0100).
+      has_prices: input.hasPrices,
     })
     .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices')
     .single()
@@ -837,6 +889,13 @@ export async function updateRfqItem(id: string, p: RfqItemPatch): Promise<void> 
     .update({ description: p.description.trim(), qty: p.qty, unit: p.unit?.trim() || null })
     .eq('id', id)
     .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
+}
+
+/** C4: set (or clear, with null) the product category of one item. The 0092 guard lets the person who entered the RFQ, its owner or an admin do it. */
+export async function setRfqItemCategory(id: string, familyId: string | null): Promise<void> {
+  const { data, error } = await requireSupabase().from('rfq_items').update({ family_id: familyId }).eq('id', id).select('id')
   if (error) throw error
   if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
 }

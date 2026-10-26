@@ -204,7 +204,7 @@ describe('intake screen', () => {
         return {
           data: [
             { supplier_id: 's-orient', asked: 8, replied: 7, no_offer: 0, median_reply_days: 1, last_contact: '2026-11-03', brand_ids: [], brand_names: [] },
-            { supplier_id: 's-zeta', asked: 2, replied: 1, no_offer: 0, median_reply_days: 3, last_contact: '2026-10-03', brand_ids: ['b-hach'], brand_names: ['Hach'] },
+            { supplier_id: 's-zeta', asked: 2, replied: 0, no_offer: 0, median_reply_days: 3, last_contact: '2026-10-03', brand_ids: ['b-hach'], brand_names: ['Hach'] },
           ],
         }
       if (call.target === 'companies' && !call.ops.some(([n]) => n === 'ilike' || n === 'maybeSingle' || n === 'limit'))
@@ -504,7 +504,7 @@ describe('the New RFQ draft (kept on this device)', () => {
     await user.click(screen.getByRole('button', { name: 'Send from Paste or photo' }))
     // A new form: the two pasted items are not on it, and the one that was open is the draft on offer.
     expect(await screen.findByText(/Acme Plastics, 2 items\. It is kept on this device/)).toBeInTheDocument()
-    expect(screen.getByText(/the pasted message stays in Paste or photo/)).toBeInTheDocument()
+    expect(screen.getByText(/the message you brought is not added/)).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Start new with the pasted message' }))
     expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Rosemount 3051 transmitter')

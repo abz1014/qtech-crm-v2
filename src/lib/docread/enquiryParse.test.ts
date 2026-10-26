@@ -446,7 +446,7 @@ describe('parseEnquiry: corpus batches 22 and 23 (fictional)', () => {
   it('takes Qty Required, not Qty in Stock', () => {
     const text = ['S.No', 'Description', 'UOM', 'Qty in Stock', 'Qty Required', '1', 'Butterfly valve DN100, wafer type', 'EA', '0', '2'].join('\n')
     expect(rows(text)).toEqual([['Butterfly valve DN100, wafer type', 2, 'EA']])
-    expect(rows('S.No\tDescription\tUOM\tQty in Stock\tQty Required\n1\tLimit switch roller lever\tNO\t3\t8')).toEqual([['Limit switch roller lever', 8, 'nos']])
+    expect(rows('S.No\tDescription\tUOM\tQty in Stock\tQty Required\n1\tFloat switch roller lever\tNO\t3\t8')).toEqual([['Float switch roller lever', 8, 'nos']])
   })
 
   it('reads "Item: 12" in a chat and "need 10 item", but not "need 3 phase motor" as three', () => {
@@ -744,7 +744,7 @@ describe('parseEnquiry: reference rules (R-W4)', () => {
   })
 
   it('a subject that names a product has a model code in it, not a reference; a reference-shaped code still counts', () => {
-    expect(ref('Subject: RFQ Inductive Sensor BES M18AB1-PSC10Z-S04G Maker\n\nPlease quote 4 nos')[0]).toBeNull()
+    expect(ref('Subject: RFQ Capacitive Sensor BES M18AB1-PSC10Z-S04G Maker\n\nPlease quote 4 nos')[0]).toBeNull()
     expect(ref('Subject: Urgent RFQ - Replacement for ABC010RB/8 Level Transmitter\n\n1 no')[0]).toBeNull()
     expect(ref('Subject: RFQ FOR THE DRIVE SPARES REQUIRED T-26-88A\n\nPlease quote 4 nos')[0]).toBe('T-26-88A')
     expect(ref('Subject: RFQ for PLC spares 40512-RFQ-OC\n\nPlease quote 4 nos')[0]).toBe('40512-RFQ-OC')
@@ -758,7 +758,7 @@ describe('parseEnquiry: the company from the signature (R-W5)', () => {
     'Please quote 4 nos ball valve 1 inch',
     'Regards,',
     'Asad Ali',
-    'Deputy Manager | Purchase',
+    'Assistant Manager | Stores',
     ' <https://shorturl.at/Ab1cD>  <https://www.linkedin.com/company/examplemills/> ',
     'Mobile : +923001234567  | Ext. 6776',
     'Example Finishing Mills Limited, Tower Centre, 2nd Floor, 73-E Main Road, Lahore 54000, Pakistan',
@@ -775,5 +775,76 @@ describe('parseEnquiry: the company from the signature (R-W5)', () => {
     const c = co('From: Asad Ali <asad@examplemills.example>\nSubject: RFQ 4455\n\nPlease quote 4 nos ball valve 1 inch\nLIMITED')
     expect(c?.name ?? null).toBeNull()
     expect(c?.domain).toBe('examplemills.example')
+  })
+})
+
+describe('parseEnquiry: a table pasted one cell per line (R-W6b)', () => {
+  const double = (cells: string[]) => cells.join('\n\n')
+
+  it('an Outlook plain-text copy with a blank line after every cell, a zero-padded serial and a description over several lines', () => {
+    const text = double([
+      'Please quote the items below.',
+      'Sr. #', 'Description', 'Qty', 'Reference #',
+      '01', 'Float Switch', 'XY-100 AV', 'Make: Acme', '02', ' ',
+      '02', 'Capacitive Sensor', 'AB M12-PSC10Z', 'Make: Beta', '04', ' ',
+      '03', 'Solenoid valve XZ-5/2-5,0-S-B 220417, Coil 24VDC', 'Make GAMMA,', '02', ' ',
+      '04', 'Air valve type QW-63B, operating pressure 0.4-0.6 MPa', 'Make DELTA,', '02', ' ',
+      'Regards,',
+    ])
+    const r = parse(text)
+    expect(r.items.map(i => i.qty)).toEqual([2, 4, 2, 2])
+    expect(r.items[0]?.description).toContain('XY-100 AV')
+    expect(r.items).toHaveLength(4)
+  })
+
+  it('a headerless list of description / quantity / unit lines is read with its unit, and the unit lines are no items', () => {
+    const text = double(['Dear Sir,', 'Gluing iron TG-41-01', '2', 'EA', 'Capacitor 220UF, 63 V-01', '50', 'EA', 'Zener diode 5.1V SMD', '24', 'EA', 'Regards,', 'Asad Ali', 'Assistant Manager | Stores'])
+    const r = parse(text)
+    expect(r.items.map(i => [i.qty, i.unit])).toEqual([[2, 'EA'], [50, 'EA'], [24, 'EA']])
+    expect(r.items).toHaveLength(3)
+  })
+
+  it('a headerless description / quantity list keeps its quantities', () => {
+    const r = parse(double(['Dear Sir,', 'Gluing iron TG-41-01', '2', 'Opto coupler B 4410, SMD, 8 pin-01', '24', 'Capacitor 220UF, 63 V-01', '50', 'Regards,']))
+    expect(r.items.map(i => i.qty)).toEqual([2, 24, 50])
+  })
+})
+
+describe('parseEnquiry: item blocks in a plain email (R-W6b)', () => {
+  it('nameplate details in bullets and a quantity line under them are one item', () => {
+    const r = parse(
+      ['Dear Sales Team,', 'We have a level module installed and need a replacement.', 'The nameplate details are:', '', '*\tModel: AB-010/8', '*\tSerial No.: 568', '*\tPower Supply: 230 VAC', '', 'Quantity 1', '', 'Please confirm whether this model is still available.'].join('\n'),
+    )
+    expect(r.items).toHaveLength(1)
+    expect(r.items[0]).toMatchObject({ qty: 1 })
+    expect(r.items[0]?.description).toContain('AB-010/8')
+  })
+
+  it('a name on one line and its model code on the next, blank lines between, then a quantity: one item', () => {
+    const r = parse(['Dear Rana,', '', 'Please send the price of the part below.', '', 'Capacitive Sensor', '', 'AB M12-PSC10Z-S04G', '', 'Make: Beta', '', 'Quantity 4 nos\u2019s.'].join('\n'))
+    expect(r.items).toHaveLength(1)
+    expect(r.items[0]).toMatchObject({ qty: 4, unit: 'nos' })
+    expect(r.items[0]?.description).toContain('Capacitive Sensor')
+  })
+
+  it('a forwarded message whose header is pasted keeps the items below its From / Sent block', () => {
+    const r = parse(
+      ['From: Sales <sales@example-sup.example>', 'Subject: Urgent RFQ - replacement for AB-010/8 module', 'Date: 2026-10-21', '', 'FYI', '', 'From: Buyer <buyer@example-mills.example>', 'Sent: Wednesday, October 21, 2026 7:33 AM', 'To: info@example-sup.example', 'Subject: Urgent RFQ - replacement for AB-010/8 module', '', 'Please quote 1 no module AB-010/8'].join('\n'),
+    )
+    expect(r.items).toHaveLength(1)
+  })
+})
+
+describe('parseEnquiry: a legal form alone is no company name (R-W6b)', () => {
+  it('"Limited Company (Norway)" names no one', () => {
+    const r = parse('Please quote 2 nos valve\nOur company is based in Oslo.\nLimited Company (Norway)\n')
+    expect(r.facts.company?.name ?? null).toBeNull()
+  })
+})
+
+describe('parseEnquiry: a forwarding note is no item (round 2)', () => {
+  it('"@Name for necessary action" above a forwarded enquiry', () => {
+    const r = parse('@AB for necessary action.\nFrom: Buyer <b@example-mills.example>\nSent: Friday, October 16, 2026 2:38 PM\nSubject: Quotation\n\nPlease quote 2 nos valve')
+    expect(r.items.map(i => i.description)).toEqual(['valve'])
   })
 })

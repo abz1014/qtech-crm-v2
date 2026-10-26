@@ -29,6 +29,16 @@ describe('next step in words', () => {
     expect(jobNext({ stage: 'ordered', stageDetail: 'to source', role: 'admin' }).on).toBe('order')
   })
 
+  it('the order-side steps open their stage on the job page (P5-D2), not the order page', () => {
+    expect(jobNext({ stage: 'ordered', stageDetail: 'to source', role: 'admin' })).toMatchObject({ button: 'Choose suppliers', stop: 3 })
+    expect(jobNext({ stage: 'ordered', stageDetail: 'to place', role: 'sales' })).toMatchObject({ button: 'Place the order', stop: 3 })
+    expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'arrived, not delivered', role: 'sales' })).toMatchObject({ button: 'Deliver the goods', stop: 4 })
+    expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'admin' })).toMatchObject({ button: 'Chase the supplier', stop: 4 })
+    expect(jobNext({ stage: 'delivered', stageDetail: 'not invoiced yet', role: 'admin' })).toMatchObject({ button: 'Create invoice', stop: 5 })
+    expect(jobNext({ stage: 'invoiced', stageDetail: 'part paid', role: 'admin' })).toMatchObject({ button: 'Chase the payment', stop: 5 })
+    expect(jobNext({ stage: 'delivered', stageDetail: 'installation to plan', role: 'engineer' })).toMatchObject({ button: 'Plan installation', stop: 4 })
+  })
+
   it('a late supplier is the red step', () => {
     expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'admin' }).tone).toBe('late')
   })

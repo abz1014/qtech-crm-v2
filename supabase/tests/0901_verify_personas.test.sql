@@ -150,14 +150,14 @@ insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), p
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
-insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
-  (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
+insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices) values   -- untagged: 0103 defaults to true
+  (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'), false);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id) values
   (pg_temp.f('2c'), 'gst-receipts', 'm/2.pdf', 'b.pdf', 'application/pdf', 10, pg_temp.f('26'));
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values   -- A6
   (pg_temp.f('3c'), 'expense-receipts', 'm/3.jpg', 'c.jpg', 'image/jpeg', 10, pg_temp.f('29'));
-insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values   -- R22 (0042)
-  (pg_temp.f('3f'), 'rfq-files', 'm/4.jpg', 'd.jpg', 'image/jpeg', 10, pg_temp.f('20'));
+insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id, has_prices) values   -- R22 (0042), untagged
+  (pg_temp.f('3f'), 'rfq-files', 'm/4.jpg', 'd.jpg', 'image/jpeg', 10, pg_temp.f('20'), false);
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
 insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M Group', 'overhead');   -- 0086
 insert into public.expense_claims (id, created_by, amount_pkr) values (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5);   -- 0087

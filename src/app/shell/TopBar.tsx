@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Import, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
 import { AccountMenu } from '@/app/shell/AccountMenu'
@@ -20,13 +20,10 @@ interface TopBarProps {
   /** A red dot, no number (Money while an invoice is late). */
   dots?: Partial<Record<NavKey, boolean>>
   onSearch?: () => void
-  onCapture?: () => void
   /** The destinations. Default: the role's list from navConfig. The gallery passes a fixed list so its photo does not move with navConfig. */
   items?: readonly NavItem[]
 }
 
-/** The paste / photo action (was "Capture"; plain-words glossary, DECISIONS 2026-10-19). Same C key. */
-export const CAPTURE_LABEL = 'Paste or photo'
 
 /*
  * Top bar (desktop and tablet), navy in direction C (data-surface="navy" re-inks the primitives inside): --topbar-h, the role-filtered destinations (5 or 6, from navConfig),
@@ -39,7 +36,7 @@ export const CAPTURE_LABEL = 'Paste or photo'
  *   md, 768-1023  icons, the active label only, logo mark, search and the action as icon buttons.
  * Below 768 the phone bar and the bottom tabs take over (MobileChrome).
  */
-export function TopBar({ user, counts, dots, onSearch, onCapture, items: given }: TopBarProps) {
+export function TopBar({ user, counts, dots, onSearch, items: given }: TopBarProps) {
   const items = given ?? navItemsForRole(user.role)
   const hint = searchKeyHint()
   return (
@@ -113,29 +110,6 @@ export function TopBar({ user, counts, dots, onSearch, onCapture, items: given }
       </div>
 
       <NewMenu role={user.role} className="shrink-0 max-lg:w-control max-lg:px-0" labelClass="max-lg:sr-only" />
-
-      {onCapture ? (
-        // Outlined, never green (audit X1): every screen has its own one primary button, and this sits beside it. No key hint drawn on
-        // it (at 2xl it overlapped the label, "Paste or ph[C]o"); the tooltip and aria-keyshortcuts carry the C.
-        <Tooltip content={CAPTURE_LABEL} shortcut="C">
-          <button
-            type="button"
-            onClick={onCapture}
-            aria-label={CAPTURE_LABEL}
-            aria-keyshortcuts="C"
-            className={cn(
-              'flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg',
-              'transition-colors duration-fast ease-out hover:border-line-input hover:bg-sunken active:bg-selected',
-              'max-lg:w-control max-lg:justify-center max-lg:px-0',
-            )}
-          >
-            <Icon icon={Import} className="text-fg-muted" />
-            <span aria-hidden="true" className="max-lg:hidden">
-              {CAPTURE_LABEL}
-            </span>
-          </button>
-        </Tooltip>
-      ) : null}
 
       <div className="flex shrink-0 items-center gap-3">
         <span className="text-xs font-medium text-fg-muted max-2xl:hidden">{ROLE_LABEL[user.role] ?? user.role}</span>
