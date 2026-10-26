@@ -69,8 +69,15 @@ const tabs = () => within(screen.getByRole('navigation', { name: 'Money views' }
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
 describe('Money tabs and landing', () => {
-  it('opens on Who owes us, for admin and for sales', async () => {
+  it('opens on Money home for an admin (four numbers)', async () => {
     at('/money')
+    expect(await screen.findByTestId('money-blocks')).toBeInTheDocument()
+    expect(screen.getByTestId('where')).not.toHaveTextContent('/money/receivables')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Money')
+  })
+
+  it('sales go straight to Who owes us', async () => {
+    at('/money', 'sales')
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/receivables'))
     expect(screen.getByRole('link', { name: /^Who owes us/ })).toHaveAttribute('aria-current', 'page')
   })
@@ -104,7 +111,7 @@ describe('old addresses keep working', () => {
 
   it('Margins and Exceptions still open, inside Month end, with their plain names', async () => {
     at('/money/exceptions')
-    expect(await screen.findByRole('heading', { name: 'Things to check', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^Month end/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Back to Month end' })).toHaveAttribute('href', '/money/month-end')
   })
@@ -170,7 +177,7 @@ describe('Month end checklist', () => {
     expect(screen.getByTestId('checks-summary')).toHaveTextContent('2 checks have something to look at')
     await waitFor(() => expect(screen.getByTestId('checks-clear')).toHaveTextContent('5 checks are clear'))
     expect(screen.getByTestId('checks-clear')).toHaveTextContent('Expenses without a category')
-    expect(screen.getByTestId('checks-clear')).toHaveTextContent('Things to check')
+    expect(screen.getByTestId('checks-clear')).toHaveTextContent('Mistakes to fix')
   })
 
   it('has one green button with its (i), one link to the month’s reports, and no repeated panels', async () => {
@@ -182,7 +189,7 @@ describe('Month end checklist', () => {
     expect(screen.queryByRole('list', { name: 'Reports' })).toBeNull()
   })
 
-  it('adds a Things to check row when the reconciliation finds something', async () => {
+  it('adds a Mistakes to fix row when the reconciliation finds something', async () => {
     at(`/money/month-end?month=${MONTH}`, 'admin', c =>
       c.target === 'rpc:money_exceptions_input'
         ? { data: { orders: [{ id: 'o1', number: 7, orderedOn: null, cancelled: false, basisUnknown: true }], money: [], payments: [], expenses: [], invoices: [], legs: [], pos: [], legPaid: [] } }

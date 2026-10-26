@@ -26,11 +26,11 @@ import { closeButtonLabel, closedThrough, closeTarget, monthName, type CheckCard
 /*
  * Money › Month end (M10; admin only). Owner decision 2026-10-19: the phone layout everywhere. The month and its Close button
  * on top; then ONLY the checks that have items, one row each, with what the count is made of and a link to the screen that fixes
- * it (Match bank statement, Expenses, Margins, Invoices & GST, Who owes us, Things to check); the checks that are clear are one
+ * it (Match bank statement, Expenses, Margins, Invoices & GST, Who owes us, Mistakes to fix); the checks that are clear are one
  * line. None blocks the close: "Close September" is two taps, the button then the confirmation, and what closing does is one (i)
  * beside the button. The money reports for the month are one link to Reports. Closed months, with Reopen, sit under the list.
  *
- * "Things to check" (the reconciliation checks, M07) joins the list here: it looks at every month, not only this one, so its row
+ * "Mistakes to fix" (the reconciliation checks, M07) joins the list here: it looks at every month, not only this one, so its row
  * says so.
  */
 interface Row {
@@ -207,13 +207,13 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
     const critical = things.filter(t => t.severity === 'critical').length
     rows.push({
       key: 'things_to_check',
-      label: 'Things to check',
+      label: 'Mistakes to fix',
       n: things.length,
       parts: [`Orders, payments, invoices or costs that do not add up, in any month.${critical ? ` ${critical} ${critical === 1 ? 'is' : 'are'} serious.` : ''}`],
-      linkLabel: 'Open things to check',
+      linkLabel: 'Open mistakes to fix',
       to: '/money/exceptions',
     })
-  } else if (things) clear.push('Things to check')
+  } else if (things) clear.push('Mistakes to fix')
   return (
     <section aria-label="Checklist" className="grid gap-2">
       {rows.length > 0 ? (

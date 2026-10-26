@@ -125,7 +125,7 @@ export const ROUTES: readonly RouteSpec[] = [
   },
   { path: '/companies/{supplier}', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^About the prices$/] },
   // ------------------------------------------------------------------ Money (two levels after the restructure)
-  { path: '/money', admin: 'ok', sales: 'ok', engineer: 'no', landsOn: /\/money\/(gst-register|receivables)$/, note: 'main opens GST register, post opens Who owes us' },
+  { path: '/money', admin: 'ok', sales: 'ok', engineer: 'no', landsOn: /\/money(\/(gst-register|receivables))?$/, note: 'admin opens Money home, sales Who owes us' },
   { path: '/money/gst-register', admin: 'ok', sales: 'ok', engineer: 'no', openers: [{ name: /^Create invoice$/, roles: AS }, { name: /^More$/, roles: A, open: false, optional: true }] },
   { path: '/money/gst-register?invoice={invoice}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: invoice detail dialog' },
   { path: '/money/gst-register?new=1&order={order}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: Create invoice dialog' },

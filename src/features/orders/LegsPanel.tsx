@@ -13,6 +13,8 @@ import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib'
+import { LastChanged } from '@/features/history/LastChanged'
+import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGroups'
 import { poChange } from '@/features/orders/lib/poChange'
@@ -197,6 +199,7 @@ function Leg({
   const rate = ccy && ccy !== 'PKR' ? rates[ccy] : undefined
   const pkr = rate && rate.staleness !== 'unusable' && total.priced > 0 ? convertToPaisa(total.total, rate.rate) : null
   const name = leg.supplierName
+  const poHistory = useHistoryPanel({ table: 'purchase_orders', id: po?.id ?? '', context: po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision} · ${name}` : name })
   /** A8 (O09): the latest PO revision lists lines this supplier order no longer matches (a split moved quantity). Admin and sales only: a PO carries prices. */
   const changed = money && po ? poChange(po.lines, items.map(it => ({ id: it.id, description: it.description, qty: it.qty, isService: it.isService }))) : null
   const canChase = Boolean(leg.placedOn && !leg.deliveredOn && leg.expectedOn)
@@ -283,6 +286,7 @@ function Leg({
             </span>
           ) : null}
         </div>
+        {money && po?.id ? <LastChanged table="purchase_orders" id={po.id} className="text-base text-fg-2" /> : null}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm" role="group" aria-label={`Dates, ${name}`}>
           {date('Placed', 'placedOn')}
           {date('Expected', 'expectedOn', expectedHint)}
@@ -356,6 +360,7 @@ function Leg({
                   <Button size="sm" variant="quiet" icon={Ellipsis} aria-label={`More for ${name}`} />
                 </PopoverTrigger>
                 <PopoverContent variant="menu" align="end">
+                  {money && po?.id ? poHistory.item : null}
                   {money && po ? (
                     <MenuItem icon={FileText} onClick={onViewPo} disabled={viewingPo}>
                       View PO
@@ -396,6 +401,7 @@ function Leg({
           </Button>
         ) : null}
       </div>
+      {money && po?.id ? poHistory.node : null}
       {addingExpense ? (
         <PayDialog
           open
