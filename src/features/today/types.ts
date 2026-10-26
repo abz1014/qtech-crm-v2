@@ -251,6 +251,9 @@ export interface JobFact {
   deliveredOn: string | null
   /** Imported from the old CRM (orders.legacy_source) or with estimated dates (v_order_state.data_trust): never an engineer's job item. */
   legacy?: boolean
+  /** orders.commissioning_time as "HH:MM" and orders.visit_type (0101): the engineer's list says "10:00 · Install". */
+  visitTime?: string | null
+  visitType?: string | null
 }
 
 /**
@@ -370,6 +373,8 @@ export interface TodayItem {
   imported?: boolean
   /** Money still owed, on a payment_overdue item only (the Imported fold header sums it). */
   amount?: number
+  /** An engineer's job_commissioning item: the visit's time and type (0101) and where, for the day list's row (engineerDays.ts). */
+  visit?: { time: string | null; type: string | null; customer: string; site: string | null }
 }
 
 export interface TodayView {
