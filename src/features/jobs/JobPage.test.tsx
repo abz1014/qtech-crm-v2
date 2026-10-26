@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { qk } from '@/features/queryKeys'
@@ -131,5 +131,52 @@ describe('Job page', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+  })
+})
+
+describe('Job page: the enquiry-side actions stay on the page (P5-D1)', () => {
+  function Where() {
+    const l = useLocation()
+    return <output data-testid="where">{`${l.pathname}${l.search}`}</output>
+  }
+  function mountAt(j: JobRow, role: 'admin' | 'sales' | 'engineer') {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
+    seed(client, j, role !== 'engineer')
+    return render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Faizan', role } }}>
+          <MemoryRouter initialEntries={[`/jobs/${j.key}`]}>
+            <Where />
+            <Routes>
+              <Route path="/jobs/*" element={<JobsScreen />} />
+            </Routes>
+          </MemoryRouter>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('Send quotation opens the Quotation stage and the Issue quotation address, and does not leave the page', async () => {
+    const user = userEvent.setup()
+    const { container } = mountAt(job({ stage: 'prices_in', stageDetail: '3 of 3 items priced', orderId: null }), 'sales')
+    await screen.findByRole('heading', { level: 1 })
+    await user.click(screen.getByRole('button', { name: 'Send quotation' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/jobs/139?issue=1')
+    expect(stagesOf(container).getByRole('button', { name: /Quotation/ })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('Mark won asks for the order on this page (?won=1), from the next-step band', async () => {
+    const user = userEvent.setup()
+    mountAt(job({ stage: 'quoted', stageDetail: 'waiting for the customer', orderId: null }), 'admin')
+    await screen.findByRole('heading', { level: 1 })
+    await user.click(screen.getByRole('button', { name: 'Mark won' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/jobs/139?won=1')
+  })
+
+  it('an engineer has no Send quotation or Mark won', async () => {
+    mountAt(job({ stage: 'quoted', stageDetail: 'waiting for the customer', orderId: null }), 'engineer')
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('button', { name: 'Send quotation' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Mark won' })).toBeNull()
   })
 })

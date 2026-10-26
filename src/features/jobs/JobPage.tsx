@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CloudOff } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
@@ -22,6 +22,7 @@ import { jobNext } from '@/features/jobs/lib/nextStep'
 import { currentStopIndex, officeDetail, stageModel } from '@/features/jobs/lib/stages'
 import { jobLabel } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
+import { WonDialogHost } from '@/features/jobs/EnquiryWork'
 
 /*
  * The Job page (redesign phase 5, P5-C): /jobs/:key, one page for a customer request from enquiry to payment.
@@ -94,6 +95,7 @@ function JobView({ facts }: { facts: JobFacts }) {
   const session = useSession()
   const role = (session.status === 'signed-in' ? session.user.role : 'engineer') as 'admin' | 'sales' | 'engineer'
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const phone = useMediaQuery('(max-width: 767px)')
   const { job } = facts
   const data = useJobData(facts, role)
@@ -106,6 +108,11 @@ function JobView({ facts }: { facts: JobFacts }) {
   const first = current === null ? null : Math.min(current, 6)
   const [open, setOpen] = useState<number | null>(first)
   useEffect(() => setOpen(first), [first, job.key])
+  // A link that carries ?issue=1 (the RFQ page's own address for the Issue quotation dialog) lands on the stage that holds it.
+  const wantsIssue = params.get('issue') === '1'
+  useEffect(() => {
+    if (wantsIssue) setOpen(1)
+  }, [wantsIssue])
   const toggle = (i: number) => setOpen(o => (o === i ? null : i))
   const select = (i: number) => {
     setOpen(i)
@@ -114,14 +121,27 @@ function JobView({ facts }: { facts: JobFacts }) {
 
   useMobileBar({ title: jobLabel(job.key), back: 'history', fallback: '/jobs', hideTabs: true })
 
-  const target =
-    next.button && next.on === 'rfq' && job.rfqId
-      ? `/rfqs/${job.rfqId}${next.query ? `?${next.query}` : ''}`
-      : next.button && next.on === 'order' && job.orderId
-        ? `/orders/${job.orderId}`
-        : null
-  const button = target && next.button ? (
-    <Button variant="primary" size={phone ? 'touch' : 'lg'} onClick={() => navigate(target)}>
+  // The enquiry-side steps are done on this page (P5-D1): the button opens the Quotation stage, or the same dialog the RFQ page opens
+  // (?issue=1, ?won=1). The order-side steps still open the order page until lane L3 moves them here (P5-D2).
+  const onRfq = Boolean(next.button && next.on === 'rfq' && job.rfqId)
+  const orderTarget = next.button && next.on === 'order' && job.orderId ? `/orders/${job.orderId}` : null
+  const act = () => {
+    if (orderTarget) return navigate(orderTarget)
+    if (!onRfq) return
+    const p = new URLSearchParams(params)
+    if (next.query === 'won=1') {
+      p.set('won', '1')
+      setParams(p, { replace: true })
+      return
+    }
+    if (next.query === 'issue=1') {
+      p.set('issue', '1')
+      setParams(p, { replace: true })
+    }
+    select(1)
+  }
+  const button = onRfq || orderTarget ? (
+    <Button variant="primary" size={phone ? 'touch' : 'lg'} onClick={act}>
       {next.button}
     </Button>
   ) : undefined
@@ -172,6 +192,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} />
       ) : null}
 
+      {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid min-w-0 gap-4">
           <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} />

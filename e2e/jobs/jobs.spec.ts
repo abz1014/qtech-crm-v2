@@ -106,3 +106,40 @@ test.describe('Jobs list (P5-B)', () => {
     }
   })
 })
+
+test.describe('Job page (P5-C, P5-D1)', () => {
+  test('the page for an enquiry: header, seven-stop ruler, one green button, and the enquiry work on the Quotation stage', async ({ page }) => {
+    const f = await seed()
+    // an enquiry with no order of its own: its Quotation stage holds the supplier work
+    const rfq = await createRfq(f.company.id, { customer_ref: `${f.ref}-B`, due_on: karachiDay(7) })
+    await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Level switch', qty: 1 }, prefer: 'return=minimal' }))
+    await openAs(page, 'admin', `/jobs/${rfq.number}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
+    await expect(page.getByRole('list', { name: 'Stages of this job' }).getByRole('listitem')).toHaveCount(7)
+    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Ask suppliers' }).click()
+    await expect(page.locator('[data-stages]').getByRole('button', { name: /^Quotation/ })).toHaveAttribute('aria-expanded', 'true')
+    await review(page, 'job-page-1440')
+    expect(await axeViolations(page)).toEqual([])
+  })
+
+  test('an engineer opens the job with no Money panel and no price', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'engineer', `/jobs/${f.rfq.number}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${f.rfq.number}`)
+    await expect(page.getByRole('region', { name: 'Money for this job' })).toHaveCount(0)
+    expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs\.?\s?\d/)
+    await review(page, 'job-page-engineer-1440')
+  })
+
+  test('phone: the ruler is one line, no sideways scroll at 375 and 320', async ({ page }) => {
+    const f = await seed()
+    for (const width of [375, 320]) {
+      await page.setViewportSize({ width, height: 800 })
+      await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
+      await expect(page.locator('[data-stage-phone]')).toContainText(/Stage \d of 7/)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)
+    }
+  })
+})

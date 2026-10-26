@@ -1,4 +1,8 @@
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
+import { lazyWithReload } from '@/lib/importWithReload'
+import { Button } from '@/ui/Button'
+import { Skeleton } from '@/ui/Skeleton'
+import { useWonDialog } from '@/features/orders/useWonDialog'
 import { Link } from 'react-router-dom'
 import { Check, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,6 +17,9 @@ import { JobSlot, type JobContext } from '@/features/jobs/slots'
 import { stageSlot } from '@/features/jobs/slotRegistry'
 import { quotationRef } from '@/features/jobs/lib/refs'
 import { STOPS, type StageModel, type StopName, type StopState } from '@/features/jobs/lib/stages'
+
+// The enquiry side's real components (P5-D1): downloaded when the Quotation stage is first opened, not with the job page.
+const EnquiryWork = lazyWithReload(() => import('@/features/jobs/EnquiryWork'))
 
 /*
  * The job's stages as an accordion (plan "Page layout": the current stage open, earlier ones folded to one line each, later ones grey).
@@ -61,7 +68,7 @@ interface Section {
   body: ReactNode
 }
 
-function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobContext): Section[] {
+function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobContext, markWon: () => void): Section[] {
   const { job } = facts
   const direct = job.kind === 'direct'
   const today = businessToday()
@@ -105,6 +112,11 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   ])
   const quotationBody = direct ? (
     <Note>No quotation: this job started as an order.</Note>
+  ) : job.rfqId ? (
+    // Ask suppliers, their replies and prices, the items, the quotation and Issue quotation: the RFQ page's own components.
+    <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+      <EnquiryWork rfqId={job.rfqId} />
+    </Suspense>
   ) : (
     <div className="grid gap-3">
       {inquiries.length ? <Table head={['Supplier', 'Asked', 'Answer']} label="Suppliers asked" rows={supplierRows} /> : <Note>No supplier has been asked yet.</Note>}
@@ -120,7 +132,15 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   )
 
   const orderBody = !job.orderId ? (
-    <Note>{direct ? 'The order is not available.' : "There is no order yet. It starts when the customer's order arrives and the enquiry is marked won."}</Note>
+    <div className="grid gap-2">
+      <Note>{direct ? 'The order is not available.' : "There is no order yet. It starts when the customer's order arrives and the enquiry is marked won."}</Note>
+      // once quoted, Mark won is the next-step band's green button: not repeated here
+      {!direct && ctx.money && job.stage !== 'lost' && job.stage !== 'quoted' ? (
+        <p>
+          <Button onClick={markWon}>Mark won</Button>
+        </p>
+      ) : null}
+    </div>
   ) : (
     <div className="grid gap-2">
       <p className="text-base text-fg-2">
@@ -258,7 +278,8 @@ function orderLink(orderId: string | null, label: string) {
 const TAG: Record<StopState, string | null> = { done: 'Done', current: 'Now', future: null, none: null, stopped: null }
 
 export function StageSections({ facts, data, model, ctx, open, onToggle }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void }) {
-  const sections = buildSections(facts, data, model, ctx)
+  const [, setWon] = useWonDialog()
+  const sections = buildSections(facts, data, model, ctx, () => setWon(true))
   return (
     <div className="grid gap-2" data-stages>
       {sections.map(s => {
