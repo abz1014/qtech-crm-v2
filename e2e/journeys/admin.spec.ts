@@ -5,7 +5,7 @@ import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext 
 /*
  * P03, the admin journey: the books for a month, from the daily scraps to the close.
  *
- *   burst-enter five expenses with the keyboard only -> match the bank statement -> review the margins and the things to check ->
+ *   burst-enter five expenses with the keyboard only -> match the bank statement -> review the margins and the mistakes to fix ->
  *   close the month -> the closed-month sentence refuses an edit (a new expense, a delete) -> reopen the month.
  *
  * FE-2 targets (BUILD_PLAN FE-2 and A6.5), each read from the browser's own mouse and key events:
@@ -165,15 +165,15 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(p).toContainText(ordRef(m.prov.order.number))
     await expect(p).toContainText('Not final')
     await expect(p.getByTestId('margin-value')).toContainText('(est.)') // round 3: an estimate, greyed
-    // Things to check (the old Exceptions tab) is one row of the Month end checklist: one tap from there.
+    // Mistakes to fix (the old Exceptions tab) is one row of the Month end checklist: one tap from there.
     await page.goto(`/money/month-end?month=${STMT.key}`)
     const row = page.getByTestId('check-things_to_check')
     await expect(row).toBeVisible()
     await resetCount(page)
     await row.getByRole('link').click()
-    await expect(page.getByRole('heading', { name: 'Things to check', level: 2 })).toBeVisible()
-    fe2('Month end to Things to check', (await readCount(page)).mouse, 1)
-    const over = page.getByRole('list', { name: 'Things to check' }).getByRole('listitem').filter({ hasText: ordRef(m.over.order.number) }).filter({ hasText: 'Payments exceed total' })
+    await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeVisible()
+    fe2('Month end to Mistakes to fix', (await readCount(page)).mouse, 1)
+    const over = page.getByRole('list', { name: 'Mistakes to fix' }).getByRole('listitem').filter({ hasText: ordRef(m.over.order.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
     await expect(over.getByRole('link', { name: 'View order' })).toHaveAttribute('href', `/orders/${m.over.order.id}`)
     await page.close()
