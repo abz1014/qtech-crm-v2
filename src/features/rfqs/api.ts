@@ -324,6 +324,8 @@ export interface InquiryRow {
   /** The supplier's city (companies.city), shown under its name beside the country. */
   supplierCity?: string | null
   sentOn: string | null
+  /** 0097: when a person said "Yes, sent". sentOn alone only means the message was copied ("Asked"). */
+  sentConfirmedAt?: string | null
   lastChasedOn: string | null
   /** users.id of whoever made the last chase (0048). */
   lastChasedBy?: string | null
@@ -363,7 +365,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
   const inq = unwrap(
     await db
       .from('supplier_inquiries')
-      .select('id, supplier_id, sent_on, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
+      .select('id, supplier_id, sent_on, sent_confirmed_at, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at'),
   )
@@ -434,6 +436,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       supplierCountry: c?.country ?? null,
       supplierCity: c?.city ?? null,
       sentOn: i.sent_on,
+      sentConfirmedAt: i.sent_confirmed_at,
       lastChasedOn: i.last_chased_on,
       lastChasedBy: i.last_chased_by,
       lastRelayedAt: i.last_relayed_at,
@@ -865,6 +868,24 @@ export async function markInquiriesSent(ids: readonly string[], on: string): Pro
   const db = requireSupabase()
   const rows = unwrap(await db.from('supplier_inquiries').update({ sent_on: on }).in('id', [...ids]).is('sent_on', null).select('id'))
   return rows.map(r => r.id)
+}
+
+/**
+ * "Did you send it? Yes, sent" (0097): stamp sent_confirmed_at on inquiries that were asked and not yet confirmed. Only this call writes
+ * the column, so "Sent" on a screen always means a person said so. Returns the ids that changed, for the Undo.
+ */
+export async function confirmInquiriesSent(ids: readonly string[]): Promise<string[]> {
+  if (ids.length === 0) return []
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('supplier_inquiries').update({ sent_confirmed_at: new Date().toISOString() }).in('id', [...ids]).not('sent_on', 'is', null).is('sent_confirmed_at', null).select('id'))
+  return rows.map(r => r.id)
+}
+
+/** The Undo of confirmInquiriesSent: back to "Asked". */
+export async function unconfirmInquiriesSent(ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return
+  const db = requireSupabase()
+  unwrap(await db.from('supplier_inquiries').update({ sent_confirmed_at: null }).in('id', [...ids]).select('id'))
 }
 
 /** The Undo of markInquiriesSent: back to shortlisted, only while still stamped that day and not chased since. */

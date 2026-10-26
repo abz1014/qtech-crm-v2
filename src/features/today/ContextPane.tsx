@@ -483,7 +483,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
             <h3 className="text-base font-semibold">What happened</h3>
             <ul className="grid gap-2 text-sm">
               {rfq ? <Event on={rfq.receivedOn} text="RFQ received from customer" /> : null}
-              {firstFloat ? <Event on={firstFloat} text={`Sent to ${floated} ${floated === 1 ? 'supplier' : 'suppliers'} for prices`} /> : null}
+              {firstFloat ? <Event on={firstFloat} text={`Asked ${floated} ${floated === 1 ? 'supplier' : 'suppliers'} for prices`} /> : null}
               <Event on={questions.map(q => q.firstAskedOn).sort()[0]} text={`${questions.length} ${questions.length === 1 ? 'question' : 'questions'} sent to customer`} />
               {item.waiting ? (
                 <>
@@ -691,7 +691,7 @@ function factsFor(
     case 'chase_supplier': {
       const i = c.inquiryFact
       const pricedFact: Fact | null = c.pricedOf ? { label: 'Priced', icon: Check, value: `${c.pricedOf.priced} of ${c.pricedOf.total}`, sub: 'items' } : null
-      const sent: Fact | null = i?.sentOn ? { label: 'Sent to suppliers', icon: Clock, value: formatDay(i.sentOn) } : null
+      const sent: Fact | null = i?.sentOn ? { label: 'Asked suppliers', icon: Clock, value: formatDay(i.sentOn) } : null
       if (c.justChased && item.waiting) {
         out.push(pricedFact, sent, chased('supplier', i?.chaseCount ?? 1, item.waiting.chasedOn), nextNudge(item.waiting.nextNudgeOn))
         break

@@ -60,7 +60,7 @@ import { useToast } from '@/ui/useToast'
 
 /*
  * New RFQ: intake and asking suppliers on one screen (R05; g2-intake-float.html; plain words of 2026-10-19). Company and a paste,
- * then suppliers with their reasons, then the message, then one button that copies it and marks the RFQ as sent to those
+ * then suppliers with their reasons, then the message, then one button that copies it and marks the RFQ as asked of those
  * suppliers, with a 10-second Undo.
  *
  * FE-2 entry burden, listed for the commit:
@@ -634,7 +634,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       const n = ticked.length
       toast({
         title: `Asked ${n} ${n === 1 ? 'supplier' : 'suppliers'}`,
-        body: ok ? `Copied, and ${rfqRef(s.number)} marked as sent to them.` : `${rfqRef(s.number)} marked as sent. The message did not copy: copy it from the page.`,
+        body: ok ? `Copied, and ${rfqRef(s.number)} marked as asked.` : `${rfqRef(s.number)} marked as asked. The message did not copy: copy it from the page.`,
         undo: {
           seconds: 10,
           onUndo: async () => {
@@ -683,7 +683,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   }
 
   // ---- text
-  const heading = step === 'floated' ? (copied ? 'Copied. Paste it into each supplier’s chat.' : 'Marked as sent. Copy the message below.') : null
+  const heading = step === 'floated' ? (copied ? 'Copied. Paste it into each supplier’s chat.' : 'Marked as asked. Copy the message below.') : null
   const lede =
     step === 'build'
       ? real.length > 0
@@ -694,7 +694,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
         : step === 'enquiry'
           ? 'Check the message, then copy it once.'
           : step === 'saved'
-            ? 'Saved. Nothing has been sent to a supplier.'
+            ? 'Saved. No supplier has been asked.'
             : (heading ?? '')
 
   const itemCountNote = pasted
@@ -1107,7 +1107,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   saved ? (
                     <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier’s chat.</>
                   ) : (
-                    'Copies the message and marks the RFQ as sent to them.'
+                    'Copies the message and marks the RFQ as asked.'
                   )
                 }
                 primary={{
@@ -1151,7 +1151,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               <h2 className="m-0 text-xl font-semibold tracking-snug"><span className="num">{rfqRef(saved.number)}</span> is saved</h2>
               <p className="m-0 text-sm text-fg-2">
                 {ticked.length > 0
-                  ? `${ticked.length} ${ticked.length === 1 ? 'supplier is' : 'suppliers are'} shortlisted (${joinNames(floatedNames)}). Nothing has been sent, so it shows as not sent to suppliers.`
+                  ? `${ticked.length} ${ticked.length === 1 ? 'supplier is' : 'suppliers are'} shortlisted (${joinNames(floatedNames)}). No supplier has been asked yet, so it shows as not asked.`
                   : 'No supplier is shortlisted yet. Open it to ask suppliers when you are ready.'}
               </p>
               <div className="flex flex-wrap gap-2">

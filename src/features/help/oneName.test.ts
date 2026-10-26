@@ -27,7 +27,7 @@ export const GROUPS: readonly Group[] = [
   { keep: 'Add expenses', others: ['Add expense'] },
   { keep: 'Quotations', others: ['Quotes', 'Bids', 'Bid', 'Offers'] },
   { keep: 'Quotation sent', others: ['Bid sent', 'Mark bid sent'] },
-  { keep: 'Sent to suppliers', others: ['Enquiry sent', 'Floated'] },
+  { keep: 'Asked suppliers', others: ['Sent to suppliers', 'Enquiry sent', 'Floated'] },
   { keep: 'Ask suppliers', others: ['Float', 'Float to suppliers', 'Float to another supplier', 'Copy & mark floated', 'Copy enquiry'] },
   { keep: 'Paste or photo', others: ['Paste or add a photo', 'Capture'] },
   { keep: 'Export CSV', others: ['Export'] },

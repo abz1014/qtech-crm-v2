@@ -103,9 +103,9 @@ export interface QuoteRow {
   outcome: QuoteOutcome
   /** "ORD-0038" when the item was ordered on a leg with them. */
   orderRef: string | null
-  /** Small print under the item: "Sent 24 Nov, 3 days ago" (an enquiry still waiting). */
+  /** Small print under the item: "Asked 24 Nov, 3 days ago" (an enquiry still waiting). */
   itemNote: string | null
-  /** What the PKR column says when there is no price: "Awaiting a quote", "Sent 2 Jun, never answered", the reason it was declined. */
+  /** What the PKR column says when there is no price: "Awaiting a quote", "Asked 2 Jun, never answered", the reason it was declined. */
   pkrNote: string | null
   imported: boolean
 }
@@ -149,7 +149,7 @@ export interface SupplierRecord {
   deliveries: DeliveryRow[]
   deliveryCount: number
   open: OpenWithThem
-  /** What the last contact was, as a sentence in pieces so an RFQ reference can be a link ("Enquiry sent for RFQ-0171. No reply yet."). */
+  /** What the last contact was, as a sentence in pieces so an RFQ reference can be a link ("Enquiry asked for RFQ-0171. No reply yet."). */
   lastContact: LastContactPart[] | null
   /** One unit per delivery with both dates, for the squares: imported on-time ones are drawn dashed ("dates estimated"). */
   deliveryUnits: { ontime: number; late: number; estimatedOntime: number }
@@ -255,14 +255,14 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
       leadTime: null,
       outcome,
       orderRef: null,
-      itemNote: outcome === 'waiting' ? `Sent ${formatShortDate(inq.sentOn, today)}, ${plural(waited, 'day')} ago` : null,
+      itemNote: outcome === 'waiting' ? `Asked ${formatShortDate(inq.sentOn, today)}, ${plural(waited, 'day')} ago` : null,
       pkrNote:
         outcome === 'declined'
           ? inq.noOfferReason
             ? reasonLabel(inq.noOfferReason)
             : 'No reason given'
           : outcome === 'no-reply'
-            ? `Sent ${formatShortDate(inq.sentOn, today)}, ${inq.chaseCount > 0 ? `chased ${inq.chaseCount === 1 ? 'once' : `${inq.chaseCount} times`}, ` : ''}never answered`
+            ? `Asked ${formatShortDate(inq.sentOn, today)}, ${inq.chaseCount > 0 ? `chased ${inq.chaseCount === 1 ? 'once' : `${inq.chaseCount} times`}, ` : ''}never answered`
             : 'Awaiting a quote',
       imported: inq.legacy,
     })
@@ -338,7 +338,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
           : replied
             ? ''
             : ' No reply yet.'
-      events.push({ on: i.lastChasedOn && i.lastChasedOn > i.sentOn ? i.lastChasedOn : i.sentOn, parts: ['Enquiry sent for ', { rfqId: i.rfqId, ref: ref(i.rfqId) }, `.${tail}`] })
+      events.push({ on: i.lastChasedOn && i.lastChasedOn > i.sentOn ? i.lastChasedOn : i.sentOn, parts: ['Enquiry asked for ', { rfqId: i.rfqId, ref: ref(i.rfqId) }, `.${tail}`] })
     }
   }
   for (const l of raw.legs) {
