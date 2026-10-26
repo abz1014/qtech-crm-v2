@@ -38,6 +38,8 @@ import { InfoTip } from '@/ui/InfoTip'
 import { waLink } from '@/lib/messageLinks'
 import { Money } from '@/ui/Money'
 import { MoreMenu } from '@/ui/MoreMenu'
+import { LastChanged } from '@/features/history/LastChanged'
+import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import { NextStepBox } from '@/ui/NextStepBox'
 import { MenuItem } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
@@ -211,11 +213,13 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   // The "More" menu: Edit, Copy link, New RFQ asking them (a customer that also supplies us), Merge (admin). On a phone it is the
   // one bar's right slot; from tablet up the "More" text button beside the name.
+  const recordHistory = useHistoryPanel({ table: 'companies', id: company.id, context: company.name })
   const moreMenu = (touch: boolean) => (
     <MoreMenu touch={touch} label="More actions" menuClassName="min-w-[280px]">
       <MenuItem icon={Pencil} onClick={() => setDialog('edit')}>
         Edit company
       </MenuItem>
+      {recordHistory.item}
       <MenuItem icon={Link2} onClick={() => void copyLink()}>
         Copy link to this company
       </MenuItem>
@@ -329,6 +333,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
               </InfoTip>
             </p>
           ) : null}
+          <LastChanged table="companies" id={company.id} className="mt-2 text-base text-fg-2" />
           <NextStepBox
             tone="quiet"
             text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
@@ -336,6 +341,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
           />
         </DetailHeader>
         {phone ? <StickyActionBar label="Company actions" primary={primary} /> : null}
+        {recordHistory.node}
 
         {wide ? (
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">

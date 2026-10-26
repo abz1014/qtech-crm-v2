@@ -141,11 +141,11 @@ const MONEY_PLACES: ReadonlyArray<{
   },
   {
     id: "money:exceptions",
-    label: "Things to check",
+    label: "Mistakes to fix",
     href: "/money/exceptions",
     icon: CircleAlert,
     roles: ["admin"],
-    keywords: ["exceptions"],
+    keywords: ["exceptions", "things to check"],
   },
 ];
 

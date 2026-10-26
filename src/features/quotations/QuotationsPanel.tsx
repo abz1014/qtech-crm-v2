@@ -17,6 +17,8 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
 import { downloadStoredPdf, loadPdfData, type QuotationRow } from '@/features/quotations/api'
 import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
+import { RevisionMenu } from '@/features/quotations/RevisionMenu'
+import { LastChanged } from '@/features/history/LastChanged'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
 import { InfoTip } from '@/ui/InfoTip'
 import { lazyWithReload } from '@/lib/importWithReload'
@@ -176,6 +178,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                       ) : latest ? null : (
                         <span className="text-sm text-fg-muted" data-replaced>{`Replaced by revision ${rows[i - 1].revision}`}</span>
                       )}
+                      {prices && latest ? <LastChanged table="quotations" id={q.id} className="w-full text-base text-fg-2" /> : null}
                     </span>
                     <span role="cell" className="num text-sm">
                       <span className="text-sm text-fg-muted sm:sr-only">Issued </span>
@@ -215,6 +218,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                               Share
                             </Button>
                           ) : null}
+                          <RevisionMenu quotationId={q.id} label={q.revision > 0 ? `${base} revision ${q.revision}` : base} context={`${base}${q.revision > 0 ? ` R${q.revision}` : ''} · ${rfq.company.name}`} />
                         </span>
                       </>
                     ) : null}
