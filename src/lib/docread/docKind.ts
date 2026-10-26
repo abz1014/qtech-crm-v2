@@ -347,6 +347,9 @@ function classify(text: string): DocKindResult {
   if (asks || qtyHead) {
     return done('rfq', 0.5 + Math.min(0.45, 0.1 * rfqHits + (qtyHead ? 0.2 : 0) + (RFQ_DATE.test(body) ? 0.1 : 0) + (qtyRows ? 0.1 : 0)), [...(rfqHits ? [plural(rfqHits, 'request phrases')] : []), ...(qtyHead ? ['a quantity column'] : []), ...(qtyRows ? [plural(qtyRows, 'lines with a quantity')] : [])])
   }
+  // A line with a quantity and an amount of money and nothing else ("FM-100 DN50: EUR 1.234 each") is a supplier's one-line price at
+  // least as much as an enquiry's line: left undecided, so a pasted reply is not held.
+  if (qtyRows > 0 && !asks && !qtyHead && /(?:\b(?:usd|eur|aed|cny|rmb|gbp|pkr)\s?\d|\d\s?(?:usd|eur|aed|cny|rmb|gbp|pkr)\b|[$\u20ac\u00a3\u00a5]\s?\d)/i.test(text)) return done('unknown', 0.3, ['one line with a quantity and an amount'])
   if (qtyRows > 0) return done('rfq', 0.4, [plural(qtyRows, 'lines with a quantity')])
   return done('unknown', 0.2, ['nothing that settles it'])
 }
