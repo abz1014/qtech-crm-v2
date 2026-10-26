@@ -67,6 +67,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     cancelled_on: d('Cancelled on'),
     commissioning_done_on: d('Commissioning done'),
     commissioning_planned_on: d('Commissioning planned'),
+    commissioning_time: t('Visit time'),
     company_id: r('Company'),
     contact_id: r('Contact'),
     customer_po_number: t('Customer PO number'),
@@ -78,6 +79,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     payment_terms_days: t('Payment terms (days)'),
     rfq_id: hide,
     site_id: r('Site'),
+    visit_type: { kind: 'enum', label: 'Visit type', words: { installation: 'Installation', survey: 'Survey', service: 'Service' } },
   },
   invoices: {
     client_received_on: d('Client received on'),
@@ -215,6 +217,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     no_offer_reason: t('Why no offer'),
     notes: t('Notes'),
     rfq_id: hide,
+    sent_confirmed_at: dt('Confirmed sent'),
     sent_on: d('Sent on'),
     supplier_id: r('Supplier'),
   },
