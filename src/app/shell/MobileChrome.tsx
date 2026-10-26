@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate, type Location, type NavigateFunction } from 'react-router-dom'
 import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
@@ -82,12 +83,15 @@ export function BottomTabs({
   role,
   counts,
   dots,
+  fab,
   items: given,
 }: {
   role: string
   counts?: Partial<Record<CountKey, number>>
   /** A red dot, no number (Money while an invoice is late). */
   dots?: Partial<Record<NavKey, boolean>>
+  /** Drawn between the first and second destination (the engineer's Photo or note button). */
+  fab?: ReactNode
   /** Default: the role's list from navConfig (the gallery passes a fixed one). */
   items?: readonly NavItem[]
 }) {
@@ -98,13 +102,14 @@ export function BottomTabs({
     <nav
       aria-label="Main"
       className="grid border-t bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
-      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(min-content, 1fr))` }}
+      style={{ gridTemplateColumns: fab ? `minmax(min-content, 1fr) auto repeat(${Math.max(items.length - 1, 1)}, minmax(min-content, 1fr))` : `repeat(${items.length}, minmax(min-content, 1fr))` }}
     >
-      {items.map(item => {
+      {items.map((item, at) => {
         const count = counts?.[item.key]
         return (
+          <Fragment key={item.key}>
+          {at === 1 && fab ? <div className="grid content-center">{fab}</div> : null}
           <NavLink
-            key={item.key}
             to={item.path}
             className={({ isActive }) =>
               cn(
@@ -131,6 +136,7 @@ export function BottomTabs({
               </>
             )}
           </NavLink>
+          </Fragment>
         )
       })}
     </nav>
