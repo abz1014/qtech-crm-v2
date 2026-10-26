@@ -27,9 +27,9 @@ export function StepFilter({ value, onChange }: { value: BoardShow; onChange: (v
             key={o.value}
             value={o.value}
             className={cn(
-              'inline-flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border px-3 text-sm font-medium transition-colors duration-fast ease-out',
+              'inline-flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded-round border px-4 text-sm font-medium transition-colors duration-fast ease-out',
               'border-line-strong bg-surface text-fg-2 hover:border-fg-muted hover:text-fg',
-              'data-[state=checked]:border-fg data-[state=checked]:bg-selected data-[state=checked]:text-fg',
+              'data-[state=checked]:border-chrome data-[state=checked]:bg-chrome data-[state=checked]:text-chrome-fg',
               o.value === 'closed' && 'md:ml-2',
             )}
           >

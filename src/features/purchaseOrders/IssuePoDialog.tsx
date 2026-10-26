@@ -410,7 +410,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
                 columns={columns}
                 twoLine
               />
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded border bg-sunken px-4 py-3 text-xs text-fg-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-row border bg-sunken px-4 py-3 text-xs text-fg-2">
                 <span>{conversion ?? `Total in ${ccy ?? '—'}`}</span>
                 <span className="num text-sm font-medium text-fg" data-testid="po-total">
                   {ccy ?? ''} {formatAmount(total, 'always')}

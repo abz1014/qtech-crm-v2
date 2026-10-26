@@ -29,8 +29,10 @@ export function StickyActionBar({ primary, secondary, more, label, className }: 
       role="toolbar"
       aria-label={label}
       data-action-bar
+      // Navy, like the next-step band it repeats (direction C): data-surface re-inks the buttons and rings the green one.
+      data-surface="navy"
       className={cn(
-        'fixed inset-x-0 bottom-0 z-20 flex items-center gap-2 border-t bg-surface px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 shadow-pop md:hidden',
+        'fixed inset-x-0 bottom-0 z-20 flex items-center gap-2 bg-chrome px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 text-fg shadow-pop md:hidden',
         className,
       )}
     >

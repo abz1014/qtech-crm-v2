@@ -141,7 +141,7 @@ function Ready({
   return (
     <>
       <div className="grid gap-5">
-        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded border bg-line text-sm md:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line text-sm md:grid-cols-4">
           {[
             ['Invoice', <span key="n" className="num font-medium">{src.invoice.number ?? 'No number'}</span>],
             ['Date', src.invoice.invoiceDate ? formatDay(src.invoice.invoiceDate) : 'No date'],
@@ -177,7 +177,7 @@ function Ready({
         ) : null}
 
         {src.buyer ? (
-          <section aria-label="Buyer" className="grid gap-3 rounded border p-4">
+          <section aria-label="Buyer" className="grid gap-3 rounded-panel border p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-sm font-semibold">Buyer: {src.buyer.name}</h3>
               {buyerGaps.length === 0 && !editBuyer ? (
@@ -345,7 +345,7 @@ function LinePicker({ src, picks, onChange }: { src: InvoicePdfSource; picks: re
         const pick = byId.get(l.id)
         const title = l.description.split(/\r?\n/)[0]
         return (
-          <li key={l.id} className="grid gap-2 rounded border px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <li key={l.id} className="grid gap-2 rounded-row border px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <Checkbox
               checked={Boolean(pick)}
               onCheckedChange={v => toggle(l.id, v === true, l.qty)}

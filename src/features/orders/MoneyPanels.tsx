@@ -16,7 +16,7 @@ export function InvoicesPanel({ orderId, orderNumber }: { orderId: string; order
   const q = useOrderPayments(orderId)
   if (!q.data?.length) return null
   return (
-    <section id="payments" aria-label="Invoices and payments" data-slot="invoices-payments" className="rounded border bg-surface">
+    <section id="payments" aria-label="Invoices and payments" data-slot="invoices-payments" className="rounded-panel border bg-surface">
       <div className="flex items-center gap-2 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Invoices and payments</h2>
         <span className="ml-auto text-xs text-fg-muted">Payments received</span>

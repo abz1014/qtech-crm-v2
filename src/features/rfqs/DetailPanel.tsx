@@ -29,7 +29,7 @@ export function DetailPanel({
 }) {
   const id = useId()
   return (
-    <section aria-labelledby={id} data-slot={dataSlot} className={cn('min-w-0 rounded border bg-surface', className)}>
+    <section aria-labelledby={id} data-slot={dataSlot} className={cn('min-w-0 rounded-panel border bg-surface', className)}>
       <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b px-5 py-4">
         <div className="min-w-0 flex-1 basis-[12rem]">
           <div className="flex items-center gap-1">

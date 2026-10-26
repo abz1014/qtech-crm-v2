@@ -322,11 +322,12 @@ function BurstContent({ onClose }: { onClose: () => void }) {
           }}
           onInteractOutside={e => e.preventDefault()}
           aria-describedby="burst-desc"
+          aria-modal="true"
           className={cn(
             'grid w-full grid-rows-[auto_minmax(0,1fr)_auto] bg-surface focus:outline-none',
             compact
               ? 'min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto]'
-              : 'mb-10 max-w-[calc(100vw-2rem)] rounded shadow-modal md:w-[1320px]',
+              : 'mb-10 max-w-[calc(100vw-2rem)] rounded-panel shadow-modal md:w-[1320px]',
           )}
         >
           {compact ? (
@@ -433,7 +434,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </div>
             )}
             {banner ? (
-              <p role="alert" className="mx-6 mb-4 flex items-center gap-2 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-sm text-tone-danger-fg max-lg:mx-4">
+              <p role="alert" className="mx-6 mb-4 flex items-center gap-2 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-sm text-tone-danger-fg max-lg:mx-4">
                 <Icon icon={CircleAlert} />
                 {banner}
               </p>
@@ -450,7 +451,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
             <footer className="flex flex-wrap items-center gap-4 rounded-b border-t bg-sunken px-6 py-3">
               <span className="flex-1" />
               {badCount > 0 ? (
-                <span className="inline-flex h-5 items-center gap-[5px] rounded border border-tone-warning-fg/25 bg-tone-warning-bg pl-[6px] pr-2 text-xs font-medium text-tone-warning-fg">
+                <span className="inline-flex h-chip items-center gap-[5px] rounded-round border border-tone-warning-fg/25 bg-tone-warning-bg pl-[6px] pr-2 text-xs font-medium text-tone-warning-fg">
                   <Icon icon={TriangleAlert} size="chip" />
                   {badCount} {badCount === 1 ? 'row needs' : 'rows need'} a change
                 </span>
@@ -656,7 +657,7 @@ function ClosedError({ message, others }: { message: string; others: number }) {
   return (
     <div
       role="alert"
-      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
+      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
     >
       <Icon icon={CircleAlert} className="mt-[2px] text-tone-danger-fg" />
       <div className="grid gap-0">
@@ -796,7 +797,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
       role="group"
       aria-label={`Expense ${index}`}
       onKeyDown={onKey}
-      className={cn('grid gap-3 rounded border bg-surface px-3 pb-4 pt-3', err && 'border-tone-danger-fg/45')}
+      className={cn('grid gap-3 rounded-row border bg-surface px-3 pb-4 pt-3', err && 'border-tone-danger-fg/45')}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-3">
         <label className="flex h-[44px] items-center gap-2 rounded border border-line-input px-3 focus-within:border-fg">
@@ -865,7 +866,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         groups={groups}
         recent={recent}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <label
           className={cn(
             'relative inline-flex h-touch min-w-0 items-center gap-2 rounded border px-3 text-sm text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
@@ -932,7 +933,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         ) : null}
       </div>
       {err ? (
-        <div role="alert" className="flex gap-2 rounded bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
+        <div role="alert" className="flex gap-2 rounded-row bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
           <Icon icon={CircleAlert} size="sm" className="mt-[1px] text-tone-danger-fg" />
           <span>
             <b className="font-medium text-tone-danger-fg">{err}</b> This row keeps what you typed.

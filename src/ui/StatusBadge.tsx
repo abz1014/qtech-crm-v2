@@ -35,7 +35,7 @@ export function StatusBadge({ dimension, value, label, detail, className }: Stat
         borderColor: 'color-mix(in srgb, var(--status-fg, var(--tone-neutral-fg)) 24%, transparent)',
       }}
       className={cn(
-        'inline-flex min-h-chip items-center gap-[6px] whitespace-nowrap rounded border bg-status-bg py-px pl-[6px] pr-2 text-xs font-medium leading-none text-status-fg',
+        'inline-flex min-h-chip items-center gap-[6px] whitespace-nowrap rounded-round border bg-status-bg py-px pl-2 pr-[10px] text-xs font-semibold leading-none text-status-fg',
         !s && 'bg-tone-neutral-bg text-tone-neutral-fg',
         className,
       )}

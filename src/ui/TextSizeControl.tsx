@@ -27,7 +27,7 @@ export function TextSizeControl({ className }: { className?: string }) {
 /** The Text size panel for Settings > Your details: a heading, one line on what it does, and the control. */
 export function TextSizePanel({ className }: { className?: string }) {
   return (
-    <section aria-labelledby="text-size-h" className={cn('grid gap-3 rounded border bg-surface p-5', className)}>
+    <section aria-labelledby="text-size-h" className={cn('grid gap-3 rounded-panel border bg-surface p-5', className)}>
       <div className="grid gap-[2px]">
         <h2 id="text-size-h" className="text-base font-semibold">
           Text size
@@ -45,7 +45,7 @@ export function TextSizePanel({ className }: { className?: string }) {
 export function ShortcutsPanel({ className }: { className?: string }) {
   const [on, setOn] = useSingleKeyShortcuts()
   return (
-    <section aria-labelledby="shortcuts-h" className={cn('grid gap-3 rounded border bg-surface p-5', className)}>
+    <section aria-labelledby="shortcuts-h" className={cn('grid gap-3 rounded-panel border bg-surface p-5', className)}>
       <div className="grid gap-[2px]">
         <h2 id="shortcuts-h" className="text-base font-semibold">
           Keyboard shortcuts

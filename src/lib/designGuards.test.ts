@@ -82,8 +82,8 @@ describe('token parity (U01)', () => {
   })
 
   it('fails when a token is removed or invented', () => {
-    expect(run(index.replace('--radius: 4px;', '')).status).toBe(1)
-    expect(run(index.replace('--radius: 4px;', '--radius: 4px; --extra: 1px;')).status).toBe(1)
+    expect(run(index.replace('--radius: 10px;', '')).status).toBe(1)
+    expect(run(index.replace('--radius: 10px;', '--radius: 4px; --extra: 1px;')).status).toBe(1)
   })
 
   it('fails when a status-map rule differs', () => {

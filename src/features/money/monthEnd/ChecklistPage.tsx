@@ -78,7 +78,7 @@ export function ChecklistPage() {
       ) : !ctx.statusReady || !ctx.state ? (
         <ChecklistLoading />
       ) : ctx.state.kind === 'not-ended' && ctx.hasMoney === false ? (
-        <section className="rounded border bg-surface">
+        <section className="rounded-panel border bg-surface">
           <EmptyState
             title={`Nothing to check for ${monthName(ctx.month)} yet`}
             actions={
@@ -157,7 +157,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   return (
     <section
       aria-label={`${monthKeyLabel(ctx.month)} summary`}
-      className="grid items-center gap-x-8 gap-y-4 rounded border bg-surface px-6 py-5 md:grid-cols-[minmax(0,1fr)_auto]"
+      className="grid items-center gap-x-8 gap-y-4 rounded-panel border bg-surface px-6 py-5 md:grid-cols-[minmax(0,1fr)_auto]"
     >
       <div className="grid gap-1">
         {/* No chip in the heading (spec 1.2): the month's state is the Closed chip beside the pager and the lock bar. */}
@@ -218,7 +218,7 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
   return (
     <section aria-label="Checklist" className="grid gap-2">
       {rows.length > 0 ? (
-        <ul className="grid overflow-hidden rounded border bg-surface">
+        <ul className="grid overflow-hidden rounded-panel border bg-surface">
           {rows.map(r => (
             <li key={r.key} data-testid={`check-${r.key}`} className="border-t first:border-t-0">
               <Link to={r.to} className="grid min-h-[64px] grid-cols-[4px_minmax(0,1fr)_auto] items-center gap-4 pr-4 hover:bg-sunken md:grid-cols-[4px_minmax(0,1fr)_auto_auto]">
@@ -325,11 +325,11 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
 function ChecklistLoading() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading the month-end checklist" className="grid gap-4">
-      <div className="grid gap-3 rounded border bg-surface px-6 py-5 md:grid-cols-[1fr_auto]">
+      <div className="grid gap-3 rounded-panel border bg-surface px-6 py-5 md:grid-cols-[1fr_auto]">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="h-10 w-40" />
       </div>
-      <div className="grid overflow-hidden rounded border bg-surface">
+      <div className="grid overflow-hidden rounded-panel border bg-surface">
         {[0, 1, 2].map(i => (
           <div key={i} className="grid gap-2 border-t px-5 py-4 first:border-t-0">
             <Skeleton className="h-4 w-56" />

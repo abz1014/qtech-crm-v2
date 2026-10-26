@@ -60,7 +60,7 @@ export function Panel({
   bodyClassName?: string
 }) {
   return (
-    <section className={cn('overflow-hidden rounded border bg-surface', className)}>
+    <section className={cn('overflow-hidden rounded-panel border bg-surface', className)}>
       <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b px-5 py-2">
         <h2 className="text-base font-semibold">{title}</h2>
         {meta}
@@ -110,7 +110,7 @@ export function AsOfControl({ asOf, chosen, onChange }: { asOf: string; chosen: 
 export function ReportLoading({ label }: { label: string }) {
   return (
     <div role="status" aria-busy="true" aria-label={label} className="grid gap-4">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded border bg-line md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-cols-4">
         {[0, 1, 2, 3].map(i => (
           <div key={i} className="grid gap-2 bg-surface px-5 py-4">
             <Skeleton className="h-3 w-24" />
@@ -137,7 +137,7 @@ export function ReportLoading({ label }: { label: string }) {
 
 export function ReportError({ title, onRetry }: { title: string; onRetry: () => void }) {
   return (
-    <div role="alert" className="mx-auto mt-8 max-w-[520px] rounded border bg-surface p-6">
+    <div role="alert" className="mx-auto mt-8 max-w-[520px] rounded-panel border bg-surface p-6">
       <EmptyState
         mood="error"
         title={title}

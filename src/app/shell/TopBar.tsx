@@ -25,7 +25,7 @@ interface TopBarProps {
 export const CAPTURE_LABEL = 'Paste or photo'
 
 /*
- * Direction B top bar (desktop and tablet): --topbar-h, the role-filtered destinations (5 or 6, from navConfig),
+ * Top bar (desktop and tablet), navy in direction C (data-surface="navy" re-inks the primitives inside): --topbar-h, the role-filtered destinations (5 or 6, from navConfig),
  * search with the command-palette hint, the paste-or-photo action, role and avatar. Words beat icons for this
  * team, so the labels stay on from 1024 up (a 1366 laptop at 125% is about 1093 px) and the icons, key hints and
  * role go first when room runs out. Never wider than the window (e2e/money-books/shell-overflow.spec.ts):
@@ -39,8 +39,9 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
   const items = given ?? navItemsForRole(user.role)
   const hint = searchKeyHint()
   return (
-    <header className="hidden h-topbar min-w-0 items-center gap-4 border-b bg-surface px-4 md:flex xl:gap-5 2xl:gap-6 2xl:px-5">
-      <NavLink to="/" className="shrink-0 rounded" aria-label="Q-Tech Solutions, home">
+    <header data-surface="navy" className="hidden h-topbar min-w-0 items-center gap-4 bg-chrome px-4 text-fg md:flex xl:gap-5 2xl:gap-6 2xl:px-5">
+      {/* The wordmark sits on its own white plate (BRAND 6: never on a coloured background); the mark is a green square and needs none. */}
+      <NavLink to="/" className="shrink-0 rounded xl:bg-chrome-fg xl:px-2 xl:py-1" aria-label="Q-Tech Solutions, home">
         {/* Lazy: the top bar is hidden on phones, and a hidden lazy image is never downloaded (perf/lcp). */}
         <BrandImage name="logo-wordmark" alt="" width={124} height={30} loading="lazy" className="block h-[30px] w-auto max-xl:hidden" />
         <BrandImage name="logo-mark" alt="" width={28} height={28} loading="lazy" className="block size-[28px] xl:hidden" />
@@ -69,7 +70,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
                   {item.label}
                 </span>
                 <NeedsCount n={counts?.[item.key]} className="max-lg:hidden" />
-                {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 -bottom-px h-indicator bg-brand-green xl:inset-x-3" /> : null}
+                {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 bottom-0 h-1 rounded-t bg-brand-green xl:inset-x-3" /> : null}
               </>
             )}
           </NavLink>
@@ -87,7 +88,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
           aria-label="Search or jump to"
           aria-keyshortcuts={hint === '⌘K' ? 'Meta+K' : 'Control+K'}
           className={cn(
-            'flex h-control items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
+            'flex h-control items-center gap-2 rounded border border-line-strong bg-surface text-left text-sm text-fg-muted',
             'transition-colors duration-fast ease-out hover:border-line-input',
             'w-control justify-center lg:w-[150px] lg:justify-start lg:pl-3 lg:pr-2 xl:w-[220px] 2xl:w-[280px] 2xl:pr-16',
           )}

@@ -34,7 +34,7 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
   const older = showAllOlder ? side.older : side.older.slice(0, COLLAPSED_OLDER)
 
   return (
-    <section aria-label={heading} data-testid={`bank-${dir}`} className="min-w-0 rounded border bg-surface">
+    <section aria-label={heading} data-testid={`bank-${dir}`} className="min-w-0 rounded-panel border bg-surface">
       <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b py-2 pl-5 pr-4">
         <h2 className="text-base font-semibold">{heading}</h2>
         <span className="inline-flex h-[22px] items-center gap-[6px] rounded bg-selected px-2 text-xs font-medium text-fg-2">

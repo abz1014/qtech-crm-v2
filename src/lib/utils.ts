@@ -10,13 +10,14 @@ import { extendTailwindMerge } from 'tailwind-merge'
  */
 export const TOKEN_SIZES = {
   h: ['control', 'control-sm', 'control-lg', 'segment', 'chip', 'row', 'row-tall', 'head', 'topbar', 'touch', 'indicator'],
-  'min-h': ['control', 'control-sm', 'control-lg', 'segment', 'chip', 'row', 'head', 'touch'],
+  'min-h': ['control', 'control-sm', 'control-lg', 'segment', 'chip', 'row', 'row-tall', 'head', 'touch'],
   w: ['nav', 'touch', 'control', 'control-sm', 'control-lg'],
   'min-w': ['touch', 'chip'],
   'max-w': ['list', 'table', 'prose'],
   size: ['icon-chip', 'control-sm', 'touch'],
-  text: ['table', 'display'],
-  font: ['regular'],
+  text: ['stamp', 'table', 'display'],
+  font: ['regular', 'heavy'],
+  rounded: ['row', 'panel', 'round'],
 } as const
 
 const twMerge = extendTailwindMerge({
@@ -30,6 +31,11 @@ const twMerge = extendTailwindMerge({
       size: [{ size: [...TOKEN_SIZES.size] }],
       'font-size': [{ text: [...TOKEN_SIZES.text] }],
       'font-weight': [{ font: [...TOKEN_SIZES.font] }],
+      rounded: [{ rounded: [...TOKEN_SIZES.rounded] }],
+      'rounded-t': [{ 'rounded-t': [...TOKEN_SIZES.rounded] }],
+      'rounded-b': [{ 'rounded-b': [...TOKEN_SIZES.rounded] }],
+      'rounded-l': [{ 'rounded-l': [...TOKEN_SIZES.rounded] }],
+      'rounded-r': [{ 'rounded-r': [...TOKEN_SIZES.rounded] }],
     },
   },
 })

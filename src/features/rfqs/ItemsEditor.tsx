@@ -160,7 +160,7 @@ export function PasteZone({
   return (
     <div
       className={cn(
-        'relative grid gap-2 rounded border border-dashed border-line-input bg-surface p-4 text-center transition-colors duration-fast ease-out',
+        'relative grid gap-2 rounded-panel border border-dashed border-line-input bg-surface p-4 text-center transition-colors duration-fast ease-out',
         'focus-within:border-fg-muted',
         filled ? 'justify-items-start text-left' : 'justify-items-center',
       )}
@@ -226,7 +226,7 @@ export function PastedPanel({ block }: { block: PastedBlock }) {
   const { result } = block
   const found = result.items.length
   return (
-    <div className="overflow-hidden rounded border bg-surface">
+    <div className="overflow-hidden rounded-panel border bg-surface">
       <div className="flex items-center gap-2 border-b bg-sunken px-4 py-2 text-xs text-fg-muted">
         <Icon icon={ClipboardPaste} size="sm" />
         <span>
@@ -285,7 +285,7 @@ export function ItemRows({
   }, [focusKey])
 
   return (
-    <div className="overflow-hidden rounded border bg-surface">
+    <div className="overflow-hidden rounded-panel border bg-surface">
       {items.length > 0 ? (
         <>
           <div className={cn('hidden min-h-8 border-b bg-sunken px-4 text-xs font-medium text-fg-muted', grid)} aria-hidden="true">

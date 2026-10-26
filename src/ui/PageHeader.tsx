@@ -50,7 +50,7 @@ export function PageHeader({ title, lede, primary, secondary, className }: PageH
   return (
     <header className={cn('flex flex-wrap items-end justify-between gap-x-4 gap-y-3', className)}>
       <div className="grid min-w-0 gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-pretty max-md:sr-only">{title}</h1>
+        <h1 className="text-2xl font-heavy tracking-tight text-pretty max-md:sr-only">{title}</h1>
         {lede ? <p className="text-sm text-fg-muted text-pretty">{lede}</p> : null}
       </div>
       {hasActions ? (

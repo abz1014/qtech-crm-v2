@@ -7,20 +7,22 @@ import { Icon } from '@/ui/Icon'
 /*
  * Button (docs/design/INVENTORY.md; D08 section 01). Variants primary,
  * secondary, quiet, danger. Sizes read the density tokens, so they follow the text size:
- * lg 44 (40 with smaller text), md 40 (32; 44 on touch), sm 36 (28; 44 on touch), touch 44 (phone chrome).
+ * lg 52 (40 with smaller text), md 44 (32), sm 40 (28; 44 on touch), touch 44 (phone chrome).
  * States: default, hover, pressed, focus (global ring), disabled, busy.
+ * Direction C: semibold labels, 10 px corners. On a navy surface (data-surface="navy": the next-step band, the top bar) the
+ * green button gets a 2 px white ring, because green on navy alone is 2.71:1 (WCAG 1.4.11 wants 3:1 for its edge).
  */
 const button = cva(
   [
     'group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded border',
-    'font-medium leading-none transition-[background-color,border-color,transform] duration-fast ease-out',
+    'font-semibold leading-none transition-[background-color,border-color,transform] duration-fast ease-out',
     'active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:active:translate-y-0',
   ],
   {
     variants: {
       variant: {
         primary: [
-          'border-primary bg-primary text-primary-foreground',
+          'border-primary bg-primary text-primary-foreground [[data-surface=navy]_&]:shadow-on-navy',
           'hover:border-primary-hover hover:bg-primary-hover active:border-primary-active active:bg-primary-active',
           'disabled:border-line disabled:bg-selected disabled:text-fg-muted',
         ],
