@@ -17,7 +17,7 @@ vi.mock('workbox-routing', () => ({ registerRoute: (m: Matcher, h: unknown, meth
 vi.mock('workbox-precaching', () => ({
   precacheAndRoute: (m: unknown) => precacheAndRoute(m),
   cleanupOutdatedCaches: vi.fn(),
-  createHandlerBoundToURL: (u: string) => ({ shell: u }),
+  createHandlerBoundToURL: (u: string) => async () => ({ shell: u }),
 }))
 vi.mock('workbox-core', () => ({ clientsClaim: vi.fn() }))
 
@@ -44,7 +44,7 @@ describe('service worker: nothing from Supabase is cached', () => {
 
   it('registers exactly two routes: the app-shell navigation fallback and the share-target POST (R22)', () => {
     expect(registerRoute).toHaveBeenCalledTimes(2)
-    expect(registerRoute.mock.calls[0][1]).toEqual({ shell: '/index.html' })
+    expect(typeof registerRoute.mock.calls[0][1]).toBe('function')
     expect(registerRoute.mock.calls[0][2]).toBeUndefined()
     expect(registerRoute.mock.calls[1][2]).toBe('POST')
   })
@@ -67,6 +67,23 @@ describe('service worker: nothing from Supabase is cached', () => {
     expect(match(ctx(ORIGIN + '/rfqs/123', 'cors'))).toBe(false)
     expect(match(ctx(ORIGIN + '/assets/app.js', 'navigate'))).toBe(false)
     expect(match(ctx('https://example.com/rfqs', 'navigate'))).toBe(false)
+  })
+
+  it('a page open asks the network first, revalidated, and takes the cached shell only when the network fails or answers with a non-page', async () => {
+    const handler = registerRoute.mock.calls[0][1] as (o: { request: unknown }) => Promise<unknown>
+    const page = { ok: true, redirected: false, headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }) }
+    const request = { url: ORIGIN + '/rfqs/1', mode: 'navigate' }
+    const fetchSpy = vi.fn(async () => page)
+    vi.stubGlobal('fetch', fetchSpy)
+    expect(await handler({ request })).toBe(page)
+    expect(fetchSpy).toHaveBeenCalledWith(request, expect.objectContaining({ cache: 'no-cache' }))
+    fetchSpy.mockRejectedValueOnce(new TypeError('offline'))
+    expect(await handler({ request })).toEqual({ shell: '/index.html' })
+    fetchSpy.mockResolvedValueOnce({ ok: false, redirected: false, headers: new Headers({ 'content-type': 'text/html' }) } as never)
+    expect(await handler({ request })).toEqual({ shell: '/index.html' })
+    fetchSpy.mockResolvedValueOnce({ ok: true, redirected: false, headers: new Headers({ 'content-type': 'application/json' }) } as never)
+    expect(await handler({ request })).toEqual({ shell: '/index.html' })
+    vi.unstubAllGlobals()
   })
 
   it('the share route matches only a same-origin POST to /capture', () => {

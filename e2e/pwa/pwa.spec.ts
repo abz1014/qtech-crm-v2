@@ -1,3 +1,5 @@
+import { readFileSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 
 /*
@@ -183,4 +185,62 @@ test('Chrome reports the app installable', async ({ page, context }) => {
   const { url, errors } = await cdp.send('Page.getAppManifest')
   expect(url).toContain('/manifest.webmanifest')
   expect(errors).toEqual([])
+})
+
+/*
+ * A new deploy reaches an open app by itself (safe auto-update, 2026-10-26). "Deploying" is simulated by changing dist/sw.js
+ * on the preview server's disk (any byte change makes the browser install a new worker); the file is put back afterwards.
+ * The tab is sent to the background and brought back, as a person does, and the window must end up on the new worker.
+ */
+test.describe('a new deploy reaches an open app', () => {
+  const swFile = path.resolve(process.env.E2E_DIST ?? 'dist', 'sw.js')
+  let original: Buffer
+  test.beforeEach(() => {
+    original = readFileSync(swFile)
+  })
+  test.afterEach(() => {
+    writeFileSync(swFile, original)
+  })
+
+  const deploy = () => writeFileSync(swFile, Buffer.concat([original, Buffer.from(`\n// e2e: a new deploy ${Date.now()}\n`)]))
+  const mark = (page: Page) => page.evaluate(() => ((window as unknown as { __oldWindow: boolean }).__oldWindow = true))
+  const isOldWindow = (page: Page) => page.evaluate(() => (window as unknown as { __oldWindow?: boolean }).__oldWindow === true)
+  /** Background then foreground, the way a phone app is left and come back to. */
+  const leaveAndReturn = (page: Page) =>
+    page.evaluate(() => {
+      const set = (v: 'hidden' | 'visible') => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v })
+        document.dispatchEvent(new Event('visibilitychange'))
+      }
+      set('hidden')
+      set('visible')
+    })
+  const waitingWorker = (page: Page) => page.waitForFunction(async () => (await navigator.serviceWorker.getRegistration())?.waiting != null, undefined, { timeout: 30_000 })
+
+  test('coming back to the tab after a deploy updates the app', async ({ page }) => {
+    await activeWorker(page)
+    await mark(page)
+    deploy()
+    await leaveAndReturn(page)
+    await page.waitForFunction(() => !(window as unknown as { __oldWindow?: boolean }).__oldWindow, undefined, { timeout: 30_000 })
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+    await expect(page.locator('#root')).not.toBeEmpty()
+    expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting ?? null)).toBeNull()
+  })
+
+  test('typing is never lost: the update waits while text sits in a field, and comes when the typing is done', async ({ page }) => {
+    await activeWorker(page)
+    await mark(page)
+    const email = page.getByLabel('Email')
+    await email.fill('half-typed@example.com')
+    deploy()
+    await leaveAndReturn(page)
+    await waitingWorker(page)
+    await page.waitForTimeout(1500)
+    expect(await isOldWindow(page)).toBe(true) // not reloaded
+    await expect(email).toHaveValue('half-typed@example.com')
+    await email.fill('')
+    await leaveAndReturn(page)
+    await page.waitForFunction(() => !(window as unknown as { __oldWindow?: boolean }).__oldWindow, undefined, { timeout: 30_000 })
+  })
 })

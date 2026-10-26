@@ -6,7 +6,7 @@ import { paisaToFixed, sumPaisa } from '@/lib/money'
 import { fetchReceivablesList } from '@/features/money/payments/api'
 import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
 import { phoneKey, type SearchContact } from '@/features/companies/companySearch'
-import { companyActivity } from '@/features/companies/listActivity'
+import { companyActivity, legDay, quoteAsks, type QuoteOnUnsentAsk } from '@/features/companies/listActivity'
 
 /*
  * Companies: every database call for this area (R01 reference implementation). This is the only
@@ -52,11 +52,12 @@ function asRole(r: string | null | undefined): CompanyRole | null {
 
 /**
  * Every company with its derived role, how many RFQs and orders it has on either side (companyActivity: a supplier's are the
- * RFQs it was asked about and the orders with a supplier order from it), and its contacts for the search. Seven light reads, joined here.
+ * RFQs it was asked about, a sent enquiry or one that only carries a price (D9), and the orders with a supplier order from it, an
+ * imported PO included: dated by its order when it has no placed date), and its contacts for the search. Eight light reads, joined here.
  */
 export async function listCompanies(): Promise<CompanyListRow[]> {
   const db = requireSupabase()
-  const [companies, roles, rfqs, orders, asks, legs, contacts] = await Promise.all([
+  const [companies, roles, rfqs, orders, asks, quotes, legs, contacts] = await Promise.all([
     fetchAll<Pick<TableRow<'companies'>, 'id' | 'name' | 'country' | 'city' | 'updated_at'>>((from, to) =>
       db.from('companies').select('id, name, country, city, updated_at').order('name').range(from, to),
     ),
@@ -72,8 +73,17 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
     fetchAll<{ supplier_id: string; rfq_id: string; sent_on: string | null }>((from, to) =>
       db.from('supplier_inquiries').select('supplier_id, rfq_id, sent_on').not('sent_on', 'is', null).order('id').range(from, to),
     ),
-    fetchAll<{ supplier_id: string | null; order_id: string; placed_on: string | null; created_at: string }>((from, to) =>
-      db.from('supplier_orders').select('supplier_id, order_id, placed_on, created_at').order('id').range(from, to),
+    // D9: prices on an enquiry whose sent date was never kept (imported quotes). No price column is read: an engineer may do this too.
+    fetchAll<QuoteOnUnsentAsk & { id: string }>((from, to) =>
+      db
+        .from('supplier_quote_lines')
+        .select('id, created_at, supplier_inquiries!inner(supplier_id, rfq_id, sent_on)')
+        .is('supplier_inquiries.sent_on', null)
+        .order('id')
+        .range(from, to),
+    ),
+    fetchAll<{ supplier_id: string | null; order_id: string; placed_on: string | null; created_at: string; orders: { ordered_on: string | null } | { ordered_on: string | null }[] | null }>((from, to) =>
+      db.from('supplier_orders').select('supplier_id, order_id, placed_on, created_at, orders(ordered_on)').order('id').range(from, to),
     ),
     fetchAll<Pick<TableRow<'contacts'>, 'company_id' | 'name' | 'phone'>>((from, to) =>
       // ordered by id: names repeat ("Accounts"), and only a unique order pages stably across 1000-row pages
@@ -84,8 +94,8 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
   const activity = companyActivity({
     rfqs,
     orders,
-    asks,
-    legs: legs.flatMap(l => (l.supplier_id ? [{ supplier_id: l.supplier_id, order_id: l.order_id, on: l.placed_on ?? toBusinessDate(new Date(l.created_at)) }] : [])),
+    asks: [...asks, ...quoteAsks(quotes)],
+    legs: legs.flatMap(l => (l.supplier_id ? [{ supplier_id: l.supplier_id, order_id: l.order_id, on: legDay(l, iso => toBusinessDate(new Date(iso))) }] : [])),
   })
   const contactsBy = new Map<string, SearchContact[]>()
   for (const p of contacts) {
