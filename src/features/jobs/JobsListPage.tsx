@@ -31,7 +31,7 @@ import { stageModel } from '@/features/jobs/lib/stages'
 const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'History' }
 
 function NextText({ job, role }: { job: JobRow; role: Who['role'] }) {
-  const n = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role: role === '' ? 'sales' : role })
+  const n = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role: role === '' ? 'sales' : role, imported: job.imported })
   return n.text ? (
     <StatusText tone={n.tone} className="whitespace-normal">
       {n.text}

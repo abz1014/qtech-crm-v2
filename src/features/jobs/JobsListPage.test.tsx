@@ -26,6 +26,8 @@ const rows = [
 const fake = (c: FakeCall) => {
   if (c.target === 'v_jobs') return { data: rows }
   if (c.target === 'companies') return { data: [{ id: 'c1', name: 'Ibrahim Fibres Limited' }] }
+  // the ids of orders imported from the old CRM (legacy_source set): Job O-45 is one of them
+  if (c.target === 'orders') return { data: [{ id: 'oO-45' }] }
   if (c.target === 'users') return { data: [{ id: 'u', name: 'Faizan' }, { id: 'other', name: 'Hammad' }] }
   return { data: [] }
 }
@@ -67,6 +69,18 @@ describe('Jobs list', () => {
     await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 120/ }).length).toBeGreaterThan(0))
     expect(screen.getAllByRole('row', { name: /Job 121/ })[0]).toHaveTextContent('Lost: price too high')
     expect(screen.queryAllByRole('row', { name: /Job 139/ })).toHaveLength(0)
+  })
+
+  it('an imported job is a live job but raises no red task: its step is grey and says Imported', async () => {
+    installFakeDb(fake)
+    mount('admin')
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job O-45/ }).length).toBeGreaterThan(0))
+    const imported = screen.getAllByRole('row', { name: /Job O-45/ })[0]
+    expect(imported).toHaveTextContent('Imported · Choose a supplier for the items')
+    expect(imported.querySelector('[data-tone="now"]')).toBeNull()
+    // a live job with the same kind of step keeps its tone
+    const live = screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))
+    expect(live?.querySelector('[data-tone="late"]')).not.toBeNull()
   })
 
   it('an engineer opens on Mine, sees no button to start an enquiry and no amount', async () => {

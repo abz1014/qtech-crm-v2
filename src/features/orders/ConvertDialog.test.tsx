@@ -254,3 +254,17 @@ describe('roles', () => {
     expect(db.calls).toHaveLength(0)
   })
 })
+
+describe('Mark won on a line nobody quoted (a service)', () => {
+  it('offers "Service, no supplier" on the line and sends it as a service (END-CHECKLIST 20)', async () => {
+    const db = setup({ ranks: [] })
+    const price = await screen.findByLabelText('Selling price, line 1')
+    const picker = await screen.findByRole('button', { name: /Supplier for line 1/ })
+    fireEvent.click(picker)
+    fireEvent.click(await screen.findByRole('option', { name: 'Service, no supplier' }))
+    fireEvent.change(price, { target: { value: '25,000' } })
+    fireEvent.click(await screen.findByRole('button', { name: 'Create order' }))
+    await waitFor(() => expect(payload(db)).not.toBeNull())
+    expect(payload(db)).toEqual([{ rfq_item_id: 'i1', unit_price_net: 25000, is_service: true }])
+  })
+})

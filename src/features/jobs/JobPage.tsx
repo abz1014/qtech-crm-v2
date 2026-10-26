@@ -103,7 +103,8 @@ function JobView({ facts }: { facts: JobFacts }) {
   const data = useJobData(facts, role)
   const model = useMemo(() => stageModel({ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }), [job.stage, job.stageDetail, job.kind, role])
   const ctx = useMemo<JobContext>(() => ({ job, role, money: role !== 'engineer' }), [job, role])
-  const next = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role })
+  const imported = Boolean(job.imported || data.order.data?.imported)
+  const next = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role, imported })
 
   // The current stage opens first; a finished job opens its last stage.
   const current = currentStopIndex(job.stage, job.stageDetail)
@@ -186,7 +187,7 @@ function JobView({ facts }: { facts: JobFacts }) {
 
       <NextStepBox
         text={next.text || 'Nothing to do'}
-        tone={next.tone === 'late' ? 'late' : next.button ? 'action' : 'quiet'}
+        tone={next.tone === 'late' ? 'late' : next.button && !imported ? 'action' : 'quiet'}
         action={
           phone ? undefined : (
             <span className="flex flex-wrap items-center gap-2">

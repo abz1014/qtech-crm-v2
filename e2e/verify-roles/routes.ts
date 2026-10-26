@@ -191,6 +191,12 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/settings/password', admin: 'ok', sales: 'ok', engineer: 'ok' },
   { path: '/settings/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ Capture (share target and sign-in return point)
+  // ------------------------------------------------------------------ redesign phase 3 to 5 additions
+  { path: '/enquiries/new', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'New enquiry (one intake page); no price for an engineer' },
+  { path: '/todo/review', admin: 'ok', sales: 'no', engineer: 'no', note: 'the weekly review is admin only' },
+  { path: '/my-expenses', admin: 'no', sales: 'no', engineer: 'ok', note: '"I paid": only an engineer has it (their own claims)' },
+  { path: '/jobs/{job}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation on the Job page (an engineer gets the page without the dialog)' },
+  { path: '/jobs/{job}?won=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Mark won on the Job page (an engineer gets the page without the dialog)' },
   { path: '/capture', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'opens the Capture sheet' },
 ]
 
