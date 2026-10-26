@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { History as HistoryIcon } from 'lucide-react'
 import { MenuItem } from '@/ui/Popover'
 import { useRecordHistory, type HistoryTable } from '@/features/history/api'
@@ -17,7 +18,18 @@ export function HistoryMenuItem({ onOpen }: { onOpen: () => void }) {
  * opening History straight after costs nothing. Draws nothing until it has an answer, and nothing when there is no history.
  */
 export function LastChanged({ table, id, className }: { table: HistoryTable; id: string | null | undefined; className?: string }) {
-  const q = useRecordHistory(table, id)
+  // Asked for once the page has drawn, never in the page's first round of reads (perf: the RFQ and order pages' LCP).
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (h: number) => void }
+    if (w.requestIdleCallback) {
+      const h = w.requestIdleCallback(() => setReady(true), { timeout: 1500 })
+      return () => w.cancelIdleCallback?.(h)
+    }
+    const t = window.setTimeout(() => setReady(true), 400)
+    return () => window.clearTimeout(t)
+  }, [])
+  const q = useRecordHistory(table, id, ready)
   const text = lastChangedLine(q.data?.pages[0]?.events[0])
   if (!text) return null
   return (

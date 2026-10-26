@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Calendar,
@@ -8,6 +8,7 @@ import {
   FilePlus2,
   FileText,
   Flag,
+  History as HistoryIcon,
   MapPin,
   MessageCircle,
   Package,
@@ -38,6 +39,8 @@ import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useDeleteRfqFlow } from '@/features/rfqs/deleteFlow'
 import { useEditRfqFlow } from '@/features/rfqs/useEditRfqFlow'
+import { LastChanged } from '@/features/history/LastChanged'
+import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { useWonDialog } from '@/features/orders/useWonDialog'
@@ -206,7 +209,7 @@ function useMainActions(rfq: RfqHeader, facts: HeaderFacts) {
 }
 
 /** The "More" menu: everything that is not the green button. */
-function MoreItems({ rfq, facts, actions, onDelete, onEdit }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; onEdit: () => void }) {
+function MoreItems({ rfq, facts, actions, onDelete, onEdit, history }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; onEdit: () => void; history: ReactNode }) {
   const main = useMainActions(rfq, facts)
   const sent = quotationSent({ bidState: rfq.state?.bid_state, quotationCount: facts.quotationCount })
   const noItems = facts.itemCount === 0
@@ -215,6 +218,7 @@ function MoreItems({ rfq, facts, actions, onDelete, onEdit }: { rfq: RfqHeader; 
       <MenuItem icon={Pencil} onClick={onEdit}>
         Edit RFQ details
       </MenuItem>
+      {history}
       {facts.primary !== 'ask' ? (
         <MenuItem icon={Copy} disabled={noItems} hint={noItems ? 'add an item first' : undefined} onClick={main.ask}>
           {main.askLabel}
@@ -267,10 +271,10 @@ function DeleteItem({ onDelete, separator = false }: { onDelete?: () => void; se
 }
 
 /** The page's More menu (src/ui/MoreMenu): the "More" text button on desktop, the Ellipsis in the phone bar. */
-function RfqMoreMenu({ rfq, facts, actions, onDelete, onEdit, touch = false }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; onEdit: () => void; touch?: boolean }) {
+function RfqMoreMenu({ rfq, facts, actions, onDelete, onEdit, history, touch = false }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; onDelete?: () => void; onEdit: () => void; history: ReactNode; touch?: boolean }) {
   return (
     <MoreMenu touch={touch} side={touch ? 'top' : undefined} label={touch ? 'More actions' : 'More'} menuClassName="min-w-[300px]">
-      <MoreItems rfq={rfq} facts={facts} actions={actions} onDelete={onDelete} onEdit={onEdit} />
+      <MoreItems rfq={rfq} facts={facts} actions={actions} onDelete={onDelete} onEdit={onEdit} history={history} />
     </MoreMenu>
   )
 }
@@ -454,6 +458,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
   const actions = useQuoteAndClose(rfq)
   const del = useDeleteRfqFlow(rfq)
   const edit = useEditRfqFlow(rfq)
+  const hist = useHistoryPanel({ table: 'rfqs', id: rfq.id, context: `${rfqRef(rfq.number)} · ${rfq.company.name}` })
   const main = useMainActions(rfq, facts)
   const s = rfq.state
   const ref = rfqRef(rfq.number)
@@ -489,12 +494,13 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       // A closed or won RFQ has no other actions, but an admin can still delete a mistake: a More menu with only that.
       more={
         open ? (
-          <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} />
+          <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} history={hist.item} />
         ) : (
           <MoreMenu label="More" menuClassName="min-w-[200px]">
             <MenuItem icon={Pencil} onClick={edit.ask}>
               Edit RFQ details
             </MenuItem>
+            {hist.item}
             <DeleteItem onDelete={del.ask} separator />
           </MoreMenu>
         )
@@ -523,16 +529,26 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       ]}
     >
       <RfqNextStep rfq={rfq} facts={facts} actions={actions} />
-      {/* The header's More menu is hidden on a phone, and a closed RFQ has no action bar: so the delete is a button here. */}
-      {!open && del.ask ? (
-        <div className="mt-3 md:hidden">
-          <Button size="touch" icon={Trash2} onClick={del.ask}>
-            Delete RFQ
+      {/* The header's More menu is hidden on a phone, and a closed RFQ has no action bar: so its actions are buttons here. */}
+      {!open ? (
+        <div className="mt-3 flex flex-wrap gap-2 md:hidden">
+          <Button size="touch" icon={Pencil} onClick={edit.ask}>
+            Edit RFQ details
           </Button>
+          <Button size="touch" icon={HistoryIcon} onClick={hist.ask}>
+            History
+          </Button>
+          {del.ask ? (
+            <Button size="touch" icon={Trash2} onClick={del.ask}>
+              Delete RFQ
+            </Button>
+          ) : null}
         </div>
       ) : null}
+      <LastChanged table="rfqs" id={rfq.id} className="mt-3 text-base text-fg-2" />
       {del.node}
       {edit.node}
+      {hist.node}
 
       <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>
@@ -604,6 +620,7 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
   const actions = useQuoteAndClose(rfq)
   const del = useDeleteRfqFlow(rfq)
   const edit = useEditRfqFlow(rfq)
+  const hist = useHistoryPanel({ table: 'rfqs', id: rfq.id, context: `${rfqRef(rfq.number)} · ${rfq.company.name}` })
   if ((rfq.state?.outcome ?? 'open') !== 'open') return null
   return (
     <>
@@ -625,10 +642,11 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
           </PopoverContent>
         </Popover>
       }
-      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} touch />}
+      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} history={hist.item} touch />}
     />
       {del.node}
       {edit.node}
+      {hist.node}
     </>
   )
 }
