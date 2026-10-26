@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { useSeesPrices, useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
+import { VersionLabel } from '@/app/shell/VersionLabel'
 import { InstallBanner } from '@/features/settings/InstallBanner'
 import { canOpenSettingsLink, SETTINGS_GROUPS } from '@/features/settings/settingsLinks'
 import { Icon } from '@/ui/Icon'
@@ -83,6 +84,7 @@ export function SettingsLayout() {
             </div>
           ) : null,
         )}
+        <VersionLabel />
       </nav>
       <div className="min-w-0 px-4 pb-12 pt-6 md:px-8 md:pb-12 md:pt-8">
         <div className="grid max-w-[940px] grid-cols-[minmax(0,1fr)] gap-6">
