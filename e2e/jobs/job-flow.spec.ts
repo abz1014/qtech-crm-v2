@@ -102,7 +102,8 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
     await page.reload()
     await expect(phoneLabel(page)).toContainText('Stage 6 of 7 · Invoice')
     await openStage(page, /^Invoice/)
-    await page.getByRole('button', { name: 'Create invoice' }).first().click()
+    // the band's green "Create invoice" only opens this stage; the button that opens the dialog is the stage's own
+    await stages(page).getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await expect(d, 'the dialog opens (its code is a download of its own)').toBeVisible({ timeout: 45_000 })
     await expect(d, 'the dialog shows the gross').toContainText(amount(GROSS))
