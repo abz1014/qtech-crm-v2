@@ -46,6 +46,7 @@ const toCategory = (r: CategoryRow): Category => ({
   sort: r.sort,
   active: r.active,
   budget: r.monthly_budget_pkr === null ? null : Number(r.monthly_budget_pkr),
+  isMisc: r.is_misc,
 })
 
 export async function listCategories(): Promise<Category[]> {
@@ -457,4 +458,28 @@ export async function deleteRecurring(id: string): Promise<void> {
   const db = requireSupabase()
   const { error } = await db.from('recurring_expenses').delete().eq('id', id)
   if (error) throw error
+// ------------------------------------------------------------------ 0091: one-off ("Other") titles that repeat
+
+export interface MiscSuggestion {
+  miscCategoryId: string
+  titleKey: string
+  title: string
+  uses: number
+  spent: number
+}
+
+/** Titles used 3 or more times in 90 days under an "Other" category. Admin only (the database refuses anyone else). */
+export async function listMiscSuggestions(): Promise<MiscSuggestion[]> {
+  const db = requireSupabase()
+  const { data, error } = await db.rpc('suggest_misc_categories')
+  if (error) throw error
+  return (data ?? []).map(r => ({ miscCategoryId: r.misc_category_id, titleKey: r.title_key, title: r.title, uses: r.uses, spent: Number(r.spent) }))
+}
+
+/** Re-files the expenses carrying that title under a category of that name (new, or an existing one of the same kind). Returns how many moved. */
+export async function promoteMiscTitle(v: { miscCategoryId: string; titleKey: string; name: string }): Promise<number> {
+  const db = requireSupabase()
+  const { data, error } = await db.rpc('promote_misc_title', { p_misc_category: v.miscCategoryId, p_title_key: v.titleKey, p_name: v.name })
+  if (error) throw error
+  return data as number
 }

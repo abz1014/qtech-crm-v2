@@ -21,6 +21,8 @@ export interface Category {
   active: boolean
   /** Optional monthly budget in PKR (gross paid), 0086. */
   budget: number | null
+  /** 0091: the "Other" of its group, where a one-off spend is filed under a typed title (the Detail). One per group. */
+  isMisc?: boolean
 }
 
 /** The first level of the expense list (0086): "Office running", "Vehicles", "Order costs". Its kind is the P&L place of its categories. */
@@ -85,6 +87,32 @@ export function guessGroupId(typed: string, categories: readonly Category[], gro
   }
   return null
 }
+
+/** The label of Detail on a misc ("Other") expense: it is the title, and the database refuses the expense without one (0091). */
+export const MISC_TITLE_LABEL = 'What was it for?'
+export const MISC_TITLE_ERROR = 'Write what it was for, e.g. Courier from shop to office'
+
+/** Active "Other" categories, one per group, in the order of their groups. */
+export function miscCategories(categories: readonly Category[], groups: readonly ExpenseGroup[] = []): Category[] {
+  const order = new Map(sortGroups(groups).map((g, i) => [g.id, i]))
+  return categories
+    .filter(c => c.isMisc && c.active)
+    .sort((a, b) => (order.get(a.groupId) ?? 99) - (order.get(b.groupId) ?? 99) || a.sort - b.sort)
+}
+
+/**
+ * The "Other" a typed word belongs under: the misc category of the group the words suggest ("Bike fuel" -> Fuel & travel ->
+ * Vehicles -> "Other (Vehicles)"), else the Other of the default group (Office running), else the first Other there is.
+ */
+export function miscFor(typed: string, categories: readonly Category[], groups: readonly ExpenseGroup[]): Category | null {
+  const miscs = miscCategories(categories, groups)
+  if (miscs.length === 0) return null
+  const gid = guessGroupId(typed, categories.filter(c => !c.isMisc), groups) ?? defaultGroupId(groups)
+  return miscs.find(c => c.groupId === gid) ?? miscs[0]
+}
+
+/** A misc expense needs a title: true when the category is an "Other" and the detail is blank. */
+export const needsTitle = (category: Category | undefined | null, detail: string | null | undefined): boolean => !!category?.isMisc && !(detail ?? '').trim()
 
 /** The group new categories go to when none is chosen: Office running, else the first group of running costs. */
 export function defaultGroupId(groups: readonly ExpenseGroup[]): string | null {
@@ -221,6 +249,8 @@ export interface BurstRow {
   templateId?: string
   /** The closed-month sentence for this row after a refused save. */
   error?: string
+  /** The Detail cell's own error: an "Other" row saved with no title (0091). */
+  noteError?: string
 }
 
 export interface BurstDefaults {
@@ -252,6 +282,10 @@ export const effectivePaidVia = (row: BurstRow, categories: readonly Category[])
 export const isFilled = (row: BurstRow): boolean => row.amount !== null && row.amount !== 0
 
 export const isSavable = (row: BurstRow): boolean => row.amount !== null && row.amount > 0 && !!row.categoryId && !!row.date && !row.categoryText && !row.orderText
+
+/** Filled rows filed under an "Other" with no title: refused by the database (0091), so caught here with the error on the Detail cell. */
+export const rowsMissingTitle = (rows: readonly BurstRow[], categories: readonly Category[]): BurstRow[] =>
+  rows.filter(r => isFilled(r) && needsTitle(categories.find(c => c.id === r.categoryId), r.note))
 
 export function burstTotals(rows: readonly BurstRow[]): { count: number; total: number } {
   const filled = rows.filter(isFilled)

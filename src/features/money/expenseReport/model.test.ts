@@ -172,3 +172,22 @@ describe('helpers and CSV', () => {
     expect(entriesCsv('Fuel', list).rows.map(r => r[0])).toEqual(['2026-09-02', '2026-09-08'])
   })
 })
+
+describe('0091: an Other is told apart by title', () => {
+  it('a misc category line is flagged and keeps one detail line per title, biggest first', () => {
+    const misc = { ...cat('oth', 'Other (Office running)', 'g-office', 'overhead'), isMisc: true }
+    const rows = [
+      e('2026-09-02', 500, 'oth', 'cash', 'Courier from shop'),
+      e('2026-09-09', 700, 'oth', 'cash', 'courier  from shop'),
+      e('2026-09-12', 300, 'oth', 'cash', 'Taxi for the visitor'),
+    ]
+    const v = buildExpenseReport({ period: { kind: 'month', key: '2026-09' }, entries: toEntries(rows), categories: [...C, misc], groups: G, flows: FLOWS })
+    const line = v.groups.flatMap(g => g.categories).find(c => c.id === 'oth')
+    expect(line?.isMisc).toBe(true)
+    expect(line?.details.map(d => [d.detail, d.count, d.amount])).toEqual([
+      ['Courier from shop', 2, '1200.00'],
+      ['Taxi for the visitor', 1, '300.00'],
+    ])
+    expect(v.groups.flatMap(g => g.categories).find(c => c.id === 'water')?.isMisc).toBe(false)
+  })
+})
