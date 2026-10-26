@@ -96,15 +96,15 @@ function SignInRoute() {
  * and the page after it (perf/lcp). The first address is handled at start-up (main.tsx).
  */
 function PreloadOnNavigate() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const first = useRef(true)
   useEffect(() => {
     if (first.current) {
       first.current = false
       return
     }
-    preloadRouteCode(pathname)
-  }, [pathname])
+    preloadRouteCode(pathname, search)
+  }, [pathname, search])
   return null
 }
 

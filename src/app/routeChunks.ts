@@ -9,6 +9,7 @@
  */
 import type { QueryClient } from '@tanstack/react-query'
 import { setFirstPage } from '@/app/firstPage'
+import { wantsOld } from '@/app/oldAddressesModel'
 import type { SessionUser } from '@/app/session'
 import { queryClient } from '@/lib/queryClient'
 import { readRememberedUser } from '@/lib/storedSession'
@@ -49,7 +50,7 @@ type ChunkKey = keyof typeof routeChunks
  * The downloads a first visit to `pathname` needs, outermost first: exactly the pages routes.tsx and each screen's own routes
  * draw for that address (an address no page owns gets only its screen, which draws Not found, and no data is read ahead).
  */
-export function chunksForPath(pathname: string): ChunkKey[] {
+export function chunksForPath(pathname: string, search = ''): ChunkKey[] {
   const parts = pathname.split('/').filter(Boolean)
   const [top, sub, third] = parts
   const n = parts.length
@@ -61,10 +62,13 @@ export function chunksForPath(pathname: string): ChunkKey[] {
       return ['today']
     // /rfqs and /orders open Jobs now (src/app/oldAddresses.tsx): the first visit needs the Jobs downloads, not the old pages'
     // (?old=1 loads those on demand). New RFQ keeps its own address.
+    // A device that keeps the old pages (?old=1, src/app/oldAddressesModel.ts) opens them: their own downloads, not the Jobs ones.
     case 'rfqs':
       if (n === 2 && sub === 'new') return ['rfqNew']
+      if (wantsOld(search)) return n === 1 ? ['rfqs', 'rfqsBoard'] : n === 2 ? ['rfqs', 'rfq'] : ['rfqs']
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
     case 'orders':
+      if (wantsOld(search)) return n === 1 ? ['orders', 'ordersList'] : n === 2 ? ['orders', 'order'] : ['orders']
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
     case 'jobs':
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
@@ -94,8 +98,8 @@ export function chunksForPath(pathname: string): ChunkKey[] {
 }
 
 /** Start downloading the pages an in-app navigation to `pathname` needs, all at once instead of one after the other. */
-export function preloadRouteCode(pathname: string): void {
-  for (const key of chunksForPath(pathname)) void routeChunks[key]().catch(() => {})
+export function preloadRouteCode(pathname: string, search = ''): void {
+  for (const key of chunksForPath(pathname, search)) void routeChunks[key]().catch(() => {})
 }
 
 /**
@@ -142,12 +146,12 @@ const FIRST_PAGE_WAIT_MS = 4_000
  * Returns whether a page is being fetched ahead. Failures are ignored here: the route table's own import (with its retry and reload, importWithReload.ts) and the page's own
  * hooks report them when the page is really drawn.
  */
-export function preloadRoute(pathname: string, sessionUserId: string | null): boolean {
+export function preloadRoute(pathname: string, sessionUserId: string | null, search = ''): boolean {
   if (!sessionUserId) {
     void routeChunks.signIn().catch(() => {})
     return false
   }
-  const keys = chunksForPath(pathname).filter(k => k !== 'signIn')
+  const keys = chunksForPath(pathname, search).filter(k => k !== 'signIn')
   if (keys.length === 0) return false
   // The small reads module is asked for first, so its requests go out while the page's larger code is still downloading.
   const reads = routePrefetch[keys[keys.length - 1]]

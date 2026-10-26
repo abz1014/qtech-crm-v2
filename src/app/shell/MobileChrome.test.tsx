@@ -57,6 +57,8 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
   // longer than any findBy. Load it first, with a hook timeout of its own, so the tests only exercise opening it.
   beforeAll(async () => {
     await import('@/ui/CommandPalette')
+    // the palette's search loads the jobs code with the first search (src/features/search/paletteSource.ts): not inside a test's wait
+    await Promise.all([import('@/features/jobs/api'), import('@/features/jobs/lib/stages')])
   }, 60_000)
 
   const shell = (role: string) => {
