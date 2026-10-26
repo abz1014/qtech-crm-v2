@@ -614,15 +614,15 @@ function howTo(item: TodayItem): string {
     case 'costs_incomplete':
       return 'These orders are paid in full but their costs are not marked complete, so their margin is not final. Open Margins, check the costs and mark each order complete.'
     case 'fbr_attention':
-      return 'The GST on these invoices is not deposited with FBR and the month is over, or an FBR step was recorded out of order. Open Invoices & GST, which is filtered to them.'
+      return 'The GST on these invoices is not deposited with FBR and the month is over, or an FBR step was recorded out of order. Open Invoices, which is filtered to them.'
     case 'tcs_not_sent':
-      return 'These invoices have no courier (TCS) date three working days after the invoice. Open Invoices & GST, tick them and press "Sent to customer today" once.'
+      return 'These invoices have no courier (TCS) date three working days after the invoice. Open Invoices, tick them and press "Invoice posted today" once.'
     case 'job_commissioning':
       return 'You are an engineer on this order. Open it to see the site contact and the notes, then "Mark done today" when the commissioning is finished, or change the planned date.'
     case 'job_on_site':
       return 'The goods have reached the site and the commissioning has no date yet. Open the order and set the planned date.'
     case 'gst_fbr':
-      return 'Last month GST is paid to FBR by the 15th and the return is filed by the 18th. Open Invoices & GST, deposit the tax and record the payment slip number (PSID).'
+      return 'Last month GST is paid to FBR by the 15th and the return is filed by the 18th. Open Invoices, deposit the tax and record the payment slip number (PSID).'
     case 'claims_to_approve':
       return 'An engineer paid for something and asked to be paid back. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':

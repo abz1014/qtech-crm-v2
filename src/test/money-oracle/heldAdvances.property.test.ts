@@ -7,7 +7,7 @@ import { RUNS, booksArb, dateArb } from '@/test/money-oracle/arbitraries'
 /*
  * Owner decision 2026-10-22 (money-verify owner question): an advance on a CANCELLED order is never owed and never overdue. It is
  * held, to refund or keep, and listed apart. Checked over random books against the oracle, and against the app's own list rules
- * (filterReceivables, which Who owes us and Today's reminders use over the rows receivables lists).
+ * (filterReceivables, which To collect and Today's reminders use over the rows receivables lists).
  */
 
 const toRow = (o: Order, books: Books, today: string): ReceivableRow => {
@@ -33,11 +33,11 @@ const toRow = (o: Order, books: Books, today: string): ReceivableRow => {
 }
 
 describe('advances held on cancelled orders (owner decision 2026-10-22)', () => {
-  it('a cancelled, never-invoiced order is never on Who owes us, never overdue, and its money is held in full', () => {
+  it('a cancelled, never-invoiced order is never on To collect, never overdue, and its money is held in full', () => {
     fc.assert(
       fc.property(booksArb, dateArb, (books, today) => {
         const held = heldAdvances(books)
-        // what receivables lists (D-MR3), as Who owes us and Today's "payment overdue" see it
+        // what receivables lists (D-MR3), as To collect and Today's "payment overdue" see it
         const listed = books.orders.filter(o => receivableOf(o, books, today).listed).map(o => toRow(o, books, today))
         const open = new Set(filterReceivables(listed, 'open').map(r => r.orderId))
         const overdue = new Set(filterReceivables(listed, 'overdue').map(r => r.orderId))

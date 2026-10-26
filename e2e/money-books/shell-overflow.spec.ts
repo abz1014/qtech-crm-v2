@@ -58,7 +58,7 @@ test.describe('shell width', () => {
       expect(m.bar, `top bar at ${width}`).toBeLessThanOrEqual(m.view)
       expect(m.barOverflow, `top bar scrolls inside itself at ${width}`).toBe(false)
       const nav = page.getByRole('navigation', { name: 'Main' }).first()
-      for (const name of ['To do', 'RFQs', 'Orders', 'Companies', 'Money']) {
+      for (const name of ['To do', 'Jobs', 'Money', 'Companies']) {
         const box = await nav.getByRole('link', { name: new RegExp(`^${name}`) }).locator('[data-nav-label]').boundingBox()
         expect(box?.width ?? 0, `${name} shown in words at ${width}`).toBeGreaterThan(2)
       }

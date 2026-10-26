@@ -25,10 +25,10 @@ export const HOW_IT_WORKS: Record<HelpRole, HowItWorksStep[]> = {
     { text: 'One tap when done: **Delivered today**, **Mark done today**. Wrong tap? **Undo**.', recipe: 'goods-delivered' },
   ],
   admin: [
-    { text: '**Who owes us**: record payments and send reminders.', recipe: 'record-payment' },
-    { text: '**Invoices & GST**: create invoices, mark TCS and FBR.', recipe: 'tcs-fbr' },
+    { text: '**To collect**: record payments and send reminders.', recipe: 'record-payment' },
+    { text: '**Invoices**: create invoices, mark TCS and FBR.', recipe: 'tcs-fbr' },
     { text: '**Expenses**: add many at once.', recipe: 'add-expenses' },
-    { text: '**Month end** lists only what needs fixing, then you close the month.', recipe: 'month-end-close' },
+    { text: '**Lock a month** lists only what needs fixing, then you close the month.', recipe: 'month-end-close' },
     { text: '**Team**: add people. Each one sees only what their role needs.', recipe: 'add-person' },
   ],
 }

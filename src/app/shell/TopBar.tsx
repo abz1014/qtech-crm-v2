@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import { Search } from 'lucide-react'
-import { navItemsForRole, type NavItem, type NavKey } from '@/app/navConfig'
+import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { NewMenu } from '@/app/shell/NewMenu'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
+import { LateDot } from '@/ui/LateDot'
 import { NeedsCount } from '@/ui/Tag'
 import { Tooltip } from '@/ui/Tooltip'
 import { cn } from '@/lib/utils'
@@ -15,7 +16,9 @@ import { searchKeyHint } from '@/ui/paletteSources'
 interface TopBarProps {
   user: SessionUser
   /** "Needs you" counts beside a destination (NeedsCount: "RFQs 4", named "RFQs, 4 need you"). Nothing is shown for 0 or absent. */
-  counts?: Partial<Record<NavKey, number>>
+  counts?: Partial<Record<CountKey, number>>
+  /** A red dot, no number (Money while an invoice is late). */
+  dots?: Partial<Record<NavKey, boolean>>
   onSearch?: () => void
   /** The destinations. Default: the role's list from navConfig. The gallery passes a fixed list so its photo does not move with navConfig. */
   items?: readonly NavItem[]
@@ -33,7 +36,7 @@ interface TopBarProps {
  *   md, 768-1023  icons, the active label only, logo mark, search and the action as icon buttons.
  * Below 768 the phone bar and the bottom tabs take over (MobileChrome).
  */
-export function TopBar({ user, counts, onSearch, items: given }: TopBarProps) {
+export function TopBar({ user, counts, dots, onSearch, items: given }: TopBarProps) {
   const items = given ?? navItemsForRole(user.role)
   const hint = searchKeyHint()
   return (
@@ -68,6 +71,7 @@ export function TopBar({ user, counts, onSearch, items: given }: TopBarProps) {
                   {item.label}
                 </span>
                 <NeedsCount n={counts?.[item.key]} className="max-lg:hidden" />
+                {dots?.[item.key] ? <LateDot className="max-lg:hidden" /> : null}
                 {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 bottom-0 h-1 rounded-t bg-brand-green xl:inset-x-3" /> : null}
               </>
             )}

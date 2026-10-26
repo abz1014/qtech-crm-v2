@@ -3,7 +3,7 @@ id: issue-quotation
 title: Send a quotation to the customer
 roles: sales, admin
 keywords: quotation, quote, bid, pdf, price, customer, send, validity
-screens: /rfqs
+screens: /rfqs, /jobs
 related: revise-quotation, mark-won
 ---
 1. On the RFQ, tap the green [Issue quotation].

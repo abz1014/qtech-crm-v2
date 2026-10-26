@@ -17,7 +17,7 @@ import { bankTotals, buildBankView, defaultStatementMonth, isOpenableMonth, type
 import { TickPanel } from '@/features/money/bank/TickPanel'
 
 /*
- * Money › Month end › Match bank statement (M12; admin only; the old "Bank tick", reached from the checklist). Pick the statement month, tick each bank line against the statement:
+ * Money › Lock a month › Bank check (M12; admin only; the old "Bank tick", reached from the checklist). Pick the statement month, tick each bank line against the statement:
  * one tap a line, one tap a whole PSID group, the same tap again to undo. The four totals are for comparing with the
  * statement's total credits and debits. Nothing is typed and there is no import. Layout: g2-month-end "Bank tick".
  *
@@ -64,7 +64,7 @@ export function BankTickPage() {
   }
 
   const go = (by: number) => setParams({ month: shiftMonth(month, by) }, { replace: true })
-  // The one definition of "to match", the same number Month end's bank check says (bankLinesToMatch).
+  // The one definition of "to match", the same number Lock a month's bank check says (bankLinesToMatch).
   const openCount = totals ? totals.openIn.count + totals.openOut.count : undefined
   const allLines = view ? view.in.ticked.length + view.in.open.length + view.in.older.length + view.out.ticked.length + view.out.open.length + view.out.older.length : 0
   const back = `/money/month-end?month=${month}`
@@ -81,8 +81,8 @@ export function BankTickPage() {
   return (
     <MoneyFrame active="month-end">
       <MoneySubHeader
-        back={{ to: `/money/month-end?month=${month}`, label: 'Month end' }}
-        title="Match bank statement"
+        back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
+        title="Bank check"
         meta={totals ? <StateChip open={openCount ?? 0} /> : null}
       />
 
@@ -162,7 +162,7 @@ export function BankTickPage() {
                 title={`Nothing to tick for ${monthKeyLabel(month)}`}
                 actions={
                   <Button variant="primary" onClick={() => navigate(back)}>
-                    Back to Month end
+                    Back to Lock a month
                   </Button>
                 }
               >

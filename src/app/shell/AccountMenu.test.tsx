@@ -23,7 +23,7 @@ function shell(path = '/todo') {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/todo" element={<p>Today page</p>} />
-            <Route path="/rfqs" element={<p>RFQs page</p>} />
+            <Route path="/jobs" element={<p>Jobs page</p>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -98,8 +98,9 @@ describe('search button and Cmd/Ctrl+K open the palette (U08)', () => {
     expect(rows.map(r => r.textContent)).toEqual(
       expect.arrayContaining([expect.stringContaining('New enquiry'), expect.stringContaining('Go to To do')]),
     )
+    // the old word still finds its new home
     await user.keyboard('rfq{Enter}')
-    expect(await screen.findByText('RFQs page')).toBeInTheDocument()
+    expect(await screen.findByText('Jobs page')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 

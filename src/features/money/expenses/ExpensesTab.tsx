@@ -52,7 +52,7 @@ import {
  * never hide among the snacks. "Search expenses" (payee, detail, category, order number; `?q=`) and Filters (group, category,
  * paid via). Input tax shows as a column only in a month that has some. A row opens for editing; its "⋯" holds Edit and Delete.
  * Delete (here and in the edit dialog, one flow: deleteFlow.tsx) asks once, then deletes at once and for good. A closed
- * month's rows carry a lock and cannot be edited or deleted (the database refuses too); one line says so and links Month end.
+ * month's rows carry a lock and cannot be edited or deleted (the database refuses too); one line says so and links Lock a month.
  */
 interface ExpensesTabProps {
   /** Month to open on ("2026-11"); today's by default. */
@@ -115,7 +115,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               <b className="font-medium text-fg">{monthKeyLabel(month)} is closed.</b> {CLOSED_MONTH_LINE}
             </span>
             <Link to={`/money/month-end?month=${month}`} className="font-medium text-primary underline-offset-2 hover:underline">
-              Open Month end
+              Open Lock a month
             </Link>
           </p>
         ) : null}

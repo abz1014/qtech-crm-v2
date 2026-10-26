@@ -4,7 +4,7 @@ import { openAs, review } from '../support/stack'
 /*
  * What the owner saw on the live site on a brand-new CRM (empty database, admin, 1920x1080 desktop Chrome), 2026-10-20:
  *  1. Today: the list pane scrolled sideways under the "Just you so far" card.
- *  2. Who owes us: two (i) tips side by side after "Balance is gross, GST included".
+ *  2. To collect: two (i) tips side by side after "Balance is gross, GST included".
  *  3. Orders: a stray up/down scroller at the right end of the Active / Done / Cancelled tabs.
  *  4. Amounts and counts set with a slashed zero.
  *  5. Empty lists that praise finished work nobody did ("Every order is paid in full").
@@ -63,7 +63,7 @@ test.describe('a brand-new CRM, as the admin', () => {
     await expect(page).toHaveURL(/\/settings\/targets$/)
   })
 
-  test('Who owes us: ONE info tip beside the header, and an empty list says no balances yet, not "paid in full"', async ({ page }) => {
+  test('To collect: ONE info tip beside the header, and an empty list says no balances yet, not "paid in full"', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 })
     await open(page, '/money/receivables')
     const note = page.getByRole('heading', { name: 'Balances', level: 2 })

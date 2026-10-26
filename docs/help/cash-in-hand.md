@@ -12,4 +12,4 @@ related: add-expenses, month-end-close
 4. To check, count the box, tap [Count cash], type the amount and [Save count].
 5. Short or over? The difference is kept with the count. Look for a cash expense not recorded yet.
 
-Tip: Every cash expense lowers what should be there. The same line is on Month end.
+Tip: Every cash expense lowers what should be there. The same line is on Lock a month.

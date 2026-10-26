@@ -20,7 +20,7 @@ export function Tag({ children, dashed, className }: { children: ReactNode; dash
  * NeedsCount (consistency spec 2.1): the ONLY number drawn beside a nav item, tab, segmented option or toggle, and it always
  * means "items that need someone on our side to act". Any other count is written in words (a lede, a footer, "Waiting · 5").
  *   <NeedsCount n={4} />                    warning tint, mono; screen readers hear ", 4 need you"
- *   <NeedsCount n={2} variant="danger" />   critical items (Things to check)
+ *   <NeedsCount n={2} variant="danger" />   critical items (Mistakes to fix)
  *   <NeedsCount n={4} badge />              solid warning dot pinned to the top-right of an icon (phone tabs); needs a
  *                                           `relative` parent. Over 99 reads "99+".
  * Renders nothing for 0 (or a missing count): a pill is never shown for zero. `sr` replaces the spoken words when

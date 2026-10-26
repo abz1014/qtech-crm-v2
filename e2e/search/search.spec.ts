@@ -210,7 +210,8 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
     await expect(order).toContainText(`Customer PO ${f.po}`)
 
     await input.fill(`transmitter ${f.tag}x9`)
-    const item = page.getByRole('option', { name: new RegExp(f.item) })
+    // the Jobs source also lists the order's job; the item result is the one in the Order items group
+    const item = page.getByRole('option', { name: new RegExp(f.item) }).and(page.locator('[data-value*="Order items"]'))
     await expect(item).toBeVisible()
     await expect(page.getByRole('dialog').getByText('Order items', { exact: true })).toBeVisible()
     await expect(item).not.toContainText('4321')
@@ -241,7 +242,7 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
     await expect(order).toBeVisible()
     await expect(order).not.toContainText(f.po)
     await input.fill(`transmitter ${f.tag}x9`)
-    await expect(page.getByRole('option', { name: new RegExp(f.item) })).toBeVisible()
+    await expect(page.getByRole('option', { name: new RegExp(f.item) }).and(page.locator('[data-value*="Order items"]'))).toBeVisible()
     for (const q of [f.invoice, f.invoice.slice(0, 8), f.po]) {
       await input.fill(q)
       await expect(page.getByRole('option', { name: new RegExp(`Add “${q}”`) })).toBeVisible()

@@ -307,7 +307,7 @@ export function computeReconciliationExceptions(input: ReconciliationInput): Rec
     }
   }
 
-  // Imported records are history (redesign phase 0, D10: "Things to check" lists real mistakes in live data only). A finding about
+  // Imported records are history (redesign phase 0, D10: "Mistakes to fix" lists real mistakes in live data only). A finding about
   // an imported order, or an imported invoice, is dropped: the old CRM's books were kept there, and the one-off Review imported
   // (phase 2) is where an imported record that is still open gets looked at.
   const legacyOrders = new Set(input.orders.filter(o => o.legacy).map(o => o.id))

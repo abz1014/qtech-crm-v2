@@ -7,7 +7,7 @@ import { ctxAs, settle, shot, tag } from './support'
  * failure); test.fail is declared just before the one expect that states the correct behaviour.
  */
 
-test('HW-42 (fixed): on a phone, Invoices & GST keeps the search box and the filter tabs inside the screen', async ({ browser }, info) => {
+test('HW-42 (fixed): on a phone, Invoices keeps the search box and the filter tabs inside the screen', async ({ browser }, info) => {
   const o = await order({ lines: [{ description: `Hunt phone register ${tag()}`, qty: 1, price: 10000 }] })
   await invoice(o.order.id, 10000, 1800)
   const ctx = await ctxAs(browser, info, 'admin', 'phone')

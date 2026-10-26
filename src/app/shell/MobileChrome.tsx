@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate, type Location, type NavigateFunction } from 'react-router-dom'
-import { navItemsForRole, type NavItem, type NavKey } from '@/app/navConfig'
+import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
 import { ChevronLeft, Search, X } from 'lucide-react'
 import { useMobileBarConfig, type MobileBarConfig } from '@/app/shell/MobileBarContext'
@@ -8,6 +8,7 @@ import { NewMenu } from '@/app/shell/NewMenu'
 import { Button } from '@/ui/Button'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
+import { LateDot } from '@/ui/LateDot'
 import { NeedsCount } from '@/ui/Tag'
 import { cn } from '@/lib/utils'
 
@@ -75,10 +76,13 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
 export function BottomTabs({
   role,
   counts,
+  dots,
   items: given,
 }: {
   role: string
-  counts?: Partial<Record<NavKey, number>>
+  counts?: Partial<Record<CountKey, number>>
+  /** A red dot, no number (Money while an invoice is late). */
+  dots?: Partial<Record<NavKey, boolean>>
   /** Default: the role's list from navConfig (the gallery passes a fixed one). */
   items?: readonly NavItem[]
 }) {
@@ -112,10 +116,12 @@ export function BottomTabs({
                   <Icon icon={item.icon} size="lg" />
                   {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
                   <NeedsCount n={count} badge silent />
+                  {dots?.[item.key] ? <LateDot badge silent /> : null}
                 </span>
                 <span className="whitespace-nowrap">
                   {item.label}
                   {count ? <span className="sr-only">{`, ${count} need you`}</span> : null}
+                  {dots?.[item.key] ? <span className="sr-only">, an invoice is late</span> : null}
                 </span>
               </>
             )}

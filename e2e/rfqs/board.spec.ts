@@ -239,7 +239,7 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
         // Redesign phase 0: the top bar has ONE number, Today's. RFQs carries none; the board's lede says "N need you" (the RFQ
         // items on the admin's own Today, due now) and never an "overdue" count. "12 open · 4 need you".
         const nav = page.getByRole('navigation', { name: 'Main' }).first()
-        await expect(nav.getByRole('link', { name: 'RFQs', exact: true })).toBeVisible()
+        await expect(nav.getByRole('link', { name: 'Jobs', exact: true })).toBeVisible()
         await expect(nav.getByRole('link', { name: /^To do\s?, \d+ need you$/ })).toBeVisible()
         await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
         const lede = page.getByText(/^\d+ open( · \d+ need you)?$/)

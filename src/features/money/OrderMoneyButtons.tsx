@@ -3,7 +3,7 @@ import { Banknote, FilePlus2 } from 'lucide-react'
 import { Button, type ButtonProps } from '@/ui/Button'
 import { lazyDialog } from '@/lib/lazyDialog'
 
-// Downloaded the first time each opens (perf/lcp, lazyDialog.tsx): the order page and Who owes us do not wait for the forms.
+// Downloaded the first time each opens (perf/lcp, lazyDialog.tsx): the order page and To collect do not wait for the forms.
 const CreateInvoiceDialog = lazyDialog(() => import('@/features/money/invoices/CreateInvoiceDialog').then(m => m.CreateInvoiceDialog))
 const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
