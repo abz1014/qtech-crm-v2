@@ -218,7 +218,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                               Share
                             </Button>
                           ) : null}
-                          <RevisionMenu quotationId={q.id} label={q.revision > 0 ? `${base} revision ${q.revision}` : base} context={`${base}${q.revision > 0 ? ` R${q.revision}` : ''} · ${rfq.company.name}`} />
+                          <RevisionMenu rfqId={rfq.id} quotationId={q.id} revision={q.revision} hasPdf={Boolean(q.pdfPath)} latest={latest} only={rows.length === 1} label={q.revision > 0 ? `${base} revision ${q.revision}` : base} context={`${base}${q.revision > 0 ? ` R${q.revision}` : ''} · ${rfq.company.name}`} />
                         </span>
                       </>
                     ) : null}
