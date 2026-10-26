@@ -149,6 +149,27 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await review(page, 'job-page-engineer-1440')
   })
 
+  test('phone: the engineer big buttons are one green, no price, 44 px or more, no sideways scroll at 375 and 320', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'engineer', '/today')
+    for (const width of [375, 320]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(`/jobs/${f.rfq.number}`)
+      const card = page.getByRole('region', { name: 'On site' })
+      await expect(card.getByRole('button', { name: 'Add photo or note' })).toBeVisible()
+      await expect(page.locator('#main button.bg-primary'), `one green button at ${width}`).toHaveCount(1)
+      for (const b of await card.getByRole('button').all()) {
+        const box = await b.boundingBox()
+        expect(box?.height ?? 0, `${await b.innerText()} is tall enough at ${width}`).toBeGreaterThanOrEqual(44)
+        expect(box?.width ?? 0).toBeGreaterThanOrEqual(44)
+      }
+      expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs.?s?d/)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)
+      if (width === 375) await review(page, 'job-page-engineer-375')
+    }
+  })
+
   test('phone: the ruler is one line, no sideways scroll at 375 and 320', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'admin', '/today')

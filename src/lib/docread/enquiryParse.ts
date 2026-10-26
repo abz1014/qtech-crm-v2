@@ -21,7 +21,7 @@
 
 import { businessToday } from '@/lib/dates'
 import { normaliseUnit, parsePaste, type ParsedItem, type ParseResult } from '@/features/rfqs/lib/parseItems'
-import { alignSpacedRows, rebuildCellTables } from './cellTable'
+import { alignSpacedRows, rebuildCellTables, rebuildHeaderlessLists } from './cellTable'
 import { fixOcrWord } from './ocrLayout'
 import { isHeaderCell } from './pdfLayout'
 
@@ -131,18 +131,18 @@ const NOT_A_SITE = /^(?:(?:www\.)?(?:shorturl\.at|bit\.ly|tinyurl\.com|t\.co|goo
 /** A company name told by what it is: a legal suffix, or the trade words a Pakistani mill or plant carries. */
 const COMPANY_STRONG = /\b(?:ltd|limited|pvt|private|llc|inc|corp(?:oration)?|gmbh|mills?|fib(?:re|er)s?|cement|textiles?|industries|steel|chemicals?|pharma\w*|sugar)\b/i
 /** A legal suffix alone is no name ("LIMITED", "Pvt. Ltd."). */
-const SUFFIX_ONLY = /^(?:(?:pvt|private|ltd|limited|llc|inc|corp|co|company|group|sons)\.?\s*)+$/i
+const SUFFIX_ONLY = /^(?:(?:pvt|private|ltd|limited|liability|llc|inc|corp|co|company|group|sons|plc|gmbh)\.?\s*)+(?:\([^)]*\))?$/i
 const FREE_MAIL = /^(?:gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icloud|me|aol|proton|protonmail|zoho|yandex|mail)\./i
 
 // ------------------------------------------------------------------------------------------------ quantities
 
-const UNIT_SRC = String.raw`nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|rolls?|mtrs?|meters?|metres?|m|ltrs?|litres?|liters?|l|kgs?|ft|feet|prs?|adad|rmt?|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?`
+const UNIT_SRC = String.raw`nos's|nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|rolls?|mtrs?|meters?|metres?|m|ltrs?|litres?|liters?|l|kgs?|ft|feet|prs?|adad|rmt?|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?`
 const QTY_WORD = String.raw`(?:qty\.?\s*req(?:uired|d)?\.?|req(?:uired|\.)?\s*qty\.?|required\s+(?:qty\.?|quantity)|quantity\s+required|qty\.?|quantity|q'ty|qnty|gty|qtv|oty)`
 const LABELLED_QTY = new RegExp(
   String.raw`(^|[\s,;(|[])${QTY_WORD}\s*[:=.\-–]?\s*(\d[\d,]*(?:\.\d+)?)(?:\s*(${UNIT_SRC}))?(?![A-Za-z0-9])`,
   'i',
 )
-const EXTRA_TRAIL = new RegExp(String.raw`(?:^|[\s,;(–—-])\s*(\d[\d,]*(?:\.\d+)?)\s*(nos?|no's|numbers?|adad|drums?|bags?|boxe?s?|cans?|sheets?|coils?|cartons?|pkts?|packets?|lengths?|kgs?|prs?|pairs?|rolls?|ea|each|pieces?|pcs?|sets?|lots?)\.?\s*\)?\.?$`, 'i')
+const EXTRA_TRAIL = new RegExp(String.raw`(?:^|[\s,;(–—-])\s*(\d[\d,]*(?:\.\d+)?)\s*(nos's|nos?|no's|numbers?|adad|drums?|bags?|boxe?s?|cans?|sheets?|coils?|cartons?|pkts?|packets?|lengths?|kgs?|prs?|pairs?|rolls?|ea|each|pieces?|pcs?|sets?|lots?)\.?\s*\)?\.?$`, 'i')
 const LEAD_UNIT = new RegExp(String.raw`^(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})\.?\s*(?:[-–:]\s*)?(?:of\s+)?(?<=[\s.:-])(?=[A-Za-z])`, 'i')
 /** "Bearing 6308 C3 -- Nos. 10": the unit before the number, after a dash. */
 const UNIT_FIRST_TRAIL = new RegExp(String.raw`\s[-–—:=]{1,2}\s*(${UNIT_SRC})\.?\s+(\d[\d,]*(?:\.\d+)?)$`, 'i')
@@ -160,7 +160,7 @@ function toQty(raw: string): number {
  * goes on the quotation unchanged.
  */
 const OWN_UNITS: Record<string, string> = {
-  no: 'nos', nos: 'nos', "no's": 'nos', number: 'nos', numbers: 'nos', adad: 'nos',
+  no: 'nos', nos: 'nos', "no's": 'nos', "nos's": 'nos', number: 'nos', numbers: 'nos', adad: 'nos',
   set: 'set', sets: 'set', lot: 'lot', lots: 'lot', pair: 'pair', pairs: 'pair', pr: 'pair', prs: 'pair', roll: 'roll', rolls: 'roll',
   m: 'm', mtr: 'm', mtrs: 'm', meter: 'm', meters: 'm', metre: 'm', metres: 'm', rm: 'm', rmt: 'm',
   kg: 'kg', kgs: 'kg', l: 'l', ltr: 'l', ltrs: 'l', litre: 'l', litres: 'l', liter: 'l', liters: 'l', ft: 'ft', feet: 'ft',
@@ -425,7 +425,7 @@ function subjectRef(line: string): RefHit | null {
   // A subject that names a product ("RFQ: Butterfly valve DN200 - 5 Sets") has its specs as codes: only the code right after
   // the word counts there.
   const itemSubject = PRODUCT.test(body) && new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?\s*$`, 'i').test(body)
-  // A subject that names a product ("RFQ Inductive Sensor ABX M12AB1-PQ10Z Maker") has a model code in it, not a reference:
+  // A subject that names a product ("RFQ Capacitive Sensor ABX M12AB1-PQ10Z Maker") has a model code in it, not a reference:
   // there, a code counts only when it is shaped like a reference (digits only, or letters and a number: "EML-RFQ-2210").
   const refShaped = (w: string) => {
     const seg = w.split(/[-/]/)
@@ -816,6 +816,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     .replace(/[\u200b-\u200d\ufeff]/g, '')
     .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0))
     .replace(/：/g, ':')
+    // A curly apostrophe is the straight one ("no’s", "nos’s").
+    .replace(/[‘’]/g, "'")
     // "2 (Two) Nos", "12 (Twelve) No", "100 (One Hundred Only) Mtrs": the number again in words, as a letter writes it.
     .replace(/(\d)\s*\(\s*(?:(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|and)[\s-]*)+(?:only)?\s*\)/gi, '$1')
     // Urdu and Arabic-Indic digits, the Urdu word for "number" (adad) and Urdu request tails ("bhej dein", "chahiye").
@@ -886,7 +888,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     else src.push({ t: kept, indent, blankBefore: blank, wa })
     blank = false
   }
-  rebuildCellTables(src, t => SIGN_OFF.test(t) || DISCLAIMER.test(t) || findDue(t, today) !== null)
+  // A mail client that puts a blank line after every line of a table copied as one cell per line (an Outlook copy): then the blank
+  // lines say nothing about where a row ends.
+  const spacedOut = src.length >= 12 && src.filter((x, i) => i > 0 && x.blankBefore).length >= 0.7 * (src.length - 1)
+  rebuildCellTables(src, t => SIGN_OFF.test(t) || DISCLAIMER.test(t) || findDue(t, today) !== null, { ignoreBlank: spacedOut })
+  rebuildHeaderlessLists(src, { ignoreBlank: spacedOut })
 
   // A screenshot of a mail app shows the subject as the first line, with no "Subject:" ("Enquiry 1000083843 for maintenance
   // spares"): its number is the reference, as on a Subject: line.
@@ -935,7 +941,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   for (let k = 1; k < src.length; k++) {
     const t = (src[k] as Src).t
     const outlook = /^from\s*:/i.test(t) && src.slice(k + 1, k + 4).some(x => /^(?:sent|date)\s*:/i.test(x.t))
-    if ((REPLY_SEP.test(t) || outlook) && !FORWARD_SEP.test(t) && src.slice(0, k).some(x => itemish(x.t))) {
+    if ((REPLY_SEP.test(t) || outlook) && !FORWARD_SEP.test(t) && src.slice(0, k).some(x => !HEADER_LINE.test(x.t) && itemish(x.t))) {
       quotedFrom = k
       break
     }
@@ -1458,6 +1464,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
 
     // ---- lines that belong to the item above
     const attr = ATTR.exec(work)
+    // Nameplate details in bullets ("Model: X" / "Serial No.: 568" / "Power Supply: 230 VAC"): one item's lines, not an item each.
+    const labelled = /^[A-Za-z][A-Za-z ./-]{1,30}:\s*\S/
+    const detailRun = m !== null && cur !== null && labelled.test(work) && labelled.test((cur as Draft).texts[0] ?? '') && (cur as Draft).marker === marker && (cur as Draft).qty === null
+    if (detailRun) {
+      ;(cur as Draft).attrs.push(work)
+      lines.push({ text: t, kind: 'joined', reason: null, marker: null })
+      continue
+    }
     // A sub-bullet under an item ("• Relay 24VDC" / "    - Qty: 4 Nos"): a dash or bullet of another kind, or further in.
     const subBullet = m !== null && cur !== null && /^[-–*•○◦▪]$/.test(marker ?? '') && (s.indent > (cur as Draft).indent || marker !== (cur as Draft).marker)
     if (attr && (!m || subBullet)) {
@@ -1518,6 +1532,17 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     const self = readItem(work)
     const ownQty = !m && self !== null && self.qty !== null && /[A-Za-z]{3}/.test(self.description)
     const curHasQty0 = () => cur !== null && ((cur as Draft).qty !== null || ((cur as Draft).texts.length > 0 && readItem(joinWrapped((cur as Draft).texts))?.qty != null))
+    // A name on a line of its own and its model code on the next, a blank line between ("Capacitive Sensor" / "ZK M12AB-PQ10Z"):
+    // one item, the name first.
+    if (cur && !m && s.blankBefore) {
+      const d = cur as Draft
+      const name = d.texts.length === 1 ? (d.texts[0] as string) : ''
+      if (name && d.qty === null && !d.fromTable && !/\d/.test(name) && name.split(' ').length <= 4 && hasCode(work) && work.split(' ').length <= 6 && !self?.qty && !LABELLED_QTY.test(work) && !isCourtesy(work)) {
+        d.texts.push(work)
+        lines.push({ text: t, kind: 'joined', reason: null, marker: null })
+        continue
+      }
+    }
     if (cur && !m && !s.blankBefore) {
       const d = cur as Draft
       const prev = d.texts[d.texts.length - 1] ?? ''
@@ -1663,7 +1688,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   goodEmails.sort((a, b) => b.rank - a.rank)
   const domain = goodEmails[0] ? domainOf(goodEmails[0].e) : null
   // Never a link or a bare legal suffix; a line with a legal suffix or a trade word beats one that only says "company" or "group".
-  const usable = names.filter(x => !/https?:|www\.|[<>@]|\.(?:com|net|org|pk)\b/i.test(x.n) && !SUFFIX_ONLY.test(x.n.trim()))
+  const usable = names.filter(x => !/https?:|www\.|[<>@]|\.(?:com|net|org|pk)\b/i.test(x.n) && !SUFFIX_ONLY.test(x.n.trim()) && !(x.n.split(' ').length >= 4 && /\b(?:is|are|was|were|has|have|our|we|your|registered)\b/i.test(x.n)))
   const score = (x: { n: string; rank: number }) => x.rank + (COMPANY_STRONG.test(x.n) ? 0.5 : 0)
   usable.sort((a, b) => score(b) - score(a))
   names.length = 0

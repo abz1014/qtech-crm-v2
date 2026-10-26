@@ -23,6 +23,7 @@ import { currentStopIndex, stageModel } from '@/features/jobs/lib/stages'
 import { jobLabel } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
 import { WonDialogHost } from '@/features/jobs/EnquiryWork'
+import { EngineerActions } from '@/features/jobs/EngineerActions'
 
 /*
  * The Job page (redesign phase 5, P5-C): /jobs/:key, one page for a customer request from enquiry to payment.
@@ -143,7 +144,13 @@ function JobView({ facts }: { facts: JobFacts }) {
     }
     select(1)
   }
+<<<<<<< HEAD
   const button = onRfq || orderTarget || inPlace !== null ? (
+=======
+  // An engineer's one green button is on the site card (EngineerActions: Delivered today, Installed today, Add photo or note), so the
+  // band's "Open the order" is not a second one; the card has the link.
+  const button = role !== 'engineer' && (onRfq || orderTarget) ? (
+>>>>>>> origin/develop
     <Button variant="primary" size={phone ? 'touch' : 'lg'} onClick={act}>
       {next.button}
     </Button>
@@ -195,6 +202,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} />
       ) : null}
 
+      {role === 'engineer' ? <EngineerActions facts={facts} data={data} /> : null}
       {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid min-w-0 gap-4">

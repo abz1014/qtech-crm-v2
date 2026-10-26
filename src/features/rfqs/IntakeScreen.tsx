@@ -1,3 +1,4 @@
+import { pastedText } from '@/lib/docread/htmlTable'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, Copy, Plus, Save, TriangleAlert } from 'lucide-react'
@@ -22,6 +23,7 @@ import {
   qtyTooLarge,
   realItems,
   RFQ_REF_PLACEHOLDER,
+  coverageLine,
   suggestSuppliers,
   tickedIds,
   toEnquiryItems,
@@ -45,6 +47,7 @@ import { repeatedNote, skipRepeats } from '@/features/rfqs/lib/skipRepeats'
 import { useChannelPreference } from '@/lib/useChannelPreference'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { InfoTip } from '@/ui/InfoTip'
+import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { ItemChips, SupplierPicker, type ManualSupplier } from '@/features/rfqs/SupplierPicker'
 import { CompanyPicker, type IntakeCompany } from '@/features/rfqs/CompanyPicker'
 import { Avatar } from '@/ui/Avatar'
@@ -341,7 +344,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       const t = e.target as HTMLElement | null
       const editable = t?.closest?.('input, textarea, select, [contenteditable="true"]')
       if (editable && editable !== zoneRef.current) return
-      const text = e.clipboardData?.getData('text/plain') ?? ''
+      const text = pastedText(e.clipboardData)
       if (!text.trim()) {
         const pictures = e.defaultPrevented ? [] : pastedPictures(e.clipboardData)
         if (pictures.length === 0) return
@@ -515,10 +518,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     candidateList.map(c => c.id),
     wantSuppliers && candidates.isSuccess,
   )
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess)
   const suggestions = useMemo(
-    () => suggestSuppliers(suggestionItems, { suppliers: candidateList, memory: memory.data ?? {} }, { today }),
-    [suggestionItems, candidateList, memory.data, today],
+    () => suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }),
+    [extras.items, extras.extra, candidateList, memory.data, today],
   )
+  const coverage = coverageLine(suggestions.uncovered)
   const memoryContext = useMemo(
     () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description, brandId: i.brandId ?? null, familyId: i.familyId ?? null, brandName: i.brandName ?? null, familyName: i.familyName ?? null })), today }),
     [memory.data, suggestionItems, today],
@@ -1083,14 +1088,16 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                       Suppliers
                     </h2>
                     <InfoTip label="How is this list ordered?">
-                      By the reason first (same model, same item, same brand), then the track record: on time or not, how often we have ordered, how often they reply, then
-                      the most recent contact. A supplier marked late is still listed. Only suppliers who supplied the item before are ticked.
+                      Suppliers who deal in the item's category come first, then those who carry its brand. Inside a group: how often we have ordered, how often they
+                      answered in this category, then overall, then price wins, then the most recent contact. A supplier that said no offer on 2 of its last 3 asks goes last.
+                      Up to three are ticked: those who usually answer, or that you tagged for the category.
                     </InfoTip>
                   </span>
-                  <p className="text-sm text-fg-muted">Ticked: supplied this item before. The rest is your call.</p>
+                  <p className="text-sm text-fg-muted">Ticked: the three most likely to answer. The rest is your call.</p>
                 </div>
                 <SupplierPicker
                   groups={suggestions.groups}
+                  coverage={coverage}
                   ticked={tickedSet}
                   onToggle={toggleSupplier}
                   manual={manualList}

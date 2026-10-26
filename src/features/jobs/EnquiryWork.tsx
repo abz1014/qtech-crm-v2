@@ -12,8 +12,9 @@ import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
-import { suggestSuppliers, toRateTable, quotationSent, type SuggestionItem } from '@/features/rfqs/lib'
+import { coverageLine, suggestSuppliers, toRateTable, quotationSent, type SuggestionItem } from '@/features/rfqs/lib'
 import { withShortlist } from '@/features/rfqs/askList'
+import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
@@ -119,10 +120,13 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
   const memoryItems = useMemo(() => itemList.map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: i.familyId })), [itemList])
   const memorySuppliers = useMemo(() => [...new Set([...inquiryList.filter(i => i.lines.length > 0).map(i => i.supplierId), ...candidateList.map(c => c.id)])].sort(), [inquiryList, candidateList])
   const memory = useSupplierMemory(memoryItems, memorySuppliers, memorySuppliers.length > 0 && itemList.length > 0 && candidates.isSuccess, rfq.id)
-  const suggestions = useMemo(
-    () => (candidates.isSuccess ? suggestSuppliers(suggestionItems, { suppliers: candidateList, memory: memory.data ?? {} }, { today }).suppliers : undefined),
-    [candidates.isSuccess, suggestionItems, candidateList, memory.data, today],
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess)
+  const suggestResult = useMemo(
+    () => (candidates.isSuccess ? suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
+    [candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
   )
+  const suggestions = suggestResult?.suppliers
+  const coverage = suggestResult ? coverageLine(suggestResult.uncovered) : null
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
   const ranking = useRankedQuotes(rfq.id, hasPrices)
@@ -173,6 +177,7 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
           <FloatDialog
             title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
             suggestions={askList}
+ coverage={coverage}
             itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
             busy={asking}
             onClose={() => setFloating(false)}

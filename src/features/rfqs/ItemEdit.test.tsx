@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionContext } from '@/app/session'
 import type { RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { EditItemDialog, RemoveItemConfirm } from '@/features/rfqs/ItemEdit'
+import { EditItemDialog, RemoveItemConfirm } from '@/features/rfqs/ItemDialogs'
 import { installFakeDb, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
