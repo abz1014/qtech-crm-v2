@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, Check, ChevronDown, ChevronRight, Ellipsis, PencilLine, RotateCcw } from 'lucide-react'
+import { Ban, Check, ChevronDown, ChevronRight, Ellipsis, History as HistoryIcon, PencilLine, RotateCcw, Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
@@ -13,7 +13,6 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
-import { Tooltip } from '@/ui/Tooltip'
 import { useToast } from '@/ui/useToast'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
@@ -31,6 +30,8 @@ import {
   type PaymentLine,
 } from '@/features/money/payments/correctionApi'
 import { useCorrectPayment, useOrderPayments, useRestorePayment, useVoidPayment } from '@/features/money/payments/correctionHooks'
+import { useDeletePaymentFlow } from '@/features/money/payments/PaymentDelete'
+import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
 
 /*
  * Void, correct and Undo a recorded payment (migration 0073; DECISIONS 2026-10-20). ADMIN ONLY: payments_in is admin-only, so
@@ -38,6 +39,10 @@ import { useCorrectPayment, useOrderPayments, useRestorePayment, useVoidPayment 
  * Record payment dialog ("already recorded"): the payments that count, each with ⋯ Correct… / Void… (off, with a tip, while it
  * is ticked against the bank statement), a Corrected tag on a replacement, and the voided ones folded under "Voided (n)" with
  * Undo while the admin who voided may still undo it.
+ *
+ * W11 (0092): the same menu also has Delete… (permanent, admin only, for a payment that was a mistake; the confirm names what blocks
+ * it: voided, part of a correction, ticked against a bank statement) and History. A ticked payment's menu stays open for them,
+ * with Correct and Void off and the reason beside them; a voided payment is kept as history and says so.
  */
 export const VOID_QUICK_REASONS = ['Typed twice', 'Wrong order', 'Cheque bounced'] as const
 
@@ -71,33 +76,44 @@ function lineText(l: PaymentLine, today: string) {
   )
 }
 
-/** The ⋯ of one payment that counts. */
-export function PaymentRowMenu({ line, orderNumber }: { line: PaymentLine; orderNumber: number }) {
-  const [dialog, setDialog] = useState<'void' | 'correct' | null>(null)
+/** The ⋯ of one payment that counts. `inChain`: another payment corrects this one (it cannot be deleted then). */
+export function PaymentRowMenu({ line, orderNumber, inChain = false }: { line: PaymentLine; orderNumber: number; inChain?: boolean }) {
+  const [dialog, setDialog] = useState<'void' | 'correct' | 'history' | null>(null)
+  const deleteFlow = useDeletePaymentFlow(line, orderNumber, inChain)
   const blocked = changeBlockedBy(line)
   if (blocked === 'voided') return null
-  const trigger = (
-    <Button icon={Ellipsis} size="sm" variant="quiet" aria-label={`Change payment of PKR ${formatAmount(line.amount)}`} disabled={blocked === 'bank_ticked'} />
-  )
-  if (blocked === 'bank_ticked')
-    return (
-      <Tooltip content={BANK_TIP} forDisabled>
-        {trigger}
-      </Tooltip>
-    )
+  const trigger = <Button icon={Ellipsis} size="sm" variant="quiet" aria-label={`Change payment of PKR ${formatAmount(line.amount)}`} />
+  const ticked = blocked === 'bank_ticked'
   return (
     <>
       <Popover>
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         <PopoverContent variant="menu" align="end">
-          <MenuItem icon={PencilLine} onClick={() => setDialog('correct')}>
+          <MenuItem icon={PencilLine} onClick={() => setDialog('correct')} disabled={ticked} title={ticked ? BANK_TIP : undefined}>
             Correct…
           </MenuItem>
-          <MenuItem icon={Ban} danger onClick={() => setDialog('void')}>
+          <MenuItem icon={Ban} danger onClick={() => setDialog('void')} disabled={ticked} title={ticked ? BANK_TIP : undefined}>
             Void…
+          </MenuItem>
+          <MenuItem icon={Trash2} danger onClick={deleteFlow.ask}>
+            Delete…
+          </MenuItem>
+          <MenuItem icon={HistoryIcon} onClick={() => setDialog('history')}>
+            History
           </MenuItem>
         </PopoverContent>
       </Popover>
+      {deleteFlow.node}
+      {dialog === 'history' ? (
+        <LazyHistoryPanel
+          open
+          onOpenChange={o => !o && setDialog(null)}
+          table="payments_in"
+          id={line.id}
+          context={`${orderRef(orderNumber)} · PKR ${formatAmount(line.amount)} · ${formatShortDate(line.receivedOn, businessToday())}`}
+          imported={line.legacy}
+        />
+      ) : null}
       <VoidPaymentDialog open={dialog === 'void'} onOpenChange={o => setDialog(o ? 'void' : null)} line={line} orderNumber={orderNumber} />
       <CorrectPaymentDialog open={dialog === 'correct'} onOpenChange={o => setDialog(o ? 'correct' : null)} line={line} orderNumber={orderNumber} />
     </>
@@ -298,7 +314,7 @@ export function OrderPaymentLines({ orderId, orderNumber, compact = false }: { o
             <span className="min-w-0">
               {lineText(l, today)} {l.correctsPaymentId ? <Tag className="ml-1">Corrected</Tag> : null}
             </span>
-            <PaymentRowMenu line={l} orderNumber={orderNumber} />
+            <PaymentRowMenu line={l} orderNumber={orderNumber} inChain={q.data.some(x => x.correctsPaymentId === l.id)} />
           </li>
         ))}
       </ul>
@@ -309,6 +325,8 @@ export function OrderPaymentLines({ orderId, orderNumber, compact = false }: { o
             Voided ({voided.length})
           </button>
           {showVoided ? (
+            <>
+            <p className="text-sm text-fg-muted" data-testid="voided-kept">Voided payments are kept as history and cannot be deleted.</p>
             <ul className="grid gap-1">
               {voided.map(l => (
                 <li key={l.id} data-testid="voided-line" className="flex items-center justify-between gap-2 text-sm text-fg-muted">
@@ -335,6 +353,7 @@ export function OrderPaymentLines({ orderId, orderNumber, compact = false }: { o
                 </li>
               ))}
             </ul>
+            </>
           ) : null}
         </div>
       ) : null}
