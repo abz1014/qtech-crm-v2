@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ExpensesTab } from '@/features/money/expenses/ExpensesTab'
-import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
+import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
@@ -108,5 +108,17 @@ describe('Expenses list (0086)', () => {
     await screen.findByTestId('expenses-month-total')
     expect(screen.queryByRole('button', { name: /^More for/ })).not.toBeInTheDocument()
     expect(screen.getAllByText('Locked, the month is closed').length).toBe(3)
+  })
+
+  it('a closed month: History sits next to the lock on every row and opens the history of that expense', async () => {
+    const user = userEvent.setup()
+    const db = setup(['2026-09'])
+    await screen.findByTestId('expenses-month-total')
+    const buttons = screen.getAllByRole('button', { name: /^History of/ })
+    expect(buttons).toHaveLength(3)
+    await user.click(buttons[0])
+    await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:record_history')).toBe(true))
+    const call = db.calls.find(c => c.target === 'rpc:record_history') as FakeCall
+    expect(opArgs(call, 'args')?.[0]).toMatchObject({ p_table: 'expenses' })
   })
 })

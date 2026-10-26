@@ -36,6 +36,8 @@ import {
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { OrderTagPicker } from '@/features/money/expenses/OrderTagPicker'
 import {
+  MISC_TITLE_ERROR,
+  MISC_TITLE_LABEL,
   PAID_VIA_LABEL,
   SUPPLIER_PAYMENT_ID,
   burstInserts,
@@ -49,6 +51,7 @@ import {
   newBurstRow,
   recentCategories,
   repeatTemplates,
+  rowsMissingTitle,
   showsInputTax,
   type BurstRow,
   type Category,
@@ -176,7 +179,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   }, [rows])
 
   const patch = useCallback((id: string, p: Partial<BurstRow>) => {
-    setRows(list => list.map(r => (r.id === id ? { ...r, ...p, error: p.error ?? undefined } : r)))
+    // a closed-month sentence goes with the next change; the title error goes when the Detail or the category changes
+    setRows(list => list.map(r => (r.id === id ? { ...r, ...p, error: p.error ?? undefined, noteError: 'note' in p || 'categoryId' in p ? undefined : r.noteError } : r)))
     setBanner(null)
   }, [setRows])
 
@@ -229,6 +233,14 @@ function BurstContent({ onClose }: { onClose: () => void }) {
       const first = noCategory[0] ?? noOrder[0] ?? unsavable[0]
       const target = first.categoryText ? '[role="combobox"]' : first.orderText ? '[data-cell="order"]' : '[data-cell="date"]'
       requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(`[data-row="${first.id}"] ${target}`)?.focus())
+      return
+    }
+    const untitled = rowsMissingTitle(settled, categories)
+    if (untitled.length > 0) {
+      // 0091: an "Other" says what it was for; the error sits on that row's Detail, and nothing is saved until every one has it
+      setRows(settled.map(r => (untitled.some(u => u.id === r.id) ? { ...r, noteError: MISC_TITLE_ERROR } : r)))
+      setBanner(untitled.length === 1 ? 'One row is an Other with no title. Write what it was for, then save.' : `${untitled.length} rows are an Other with no title. Write what each was for, then save.`)
+      requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(`[data-row="${untitled[0].id}"] [data-cell="detail"]`)?.focus())
       return
     }
     lock.current = true
@@ -521,6 +533,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
+  const isOther = !!categories.find(c => c.id === row.categoryId)?.isMisc
   return (
     <div data-row={row.id} role="group" aria-label={`Row ${index}`} onKeyDown={onKey} className={cn(GRID, 'py-2', err && 'bg-tone-danger-bg/40')}>
       <div className="num grid h-[36px] place-items-center text-xs text-fg-muted" aria-hidden="true">
@@ -543,6 +556,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}
+        onMisc={(c, text) => onPatch({ categoryId: c.id, categorySource: 'typed', categoryText: undefined, note: text })}
         groups={groups}
         recent={recent}
       />
@@ -567,14 +581,18 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
       </div>
       <div className="min-w-0">
         <TextField
+          data-cell="detail"
           aria-label={`Detail, row ${index}`}
-          placeholder="e.g. LESCO bill, LEA-1234"
+          placeholder={isOther ? MISC_TITLE_LABEL : 'e.g. LESCO bill, LEA-1234'}
           list={`detail-${row.id}`}
           autoComplete="off"
           value={row.note}
+          aria-invalid={row.noteError ? true : undefined}
+          aria-required={isOther || undefined}
           onChange={e => onPatch({ note: e.target.value })}
-          className="h-[36px]"
+          className={cn('h-[36px]', row.noteError && 'border-tone-danger-fg bg-tone-danger-bg')}
         />
+        {row.noteError ? <p className="mt-1 text-base text-tone-danger-fg">{row.noteError}</p> : null}
         <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       </div>
       <OrderTagPicker
@@ -789,6 +807,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
   const fileRef = useRef<HTMLInputElement | null>(null)
   const categoryRef = useRef<HTMLInputElement | null>(null)
   const hasPhoto = !!row.photo && !row.photo.error
+  const isOther = !!categories.find(c => c.id === row.categoryId)?.isMisc
   const dateText = row.date === today ? 'Today' : row.date ? formatShortDate(row.date, today) : 'Choose a date'
   const err = row.error
   return (
@@ -863,6 +882,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}
+        onMisc={(c, text) => onPatch({ categoryId: c.id, categorySource: 'typed', categoryText: undefined, note: text })}
         groups={groups}
         recent={recent}
       />
@@ -896,14 +916,21 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         />
       </div>
       <input
+        data-cell="detail"
         aria-label={`Detail, expense ${index}`}
-        placeholder="Detail: LESCO bill, LEA-1234"
+        placeholder={isOther ? MISC_TITLE_LABEL : 'Detail: LESCO bill, LEA-1234'}
         list={`detail-${row.id}`}
         autoComplete="off"
         value={row.note}
+        aria-invalid={row.noteError ? true : undefined}
+        aria-required={isOther || undefined}
         onChange={e => onPatch({ note: e.target.value })}
-        className="h-touch w-full rounded border border-line-input bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg"
+        className={cn(
+          'h-touch w-full rounded border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg',
+          row.noteError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
+        )}
       />
+      {row.noteError ? <p className="text-base text-tone-danger-fg">{row.noteError}</p> : null}
       <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       <OrderTagPicker
         orders={orders}
