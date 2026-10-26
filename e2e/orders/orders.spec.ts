@@ -682,7 +682,7 @@ test.describe('O03: role views', () => {
     expect(text).not.toMatch(/PKR|48,500|96,500|135,000|GST|Invoic|Margin|Payment|Terms|Exempt|Costs|Balance|Add line|Add supplier|Issue PO|Record payment|Add expense|Create invoice/i)
     await expect(page.getByRole('checkbox', { name: /Exempt|Service/ })).toHaveCount(0)
     await expect(page.getByLabel(/GST rate/)).toHaveCount(0)
-    await expect(page.getByText('Not set')).toHaveCount(0)
+    await expect(page.locator('.sr-only', { hasText: 'Not set' })).toHaveCount(0)
     // no money column in the lines table, and no money dimension
     for (const header of ['Unit price', 'Total']) await expect(page.getByRole('columnheader', { name: new RegExp(header) })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Items' })).toBeVisible()

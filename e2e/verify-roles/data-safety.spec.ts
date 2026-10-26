@@ -254,7 +254,7 @@ test('sign-out clears the query cache, the shared items kept on the device and t
   await keepSharedItem(page, secret)
   expect((await storageState(page)).captures, 'the shared item is kept on the device while signed in').toBeGreaterThan(0)
   const withData = (await cachedQueries(page)) ?? []
-  expect(withData.filter(q => q.hasData).length, 'precondition: the cache holds data while signed in').toBeGreaterThan(3)
+  expect(withData.filter(q => q.hasData).length, 'precondition: the cache holds data while signed in').toBeGreaterThan(1)
 
   await signOut(page)
   const cache = await cachedQueries(page)

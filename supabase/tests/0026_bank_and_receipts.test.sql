@@ -100,9 +100,9 @@ select lives_ok($$insert into public.attachments (id, bucket, path, file_name, m
                   values ('e0000000-0000-4000-8000-000000000001', 'expense-receipts', 'exp1/a.jpg', 'a.jpg', 'image/jpeg',
                           1000, 'b4000000-0000-4000-8000-000000000001')$$,
   'an expense receipt in the expense-receipts bucket is accepted');
-select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id)
+select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices)
                   values ('e0000000-0000-4000-8000-000000000002', 'rfq-files', 'rfq1/a.jpg', 'a.jpg', 'image/jpeg',
-                          1000, 'd0000000-0000-4000-8000-000000000001')$$,
+                          1000, 'd0000000-0000-4000-8000-000000000001', false)$$,
   'an RFQ attachment is still accepted');
 select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id)
                   values ('e0000000-0000-4000-8000-000000000003', 'gst-receipts', 'inv1/a.pdf', 'a.pdf',

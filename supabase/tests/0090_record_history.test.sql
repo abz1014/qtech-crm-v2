@@ -99,8 +99,8 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('24'), pg_temp.f('20'), 5);
 insert into public.expenses (id, order_id, amount_pkr, category_id) values
   (pg_temp.f('25'), pg_temp.f('20'), 7, 'ca7e0000-0000-4000-8000-000000000011');
-insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values
-  (pg_temp.f('26'), 'rfq-files', 'hx/1.pdf', 'order-file.pdf', 'application/pdf', 10, pg_temp.f('20'));
+insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id, has_prices) values   -- untagged: 0103 defaults to true
+  (pg_temp.f('26'), 'rfq-files', 'hx/1.pdf', 'order-file.pdf', 'application/pdf', 10, pg_temp.f('20'), false);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id) values
   (pg_temp.f('27'), 'gst-receipts', 'hx/2.pdf', 'invoice-file.pdf', 'application/pdf', 10, pg_temp.f('23'));
 
