@@ -27,6 +27,9 @@ export const routeChunks = {
   orders: () => import('@/features/orders/OrdersScreen'),
   ordersList: () => import('@/features/orders/OrdersListPage'),
   order: () => import('@/features/orders/OrderDetailScreen'),
+  jobs: () => import('@/features/jobs/JobsScreen'),
+  jobsList: () => import('@/features/jobs/JobsListPage'),
+  job: () => import('@/features/jobs/JobPage'),
   money: () => import('@/features/money/MoneyScreen'),
   moneyReceivables: () => import('@/features/money/payments/ReceivablesPage'),
   moneyGst: () => import('@/features/money/invoices/GstRegisterPage'),
@@ -61,6 +64,8 @@ export function chunksForPath(pathname: string): ChunkKey[] {
       return ['rfqs']
     case 'orders':
       return n === 1 ? ['orders', 'ordersList'] : n === 2 ? ['orders', 'order'] : ['orders']
+    case 'jobs':
+      return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
     case 'companies':
       return n === 1 ? ['companies', 'companiesList'] : n === 2 ? ['companies', 'company'] : ['companies']
     case 'money':
@@ -112,6 +117,7 @@ const routePrefetch: Partial<Record<ChunkKey, () => Promise<{ prefetch: Prefetch
   rfq: () => import('@/features/rfqs/prefetch'),
   ordersList: () => import('@/features/orders/prefetch').then(m => ({ prefetch: m.prefetchList })),
   order: () => import('@/features/orders/prefetch').then(m => ({ prefetch: m.prefetchOrder })),
+  jobsList: () => import('@/features/jobs/prefetch').then(m => ({ prefetch: m.prefetchList })),
   companiesList: () => import('@/features/companies/prefetch'),
   moneyReceivables: () => import('@/features/money/payments/prefetch'),
 }

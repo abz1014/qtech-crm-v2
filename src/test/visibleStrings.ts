@@ -148,6 +148,8 @@ export const SCREEN_ENTRIES: Record<string, readonly string[]> = {
   today: ['features/today/TodayScreen.tsx'],
   rfqs: ['features/rfqs/board/RfqsScreen.tsx', 'features/rfqs/IntakeScreen.tsx'],
   orders: ['features/orders/OrdersScreen.tsx'],
+  /** Redesign phase 5 (src/app/routes.tsx, jobs/*). */
+  jobs: ['features/jobs/JobsScreen.tsx'],
   companies: ['features/companies/CompaniesScreen.tsx'],
   money: ['features/money/MoneyScreen.tsx'],
   /** 0087: an engineer's "I paid" (src/app/routes.tsx, my-expenses). */
