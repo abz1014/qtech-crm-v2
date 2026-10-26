@@ -16,7 +16,7 @@ export interface NewEntry {
 
 /** What the person may start. Pure, so a test can pin each role's list. */
 export function newEntries(role: string): NewEntry[] {
-  const enquiry: NewEntry = { id: 'enquiry', label: 'New enquiry', icon: FilePlus2, to: '/rfqs/new', key: 'N' }
+  const enquiry: NewEntry = { id: 'enquiry', label: 'New enquiry', icon: FilePlus2, to: '/enquiries/new', key: 'N' }
   const order: NewEntry = { id: 'order', label: 'Order without enquiry', icon: ShoppingCart, to: '/orders?new=1', key: 'O' }
   if (role === 'admin') {
     return [

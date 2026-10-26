@@ -1,11 +1,10 @@
 import { NavLink, useLocation, useNavigate, type Location, type NavigateFunction } from 'react-router-dom'
 import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
-import { ChevronLeft, Import, Search, X } from 'lucide-react'
+import { ChevronLeft, Search, X } from 'lucide-react'
 import { useMobileBarConfig, type MobileBarConfig } from '@/app/shell/MobileBarContext'
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { NewMenu } from '@/app/shell/NewMenu'
-import { CAPTURE_LABEL } from '@/app/shell/TopBar'
 import { Button } from '@/ui/Button'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
@@ -37,7 +36,7 @@ function leave(config: MobileBarConfig, navigate: NavigateFunction, location: Lo
  * A screen can ask for the one-bar form through useMobileBar(): chevron-left or x, its own title, and one slot on the
  * right for its actions (g2-login-team-settings phone frames). Logo, search, paste-or-photo and the avatar are not shown then.
  */
-export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionUser; title: string; onSearch?: () => void; onCapture?: () => void }) {
+export function MobileBar({ user, title, onSearch }: { user: SessionUser; title: string; onSearch?: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
   const config = useMobileBarConfig()
@@ -62,10 +61,6 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
       <p className="min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base">{config?.title ?? title}</p>
       {actions ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
       <NewMenu role={user.role} iconOnly size="touch" />
-      {onCapture ? (
-        // Icon only and secondary (audit X1): the screen's own green button is the one primary on a phone; the name is "Paste or photo".
-        <Button variant="secondary" size="touch" icon={Import} aria-label={CAPTURE_LABEL} onClick={onCapture} />
-      ) : null}
       <AccountMenu user={user} touch />
     </header>
   )

@@ -202,7 +202,7 @@ describe('help recipes stay true to the screens (labelSync)', () => {
     const covered = new Set(recipes.flatMap(r => r.labels.map(norm)))
     // The RFQ page's green buttons (rfqs/lib/nextAction.ts names them by kind: ask, issue, won), the top-bar actions, and
     // the order page's steps, read from orders/lib/primaryAction.ts once that file is on main.
-    const fixed = ['Ask suppliers', 'Issue quotation', 'Mark won', 'New RFQ', 'Paste or photo']
+    const fixed = ['Ask suppliers', 'Issue quotation', 'Mark won', 'New RFQ', 'New enquiry']
     const roots = OTHER_ROOTS ?? [path.join(repo, 'src')]
     const fromOrders = roots
       .map(root => path.join(root, 'features/orders/lib/primaryAction.ts'))

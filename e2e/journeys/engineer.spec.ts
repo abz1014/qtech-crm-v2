@@ -8,7 +8,7 @@ import { fe2, ordRef, openPage, pastePage, PNG_B64, readCount, resetCount, roleC
 /*
  * P03, the engineer journey: a working day on the phone-sized core of the app, and not one rupee anywhere.
  *
- *   Today shows the order that needs its commissioning planned -> open it -> capture a photo and a note into the order ->
+ *   Today shows the order that needs its commissioning planned -> open it -> add a photo and a note to the job ->
  *   mark commissioning done -> mark the goods delivered -> Today no longer lists it.
  *
  * FE-2 targets held at each step:
@@ -138,23 +138,22 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
   })
 
   // ---- 3. Capture a photo and a note into the order -------------------------------------------------------------------------------------
-  await test.step('capture a photo and a note into the order', async () => {
+  await test.step('add a photo and a note to the job', async () => {
     const note = 'Site photo: nameplate on transmitter 1, tag PT-204.'
-    // The order was just opened, so Capture offers it. The paste is made on Today: the order page's own Files panel also listens for a paste.
-    await page.goto('/todo')
-    await showAllTodo(page)
+    // The order has no enquiry, so its job is O-<number>. "Add to this job" takes a paste anywhere on the page: it guesses a note (an
+    // engineer is offered only a photo or a note, never a price), and one tap adds the note and the photo.
+    await page.goto(`/jobs/O-${s.order.number}`)
     await page.locator('#main').waitFor()
+    await expect(page.getByRole('region', { name: 'Add to this job' })).toBeVisible()
     await resetCount(page)
     await pastePage(page, { text: note, file: { name: 'nameplate.png', type: 'image/png', b64: PNG_B64 } })
-    const sheet = page.getByRole('dialog', { name: 'Paste or photo' })
-    await expect(sheet).toBeVisible()
-    await sheet.getByRole('button', { name: 'Something else' }).click() // R2-11: the other choices are one tap away
-    await sheet.getByRole('button', { name: 'Attach to an order' }).click()
-    await expect(sheet.getByRole('radio', { name: new RegExp(`${ref} · ${s.customer.name}`) })).toBeChecked()
+    await expect(page.getByTestId('guess-line')).toHaveText('Note')
+    await expect(page.getByRole('button', { name: 'Supplier price' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Customer answer' })).toHaveCount(0)
     await waitForAnimationsToFinish(page)
-    await sheet.getByRole('button', { name: 'Attach to order' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Saved to ORD-' }).filter({ has: page.getByRole('button', { name: /Undo/ }) })).toBeVisible()
-    fe2('Capture a photo and a note into the order (after the paste)', (await readCount(page)).mouse, 4)
+    await page.getByRole('button', { name: 'Add note and files' }).click()
+    await expect(page.getByRole('status').filter({ hasText: `Added to Job O-${s.order.number}` }).filter({ has: page.getByRole('button', { name: /Undo/ }) })).toBeVisible()
+    fe2('Add a photo and a note to the job (after the paste)', (await readCount(page)).mouse, 1)
     const files = await must(rest<{ file_name: string; bucket: string }[]>('admin', `attachments?order_id=eq.${s.order.id}&select=file_name,bucket`))
     expect(files).toEqual([{ file_name: 'nameplate.png', bucket: 'rfq-files' }])
     const notes = await must(rest<{ notes: string | null }[]>('admin', `orders?id=eq.${s.order.id}&select=notes`))

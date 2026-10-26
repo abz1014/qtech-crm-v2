@@ -318,6 +318,27 @@ export async function listCompanyBrands(companyId: string): Promise<CarriedBrand
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** What one supplier has done in each product category (v_supplier_category_evidence, 0093): counts only, the same for every role. */
+export interface SupplierCategoryEvidence {
+  familyId: string
+  name: string
+  asked: number
+  replied: number
+  quoted: number
+  ordered: number
+}
+
+export async function listSupplierCategoryEvidence(supplierId: string): Promise<SupplierCategoryEvidence[]> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('v_supplier_category_evidence').select('family_id, asked, replied, quoted, ordered').eq('supplier_id', supplierId)) ?? []
+  const ids = rows.flatMap(r => (r.family_id ? [r.family_id] : []))
+  if (ids.length === 0) return []
+  const names = new Map((unwrap(await db.from('brands').select('id, name').in('id', ids)) ?? []).map(b => [b.id, b.name]))
+  return rows.flatMap(r =>
+    r.family_id ? [{ familyId: r.family_id, name: names.get(r.family_id) ?? 'A category', asked: r.asked ?? 0, replied: r.replied ?? 0, quoted: r.quoted ?? 0, ordered: r.ordered ?? 0 }] : [],
+  )
+}
+
 export async function listBrands() {
   const db = requireSupabase()
   return fetchAll<Pick<TableRow<'brands'>, 'id' | 'name' | 'kind'>>((from, to) =>

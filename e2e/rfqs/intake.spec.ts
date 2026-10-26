@@ -137,12 +137,14 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     expect(newRfqActions).toBeLessThanOrEqual(3)
     expect(pastes).toBe(1)
 
-    // Suppliers: reasons first. Only the one that supplied it before is ticked; the item nobody is asked about is flagged.
-    await expect(page.getByRole('heading', { name: 'Supplied this item before', level: 3 })).toBeVisible()
+    // Suppliers: reasons first (C3: the brand group, with "Supplied this item before" as a badge on the one that did). The one that
+    // supplied it before is ticked; the item nobody is asked about is flagged.
+    await expect(page.getByRole('heading', { name: 'Carries a brand in this RFQ', level: 3 })).toBeVisible()
+    await expect(page.locator('[data-badge="supplied-before"]')).toHaveCount(1)
     await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
     await expect(page.getByRole('checkbox', { name: s.carries.name })).not.toBeChecked()
     await expect(page.getByRole('checkbox', { name: s.other.name })).not.toBeChecked()
-    await expect(page.getByText(/Supplied this item before: /)).toBeVisible()
+    await expect(page.locator('li', { has: page.getByRole('checkbox', { name: s.supplied.name }) }).locator('[data-badge="supplied-before"]')).toBeVisible()
     // Named by its brand, with the supplier that carries it offered as a one-tap tick (owner audit N4). Not ticked for them.
     await expect(page.getByText(/^Item 2 \(.+\): tick .+\?$/)).toBeVisible()
     await expect(page.getByRole('button', { name: /^Tick / })).toBeVisible()

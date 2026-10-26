@@ -123,10 +123,13 @@ function JobView({ facts }: { facts: JobFacts }) {
   useMobileBar({ title: jobLabel(job.key), back: 'history', fallback: '/jobs', hideTabs: true })
 
   // The enquiry-side steps are done on this page (P5-D1): the button opens the Quotation stage, or the same dialog the RFQ page opens
-  // (?issue=1, ?won=1). The order-side steps still open the order page until lane L3 moves them here (P5-D2).
+  // (?issue=1, ?won=1). The order-side steps are done here too (P5-D2): the button opens the stage that holds the action (choose a
+  // supplier, place, deliver, invoice, collect), in place. Only a step with no stage of its own still opens the order page.
   const onRfq = Boolean(next.button && next.on === 'rfq' && job.rfqId)
-  const orderTarget = next.button && next.on === 'order' && job.orderId ? `/orders/${job.orderId}` : null
+  const inPlace = next.button && next.on === 'order' && job.orderId && next.stop !== undefined ? next.stop : null
+  const orderTarget = next.button && next.on === 'order' && job.orderId && inPlace === null ? `/orders/${job.orderId}` : null
   const act = () => {
+    if (inPlace !== null) return select(inPlace)
     if (orderTarget) return navigate(orderTarget)
     if (!onRfq) return
     const p = new URLSearchParams(params)
@@ -143,7 +146,7 @@ function JobView({ facts }: { facts: JobFacts }) {
   }
   // An engineer's one green button is on the site card (EngineerActions: Delivered today, Installed today, Add photo or note), so the
   // band's "Open the order" is not a second one; the card has the link.
-  const button = role !== 'engineer' && (onRfq || orderTarget) ? (
+  const button = role !== 'engineer' && (onRfq || orderTarget || inPlace !== null) ? (
     <Button variant="primary" size={phone ? 'touch' : 'lg'} onClick={act}>
       {next.button}
     </Button>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Copy, FileCheck } from 'lucide-react'
 import { Button } from '@/ui/Button'
@@ -33,23 +33,38 @@ function PickList({
   suggestions,
   isTicked,
   onTick,
+  coverage,
 }: {
   suggestions: readonly SupplierSuggestion[]
+  coverage?: string | null
   isTicked: (s: SupplierSuggestion) => boolean
   onTick: (id: string, on: boolean) => void
 }) {
   return (
     <ul>
-      {suggestions.map(s => {
+      {coverage ? (
+        <li className="border-b border-dashed px-5 py-3 text-base text-fg-2" data-coverage>
+          {coverage}
+        </li>
+      ) : null}
+      {suggestions.map((s, n) => {
         const id = `ask-${s.supplierId}`
+        const heading = n === 0 || suggestions[n - 1].groupKey !== s.groupKey
         return (
-          <li key={s.supplierId} className="relative grid gap-[2px] border-t px-5 py-3 first:border-t-0">
+          <Fragment key={s.supplierId}>
+          {heading ? <li className="border-t bg-sunken px-5 py-2 text-base font-semibold first:border-t-0">{s.groupLabel}</li> : null}
+          <li className="relative grid gap-[2px] border-t px-5 py-3 first:border-t-0">
             <div className="flex min-w-0 items-center gap-3">
               <Checkbox id={id} checked={isTicked(s)} onCheckedChange={v => onTick(s.supplierId, v === true)} aria-label={s.name} />
               <label htmlFor={id} className="min-w-0 text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
                 {s.name}
                 {s.city ? <span className="ml-2 text-xs font-regular text-fg-muted">{s.city}</span> : null}
               </label>
+              {s.suppliedBefore ? (
+                <span className="relative inline-flex min-h-chip items-center rounded border border-tone-success-fg px-[6px] text-xs font-semibold text-tone-success-fg" data-badge="supplied-before">
+                  Supplied this item before
+                </span>
+              ) : null}
             </div>
             <p className="pl-[30px] text-xs text-fg-muted">{s.reason}</p>
             {s.evidence ? (
@@ -66,16 +81,17 @@ function PickList({
               </p>
             ) : null}
           </li>
+          </Fragment>
         )
       })}
     </ul>
   )
 }
 
-function Empty() {
+function Empty({ coverage }: { coverage?: string | null }) {
   return (
     <p className="px-5 py-4 text-sm text-fg-muted">
-      No supplier on file carries a brand in this RFQ yet. Add the brands a supplier carries on its company page, or ask anyone from{' '}
+      {coverage ?? 'No supplier on file deals in these categories or carries a brand in this RFQ yet.'} Add the brands a supplier carries on its company page, or ask anyone from{' '}
       <Link to="/companies" className="underline underline-offset-2">
         Companies
       </Link>
@@ -89,9 +105,12 @@ export function SuppliersToAskCard({
   items,
   busy,
   onAsk,
+  coverage,
 }: {
   /** Undefined while they load. */
   suggestions: readonly SupplierSuggestion[] | undefined
+  /** The coverage line: no supplier on file deals in a category of this RFQ. */
+  coverage?: string | null
   items: readonly RfqItemRow[]
   busy: boolean
   onAsk: (ticked: readonly SupplierSuggestion[]) => void
@@ -105,10 +124,10 @@ export function SuppliersToAskCard({
           <Skeleton className="h-10" />
         </div>
       ) : suggestions.length === 0 ? (
-        <Empty />
+        <Empty coverage={coverage} />
       ) : (
         <>
-          <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} />
+          <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} />
           <div className="border-t px-5 py-3">
             <Button icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0 || items.length === 0} onClick={() => onAsk(t.ticked)}>
               {t.ticked.length === 0 ? 'Tick a supplier to ask' : copyLabel(t.ticked.length)}
@@ -128,8 +147,10 @@ export function FloatDialog({
   busy,
   onAsk,
   onClose,
+  coverage,
 }: {
   title?: string
+  coverage?: string | null
   suggestions: readonly SupplierSuggestion[] | undefined
   itemCount: number
   busy: boolean
@@ -157,10 +178,10 @@ export function FloatDialog({
         {suggestions === undefined ? (
           <Skeleton className="h-24" />
         ) : suggestions.length === 0 ? (
-          <Empty />
+          <Empty coverage={coverage} />
         ) : (
           <div className="-mx-5 -my-2">
-            <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} />
+            <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} />
           </div>
         )}
       </DialogContent>

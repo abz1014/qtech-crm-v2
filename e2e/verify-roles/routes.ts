@@ -184,6 +184,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/settings/team', admin: 'ok', sales: 'no', engineer: 'no', openers: [{ name: /^Add person$/, roles: A }] },
   { path: '/settings/targets', admin: 'ok', sales: 'no', engineer: 'no' },
   { path: '/settings/categories', admin: 'ok', sales: 'no', engineer: 'no' },
+  { path: '/settings/product-categories', admin: 'ok', sales: 'no', engineer: 'no', note: 'C4: Product categories, admin only (the 0098 trigger says so in the database too)' },
   { path: '/settings/company', admin: 'ok', sales: 'ok', engineer: 'ok' },
   { path: '/settings/details', admin: 'ok', sales: 'ok', engineer: 'ok' },
   { path: '/settings/exchange-rates', admin: 'ok', sales: 'ok', engineer: 'no', note: 'rates are currency amounts: admin and sales (2026-10-22)' },

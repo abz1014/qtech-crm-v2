@@ -102,6 +102,11 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
         <label htmlFor={id} className="flex min-w-[9rem] flex-1 flex-wrap items-baseline gap-x-2 text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
           <span className="min-w-0">{s.name}</span>
           {s.city ? <span className="text-xs font-regular text-fg-muted">{s.city}</span> : null}
+          {s.suppliedBefore ? (
+            <span className="inline-flex min-h-chip items-center rounded border border-tone-success-fg px-[6px] text-xs font-semibold text-tone-success-fg" data-badge="supplied-before">
+              Supplied this item before
+            </span>
+          ) : null}
         </label>
         {/* "2 items · same model": how many of the items they are suggested for, and the reason (R2-10; a bare "2 same model" read as a count of models). */}
         <span className={cn(pill, 'ml-auto')}>
@@ -188,6 +193,7 @@ export function SupplierPicker({
   error,
   onRetry,
   memory,
+  coverage,
 }: {
   groups: readonly SuggestionGroupResult[]
   ticked: ReadonlySet<string>
@@ -201,6 +207,8 @@ export function SupplierPicker({
   onRetry: () => void
   /** When given, every suggestion gets a History button that opens its memory card. */
   memory?: MemoryContext
+  /** "No supplier on file deals in <category> yet." (coverageLine), or null. */
+  coverage?: string | null
 }) {
   const [text, setText] = useState('')
   // Someone added by hand (or from a supplier's page) who is also suggested shows once, in the reason group, ticked there.
@@ -233,11 +241,18 @@ export function SupplierPicker({
         </EmptyState>
       ) : groups.length === 0 ? (
         <EmptyState className="rounded border bg-surface" icon={Building2} title="No supplier on file for these items yet">
-          Nothing is suggested until a supplier has carried one of these brands or supplied something like it. Add one by name below, or
+          {coverage ?? 'Nothing is suggested until a supplier has dealt in one of these categories, carried one of these brands or supplied something like it.'} Add one by name below, or
           save the RFQ and come back to it.
         </EmptyState>
       ) : (
-        groups.map(g => <Group key={g.group} g={g} ticked={ticked} onToggle={onToggle} memory={memory} />)
+        <>
+          {coverage ? (
+            <p className="m-0 rounded border border-dashed border-line-strong bg-surface px-4 py-3 text-base text-fg-2" data-coverage>
+              {coverage}
+            </p>
+          ) : null}
+          {groups.map(g => <Group key={g.key} g={g} ticked={ticked} onToggle={onToggle} memory={memory} />)}
+        </>
       )}
 
       {shownManual.length > 0 ? (

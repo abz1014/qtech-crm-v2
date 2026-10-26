@@ -52,7 +52,7 @@ export function ShortcutsPanel({ className }: { className?: string }) {
           Keyboard shortcuts
         </h2>
         <p className="max-w-[62ch] text-sm text-fg-2 text-pretty">
-          N starts an RFQ, E adds an expense (admin), O starts an order without an enquiry, C opens Paste or photo, G then T goes to To do, / jumps to a list&apos;s search and ? opens the keyboard
+          N starts an enquiry, E adds an expense (admin), O starts an order without an enquiry, G then T goes to To do, / jumps to a list&apos;s search and ? opens the keyboard
           shortcuts. Turn these off if you use voice control or press keys by accident. Ctrl+K and Ctrl+Z always work. This device only.
         </p>
       </div>

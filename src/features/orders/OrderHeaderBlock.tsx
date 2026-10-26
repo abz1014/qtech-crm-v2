@@ -401,7 +401,7 @@ export function OrderHeaderBlock({
  * The order's "More" menu (the shared MoreMenu): Cancel order (with a reason, and Undo) or Reopen order. A "More" text button beside
  * the title from tablet up, and an icon in the phone's one bar (useMobileBar) below 768. Engineers have none.
  */
-export function OrderMoreMenu({ order, touch = false, recordPayment = false }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean }) {
+export function OrderMoreMenu({ order, touch = false, recordPayment = false, afterDelete }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean; /** Where a deleted order lands (the job page: the jobs list). */ afterDelete?: string }) {
   const { toast } = useToast()
   const cancel = useCancelOrder(order.id)
   const once = useInFlight() // HW-15: one cancel / reopen per press, however many clicks
@@ -410,7 +410,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
   const today = businessToday()
-  const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName })
+  const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName }, afterDelete)
   const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
 
   const reopen = () =>

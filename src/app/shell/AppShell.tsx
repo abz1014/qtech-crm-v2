@@ -11,7 +11,6 @@ import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
-import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
 import type { NavCounts } from '@/app/shell/useNavCounts'
 import { usePageSettled } from '@/app/usePageSettled'
@@ -66,7 +65,6 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
     if (settled) markContentDrawn()
   }, [settled])
   const palette = usePalette()
-  const { openCapture } = useCapture()
   useSearchPaletteSource()
   const { pathname } = useLocation()
   const active = navItemForPath(pathname)
@@ -83,8 +81,8 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       >
         Skip to content
       </a>
-      <TopBar user={user} counts={badges} dots={dots} onSearch={palette.open} onCapture={openCapture} />
-      <MobileBar user={user} title={title} onSearch={palette.open} onCapture={openCapture} />
+      <TopBar user={user} counts={badges} dots={dots} onSearch={palette.open} />
+      <MobileBar user={user} title={title} onSearch={palette.open} />
       <main id="main" tabIndex={-1} className="min-h-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
           <NavCountsContext.Provider value={nav.ready ? counts : null}>

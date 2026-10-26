@@ -124,6 +124,22 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     expect(await axeViolations(page)).toEqual([])
   })
 
+  test('the order steps are on the page (P5-D2): the green button opens the Supplier order stage, which holds the supplier work; Invoice offers nothing before delivery', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
+    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Choose suppliers' }).click()
+    const stage = page.getByRole('region', { name: 'Supplier order stage' })
+    await expect(stage).toBeVisible()
+    await expect(stage.getByText('1 line has no supplier')).toBeVisible()
+    await expect(stage.getByRole('button', { name: 'Add supplier' }).first()).toBeVisible()
+    // the order lines (Order stage) and the invoice (nothing to create before the goods are delivered) are on this page, not the order page
+    await page.locator('[data-stages]').getByRole('button', { name: /^Order/ }).click()
+    await expect(page.getByRole('region', { name: 'Order stage' }).getByText(f.po).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Create invoice' })).toHaveCount(0)
+    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+  })
+
   test('an engineer opens the job with no Money panel and no price', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'engineer', `/jobs/${f.rfq.number}`)

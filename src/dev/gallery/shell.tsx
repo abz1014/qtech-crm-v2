@@ -31,8 +31,8 @@ export function ShellScene() {
   const items = params.get('tabs') === '6' ? SIX : FIVE
   return (
     <div data-shell-scene="" className="-m-6 grid min-h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
-      <TopBar user={USER} counts={COUNTS} items={items} onSearch={noop} onCapture={noop} />
-      <MobileBar user={USER} title="Companies" onSearch={noop} onCapture={noop} />
+      <TopBar user={USER} counts={COUNTS} items={items} onSearch={noop} />
+      <MobileBar user={USER} title="Companies" onSearch={noop} />
       <div className="grid content-start gap-2 p-6">
         <p className="text-2xl font-semibold tracking-tight">Today</p>
         <p className="max-w-prose text-sm text-fg-2">The page draws here. The bars above and below are the real shell components.</p>
