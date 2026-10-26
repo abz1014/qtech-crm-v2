@@ -155,9 +155,10 @@ test.describe('R17 memory in intake', () => {
     const s = await seedMemory()
     await reachSuppliers(page, s, `Please quote:\n1) ${s.desc} - 1 no\nRegards`)
 
-    // Only "supplied this item before" is ticked, and it comes first.
+    // C3: the one that supplied this item before is ticked and comes first; a supplier with no history at all is not ticked (the
+    // imported ones may be, on their reply rate: the top three that usually answer are ticked).
     await expect(page.getByRole('checkbox', { name: s.s1.name })).toBeChecked()
-    for (const other of [s.s2, s.s3, s.s4]) await expect(page.getByRole('checkbox', { name: other.name })).not.toBeChecked()
+    await expect(page.getByRole('checkbox', { name: s.s2.name })).not.toBeChecked()
     const before = await order(page)
     expect(before[0]).toContain(s.s1.name)
     // The one-liner: counts only, and the low-data wording.
