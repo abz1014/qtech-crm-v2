@@ -86,6 +86,7 @@ describe('invalidation map (R01)', () => {
     'order.repeat': { companyId: 'c1' },
     'order.update': { orderId: 'o1' },
     'order.cancel': { orderId: 'o1' },
+    'order.delete': { orderId: 'o1' },
     'po.issue': { orderId: 'o1' },
     'po.pdf': { orderId: 'o1' },
     'today.chase': {},

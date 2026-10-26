@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Icon } from '@/ui/Icon'
-import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, CopyPlus, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
+import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, CopyPlus, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Trash2, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
@@ -14,7 +14,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { MessageActions } from '@/ui/MessageActions'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
-import { MenuItem } from '@/ui/Popover'
+import { MenuItem, MenuSeparator } from '@/ui/Popover'
 import { MoreMenu } from '@/ui/MoreMenu'
 import { Skeleton } from '@/ui/Skeleton'
 import { NextStepBox } from '@/ui/NextStepBox'
@@ -26,6 +26,7 @@ import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/Order
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
+import { useDeleteOrderFlow } from '@/features/orders/deleteFlow'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
@@ -408,6 +409,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
   const today = businessToday()
+  const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName })
   const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
 
   const reopen = () =>
@@ -451,7 +453,16 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
               Cancel order
             </MenuItem>
           )}
+          {del.ask ? (
+            <>
+              <MenuSeparator />
+              <MenuItem icon={Trash2} danger onClick={del.ask}>
+                Delete order
+              </MenuItem>
+            </>
+          ) : null}
       </MoreMenu>
+      {del.node}
       {history.node}
       {recordPayment ? <RecordPaymentDialog open={paying} onOpenChange={setPaying} orderId={order.id} /> : null}
       {cancelling ? (

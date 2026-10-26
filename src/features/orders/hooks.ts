@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { nullOnInvalidId } from '@/lib/uuid'
 import { seesPrices } from '@/app/session'
@@ -85,6 +85,30 @@ export function useCancelOrder(orderId: string) {
     mutationFn: (patch: Parameters<typeof api.updateOrder>[1]) => api.updateOrder(orderId, patch),
     onSuccess: () => invalidateAfter(client, 'order.cancel', { orderId }),
   })
+}
+
+export function useRemoveOrderItem(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.removeOrderItem(id),
+    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
+  })
+}
+
+/** What stops the order being deleted and what goes with it, read when the confirm opens. Never cached. */
+export function useOrderDeleteFacts(orderId: string, enabled: boolean) {
+  return useQuery({ queryKey: [...qk.orders.detail(orderId), 'delete-facts'], queryFn: () => api.getOrderDeleteFacts(orderId), enabled, staleTime: 0, gcTime: 0 })
+}
+
+/** The delete itself. It does not refresh anything: the flow leaves the page first, then calls `refreshAfterOrderDelete`. */
+export function useDeleteOrder() {
+  return useMutation({ mutationFn: (orderId: string) => api.deleteOrder(orderId) })
+}
+
+/** After the page is left: drop the deleted order's cached pages and refresh the lists, Today, the RFQ it came from and the money. */
+export function refreshAfterOrderDelete(client: QueryClient, orderId: string): Promise<void> {
+  client.removeQueries({ queryKey: qk.orders.detail(orderId) })
+  return invalidateAfter(client, 'order.delete', { orderId })
 }
 
 export function useUpdateItem(orderId: string) {
