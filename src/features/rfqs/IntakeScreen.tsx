@@ -1,3 +1,4 @@
+import * as suggestLib from '@/features/rfqs/lib/suggestLib'
 import { pastedText } from '@/lib/docread/htmlTable'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -530,7 +531,7 @@ function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMo
     candidateList.map(c => c.id),
     wantSuppliers && candidates.isSuccess,
   )
-  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess)
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess, suggestLib)
   const suggestions = useMemo(
     () => suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }),
     [extras.items, extras.extra, candidateList, memory.data, today],

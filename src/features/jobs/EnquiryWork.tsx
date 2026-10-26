@@ -12,8 +12,8 @@ import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
-import { coverageLine, suggestSuppliers, toRateTable, quotationSent, type SuggestionItem } from '@/features/rfqs/lib'
-import { withShortlist } from '@/features/rfqs/askList'
+import { toRateTable, quotationSent, type SuggestionItem } from '@/features/rfqs/lib'
+import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
 import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
@@ -120,19 +120,20 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
   const memoryItems = useMemo(() => itemList.map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: i.familyId })), [itemList])
   const memorySuppliers = useMemo(() => [...new Set([...inquiryList.filter(i => i.lines.length > 0).map(i => i.supplierId), ...candidateList.map(c => c.id)])].sort(), [inquiryList, candidateList])
   const memory = useSupplierMemory(memoryItems, memorySuppliers, memorySuppliers.length > 0 && itemList.length > 0 && candidates.isSuccess, rfq.id)
-  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess)
+  const lib = useSuggestLib()
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess, lib)
   const suggestResult = useMemo(
-    () => (candidates.isSuccess ? suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
-    [candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
+    () => (lib && candidates.isSuccess ? lib.suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
+    [lib, candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
   )
   const suggestions = suggestResult?.suppliers
-  const coverage = suggestResult ? coverageLine(suggestResult.uncovered) : null
+  const coverage = lib && suggestResult ? lib.coverageLine(suggestResult.uncovered) : null
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
   const ranking = useRankedQuotes(rfq.id, hasPrices)
   const askedCount = inquiryList.filter(i => i.sentOn || i.noOfferOn).length
   const nobodyAsked = askedCount === 0
-  const askList = useMemo(() => withShortlist(inquiryList, itemList, suggestions), [inquiryList, itemList, suggestions])
+  const askList = useMemo(() => (lib ? lib.withShortlist(inquiryList, itemList, suggestions) : []), [lib, inquiryList, itemList, suggestions])
   const quotations = useQuotations(prices ? rfq.id : undefined)
   const orders = useOrdersForRfq(rfq.id)
   const quotationCount = quotations.data?.length ?? 0

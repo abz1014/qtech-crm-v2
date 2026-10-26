@@ -149,6 +149,10 @@ export function preloadRoute(pathname: string, sessionUserId: string | null): bo
   // The small reads module is asked for first, so its requests go out while the page's larger code is still downloading.
   const reads = routePrefetch[keys[keys.length - 1]]
   const readsModule = reads?.()
+  // The Auth client starts reading its stored session now, while the reads module downloads, so `getSession()` below answers at once
+  // instead of making the first reads wait for the client to start (perf: the page's first data).
+  const early = getSupabase()?.auth.getSession()
+  if (early) void early.catch(() => undefined)
   const code = Promise.all(keys.map(key => routeChunks[key]().catch(() => null)))
   const user = readRememberedUser()
   const id = pathname.split('/').filter(Boolean)[1]
