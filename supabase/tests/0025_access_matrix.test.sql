@@ -277,6 +277,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
   ('table', 'cash_topups',       '',      'SIUD', '',     ''),            -- 0087: cash drawn from the bank, admin only
   ('table', 'cash_counts',       '',      'SID',  '',     ''),            -- 0087: cash counts, admin only, never edited (delete and count again)
+  ('table', 'checked_findings',  '',      'SID',  '',     ''),            -- 0102: a "Mistakes to fix" finding the admin has checked, per company; never edited (un-tick = delete)
   ('function', 'link_imported_invoices',  '', 'X', '',     ''),           -- 0096: admin only (42501 for everyone else)
   ('function', 'link_imported_invoice',   '', 'X', '',     ''),           -- 0096: admin only
   ('function', 'unlink_imported_invoice', '', 'X', '',     ''),           -- 0096: admin only
@@ -362,6 +363,7 @@ insert into public.expense_claims (id, created_by, amount_pkr, note) values
   (pg_temp.f('e1'), 'a0000000-0000-4000-8000-000000000001', 5, 'other claim');
 insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);
 insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);
+insert into public.checked_findings (finding_key, message_hash) values ('probe-key', 'probe-hash');   -- 0102
 insert into public.orders (id, company_id, owner_id, legacy_source) values   -- 0096: an imported order, an unlinked imported invoice and a linked one
   (pg_temp.f('e7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"sheet":"orders"}');
 insert into public.invoices (id, company_id, number, net_amount, gst_amount, legacy_source) values
@@ -451,7 +453,9 @@ insert into spec values
   ('expense_claims', 'own', 'id = @e0', 'note', $q$insert into public.expense_claims (id, amount_pkr) values (@e4, 5)$q$),   -- 0087
   ('expense_claims', 'other', 'id = @e1', 'note', null),   -- 0087: a claim is always the caller's own, so "someone else's" cannot be inserted
   ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
-  ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$);   -- 0087
+  ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$),   -- 0087
+  ('checked_findings', '', $q$finding_key = 'probe-key'$q$, 'message_hash', $q$insert into public.checked_findings (finding_key, message_hash) values ('probe-2', 'probe-hash')$q$);   -- 0102
+
 
 
 insert into probes
@@ -629,8 +633,8 @@ insert into probes values
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (38)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 38, 'coverage: 38 tables');
+  'coverage: the matrix lists every table in schema public (39)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 39, 'coverage: 39 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

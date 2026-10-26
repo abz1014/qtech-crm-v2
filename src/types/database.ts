@@ -189,6 +189,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"checked_findings": {
+                  Row: {
+                    "checked_at": string,"checked_by": string,"finding_key": string,"message_hash": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "checked_at"?: string,"checked_by"?: string,"finding_key": string,"message_hash": string
+                  }
+                  Update: {
+                    "checked_at"?: string,"checked_by"?: string,"finding_key"?: string,"message_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "checked_findings_checked_by_fkey"
+      columns: ["checked_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clarifications": {
                   Row: {
                     "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
