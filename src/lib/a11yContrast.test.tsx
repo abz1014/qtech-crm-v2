@@ -54,9 +54,17 @@ function tokenOfClass(name: string): string | null {
     primary: 'primary',
     'primary-foreground': 'on-primary',
     'brand-green': 'brand-green',
+    // Direction C: the navy (top bar, next-step band, a selected segment or pressed toggle)
+    chrome: 'bg-chrome',
+    'chrome-fg': 'fg-on-chrome',
+    'chrome-fg-2': 'fg-on-chrome-2',
+    'chrome-field': 'chrome-field',
+    'chrome-edge': 'chrome-input',
   }
   if (direct[name]) return direct[name]
   if (/^tone-[a-z]+-(fg|bg)$/.test(name)) return name
+  if (/^block-[a-z]+-fg$/.test(name)) return name
+  if (/^block-[a-z]+$/.test(name)) return `${name}-bg`
   return null
 }
 
@@ -261,8 +269,11 @@ describe('tone text and green text on highlighted rows and tints', () => {
       expect(low, low.map(([b, r]) => `${text} on ${b}: ${r}:1`).join(', ')).toEqual([])
     })
   }
-  it('green text (primary-text) is at least 5:1 on every background it can sit on', () => {
-    const low = backgrounds.map(b => [b, contrast('primary-text', b)] as const).filter(([, r]) => r < 5)
+  // Direction C (2026-10-22): the block tints are stronger, and no green can be 5:1 on the red tint and still 3:1 against the
+  // ink (link-in-text-block). WCAG's 4.5:1 is the bar on the tints; white and the field keep 5:1.
+  it('green text (primary-text) is at least 4.5:1 on every background it can sit on, 5:1 on white and the field', () => {
+    for (const b of ['bg-surface', 'bg-canvas']) expect(contrast('primary-text', b), b).toBeGreaterThanOrEqual(5)
+    const low = backgrounds.map(b => [b, contrast('primary-text', b)] as const).filter(([, r]) => r < 4.5)
     expect(low, low.map(([b, r]) => `primary-text on ${b}: ${r}:1`).join(', ')).toEqual([])
   })
   it('a green link inside a sentence is told apart from the text around it: 3:1 against fg (axe link-in-text-block)', () => {
@@ -275,5 +286,101 @@ describe('tone text and green text on highlighted rows and tints', () => {
   })
   it('tailwind.config.ts maps text-primary to --primary-text, not to the button fill', () => {
     expect(read('tailwind.config.ts')).toMatch(/textColor:[\s\S]*primary:\s*\{\s*DEFAULT:\s*v\('primary-text'\)/)
+  })
+})
+
+/*
+ * Direction C, "Colour blocks" (DECISIONS 2026-10-22): every new pair. The navy chrome (top bar, phone bars, next-step band), the
+ * [data-surface="navy"] re-inking of the primitives inside it, the Late / Today / This week blocks and the text that sits on them,
+ * the white ring on the green button, the round identifier plate and the open To do tile.
+ */
+describe('direction C: the navy chrome and the next-step band', () => {
+  it('text on the navy: white 7:1 or better, the quiet text 7:1 on the navy and on a field', () => {
+    expect(contrast('fg-on-chrome', 'bg-chrome')).toBeGreaterThanOrEqual(7)
+    expect(contrast('fg-on-chrome-2', 'bg-chrome')).toBeGreaterThanOrEqual(7)
+    expect(contrast('fg-on-chrome-2', 'chrome-field')).toBeGreaterThanOrEqual(7)
+    expect(contrast('fg-on-chrome', 'chrome-field-hover')).toBeGreaterThanOrEqual(7)
+    expect(contrast('fg-on-chrome-2', 'chrome-field-hover')).toBeGreaterThanOrEqual(4.5)
+  })
+  it('edges and indicators on the navy are 3:1 (WCAG 1.4.11)', () => {
+    expect(contrast('chrome-input', 'bg-chrome')).toBeGreaterThanOrEqual(3)
+    expect(contrast('chrome-input', 'chrome-field')).toBeGreaterThanOrEqual(3)
+    expect(contrast('indicator-on-chrome', 'bg-chrome')).toBeGreaterThanOrEqual(3)
+    expect(contrast('indicator-on-chrome', 'chrome-field')).toBeGreaterThanOrEqual(3)
+  })
+  it('the green button on the navy needs its white ring: green alone is under 3:1, the ring is 3:1 or better', () => {
+    expect(contrast('primary', 'bg-chrome')).toBeLessThan(3)
+    expect(read('docs/design/tokens.css')).toMatch(/--shadow-on-navy: 0 0 0 2px var\(--neutral-0\);/)
+    expect(contrast('neutral-0', 'bg-chrome')).toBeGreaterThanOrEqual(3)
+    expect(read('src/ui/Button.tsx')).toContain('[[data-surface=navy]_&]:shadow-on-navy')
+  })
+  it('the late sentence on the navy band (tone-danger-bg ink) is 7:1', () => {
+    expect(read('src/ui/NextStepBox.tsx')).toContain("tone === 'late' && 'text-tone-danger-bg'")
+    expect(contrast('tone-danger-bg', 'bg-chrome')).toBeGreaterThanOrEqual(7)
+  })
+  it('the avatar on the navy (re-inked to white with navy initials) is 7:1', () => {
+    expect(contrast('bg-chrome', 'neutral-0')).toBeGreaterThanOrEqual(7)
+  })
+
+  // The scope re-inks --fg, --bg-surface and friends; each text it can produce must still read on each surface it produces.
+  const css = read('docs/design/tokens.css')
+  const at = css.indexOf('[data-surface="navy"] {')
+  const scope = css.slice(at, css.indexOf('}', at))
+  const mapped: Record<string, string> = {}
+  for (const m of scope.matchAll(/--([\w-]+):\s*var\(--([\w-]+)\);/g)) mapped[m[1]] = m[2]
+  it('the guard can read the [data-surface="navy"] block', () => {
+    expect(Object.keys(mapped)).toEqual(expect.arrayContaining(['fg', 'fg-2', 'fg-muted', 'primary-text', 'bg-surface', 'bg-sunken', 'bg-selected', 'border-input', 'brand-green']))
+  })
+  for (const text of ['fg', 'fg-2', 'fg-muted', 'primary-text']) {
+    it(`inside the navy, ${text} reads 4.5:1 on the navy, a field and a hovered field`, () => {
+      for (const bg of ['bg-chrome', mapped['bg-surface'], mapped['bg-sunken'], mapped['bg-selected']]) {
+        expect(contrast(mapped[text], bg), `${mapped[text]} on ${bg}`).toBeGreaterThanOrEqual(4.5)
+      }
+    })
+  }
+  it('inside the navy, the focus ring and the field edge are 3:1 on the navy and on a field', () => {
+    for (const bg of ['bg-chrome', mapped['bg-surface']]) {
+      expect(contrast(mapped['brand-green'], bg), bg).toBeGreaterThanOrEqual(3)
+      expect(contrast(mapped['border-input'], bg), bg).toBeGreaterThanOrEqual(3)
+    }
+  })
+})
+
+describe('direction C: the colour blocks and what sits on them', () => {
+  const blocks = ['late', 'today', 'week', 'quiet'] as const
+  for (const b of blocks) {
+    it(`the ${b} block heading (its own ink) is 7:1 on the block`, () => {
+      expect(contrast(`block-${b}-fg`, `block-${b}-bg`)).toBeGreaterThanOrEqual(7)
+    })
+    it(`body text and the second line are 7:1 on the ${b} block`, () => {
+      expect(contrast('fg', `block-${b}-bg`)).toBeGreaterThanOrEqual(7)
+      expect(contrast('fg-2', `block-${b}-bg`)).toBeGreaterThanOrEqual(7)
+    })
+  }
+  it('Today draws the blocks from the block tokens, and only Late is red', () => {
+    const src = read('src/features/today/TodayScreen.tsx')
+    for (const b of blocks) expect(src).toContain(`bg-block-${b} text-block-${b}-fg`)
+    expect(src).toMatch(/i\.actionDueOn < today\) \? 'late' : 'today'/)
+  })
+  it('the round identifier plate (Tag) is 7:1', () => {
+    expect(read('src/ui/Tag.tsx')).toContain('bg-tone-info-bg text-block-week-fg')
+    expect(contrast('block-week-fg', 'tone-info-bg')).toBeGreaterThanOrEqual(7)
+  })
+  it('the open To do tile: the ink ring is 3:1 against the white tile (WCAG 1.4.11)', () => {
+    expect(read('src/features/today/TodayScreen.tsx')).toContain("open && 'ring-2 ring-inset ring-fg'")
+    expect(contrast('fg', 'bg-surface')).toBeGreaterThanOrEqual(3)
+  })
+  it('the table header rule (2 px ink) is 3:1 on the white table', () => {
+    expect(read('src/ui/DataTable.tsx')).toContain('border-b-2 border-fg bg-surface')
+    expect(contrast('fg', 'bg-surface')).toBeGreaterThanOrEqual(3)
+  })
+  it('a selected segment or pressed toggle (navy fill) carries its text at 7:1', () => {
+    expect(contrast('fg-on-chrome', 'bg-chrome')).toBeGreaterThanOrEqual(7)
+    expect(contrast('fg-on-chrome-2', 'bg-chrome')).toBeGreaterThanOrEqual(7)
+  })
+  it('field and button edges are 3:1 on the white tiles and on the field', () => {
+    expect(contrast('border-input', 'bg-canvas')).toBeGreaterThanOrEqual(3)
+    expect(contrast('border-input', 'bg-surface')).toBeGreaterThanOrEqual(3)
+    expect(contrast('border-strong', 'bg-surface')).toBeGreaterThanOrEqual(3)
   })
 })

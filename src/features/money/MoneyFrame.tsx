@@ -63,10 +63,10 @@ export function MoneyFrame({
                 aria-current={active === 'reports' ? 'page' : undefined}
                 className={cn(
                   'inline-flex h-touch items-center gap-2 rounded border px-3 text-sm font-medium',
-                  active === 'reports' ? 'border-fg bg-selected text-fg' : 'border-line-strong bg-surface text-fg',
+                  active === 'reports' ? 'border-chrome bg-chrome text-chrome-fg' : 'border-line-strong bg-surface text-fg',
                 )}
               >
-                <Icon icon={ChartColumn} className="text-fg-muted" />
+                <Icon icon={ChartColumn} className={active === 'reports' ? 'text-chrome-fg-2' : 'text-fg-muted'} />
                 Reports
               </Link>
             ) : undefined
@@ -107,7 +107,7 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
       className={cn(
         'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
         phone ? 'min-h-touch min-w-0 flex-auto justify-center gap-1 px-1 text-xs' : 'min-h-control gap-2 px-4 text-sm',
-        on ? 'border-fg bg-surface text-fg' : 'border-transparent text-fg-muted hover:text-fg',
+        on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg',
       )}
     >
       {/* The name is the visible words plus, for a short phone label, the full name for screen readers (WCAG 2.5.3 label in name). */}

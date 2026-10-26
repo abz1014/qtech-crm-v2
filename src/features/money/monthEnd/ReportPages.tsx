@@ -117,7 +117,7 @@ function whole<T>(get: (r: T) => Amount | null | undefined) {
 
 function Empty({ ctx, what }: { ctx: MonthEndCtx; what: string }) {
   return (
-    <section className="rounded border bg-surface">
+    <section className="rounded-panel border bg-surface">
       <EmptyState title={`Nothing to report for ${monthKeyLabel(ctx.month)}`}>
         {what} The report fills in as payments and expenses are recorded in {monthName(ctx.month)}.
       </EmptyState>
@@ -273,7 +273,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
 
           {/* Shown only when something was drawn or repaid: an empty panel every month was noise. */}
           {drawings ? (
-          <section aria-label="Not in P&L" className="overflow-hidden rounded border border-dashed border-line-input bg-canvas">
+          <section aria-label="Not in P&L" className="overflow-hidden rounded-panel border border-dashed border-line-input bg-canvas">
             <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
               <h3 className="text-base font-semibold">Drawings and loan repayment</h3>
               <InfoTip label="About drawings">Owner drawings and loan repayment are money out, but not a cost of doing business, so they are not in the profit.</InfoTip>
@@ -305,7 +305,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         <div className="grid gap-6">
           <Panel title="Where the money went" meta={<span className="num text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
             <div className="grid gap-3 px-5 py-4">
-              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 overflow-hidden rounded border bg-surface">
+              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 overflow-hidden rounded-panel border bg-surface">
                 <i className="block bg-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />
                 <i className="block bg-fg-muted" style={{ width: w(toPaisa(v.overheads.net)) }} />
                 {resultPositive ? <i className="block flex-1 bg-surface" /> : null}
@@ -390,7 +390,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       { id: 'date', header: 'Invoice date', kind: 'date', value: r => r.invoiceDate, cell: r => <span className="num">{formatShortDate(r.invoiceDate, asOf)}</span> },
       { id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays },
       { id: 'gross', header: 'Invoice gross', kind: 'money', value: r => r.gross, ...whole<AgingRow>(r => r.gross), hideBelowMd: true },
-      { id: 'applied', header: 'Paid by then', kind: 'money', value: r => (toPaisa(r.applied) > 0n ? r.applied : null), ...whole<AgingRow>(r => r.applied), hideBelowMd: true },
+      { id: 'applied', header: 'Paid by then', kind: 'money', value: r => (toPaisa(r.applied) > 0n ? r.applied : null), ...whole<AgingRow>(r => r.applied), hideClass: 'hidden min-[1440px]:table-cell' }, // 10 columns at 16 px do not fit a 1366 window: Paid by then waits for 1440
       ...AGING_BUCKETS.map(
         (b): Column<AgingRow> => ({
           id: `b${b}`,
@@ -809,7 +809,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           }
         >
           <div className="grid gap-4 px-5 py-4">
-            <div className="grid divide-y rounded border md:grid-cols-2 md:divide-x md:divide-y-0">
+            <div className="grid divide-y rounded-panel border md:grid-cols-2 md:divide-x md:divide-y-0">
               <div className="grid gap-1 px-4 py-3">
                 <span className="text-xs text-fg-2">Output GST, {name} invoices</span>
                 <span className="num text-base">

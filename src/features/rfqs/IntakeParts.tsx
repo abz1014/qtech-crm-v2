@@ -50,7 +50,7 @@ export interface BarAction {
 
 /**
  * The sticky "Next step" bar under the steps of New RFQ. Desktop: the summary, a warning, then the buttons in one row, the green
- * one last. Phone (owner audit N1): one slim row (about 62 px) so it never covers the items: the green button at full width and
+ * one last. Phone (owner audit N1): one slim row (about 62 px) that sits in the page after the list, never over it (audit: a sticky bar covered supplier rows at 375): the green button at full width and
  * the rest ("Back", "Save for later") in a ⋯ menu. The summary is not repeated there, and the warning (with its own one-tap fix)
  * sits just above the bar, in the page.
  */
@@ -60,7 +60,7 @@ export function StepBar({ summary, warning, primary, more }: { summary?: ReactNo
     return (
       <>
         {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
-        <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-3 z-10 flex items-center gap-2 rounded border bg-surface p-2 shadow-pop">
+        <div role="region" aria-label="Next step" data-sticky-bar className="flex items-center gap-2 rounded-row border bg-surface p-2">
           {primary ? (
             <Button
               variant="primary"
@@ -91,7 +91,7 @@ export function StepBar({ summary, warning, primary, more }: { summary?: ReactNo
     )
   }
   return (
-    <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded border bg-surface px-4 py-3 shadow-pop">
+    <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-row border bg-surface px-4 py-3 shadow-pop">
       {summary ? <p className="m-0 min-w-0 text-sm text-fg-2">{summary}</p> : null}
       {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
       <span className="flex-1" />
@@ -214,7 +214,7 @@ export function Hint({ tone = 'warning', children, className }: { tone?: 'warnin
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded border px-4 py-3 text-sm text-fg-2',
+        'flex items-start gap-3 rounded-row border px-4 py-3 text-sm text-fg-2',
         tone === 'info' ? 'border-tone-info-fg/25 bg-tone-info-bg' : 'border-tone-warning-fg/25 bg-tone-warning-bg',
         className,
       )}
@@ -317,7 +317,7 @@ export function EnquiryCard({
   // The text is shown as drawn (blank specs highlighted); "Edit the text" swaps it for a text area.
   const [editing, setEditing] = useState(false)
   return (
-    <section aria-label="The message" className="overflow-hidden rounded border bg-surface">
+    <section aria-label="The message" className="overflow-hidden rounded-panel border bg-surface">
       <header className="flex flex-wrap items-start gap-3 border-b px-5 py-4">
         <div className="min-w-0 flex-1">
           <span className="inline-flex items-center gap-1">
@@ -436,7 +436,7 @@ export function FloatedPanel({
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const next = messages ? asked.find(i => !opened.has(i.id)) : undefined
   return (
-    <section aria-label="Sent to suppliers" className="grid gap-4 rounded border bg-surface p-6">
+    <section aria-label="Sent to suppliers" className="grid gap-4 rounded-panel border bg-surface p-6">
       <p className="m-0 flex items-center gap-2 text-sm text-tone-success-fg">
         <Icon icon={CircleCheck} />
         Asked <span className="num">{n}</span> {n === 1 ? 'supplier' : 'suppliers'} on {formatDay(floatedOn)}

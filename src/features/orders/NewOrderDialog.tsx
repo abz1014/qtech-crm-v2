@@ -100,7 +100,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
       >
         {chosen ? (
           <div className="grid gap-4">
-            <div className="grid gap-1 rounded border bg-sunken p-4" data-testid="chosen-order">
+            <div className="grid gap-1 rounded-panel border bg-sunken p-4" data-testid="chosen-order">
               <span className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="font-medium">{chosen.companyName}</span>
                 <span className="num text-sm text-fg-2">{orderRef(chosen.number)}</span>

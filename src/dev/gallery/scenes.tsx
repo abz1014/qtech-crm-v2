@@ -252,7 +252,7 @@ const COMPANIES: ComboOption[] = [
 export function ComboScene() {
   const [co, setCo] = useState<string | null>(null)
   return (
-    <div className="grid w-[427px] max-w-full gap-2 rounded border bg-surface p-5">
+    <div className="grid w-[427px] max-w-full gap-2 rounded-panel border bg-surface p-5">
       <Field label="Company">
         <Combobox
           options={COMPANIES}
@@ -272,7 +272,7 @@ export function Controls() {
   const [rate, setRate] = useState<number | null>(278.4)
   const [a, setA] = useState(true)
   return (
-    <div className="grid w-full gap-6 rounded border bg-surface p-6 grid-cols-1 md:grid-cols-3">
+    <div className="grid w-full gap-6 rounded-panel border bg-surface p-6 grid-cols-1 md:grid-cols-3">
       <div className="grid content-start gap-4">
         <Field label="Default">
           <TextField placeholder="Placeholder, 8.4:1" />
@@ -353,7 +353,7 @@ export function Misc() {
   const [filter, setFilter] = useState('all')
   const [role, setRole] = useState('customer')
   return (
-    <div className="grid w-full min-w-0 grid-cols-1 gap-6 rounded border bg-surface p-4 md:p-6">
+    <div className="grid w-full min-w-0 grid-cols-1 gap-6 rounded-panel border bg-surface p-4 md:p-6">
       <section className="grid min-w-0 grid-cols-1 gap-3">
         <h2 className="text-base font-semibold">Segmented control</h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -412,7 +412,7 @@ export function Misc() {
 
 export function Overlays() {
   return (
-    <div className="grid w-[420px] max-w-full gap-3 rounded border bg-surface p-6">
+    <div className="grid w-[420px] max-w-full gap-3 rounded-panel border bg-surface p-6">
       <section className="grid gap-3 pb-[170px]">
         <div className="flex flex-wrap items-start gap-6">
           <Tooltip content="Paste or photo" shortcut="C" side="bottom">
@@ -514,7 +514,7 @@ function ToastScene({ kind }: { kind: ToastKind }) {
 export function Feedback() {
   const [on, setOn] = useState(true)
   return (
-    <div className="grid w-full gap-6 rounded border bg-surface p-6 grid-cols-1 md:grid-cols-2">
+    <div className="grid w-full gap-6 rounded-panel border bg-surface p-6 grid-cols-1 md:grid-cols-2">
       <div className="grid content-start gap-3">
         <div className="flex flex-wrap gap-2">
           <ToggleButton pressed={false} onPressedChange={noop} icon={ListFilter}>
@@ -578,12 +578,12 @@ const NODES: Record<SceneName, () => ReactNode> = {
   'combobox-open': () => <ComboScene />,
   'overlays': () => <Overlays />,
   'tooltips': () => (
-    <div className="w-[760px] max-w-full rounded border bg-surface p-6 pb-[140px]">
+    <div className="w-[760px] max-w-full rounded-panel border bg-surface p-6 pb-[140px]">
       <TooltipVariants />
     </div>
   ),
   'infotip-open': () => (
-    <div className="w-[760px] max-w-full rounded border bg-surface p-6 pb-[160px]">
+    <div className="w-[760px] max-w-full rounded-panel border bg-surface p-6 pb-[160px]">
       <InfoTipExamples />
     </div>
   ),

@@ -191,7 +191,7 @@ export function CategoriesPage() {
           Check your connection, then try again.
         </Banner>
       ) : loading ? (
-        <div role="status" className="grid gap-px overflow-hidden rounded border bg-line" aria-busy="true" aria-label="Loading categories">
+        <div role="status" className="grid gap-px overflow-hidden rounded-panel border bg-line" aria-busy="true" aria-label="Loading categories">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="bg-surface p-4">
               <Skeleton className="h-8 w-full" />
@@ -205,7 +205,7 @@ export function CategoriesPage() {
             <GroupSection key={s.group.id} s={s} phone={phone} totals={totals} groupItems={groupItems(s)} itemsFor={c => categoryItems(c, s)} onAdd={() => setOpen({ kind: 'add', groupId: s.group.id })} />
           ))}
           {archived.length > 0 ? (
-            <details className="group/arch rounded border bg-surface">
+            <details className="group/arch rounded-panel border bg-surface">
               <summary className="flex min-h-touch cursor-pointer items-center gap-2 px-4 text-base font-medium text-fg-2 [&::-webkit-details-marker]:hidden">
                 <Icon16 />
                 Archived ({archived.length})
@@ -263,7 +263,7 @@ function GroupSection({
 }) {
   const headId = `grp-${s.group.id}`
   return (
-    <section aria-labelledby={headId} data-group={s.group.name} className="overflow-hidden rounded border bg-surface">
+    <section aria-labelledby={headId} data-group={s.group.name} className="overflow-hidden rounded-panel border bg-surface">
       <header className="flex items-center gap-3 border-b bg-sunken py-2 pl-4 pr-1">
         <div className="grid min-w-0 flex-1">
           <h2 id={headId} className="min-w-0 text-lg font-semibold tracking-snug [overflow-wrap:anywhere]">

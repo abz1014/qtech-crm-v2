@@ -134,7 +134,7 @@ test.describe('shell widths', () => {
  * smaller, never the buttons. A phone-like context (touch, mobile), so (pointer: coarse) matches.
  */
 test.describe('touch targets at Smaller text', () => {
-  test('controls, small buttons and segments 44, rows 48; the phone bar and tabs stay 44 or taller', async ({ browser }, info) => {
+  test('controls, small buttons and segments 44, large buttons 52, rows 56; the phone bar and tabs stay 44 or taller', async ({ browser }, info) => {
     test.skip(info.project.name !== 'w1440', 'it makes its own phone context')
     const context = await browser.newContext({ ...info.project.use, viewport: { width: 375, height: 700 }, hasTouch: true, isMobile: true })
     const page = await context.newPage()
@@ -159,7 +159,7 @@ test.describe('touch targets at Smaller text', () => {
           }
         })
         expect(m.coarse, 'the context is a touch screen').toBe(true)
-        expect([m.control, m.controlLg, m.controlSm, m.segment, m.row, m.touch], `${text} text`).toEqual([44, 44, 44, 44, 48, 44])
+        expect([m.control, m.controlLg, m.controlSm, m.segment, m.row, m.touch], `${text} text`).toEqual([44, 52, 44, 44, 56, 44])
         expect(m.bar.filter(h => h < 44), `phone bar targets under 44 px, ${text} text`).toEqual([])
         expect(m.tabs.filter(h => h < 44), `tabs under 44 px, ${text} text`).toEqual([])
       }

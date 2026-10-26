@@ -247,7 +247,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
         </dl>
 
         {editing ? (
-          <div className="grid gap-4 rounded border bg-canvas p-4">
+          <div className="grid gap-4 rounded-panel border bg-canvas p-4">
             <FormField<Values, 'net'> name="net" label="Net amount, PKR" help="Change it to invoice part of the order.">
               {f => <NumberInput {...f} onChange={setNet} />}
             </FormField>

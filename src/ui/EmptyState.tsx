@@ -45,7 +45,7 @@ export function EmptyState({ mood = 'neutral', icon, title, children, actions, m
       data-mood={mood}
       className={cn(
         'grid justify-items-center gap-3 text-center',
-        edge ? 'min-h-[260px] content-center rounded bg-surface px-6 py-10' : 'px-6 py-10',
+        edge ? 'min-h-[260px] content-center rounded-panel bg-surface px-6 py-10' : 'px-6 py-10',
         edge === 'solid' && 'border',
         edge === 'dashed' && 'border border-dashed border-line-strong',
         className,

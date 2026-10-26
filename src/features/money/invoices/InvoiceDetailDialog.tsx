@@ -151,7 +151,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
 
   return (
     <>
-      <dl className="grid grid-cols-3 gap-px overflow-hidden rounded border bg-line text-sm">
+      <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-panel border bg-line text-sm">
         {[
           ['Net', net],
           ['GST', gst],
@@ -209,7 +209,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         ) : (
           <ul className="grid gap-1">
             {(receipts.data ?? []).map(r => (
-              <li key={r.id} className="flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm">
+              <li key={r.id} className="flex items-center justify-between gap-3 rounded-row border px-3 py-2 text-sm">
                 <button type="button" onClick={() => void open(r.path)} className="inline-flex min-w-0 items-center gap-2 text-left font-medium text-primary hover:underline">
                   <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
                   <span className="min-w-0 [overflow-wrap:anywhere] break-all">{r.fileName}</span>

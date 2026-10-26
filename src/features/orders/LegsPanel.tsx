@@ -91,7 +91,7 @@ export function LegsPanel({
   const imported = order.imported
 
   return (
-    <section aria-label="Supplier orders" className="min-w-0 rounded border bg-surface">
+    <section aria-label="Supplier orders" className="min-w-0 rounded-panel border bg-surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Supplier orders</h2>
         <InfoTip label="About supplier orders">One supplier's part of this order: their PO, when it was placed, received and delivered.</InfoTip>
@@ -266,13 +266,13 @@ function Leg({
       <div className="grid min-w-0 content-start gap-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="min-w-0 break-words font-medium">{name}</span>
-          {ccy ? <span className="num inline-flex h-5 items-center rounded border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
+          {ccy ? <span className="num inline-flex h-chip items-center rounded-round border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
           <span data-testid={`leg-${letter}-state`}>
             <StatusBadge dimension="goods" value={STATE_DIM[state]} />
           </span>
           {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
           {po || !pastPo ? (
-          <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-5 items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
+          <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-chip items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
           ) : null}
@@ -302,7 +302,7 @@ function Leg({
         </div>
         {lines ? <p className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{lines}</p> : null}
         {changed && po ? (
-          <div role="status" data-testid={`leg-${letter}-changed`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
+          <div role="status" data-testid={`leg-${letter}-changed`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
             <Icon icon={TriangleAlert} className="text-tone-warning-fg" />
             <span className="min-w-0 flex-1 text-pretty">
               <b className="font-semibold">

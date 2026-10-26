@@ -70,7 +70,7 @@ export function SegmentedControl({
   )
   const segment = (o: SegmentOption) => (
     <>
-      {o.icon ? <Icon icon={o.icon} className="text-fg-muted group-data-[state=checked]:text-fg-2 group-data-[state=active]:text-fg-2" /> : null}
+      {o.icon ? <Icon icon={o.icon} className="text-fg-muted group-data-[state=checked]:text-chrome-fg-2 group-data-[state=active]:text-chrome-fg-2" /> : null}
       {o.label}
       <NeedsCount n={o.needs} variant={o.needsVariant} />
     </>
@@ -78,11 +78,11 @@ export function SegmentedControl({
   const segClass = cn(
     'group inline-flex shrink-0 items-center justify-center gap-[6px] whitespace-nowrap rounded border border-transparent px-3 text-xs font-medium text-fg-muted',
     'transition-colors duration-fast ease-out hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled',
-    // WCAG 1.4.11: the selected segment has an ink edge (3:1+ against the track), not only a white fill.
-    'data-[state=checked]:border-fg data-[state=checked]:bg-surface data-[state=checked]:text-fg',
-    'data-[state=active]:border-fg data-[state=active]:bg-surface data-[state=active]:text-fg',
+    // WCAG 1.4.11: the selected segment is filled navy (direction C), 12:1 against the track.
+    'data-[state=checked]:border-chrome data-[state=checked]:bg-chrome data-[state=checked]:text-chrome-fg',
+    'data-[state=active]:border-chrome data-[state=active]:bg-chrome data-[state=active]:text-chrome-fg',
     // locked (a submitting form disables its fieldset): the selected segment keeps its surface but greys out
-    'disabled:data-[state=checked]:text-fg-disabled disabled:data-[state=active]:text-fg-disabled',
+    'disabled:data-[state=checked]:border-line disabled:data-[state=checked]:bg-surface disabled:data-[state=checked]:text-fg-disabled disabled:data-[state=active]:border-line disabled:data-[state=active]:bg-surface disabled:data-[state=active]:text-fg-disabled',
     // On a phone the height is a floor, so a label that has to break onto two lines grows the segment instead of spilling out.
     large ? 'h-control max-sm:h-auto max-sm:min-h-control' : 'h-segment max-sm:h-auto max-sm:min-h-segment',
     // Shares the width but never shrinks below its words: a track too narrow wraps (phones) or scrolls (wider) instead of overlapping labels.
