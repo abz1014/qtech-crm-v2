@@ -1,4 +1,3 @@
-import * as suggestLib from '@/features/rfqs/lib/suggestLib'
 import { pastedText } from '@/lib/docread/htmlTable'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -26,6 +25,7 @@ import {
   RFQ_REF_PLACEHOLDER,
   coverageLine,
   suggestSuppliers,
+  withCategories,
   tickedIds,
   toEnquiryItems,
   toFloatItems,
@@ -531,7 +531,7 @@ function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMo
     candidateList.map(c => c.id),
     wantSuppliers && candidates.isSuccess,
   )
-  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess, suggestLib)
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess, { withCategories })
   const suggestions = useMemo(
     () => suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }),
     [extras.items, extras.extra, candidateList, memory.data, today],

@@ -11,9 +11,6 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { DetailHeader } from '@/ui/DetailHeader'
 import { InfoTip } from '@/ui/InfoTip'
-import { MessageActions } from '@/ui/MessageActions'
-import { Dialog, DialogContent } from '@/ui/Dialog'
-import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { MenuItem, MenuSeparator } from '@/ui/Popover'
 import { MoreMenu } from '@/ui/MoreMenu'
 import { Skeleton } from '@/ui/Skeleton'
@@ -35,21 +32,18 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
-import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { CopyReminderButton } from '@/features/orders/CopyReminderButton'
 import { legState } from '@/features/orders/lib/legModel'
 import { orderFacts, pageStep, recordPaymentPlace, type PrimaryAction } from '@/features/orders/lib/primaryAction'
 import type { OrderStep } from '@/features/orders/lib/orderSteps'
 import { useLegActions } from '@/features/orders/useLegActions'
-import { useSentPos } from '@/features/purchaseOrders/hooks'
-import { cancellationMessage, sentPoSentence } from '@/features/purchaseOrders/lib/cancelText'
-import { copyToClipboard } from '@/lib/clipboard'
-import { COMPANY_NAME } from '@/features/rfqs/lib/chaseCommon'
-import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
+import { cancelReasonLabel } from '@/features/orders/lib/cancel'
 import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
 import { VisitButton } from '@/features/orders/VisitDialog'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
+const CancelDialog = lazyShown(() => import('@/features/orders/CancelDialog').then(m => m.CancelDialog))
+const ResolveBasisDialog = lazyShown(() => import('@/features/orders/ResolveBasisDialog').then(m => m.ResolveBasisDialog))
 const CommissioningEditDialog = lazyShown(() => import('@/features/orders/CommissioningPanel').then(m => m.CommissioningEditDialog))
 const IssuePoDialog = lazyShown(() => import('@/features/purchaseOrders/IssuePoDialog').then(m => m.IssuePoDialog))
 const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDialog').then(m => m.GoodsChaseDialog))
@@ -724,73 +718,5 @@ function EngineerJob({
         </div>
       ) : null}
     </section>
-  )
-}
-
-function CancelDialog({
-  order,
-  busy,
-  onClose,
-  onConfirm,
-}: {
-  order: OrderHeader
-  busy: boolean
-  onClose: () => void
-  onConfirm: (reason: CancelReason) => Promise<unknown>
-}) {
-  const [reason, setReason] = useState<CancelReason | null>(null)
-  const { toast } = useToast()
-  const sent = useSentPos(order.id, true).data ?? []
-  return (
-    <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
-      <DialogContent
-        size="sm"
-        tone="danger"
-        icon={Ban}
-        title="Cancel this order"
-        context={`${orderRef(order.number)} · ${order.companyName}`}
-        footer={
-          <>
-            <Button data-cancel onClick={onClose} disabled={busy}>
-              Keep the order
-            </Button>
-            <Button variant="danger" busy={busy} busyLabel="Cancelling" disabled={!reason} onClick={() => (reason ? onConfirm(reason) : undefined)}>
-              Cancel order
-            </Button>
-          </>
-        }
-      >
-        <div className="grid gap-4">
-          <p className="text-sm text-fg-muted">The order stays on record and can be reopened. Reports use the reason.</p>
-          {sent.length > 0 ? (
-            <ul aria-label="Purchase orders already sent" data-testid="cancel-sent-pos" className="grid gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg p-3 text-sm text-tone-warning-fg">
-              {sent.map(po => (
-                <li key={po.ref} className="flex flex-wrap items-center justify-between gap-2">
-                  <span>{sentPoSentence(po)}</span>
-                  <MessageActions
-                    size="sm"
-                    to={po.contact ?? { name: po.supplierName }}
-                    text={cancellationMessage(po, COMPANY_NAME)}
-                    email={{ subject: `${po.ref} cancelled` }}
-                    copy={{
-                      label: 'Copy cancellation message',
-                      onCopy: async () => {
-                        const ok = await copyToClipboard(cancellationMessage(po, COMPANY_NAME))
-                        toast(ok ? { title: 'Cancellation message copied', body: `For ${po.supplierName}, ${po.ref}.` } : { title: 'Could not copy the message', body: 'Nothing was changed.', tone: 'danger' })
-                      },
-                    }}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <RadioGroup aria-label="Reason" value={reason ?? ''} onValueChange={v => setReason(v as CancelReason)} className="gap-2">
-            {CANCEL_REASONS.map(r => (
-              <Radio key={r.value} value={r.value} label={r.label} />
-            ))}
-          </RadioGroup>
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }

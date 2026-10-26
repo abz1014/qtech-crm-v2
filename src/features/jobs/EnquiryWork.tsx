@@ -21,7 +21,6 @@ import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { useQuotations } from '@/features/quotations/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
-import { useWonDialog } from '@/features/orders/useWonDialog'
 
 /*
  * The enquiry side of the job, on the job page (redesign P5-D1): ask suppliers, enter their prices, send the quotation, Mark won.
@@ -34,24 +33,7 @@ const QuotationsPanel = lazyWithReload(() => import('@/features/quotations/Quota
 const SuppliersAsked = lazyWithReload(() => import('@/features/rfqs/SuppliersAsked').then(m => ({ default: m.SuppliersAsked })))
 const SuppliersToAskCard = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.SuppliersToAskCard })))
 const FloatDialog = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.FloatDialog })))
-const ConvertDialog = lazyWithReload(() => import('@/features/orders/ConvertDialog').then(m => ({ default: m.ConvertDialog })))
 const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
-
-/** Mark won's Create order dialog, open while the address carries ?won=1 (admin and sales; the dialog refuses an engineer). */
-export function WonDialogHost({ rfqId }: { rfqId: string }) {
-  const [wonOpen, setWonOpen] = useWonDialog()
-  const prices = useSeesPrices()
-  const header = useRfqHeader(wonOpen ? rfqId : undefined)
-  const inquiries = useRfqInquiries(wonOpen ? rfqId : undefined)
-  const fx = useFxLatest()
-  const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
-  if (!wonOpen || !prices || !header.data || !inquiries.data) return null
-  return (
-    <Suspense fallback={null}>
-      <ConvertDialog rfq={header.data} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} />
-    </Suspense>
-  )
-}
 
 /** After an ask: the one enquiry (copied already) with Open in WhatsApp / Open in email for each supplier asked. */
 function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask: AskResult; inquiries: readonly InquiryRow[]; onClose: () => void }) {

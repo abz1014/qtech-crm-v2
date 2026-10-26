@@ -22,7 +22,7 @@ import { jobNext } from '@/features/jobs/lib/nextStep'
 import { currentStopIndex, stageModel } from '@/features/jobs/lib/stages'
 import { jobLabel } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
-import { WonDialogHost } from '@/features/jobs/EnquiryWork'
+import { WonDialogHost } from '@/features/jobs/WonDialogHost'
 import { EngineerActions } from '@/features/jobs/EngineerActions'
 
 /*

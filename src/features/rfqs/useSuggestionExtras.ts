@@ -8,7 +8,7 @@ import type { SuggestLib } from '@/features/rfqs/useSuggestLib'
  * family, else the dictionary's guess, `categoryGuessed`) and the evidence, price wins and recent asks behind it. Until these load, or if
  * they fail, the list is ranked on the memory alone: nothing waits for them.
  */
-export function useSuggestionExtras<T extends SuggestionItem>(items: readonly T[], candidates: readonly SupplierRecord[], today: string, enabledNow: boolean, lib: SuggestLib | null) {
+export function useSuggestionExtras<T extends SuggestionItem>(items: readonly T[], candidates: readonly SupplierRecord[], today: string, enabledNow: boolean, lib: Pick<SuggestLib, 'withCategories'> | null) {
   // Nothing is asked for until the suggestion code has arrived (after the first paint): these reads are not part of the page's first round.
   const enabled = enabledNow && lib !== null
   const categories = useCuratedCategories(enabled)
