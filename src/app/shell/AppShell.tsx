@@ -72,7 +72,9 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
     if (import.meta.env.MODE === 'test') return // loaded up front by src/test/setup.ts
     let t: number | undefined
     whenContentDrawn(() => {
-      t = window.setTimeout(() => { void preloadPopover(); void preloadDialog() }, 1500)
+      t = window.setTimeout(() => {
+        void Promise.all([preloadPopover(), preloadDialog()]).then(() => void (document.documentElement.dataset.radixReady = '1')) // e2e waits for this: the swap rebuilds triggers
+      }, 1500)
     })
     return () => window.clearTimeout(t)
   }, [])
