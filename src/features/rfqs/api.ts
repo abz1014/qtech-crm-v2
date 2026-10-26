@@ -225,30 +225,29 @@ export interface RfqHeader {
   state: RfqStateRow | null
 }
 
-type Maybe<T> = { data: T | null; error: { code?: string; message: string } | null }
-const none = Promise.resolve({ data: null, error: null })
-
-/** The RFQ, who it is for, who owns it and its derived states (v_rfq_state). Null when there is no such RFQ. */
+/**
+ * The RFQ, who it is for, who owns it and its derived states (v_rfq_state). Null when there is no such RFQ.
+ * ONE round: the customer, site, contact and owner come embedded in the RFQ's own read, in parallel with the state view (PERF-1,
+ * the order page's fix/order-lcp pattern: the customer's name is the page's largest text, and a second round trip on slow mobile
+ * data held it back). Row Level Security applies to an embedded row as to its own read: one the person may not see comes back null.
+ */
 export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const db = requireSupabase()
   const [rfqRes, stateRes] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, created_by, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
+      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, created_by, is_priority, quoted_on, closed_on, close_reason, close_note, notes, company:companies!rfqs_company_id_fkey(id, name, country, city, created_at), site:company_sites!rfqs_site_id_fkey(name, address), contact:contacts!rfqs_contact_id_fkey(name, phone, email, job_title), owner:users!rfqs_owner_id_fkey(id, name, role, phone)')
       .eq('id', id)
       .maybeSingle(),
     db.from('v_rfq_state').select('*').eq('rfq_id', id).maybeSingle(),
   ])
   const r = unwrap(rfqRes)
   if (!r) return null
-  const [company, site, contact, owner] = await Promise.all([
-    db.from('companies').select('id, name, country, city, created_at').eq('id', r.company_id).maybeSingle(),
-    r.site_id ? db.from('company_sites').select('name, address').eq('id', r.site_id).maybeSingle() : none,
-    r.contact_id ? db.from('contacts').select('name, phone, email, job_title').eq('id', r.contact_id).maybeSingle() : none,
-    r.owner_id ? db.from('users').select('id, name, role, phone').eq('id', r.owner_id).maybeSingle() : none,
-  ])
-  const c = unwrap(company)
-  const ct0 = unwrap(contact as Maybe<{ name: string; phone: string | null; email: string | null; job_title: string | null }>)
+  const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null))
+  const c = one(r.company)
+  const ct0 = r.contact_id ? one(r.contact) : null
+  const site = r.site_id ? one(r.site) : null
+  const owner = r.owner_id ? one(r.owner) : null
   return {
     id: r.id,
     number: r.number,
@@ -266,9 +265,9 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, createdAt: c?.created_at ?? null },
     siteId: r.site_id,
     contactId: r.contact_id,
-    site: unwrap(site as Maybe<{ name: string; address: string | null }>),
+    site,
     contact: ct0 ? { name: ct0.name, phone: ct0.phone, email: ct0.email, jobTitle: ct0.job_title } : null,
-    owner: unwrap(owner as Maybe<{ id: string; name: string; role: string; phone: string | null }>),
+    owner,
     state: unwrap(stateRes) as RfqStateRow | null,
   }
 }
