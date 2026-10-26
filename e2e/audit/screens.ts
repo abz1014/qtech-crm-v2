@@ -163,6 +163,10 @@ const newRfq: Visit = {
       .waitFor({ timeout: 10_000 })
       .catch(() => undefined)
     await settle(page)
+    // The supplier rows load a moment after the page; the green moves from Open RFQ to the first Open in WhatsApp with a colour transition.
+    // Wait for the rows and let it finish, or the measure reads a green in between.
+    await page.locator("[data-slot="send-to-each"]").waitFor({ timeout: 5_000 }).catch(() => undefined)
+    await page.waitForTimeout(700)
     await capture('rfq-new-4-sent')
   },
 }
