@@ -331,3 +331,17 @@ describe('round 2: shapes the first dev set did not have', () => {
     expect(r.regret).toBe(false)
   })
 })
+
+describe('round 3: a table whose cells a mail export scrambled', () => {
+  it('the end of one row that landed at the start of the next goes back to its own item', () => {
+    const items = ['XQ-100', 'WP-2000', 'ZT-300'].map(id => ({ id, description: id }))
+    const text = [
+      'SL\tProduct Description\tQty (Pcs)\tUnit Price (RMB)\tDelivery Time\tWeight(Unit)\tOrigin',
+      '1\tModel: XQ-100 Brand: Maker\t6\t250\t1-2 weeks\t0.2 kg\tFrance',
+      '2\tModel: WP-2000 Brand: Maker',
+      '3\t380 0.3 kg India\t3\t\tModel: ZT-300\tBrand: Maker\t6 265 0.1 kg India',
+    ].join('\n')
+    const r = parseSupplierReply(text, items, { today: '2026-10-20' })
+    expect(r.offers.map(o => [o.rfqItemId, o.unitPrice, o.currency])).toEqual([['XQ-100', 250, 'CNY'], ['WP-2000', 380, 'CNY'], ['ZT-300', 265, 'CNY']])
+  })
+})
