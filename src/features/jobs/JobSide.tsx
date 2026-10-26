@@ -13,6 +13,7 @@ import { qk } from '@/features/queryKeys'
 import { signFileUrls, type AttachmentRow } from '@/features/rfqs/api'
 import type { JobFacts } from '@/features/jobs/api'
 import type { JobData } from '@/features/jobs/useJobData'
+import { HasPricesToggle } from '@/features/rfqs/HasPricesToggle'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
 
 /*
@@ -104,17 +105,20 @@ interface TimelineEntry {
   kind: 'note' | 'file'
   text: string
   file?: AttachmentRow
+  from?: 'rfq' | 'order'
 }
 
 export function NotesFilesPanel({ facts, data, ctx }: { facts: JobFacts; data: JobData; ctx: JobContext }) {
   const today = businessToday()
-  const files = [...(data.rfqFiles.data ?? []), ...(data.orderFiles.data ?? [])]
+  const rfqFiles = data.rfqFiles.data ?? []
+  const orderFiles = data.orderFiles.data ?? []
+  const files = [...rfqFiles, ...orderFiles]
   const paths = files.map(f => f.path).sort()
   const urls = useQuery({ queryKey: qk.jobs.fileUrls(paths.join('|')), queryFn: () => signFileUrls(paths), enabled: paths.length > 0, staleTime: 8 * 60_000 })
   const notes = [facts.notes, data.order.data?.notes && data.order.data.notes !== facts.notes ? data.order.data.notes : null].filter((n): n is string => Boolean(n && n.trim()))
   const entries: TimelineEntry[] = [
     ...notes.map(n => ({ at: facts.receivedOn ?? '', kind: 'note' as const, text: n })),
-    ...files.map(f => ({ at: f.createdAt.slice(0, 10), kind: 'file' as const, text: f.fileName, file: f })),
+    ...files.map(f => ({ at: f.createdAt.slice(0, 10), kind: 'file' as const, text: f.fileName, file: f, from: (rfqFiles.includes(f) ? 'rfq' : 'order') as 'rfq' | 'order' })),
   ].sort((a, b) => b.at.localeCompare(a.at))
   return (
     <Panel title="Notes and files" action={<JobSlot name="files" context={ctx} />}>
@@ -126,7 +130,8 @@ export function NotesFilesPanel({ facts, data, ctx }: { facts: JobFacts; data: J
             <li key={`${e.kind}-${i}`} className="grid grid-cols-[4.5rem_1fr] gap-3 text-base">
               <span className="num pt-px text-stamp text-fg-muted">{e.at ? formatShortDate(e.at, today) : ''}</span>
               {e.kind === 'file' && e.file ? (
-                urls.data?.[e.file.path] ? (
+                <span className="grid min-w-0 gap-1">
+                {urls.data?.[e.file.path] ? (
                   <a href={urls.data[e.file.path]} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-start gap-2 rounded text-primary hover:underline">
                     <Icon icon={FileText} className="mt-[3px] shrink-0" />
                     <span className="min-w-0 [overflow-wrap:anywhere]">{e.text}</span>
@@ -136,7 +141,9 @@ export function NotesFilesPanel({ facts, data, ctx }: { facts: JobFacts; data: J
                     <Icon icon={FileText} className="mt-[3px] shrink-0 text-fg-muted" />
                     <span className="min-w-0 [overflow-wrap:anywhere]">{e.text}</span>
                   </span>
-                )
+                )}
+                <HasPricesToggle att={e.file} rfqId={e.from === 'rfq' ? (facts.job.rfqId ?? undefined) : undefined} orderId={e.from === 'order' ? (facts.job.orderId ?? undefined) : undefined} />
+                </span>
               ) : (
                 <span className="min-w-0 whitespace-pre-line [overflow-wrap:anywhere]">{e.text}</span>
               )}

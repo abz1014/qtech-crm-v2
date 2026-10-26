@@ -58,6 +58,7 @@ import { TextField } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
+import { attachmentHasPrices } from '@/features/rfqs/lib/attachmentPrices'
 
 /*
  * New RFQ: intake and asking suppliers on one screen (R05; g2-intake-float.html; plain words of 2026-10-19). Company and a paste,
@@ -139,6 +140,7 @@ export default function IntakeScreen() {
 
 function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const session = useSession()
+  const uploaderRole = session.status === 'signed-in' ? session.user.role : 'engineer'
   const signedIn = session.status === 'signed-in'
   const user = signedIn ? session.user : null
   const userId = user?.id ?? null
@@ -393,7 +395,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       try {
         for (const file of files) {
           const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
-          await uploadAttachment({ rfqId: saved.id, clarificationId: null, file, path: `${saved.id}/${crypto.randomUUID()}.${(ext ?? 'bin').toLowerCase()}` })
+          await uploadAttachment({ rfqId: saved.id, clarificationId: null, file, path: `${saved.id}/${crypto.randomUUID()}.${(ext ?? 'bin').toLowerCase()}`, hasPrices: attachmentHasPrices({ role: uploaderRole, mime: file.type }) })
         }
         if (fromCapture && captured) await safely(() => deleteCapture(captured.id), undefined)
         if (files.length) toast({ title: `${files.length} ${files.length === 1 ? 'file' : 'files'} attached`, body: rfqRef(saved.number), tone: 'success' })
@@ -401,7 +403,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
         toast({ title: 'Could not attach the files', body: 'The RFQ is saved. Add them from its Files panel.', tone: 'danger' })
       }
     })()
-  }, [saved, captured, toast])
+  }, [saved, captured, toast, uploaderRole])
 
   const real = realItems(items)
   const badQty = firstQtyProblem(items)
