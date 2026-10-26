@@ -19,6 +19,8 @@ const OWN = /q[\s-]?tech/i
 const OWN_REF = /\b(?:QT-\d{2}-\d{3,5}|QT[A-Z]-[A-Z]+-?\d{2,})\b/
 /** A letterhead line starts with our name; a line that only mentions us ("To: Q-Tech", "Buyer: Q-Tech") is the other side. */
 const STARTS_OWN = /^\W*q[\s-]?tech\b/i
+// A label line above a name ("Supplier", "To") means the name is the addressee, not the issuer.
+const ADDRESSEE_LABEL = /^\W*(?:supplier|vendor|to|attn|attention|bill\s+to|ship\s+to|quote\s+to|dear)(?:\s+(?:name|code))?\s*:?\W*$/i
 /** Header lines that say nothing about the document (an email's subject, a reference quoted back). */
 const NOISE = /^(?:subject|re|fw|fwd)\s*:|your\s+ref/i
 
@@ -32,15 +34,15 @@ const RFQ_DATE = /\b(?:due\s+date|closing\s+date|last\s+date|(?:quotations?|quot
 const QTY_HEAD = /\b(?:qty|quantity|req(?:uired)?\.?\s*qty|order\s+qty)\b/i
 const DESC_HEAD = /\b(?:description|item|items|product|material|part|particulars|details|sr|s\.?\s?no)\b/i
 const QTY_ROW = /\b\d+(?:\.\d+)?\s*(?:nos?\.?|pcs?\.?|pieces?|sets?|units?|each|ea|mtrs?|meters?|kgs?|rolls?|boxes|box|packs?|lots?)\b/i
-const PRICE = /(?:\b(?:pkr|usd|us\$|eur|aed|cny|rmb|rs\.?|gbp)\s?[\d,]{2,}(?![\da-z])|[$€£¥￥]\s?[\d,]{2,}|\d[\d,]*(?:\.\d{1,2})?\s?(?:pkr|usd|eur|aed|cny|rmb)\b)/i
-const TOTAL = /^(?:sub\s*-?\s*total|grand\s+total|net\s+total|total(?:\s+(?:amount|price|value|incl|excl)\b.*)?$|gst|vat|sales\s+tax|freight)\b/i
+const PRICE = /(?:\b(?:pkr|usd|us\$|eur|aed|cny|rmb|rs\.?|gbp)\s?[\d,]{2,}(?![\da-z])|[$€£¥￥]\s?[\d,]{2,}|\u20ac\s?\d{1,3}(?:\.\d{3})*,\d{2}\b|\b\d{1,3}(?:\.\d{3})*,\d{2}\s?\u20ac|\d[\d,]*(?:\.\d{1,2})?\s?(?:pkr|usd|eur|aed|cny|rmb)\b)/i
+const TOTAL = /^(?:imponibile|totale|sub\s*-?\s*total|grand\s+total|net\s+total|total(?:\s+(?:amount|price|value|incl|excl)\b.*)?$|gst|vat|sales\s+tax|freight)\b/i
 /** A supplier's own words: what a quotation says and an enquiry does not. */
 /** The strongest of them, counted a second time. */
 const QUOTE_STRONG = /please\s+find\s+(?:our|the\s+attached)|\bour\s+(?:offer|quotation|quote)|\bwe\s+(?:can\s+)?offer/gi
 const QUOTE_PHRASE =
   /\b(?:our\s+(?:offer|quotation|quote|prices?|rates?)|we\s+(?:can\s+)?offer|offer\s+valid|offer\s*:|price\s+validity|validity|valid\s+(?:for|until|till)|lead\s*time|please\s+find\s+(?:our|the\s+attached)\s+(?:quotation|offer|prices?)|quotation\s+no|offer\s+no|best\s+offer|looking\s+forward\s+to\s+your\s+order|sorry,?\s+we\s+cannot|unable\s+to\s+(?:offer|quote)|incoterm|price\s+term|(?:fob|exw|cif|fca|cfr)\s+[a-z]+|prices?\s*:|rates?\s*:|delivery\s*:\s*\d|(?:rates?|prices?|amounts?)\s+(?:are\s+)?(?:in|exclusive|inclusive)\s+(?:of\s+)?[a-z]{2,}|gst\s*(?:\d+\s*%\s*)?extra|(?:exclusive|inclusive)\s+of\s+(?:\d+\s*%\s*)?(?:gst|vat|tax)|payment\s*:?\s*(?:100%|advance|l\/c|t\/t|30\s+days))|有效期|交货/gi
 /** A price column heading ("Unit Price", "Price each"), not an estimate or a target the customer wrote. */
-const PRICE_HEAD = /\b(?:unit\s*(?:price|rate|pr\b)|price\s+each|list\s+price|net\s+price|ext\.?\s+price|einzelpreis|total\s+(?:price|amount))|\brates?\s*\((?:rs|pkr|usd|eur|aed|cny|rmb)|\bunit\s+(?:usd|eur|pkr|aed|cny|rmb)\b|\bunit\s+rate|[\t|\s]rate[\t|\s]+(?:amount|total|value)\b|\bprice\s+(?:pkr|usd|eur|aed|cny|rmb|rs)\b|^(?:rate|price)\s*(?:\([^)]*\))?$/i
+const PRICE_HEAD = /\b(?:unit\s*(?:price|rate|pr\b)|price\s+each|list\s+price|net\s+price|ext\.?\s+price|einzelpreis|prezzo\s+unit\w*|prix\s+unitaire|total\s+(?:price|amount))|\brates?\s*\((?:rs|pkr|usd|eur|aed|cny|rmb)|\bunit\s+(?:usd|eur|pkr|aed|cny|rmb)\b|\bunit\s+rate|[\t|\s]rate[\t|\s]+(?:amount|total|value)\b|\bprice\s+(?:pkr|usd|eur|aed|cny|rmb|rs)\b|^(?:rate|price)\s*(?:\([^)]*\))?$/i
 const QUOTE_TITLE = /^\W*(?:price\s+)?(?:quotation|quote|offer|proforma\s+invoice|preventivo|offerta|angebot|cotizaci\w+|报价)\s*(?:$|no\b|number\b|ref\b|#|:|date\b|\/|\d)/i
 const PO_HEAD = /^\W*(?:purchase\s+order|work\s+order|sales\s+order|order\s+confirmation|p\.?\s?o\.?\s*(?:no|number|#))/i
 const PO_TERM =
@@ -298,7 +300,7 @@ function classify(text: string): DocKindResult {
   const profile = count(PROFILE, text)
   const tech = spec + Math.floor(count(UNIT_TOKEN, text) / 2)
   const sheetTitle = lines.slice(0, 6).some(l => l.length < 80 && SHEET_TITLE.test(l))
-  const issuer = headBody.some(l => STARTS_OWN.test(l) && l.length < 90) || head.some(l => /^from\s*:/i.test(l) && OWN.test(l))
+  const issuer = headBody.some((l, i) => STARTS_OWN.test(l) && l.length < 90 && !(i > 0 && ADDRESSEE_LABEL.test(headBody[i - 1] ?? ''))) || head.some(l => /^from\s*:/i.test(l) && OWN.test(l))
   const ownRef = OWN_REF.test(headBody.join('\n'))
   const quoteTitle = head.some(l => l.length < 70 && QUOTE_TITLE.test(l))
   const priced = priceLines >= 2 || (priceLines >= 1 && totals >= 1)
