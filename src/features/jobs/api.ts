@@ -33,6 +33,8 @@ export interface JobRow {
   cancelledOrders: number
   /** The engineers put on the job's order (an engineer's "Mine"). */
   engineerIds: string[]
+  /** The enquiry or the order came from the old CRM (legacy_source set): a live job, but it raises no task and is never red (owner decision 1b). */
+  imported?: boolean
 }
 
 type JobView = ViewRow<'v_jobs'>
@@ -44,6 +46,9 @@ interface Names {
   sites: Map<string, string>
   users: Map<string, string>
   engineers: Map<string, string[]>
+  /** Ids of imported orders and RFQs (the ids only: legacy_source itself may hold old prices and is never read). */
+  importedOrders: Set<string>
+  importedRfqs: Set<string>
 }
 
 function shape(v: JobView, n: Names): JobRow | null {
@@ -66,6 +71,7 @@ function shape(v: JobView, n: Names): JobRow | null {
     repeatOf: v.repeat_of_job_key,
     cancelledOrders: Number(v.cancelled_orders ?? 0),
     engineerIds: v.order_id ? (n.engineers.get(v.order_id) ?? []) : [],
+    imported: Boolean((v.order_id && n.importedOrders.has(v.order_id)) || (v.rfq_id && n.importedRfqs.has(v.rfq_id))),
   }
 }
 
@@ -79,11 +85,14 @@ async function namesFor(rows: JobView[]): Promise<Names> {
   const companyIds = [...new Set(rows.map(r => r.company_id).filter((x): x is string => !!x))]
   const siteIds = [...new Set(rows.map(r => r.site_id).filter((x): x is string => !!x))]
   const orderIds = [...new Set(rows.map(r => r.order_id).filter((x): x is string => !!x))]
-  const [companies, sites, users, engineers] = await Promise.all([
+  const rfqIds = [...new Set(rows.map(r => r.rfq_id).filter((x): x is string => !!x))]
+  const [companies, sites, users, engineers, impOrders, impRfqs] = await Promise.all([
     Promise.all(slices(companyIds).map(async ids => unwrap(await db.from('companies').select('id, name').in('id', ids)))),
     Promise.all(slices(siteIds).map(async ids => unwrap(await db.from('company_sites').select('id, name').in('id', ids)))),
     db.from('users').select('id, name'),
     Promise.all(slices(orderIds).map(async ids => unwrap(await db.from('order_engineers').select('order_id, user_id').in('order_id', ids)))),
+    Promise.all(slices(orderIds).map(async ids => unwrap(await db.from('orders').select('id').in('id', ids).not('legacy_source', 'is', null)))),
+    Promise.all(slices(rfqIds).map(async ids => unwrap(await db.from('rfqs').select('id').in('id', ids).not('legacy_source', 'is', null)))).catch(() => [] as Array<Array<{ id: string }>>),
   ])
   const engineersBy = new Map<string, string[]>()
   for (const e of engineers.flat()) engineersBy.set(e.order_id, [...(engineersBy.get(e.order_id) ?? []), e.user_id])
@@ -92,18 +101,23 @@ async function namesFor(rows: JobView[]): Promise<Names> {
     sites: new Map(sites.flat().map(s => [s.id, s.name])),
     users: new Map(unwrap(users).map(u => [u.id, u.name])),
     engineers: engineersBy,
+    importedOrders: new Set(impOrders.flat().map(r => r.id)),
+    importedRfqs: new Set(impRfqs.flat().map(r => r.id)),
   }
 }
 
 /** Every job, with the names beside it: the view, the companies, sites, users and engineers, all in one round. */
 export async function listJobs(): Promise<JobRow[]> {
   const db = requireSupabase()
-  const [views, companies, sites, users, engineers] = await Promise.all([
+  const [views, companies, sites, users, engineers, impOrders, impRfqs] = await Promise.all([
     fetchAll<JobView>((from, to) => db.from('v_jobs').select(JOB_COLUMNS).order('job_key').range(from, to) as unknown as Page<JobView>),
     fetchAll((from, to) => db.from('companies').select('id, name').order('id').range(from, to)),
     fetchAll((from, to) => db.from('company_sites').select('id, name').order('id').range(from, to)),
     db.from('users').select('id, name'),
     fetchAll((from, to) => db.from('order_engineers').select('order_id, user_id').order('order_id').range(from, to)),
+    fetchAll((from, to) => db.from('orders').select('id').not('legacy_source', 'is', null).order('id').range(from, to)),
+    // a refusal here must never take the Jobs list down: the imported mark is a nicety (grey instead of red), not the list
+    fetchAll((from, to) => db.from('rfqs').select('id').not('legacy_source', 'is', null).order('id').range(from, to)).catch(() => [] as Array<{ id: string }>),
   ])
   const engineersBy = new Map<string, string[]>()
   for (const e of engineers) engineersBy.set(e.order_id, [...(engineersBy.get(e.order_id) ?? []), e.user_id])
@@ -112,6 +126,8 @@ export async function listJobs(): Promise<JobRow[]> {
     sites: new Map(sites.map(s => [s.id, s.name])),
     users: new Map(unwrap(users).map(u => [u.id, u.name])),
     engineers: engineersBy,
+    importedOrders: new Set(impOrders.map(r => r.id)),
+    importedRfqs: new Set(impRfqs.map(r => r.id)),
   }
   return views.map(v => shape(v, names)).filter((j): j is JobRow => j !== null)
 }
@@ -268,7 +284,18 @@ export async function getJobFacts(key: string): Promise<JobFacts | null> {
         .select(embeds('rfqs', 'id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason'))
         .eq('number', number)
         .maybeSingle()
-  const [view, headRes] = await Promise.all([db.from('v_jobs').select(JOB_COLUMNS).eq('job_key', key).maybeSingle(), head])
+  // whether it came from the old CRM: the id only, in the same round
+  const importedRead = (async (): Promise<boolean> => {
+    try {
+      const r = direct
+        ? await db.from('orders').select('id').eq('number', number).is('rfq_id', null).not('legacy_source', 'is', null).limit(1)
+        : await db.from('rfqs').select('id').eq('number', number).not('legacy_source', 'is', null).limit(1)
+      return !r.error && (r.data?.length ?? 0) > 0
+    } catch {
+      return false // the grey mark is a nicety: a refusal must never keep the page from opening
+    }
+  })()
+  const [view, headRes, impRes] = await Promise.all([db.from('v_jobs').select(JOB_COLUMNS).eq('job_key', key).maybeSingle(), head, importedRead])
   const v = unwrap(view) as JobView | null
   const h = unwrap(headRes) as unknown as HeadJoin | null
   if (!v || !h || !v.job_key || !v.company_id) return null
@@ -294,6 +321,7 @@ export async function getJobFacts(key: string): Promise<JobFacts | null> {
     repeatOf: v.repeat_of_job_key,
     cancelledOrders: Number(v.cancelled_orders ?? 0),
     engineerIds: [],
+    imported: impRes,
   }
   return {
     job,
