@@ -113,7 +113,7 @@ describe('Payment rows with Correct / Void (0073)', () => {
     expect(ids[0]).toBe(ids[1])
   })
 
-  it('a bank-ticked payment has its menu off; a correction is tagged; voided ones fold under "Voided (n)" with Undo', async () => {
+  it('a bank-ticked payment has Correct and Void off; a correction is tagged; voided ones fold under "Voided (n)" with Undo', async () => {
     const user = userEvent.setup()
     const recent = new Date(Date.now() - 60_000).toISOString()
     db([
@@ -124,11 +124,55 @@ describe('Payment rows with Correct / Void (0073)', () => {
     mount()
     const lines = await screen.findAllByTestId('payment-line')
     expect(lines).toHaveLength(2)
-    expect(within(lines[0]).getByRole('button', { name: /Change payment/ })).toBeDisabled()
+    await user.click(within(lines[0]).getByRole('button', { name: /Change payment/ }))
+    expect(await screen.findByRole('menuitem', { name: 'Correct…' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Void…' })).toBeDisabled()
+    await user.keyboard('{Escape}')
     expect(within(lines[1]).getByText('Corrected')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Voided (1)' }))
     const voided = screen.getByTestId('voided-line')
     expect(voided.textContent).toContain('Wrong amount')
     expect(within(voided).getByRole('button', { name: /Undo/ })).toBeInTheDocument()
+  })
+})
+
+describe('Delete a payment (0092)', () => {
+  it('a bank-ticked payment says so in the confirm, with the way to untick, and offers no Delete', async () => {
+    const user = userEvent.setup()
+    db([pay({ id: 'a', bank_month: '2026-10-01' })])
+    mount()
+    await user.click(await screen.findByRole('button', { name: /Change payment/ }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Delete…' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/ticked against the October 2026 bank statement/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('link', { name: 'Open Match bank statement' })).toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: 'Delete' })).toBeNull()
+  })
+
+  it('a payment that is part of a correction is kept as history', async () => {
+    const user = userEvent.setup()
+    const recent = new Date(Date.now() - 60_000).toISOString()
+    db([pay({ id: 'b', voided_at: recent, voided_by: 'u', void_reason: 'Wrong amount' }), pay({ id: 'c', corrects_payment_id: 'b', created_at: recent, amount: 90 })])
+    mount()
+    await user.click(await screen.findByRole('button', { name: /Change payment/ }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Delete…' }))
+    expect(await screen.findByText(/part of a correction, so it is kept as history/)).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'Voided (1)' }))
+    expect(screen.getByTestId('voided-kept').textContent).toContain('cannot be deleted')
+  })
+
+  it('Delete runs delete_payment, then a toast', async () => {
+    const user = userEvent.setup()
+    const d = db([pay({ id: 'a' })])
+    mount()
+    await user.click(await screen.findByRole('button', { name: /Change payment/ }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Delete…' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByTestId('delete-payment-what').textContent).toContain('ORD-0038')
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByText('Deleted payment')).toBeInTheDocument()
+    const call = d.calls.find(c => c.target === 'rpc:delete_payment')
+    expect((opArgs(call as FakeCall, 'args')?.[0] as { p_payment_id: string }).p_payment_id).toBe('a')
   })
 })
