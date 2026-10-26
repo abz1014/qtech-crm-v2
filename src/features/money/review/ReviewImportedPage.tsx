@@ -1,3 +1,4 @@
+import { NoPrimary } from '@/ui/NoPrimary'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, CircleCheck, Link2, Search } from 'lucide-react'
@@ -46,6 +47,7 @@ export function ReviewImportedPage() {
 
   return (
     <MoneyFrame active={null}>
+      <NoPrimary />
       <MoneySubHeader back={{ to: '/money', label: 'Money' }} title="Review imported" />
       <p className="max-w-prose text-base text-fg-2">
         Records imported from the old system that still show money or goods open. Decide each one once: still open, or settled and kept as history. Nothing is hidden

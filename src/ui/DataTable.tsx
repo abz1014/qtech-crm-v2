@@ -865,7 +865,7 @@ function TableView<T>(props: DataTableProps<T>) {
               })}
             </tr>
           </thead>
-          <tbody ref={bodyRef} role={cards ? 'rowgroup' : undefined} className={cn(cards && 'block')}>
+          <tbody ref={bodyRef} data-row-actions="" role={cards ? 'rowgroup' : undefined} className={cn(cards && 'block')}>
             {body}
           </tbody>
           {showFoot ? <tfoot>{summaryRow('foot', footerLabel ?? 'Total', dataRows, 'foot')}</tfoot> : null}

@@ -303,6 +303,7 @@ function Trend({ bars, kind, onPick }: { bars: TrendBar[]; kind: PeriodKind; onP
           <button
             key={b.period.key}
             type="button"
+            data-row-actions=""
             onClick={() => onPick(b.period)}
             aria-label={`${b.current ? `${compact(b.amount)}, ` : ''}${b.label}: PKR ${rupees(b.amount)} spent${b.current ? ', shown' : ''}`}
             aria-current={b.current || undefined}

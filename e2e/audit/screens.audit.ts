@@ -53,6 +53,8 @@ export interface CaptureRecord {
   screen: string
   visit: string
   title: string
+  /** The old RFQ and Orders pages (kept to 2026-11-09): captured, not scored. */
+  legacy?: boolean
   viewport: string
   status: Metrics['status'] | 'error'
   error?: string
@@ -184,7 +186,7 @@ async function fullShot(page: Page, vp: Viewport, path: string, root: string | n
 
 async function captureOne(page: Page, role: Role, visit: Visit, screen: string, vp: Viewport, opts: CaptureOptions = {}): Promise<CaptureRecord> {
   const t0 = Date.now()
-  const base = { role, screen, visit: visit.id, title: visit.title, viewport: vp.name }
+  const base = { role, screen, visit: visit.id, title: visit.title, viewport: vp.name, ...(visit.legacy ? { legacy: true } : {}) }
   const dir = join(OUT, 'shots', role, screen)
   mkdirSync(dir, { recursive: true })
   try {
