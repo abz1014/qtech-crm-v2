@@ -140,3 +140,18 @@ describe('routing and role landing', () => {
     expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/jobs')
   })
 })
+
+describe('the engineer\'s phone bar (P7-C)', () => {
+  it('only an engineer has the Photo or note button and I paid; admin and sales have neither', () => {
+    render(signedIn('engineer'), '/todo')
+    expect(el.querySelector('[data-engineer-fab]')).not.toBeNull()
+    act(() => root?.unmount())
+    el.remove()
+    render(signedIn('admin'), '/todo')
+    expect(el.querySelector('[data-engineer-fab]')).toBeNull()
+    act(() => root?.unmount())
+    el.remove()
+    render(signedIn('sales'), '/todo')
+    expect(el.querySelector('[data-engineer-fab]')).toBeNull()
+  })
+})

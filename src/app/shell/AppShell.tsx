@@ -11,6 +11,7 @@ import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
+import { EngineerFab } from '@/app/shell/EngineerFab'
 import { TopBar } from '@/app/shell/TopBar'
 import type { NavCounts } from '@/app/shell/useNavCounts'
 import { usePageSettled } from '@/app/usePageSettled'
@@ -90,7 +91,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
           </NavCountsContext.Provider>
         </ErrorBoundary>
       </main>
-      <BottomTabs role={user.role} counts={badges} dots={dots} />
+      <BottomTabs role={user.role} counts={badges} dots={dots} fab={user.role === 'engineer' ? <EngineerFab /> : undefined} />
       <HelpHost />
       {settled ? (
         <Suspense fallback={null}>
