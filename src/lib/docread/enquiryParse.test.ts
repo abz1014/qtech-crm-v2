@@ -675,3 +675,51 @@ describe('parseEnquiry: a ruled grid read from a screenshot', () => {
     expect(rows(text)).toEqual(['Washer 12x30mm Zinc Plated | 24 PCS', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA) | 3 Pcs', 'Breaker 1P 25A (Aurion) | 6 PCS', 'Capacitor 7.5Uf (Norvalt) | 12 Pcs'])
   })
 })
+
+describe('parseEnquiry: an ERP RFQ form that prints its header before every item (R-W3)', () => {
+  const HEAD = 'S.No.\tMaterial Description\tPur. Req.\tPlant\tUOM\tQuantity\tRate/Unit\tAmount'
+  const form = [
+    'EXAMPLE CEMENT COMPANY LIMITED',
+    'REQUEST FOR QUOTATION',
+    'SUPPLIER:\t7700000\tRFQ # : 1000099001',
+    'SUPPLIER NAME: COLLECTIVE NO.: 1000099000',
+    'RFQ DATE:\t14.10.2026',
+    'REPLY DUE DATE: 23.10.2026',
+    HEAD,
+    '1 .\tSOV TYP.AB-5-1/2,ACME\t1000099000\tPlant North\tEA\t12.00\t\t',
+    'SOLENOID VALVE (5-port)',
+    'Type: AB-5-1/2',
+    'Art No. 310477',
+    'Make ACME (Holland).',
+    HEAD,
+    '2 .\tFILTER SILENCER SIZE: 1/2",ACME\t1000099000\tPlant North\t***\t30.00\t\t',
+    'FILTER SILENCER (Material:',
+    'BRASS) FOR',
+    'SOV AB-5-1/2, Art No. 310477,',
+    'Make: ACME',
+    HEAD,
+    '3 .\tCPU XR30 7XY1 418-2QT55-1BB7,MAKER\t1000099000\tPlant\tEA\t2.00\t\t',
+    'SMART\tCPU XR30,CPU,\t\tNorth',
+    'AC/DC/relay, onboard I/O. Part # 7XY1',
+    'TOTAL AMOUNT:',
+    'Page: 1',
+    'of 2',
+    HEAD,
+    '4 . LEVEL\tCONTROLLER TYPE: KZ-9021,\t1000099000\tPlant\tEA\t2.00\t\t',
+    'MAKER\t\t\tNorth',
+    'Type: Floatless Liquid Level Control Relay',
+    'Make;MAKER',
+    'TOTAL AMOUNT:',
+    'Terms and Conditions',
+    '1. Please reply within due date.',
+  ].join('\n')
+
+  it('keeps every wrapped line with its own item: four rows, no extra items, "***" is no unit', () => {
+    const r = parse(form)
+    expect(r.items.map(i => [i.qty, i.unit])).toEqual([[12, 'EA'], [30, null], [2, 'EA'], [2, 'EA']])
+    expect(r.items).toHaveLength(4)
+    expect(r.items[0]?.description).toContain('310477')
+    expect(r.items[1]?.description).toContain('Art No. 310477')
+    expect(r.items[3]?.description).toMatch(/^LEVEL CONTROLLER/)
+  })
+})

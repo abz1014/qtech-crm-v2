@@ -162,7 +162,8 @@ const OWN_UNITS: Record<string, string> = {
 export function unitOf(raw: string | null | undefined): string | null {
   if (!raw) return null
   const w = raw.trim().replace(/\.$/, '')
-  if (!w) return null
+  // A form's "no unit" mark ("***", "-", "N/A", "nil"): no unit.
+  if (!w || /^[*\-–—.\s]+$|^(?:n\/?a|nil|none)$/i.test(w)) return null
   return OWN_UNITS[w.toLowerCase()] ?? (/^[a-z]+$/i.test(w) ? w : normaliseUnit(w))
 }
 
@@ -568,7 +569,10 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   const cell = (i: number) => (i >= 0 ? (cells[i] ?? '').trim() : '')
   // Two description columns ("Item Description" and "Special Instructions"): both, unless one only repeats the other.
   const words = (t: string) => new Set(t.toLowerCase().match(/[a-z0-9]+/g) ?? [])
-  const parts = cols.desc.map(cell).filter(Boolean)
+  // The first words of a description that ran into the serial-number column ("5 . LEVEL" | "CONTROLLER TYPE: KZ-9021,").
+  const spill = cols.desc.includes(0) ? null : /^\d{1,3}\s*\.?\s+([A-Za-z][A-Za-z -]{1,24})$/.exec(cell(0))
+  const descCells = cols.desc.map(cell).filter(Boolean)
+  const parts = spill && descCells.length ? [`${spill[1]} ${descCells[0]}`, ...descCells.slice(1)] : descCells
   const main = parts
     .filter((p, i) => {
       const w = words(p)
@@ -592,6 +596,19 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
     qty: qm ? toQty(qm[1] as string) : unitQty(cell(cols.unit)),
     unit: unitOf(unitCell(cell(cols.unit)) || qm?.[2] || null),
   }
+}
+
+/**
+ * A part number a page break split: the item above ends on "Part # 6ES7" and the next page's first row starts with the rest of
+ * it ("418-2QT55-1BB7. PWR SUPPLY ..."). The rest goes back to the item it belongs to.
+ */
+function carryPartNumber(prev: ReadItem | undefined, next: ReadItem): void {
+  if (!prev) return
+  const tail = /(?:part\s*(?:no\.?|number|#)|p\/n|cat\.?\s*(?:no\.?|#)|model(?:\s*no\.?)?)\s*[#:]?\s*[A-Z0-9][A-Z0-9-]{1,9}$/i.test(prev.description)
+  const rest = /^([A-Z0-9][A-Z0-9-]*\d[A-Z0-9-]*)\.\s+(?=[A-Za-z])/.exec(next.description)
+  if (!tail || !rest || !/-/.test(rest[1] as string)) return
+  prev.description = tidy(`${prev.description} ${rest[1]}`)
+  next.description = tidy(next.description.slice(rest[0].length))
 }
 
 /** The unit in a unit cell: the cell itself, its letters run together ("Numbe rs"), or its first word ("PCS Stockitem"). */
@@ -910,6 +927,17 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     const c = splitCells(s.t)
     return c !== null && formRow(c) !== null
   })
+  // A form whose column header is printed again before every item row (an ERP form that starts a table for each item): each
+  // item's description wraps on the lines under its row, up to the next header; a line there is never an item of its own.
+  const headerRows = src.filter(s => {
+    const c = splitCells(s.t)
+    return c !== null && tableHeader(c) !== null
+  }).length
+  const formRowCount = src.filter(s => {
+    const c = splitCells(s.t)
+    return c !== null && formRow(c) !== null
+  }).length
+  const headerPerItem = formMode && headerRows >= 2 && headerRows >= formRowCount - 1
   // A column of short words in capitals at the end of the text cells ("PROD", "MECH", "UTIL": a department), when no header names
   // it: such a word on most form rows (at least 3), a few words over and over.
   const deptWords = new Set<string>()
@@ -1243,6 +1271,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         }
         if (it) {
           const d: Draft = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it }
+          carryPartNumber(drafts[drafts.length - 1]?.fromTable, it)
           drafts.push(d)
           row = formMode ? d : null
           lines.push({ text: t, kind: 'item', reason: null, marker: null })
@@ -1283,7 +1312,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         // So is a line that ends in the same line code as the row above ("... -01").
         const lineCode = /\s?-\d{2}$/.test(ft.description) && /\s?-\d{2}$/.test(t.trim()) && t.trim().split(/\s+/).length >= 3
         const ownProduct = PRODUCT.test(head) && t.trim().split(/\s+/).length >= 3 && PRODUCT.test(ft.description)
-        if (/^[A-Z]/.test(t.trim()) && (ownProduct || lineCode) && ft.qty !== null && continuesRow(t)) {
+        if (!headerPerItem && /^[A-Z]/.test(t.trim()) && (ownProduct || lineCode) && ft.qty !== null && continuesRow(t)) {
           row = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: { description: tidy(t), qty: 1, unit: null } }
           drafts.push(row)
           lines.push({ text: t, kind: 'item', reason: null, marker: null })
