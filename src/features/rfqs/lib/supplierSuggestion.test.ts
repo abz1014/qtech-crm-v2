@@ -170,6 +170,11 @@ describe('order inside a group: ordered, category reply rate, overall reply rate
     expect(ids(run([sup('b', 'Twin', { brand_ids: [CONTACTORS] }), sup('a', 'Twin', { brand_ids: [CONTACTORS] })]))).toEqual(['a', 'b'])
   })
 
+  it('equal on every count, a proven delivery record comes before an unproven one and often late goes last (A8 as a tie-break)', () => {
+    const r = run([sup('late', 'Aardvark', { brand_ids: [CONTACTORS], deliveries: 6, late: 4 }), sup('new', 'Beta', { brand_ids: [CONTACTORS] }), sup('good', 'Zeta', { brand_ids: [CONTACTORS], deliveries: 4, late: 0 })])
+    expect(ids(r)).toEqual(['good', 'new', 'late'])
+  })
+
   it('is independent of the input order', () => {
     const list = [sup('a', 'Alpha', { brand_ids: [CONTACTORS] }), sup('b', 'Bravo', { brand_ids: [CONTACTORS], last_contact: '2026-10-24' }), sup('c', 'Charlie', { brand_ids: [EH] })]
     const base = ids(run(list))
