@@ -166,6 +166,8 @@ export const SCREEN_ENTRIES: Record<string, readonly string[]> = {
     'features/fx/ExchangeRatesPage.tsx',
   ],
   capture: ['features/capture/CaptureRoute.tsx'],
+  /** New enquiry (P4-A, /enquiries/new). */
+  enquiries: ['features/enquiry/NewEnquiryPage.tsx'],
 }
 
 /** The files a route ("/money/expenses") can draw, the shell included. Throws for a route no screen owns. */

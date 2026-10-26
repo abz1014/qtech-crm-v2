@@ -156,7 +156,7 @@ export default function JobsListPage() {
         lede={lede}
         primary={
           money ? (
-            <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/rfqs/new')}>
+            <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/enquiries/new')}>
               New enquiry
             </Button>
           ) : undefined
