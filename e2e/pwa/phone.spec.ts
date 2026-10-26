@@ -87,17 +87,6 @@ test.describe('phone platform', () => {
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
     await noSidewaysScroll(page)
 
-    // Capture stays reachable from the shell (it keeps what is pasted on this phone).
-    await expect(page.getByRole('button', { name: 'Paste or photo' })).toBeEnabled()
-    // ...and opens with no signal (its chunk is precached): what is added is kept, and Save says why it waits.
-    await page.getByRole('button', { name: 'Paste or photo' }).first().click()
-    const sheet = page.getByRole('dialog')
-    await expect(sheet.getByText('You are offline')).toBeVisible()
-    await sheet.getByRole('textbox').first().fill('Please quote 2 nos level switch')
-    await expect(sheet.getByTestId('capture-why')).toHaveText('You’re offline')
-    await page.keyboard.press('Escape')
-    await expect(sheet).toHaveCount(0)
-
     // Signal returns: the banner goes without a reload or a sign-in.
     await context.setOffline(false)
     await expect(banner(page)).toHaveCount(0, { timeout: 20_000 })

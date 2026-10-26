@@ -33,14 +33,6 @@ for (const s of SCREENS) {
 /** Overlays that open on a screen, each with the way to open it at any width. */
 const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (page: Page, w: World) => Promise<void> }> = [
   {
-    name: 'Capture sheet',
-    open: async page => {
-      await open(page, '/todo')
-      await page.getByRole('button', { name: UI.capture }).filter({ visible: true }).first().click()
-      await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeVisible()
-    },
-  },
-  {
     name: 'Issue quotation dialog',
     open: async (page, w) => {
       await open(page, `/rfqs/${w.rfq.id}`)

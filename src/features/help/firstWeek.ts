@@ -37,7 +37,7 @@ export const FIRST_WEEK: Record<string, FirstWeekItem[]> = {
   ],
   engineer: [
     PHONE,
-    { id: 'photo', label: 'Save a photo or note with Paste or photo' },
+    { id: 'photo', label: 'Save a photo or note with Add to this job' },
     { id: 'delivered', label: 'Mark goods delivered or received' },
     { id: 'commissioning', label: 'Mark a commissioning job done' },
   ],

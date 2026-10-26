@@ -1,4 +1,5 @@
 import type { ComponentType, LazyExoticComponent } from 'react'
+import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import type { StopName } from '@/features/jobs/lib/stages'
 
@@ -11,7 +12,8 @@ export type SlotComponent = LazyExoticComponent<ComponentType<JobSlotProps>>
 /** One line per plugged-in component. Empty until a lane adds its own. */
 export const JOB_SLOTS: Record<JobSlotName, readonly SlotComponent[]> = {
   'next-step': [],
-  side: [],
+  // P4-B: Add to this job (paste, photo or file; a guess of what it is, one tap to confirm).
+  side: [lazy(() => import('@/features/jobs/AddToJob'))],
   files: [],
   'stage:enquiry': [],
   'stage:quotation': [],

@@ -20,34 +20,27 @@ test.beforeAll(async () => {
   world = await seedWorld('VD')
 })
 
-const captureSheet = (page: Page) => page.getByRole('dialog', { name: /^(Capture|Paste or photo)$/ })
-const captureBox = (page: Page) => captureSheet(page).locator('textarea').first()
-
-/** Opens the Capture sheet: the top-bar button, then the C key as a fallback (as e2e/capture does). */
-async function openCapture(page: Page): Promise<void> {
-  await page.locator('#main').waitFor()
-  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
-  if (!(await captureSheet(page).isVisible().catch(() => false))) {
-    await page.waitForTimeout(1000)
-    if (!(await captureSheet(page).isVisible().catch(() => false))) {
-      await page.locator('#main').click({ position: { x: 5, y: 5 } })
-      await page.keyboard.press('c')
-    }
-  }
-  await expect(captureSheet(page)).toBeVisible({ timeout: 10_000 })
-  const n = await captureBox(page).count()
-  if (n === 0) test.info().annotations.push({ type: 'Capture sheet without a text box', description: (await captureSheet(page).innerText()).slice(0, 600) })
-}
-
-/** A paste outside any text field: CaptureProvider opens the sheet with that text (src/app/capture/CaptureProvider.tsx). */
-async function pasteIntoCapture(page: Page, text: string): Promise<void> {
-  await page.evaluate(t => {
-    const dt = new DataTransfer()
-    dt.setData('text/plain', t)
-    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
-  }, text)
-  await expect(captureSheet(page)).toBeVisible({ timeout: 10_000 })
-  await expect.poll(() => captureBox(page).inputValue()).toContain(text.slice(0, 20))
+/**
+ * Keeps an item on this device as the Android share target does (IndexedDB 'qtech-capture', 7 days). The Paste or photo sheet is
+ * gone (P4), so this is the one thing Capture still keeps: a shared item waiting for a person to choose New enquiry or Add to job.
+ */
+async function keepSharedItem(page: Page, text: string): Promise<void> {
+  await page.evaluate(
+    t =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('qtech-capture', 1)
+        open.onupgradeneeded = () => open.result.createObjectStore('items', { keyPath: 'id' })
+        open.onerror = () => reject(open.error)
+        open.onsuccess = () => {
+          const tx = open.result.transaction('items', 'readwrite')
+          const now = Date.now()
+          tx.objectStore('items').put({ id: crypto.randomUUID(), createdAt: now, expiresAt: now + 7 * 86_400_000, source: 'share', text: t, files: [] })
+          tx.oncomplete = () => resolve()
+          tx.onerror = () => reject(tx.error)
+        }
+      }),
+    text,
+  )
 }
 
 const rows = async <T>(path: string): Promise<T[]> => {
@@ -250,18 +243,16 @@ test('the bank tick (optimistic) is rolled back when the write fails: network er
 })
 
 // ------------------------------------------------------------------------------------------------ shared device
-test('sign-out clears the query cache, the Capture drafts and the recents; the next person sees none of it', async ({ page }) => {
+test('sign-out clears the query cache, the shared items kept on the device and the recents; the next person sees none of it', async ({ page }) => {
   const secret = `${world.tag} secret capture note PKR 99,123`
   await openAs(page, 'admin', `/orders/${world.order.id}`)
   await page.goto(`/rfqs/${world.rfq.id}`)
   await page.locator('#main').waitFor()
   await page.goto('/money/gst-register')
   await page.locator('#main').waitFor()
-  // A Capture draft (kept in IndexedDB while signed in).
-  await pasteIntoCapture(page, secret)
-  await page.waitForTimeout(800)
-  expect((await storageState(page)).captures, 'the draft is kept on the device while signed in').toBeGreaterThan(0)
-  await page.keyboard.press('Escape')
+  // A shared item waiting on the device (kept in IndexedDB while signed in).
+  await keepSharedItem(page, secret)
+  expect((await storageState(page)).captures, 'the shared item is kept on the device while signed in').toBeGreaterThan(0)
   const withData = (await cachedQueries(page)) ?? []
   expect(withData.filter(q => q.hasData).length, 'precondition: the cache holds data while signed in').toBeGreaterThan(3)
 
@@ -270,7 +261,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   expect(cache, 'the query cache is reachable').not.toBeNull()
   expect((cache ?? []).filter(q => q.hasData && !q.key.startsWith('["session"')), 'queries still holding data after sign-out').toEqual([])
   const s = await storageState(page)
-  expect(s.captures, 'Capture drafts after sign-out').toBe(0)
+  expect(s.captures, 'shared items after sign-out').toBe(0)
   expect(s.local.filter(k => /^qtech\.(recentRfqs|recentOrders|rfqs\.intakeDraft\.)/.test(k)), 'recents and drafts after sign-out').toEqual([])
   expect(s.local.filter(k => /^sb-.*-auth-token/.test(k)), 'the session token after sign-out').toEqual([])
   test.info().annotations.push({ type: 'localStorage after sign-out', description: s.local.join(', ') || 'empty' })
@@ -278,36 +269,12 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
 
   // The next person on the same tab.
   await signIn(page, STAFF_EMAIL.engineer)
-  await openCapture(page)
-  const next = captureSheet(page)
-  expect(await captureBox(page).inputValue(), 'the next person\'s Capture sheet').not.toContain('secret capture note')
-  await expect(next).not.toContainText('secret capture note')
-  await page.keyboard.press('Escape')
+  await page.goto('/capture')
+  await expect(page.getByTestId('share-gone'), 'the next person finds no shared item').toBeVisible()
   await page.goto(`/orders/${world.order.id}`)
   await page.waitForLoadState('networkidle')
   const text = await page.locator('body').innerText()
   for (const n of [world.amounts.invoiceNet, world.amounts.payment, world.amounts.sell]) expect(text, 'no figure from the admin session').not.toContain(n.toLocaleString('en-US'))
-})
-
-test('BUG-RV-06: a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
-  const secret = `${world.tag} expired-session capture note`
-  await openAs(page, 'admin', '/todo')
-  await pasteIntoCapture(page, secret)
-  await page.waitForTimeout(800)
-  await page.keyboard.press('Escape')
-  expect((await storageState(page)).captures, 'precondition: the draft is kept on the device').toBeGreaterThan(0)
-  // The session ends without the Sign out button: the stored token is gone (refresh token expired or revoked elsewhere).
-  await page.evaluate(() => {
-    for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token/.test(k)) localStorage.removeItem(k)
-  })
-  await page.reload()
-  await expect(page).toHaveURL(/\/login$/)
-  const left = await storageState(page)
-  test.info().annotations.push({ type: 'device state after the session ended', description: `captures ${left.captures}; localStorage ${left.local.join(', ')}` })
-  await signIn(page, STAFF_EMAIL.engineer)
-  await openCapture(page)
-  await page.waitForTimeout(1000)
-  expect(await captureBox(page).inputValue(), 'the next person sees the previous person\'s Capture draft').not.toContain('expired-session capture note')
 })
 
 test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and are per person', async ({ page }) => {
