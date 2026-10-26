@@ -83,3 +83,13 @@ describe('what an engineer reads', () => {
     expect(officeDetail(null)).toBeNull()
   })
 })
+
+describe('an engineer\'s ruler', () => {
+  it('calls the Invoice stop Billing and drops the money states', () => {
+    const m = stageModel({ stage: 'delivered', stageDetail: 'partly invoiced, advance received, installation planned 28 Oct', kind: 'enquiry', office: true })
+    expect(m.stops[5].shown).toBe('Billing')
+    expect(m.phoneLabel).toBe('Stage 6 of 7 · Billing')
+    expect(m.detail).toBe('installation planned 28 Oct')
+    expect(JSON.stringify([m.stops.map(s => [s.shown, s.note]), m.label, m.phoneLabel, m.detail])).not.toMatch(/nvoice|advance/)
+  })
+})

@@ -96,9 +96,10 @@ test.describe('Jobs list (P5-B)', () => {
 
   test('phone: cards, no sideways scroll at 375 and 320', async ({ page }) => {
     const f = await seed()
+    await openAs(page, 'admin', '/today')
     for (const width of [375, 320]) {
       await page.setViewportSize({ width, height: 800 })
-      await openAs(page, 'admin', `/jobs?q=${encodeURIComponent(f.company.name)}`)
+      await page.goto(`/jobs?q=${encodeURIComponent(f.company.name)}`)
       await expect(page.getByText(`Job ${f.rfq.number}`).first()).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)
@@ -134,9 +135,10 @@ test.describe('Job page (P5-C, P5-D1)', () => {
 
   test('phone: the ruler is one line, no sideways scroll at 375 and 320', async ({ page }) => {
     const f = await seed()
+    await openAs(page, 'admin', '/today')
     for (const width of [375, 320]) {
       await page.setViewportSize({ width, height: 800 })
-      await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
+      await page.goto(`/jobs/${f.rfq.number}`)
       await expect(page.locator('[data-stage-phone]')).toContainText(/Stage \d of 7/)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)

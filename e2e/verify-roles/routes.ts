@@ -119,7 +119,7 @@ export const ROUTES: readonly RouteSpec[] = [
     sales: 'ok',
     engineer: 'ok',
     // an engineer sees the same list, which holds no money for anyone; the one green button starts an enquiry (admin and sales)
-    openers: [{ name: /^New enquiry$/, roles: AS }],
+    openers: [{ name: /^New enquiry$/, roles: AS, open: false }], // it goes to the intake page: presence only
     engineerAbsent: [/^Value/, /^Gross/, /PKR/],
   },
   { path: '/jobs?chip=history', admin: 'ok', sales: 'ok', engineer: 'ok' },

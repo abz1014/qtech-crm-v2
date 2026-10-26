@@ -43,12 +43,16 @@ export interface JobStanding {
   stage: string | null
   stageDetail: string | null
   kind: 'enquiry' | 'direct'
+  /** An engineer's page: money states are left out of the words and the Invoice stop is called Billing (an engineer's screen never says Invoice). */
+  office?: boolean
 }
 
 export type StopState = 'done' | 'current' | 'future' | 'none' | 'stopped'
 
 export interface StopView {
   name: StopName
+  /** The word drawn: the name, or "Billing" for an engineer's Invoice stop. */
+  shown: string
   index: number
   state: StopState
   /** A parallel sub-state to draw under the stop ("2 of 3 delivered"). */
@@ -63,6 +67,8 @@ export interface StageModel {
   current: number | null
   /** "Stage 4 of 7 · Supplier order", the phone form. */
   phoneLabel: string
+  /** The detail as this person reads it (an engineer's has the money states left out). */
+  detail: string | null
   /** The words for "Where it stands": the stop, then its detail. */
   label: string
   /** A lost or cancelled job ends with this ("Lost: price too high"); otherwise null. */
@@ -113,7 +119,8 @@ export function officeDetail(detail: string | null): string | null {
 const parts = (detail: string | null) => (detail ?? '').split(', ').map(s => s.trim()).filter(Boolean)
 
 export function stageModel(job: JobStanding): StageModel {
-  const detail = job.stageDetail
+  const detail = job.office ? officeDetail(job.stageDetail) : job.stageDetail
+  const shownName = (name: StopName) => (job.office && name === 'Invoice' ? 'Billing' : name)
   const cur = currentStopIndex(job.stage, detail)
   const lostOrCancelled = job.stage === 'lost' || job.stage === 'cancelled'
   const advance = parts(detail).some(p => p === 'advance received' || p === 'part paid')
@@ -136,10 +143,10 @@ export function stageModel(job: JobStanding): StageModel {
       if (index === 5 && cur !== 5 && ps.includes('invoiced')) note = 'invoiced'
       if (index === 7) note = null
     }
-    return { name, index, state, note, half: index === 6 && advance && cur !== 7 }
+    return { name, shown: shownName(name), index, state, note, half: index === 6 && advance && cur !== 7 }
   })
   const label =
-    ending ?? (cur === 7 ? 'Paid' : cur === null ? 'Not started' : [STOPS[cur], detail ? parts(detail).join(', ') : null].filter(Boolean).join(' · '))
-  const phoneLabel = ending ?? (cur === 7 ? 'All 7 stops done' : cur === null ? 'Not started' : `Stage ${cur + 1} of 7 · ${STOPS[cur]}`)
-  return { stops, current: cur === null ? null : cur === 7 ? 7 : cur + 1, phoneLabel, label, ending, finished: cur === 7 || lostOrCancelled }
+    ending ?? (cur === 7 ? 'Paid' : cur === null ? 'Not started' : [shownName(STOPS[cur]), detail ? parts(detail).join(', ') : null].filter(Boolean).join(' · '))
+  const phoneLabel = ending ?? (cur === 7 ? 'All 7 stops done' : cur === null ? 'Not started' : `Stage ${cur + 1} of 7 · ${shownName(STOPS[cur])}`)
+  return { stops, detail, current: cur === null ? null : cur === 7 ? 7 : cur + 1, phoneLabel, label, ending, finished: cur === 7 || lostOrCancelled }
 }

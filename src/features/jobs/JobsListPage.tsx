@@ -15,7 +15,7 @@ import type { JobRow } from '@/features/jobs/api'
 import { StageMini } from '@/features/jobs/StageBar'
 import { jobNext } from '@/features/jobs/lib/nextStep'
 import { byRecent, chipCounts, defaultChip, inChip, isChip, jobLabel, type Chip, type Who } from '@/features/jobs/lib/listModel'
-import { officeDetail, stageModel } from '@/features/jobs/lib/stages'
+import { stageModel } from '@/features/jobs/lib/stages'
 
 /*
  * Jobs (redesign phase 5, P5-B). One row per customer request from enquiry to payment ("Job 139"; "Job O-45" for an order with no
@@ -66,7 +66,7 @@ function JobCard({ job, role }: { job: JobRow; role: Who['role'] }) {
         <span className="num shrink-0 text-base text-fg-muted">{jobLabel(job.key)}</span>
       </span>
       {job.items ? <span className="min-w-0 text-base text-fg-2 [overflow-wrap:anywhere]">{job.items}</span> : null}
-      <StageMini job={{ stage: job.stage, stageDetail: role === 'engineer' ? officeDetail(job.stageDetail) : job.stageDetail, kind: job.kind }} />
+      <StageMini job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }} />
       <span className="text-base">
         <NextText job={job} role={role} />
       </span>
@@ -117,7 +117,7 @@ export default function JobsListPage() {
       header: 'Where it stands',
       value: j => stageModel({ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind }).current ?? 99,
       sortable: true,
-      cell: j => <StageMini job={{ stage: j.stage, stageDetail: role === 'engineer' ? officeDetail(j.stageDetail) : j.stageDetail, kind: j.kind }} />,
+      cell: j => <StageMini job={{ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind, office: role === 'engineer' }} />,
     },
     { id: 'next', header: 'Next step', cell: j => <NextText job={j} role={role} /> },
     { id: 'owner', header: 'Owner', value: j => j.ownerName ?? '', sortable: true, hideBelowMd: true, cell: j => j.ownerName ?? <span className="text-fg-muted">No owner</span> },

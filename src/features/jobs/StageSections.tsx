@@ -62,6 +62,7 @@ const Note = ({ children }: { children: ReactNode }) => <p className="py-2 text-
 
 interface Section {
   stop: StopName
+  shown: string
   index: number
   state: StopState
   summary: ReactNode
@@ -253,7 +254,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
     ctx.money ? (m ? (m.balance <= 0 && m.settled > 0 ? 'Paid' : m.settled > 0 ? 'Part paid, the rest to collect' : 'Not paid yet') : 'Starts after the invoice') : 'Handled by the office',
   ]
 
-  return STOPS.map((stop, index) => ({ stop, index, state: state(index), summary: summaries[index], body: bodies[index] }))
+  return STOPS.map((stop, index) => ({ stop, shown: model.stops[index].shown, index, state: state(index), summary: summaries[index], body: bodies[index] }))
 }
 
 function rfqLink(rfqId: string | null, label: string) {
@@ -288,7 +289,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle }: { fac
         const head = (
           <>
             <Icon icon={ChevronRight} className={cn('shrink-0 text-fg-muted transition-transform', isOpen && 'rotate-90')} />
-            <span className={cn('w-[8.5rem] shrink-0 text-left text-base font-semibold', (s.state === 'future' || none || s.state === 'stopped') && 'font-medium text-fg-muted')}>{s.stop}</span>
+            <span className={cn('w-[8.5rem] shrink-0 text-left text-base font-semibold', (s.state === 'future' || none || s.state === 'stopped') && 'font-medium text-fg-muted')}>{s.shown}</span>
             <span className="min-w-0 flex-1 text-left text-base text-fg-2 [overflow-wrap:anywhere]">{s.summary}</span>
             {TAG[s.state] ? (
               <span
@@ -321,7 +322,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle }: { fac
               )}
             </h2>
             {isOpen ? (
-              <div id={`stage-body-${s.index}`} role="region" aria-label={`${s.stop} stage`} className="grid gap-3 border-t px-4 py-3">
+              <div id={`stage-body-${s.index}`} role="region" aria-label={`${s.shown} stage`} className="grid gap-3 border-t px-4 py-3">
                 {s.body}
                 <JobSlot name={stageSlot(s.stop)} context={ctx} />
               </div>

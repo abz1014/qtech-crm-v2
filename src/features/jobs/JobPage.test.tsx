@@ -87,8 +87,10 @@ describe('Job page', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('region', { name: 'Money for this job' })).toBeNull()
     expect(container.textContent).not.toMatch(/PKR|1,392,400|974,680|advance received/)
-    const invoice = stagesOf(container).getByRole('button', { name: /Invoice/ })
-    expect(invoice).toHaveTextContent('Handled by the office')
+    const billing = stagesOf(container).getByRole('button', { name: /Billing/ })
+    expect(billing).toHaveTextContent('Handled by the office')
+    // the engineer's screen never says Invoice (verify-roles: ENGINEER_MONEY_WORDS)
+    expect(container.textContent).not.toMatch(/Invoic/i)
   })
 
   it('clicking a stop opens its stage', async () => {

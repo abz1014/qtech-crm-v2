@@ -45,7 +45,7 @@ export function StageBar({ job, onSelect, className }: { job: JobStanding; onSel
         <p className="text-base font-semibold" data-stage-phone>
           {m.phoneLabel}
         </p>
-        {m.current !== null && m.ending === null && job.stageDetail ? <p className="text-base text-fg-2">{job.stageDetail}</p> : null}
+        {m.current !== null && m.ending === null && m.detail ? <p className="text-base text-fg-2">{m.detail}</p> : null}
         <div className="mt-2 flex gap-1" aria-hidden="true">
           {m.stops.map(s => (
             <span key={s.name} className={cn('h-2 flex-1 rounded-round', SEG[s.state])} />
@@ -65,7 +65,7 @@ export function StageBar({ job, onSelect, className }: { job: JobStanding; onSel
                 </span>
               </span>
               <span className={cn('mt-2 text-center text-sm', s.state === 'current' ? 'font-semibold text-fg' : s.state === 'done' ? 'font-medium text-fg-2' : 'text-fg-muted')}>
-                {s.name}
+                {s.shown}
                 <span className="sr-only">{`, ${STATE_WORD[s.state]}`}</span>
               </span>
               {s.note ? <span className="mt-px text-center text-sm text-fg-2">{s.note}</span> : null}

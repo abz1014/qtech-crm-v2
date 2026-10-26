@@ -19,7 +19,7 @@ import { StageSections } from '@/features/jobs/StageSections'
 import { CancelledOrders, ContactPanel, MoneyPanel, NotesFilesPanel } from '@/features/jobs/JobSide'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
 import { jobNext } from '@/features/jobs/lib/nextStep'
-import { currentStopIndex, officeDetail, stageModel } from '@/features/jobs/lib/stages'
+import { currentStopIndex, stageModel } from '@/features/jobs/lib/stages'
 import { jobLabel } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
 import { WonDialogHost } from '@/features/jobs/EnquiryWork'
@@ -99,7 +99,7 @@ function JobView({ facts }: { facts: JobFacts }) {
   const phone = useMediaQuery('(max-width: 767px)')
   const { job } = facts
   const data = useJobData(facts, role)
-  const model = useMemo(() => stageModel({ stage: job.stage, stageDetail: role === 'engineer' ? officeDetail(job.stageDetail) : job.stageDetail, kind: job.kind }), [job.stage, job.stageDetail, job.kind, role])
+  const model = useMemo(() => stageModel({ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }), [job.stage, job.stageDetail, job.kind, role])
   const ctx = useMemo<JobContext>(() => ({ job, role, money: role !== 'engineer' }), [job, role])
   const next = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role })
 
@@ -173,7 +173,7 @@ function JobView({ facts }: { facts: JobFacts }) {
       </DetailHeader>
 
       <div className="mt-4 rounded-panel border bg-surface px-4 py-4">
-        <StageBar job={{ stage: job.stage, stageDetail: role === 'engineer' ? officeDetail(job.stageDetail) : job.stageDetail, kind: job.kind }} onSelect={select} />
+        <StageBar job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }} onSelect={select} />
       </div>
 
       <NextStepBox
