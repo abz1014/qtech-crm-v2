@@ -1,3 +1,4 @@
+import { gstReturnDueDay, gstReturnMayBeFiled, monthHasFbrRecord } from '@/features/money/invoices/model'
 import { describe, expect, it } from 'vitest'
 import {
   attentionReason,
@@ -128,5 +129,26 @@ describe('month stamping', () => {
 
   it('a pasted PSID loses its stray spaces and line breaks', () => {
     expect(cleanPsid('  1234 5678\n')).toBe('1234 5678')
+  })
+})
+
+describe('is the month\'s GST return perhaps in? (W11)', () => {
+  it('a PSID or a deposit on any invoice of that month says yes', () => {
+    const rows = [{ invoiceDate: '2026-10-03', psid: null, taxDepositedOn: null }, { invoiceDate: '2026-10-20', psid: ' 123 ', taxDepositedOn: null }]
+    expect(monthHasFbrRecord(rows, '2026-10-12')).toBe(true)
+    expect(monthHasFbrRecord(rows, '2026-09-30')).toBe(false)
+    expect(monthHasFbrRecord([{ invoiceDate: '2026-10-03', psid: '', taxDepositedOn: '2026-11-15' }], '2026-10-01')).toBe(true)
+    expect(monthHasFbrRecord(rows, null)).toBe(false)
+  })
+  it('past the 18th of the following month says yes, the 18th itself does not', () => {
+    expect(gstReturnDueDay('2026-10-12')).toBe('2026-11-18')
+    expect(gstReturnMayBeFiled('2026-10-12', '2026-11-18', false)).toBe(false)
+    expect(gstReturnMayBeFiled('2026-10-12', '2026-11-19', false)).toBe(true)
+    expect(gstReturnMayBeFiled('2026-12-02', '2027-01-10', false)).toBe(false)
+    expect(gstReturnMayBeFiled('2026-12-02', '2027-01-19', false)).toBe(true)
+  })
+  it('a recorded FBR payment says yes whatever the day, and no date says no', () => {
+    expect(gstReturnMayBeFiled('2026-10-12', '2026-10-13', true)).toBe(true)
+    expect(gstReturnMayBeFiled(null, '2026-12-31', true)).toBe(false)
   })
 })
