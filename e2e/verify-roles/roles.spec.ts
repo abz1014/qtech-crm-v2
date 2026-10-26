@@ -314,7 +314,8 @@ test('signed out: every protected route and deep link goes to sign-in, then back
   await page.getByLabel('Email').fill(STAFF_EMAIL.engineer)
   await page.getByLabel('Password', { exact: true }).fill(FIXTURE_PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(new RegExp(`/orders/${world.order.id}$`))
+  // The old order address now opens the order's Job page (/jobs/O-<number>); either is the same page.
+  await expect(page).toHaveURL(new RegExp(`/(orders/${world.order.id}|jobs/O-${world.order.number})$`))
   await page.getByRole('button', { name: /^Account menu, / }).click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/login$/)
