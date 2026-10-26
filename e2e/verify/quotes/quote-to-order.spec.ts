@@ -103,7 +103,7 @@ test('every close reason on the Bid and close menu is stored as itself, and the 
     Object.fromEntries((await db.view<{ close_reason: string | null; outcome: string; rfqs: number }>('v_report_rfq_outcomes?select=close_reason,outcome,rfqs')).filter(o => o.close_reason).map(o => [o.close_reason as string, Number(o.rfqs)]))
   const before = await outcomes()
   const sales = await signedIn(browser, info, 'sales')
-  const page = await open(sales, '/today')
+  const page = await open(sales, '/todo')
   const customer = await company('Verify Lost Customer')
   for (const [key, label] of QUOTES.close.reasons) {
     const r = await rfq({ customer, items: [{ description: `Lost item ${key}`, qty: 1 }] })

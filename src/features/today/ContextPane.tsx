@@ -2,10 +2,8 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlarmClock,
-  AlarmClockOff,
   CalendarDays,
   Check,
-  ChevronRight,
   CircleCheck,
   Clock,
   ExternalLink,
@@ -17,7 +15,6 @@ import {
 import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { copyToClipboard } from '@/lib/clipboard'
-import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
 import { cn } from '@/lib/utils'
@@ -26,14 +23,10 @@ import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
 import { MessageActions } from '@/ui/MessageActions'
-import { Dialog, DialogContent } from '@/ui/Dialog'
-import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
-import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { ChannelLink } from '@/ui/ChannelLink'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
-import { InfoTip } from '@/ui/InfoTip'
 import { ChaseNote, FormattedMessage, RecipientRow, SubjectRow } from '@/features/rfqs/ChaseParts'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
@@ -41,15 +34,16 @@ import { useRfqHeader, useRfqInquiries, useRfqItems, useSetRfqClosed } from '@/f
 import { COMPANY_NAME, customerReturnsOn, supplierReturnsOn } from '@/features/rfqs/lib'
 import { SUPPLIER_WAIT_DAYS } from '@/features/rfqs/lib/chaseWait'
 import { supplierChaseBaseDays } from '@/features/today/rules'
-import { addBusinessDays, addDays, nextMonday } from '@/features/rfqs/lib/dateText'
+import { addBusinessDays } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import { closeReasonLabel, type CloseReason } from '@/features/rfqs/lib/closeDefaults'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import type { TodayData } from '@/features/today/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft, type Draft } from '@/features/today/chaseDraft'
 import { chaseMemo, clockText, excerptOf, forgetChase, rememberChase } from '@/features/today/chaseMemory'
-import { performChase, useLegDraft, usePaymentDraft, useRefreshAfterChase, useSnooze, useUnsnooze, type ChaseSpec } from '@/features/today/hooks'
-import { SNOOZE_RULE, type TodayItem } from '@/features/today/types'
+import { performChase, useLegDraft, usePaymentDraft, useRefreshAfterChase, type ChaseSpec } from '@/features/today/hooks'
+import { SnoozeMenu } from '@/features/today/SnoozeMenu'
+import type { TodayItem } from '@/features/today/types'
 import { agoText, distanceText } from '@/features/today/text'
 import { COUNT_WORDS_MAX_DAYS, sinceWords } from '@/lib/timeWords'
 import { daysBetween } from '@/features/rfqs/lib/dateText'
@@ -255,7 +249,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
     <section aria-label={`${item.title}, ${item.ref}`} className="grid content-start gap-4">
       {compact ? null : (
         <header className="grid gap-1">
-          <Breadcrumb className="mb-1" items={[{ label: 'Today', to: '/today' }, { label: item.ref, mono: true }]} />
+          <Breadcrumb className="mb-1" items={[{ label: 'To do', to: '/todo' }, { label: item.ref, mono: true }]} />
           <h2 className="text-xl font-semibold tracking-snug">{item.title}</h2>
           <p className="text-sm text-fg-2">
             {customerRule ? (
@@ -912,88 +906,3 @@ function CloseRfqBanner({
   )
 }
 
-/** Snooze: tomorrow, Monday or a date. One snooze per rule and subject; Undo puts back what was there. */
-export function SnoozeMenu({ item, today, iconOnly = false }: { item: TodayItem; today: string; iconOnly?: boolean }) {
-  const snooze = useSnooze()
-  const unsnooze = useUnsnooze()
-  const { toast } = useToast()
-  const [picking, setPicking] = useState(false)
-  const [date, setDate] = useState<string>(addDays(businessToday(), 2) ?? '')
-  const rule = SNOOZE_RULE[item.rule]
-
-  const apply = (untilOn: string) => {
-    snooze.mutate(
-      { rule, subjectId: item.subjectId, untilOn },
-      {
-        onSuccess: () =>
-          toast({
-            title: `Snoozed until ${formatDay(untilOn)}`,
-            body: `${item.ref} · ${item.party}`,
-            tone: 'neutral',
-            undo: { onUndo: () => unsnooze.mutateAsync({ rule, subjectId: item.subjectId }).then(() => undefined) },
-          }),
-        onError: err => toast({ title: 'Could not snooze', body: mapPgError(err).message, tone: 'danger' }),
-      },
-    )
-  }
-  const tomorrow = addDays(today, 1) as string
-  const monday = nextMonday(today)
-  const short = (iso: string) => formatDay(iso).split(' ').slice(0, 2).join(' ')
-  return (
-    <>
-      <Popover>
-        <PopoverTrigger asChild>
-          {iconOnly ? (
-            <Button variant="secondary" icon={AlarmClockOff} aria-label="Snooze" size="touch" />
-          ) : (
-            <Button variant="quiet" icon={AlarmClockOff}>
-              Snooze
-            </Button>
-          )}
-        </PopoverTrigger>
-        <PopoverContent variant="menu" align="end" aria-label="Snooze until">
-          <MenuItem onClick={() => apply(tomorrow)} hint={short(tomorrow)}>
-            Tomorrow morning
-          </MenuItem>
-          <MenuItem onClick={() => apply(monday)} hint={formatDay(monday)}>
-            Monday
-          </MenuItem>
-          <MenuItem icon={CalendarDays} onClick={() => setPicking(true)} hint={<Icon icon={ChevronRight} size="sm" />}>
-            Pick a date
-          </MenuItem>
-        </PopoverContent>
-      </Popover>
-      {iconOnly ? null : <InfoTip label="About snooze">Hides this item until the day you pick. Only for you.</InfoTip>}
-      <Dialog open={picking} onOpenChange={setPicking}>
-        <DialogContent
-          title="Snooze until"
-          context={`${item.ref} · ${item.party}`}
-          icon={AlarmClockOff}
-          footer={
-            <>
-              <Button data-cancel onClick={() => setPicking(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                disabled={!date || date <= today}
-                onClick={() => {
-                  setPicking(false)
-                  apply(date)
-                }}
-              >
-                Snooze
-              </Button>
-            </>
-          }
-        >
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Come back on</span>
-            <DateInput value={date} onChange={setDate} defaultToday={false} aria-label="Snooze until" />
-          </label>
-          <p className="mt-2 text-xs text-fg-muted">It disappears from Today until that day.</p>
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}

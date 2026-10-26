@@ -28,11 +28,11 @@ function Where() {
 }
 
 function BarPage() {
-  useMobileBar({ title: 'Team', back: { to: '/today' }, action: <button type="button">Add</button> })
+  useMobileBar({ title: 'Team', back: { to: '/todo' }, action: <button type="button">Add</button> })
   return <p>Bar page</p>
 }
 
-function shell(path = '/today') {
+function shell(path = '/todo') {
   return render(
     <QueryClientProvider client={client}>
     <SessionProvider value={signedIn}>
@@ -46,7 +46,7 @@ function shell(path = '/today') {
               </>
             }
           >
-            <Route path="/today" element={<input aria-label="Notes" />} />
+            <Route path="/todo" element={<input aria-label="Notes" />} />
             <Route path="/rfqs/new" element={<p>Intake</p>} />
             <Route path="/rfqs" element={<p>RFQs page</p>} />
             <Route path="/bar" element={<BarPage />} />
@@ -75,37 +75,37 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     await import('@/ui/CommandPalette')
   }, 60_000)
 
-  it('idle lists Actions: New RFQ (N), Paste or photo (C), Go to Today (G T)', async () => {
+  it('idle lists Actions: New RFQ (N), Paste or photo (C), Go to To do (G T)', async () => {
     const user = userEvent.setup()
     shell()
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Paste or photoActionC', 'Go to TodayG T']))
+    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Paste or photoActionC', 'Go to To doG T']))
   })
 
-  it('N opens intake, C opens the capture surface, G then T goes to Today', async () => {
+  it('N opens intake, C opens the capture surface, G then T goes to To do', async () => {
     shell('/rfqs')
     press('n')
     expect(await screen.findByText('Intake')).toBeInTheDocument()
     expect(screen.getByTestId('where').textContent).toBe('/rfqs/new')
     press('g')
     press('t')
-    expect(screen.getByTestId('where').textContent).toBe('/today')
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
     // From the page, as a real key press is: CaptureProvider's document listener answers C (PaletteHost no longer does).
     press('c', document.body)
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByTestId('where').textContent).toBe('/today')
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
   })
 
   it('T alone does nothing, and typing in a field never triggers a shortcut', async () => {
-    shell('/today')
+    shell('/todo')
     press('t')
-    expect(screen.getByTestId('where').textContent).toBe('/today')
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
     const field = screen.getByRole('textbox', { name: 'Notes' })
     press('n', field)
-    expect(screen.getByTestId('where').textContent).toBe('/today')
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
   })
 })
 
@@ -131,7 +131,7 @@ describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
 
   it('? does nothing while typing, with a dialog open, or with single-key shortcuts off', async () => {
     const user = userEvent.setup()
-    shell('/today')
+    shell('/todo')
     press('?', screen.getByRole('textbox', { name: 'Notes' }))
     expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).toBeNull()
 
@@ -179,7 +179,7 @@ describe('phone bar (A-82)', () => {
     const back = await screen.findByRole('button', { name: 'Back' })
     expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
     await user.click(back)
-    expect(screen.getByTestId('where').textContent).toBe('/today')
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
     expect(screen.getAllByRole('button', { name: 'Search' }).length).toBeGreaterThan(0)
   })

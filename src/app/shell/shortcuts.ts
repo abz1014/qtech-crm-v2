@@ -40,7 +40,7 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
     { group: 'Anywhere', keys: [mod, 'K'], what: 'Search or jump to', where: 'Also works inside a text box', handles: ['k'] },
     { group: 'Anywhere', keys: ['N'], what: 'New RFQ', handles: ['n'] },
     { group: 'Anywhere', keys: ['C'], what: 'Paste or photo', handles: ['c'] },
-    { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to Today', handles: ['g', 't'] },
+    { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to To do', handles: ['g', 't'] },
     { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture: opens Paste or photo with it', handles: ['v'] },
     { group: 'Anywhere', keys: [mod, 'Z'], what: 'Undo the last action while its Undo button shows', handles: ['z'] },
     { group: 'Anywhere', keys: ['Esc'], what: 'Close a dialog, sheet or menu', handles: ['escape'] },

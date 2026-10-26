@@ -54,7 +54,7 @@ test.describe('the enquiry as it arrives', () => {
   test('an Excel block with a header row, a number column and a unit column gives one item per row with its quantity and unit', async ({ browser }, info) => {
     const customer = await company('Verify Excel Customer')
     const sales = await signedIn(browser, info, 'sales')
-    const page = await open(sales, '/today')
+    const page = await open(sales, '/todo')
     await startIntake(page, customer.name)
     await paste(page, ['S.No\tDescription\tQty\tUnit', '1\tSolenoid valve 1/2 inch 24V DC\t6\tnos', '2\tInstrument cable 2 core 1.5 mm\t150\tm'].join('\n'))
     await expect(page.getByText(SALES.intake.found(2, 2)).first()).toBeVisible()
@@ -72,7 +72,7 @@ test.describe('the enquiry as it arrives', () => {
   test('a WhatsApp chat copied with its "[time, date] Name:" prefixes gives the two items, without the prefixes or the greetings', async ({ browser }, info) => {
     const customer = await company('Verify WhatsApp Customer')
     const sales = await signedIn(browser, info, 'sales')
-    const page = await open(sales, '/today')
+    const page = await open(sales, '/todo')
     await startIntake(page, customer.name)
     // What WhatsApp Web puts on the clipboard when several messages are copied together.
     await paste(
@@ -96,7 +96,7 @@ test.describe('the enquiry as it arrives', () => {
   test('an unmarked email with a signature block gives only the items, not the name, the job title or the phone number', async ({ browser }, info) => {
     const customer = await company('Verify Signature Customer')
     const sales = await signedIn(browser, info, 'sales')
-    const page = await open(sales, '/today')
+    const page = await open(sales, '/todo')
     await startIntake(page, customer.name)
     await paste(
       page,
@@ -114,7 +114,7 @@ test.describe('the enquiry as it arrives', () => {
   test('the same message pasted twice does not double the items', async ({ browser }, info) => {
     const customer = await company('Verify Twice Customer')
     const sales = await signedIn(browser, info, 'sales')
-    const page = await open(sales, '/today')
+    const page = await open(sales, '/todo')
     await startIntake(page, customer.name)
     const msg = ['1) Temperature transmitter PT100 head mount - 3 nos', '2) Thermowell SS316 250 mm - 3 nos'].join('\n')
     await paste(page, msg)

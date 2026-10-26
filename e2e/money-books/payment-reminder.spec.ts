@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { showAllTodo } from '../support/todo'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
@@ -132,7 +133,8 @@ test.describe('payment-reminder panel (M09)', () => {
   test('a reminded order leaves Today for Waiting, and the Receivables row says when it was reminded', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     const s = await seedOverdue()
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
+    await showAllTodo(page)
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toBeVisible()
     await page.goto('/money/receivables')
     await pick(page, s)
@@ -140,9 +142,10 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(page.getByText(/Reminder 1 recorded today/)).toBeVisible()
     await page.waitForTimeout(10_500) // the undo window closes and the screen re-reads
     await expect(page.getByRole('row', { name: new RegExp(s.company.name) })).toContainText('Reminded today')
-    await page.goto('/today')
+    await page.goto('/todo')
+    await showAllTodo(page)
     // Waiting starts collapsed (R2-08): open it to see the reminded order
-    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Waiting · \d+/ }).click()
+    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Chased, waiting · \d+/ }).click()
     await expect(page.locator('li[data-rule="payment_overdue"][data-waiting]').filter({ hasText: s.company.name })).toHaveCount(1)
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })
@@ -236,7 +239,8 @@ test.describe('Today v3 money rules (M08)', () => {
   test('admin sees the TCS item as one rolled-up row that opens the register', async ({ page }) => {
     // An invoice from 10 days ago with no courier date: "n invoices not sent by TCS" (one rolled-up item).
     await seedOverdue({ invoiceDate: karachiDay(-10) })
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
+    await showAllTodo(page)
     await page.getByRole('radio', { name: /^Money/ }).click()
     await expect(page.locator(tcs)).toHaveCount(1)
     await expect(page.locator(tcs)).toContainText(/\d+ invoices? not sent by TCS/)
@@ -249,7 +253,8 @@ test.describe('Today v3 money rules (M08)', () => {
   })
 
   test('sales see the TCS item but not the admin-only money items', async ({ page }) => {
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     await expect(page.locator(tcs)).toHaveCount(1)
     for (const rule of ['costs_incomplete', 'recurring_due', 'close_month']) await expect(page.locator(`li[data-rule="${rule}"]`)).toHaveCount(0)
   })
@@ -259,7 +264,8 @@ test.describe('Today v3 money rules (M08)', () => {
     page.on('request', r => {
       if (/v_invoice_state|v_order_money|recurring_expenses|rpc\/order_receivables|rpc\/month_end_status/.test(r.url())) seen.push(r.url())
     })
-    await openAs(page, 'engineer', '/today')
+    await openAs(page, 'engineer', '/todo')
+    await showAllTodo(page)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /Money/ })).toHaveCount(0) // E-SH-01
     for (const rule of ['tcs_not_sent', 'fbr_attention', 'costs_incomplete', 'recurring_due', 'payment_overdue', 'close_month']) {
@@ -270,7 +276,8 @@ test.describe('Today v3 money rules (M08)', () => {
 
   test('the Today money items fit at 375 and pass axe', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
+    await showAllTodo(page)
     await page.getByRole('radio', { name: /^Money/ }).click()
     await expect(page.locator(tcs)).toHaveCount(1)
     await review(page, 'm08-today-money-375')

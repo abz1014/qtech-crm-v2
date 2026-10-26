@@ -201,7 +201,7 @@ async function closeDialogs(page: Page): Promise<void> {
     .click({ timeout: 3_000 })
     .catch(() => undefined)
   if (await gone(3_000)) return
-  await open(page, '/today').catch(() => undefined)
+  await open(page, '/todo').catch(() => undefined)
 }
 
 /**
@@ -228,7 +228,7 @@ const pasteOrPhoto: Visit = {
     }
     try {
       await bounded(45_000, 'open Paste or photo', async () => {
-        await open(page, '/today')
+        await open(page, '/todo')
         await closeDialogs(page)
         await press(page, [/^paste or photo$/i, /paste or photo/i, /^capture$/i], 'open Paste or photo')
         await dialog.waitFor({ timeout: 10_000 })
@@ -322,7 +322,7 @@ const markWon: Visit = {
 }
 
 export const VISITS: readonly Visit[] = [
-  screen('today', 'Today, with items', ALL, () => '/today'),
+  screen('today', 'Today, with items', ALL, () => '/todo'),
   screen('rfqs-open', 'RFQ list, open', ALL, () => '/rfqs'),
   screen('rfqs-closed', 'RFQ list, closed', ALL, () => '/rfqs?tab=closed'),
   screen('rfq-not-sent', 'RFQ page: not sent to suppliers', ALL, fx => `/rfqs/${fx.rfq.notSent}`),

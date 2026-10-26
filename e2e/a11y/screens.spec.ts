@@ -91,7 +91,7 @@ for (const viewport of [
 
 test.describe('axe on open overlays at 1440', () => {
   test('the account menu', async ({ page }) => {
-    await open(page, '/today')
+    await open(page, '/todo')
     await page.getByRole('button', { name: UI.accountMenu }).filter({ visible: true }).first().click()
     await expect(page.getByRole('menu')).toBeVisible()
     expect(await axe(page, { landmarks: false })).toEqual([])
@@ -110,7 +110,7 @@ test.describe('axe on open overlays at 1440', () => {
   })
 
   test('the command palette', async ({ page }) => {
-    await open(page, '/today')
+    await open(page, '/todo')
     await page.keyboard.press('Control+k')
     await expect(page.getByRole('dialog', { name: UI.palette })).toBeVisible()
     expect(await axe(page, { landmarks: false })).toEqual([])
@@ -118,7 +118,7 @@ test.describe('axe on open overlays at 1440', () => {
 
   test('Today with the Undo toast showing', async ({ page }) => {
     const s = await seedChase()
-    await open(page, '/today')
+    await open(page, '/todo')
     await (await openChase(page, s.ref)).button.click()
     await expect(page.getByRole('button', { name: UI.undo })).toBeVisible()
     expect(await axe(page)).toEqual([])

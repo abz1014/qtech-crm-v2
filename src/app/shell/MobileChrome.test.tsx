@@ -16,12 +16,12 @@ const user = { id: 'u1', name: 'Farhan Mirza', role: 'admin' }
 describe('phone tabs: the top bar counts as badges', () => {
   it('a count shows on the icon and is read with the label; no badge for zero or no count', () => {
     render(
-      <MemoryRouter initialEntries={['/today']}>
+      <MemoryRouter initialEntries={['/todo']}>
         <BottomTabs role="admin" counts={{ today: 9, rfqs: 140, orders: 0 }} />
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: /^Today\s?, 9 need you$/ })).toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: /^To do\s?, 9 need you$/ })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: /^RFQs\s?, 140 need you$/ })).toHaveTextContent('99+')
     expect(within(nav).getByRole('link', { name: 'Orders' }).querySelector('[data-needs-count]')).toBeNull()
     expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
@@ -68,10 +68,10 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <SessionProvider value={session}>
-          <MemoryRouter initialEntries={['/today']}>
+          <MemoryRouter initialEntries={['/todo']}>
             <Routes>
               <Route element={<AppShell />}>
-                <Route path="/today" element={<p>Today page</p>} />
+                <Route path="/todo" element={<p>Today page</p>} />
                 <Route path="/settings/exchange-rates" element={<p>Rates page</p>} />
                 <Route path="/settings/details" element={<p>Details page</p>} />
               </Route>

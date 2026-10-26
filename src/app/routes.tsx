@@ -51,6 +51,12 @@ function ReportsRedirect() {
   return <Navigate to={{ pathname: '/money/reports', search }} replace />
 }
 
+/** `/today` was the home screen until redesign phase 3 (To do). Its query string is kept. */
+function TodayRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: '/todo', search }} replace />
+}
+
 /** Dev builds only: the component gallery (U09). Dead code in production. */
 const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')) : null
 /** Dev builds only: reads a picture with the on-device OCR (e2e/docread). Dead code in production. */
@@ -120,6 +126,8 @@ function AppRouteTable() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          {/* Today became To do (redesign phase 3): an old link, bookmark or installed shortcut lands on /todo. */}
+          <Route path="today/*" element={<TodayRedirect />} />
           <Route
             path="my-expenses"
             element={

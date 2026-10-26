@@ -237,7 +237,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
   test(`sales intake at ${vp}: odd paste, PDF, screenshot, reload, Back, double taps, boundaries`, async ({ browser }, info) => {
     test.setTimeout(330_000)
     const ctx = await ctxAs(browser, info, 'sales', vp)
-    const page = await openPage(ctx, info, '/today', `sales/${vp}`)
+    const page = await openPage(ctx, info, '/todo', `sales/${vp}`)
     const W = `intake/${vp}`
 
     // ---- (a) a pasted email with odd lines, asked to one supplier
@@ -399,7 +399,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
     // ---- browser Back with items on the form; Back while "Leave this new RFQ?" is open
     await probe(info, page, `${W} Back from New RFQ`, async () => {
       const cust = await company('Hunt Back Customer')
-      await visit(page, info, '/today', W)
+      await visit(page, info, '/todo', W)
       await startIntake(page, info, cust)
       await pasteOnPage(page, { text: `Differential pressure transmitter ${tag()} - 3 nos` })
       await expect(page.getByRole('textbox', { name: 'Description of item 1', exact: true })).toBeVisible(T)
@@ -1218,7 +1218,7 @@ test('HW-5: a pasted reply line "price on request" is stored as a price (the "2"
 
 test('HW-7: an enquiry quantity of 0 is read as 1 and saved as 1, with no warning', async ({ browser }, info) => {
   const cust = await company('Hunt HW7 Customer')
-  const { ctx, page } = await hwPage(browser, info, '/today', 'HW-7')
+  const { ctx, page } = await hwPage(browser, info, '/todo', 'HW-7')
   await startIntake(page, info, cust)
   await pasteOnPage(page, { text: [`Pressure gauge 0-16 bar ${tag()} - 2 nos`, `Thermowell SS316 ${tag()} - 0 nos`].join('\n') })
   const qty = page.getByRole('textbox', { name: 'Quantity of item 2', exact: true })
@@ -1259,7 +1259,7 @@ test('HW-9: Back with the Issue quotation dialog open leaves the RFQ page and di
 
 test('HW-10: an over-large intake quantity is refused with only "Nothing was saved." and no reason', async ({ browser }, info) => {
   const cust = await company('Hunt HW10 Customer')
-  const { ctx, page } = await hwPage(browser, info, '/today', 'HW-10')
+  const { ctx, page } = await hwPage(browser, info, '/todo', 'HW-10')
   await startIntake(page, info, cust)
   await pasteOnPage(page, { text: `Level switch vibrating fork ${tag()} - 5 nos` })
   const q = page.getByRole('textbox', { name: 'Quantity of item 1', exact: true })

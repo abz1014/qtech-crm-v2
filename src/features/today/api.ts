@@ -723,9 +723,12 @@ export async function undoPaymentReminder(before: ReadonlyArray<{ id: string; la
 }
 
 /** Snooze one item until a date (own row; one snooze per rule and subject, replaced if it exists). */
-export async function snoozeItem(input: { rule: string; subjectId: string; untilOn: string }): Promise<void> {
+export async function snoozeItem(input: { rule: string; subjectId: string; untilOn: string; untilChange?: boolean }): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('snoozes').upsert({ rule: input.rule, subject_id: input.subjectId, until_on: input.untilOn }, { onConflict: 'user_id,rule,subject_id' })
+  // until_change (0097, "Not ours to chase"): the snooze ends when the record changes; until_on is then only a far-off ceiling.
+  const { error } = await db
+    .from('snoozes')
+    .upsert({ rule: input.rule, subject_id: input.subjectId, until_on: input.untilOn, until_change: input.untilChange === true }, { onConflict: 'user_id,rule,subject_id' })
   if (error) throw error
 }
 

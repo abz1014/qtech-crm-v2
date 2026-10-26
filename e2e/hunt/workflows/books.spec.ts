@@ -801,7 +801,7 @@ test('team: add a person, they sign in on a phone; deactivate, reactivate, chang
     await probe(info, p, 'the new person signs in through /login on a phone and uses the app', async () => {
       await signIn(p, email, password)
       if (!(await signedInApp(p))) throw new Error(`not signed in: ${p.url()} ${(await p.locator('body').innerText()).slice(0, 200)}`)
-      await visit(p, info, '/today', 'person today')
+      await visit(p, info, '/todo', 'person today')
       await layout(p, info, 'new person today phone')
       await shot(p, 'books-new-person-today-phone')
       await visit(p, info, '/money/receivables', 'person receivables')
@@ -864,7 +864,7 @@ test('team: add a person, they sign in on a phone; deactivate, reactivate, chang
         const body = await r.text().catch(() => '')
         if (body.length > 2 && body !== '[]') moneyRows.push(`${r.url().replace(/^https?:\/\/[^/]+/, '').slice(0, 120)} -> ${body.slice(0, 80)}`)
       })
-      await spaGo(p, '/today')
+      await spaGo(p, '/todo')
       await sleep(6000)
       await spaGo(p, '/money/receivables')
       const lost = await within(15_000, async () => (await refused(p)) || new URL(p.url()).pathname.startsWith('/no-access'))
@@ -912,7 +912,7 @@ test('team: add a person, they sign in on a phone; deactivate, reactivate, chang
       }
       await fill('wrong-current-password', 'Hunt-long-enough-pw', 'Hunt-long-enough-pw')
       if (!(await pg.getByText('Current password is incorrect.').isVisible().catch(() => false))) note(info, { kind: 'observation', where: 'change password', what: 'wrong current: no "Current password is incorrect."' })
-      await spaGo(pg, '/today')
+      await spaGo(pg, '/todo')
       if (!(await signedInApp(pg))) note(info, { kind: 'observation', where: 'change password', what: 'a wrong current password signed the person out' })
       await visit(pg, info, '/settings/password', 'change password 2')
       await fill(newPassword, 'Hunt-long-enough-pw', 'Hunt-long-enough-px')
@@ -1107,7 +1107,7 @@ test('settings: company profile, exchange rates, targets, categories, my details
       await fill('definitely-not-it', 'short', 'short')
       await layout(page, info, 'change password errors')
       await shot(page, 'books-change-password-errors')
-      await visit(page, info, '/today', 'after change password')
+      await visit(page, info, '/todo', 'after change password')
       if (!(await signedInApp(page))) note(info, { kind: 'observation', where: 'admin change password', what: 'the admin was signed out by the failed attempts' })
       const r = await fetch(`${API_URL}/auth/v1/token?grant_type=password`, {
         method: 'POST',
@@ -1130,7 +1130,7 @@ test('settings: company profile, exchange rates, targets, categories, my details
 
     for (const role of ['sales', 'engineer'] as const) {
       const rc = await ctxAs(browser, info, role, role === 'engineer' ? 'phone' : 'desktop')
-      const rp = await open(rc, info, '/today', `${role} admin screens`)
+      const rp = await open(rc, info, '/todo', `${role} admin screens`)
       for (const path of ['/settings/team', '/settings/targets', '/settings/categories', '/money/month-end', '/money/expenses?add=1', '/money/reports/in-out', '/money/reports/pnl', '/money/month-end/bank'])
         await probe(info, rp, `${role} by URL ${path}`, async () => {
           await visit(rp, info, path, `${role} ${path}`)
@@ -1138,7 +1138,7 @@ test('settings: company profile, exchange rates, targets, categories, my details
           if ((await rp.getByRole('dialog', { name: 'Add expense' }).count()) > 0) note(info, { kind: 'access', where: `${role} ${path}`, what: 'the Add expense dialog opened' })
         })
       await probe(info, rp, `${role}: the Ctrl+K palette offers no admin places`, async () => {
-        await visit(rp, info, '/today', `${role} palette`)
+        await visit(rp, info, '/todo', `${role} palette`)
         await rp.keyboard.press('Control+k')
         const pal = rp.getByRole('dialog', { name: 'Search or jump to' })
         await pal.waitFor({ timeout: 5_000 })

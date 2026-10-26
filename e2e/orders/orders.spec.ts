@@ -847,7 +847,7 @@ test.describe('O03: the command palette finds an order by number and customer PO
 
   test('by customer PO, and by order number', async ({ page }) => {
     const s = await seedOrder()
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     const input = page.getByRole('combobox')
     await input.fill(s.po.slice(0, 9))
@@ -863,7 +863,7 @@ test.describe('O03: the command palette finds an order by number and customer PO
 
   test('an engineer finds an order by its number only, never by the PO number (R12: no PO or invoice number for an engineer)', async ({ page }) => {
     const s = await seedOrder()
-    await openAs(page, 'engineer', '/today')
+    await openAs(page, 'engineer', '/todo')
     await openPalette(page)
     const input = page.getByRole('combobox')
     await input.fill(s.po)

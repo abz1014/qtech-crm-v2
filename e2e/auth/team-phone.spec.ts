@@ -20,7 +20,7 @@ test('admin adds a person on a phone', async ({ page }) => {
   await page.getByLabel('Email').fill('admin@test.invalid')
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).tap()
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
 
   await page.goto('/settings/team')
   // one full-width "Add person" at the top of the page (the small bar "Add" is gone), 44 px tall, nothing on top of it

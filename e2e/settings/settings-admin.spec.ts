@@ -98,7 +98,7 @@ test.describe('Settings › Targets (M06)', () => {
       p.on('request', r => {
         if (r.url().includes('/rest/v1/')) requested.push(new URL(r.url()).pathname.replace('/rest/v1/', ''))
       })
-      await openAs(p, 'sales', '/today')
+      await openAs(p, 'sales', '/todo')
       return p
     })()
     const tile = salesPage.getByRole('region', { name: /^Your Q\d.* target$/ }).first()

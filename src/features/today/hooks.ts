@@ -113,7 +113,7 @@ export function usePaymentDraft(orderId: string | undefined, enabled: boolean) {
 export function useSnooze() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { rule: string; subjectId: string; untilOn: string }) => api.snoozeItem(v),
+    mutationFn: (v: { rule: string; subjectId: string; untilOn: string; untilChange?: boolean }) => api.snoozeItem(v),
     onSuccess: () => invalidateAfter(client, 'today.snooze', {}),
   })
 }

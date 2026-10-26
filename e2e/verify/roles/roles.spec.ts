@@ -23,7 +23,7 @@ test('route matrix: every page opens for the roles allowed and shows the no-acce
   const r = await rfq({ items: [{ description: 'Route matrix item', qty: 1 }] })
   const o = await order({ lines: [{ description: 'Route matrix line', qty: 1, price: 1000 }] })
   const routes: [string, Allowed][] = [
-    ['/today', ALL],
+    ['/todo', ALL],
     ['/rfqs', ALL],
     ['/rfqs/new', ALL],
     [`/rfqs/${r.rfq.id}`, ALL],
@@ -55,7 +55,7 @@ test('route matrix: every page opens for the roles allowed and shows the no-acce
   ]
   for (const role of ALL) {
     const ctx = await signedIn(browser, info, role)
-    const page = await open(ctx, '/today')
+    const page = await open(ctx, '/todo')
     // The main navigation offers exactly the role's destinations.
     const nav = page.getByRole('navigation', { name: ROLES.nav.main })
     const links = (await nav.getByRole('link').allInnerTexts()).map(t => t.split(/\n/)[0].replace(/\s+\d+$/, '').trim()).filter(Boolean) // the label line, without the NeedsCount pill or its words
@@ -187,7 +187,7 @@ test('an engineer walking every screen asks for no money and never sees a price 
   const eng = await signedIn(browser, info, 'engineer')
   const page: Page = await eng.newPage()
   const log = restLog(page)
-  for (const path of ['/today', '/rfqs', `/rfqs/${won.rfq.id}`, '/orders', `/orders/${o.order.id}`, '/companies', `/companies/${other.id}`, `/companies/${won.supplier.id}`]) {
+  for (const path of ['/todo', '/rfqs', `/rfqs/${won.rfq.id}`, '/orders', `/orders/${o.order.id}`, '/companies', `/companies/${other.id}`, `/companies/${won.supplier.id}`]) {
     await page.goto(path)
     await page.locator('#main').waitFor()
     await page.waitForLoadState('networkidle')

@@ -15,12 +15,12 @@ async function pressOnNavLink(page: Page, key: string): Promise<void> {
 }
 
 test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside text fields', async ({ page }) => {
-  test.info().annotations.push({ type: 'behaviour', description: 'N -> /rfqs/new, C -> Capture sheet, G T -> /today, / -> table filter; active with focus on any link or button' })
-  await open(page, '/today')
+  test.info().annotations.push({ type: 'behaviour', description: 'N -> /rfqs/new, C -> Capture sheet, G T -> /todo, / -> table filter; active with focus on any link or button' })
+  await open(page, '/todo')
   await pressOnNavLink(page, 'n')
   await expect(page).toHaveURL(/\/rfqs\/new$/)
 
-  await open(page, '/today')
+  await open(page, '/todo')
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.press('c')
   await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeVisible()
@@ -30,7 +30,7 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
   await open(page, '/rfqs')
   await pressOnNavLink(page, 'g')
   await page.keyboard.press('t')
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
 
   await open(page, '/rfqs')
   await pressOnNavLink(page, '/')
@@ -50,7 +50,7 @@ test('a single printable key never acts unless the person can turn it off (WCAG 
   await open(page, '/settings/details')
   const setting = page.getByRole('checkbox', { name: UI.shortcutsSetting }).or(page.getByRole('switch', { name: UI.shortcutsSetting }))
   if ((await setting.count()) > 0 && (await setting.first().isChecked())) await setting.first().click()
-  await open(page, '/today')
+  await open(page, '/todo')
   await pressOnNavLink(page, 'n')
   await page.waitForTimeout(500)
   expect(new URL(page.url()).pathname, 'N moved the page with no way to turn it off').not.toBe('/rfqs/new')

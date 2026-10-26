@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
@@ -8,7 +9,6 @@ import { pkr } from '@/features/money/expenses/model'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
-import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { FirstUseState } from '@/features/help/FirstUseState'
 import { HowItWorksCard } from '@/features/help/HowItWorksCard'
@@ -16,11 +16,13 @@ import { useFirstUse } from '@/features/help/useFirstUse'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { needsYouItems } from '@/features/today/needsYou'
+import { SnoozeMenu } from '@/features/today/SnoozeMenu'
 import { TargetTile } from '@/features/today/TargetTile'
 import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
-import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
+import { ACTION_LABEL, BLOCK_TITLE, WAITING_TITLE, blockOf, buildTodo, moreText, opensMessage, secondAction, type TodoBlock } from '@/features/today/todoModel'
+import type { Role, RuleKey, TodayItem } from '@/features/today/types'
 
 /*
  * The context pane (what to do about an item: the chase text, the numbers, the buttons) is its own download (perf/lcp): on a
@@ -32,15 +34,15 @@ const ContextPane = lazyWithReload(() => loadContextPane().then(m => ({ default:
 if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches) void loadContextPane().catch(() => {})
 
 /*
- * Today (R11, direction B): a 420px list and a context pane. Groups: overdue or due today, the next 5 days, ready to
- * move, then Waiting (the system's cooldown, dimmed, never in the count of things that need you; collapsed until the person
- * opens it, "Waiting · 5 · next nudge Mon 30 Nov"). On a phone the pane folds into an accordion under the row. The target tile sits
- * under the list at every width (never for an engineer). The empty state is the goal state.
+ * To do (redesign phase 3, P3-A; replaces Today). ONE list that says "do this", three colour blocks (direction C): Late (red),
+ * Today (yellow), This week (blue). A block with nothing in it is not drawn. At most 7 rows are drawn, late money first, then a
+ * promise to a customer, then the rest; the rest folds into "N more this week" (nothing is dropped). The count is ONE number:
+ * needsYouItems(view).length (needsYou.ts), which is Late plus Today, and it is the same number as the top bar's badge.
  *
- * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money. They filter; they carry no number (redesign phase
- * 0: the one count, "N need you", is the header's and the Today badge's, from features/today/needsYou.ts). Engineers get no tabs
- * at all: their list is short (their jobs, their goods, the RFQs they own) and one list is easier.
- * Older than 30 days (needsYou.ts): a grey fold under Waiting, closed until opened, never counted. A late payment never goes there.
+ * Every row carries its own button (todoModel.ts ACTION_LABEL: Chase, Copy reminder, Send quotation, Ask suppliers, Create
+ * invoice ...; Record payment too, for an admin). The four rules that prepare a message open it beside the list (or under the row
+ * on a phone), where Copy, Open in WhatsApp and Mark chased are; the others go to the page that does it. The snooze menu has
+ * "Not ours to chase" (0097). Greys: Chased, waiting until <weekday>; Older than 30 days; Imported, to review. Never counted.
  */
 const ICON: Record<RuleKey, LucideIcon> = {
   chase_customer: MessageCircleQuestion,
@@ -64,27 +66,16 @@ const ICON: Record<RuleKey, LucideIcon> = {
   job_on_site: PackageCheck,
 }
 
-// The glossary's "Quotations", and "Suppliers" (the short form of "Suppliers & delivery"), so the four tabs fit the list column in
-// one row on a laptop; below that they wrap (never a sideways scroll).
-const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotations', sourcing: 'Suppliers', money: 'Money' }
+const NONE: TodayItem[] = []
 const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08)
 
-/*
- * Colour blocks (direction C): each group is a block, its rows white tiles on it. Late is red, and only when the group holds
- * something past its date (red only for late money or a broken promise); otherwise the due-now group is the yellow Today block.
- * The next five days are the blue This week block; Ready to move and Waiting are quiet. An empty group draws no block.
- * The heading takes the block's own ink (7.8:1 or better); hints never sit on the yellow, they sit on the white tiles.
- */
-type Block = 'late' | 'today' | 'week' | 'quiet'
+/* The three work blocks and the quiet folds: each block's ink is its own (7.8:1 or better); hints sit on the white tiles, never on the yellow. */
+type Block = TodoBlock | 'quiet'
 const BLOCK: Record<Block, string> = {
   late: 'bg-block-late text-block-late-fg',
   today: 'bg-block-today text-block-today-fg',
   week: 'bg-block-week text-block-week-fg',
   quiet: 'bg-block-quiet text-block-quiet-fg',
-}
-function blockOf(id: string, items: readonly TodayItem[], today: string): Block {
-  if (id === 'now') return items.some(i => i.actionDueOn !== null && i.actionDueOn < today) ? 'late' : 'today'
-  return id === 'soon' ? 'week' : 'quiet'
 }
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
@@ -93,6 +84,8 @@ let waitingToggledThisSession: boolean | null = null
 let staleOpenThisSession = false
 /** Whether the person opened the "Imported, to review" fold, for this browser session only. */
 let importedOpenThisSession = false
+/** Whether the person opened "N more this week", for this browser session only. */
+let moreOpenThisSession = false
 
 export default function TodayScreen() {
   const session = useSession()
@@ -102,15 +95,16 @@ export default function TodayScreen() {
 
 function TodayBody({ user, name }: { user: { id: string; role: Role }; name: string }) {
   const today = useBusinessToday()
+  const navigate = useNavigate()
   const { view, data, query } = useTodayView(user, today)
   const wide = useMediaQuery('(min-width: 768px)')
-  const [tab, setTab] = useState<'all' | TodayTab>('all')
   const [selected, setSelected] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState<ReadonlySet<string>>(new Set())
   const [waitingToggled, setWaitingToggled] = useState<boolean | null>(waitingToggledThisSession)
   const [staleOpen, setStaleOpen] = useState(staleOpenThisSession)
   const [importedOpen, setImportedOpen] = useState(importedOpenThisSession)
+  const [moreOpen, setMoreOpen] = useState(moreOpenThisSession)
   const markCopied = (k: string) => {
     setCopied(s => new Set(s).add(k))
     // On desktop the first item is shown without being picked; pin it, so the pane stays on it ("Moved to Waiting")
@@ -124,92 +118,97 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
       return n
     })
 
-  const inTab = (i: TodayItem) => tab === 'all' || i.tab === tab
-  const active = useMemo(() => (view ? view.active.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
-  const waiting = useMemo(() => (view ? view.waiting.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
-  const stale = useMemo(() => (view ? view.stale.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
-  const imported = useMemo(() => (view ? view.imported.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  const model = useMemo(() => (view ? buildTodo(view, today) : null), [view, today])
+  const waiting = view?.waiting ?? NONE
+  const stale = view?.stale ?? NONE
+  const imported = view?.imported ?? NONE
   const latePayments = useMemo(() => imported.filter(i => i.rule === 'payment_overdue'), [imported])
-  const groups = useMemo(
-    () => (view ? [
-      { id: 'now', title: 'Overdue or due today', items: view.now.filter(inTab) },
-      { id: 'soon', title: 'Due in the next 5 days', items: view.soon.filter(inTab) },
-      { id: 'ready', title: 'Ready to move', items: view.ready.filter(inTab) },
-    ] : []),
-    [view, tab], // eslint-disable-line react-hooks/exhaustive-deps
+  const blocks = useMemo(
+    () => (model ? ([['late', model.late], ['today', model.today], ['week', model.week]] as const).filter(([, items]) => items.length > 0) : []),
+    [model],
   )
+  const drawn = useMemo(() => [...blocks.flatMap(([, items]) => items), ...(moreOpen && model ? model.more : [])], [blocks, moreOpen, model])
   const all = useMemo(
-    () => [...active, ...waiting, ...(importedOpen ? imported : []), ...(staleOpen ? stale : [])],
-    [active, waiting, imported, importedOpen, stale, staleOpen],
+    () => [...drawn, ...waiting, ...(importedOpen ? imported : []), ...(staleOpen ? stale : [])],
+    [drawn, waiting, imported, importedOpen, stale, staleOpen],
   )
   // Desktop always has something selected (the first item); a selection that left the list moves on.
-  const current = all.find(i => i.key === selected) ?? (wide ? active[0] ?? waiting[0] : undefined)
+  const current = all.find(i => i.key === selected) ?? (wide ? drawn[0] ?? waiting[0] : undefined)
   const openId = wide ? current?.key : expanded
 
   useEffect(() => {
     if (selected && !all.some(i => i.key === selected) && !copied.has(selected)) setSelected(null)
   }, [all, selected, copied])
 
-  // The one count (needsYou.ts): what is due today or late, not Waiting, not older than 30 days. The same number as the Today badge.
+  // The one count (needsYou.ts): Late + Today. The same number as the To do badge in the top bar.
   const needYou = view ? needsYouItems(view).length : 0
   const firstUse = useFirstUse('today', user.id, user.role, !!view && view.active.length === 0 && view.waiting.length === 0 && view.stale.length === 0 && view.imported.length === 0)
-  const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? [] : ['all', 'bids', 'sourcing', 'money']
 
   // Waiting starts collapsed (round-2 R2-08): it is the system's cooldown, not work. Opening it is the person's choice,
   // remembered for the session. The collapsed line names the earliest next nudge.
   const waitingOpen = waitingToggled ?? waiting.length <= WAITING_OPEN_MAX
   const nextNudge = useMemo(() => waiting.map(i => i.waiting?.nextNudgeOn).filter((d): d is string => !!d).sort()[0] ?? null, [waiting])
-  const nextOf = (key: string) => active.find(i => i.key !== key)
+  const nextOf = (key: string) => drawn.find(i => i.key !== key)
   const shownWaiting = waitingOpen ? waiting : waiting.filter(i => i.key === openId)
 
   const pick = (k: string) => {
     if (wide) setSelected(k)
     else setExpanded(e => (e === k ? null : k))
   }
+  /** The row's own button: a prepared message opens beside the list (under the row on a phone), anything else goes to its page. */
+  const act = (i: TodayItem) => {
+    if (opensMessage(i.rule)) {
+      if (wide) setSelected(i.key)
+      else setExpanded(i.key)
+    } else navigate(i.href)
+  }
+
+  const row = (i: TodayItem, o: { waiting?: boolean; faded?: boolean; actions?: boolean } = {}) => (
+    <Row key={i.key} item={i} today={today} role={user.role} names={data?.names} waiting={o.waiting} faded={o.faded} actions={o.actions ?? true} open={openId === i.key} copied={!o.waiting && copied.has(i.key)} wide={wide} onPick={() => pick(i.key)} onAct={() => act(i)} onGo={href => navigate(href)}>
+      {!wide && expanded === i.key && data ? (
+        <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
+          <Suspense fallback={null}>
+            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+          </Suspense>
+        </div>
+      ) : null}
+    </Row>
+  )
 
   const list = (
     // One column that may shrink to the pane: no card or row can make the list wider than its pane (no sideways scroll).
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
       <header className="grid gap-1 px-5 pb-3 pt-5">
-        <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>Today</h1>
+        <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>To do</h1>
         <p className="text-base text-fg-muted">
           {headerDate(today)}
           {view ? (
             <>
               {' · '}
               <b className="num font-medium text-fg" data-needs-you-count>{needYou}</b> need you
+              {model && model.weekTotal > 0 ? ` · ${model.weekTotal} later this week` : ''}
             </>
           ) : null}
         </p>
-        {tabs.length > 0 ? (
-          <SegmentedControl
-            aria-label="Show"
-            // A filter with no numbers (redesign phase 0: the line above is the one count). It wraps when the list is narrow (audit T4).
-            className="mt-2 flex-wrap justify-self-start max-md:[&>*]:min-w-[44px] [&>*]:justify-center"
-            value={tab}
-            onValueChange={v => setTab(v as 'all' | TodayTab)}
-            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t] }))}
-          />
-        ) : null}
         <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />
       </header>
 
       {query.isPending ? (
-        <div role="status" className="grid gap-4 px-5 py-4" aria-busy="true" aria-label="Loading Today">
+        <div role="status" className="grid gap-4 px-5 py-4" aria-busy="true" aria-label="Loading To do">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="grid gap-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
           ))}
         </div>
-      ) : query.isError || !view ? (
-        <EmptyState mood="error" title="Today could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
+      ) : query.isError || !view || !model ? (
+        <EmptyState mood="error" title="To do could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (
         <>
           {firstUse.isNew ? (
             <FirstUseState screen="today" role={user.role} alone={firstUse.alone} className="mx-5 my-4" />
-          ) : active.length === 0 ? (
-            <EmptyState mood="goal" title={tab === 'all' ? 'Nothing needs you today' : 'Nothing here needs you today'}>
+          ) : model.total === 0 ? (
+            <EmptyState mood="goal" title="Nothing needs you today">
               {waiting.length > 0
                 ? 'Everything you chased is waiting for its date. It comes back here when it is time to nudge.'
                 : imported.length > 0
@@ -221,28 +220,19 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                   : 'Chases, quotations, goods and payments that need you will appear here.'}
             </EmptyState>
           ) : null}
-          {groups.map(g =>
-            g.items.length === 0 ? null : (
-              <section key={g.id} aria-label={g.title} data-block={blockOf(g.id, g.items, today)} className={cn('mx-2 mb-3 rounded-panel p-2 first-of-type:mt-1 md:mx-3 md:p-3', BLOCK[blockOf(g.id, g.items, today)])}>
-                <h2 className="flex items-baseline gap-2 px-1 pb-2 text-lg font-heavy">
-                  {g.title} <span className="num">{g.items.length}</span>
-                </h2>
-                <ul className="grid gap-2">
-                  {g.items.map(i => (
-                    <Row key={i.key} item={i} today={today} names={data?.names} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
-                      {!wide && expanded === i.key && data ? (
-                        <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <Suspense fallback={null}>
-                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
-                          </Suspense>
-                        </div>
-                      ) : null}
-                    </Row>
-                  ))}
-                </ul>
-              </section>
-            ),
-          )}
+          {blocks.map(([id, items]) => (
+            <section key={id} aria-label={BLOCK_TITLE[id]} data-block={id} className={cn('mx-2 mb-3 rounded-panel p-2 first-of-type:mt-1 md:mx-3 md:p-3', BLOCK[id])}>
+              <h2 className="flex items-baseline gap-2 px-1 pb-2 text-lg font-heavy">
+                {BLOCK_TITLE[id]} <span className="num">{items.length}</span>
+              </h2>
+              <ul className="grid gap-2">{items.map(i => row(i))}</ul>
+            </section>
+          ))}
+          {model.more.length > 0 ? (
+            <Fold label={moreText(model)} open={moreOpen} hint={moreOpen ? '' : ' · show'} data-more-fold="" onToggle={() => { moreOpenThisSession = !moreOpen; setMoreOpen(!moreOpen) }}>
+              <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{model.more.map(i => row(i))}</ul>
+            </Fold>
+          ) : null}
           {waiting.length > 0 ? (
             <section aria-label="Waiting" data-block="quiet" className="mx-2 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg md:mx-3">
               <button
@@ -252,109 +242,55 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                   waitingToggledThisSession = !waitingOpen
                   setWaitingToggled(!waitingOpen)
                 }}
-                className="flex w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2"
+                className="flex min-h-touch w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2"
               >
                 <Icon icon={waitingOpen ? ChevronDown : ChevronRight} size="sm" />
-                {/* A count in words, never a pill (spec 2.2 #8): "Waiting · 5 · next nudge Mon 30 Nov". */}
+                {/* Words, never a pill (spec 2.2 #8): "Chased, waiting until Mon 30 Nov". */}
                 <span>
-                  Waiting · <span className="num">{waiting.length}</span>
-                  {!waitingOpen && nextNudge ? <span className="font-regular text-fg-muted">{` · next nudge ${formatDay(nextNudge)}`}</span> : null}
+                  {WAITING_TITLE} · <span className="num">{waiting.length}</span>
+                  {!waitingOpen && nextNudge ? <span className="font-regular text-fg-muted">{` · until ${formatDay(nextNudge)}`}</span> : null}
                 </span>
-                {waitingOpen ? <span className="ml-auto text-sm font-regular text-fg-muted">comes back when its date arrives</span> : null}
+                {waitingOpen ? <span className="ml-auto text-base font-regular text-fg-muted max-md:hidden">comes back when its date arrives</span> : null}
               </button>
               {/* Collapsed, it still shows the open row: an item just chased stays where the person is looking. */}
-              {shownWaiting.length > 0 ? (
-                <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">
-                  {shownWaiting.map(i => (
-                    <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
-                      {!wide && expanded === i.key && data ? (
-                        <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <Suspense fallback={null}>
-                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
-                          </Suspense>
-                        </div>
-                      ) : null}
-                    </Row>
-                  ))}
-                </ul>
-              ) : null}
+              {shownWaiting.length > 0 ? <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{shownWaiting.map(i => row(i, { waiting: true, actions: false }))}</ul> : null}
             </section>
           ) : null}
           {imported.length > 0 ? (
             // Owner decision 2026-10-22 (1b): order tasks on imported orders wait here, grey and never counted, until the one-off
             // Review imported (redesign phase 2) says which orders are still live. Their invoices are not linked to them yet.
-            <section aria-label="Imported, to review" data-block="quiet" className="mx-2 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg md:mx-3" data-imported-fold="">
-              <button
-                type="button"
-                aria-expanded={importedOpen}
-                onClick={() => {
-                  importedOpenThisSession = !importedOpen
-                  setImportedOpen(!importedOpen)
-                }}
-                className="flex w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2"
-              >
-                <Icon icon={importedOpen ? ChevronDown : ChevronRight} size="sm" />
-                <span className="min-w-0 break-words">
+            <Fold
+              label={
+                <>
                   Imported, to review · <span className="num">{imported.length}</span>
                   {latePayments.length > 0 ? (
                     <span className="text-tone-warning-fg">
                       {' '}· incl. {latePayments.length} late {latePayments.length === 1 ? 'payment' : 'payments'} · <span className="num">{pkr(latePayments.reduce((s, i) => s + (i.amount ?? 0), 0))}</span>
                     </span>
                   ) : null}
-                  <span className="font-regular text-fg-muted">{importedOpen ? ' · not counted' : ' · show'}</span>
-                </span>
-              </button>
-              {importedOpen ? (
-                <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">
-                  {imported.map(i => (
-                    <Row key={i.key} item={i} today={today} names={data?.names} faded open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
-                      {!wide && expanded === i.key && data ? (
-                        <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <Suspense fallback={null}>
-                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
-                          </Suspense>
-                        </div>
-                      ) : null}
-                    </Row>
-                  ))}
-                </ul>
-              ) : null}
-            </section>
+                </>
+              }
+              ariaLabel="Imported, to review"
+              open={importedOpen}
+              hint={importedOpen ? ' · not counted' : ' · show'}
+              data-imported-fold=""
+              onToggle={() => { importedOpenThisSession = !importedOpen; setImportedOpen(!importedOpen) }}
+            >
+              <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{imported.map(i => row(i, { faded: true, actions: false }))}</ul>
+            </Fold>
           ) : null}
           {stale.length > 0 ? (
             // Older than 30 days (needsYou.ts): kept in sight for the person who has to act, never counted, never coloured.
-            <section aria-label="Older than 30 days" data-block="quiet" className="mx-2 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg md:mx-3" data-stale-fold="">
-              <button
-                type="button"
-                aria-expanded={staleOpen}
-                onClick={() => {
-                  staleOpenThisSession = !staleOpen
-                  setStaleOpen(!staleOpen)
-                }}
-                className="flex w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2"
-              >
-                <Icon icon={staleOpen ? ChevronDown : ChevronRight} size="sm" />
-                <span>
-                  Older than 30 days · <span className="num">{stale.length}</span>
-                  <span className="font-regular text-fg-muted">{staleOpen ? ' · not counted' : ' · show'}</span>
-                </span>
-              </button>
-              {staleOpen ? (
-                <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">
-                  {stale.map(i => (
-                    <Row key={i.key} item={i} today={today} names={data?.names} faded open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
-                      {!wide && expanded === i.key && data ? (
-                        <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <Suspense fallback={null}>
-                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
-                          </Suspense>
-                        </div>
-                      ) : null}
-                    </Row>
-                  ))}
-                </ul>
-              ) : null}
-            </section>
+            <Fold
+              label={<>Older than 30 days · <span className="num">{stale.length}</span></>}
+              ariaLabel="Older than 30 days"
+              open={staleOpen}
+              hint={staleOpen ? ' · not counted' : ' · show'}
+              data-stale-fold=""
+              onToggle={() => { staleOpenThisSession = !staleOpen; setStaleOpen(!staleOpen) }}
+            >
+              <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{stale.map(i => row(i, { faded: true }))}</ul>
+            </Fold>
           ) : null}
         </>
       )}
@@ -386,7 +322,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
               </Suspense>
             </div>
           ) : query.isPending ? null : (
-            <div className="grid h-full place-items-center text-sm text-fg-muted">Select an item to see what to do about it.</div>
+            <div className="grid h-full place-items-center text-base text-fg-muted">Select an item to see what to do about it.</div>
           )}
         </div>
       ) : null}
@@ -394,21 +330,59 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   )
 }
 
-function Row({ item, today, names, waiting = false, faded = false, open, copied, wide, onPick, children }: { item: TodayItem; today: string; names?: Record<string, string>; waiting?: boolean; faded?: boolean; open: boolean; copied: boolean; wide: boolean; onPick: () => void; children?: React.ReactNode }) {
+/** A grey fold: one line that opens its rows. Never counted. */
+function Fold({ label, ariaLabel, open, hint, onToggle, children, ...rest }: { label: ReactNode; ariaLabel?: string; open: boolean; hint: string; onToggle: () => void; children: ReactNode } & Record<`data-${string}`, string>) {
+  return (
+    <section aria-label={ariaLabel ?? (typeof label === 'string' ? label : undefined)} data-block="quiet" className="mx-2 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg md:mx-3" {...rest}>
+      <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-h-touch w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2">
+        <Icon icon={open ? ChevronDown : ChevronRight} size="sm" />
+        <span className="min-w-0 break-words">
+          {label}
+          <span className="font-regular text-fg-muted">{hint}</span>
+        </span>
+      </button>
+      {open ? children : null}
+    </section>
+  )
+}
+
+/** Which block an active row is counted in (late, today, week); none for the grey folds. For tests and for the e2e counters. */
+const dueOf = (item: TodayItem, today: string, grey: boolean): TodoBlock | undefined => (grey ? undefined : blockOf(item, today))
+
+interface RowProps {
+  item: TodayItem
+  today: string
+  role: Role
+  names?: Record<string, string>
+  waiting?: boolean
+  faded?: boolean
+  actions: boolean
+  open: boolean
+  copied: boolean
+  wide: boolean
+  onPick: () => void
+  onAct: () => void
+  onGo: (href: string) => void
+  children?: ReactNode
+}
+
+function Row({ item, today, role, names, waiting = false, faded = false, actions, open, copied, wide, onPick, onAct, onGo, children }: RowProps) {
   // On the selected row's background the amber is below 4.5:1, so a warning badge reads in the body colour there (as on the GST register).
   const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? (open ? 'text-fg-2' : 'text-tone-warning-fg') : 'text-fg-muted'
+  const second = actions ? secondAction(item, role) : null
+  const own = actions && !waiting // the row carries its own button and its own snooze
   return (
-    <li data-rule={item.rule} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className="rounded-row bg-surface text-fg">
+    <li data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className="relative rounded-row bg-surface text-fg">
       <button
         type="button"
         onClick={onPick}
         aria-expanded={wide ? undefined : open}
         aria-current={wide && open ? 'true' : undefined}
         className={cn(
-          'grid min-h-row-tall w-full items-start gap-2 rounded-row px-3 py-3 text-left md:gap-3 md:px-4 transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken',
+          'grid w-full grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 rounded-row px-3 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken md:px-4',
+          own && 'pr-12 md:pr-16',
           // The open row: an ink ring inside the tile (direction C), 18:1 against the white tile.
           open && 'ring-2 ring-inset ring-fg',
-          wide ? 'grid-cols-[2rem_minmax(0,1fr)_auto]' : 'grid-cols-[2rem_minmax(0,1fr)_auto_auto]',
           (waiting || faded) && 'bg-sunken',
           waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle',
         )}
@@ -422,23 +396,43 @@ function Row({ item, today, names, waiting = false, faded = false, open, copied,
             <span className="num">{item.ref}</span> · {item.party}
           </span>
           {item.collision && names?.[item.collision.by] ? (
-            <span data-collision className="flex items-center gap-1 text-xs text-tone-warning-fg">
+            <span data-collision className="flex items-center gap-1 text-base text-tone-warning-fg">
               <Icon icon={Users} size="chip" /> {chasedByText(names[item.collision.by], item.collision.at, Date.now())}
             </span>
           ) : null}
           {item.waiting ? (
-            <span className="text-xs text-fg-muted">{waitingLine(item.waiting.chasedOn, item.waiting.nextNudgeOn, today, item.rule === 'payment_overdue' ? 'reminded' : 'chased')}</span>
+            <span className="text-stamp text-fg-muted">{waitingLine(item.waiting.chasedOn, item.waiting.nextNudgeOn, today, item.rule === 'payment_overdue' ? 'reminded' : 'chased')}</span>
           ) : null}
+          {/* When it is due, in words: its own line, so the title keeps the whole width of a narrow column. */}
+          <span className="flex min-w-0 items-center gap-2">
+            {waiting ? (
+              <span className="sr-only">Waiting</span>
+            ) : copied ? (
+              <span className="inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-[10px] text-base font-semibold text-tone-success-fg">Copied</span>
+            ) : (
+              <span className={cn('min-w-0 text-base font-semibold', tone)}>{item.badge.text}</span>
+            )}
+            {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('ml-auto shrink-0 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
+          </span>
         </span>
-        {waiting ? (
-          <span className="sr-only">Waiting</span>
-        ) : copied ? (
-          <span className="inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-[10px] text-xs font-semibold text-tone-success-fg">Copied</span>
-        ) : (
-          <span className={cn('whitespace-nowrap pt-px text-sm font-semibold', tone)}>{item.badge.text}</span>
-        )}
-        {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('mt-1 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
       </button>
+      {own ? (
+        <span className="absolute right-1 top-1 md:right-2 md:top-2">
+          <SnoozeMenu item={item} today={today} iconOnly />
+        </span>
+      ) : null}
+      {own ? (
+        <div className="flex flex-wrap items-center gap-2 px-3 pb-3 md:px-4" data-row-actions="">
+          <Button variant="secondary" onClick={onAct} aria-label={`${ACTION_LABEL[item.rule]}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
+            {ACTION_LABEL[item.rule]}
+          </Button>
+          {second ? (
+            <Button variant="secondary" onClick={() => onGo(second.href)} aria-label={`${second.label}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
+              {second.label}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {children}
     </li>
   )

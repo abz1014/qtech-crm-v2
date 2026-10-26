@@ -7,17 +7,17 @@ const paths = (r: string) => navItemsForRole(r).map(i => i.path)
 
 describe('navItemsForRole', () => {
   it('admin sees the five destinations', () =>
-    expect(paths('admin')).toEqual(['/today', '/rfqs', '/orders', '/companies', '/money']))
+    expect(paths('admin')).toEqual(['/todo', '/rfqs', '/orders', '/companies', '/money']))
   it('sales sees the five destinations incl. Money (Reports lives inside Money)', () =>
-    expect(paths('sales')).toEqual(['/today', '/rfqs', '/orders', '/companies', '/money']))
+    expect(paths('sales')).toEqual(['/todo', '/rfqs', '/orders', '/companies', '/money']))
   it('engineer sees no Money', () =>
-    expect(paths('engineer')).toEqual(['/today', '/rfqs', '/orders', '/companies']))
+    expect(paths('engineer')).toEqual(['/todo', '/rfqs', '/orders', '/companies']))
   it('unknown role sees nothing', () => expect(paths('hacker')).toEqual([]))
 })
 
 describe('getHomeRoute', () => {
-  it.each(['admin', 'sales', 'engineer'])('%s lands on /today', role =>
-    expect(getHomeRoute(role)).toBe('/today'))
+  it.each(['admin', 'sales', 'engineer'])('%s lands on /todo', role =>
+    expect(getHomeRoute(role)).toBe('/todo'))
   it('unknown role goes to /no-access', () => {
     expect(getHomeRoute('')).toBe('/no-access')
     expect(getHomeRoute('guest')).toBe('/no-access')

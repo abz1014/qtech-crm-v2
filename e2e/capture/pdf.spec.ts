@@ -30,7 +30,7 @@ test('a PDF enquiry dropped in Paste or photo opens New RFQ with its items, refe
     `purchase@${domain}`,
   ])
 
-  await openAs(page, 'sales', '/today')
+  await openAs(page, 'sales', '/todo')
   await page.locator('#main').waitFor()
   await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
   const sheet = page.getByRole('dialog')

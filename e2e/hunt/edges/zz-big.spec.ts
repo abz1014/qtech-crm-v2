@@ -37,7 +37,7 @@ test('1,000+ rows: lists, board, search', async ({ browser }, info) => {
     const context = await contextAs(browser, info, run.role, vp(run.v))
     const page = await context.newPage()
     const w = new Watcher(page, { role: run.role, vp: `${run.v}-big` })
-    const paths = ['/companies', '/rfqs', '/rfqs?owner=all', '/orders', '/orders?owner=all', '/today', ...(run.role === 'admin' ? ['/money/receivables', '/money/gst-register', '/money/margins'] : [])]
+    const paths = ['/companies', '/rfqs', '/rfqs?owner=all', '/orders', '/orders?owner=all', '/todo', ...(run.role === 'admin' ? ['/money/receivables', '/money/gst-register', '/money/margins'] : [])]
     for (const path of paths) {
       w.at(`${path} big`)
       const t0 = Date.now()
@@ -60,7 +60,7 @@ test('1,000+ rows: lists, board, search', async ({ browser }, info) => {
     }
     // Search across the bulk rows: a company name and an order PO.
     w.at('palette big')
-    await page.goto('/today')
+    await page.goto('/todo')
     await settle(page)
     await page.keyboard.press('Control+k')
     const box = page.getByRole('combobox').first()

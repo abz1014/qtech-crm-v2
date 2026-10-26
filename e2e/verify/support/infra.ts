@@ -13,7 +13,7 @@ export function infraTest(role: Role): void {
     const me = await db.one<{ id: string; role: string }>(`users?id=eq.${USER[role]}&select=id,role`)
     expect(me.role).toBe(role)
     const ctx = await signedIn(browser, info, role)
-    const page = await open(ctx, '/today')
+    const page = await open(ctx, '/todo')
     await expect(page.locator('#main')).toBeVisible()
     await expect(page).not.toHaveURL(/\/login/)
     await ctx.close()

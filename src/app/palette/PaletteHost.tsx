@@ -44,7 +44,7 @@ import {
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = "/rfqs/new";
-const TODAY_ROUTE = "/today";
+const TODAY_ROUTE = "/todo";
 
 /**
  * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see Who owes us, Invoices & GST and
@@ -321,7 +321,7 @@ export function PaletteHost({
       captureItem,
       {
         id: "go-today",
-        label: "Go to Today",
+        label: "Go to To do",
         icon: CalendarCheck,
         shortcut: ["G T"],
         href: TODAY_ROUTE,

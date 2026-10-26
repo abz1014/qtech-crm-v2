@@ -192,7 +192,7 @@ test('HE-12 Targets: typing junk ("abc") over a saved target and pressing Enter 
 test('HE-13 the "Paste or photo" (Capture) dialog at 1366: Tab moves focus out of the open dialog', async ({ browser }, info) => {
   const context = await contextAs(browser, info, 'admin', vp('w1366'))
   const page = await context.newPage()
-  await page.goto('/today')
+  await page.goto('/todo')
   await settle(page)
   await page.getByRole('button', { name: /Paste or photo/ }).first().click()
   const d = page.getByRole('dialog', { name: /Paste or photo/ })
@@ -297,7 +297,7 @@ test('HE-18 Add expense: the error summary shows the internal field name "inputT
 test('HE-19 phone Back with a More menu open on an order leaves the order page', async ({ browser }, info) => {
   const context = await contextAs(browser, info, 'sales', vp('w375'))
   const page = await context.newPage()
-  await page.goto('/today')
+  await page.goto('/todo')
   await settle(page)
   await page.goto(`/orders/${world.order.id}`)
   await settle(page)

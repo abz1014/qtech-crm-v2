@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName, type Role } from '../support/stack'
+import { showAllTodo } from '../support/todo'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
@@ -108,13 +109,14 @@ const paneFor = (page: Page, ref: string) => page.getByRole('region', { name: ne
 test.describe('Today: the 1-tap chase (sales)', () => {
   test('one tap copies the message and marks it chased; Undo takes it back; the item then waits and returns on its date', async ({ page }) => {
     const s = await seedCustomerChase(SALES)
-    await openAs(page, 'sales', '/today')
-    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
 
     const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
     await expect(row).toBeVisible()
     // Asked 9 days ago, bid in 14 days: the chase has been due for days, so it is in "Overdue or due today" and the chip says how late.
-    const overdue = page.getByRole('region', { name: 'Overdue or due today' })
+    const overdue = page.locator('section[data-block="late"], section[data-block="today"]')
     await expect(overdue.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible()
     await expect(row.getByText(/^\d+ days? overdue$/)).toBeVisible()
     await expect(page.getByRole('region', { name: 'Ready to move' }).filter({ hasText: s.ref })).toHaveCount(0)
@@ -173,10 +175,11 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     const s = await seedCustomerChase(SALES)
     // the admin chases it first (the same stamp the Copy buttons make)
     await must(rest('admin', 'rpc/stamp_clarification_ask', { method: 'POST', body: { p_clarification_ids: [s.clarificationId] }, prefer: 'return=minimal' }))
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     const waiting = page.getByRole('region', { name: 'Waiting' })
     // Waiting starts collapsed (R2-08): "Waiting · N · next nudge …"
-    await waiting.getByRole('button', { name: /^Waiting · \d+/ }).click()
+    await waiting.getByRole('button', { name: /^Chased, waiting · \d+/ }).click()
     const row = waiting.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })
     await expect(row).toBeVisible()
     await expect(row.locator('[data-collision]')).toContainText(/Test chased this (just now|\d+ min ago|\d+h ago|today)/)
@@ -187,7 +190,8 @@ test.describe('Today: the 1-tap chase (sales)', () => {
 
   test('snooze: Tomorrow hides the item, Undo brings it back', async ({ page }) => {
     const s = await seedCustomerChase(SALES)
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
     await row.getByRole('button').first().click()
     await paneFor(page, s.ref).getByRole('button', { name: 'Snooze', exact: true }).click() // tap 1: open
@@ -201,7 +205,8 @@ test.describe('Today: the 1-tap chase (sales)', () => {
   test('at 1366 x 768 the one job, "Copy and mark chased", is on the first screen without scrolling', async ({ page }) => {
     const s = await seedCustomerChase(SALES)
     await page.setViewportSize({ width: 1366, height: 768 })
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     await rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' }).getByRole('button').first().click()
     const pane = paneFor(page, s.ref)
     const copy = pane.getByRole('button', { name: 'Copy and mark chased' })
@@ -219,7 +224,8 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     const year = d.getUTCFullYear()
     const quarter = Math.floor(d.getUTCMonth() / 3) + 1
     await must(rest('admin', 'targets?on_conflict=user_id,year,quarter', { method: 'POST', body: [{ user_id: SALES, year, quarter, target_net_pkr: 6_000_000 }, { user_id: ADMIN, year, quarter, target_net_pkr: 9_999_000 }], prefer: 'resolution=merge-duplicates,return=minimal' }))
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     const tile = page.getByRole('region', { name: new RegExp(`Your Q${quarter} target`) })
     await expect(tile).toContainText('PKR 6,000,000')
     await expect(page.getByText('9,999,000')).toHaveCount(0)
@@ -234,7 +240,8 @@ test.describe('Today: role-aware', () => {
   test('engineer: the jobs they are ASSIGNED to are on Today (commissioning soon, goods on site), with no tabs to choose from', async ({ page }) => {
     const planned = await seedAssignedJob('planned')
     const onSite = await seedAssignedJob('onSite')
-    await openAs(page, 'engineer', '/today')
+    await openAs(page, 'engineer', '/todo')
+    await showAllTodo(page)
     const job = page.locator('li[data-rule="job_commissioning"]').filter({ hasText: planned.ref })
     await expect(job).toContainText('Commissioning tomorrow')
     await expect(job).toContainText(planned.customer)
@@ -252,7 +259,8 @@ test.describe('Today: role-aware', () => {
     await seedOverdueOrder(ENGINEER)
     const requests: string[] = []
     page.on('request', r => requests.push(r.url()))
-    await openAs(page, 'engineer', '/today')
+    await openAs(page, 'engineer', '/todo')
+    await showAllTodo(page)
     const goods = rowOf(page, g.reference)
     await expect(goods.getByText(/Goods \d+ days late from supplier/)).toBeVisible()
     await expect(page.getByRole('radio', { name: /^Money/ })).toHaveCount(0)
@@ -275,7 +283,8 @@ test.describe('Today: role-aware', () => {
 
   test('sales: sees the payment-overdue item for their own order, with a reminder 1 tap away', async ({ page }) => {
     const p = await seedOverdueOrder(SALES)
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     const row = rowOf(page, p.customer)
     await expect(row.getByText(/Payment \d+ days overdue/)).toBeVisible()
     await row.getByRole('button').first().click()
@@ -292,7 +301,8 @@ test.describe('Today: role-aware', () => {
     const p = await seedOverdueOrder(SALES, null)
     const [o] = await must(rest<{ payment_terms_days: number | null }[]>('admin', `orders?id=eq.${p.order.id}&select=payment_terms_days`))
     expect(o.payment_terms_days).toBeNull()
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     // invoiced 45 days ago, default terms 30 days: 15 days overdue, the same as an order that carries 30 days itself
     await expect(rowOf(page, p.customer).getByText(/Payment 15 days overdue/)).toBeVisible()
     const [r] = await must(rest<{ is_overdue: boolean; payment_state: string }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: p.order.id } }))
@@ -313,7 +323,8 @@ test.describe('Today: role-aware', () => {
     }
     const plain = await seed(false)
     const part = await seed(true)
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     await expect(rowOf(page, plain.customer).getByText('Delivered, not invoiced')).toBeVisible()
     await expect(rowOf(page, part.customer).getByText('Partly invoiced: PKR 59,000 still to invoice')).toBeVisible()
   })
@@ -332,7 +343,8 @@ test.describe('Today: role-aware', () => {
         prefer: 'return=minimal',
       }),
     )
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     await expect(rowOf(page, customer).getByText('2 items still need a supplier')).toBeVisible()
   })
 
@@ -340,7 +352,8 @@ test.describe('Today: role-aware', () => {
     const p = await seedOverdueOrder(ADMIN)
     const mine = await seedCustomerChase(ADMIN)
     const theirs = await seedCustomerChase(SALES) // another owner's RFQ: not on the admin's Today
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
+    await showAllTodo(page)
     await expect(rowOf(page, p.customer).getByText(/Payment \d+ days overdue/)).toBeVisible()
     await expect(rowOf(page, mine.ref).first()).toBeVisible()
     await expect(rowOf(page, theirs.ref)).toHaveCount(0)
@@ -358,7 +371,8 @@ test.describe('Today: the tab strip fits', () => {
     test(`at ${width} px every tab is on screen and nothing scrolls sideways`, async ({ page }) => {
       await seedOverdueOrder(ADMIN)
       await page.setViewportSize({ width, height })
-      await openAs(page, 'admin', '/today')
+      await openAs(page, 'admin', '/todo')
+      await showAllTodo(page)
       const strip = page.getByRole('radiogroup', { name: 'Show' })
       await expect(strip.getByRole('radio', { name: /^Money/ })).toBeVisible()
       for (const tab of await strip.getByRole('radio').all()) await expect(tab).toBeInViewport({ ratio: 1 })
@@ -376,14 +390,16 @@ test.describe('Today: accessibility and mobile', () => {
   test('axe is clean at 1440 and at 375, and the pane folds into an accordion on a phone', async ({ page }) => {
     const s = await seedCustomerChase(SALES)
     await seedLateGoods(SALES)
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
+    await showAllTodo(page)
     await expect(rowOf(page, s.ref).first()).toBeVisible()
     await rowOf(page, s.ref).first().getByRole('button').first().click()
     await expect(paneFor(page, s.ref).getByText('Prepared for you')).toBeVisible()
     expect(await violations(page), 'axe at 1440').toEqual([])
 
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto('/today')
+    await page.goto('/todo')
+    await showAllTodo(page)
     await page.locator('#main').waitFor()
     const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
     await expect(row).toBeVisible()
@@ -414,8 +430,9 @@ test.describe('Today: accessibility and mobile', () => {
   test('an empty Today reads as the goal state', async ({ page }) => {
     // The engineer has no seed of their own in this describe's first run; whatever is there, the heading and tabs must render.
     const role: Role = 'engineer'
-    await openAs(page, role, '/today')
-    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+    await openAs(page, role, '/todo')
+    await showAllTodo(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
     expect(await violations(page), 'axe empty or populated').toEqual([])
   })
 })
