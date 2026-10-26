@@ -194,6 +194,9 @@ export const BATCHES: BatchSpec[] = [
   // store codes in the description, a list in one sentence). After fixing on batch 31 only: 31 100%, 32 98.6% and 98.9%.
   { batch: 31, enquiries: 120, quotes: 0, gens: [29, 30], dev: true, gate: true },
   { batch: 32, enquiries: 80, quotes: 0, gens: [29, 30], gate: true },
+  // Batch 33 is the EU quotation PDF alone (generation 32, the Italian Preventivo layout): quotes only, text and PDF. It was written
+  // together with the reply reader's Italian labels, so it is dev data (tuned on), run in CI.
+  { batch: 33, enquiries: 0, quotes: 48, gens: [32], dev: true, gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {
