@@ -337,7 +337,8 @@ function settled(client: QueryClient, queries: Query[]): Promise<void> {
  *     read has). Usually there are none, and it resolves at once.
  */
 export function invalidateAfter<N extends WriteName>(client: QueryClient, name: N, vars: WriteVars[N], options: InvalidateOptions = {}): Promise<void> {
-  const keys = withoutCovered(keysFor(name, vars))
+  // Every job page and the Jobs list read rfqs, orders, invoices and payments through v_jobs, so any write makes them stale (qk.jobs).
+  const keys = withoutCovered([...keysFor(name, vars), qk.jobs.all])
   const cache = client.getQueryCache()
   const matched = new Set<Query>()
   for (const queryKey of keys) for (const q of cache.findAll({ queryKey })) matched.add(q)

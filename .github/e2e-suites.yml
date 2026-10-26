@@ -40,6 +40,8 @@ today: # weight=75
   - 'e2e/today/**'
 search: # weight=50
   - 'e2e/search/**'
+jobs: # weight=60
+  - 'e2e/jobs/**'
 capture: # weight=155
   - 'e2e/capture/**'
 expenses: # weight=76
