@@ -26,6 +26,7 @@ import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { withShortlist } from '@/features/rfqs/askList'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
+import { SentConfirm } from '@/features/rfqs/SentConfirm'
 import { BelowTheFold } from '@/ui/BelowTheFold'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { useWonDialog } from '@/features/orders/useWonDialog'
@@ -422,7 +423,7 @@ function Loaded({
 
 /**
  * After an ask: the one enquiry (copied already, the same for every supplier) with Open in WhatsApp / Open in email for
- * each supplier asked, so nobody pastes it N times by hand. Nothing to mark: the ask was recorded when it was copied.
+ * each supplier asked, so nobody pastes it N times by hand. The ask was recorded when it was copied; "Sent" is only what the person confirms (SentConfirm).
  */
 function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask: AskResult; inquiries: readonly InquiryRow[]; onClose: () => void }) {
   const [channel, setChannel] = useChannelPreference()
@@ -451,6 +452,8 @@ function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask:
               channel={channel}
               onChannelChange={setChannel}
             />
+            {/* P3-C2: copying or opening proves nothing; only "Yes, sent" says Sent (SentConfirm.tsx, 0097). */}
+            <SentConfirm rfqId={rfq.id} inquiry={i} />
           </li>
         ))}
       </ul>

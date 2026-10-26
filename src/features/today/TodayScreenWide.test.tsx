@@ -80,7 +80,7 @@ describe('Today at desktop width, after a chase', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
       expect(await screen.findByText('Moved to Waiting.')).toBeInTheDocument()
       // Waiting starts collapsed (R2-08), a count in words with the next nudge; the open row still shows inside it.
-      const toggle = screen.getByRole('button', { name: /^Waiting · 1 · next nudge \w{3} \d{1,2} \w{3}$/ })
+      const toggle = screen.getByRole('button', { name: /^Chased, waiting · 1 · until \w{3} \d{1,2} \w{3}$/ })
       expect(toggle).toHaveAttribute('aria-expanded', 'false')
       expect(within(screen.getByRole('region', { name: 'Waiting' })).getAllByRole('listitem')).toHaveLength(1)
     } finally {

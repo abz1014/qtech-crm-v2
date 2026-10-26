@@ -21,7 +21,7 @@ export const COMMON = {
   network: 'Check your connection and try again. Trying again will not create a duplicate.',
   /** The month-lock trigger's sentence (P0001), passed through to the screen unchanged. */
   closedMonth: (monthLabel: string) => `${monthLabel} is closed. An admin can reopen it.`,
-  nav: { today: 'Today', rfqs: 'RFQs', orders: 'Orders', companies: 'Companies', money: 'Money', reports: 'Reports' },
+  nav: { today: 'To do', rfqs: 'RFQs', orders: 'Orders', companies: 'Companies', money: 'Money', reports: 'Reports' },
 } as const
 
 /*
@@ -158,8 +158,8 @@ export const ORDERS = {
     reason: 'The customer cancelled the PO',
   },
   today: {
-    path: '/today',
-    heading: 'Today',
+    path: '/todo',
+    heading: 'To do',
     loaded: /\d+ need you/,
   },
   invoice: {
@@ -317,7 +317,7 @@ export const ROLES = {
   /** The no-access page's heading (src/app/pages/NoAccessPage.tsx): "<Area> is for admins", "Money is for admins and sales". */
   noAccess: /\bis for (admins|sales|engineers)/,
   nav: { main: 'Main' },
-  navLabels: { admin: ['Today', 'RFQs', 'Orders', 'Companies', 'Money'], sales: ['Today', 'RFQs', 'Orders', 'Companies', 'Money'], engineer: ['Today', 'RFQs', 'Orders', 'Companies'] },
+  navLabels: { admin: ['To do', 'RFQs', 'Orders', 'Companies', 'Money'], sales: ['To do', 'RFQs', 'Orders', 'Companies', 'Money'], engineer: ['To do', 'RFQs', 'Orders', 'Companies'] },
   order: {
     recordPayment: 'Record payment',
     createInvoice: 'Create invoice',

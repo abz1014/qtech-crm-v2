@@ -38,14 +38,14 @@ async function open(page: Page, path: string) {
 
 test.describe('a brand-new CRM, as the admin', () => {
   test.beforeEach(async ({ page }) => {
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
     await emptyCompany(page)
   })
 
   test('Today: the list pane never scrolls sideways (1920, 1366, 375), and no target is one small line', async ({ page }) => {
     for (const [width, height] of [[1920, 1080], [1366, 768], [375, 812]] as const) {
       await page.setViewportSize({ width, height })
-      await open(page, '/today')
+      await open(page, '/todo')
       await expect(page.getByText('Just you so far')).toBeVisible()
       const m = await page.evaluate(() => {
         const list = document.querySelector('[data-today-list]') as HTMLElement
@@ -99,7 +99,7 @@ test.describe('a brand-new CRM, as the admin', () => {
 
   test('amounts and counts: tabular figures in the sans, never a slashed zero', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 })
-    for (const path of ['/today', '/orders', '/money/receivables']) {
+    for (const path of ['/todo', '/orders', '/money/receivables']) {
       await open(page, path)
       const styles = await page.evaluate(() =>
         Array.from(document.querySelectorAll('.num')).map(el => {

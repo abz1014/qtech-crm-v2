@@ -15,14 +15,14 @@ installFakeDb(() => ({ data: [] }))
 
 const signedIn: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }
 
-function shell(path = '/today') {
+function shell(path = '/todo') {
   return render(
     <QueryClientProvider client={qc()}>
       <SessionProvider value={signedIn}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route element={<AppShell />}>
-            <Route path="/today" element={<p>Today page</p>} />
+            <Route path="/todo" element={<p>Today page</p>} />
             <Route path="/rfqs" element={<p>RFQs page</p>} />
           </Route>
         </Routes>
@@ -58,10 +58,10 @@ describe('account menu (U03, on Popover)', () => {
     render(
       <QueryClientProvider client={qc()}>
         <SessionProvider value={signedIn}>
-        <MemoryRouter initialEntries={['/today']}>
+        <MemoryRouter initialEntries={['/todo']}>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/today" element={<p>Today page</p>} />
+              <Route path="/todo" element={<p>Today page</p>} />
               <Route path="/settings/password" element={<p>Password page</p>} />
             </Route>
           </Routes>
@@ -96,7 +96,7 @@ describe('search button and Cmd/Ctrl+K open the palette (U08)', () => {
     const rows = await within(dlg).findAllByRole('option')
     // Idle: the Actions of the mockup (A-89); the destinations answer when typed.
     expect(rows.map(r => r.textContent)).toEqual(
-      expect.arrayContaining([expect.stringContaining('New RFQ'), expect.stringContaining('Paste or photo'), expect.stringContaining('Go to Today')]),
+      expect.arrayContaining([expect.stringContaining('New RFQ'), expect.stringContaining('Paste or photo'), expect.stringContaining('Go to To do')]),
     )
     await user.keyboard('rfq{Enter}')
     expect(await screen.findByText('RFQs page')).toBeInTheDocument()
@@ -120,10 +120,10 @@ describe('account menu: Settings and Team (A04)', () => {
     render(
       <QueryClientProvider client={qc()}>
         <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }}>
-        <MemoryRouter initialEntries={['/today']}>
+        <MemoryRouter initialEntries={['/todo']}>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/today" element={<p>Today page</p>} />
+              <Route path="/todo" element={<p>Today page</p>} />
               <Route path="/settings" element={<p>Settings page</p>} />
               <Route path="/settings/team" element={<p>Team page</p>} />
             </Route>
@@ -176,6 +176,12 @@ describe('account menu: Text size (DECISIONS 2026-10-19)', () => {
     expect(await axeViolations(menu)).toEqual([])
     await user.click(normal)
     expect(document.documentElement.hasAttribute('data-text')).toBe(false)
+    // Larger (18 px) is a third choice in the same group
+    await user.click(within(group).getByRole('menuitemradio', { name: 'Larger' }))
+    expect(document.documentElement.dataset.text).toBe('large')
+    expect(window.localStorage.getItem('qtech.text-size')).toBe('large')
+    expect(within(group).getByRole('menuitemradio', { name: 'Larger' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(normal)
   })
 
   it('the arrow keys reach the text size choices like any other item', async () => {
@@ -183,8 +189,8 @@ describe('account menu: Text size (DECISIONS 2026-10-19)', () => {
     shell()
     await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
     await screen.findByRole('menu', { name: 'Account' })
-    await user.keyboard('{End}{ArrowUp}{ArrowUp}')
-    // The last item is Sign out; above it (no Install app in jsdom) Smaller, then Normal.
+    await user.keyboard('{End}{ArrowUp}{ArrowUp}{ArrowUp}{ArrowUp}')
+    // The last item is Sign out; above it the version row, then (no Install app in jsdom) Larger, Smaller, then Normal.
     expect(screen.getByRole('menuitemradio', { name: 'Normal' })).toHaveFocus()
   })
 

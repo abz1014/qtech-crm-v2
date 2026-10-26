@@ -2,7 +2,8 @@ import { Suspense, useEffect, useRef, type ComponentType } from 'react'
 import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
-import { navItems, type NavKey } from '@/app/navConfig'
+import { navItems, type NavItem, type NavKey } from '@/app/navConfig'
+import { Package } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
@@ -25,6 +26,8 @@ const screens: Record<NavKey, ComponentType> = {
   orders: lazy(routeChunks.orders),
 }
 
+/** The weekly owner review (redesign phase 3): /todo/review, admin only. */
+const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
@@ -38,6 +41,9 @@ const IntakeScreen = lazy(routeChunks.rfqNew)
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
+/** /jobs (redesign phase 5): reachable by address only until the navigation switch (P5-F, lane L1) adds Jobs to navConfig. Every staff role. */
+const JobsScreen = lazy(routeChunks.jobs)
+const jobsItem: NavItem = { key: 'orders', label: 'Jobs', path: '/jobs', icon: Package, roles: ['admin', 'sales', 'engineer'] }
 const rfqsItem = navItems.find(i => i.key === 'rfqs')
 const moneyItem = navItems.find(i => i.key === 'money')
 
@@ -49,6 +55,12 @@ const moneyItem = navItems.find(i => i.key === 'money')
 function ReportsRedirect() {
   const { search } = useLocation()
   return <Navigate to={{ pathname: '/money/reports', search }} replace />
+}
+
+/** `/today` was the home screen until redesign phase 3 (To do). Its query string is kept. */
+function TodayRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: '/todo', search }} replace />
 }
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
@@ -120,6 +132,18 @@ function AppRouteTable() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          <Route
+            path="todo/review"
+            element={
+              <AdminOnly area="Weekly review">
+                <Suspense fallback={null}>
+                  <ReviewPage />
+                </Suspense>
+              </AdminOnly>
+            }
+          />
+          {/* Today became To do (redesign phase 3): an old link, bookmark or installed shortcut lands on /todo. */}
+          <Route path="today/*" element={<TodayRedirect />} />
           <Route
             path="my-expenses"
             element={
@@ -216,6 +240,16 @@ function AppRouteTable() {
               }
             />
           ) : null}
+          <Route
+            path="jobs/*"
+            element={
+              <RequireRole item={jobsItem}>
+                <Suspense fallback={null}>
+                  <JobsScreen />
+                </Suspense>
+              </RequireRole>
+            }
+          />
           {moneyItem ? (
             <Route
               path="reports/*"

@@ -237,8 +237,8 @@ describe('label matching', () => {
 })
 
 describe('a screen is what its module draws', () => {
-  it('the Today screen does not draw the Orders list, and every screen draws the shell', () => {
-    const today = screenFiles('/today')
+  it('the To do screen does not draw the Orders list, and every screen draws the shell', () => {
+    const today = screenFiles('/todo')
     const rel = (f: string) => path.relative(path.join(repo, 'src'), f).split(path.sep).join('/')
     const names = [...today].map(rel)
     expect(names).toContain('features/today/TodayScreen.tsx')

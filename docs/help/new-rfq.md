@@ -3,7 +3,7 @@ id: new-rfq
 title: Log a new enquiry (RFQ)
 roles: sales, admin
 keywords: enquiry, inquiry, customer, request, price, paste, pdf, excel, spreadsheet, csv, new, rfq
-screens: /rfqs, /today
+screens: /rfqs, /todo
 related: ask-suppliers
 ---
 1. Tap [RFQs], then [New RFQ].

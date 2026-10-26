@@ -120,6 +120,8 @@ insert into public.rfqs (id, company_id, owner_id) values
 insert into public.rfq_items (id, rfq_id, position, description, brand_id, quoted_unit_price_net) values
   (pg_temp.f('17'), pg_temp.f('15'), 0, 'Fixture item', pg_temp.f('13'), 50),
   (pg_temp.f('18'), pg_temp.f('15'), 1, 'Leaf item', null, 50);
+insert into public.brands (id, name, kind) values (pg_temp.f('d7'), 'M Category', 'family');   -- 0093: a category no probe deletes
+update public.rfq_items set family_id = pg_temp.f('d7') where id = pg_temp.f('18');   -- 0093: v_supplier_category_evidence needs an asked item with a category
 insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   (pg_temp.f('19'), pg_temp.f('15'), pg_temp.f('03'), public.today_pkt()),
   (pg_temp.f('1a'), pg_temp.f('15'), pg_temp.f('04'), public.today_pkt()),
@@ -277,7 +279,7 @@ insert into probes
 select v, '', 'S', format('select 1 from public.%s limit 1', v)
 from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_state','v_invoice_state','v_gst_register',
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
-                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
+                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
@@ -315,6 +317,7 @@ insert into probes values
   ('money_exceptions_input', '', 'X', 'select 1 from public.money_exceptions_input() j where j is not null'),   -- P9 (0066): NULL unless admin
   ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
   ('rank_item_quotes', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.rank_item_quotes(@15)) >= 0'),   -- A8 (0049): same shape as the customer_price_memory probe (the fixture RFQ must be visible; a deactivated user sees none)
+  ('supplier_category_price_wins', '', 'X', 'select 1 where exists (select 1 from public.companies where id = @03) and (select count(*) from public.supplier_category_price_wins(array[@13])) >= 0'),   -- 0093: same shape as rank_item_quotes (a deactivated user sees no company)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
   ('po_line_prefill', '', 'X', 'select 1 where exists (select 1 from public.supplier_orders where id = @23) and (select count(*) from public.po_line_prefill(@23)) >= 0'),   -- O07: read-only; needs the leg to be visible, so a deactivated user is denied
@@ -530,8 +533,8 @@ select is((select array_agg(p.proname::text order by p.proname::text) from pg_pr
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
           array['attachment_is_priced', 'close_month', 'close_months_through', 'current_user_role', 'job_stage', 'my_target_progress',
-                'order_receivables', 'receipt_locked', 'record_history_rows', 'reopen_month'],
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed ten (0090: record_history_rows, refused unless record_history marked the transaction; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy)');
+                'order_receivables', 'receipt_locked', 'record_history_rows', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed eleven (0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

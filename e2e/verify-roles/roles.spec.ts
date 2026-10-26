@@ -268,7 +268,7 @@ for (const role of ['admin', 'sales', 'engineer'] as const) {
   test(`${role}: every route, dialog and popover`, async ({ browser }, info) => {
     const context = await staffContext(browser, info)
     const page = await context.newPage()
-    await openAs(page, role, '/today')
+    await openAs(page, role, '/todo')
     // The shell: the nav and the account menu.
     const money = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money/ })
     if (role === 'engineer') await expect.soft(money).toHaveCount(0)

@@ -8,6 +8,7 @@ import { ROLE_LABEL, session, type SessionUser } from '@/app/session'
 import { useHelp } from '@/features/help/useHelp'
 import { cn } from '@/lib/utils'
 import { promptInstall, useInstall } from '@/lib/pwa/install'
+import { VersionMenuItem } from '@/app/shell/VersionLabel'
 import { Avatar } from '@/ui/Avatar'
 import { Kbd } from '@/ui/Kbd'
 import { MenuGroup, MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
@@ -17,7 +18,7 @@ import { useTextSize } from '@/ui/useTextSize'
  * Account menu: the top-bar avatar opens a Popover (menu variant) with the
  * person's name and role, Settings, the Text size choice (Normal or Smaller,
  * applied at once and kept on this device) and "Sign out". Esc closes it and
- * returns focus to the avatar. "Keyboard shortcuts" (with its ? key) shows only where a keyboard is likely: a fine pointer
+ * returns focus to the avatar. The version ("Version a1b2c3d · 26 Oct 2026") sits above Sign out; tapping it checks for an update. "Keyboard shortcuts" (with its ? key) shows only where a keyboard is likely: a fine pointer
  * from md up.
  */
 export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?: boolean }) {
@@ -79,6 +80,9 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
           <MenuItem keepOpen checked={textSize === 'small'} onClick={() => setTextSize('small')}>
             Smaller
           </MenuItem>
+          <MenuItem keepOpen checked={textSize === 'large'} onClick={() => setTextSize('large')}>
+            Larger
+          </MenuItem>
         </MenuGroup>
         {canPrompt ? (
           <MenuItem icon={Download} onClick={() => void promptInstall()}>
@@ -86,6 +90,7 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
           </MenuItem>
         ) : null}
         <MenuSeparator />
+        <VersionMenuItem />
         <MenuItem icon={LogOut} danger onClick={() => void session.signOut()}>
           Sign out
         </MenuItem>

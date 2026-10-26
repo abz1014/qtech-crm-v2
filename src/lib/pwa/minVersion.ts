@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { PlainError } from '@/lib/errors/plainError'
+import { noteDeployedBuild } from '@/lib/pwa/updates'
 
 /*
  * Minimum app version (owner decision 2026-10-22). The server side is a static file: every deploy publishes /version.json
@@ -11,8 +12,9 @@ import { PlainError } from '@/lib/errors/plainError'
  *     the form keeps what was typed, as with an offline save,
  *   - the shell shows "Update needed — tap Reload" (src/app/shell/UpdateNeededBanner.tsx), which moves this window onto the new
  *     service worker (src/lib/pwa/updates.ts reloadOntoNewVersion).
- * Checked once at start, when the app comes back to the front (at most every 5 minutes), when the network returns, and every
- * 30 minutes. A failed check changes nothing. Once an update is needed it stays needed until the page reloads.
+ * Checked once at start, when the app comes back to the front (at most once a minute), when the network returns, and every
+ * 30 minutes. A published `build` other than this one also asks the browser for the new service worker at once (pwa/updates.ts),
+ * which then switches in at a safe moment (2026-10-26). A failed check changes nothing. Once an update is needed it stays needed until the page reloads.
  */
 declare const __APP_VERSION__: number | undefined
 
@@ -56,7 +58,12 @@ export function needsUpdate(published: unknown, running: number = APP_VERSION): 
 export async function checkMinVersion(fetcher: typeof fetch = fetch): Promise<boolean> {
   try {
     const res = await fetcher('/version.json', { cache: 'no-store', headers: { accept: 'application/json' } })
-    if (res.ok && needsUpdate(await res.json())) markNeeded()
+    if (res.ok) {
+      const published: unknown = await res.json()
+      if (needsUpdate(published)) markNeeded()
+      // A different build is live (even when nothing forces it): fetch its service worker now, so it can switch in at a safe moment.
+      noteDeployedBuild(published)
+    }
   } catch {
     // offline, or a host without the file: nothing to say
   }
@@ -68,7 +75,7 @@ export function refuseOutdatedSave(): void {
   if (needed) throw new PlainError(UPDATE_NEEDED_MESSAGE, 'update_needed')
 }
 
-const RETURN_EVERY_MS = 5 * 60_000
+const RETURN_EVERY_MS = 60_000
 const POLL_EVERY_MS = 30 * 60_000
 let started = false
 

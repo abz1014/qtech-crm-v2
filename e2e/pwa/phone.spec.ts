@@ -27,7 +27,7 @@ async function signIn(page: Page) {
   await page.getByLabel('Email').fill('sales@test.invalid')
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
   // The session resolved and the person is remembered on this device.
   await page.waitForFunction(() => window.localStorage.getItem('qtech.session.user') !== null)
 }
@@ -82,7 +82,7 @@ test.describe('phone platform', () => {
 
     await goOffline(context, page)
     await expect(banner(page)).toHaveText(/You’re offline — Showing what’s saved; changes need signal\./)
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await expect(page.getByLabel('Email')).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
     await noSidewaysScroll(page)
@@ -101,7 +101,7 @@ test.describe('phone platform', () => {
     // Signal returns: the banner goes without a reload or a sign-in.
     await context.setOffline(false)
     await expect(banner(page)).toHaveCount(0, { timeout: 20_000 })
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
   })
 
   test('offline cold open after the access token expired: still the shell, not the sign-in form', async ({ page, context }) => {
@@ -117,7 +117,7 @@ test.describe('phone platform', () => {
     await goOffline(context, page)
     await expect(banner(page)).toBeVisible({ timeout: 10_000 })
     await expect(page.getByLabel('Email')).toHaveCount(0)
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await context.setOffline(false)
   })
 
@@ -149,7 +149,7 @@ test.describe('phone platform', () => {
     await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(0)
 
     await page.goBack()
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(600)
   })
 })
@@ -190,7 +190,7 @@ test('an engineer deactivated while the app is open loses everything on this pho
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
   await expect.poll(() => savedCache(page), { timeout: 15_000 }).toBe(true)
 
   // An admin deactivates them (the users row current_user_role() reads, as the admin-users function writes it).

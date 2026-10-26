@@ -84,12 +84,17 @@ export interface SentLineInput {
   chaseCount: number
   noOfferOn: string | null
   quoteReceivedOn?: string | null
+  /** supplier_inquiries.sent_confirmed_at (0097): the person said "Yes, sent". Only then does a screen say "Sent". */
+  sentConfirmedAt?: string | null
 }
 
-/** "Sent Sun 22 Nov · replied Mon 23 Nov" / "· chased Wed 25 Nov" / "· can't quote Mon 23 Nov" / "Not sent yet". */
+/**
+ * "Asked Sun 22 Nov · replied Mon 23 Nov" / "· chased Wed 25 Nov" / "· can't quote Mon 23 Nov" / "Not asked yet". The word is "Asked" until
+ * the person confirmed they really sent the message ("Yes, sent", 0097); only then it is "Sent Sun 22 Nov". Copying a message proves nothing.
+ */
 export function sentLine(i: SentLineInput): string {
-  if (!i.sentOn) return 'Not sent yet'
-  const parts = [`Sent ${formatDay(i.sentOn)}`]
+  if (!i.sentOn) return 'Not asked yet'
+  const parts = [`${i.sentConfirmedAt ? 'Sent' : 'Asked'} ${formatDay(i.sentOn)}`]
   if (i.quoteReceivedOn) parts.push(`replied ${formatDay(i.quoteReceivedOn)}`)
   else if (i.noOfferOn) parts.push(`can't quote ${formatDay(i.noOfferOn)}`)
   else if (i.lastChasedOn) parts.push(`chased ${formatDay(i.lastChasedOn)}`)

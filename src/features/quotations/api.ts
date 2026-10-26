@@ -1,4 +1,5 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
+import type { StoredFile } from '@/features/rfqs/api'
 
 /*
  * Quotations (R19): every database and storage call for issuing a quotation, listing its revisions and keeping its PDF.
@@ -311,4 +312,10 @@ export async function downloadStoredPdf(path: string): Promise<Blob> {
   const { data, error } = await requireSupabase().storage.from(PDF_BUCKET).download(path)
   if (error) throw error
   return data
+}
+
+/** delete_quotation_revision (0092, admin only): the latest revision only. The rows are gone when this resolves; the PDF it names is the caller's to remove. */
+export async function deleteQuotationRevision(quotationId: string): Promise<StoredFile[]> {
+  const rows = unwrap(await requireSupabase().rpc('delete_quotation_revision', { p_quotation_id: quotationId })) ?? []
+  return rows.map(r => ({ bucket: r.storage_bucket, path: r.storage_path }))
 }

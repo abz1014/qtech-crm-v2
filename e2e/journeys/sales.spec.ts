@@ -258,7 +258,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
 
   await test.step('hand-off: both suppliers replied, so no supplier chase; the customer chase is one tap on Today', async () => {
     await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number)], false)
-    const t = await openPage(salesCtx, '/today')
+    const t = await openPage(salesCtx, '/todo')
     const row = t.locator('li[data-rule="chase_customer"]').filter({ hasText: rfqRef(rfq.number) })
     await expect(row).toBeVisible()
     await row.getByRole('button').first().click() // selecting a row is not a chase

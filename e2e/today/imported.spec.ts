@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { showAllTodo } from '../support/todo'
 import { db } from '../verify/support/db'
 
 /*
@@ -25,10 +26,11 @@ async function lateGoods(imported: boolean) {
 test('an imported order\'s late goods wait in "Imported, to review", grey and not counted; a v2 order\'s are still due', async ({ page }) => {
   const old = await lateGoods(true)
   const live = await lateGoods(false)
-  await openAs(page, 'sales', '/today')
-  await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+  await openAs(page, 'sales', '/todo')
+  await showAllTodo(page)
+  await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
 
-  const due = page.getByRole('region', { name: 'Overdue or due today' })
+  const due = page.locator('section[data-block="late"], section[data-block="today"]')
   await expect(due.locator('li[data-rule="goods_late"]').filter({ hasText: live.supplier })).toBeVisible()
   await expect(page.locator('li[data-rule]').filter({ hasText: old.supplier }).filter({ visible: true })).toHaveCount(0)
 

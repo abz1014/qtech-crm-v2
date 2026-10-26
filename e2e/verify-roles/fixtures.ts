@@ -88,6 +88,8 @@ export function fill(path: string, w: World): string {
     .replaceAll('{rfq}', w.rfq.id)
     .replaceAll('{order}', w.order.id)
     .replaceAll('{legacyOrder}', w.legacyOrder.id)
+    .replaceAll('{directJob}', `O-${w.legacyOrder.number}`)
+    .replaceAll('{job}', String(w.rfq.number))
     .replaceAll('{company}', w.company.id)
     .replaceAll('{supplier}', w.supplier.id)
     .replaceAll('{invoice}', w.invoice.id)

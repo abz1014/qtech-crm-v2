@@ -13,7 +13,7 @@
  * prices      money an ENGINEER may see on this screen by owner decision: 'supplier', 'm3', 'fx'. Since the owner decision of
  *             2026-10-22 (engineers see NO prices: SECURITY_REVIEW M-3) no route grants any: the field stays for a future
  *             decision. Anything that looks like money on an engineer's screen or in their network answers is a failure.
- * Placeholders: {rfq} {order} {company} {supplier} {invoice} {month} {legacyOrder}, filled from the suite's own fixtures.
+ * Placeholders: {rfq} {order} {company} {supplier} {invoice} {month} {legacyOrder} {job} (the RFQ's job key) {directJob} (the imported order's job key, O-n), filled from the suite's own fixtures.
  */
 export type Expect = 'ok' | 'new' | 'no'
 export type Allowance = 'supplier' | 'm3' | 'fx'
@@ -50,9 +50,9 @@ const MONTH_REPORTS = ['pnl', 'categories', 'aging', 'owe', 'gst', 'team'] as co
 
 export const ROUTES: readonly RouteSpec[] = [
   // ------------------------------------------------------------------ shell
-  { path: '/', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/today$/, note: 'role landing' },
-  { path: '/login', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/today$/, note: 'signed in: the sign-in page sends you on' },
-  { path: '/today', admin: 'ok', sales: 'ok', engineer: 'ok' },
+  { path: '/', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'role landing' },
+  { path: '/login', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'signed in: the sign-in page sends you on' },
+  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok' },
   { path: '/no-access', admin: 'no', sales: 'no', engineer: 'no', note: 'the bare no-access page' },
   { path: '/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ RFQs
@@ -112,6 +112,28 @@ export const ROUTES: readonly RouteSpec[] = [
   },
   { path: '/orders/{legacyOrder}', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'an imported order (legacy_source set by the import)' },
   { path: '/orders/{order}/extra', admin: 'no', sales: 'no', engineer: 'no' },
+  // ------------------------------------------------------------------ Jobs (redesign phase 5; reachable by address until the nav switch)
+  {
+    path: '/jobs',
+    admin: 'ok',
+    sales: 'ok',
+    engineer: 'ok',
+    // an engineer sees the same list, which holds no money for anyone; the one green button starts an enquiry (admin and sales)
+    openers: [{ name: /^New enquiry$/, roles: AS, open: false }], // it goes to the intake page: presence only
+    engineerAbsent: [/^Value/, /^Gross/, /PKR/],
+  },
+  { path: '/jobs?chip=history', admin: 'ok', sales: 'ok', engineer: 'ok' },
+  {
+    path: '/jobs/{job}',
+    admin: 'ok',
+    sales: 'ok',
+    engineer: 'ok',
+    // no prices, no money panel, no price-carrying files and no quotation or invoice actions for an engineer
+    engineerAbsent: [/^Money for this job$/, /^Send quotation$/, /^Mark won$/, /^Costs/, /^Has prices/, /^Gross, PKR$/, /^Price, PKR today/, /^Enter reply/, /^Edit reply/, /^Paste reply/],
+  },
+  { path: '/jobs/{directJob}', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'an order with no enquiry: Job O-n, the ruler starts at Order' },
+  { path: '/jobs/9999999', admin: 'no', sales: 'no', engineer: 'no', note: 'no such job: the not-found state' },
+  { path: '/jobs/{job}/extra', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ Companies
   { path: '/companies', admin: 'ok', sales: 'ok', engineer: 'ok', openers: [{ name: /^New company$/, roles: ALL }] },
   { path: '/companies?new=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: New company dialog' },

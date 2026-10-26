@@ -24,6 +24,7 @@ import { useChannelPreference } from '@/lib/useChannelPreference'
 import { awaitingReply, canChaseInquiry, jumpToReplyRow, outstandingItems } from '@/features/rfqs/replyFocus'
 import { ReplyChip, SupplierReplyDialog } from '@/features/rfqs/SupplierReplies'
 import { useReplyDialog } from '@/features/rfqs/useReplyDialog'
+import { SentConfirm } from '@/features/rfqs/SentConfirm'
 import {
   daysSince,
   generateSupplierChase,
@@ -165,6 +166,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                           {label}
                         </Button>
                       )}
+                      {awaiting && !i.sentConfirmedAt ? <SentConfirm rfqId={rfq.id} inquiry={i} variant="later" /> : null}
                       {can && open?.id !== i.id ? <ChaseNow rfq={rfq} items={items} inquiry={i} variant={channel} /> : null}
                       {/* While a card shows, its "Message for" picker reaches the others; with no card (prices in), each row offers it. */}
                       {can && !open ? (

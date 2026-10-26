@@ -240,7 +240,7 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
         // items on the admin's own Today, due now) and never an "overdue" count. "12 open · 4 need you".
         const nav = page.getByRole('navigation', { name: 'Main' }).first()
         await expect(nav.getByRole('link', { name: 'RFQs', exact: true })).toBeVisible()
-        await expect(nav.getByRole('link', { name: /^Today\s?, \d+ need you$/ })).toBeVisible()
+        await expect(nav.getByRole('link', { name: /^To do\s?, \d+ need you$/ })).toBeVisible()
         await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
         const lede = page.getByText(/^\d+ open( · \d+ need you)?$/)
         await expect(lede).toBeVisible()
@@ -337,13 +337,13 @@ test.describe('closed and won', () => {
 
 test.describe('palette', () => {
   test('finds an RFQ by number, by the customer ref and by company name', async ({ page }) => {
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     for (const [text, key] of [
       [String(fx.numbers.awaiting), 'awaiting'],
       [`BRD-${fx.tag}-P`, 'priority'],
       [fx.names.covered, 'covered'],
     ] as const) {
-      await page.goto('/today') // a fresh page each time, so the shortcut never meets a closing palette
+      await page.goto('/todo') // a fresh page each time, so the shortcut never meets a closing palette
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       await page.keyboard.press('Control+k')
       await page.getByRole('combobox').fill(text)

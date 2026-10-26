@@ -12,7 +12,7 @@ async function signIn(page: Page, email: string) {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
 }
 
 test.describe('update needed', () => {

@@ -28,7 +28,7 @@ test.describe('sign-in and role landing', () => {
   for (const p of people) {
     test(`${p.role} lands on Today with the right navigation`, async ({ page }) => {
       await signIn(page, p.email)
-      await expect(page).toHaveURL(/\/today$/)
+      await expect(page).toHaveURL(/\/todo$/)
       await page.getByRole('button', { name: `Account menu, ${p.name}` }).click()
       await expect(page.getByRole('menu', { name: 'Account' }).getByText(p.role, { exact: true })).toBeVisible()
       await page.keyboard.press('Escape')
@@ -40,7 +40,7 @@ test.describe('sign-in and role landing', () => {
 
   test('an engineer who opens Money gets the no-access page, not the screen', async ({ page }) => {
     await signIn(page, 'engineer@test.invalid')
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await page.goto('/money')
     await expect(page.getByText(/is for admins|not available to your role|no access|don.t have access/i).first()).toBeVisible()
   })
@@ -53,13 +53,13 @@ test.describe('sign-in and role landing', () => {
 
   test('the session survives a reload and Sign out returns to /login', async ({ page }) => {
     await signIn(page, 'sales@test.invalid')
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await page.reload()
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await page.getByRole('button', { name: 'Account menu, Test Sales' }).click()
     await page.getByRole('menuitem', { name: 'Sign out' }).click()
     await expect(page).toHaveURL(/\/login$/)
-    await page.goto('/today')
+    await page.goto('/todo')
     await expect(page).toHaveURL(/\/login$/)
   })
 
@@ -67,7 +67,7 @@ test.describe('sign-in and role landing', () => {
     await signIn(page, 'deactivated@test.invalid')
     await expect(page.getByText('This account is deactivated')).toBeVisible()
     await expect(page).toHaveURL(/\/login$/)
-    await page.goto('/today')
+    await page.goto('/todo')
     await expect(page).toHaveURL(/\/login$/)
   })
 
@@ -84,7 +84,7 @@ test.describe('sign-in and role landing', () => {
     expect(profile.status).toBe(201)
 
     await signIn(page, email)
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
 
     // An admin deactivates them (the users row is what current_user_role() reads).
     const patch = await service(`/rest/v1/users?id=eq.${id}`, {

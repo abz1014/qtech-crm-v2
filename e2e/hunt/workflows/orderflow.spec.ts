@@ -176,8 +176,8 @@ async function newPage(ctx: BrowserContext, info: TestInfo, label: string): Prom
 async function todayItems(ctx: BrowserContext, info: TestInfo, rule: string, text: string): Promise<{ count: number; waiting: number }> {
   const p = await newPage(ctx, info, `today ${rule}`)
   try {
-    await visit(p, info, '/today')
-    await p.getByRole('heading', { level: 1, name: 'Today' }).waitFor({ timeout: T }).catch(() => undefined)
+    await visit(p, info, '/todo')
+    await p.getByRole('heading', { level: 1, name: 'To do' }).waitFor({ timeout: T }).catch(() => undefined)
     await p.getByText(/\d+ need you|Nothing due|all done/i).first().waitFor({ timeout: T }).catch(() => undefined)
     // Waiting starts collapsed (R2-08): open it so its items are in the DOM too.
     const toggle = p.getByRole('region', { name: 'Waiting' }).getByRole('button', { expanded: false })
@@ -586,8 +586,8 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
   const log = restLog(ep)
 
   await probe(info, ep, 'B engineer phone Today: "Commissioning today"', async () => {
-    await visit(ep, info, '/today')
-    await ep.getByRole('heading', { level: 1, name: 'Today' }).waitFor({ timeout: T })
+    await visit(ep, info, '/todo')
+    await ep.getByRole('heading', { level: 1, name: 'To do' }).waitFor({ timeout: T })
     const li = ep.locator('li[data-rule="job_commissioning"]').filter({ hasText: oref })
     want(info, 'B engineer Today', (await li.count()) === 1, `engineer Today has ${await li.count()} job_commissioning items for ${oref}`)
     if (await li.count()) want(info, 'B engineer Today', /Commissioning today/.test(await li.innerText()), 'the item does not say "Commissioning today"', await li.innerText())

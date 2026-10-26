@@ -189,7 +189,7 @@ export async function openChase(page: Page, ref: string) {
 
 /** The main screens, as the admin sees them: a name for the test title and the path, which may need the seeded records. */
 export const SCREENS: ReadonlyArray<{ name: string; path: (w: World) => string }> = [
-  { name: 'Today', path: () => '/today' },
+  { name: 'To do', path: () => '/todo' },
   { name: 'RFQ board', path: () => '/rfqs' },
   { name: 'New RFQ', path: () => '/rfqs/new' },
   { name: 'RFQ detail', path: w => `/rfqs/${w.rfq.id}` },
@@ -224,7 +224,7 @@ export const test = base.extend<{ world: World }, { adminState: string; worldOnc
       const path = join(tmpdir(), `qtech-a11y-admin-${process.pid}-${info.workerIndex}.json`)
       const context = await browser.newContext({ baseURL: info.project.use.baseURL })
       const page = await context.newPage()
-      await openAs(page, 'admin', '/today')
+      await openAs(page, 'admin', '/todo')
       await context.storageState({ path })
       await context.close()
       await provide(path)

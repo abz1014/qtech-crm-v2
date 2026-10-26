@@ -51,10 +51,10 @@ function navs() {
 
 describe('page shell navigation, per role', () => {
   it('admin: all five, in order, on both bars', () => {
-    render(signedIn('admin'), '/today')
+    render(signedIn('admin'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
-        "Today -> /today",
+        "To do -> /todo",
         "RFQs -> /rfqs",
         "Orders -> /orders",
         "Companies -> /companies",
@@ -65,10 +65,10 @@ describe('page shell navigation, per role', () => {
   })
 
   it('sales: all five, in order, on both bars', () => {
-    render(signedIn('sales'), '/today')
+    render(signedIn('sales'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
-        "Today -> /today",
+        "To do -> /todo",
         "RFQs -> /rfqs",
         "Orders -> /orders",
         "Companies -> /companies",
@@ -79,10 +79,10 @@ describe('page shell navigation, per role', () => {
   })
 
   it('engineer: four, never Money (top bar or tab bar)', () => {
-    render(signedIn('engineer'), '/today')
+    render(signedIn('engineer'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
-        "Today -> /today",
+        "To do -> /todo",
         "RFQs -> /rfqs",
         "Orders -> /orders",
         "Companies -> /companies",
@@ -94,16 +94,16 @@ describe('page shell navigation, per role', () => {
   })
 
   it('unknown role: no destinations', () => {
-    render(signedIn('guest'), '/today')
+    render(signedIn('guest'), '/todo')
     expect(navs()).toEqual([[], []])
   })
 })
 
 describe('routing and role landing', () => {
-  it.each(['admin', 'sales', 'engineer'])('%s lands on Today from /', role => {
+  it.each(['admin', 'sales', 'engineer'])('%s lands on To do from /', role => {
     render(signedIn(role), '/')
     // Today is a lazy screen now (R11): the shell lands on its route; the screen itself is covered in features/today.
-    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/today')
+    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/todo')
   })
 
   it('an engineer who opens /money sees no-access inside the shell, not Money', () => {
@@ -131,7 +131,7 @@ describe('routing and role landing', () => {
 
   it('a signed-in person who opens /login is sent to their landing page', () => {
     render(signedIn('sales'), '/login')
-    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/today')
+    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/todo')
   })
 
   it('an unknown address shows page not found inside the shell', () => {

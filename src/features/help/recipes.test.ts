@@ -13,13 +13,13 @@ describe('help recipes (docs/help/*.md)', () => {
   })
 
   it('reads the front matter and the steps', () => {
-    const r = recipe('new-rfq', 'sales, admin', 'keywords: enquiry, paste\nscreens: /rfqs, /today\nrelated: ask-suppliers\n', '1. Tap [RFQs].\n2. Tap [New RFQ].\n\nTip: [Undo].')
+    const r = recipe('new-rfq', 'sales, admin', 'keywords: enquiry, paste\nscreens: /rfqs, /todo\nrelated: ask-suppliers\n', '1. Tap [RFQs].\n2. Tap [New RFQ].\n\nTip: [Undo].')
     expect(r).toMatchObject({
       id: 'new-rfq',
       title: 'Title of new-rfq',
       roles: ['sales', 'admin'],
       keywords: ['enquiry', 'paste'],
-      screens: ['/rfqs', '/today'],
+      screens: ['/rfqs', '/todo'],
       related: ['ask-suppliers'],
       steps: ['Tap RFQs.', 'Tap New RFQ.'],
       labels: ['RFQs', 'New RFQ', 'Undo'],
@@ -46,7 +46,7 @@ describe('help recipes (docs/help/*.md)', () => {
     const list = [recipe('money', 'sales', 'screens: /money\n'), recipe('gst', 'sales', 'screens: /money/gst-register\n'), recipe('other', 'sales', 'screens: /moneybags\n')]
     expect(recipesForPath(list, '/money/gst-register', 'sales').map(r => r.id)).toEqual(['gst', 'money'])
     expect(recipesForPath(list, '/money', 'sales').map(r => r.id)).toEqual(['money'])
-    expect(recipesForPath(list, '/today', 'sales')).toEqual([])
+    expect(recipesForPath(list, '/todo', 'sales')).toEqual([])
     expect(recipesForPath(list, '/money', 'engineer')).toEqual([])
   })
 
@@ -67,9 +67,9 @@ describe('help recipes (docs/help/*.md)', () => {
   })
 
   it('groups recipes by the area of their first screen, in tab order', () => {
-    const list = [recipe('m', 'admin', 'screens: /money/gst-register, /orders\n'), recipe('t', 'sales', 'screens: /today\n'), recipe('x', 'sales')]
+    const list = [recipe('m', 'admin', 'screens: /money/gst-register, /orders\n'), recipe('t', 'sales', 'screens: /todo\n'), recipe('x', 'sales')]
     expect(groupByArea(list).map(g => [g.area, g.recipes.map(r => r.id)])).toEqual([
-      ['Today', ['t']],
+      ['To do', ['t']],
       ['Money', ['m']],
       ['Other', ['x']],
     ])

@@ -8,7 +8,7 @@ import { labelsIn, parseInline, parseMarkdown, plainText, type Block } from '@/f
  *   title: Log a new enquiry         read after "How do I..."
  *   roles: sales, admin              who it is for (engineer, sales, admin)
  *   keywords: enquiry, customer      extra words search should find it by (optional)
- *   screens: /rfqs, /today           route prefixes where it is offered under "For this screen" (optional)
+ *   screens: /rfqs, /todo            route prefixes where it is offered under "For this screen" (optional)
  *   related: ask-suppliers           recipes to read next (optional)
  *   ---
  *   1. Tap [RFQs], then [New RFQ].   at most 7 steps; [Label] is the exact on-screen label
@@ -116,7 +116,7 @@ export function recipesForPath(recipes: readonly Recipe[], pathname: string, rol
 
 /** The app's areas, in tab order: a recipe is listed under the area of its first `screens:` entry. */
 const AREAS: ReadonlyArray<readonly [prefix: string, area: string]> = [
-  ['/today', 'Today'],
+  ['/todo', 'To do'],
   ['/rfqs', 'RFQs'],
   ['/orders', 'Orders'],
   ['/companies', 'Companies'],

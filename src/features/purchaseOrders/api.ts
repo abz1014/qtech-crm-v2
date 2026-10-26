@@ -1,4 +1,5 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
+import type { StoredFile } from '@/features/rfqs/api'
 import { poLineAmounts, type LastPo, type PrefillRow, type PriceSource } from '@/features/purchaseOrders/lib/prefill'
 
 /*
@@ -310,4 +311,10 @@ export async function listSentPos(orderId: string): Promise<import('@/features/p
     })
   }
   return out
+}
+
+/** delete_po_revision (0092, admin only): the latest revision only. The rows are gone when this resolves; the PDF it names is the caller's to remove. */
+export async function deletePoRevision(poId: string): Promise<StoredFile[]> {
+  const rows = unwrap(await requireSupabase().rpc('delete_po_revision', { p_po_id: poId })) ?? []
+  return rows.map(r => ({ bucket: r.storage_bucket, path: r.storage_path }))
 }

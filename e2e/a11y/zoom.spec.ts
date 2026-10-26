@@ -35,7 +35,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
   {
     name: 'Capture sheet',
     open: async page => {
-      await open(page, '/today')
+      await open(page, '/todo')
       await page.getByRole('button', { name: UI.capture }).filter({ visible: true }).first().click()
       await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeVisible()
     },
@@ -75,7 +75,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
   {
     name: 'Command palette',
     open: async page => {
-      await open(page, '/today')
+      await open(page, '/todo')
       await page.keyboard.press('Control+k')
       await expect(page.getByRole('dialog', { name: UI.palette })).toBeVisible()
     },
@@ -83,7 +83,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
   {
     name: 'Account menu',
     open: async page => {
-      await open(page, '/today')
+      await open(page, '/todo')
       await page.getByRole('button', { name: UI.accountMenu }).filter({ visible: true }).first().click()
       await expect(page.getByRole('menu')).toBeVisible()
     },

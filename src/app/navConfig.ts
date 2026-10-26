@@ -26,7 +26,7 @@ export interface NavItem {
  * longer a destination of its own: `/reports` opens Money's Reports view.
  */
 export const navItems: readonly NavItem[] = [
-  { key: 'today', label: 'Today', path: '/today', icon: CalendarCheck, roles: ['admin', 'sales', 'engineer'] },
+  { key: 'today', label: 'To do', path: '/todo', icon: CalendarCheck, roles: ['admin', 'sales', 'engineer'] },
   { key: 'rfqs', label: 'RFQs', path: '/rfqs', icon: FileText, roles: ['admin', 'sales', 'engineer'] },
   { key: 'orders', label: 'Orders', path: '/orders', icon: Package, roles: ['admin', 'sales', 'engineer'] },
   { key: 'companies', label: 'Companies', path: '/companies', icon: Building2, roles: ['admin', 'sales', 'engineer'] },
