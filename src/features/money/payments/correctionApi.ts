@@ -157,6 +157,20 @@ export function changeBlockedBy(line: PaymentLine): 'voided' | 'bank_ticked' | n
   return null
 }
 
+export type DeleteBlock = 'voided' | 'correction_chain' | 'bank_ticked'
+
+/**
+ * Why a payment cannot be deleted (delete_payment, 0092), in the order the database checks: voided, part of a correction (it
+ * corrects another, or another corrects it: `inChain`), ticked against a bank statement. Null when it can be tried (a closed
+ * month is only known to the server: it answers month_closed).
+ */
+export function deleteBlockedBy(line: Pick<PaymentLine, 'status' | 'correctsPaymentId' | 'bankMonth'>, inChain: boolean): DeleteBlock | null {
+  if (line.status !== 'counts') return 'voided'
+  if (line.correctsPaymentId !== null || inChain) return 'correction_chain'
+  if (line.bankMonth !== null) return 'bank_ticked'
+  return null
+}
+
 /** True while `userId` may still undo the void of this line (the same rule restore_payment applies). */
 export function canUndo(line: PaymentLine, userId: string | null | undefined, nowMs: number = Date.now()): boolean {
   if (line.status === 'counts' || !line.voidedAt || !userId || line.voidedBy !== userId) return false
@@ -204,6 +218,13 @@ export async function correctPayment(v: CorrectionInput): Promise<string> {
   })
   if (error) throw toCorrectionError(error)
   return typeof data === 'string' && data ? data : v.newId
+}
+
+/** delete_payment (admin only, permanent). The refusals carry a HINT (voided, correction_chain, bank_ticked, month lock) for the caller to branch on. */
+export async function deletePayment(paymentId: string): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.rpc('delete_payment', { p_payment_id: paymentId })
+  if (error) throw error
 }
 
 /** Undo of a void or a correction: pass the payment that was voided (for a correction, the original). */

@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Checkbox } from '@/ui/form/Checkbox'
 
 /*
  * ConfirmDelete: the ONE confirm for deleting a record (owner decision 2026-10-22, from the expense delete). Every delete button asks
@@ -15,7 +16,9 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
  * Delete runs `onConfirm` at once. While it runs the dialog is busy (Esc, the scrim and Cancel are held) and a second tap does
  * nothing. If it throws, the server's sentence is shown in the dialog, where the tap was, and the record stays; the caller shows
  * its "deleted" toast only after `onConfirm` has resolved, which closes the dialog. `blocked` replaces Delete with a reason the
- * record cannot be deleted (the only button left is OK). 16px text, 44px buttons, a bottom sheet on a phone (Dialog).
+ * record cannot be deleted (the only button left is OK). `tick` adds a warning and a box that must be ticked before Delete is
+ * pressable (a warning that never blocks, e.g. a GST return that may already be filed). 16px text, 44px buttons, a bottom sheet
+ * on a phone (Dialog).
  */
 export interface ConfirmDeleteProps {
   open: boolean
@@ -29,6 +32,8 @@ export interface ConfirmDeleteProps {
   loading?: boolean
   /** The record cannot be deleted: this sentence is shown instead of the warning, and there is no Delete button. */
   blocked?: ReactNode
+  /** A warning with a box to tick: Delete stays disabled until it is ticked. Not a block: the person can tick and go on. */
+  tick?: { warning: ReactNode; label: ReactNode }
   /** Runs the delete. Resolve when the server has confirmed; throw to keep the dialog open with the message. */
   onConfirm: () => Promise<void>
   /** Words for a thrown error. Default: the plain sentence of mapPgError. */
@@ -45,17 +50,19 @@ export function ConfirmDelete({
   also,
   loading = false,
   blocked,
+  tick,
   onConfirm,
   errorMessage,
   onError,
 }: ConfirmDeleteProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ticked, setTicked] = useState(false)
   // A second tap in the same tick sees the state from before the first; the ref does not.
   const running = useRef(false)
 
   const run = async () => {
-    if (running.current || loading || blocked) return
+    if (running.current || loading || blocked || (tick && !ticked)) return
     running.current = true
     setBusy(true)
     setError(null)
@@ -90,7 +97,7 @@ export function ConfirmDelete({
               {blocked ? 'OK' : 'Cancel'}
             </Button>
             {blocked ? null : (
-              <Button size="lg" variant="danger" onClick={() => void run()} busy={busy} busyLabel="Deleting" disabled={loading}>
+              <Button size="lg" variant="danger" onClick={() => void run()} busy={busy} busyLabel="Deleting" disabled={loading || (!!tick && !ticked)}>
                 Delete
               </Button>
             )}
@@ -109,6 +116,12 @@ export function ConfirmDelete({
             </p>
           ) : null}
           {loading ? <p className="text-fg-muted">Checking what goes with it…</p> : null}
+          {tick && !blocked ? (
+            <div role="group" aria-label="Warning" data-slot="delete-tick" className="grid gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-3">
+              <p className="font-medium">{tick.warning}</p>
+              <Checkbox label={tick.label} checked={ticked} onCheckedChange={c => setTicked(c === true)} />
+            </div>
+          ) : null}
           {blocked ? (
             <p role="alert" data-slot="delete-blocked" className="font-medium text-tone-danger-fg">
               {blocked}

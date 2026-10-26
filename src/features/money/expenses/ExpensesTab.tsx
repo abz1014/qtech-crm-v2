@@ -198,7 +198,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               </EmptyState>
             )
           }
-          mobileRow={r => <ExpenseCard row={r} categories={categories} listing={list.data} locked={monthClosed} onEdit={setEditing} onDelete={onDelete} />}
+          mobileRow={r => <ExpenseCard row={r} categories={categories} listing={list.data} locked={monthClosed} onEdit={setEditing} onDelete={onDelete} onHistory={setHistory} />}
         />
       </section>
 
@@ -349,11 +349,15 @@ function buildColumns(
       width: 84,
       cell: r => {
         const name = describe(r, categories, listing).name
+        // A closed month cannot be edited or deleted, but what changed and who changed it is still there to read: History sits by the lock.
         if (act.locked)
           return (
-            <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked: the month is closed">
-              <Icon icon={Lock} size="sm" />
-              <span className="sr-only">Locked, the month is closed</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked: the month is closed">
+                <Icon icon={Lock} size="sm" />
+                <span className="sr-only">Locked, the month is closed</span>
+              </span>
+              <Button variant="quiet" size="touch" icon={History} aria-label={`History of ${name} of ${r.amount}`} className="min-w-[44px]" onClick={() => act.onHistory(r)} />
             </span>
           )
         return (
@@ -387,6 +391,7 @@ function ExpenseCard({
   locked,
   onEdit,
   onDelete,
+  onHistory,
 }: {
   row: ListedExpense
   categories: readonly Category[]
@@ -394,6 +399,7 @@ function ExpenseCard({
   locked: boolean
   onEdit: (r: ListedExpense) => void
   onDelete: (r: ListedExpense) => void
+  onHistory: (r: ListedExpense) => void
 }) {
   const d = describe(row, categories, listing)
   return (
@@ -401,7 +407,7 @@ function ExpenseCard({
       <span className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{d.name}</span>
       <Money value={row.amount} prefix={false} className="justify-self-end text-right text-base font-medium" />
       {locked ? (
-        <span aria-hidden="true" />
+        <Button variant="quiet" size="touch" icon={History} className="row-span-2 min-w-[44px]" aria-label={`History of ${d.name} of ${row.amount}`} onClick={() => onHistory(row)} />
       ) : (
         <Popover>
           <PopoverTrigger asChild>
@@ -410,6 +416,9 @@ function ExpenseCard({
           <PopoverContent variant="menu" align="end">
             <MenuItem icon={Pencil} onClick={() => onEdit(row)}>
               Edit expense
+            </MenuItem>
+            <MenuItem icon={History} onClick={() => onHistory(row)}>
+              History
             </MenuItem>
             <MenuItem icon={Trash2} onClick={() => onDelete(row)}>
               Delete expense

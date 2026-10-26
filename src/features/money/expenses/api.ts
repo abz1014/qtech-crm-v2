@@ -443,6 +443,23 @@ export async function recordRecurring(t: RecurringTemplate, args: { id: string; 
   if (error) throw error
 }
 
+// ------------------------------------------------------------------ delete a recurring template (W12b, 0092)
+
+/** How many expenses were recorded from this template: they stay when it is deleted (their link is cleared, nothing else changes). */
+export async function countRecurringExpenses(templateId: string): Promise<number> {
+  const db = requireSupabase()
+  const { count, error } = await db.from('expenses').select('id', { count: 'exact', head: true }).eq('recurring_id', templateId)
+  if (error) throw error
+  return count ?? 0
+}
+
+/** Admin only (row security). Past expenses stay; even those in a closed month (0092 lets the link clear). */
+export async function deleteRecurring(id: string): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('recurring_expenses').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ------------------------------------------------------------------ 0091: one-off ("Other") titles that repeat
 
 export interface MiscSuggestion {

@@ -1,4 +1,4 @@
-import { monthLabel } from '@/features/money/expenses/model'
+import { monthKey, monthLabel, shiftMonth } from '@/features/money/expenses/model'
 import { divRoundHalfUp, gstWholeRupeesPaisa, paisaToFixed, productPaisa, toPaisa, type Amount } from '@/lib/money'
 
 /*
@@ -309,3 +309,30 @@ export function cleanPsid(text: string): string {
 // ------------------------------------------------------------------ invoice number
 
 export const invoiceNumberOk = (n: string): boolean => n.trim().length > 0 && n.trim().length <= 40
+
+// ------------------------------------------------------------------ editing and deleting: has the month's GST return gone in?
+
+/** The sentence shown, with a tick, before an invoice of such a month is changed or deleted (owner decision 2026-10-26: warn, never block). */
+export const GST_FILED_WARNING = "This month's GST return may already be filed. File a revised return with FBR."
+
+/**
+ * The day after which a month's GST return is taken as filed: the 18th of the month that follows (the return is due on the 18th;
+ * the GST itself on the 15th).
+ */
+export const gstReturnDueDay = (invoiceDate: string): string => `${shiftMonth(monthKey(invoiceDate), 1)}-18`
+
+/** An FBR GST payment (tax deposited) or a PSID is recorded on an invoice of that month. */
+export function monthHasFbrRecord(rows: readonly Pick<GstRow, 'invoiceDate' | 'psid' | 'taxDepositedOn'>[], invoiceDate: string | null | undefined): boolean {
+  if (!invoiceDate) return false
+  const m = monthKey(invoiceDate)
+  return rows.some(r => !!r.invoiceDate && monthKey(r.invoiceDate) === m && (!!r.psid?.trim() || !!r.taxDepositedOn))
+}
+
+/**
+ * The GST return of the invoice's month may already be filed: an FBR GST payment or a PSID is recorded for the month, or today is
+ * past the 18th of the following month. A guess that errs towards warning; the person ticks and goes on.
+ */
+export function gstReturnMayBeFiled(invoiceDate: string | null | undefined, today: string, fbrRecorded: boolean): boolean {
+  if (!invoiceDate) return false
+  return fbrRecorded || today > gstReturnDueDay(invoiceDate)
+}

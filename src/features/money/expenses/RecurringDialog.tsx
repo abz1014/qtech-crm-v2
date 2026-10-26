@@ -1,7 +1,11 @@
 import { z } from 'zod'
-import { Check } from 'lucide-react'
+import { useState } from 'react'
+import { Check, Trash2 } from 'lucide-react'
+import { useSession } from '@/app/session'
+import { mapPgError } from '@/lib/pgErrors'
 import { amountSchema } from '@/lib/formRules'
 import { Button } from '@/ui/Button'
+import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
@@ -11,10 +15,14 @@ import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
-import { useGroups, useInlineCategoryCreate, useSaveRecurring } from '@/features/money/expenses/hooks'
-import { PAID_VIA_LABEL, paidViaFor, type Category, type PaidVia, type RecurringTemplate } from '@/features/money/expenses/model'
+import { useDeleteRecurring, useGroups, useInlineCategoryCreate, useRecurringExpenseCount, useSaveRecurring } from '@/features/money/expenses/hooks'
+import { PAID_VIA_LABEL, paidViaFor, pkr, type Category, type PaidVia, type RecurringTemplate } from '@/features/money/expenses/model'
 
-/** Add or edit a recurring template: what it is called, its category, the amount, and the day it usually falls on. */
+/**
+ * Add or edit a recurring template: what it is called, its category, the amount, and the day it usually falls on. An admin can
+ * delete one (W12b, 0092): a confirm that says the expenses already recorded from it stay (a count, so it is not a guess), and
+ * from then on it is not due any month. The expenses keep their amount, category and month, closed months included.
+ */
 const schema = z.object({
   label: z.string().trim().min(1, 'Name it, for example Rent'),
   categoryId: z.string().min(1, 'Choose a category'),
@@ -31,6 +39,11 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
   const groupsQ = useGroups()
   const createCategory = useInlineCategoryCreate(categories, groupsQ.data)
   const toast = useToast()
+  const session = useSession()
+  const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
+  const del = useDeleteRecurring()
+  const [confirming, setConfirming] = useState(false)
+  const used = useRecurringExpenseCount(template?.id, isAdmin && confirming)
   const sf = useSubmitForm({
     schema,
     entity: 'recurring expense',
@@ -62,12 +75,18 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
     },
   })
   return (
+    <>
     <Dialog open onOpenChange={o => !o && !sf.pending && onClose()} busy={sf.pending}>
       <DialogContent
         title={template ? 'Edit recurring expense' : 'Add recurring expense'}
         context="Shows as due each month until you record it"
         footer={
           <>
+            {template && isAdmin ? (
+              <Button variant="secondary" size="lg" icon={Trash2} className="mr-auto min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg max-md:mr-0" onClick={() => setConfirming(true)} disabled={sf.pending}>
+                Delete recurring expense
+              </Button>
+            ) : null}
             <Button data-cancel variant="quiet" onClick={onClose} disabled={sf.pending}>
               Cancel
             </Button>
@@ -112,5 +131,28 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
         </Form>
       </DialogContent>
     </Dialog>
+      {template && confirming ? (
+        <ConfirmDelete
+          open
+          onOpenChange={o => {
+            if (!o) setConfirming(false)
+          }}
+          thing={`“${template.label}”`}
+          summary={
+            <span data-testid="delete-recurring-what">
+              {template.label} · {pkr(template.amount)} every month
+              {used.data ? ` · ${used.data} ${used.data === 1 ? 'expense' : 'expenses'} recorded from it stay as they are` : ' · past expenses stay'}
+            </span>
+          }
+          loading={used.isPending}
+          onConfirm={async () => {
+            await del.mutateAsync(template.id)
+            toast.toast({ title: `Deleted ${template.label}`, body: 'It is no longer due each month. Past expenses stay.', tone: 'success' })
+            onClose()
+          }}
+          errorMessage={e => mapPgError(e, { entity: 'recurring expense' }).message}
+        />
+      ) : null}
+    </>
   )
 }
