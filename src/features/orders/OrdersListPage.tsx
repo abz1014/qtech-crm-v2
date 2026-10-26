@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CircleCheck, CopyPlus, Users } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -147,6 +147,17 @@ export default function OrdersListPage() {
   const navigate = useNavigate()
   const phone = useMediaQuery('(max-width: 639px)')
   const [creating, setCreating] = useState(false)
+  // + New > Order without enquiry (the top bar's menu) arrives as /orders?new=1: open the dialog once, then drop the flag.
+  const openNew = params.get('new') === '1'
+  useEffect(() => {
+    if (!openNew) return
+    setCreating(true)
+    setParams(p => {
+      const next = new URLSearchParams(p)
+      next.delete('new')
+      return next
+    }, { replace: true })
+  }, [openNew, setParams])
 
   const orders = useOrdersList(role === '' ? null : role)
 

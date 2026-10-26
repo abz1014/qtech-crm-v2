@@ -56,7 +56,8 @@ export function chunksForPath(pathname: string): ChunkKey[] {
   switch (top) {
     case 'login':
       return n === 1 ? ['signIn'] : []
-    case 'today':
+    case 'todo':
+    case 'today': // the old address: it redirects to /todo
       return ['today']
     case 'rfqs':
       if (n === 1) return ['rfqs', 'rfqsBoard']

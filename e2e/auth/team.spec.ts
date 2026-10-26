@@ -26,7 +26,7 @@ async function person(browser: Browser): Promise<{ ctx: BrowserContext; page: Pa
 
 async function signInAdmin(page: Page) {
   await signIn(page, 'admin@test.invalid')
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
 }
 
 async function openTeam(page: Page) {
@@ -99,7 +99,7 @@ test.describe('Team (A04)', () => {
     // ---- The new person signs in with it. A sales person has Settings but no Team.
     const newbie = await person(browser)
     await signIn(newbie.page, email, password)
-    await expect(newbie.page).toHaveURL(/\/today$/)
+    await expect(newbie.page).toHaveURL(/\/todo$/)
     await newbie.page.getByRole('button', { name: `Account menu, ${name}` }).click()
     await expect(newbie.page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
     await expect(newbie.page.getByRole('menuitem', { name: 'Team' })).toHaveCount(0)
@@ -165,7 +165,7 @@ test.describe('Team (A04)', () => {
     await expect(page.getByText(`${name} reactivated`)).toBeVisible()
     await expect(rowOf(page, name).getByRole('button', { name: `Actions for ${name}` })).toBeVisible() // active again: no chip, the menu is back
     await signIn(newbie.page, email, newPassword)
-    await expect(newbie.page.getByRole('button', { name: `Account menu, ${name}` })).toBeVisible() // the app resumes where they were, not always /today
+    await expect(newbie.page.getByRole('button', { name: `Account menu, ${name}` })).toBeVisible() // the app resumes where they were, not always /todo
 
     await newbie.ctx.close()
     await admin.ctx.close()
@@ -211,7 +211,7 @@ test.describe('Team (A04)', () => {
   ]) {
     test(`${p.role} has no Team: not in the menu, and the address shows the no-access page`, async ({ page }) => {
       await signIn(page, p.email)
-      await expect(page).toHaveURL(/\/today$/)
+      await expect(page).toHaveURL(/\/todo$/)
       await page.getByRole('button', { name: `Account menu, ${p.name}` }).click()
       await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
       await expect(page.getByRole('menuitem', { name: 'Team' })).toHaveCount(0)
@@ -305,7 +305,7 @@ test.describe('Company profile (A06)', () => {
     // Sales reads the same values, with no way to edit.
     const sales = await person(browser)
     await signIn(sales.page, 'sales@test.invalid')
-    await expect(sales.page).toHaveURL(/\/today$/)
+    await expect(sales.page).toHaveURL(/\/todo$/)
     await sales.page.goto('/settings/company')
     await expect(sales.page.getByText('Q-Tech Solutions (Private) Limited')).toBeVisible()
     await expect(sales.page.getByText('Only an admin can edit')).toBeVisible()

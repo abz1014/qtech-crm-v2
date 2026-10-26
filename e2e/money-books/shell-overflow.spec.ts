@@ -7,7 +7,7 @@ import { openAs } from '../support/stack'
  * Since the bigger default text (DECISIONS 2026-10-19) the main screens are checked on a phone (375) and at 1280, 1366 and 1440, as admin
  * (the widest bar: every destination and every count); the top bar alone is also checked at 1024 (a 1366 laptop at 125%) and 1920.
  */
-const SCREENS = ['/today', '/rfqs', '/orders', '/companies', '/money/receivables', '/money/gst-register', '/money/month-end', '/money/reports']
+const SCREENS = ['/todo', '/rfqs', '/orders', '/companies', '/money/receivables', '/money/gst-register', '/money/month-end', '/money/reports']
 
 const measure = () => {
   // The shell's bars only: a page may draw its own <header> inside #main.
@@ -29,7 +29,7 @@ test.describe('shell width', () => {
     // 32 cold page loads, each waited to network idle: since perf/lcp a page's extras (the top bar's counts, Help, the web fonts)
     // load after its content, so each load takes a little longer to go quiet.
     test.setTimeout(60_000)
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
     for (const width of [375, 1280, 1366, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       for (const path of SCREENS) {
@@ -48,17 +48,17 @@ test.describe('shell width', () => {
   })
 
   test('the top bar fits at 1024 and 1920 with every label in words', async ({ page }) => {
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
     for (const width of [1024, 1920]) {
       await page.setViewportSize({ width, height: 800 })
-      await page.goto('/today')
+      await page.goto('/todo')
       await page.locator('#main').waitFor()
       await page.waitForLoadState('networkidle')
       const m = await page.evaluate(measure)
       expect(m.bar, `top bar at ${width}`).toBeLessThanOrEqual(m.view)
       expect(m.barOverflow, `top bar scrolls inside itself at ${width}`).toBe(false)
       const nav = page.getByRole('navigation', { name: 'Main' }).first()
-      for (const name of ['Today', 'RFQs', 'Orders', 'Companies', 'Money']) {
+      for (const name of ['To do', 'RFQs', 'Orders', 'Companies', 'Money']) {
         const box = await nav.getByRole('link', { name: new RegExp(`^${name}`) }).locator('[data-nav-label]').boundingBox()
         expect(box?.width ?? 0, `${name} shown in words at ${width}`).toBeGreaterThan(2)
       }

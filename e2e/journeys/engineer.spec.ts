@@ -1,5 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { API_URL, createCompany, karachiDay, must, rest, uniqueName } from '../support/stack'
+import { showAllTodo } from '../support/todo'
 import { waitForAnimationsToFinish } from '../support/axe'
 import { legLoc } from '../orders/fixtures'
 import { fe2, ordRef, openPage, pastePage, PNG_B64, readCount, resetCount, roleContext } from './support'
@@ -102,9 +103,9 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
   const { seen, settle } = watch(ctx)
 
   // ---- 1. Today shows the commissioning to plan -------------------------------------------------------------------------------------
-  const page = await openPage(ctx, '/today')
+  const page = await openPage(ctx, '/todo')
   await test.step('Today lists the order whose commissioning is to plan, with 0 taps', async () => {
-    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
     await resetCount(page)
     const row = page.locator('li[data-rule="plan_commissioning"]').filter({ hasText: ref })
     await expect(row).toBeVisible()
@@ -140,7 +141,8 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
   await test.step('capture a photo and a note into the order', async () => {
     const note = 'Site photo: nameplate on transmitter 1, tag PT-204.'
     // The order was just opened, so Capture offers it. The paste is made on Today: the order page's own Files panel also listens for a paste.
-    await page.goto('/today')
+    await page.goto('/todo')
+    await showAllTodo(page)
     await page.locator('#main').waitFor()
     await resetCount(page)
     await pastePage(page, { text: note, file: { name: 'nameplate.png', type: 'image/png', b64: PNG_B64 } })
@@ -184,9 +186,10 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
 
   // ---- 5. Back on Today: the item has gone ------------------------------------------------------------------------------------------------
   await test.step('Today no longer lists the commissioning', async () => {
-    await page.goto('/today')
+    await page.goto('/todo')
+    await showAllTodo(page)
     await page.locator('#main').waitFor()
-    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
     await expect(page.locator('li[data-rule="plan_commissioning"]').filter({ hasText: ref })).toHaveCount(0)
     await noMoneyOnScreen(page, 'Today at the end of the day')
   })

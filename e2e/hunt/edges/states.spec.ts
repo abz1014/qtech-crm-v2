@@ -41,7 +41,7 @@ test('offline: save, navigate, come back online', async ({ browser }, info) => {
   // Navigate while offline: lazy screens that were never loaded, and data that is not cached.
   for (const path of ['/settings/team', '/money/month-end', `/rfqs/${world.rfq.id}`, '/settings/exchange-rates']) {
     w.at(`${path} offline`)
-    await page.goto('/today')
+    await page.goto('/todo')
     await settle(page)
     await context.setOffline(true)
     await page.evaluate(p => {
@@ -86,7 +86,7 @@ test('slow network: typing is kept, double submit makes one row', async ({ brows
 
   // The search palette with slow answers: type fast, check the last query wins.
   w.at('palette slow')
-  await page.goto('/today')
+  await page.goto('/todo')
   await settle(page)
   await page.getByRole('button', { name: 'Search' }).first().click().catch(() => undefined)
   const box = page.getByRole('combobox').first()
@@ -103,8 +103,8 @@ test('slow network: typing is kept, double submit makes one row', async ({ brows
 /** Overlays to open on a phone, then press the browser Back button: the overlay should close and the page stay. */
 const BACK_CASES: { role: 'admin' | 'sales' | 'engineer'; path: string; open: (p: Page) => Promise<unknown> }[] = [
   { role: 'sales', path: '/companies', open: p => p.getByRole('button', { name: 'New company' }).first().click() },
-  { role: 'sales', path: '/today', open: p => p.getByRole('button', { name: 'Search' }).first().click() },
-  { role: 'sales', path: '/today', open: p => p.getByRole('button', { name: /Capture/ }).first().click() },
+  { role: 'sales', path: '/todo', open: p => p.getByRole('button', { name: 'Search' }).first().click() },
+  { role: 'sales', path: '/todo', open: p => p.getByRole('button', { name: /Capture/ }).first().click() },
   { role: 'admin', path: '/money/receivables', open: p => p.getByRole('button', { name: /^Record payment for ORD-/ }).first().click() },
   { role: 'admin', path: '/money/expenses', open: p => p.getByRole('button', { name: /^Add expenses?$/ }).first().click() },
   { role: 'admin', path: '/settings/team', open: p => p.getByRole('button', { name: 'Add person' }).first().click() },
@@ -122,7 +122,7 @@ test('phone Back button closes every overlay and keeps the page', async ({ brows
     const w = new Watcher(page, { role: c.role, vp: 'w375-back' })
     const path = c.path.replace('{rfq}', world.rfq.id).replace('{order}', world.order.id)
     w.at(`${c.path} back`)
-    await page.goto('/today')
+    await page.goto('/todo')
     await settle(page)
     await page.goto(path)
     await settle(page)
@@ -144,7 +144,7 @@ test('keyboard only: focus is visible on every Tab stop of the main screens', as
   const context = await contextAs(browser, info, 'admin', vp('w1366'))
   const page = await context.newPage()
   const w = new Watcher(page, { role: 'admin', vp: 'w1366-keys' })
-  for (const path of ['/today', '/rfqs', `/rfqs/${world.rfq.id}`, `/orders/${world.order.id}`, '/companies', '/money/receivables', '/settings/targets']) {
+  for (const path of ['/todo', '/rfqs', `/rfqs/${world.rfq.id}`, `/orders/${world.order.id}`, '/companies', '/money/receivables', '/settings/targets']) {
     w.at(`${path} tab`)
     await page.goto(path)
     await settle(page)
@@ -185,7 +185,7 @@ test('clock at quarter, month and tax-year ends', async ({ browser }, info) => {
     const page = await context.newPage()
     await page.clock.setFixedTime(new Date(t))
     const w = new Watcher(page, { role: 'admin', vp: `w1366-clock-${t.slice(0, 16)}` })
-    for (const path of ['/today', '/settings/targets', '/money/month-end', '/money/reports', '/money/receivables', '/money/expenses?add=1']) {
+    for (const path of ['/todo', '/settings/targets', '/money/month-end', '/money/reports', '/money/receivables', '/money/expenses?add=1']) {
       w.at(path)
       await page.goto(path)
       await page.locator('#main').waitFor({ timeout: 15_000 }).catch(() => undefined)

@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, rfqRef, uniqueName } from '../support/stack'
 import { db } from '../verify/support/db'
+import { dueRows, showAllTodo } from '../support/todo'
 
 /*
  * Redesign phase 0, whole app: NO screen says a false "N days overdue". The old CRM's data (an order delivered 757 days ago and part
@@ -119,14 +120,14 @@ async function isRed(l: Locator): Promise<boolean> {
 }
 
 async function todayReading(page: Page) {
-  await page.goto('/today')
+  await page.goto('/todo')
   const header = page.locator('[data-needs-you-count]')
   await expect(header).toBeVisible()
   const n = Number(await header.innerText())
-  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^Today\\s?, ${n} need you$`) : /^Today$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
-  const due = page.getByRole('region', { name: 'Overdue or due today' })
-  const rules = (await due.count()) ? await due.locator('li[data-rule]').evaluateAll(ls => ls.map(l => l.getAttribute('data-rule') ?? '')) : []
-  const link = (await nav(page).getByRole('link', { name: /^Today/ }).first().textContent()) ?? ''
+  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^To do\\s?, ${n} need you$`) : /^To do$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
+  await showAllTodo(page)
+  const rules = await dueRows(page).evaluateAll(ls => ls.map(l => l.getAttribute('data-rule') ?? ''))
+  const link = (await nav(page).getByRole('link', { name: /^To do/ }).first().textContent()) ?? ''
   return { badge: Number(/(\d+)/.exec(link)?.[1] ?? 0), header: Number(await header.innerText()), rows: rules.length, rules }
 }
 
@@ -137,12 +138,12 @@ async function checkToday(page: Page, s: Seeded): Promise<void> {
     expect(t.rows, 'rows in the counted group vs the header').toBe(t.header)
   }).toPass({ timeout: 90_000 })
 
-  await page.goto('/today')
+  await page.goto('/todo')
   await expect(page.locator('[data-needs-you-count]')).toBeVisible()
   await expectNoFalseOverdue(page, 'Today (folds closed)')
 
   // The control is counted, red, "5 days overdue".
-  const ctl = page.getByRole('region', { name: 'Overdue or due today' }).locator('li[data-rule="payment_overdue"]').filter({ hasText: s.control.customer })
+  const ctl = page.locator('section[data-block="late"], section[data-block="today"]').locator('li[data-rule="payment_overdue"]').filter({ hasText: s.control.customer })
   await expect(ctl).toBeVisible()
   const five = ctl.getByText(/\b5 days overdue\b/)
   await expect(five.first()).toBeVisible()
@@ -228,8 +229,8 @@ for (const role of ['admin', 'sales'] as const) {
   test(`no screen shows a false "N days overdue" for imported data, and the v2 control stays red (${role})`, async ({ page }) => {
     test.setTimeout(240_000)
     const s = await seed(role)
-    await openAs(page, role, '/today')
-    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+    await openAs(page, role, '/todo')
+    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
 
     await checkToday(page, s)
     await checkRfqs(page, s)

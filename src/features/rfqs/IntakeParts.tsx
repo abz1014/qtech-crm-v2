@@ -436,7 +436,7 @@ export function FloatedPanel({
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const next = messages ? asked.find(i => !opened.has(i.id)) : undefined
   return (
-    <section aria-label="Sent to suppliers" className="grid gap-4 rounded-panel border bg-surface p-6">
+    <section aria-label="Asked suppliers" className="grid gap-4 rounded-panel border bg-surface p-6">
       <p className="m-0 flex items-center gap-2 text-sm text-tone-success-fg">
         <Icon icon={CircleCheck} />
         Asked <span className="num">{n}</span> {n === 1 ? 'supplier' : 'suppliers'} on {formatDay(floatedOn)}
@@ -452,7 +452,7 @@ export function FloatedPanel({
       ) : (
         <div className="grid gap-2">
           <Banner tone="warning" title="The message did not copy">
-            The RFQ is marked as sent. Copy the message below, then paste it into {joinNames(names)}.
+            The RFQ is marked as asked. Copy the message below, then paste it into {joinNames(names)}.
           </Banner>
           <label htmlFor="floated-text" className="sr-only">
             Message to copy

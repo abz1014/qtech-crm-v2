@@ -350,7 +350,7 @@ test.describe('expenses (M03, M11)', () => {
     const supplier = await createCompany(uniqueName('Leg Supplier'))
     const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
     const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id } })))[0]
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
     const note = 'Owed (about) on 30 Nov, from We owe suppliers'
     await page.goto(`/money/expenses?add=1&order=${order.id}&leg=${leg.id}&amount=384497&note=${encodeURIComponent(note)}`)
     const dialog = page.getByRole('dialog', { name: `Pay ${supplier.name}` })
@@ -372,7 +372,7 @@ test.describe('expenses (M03, M11)', () => {
     const supplier = await createCompany(uniqueName('Fx Supplier GmbH'))
     const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
     const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id, currency: 'EUR' } })))[0]
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
     await page.goto(`/money/expenses?add=1&order=${order.id}&leg=${leg.id}`)
     const dialog = page.getByRole('dialog', { name: `Pay ${supplier.name}` })
     await dialog.getByRole('textbox', { name: 'Paid in EUR' }).fill('2,430')

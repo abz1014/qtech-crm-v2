@@ -54,7 +54,7 @@ async function stateFor(browser: Browser, info: TestInfo, role: Role): Promise<s
   if (existsSync(path)) return path
   const context = await browser.newContext(contextOptions(info))
   const page = await context.newPage()
-  await openAs(page, role, '/today')
+  await openAs(page, role, '/todo')
   await context.storageState({ path })
   await context.close()
   return path
@@ -158,11 +158,11 @@ export type Rule = 'not_floated' | 'chase_supplier' | 'bid_due' | 'chase_custome
  * what the row carries (the RFQ or order number, plus a supplier name where one RFQ or order has several rows of the same rule).
  */
 export async function todayHas(context: BrowserContext, rule: Rule, text: string[], listed: boolean): Promise<void> {
-  const page = await openPage(context, '/today')
-  await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+  const page = await openPage(context, '/todo')
+  await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
   await expect(page.getByText(/\d+ need you/)).toBeVisible() // the list has loaded
   // Waiting starts collapsed (R2-08): open it, so a waiting row counts as listed as it did before
-  const waiting = page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Waiting · \d+/ })
+  const waiting = page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Chased, waiting · \d+/ })
   if ((await waiting.count()) > 0 && (await waiting.getAttribute('aria-expanded')) === 'false') await waiting.click()
   let row = page.locator(`li[data-rule="${rule}"]`)
   for (const t of text) row = row.filter({ hasText: t })

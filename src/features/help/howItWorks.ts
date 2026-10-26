@@ -17,10 +17,10 @@ export const HOW_IT_WORKS: Record<HelpRole, HowItWorksStep[]> = {
     { text: 'A customer asks for prices: **New RFQ**, then paste their message.', recipe: 'new-rfq' },
     { text: '**Ask suppliers**: one message, copied into WhatsApp.', recipe: 'ask-suppliers' },
     { text: 'Prices come in: paste their reply, and the app compares them in PKR.', recipe: 'supplier-prices' },
-    { text: '**Issue quotation** makes the PDF. Today reminds you to chase until it is won or lost.', recipe: 'issue-quotation' },
+    { text: '**Issue quotation** makes the PDF. To do reminds you to chase until it is won or lost.', recipe: 'issue-quotation' },
   ],
   engineer: [
-    { text: '**Today** lists your site jobs and their dates.', recipe: 'today-jobs' },
+    { text: '**To do** lists your site jobs and their dates.', recipe: 'today-jobs' },
     { text: 'On site, **Paste or photo** saves a photo or note to the RFQ or order. No forms.', recipe: 'paste-or-photo' },
     { text: 'One tap when done: **Delivered today**, **Mark done today**. Wrong tap? **Undo**.', recipe: 'goods-delivered' },
   ],

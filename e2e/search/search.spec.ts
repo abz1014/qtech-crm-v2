@@ -43,7 +43,7 @@ const rpcHeaders = (token: string) => ({ apikey: process.env.ANON_KEY ?? '', aut
 test.describe('palette search (R12)', () => {
   test('finds a contact by name, groups the results, bolds the match and opens the contact company', async ({ page }) => {
     const f = await seed()
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     await page.getByRole('combobox').fill(`qadir${f.tag}`)
     const hit = page.getByRole('option', { name: new RegExp(`Qadir${f.tag} Hussain`) })
@@ -58,7 +58,7 @@ test.describe('palette search (R12)', () => {
 
   test('finds a contact by e-mail and by phone digits', async ({ page }) => {
     const f = await seed()
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     const input = page.getByRole('combobox')
     await input.fill(`qadir.${f.tag}@srch`)
@@ -69,7 +69,7 @@ test.describe('palette search (R12)', () => {
 
   test('finds an RFQ by number and by customer reference, RFQs first for a number', async ({ page }) => {
     const f = await seed()
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     const input = page.getByRole('combobox')
     await input.fill(rfqRef(f.rfq.number))
@@ -85,12 +85,12 @@ test.describe('palette search (R12)', () => {
 
   test('recents stay on the idle view', async ({ page }) => {
     const f = await seed()
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     await page.getByRole('combobox').fill(f.company.name)
     await page.getByRole('option', { name: new RegExp(f.company.name) }).first().click()
     await expect(page).toHaveURL(new RegExp(`/companies/${f.company.id}$`))
-    await page.goto('/today')
+    await page.goto('/todo')
     await openPalette(page)
     await expect(page.getByRole('dialog').getByText('Recent', { exact: true })).toBeVisible()
     await expect(page.getByRole('option', { name: new RegExp(f.company.name) })).toBeVisible()
@@ -102,7 +102,7 @@ test.describe('palette search (R12)', () => {
     page.on('request', r => {
       if (r.url().includes('/rpc/search_all')) calls.push(JSON.parse(r.postData() ?? '{}').q)
     })
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     await page.getByRole('combobox').pressSequentially(`qadir${f.tag}`, { delay: 15 })
     await expect(page.getByRole('option', { name: new RegExp(`Qadir${f.tag} Hussain`) })).toBeVisible()
@@ -129,7 +129,7 @@ test.describe('palette search (R12)', () => {
     const invoiceNumber = `INVSEC${tag}`
     await must(rest('admin', 'invoices', { method: 'POST', body: { order_id: order.id, company_id: f.company.id, number: invoiceNumber, net_amount: 123456, gst_amount: 22222 }, prefer: 'return=minimal' }))
 
-    await openAs(page, 'engineer', '/today')
+    await openAs(page, 'engineer', '/todo')
     await openPalette(page)
     const input = page.getByRole('combobox')
     await input.fill(`srch${f.tag}`)
@@ -160,7 +160,7 @@ test.describe('palette search (R12)', () => {
     test(`axe: the palette with grouped results has no violations at ${name}`, async ({ page }) => {
       const f = await seed()
       await page.setViewportSize(size)
-      await openAs(page, 'sales', '/today')
+      await openAs(page, 'sales', '/todo')
       await openPalette(page)
       await page.getByRole('combobox').fill(`srch${f.tag}`)
       await expect(page.getByRole('option', { name: new RegExp(f.company.name) }).first()).toBeVisible()
@@ -200,7 +200,7 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
 
   test('sales find an order by customer PO, an item by description, a supplier PO and an invoice by number, each opening the right place', async ({ page }) => {
     const f = await seedV2()
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     const input = page.getByRole('combobox')
 
@@ -233,7 +233,7 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
 
   test('an engineer: the order and the item and the supplier PO are found, the invoice and the customer PO are not, at the API too', async ({ page }) => {
     const f = await seedV2()
-    await openAs(page, 'engineer', '/today')
+    await openAs(page, 'engineer', '/todo')
     await openPalette(page)
     const input = page.getByRole('combobox')
     await input.fill(`ORD-${String(f.order.number).padStart(4, '0')}`)

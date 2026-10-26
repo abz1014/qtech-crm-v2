@@ -51,7 +51,8 @@ describe('Today screen', () => {
     renderAs('sales')
     expect(await screen.findByText('Needs suppliers')).toBeInTheDocument()
     expect(screen.getAllByText('RFQ-0184').length).toBeGreaterThan(0)
-    expect(screen.getByRole('radio', { name: /Money/ })).toBeInTheDocument()
+    // no topic tabs any more: one list (redesign phase 3)
+    expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
   })
 
   it('counts it once in the header, and shows no number on the tabs (redesign phase 0)', async () => {
@@ -84,15 +85,14 @@ describe('Today screen', () => {
   it('says so and offers a retry when it cannot load', async () => {
     fake = install({ fail: true })
     renderAs('sales')
-    expect(await screen.findByText('Today could not load')).toBeInTheDocument()
+    expect(await screen.findByText('To do could not load')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
-  it('an engineer has no Money tab and never requests receivables, invoices or the month-end checks', async () => {
+  it('an engineer never requests receivables, invoices or the month-end checks', async () => {
     fake = install()
     renderAs('engineer')
     await screen.findByText('Needs suppliers')
-    expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
     await waitFor(() => expect(fake?.calls.length).toBeGreaterThan(0))
     const targets = fake?.calls.map(c => c.target) ?? []
     expect(targets).not.toContain('rpc:order_receivables')
@@ -122,5 +122,71 @@ describe('Today screen', () => {
     const tile = await screen.findByRole('region', { name: /^Your Q\d target$/ })
     expect(tile).toHaveTextContent(/^No Q\d target set\. The admin sets it\.$/)
     expect(screen.queryByRole('link', { name: 'Set targets' })).toBeNull()
+  })
+
+  it('draws the Today block with its own button on each row, and no Late block when nothing is late', async () => {
+    fake = install({ rfqs: [{ ...rfqState, received_on: businessToday() }] })
+    renderAs('sales')
+    const block = await screen.findByRole('region', { name: 'Today' })
+    expect(block).toHaveAttribute('data-block', 'today')
+    expect(screen.queryByRole('region', { name: 'Late' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'This week' })).toBeNull()
+    expect(within(block).getByRole('button', { name: /^Ask suppliers/ })).toBeInTheDocument()
+    expect(within(block).getByRole('button', { name: 'Snooze' })).toBeInTheDocument()
+  })
+
+  it('a late item is a red Late block, not Today', async () => {
+    fake = install({ rfqs: [{ ...rfqState, received_on: addDays(businessToday(), -4), due_on: addDays(businessToday(), -1), bid_state: 'to_bid', sourcing_state: 'priced' }] })
+    renderAs('sales')
+    const late = await screen.findByRole('region', { name: 'Late' })
+    expect(late).toHaveAttribute('data-block', 'late')
+    expect(within(late).getByRole('button', { name: /^Send quotation/ })).toBeInTheDocument()
+  })
+
+  it('shows seven rows and folds the rest into "N more", every one still reachable', async () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({ ...rfqState, rfq_id: `r${i}`, number: 100 + i, companies: { name: `Customer ${i}` } }))
+    fake = install({ rfqs: many })
+    renderAs('sales')
+    const fold = await screen.findByRole('region', { name: '2 more' })
+    expect(screen.getAllByRole('listitem').filter(li => li.hasAttribute('data-rule'))).toHaveLength(7)
+    // the one count is every item that needs you, shown or folded (it equals the top bar's badge)
+    expect(document.querySelector('[data-needs-you-count]')?.textContent).toBe('9')
+    fireEvent.click(within(fold).getByRole('button', { name: /^2 more/ }))
+    expect(screen.getAllByRole('listitem').filter(li => li.hasAttribute('data-rule'))).toHaveLength(9)
+  })
+
+  it('the snooze menu offers "Not ours to chase", saved as a change-ending snooze with a far date (0097)', async () => {
+    fake = install()
+    renderAs('sales')
+    fireEvent.click(await screen.findByRole('button', { name: 'Snooze' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Not ours to chase/ }))
+    await waitFor(() => expect(fake?.calls.some(c => c.target === 'snoozes' && c.verb === 'upsert')).toBe(true))
+    const call = fake?.calls.find(c => c.target === 'snoozes' && c.verb === 'upsert')
+    expect(call?.ops.find(([n]) => n === 'upsert')?.[1][0]).toMatchObject({ rule: 'not_floated', until_change: true, until_on: '2099-12-31' })
+  })
+
+  it('a date snooze is saved with until_change false, so it replaces an earlier "Not ours"', async () => {
+    fake = install()
+    renderAs('sales')
+    fireEvent.click(await screen.findByRole('button', { name: 'Snooze' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Tomorrow morning/ }))
+    await waitFor(() => expect(fake?.calls.some(c => c.target === 'snoozes' && c.verb === 'upsert')).toBe(true))
+    const call = fake?.calls.find(c => c.target === 'snoozes' && c.verb === 'upsert')
+    expect(call?.ops.find(([n]) => n === 'upsert')?.[1][0]).toMatchObject({ until_change: false })
+  })
+
+  it("only the admin has Mine / Team; Team opens each person's list, read only", async () => {
+    fake = install()
+    const first = renderAs('sales')
+    await screen.findByText('Needs suppliers')
+    expect(screen.queryByRole('radio', { name: 'Team' })).toBeNull()
+    first.unmount()
+    fake.uninstall()
+    fake = install()
+    renderAs('admin')
+    await screen.findByText('Needs suppliers')
+    fireEvent.click(screen.getByRole('radio', { name: 'Team' }))
+    expect(await screen.findByText('Nobody else is on the team yet')).toBeInTheDocument()
+    expect(screen.queryByText('Needs suppliers')).toBeNull()
   })
 })

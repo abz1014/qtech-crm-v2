@@ -11,7 +11,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRe
  * pressed straight after `goto` can be lost: wait for the shell (heading and an enabled search button) first.
  */
 async function openPalette(page: Page) {
-  await expect(page.getByRole('heading', { name: 'Today', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'To do', level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Search or jump to' }).first()).toBeEnabled()
   await page.keyboard.press('Control+k')
   await expect(page.getByRole('dialog', { name: 'Search or jump to' })).toBeVisible()
@@ -72,7 +72,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
 
   test('the command palette finds a company by name and opens it', async ({ page }) => {
     const company = await createCompany(uniqueName('Palette Probe'))
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     await page.getByRole('combobox').fill(company.name.slice(0, 18))
     const hit = page.getByRole('option', { name: company.name, exact: true })
@@ -82,7 +82,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
   })
 
   test('the palette offers to add a name that is not on file', async ({ page }) => {
-    await openAs(page, 'sales', '/today')
+    await openAs(page, 'sales', '/todo')
     await openPalette(page)
     await page.getByRole('combobox').fill('Zzyzx Brand New Works')
     await page.getByRole('option', { name: /Add “Zzyzx Brand New Works” as a new company/ }).click()

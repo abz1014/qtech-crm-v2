@@ -21,7 +21,7 @@ test.describe('toasts', () => {
 
   test('the Undo toast is not re-read every second while its countdown runs', async ({ page }) => {
     const s = await seedChase()
-    await open(page, '/today')
+    await open(page, '/todo')
     await (await openChase(page, s.ref)).button.click()
     const text = new RegExp(`${s.ref}.*marked chased|marked chased.*${s.ref}`)
     await expect(page.getByRole('button', { name: UI.undo })).toBeVisible()
@@ -34,7 +34,7 @@ test.describe('toasts', () => {
 
   test('the Undo toast tells a screen reader how to undo from the keyboard (Ctrl+Z)', async ({ page }) => {
     const s = await seedChase()
-    await open(page, '/today')
+    await open(page, '/todo')
     await (await openChase(page, s.ref)).button.click()
     await expect(page.getByRole('button', { name: UI.undo })).toBeVisible()
     const said = await liveText(page, new RegExp(`${s.ref}.*marked chased|marked chased.*${s.ref}`))

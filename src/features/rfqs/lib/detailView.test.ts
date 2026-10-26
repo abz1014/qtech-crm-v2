@@ -41,10 +41,12 @@ describe('supplierMemoryLine', () => {
 describe('sentLine and dates', () => {
   it('says what happened to the enquiry', () => {
     const base = { sentOn: '2026-11-22', lastChasedOn: null, chaseCount: 0, noOfferOn: null }
-    expect(sentLine({ ...base, quoteReceivedOn: '2026-11-23' })).toBe('Sent Sun 22 Nov · replied Mon 23 Nov')
-    expect(sentLine({ ...base, lastChasedOn: '2026-11-25', chaseCount: 1 })).toBe('Sent Sun 22 Nov · chased Wed 25 Nov')
-    expect(sentLine({ ...base, noOfferOn: '2026-11-23' })).toBe("Sent Sun 22 Nov · can't quote Mon 23 Nov")
-    expect(sentLine({ ...base, sentOn: null })).toBe('Not sent yet')
+    expect(sentLine({ ...base, quoteReceivedOn: '2026-11-23' })).toBe('Asked Sun 22 Nov · replied Mon 23 Nov')
+    expect(sentLine({ ...base, lastChasedOn: '2026-11-25', chaseCount: 1 })).toBe('Asked Sun 22 Nov · chased Wed 25 Nov')
+    expect(sentLine({ ...base, noOfferOn: '2026-11-23' })).toBe("Asked Sun 22 Nov · can't quote Mon 23 Nov")
+    expect(sentLine({ ...base, sentOn: null })).toBe('Not asked yet')
+    // only "Yes, sent" (sent_confirmed_at, 0097) turns Asked into Sent
+    expect(sentLine({ ...base, sentConfirmedAt: '2026-11-22T10:00:00Z' })).toBe('Sent Sun 22 Nov')
   })
   it('counts whole days', () => {
     expect(daysSince('2026-11-22', '2026-11-27')).toBe(5)

@@ -48,7 +48,7 @@ async function ready(page: Page, rfqId: string) {
   await openAs(page, 'sales', `/rfqs/${rfqId}`)
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await page.waitForFunction(() => navigator.serviceWorker?.controller !== null)
-  await page.goto('/today')
+  await page.goto('/todo')
   await page.locator('#main').waitFor()
 }
 
@@ -419,7 +419,7 @@ test.describe('attach to an order (migration 0042)', () => {
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await expect(page.getByRole('heading', { name: 'Files' })).toBeVisible() // the order page records the visit
     await page.waitForFunction(() => navigator.serviceWorker?.controller !== null)
-    await page.goto('/today')
+    await page.goto('/todo')
     await page.locator('#main').waitFor()
     await paste(page, { text: 'Customer PO attached, delivery to site gate 2.', files: [{ name: 'po-scan.png', type: 'image/png' }] })
     await expect(sheet(page)).toBeVisible()

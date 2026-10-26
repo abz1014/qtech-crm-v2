@@ -197,7 +197,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     const amt = 2000 + Math.floor(Math.random() * 900)
     const note = `Petrol to site ${amt}`
     const eng = await (await browser.newContext({ viewport: { width: 375, height: 812 } })).newPage()
-    await openAs(eng, 'engineer', '/today')
+    await openAs(eng, 'engineer', '/todo')
     await eng.getByRole('button', { name: /Account menu/ }).click()
     await eng.getByRole('menuitem', { name: 'I paid' }).click()
     await expect(eng).toHaveURL(/\/my-expenses$/)

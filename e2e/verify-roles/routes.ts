@@ -50,9 +50,9 @@ const MONTH_REPORTS = ['pnl', 'categories', 'aging', 'owe', 'gst', 'team'] as co
 
 export const ROUTES: readonly RouteSpec[] = [
   // ------------------------------------------------------------------ shell
-  { path: '/', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/today$/, note: 'role landing' },
-  { path: '/login', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/today$/, note: 'signed in: the sign-in page sends you on' },
-  { path: '/today', admin: 'ok', sales: 'ok', engineer: 'ok' },
+  { path: '/', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'role landing' },
+  { path: '/login', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'signed in: the sign-in page sends you on' },
+  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok' },
   { path: '/no-access', admin: 'no', sales: 'no', engineer: 'no', note: 'the bare no-access page' },
   { path: '/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ RFQs

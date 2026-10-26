@@ -32,7 +32,7 @@ async function ready(page: Page, rfqId: string) {
   await openAs(page, 'sales', `/rfqs/${rfqId}`)
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await page.waitForFunction(() => navigator.serviceWorker?.controller !== null)
-  await page.goto('/today')
+  await page.goto('/todo')
   await page.locator('#main').waitFor()
 }
 

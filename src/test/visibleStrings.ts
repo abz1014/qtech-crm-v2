@@ -145,7 +145,8 @@ export const SHELL_ENTRY = 'app/shell/AppShell.tsx'
 
 /** The first path segment of a route to the module(s) that draw it (src/app/routes.tsx). */
 export const SCREEN_ENTRIES: Record<string, readonly string[]> = {
-  today: ['features/today/TodayScreen.tsx'],
+  /** To do, and the weekly review page that routes.tsx puts under /todo/review. */
+  todo: ['features/today/TodayScreen.tsx', 'features/today/ReviewPage.tsx'],
   rfqs: ['features/rfqs/board/RfqsScreen.tsx', 'features/rfqs/IntakeScreen.tsx'],
   orders: ['features/orders/OrdersScreen.tsx'],
   /** Redesign phase 5 (src/app/routes.tsx, jobs/*). */

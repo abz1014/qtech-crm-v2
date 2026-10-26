@@ -14,7 +14,7 @@
 // orders only; a settled imported order raises no costs item; pending owner DB batch A (0088) stops the FBR receipt exception on imported invoices).
 //
 // Colour (plan section (e)): RED only for late money (a payment on a real invoice past its due date, by even one day) and for a
-// promise to a customer that slipped within the last 30 days (the quotation's due date; the commissioning day an engineer was
+// promise to a customer that slipped within the last 30 days (and the GST to FBR after its payment day, the 15th: a real deadline) (the quotation's due date; the commissioning day an engineer was
 // given). AMBER for due today or tomorrow and for our own pace slipping. GREY for everything else: ages, chores, stale items.
 import { daysBetween } from '@/features/rfqs/lib/dateText'
 import { COUNT_WORDS_MAX_DAYS } from '@/lib/timeWords'
@@ -27,7 +27,7 @@ export const STALE_AFTER_DAYS = COUNT_WORDS_MAX_DAYS
 const NEVER_STALE: ReadonlySet<RuleKey> = new Set<RuleKey>(['payment_overdue'])
 
 /** The only rules that may turn red: late money, and a promise made to a customer. */
-export const RED_RULES: ReadonlySet<RuleKey> = new Set<RuleKey>(['payment_overdue', 'bid_due', 'job_commissioning'])
+export const RED_RULES: ReadonlySet<RuleKey> = new Set<RuleKey>(['payment_overdue', 'bid_due', 'job_commissioning', 'gst_fbr'])
 
 /** Older than 30 days (by the date the item is due on) and not late money. Roll-ups and chores with no date are never stale. */
 export function isStale(item: Pick<TodayItem, 'rule' | 'actionDueOn'>, today: string): boolean {

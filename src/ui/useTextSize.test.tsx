@@ -26,7 +26,17 @@ describe('text size store', () => {
     expect(html().dataset.text).toBe('small')
   })
 
-  it('ignores anything that is not "small"', () => {
+  it('stores, applies and reads Larger (18 px) the same way', () => {
+    setTextSize('large')
+    expect(window.localStorage.getItem(TEXT_SIZE_KEY)).toBe('large')
+    expect(html().dataset.text).toBe('large')
+    expect(readTextSize()).toBe('large')
+    delete html().dataset.text
+    expect(applyStoredTextSize()).toBe('large')
+    expect(html().dataset.text).toBe('large')
+  })
+
+  it('ignores anything that is not "small" or "large"', () => {
     window.localStorage.setItem(TEXT_SIZE_KEY, 'huge')
     expect(readTextSize()).toBe('normal')
   })

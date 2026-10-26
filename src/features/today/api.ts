@@ -1,7 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { toBusinessDate } from '@/lib/dates'
 import type { ViewRow } from '@/features/dbTypes'
-import { previousMonthStart } from '@/features/today/rules'
+import { previousMonthStart, today1 } from '@/features/today/rules'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { fetchReceivablesList, type ReceivablesListRow } from '@/features/money/payments/api'
 import { billPeriod, billPeriods } from '@/features/money/expenses/forMonth'
@@ -19,6 +19,8 @@ import type {
   RfqFact,
   Role,
   SnoozeFact,
+  GstFact,
+  ClaimsFact,
 } from '@/features/today/types'
 
 /*
@@ -40,6 +42,10 @@ export interface TodayData {
   orders: OrderFact[]
   receivables: ReceivableFact[]
   monthEnd: MonthEndFact | null
+  /** P3-D. Admin only: last month's GST to FBR. Null otherwise. */
+  gst: GstFact | null
+  /** P3-D. Admin only: engineers' "I paid" claims waiting. Null otherwise. */
+  claims: ClaimsFact | null
   /** M08. Admin only; empty otherwise. */
   costs: CostFact[]
   /** M08. Admin and sales only; empty for an engineer (the read is never made). */
@@ -372,6 +378,34 @@ export const toReceivableFact = (r: Omit<ReceivablesListRow, 'company_name' | 'i
   reminderCount: num(r.reminder_count),
 })
 
+/**
+ * P3-D, admin only: how much of last month's GST is still to pay. The invoices dated last month that carry GST (not imported, not
+ * settled before the cutover), and how many of them have no tax deposit recorded. One small read.
+ */
+async function loadGst(today: string): Promise<GstFact> {
+  const db = requireSupabase()
+  const month = previousMonthStart(today)
+  const rows =
+    unwrap(
+      await db
+        .from('invoices')
+        .select('id, tax_deposited_on')
+        .gte('invoice_date', month)
+        .lt('invoice_date', today1(today))
+        .gt('gst_amount', 0)
+        .is('legacy_source', null)
+        .eq('settled_before_cutover', false),
+    ) ?? []
+  return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length }
+}
+
+/** P3-D, admin only: engineers' pending "I paid" claims (0087): how many, and the day the oldest was made. */
+async function loadClaims(): Promise<ClaimsFact> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('expense_claims').select('created_at').eq('status', 'pending').order('created_at').limit(500)) ?? []
+  return { pending: rows.length, oldestOn: rows[0]?.created_at ? rows[0].created_at.slice(0, 10) : null }
+}
+
 /** The close-month item reads only on the 1st to the 10th: one RPC and one tiny read, admin only. */
 async function loadMonthEnd(today: string): Promise<MonthEndFact | null> {
   const day = Number(today.slice(8, 10))
@@ -495,13 +529,15 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   /** Customers read "Name — City"; suppliers stay plain. */
   const labels = new Map(companies.map(c => [c.id, withCity(c.name, c.city)]))
   const money = role === 'admin' || role === 'sales'
-  const [clarifications, inquiries, legs, orders, receivables, monthEnd, costs, invoices, recurring, jobs] = await Promise.all([
+  const [clarifications, inquiries, legs, orders, receivables, monthEnd, gst, claims, costs, invoices, recurring, jobs] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open),
     loadLegs(names, labels),
     loadOrders(role, names),
     money ? loadReceivables(labels) : Promise.resolve<ReceivableFact[]>([]),
     role === 'admin' ? loadMonthEnd(today) : Promise.resolve<MonthEndFact | null>(null),
+    role === 'admin' ? loadGst(today) : Promise.resolve<GstFact | null>(null),
+    role === 'admin' ? loadClaims() : Promise.resolve<ClaimsFact | null>(null),
     role === 'admin' ? loadCosts() : Promise.resolve<CostFact[]>([]),
     money ? loadInvoiceFacts(today) : Promise.resolve<InvoiceFact[]>([]),
     role === 'admin' ? loadRecurringFacts(today) : Promise.resolve<RecurringFact[]>([]),
@@ -516,6 +552,8 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     orders,
     receivables,
     monthEnd,
+    gst,
+    claims,
     costs,
     invoices,
     recurring,
@@ -723,9 +761,12 @@ export async function undoPaymentReminder(before: ReadonlyArray<{ id: string; la
 }
 
 /** Snooze one item until a date (own row; one snooze per rule and subject, replaced if it exists). */
-export async function snoozeItem(input: { rule: string; subjectId: string; untilOn: string }): Promise<void> {
+export async function snoozeItem(input: { rule: string; subjectId: string; untilOn: string; untilChange?: boolean }): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('snoozes').upsert({ rule: input.rule, subject_id: input.subjectId, until_on: input.untilOn }, { onConflict: 'user_id,rule,subject_id' })
+  // until_change (0097, "Not ours to chase"): the snooze ends when the record changes; until_on is then only a far-off ceiling.
+  const { error } = await db
+    .from('snoozes')
+    .upsert({ rule: input.rule, subject_id: input.subjectId, until_on: input.untilOn, until_change: input.untilChange === true }, { onConflict: 'user_id,rule,subject_id' })
   if (error) throw error
 }
 

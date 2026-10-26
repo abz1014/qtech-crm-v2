@@ -84,7 +84,7 @@ async function todayNumbers(page: Page) {
   const text = await mainText(page)
   const m = /(\d+)\s+need you/.exec(text)
   const header = m ? Number(m[1]) : null
-  const rows = await page.getByRole('region', { name: 'Overdue or due today' }).locator('li[data-rule]').count()
+  const rows = await page.locator('section[data-block="late"], section[data-block="today"]').locator('li[data-rule]').count()
   const links = await page
     .getByRole('navigation', { name: 'Main' })
     .filter({ visible: true })
@@ -155,7 +155,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[])
       const page = await newPage(ctx, info, `today/${role}/${vp}`)
       const where = `today ${role}/${vp}`
       await probe(info, page, `${where} load and counts`, async () => {
-        await visit(page, info, '/today', where)
+        await visit(page, info, '/todo', where)
         await checkParity(page, info, where)
         await layout(page, info, where)
         await shot(page, `today-${role}-${vp}`)
@@ -289,7 +289,7 @@ test('crosscut: palette search with refs, partial words, Urdu, wildcard and SQL-
 
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await newPage(ctx, info, 'palette/admin')
-  await visit(page, info, '/today', 'palette')
+  await visit(page, info, '/todo', 'palette')
   const dialog = await openPalette(page)
   for (const c of cases)
     await probe(info, page, `palette "${c.q.slice(0, 40)}" (${c.why})`, async () => {
@@ -323,7 +323,7 @@ test('crosscut: palette search with refs, partial words, Urdu, wildcard and SQL-
   const pctx = await ctxAs(browser, info, 'sales', 'phone')
   const pp = await newPage(pctx, info, 'palette/sales/phone')
   await probe(info, pp, 'palette phone open and search', async () => {
-    await visit(pp, info, '/today', 'palette phone')
+    await visit(pp, info, '/todo', 'palette phone')
     await pp.getByRole('button', { name: 'Search', exact: true }).filter({ visible: true }).first().click()
     const d = pp.getByRole('dialog', { name: 'Search or jump to' })
     await d.waitFor({ timeout: 8_000 })
@@ -334,7 +334,7 @@ test('crosscut: palette search with refs, partial words, Urdu, wildcard and SQL-
     await pp.goBack()
     await pp.waitForTimeout(500)
     if (await d.isVisible()) note(info, { kind: 'observation', where: 'palette phone', what: 'Back did not close the palette on a phone' })
-    if (!/\/today/.test(pp.url())) note(info, { kind: 'observation', where: 'palette phone', what: `Back with the palette open left Today for ${pp.url()}` })
+    if (!/\/todo/.test(pp.url())) note(info, { kind: 'observation', where: 'palette phone', what: `Back with the palette open left Today for ${pp.url()}` })
   })
   await pctx.close()
 })
@@ -404,7 +404,7 @@ test('crosscut: single-key shortcuts never fire while typing; Help panel and men
     await page.keyboard.press('Escape')
   })
   await probe(info, page, 'shortcuts turned off: C and N', async () => {
-    await reset('/today')
+    await reset('/todo')
     await page.evaluate(() => localStorage.setItem('qtech.single-keys', 'off'))
     await page.reload()
     await settle(page)
@@ -424,7 +424,7 @@ test('crosscut: single-key shortcuts never fire while typing; Help panel and men
     await blur(page)
     await page.keyboard.press('g')
     await page.keyboard.press('t')
-    await page.waitForURL(/\/today/, { timeout: 5_000 }).catch(() => note(info, { kind: 'observation', where: 'G then T', what: `G then T did not go to Today (at ${page.url()})` }))
+    await page.waitForURL(/\/todo/, { timeout: 5_000 }).catch(() => note(info, { kind: 'observation', where: 'G then T', what: `G then T did not go to Today (at ${page.url()})` }))
     await blur(page)
     await page.keyboard.press('Shift+?')
     if (!(await sheet.isVisible().catch(() => false))) await sheet.waitFor({ timeout: 3_000 }).catch(() => note(info, { kind: 'observation', where: '?', what: '? did not open Keyboard shortcuts' }))
@@ -462,11 +462,11 @@ test('crosscut: Help from every main screen, its recipes, and the How it works c
   const co = await company(`Hunt Help ${T}`)
   const r = await rfq({ customer: co, items: [{ description: `Hunt help item ${T}`, qty: 1 }] })
   const o = await order({ customer: co, lines: [{ description: `Hunt help line ${T}`, qty: 1, price: 500 }], owner: 'sales' })
-  const screens = ['/today', '/rfqs', '/rfqs/new', `/rfqs/${r.rfq.id}`, '/orders', `/orders/${o.order.id}`, '/companies', `/companies/${co.id}`, '/money/receivables', '/settings']
+  const screens = ['/todo', '/rfqs', '/rfqs/new', `/rfqs/${r.rfq.id}`, '/orders', `/orders/${o.order.id}`, '/companies', `/companies/${co.id}`, '/money/receivables', '/settings']
 
   for (const [role, vp, list] of [
     ['sales', 'desktop', screens],
-    ['engineer', 'phone', ['/today', `/orders/${o.order.id}`, '/rfqs']],
+    ['engineer', 'phone', ['/todo', `/orders/${o.order.id}`, '/rfqs']],
   ] as [Role, Viewport, string[]][]) {
     const ctx = await ctxAs(browser, info, role, vp)
     const page = await newPage(ctx, info, `help/${role}/${vp}`)
@@ -494,7 +494,7 @@ test('crosscut: Help from every main screen, its recipes, and the How it works c
         if (/[?&]help=/.test(page.url())) note(info, { kind: 'observation', where: `help ${path}`, what: `Close help left ?help= in the address (${page.url()})` })
       })
     await probe(info, page, `help ${role}/${vp} unknown recipe and search`, async () => {
-      await visit(page, info, '/today?help=no-such-recipe', 'help unknown')
+      await visit(page, info, '/todo?help=no-such-recipe', 'help unknown')
       await help.waitFor({ timeout: 8_000 })
       if ((await help.getByText(/not here any more/).count()) === 0) note(info, { kind: 'observation', where: 'help unknown id', what: '?help=no-such-recipe shows no "not here any more" line' })
       const box = help.getByRole('searchbox').or(help.getByRole('textbox')).first()
@@ -515,7 +515,7 @@ test('crosscut: Help from every main screen, its recipes, and the How it works c
       await page.addInitScript(() => {
         for (const k of Object.keys(localStorage)) if (k.startsWith('qtech.howItWorks.')) localStorage.removeItem(k)
       })
-      await visit(page, info, '/today', `howitworks ${role}`)
+      await visit(page, info, '/todo', `howitworks ${role}`)
       const card = page.locator('section').filter({ has: page.getByRole('heading', { name: /How Q-Tech CRM works/ }) }).first()
       if (!(await card.isVisible().catch(() => false))) {
         note(info, { kind: 'observation', where: `How it works ${role}`, what: 'the How Q-Tech CRM works card is not on Today (dismissed or "long ago")' })
@@ -843,7 +843,7 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
   // with it blocked, the first lazy chunk fetched offline crashes the page, which production never does.
   const ctx = await ctxAs(browser, info, 'sales', 'desktop', { serviceWorkers: 'allow' })
   const page = await newPage(ctx, info, 'offline/sales')
-  await page.goto('/today')
+  await page.goto('/todo')
   await page.evaluate(async () => {
     const reg = await navigator.serviceWorker.ready
     if (!navigator.serviceWorker.controller) await new Promise(r => setTimeout(r, 3000))
@@ -964,7 +964,7 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
 
   await probe(info, page, 'offline Today chase', async () => {
     const s = await seedChase('sales', 'Offline Chase')
-    await visit(page, info, '/today', 'offline chase')
+    await visit(page, info, '/todo', 'offline chase')
     const scope = await openItem(page, 'desktop', 'chase_customer', s.ref)
     const copy = scope.getByRole('button', { name: /^Copy (message )?and mark chased$/ }).first()
     await goOffline()
@@ -986,7 +986,7 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
   const pctx = await ctxAs(browser, info, 'engineer', 'phone')
   const pp = await newPage(pctx, info, 'offline/engineer/phone')
   await probe(info, pp, 'offline banner on a phone', async () => {
-    await visit(pp, info, '/today', 'offline phone')
+    await visit(pp, info, '/todo', 'offline phone')
     await pctx.setOffline(true)
     await pp.locator('[data-offline-banner]').waitFor({ timeout: 5_000 }).catch(() => note(info, { kind: 'observation', where: 'offline phone', what: 'no offline banner on a phone' }))
     await layout(pp, info, 'offline banner phone')
@@ -1035,7 +1035,7 @@ test('crosscut: Back/Forward through dialogs, refresh, deep link after sign in, 
       if (notes.notes !== 'Original notes') note(info, { kind: 'observation', where: `Back with a dialog (${vp})`, what: `notes changed to ${notes.notes} without Save` })
       await shot(page, `nav-back-forward-${vp}`, false)
     })
-    for (const path of [`/rfqs/${r.rfq.id}`, `/orders/${o.order.id}`, `/companies/${co.id}`, `/companies?new=1&name=${encodeURIComponent(`Hunt Refresh ${T}`)}`, '/today?help=today-chase', `/rfqs/new?company=${co.id}`])
+    for (const path of [`/rfqs/${r.rfq.id}`, `/orders/${o.order.id}`, `/companies/${co.id}`, `/companies?new=1&name=${encodeURIComponent(`Hunt Refresh ${T}`)}`, '/todo?help=today-chase', `/rfqs/new?company=${co.id}`])
       await probe(info, page, `refresh ${path} (${vp})`, async () => {
         await visit(page, info, path, `refresh ${vp}`)
         await page.reload()
@@ -1129,10 +1129,10 @@ test('crosscut: a 120-character company and a long contact name at phone size', 
 
   const ctx = await ctxAs(browser, info, 'sales', 'phone')
   const page = await newPage(ctx, info, 'long/sales/phone')
-  for (const path of ['/today', `/rfqs?owner=all&q=${T}`, `/rfqs/${r.id}`, `/orders?owner=all&q=${T}`, `/orders/${o.order.id}`, `/companies/${co.id}`, `/companies?q=${T}`])
+  for (const path of ['/todo', `/rfqs?owner=all&q=${T}`, `/rfqs/${r.id}`, `/orders?owner=all&q=${T}`, `/orders/${o.order.id}`, `/companies/${co.id}`, `/companies?q=${T}`])
     await probe(info, page, `long names phone ${path}`, async () => {
       await visit(page, info, path, 'long phone')
-      if (path === '/today') {
+      if (path === '/todo') {
         const row = page.locator('#main li[data-rule]').filter({ hasText: ref.rfq(r.number) }).first()
         if (await row.count()) await row.getByRole('button').first().click()
       }
@@ -1140,7 +1140,7 @@ test('crosscut: a 120-character company and a long contact name at phone size', 
       await shot(page, `long-phone-${path}`)
     })
   await probe(info, page, 'long names in the palette on a phone', async () => {
-    await visit(page, info, '/today', 'long palette')
+    await visit(page, info, '/todo', 'long palette')
     await page.getByRole('button', { name: 'Search', exact: true }).filter({ visible: true }).first().click()
     const d = page.getByRole('dialog', { name: 'Search or jump to' })
     await d.waitFor({ timeout: 8_000 })
@@ -1152,7 +1152,7 @@ test('crosscut: a 120-character company and a long contact name at phone size', 
 
   const dctx = await ctxAs(browser, info, 'sales', 'desktop')
   const dp = await newPage(dctx, info, 'long/sales/desktop')
-  for (const path of [`/rfqs?owner=all&q=${T}`, `/orders/${o.order.id}`, '/today'])
+  for (const path of [`/rfqs?owner=all&q=${T}`, `/orders/${o.order.id}`, '/todo'])
     await probe(info, dp, `long names desktop ${path}`, async () => {
       await visit(dp, info, path, 'long desktop')
       await layout(dp, info, `long names desktop ${path}`)
@@ -1227,9 +1227,9 @@ test("HW-25: a stale second tab's Edit company save silently wipes the Notes sav
 
 test('HW-26: the C shortcut (Paste or photo) still fires with single-key shortcuts turned off, and while a menu is open', async ({ browser }, info) => {
   const { page } = await pin(browser, info, 'admin')
-  await land(page, '/today')
+  await land(page, '/todo')
   await page.evaluate(() => localStorage.setItem('qtech.single-keys', 'off'))
-  await land(page, '/today')
+  await land(page, '/todo')
   expect(await page.evaluate(() => localStorage.getItem('qtech.single-keys'))).toBe('off')
   await blur(page)
   await page.keyboard.press('c')
@@ -1262,7 +1262,7 @@ test('HW-28: Ctrl+K opens the palette on top of an open dialog', async ({ browse
 
 test("HW-29: palette: '%' and '_' list unrelated results, a name with a backslash cannot be found, extra spaces find nothing", async ({ browser }, info) => {
   const { page } = await pin(browser, info, 'admin')
-  await land(page, '/today')
+  await land(page, '/todo')
   const dialog = await openPalette(page)
   await expect(dialog).toBeVisible()
   const a = await paletteAsk(page, dialog, '%')
@@ -1299,7 +1299,7 @@ test("HW-31: the RFQ board's 'need you' is the person's own (Today's RFQ items),
   const all = await lede()
   const allShown = showing(await mainText(page))
   expect(mineShown).toBeLessThan(allShown)
-  // Redesign phase 0: one definition of "needs you" (features/today/needsYou.ts). The board's number is the RFQ items on this
+  // Redesign phase 0: one definition of "needs you" (features/todo/needsYou.ts). The board's number is the RFQ items on this
   // person's own Today (their own RFQ that needs suppliers today), whichever owner filter the list shows, and no "overdue" count.
   expect(need(all)).toBeGreaterThan(0)
   expect(need(mine)).toBe(need(all))
@@ -1314,9 +1314,9 @@ test("HW-32: the Orders page's 'need you' is the order rows on the person's Toda
   await db.patch(`supplier_orders?id=eq.${o.legs[0].id}`, { placed_on: karachiDay(-15), expected_on: karachiDay(-6) })
   const ORDER_RULES = ['goods_late', 'place_po', 'plan_commissioning', 'to_source', 'job_commissioning', 'job_on_site']
   await expect(async () => {
-    await land(page, '/today')
+    await land(page, '/todo')
     const rows = await page
-      .getByRole('region', { name: 'Overdue or due today' })
+      .locator('section[data-block="late"], section[data-block="today"]')
       .locator('li[data-rule]')
       .evaluateAll((ls, rules) => ls.filter(l => rules.includes(l.getAttribute('data-rule') ?? '')).length, ORDER_RULES)
       .catch(() => 0)
@@ -1387,7 +1387,7 @@ test('HW-36: the RFQ board table header scrolls away (not sticky) in a long list
 
 test('HW-37: the palette offers to add a 300-character text as a new company', async ({ browser }, info) => {
   const { page } = await pin(browser, info, 'admin')
-  await land(page, '/today')
+  await land(page, '/todo')
   const dialog = await openPalette(page)
   await expect(dialog).toBeVisible()
   const a = await paletteAsk(page, dialog, 'x'.repeat(300))
@@ -1396,7 +1396,7 @@ test('HW-37: the palette offers to add a 300-character text as a new company', a
 
 test('HW-38: closing the palette with Escape leaves focus on <body>', async ({ browser }, info) => {
   const { page } = await pin(browser, info, 'admin')
-  await land(page, '/today')
+  await land(page, '/todo')
   await page.waitForTimeout(1500) // the palette's own Ctrl+K handler is loaded on idle
   await page.keyboard.press('Control+k')
   const dialog = page.getByRole('dialog', { name: 'Search or jump to' })

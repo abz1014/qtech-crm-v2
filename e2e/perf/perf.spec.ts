@@ -14,7 +14,7 @@ import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../su
  *  2. Content-Security-Policy: this suite runs with E2E_CSP=1 (the preview server sends vercel.json's real policy, Supabase origin swapped
  *     for the local stack). No `securitypolicyviolation` may fire while the screens load. PDFs, the share target and storage images are
  *     covered by the quotation, orders, capture and pwa suites, which run under the same policy.
- *  3. Request shape: on Today and the RFQ page no data request is made twice, and the request waves are reported.
+ *  3. Request shape: on To do and the RFQ page no data request is made twice, and the request waves are reported.
  */
 const PORT = 9333
 /** The suite's server and Supabase proxy use a throwaway self-signed certificate (scripts/ci/e2e-run.sh); Lighthouse's tab must accept it too. */
@@ -49,7 +49,7 @@ async function seed(): Promise<Seed> {
 }
 
 const screens = (s: Seed): Array<[string, string]> => [
-  ['Today', '/today'],
+  ['To do', '/todo'],
   ['RFQ board', '/rfqs'],
   ['RFQ detail', `/rfqs/${s.rfqId}`],
   ['Order detail', `/orders/${s.orderId}`],
@@ -76,7 +76,7 @@ test('Lighthouse accessibility is at least 95 on the main screens (desktop and p
   const ctx = await chromium.launchPersistentContext(profile, { args: [`--remote-debugging-port=${PORT}`, ...TLS_ARGS], ignoreHTTPSErrors: true, baseURL, viewport: { width: 1440, height: 900 } })
   try {
     const page = ctx.pages()[0] ?? (await ctx.newPage())
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
     const pkg = 'lighthouse'
     const lighthouse = ((await import(/* @vite-ignore */ pkg)) as { default: Lighthouse }).default
     const rows: string[] = ['### Lighthouse accessibility (P04)', '', '| Screen | Desktop | Phone |', '|---|---|---|']
@@ -149,13 +149,13 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
   const ctx = await chromium.launchPersistentContext(profile, { args: [`--remote-debugging-port=${PORT}`, ...TLS_ARGS], ignoreHTTPSErrors: true, baseURL, viewport: { width: 412, height: 823 } })
   try {
     const page = ctx.pages()[0] ?? (await ctx.newPage())
-    await openAs(page, 'admin', '/today')
+    await openAs(page, 'admin', '/todo')
     const cdp = await ctx.newCDPSession(page)
     const origin = new URL(baseURL!).origin
     const pkg = 'lighthouse'
     const lighthouse = ((await import(/* @vite-ignore */ pkg)) as { default: (url: string, flags: Record<string, unknown>) => Promise<PerfRun> }).default
     const targets: Array<[string, string]> = [
-      ['Today', '/today'],
+      ['To do', '/todo'],
       ['RFQ list', '/rfqs'],
       ['RFQ page', `/rfqs/${s.rfqId}`],
       ['Orders list', '/orders'],
@@ -255,7 +255,7 @@ function waves(log: Array<{ start: number; end: number }>): number {
   return n
 }
 
-test('the production CSP is never violated, and Today and the RFQ page make no repeated data request', async ({ page, baseURL }) => {
+test('the production CSP is never violated, and To do and the RFQ page make no repeated data request', async ({ page, baseURL }) => {
   test.setTimeout(300_000)
   expect(process.env.E2E_CSP, 'run this suite with E2E_CSP=1 so the preview server sends the production policy').toBeTruthy()
   const s = await seed()
@@ -271,7 +271,7 @@ test('the production CSP is never violated, and Today and the RFQ page make no r
   expect(res.headers()['content-security-policy']).toContain("default-src 'self'")
   expect(res.headers()['content-security-policy']).not.toMatch(/'unsafe-eval'/)
 
-  await openAs(page, 'admin', '/today')
+  await openAs(page, 'admin', '/todo')
   const lines: string[] = ['### Request shape (P04)', '', '| Page | Data requests | Waves | Repeated |', '|---|---|---|---|']
   const repeated: string[] = []
   for (const [name, path] of screens(s)) {
@@ -289,7 +289,7 @@ test('the production CSP is never violated, and Today and the RFQ page make no r
     for (const r of log) if (r.key.startsWith('GET') && !isSessionCheck(r.key)) seen.set(r.key, (seen.get(r.key) ?? 0) + 1)
     const dup = [...seen].filter(([, n]) => n > 1).map(([k, n]) => `${k} x${n}`)
     lines.push(`| ${name} | ${log.length} | ${waves(log)} | ${dup.length} |`)
-    if (name === 'Today' || name === 'RFQ detail') repeated.push(...dup.map(d => `${name}: ${d}`))
+    if (name === 'To do' || name === 'RFQ detail') repeated.push(...dup.map(d => `${name}: ${d}`))
     page.removeAllListeners('request')
     page.removeAllListeners('requestfinished')
   }

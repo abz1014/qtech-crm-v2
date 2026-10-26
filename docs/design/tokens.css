@@ -204,6 +204,30 @@
   --topbar-h: 56px;
 }
 
+/* "Larger text" (Settings > Your details, the account menu; owner yes, redesign L1-X): 18 px reading text, 16 px timestamps, controls a
+   little taller so a bigger label never crowds its button. The person's own choice, per device, like Smaller. */
+[data-text="large"] {
+  --text-stamp: 16px; --lh-stamp: 22px;
+  --text-xs: 18px;   --lh-xs: 26px;
+  --text-sm: 18px;   --lh-sm: 26px;
+  --text-base: 18px; --lh-base: 27px;
+  --text-lg: 20px;   --lh-lg: 28px;
+  --text-xl: 24px;   --lh-xl: 32px;
+  --text-2xl: 34px;  --lh-2xl: 42px;
+  --text-display: 40px; --lh-display: 46px;
+  --control-h: 48px;
+  --control-sm-h: 44px;
+  --control-lg-h: 56px;
+  --segment-h: 44px;
+  --chip-h: 32px;
+  --icon-chip: 18px;
+  --row-h: 60px;
+  --row-h-tall: 72px;
+  --head-h: 48px;
+  --text-table: var(--text-sm);
+  --lh-table: var(--lh-sm);
+}
+
 [data-density="compact"] {
   --row-h: 44px;
   --cell-px: var(--sp-2);

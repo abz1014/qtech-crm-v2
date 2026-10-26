@@ -35,7 +35,7 @@ async function stateFor(browser: Browser, info: TestInfo, role: Role): Promise<s
   if (existsSync(path)) return path
   const context = await browser.newContext({ baseURL: info.project.use.baseURL, viewport: { width: 1366, height: 768 } })
   const page = await context.newPage()
-  await openAs(page, role, '/today')
+  await openAs(page, role, '/todo')
   await context.storageState({ path })
   await context.close()
   return path

@@ -385,6 +385,15 @@ export function useMarkInquiriesSent(rfqId: string) {
   })
 }
 
+/** "Yes, sent" on the question after copying or opening a supplier enquiry (0097). `undo` puts the row back to Asked. */
+export function useConfirmInquiriesSent(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { ids: readonly string[]; undo?: boolean }) => (v.undo ? api.unconfirmInquiriesSent(v.ids).then(() => [...v.ids]) : api.confirmInquiriesSent(v.ids)),
+    onSuccess: () => invalidateAfter(client, 'rfq.setFloated', { rfqId }),
+  })
+}
+
 export function useRemoveInquiries(rfqId: string) {
   const client = useQueryClient()
   return useMutation({

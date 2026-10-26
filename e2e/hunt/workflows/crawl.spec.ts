@@ -43,7 +43,7 @@ function routes(): { path: string; who: Role[] }[] {
   const as: Role[] = ['admin', 'sales']
   const a: Role[] = ['admin']
   return [
-    { path: '/today', who: all },
+    { path: '/todo', who: all },
     { path: '/rfqs', who: all },
     { path: '/rfqs/new', who: all },
     { path: `/rfqs/${ids.rfq}`, who: all },
@@ -168,7 +168,7 @@ test('crawl: deep links to records that do not exist, and junk params', async ({
 
 test('crawl: an open order page and RFQ page stay quiet (no repeated data requests while nobody touches them)', async ({ browser }, info) => {
   for (const vp of ['desktop', 'phone'] as Viewport[])
-    for (const path of [`/orders/${ids.order}`, `/rfqs/${ids.rfq}`, '/today']) {
+    for (const path of [`/orders/${ids.order}`, `/rfqs/${ids.rfq}`, '/todo']) {
       const ctx = await ctxAs(browser, info, 'admin', vp)
       const page = await ctx.newPage()
       watch(page, info, `quiet ${vp}`)
