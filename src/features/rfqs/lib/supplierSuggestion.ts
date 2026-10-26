@@ -12,14 +12,15 @@
 //      3. supplied_before  only for a supplier that qualifies for neither 1 nor 2 but supplied the exact item before.
 //    "Supplied this item before" (tier 0 or 1 on a past leg, supplier_item_memory()) is a BADGE on any suggestion, not a group.
 //  - Order inside a group: ordered count, then the category's reply rate, then the overall reply rate, then price wins (admin and
-//    sales only: NULL for an engineer), then the most recent contact, then name, then id. A supplier that declared no offer on at
+//    sales only: NULL for an engineer), then the most recent contact, then the delivery record (proven, unproven, often late: A8's
+//    band, kept only as a tie-break so two suppliers equal on every count above do not fall to the alphabet), then name, then id. A supplier that declared no offer on at
 //    least 2 of its last 3 asks is demoted: after every other supplier of its group, still listed.
 //  - Pre-ticked: the first 3 of the ranked list whose reply rate is 50% or more (the category's, else the overall rate), or that
 //    carry a manual tag, or that supplied this item before; never a demoted one.
 //  - Every key is a count and is printed (the reason, the memory line); there is no score.
 
 import { monthYear, shortDay } from './dateText'
-import { evidenceOf, evidenceReason, recordFromStats, type Evidence, type Reason } from './ranking/reasons'
+import { evidenceOf, evidenceReason, recordFromStats, reliabilityBand, type Evidence, type Reason } from './ranking/reasons'
 import { inferCategory } from '@/lib/categories/dictionary'
 import type { MemoryRow, MemoryStats } from '@/lib/memory'
 
@@ -304,6 +305,8 @@ interface Keys {
   catRate: number
   overallRate: number
   wins: number
+  /** A8's delivery band (1 proven, 2 unproven, 3 often late): a tie-break after the last contact. */
+  band: 1 | 2 | 3
 }
 
 // ------------------------------------------------------------------------------------------------ main
@@ -439,6 +442,7 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
       catRate: ratePct(catRow?.replied, catRow?.asked) ?? -1,
       overallRate: ratePct(sup.stats?.replied, sup.stats?.asked) ?? -1,
       wins: w?.wins ?? 0,
+      band: reliabilityBand({ deliveries: sup.stats?.deliveries ?? 0, onTime: (sup.stats?.deliveries ?? 0) - Math.min(sup.stats?.late ?? 0, sup.stats?.deliveries ?? 0) }),
     })
   }
 
@@ -461,6 +465,7 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
       if (b.lastContact === null) return -1
       return a.lastContact < b.lastContact ? 1 : -1
     }
+    if (ka.band !== kb.band) return ka.band - kb.band
     const an = a.name.toLocaleLowerCase('en')
     const bn = b.name.toLocaleLowerCase('en')
     if (an !== bn) return an < bn ? -1 : 1

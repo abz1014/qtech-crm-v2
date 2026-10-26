@@ -80,7 +80,7 @@ function fromSheetRow(line: string): string | null {
 
 /** Units as written -> the unit stored. Safe units may follow a number after a space; ambiguous ones need a separator. */
 const SAFE_UNITS: Record<string, string> = {
-  no: 'nos', nos: 'nos', pc: 'nos', pcs: 'nos', piece: 'nos', pieces: 'nos', unit: 'nos', units: 'nos', each: 'nos', ea: 'nos',
+  no: 'nos', nos: 'nos', "no's": 'nos', "nos's": 'nos', pc: 'nos', pcs: 'nos', piece: 'nos', pieces: 'nos', unit: 'nos', units: 'nos', each: 'nos', ea: 'nos',
   // Urdu "adad" (عدد, pieces), written in Latin letters or read from the Urdu word (see urduDigits).
   adad: 'nos',
   set: 'set', sets: 'set', lot: 'lot', lots: 'lot', pair: 'pair', pairs: 'pair', roll: 'roll', rolls: 'roll',
@@ -90,7 +90,7 @@ const SAFE_UNITS: Record<string, string> = {
 const AMBIGUOUS_UNITS: Record<string, string> = { m: 'm', kg: 'kg', g: 'g', l: 'l', ft: 'ft', km: 'km' }
 
 const NUM = String.raw`(\d[\d,]*(?:\.\d+)?)`
-const SAFE = Object.keys(SAFE_UNITS).join('|')
+const SAFE = Object.keys(SAFE_UNITS).sort((a, b) => b.length - a.length).join('|')
 const AMBIG = Object.keys(AMBIGUOUS_UNITS).join('|')
 const ANY_UNIT = `${SAFE}|${AMBIG}`
 
@@ -100,7 +100,7 @@ const LEADING_MEASURE = /^(\d[\d,]*(?:\.\d+)?)\s*(m|kg|l|ft)\.?\s+(?=[A-Za-z])(.
 const TRAIL_QTY = new RegExp(String.raw`(?:^|[\s,;(–-])(?:qty|quantity|q'ty)\s*[:=]?\s*${NUM}\s*(${ANY_UNIT})?\s*\)?\s*[.;]?\s*$`, 'i')
 const TRAIL_X = new RegExp(String.raw`(?:^|\s)[x×]\s*${NUM}\s*(${ANY_UNIT})?\s*\)?\s*[.;]?\s*$`, 'i')
 const TRAIL_SAFE = new RegExp(String.raw`(?:^|[\s,;(–-])\s*${NUM}\s*(${SAFE})\s*\)?\s*[.;]?\s*$`, 'i')
-const TRAIL_AMBIG = new RegExp(String.raw`[,;(–-]\s*${NUM}\s*(${AMBIG})\s*\)?\s*[.;]?\s*$`, 'i')
+const TRAIL_AMBIG = new RegExp(String.raw`(?:[,;(]|(?<!\d)[–-])\s*${NUM}\s*(${AMBIG})\s*\)?\s*[.;]?\s*$`, 'i')
 /**
  * "Silicone tube 8mm 0.5 m", "Copper wire 2.5 kg": a length or weight at the end after a plain space. Decimals are allowed (a
  * length or a weight can be part of one); not the end of a range ("0-10 m", "0 to 10 m") or a measurement ("range 20 m").
@@ -132,7 +132,7 @@ const tidy = (s: string) => s.replace(/\s+/g, ' ').replace(/[\s\-–,;:(]+$/, ''
 
 /** One item line (marker already removed) into description, quantity and unit. */
 export function parseItemLine(line: string): ParsedItem {
-  const text = urduDigits(line).trim()
+  const text = urduDigits(line).replace(/[‘’]/g, "'").trim()
   const lead = LEADING.exec(text)
   if (lead && lead[3]) {
     return { description: tidy(lead[3]), qty: toQty(lead[1]), unit: lead[2] ? normaliseUnit(lead[2]) : null }
