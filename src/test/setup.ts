@@ -6,6 +6,10 @@ import { cleanup, configure } from '@testing-library/react'
 
 afterEach(() => cleanup())
 
+// The Radix half of Popover is a lazy chunk in the app (src/ui/Popover.tsx); here it is loaded up front, so a popover is the real one from the first render.
+const { preloadPopover } = await import('@/ui/popoverStore')
+await preloadPopover()
+
 /*
  * findBy*, waitFor and waitForElementToBeRemoved give up after 1000 ms by default. Vitest runs ~200 jsdom files in parallel
  * workers, and the first render of a whole screen (Today, the palette, Help) plus the first transform of a lazy chunk is

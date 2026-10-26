@@ -13,7 +13,8 @@ import { CaptureProvider } from '@/app/capture/CaptureProvider'
 import { TopBar } from '@/app/shell/TopBar'
 import type { NavCounts } from '@/app/shell/useNavCounts'
 import { usePageSettled } from '@/app/usePageSettled'
-import { markContentDrawn } from '@/lib/afterContent'
+import { markContentDrawn, whenContentDrawn } from '@/lib/afterContent'
+import { preloadPopover } from '@/ui/popoverStore'
 import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
 
@@ -62,6 +63,14 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   useEffect(() => {
     if (settled) markContentDrawn()
   }, [settled])
+  // The Radix half of every popover and menu is downloaded once the content is drawn (src/ui/Popover.tsx), not with the first page.
+  useEffect(() => {
+    let t: number | undefined
+    whenContentDrawn(() => {
+      t = window.setTimeout(() => void preloadPopover(), 1500)
+    })
+    return () => window.clearTimeout(t)
+  }, [])
   const palette = usePalette()
   useSearchPaletteSource()
   const { pathname } = useLocation()
