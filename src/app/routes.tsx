@@ -2,7 +2,8 @@ import { Suspense, useEffect, useRef, type ComponentType } from 'react'
 import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
-import { navItems, type NavKey } from '@/app/navConfig'
+import { navItems, type NavItem, type NavKey } from '@/app/navConfig'
+import { Package } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
@@ -38,6 +39,9 @@ const IntakeScreen = lazy(routeChunks.rfqNew)
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
+/** /jobs (redesign phase 5): reachable by address only until the navigation switch (P5-F, lane L1) adds Jobs to navConfig. Every staff role. */
+const JobsScreen = lazy(routeChunks.jobs)
+const jobsItem: NavItem = { key: 'orders', label: 'Jobs', path: '/jobs', icon: Package, roles: ['admin', 'sales', 'engineer'] }
 const rfqsItem = navItems.find(i => i.key === 'rfqs')
 const moneyItem = navItems.find(i => i.key === 'money')
 
@@ -216,6 +220,16 @@ function AppRouteTable() {
               }
             />
           ) : null}
+          <Route
+            path="jobs/*"
+            element={
+              <RequireRole item={jobsItem}>
+                <Suspense fallback={null}>
+                  <JobsScreen />
+                </Suspense>
+              </RequireRole>
+            }
+          />
           {moneyItem ? (
             <Route
               path="reports/*"

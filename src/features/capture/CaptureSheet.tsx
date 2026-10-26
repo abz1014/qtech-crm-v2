@@ -41,6 +41,7 @@ import {
   type AttachmentRow,
 } from '@/features/rfqs/api'
 import { attachmentPath, clarState, splitQuestions } from '@/features/rfqs/lib/clarifications'
+import { attachmentHasPrices } from '@/features/rfqs/lib/attachmentPrices'
 import { formatBytes } from '@/lib/fileIntake'
 import { isReadableFile } from '@/features/rfqs/lib/readPdf'
 import { cn } from '@/lib/utils'
@@ -203,7 +204,7 @@ export default function CaptureSheet() {
     for (const f of goodFiles) {
       let row = uploaded.current.get(f.id)
       if (!row) {
-        row = await uploadAttachment({ rfqId, clarificationId, file: f.file, path: attachmentPath(rfqId, crypto.randomUUID(), f.file.name, f.file.type) })
+        row = await uploadAttachment({ rfqId, clarificationId, file: f.file, path: attachmentPath(rfqId, crypto.randomUUID(), f.file.name, f.file.type), hasPrices: attachmentHasPrices({ role: user?.role ?? 'engineer', clarificationId, mime: f.file.type }) })
         uploaded.current.set(f.id, row)
       }
       out.push(row)
@@ -242,7 +243,7 @@ export default function CaptureSheet() {
         for (const f of goodFiles) {
           let row = uploaded.current.get(f.id)
           if (!row) {
-            row = await uploadAttachment({ orderId, clarificationId: null, file: f.file, path: attachmentPath(orderId, crypto.randomUUID(), f.file.name, f.file.type) })
+            row = await uploadAttachment({ orderId, clarificationId: null, file: f.file, path: attachmentPath(orderId, crypto.randomUUID(), f.file.name, f.file.type), hasPrices: attachmentHasPrices({ role: user?.role ?? 'engineer', orderId, mime: f.file.type }) })
             uploaded.current.set(f.id, row)
           }
           rows.push(row)

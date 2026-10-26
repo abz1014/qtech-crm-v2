@@ -49,7 +49,8 @@ select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-0000000
 insert into public.companies (id, name)
 select pg_temp.u('c7000000', g), case when g = 0 then 'Fixture Customer' else 'Fixture Supplier ' || lpad(g::text, 2, '0') end
 from generate_series(0, 30) g;
-insert into public.brands (id, name, kind) values (pg_temp.u('b7000000', 1), 'Pressure transmitters', 'family');
+-- 0093 seeds the canonical categories, 'Pressure transmitters' among them: the fixture takes the seeded family over under its own id
+update public.brands set id = pg_temp.u('b7000000', 1) where name = 'Pressure transmitters' and kind = 'family';
 -- Rates: USD and CNY fresh (today), EUR stale (15 days), JPY unusable (40 days), AED none.
 insert into public.fx_rates (currency, rate_pkr, as_of, source) values
   ('USD', 280, public.today_pkt(), 'manual'),

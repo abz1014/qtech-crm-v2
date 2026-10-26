@@ -45,12 +45,12 @@ create index orders_repeat_of_idx on public.orders (repeat_of_order_id) where re
 comment on column public.orders.repeat_of_order_id is
   '0099: the order this one was copied from by create_repeat_order ("Repeat of Job 139"). NULL for every other order. SET NULL when the source is deleted.';
 
--- create_repeat_order (0019, unchanged since) now stores its source. Same signature, same body: the column list and the value list
+-- create_repeat_order (0019, then 0095: the p_repeat_cancelled argument) now stores its source. Same signature, same body: the column list and the value list
 -- of its one `insert into public.orders` each gain one entry. Patched from the CURRENT definition, so a later or parallel change to
 -- the function is kept; a definition this cannot patch stops the migration instead of being replaced blind.
 do $$
 declare
-  def     text := pg_catalog.pg_get_functiondef('public.create_repeat_order(uuid, uuid, text, date)'::regprocedure);
+  def     text := pg_catalog.pg_get_functiondef('public.create_repeat_order(uuid, uuid, text, date, boolean)'::regprocedure);
   patched text;
 begin
   if def ~ 'repeat_of_order_id' then

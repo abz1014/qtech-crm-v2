@@ -574,6 +574,8 @@ export interface AttachmentRow {
   sizeBytes: number
   clarificationId: string | null
   createdAt: string
+  /** 0100: the file shows a price (a customer PO, a supplier quote, an enquiry with prices). An engineer reads no such file. */
+  hasPrices: boolean
 }
 
 export interface ClarificationRow {
@@ -626,7 +628,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
 export async function listOrderAttachments(orderId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
-    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at').eq('order_id', orderId).eq('bucket', FILE_BUCKET).order('created_at'),
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices').eq('order_id', orderId).eq('bucket', FILE_BUCKET).order('created_at'),
   )
   return rows.map(r => ({
     id: r.id,
@@ -636,13 +638,14 @@ export async function listOrderAttachments(orderId: string): Promise<AttachmentR
     sizeBytes: r.size_bytes,
     clarificationId: r.clarification_id,
     createdAt: r.created_at,
+    hasPrices: r.has_prices,
   }))
 }
 
 export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
-    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at').eq('rfq_id', rfqId).eq('bucket', FILE_BUCKET).order('created_at'),
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices').eq('rfq_id', rfqId).eq('bucket', FILE_BUCKET).order('created_at'),
   )
   return rows.map(r => ({
     id: r.id,
@@ -652,6 +655,7 @@ export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
     sizeBytes: r.size_bytes,
     clarificationId: r.clarification_id,
     createdAt: r.created_at,
+    hasPrices: r.has_prices,
   }))
 }
 
@@ -734,7 +738,7 @@ export async function setInquiryRelayed(inquiryId: string, at: string | null): P
  * Upload one file to rfq-files at {rfq_id}/{uuid}.{ext} and record it. The object goes first; if the row cannot be
  * written the object is removed again, so nothing is left behind.
  */
-export async function uploadAttachment(input: { rfqId?: string; orderId?: string; clarificationId: string | null; file: File; path: string }): Promise<AttachmentRow> {
+export async function uploadAttachment(input: { rfqId?: string; orderId?: string; clarificationId: string | null; file: File; path: string; hasPrices: boolean }): Promise<AttachmentRow> {
   const db = requireSupabase()
   const up = await db.storage.from(FILE_BUCKET).upload(input.path, input.file, { contentType: input.file.type, upsert: false })
   if (up.error) throw up.error
@@ -750,14 +754,20 @@ export async function uploadAttachment(input: { rfqId?: string; orderId?: string
       order_id: input.orderId ?? null,
       clarification_id: input.clarificationId,
     })
-    .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at')
+    .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices')
     .single()
   if (res.error) {
     await db.storage.from(FILE_BUCKET).remove([input.path])
     throw res.error
   }
   const r = res.data
-  return { id: r.id, path: r.path, fileName: r.file_name, mimeType: r.mime_type, sizeBytes: r.size_bytes, clarificationId: r.clarification_id, createdAt: r.created_at }
+  return { id: r.id, path: r.path, fileName: r.file_name, mimeType: r.mime_type, sizeBytes: r.size_bytes, clarificationId: r.clarification_id, createdAt: r.created_at, hasPrices: r.has_prices }
+}
+
+/** Admin: tag a file as carrying prices (hidden from engineers) or not. Migration 0100's policy refuses an engineer here. */
+export async function setAttachmentHasPrices(id: string, hasPrices: boolean): Promise<void> {
+  const { error } = await requireSupabase().from('attachments').update({ has_prices: hasPrices }).eq('id', id)
+  if (error) throw error
 }
 
 /** The row first, then the object: a failed object removal leaves an orphan (swept later), never a row pointing at nothing. */
