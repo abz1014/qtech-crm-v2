@@ -929,6 +929,27 @@ function alignShortRow(cells: string[], cols: TableCols): string[] | null {
   return pc >= 0 && isNum(filled[pc] ?? '') ? filled : null
 }
 
+/**
+ * A row that starts with the serial number, then the end of the row above ("3 | 380 0.3 kg India | 3 | | Model: X | Brand: Y | 6 265
+ * 0.1 kg India"): the cells before the item's own cell are the previous item's (its price is the first number that is no weight),
+ * and the last cell holds the quantity and price run together. Null for any other row.
+ */
+function spillRow(cells: string[] | null, cols: TableCols, idx: ItemIndex[]): { lead: string; price: number | null; row: string[] } | null {
+  if (!cells || cells.length < 5 || cols.num < 0 || !/^\d{1,3}$/.test(cells[0] ?? '')) return null
+  const at = cells.findIndex((c, i) => i >= 2 && matchByContent(c, idx) !== null)
+  if (at < 2) return null
+  const lead = cells.slice(1, at).filter(Boolean)
+  if (!lead.length || lead.every(c => !/\d/.test(c))) return null
+  const first = /(?<![\d.])(\d[\d,]*(?:\.\d+)?)(?!\s*(?:kg|g|mm|cm)\b)(?![\d.])/i.exec(lead.join(' '))
+  const rest = cells.slice(at)
+  const tail = rest[rest.length - 1] ?? ''
+  const toks = tail.match(/\d[\d,]*(?:\.\d+)?(?:\s*(?:kg|g)\b)?|[A-Za-z][A-Za-z .&/-]*/g)
+  if (!toks || toks.length < 3 || !/^\d+$/.test((toks[0] ?? '').trim()) || !/^\d[\d,]*(?:\.\d+)?$/.test((toks[1] ?? '').trim())) return null
+  const desc = rest.slice(0, -1).filter(Boolean).join(' ')
+  const row = [cells[0] as string, desc, (toks[0] as string).trim(), (toks[1] as string).trim(), '', ...toks.slice(2).map(t => t.trim())]
+  return { lead: lead.join(' '), price: first ? Number((first[1] as string).replace(/,/g, '')) : null, row }
+}
+
 function qtyPriceTotal(cells: string[]): { qty: number; price: number } | null {
   const nums = cells.map((c, i) => {
     const t = c.trim().replace(/^(?:[A-Za-z$€£¥]{1,4}\.?\s?)/, '')
@@ -1251,7 +1272,8 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     d.lines.push(line.n)
   }
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    let line = rawLine
     if (!line.text) {
       blankSince = true
       cols = null
@@ -1259,6 +1281,16 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     }
     if (SEPARATOR_ROW.test(line.text)) continue
 
+    // A row whose first cells are the end of the row above (a mail export that scrambled the cells): that part goes to the item
+    // above, and the row goes on from its own item.
+    const spill = cols && current !== null && current.itemIdx !== null && current.f.prices.length === 0 ? spillRow(splitCells(line.text), cols, idx) : null
+    if (spill) {
+      const lf = analyse(spill.lead, opts.today)
+      const lp = spill.price !== null ? [{ value: spill.price, currency: cols?.headCur ?? null, ambiguous: false, anchored: true, kind: 'unit' as const, forQty: null, start: 0, end: 0 }] : []
+      if (lp.length) lf.prices = lp
+      mergeInto(current as Draft, lf, line)
+      line = { ...line, text: spill.row.join('	') }
+    }
     const cells = splitCells(line.text)
     const header = cells ? tableHeader(cells) : null
     if (header) {
@@ -1270,7 +1302,8 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     const rowCells = aligned ?? cells
     const rowCols = cols && rowCells && rowCells.length === cols.n ? cols : null
     // A list number in front of a sentence ("3.) Payment terms: ...") is a list number, not a price.
-    const analysable = cells ? line.text : line.text.replace(/^\s*\d{1,2}\s*[.)]+\s*(?=[A-Za-z])/, '')
+    // (A table row under a heading: its serial number is not a price either.)
+    const analysable = cells ? (cols && !rowCols && cells.length <= 2 && cols.num >= 0 && /^\d{1,3}$/.test(cells[0] ?? '') ? cells.slice(1).join(String.fromCharCode(9)) : line.text) : line.text.replace(/^\s*\d{1,2}\s*[.)]+\s*(?=[A-Za-z])/, '')
     const f = rowCols && rowCells ? analyseRow(rowCells, rowCols, opts.today) : analyse(analysable, opts.today)
     // A row whose empty cells were trimmed ends in "NA.": no price for this item.
     if (!f.regret && !rowCols && cells && cells.length >= 3 && f.prices.length === 0 && /^(?:n\.?\/?a\.?|nil|not\s+available|unavailable)$/i.test(cells[cells.length - 1] ?? '')) {
