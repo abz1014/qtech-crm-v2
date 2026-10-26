@@ -28,6 +28,36 @@ export function useSupplierCandidates(enabled: boolean) {
   return useQuery({ queryKey: qk.intake.suppliers(), queryFn: api.listSupplierCandidates, enabled, staleTime: 60_000 })
 }
 
+/** The curated product categories, for resolving the dictionary's guess and for the category picker. */
+export function useCuratedCategories(enabled = true) {
+  return useQuery({ queryKey: qk.intake.categories(), queryFn: api.listCuratedCategories, enabled, staleTime: 5 * 60_000 })
+}
+
+/**
+ * What the ranking needs beyond the item memory (C3): each supplier's evidence in the categories of the items, its price wins
+ * there (admin and sales only: never asked for an engineer), and how its last asks ended. Counts only; it never blocks the page:
+ * if it fails the list is ranked on the rest.
+ */
+export function useSupplierCategoryData(familyIds: readonly string[], supplierIds: readonly string[], today: string, enabled: boolean) {
+  const prices = useSeesPrices()
+  const fams = [...new Set(familyIds)].sort()
+  const sups = [...supplierIds].sort()
+  const signature = JSON.stringify([fams, sups.length, sups[0] ?? '', sups[sups.length - 1] ?? '', prices, today])
+  return useQuery({
+    queryKey: qk.intake.categoryEvidence(signature),
+    queryFn: async () => {
+      const [evidence, priceWins, recentAsks] = await Promise.all([
+        api.getCategoryEvidence(fams, sups),
+        prices ? api.getCategoryPriceWins(fams) : Promise.resolve([]),
+        api.getRecentAsks(sups, today),
+      ])
+      return { evidence, priceWins, recentAsks }
+    },
+    enabled: enabled && sups.length > 0,
+    staleTime: 60_000,
+  })
+}
+
 /**
  * What each candidate remembers about each item. `signature` changes when an item's description, brand or family does.
  * `excludeRfqId` (the RFQ detail page) leaves the open RFQ out of its own memory.
