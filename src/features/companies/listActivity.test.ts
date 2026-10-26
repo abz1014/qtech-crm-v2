@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { companyActivity } from '@/features/companies/listActivity'
+import { companyActivity, legDay, quoteAsks } from '@/features/companies/listActivity'
 
 describe('companyActivity (Companies list counts on both sides)', () => {
   it('counts a supplier by the RFQs it was asked about and its supplier orders, with its last activity', () => {
@@ -51,5 +51,27 @@ describe('companyActivity (Companies list counts on both sides)', () => {
     })
     expect(m.get('c')).toEqual({ rfqs: 2, orders: 1, last: '2026-10-19' })
     expect(m.get('nobody')).toBeUndefined()
+  })
+})
+
+describe('D9: imported quote lines and imported POs count', () => {
+  it('a price on an enquiry that was never stamped sent is an ask, dated by the day the price was recorded', () => {
+    const asks = quoteAsks([
+      { created_at: '2024-03-02T10:00:00Z', supplier_inquiries: { supplier_id: 'keller', rfq_id: 'r1', sent_on: null } },
+      { created_at: '2024-05-09T10:00:00Z', supplier_inquiries: [{ supplier_id: 'keller', rfq_id: 'r2', sent_on: null }] },
+      { created_at: '2024-05-09T10:00:00Z', supplier_inquiries: null },
+    ])
+    expect(asks).toEqual([
+      { supplier_id: 'keller', rfq_id: 'r1', sent_on: '2024-03-02' },
+      { supplier_id: 'keller', rfq_id: 'r2', sent_on: '2024-05-09' },
+    ])
+    expect(companyActivity({ rfqs: [], orders: [], asks, legs: [] }).get('keller')).toEqual({ rfqs: 2, orders: 0, last: '2024-05-09' })
+  })
+
+  it('an imported PO with no placed date is dated by its order, not by the day it was imported', () => {
+    const day = (iso: string) => iso.slice(0, 10)
+    expect(legDay({ placed_on: null, created_at: '2026-10-20T08:00:00Z', orders: { ordered_on: '2024-06-01' } }, day)).toBe('2024-06-01')
+    expect(legDay({ placed_on: '2024-06-03', created_at: '2026-10-20T08:00:00Z', orders: [{ ordered_on: '2024-06-01' }] }, day)).toBe('2024-06-03')
+    expect(legDay({ placed_on: null, created_at: '2026-10-20T08:00:00Z', orders: null }, day)).toBe('2026-10-20')
   })
 })

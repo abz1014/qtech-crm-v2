@@ -165,14 +165,14 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(p).toContainText(ordRef(m.prov.order.number))
     await expect(p).toContainText('Not final')
     await expect(p.getByTestId('margin-value')).toContainText('(est.)') // round 3: an estimate, greyed
-    // Mistakes to fix (the old Exceptions tab) is one row of the Month end checklist: one tap from there.
+    // Mistakes to fix (the old Exceptions tab) is one row of the Lock a month checklist: one tap from there.
     await page.goto(`/money/month-end?month=${STMT.key}`)
     const row = page.getByTestId('check-things_to_check')
     await expect(row).toBeVisible()
     await resetCount(page)
     await row.getByRole('link').click()
     await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeVisible()
-    fe2('Month end to Mistakes to fix', (await readCount(page)).mouse, 1)
+    fe2('Lock a month to Mistakes to fix', (await readCount(page)).mouse, 1)
     const over = page.getByRole('list', { name: 'Mistakes to fix' }).getByRole('listitem').filter({ hasText: ordRef(m.over.order.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
     await expect(over.getByRole('link', { name: 'View order' })).toHaveAttribute('href', `/orders/${m.over.order.id}`)
@@ -188,7 +188,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   const page = await openPage(ctx, `/money/month-end?month=${STMT.key}`)
 
   await test.step('the checklist knows the bank is ticked; closing the month is 2 taps', async () => {
-    await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /^Month end/ })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /^Lock a month/ })).toHaveAttribute('aria-current', 'page')
     // nothing left to tick: a clear check is not listed, it is named on the "clear" line
     await expect(page.getByTestId('check-bank_unticked')).toHaveCount(0)
     await expect(page.getByTestId('checks-clear')).toContainText('Not matched to the bank statement')

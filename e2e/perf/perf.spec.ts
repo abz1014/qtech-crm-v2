@@ -162,7 +162,7 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
       ['Order page', `/orders/${s.orderId}`],
       ['Jobs list', '/jobs'],
       ['Job page', `/jobs/${s.jobKey}`],
-      ['Who owes us', '/money/receivables'],
+      ['To collect', '/money/receivables'],
       ['Companies', '/companies'],
     ]
     const rows = ['### Lighthouse mobile, simulated Slow 4G (rubric: LCP at most 2.5 s)', '', '| Screen | Score | FCP | LCP | TBT | JS transferred |', '|---|---|---|---|---|---|']

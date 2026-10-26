@@ -19,6 +19,7 @@ export function withShortlist(
       name: i.supplierName,
       city: i.supplierCity ?? null,
       group: 'supplied_before',
+      groupKey: 'supplied_before',
       groupLabel: 'Shortlist',
       preTicked: true,
       tierLabel: 'same item',
@@ -29,6 +30,11 @@ export function withShortlist(
       record: null,
       evidence: null,
       stats: null,
+      suppliedBefore: false,
+      manualTag: false,
+      demoted: false,
+      categoryId: null,
+      categoryName: null,
     }))
   return [...short, ...suggestions.filter(s => !short.some(x => x.supplierId === s.supplierId))]
 }

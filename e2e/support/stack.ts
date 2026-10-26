@@ -50,6 +50,9 @@ export async function openAs(page: Page, role: Role, path: string): Promise<void
   await page.getByLabel('Password', { exact: true }).fill(FIXTURE_PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL(url => !url.pathname.startsWith('/login'))
+  // The specs of the old RFQ board, RFQ page, Orders list and order page keep testing those pages: they stay on until their removal
+  // (src/app/oldAddresses.tsx). A spec that wants Jobs opens a /jobs address, or /rfqs?old=0.
+  await page.evaluate(() => window.localStorage.setItem('qtech.old-pages', '1'))
   await page.goto(path)
   // The shell (and so the Ctrl+K handler) only exists once the session has resolved. Wait for it, so a key pressed right after this returns is not lost.
   await page.locator('#main').waitFor()

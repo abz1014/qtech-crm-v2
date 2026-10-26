@@ -38,12 +38,11 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
   return [
     // Anywhere outside a text field
     { group: 'Anywhere', keys: [mod, 'K'], what: 'Search or jump to', where: 'Also works inside a text box', handles: ['k'] },
-    { group: 'Anywhere', keys: ['N'], what: 'New RFQ', handles: ['n'] },
+    { group: 'Anywhere', keys: ['N'], what: 'New enquiry', handles: ['n'] },
     { group: 'Anywhere', keys: ['E'], what: 'Add an expense', where: 'Admin', handles: ['e'] },
     { group: 'Anywhere', keys: ['O'], what: 'Order without enquiry', where: 'Admin and sales', handles: ['o'] },
-    { group: 'Anywhere', keys: ['C'], what: 'Paste or photo', handles: ['c'] },
     { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to To do', handles: ['g', 't'] },
-    { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture: opens Paste or photo with it', handles: ['v'] },
+    { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture on To do (starts a New enquiry) or on a job (adds it to the job)', handles: ['v'] },
     { group: 'Anywhere', keys: [mod, 'Z'], what: 'Undo the last action while its Undo button shows', handles: ['z'] },
     { group: 'Anywhere', keys: ['Esc'], what: 'Close a dialog, sheet or menu', handles: ['escape'] },
     { group: 'Anywhere', keys: ['?'], what: 'Show this list', handles: ['?'] },
@@ -64,7 +63,7 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
     { group: 'Search box', keys: ['Esc'], what: 'Close the search', handles: ['escape'] },
 
     // Writing
-    { group: 'Writing', keys: [mod, 'Enter'], what: 'Save', where: 'Paste or photo, customer questions, an answer', handles: ['enter'] },
+    { group: 'Writing', keys: [mod, 'Enter'], what: 'Save', where: 'Add to this job, customer questions, an answer', handles: ['enter'] },
     { group: 'Writing', keys: ['Enter'], what: 'Save an inline change', where: 'A name, a supplier price, a line price, the expected cost', handles: ['enter'] },
     { group: 'Writing', keys: ['Esc'], what: 'Cancel an inline change', handles: ['escape'] },
 

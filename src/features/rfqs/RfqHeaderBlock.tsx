@@ -458,6 +458,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
   const actions = useQuoteAndClose(rfq)
   const del = useDeleteRfqFlow(rfq)
   const edit = useEditRfqFlow(rfq)
+  const prices = useSeesPrices()
   const hist = useHistoryPanel({ table: 'rfqs', id: rfq.id, context: `${rfqRef(rfq.number)} · ${rfq.company.name}` })
   const main = useMainActions(rfq, facts)
   const s = rfq.state
@@ -535,9 +536,11 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
           <Button size="touch" icon={Pencil} onClick={edit.ask}>
             Edit RFQ details
           </Button>
-          <Button size="touch" icon={HistoryIcon} onClick={hist.ask}>
-            History
-          </Button>
+          {prices ? (
+            <Button size="touch" icon={HistoryIcon} onClick={hist.ask}>
+              History
+            </Button>
+          ) : null}
           {del.ask ? (
             <Button size="touch" icon={Trash2} onClick={del.ask}>
               Delete RFQ

@@ -43,13 +43,13 @@ import {
 } from '@/features/money/invoices/model'
 
 /*
- * Money > Invoices & GST (M01; g2-money "GST register, by invoice date" and "month stamping"). Admin and sales: the one register,
+ * Money > Invoices (M01; g2-money "GST register, by invoice date" and "month stamping"). Admin and sales: the one register,
  * every invoice goes to FBR. Grouped by invoice month with month subtotals; the courier (TCS) and FBR states are one chip each
  * (owner decision 2026-10-19: the chip or the bar, not both), "Needs attention" for tax not deposited in an earlier month and for a
  * step recorded without the one before it. Sales tick and stamp like the admin (Today sends them the TCS and FBR items, and the
  * stamp functions of 0020 accept them); their register leaves out the Net and GST columns, and Export stays the admin's.
  *
- * Month stamping: tick a month (1), then "Sent by TCS today" (2), paste the PSID once and press Enter or "Add PSID", then
+ * Month stamping: tick a month (1), then "Invoice posted today" (2), paste the PSID once and press Enter or "Add PSID", then
  * "Deposited today" (3): at most 3 taps and 1 paste. Each stamp writes today's date to the ticked invoices, and Undo stays on the
  * toast for 10 seconds. Export is admin only (in the toolbar's More menu); sales see the same register without it.
  *
@@ -76,7 +76,7 @@ export function GstRegisterPage() {
   const toast = useToast()
   const stamps = useStamps()
   const [params, setParams] = useSearchParams()
-  // Today's "FBR attention" item opens it on Needs attention (?attention=1), and "not sent by TCS" on that view (?tcs=1).
+  // Today's "FBR attention" item opens it on Needs attention (?attention=1), and "not posted" on that view (?tcs=1).
   const [view, setView] = useState<RegisterView>(() => (params.get('attention') === '1' ? 'attention' : params.get('tcs') === '1' ? 'tcs' : 'all'))
   const attention = view === 'attention'
   const tcs = view === 'tcs'
@@ -220,10 +220,10 @@ export function GstRegisterPage() {
     <div className="flex flex-wrap items-center gap-3">
       <h2 className="text-base font-semibold">GST register</h2>
       <InfoTip label="About sending, FBR and PSID">
-        By invoice date{all.length > 0 ? `, ${rangeLabel(all)}` : ''}. <b className="font-medium text-fg">Sent to customer</b> means the TCS courier took
+        By invoice date{all.length > 0 ? `, ${rangeLabel(all)}` : ''}. <b className="font-medium text-fg">Invoice posted</b> means the TCS courier took
         the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the tax office: the GST on every invoice is deposited with FBR.{' '}
         <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit; one PSID can cover several invoices. Money actually
-        received is under Who owes us.
+        received is under To collect.
       </InfoTip>
     </div>
   )
@@ -304,7 +304,7 @@ export function GstRegisterPage() {
                 </span>
                 <span className="flex-1" />
                 <Button size="sm" icon={Truck} onClick={() => void stamp('tcs')} disabled={busy} title="The TCS courier took them today">
-                  Sent to customer today
+                  Invoice posted today
                 </Button>
                 <span className="inline-flex items-center gap-2">
                   <InfoTip label="About PSID">PSID is the payment slip number FBR gives a tax deposit. Paste it once: it is written to every ticked invoice.</InfoTip>

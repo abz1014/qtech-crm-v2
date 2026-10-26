@@ -16,6 +16,8 @@ export interface JobNext {
   on: 'rfq' | 'order' | null
   /** The query string that opens the right dialog there (the old pages read ?issue=1 and ?won=1). */
   query?: string
+  /** The order-side steps are done on the job page itself (P5-D2): the stop whose section the button opens (0 enquiry ... 6 payment). */
+  stop?: number
 }
 
 export interface NextInput {
@@ -40,20 +42,22 @@ export function jobNext({ stage, stageDetail: d, role }: NextInput): JobNext {
         ? { text: 'The quotation has expired: ask the customer', tone: 'late', button: office ? null : 'Open the enquiry', on: office ? null : 'rfq' }
         : { text: 'Waiting for the customer to order', tone: 'waiting', button: office ? null : 'Mark won', on: office ? null : 'rfq', query: 'won=1' }
     case 'ordered':
-      return { text: has(d, 'to source') ? 'Choose a supplier for the items' : 'Place the supplier order', tone: 'now', button: 'Open the order', on: 'order' }
+      return has(d, 'to source')
+        ? { text: 'Choose a supplier for the items', tone: 'now', button: 'Choose suppliers', on: 'order', stop: 3 }
+        : { text: 'Place the supplier order', tone: 'now', button: 'Place the order', on: 'order', stop: 3 }
     case 'supplier_ordered':
-      if (has(d, 'late')) return { text: 'The goods are late: chase the supplier', tone: 'late', button: 'Open the order', on: 'order' }
-      if (has(d, 'arrived')) return { text: 'The goods are here: deliver them', tone: 'now', button: 'Open the order', on: 'order' }
-      return { text: 'Waiting for the goods', tone: 'waiting', button: 'Open the order', on: 'order' }
+      if (has(d, 'late')) return { text: 'The goods are late: chase the supplier', tone: 'late', button: 'Chase the supplier', on: 'order', stop: 4 }
+      if (has(d, 'arrived')) return { text: 'The goods are here: deliver them', tone: 'now', button: 'Deliver the goods', on: 'order', stop: 4 }
+      return { text: 'Waiting for the goods', tone: 'waiting', button: 'See the deliveries', on: 'order', stop: 4 }
     case 'delivered':
-      if (office) return has(d, 'installation to plan') ? { text: 'Installation needs a date', tone: 'now', button: 'Open the order', on: 'order' } : { text: has(d, 'installation planned') ? 'Installation is planned' : 'Delivered. The office takes it from here', tone: 'inert', button: null, on: null }
-      return { text: has(d, 'not invoiced') ? 'Delivered: send the invoice' : 'Invoice the rest', tone: 'now', button: 'Open the order', on: 'order' }
+      if (office) return has(d, 'installation to plan') ? { text: 'Installation needs a date', tone: 'now', button: 'Plan installation', on: 'order', stop: 4 } : { text: has(d, 'installation planned') ? 'Installation is planned' : 'Delivered. The office takes it from here', tone: 'inert', button: null, on: null }
+      return { text: has(d, 'not invoiced') ? 'Delivered: send the invoice' : 'Invoice the rest', tone: 'now', button: 'Create invoice', on: 'order', stop: 5 }
     case 'invoiced':
       if (office) return { text: 'Handled by the office', tone: 'inert', button: null, on: null }
-      return { text: has(d, 'part paid') ? 'Part paid: chase the balance' : 'Invoiced: chase the payment', tone: 'waiting', button: 'Open the order', on: 'order' }
+      return { text: has(d, 'part paid') ? 'Part paid: chase the balance' : 'Invoiced: chase the payment', tone: 'waiting', button: 'Chase the payment', on: 'order', stop: 5 }
     case 'paid':
       return has(d, 'installation to plan')
-        ? { text: 'Paid. Installation still needs a date', tone: 'now', button: 'Open the order', on: 'order' }
+        ? { text: 'Paid. Installation still needs a date', tone: 'now', button: 'Plan installation', on: 'order', stop: 4 }
         : { text: has(d, 'installation planned') ? 'Paid. Installation is planned' : 'Done', tone: 'done', button: null, on: null }
     case 'lost':
       return { text: 'Closed without an order', tone: 'inert', button: null, on: null }

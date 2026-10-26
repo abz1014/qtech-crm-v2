@@ -49,7 +49,7 @@ const CreateInvoiceDialog = lazyDialog(() => import('@/features/money/invoices/C
 const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
- * Money > Who owes us (M02; g2-money "receivables"; one name for admin and sales since the owner decision of 2026-10-19, and
+ * Money > To collect (M02; g2-money "receivables"; one name for admin and sales since the owner decision of 2026-10-19, and
  * where Money opens). What each order still owes, gross, GST included, through order_receivables(): admin and sales see
  * balances; only admin sees payment rows (there are none on this screen) and only admin can record a payment. On a phone each
  * card carries "Record payment" (admin) and "Open order", so the most frequent admin job needs no detour through the order.
@@ -198,7 +198,7 @@ export function ReceivablesPage() {
     return cols
   }, [today])
 
-  const tabLabel = 'Who owes us'
+  const tabLabel = 'To collect'
   const searching = search.trim() !== ''
   const clearSearch = () => {
     setSearch('')
@@ -276,7 +276,7 @@ export function ReceivablesPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <TableFilter label="Search balances" hint="Finds a balance by customer, order number or invoice number." value={search} onChange={setSearch} />
                   <span className="flex-1" />
-                  {/* No counts: the Who owes us tab carries the to-remind count (spec 2.2 #18). */}
+                  {/* No counts: the To collect tab carries the to-remind count (spec 2.2 #18). */}
                   <SegmentedControl
                     aria-label="Filter"
                     value={filter}

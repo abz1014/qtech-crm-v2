@@ -239,7 +239,7 @@ export interface InvoiceNextStep {
 }
 
 /**
- * The register's ONE Next step (round 3: it replaces the two chip columns "Sent to customer" and "Tax deposited"): a step
+ * The register's ONE Next step (round 3: it replaces the two chip columns "Invoice posted" and "GST paid to FBR"): a step
  * recorded out of order first, then GST late for an earlier month, then sending the invoice to the customer (by the TCS
  * courier), then depositing its GST, else Done.
  */

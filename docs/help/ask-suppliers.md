@@ -3,7 +3,7 @@ id: ask-suppliers
 title: Ask suppliers for prices
 roles: sales, admin
 keywords: suppliers, enquiry, float, prices, quote, whatsapp, message, ask more
-screens: /rfqs
+screens: /rfqs, /jobs
 related: supplier-prices
 ---
 1. After [Looks right: find suppliers], the usual suppliers are already ticked. Tick or untick any.

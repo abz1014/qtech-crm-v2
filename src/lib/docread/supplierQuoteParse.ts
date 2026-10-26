@@ -179,7 +179,7 @@ export function plainQuoteText(raw: string, units: boolean | 'payment' = true): 
 const TOTAL_LABEL =
   /^(?:sub\s*-?\s*total|total(?:\s+(?:amount|value|price))?|grand\s+total|net\s+(?:total|amount)|vat|gst|sales\s+tax|tax|freight|shipping(?:\s+cost)?|discount|packing|insurance|bank\s+charges|round(?:ing)?\s*off|amount\s+in\s+words|in\s+words|say\s*:|total\s+in\s+words)\b/i
 const BANK = /\b(?:banca|bonifico\s+su|coordinate\s+bancarie|bankverbindung|iban|swift|bic|account\s*(?:no\.?|number|title|name)|a\/c\s*(?:no|title)|beneficiary|bank\s*(?:name|address|details|account)|branch\s*code|routing|sort\s*code)\b/i
-const CONTACT = /^(?:tel|ph|phone|fax|mob|mobile|cell|email|e-mail|web|website|www\.|add(?:ress)?|attn|attention|to|from|cc|sent|subject|date|dated)\b\.?\s*[:.]?/i
+const CONTACT = /^(?:tel|ph|phone|fax|mob|mobile|cell|email|e-mail|web|website|www\.|add(?:ress)?|attn|attention|to|from|cc|sent|subject|date|dated|skype|wechat|whatsapp|qq|teams)\b\.?\s*\d?\s*[:.]?/i
 const REF_TOKEN = String.raw`[A-Z0-9][A-Z0-9/_.-]*\d[A-Z0-9/_.-]*`
 // "Quotation No. Q-118", "Our ref: Q-118", "Quote: SH/2026/118". The customer's own reference ("Your ref") is never the quote's.
 const QUOTE_REF = new RegExp(

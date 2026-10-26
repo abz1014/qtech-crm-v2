@@ -3,7 +3,7 @@ id: issue-po
 title: Order the goods from a supplier (PO)
 roles: sales, admin
 keywords: purchase order, po, order goods, supplier, placed, buy
-screens: /orders
+screens: /orders, /jobs
 related: goods-delivered
 ---
 1. Open the order. A line with no supplier yet? The green button is [Add supplier]: choose one first.

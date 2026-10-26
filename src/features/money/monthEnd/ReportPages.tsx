@@ -780,7 +780,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             <ClockTag>By invoice date</ClockTag>
             <InfoTip label="About GST and FBR">
               FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
-              Sales see Invoices &amp; GST only, never input tax or this report.
+              Sales see Invoices only, never input tax or this report.
             </InfoTip>
           </div>
         }

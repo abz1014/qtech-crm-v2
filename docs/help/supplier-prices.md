@@ -3,7 +3,7 @@ id: supplier-prices
 title: Enter a supplier's prices
 roles: sales, admin
 keywords: reply, offer, price, supplier, paste, pdf, quotation, lead time, currency, compare, no price
-screens: /rfqs
+screens: /rfqs, /jobs
 related: issue-quotation
 ---
 1. Open the RFQ. In [Suppliers asked], tap [Enter reply] beside the supplier.

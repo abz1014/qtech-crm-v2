@@ -9,8 +9,8 @@ import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
- * Money's navigation after the owner decision of 2026-10-19: four tabs, two levels, Who owes us first and where Money opens,
- * one name for admin and sales, Reports a link in the header (and from Month end), no third strip, and every old address
+ * Money's navigation after the owner decision of 2026-10-19: four tabs, two levels, To collect first and where Money opens,
+ * one name for admin and sales, Reports a link in the header (and from Lock a month), no third strip, and every old address
  * still landing somewhere sensible.
  */
 const MONTH = '2025-06' // long ended, so the close button is live whatever day the test runs
@@ -76,25 +76,25 @@ describe('Money tabs and landing', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Money')
   })
 
-  it('sales go straight to Who owes us', async () => {
+  it('sales go straight to To collect', async () => {
     at('/money', 'sales')
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/receivables'))
-    expect(screen.getByRole('link', { name: /^Who owes us/ })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: /^To collect/ })).toHaveAttribute('aria-current', 'page')
   })
 
   it('admin has five tabs in the decided order (Reports last), one strip only, and the h1 names the tab', async () => {
     at('/money/receivables')
     await screen.findByRole('navigation', { name: 'Money views' })
-    expect(tabs()).toEqual(['Who owes us', 'Invoices & GST', 'Expenses', 'Month end', 'Reports'])
+    expect(tabs()).toEqual(['To collect', 'Invoices', 'Expenses', 'Lock a month', 'Reports'])
     expect(screen.getAllByRole('navigation')).toHaveLength(1)
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/money/reports')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Who owes us')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('To collect')
   })
 
   it('sales see the same names (no "Order balances"), two tabs, and Reports', async () => {
     at('/money/receivables', 'sales')
     await screen.findByRole('navigation', { name: 'Money views' })
-    expect(tabs()).toEqual(['Who owes us', 'Invoices & GST', 'Reports'])
+    expect(tabs()).toEqual(['To collect', 'Invoices', 'Reports'])
     expect(screen.queryByText('Order balances')).toBeNull()
   })
 })
@@ -109,11 +109,11 @@ describe('old addresses keep working', () => {
     expect(screen.getByTestId('report-picker')).toHaveValue('pnl')
   })
 
-  it('Margins and Exceptions still open, inside Month end, with their plain names', async () => {
+  it('Margins and Exceptions still open, inside Lock a month, with their plain names', async () => {
     at('/money/exceptions')
     expect(await screen.findByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^Month end/ })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: 'Back to Month end' })).toHaveAttribute('href', '/money/month-end')
+    expect(screen.getByRole('link', { name: /^Lock a month/ })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Back to Lock a month' })).toHaveAttribute('href', '/money/month-end')
   })
 
   it('sales get the no-access page on a money report', async () => {
@@ -123,7 +123,7 @@ describe('old addresses keep working', () => {
 })
 
 describe('no Money tab carries a number (redesign phase 0: the one count is Today\'s)', () => {
-  it('Who owes us has no count, even with overdue payments (they are rows on Today)', async () => {
+  it('To collect has no count, even with overdue payments (they are rows on Today)', async () => {
     const overdue = (id: string, owner: string) => ({
       order_id: id, order_number: Number(id.slice(1)), company_id: 'c', owner_id: owner, gross_target: 118000, settled: 0, balance: 118000, overpaid_by: 0,
       due_on: '2025-01-01', is_overdue: true, payment_state: 'overdue', reminder_count: 0, data_trust: 'ok', last_reminded_on: null,
@@ -134,25 +134,25 @@ describe('no Money tab carries a number (redesign phase 0: the one count is Toda
       if (c.target === 'users') return { data: [{ id: 'u', role: 'admin', name: 'A' }, { id: 's', role: 'sales', name: 'S' }] }
       return respond(c)
     })
-    const tab = await screen.findByRole('link', { name: /^Who owes us/ })
+    const tab = await screen.findByRole('link', { name: /^To collect/ })
     await new Promise(r => setTimeout(r, 50))
-    expect(tab).toHaveAccessibleName(/^Who owes us$/)
+    expect(tab).toHaveAccessibleName(/^To collect$/)
     expect(screen.getByTestId('money-tabs').querySelectorAll('[data-needs-count]')).toHaveLength(0)
   })
 
-  it('Month end has no count; the checklist still says how many checks have something', async () => {
+  it('Lock a month has no count; the checklist still says how many checks have something', async () => {
     at(`/money/month-end?month=${MONTH}`, 'admin', c =>
       c.target === 'rpc:money_exceptions_input'
         ? { data: { orders: [{ id: 'o1', number: 7, orderedOn: null, cancelled: false, basisUnknown: true }], money: [], payments: [], expenses: [], invoices: [], legs: [], pos: [], legPaid: [] } }
         : respond(c),
     )
     expect(await screen.findByTestId('checks-summary')).toHaveTextContent('3 checks have something to look at')
-    expect(screen.getByRole('link', { name: /^Month end/ })).toHaveAccessibleName(/^Month end$/)
+    expect(screen.getByRole('link', { name: /^Lock a month/ })).toHaveAccessibleName(/^Lock a month$/)
   })
 })
 
-describe('Month end checklist', () => {
-  it('always offers Match bank statement, for the month, even when the bank checks are clear', async () => {
+describe('Lock a month checklist', () => {
+  it('always offers Bank check, for the month, even when the bank checks are clear', async () => {
     at(`/money/month-end?month=${MONTH}`, 'admin', c => (c.target === 'rpc:month_end_status' ? { data: [] } : respond(c)))
     await screen.findByTestId('checks-summary')
     expect(screen.queryByTestId('check-bank_unticked')).toBeNull()
@@ -169,7 +169,7 @@ describe('Month end checklist', () => {
     at(`/money/month-end?month=${MONTH}`)
     const bank = await screen.findByTestId('check-bank_unticked')
     expect(within(bank).getByRole('link')).toHaveAttribute('href', `/money/month-end/bank?month=${MONTH}`)
-    expect(within(bank).getByText('Match bank statement')).toBeInTheDocument()
+    expect(within(bank).getByText('Bank check')).toBeInTheDocument()
     const margins = screen.getByTestId('check-provisional_margins')
     expect(within(margins).getByText('Margin not final')).toBeInTheDocument()
     expect(within(margins).getByRole('link')).toHaveAttribute('href', '/money/margins?filter=paid-provisional')

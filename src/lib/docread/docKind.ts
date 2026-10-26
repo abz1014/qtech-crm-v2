@@ -226,10 +226,10 @@ const REPLY_CUE =
 const THREAD_CUE =
   /\b(?:any\s+update|update\??|status|remind\w*|chas\w+|delivery|deliver(?:ed)?|dispatch\w*|received|supplied|replacement|payment|invoice|purchase\s+order|pending|awaiting|still\s+waiting|feedback|follow(?:ing)?[\s-]?up|did\s+you|have\s+you|kindly\s+(?:update|confirm|advise)|costing|as\s+discussed|end\s+user|required\s+(?:cable|length))\b/i
 const PROMO_CUE =
-  /\b(?:distribut\w+|manufactur\w+|factory|trading|wholesale|stockist|we\s+(?:supply|sell|specializ\w+|provide|have|can\s+supply)|we\s+are\s+(?:a|an)\s+[\w\s-]{0,30}(?:supplier|distributor|manufacturer|company|trader)|our\s+(?:products?|company|services?|advantages?|strengths?|main|strong)|competitive|brand\s+new|wide\s+(?:range|coverage)|one-?stop|cooperat\w+|business\s+partner|introduce|hope\s+(?:this\s+email|to\s+hear)|still\s+in\s+need|heard\s+from\s+you|new\s+arrivals?|hot\s+sale|promotion|discount|catalog\w*|shortages?|cost-?saving|original\s+(?:and|&)\s+(?:new|genuine)|genuine|this\s+is\s+\w+(?:\s+\w+)?\s+from|we\s+distribute|stable\s+supply|inventory|100%\s+original|hard-to-find|strong\s+line|committed\s+to|commited\s+to|reliable\s+(?:supplier|lead)|independent\s+distributor|sourcing)\b/gi
+  /\b(?:distribut\w+|manufactur\w+|factory|trading|wholesale|stockist|we\s+(?:supply|sell|specializ\w+|provide|have|can\s+supply)|we\s+are\s+(?:a|an)\s+[\w\s-]{0,30}(?:supplier|distributor|manufacturer|company|trader)|our\s+(?:products?|company|services?|advantages?|strengths?|main|strong)|competitive|brand\s+new|wide\s+(?:range|coverage)|one-?stop|cooperat\w+|business\s+partner|introduce|hope\s+(?:this\s+email|to\s+hear)|still\s+in\s+need|heard\s+from\s+you|new\s+arrivals?|hot\s+sale|promotion|discount|catalog\w*|shortages?|cost-?saving|original\s+(?:and|&)\s+(?:new|genuine)|genuine|this\s+is\s+\w+(?:\s+\w+)?\s+from|we\s+distribute|stable\s+supply|inventory|100%\s+original|hard-to-find|strong\s+line|committed\s+to|commited\s+to|reliable\s+(?:supplier|lead)|helping\s+customers|our\s+partners|(?:products?|brands?)\s+including|tailored\s+quote|independent\s+distributor|sourcing)\b/gi
 /** Ours: "please find attached our quotation". */
 /** A seller inviting us to send them our enquiries ("send me your RFQ"): the other way round from asking us for a price. */
-const INVITE = /(?:send|share|forward|email)\s+(?:(?:me|us|you|them|your|any|the|all|those|these|an?)\s+)*(?:current\s+|new\s+|hard-to-find\s+)?(?:rfqs?|inquir\w+|enquir\w+|requirements?|requests?|part\s+numbers?)|your\s+(?:inquiry|enquiry)s?(?:\s+(?:and|&)\s+rfqs?)?|any\s+(?:current\s+)?rfqs?|looking\s+forward\s+to\s+(?:your\s+)?(?:inquir\w+|enquir\w+|rfq)|reply\s+with\s+(?:pn|part)|\bI\s+(?:will|can|shall)\s+(?:provide|send|give|quote|offer|get\s+back)\b[^.!?\n]*[.!?]?|\bif\s+you\s+(?:have|need|are|want|would|can)\b[^.!?\n]*[.!?]?/gi
+const INVITE = /(?:send|share|forward|email)\s+(?:(?:me|us|you|them|your|any|the|all|those|these|an?)\s+)*(?:current\s+|new\s+|hard-to-find\s+)?(?:rfqs?|inquir\w+|enquir\w+|requirements?|requests?|part\s+numbers?)|your\s+(?:inquiry|enquiry)s?(?:\s+(?:and|&)\s+rfqs?)?|any\s+(?:current\s+)?rfqs?|looking\s+forward\s+to\s+(?:your\s+)?(?:inquir\w+|enquir\w+|rfq)|reply\s+with\s+(?:pn|part)|reply\s+with\s+your\s+(?:\w+\s+){0,2}(?:needs|requirements?|inquir\w+|enquir\w+|rfqs?)(?:\s+or\s+rfqs?)?|do\s+you\s+have\s+any\s+(?:current\s+)?(?:inquir\w+|enquir\w+|rfqs?)(?:\s+to\s+quote)?|\bI(?:\s+(?:will|can|shall)|['’]ll)\s+(?:provide|send|give|quote|offer|get\s+back)\b[^.!?\n]*[.!?]?|\bif\s+you\s+(?:have|need|are|want|would|can)\b[^.!?\n]*[.!?]?/gi
 const OWN_OFFER = /\b(?:please\s+find\s+(?:the\s+)?attached\s+(?:is\s+)?our|our\s+(?:price\s+)?(?:quotation|quote|offer)|our\s+best\s+offer|attached\s+(?:is\s+)?our)\b/i
 /** An order already placed or delivered: the thread is a customer's, not a supplier's. */
 const ORDER_CUE = /\bpo\s*#|\b(?:p\.o\.|purchase\s+order|order\s+(?:no|number|#)|delivery\s+(?:status|schedule)|supplied|received\s+(?:the\s+)?(?:item|material|goods|sensor)|replacement)\b/i
@@ -252,7 +252,10 @@ function classifyMail(m: Newest): DocKindResult | null {
   const subjectRe = RE_SUBJECT.test(m.subject ?? '')
 
   if (own) {
-    if (OWN_OFFER.test(body) || (prices >= 2 && !asks)) return done('own-quote', 0.7, ['written by us', 'our quotation wording'])
+    // Talking about a purchase order or a delivery, with no price in it, is not our quotation.
+    if ((OWN_OFFER.test(body) || (prices >= 2 && !asks)) && !(ORDER_CUE.test(body) && prices === 0)) return done('own-quote', 0.7, ['written by us', 'our quotation wording'])
+    // Asking a supplier for the price of an item with its quantity is our enquiry even when it also thanks for an earlier quotation.
+    if (asks > 0 && /\b(?:quantity|qty)\s*[:=]?\s*\d/i.test(body)) return done('own-rfq', 0.7, ['written by us', 'asks for a price of an item with its quantity'])
     if (asks > 0 && !THANKS_QUOTE.test(body) && !subjectRe) return done('own-rfq', 0.7, ['written by us', 'asks for a quotation'])
     if (words(body) > 0 || m.forwarded) return done('follow-up', 0.6, ['written by us', 'no request for a price or quotation from us'])
     return null
@@ -264,6 +267,8 @@ function classifyMail(m: Newest): DocKindResult | null {
     const weOffered = OWN_OFFER.test(m.ourQuoted) || /\bpleased\s+to\s+offer\b/i.test(m.ourQuoted)
     const weAsked = count(ASK_PHRASE, m.ourQuoted.replace(INVITE, ' ')) > 0
     const orderThread = ORDER_CUE.test(m.subject ?? '') || count(ORDER_CUE_G, m.quoted) >= 2
+    // A customer thanking us for a quotation with a remark on it ("Thanks for your quotation. Pl mention the origin"): no new request.
+    if (THANKS_QUOTE.test(body) && words(askBody) <= 40 && !/\b(?:quantity|qty)\b|\d\s*(?:nos?|pcs?|sets?|units?|ea|each|pieces?)\b|\b[A-Z0-9]{2,}-[A-Z0-9]{2,}|\balso\s+(?:quote|price|send|share)|\bplease\s+(?:quote|price)\b/i.test(body)) return done('follow-up', 0.6, ['thanks us for a quotation', 'no new request'])
     if (asks > 0 && asks >= offer) return null
     if (offer >= 2) return done('supplier-quote', 0.7, ['answers a message we sent', 'prices or a reply to the request'])
     if (weOffered && !weAsked) return done('follow-up', 0.6, ['answers our quotation', 'no prices'])

@@ -41,7 +41,7 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await expect(page.getByText('Your work shows up here', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'New RFQ' }).first()).toBeVisible()
 
-  await page.goto('/rfqs')
+  await page.goto('/rfqs?old=1') // the old RFQ list (this person signed in through the form, so the old pages are not on yet)
   await expect(page.getByText('No RFQs of yours yet', { exact: true })).toBeVisible()
   await page.goto('/orders')
   await expect(page.getByText('No orders of yours yet', { exact: true })).toBeVisible()

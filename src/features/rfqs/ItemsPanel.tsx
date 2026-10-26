@@ -18,6 +18,7 @@ import { useToast } from '@/ui/useToast'
 import { LastPriceChipView } from '@/features/rfqs/LastPriceChip'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ItemMenu } from '@/features/rfqs/ItemEdit'
+import { CategoryChip } from '@/features/rfqs/CategoryChip'
 import { RateBar } from '@/features/rfqs/RateBar'
 import { InfoTip } from '@/ui/InfoTip'
 import { focusReplyInput } from '@/features/rfqs/replyFocus'
@@ -402,8 +403,9 @@ export function ItemsPanel({
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-fg-muted">
                       {q ? <span className="num">{q}</span> : null}
                       {item.brandName ? <Dot>{item.brandName}</Dot> : null}
-                      {item.familyName ? <Dot>{item.familyName}</Dot> : null}
-                      {!item.brandName && !item.familyName ? <Dot>No brand given</Dot> : null}
+                      <Dot>
+                        <CategoryChip rfqId={rfq.id} item={item} />
+                      </Dot>
                       {sell ? (
                         <span data-sell-note={sell.kind} className="inline-flex items-center gap-2">
                           <span aria-hidden="true" className="size-[3px] rounded-round bg-fg-muted" />

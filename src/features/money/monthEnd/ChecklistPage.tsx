@@ -14,8 +14,7 @@ import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
-import { useSession } from '@/app/session'
-import { openFindings } from '@/features/money/exceptions/checked'
+import { openFindings, useCheckedSet } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
@@ -25,9 +24,9 @@ import { closeWindowDay, formatClosedAt, formatClosedDay } from '@/features/mone
 import { closeButtonLabel, closedThrough, closeTarget, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
 
 /*
- * Money › Month end (M10; admin only). Owner decision 2026-10-19: the phone layout everywhere. The month and its Close button
+ * Money › Lock a month (M10; admin only). Owner decision 2026-10-19: the phone layout everywhere. The month and its Close button
  * on top; then ONLY the checks that have items, one row each, with what the count is made of and a link to the screen that fixes
- * it (Match bank statement, Expenses, Margins, Invoices & GST, Who owes us, Mistakes to fix); the checks that are clear are one
+ * it (Bank check, Expenses, Margins, Invoices, To collect, Mistakes to fix); the checks that are clear are one
  * line. None blocks the close: "Close September" is two taps, the button then the confirmation, and what closing does is one (i)
  * beside the button. The money reports for the month are one link to Reports. Closed months, with Reopen, sit under the list.
  *
@@ -48,8 +47,8 @@ export function ChecklistPage() {
   const [reopen, setReopen] = useState<ClosedMonth | null>(null)
   const isClosed = ctx.state?.kind === 'closed'
   const recon = useReconciliationInput(true)
-  const session = useSession()
-  const things = useMemo(() => (recon.data ? openFindings(session.status === 'signed-in' ? session.user.id : null, computeReconciliationExceptions(recon.data)) : null), [recon.data, session])
+  const checkedTicks = useCheckedSet()
+  const things = useMemo(() => (recon.data ? openFindings(checkedTicks, computeReconciliationExceptions(recon.data)) : null), [recon.data, checkedTicks])
 
   return (
     <MoneyFrame active="month-end">
@@ -57,7 +56,7 @@ export function ChecklistPage() {
         <MonthPager month={ctx.month} thisMonth={ctx.thisMonth} go={ctx.go} />
         {ctx.state ? <MonthStateChip closed={isClosed} /> : null}
         <span className="flex-1" />
-        {/* Match bank statement is the bank check's own row (and the clear line's link when it has nothing), never twice. */}
+        {/* Bank check is the bank check's own row (and the clear line's link when it has nothing), never twice. */}
         <Link
           to={`/money/reports${ctx.search}`}
           className="inline-flex min-h-touch items-center gap-2 text-sm font-medium text-primary hover:underline md:min-h-0"
@@ -134,7 +133,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const target = closeTarget(ctx.month, state)
   const phone = useMediaQuery('(max-width: 767px)')
   // The sticky bar replaces the bottom tabs on a phone (StickyActionBar's contract); the bar's back arrow leads out.
-  useMobileBar({ title: 'Month end', back: 'history', fallback: '/money/receivables', hideTabs: true })
+  useMobileBar({ title: 'Lock a month', back: 'history', fallback: '/money/receivables', hideTabs: true })
   const navigate = useNavigate()
   // A closed month's next step is reading its reports (reopening is in the list below), so that is the one green button.
   const button = (size: 'lg' | 'touch') =>
@@ -186,7 +185,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
       </div>
       {phone ? (
         // The phone's one action bar (spec 5.3), the same button as on desktop.
-        <StickyActionBar label="Month end actions" primary={button('touch')} secondary={closed ? undefined : tip} />
+        <StickyActionBar label="Lock a month actions" primary={button('touch')} secondary={closed ? undefined : tip} />
       ) : (
         <div className="flex items-center gap-2">
           {button('lg')}
@@ -259,7 +258,7 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
               <>
                 {' '}
                 <Link to={`/money/month-end/bank${ctx.search}`} data-testid="month-bank-link" className="font-medium text-primary hover:underline">
-                  Match bank statement
+                  Bank check
                 </Link>
               </>
             ) : null}

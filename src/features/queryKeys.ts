@@ -40,6 +40,7 @@ export type CompanyPart =
   | 'supplier-activity'
   | 'supplier-record'
   | 'supplier-brand-quotes'
+  | 'category-evidence'
   | 'history'
   | 'money'
 
@@ -92,6 +93,10 @@ function intake() {
   return {
     all,
     suppliers: () => [...all, 'suppliers'] as const,
+    /** The curated product categories (brands of kind family): the dictionary's names resolve to these. */
+    categories: () => [...all, 'categories'] as const,
+    /** Per-category evidence, price wins and recent asks behind the supplier ranking (C3). */
+    categoryEvidence: (signature: string) => [...all, 'category-evidence', signature] as const,
     memory: (signature: string) => [...all, 'memory', signature] as const,
     /** The up to three evidence orders of one supplier for one item (the memory card). */
     evidence: (signature: string) => [...all, 'evidence', signature] as const,
@@ -165,6 +170,8 @@ function settings() {
     /** M13: the category list with usage counts, and the active-only list new expenses choose from. */
     categories: () => [...all, 'categories'] as const,
     activeCategories: () => [...all, 'categories', 'active'] as const,
+    /** C4: the product categories (families) with their curated flag and tagged suppliers. */
+    productCategories: () => [...all, 'product-categories'] as const,
   }
 }
 

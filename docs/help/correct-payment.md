@@ -3,7 +3,7 @@ id: correct-payment
 title: Correct a recorded payment
 roles: admin
 keywords: correct, fix payment, wrong amount, wrong date, edit payment, cash or bank
-screens: /orders, /money/receivables
+screens: /orders, /money/receivables, /jobs
 related: remove-payment, record-payment
 ---
 1. Open the order. Under [Invoices and payments], tap ⋯ beside the payment, then [Correct].

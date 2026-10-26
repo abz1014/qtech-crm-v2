@@ -47,7 +47,7 @@ function shell(path = '/todo', role: 'admin' | 'sales' | 'engineer' = 'sales') {
             }
           >
             <Route path="/todo" element={<input aria-label="Notes" />} />
-            <Route path="/rfqs/new" element={<p>Intake</p>} />
+            <Route path="/enquiries/new" element={<p>Intake</p>} />
             <Route path="/rfqs" element={<p>RFQs page</p>} />
             <Route path="/orders" element={<p>Orders page</p>} />
             <Route path="/bar" element={<BarPage />} />
@@ -76,27 +76,27 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     await import('@/ui/CommandPalette')
   }, 60_000)
 
-  it('idle lists Actions: New RFQ (N), Paste or photo (C), Go to To do (G T)', async () => {
+  it('idle lists Actions: New enquiry (N), Go to To do (G T); no Paste or photo any more', async () => {
     const user = userEvent.setup()
     shell()
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Paste or photoActionC', 'Go to To doG T']))
+    expect(text).toEqual(expect.arrayContaining(['New enquiryGo to intakeN', 'Go to To doG T']))
+    expect(text.some(t => /Paste or photo/.test(t ?? ''))).toBe(false)
   })
 
-  it('N opens intake, C opens the capture surface, G then T goes to To do', async () => {
+  it('N opens intake, G then T goes to To do, and C opens nothing (the Paste or photo sheet is gone)', async () => {
     shell('/rfqs')
     press('n')
     expect(await screen.findByText('Intake')).toBeInTheDocument()
-    expect(screen.getByTestId('where').textContent).toBe('/rfqs/new')
+    expect(screen.getByTestId('where').textContent).toBe('/enquiries/new')
     press('g')
     press('t')
     expect(screen.getByTestId('where').textContent).toBe('/todo')
-    // From the page, as a real key press is: CaptureProvider's document listener answers C (PaletteHost no longer does).
     press('c', document.body)
-    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByTestId('where').textContent).toBe('/todo')
   })
 
@@ -189,7 +189,6 @@ describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
   it('every key handled in the shell, palette, tables, toasts and Add expenses is listed in shortcuts.ts', () => {
     const root = path.resolve(__dirname, '../../..')
     const files = [
-      'src/app/capture/CaptureProvider.tsx',
       'src/app/palette/PaletteHost.tsx',
       'src/ui/CommandPalette.tsx',
       'src/ui/DataTable.tsx',

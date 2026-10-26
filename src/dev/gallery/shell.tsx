@@ -12,8 +12,8 @@ const ALL = ['admin', 'sales', 'engineer'] as const
 // Today points at the gallery itself, so it is the active destination in the photo.
 const FIVE: NavItem[] = [
   { key: 'today', label: 'Today', path: '/dev/gallery', icon: CalendarCheck, roles: ALL },
-  { key: 'rfqs', label: 'RFQs', path: '/rfqs', icon: FileText, roles: ALL },
-  { key: 'orders', label: 'Orders', path: '/orders', icon: Package, roles: ALL },
+  { key: 'rfqs' as NavKey, label: 'RFQs', path: '/rfqs', icon: FileText, roles: ALL },
+  { key: 'orders' as NavKey, label: 'Orders', path: '/orders', icon: Package, roles: ALL },
   { key: 'companies', label: 'Companies', path: '/companies', icon: Building2, roles: ALL },
   { key: 'money', label: 'Money', path: '/money', icon: Wallet, roles: ['admin', 'sales'] },
 ]
@@ -21,7 +21,8 @@ const SIX: NavItem[] = [...FIVE, { key: 'reports' as NavKey, label: 'Reports', p
 
 // The widest realistic bar: an admin, every count, three-digit RFQs.
 const USER: SessionUser = { id: 'gallery-admin', name: 'Farhan Mirza', role: 'admin' }
-const COUNTS: Partial<Record<NavKey, number>> = { today: 9, rfqs: 114, orders: 27, money: 3 }
+// The photo keeps the old five destinations and their counts (a fixed list, so it only changes when the shell does).
+const COUNTS = { today: 9, rfqs: 114, orders: 27, money: 3 } as unknown as Partial<Record<NavKey, number>>
 
 const noop = () => {}
 
@@ -30,8 +31,8 @@ export function ShellScene() {
   const items = params.get('tabs') === '6' ? SIX : FIVE
   return (
     <div data-shell-scene="" className="-m-6 grid min-h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
-      <TopBar user={USER} counts={COUNTS} items={items} onSearch={noop} onCapture={noop} />
-      <MobileBar user={USER} title="Companies" onSearch={noop} onCapture={noop} />
+      <TopBar user={USER} counts={COUNTS} items={items} onSearch={noop} />
+      <MobileBar user={USER} title="Companies" onSearch={noop} />
       <div className="grid content-start gap-2 p-6">
         <p className="text-2xl font-semibold tracking-tight">Today</p>
         <p className="max-w-prose text-sm text-fg-2">The page draws here. The bars above and below are the real shell components.</p>

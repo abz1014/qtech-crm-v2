@@ -17,11 +17,11 @@ import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { useSetCostsCompleteMany } from '@/features/money/costs/hooks'
 import { useOrderMargins } from '@/features/money/hooks'
-import { isPaidProvisional, marginPct, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
+import { isPaidProvisional, marginPct, marginTotals, noCostsYet, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
 /*
- * Money > Month end > Margins (g2-money board "Admin: order margins"; M04). Whole-life margin per order, from v_order_money. Admin
- * only. Reached from the Month end checklist ("Margin not final") and from Reports (?from=reports), with a back link to either.
+ * Money > Lock a month > Margins (g2-money board "Admin: order margins"; M04). Whole-life margin per order, from v_order_money. Admin
+ * only. Reached from the Lock a month checklist ("Margin not final") and from Reports (?from=reports), with a back link to either.
  * Only orders with costs marked complete are totalled. A provisional margin is shown with the dashed mark and not added up;
  * an order with an unknown price basis has no margin, is labelled, and is left out of every total.
  * Round 2 (R2-13): the margin sits beside the customer, bigger; the cost is ONE line (what the margin uses: the actual cost,
@@ -44,6 +44,8 @@ function stateWord(r: MarginRow): string {
 /** A margin that is not final is an estimate: grey, with "(est.)" (round 3: "0 so far" showed a 100% margin in full black). */
 function MarginFigure({ r, size }: { r: MarginRow; size?: 'lg' }) {
   if (r.state === 'basis_unknown' || r.margin === null) return <Money value={null} prefix={false} size={size} />
+  // Plan D6: with no cost yet the margin would be the whole sale. Say so in words (a settled imported order has its costs marked complete, so it is final and never says this).
+  if (noCostsYet(r)) return <span className="text-sm text-fg-2" data-testid="costs-not-entered">Costs not entered yet</span>
   const est = r.state === 'provisional'
   return (
     <span className={cn('inline-flex items-baseline gap-1', est && 'text-fg-muted')}>
@@ -135,7 +137,7 @@ export function MarginsPage() {
   return (
     <MoneyFrame active={fromReports ? 'reports' : 'month-end'}>
       <MoneySubHeader
-        back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Month end' }}
+        back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Lock a month' }}
         title="Order margins"
         meta={
           <InfoTip label="About margins">

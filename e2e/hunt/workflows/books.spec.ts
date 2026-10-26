@@ -715,7 +715,7 @@ test('books: two admins, one closes last month while the other has Add expense o
       if (!(await a.getByTestId('pnl-frozen').isVisible({ timeout: 5_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'pnl closed', what: 'no "Frozen when the month was closed" on the P&L' })
     })
 
-    await probe(info, b, 'phone: Month end of the closed month', async () => {
+    await probe(info, b, 'phone: Lock a month of the closed month', async () => {
       await visit(b, info, `/money/month-end?month=${M1.key}`, 'month-end phone closed')
       await layout(b, info, 'month-end phone closed')
       await shot(b, 'books-month-end-closed-phone')
@@ -1143,7 +1143,7 @@ test('settings: company profile, exchange rates, targets, categories, my details
         const pal = rp.getByRole('dialog', { name: 'Search or jump to' })
         await pal.waitFor({ timeout: 5_000 })
         const offered: string[] = []
-        for (const w of ['Team', 'Targets', 'Expense categories', 'Month end', 'In vs out', 'Add expenses', 'Match bank statement', 'Order margins']) {
+        for (const w of ['Team', 'Targets', 'Expense categories', 'Lock a month', 'In vs out', 'Add expenses', 'Bank check', 'Order margins']) {
           await pal.getByRole('combobox').fill(w)
           await sleep(700)
           if ((await pal.getByRole('option', { name: new RegExp(`^${esc(w)}`) }).count()) > 0) offered.push(w)

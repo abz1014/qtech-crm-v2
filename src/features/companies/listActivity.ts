@@ -27,6 +27,36 @@ export interface SupplierLeg {
   on: string | null
 }
 
+/** A quote line on an enquiry that was never stamped sent (an imported quote: the old CRM kept the price, not the send). */
+export interface QuoteOnUnsentAsk {
+  created_at: string
+  supplier_inquiries: { supplier_id: string; rfq_id: string; sent_on: string | null } | { supplier_id: string; rfq_id: string; sent_on: string | null }[] | null
+}
+
+/**
+ * D9 (imported quote lines): an enquiry that has a price on it was asked, whether or not its sent date was ever kept. It counts as
+ * an ask for that supplier, dated by the day the price was recorded (the old CRM's own date for an imported one), so a supplier
+ * known only by what it quoted is not shown as "no RFQs, no activity".
+ */
+export function quoteAsks(rows: readonly QuoteOnUnsentAsk[]): SupplierAsk[] {
+  const out: SupplierAsk[] = []
+  for (const r of rows) {
+    const i = Array.isArray(r.supplier_inquiries) ? r.supplier_inquiries[0] : r.supplier_inquiries
+    if (!i) continue
+    out.push({ supplier_id: i.supplier_id, rfq_id: i.rfq_id, sent_on: i.sent_on ?? r.created_at.slice(0, 10) })
+  }
+  return out
+}
+
+/**
+ * D9 (imported POs): the day a supplier order counts from. Its placed date; an imported PO often has none, and then the day its order
+ * was made, and only last the day the row was added (for an imported one that is the import day, which says nothing).
+ */
+export function legDay(l: { placed_on: string | null; created_at: string; orders?: { ordered_on: string | null } | { ordered_on: string | null }[] | null }, toDay: (iso: string) => string): string {
+  const order = Array.isArray(l.orders) ? l.orders[0] : l.orders
+  return l.placed_on ?? order?.ordered_on ?? toDay(l.created_at)
+}
+
 export interface CompanyActivity {
   rfqs: number
   orders: number

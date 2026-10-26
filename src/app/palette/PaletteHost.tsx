@@ -15,7 +15,6 @@ import {
   ChartColumn,
   CircleAlert,
   HandCoins,
-  Import,
   Keyboard,
   Landmark,
   Percent,
@@ -29,9 +28,7 @@ import {
 } from "lucide-react";
 import { navItemsForRole } from "@/app/navConfig";
 import { settingsLinksFor } from "@/features/settings/settingsLinks";
-import { CaptureContext } from "@/app/capture/useCapture";
 import { PaletteContext, type PaletteApi } from "@/app/palette/usePalette";
-import { CAPTURE_LABEL } from "@/app/shell/TopBar";
 import { KEYBOARD_MEDIA } from "@/app/shell/shortcuts";
 import { Kbd } from "@/ui/Kbd";
 import { LoadBoundary } from "@/ui/LoadBoundary";
@@ -44,13 +41,21 @@ import {
   type PaletteSource,
 } from "@/ui/paletteSources";
 
+/** The old destination names, kept as search words: RFQs and Orders are Jobs now; To collect is To collect (a Money page). */
+const NAV_SYNONYMS: Record<string, string[]> = {
+  today: ["today", "tasks"],
+  jobs: ["rfqs", "rfq", "orders", "order", "enquiries", "enquiry", "quotations"],
+  money: ["payments", "invoices", "expenses"],
+  companies: ["customers", "suppliers"],
+};
+
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
-const INTAKE_ROUTE = "/rfqs/new";
+const INTAKE_ROUTE = "/enquiries/new";
 const TODAY_ROUTE = "/todo";
 const NEW_ORDER_ROUTE = "/orders?new=1";
 
 /**
- * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see Who owes us, Invoices & GST and
+ * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see To collect, Invoices and
  * Reports; the rest is admin only, as the Money tabs are. "Add expenses" opens the burst sheet straight away.
  */
 const MONEY_PLACES: ReadonlyArray<{
@@ -64,19 +69,19 @@ const MONEY_PLACES: ReadonlyArray<{
 }> = [
   {
     id: "money:receivables",
-    label: "Who owes us",
+    label: "To collect",
     href: "/money/receivables",
     icon: HandCoins,
     roles: ["admin", "sales"],
-    keywords: ["receivables", "balances"],
+    keywords: ["who owes us", "receivables", "balances", "outstanding"],
   },
   {
     id: "money:gst",
-    label: "Invoices & GST",
+    label: "Invoices",
     href: "/money/gst-register",
     icon: Receipt,
     roles: ["admin", "sales"],
-    keywords: ["gst register", "invoices"],
+    keywords: ["invoices & gst", "gst register", "gst"],
   },
   {
     id: "money:reports",
@@ -119,18 +124,19 @@ const MONEY_PLACES: ReadonlyArray<{
   { id: "money:enquiries", label: "Enquiries and customers", href: "/money/reports/enquiries", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
   {
     id: "money:month-end",
-    label: "Month end",
+    label: "Lock a month",
     href: "/money/month-end",
     icon: CalendarCheck,
     roles: ["admin"],
+    keywords: ["month end", "close month", "close through"],
   },
   {
     id: "money:bank",
-    label: "Match bank statement",
+    label: "Bank check",
     href: "/money/month-end/bank",
     icon: Landmark,
     roles: ["admin"],
-    keywords: ["bank tick"],
+    keywords: ["match bank statement", "bank tick", "bank statement"],
   },
   {
     id: "money:margins",
@@ -205,7 +211,7 @@ function isTypingContext(e: KeyboardEvent): boolean {
  * shell, the registry of sources, and the built-in "Go to" source (the role's
  * destinations, so a role never sees a place it cannot open). Features add their
  * own sources with usePaletteSource(): R12 registers search (companies, contacts,
- * RFQ numbers), screens register their actions ("New RFQ") while they are mounted.
+ * job and RFQ numbers), screens register their actions while they are mounted.
  */
 // The palette (and cmdk) load after the first screen: on idle, or at once when it is opened (bundle budget, P04).
 // Both load through useRetryableLazy inside <LoadBoundary>: with no signal, a chunk that was never downloaded fails only
@@ -276,7 +282,6 @@ export function PaletteHost({
   const openRef = useRef(open);
   openRef.current = open;
   const seq = useRef(0);
-  const openCapture = useContext(CaptureContext)?.openCapture;
 
   const register = useCallback((source: PaletteSource) => {
     const tagged = { ...source, id: `${source.id}#${seq.current++}` };
@@ -292,6 +297,8 @@ export function PaletteHost({
         icon: n.icon,
         meta: "Go to",
         href: n.path,
+        // the old words still find their new home (redesign phase 5: one door per action, plus Search)
+        keywords: NAV_SYNONYMS[n.key],
       })),
       ...placesFor(role),
     ];
@@ -305,16 +312,6 @@ export function PaletteHost({
 
   // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T, ?.
   const actions = useMemo<PaletteSource>(() => {
-    // "capture" and "paste" still find it: the old name, and the word people reach for.
-    const captureItem: PaletteItem = {
-      id: "capture",
-      label: CAPTURE_LABEL,
-      meta: "Action",
-      keywords: ["capture", "paste"],
-      icon: Import,
-      shortcut: ["C"],
-      onSelect: () => openCapture?.(),
-    };
     // Desktop only (a keyboard is likely); found by "keys" or "shortcuts" too.
     const shortcutsItem: PaletteItem = {
       id: "shortcuts",
@@ -328,13 +325,14 @@ export function PaletteHost({
     const items: PaletteItem[] = [
       {
         id: "new-rfq",
-        label: "New RFQ",
+        label: "New enquiry",
         meta: "Go to intake",
         icon: Plus,
         shortcut: ["N"],
         href: INTAKE_ROUTE,
+        // the old names stay findable: RFQ, and the top-bar button this replaced (P4-A)
+        keywords: ["new rfq", "rfq", "paste or photo", "paste", "capture", "photo", "pdf", "enquiry"],
       },
-      captureItem,
       ...(role === "admin"
         ? [{ id: "new-expense", label: "Add an expense", meta: "Quick add", icon: ReceiptText, shortcut: ["E"], onSelect: openQuickExpense } satisfies PaletteItem]
         : []),
@@ -355,7 +353,7 @@ export function PaletteHost({
         href: "/companies?new=1",
       },
     ];
-    // Typing "paste", "photo" or "capture" finds the paste-or-photo action, "keys" or "shortcuts" the shortcuts sheet; the
+    // Typing "paste", "photo" or "capture" finds New enquiry (what Paste or photo became), "keys" or "shortcuts" the shortcuts sheet; the
     // other actions are idle-only (destinations answer typed text).
     return {
       id: "actions",
@@ -363,9 +361,9 @@ export function PaletteHost({
       order: 90,
       idle: () => (hasKeyboard() ? [...items, shortcutsItem] : items),
       search: (q) =>
-        filterItems(hasKeyboard() ? [captureItem, shortcutsItem] : [captureItem], q),
+        filterItems(hasKeyboard() ? [items[0], shortcutsItem] : [items[0]], q),
     };
-  }, [openCapture, openShortcuts, openQuickExpense, role]);
+  }, [openShortcuts, openQuickExpense, role]);
 
   useEffect(() => {
     let armedAt = 0;

@@ -4,8 +4,8 @@ import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../su
 import { axeViolations } from '../support/axe'
 
 /*
- * M04 and M07 end to end, against the local CI stack: the Margin panel on the order page, Money > Month end > Margins and Things to
- * check (the old Exceptions; both are reached from the Month end checklist since the owner decision of 2026-10-19),
+ * M04 and M07 end to end, against the local CI stack: the Margin panel on the order page, Money > Lock a month > Margins and Things to
+ * check (the old Exceptions; both are reached from the Lock a month checklist since the owner decision of 2026-10-19),
  * as the fixture users through the real login form, with data set up through the REST API as the admin.
  *
  * Asserted: the supplier-price estimate (supplier price x today's rate) and that it never overwrites an expected cost that is
@@ -183,7 +183,7 @@ test.describe('Money > Margins (admin)', () => {
   })
 })
 
-test.describe('Money > Month end > Mistakes to fix (admin)', () => {
+test.describe('Money > Lock a month > Mistakes to fix (admin)', () => {
   test('lists what the reconciliation finds, links the order, and exports CSV', async ({ page }) => {
     const o = await seedOrder({ lines: [{ qty: 1, net: 10000, supplierPrice: null }] }) // gross 11,800
     await post('payments_in', { order_id: o.id, amount: 15000, received_on: today() })

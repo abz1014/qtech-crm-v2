@@ -14,8 +14,6 @@ export type FirstUseScreen = 'today' | 'rfqs' | 'orders'
 export type FirstUseAction =
   /** A route to open. */
   | { kind: 'link'; label: string; to: string }
-  /** Opens the Paste or photo sheet. */
-  | { kind: 'capture'; label: string }
   /** The screen's own "show everyone's" switch; the screen passes the handler and the count. */
   | { kind: 'everyone'; label: string }
 
@@ -23,7 +21,7 @@ export interface FirstUseCopy {
   title: string
   /** At most two short lines. */
   body: string
-  /** The one button. A list with nothing to point at yet (Who owes us on a new CRM) has none; "Show me how" still shows. */
+  /** The one button. A list with nothing to point at yet (To collect on a new CRM) has none; "Show me how" still shows. */
   action?: FirstUseAction
   /** A second, quiet button opening this Help recipe. */
   recipe?: string
@@ -39,8 +37,8 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
     },
     engineer: {
       title: 'Your jobs show up here',
-      body: 'When an order needs you on site, the admin adds you to it and it appears here with its date. You can already save a site photo or note to any RFQ or order.',
-      action: { kind: 'capture', label: 'Paste or photo' },
+      body: 'When an order needs you on site, the admin adds you to it and it appears here with its date. You can already save a site photo or note to any job: open it and use Add to this job.',
+      action: { kind: 'link', label: 'Open Jobs', to: '/jobs' },
       recipe: 'paste-or-photo',
     },
     admin: {

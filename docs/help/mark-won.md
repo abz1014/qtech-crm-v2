@@ -3,7 +3,7 @@ id: mark-won
 title: Mark an RFQ won and create the order
 roles: sales, admin
 keywords: won, win, order, convert, customer po, purchase order, payment terms
-screens: /rfqs, /orders
+screens: /rfqs, /orders, /jobs
 related: issue-po, create-invoice
 ---
 1. On the RFQ, tap the green [Mark won]. It turns green once the quotation is out.

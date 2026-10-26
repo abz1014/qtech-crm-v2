@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { API_URL } from '../support/stack'
-import { api, karachiToday, moneyIn, readSchema, service, SERVICE_KEY, type Persona } from './lib'
+import { api, karachiToday, moneyIn, readSchema, service, SERVICE_KEY, tokenFor, type Persona } from './lib'
 import { IDS, seedWorld, type World } from './fixtures'
 
 /*
@@ -287,6 +287,67 @@ test('0100: a file tagged has_prices (customer PO, supplier quote) is closed to 
     const ok = await api(p, `/storage/v1/object/rfq-files/${path}`)
     expect(ok.status, `precondition: ${p} download it`).toBe(200)
   }
+})
+
+test('0100/0103: a customer PO uploaded by SALES through the app is closed to an engineer, whether the app tags it or the tag is forgotten', async () => {
+  const sales = await tokenFor('sales')
+  const up = async (name: string) => {
+    const r = await fetch(`${API_URL}/storage/v1/object/rfq-files/${world.tag}/${name}`, {
+      method: 'POST',
+      headers: { apikey: SERVICE_KEY, authorization: `Bearer ${sales?.access_token}`, 'content-type': 'application/pdf' },
+      body: Buffer.from('%PDF-1.4 verify-roles sales upload'),
+    })
+    expect(r.status, `sales uploads ${name}`).toBeLessThan(300)
+  }
+  // (a) what uploadAttachment now writes: the tag. (b) the old bug: an insert that never says has_prices must still land closed (0103 flips the default to true).
+  for (const [name, tag] of [['po-tagged.pdf', true], ['po-untagged.pdf', undefined]] as const) {
+    await up(name)
+    const path = `${world.tag}/${name}`
+    const row = await api('sales', '/rest/v1/attachments', { method: 'POST', body: { bucket: 'rfq-files', path, file_name: name, mime_type: 'application/pdf', size_bytes: 33, rfq_id: world.rfq.id, ...(tag === undefined ? {} : { has_prices: tag }) }, prefer: 'return=representation' })
+    expect(row.status, `sales records ${name}`).toBeLessThan(300)
+    expect((row.body as { has_prices: boolean }[])[0].has_prices, `${name} is stored tagged`).toBe(true)
+    expect(((await api('engineer', `/rest/v1/attachments?path=eq.${encodeURIComponent(path)}&select=id`)).body as unknown[]).length, `engineer lists ${name}`).toBe(0)
+    const list = await api('engineer', '/storage/v1/object/list/rfq-files', { method: 'POST', body: { prefix: world.tag, limit: 100 } })
+    expect((Array.isArray(list.body) ? (list.body as { name: string }[]) : []).map(o => o.name), `engineer lists the file ${name}`).not.toContain(name)
+    expect((await api('engineer', `/storage/v1/object/rfq-files/${path}`)).status, `engineer downloads ${name}`).toBeGreaterThanOrEqual(400)
+    expect((await api('sales', `/storage/v1/object/rfq-files/${path}`)).status, `precondition: sales download ${name}`).toBe(200)
+  }
+})
+
+test('0101 (phase 7): an engineer sets the visit time and type on their own site only, and the engineer view of an order still holds no money', async () => {
+  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { commissioning_time: '10:00', visit_type: 'installation' }, prefer: 'return=representation' })
+  expect(mine.status, 'the assigned engineer sets time and type').toBeLessThan(300)
+  const back = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,commissioning_time,visit_type`)
+  expect(back.body).toEqual([{ id: world.order.id, commissioning_time: '10:00:00', visit_type: 'installation' }])
+  const theirs = await api('engineer', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
+  expect(theirs.status, 'an engineer not assigned to the site is refused').toBeGreaterThanOrEqual(400)
+  expect(JSON.stringify(theirs.body)).toContain('not_assigned')
+  const sales = await api('sales', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey', commissioning_time: '09:30' }, prefer: 'return=representation' })
+  expect(sales.status, 'sales set them on any order').toBeLessThan(300)
+  const money = await api('engineer', `/rest/v1/v_jobs?select=*`)
+  const keys = new Set((Array.isArray(money.body) ? (money.body as Record<string, unknown>[]) : []).flatMap(r => Object.keys(r)))
+  expect([...keys].filter(k => /(price|cost|value|amount|gst|gross|sell|net|margin)/i.test(k)), 'the jobs view has no money column for an engineer').toEqual([])
+})
+
+test('0093 and 0098 (C3 to C5): an engineer reads category counts but no price win, and cannot tag, rename or curate a category', async () => {
+  const MCB = 'ca7e0000-0000-4000-8000-000000000001'
+  const evidence = await api('engineer', '/rest/v1/v_supplier_category_evidence?select=*&limit=5')
+  expect(evidence.status, 'counts are readable').toBeLessThan(300)
+  const keys = new Set((Array.isArray(evidence.body) ? (evidence.body as Record<string, unknown>[]) : []).flatMap(r => Object.keys(r)))
+  expect([...keys].filter(k => /(price|cost|value|amount|gst|gross|sell|net|margin)/i.test(k)), 'the evidence view has no money column').toEqual([])
+  const wins = await api('engineer', '/rest/v1/rpc/supplier_category_price_wins', { method: 'POST', body: { p_family_ids: [MCB] } })
+  for (const r of Array.isArray(wins.body) ? (wins.body as { wins: number | null; of_ranked: number | null }[]) : []) expect([r.wins, r.of_ranked], 'an engineer gets no price win').toEqual([null, null])
+  const tag = await api('engineer', '/rest/v1/company_brands', { method: 'POST', body: { company_id: world.company.id, brand_id: MCB }, prefer: 'return=representation' })
+  expect(tag.status, 'an engineer cannot tag a supplier with a category').toBeGreaterThanOrEqual(400)
+  for (const p of ['engineer', 'sales'] as const) {
+    const rename = await api(p, `/rest/v1/brands?id=eq.${MCB}`, { method: 'PATCH', body: { name: 'Renamed by ' + p }, prefer: 'return=representation' })
+    expect(rename.status, `${p} cannot rename a curated category`).toBeGreaterThanOrEqual(400)
+    expect(JSON.stringify(rename.body)).toContain('admin_only')
+    const curate = await api(p, `/rest/v1/brands?id=eq.${MCB}`, { method: 'PATCH', body: { curated: false }, prefer: 'return=representation' })
+    expect(curate.status, `${p} cannot un-curate it`).toBeGreaterThanOrEqual(400)
+  }
+  const still = await api('admin', `/rest/v1/brands?id=eq.${MCB}&select=name,curated`)
+  expect(still.body).toEqual([{ name: 'MCB', curated: true }])
 })
 
 test('BUG-RV-01: the engineer reads no legacy order value or cost through the API', async () => {

@@ -109,7 +109,7 @@ test('every close reason on the Bid and close menu is stored as itself, and the 
     const r = await rfq({ customer, items: [{ description: `Lost item ${key}`, qty: 1 }] })
     await page.goto(`/rfqs/${r.rfq.id}`)
     await page.locator('#main').waitFor()
-    await page.getByRole('button', { name: QUOTES.close.menu }).click()
+    await page.getByRole('button', { name: QUOTES.close.menu, exact: true }).click()
     await page.getByRole('menuitem', { name: new RegExp(`^${label}`) }).click()
     await expect(page.getByRole('status').filter({ hasText: QUOTES.close.closedToast }).first()).toBeVisible()
     await expect.poll(() => db.one(`rfqs?id=eq.${r.rfq.id}&select=close_reason,closed_on`), { message: `closing with "${label}"` }).toEqual({ close_reason: key, closed_on: karachiDay(0) })

@@ -2,8 +2,9 @@ import { Suspense, useEffect, useRef, type ComponentType } from 'react'
 import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
+import { Briefcase } from 'lucide-react'
 import { navItems, type NavItem, type NavKey } from '@/app/navConfig'
-import { Package } from 'lucide-react'
+import { OldAddress } from '@/app/oldAddresses'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
@@ -20,17 +21,24 @@ const SignInPage = lazy(() => routeChunks.signIn().then(m => ({ default: m.SignI
  */
 const screens: Record<NavKey, ComponentType> = {
   today: lazy(routeChunks.today),
+  jobs: lazy(routeChunks.jobs),
   companies: lazy(routeChunks.companies),
-  rfqs: lazy(routeChunks.rfqs),
   money: lazy(routeChunks.money),
-  orders: lazy(routeChunks.orders),
 }
+
+/**
+ * The old RFQ board and Orders list: no longer destinations (Jobs holds both). /rfqs and /orders open Jobs; an id opens its Job;
+ * ?old=1 keeps the old page for two weeks (src/app/oldAddresses.tsx).
+ */
+const OldRfqs = lazy(routeChunks.rfqs)
+const OldOrders = lazy(routeChunks.orders)
 
 /** The weekly owner review (redesign phase 3): /todo/review, admin only. */
 const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
+const ProductCategoriesPage = lazy(() => import('@/features/settings/productCategories/ProductCategoriesPage').then(m => ({ default: m.ProductCategoriesPage })))
 const CategoriesPage = lazy(() => import('@/features/settings/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
 const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
 const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').then(m => ({ default: m.MyDetailsPage })))
@@ -41,10 +49,12 @@ const IntakeScreen = lazy(routeChunks.rfqNew)
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
-/** /jobs (redesign phase 5): reachable by address only until the navigation switch (P5-F, lane L1) adds Jobs to navConfig. Every staff role. */
-const JobsScreen = lazy(routeChunks.jobs)
-const jobsItem: NavItem = { key: 'orders', label: 'Jobs', path: '/jobs', icon: Package, roles: ['admin', 'sales', 'engineer'] }
-const rfqsItem = navItems.find(i => i.key === 'rfqs')
+/** New enquiry (P4-A): the document beside what was read; wraps the intake. */
+const NewEnquiryPage = lazy(() => import('@/features/enquiry/NewEnquiryPage'))
+/** The old pages keep the access they had: every staff role. */
+const oldItem = (label: string, path: string): NavItem => ({ key: 'jobs', label, path, icon: Briefcase, roles: ['admin', 'sales', 'engineer'] })
+const rfqsItem = oldItem('RFQs', '/rfqs')
+const ordersItem = oldItem('Orders', '/orders')
 const moneyItem = navItems.find(i => i.key === 'money')
 
 /**
@@ -193,6 +203,16 @@ function AppRouteTable() {
               }
             />
             <Route
+              path="product-categories"
+              element={
+                <AdminOnly area="Product categories">
+                  <Suspense fallback={null}>
+                    <ProductCategoriesPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
               path="company"
               element={
                 <Suspense fallback={null}>
@@ -228,25 +248,47 @@ function AppRouteTable() {
             />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
-          {rfqsItem ? (
-            <Route
-              path="rfqs/new"
-              element={
-                <RequireRole item={rfqsItem}>
-                  <Suspense fallback={null}>
-                    <IntakeScreen />
-                  </Suspense>
-                </RequireRole>
-              }
-            />
-          ) : null}
           <Route
-            path="jobs/*"
+            path="enquiries/new"
             element={
-              <RequireRole item={jobsItem}>
+              <RequireRole item={rfqsItem}>
                 <Suspense fallback={null}>
-                  <JobsScreen />
+                  <NewEnquiryPage />
                 </Suspense>
+              </RequireRole>
+            }
+          />
+          <Route
+            path="rfqs/new"
+            element={
+              <RequireRole item={rfqsItem}>
+                <Suspense fallback={null}>
+                  <IntakeScreen />
+                </Suspense>
+              </RequireRole>
+            }
+          />
+          <Route
+            path="rfqs/*"
+            element={
+              <RequireRole item={rfqsItem}>
+                <OldAddress kind="rfq">
+                  <Suspense fallback={null}>
+                    <OldRfqs />
+                  </Suspense>
+                </OldAddress>
+              </RequireRole>
+            }
+          />
+          <Route
+            path="orders/*"
+            element={
+              <RequireRole item={ordersItem}>
+                <OldAddress kind="order">
+                  <Suspense fallback={null}>
+                    <OldOrders />
+                  </Suspense>
+                </OldAddress>
               </RequireRole>
             }
           />
@@ -262,12 +304,15 @@ function AppRouteTable() {
           ) : null}
           {navItems.map(item => {
             const Screen = screens[item.key]
+            // Companies is not in an engineer's menu (To do and Jobs only) but the page stays open to them: they add and edit
+            // customers and suppliers from a job, and every link to a company works (DECISIONS section 10).
+            const guard = item.key === 'companies' ? { ...item, roles: ['admin', 'sales', 'engineer'] as const } : item
             return (
               <Route
                 key={item.key}
                 path={`${item.path.slice(1)}/*`}
                 element={
-                  <RequireRole item={item}>
+                  <RequireRole item={guard}>
                     <Suspense fallback={null}>
                       <Screen />
                     </Suspense>

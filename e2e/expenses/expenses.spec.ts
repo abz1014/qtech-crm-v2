@@ -782,7 +782,7 @@ test.describe('expenses (M03, M11)', () => {
       await page.getByRole('button', { name: 'Previous month' }).click()
       await expect(page.getByText('before the close')).toHaveCount(1)
       await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is closed.`)
-      await expect(page.getByRole('link', { name: 'Open Month end' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Open Lock a month' })).toBeVisible()
       await expect(page.getByRole('button', { name: /^More for Rent of 11/ })).toHaveCount(0)
       await expect(page.getByText('Locked, the month is closed').first()).toBeAttached()
       // the database refuses too

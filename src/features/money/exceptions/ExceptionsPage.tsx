@@ -15,15 +15,15 @@ import { StatusText } from '@/ui/StatusText'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { useOrderMargins, useReconciliationInput } from '@/features/money/hooks'
-import { useUnchecked } from '@/features/money/exceptions/checked'
+import { useCarryOverLocalTicks, useUnchecked } from '@/features/money/exceptions/checked'
 
 /*
- * Money > Month end > Mistakes to fix (M07; was "Exceptions", owner glossary 2026-10-19): the reconciliation checks over the money
- * views, for an admin, reached from the Month end checklist. Each line is one fact with the customer and order it is about,
+ * Money > Lock a month > Mistakes to fix (M07; was "Exceptions", owner glossary 2026-10-19): the reconciliation checks over the money
+ * views, for an admin, reached from the Lock a month checklist. Each line is one fact with the customer and order it is about,
  * by severity. It is not a data-quality score: it lists what needs a human look, and says "all in balance" when nothing does.
  * Always checks everything (no period filter): an old mistake is still a mistake.
  * Round 3: the customer leads each line; View order is a button at the end; "Mark as checked" takes a finding off the list
- * (and off Month end's count) for this person on this device, until its figures change (exceptions/checked.ts). The page's one
+ * (and off Lock a month's count) for everyone, until its figures change (exceptions/checked.ts, stored in checked_findings, 0102). The page's one
  * green button is View order on the first open finding: the obvious next step. Export CSV is a quiet link.
  */
 function Row({ e, customer, first, onCheck }: { e: ReconciliationException; customer: string | null; first: boolean; onCheck: () => void }) {
@@ -67,7 +67,8 @@ export function ExceptionsPage() {
   const q = useReconciliationInput(true)
   const margins = useOrderMargins(true)
   const list = useMemo(() => (q.data ? computeReconciliationExceptions(q.data) : []), [q.data])
-  const { open, checked, mark } = useUnchecked(userId, list)
+  const { open, checked, mark, error: tickError } = useUnchecked(list)
+  useCarryOverLocalTicks(userId, list, !!q.data)
   const [showChecked, setShowChecked] = useState(false)
   const counts = countBySeverity(open)
   const customerOf = useMemo(() => new Map((margins.data ?? []).map(m => [m.orderId, m.companyName])), [margins.data])
@@ -81,13 +82,13 @@ export function ExceptionsPage() {
   return (
     <MoneyFrame active="month-end">
       <MoneySubHeader
-        back={{ to: '/money/month-end', label: 'Month end' }}
+        back={{ to: '/money/month-end', label: 'Lock a month' }}
         title="Mistakes to fix"
         meta={
           <InfoTip label="About mistakes to fix">
             Checked, in every month: customer payments against the order total, invoices against the order, costs against the expected cost
             and the POs, dates in sequence, the GST on each invoice, sending to the customer and the tax deposit, and orders where nobody has
-            said whether GST is included in the price. Mark as checked hides a finding on this device until its figures change.
+            said whether GST is included in the price. Mark as checked hides a finding for everyone until its figures change.
           </InfoTip>
         }
         actions={
@@ -124,6 +125,11 @@ export function ExceptionsPage() {
             {q.data && open.length === 0 ? <StatusText tone="done">All clear</StatusText> : null}
           </div>
         </header>
+        {tickError ? (
+          <p role="alert" className="border-b px-5 py-3 text-base text-tone-danger-fg">
+            {tickError}
+          </p>
+        ) : null}
         {q.isPending ? (
           <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Checking the money records">
             <Skeleton className="h-10 w-full" />

@@ -33,9 +33,9 @@ insert into public.clarifications (id, rfq_id, question) values
   ('b0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 'Voltage?');
 
 -- ------------------------------------------------------------------ constraints
-select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id)
+select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id, has_prices)
                   values ('e1000000-0000-4000-8000-000000000001', 'rfq-files', 'o1/a.jpg', 'a.jpg', 'image/jpeg', 1000,
-                          'a1000000-0000-4000-8000-000000000001')$$,
+                          'a1000000-0000-4000-8000-000000000001', false)$$,
   'an order attachment in rfq-files is accepted');
 select throws_ok($$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, order_id)
                    values ('gst-receipts', 'o1/b.jpg', 'b.jpg', 'image/jpeg', 1000, 'a1000000-0000-4000-8000-000000000001')$$,

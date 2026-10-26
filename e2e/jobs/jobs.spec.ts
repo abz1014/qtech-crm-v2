@@ -124,6 +124,22 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     expect(await axeViolations(page)).toEqual([])
   })
 
+  test('the order steps are on the page (P5-D2): the green button opens the Supplier order stage, which holds the supplier work; Invoice offers nothing before delivery', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
+    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Choose suppliers' }).click()
+    const stage = page.getByRole('region', { name: 'Supplier order stage' })
+    await expect(stage).toBeVisible()
+    await expect(stage.getByText('1 line has no supplier')).toBeVisible()
+    await expect(stage.getByRole('button', { name: 'Add supplier' }).first()).toBeVisible()
+    // the order lines (Order stage) and the invoice (nothing to create before the goods are delivered) are on this page, not the order page
+    await page.locator('[data-stages]').getByRole('button', { name: /^Order/ }).click()
+    await expect(page.getByRole('region', { name: 'Order stage' }).getByText(f.po).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Create invoice' })).toHaveCount(0)
+    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+  })
+
   test('an engineer opens the job with no Money panel and no price', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'engineer', `/jobs/${f.rfq.number}`)
@@ -131,6 +147,27 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.getByRole('region', { name: 'Money for this job' })).toHaveCount(0)
     expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs\.?\s?\d/)
     await review(page, 'job-page-engineer-1440')
+  })
+
+  test('phone: the engineer big buttons are one green, no price, 44 px or more, no sideways scroll at 375 and 320', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'engineer', '/today')
+    for (const width of [375, 320]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(`/jobs/${f.rfq.number}`)
+      const card = page.getByRole('region', { name: 'On site' })
+      await expect(card.getByRole('button', { name: 'Add photo or note' })).toBeVisible()
+      await expect(page.locator('#main button.bg-primary'), `one green button at ${width}`).toHaveCount(1)
+      for (const b of await card.getByRole('button').all()) {
+        const box = await b.boundingBox()
+        expect(box?.height ?? 0, `${await b.innerText()} is tall enough at ${width}`).toBeGreaterThanOrEqual(44)
+        expect(box?.width ?? 0).toBeGreaterThanOrEqual(44)
+      }
+      expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs.?s?d/)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)
+      if (width === 375) await review(page, 'job-page-engineer-375')
+    }
   })
 
   test('phone: the ruler is one line, no sideways scroll at 375 and 320', async ({ page }) => {

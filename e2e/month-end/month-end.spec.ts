@@ -4,7 +4,7 @@ import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } fro
 import { axeViolations } from '../support/axe'
 
 /*
- * M10 (and M05, amended) end to end, against the local CI stack: Money > Month end for the admin, through the real login form.
+ * M10 (and M05, amended) end to end, against the local CI stack: Money > Lock a month for the admin, through the real login form.
  * Since the owner decision of 2026-10-19 Money is two levels deep: the checklist lists only the checks that have items, each
  * row is the link to its fix, and the six month reports live in Money > Reports (/money/reports/<report>), with no strip of tabs.
  *
@@ -85,26 +85,26 @@ test.describe('month-end (M10)', () => {
     await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
     const card = page.getByTestId('check-bank_unticked')
     await expect(card).toContainText('Not matched to the bank statement')
-    await expect(card).toContainText('Match bank statement')
+    await expect(card).toContainText('Bank check')
     await expect(card.locator('span.num').first()).not.toHaveText('0')
-    await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /^Month end/ })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /^Lock a month/ })).toHaveAttribute('aria-current', 'page')
     // two levels only: the Money tabs, then the page; no strip of month-end views
     await expect(page.getByRole('navigation', { name: 'Month-end views' })).toHaveCount(0)
     await startCounting(page)
     await card.getByRole('link').click()
     await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${STMT.key}`))
-    await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bank check', level: 2 })).toBeVisible()
     expect(await mouse(page)).toBe(1)
   })
 
-  test('Match bank statement is always one tap from Month end, for the month, even when its checks are clear', async ({ page }) => {
+  test('Bank check is always one tap from Lock a month, for the month, even when its checks are clear', async ({ page }) => {
     await openAs(page, 'admin', `/money/month-end?month=${OLDER.key}`)
     await expect(page.getByTestId('checks-summary')).toBeVisible()
     await startCounting(page)
     // the bank check's own row when it has items, else the link on the clear line: one place, never two (round 3)
     await page.getByTestId('check-bank_unticked').getByRole('link').or(page.getByTestId('month-bank-link')).first().click()
     await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${OLDER.key}`))
-    await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bank check', level: 2 })).toBeVisible()
     expect(await mouse(page)).toBe(1)
   })
 
@@ -184,7 +184,7 @@ test.describe('month-end (M10)', () => {
   })
 
   for (const role of ['sales', 'engineer'] as const) {
-    test(`${role}: no Month end page, no month-end request, no rows from the database${role === 'sales' ? '; Invoices & GST is still readable' : ''}`, async ({ browser }) => {
+    test(`${role}: no Lock a month page, no month-end request, no rows from the database${role === 'sales' ? '; Invoices is still readable' : ''}`, async ({ browser }) => {
       const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
       const seen: string[] = []
       page.on('request', r => {
@@ -198,7 +198,7 @@ test.describe('month-end (M10)', () => {
         // already signed in: just navigate
         await page.goto('/money/gst-register')
         await expect(page.getByRole('navigation', { name: 'Money views' })).toBeVisible()
-        await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /Month end/ })).toHaveCount(0)
+        await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /Lock a month/ })).toHaveCount(0)
         await expect(page.getByRole('button', { name: 'Export CSV' })).toHaveCount(0)
       }
       await page.close()

@@ -1,15 +1,11 @@
-import { useState, type ReactNode } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { Suspense, useState, type ReactNode } from 'react'
 import { useSession } from '@/app/session'
-import { mapPgError } from '@/lib/pgErrors'
-import { orderRef, rfqRef } from '@/lib/refs'
-import { ConfirmDelete } from '@/ui/ConfirmDelete'
-import { useToast } from '@/ui/useToast'
-import * as api from '@/features/rfqs/api'
-import { refreshAfterRfqDelete, useDeleteRfq, useRfqDeleteCounts } from '@/features/rfqs/hooks'
-import { useOrdersForRfq } from '@/features/orders/hooks'
+import { lazyWithReload } from '@/lib/importWithReload'
+import type * as api from '@/features/rfqs/api'
 import { quotationRef } from '@/features/quotations/lib/refs'
+
+// The confirm (ConfirmDelete, the counts, the delete itself) is downloaded when an admin opens it (perf: the RFQ page's LCP).
+const DeleteRfqConfirm = lazyWithReload(() => import('@/features/rfqs/DeleteRfqConfirm'))
 
 /*
  * Delete an RFQ (0092 delete_rfq; owner decision 2026-10-23: an RFQ entered by mistake can go). Admin only: the menu item is not
@@ -54,75 +50,17 @@ export const NEEDS_ORDER_FIRST = 'Delete or cancel the order first.'
 export function useDeleteRfqFlow(rfq: { id: string; number: number; company: { name: string } }) {
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
-  const client = useQueryClient()
-  const navigate = useNavigate()
-  const { toast } = useToast()
-  const del = useDeleteRfq()
   const [open, setOpen] = useState(false)
-  // The server refused with has_order although the page did not know of an order: blocked until the page is reloaded.
-  const [refused, setRefused] = useState(false)
-  const ref = rfqRef(rfq.number)
-
-  const counts = useRfqDeleteCounts(rfq.id, isAdmin && open)
-  const orders = useOrdersForRfq(isAdmin && open ? rfq.id : undefined)
-  const orderList = orders.data ?? []
-  const loading = counts.isPending || orders.isPending
-
-  let blocked: ReactNode = null
-  if (orderList.length > 0) blocked = `Has order ${orderList.map(o => orderRef(o.number)).join(', ')}. ${NEEDS_ORDER_FIRST}`
-  else if (refused) blocked = `Has an order. ${NEEDS_ORDER_FIRST}`
-
-  const confirm = async () => {
-    let files: api.StoredFile[]
-    try {
-      files = await del.mutateAsync(rfq.id)
-    } catch (e) {
-      if (mapPgError(e).hint === 'has_order') {
-        setRefused(true)
-        void orders.refetch()
-      }
-      throw e
-    }
-    // The rows are gone. Nothing below may throw into the confirm, or the person would be told the delete failed.
-    const failed = await api.removeStoredFiles(files)
-    navigate('/rfqs')
-    void refreshAfterRfqDelete(client, rfq.id)
-    toast({ title: `${ref} deleted`, body: rfq.company.name, tone: 'success' })
-    if (failed.length > 0) {
-      toast({
-        title: 'Some files were not removed',
-        body: `${plural(failed.length, 'file')} stayed in storage. ${ref} itself is deleted.`,
-      })
-    }
-  }
-
-  const hint = (e: unknown) => (mapPgError(e).hint === 'has_order' ? '' : mapPgError(e, { entity: 'RFQ' }).message)
-
   const node: ReactNode =
     isAdmin && open ? (
-      <ConfirmDelete
-        open
-        onOpenChange={o => {
-          if (!o) setOpen(false)
-        }}
-        thing={ref}
-        summary={`${ref} · ${rfq.company.name}`}
-        also={counts.data && !blocked ? alsoDeletes(counts.data) : undefined}
-        loading={loading && !blocked}
-        blocked={blocked}
-        onConfirm={confirm}
-        errorMessage={hint}
-      />
+      <Suspense fallback={null}>
+        <DeleteRfqConfirm rfq={rfq} onClose={() => setOpen(false)} />
+      </Suspense>
     ) : null
 
   return {
     /** Admin only; undefined for everyone else, so the menu draws no item. */
-    ask: isAdmin
-      ? () => {
-          setRefused(false)
-          setOpen(true)
-        }
-      : undefined,
+    ask: isAdmin ? () => setOpen(true) : undefined,
     node,
   }
 }

@@ -74,7 +74,7 @@ describe('Invoice: edit', () => {
 
   it('a closed month shows the figures as text with the lock line, and no edit boxes or Delete', async () => {
     setup({}, ['2025-01'])
-    expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('Month closed. Reopen it on Month end to change or delete.')
+    expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('Month closed. Reopen the month first, in Lock a month, to change or delete.')
     expect(screen.queryByLabelText('Net amount, PKR')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Delete invoice' })).toBeNull()
   })
@@ -86,7 +86,7 @@ describe('Invoice: delete', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete invoice' }))
     const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
     expect(within(dialog).getByText(/ticked against the January 2025 bank statement/)).toBeInTheDocument()
-    expect(within(dialog).getByRole('link', { name: 'Open Match bank statement' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('link', { name: 'Open Bank check' })).toBeInTheDocument()
     expect(within(dialog).queryByRole('button', { name: 'Delete' })).toBeNull()
   })
 

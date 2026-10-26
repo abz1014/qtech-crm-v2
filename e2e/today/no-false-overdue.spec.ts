@@ -8,10 +8,10 @@ import { dueRows, showAllTodo } from '../support/todo'
  * invoiced, an RFQ quoted a year ago, a purchase order never marked delivered, a late payment) is history to review, not a debt that
  * is 757 days late. A count of days late over 30 is never shown; the date is said in words ("since 3 Jun 2024") or the record is
  * grey "Imported, to review". A v2 order with the same kind of fact is still red: the CONTROL (invoiced, due 5 days ago, unpaid)
- * must show a red "5 days overdue" on Today, its order page and Who owes us, and be in the Overdue total.
+ * must show a red "5 days overdue" on Today, its order page and To collect, and be in the Overdue total.
  *
  * Runs as admin and as sales over every screen that can say it: Today, the RFQ board and an RFQ page, Orders and each order page,
- * Who owes us, the aging report and the supplier page. Needs no database change (the app works at migration 0086).
+ * To collect, the aging report and the supplier page. Needs no database change (the app works at migration 0086).
  * Fictional data. The import marker (legacy_source) is written as the service role, the import's own role.
  */
 const OWNER: Record<'admin' | 'sales', string> = {
@@ -194,7 +194,7 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
   const row = page.locator('tr, [role="row"]').filter({ hasText: s.control.customer }).first()
   const five = row.getByText(/\b5 days overdue\b/)
   await expect(five.first()).toBeVisible()
-  expect(await isRed(five), 'the control\'s "5 days overdue" on Who owes us is red').toBe(true)
+  expect(await isRed(five), 'the control\'s "5 days overdue" on To collect is red').toBe(true)
   // The imported order is a grey tile, not a debt; the control is in the Overdue total.
   await expect(page.getByText('Imported, to review').first()).toBeVisible()
   const tile = page.getByRole('region', { name: 'Balance by status, includes GST' }).locator('div').filter({ has: page.getByText('Overdue', { exact: true }) }).last()

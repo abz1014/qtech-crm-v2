@@ -52,7 +52,7 @@ export const ROUTES: readonly RouteSpec[] = [
   // ------------------------------------------------------------------ shell
   { path: '/', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'role landing' },
   { path: '/login', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'signed in: the sign-in page sends you on' },
-  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok' },
+  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^Needs suppliers/, /^Chase /, /PKR/, /^Late payment/] },
   { path: '/no-access', admin: 'no', sales: 'no', engineer: 'no', note: 'the bare no-access page' },
   { path: '/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ RFQs
@@ -147,7 +147,7 @@ export const ROUTES: readonly RouteSpec[] = [
   },
   { path: '/companies/{supplier}', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^About the prices$/] },
   // ------------------------------------------------------------------ Money (two levels after the restructure)
-  { path: '/money', admin: 'ok', sales: 'ok', engineer: 'no', landsOn: /\/money(\/(gst-register|receivables))?$/, note: 'admin opens Money home, sales Who owes us' },
+  { path: '/money', admin: 'ok', sales: 'ok', engineer: 'no', landsOn: /\/money(\/(gst-register|receivables))?$/, note: 'admin opens Money home, sales To collect' },
   { path: '/money/gst-register', admin: 'ok', sales: 'ok', engineer: 'no', openers: [{ name: /^Create invoice$/, roles: AS }, { name: /^More$/, roles: A, open: false, optional: true }] },
   { path: '/money/gst-register?invoice={invoice}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: invoice detail dialog' },
   { path: '/money/gst-register?new=1&order={order}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: Create invoice dialog' },
@@ -184,6 +184,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/settings/team', admin: 'ok', sales: 'no', engineer: 'no', openers: [{ name: /^Add person$/, roles: A }] },
   { path: '/settings/targets', admin: 'ok', sales: 'no', engineer: 'no' },
   { path: '/settings/categories', admin: 'ok', sales: 'no', engineer: 'no' },
+  { path: '/settings/product-categories', admin: 'ok', sales: 'no', engineer: 'no', note: 'C4: Product categories, admin only (the 0098 trigger says so in the database too)' },
   { path: '/settings/company', admin: 'ok', sales: 'ok', engineer: 'ok' },
   { path: '/settings/details', admin: 'ok', sales: 'ok', engineer: 'ok' },
   { path: '/settings/exchange-rates', admin: 'ok', sales: 'ok', engineer: 'no', note: 'rates are currency amounts: admin and sales (2026-10-22)' },
@@ -194,7 +195,7 @@ export const ROUTES: readonly RouteSpec[] = [
 ]
 
 /** Engineer: words a screen uses for money of the business. Allowed nowhere for an engineer (journeys P03 list, extended). */
-export const ENGINEER_MONEY_WORDS = /\b(Invoic\w*|Margins?|Receivables?|Spread|Selling price|Who owes us|Balance|Profit|Payments? (in|received)|Record payment|Expenses?)\b/
+export const ENGINEER_MONEY_WORDS = /\b(Invoic\w*|Margins?|Receivables?|Spread|Selling price|To collect|Balance|Profit|Payments? (in|received)|Record payment|Expenses?)\b/
 /**
  * Engineer: an amount of money in text (Money renders "PKR1,234" with no space; plain strings use "PKR 1,234", "≈ PKR", "Rs"). "Rs" must
  * start a word: a fixture's random name suffix ("VRs37s5xf0") is not rupees.

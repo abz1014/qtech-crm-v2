@@ -176,9 +176,9 @@ function oldListReceivables(w: World): ReceivableRow[] {
   return raw.map(r => oldToRow(r, names, invoices))
 }
 
-// ------------------------------------------------------------------ Who owes us
+// ------------------------------------------------------------------ To collect
 
-describe('Who owes us reads receivables_list (paged) with the same rows as order_receivables + companies + invoices', () => {
+describe('To collect reads receivables_list (paged) with the same rows as order_receivables + companies + invoices', () => {
   it('listReceivables: identical rows, in the same order', async () => {
     await fc.assert(
       fc.asyncProperty(worldArb, async w => {

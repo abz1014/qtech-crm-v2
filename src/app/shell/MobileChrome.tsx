@@ -1,14 +1,14 @@
 import { NavLink, useLocation, useNavigate, type Location, type NavigateFunction } from 'react-router-dom'
-import { navItemsForRole, type NavItem, type NavKey } from '@/app/navConfig'
+import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
-import { ChevronLeft, Import, Search, X } from 'lucide-react'
+import { ChevronLeft, Search, X } from 'lucide-react'
 import { useMobileBarConfig, type MobileBarConfig } from '@/app/shell/MobileBarContext'
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { NewMenu } from '@/app/shell/NewMenu'
-import { CAPTURE_LABEL } from '@/app/shell/TopBar'
 import { Button } from '@/ui/Button'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
+import { LateDot } from '@/ui/LateDot'
 import { NeedsCount } from '@/ui/Tag'
 import { cn } from '@/lib/utils'
 
@@ -36,7 +36,7 @@ function leave(config: MobileBarConfig, navigate: NavigateFunction, location: Lo
  * A screen can ask for the one-bar form through useMobileBar(): chevron-left or x, its own title, and one slot on the
  * right for its actions (g2-login-team-settings phone frames). Logo, search, paste-or-photo and the avatar are not shown then.
  */
-export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionUser; title: string; onSearch?: () => void; onCapture?: () => void }) {
+export function MobileBar({ user, title, onSearch }: { user: SessionUser; title: string; onSearch?: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
   const config = useMobileBarConfig()
@@ -61,10 +61,6 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
       <p className="min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base">{config?.title ?? title}</p>
       {actions ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
       <NewMenu role={user.role} iconOnly size="touch" />
-      {onCapture ? (
-        // Icon only and secondary (audit X1): the screen's own green button is the one primary on a phone; the name is "Paste or photo".
-        <Button variant="secondary" size="touch" icon={Import} aria-label={CAPTURE_LABEL} onClick={onCapture} />
-      ) : null}
       <AccountMenu user={user} touch />
     </header>
   )
@@ -80,10 +76,13 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
 export function BottomTabs({
   role,
   counts,
+  dots,
   items: given,
 }: {
   role: string
-  counts?: Partial<Record<NavKey, number>>
+  counts?: Partial<Record<CountKey, number>>
+  /** A red dot, no number (Money while an invoice is late). */
+  dots?: Partial<Record<NavKey, boolean>>
   /** Default: the role's list from navConfig (the gallery passes a fixed one). */
   items?: readonly NavItem[]
 }) {
@@ -117,10 +116,12 @@ export function BottomTabs({
                   <Icon icon={item.icon} size="lg" />
                   {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
                   <NeedsCount n={count} badge silent />
+                  {dots?.[item.key] ? <LateDot badge silent /> : null}
                 </span>
                 <span className="whitespace-nowrap">
                   {item.label}
                   {count ? <span className="sr-only">{`, ${count} need you`}</span> : null}
+                  {dots?.[item.key] ? <span className="sr-only">, an invoice is late</span> : null}
                 </span>
               </>
             )}

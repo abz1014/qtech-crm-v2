@@ -47,6 +47,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { COMPANY_NAME } from '@/features/rfqs/lib/chaseCommon'
 import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
 import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
+import { VisitButton } from '@/features/orders/VisitDialog'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
 const CommissioningEditDialog = lazyShown(() => import('@/features/orders/CommissioningPanel').then(m => m.CommissioningEditDialog))
@@ -400,7 +401,7 @@ export function OrderHeaderBlock({
  * The order's "More" menu (the shared MoreMenu): Cancel order (with a reason, and Undo) or Reopen order. A "More" text button beside
  * the title from tablet up, and an icon in the phone's one bar (useMobileBar) below 768. Engineers have none.
  */
-export function OrderMoreMenu({ order, touch = false, recordPayment = false }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean }) {
+export function OrderMoreMenu({ order, touch = false, recordPayment = false, afterDelete }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean; /** Where a deleted order lands (the job page: the jobs list). */ afterDelete?: string }) {
   const { toast } = useToast()
   const cancel = useCancelOrder(order.id)
   const once = useInFlight() // HW-15: one cancel / reopen per press, however many clicks
@@ -409,7 +410,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
   const today = businessToday()
-  const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName })
+  const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName }, afterDelete)
   const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
 
   const reopen = () =>
@@ -694,7 +695,7 @@ function EngineerJob({
           </span>
           {order.needsCommissioning ? (
             <>
-              <span className="font-medium">{order.doneOn ? `Done ${formatShortDate(order.doneOn, today)}` : order.plannedOn ? `Planned ${formatDay(order.plannedOn)}` : 'No date yet'}</span>
+              <span className="font-medium">{order.doneOn ? `Done ${formatShortDate(order.doneOn, today)}` : order.plannedOn ? `Planned ${formatDay(order.plannedOn)}${order.visitTime ? ` at ${order.visitTime}` : ''}` : 'No date yet'}</span>
               {engineers.length ? <span className="text-sm text-fg-2">With {engineers.map(e => e.name).join(' and ')}</span> : null}
             </>
           ) : (
@@ -719,6 +720,7 @@ function EngineerJob({
             </Button>
           ) : null}
           {open ? <TapDate value={order.plannedOn} label="Planned date" today={today} onSave={setPlanned} button={{ text: 'Change planned date', icon: CalendarDays }} /> : null}
+          {open ? <VisitButton order={order} /> : null}
         </div>
       ) : null}
     </section>

@@ -27,8 +27,8 @@ export interface RpcMessage {
   action?: RpcAction
 }
 
-const MONTH_END: RpcAction = { label: 'Open Month end', href: '/money/month-end' }
-const BANK: RpcAction = { label: 'Open Match bank statement', href: '/money/month-end/bank' }
+const MONTH_END: RpcAction = { label: 'Open Lock a month', href: '/money/month-end' }
+const BANK: RpcAction = { label: 'Open Bank check', href: '/money/month-end/bank' }
 const CATEGORIES: RpcAction = { label: 'Open categories', href: '/settings/categories' }
 const TEAM: RpcAction = { label: 'Open Team', href: '/settings/team' }
 
@@ -170,6 +170,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Only the person who entered this, or an admin, can change it\.$/ },
   // 0101: an engineer's visit time and type, on a site assigned to them only (HINT not_assigned)
   { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'You can set the visit time and type only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
+  // 0098: a product category is renamed and curated by an admin (HINT admin_only)
+  { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
   { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
   { match: /^This RFQ has an order\. / },
