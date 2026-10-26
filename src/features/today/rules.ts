@@ -920,6 +920,7 @@ export function ruleJobCommissioning(ctx: TodayInputs): Entry[] {
           orderId: j.orderId,
           href: `/orders/${j.orderId}`,
           number: j.orderNumber,
+          visit: { time: j.visitTime ?? null, type: j.visitType ?? null, customer: j.customerName, site: j.siteName },
         },
         ctx.today,
       ),
@@ -1135,8 +1136,16 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
  * An item older than 30 days (needsYou.ts isStale; never a late payment) leaves the groups for the grey "Older than 30 days"
  * fold, oldest last, its date in words ("since 31 Jan 2025") and no colour. A Waiting item stays in Waiting: someone chased it.
  */
+/**
+ * An engineer's list is their jobs and nothing else (redesign phase 7): the two job rules. No sales rule (a supplier chase, "Needs
+ * suppliers", a quotation) and no money rule reaches an engineer, even for a record they happen to own. needsYou.ts counts what this
+ * view holds, so the engineer's badge says the same.
+ */
+export const ENGINEER_RULES: readonly RuleKey[] = ['job_commissioning', 'job_on_site']
+
 export function buildToday(ctx: TodayInputs): TodayView {
-  const all = applySnoozes((Object.keys(RULES) as RuleKey[]).flatMap(k => RULES[k](ctx)), ctx.snoozes, ctx.today)
+  const keys = ctx.user.role === 'engineer' ? ENGINEER_RULES : (Object.keys(RULES) as RuleKey[])
+  const all = applySnoozes(keys.flatMap(k => RULES[k](ctx)), ctx.snoozes, ctx.today)
   const stale = (i: Entry) => !i.waiting && !i.imported && isStale(i, ctx.today)
   const view = groupItems(all.filter(i => !stale(i)))
   view.stale = all

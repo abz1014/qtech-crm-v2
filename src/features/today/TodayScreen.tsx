@@ -18,6 +18,7 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { needsYouItems } from '@/features/today/needsYou'
 import { SnoozeMenu } from '@/features/today/SnoozeMenu'
+import { engineerDayGroups, dayBlock } from '@/features/today/engineerDays'
 import { TargetTile } from '@/features/today/TargetTile'
 import { TeamView } from '@/features/today/TeamView'
 import { isFreshChase } from '@/features/today/chaseMemory'
@@ -140,11 +141,17 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const stale = view?.stale ?? NONE
   const imported = view?.imported ?? NONE
   const latePayments = useMemo(() => imported.filter(i => i.rule === 'payment_overdue'), [imported])
-  const blocks = useMemo(
-    () => (model ? ([['late', model.late], ['today', model.today], ['week', model.week]] as const).filter(([, items]) => items.length > 0) : []),
-    [model],
+  // An engineer's list is their jobs by day (engineerDays.ts: Missed, Today, Tomorrow, each later day); everyone else's is the three blocks.
+  const blocks = useMemo<Array<readonly [TodoBlock, TodayItem[], string]>>(
+    () =>
+      user.role === 'engineer' && view
+        ? engineerDayGroups(view, today).map(g => [dayBlock(g.id), g.items, g.title] as const)
+        : model
+          ? ([['late', model.late], ['today', model.today], ['week', model.week]] as const).filter(([, items]) => items.length > 0).map(([b, items]) => [b, items, BLOCK_TITLE[b]] as const)
+          : [],
+    [model, view, today, user.role],
   )
-  const drawn = useMemo(() => [...blocks.flatMap(([, items]) => items), ...(moreOpen && model ? model.more : [])], [blocks, moreOpen, model])
+  const drawn = useMemo(() => [...blocks.flatMap(([, items]) => items), ...(moreOpen && model && user.role !== 'engineer' ? model.more : [])], [blocks, moreOpen, model, user.role])
   const all = useMemo(
     () => [...drawn, ...waiting, ...(importedOpen ? imported : []), ...(staleOpen ? stale : [])],
     [drawn, waiting, imported, importedOpen, stale, staleOpen],
@@ -238,15 +245,15 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                   : 'Chases, quotations, goods and payments that need you will appear here.'}
             </EmptyState>
           ) : null}
-          {blocks.map(([id, items]) => (
-            <section key={id} aria-label={BLOCK_TITLE[id]} data-block={id} className={cn('mx-2 mb-3 rounded-panel p-2 first-of-type:mt-1 md:mx-3 md:p-3', BLOCK[id])}>
+          {blocks.map(([id, items, title], n) => (
+            <section key={`${id}-${n}`} aria-label={title} data-block={id} className={cn('mx-2 mb-3 rounded-panel p-2 first-of-type:mt-1 md:mx-3 md:p-3', BLOCK[id])}>
               <h2 className="flex items-baseline gap-2 px-1 pb-2 text-lg font-heavy">
-                {BLOCK_TITLE[id]} <span className="num">{items.length}</span>
+                {title} <span className="num">{items.length}</span>
               </h2>
               <ul className="grid gap-2">{items.map(i => row(i))}</ul>
             </section>
           ))}
-          {model.more.length > 0 ? (
+          {model.more.length > 0 && user.role !== 'engineer' ? (
             <Fold label={moreText(model)} open={moreOpen} hint={moreOpen ? '' : ' · show'} data-more-fold="" onToggle={() => { moreOpenThisSession = !moreOpen; setMoreOpen(!moreOpen) }}>
               <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{model.more.map(i => row(i))}</ul>
             </Fold>

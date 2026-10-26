@@ -60,6 +60,7 @@ describe('Money home', () => {
     const hrefs = within(blocks).getAllByRole('link').map(a => a.getAttribute('href'))
     expect(hrefs).toEqual(['/money/receivables', '/money/reports/in-out', '/money/expenses', '/money/reports/owe'])
     expect(screen.getByRole('link', { name: /GST to FBR/ })).toHaveAttribute('href', '/money/accounts/gst')
+    expect(screen.getByRole('link', { name: /Review imported/ })).toHaveAttribute('href', '/money/review-imported')
   })
 
   it('has one green button', async () => {

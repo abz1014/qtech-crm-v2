@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { marginNote, marginPct, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
+import { marginNote, marginPct, marginTotals, noCostsYet, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
 const row = (n: number, over: Partial<MarginRow> = {}): MarginRow => ({
   orderId: `o${n}`,
@@ -77,5 +77,16 @@ describe('marginNote', () => {
   })
   it('never prints a percentage', () => {
     expect(marginNote({ orders: 2, netSale: 0, expectedCost: 0, actualCost: 0, margin: 0, provisional: 3, basisUnknown: 1 })).not.toContain('%')
+  })
+})
+
+describe('Costs not entered yet (P2-C, plan D6)', () => {
+  it('is for a margin that is not final and has no cost at all', () => {
+    expect(noCostsYet({ state: 'provisional', actualCost: 0 })).toBe(true)
+    expect(noCostsYet({ state: 'provisional', actualCost: 1500 })).toBe(false)
+  })
+  it('never for a final margin (a settled imported order has its costs marked complete) or an unknown basis', () => {
+    expect(noCostsYet({ state: 'final', actualCost: 0 })).toBe(false)
+    expect(noCostsYet({ state: 'basis_unknown', actualCost: 0 })).toBe(false)
   })
 })
