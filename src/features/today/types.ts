@@ -24,6 +24,7 @@ export type RuleKey =
   | 'recurring_due'
   | 'job_commissioning'
   | 'job_on_site'
+  | 'weekly_review'
 
 /** The rule key written to snoozes.rule (DATA_MODEL 2.21 gives `chase_customer_clarification` as the example). */
 export const SNOOZE_RULE: Record<RuleKey, string> = {
@@ -46,6 +47,7 @@ export const SNOOZE_RULE: Record<RuleKey, string> = {
   recurring_due: 'recurring_due',
   job_commissioning: 'job_commissioning',
   job_on_site: 'job_on_site',
+  weekly_review: 'weekly_review',
 }
 
 export type TodayTab = 'bids' | 'sourcing' | 'money'

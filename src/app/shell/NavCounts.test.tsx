@@ -6,6 +6,7 @@ import { SessionProvider } from '@/app/SessionProvider'
 import { AppShell } from '@/app/shell/AppShell'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { businessToday } from '@/lib/dates'
+import { isMonday } from '@/features/today/weeklyReview'
 import { installFakeDb } from '@/test/fakeSupabase'
 
 /*
@@ -56,8 +57,10 @@ describe('the top bar has one number: Today\'s "needs you"', () => {
 
   it('an item older than 30 days is not counted (it waits in Today\'s grey fold)', async () => {
     const { fake, bar } = mount('admin', [open(1, '2025-01-27'), open(2)])
-    // the fresh one is counted, the one from January 2025 is not
-    expect(await within(bar).findByRole('link', { name: /^To do\s?, 1 need you$/ })).toBeInTheDocument()
+    // the fresh one is counted, the one from January 2025 is not (on a Monday the admin's weekly review row, which that old enquiry
+    // is on, is counted too: it is real work for that day)
+    const n = isMonday(businessToday()) ? 2 : 1
+    expect(await within(bar).findByRole('link', { name: new RegExp(`^To do\\s?, ${n} need you$`) })).toBeInTheDocument()
     expect(fake.calls.some(c => c.target === 'v_rfq_state')).toBe(true)
     expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
   })

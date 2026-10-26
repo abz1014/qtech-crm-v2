@@ -46,6 +46,7 @@ export const ACTION_LABEL: Record<RuleKey, string> = {
   recurring_due: 'Add expenses',
   job_commissioning: 'Open job',
   job_on_site: 'Set date',
+  weekly_review: 'Start review',
 }
 
 /** Rules whose button opens the prepared message (the context pane holds Copy, Open in WhatsApp and Mark chased). */
@@ -80,14 +81,17 @@ export interface TodoModel {
   weekTotal: number
 }
 
-/** Ready work is "this week" only when it has no date (it can be done now); a far date is not a task yet. */
-const isWeek = (i: TodayItem): boolean => i.group === 'soon' || (i.group === 'ready' && i.actionDueOn === null)
+/**
+ * "Ready to move" work (place the PO, plan commissioning, close the month: it can be done now) is "this week" when it has no date or
+ * its date has come; a date still ahead beyond the week is not a task yet.
+ */
+const isWeek = (i: TodayItem, today: string): boolean => i.group === 'soon' || (i.group === 'ready' && (i.actionDueOn === null || i.actionDueOn <= today))
 
 export function buildTodo(view: TodayView, today: string, max: number = MAX_ROWS): TodoModel {
   const byBlock: Record<TodoBlock, TodayItem[]> = { late: [], today: [], week: [] }
   const later: TodayItem[] = []
   for (const i of [...view.now, ...view.soon, ...view.ready]) {
-    if (i.group === 'ready' && !isWeek(i)) later.push(i)
+    if (i.group === 'ready' && !isWeek(i, today)) later.push(i)
     else byBlock[blockOf(i, today)].push(i)
   }
   const ordered = (['late', 'today', 'week'] as const).flatMap(b => [...byBlock[b]].sort((a, z) => rank(a) - rank(z)).map(i => ({ i, b })))

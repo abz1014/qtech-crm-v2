@@ -17,6 +17,7 @@ import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { ageOrSince, dateWords, dueWord, sinceWords } from '@/lib/timeWords'
 import { isStale, STALE_AFTER_DAYS, toneFor } from './needsYou'
+import { buildReview, isMonday, reviewCount } from './weeklyReview'
 import {
   SNOOZE_RULE,
   type ClarificationFact,
@@ -1003,6 +1004,35 @@ export function groupItems(all: readonly Entry[]): TodayView {
   return { now, soon, ready, waiting, active: [...now, ...soon, ...ready], stale: [], imported }
 }
 
+/**
+ * The weekly owner review (redesign phase 3, P3-C1): one row for the admin every Monday, "Weekly review: 7 to decide", that opens
+ * /todo/review. Only when there is something to decide. Never for sales or an engineer: the owner decides what is closed as lost.
+ */
+export function ruleWeeklyReview(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role !== 'admin' || !isMonday(ctx.today)) return []
+  const n = reviewCount(buildReview(ctx))
+  if (n === 0) return []
+  return [
+    build(
+      {
+        rule: 'weekly_review',
+        subjectId: `00000000-0000-4000-8001-${ctx.today.replace(/-/g, '').padStart(12, '0')}`, // one stable id per Monday, for a snooze
+        tab: tabFor('weekly_review'),
+        title: `Weekly review: ${n} to decide`,
+        ref: 'Weekly review',
+        party: 'About 10 minutes',
+        actionDueOn: ctx.today,
+        group: 'now',
+        badge: dueBadge(ctx.today, ctx.today, 'weekly_review'),
+        isPriority: false,
+        href: '/todo/review',
+        number: 0,
+      },
+      ctx.today,
+    ),
+  ]
+}
+
 /** Every rule, in one place, so a test can name them. */
 export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   chase_customer: ruleChaseCustomer,
@@ -1024,6 +1054,7 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   recurring_due: ruleRecurringDue,
   job_commissioning: ruleJobCommissioning,
   job_on_site: ruleJobOnSite,
+  weekly_review: ruleWeeklyReview,
 }
 
 /**
@@ -1071,6 +1102,7 @@ export const NAV_SECTION: Record<RuleKey, NavSection> = {
   recurring_due: 'money',
   job_commissioning: 'orders',
   job_on_site: 'orders',
+  weekly_review: 'money', // an admin chore
 }
 
 export const navSectionOf = (item: Pick<TodayItem, 'rule'>): NavSection => NAV_SECTION[item.rule]

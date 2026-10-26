@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Banknote, CalendarCheck, Calculator, ClipboardCheck, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -66,6 +66,7 @@ const ICON: Record<RuleKey, LucideIcon> = {
   recurring_due: Repeat,
   job_commissioning: HardHat,
   job_on_site: PackageCheck,
+  weekly_review: ClipboardCheck,
 }
 
 const NONE: TodayItem[] = []
@@ -105,7 +106,12 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const team = user.role === 'admin' && params.get('view') === 'team'
   const setView = (v: string) => setParams(p => { const n = new URLSearchParams(p); if (v === 'team') n.set('view', 'team'); else n.delete('view'); return n }, { replace: true })
   const switcher = user.role === 'admin' ? (
-    <SegmentedControl aria-label="Whose list" className="mt-2 justify-self-start" value={team ? 'team' : 'mine'} onValueChange={setView} options={[{ value: 'mine', label: 'Mine' }, { value: 'team', label: 'Team' }]} />
+    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+      <SegmentedControl aria-label="Whose list" value={team ? 'team' : 'mine'} onValueChange={setView} options={[{ value: 'mine', label: 'Mine' }, { value: 'team', label: 'Team' }]} />
+      <Link to="/todo/review" className="inline-flex min-h-touch items-center rounded text-base font-medium text-primary underline underline-offset-2">
+        Weekly review
+      </Link>
+    </div>
   ) : null
   const [selected, setSelected] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)

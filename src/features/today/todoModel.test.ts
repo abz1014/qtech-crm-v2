@@ -58,6 +58,13 @@ describe('To do blocks', () => {
     expect(m.more.map(i => i.key)).toEqual(['far'])
   })
 
+  it('ready work whose date has come (place the PO, close the month) is this week work', () => {
+    const ready: TodayItem = { ...view.now[0], key: 'ready-now', group: 'ready', actionDueOn: '2026-10-01' }
+    const m = buildTodo({ ...view, now: [], soon: [], ready: [ready] }, today, 999)
+    expect(m.week.map(i => i.key)).toEqual(['ready-now'])
+    expect(m.more).toEqual([])
+  })
+
   it('names what is folded: "N more this week" only when nothing late or due today is in it', () => {
     const m = buildTodo(view, today, 2)
     expect(moreText({ more: [{ ...view.soon[0] }, { ...view.soon[0] }] })).toBe('2 more this week')

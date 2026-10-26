@@ -25,6 +25,8 @@ const screens: Record<NavKey, ComponentType> = {
   orders: lazy(routeChunks.orders),
 }
 
+/** The weekly owner review (redesign phase 3): /todo/review, admin only. */
+const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
@@ -126,6 +128,16 @@ function AppRouteTable() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          <Route
+            path="todo/review"
+            element={
+              <AdminOnly area="Weekly review">
+                <Suspense fallback={null}>
+                  <ReviewPage />
+                </Suspense>
+              </AdminOnly>
+            }
+          />
           {/* Today became To do (redesign phase 3): an old link, bookmark or installed shortcut lands on /todo. */}
           <Route path="today/*" element={<TodayRedirect />} />
           <Route
