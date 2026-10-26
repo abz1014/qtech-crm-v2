@@ -304,6 +304,27 @@ test('0101 (phase 7): an engineer sets the visit time and type on their own site
   expect([...keys].filter(k => /(price|cost|value|amount|gst|gross|sell|net|margin)/i.test(k)), 'the jobs view has no money column for an engineer').toEqual([])
 })
 
+test('0093 and 0098 (C3 to C5): an engineer reads category counts but no price win, and cannot tag, rename or curate a category', async () => {
+  const MCB = 'ca7e0000-0000-4000-8000-000000000001'
+  const evidence = await api('engineer', '/rest/v1/v_supplier_category_evidence?select=*&limit=5')
+  expect(evidence.status, 'counts are readable').toBeLessThan(300)
+  const keys = new Set((Array.isArray(evidence.body) ? (evidence.body as Record<string, unknown>[]) : []).flatMap(r => Object.keys(r)))
+  expect([...keys].filter(k => /(price|cost|value|amount|gst|gross|sell|net|margin)/i.test(k)), 'the evidence view has no money column').toEqual([])
+  const wins = await api('engineer', '/rest/v1/rpc/supplier_category_price_wins', { method: 'POST', body: { p_family_ids: [MCB] } })
+  for (const r of Array.isArray(wins.body) ? (wins.body as { wins: number | null; of_ranked: number | null }[]) : []) expect([r.wins, r.of_ranked], 'an engineer gets no price win').toEqual([null, null])
+  const tag = await api('engineer', '/rest/v1/company_brands', { method: 'POST', body: { company_id: world.company.id, brand_id: MCB }, prefer: 'return=representation' })
+  expect(tag.status, 'an engineer cannot tag a supplier with a category').toBeGreaterThanOrEqual(400)
+  for (const p of ['engineer', 'sales'] as const) {
+    const rename = await api(p, `/rest/v1/brands?id=eq.${MCB}`, { method: 'PATCH', body: { name: 'Renamed by ' + p }, prefer: 'return=representation' })
+    expect(rename.status, `${p} cannot rename a curated category`).toBeGreaterThanOrEqual(400)
+    expect(JSON.stringify(rename.body)).toContain('admin_only')
+    const curate = await api(p, `/rest/v1/brands?id=eq.${MCB}`, { method: 'PATCH', body: { curated: false }, prefer: 'return=representation' })
+    expect(curate.status, `${p} cannot un-curate it`).toBeGreaterThanOrEqual(400)
+  }
+  const still = await api('admin', `/rest/v1/brands?id=eq.${MCB}&select=name,curated`)
+  expect(still.body).toEqual([{ name: 'MCB', curated: true }])
+})
+
 test('BUG-RV-01: the engineer reads no legacy order value or cost through the API', async () => {
   const got: string[] = []
   for (const [t, filter] of [['orders', `id=eq.${world.legacyOrder.id}`], ['order_items', `order_id=eq.${world.legacyOrder.id}`], ['supplier_orders', `order_id=eq.${world.legacyOrder.id}`]] as const) {

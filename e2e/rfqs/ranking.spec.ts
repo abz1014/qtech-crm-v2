@@ -351,8 +351,10 @@ test.describe('R26 float suggestions: ordered by track record, citing the eviden
     const s = await seedFloat()
     await openAs(page, 'sales', `/rfqs/${s.rfqId}`)
     const card = page.locator('[data-slot="suppliers-to-ask"]')
-    await expect(card.locator('li')).toHaveCount(3)
-    const rows = await card.locator('li').allInnerTexts()
+    // the list also holds a group heading row (C3): the supplier rows are the ones with a tick box
+    const supplierRows = card.locator('li', { has: page.getByRole('checkbox') })
+    await expect(supplierRows).toHaveCount(3)
+    const rows = await supplierRows.allInnerTexts()
     // C3: ordered count first (Zulu and Mike three each, Alpha none), then the delivery record as the tie-break: proven before often late,
     // and Alpha, however recently contacted, after both.
     expect(rows[0]).toContain(s.zulu.name)

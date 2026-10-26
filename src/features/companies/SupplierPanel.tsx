@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useSupplierActivity, useSupplierRecordView } from '@/features/companies/hooks'
+import { CategoriesDealtIn } from '@/features/companies/CategoriesDealtIn'
 import { Deliveries, RecentQuotes, type ReplyFact } from '@/features/companies/SupplierRecordPanels'
 
 /*
@@ -21,6 +22,7 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
     <>
       <RecentQuotes view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={retryRecord} replies={replies} />
       <Deliveries view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={retryRecord} today={record.today} />
+      <CategoriesDealtIn companyId={companyId} />
     </>
   )
 }

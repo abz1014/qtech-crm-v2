@@ -40,6 +40,7 @@ export type CompanyPart =
   | 'supplier-activity'
   | 'supplier-record'
   | 'supplier-brand-quotes'
+  | 'category-evidence'
   | 'history'
   | 'money'
 
@@ -169,6 +170,8 @@ function settings() {
     /** M13: the category list with usage counts, and the active-only list new expenses choose from. */
     categories: () => [...all, 'categories'] as const,
     activeCategories: () => [...all, 'categories', 'active'] as const,
+    /** C4: the product categories (families) with their curated flag and tagged suppliers. */
+    productCategories: () => [...all, 'product-categories'] as const,
   }
 }
 

@@ -368,6 +368,14 @@ export function useUpdateRfqItem(rfqId: string) {
   })
 }
 
+export function useSetItemCategory(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; familyId: string | null }) => api.setRfqItemCategory(v.id, v.familyId),
+    onSuccess: () => invalidateAfter(client, 'item.edit', { rfqId }),
+  })
+}
+
 export function useRemoveRfqItem(rfqId: string) {
   const client = useQueryClient()
   return useMutation({

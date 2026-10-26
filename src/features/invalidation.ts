@@ -36,6 +36,12 @@ export interface WriteVars {
   'brand.unlink': { companyId: string }
   'brand.link': { companyId: string }
   'brand.create': Record<string, never>
+  /** C4: an admin renamed or curated a product category. */
+  'productCategory.edit': Record<string, never>
+  /** C4: an admin merged one product category into another: every item, order line and supplier tag moved. */
+  'productCategory.merge': Record<string, never>
+  /** C5: Fill missing categories set the category of RFQ items and order lines. */
+  'productCategory.fill': Record<string, never>
   'team.create': Record<string, never>
   'team.reset-password': Record<string, never>
   'team.set-role': Record<string, never>
@@ -159,6 +165,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.
   'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists(), qk.intake.all],
   'brand.create': () => [qk.brands.all],
+  'productCategory.edit': () => [qk.settings.productCategories(), qk.brands.all, qk.intake.all, qk.companies.all],
+  'productCategory.merge': () => [qk.settings.productCategories(), qk.brands.all, qk.intake.all, qk.companies.all, qk.rfqs.all, qk.orders.all, qk.jobs.all],
+  'productCategory.fill': () => [qk.settings.productCategories(), qk.intake.all, qk.rfqs.all, qk.orders.all, qk.jobs.all],
   // Every change to a person is read back from the admin-users function, the source of truth for the list.
   'team.create': () => [qk.settings.team(), qk.onboarding.all],
   // A new password changes nothing the list shows; refreshing it anyway is cheap and keeps the rule simple.

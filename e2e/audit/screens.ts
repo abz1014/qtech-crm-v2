@@ -300,6 +300,7 @@ export const VISITS: readonly Visit[] = [
   screen('settings-team', 'Settings: team', ADMIN, () => '/settings/team'),
   screen('settings-targets', 'Settings: targets', ADMIN, () => '/settings/targets'),
   screen('settings-categories', 'Settings: expense categories', ADMIN, () => '/settings/categories'),
+  screen('settings-product-categories', 'Settings: product categories', ADMIN, () => '/settings/product-categories'),
   screen('settings-company', 'Settings: company profile', ALL, () => '/settings/company'),
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
   screen('settings-exchange-rates', 'Settings: exchange rates', MONEY, () => '/settings/exchange-rates'), // engineers: no currency amounts (2026-10-22)

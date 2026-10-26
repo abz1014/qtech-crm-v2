@@ -160,6 +160,7 @@ export const SCREEN_ENTRIES: Record<string, readonly string[]> = {
     'features/settings/TeamPage.tsx',
     'features/settings/TargetsPage.tsx',
     'features/settings/CategoriesPage.tsx',
+    'features/settings/productCategories/ProductCategoriesPage.tsx',
     'features/settings/ChangePasswordPage.tsx',
     'features/settings/MyDetailsPage.tsx',
     'features/settings/CompanyProfilePage.tsx',
