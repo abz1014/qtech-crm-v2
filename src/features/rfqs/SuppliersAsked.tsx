@@ -395,7 +395,7 @@ function ChaseCard({
     : null
 
   return (
-    <div className="mt-2 grid gap-3" data-chase-card={inquiry.supplierId}>
+    <div className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-3" data-chase-card={inquiry.supplierId}>
       {inquiry.chaseCount >= 2 && !dismissed ? (
         <FloatElsewhere
           supplierName={inquiry.supplierName}
@@ -408,7 +408,7 @@ function ChaseCard({
           onChaseAgain={() => setDismissed(true)}
         />
       ) : null}
-      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded-panel border bg-surface">
+      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-panel border bg-surface">
         <RecipientRow channel={channel} lead={channel === 'email' ? 'Email to' : 'WhatsApp to'} contact={recipient} />
         {whole ? (
           <div id={wholeId} className="grid">

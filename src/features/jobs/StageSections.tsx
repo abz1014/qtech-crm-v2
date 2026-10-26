@@ -149,7 +149,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         {ctx.money && order?.paymentTermsDays != null ? `Payment terms ${order.paymentTermsDays} days. ` : ''}
       </p>
       {/* the order lines, Edit GST and lines and Remove line are the slot below (orders/jobSlots/OrderWork) */}
-      {orderLink(job.orderId, 'Open the order page')}
+      {ctx.money ? orderLink(job.orderId, 'Open the order page') : null}
     </div>
   )
 
@@ -158,7 +158,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   ) : legs.length ? (
     <div className="grid gap-2">
       {/* the supplier orders and their buttons are the slot below (orders/jobSlots/SupplierOrderWork) */}
-      {orderLink(job.orderId, 'Open the order page')}
+      {ctx.money ? orderLink(job.orderId, 'Open the order page') : null}
     </div>
   ) : (
     <Note>No supplier order yet. Choose a supplier for each line below.</Note>
