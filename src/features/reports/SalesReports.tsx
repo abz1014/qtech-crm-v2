@@ -52,7 +52,7 @@ export function SalesReports() {
       ) : outcomes.isLoading || repeat.isLoading ? (
         <Skeleton className="h-[88px] w-full" aria-label="Loading the headline figures" />
       ) : null}
-      <div className="grid overflow-hidden rounded border bg-surface">
+      <div className="grid overflow-hidden rounded-panel border bg-surface">
         <OutcomesReport />
         <FloatReport />
         <TurnaroundReport />

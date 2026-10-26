@@ -26,14 +26,14 @@ export function CashInHandLine({ compact = false }: { compact?: boolean }) {
   const [counting, setCounting] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const c = q.data
-  if (q.isPending) return <div className="h-[60px] animate-pulse rounded border bg-sunken" aria-hidden="true" />
+  if (q.isPending) return <div className="h-[60px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />
   if (q.isError || !c) return null
   const none = c.kind === 'none' || c.expected === null
   return (
     <section
       aria-label="Cash in hand"
       data-testid="cash-in-hand"
-      className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded border bg-surface px-4 py-3 text-base', compact && 'py-2')}
+      className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border bg-surface px-4 py-3 text-base', compact && 'py-2')}
     >
       <Icon icon={Wallet} className="text-fg-muted" />
       {none ? (

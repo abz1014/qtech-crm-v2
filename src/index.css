@@ -3,93 +3,47 @@
 @tailwind utilities;
 
 /*
- * Webfont: Geist and Geist Mono, self-hosted from the @fontsource packages (latin, woff2 only, font-display: swap). The packages
- * name their families "Geist Sans" and "Geist Mono"; tokens.css names them "Geist" and "Geist Mono", so the faces are declared
- * here under the token's names. No third-party font host is used (CSP keeps font-src 'self').
+ * Webfont: Archivo (direction C, DECISIONS 2026-10-22), self-hosted from @fontsource-variable/archivo (latin, woff2, variable,
+ * font-display: swap). No third-party font host is used (CSP keeps font-src 'self').
+ *   "Archivo"       the UI face: the weight axis, 400 to 700, normal width.
+ *   "Archivo Wide"  titles (--font-display): the width axis pinned at 118 % and weight 600 to 800 (titles are 750).
  *
  * Each face is two files split by unicode-range (perf/lcp): a core file with the characters the app's own words use
- * (src/assets/fonts, made by scripts/fonts/subset-geist.py: printable ASCII and the app's punctuation and symbols, 14 KB instead
- * of 34 KB a weight), and the full @fontsource latin file for every other character, which the browser downloads only when one is
- * on screen (an accented name, say). Same glyphs, kerning and features either way.
+ * (src/assets/fonts, made by scripts/fonts/subset-archivo.py: printable ASCII and the app's punctuation and symbols; 19 KB and
+ * 15 KB), and the full @fontsource latin file for every other character, which the browser downloads only when one is on screen
+ * (an accented name, say). Same glyphs, kerning and features either way. The Wide face falls back to the normal-width file for
+ * those rare characters (a third of the size of the width-and-weight file).
  */
 @font-face {
-  font-family: "Geist";
+  font-family: "Archivo";
   font-style: normal;
   font-display: swap;
-  font-weight: 400;
-  src: url("@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2") format("woff2");
-  unicode-range: U+00A1-00A2, U+00A4-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-0113, U+0116-012B, U+012E-0137, U+0139-013E, U+0141-0148, U+014A-014D, U+0150-017E, U+018F, U+0192, U+01B7, U+01CD-01CE, U+01E4-01E9, U+01EE-01EF, U+0218-021B, U+0237, U+0259, U+0292, U+02B9, U+02BC, U+02C6-02C8, U+02D8-02DD, U+0300-0304, U+0306-0308, U+030A-030C, U+0312, U+0326-0328, U+0335, U+039B, U+03A9, U+03BB, U+03C0, U+0E3F, U+1E20-1E21, U+1E80-1E85, U+1E9E, U+1EBC-1EBD, U+1EF2-1EF3, U+1EF8-1EF9, U+201A, U+201E, U+2020-2021, U+2030, U+2032-2033, U+2039-203A, U+2044, U+2070, U+2074-2079, U+2080-2089, U+20AA, U+20B4, U+20B9, U+20BD, U+2107, U+2116-2117, U+2122, U+2153-2155, U+215B-215E, U+2194-2199, U+219D, U+21A9-21AA, U+21B0-21B1, U+21B3-21B5, U+21E4-21E5, U+21E7, U+2202, U+2206, U+220F, U+2211, U+221A, U+221E, U+222B, U+2260, U+2264-2265, U+23CE, U+240B-240C, U+2460-2468, U+24EA, U+24FF, U+25B2-25B3, U+25B6-25B7, U+25BC-25BD, U+25C0-25C1, U+25CA-25CC, U+25CF, U+2639-263A, U+2776-277E, U+3002-3003, U+3008-3011, U+3014-3017, U+301C, U+A78B-A78C, U+FF01-FF03, U+FF05-FF0A, U+FF0C-FF0F, U+FF1A-FF1B, U+FF1F-FF20, U+FF3B-FF3D, U+FF3F, U+FF5B, U+FF5D;
+  font-weight: 400 700;
+  src: url("@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+000D, U+00A1-00A2, U+00A4-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+2009, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122, U+2215, U+FEFF;
 }
 @font-face {
-  font-family: "Geist";
+  font-family: "Archivo";
   font-style: normal;
   font-display: swap;
-  font-weight: 400;
-  src: url("./assets/fonts/geist-sans-400-core.woff2") format("woff2");
-  unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2190-2193, U+2212, U+2248;
-}
-@font-face {
-  font-family: "Geist";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 500;
-  src: url("@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2") format("woff2");
-  unicode-range: U+00A1-00A2, U+00A4-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-0113, U+0116-012B, U+012E-0137, U+0139-013E, U+0141-0148, U+014A-014D, U+0150-017E, U+018F, U+0192, U+01B7, U+01CD-01CE, U+01E4-01E9, U+01EE-01EF, U+0218-021B, U+0237, U+0259, U+0292, U+02B9, U+02BC, U+02C6-02C8, U+02D8-02DD, U+0300-0304, U+0306-0308, U+030A-030C, U+0312, U+0326-0328, U+0335, U+039B, U+03A9, U+03BB, U+03C0, U+0E3F, U+1E20-1E21, U+1E80-1E85, U+1E9E, U+1EBC-1EBD, U+1EF2-1EF3, U+1EF8-1EF9, U+201A, U+201E, U+2020-2021, U+2030, U+2032-2033, U+2039-203A, U+2044, U+2070, U+2074-2079, U+2080-2089, U+20AA, U+20B4, U+20B9, U+20BD, U+2107, U+2116-2117, U+2122, U+2153-2155, U+215B-215E, U+2194-2199, U+219D, U+21A9-21AA, U+21B0-21B1, U+21B3-21B5, U+21E4-21E5, U+21E7, U+2202, U+2206, U+220F, U+2211, U+221A, U+221E, U+222B, U+2260, U+2264-2265, U+23CE, U+240B-240C, U+2460-2468, U+24EA, U+24FF, U+25B2-25B3, U+25B6-25B7, U+25BC-25BD, U+25C0-25C1, U+25CA-25CC, U+25CF, U+2639-263A, U+2776-277E, U+3002-3003, U+3008-3011, U+3014-3017, U+301C, U+A78B-A78C, U+FF01-FF03, U+FF05-FF0A, U+FF0C-FF0F, U+FF1A-FF1B, U+FF1F-FF20, U+FF3B-FF3D, U+FF3F, U+FF5B, U+FF5D;
-}
-@font-face {
-  font-family: "Geist";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 500;
-  src: url("./assets/fonts/geist-sans-500-core.woff2") format("woff2");
-  unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2190-2193, U+2212, U+2248;
-}
-@font-face {
-  font-family: "Geist";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 600;
-  src: url("@fontsource/geist-sans/files/geist-sans-latin-600-normal.woff2") format("woff2");
-  unicode-range: U+00A1-00A2, U+00A4-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-0113, U+0116-012B, U+012E-0137, U+0139-013E, U+0141-0148, U+014A-014D, U+0150-017E, U+018F, U+0192, U+01B7, U+01CD-01CE, U+01E4-01E9, U+01EE-01EF, U+0218-021B, U+0237, U+0259, U+0292, U+02B9, U+02BC, U+02C6-02C8, U+02D8-02DD, U+0300-0304, U+0306-0308, U+030A-030C, U+0312, U+0326-0328, U+0335, U+039B, U+03A9, U+03BB, U+03C0, U+0E3F, U+1E20-1E21, U+1E80-1E85, U+1E9E, U+1EBC-1EBD, U+1EF2-1EF3, U+1EF8-1EF9, U+201A, U+201E, U+2020-2021, U+2030, U+2032-2033, U+2039-203A, U+2044, U+2070, U+2074-2079, U+2080-2089, U+20AA, U+20B4, U+20B9, U+20BD, U+2107, U+2116-2117, U+2122, U+2153-2155, U+215B-215E, U+2194-2199, U+219D, U+21A9-21AA, U+21B0-21B1, U+21B3-21B5, U+21E4-21E5, U+21E7, U+2202, U+2206, U+220F, U+2211, U+221A, U+221E, U+222B, U+2260, U+2264-2265, U+23CE, U+240B-240C, U+2460-2468, U+24EA, U+24FF, U+25B2-25B3, U+25B6-25B7, U+25BC-25BD, U+25C0-25C1, U+25CA-25CC, U+25CF, U+2639-263A, U+2776-277E, U+3002-3003, U+3008-3011, U+3014-3017, U+301C, U+A78B-A78C, U+FF01-FF03, U+FF05-FF0A, U+FF0C-FF0F, U+FF1A-FF1B, U+FF1F-FF20, U+FF3B-FF3D, U+FF3F, U+FF5B, U+FF5D;
-}
-@font-face {
-  font-family: "Geist";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 600;
-  src: url("./assets/fonts/geist-sans-600-core.woff2") format("woff2");
-  unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2190-2193, U+2212, U+2248;
-}
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 400;
-  src: url("@fontsource/geist-mono/files/geist-mono-latin-400-normal.woff2") format("woff2");
-  unicode-range: U+00A1-00A2, U+00A4-00AC, U+00AE-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122;
-}
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 400;
-  src: url("./assets/fonts/geist-mono-400-core.woff2") format("woff2");
+  font-weight: 400 700;
+  src: url("./assets/fonts/archivo-core.woff2") format("woff2-variations");
   unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2191, U+2193, U+2212;
 }
 @font-face {
-  font-family: "Geist Mono";
+  font-family: "Archivo Wide";
   font-style: normal;
   font-display: swap;
-  font-weight: 500;
-  src: url("@fontsource/geist-mono/files/geist-mono-latin-500-normal.woff2") format("woff2");
-  unicode-range: U+00A1-00A2, U+00A4-00AC, U+00AE-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122;
+  font-weight: 600 800;
+  src: url("@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+000D, U+00A1-00A2, U+00A4-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+2009, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122, U+2215, U+FEFF;
 }
 @font-face {
-  font-family: "Geist Mono";
+  font-family: "Archivo Wide";
   font-style: normal;
   font-display: swap;
-  font-weight: 500;
-  src: url("./assets/fonts/geist-mono-500-core.woff2") format("woff2");
+  font-weight: 600 800;
+  src: url("./assets/fonts/archivo-wide-core.woff2") format("woff2-variations");
   unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2191, U+2193, U+2212;
 }
 
@@ -101,7 +55,7 @@
  */
 :root:not(.fonts-on) {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 /* ==========================================================================
@@ -112,103 +66,138 @@
 /* tokens:start */
 /* ==========================================================================
    Q-Tech CRM v2 — design tokens. SINGLE SOURCE OF TRUTH.
+   Direction C, "Colour blocks" (owner decision, DECISIONS 2026-10-22): a navy top bar, white tiles on a quiet blue-grey
+   field, Late / Today / This week as red, yellow and blue blocks, the next step in a navy band, Archivo with a wide cut for
+   titles, rounded corners on a 10 / 12 / 16 ladder.
    Light theme only (default). Components must read these; never hard-code.
-   Layers: 1 primitives (--neutral-*) → 2 semantic (--bg-*, --fg-*, --tone-*)
+   Layers: 1 primitives (--neutral-*, --navy-*) → 2 semantic (--bg-*, --fg-*, --tone-*, --block-*)
    → 3 component-facing (--status-*, --row-h, …). Prose rules: ../DESIGN_SYSTEM.md
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
-  /* ---- 1. Neutral ramp (cool, hue ≈ 240°, chroma < 3%) ------------------- */
+  /* ---- 1. Neutral ramp (blue-grey, hue ≈ 218°) and the navy ------------- */
   --neutral-0: #ffffff;
-  --neutral-25: #fafafb;
-  --neutral-50: #f4f4f6;
-  --neutral-100: #eeeef1;
-  --neutral-150: #e3e3e7;
-  --neutral-200: #d2d2d8;
-  --neutral-250: #c8c8cf;   /* readable hairline (2026-10-19): 1.66 on white, 1.60 canvas, 1.52 sunken, 1.44 selected */
-  --neutral-300: #b3b3bb;
-  --neutral-400: #8a8a93;
-  --neutral-500: #6e6e77;
-  --neutral-600: #5a5a63;
-  --neutral-650: #4d4d55;   /* secondary text, 8.37:1 on white (2026-10-19) */
-  --neutral-700: #3d3d44;
-  --neutral-800: #26262b;
-  --neutral-900: #111113;
+  --neutral-25: #f6f8fb;
+  --neutral-50: #eef2f7;    /* the quiet field: canvas and sunken blocks */
+  --neutral-100: #e3eaf4;   /* selected row, neutral chip */
+  --neutral-150: #dbe2ed;
+  --neutral-200: #d3dae5;
+  --neutral-250: #c5cedb;   /* hairline, where one is still needed: 1.59 on white */
+  --neutral-300: #8592a6;   /* strong edge, secondary button: 3.15 on white */
+  --neutral-400: #68758c;   /* form control edge: 4.65 on white, 4.14 on the field */
+  --neutral-500: #56637a;
+  --neutral-600: #4a566d;
+  --neutral-650: #3f4b63;   /* hints: 8.76 white, 7.79 field, 7.23 selected */
+  --neutral-700: #28354d;   /* second line: 10.95 on the field */
+  --neutral-800: #1c2638;
+  --neutral-900: #0c1526;   /* ink: 18.25 on white */
+
+  --navy-900: #132a4c;      /* top bar, next-step band: white text 14.35:1 */
+  --navy-800: #1d3760;      /* a field or button on the navy */
+  --navy-700: #26457a;      /* its hover */
+  --navy-500: #7f93b5;      /* an edge on the navy: 4.61:1 (WCAG 1.4.11) */
+  --navy-200: #cdd7e6;      /* quiet text on the navy: 9.88:1 */
 
   /* ---- 2a. Brand & action ----------------------------------------------- */
-  --brand-green: #429446;        /* NON-TEXT ONLY: focus ring, active indicator, progress, logo (3.78:1 on white) */
+  --brand-green: #429446;        /* NON-TEXT ONLY: focus ring, active indicator, progress, logo (3.78 white, 3.36 field) */
+  --indicator-on-chrome: #4caf52; /* the same role on the navy: 5.17:1 (brand green is 3.80 there) */
   --primary: #1a7b46;             /* primary action fills (5.30:1 white text on it) */
   --primary-hover: #166a3b;
   --primary-active: #115a31;
-  --primary-text: #187242;        /* ANY green text (text-primary, links): 5.96 on white, 5.15 on --bg-selected, 5.07 on the lowest tint, 3.16 against --fg so an inline link stands out (axe link-in-text-block) (2026-10-22) */
+  --primary-text: #1a7645;        /* ANY green text: 5.64 white, 4.66 selected, 4.55 on the lowest block tint, 3.23 against --fg (axe link-in-text-block) */
   --on-primary: var(--neutral-0);
 
   /* ---- 2b. Surfaces ------------------------------------------------------ */
-  --bg-canvas: var(--neutral-25);       /* app background behind panels */
-  --bg-surface: var(--neutral-0);       /* panels, lists, inputs */
-  --bg-sunken: var(--neutral-50);       /* table header, hover row, quiet panel */
-  --bg-selected: var(--neutral-100);    /* selected row / active nav (never carries green text below 4.5:1) */
-  --bg-scrim: rgb(17 17 19 / 0.42);     /* behind modals only */
+  --bg-canvas: var(--neutral-50);       /* the quiet field behind the white tiles */
+  --bg-surface: var(--neutral-0);       /* tiles: panels, lists, inputs */
+  --bg-sunken: var(--neutral-50);       /* table header, hover row, quiet block */
+  --bg-selected: var(--neutral-100);    /* selected row / active segment */
+  --bg-scrim: rgb(12 21 38 / 0.48);     /* behind modals only */
+
+  /* Navy chrome: the top bar, the phone bars and the next-step band ([data-surface="navy"] below) */
+  --bg-chrome: var(--navy-900);
+  --fg-on-chrome: var(--neutral-0);
+  --fg-on-chrome-2: var(--navy-200);
+  --chrome-field: var(--navy-800);
+  --chrome-field-hover: var(--navy-700);
+  --chrome-input: var(--navy-500);
 
   /* ---- 2c. Text ---------------------------------------------------------- */
   --fg: var(--neutral-900);
   --fg-2: var(--neutral-700);
-  --fg-muted: var(--neutral-650);       /* captions, hints, placeholders (8.37 surface, 7.62 sunken, 7.23 selected) */
+  --fg-muted: var(--neutral-650);       /* captions, hints, placeholders. Never on the yellow block */
   --fg-disabled: var(--neutral-300);    /* disabled controls only (WCAG-exempt) */
 
   /* ---- 2d. Lines & focus ------------------------------------------------- */
-  --border: var(--neutral-250);         /* hairline: panels, rows, dividers (1.66:1 on white, 1.44 on selected) */
-  --border-strong: var(--neutral-300);  /* hover/active hairline, popover edge, secondary button (2.08:1) */
-  --border-input: var(--neutral-400);   /* form control edge (3.42:1 on white, WCAG 1.4.11) */
+  --border: var(--neutral-250);         /* hairline: row dividers, tile edges */
+  --border-strong: var(--neutral-300);  /* secondary button, popover edge, a table header's rule */
+  --border-input: var(--neutral-400);   /* form control edge (WCAG 1.4.11) */
   --hairline: 1px;
   --focus-width: 2px;
   --focus-offset: 2px;                  /* ring colour is --brand-green */
 
-  /* ---- 2e. Semantic tones (2026-10-22: text ≥ 7:1 on white, on --bg-selected and on every tint, so a coloured second line on a highlighted row passes 7:1) */
+  /* ---- 2e. Semantic tones (text ≥ 7:1 on white, the field, a selected row and every tint) */
   --tone-neutral-fg: var(--neutral-700);
   --tone-neutral-bg: var(--neutral-100);
-  --tone-info-fg: #124a7c;        /* 9.15 white, 7.90 selected, 7.79 lowest tint */
-  --tone-info-bg: #e3f0fb;
-  --tone-success-fg: #0a5049;     /* 9.31 white, 8.04 selected, 7.93 lowest tint */
-  --tone-success-bg: #e0f2f1;
-  --tone-warning-fg: #7a3408;     /* 9.04 white, 7.81 selected, 7.70 lowest tint */
-  --tone-warning-bg: #fef3c7;
-  --tone-danger-fg: #8f1414;      /* 9.22 white, 7.96 selected, 7.85 on its own tint */
-  --tone-danger-bg: #fde8e8;
+  --tone-info-fg: #124a7c;        /* 9.15 white, 7.55 selected, 7.53 this-week tint */
+  --tone-info-bg: #e1eaf6;
+  --tone-success-fg: #0a4e44;     /* 8.04 on its tint */
+  --tone-success-bg: #d9f0e8;
+  --tone-warning-fg: #693400;     /* 8.44 on its tint */
+  --tone-warning-bg: #ffeab0;
+  --tone-danger-fg: #8a1010;      /* 7.82 on its tint */
+  --tone-danger-bg: #fbe1dd;
   --tone-ink-fg: var(--neutral-0);
-  --tone-ink-bg: var(--neutral-800);
+  --tone-ink-bg: var(--navy-900);
+
+  /* ---- 2f. Colour blocks: the To do groups (red only for late money or a broken promise) */
+  --block-late-bg: var(--tone-danger-bg);
+  --block-late-fg: var(--tone-danger-fg);     /* 7.82 */
+  --block-today-bg: var(--tone-warning-bg);
+  --block-today-fg: var(--tone-warning-fg);   /* 8.44 */
+  --block-week-bg: var(--tone-info-bg);
+  --block-week-fg: var(--navy-900);           /* 11.82 */
+  --block-quiet-bg: var(--neutral-50);
+  --block-quiet-fg: var(--neutral-700);       /* 10.95 */
 
   /* ---- 3. Type ----------------------------------------------------------- */
-  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Archivo Wide", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
-  /* Normal text (owner decision 2026-10-19). [data-text="small"] below restores the old 12/13/14 scale. */
-  --text-xs: 14px;   --lh-xs: 20px;
-  --text-sm: 15px;   --lh-sm: 22px;
+  /* 16 px is the floor for anything read (owner decision 2026-10-22). xs, sm and base are all 16 and differ in line height;
+     14 px is --text-stamp, for timestamps only. [data-text="small"] below restores the old 12/13/14 scale. */
+  --text-stamp: 14px; --lh-stamp: 20px;
+  --text-xs: 16px;   --lh-xs: 22px;
+  --text-sm: 16px;   --lh-sm: 24px;
   --text-base: 16px; --lh-base: 24px;
   --text-lg: 18px;   --lh-lg: 26px;
   --text-xl: 22px;   --lh-xl: 30px;
-  --text-2xl: 30px;  --lh-2xl: 36px;
+  --text-2xl: 32px;  --lh-2xl: 40px;
   --text-display: 38px; --lh-display: 44px;
 
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
+  --weight-heavy: 750;         /* page titles and block headings only, in --font-display */
 
-  --tracking-tight: -0.02em;   /* ≥ 28px */
+  --tracking-tight: -0.015em;  /* ≥ 28px */
   --tracking-snug: -0.01em;    /* 16–20px */
 
   /* ---- 4. Spacing: 4px rhythm ------------------------------------------- */
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
   --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
 
-  /* ---- 5. Shape & elevation (hairlines first; shadows on overlays only) -- */
-  --radius: 4px;
-  --radius-round: 999px;                /* dots, avatars, progress ends only */
-  --shadow-pop: 0 0 0 1px rgb(17 17 19 / 0.06), 0 4px 6px -2px rgb(17 17 19 / 0.06), 0 12px 28px -6px rgb(17 17 19 / 0.14);
-  --shadow-modal: 0 0 0 1px rgb(17 17 19 / 0.06), 0 8px 16px -4px rgb(17 17 19 / 0.10), 0 32px 64px -12px rgb(17 17 19 / 0.24);
+  /* ---- 5. Shape & elevation (a radius ladder; colour blocks separate, shadows on overlays only) -- */
+  --radius: 10px;                       /* controls: buttons, inputs, chips, menus */
+  --radius-row: 12px;                   /* a row drawn as a tile, a small card */
+  --radius-panel: 16px;                 /* panels and colour blocks */
+  --radius-round: 999px;                /* tags, counts, dots, avatars, progress ends */
+  --shadow-pop: 0 0 0 1px rgb(12 21 38 / 0.08), 0 4px 6px -2px rgb(12 21 38 / 0.06), 0 12px 28px -6px rgb(12 21 38 / 0.16);
+  --shadow-modal: 0 0 0 1px rgb(12 21 38 / 0.08), 0 8px 16px -4px rgb(12 21 38 / 0.10), 0 32px 64px -12px rgb(12 21 38 / 0.26);
+  --shadow-on-navy: 0 0 0 2px var(--neutral-0);  /* the green button on the navy band: green on navy alone is 2.71:1 */
 
   /* ---- 6. Motion (transform + opacity only) ------------------------------ */
   --dur-fast: 120ms;     /* hover, press, focus */
@@ -218,15 +207,15 @@
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ---- 7. Density (default; compact and small text override below) ------- */
-  --control-h: 40px;     /* buttons, inputs, selects */
-  --control-sm-h: 36px;  /* small buttons, row actions */
-  --control-lg-h: 44px;  /* large buttons */
-  --segment-h: 36px;     /* one segment of a SegmentedControl (filter chips) */
-  --chip-h: 24px;        /* status chip, tag, key hint */
+  --control-h: 44px;     /* buttons, inputs, selects */
+  --control-sm-h: 40px;  /* small buttons, row actions */
+  --control-lg-h: 52px;  /* large buttons */
+  --segment-h: 40px;     /* one segment of a SegmentedControl (filter chips) */
+  --chip-h: 28px;        /* status chip, tag, key hint */
   --icon-chip: 16px;     /* the glyph inside a status chip */
-  --row-h: 48px;         /* table / list rows */
-  --row-h-tall: 56px;    /* two-line table rows (name over reference) */
-  --head-h: 40px;        /* table header row */
+  --row-h: 56px;         /* table / list rows */
+  --row-h-tall: 64px;    /* two-line rows, the To do tiles */
+  --head-h: 44px;        /* table header row */
   --cell-px: var(--sp-3);
   --text-table: var(--text-sm);
   --lh-table: var(--lh-sm);
@@ -234,13 +223,32 @@
 
   /* ---- 8. Layout --------------------------------------------------------- */
   --nav-w: 224px;        /* left navigation */
-  --topbar-h: 56px;
+  --topbar-h: 64px;
 }
 
-/* "Smaller text" (Settings > Your details, the account menu): the pre-2026-10-19 scale and heights.
-   Set on <html> before the first paint (src/ui/useTextSize.ts). Derived tokens are restated so the
-   block also works on an inner element (the gallery's side-by-side preview). */
+/* The navy surfaces (top bar, phone bars, next-step band): the same components, re-inked. A primitive inside reads --fg,
+   --bg-surface and --border-input as always and gets the navy versions. Pop-ups portal out of it and stay light. */
+[data-surface="navy"] {
+  --bg-surface: var(--chrome-field);
+  --bg-sunken: var(--chrome-field-hover);
+  --bg-selected: var(--chrome-field-hover);
+  --fg: var(--fg-on-chrome);
+  --fg-2: var(--fg-on-chrome-2);
+  --fg-muted: var(--fg-on-chrome-2);
+  --border: var(--chrome-field);
+  --border-strong: var(--chrome-input);
+  --border-input: var(--chrome-input);
+  --brand-green: var(--indicator-on-chrome);
+  --primary-text: var(--fg-on-chrome);
+  --tone-ink-bg: var(--neutral-0);
+  --tone-ink-fg: var(--navy-900);
+}
+
+/* "Smaller text" (Settings > Your details, the account menu): the pre-2026-10-19 scale and heights. The person's own choice, so
+   it may go under 16 px (DECISIONS 2026-10-22). Set on <html> before the first paint (src/ui/useTextSize.ts). Derived tokens are
+   restated so the block also works on an inner element (the gallery's side-by-side preview). */
 [data-text="small"] {
+  --text-stamp: 12px; --lh-stamp: 16px;
   --text-xs: 12px;   --lh-xs: 16px;
   --text-sm: 13px;   --lh-sm: 20px;
   --text-base: 14px; --lh-base: 22px;
@@ -259,11 +267,11 @@
   --head-h: 36px;
   --text-table: var(--text-sm);
   --lh-table: var(--lh-sm);
-  --topbar-h: 52px;
+  --topbar-h: 56px;
 }
 
 [data-density="compact"] {
-  --row-h: 40px;
+  --row-h: 44px;
   --cell-px: var(--sp-2);
   --text-table: var(--text-xs);
   --lh-table: var(--lh-xs);
@@ -274,10 +282,10 @@
   --row-h: 32px;
 }
 
-/* Phones and tablets, at EITHER text size: every control, small button and segment 44px (--hit-touch, WCAG 2.5.5), 48px rows.
+/* Phones and tablets, at EITHER text size: every control, small button and segment 44px (--hit-touch, WCAG 2.5.5), 56px rows.
    Smaller text never shrinks a tap target (this block comes after [data-text="small"] and wins at equal specificity). */
 @media (pointer: coarse) {
-  :root { --control-h: 44px; --control-lg-h: 44px; --control-sm-h: 44px; --segment-h: 44px; --row-h: 48px; }
+  :root { --control-h: 44px; --control-lg-h: 52px; --control-sm-h: 44px; --segment-h: 44px; --row-h: 56px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -455,8 +463,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Titles balance, paragraphs avoid orphans (section 2). */
+  /* Titles balance, paragraphs avoid orphans (section 2). Headings are set in the wide cut (direction C); their weight is the
+     component's (page titles and block headings font-heavy, panel titles font-semibold). */
   h1, h2, h3, h4 { text-wrap: balance; }
+  h1, h2, h3 { font-family: var(--font-display); }
   p { text-wrap: pretty; }
 
   a { color: inherit; text-decoration: none; }
@@ -489,9 +499,9 @@
 }
 
 @layer utilities {
-  /* Tabular figures: PKR amounts, reference numbers, dates in tables (section 2). Set in the sans, not Geist Mono: the mono's
-     only zero is slashed ("0" read as a struck-out digit on the live app, owner 2026-10-20) and the sans has a plain tabular
-     zero (tnum), so columns still line up. Never add slashed-zero here. */
+  /* Tabular figures: PKR amounts, reference numbers, dates in tables (section 2). Set in the sans (Archivo's own tnum figures,
+     plain zero), never a monospace: a slashed zero read as a struck-out digit on the live app (owner 2026-10-20). Never add
+     slashed-zero here. */
   .num {
     font-family: var(--font-sans);
     font-variant-numeric: tabular-nums;
@@ -505,7 +515,7 @@
   .hairline-under {
     box-shadow: inset 0 calc(-1 * var(--hairline)) 0 var(--border);
   }
-  /* Geist has no rupee glyph (U+20A8): render it through the fallback stack. */
+  /* Archivo has no rupee glyph (U+20A8): render it through the fallback stack. */
   .cur {
     font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   }

@@ -7,6 +7,7 @@ import { formatDay } from '@/lib/formatDay'
 import { formatPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { classifyDoc, KIND_LABEL, NOT_A_SUPPLIER_QUOTE, type DocKind } from '@/lib/docread/docKind'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
 import { NumberInput } from '@/ui/form/NumberInput'
@@ -244,8 +245,17 @@ export function SupplierReplyDialog({
   // ---- paste reply (R08): read the clipboard, offer what was found, save nothing until Accept
   const suggestItems = items.map(it => ({ id: it.id, number: it.number, description: it.description, qty: it.qty, unit: it.unit }))
   // A whole quotation (an email, or the text of a PDF) is read with its totals, bank and header lines left out (docread).
-  const readText = (text: string) => {
+  // A paste or PDF that is an enquiry, an order or our own quotation is held here, not read for prices; it can still be read anyway.
+  const [heldReply, setHeldReply] = useState<{ text: string; kind: DocKind; reasons: string[] } | null>(null)
+  const readText = (text: string, anyway = false) => {
     setPdfNote(null)
+    const kind = classifyDoc(text)
+    if (!anyway && NOT_A_SUPPLIER_QUOTE.includes(kind.kind)) {
+      setHeldReply({ text, kind: kind.kind, reasons: kind.reasons })
+      setPasteMode(null)
+      return
+    }
+    setHeldReply(null)
     void import('@/lib/docread/supplierQuoteParse').then(({ parseSupplierQuote }) => {
       setSuggestions(suggestFromReply(parseSupplierQuote(text, suggestItems, { today: businessToday() }), suggestItems, draft.currency))
       setPasteMode('suggest')
@@ -325,7 +335,7 @@ export function SupplierReplyDialog({
       >
         <div className="grid gap-4 text-base text-fg" data-reply-form={inquiry.supplierId}>
           {declinedAll ? (
-            <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-sunken px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3 rounded-row border border-line bg-sunken px-3 py-2">
               <span>
                 <span className="font-medium">{"Can't quote"}</span>
                 {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
@@ -345,6 +355,20 @@ export function SupplierReplyDialog({
                 <span className="text-sm text-fg-muted">or type the prices below.</span>
               </div>
               {pdfNote ? <Banner tone="warning" title={pdfNote} /> : null}
+              {heldReply ? (
+                <Banner
+                  tone="warning"
+                  className="text-base"
+                  title={`This looks like ${KIND_LABEL[heldReply.kind]}, not a quotation from ${inquiry.supplierName}.`}
+                  action={
+                    <Button size="lg" onClick={() => readText(heldReply.text, true)}>
+                      Read as a quotation anyway
+                    </Button>
+                  }
+                >
+                  No prices were taken from it. It looked like this because: {heldReply.reasons.join('; ')}.
+                </Banner>
+              ) : null}
               {pasteMode === 'box' ? <PasteBox onRead={readText} onCancel={() => setPasteMode(null)} /> : null}
               {pasteMode === 'suggest' && suggestions ? (
                 <PasteReplyPanel
@@ -365,7 +389,7 @@ export function SupplierReplyDialog({
                 />
               ) : null}
               {!draft.currency ? (
-                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded border border-line bg-sunken px-3 py-2">
+                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded-row border border-line bg-sunken px-3 py-2">
                   <span className="text-fg-2">Which currency are they quoting in? Asked once, then remembered.</span>
                   {CURRENCY_CHIPS.map(c => (
                     <button

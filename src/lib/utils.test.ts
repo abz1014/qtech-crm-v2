@@ -65,4 +65,13 @@ describe('an override replaces the token class instead of sitting beside it', ()
     expect(cn('mr-1 font-sans font-regular text-fg-muted')).toBe('mr-1 font-sans font-regular text-fg-muted')
     expect(cn('font-medium', 'font-regular')).toBe('font-regular')
   })
+
+  it('direction C tokens: text-stamp is a size, font-heavy a weight, rounded-panel a radius', () => {
+    expect(cn('text-stamp text-fg-muted')).toBe('text-stamp text-fg-muted')
+    expect(cn('text-xs', 'text-stamp')).toBe('text-stamp')
+    expect(cn('font-display font-heavy')).toBe('font-display font-heavy')
+    expect(cn('font-semibold', 'font-heavy')).toBe('font-heavy')
+    expect(cn('rounded border', 'rounded-panel')).toBe('border rounded-panel')
+    expect(cn('rounded-b', 'rounded-b-row')).toBe('rounded-b-row')
+  })
 })

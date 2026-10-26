@@ -300,6 +300,27 @@ const issueQuotation: Visit = {
   },
 }
 
+/** The Mark won dialog (Create order, with a price per line), opened from the quoted RFQ by its ?won=1 address. */
+const markWon: Visit = {
+  id: 'mark-won',
+  title: 'Mark won dialog',
+  roles: MONEY,
+  screens: ['mark-won'],
+  run: async (page, fx, capture) => {
+    const dialog = page.locator(DIALOG).first()
+    try {
+      await bounded(60_000, 'open Mark won', async () => {
+        await open(page, `/rfqs/${fx.rfq.quoted}?won=1`)
+        await dialog.waitFor({ timeout: 15_000 })
+        await settle(page)
+      })
+      await capture('mark-won', { root: DIALOG })
+    } finally {
+      await bounded(20_000, 'close Mark won', () => closeDialogs(page)).catch(() => undefined)
+    }
+  },
+}
+
 export const VISITS: readonly Visit[] = [
   screen('today', 'Today, with items', ALL, () => '/today'),
   screen('rfqs-open', 'RFQ list, open', ALL, () => '/rfqs'),
@@ -360,6 +381,7 @@ export const VISITS: readonly Visit[] = [
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
   pasteOrPhoto,
   issueQuotation,
+  markWon,
   // Last: it creates an RFQ, which would otherwise show on the lists above.
   newRfq,
 ]

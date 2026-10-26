@@ -44,7 +44,7 @@ export function CreateCompanyInline({ initialName, onCreated, onCancel }: { init
     onSuccess: v => onCreated({ id: savedId.current, name: v.name, city: v.city || null }),
   })
   return (
-    <section aria-label="New company" className="m-1 grid gap-3 rounded border bg-sunken p-4">
+    <section aria-label="New company" className="m-1 grid gap-3 rounded-panel border bg-sunken p-4">
       <Form sf={sf} labels={{ name: 'Company name' }}>
         <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <FormField

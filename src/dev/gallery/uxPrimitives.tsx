@@ -55,7 +55,7 @@ export function InfoTipSection() {
       title="InfoTip"
       note="A small (i) that opens one short explanation, in place of a footnote under a panel. Click, tap or Enter opens it; Esc or a second press closes it. Open, it is a scene (Tooltip and Popover)."
     >
-      <div className="rounded border bg-surface p-6">
+      <div className="rounded-panel border bg-surface p-6">
         <InfoTipExamples />
       </div>
     </Section>
@@ -92,7 +92,7 @@ export function PhoneBarSection() {
       title="Phone one-bar"
       note="A phone detail page calls useMobileBar({ title, back: 'history', fallback, actions, hideTabs }) and gets one bar: back, its title, its actions. The default bar's logo, search, Capture and avatar are not shown, and hideTabs drops the tab bar."
     >
-      <div className="w-[375px] max-w-full overflow-hidden rounded border bg-canvas [&_header]:!flex">
+      <div className="w-[375px] max-w-full overflow-hidden rounded-panel border bg-canvas [&_header]:!flex">
         <MobileBarProvider>
           <MobileBar user={DEMO_USER} title="RFQs" />
           <DetailPage />

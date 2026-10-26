@@ -339,7 +339,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
         <div className="grid gap-3">
           <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} className="w-fit" />
           {hasGst ? (
-            <div className="flex flex-wrap items-center gap-3 rounded border bg-canvas px-4 py-3 text-base">
+            <div className="flex flex-wrap items-center gap-3 rounded-row border bg-canvas px-4 py-3 text-base">
               <label htmlFor={`${uid}-tax`} className="font-medium">
                 GST on this bill (input tax), PKR
               </label>
@@ -353,7 +353,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
         </div>
 
         {problem ? (
-          <p role="alert" className="flex items-center gap-2 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
+          <p role="alert" className="flex items-center gap-2 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
             <Icon icon={CircleAlert} />
             {problem}
           </p>

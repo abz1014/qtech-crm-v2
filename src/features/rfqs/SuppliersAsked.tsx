@@ -406,7 +406,7 @@ function ChaseCard({
           onChaseAgain={() => setDismissed(true)}
         />
       ) : null}
-      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded border bg-surface">
+      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded-panel border bg-surface">
         <RecipientRow channel={channel} lead={channel === 'email' ? 'Email to' : 'WhatsApp to'} contact={recipient} />
         {whole ? (
           <div id={wholeId} className="grid">

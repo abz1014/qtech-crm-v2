@@ -55,7 +55,7 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
       <NeedsCount n={needs} variant={needsVariant} />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-3 -bottom-px h-indicator bg-brand-green opacity-0 group-data-[state=active]:opacity-100"
+        className="pointer-events-none absolute inset-x-3 bottom-0 h-1 rounded-t bg-brand-green opacity-0 group-data-[state=active]:opacity-100"
       />
     </RadixTabs.Trigger>
   )
