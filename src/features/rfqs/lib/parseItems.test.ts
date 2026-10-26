@@ -171,3 +171,20 @@ describe('modelTokens (mirrors the database function)', () => {
     expect(modelTokens('Hach HQ1110 portable meter', ['Hach'])).toEqual(['HQ1110'])
   })
 })
+
+describe('guessBrandFamily with the category dictionary', () => {
+  const list: BrandRef[] = [
+    { id: 'f-mcb', name: 'mcb', kind: 'family' },
+    { id: 'f-lvl', name: 'Level switches', kind: 'family' },
+    { id: 'f-ltx', name: 'Level transmitters', kind: 'family' },
+  ]
+  it('finds a family by its canonical name, ignoring case', () => {
+    expect(guessBrandFamily('MCB S/P 32A (Schneider)', list).familyId).toBe('f-mcb')
+  })
+  it('an unsure inference falls back to the exact-name match', () => {
+    expect(guessBrandFamily('WATER LEVEL SWITCH RADAR ST-70AB', list).familyId).toBe('f-lvl')
+  })
+  it('a sure inference with no such family on file guesses nothing', () => {
+    expect(guessBrandFamily('SOFT STARTER - 30KW', list).familyId).toBeNull()
+  })
+})
