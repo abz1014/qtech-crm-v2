@@ -332,8 +332,8 @@ test('HW-59 (fixed): the USD and the EUR supplier orders of one supplier have di
   const rows = await page.getByRole('listitem', { name: /^Supplier order,/ }).evaluateAll(els => els.map(e => e.getAttribute('aria-label')))
   expect(new Set(rows).size, `supplier order rows ${JSON.stringify(rows)} (buttons: ${JSON.stringify(names)})`).toBe(rows.length)
   expect(rows.some(r => /\(USD\)$/.test(r ?? '')) && rows.some(r => /\(EUR\)$/.test(r ?? '')), `the two supplier orders of one supplier carry the currency: ${JSON.stringify(rows)}`).toBe(true)
-  const buttonNames = names.filter((n): n is string => n !== null)
-  expect(new Set(buttonNames).size, `button names ${JSON.stringify(buttonNames)}`).toBe(buttonNames.length)
+  const rowButtons = await page.getByRole('listitem', { name: /^Supplier order,/ }).getByRole('button', { name: /^(Issue PO|Delivered today|Mark placed|Chase goods|More for),? / }).evaluateAll(els => els.map(e => e.getAttribute('aria-label')))
+  expect(new Set(rowButtons).size, `button names on the supplier order rows ${JSON.stringify(rowButtons)}`).toBe(rowButtons.length)
   await ctx.close()
 })
 

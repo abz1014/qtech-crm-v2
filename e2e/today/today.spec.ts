@@ -333,7 +333,7 @@ test.describe('Today: role-aware', () => {
       }),
     )
     await openAs(page, 'sales', '/today')
-    await expect(rowOf(page, customer).getByText('2 items still need a supplier')).toBeVisible()
+    await expect(rowOf(page, customer).getByText('Choose a supplier for 2 items')).toBeVisible()
   })
 
   test('admin: sees money items for orders that are not sales-owned, plus everything of their own', async ({ page }) => {
