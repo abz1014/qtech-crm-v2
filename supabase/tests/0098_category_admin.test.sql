@@ -78,9 +78,12 @@ select is(pg_temp.as_('admin', $q$update public.order_items set family_id = 'b09
           'an admin fills the category of an order line');
 select is(pg_temp.as_('admin', $q$update public.rfq_items set family_id = 'b0980000-0000-4000-8000-000000000001' where id = 'a4000000-0000-4000-8000-000000009801' and family_id is null returning 'x'$q$), 'x',
           'and of an RFQ item');
+-- the as_ calls above are rolled back by design, so the audited write is made here, as the admin (the claims set above)
+update public.order_items set family_id = 'b0980000-0000-4000-8000-000000000001' where id = 'a3000000-0000-4000-8000-000000009801' and family_id is null;
 select is((select count(*)::int from public.audit_log where table_name = 'order_items' and record_id = 'a3000000-0000-4000-8000-000000009801' and action = 'update'
            and (new_value ->> 'family_id') = 'b0980000-0000-4000-8000-000000000001' and (old_value ->> 'family_id') is null), 1,
-          'the change is in the audit log: who, from nothing to the category');
+          'the change is in the audit log: from nothing to the category');
+select is((select changed_by::text from public.audit_log where table_name = 'order_items' and record_id = 'a3000000-0000-4000-8000-000000009801' and action = 'update' order by changed_at desc limit 1), 'a0000000-0000-4000-8000-000000000001', 'and it names the admin who made it');
 
 select * from finish();
 rollback;
