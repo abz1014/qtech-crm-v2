@@ -52,7 +52,7 @@ export const ROUTES: readonly RouteSpec[] = [
   // ------------------------------------------------------------------ shell
   { path: '/', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'role landing' },
   { path: '/login', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'signed in: the sign-in page sends you on' },
-  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok' },
+  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^Needs suppliers/, /^Chase /, /PKR/, /^Late payment/] },
   { path: '/no-access', admin: 'no', sales: 'no', engineer: 'no', note: 'the bare no-access page' },
   { path: '/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ RFQs

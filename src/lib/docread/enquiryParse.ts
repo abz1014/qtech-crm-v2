@@ -126,6 +126,12 @@ const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
 const URL = /\b(?:https?:\/\/|www\.)[\w.-]+(?:\/\S*)?/i
 const PHONE = /(?:\+|00)92[\s-]?\(?\d{2,4}\)?(?:[\s-]?\d{2,4}){2,3}|\b03\d{2}[\s-]?\d{7}\b|\b0\d{2,4}[\s-]\d{6,8}\b|\b111[\s-]?\d{3}[\s-]?\d{3}\b/
 const PHONE_LABEL = /^(?:tel|ph|phone|cell|mob|mobile|fax|whatsapp|uan|landline|ext|e-?mail|email|web|website|address|off|office|res)\b\.?\s*[:#.]?/i
+/** Link shorteners, social sites and file hosts: a link to one is never the sender's company or domain. */
+const NOT_A_SITE = /^(?:(?:www\.)?(?:shorturl\.at|bit\.ly|tinyurl\.com|t\.co|goo\.gl|ow\.ly|lnkd\.in|rb\.gy|cutt\.ly|is\.gd|wa\.me|linkedin\.com|facebook\.com|fb\.com|twitter\.com|x\.com|instagram\.com|youtube\.com|youtu\.be|tiktok\.com|pinterest\.com|drive\.google\.com|dropbox\.com|onedrive\.live\.com|aka\.ms)|.*\.(?:netease\.com|safelinks\.protection\.outlook\.com))$/i
+/** A company name told by what it is: a legal suffix, or the trade words a Pakistani mill or plant carries. */
+const COMPANY_STRONG = /\b(?:ltd|limited|pvt|private|llc|inc|corp(?:oration)?|gmbh|mills?|fib(?:re|er)s?|cement|textiles?|industries|steel|chemicals?|pharma\w*|sugar)\b/i
+/** A legal suffix alone is no name ("LIMITED", "Pvt. Ltd."). */
+const SUFFIX_ONLY = /^(?:(?:pvt|private|ltd|limited|llc|inc|corp|co|company|group|sons)\.?\s*)+$/i
 const FREE_MAIL = /^(?:gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icloud|me|aol|proton|protonmail|zoho|yandex|mail)\./i
 
 // ------------------------------------------------------------------------------------------------ quantities
@@ -1652,11 +1658,16 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const domainOf = (e: string) => (e.split('@')[1] ?? '').replace(/^www\./, '')
   const goodEmails = emails.filter(x => {
     const d = domainOf(x.e)
-    return d !== '' && !own.test(x.e) && !FREE_MAIL.test(d)
+    return d !== '' && !own.test(x.e) && !FREE_MAIL.test(d) && !NOT_A_SITE.test(d)
   })
   goodEmails.sort((a, b) => b.rank - a.rank)
   const domain = goodEmails[0] ? domainOf(goodEmails[0].e) : null
-  names.sort((a, b) => b.rank - a.rank)
+  // Never a link or a bare legal suffix; a line with a legal suffix or a trade word beats one that only says "company" or "group".
+  const usable = names.filter(x => !/https?:|www\.|[<>@]|\.(?:com|net|org|pk)\b/i.test(x.n) && !SUFFIX_ONLY.test(x.n.trim()))
+  const score = (x: { n: string; rank: number }) => x.rank + (COMPANY_STRONG.test(x.n) ? 0.5 : 0)
+  usable.sort((a, b) => score(b) - score(a))
+  names.length = 0
+  names.push(...usable)
   // "For Example Mills Ltd" under a letter, "M/s Example Mills": the company is what follows.
   const name =
     names[0]?.n

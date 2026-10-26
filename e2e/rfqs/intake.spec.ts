@@ -251,7 +251,7 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toBeVisible()
     await rfqsTab.click()
     await page.getByRole('dialog', { name: 'Leave this new RFQ?' }).getByRole('button', { name: 'Leave, keep the draft' }).click()
-    await expect(page).toHaveURL(/\/rfqs$/)
+    await expect(page).toHaveURL(/\/jobs/)
     expect(await rfqsOf(s.customer.id)).toHaveLength(0) // nothing was saved to the database
 
     // Back on New RFQ: the draft is offered, and Continue brings it all back.
