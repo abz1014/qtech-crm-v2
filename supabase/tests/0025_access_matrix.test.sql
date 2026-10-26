@@ -164,6 +164,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_fx_latest',         '',           'S',    'S',    'S'),    -- s10 "v_fx_latest, v_supplier_activity, v_supplier_stats, supplier_item_memory()"
   ('view',  'v_supplier_activity', '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_supplier_stats',    '',           'S',    'S',    'S'),    -- s10 (same row)
+  ('view',  'v_jobs',              '',           'S',    'S',    'S'),    -- 0099: one row per job (an RFQ with its live order, or an order with no RFQ); no price column; security_invoker, granted to qtech_engineer
+  ('function', 'job_stage',               '',    'X',    'X',    'X'),    -- 0099: the stage, detail, history flag and last activity of one job (SECURITY DEFINER: words and a date, no amount); nothing for a deactivated user
+  ('function', 'attachment_is_priced',    '',    'X',    'X',    'X'),    -- 0100: storage policy helper (SECURITY DEFINER); NULL for anyone without a role
+  ('view',  'v_supplier_category_evidence', '',  'S',    'S',    'S'),    -- 0093: counts only (asked, replied, quoted, no_offer, ordered) per supplier and category, all staff
   ('function', 'order_receivables',       '',    'X',    'X',    ''),     -- s10 "order_receivables() (definer)"
   ('function', 'receivables_list',        '',    'X',    'X',    ''),     -- 0074: order_receivables() rows with names, filtered on the server; its access
   ('function', 'receivables_summary',     '',    'X',    'X',    ''),     -- 0074: the Who-owes-us figures in one row; order_receivables() access
@@ -202,6 +206,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'restore_payment',         '',    'X',    '',     ''),     -- 0073: Undo of a void, by the admin who voided, within 10 minutes
   ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'rank_item_quotes',       '',    'X',    'X',    'X'),    -- A8 (0049): supplier quote ranking, all staff; the selling price and spread inside it are NULL for engineers (own pgTAP test)
+  ('function', 'supplier_category_price_wins', '', 'X', 'X', 'X'),   -- 0093: category price wins; SECURITY DEFINER with a role check inside, the counts are NULL for an engineer (own pgTAP test)
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'po_line_prefill',         '',    'X',    'X',    'X'),    -- O07 (0043): what Issue PO would pre-fill, SECURITY INVOKER, all staff; writes nothing
@@ -272,6 +277,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
   ('table', 'orders',            'owner_id', 'U', '', ''),               -- 0065 (M-2): who owns an order (and gets its payments' credit) is changed by an admin
   ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
+  ('table', 'supplier_inquiries', 'sent_confirmed', 'SU', 'SU', 'SU'),   -- 0097: "Did you send it? Yes, sent": every active role stamps an inquiry it can see
+  ('table', 'snoozes',           'until_change', 'SU', 'SU', 'SU'),      -- 0097: "Not ours to chase": each role flips it on its own snoozes
+  ('table', 'orders',            'visit',       'SU', 'SU', 'SU'),       -- 0101: visit time and type; an engineer on an order assigned to them (fixture @20)
+  ('table', 'orders',            'visit_other', 'SU', 'SU', 'S'),        -- 0101: an engineer is refused on an order that is not theirs (fixture @21)
   ('function', 'receipt_locked', '', 'X', 'X', ''),                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
   ('table', 'expense_claims',    'own',   'SUD',  '',     'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; sales nothing
   ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
@@ -313,6 +322,8 @@ insert into public.rfqs (id, company_id, owner_id) values
 insert into public.rfq_items (id, rfq_id, position, description, brand_id, quoted_unit_price_net) values
   (pg_temp.f('17'), pg_temp.f('15'), 0, 'Fixture item', pg_temp.f('13'), 50),
   (pg_temp.f('18'), pg_temp.f('15'), 1, 'Leaf item', null, 50);
+insert into public.brands (id, name, kind) values (pg_temp.f('d7'), 'M Category', 'family');   -- 0093: a category no probe deletes
+update public.rfq_items set family_id = pg_temp.f('d7') where id = pg_temp.f('18');   -- 0093: v_supplier_category_evidence needs an asked item with a category
 insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   (pg_temp.f('19'), pg_temp.f('15'), pg_temp.f('03'), public.today_pkt()),
   (pg_temp.f('1a'), pg_temp.f('15'), pg_temp.f('04'), public.today_pkt()),
@@ -482,10 +493,10 @@ insert into probes
 select v, '', 'S', format('select 1 from public.%s limit 1', v)
 from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_state','v_invoice_state','v_gst_register',
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
-                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
+                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
-                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
+                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
 -- Each call is valid for an authorised caller and rolled back. A call counts as allowed when it returns rows (or a
@@ -526,6 +537,7 @@ insert into probes values
   ('money_exceptions_input', '', 'X', 'select 1 from public.money_exceptions_input() j where j is not null'),   -- P9 (0066): NULL unless admin
   ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
   ('rank_item_quotes', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.rank_item_quotes(@15)) >= 0'),   -- A8 (0049): same shape as the customer_price_memory probe (the fixture RFQ must be visible; a deactivated user sees none)
+  ('supplier_category_price_wins', '', 'X', 'select 1 where exists (select 1 from public.companies where id = @03) and (select count(*) from public.supplier_category_price_wins(array[@13])) >= 0'),   -- 0093: same shape as rank_item_quotes (a deactivated user sees no company)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
   ('po_line_prefill', '', 'X', 'select 1 where exists (select 1 from public.supplier_orders where id = @23) and (select count(*) from public.po_line_prefill(@23)) >= 0'),   -- O07: read-only; needs the leg to be visible, so a deactivated user is denied
@@ -627,8 +639,18 @@ insert into probes values
   ('purchase_orders', 'pdf_attached', 'U', $q$update public.purchase_orders set pdf_path = 'm/other.pdf' where id = @3b$q$),
   ('orders', 'legacy_flags', 'U', $q$update public.orders set legacy_flags = '{}' where id = @21$q$),   -- 0065
   ('orders', 'owner_id', 'U', $q$update public.orders set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @21$q$),
+  ('supplier_inquiries', 'sent_confirmed', 'S', 'select sent_confirmed_at from public.supplier_inquiries where id = @1a'),   -- 0097
+  ('supplier_inquiries', 'sent_confirmed', 'U', 'update public.supplier_inquiries set sent_confirmed_at = now() where id = @1a'),
+  ('snoozes', 'until_change', 'S', $q$select until_change from public.snoozes where user_id = '{uid}'$q$),   -- 0097
+  ('orders', 'visit', 'S', 'select commissioning_time, visit_type from public.orders where id = @20'),   -- 0101
+  ('orders', 'visit', 'U', $q$update public.orders set commissioning_time = '10:00', visit_type = 'survey' where id = @20$q$),
+  ('orders', 'visit_other', 'S', 'select commissioning_time, visit_type from public.orders where id = @21'),
+  ('orders', 'visit_other', 'U', $q$update public.orders set commissioning_time = '10:00', visit_type = 'survey' where id = @21$q$),
+  ('snoozes', 'until_change', 'U', $q$update public.snoozes set until_change = true where user_id = '{uid}'$q$),
   ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
-  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$);
+  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$),
+  ('job_stage', '', 'X', $q$select 1 from public.job_stage(@15, null)$q$),   -- 0099: a row for staff, none for a deactivated user
+  ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'm/1.pdf') is not null$q$);   -- 0100: NULL for anyone without a role
 
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),

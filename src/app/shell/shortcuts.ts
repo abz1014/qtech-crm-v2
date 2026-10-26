@@ -29,7 +29,7 @@ export const KEY_WORDS: ReadonlySet<string> = new Set(['or', 'then'])
 
 /** One sentence under a group's heading, for what is not a key (the Add expenses legend moved here). */
 export const GROUP_NOTES: Partial<Record<ShortcutGroup, string>> = {
-  Anywhere: 'Single keys (N, C, G then T, /, ?) work outside a text box. You can turn them off in Settings, Your details.',
+  Anywhere: 'Single keys (N, E, O, C, G then T, /, ?) work outside a text box. You can turn them off in Settings, Your details.',
   'Add expenses': 'A dashed box was filled in for you: type over it to change it. A solid box is what you typed.',
 }
 
@@ -39,8 +39,10 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
     // Anywhere outside a text field
     { group: 'Anywhere', keys: [mod, 'K'], what: 'Search or jump to', where: 'Also works inside a text box', handles: ['k'] },
     { group: 'Anywhere', keys: ['N'], what: 'New RFQ', handles: ['n'] },
+    { group: 'Anywhere', keys: ['E'], what: 'Add an expense', where: 'Admin', handles: ['e'] },
+    { group: 'Anywhere', keys: ['O'], what: 'Order without enquiry', where: 'Admin and sales', handles: ['o'] },
     { group: 'Anywhere', keys: ['C'], what: 'Paste or photo', handles: ['c'] },
-    { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to Today', handles: ['g', 't'] },
+    { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to To do', handles: ['g', 't'] },
     { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture: opens Paste or photo with it', handles: ['v'] },
     { group: 'Anywhere', keys: [mod, 'Z'], what: 'Undo the last action while its Undo button shows', handles: ['z'] },
     { group: 'Anywhere', keys: ['Esc'], what: 'Close a dialog, sheet or menu', handles: ['escape'] },

@@ -707,7 +707,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     await expect(rail).toContainText('3 asked · 0 replied')
     const usd = rail.locator(`[data-supplier-asked="${s.usd.id}"]`)
     await expect(usd).toContainText(/Asked (once|twice), 1 reply\. Not enough history to say more\./)
-    await expect(usd).toContainText('Sent ')
+    await expect(usd).toContainText('Asked ')
     await expect(usd.locator('[data-status^="inquiry:"]')).toHaveCount(1) // one chip per supplier
     await expect(usd.locator('[data-status^="inquiry:"]')).toContainText('Waiting for prices')
 

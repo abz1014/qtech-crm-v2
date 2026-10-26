@@ -3,6 +3,7 @@ import { Import, Search } from 'lucide-react'
 import { navItemsForRole, type NavItem, type NavKey } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
 import { AccountMenu } from '@/app/shell/AccountMenu'
+import { NewMenu } from '@/app/shell/NewMenu'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
@@ -106,6 +107,8 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
           {hint}
         </Kbd>
       </div>
+
+      <NewMenu role={user.role} className="shrink-0 max-lg:w-control max-lg:px-0" labelClass="max-lg:sr-only" />
 
       {onCapture ? (
         // Outlined, never green (audit X1): every screen has its own one primary button, and this sits beside it. No key hint drawn on

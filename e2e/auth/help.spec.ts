@@ -12,7 +12,7 @@ async function signIn(page: Page, email: string, password = PASSWORD) {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
 }
 
 test('a new sales person sees first-use states, and Help opens from the menu and the palette', async ({ browser }) => {
@@ -48,7 +48,7 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await expect(page.getByRole('button', { name: 'Open RFQs' })).toBeVisible()
 
   // Help from the account menu; Back closes it.
-  await page.goto('/today')
+  await page.goto('/todo')
   await page.getByRole('button', { name: `Account menu, ${name}` }).click()
   await page.getByRole('menuitem', { name: 'Help' }).click()
   const help = page.getByRole('dialog', { name: 'Help' })
@@ -56,7 +56,7 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await expect(page).toHaveURL(/[?&]help=/)
   await page.goBack()
   await expect(help).toBeHidden()
-  await expect(page).toHaveURL(/\/today$/)
+  await expect(page).toHaveURL(/\/todo$/)
 
   // Help from the palette.
   await page.keyboard.press('Control+k')

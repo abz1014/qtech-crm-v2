@@ -291,7 +291,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
 
 test('BUG-RV-06: a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
   const secret = `${world.tag} expired-session capture note`
-  await openAs(page, 'admin', '/today')
+  await openAs(page, 'admin', '/todo')
   await pasteIntoCapture(page, secret)
   await page.waitForTimeout(800)
   await page.keyboard.press('Escape')
@@ -311,7 +311,7 @@ test('BUG-RV-06: a session that ends without Sign out (expired or revoked token)
 })
 
 test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and are per person', async ({ page }) => {
-  await openAs(page, 'admin', '/today')
+  await openAs(page, 'admin', '/todo')
   await page.keyboard.press('Control+k')
   const palette = page.getByRole('dialog', { name: 'Search or jump to' })
   await palette.getByRole('combobox').fill(world.invoice.number)
@@ -347,7 +347,7 @@ test('New RFQ drafts (post-merge) are kept per person and cleared on sign-out', 
   await expect
     .poll(() => page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.'))), { message: 'one draft, keyed by the person' })
     .toEqual([`qtech.rfqs.intakeDraft.${IDS.sales}`])
-  await page.goto('/today')
+  await page.goto('/todo')
   await signOut(page)
   expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.')))).toEqual([])
   await signIn(page, STAFF_EMAIL.engineer)

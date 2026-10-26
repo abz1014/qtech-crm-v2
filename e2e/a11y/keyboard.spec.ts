@@ -68,7 +68,7 @@ test.describe('focus after an action (2.4.3)', () => {
 
   test('the 1-tap chase on Today (a busy button) keeps focus off <body>', async ({ page }) => {
     const s = await seedChase()
-    await open(page, '/today')
+    await open(page, '/todo')
     const { button } = await openChase(page, s.ref)
     await button.focus()
     await page.keyboard.press('Enter')

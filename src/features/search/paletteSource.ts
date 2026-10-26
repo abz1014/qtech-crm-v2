@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
-import { Building2, FileText, List as ListIcon, Package, Plus, Receipt, ShoppingCart, UserRound, Wrench } from 'lucide-react'
+import { Briefcase, Building2, FileText, List as ListIcon, Package, Plus, Receipt, ShoppingCart, UserRound, Wrench } from 'lucide-react'
 import { usePaletteSource } from '@/app/palette/usePalette'
+import { findJobs, type JobRow } from '@/features/jobs/api'
+import { stageModel } from '@/features/jobs/lib/stages'
 import { searchAll, type SearchHit, type SearchKind, type SearchRole } from '@/features/search/api'
 import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
 
@@ -28,6 +30,16 @@ const HEADING: Record<SearchKind, string> = {
   invoice: 'Invoices',
 }
 const ACTIONS = 'Actions'
+const JOBS = 'Jobs'
+
+/**
+ * Jobs (redesign phase 5): the same jobs the Jobs page's search box finds, because both call features/jobs/api.ts findJobs (the
+ * palette hands over the search_all answer it already has). A job that cannot be read never breaks the rest of the palette.
+ */
+function jobItem(j: JobRow): PaletteItem {
+  const stands = stageModel({ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind }).label
+  return { id: `job-${j.key}`, group: JOBS, label: `Job ${j.key} · ${j.companyName}`, meta: [j.items, stands].filter(Boolean).join(' · ') || undefined, icon: Briefcase, href: `/jobs/${encodeURIComponent(j.key)}` }
+}
 
 /** Rows shown per kind; the search asks for up to FETCH_LIMIT (the database's cap, migration 0054) so it can say how many more there are. */
 export const SHOWN_PER_KIND = 6
@@ -120,11 +132,20 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
       if (!(await pause(debounceMs, signal))) return []
       const hits = await searchAll(q, signal, FETCH_LIMIT)
       if (signal.aborted) return []
+      const jobs = await findJobs(q, signal, hits).catch(() => [] as JobRow[])
+      if (signal.aborted) return []
+      const jobItems: PaletteItem[] = [
+        ...jobs.slice(0, SHOWN_PER_KIND).map(jobItem),
+        ...(jobs.length > SHOWN_PER_KIND ? [{ id: 'see-all-jobs', group: JOBS, label: `See all ${jobs.length >= 200 ? '200+' : jobs.length} results`, meta: 'In Jobs', icon: ListIcon, href: `/jobs?q=${encodeURIComponent(q)}` }] : []),
+      ]
       const items = kindOrder(q).flatMap(kind => {
         const ofKind = hits.filter(h => h.kind === kind).sort((a, b) => b.score - a.score)
         const shown = ofKind.slice(0, SHOWN_PER_KIND).map(toItem)
         return ofKind.length > SHOWN_PER_KIND ? [...shown, seeAll(kind, q, ofKind.length)] : shown
       })
+      // A typed job number ("139", "Job 139", "O-45") puts the job first; otherwise the jobs follow the places.
+      if (/^(job[-\s]*)?(o[-\s]*)?\d{1,9}$/i.test(q)) items.unshift(...jobItems)
+      else items.push(...jobItems)
       const topCompany = hits.filter(h => h.kind === 'company').sort((a, b) => b.score - a.score)[0]
       if (topCompany) {
         items.push({ id: `rfq-new-${topCompany.id}`, group: ACTIONS, label: `New RFQ for ${topCompany.label}`, meta: 'Go to intake', icon: Plus, href: `/rfqs/new?company=${encodeURIComponent(topCompany.id)}` })

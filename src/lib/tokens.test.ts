@@ -48,6 +48,22 @@ describe('touch targets do not depend on the text size (DESIGN_SYSTEM 11)', () =
   })
 })
 
+describe('Larger text (owner yes, L1-X)', () => {
+  const large = block('[data-text="large"]')
+  it('reads at 18 px, timestamps at 16, and no control is shorter than the default', () => {
+    expect(px(large, '--text-base')).toBe(18)
+    expect(px(large, '--text-sm')).toBe(18)
+    expect(px(large, '--text-stamp')).toBe(16)
+    expect(px(large, '--control-h')).toBeGreaterThanOrEqual(44)
+    expect(px(large, '--control-sm-h')).toBeGreaterThanOrEqual(44)
+    expect(px(large, '--segment-h')).toBeGreaterThanOrEqual(44)
+    expect(large).not.toContain('--hit-touch')
+  })
+  it('sits before the coarse-pointer block, so a phone keeps its 44 px floor at every text size', () => {
+    expect(css.indexOf('[data-text="large"] {')).toBeLessThan(css.indexOf('@media (pointer: coarse)'))
+  })
+})
+
 describe('the neutral ramp', () => {
   it('gets darker with every step, so the names say which grey is darker', () => {
     const ramp = [...block(':root').matchAll(/--neutral-(\d+):\s*(#[0-9a-f]{6})/gi)].map(m => [Number(m[1]), m[2]] as const).sort((a, b) => a[0] - b[0])

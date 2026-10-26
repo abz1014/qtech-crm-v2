@@ -226,7 +226,7 @@ export function RecentQuotes({
       ) : error ? (
         <LoadError title="Couldn't load the enquiries" onRetry={onRetry} />
       ) : !view || view.allQuotes.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-fg-muted">No enquiry sent to them yet.</p>
+        <p className="px-5 py-6 text-sm text-fg-muted">No enquiry asked of them yet.</p>
       ) : (
         <div>
           <div className={prices ? QHEAD : QHEAD_NO_PRICES} aria-hidden="true">

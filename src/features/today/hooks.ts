@@ -81,6 +81,8 @@ export function useTodayView(
       orders: data.orders,
       receivables: data.receivables,
       monthEnd: data.monthEnd,
+      gst: data.gst,
+      claims: data.claims,
       costs: data.costs,
       invoices: data.invoices,
       recurring: data.recurring,
@@ -113,7 +115,7 @@ export function usePaymentDraft(orderId: string | undefined, enabled: boolean) {
 export function useSnooze() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { rule: string; subjectId: string; untilOn: string }) => api.snoozeItem(v),
+    mutationFn: (v: { rule: string; subjectId: string; untilOn: string; untilChange?: boolean }) => api.snoozeItem(v),
     onSuccess: () => invalidateAfter(client, 'today.snooze', {}),
   })
 }

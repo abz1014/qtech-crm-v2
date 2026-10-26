@@ -134,7 +134,7 @@ async function pageFor(browser: Browser, info: TestInfo, role: Role, vp: Viewpor
   })
   const page = await context.newPage()
   // Its own sign-in through the login form, so no two contexts share (and rotate) one refresh token.
-  await openAs(page, role, '/today')
+  await openAs(page, role, '/todo')
   // No click, fill or wait may hang a visit: without this, an action on an element that never shows waits for the whole test timeout.
   page.setDefaultTimeout(20_000)
   page.setDefaultNavigationTimeout(30_000)

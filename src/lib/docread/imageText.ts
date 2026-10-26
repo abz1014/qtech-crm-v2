@@ -331,6 +331,18 @@ export function clearBorderDark(grey: Uint8Array, width: number, height: number)
   }
   // Only a dark area of some size: a table rule that runs to the edge of a tight screenshot stays.
   if (filled.length < 0.01 * width * height) return
+  // And only a dark area that is an area. The rules of a bordered table, joined at their crossings and touching the edge of a tight
+  // screenshot, make one piece of it, a few pixels thick all through: wiping that would wipe the table's grid (and the cells it
+  // marks) with the desk. A desk, a bar or a wedge is thick where the table's rules are not: dark 3 px to each side both ways.
+  const R = 3
+  const dark = (x: number, y: number) => x < 0 || y < 0 || x >= width || y >= height || (grey[y * width + x] as number) < DARK
+  let thick = 0
+  for (const i of filled) {
+    const x = i % width
+    const y = Math.floor(i / width)
+    if (dark(x - R, y) && dark(x + R, y) && dark(x, y - R) && dark(x, y + R)) thick++
+  }
+  if (thick < 0.3 * filled.length) return
   for (const i of filled) grey[i] = 255
 }
 
@@ -385,6 +397,15 @@ export function cleanPixels(px: Uint8ClampedArray, width?: number, height?: numb
 
 /** Darker than this (after cleanPixels) can be a rule: a 1 px line scaled up turns grey, so the bar is lower than for ink. */
 const RULE_INK = 200
+/**
+ * A light rule: a 1 px line scaled by a factor that is not a whole number comes out light grey (an Excel range pasted as a
+ * picture, its vertical rules at 210 to 230). Taken for a rule only when it runs very far (RULE_LIGHT_RUN), which text never does.
+ */
+const RULE_LIGHT_INK = 236
+/** A rule is dark along at least this share of its length (the rest is the gaps a light rule has where it crosses another). */
+const RULE_SOLID = 0.9
+/** A light rule is at least this long: 12% of the picture's long edge (and 150 px). */
+const RULE_LIGHT_RUN = 0.12
 /** A table rule is at most this thick, in px. Thicker dark areas (a filled header, a logo) are left alone. */
 const RULE_THICKNESS = 8
 
@@ -416,11 +437,11 @@ export type Rules = TableRules
  * any letter stroke and at most a few pixels thick. Left in, they make the engine take a bordered cell for a picture and drop
  * the number in it (the quantity column of an Outlook table). Returns where they were.
  */
-export function removeRules(px: Uint8ClampedArray, width: number, height: number): Rules {
+export function removeRules(px: Uint8ClampedArray, width: number, height: number, lightRules = true): Rules {
   const hSegs: OcrBox[] = []
   const vSegs: OcrBox[] = []
   const min = Math.max(70, Math.round(0.035 * Math.max(width, height)))
-  const dark = (x: number, y: number) => (px[4 * (y * width + x)] as number) < RULE_INK
+  const light = Math.max(150, Math.round(RULE_LIGHT_RUN * Math.max(width, height)))
   const white = (x: number, y: number) => {
     const i = 4 * (y * width + x)
     px[i] = 255
@@ -429,46 +450,75 @@ export function removeRules(px: Uint8ClampedArray, width: number, height: number
   }
   // Each pass collects first, then wipes, so a crossing of two rules is seen by both.
   const wipe: number[] = []
-  for (let y = 0; y < height; y++) {
-    let x = 0
-    while (x < width) {
-      if (!dark(x, y)) {
-        x++
-        continue
+  // Dark runs (ink below `ink`) of at least `run` px, thin ones (at most RULE_THICKNESS across): the rules of one strength.
+  const scan = (ink: number, run: number, gap: number, rowsToo = true) => {
+    const dark = (x: number, y: number) => (px[4 * (y * width + x)] as number) < ink
+    for (let y = 0; y < (rowsToo ? height : 0); y++) {
+      let x = 0
+      while (x < width) {
+        if (!dark(x, y)) {
+          x++
+          continue
+        }
+        const start = x
+        let ink = 0
+        while (x < width && dark(x, y)) {
+          x++
+          ink++
+          // A light rule has a few lighter pixels along it (where it crosses another rule): the run goes on over a short gap.
+          if (gap && x < width && !dark(x, y)) {
+            let g = 1
+            while (g <= gap && x + g < width && !dark(x + g, y)) g++
+            if (g <= gap && x + g < width) x += g
+          }
+        }
+        // (A row of text, its letters a few px apart, is no rule: a rule is dark along nearly all of its length.)
+        if (x - start < run || ink < RULE_SOLID * (x - start)) continue
+        for (let xi = start; xi < x; xi++) {
+          let up = 0
+          while (up <= RULE_THICKNESS && y - up - 1 >= 0 && dark(xi, y - up - 1)) up++
+          let down = 0
+          while (down <= RULE_THICKNESS && y + down + 1 < height && dark(xi, y + down + 1)) down++
+          if (up + down + 1 <= RULE_THICKNESS) wipe.push(xi, y)
+        }
+        hSegs.push({ x0: start, x1: x, y0: y, y1: y + 1 })
       }
-      const start = x
-      while (x < width && dark(x, y)) x++
-      if (x - start < min) continue
-      for (let xi = start; xi < x; xi++) {
-        let up = 0
-        while (up <= RULE_THICKNESS && y - up - 1 >= 0 && dark(xi, y - up - 1)) up++
-        let down = 0
-        while (down <= RULE_THICKNESS && y + down + 1 < height && dark(xi, y + down + 1)) down++
-        if (up + down + 1 <= RULE_THICKNESS) wipe.push(xi, y)
+    }
+    for (let x = 0; x < width; x++) {
+      let y = 0
+      while (y < height) {
+        if (!dark(x, y)) {
+          y++
+          continue
+        }
+        const start = y
+        let ink = 0
+        while (y < height && dark(x, y)) {
+          y++
+          ink++
+          if (gap && y < height && !dark(x, y)) {
+            let g = 1
+            while (g <= gap && y + g < height && !dark(x, y + g)) g++
+            if (g <= gap && y + g < height) y += g
+          }
+        }
+        if (y - start < run || ink < RULE_SOLID * (y - start)) continue
+        for (let yi = start; yi < y; yi++) {
+          let left = 0
+          while (left <= RULE_THICKNESS && x - left - 1 >= 0 && dark(x - left - 1, yi)) left++
+          let right = 0
+          while (right <= RULE_THICKNESS && x + right + 1 < width && dark(x + right + 1, yi)) right++
+          if (left + right + 1 <= RULE_THICKNESS) wipe.push(x, yi)
+        }
+        vSegs.push({ x0: x, x1: x + 1, y0: start, y1: y })
       }
-      hSegs.push({ x0: start, x1: x, y0: y, y1: y + 1 })
     }
   }
-  for (let x = 0; x < width; x++) {
-    let y = 0
-    while (y < height) {
-      if (!dark(x, y)) {
-        y++
-        continue
-      }
-      const start = y
-      while (y < height && dark(x, y)) y++
-      if (y - start < min) continue
-      for (let yi = start; yi < y; yi++) {
-        let left = 0
-        while (left <= RULE_THICKNESS && x - left - 1 >= 0 && dark(x - left - 1, yi)) left++
-        let right = 0
-        while (right <= RULE_THICKNESS && x + right + 1 < width && dark(x + right + 1, yi)) right++
-        if (left + right + 1 <= RULE_THICKNESS) wipe.push(x, yi)
-      }
-      vSegs.push({ x0: x, x1: x + 1, y0: start, y1: y })
-    }
-  }
+  scan(RULE_INK, min, 0)
+  // (Light rules only on a picture that needed no turning: a photo's faint rules and shadows are not worth the risk to its text.)
+  // Only the column rules, and only in a table whose row rules were found: the light run of a text row (flat tops of capitals) is
+  // no rule, a column that runs the height of a table is.
+  if (lightRules && hSegs.length >= 3) scan(RULE_LIGHT_INK, light, 4, false)
   for (let i = 0; i < wipe.length; i += 2) white(wipe[i] as number, wipe[i + 1] as number)
   // A thick dark area (a logo, a filled header) gives many long runs too: only thin ones are rules.
   const thin = (b: OcrBox) => Math.min(b.x1 - b.x0, b.y1 - b.y0) <= RULE_THICKNESS
@@ -518,7 +568,7 @@ export async function prepareImage(blob: Blob, scaleOverride?: number, angle = 0
     } else ctx.drawImage(src, 0, 0, width, height)
     const data = ctx.getImageData(0, 0, width, height)
     cleanPixels(data.data, width, height)
-    const rules = removeRules(data.data, width, height)
+    const rules = removeRules(data.data, width, height, !angle)
     ctx.putImageData(data, 0, 0)
     const crop = (box: OcrBox, by: number) => {
       const c = document.createElement('canvas')

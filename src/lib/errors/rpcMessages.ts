@@ -66,6 +66,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^You cannot see the history of this record\.$/ },
   { match: /^This kind of record has no history page\.$/, internal: true },
   { match: /^record_history_rows is internal: call record_history$/, internal: true },
+  // 0099 jobs: the migration refuses to run when create_repeat_order cannot be patched (never raised at run time)
+  { match: /^create_repeat_order could not be patched for repeat_of_order_id$/, internal: true },
   { match: /^The correction of this payment has been changed since\./ },
   { match: /^The date received is required\.$/ },
   { match: /^This payment is already voided\./ },
@@ -101,11 +103,20 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'Add at least one item first.' },
   // 0077: already plain; Create order opens that order instead (existingOrderOf in src/features/orders/api.ts).
   { match: /^This RFQ is already order ORD-.+\.$/ },
+  // 0094 (HW-60): the quotation or a quantity moved on while Mark won was open. Already plain; the dialog reloads the lines.
+  { match: /^The quotation changed since you opened this\. Review again\.$/ },
+  // 0095: order, PO and repeat-order fixes (already written for people)
+  { match: /^PO (.+) is already on order (ORD-.+?)\. Open that order instead of adding a second\.$/ },
+  { match: /^RFQ-.+ already has live order ORD-.+\.$/ },
+  { match: /^This order was cancelled\. Repeat it anyway\?$/ },
+  { match: /^The order lines changed\. Review again\.$/ },
+  { match: /^PO R.+ was just issued by .+\. Revise instead\?$/ },
   { match: /^the supplier order has no goods lines to issue$/, message: () => 'Add at least one goods line to this supplier order, then issue the PO.' },
   { match: /^the chosen quote line is not a quote for the item: (.+)$/, message: m => `The chosen supplier quote does not belong to "${m[1]}". Choose the quote again.` },
   { match: /^an item (to quote )?does not belong to this RFQ$/, message: () => RELOAD },
   { match: /^every item needs a description$/, message: () => 'Every item needs a description. Fill in the empty ones, then save.' },
   { match: /^invoice numbers are for admin and sales only$/, message: () => ADMIN_SALES },
+  { match: /^supplier categories are tagged by admin and sales only$/, message: () => ADMIN_SALES },   // 0093
   { match: /^(FBR|TCS) stamping is for admin and sales only$/, message: () => ADMIN_SALES },
   { match: /^prices, quantities and GST on an order are changed by admin and sales only$/, message: () => ADMIN_SALES },
 
@@ -157,6 +168,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // (not_yours, admin_only, not_found, has_order, has_invoice, has_payment, has_expense, has_po, bank_ticked, voided,
   // correction_chain, not_latest, in_use, linked_to_order) that mapPgError passes on as `hint`.
   { match: /^Only the person who entered this, or an admin, can change it\.$/ },
+  // 0101: an engineer's visit time and type, on a site assigned to them only (HINT not_assigned)
+  { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'You can set the visit time and type only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
   { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
   { match: /^This RFQ has an order\. / },

@@ -47,7 +47,7 @@ test.describe('change your own password', () => {
   test('the screen passes axe', async ({ page }) => {
     const { email, name } = await makePerson()
     await signIn(page, email, OLD)
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await openChangePassword(page, name)
     expect(await axeViolations(page)).toEqual([])
   })
@@ -73,7 +73,7 @@ test.describe('change your own password', () => {
   test('changing it keeps the session, then the new password signs in and the old one fails', async ({ page }) => {
     const { email, name } = await makePerson()
     await signIn(page, email, OLD)
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page).toHaveURL(/\/todo$/)
     await openChangePassword(page, name)
 
     await page.getByLabel('Current password', { exact: true }).fill(OLD)

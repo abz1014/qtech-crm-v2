@@ -225,30 +225,29 @@ export interface RfqHeader {
   state: RfqStateRow | null
 }
 
-type Maybe<T> = { data: T | null; error: { code?: string; message: string } | null }
-const none = Promise.resolve({ data: null, error: null })
-
-/** The RFQ, who it is for, who owns it and its derived states (v_rfq_state). Null when there is no such RFQ. */
+/**
+ * The RFQ, who it is for, who owns it and its derived states (v_rfq_state). Null when there is no such RFQ.
+ * ONE round: the customer, site, contact and owner come embedded in the RFQ's own read, in parallel with the state view (PERF-1,
+ * the order page's fix/order-lcp pattern: the customer's name is the page's largest text, and a second round trip on slow mobile
+ * data held it back). Row Level Security applies to an embedded row as to its own read: one the person may not see comes back null.
+ */
 export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const db = requireSupabase()
   const [rfqRes, stateRes] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, created_by, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
+      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, created_by, is_priority, quoted_on, closed_on, close_reason, close_note, notes, company:companies!rfqs_company_id_fkey(id, name, country, city, created_at), site:company_sites!rfqs_site_id_fkey(name, address), contact:contacts!rfqs_contact_id_fkey(name, phone, email, job_title), owner:users!rfqs_owner_id_fkey(id, name, role, phone)')
       .eq('id', id)
       .maybeSingle(),
     db.from('v_rfq_state').select('*').eq('rfq_id', id).maybeSingle(),
   ])
   const r = unwrap(rfqRes)
   if (!r) return null
-  const [company, site, contact, owner] = await Promise.all([
-    db.from('companies').select('id, name, country, city, created_at').eq('id', r.company_id).maybeSingle(),
-    r.site_id ? db.from('company_sites').select('name, address').eq('id', r.site_id).maybeSingle() : none,
-    r.contact_id ? db.from('contacts').select('name, phone, email, job_title').eq('id', r.contact_id).maybeSingle() : none,
-    r.owner_id ? db.from('users').select('id, name, role, phone').eq('id', r.owner_id).maybeSingle() : none,
-  ])
-  const c = unwrap(company)
-  const ct0 = unwrap(contact as Maybe<{ name: string; phone: string | null; email: string | null; job_title: string | null }>)
+  const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null))
+  const c = one(r.company)
+  const ct0 = r.contact_id ? one(r.contact) : null
+  const site = r.site_id ? one(r.site) : null
+  const owner = r.owner_id ? one(r.owner) : null
   return {
     id: r.id,
     number: r.number,
@@ -266,9 +265,9 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, createdAt: c?.created_at ?? null },
     siteId: r.site_id,
     contactId: r.contact_id,
-    site: unwrap(site as Maybe<{ name: string; address: string | null }>),
+    site,
     contact: ct0 ? { name: ct0.name, phone: ct0.phone, email: ct0.email, jobTitle: ct0.job_title } : null,
-    owner: unwrap(owner as Maybe<{ id: string; name: string; role: string; phone: string | null }>),
+    owner,
     state: unwrap(stateRes) as RfqStateRow | null,
   }
 }
@@ -329,6 +328,8 @@ export interface InquiryRow {
   /** The supplier's city (companies.city), shown under its name beside the country. */
   supplierCity?: string | null
   sentOn: string | null
+  /** 0097: when a person said "Yes, sent". sentOn alone only means the message was copied ("Asked"). */
+  sentConfirmedAt?: string | null
   lastChasedOn: string | null
   /** users.id of whoever made the last chase (0048). */
   lastChasedBy?: string | null
@@ -368,7 +369,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
   const inq = unwrap(
     await db
       .from('supplier_inquiries')
-      .select('id, supplier_id, sent_on, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
+      .select('id, supplier_id, sent_on, sent_confirmed_at, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at'),
   )
@@ -439,6 +440,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       supplierCountry: c?.country ?? null,
       supplierCity: c?.city ?? null,
       sentOn: i.sent_on,
+      sentConfirmedAt: i.sent_confirmed_at,
       lastChasedOn: i.last_chased_on,
       lastChasedBy: i.last_chased_by,
       lastRelayedAt: i.last_relayed_at,
@@ -575,6 +577,8 @@ export interface AttachmentRow {
   sizeBytes: number
   clarificationId: string | null
   createdAt: string
+  /** 0100: the file shows a price (a customer PO, a supplier quote, an enquiry with prices). An engineer reads no such file. */
+  hasPrices: boolean
 }
 
 export interface ClarificationRow {
@@ -627,7 +631,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
 export async function listOrderAttachments(orderId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
-    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at').eq('order_id', orderId).eq('bucket', FILE_BUCKET).order('created_at'),
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices').eq('order_id', orderId).eq('bucket', FILE_BUCKET).order('created_at'),
   )
   return rows.map(r => ({
     id: r.id,
@@ -637,13 +641,14 @@ export async function listOrderAttachments(orderId: string): Promise<AttachmentR
     sizeBytes: r.size_bytes,
     clarificationId: r.clarification_id,
     createdAt: r.created_at,
+    hasPrices: r.has_prices,
   }))
 }
 
 export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
-    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at').eq('rfq_id', rfqId).eq('bucket', FILE_BUCKET).order('created_at'),
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices').eq('rfq_id', rfqId).eq('bucket', FILE_BUCKET).order('created_at'),
   )
   return rows.map(r => ({
     id: r.id,
@@ -653,6 +658,7 @@ export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
     sizeBytes: r.size_bytes,
     clarificationId: r.clarification_id,
     createdAt: r.created_at,
+    hasPrices: r.has_prices,
   }))
 }
 
@@ -735,7 +741,7 @@ export async function setInquiryRelayed(inquiryId: string, at: string | null): P
  * Upload one file to rfq-files at {rfq_id}/{uuid}.{ext} and record it. The object goes first; if the row cannot be
  * written the object is removed again, so nothing is left behind.
  */
-export async function uploadAttachment(input: { rfqId?: string; orderId?: string; clarificationId: string | null; file: File; path: string }): Promise<AttachmentRow> {
+export async function uploadAttachment(input: { rfqId?: string; orderId?: string; clarificationId: string | null; file: File; path: string; hasPrices: boolean }): Promise<AttachmentRow> {
   const db = requireSupabase()
   const up = await db.storage.from(FILE_BUCKET).upload(input.path, input.file, { contentType: input.file.type, upsert: false })
   if (up.error) throw up.error
@@ -751,14 +757,20 @@ export async function uploadAttachment(input: { rfqId?: string; orderId?: string
       order_id: input.orderId ?? null,
       clarification_id: input.clarificationId,
     })
-    .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at')
+    .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices')
     .single()
   if (res.error) {
     await db.storage.from(FILE_BUCKET).remove([input.path])
     throw res.error
   }
   const r = res.data
-  return { id: r.id, path: r.path, fileName: r.file_name, mimeType: r.mime_type, sizeBytes: r.size_bytes, clarificationId: r.clarification_id, createdAt: r.created_at }
+  return { id: r.id, path: r.path, fileName: r.file_name, mimeType: r.mime_type, sizeBytes: r.size_bytes, clarificationId: r.clarification_id, createdAt: r.created_at, hasPrices: r.has_prices }
+}
+
+/** Admin: tag a file as carrying prices (hidden from engineers) or not. Migration 0100's policy refuses an engineer here. */
+export async function setAttachmentHasPrices(id: string, hasPrices: boolean): Promise<void> {
+  const { error } = await requireSupabase().from('attachments').update({ has_prices: hasPrices }).eq('id', id)
+  if (error) throw error
 }
 
 /** The row first, then the object: a failed object removal leaves an orphan (swept later), never a row pointing at nothing. */
@@ -912,6 +924,24 @@ export async function markInquiriesSent(ids: readonly string[], on: string): Pro
   const db = requireSupabase()
   const rows = unwrap(await db.from('supplier_inquiries').update({ sent_on: on }).in('id', [...ids]).is('sent_on', null).select('id'))
   return rows.map(r => r.id)
+}
+
+/**
+ * "Did you send it? Yes, sent" (0097): stamp sent_confirmed_at on inquiries that were asked and not yet confirmed. Only this call writes
+ * the column, so "Sent" on a screen always means a person said so. Returns the ids that changed, for the Undo.
+ */
+export async function confirmInquiriesSent(ids: readonly string[]): Promise<string[]> {
+  if (ids.length === 0) return []
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('supplier_inquiries').update({ sent_confirmed_at: new Date().toISOString() }).in('id', [...ids]).not('sent_on', 'is', null).is('sent_confirmed_at', null).select('id'))
+  return rows.map(r => r.id)
+}
+
+/** The Undo of confirmInquiriesSent: back to "Asked". */
+export async function unconfirmInquiriesSent(ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return
+  const db = requireSupabase()
+  unwrap(await db.from('supplier_inquiries').update({ sent_confirmed_at: null }).in('id', [...ids]).select('id'))
 }
 
 /** The Undo of markInquiriesSent: back to shortlisted, only while still stamped that day and not chased since. */

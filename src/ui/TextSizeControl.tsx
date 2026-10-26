@@ -5,18 +5,19 @@ import { useSingleKeyShortcuts } from '@/ui/useShortcutsSetting'
 import { Checkbox } from '@/ui/form/Checkbox'
 
 const OPTIONS = [
-  { value: 'normal', label: 'Normal' },
   { value: 'small', label: 'Smaller' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'large', label: 'Larger' },
 ] as const
 
-/** "Text size: Normal / Smaller" as a SegmentedControl. Applies at once, on this device (src/ui/useTextSize.ts). */
+/** "Text size: Smaller / Normal / Larger" as a SegmentedControl. Applies at once, on this device (src/ui/useTextSize.ts). */
 export function TextSizeControl({ className }: { className?: string }) {
   const [size, setSize] = useTextSize()
   return (
     <SegmentedControl
       aria-label="Text size"
       value={size}
-      onValueChange={v => setSize(v === 'small' ? 'small' : 'normal')}
+      onValueChange={v => setSize(v === 'small' || v === 'large' ? v : 'normal')}
       options={OPTIONS}
       large
       className={className}
@@ -33,7 +34,7 @@ export function TextSizePanel({ className }: { className?: string }) {
           Text size
         </h2>
         <p className="max-w-[62ch] text-sm text-fg-2 text-pretty">
-          Normal is the larger, easier-to-read size. Smaller fits more on the screen. It changes this device only, straight away.
+          Normal is the easier-to-read size. Larger is bigger still (18 px). Smaller fits more on the screen. It changes this device only, straight away.
         </p>
       </div>
       <TextSizeControl className="justify-self-start" />
@@ -51,7 +52,7 @@ export function ShortcutsPanel({ className }: { className?: string }) {
           Keyboard shortcuts
         </h2>
         <p className="max-w-[62ch] text-sm text-fg-2 text-pretty">
-          N starts an RFQ, C opens Paste or photo, G then T goes to Today, / jumps to a list&apos;s search and ? opens the keyboard
+          N starts an RFQ, E adds an expense (admin), O starts an order without an enquiry, C opens Paste or photo, G then T goes to To do, / jumps to a list&apos;s search and ? opens the keyboard
           shortcuts. Turn these off if you use voice control or press keys by accident. Ctrl+K and Ctrl+Z always work. This device only.
         </p>
       </div>

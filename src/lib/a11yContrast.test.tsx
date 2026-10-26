@@ -360,7 +360,7 @@ describe('direction C: the colour blocks and what sits on them', () => {
   it('Today draws the blocks from the block tokens, and only Late is red', () => {
     const src = read('src/features/today/TodayScreen.tsx')
     for (const b of blocks) expect(src).toContain(`bg-block-${b} text-block-${b}-fg`)
-    expect(src).toMatch(/i\.actionDueOn < today\) \? 'late' : 'today'/)
+    expect(read('src/features/today/todoModel.ts')).toMatch(/actionDueOn < today \? 'late' : 'today'/)
   })
   it('the round identifier plate (Tag) is 7:1', () => {
     expect(read('src/ui/Tag.tsx')).toContain('bg-tone-info-bg text-block-week-fg')

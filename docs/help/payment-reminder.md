@@ -3,7 +3,7 @@ id: payment-reminder
 title: Remind a customer to pay
 roles: sales, admin
 keywords: payment, reminder, overdue, owes, balance, late, receivable
-screens: /money, /today, /orders
+screens: /money, /todo, /orders
 related: record-payment
 ---
 1. Tap [Money]. It opens on [Who owes us].

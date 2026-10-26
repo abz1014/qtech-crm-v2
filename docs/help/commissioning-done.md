@@ -3,7 +3,7 @@ id: commissioning-done
 title: Mark commissioning done
 roles: engineer, sales, admin
 keywords: commissioning, done, finished, complete, site, job, install, notes
-screens: /orders, /today
+screens: /orders, /todo
 related: change-planned-date
 ---
 1. Open the order. Once the job is due, the green button is [Mark done today].

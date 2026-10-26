@@ -201,3 +201,11 @@ describe('classifyDoc on an email thread', () => {
     expect(classifyDoc('ok, noted').kind).toBe('unknown')
   })
 })
+
+describe('a one-line price pasted as a reply (R-0 follow-up)', () => {
+  it('is not called an enquiry, so a pasted reply is not held', () => {
+    for (const t of ['AB-100 DN50: EUR 1.234 each', 'AB-100 DN50 - USD 100.00 each, 3 weeks']) {
+      expect(NOT_A_SUPPLIER_QUOTE).not.toContain(classifyDoc(t).kind)
+    }
+  })
+})

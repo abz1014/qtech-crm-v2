@@ -15,7 +15,7 @@ test.beforeAll(async () => {
 })
 
 const FULL = new Set(['w1366', 'w375', 'w320'])
-const KEY = new Set(['/today', '/rfqs', '/rfqs/new', '/rfqs/{rfq}', '/orders', '/orders/{order}', '/companies', '/companies/{company}', '/companies/{supplier}', '/money', '/money/gst-register', '/money/receivables', '/money/expenses', '/money/month-end', '/money/margins', '/money/reports', '/settings', '/settings/team', '/settings/targets', '/settings/exchange-rates', '/settings/company'])
+const KEY = new Set(['/todo', '/rfqs', '/rfqs/new', '/rfqs/{rfq}', '/orders', '/orders/{order}', '/companies', '/companies/{company}', '/companies/{supplier}', '/money', '/money/gst-register', '/money/receivables', '/money/expenses', '/money/month-end', '/money/margins', '/money/reports', '/settings', '/settings/team', '/settings/targets', '/settings/exchange-rates', '/settings/company'])
 
 for (const v of VIEWPORTS) {
   for (const role of ['admin', 'sales', 'engineer'] as const) {

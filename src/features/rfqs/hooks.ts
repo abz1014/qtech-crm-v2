@@ -4,7 +4,8 @@ import { nullOnInvalidId } from '@/lib/uuid'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/rfqs/api'
 import { searchCompanies } from '@/features/companies/api'
-import { useSeesPrices } from '@/app/session'
+import { useSeesPrices, useSession } from '@/app/session'
+import { attachmentHasPrices } from '@/features/rfqs/lib/attachmentPrices'
 
 /*
  * RFQ hooks for intake (R05). Same shape as companies (src/features/README.md): one hook per read, one per write,
@@ -281,8 +282,23 @@ export function useSetInquiryRelayed(rfqId: string) {
 /** Upload a file to an RFQ, or to an order when `orderId` is given (the Files panel serves both). */
 export function useUploadAttachment(rfqId: string | undefined, orderId?: string) {
   const client = useQueryClient()
+  const session = useSession()
+  const role = session.status === 'signed-in' ? session.user.role : 'engineer'
   return useMutation({
-    mutationFn: (v: { clarificationId: string | null; file: File; path: string }) => api.uploadAttachment(orderId ? { orderId, ...v } : { rfqId, ...v }),
+    // has_prices (0100): true for a customer PO, a supplier quote or an enquiry file; false for a site photo or an engineer's file.
+    mutationFn: (v: { clarificationId: string | null; file: File; path: string }) => {
+      const hasPrices = attachmentHasPrices({ role, orderId, clarificationId: v.clarificationId, mime: v.file.type })
+      return api.uploadAttachment(orderId ? { orderId, ...v, hasPrices } : { rfqId, ...v, hasPrices })
+    },
+    onSuccess: () => (orderId ? invalidateAfter(client, 'order.files', { orderId }) : invalidateAfter(client, 'attachment.add', { rfqId: rfqId as string })),
+  })
+}
+
+/** Admin: "Has prices: hide from engineers" on a file row. */
+export function useSetAttachmentHasPrices(rfqId: string | undefined, orderId?: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; hasPrices: boolean }) => api.setAttachmentHasPrices(v.id, v.hasPrices),
     onSuccess: () => (orderId ? invalidateAfter(client, 'order.files', { orderId }) : invalidateAfter(client, 'attachment.add', { rfqId: rfqId as string })),
   })
 }
@@ -365,6 +381,15 @@ export function useMarkInquiriesSent(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (v: { ids: readonly string[]; on: string; undo?: boolean }) => (v.undo ? api.unmarkInquiriesSent(v.ids, v.on).then(() => [...v.ids]) : api.markInquiriesSent(v.ids, v.on)),
+    onSuccess: () => invalidateAfter(client, 'rfq.setFloated', { rfqId }),
+  })
+}
+
+/** "Yes, sent" on the question after copying or opening a supplier enquiry (0097). `undo` puts the row back to Asked. */
+export function useConfirmInquiriesSent(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { ids: readonly string[]; undo?: boolean }) => (v.undo ? api.unconfirmInquiriesSent(v.ids).then(() => [...v.ids]) : api.confirmInquiriesSent(v.ids)),
     onSuccess: () => invalidateAfter(client, 'rfq.setFloated', { rfqId }),
   })
 }

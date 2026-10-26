@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import http from 'node:http'
 import { createRequire } from 'node:module'
@@ -211,6 +212,21 @@ function ocrAssets(): Plugin {
 const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || Date.now().toString(36)
 
 /*
+ * The date shown beside the build ("Version a1b2c3d · 26 Oct 2026", src/lib/pwa/buildInfo.ts): the commit's date, so a rebuild of
+ * the same commit keeps the same entry chunk (a build timestamp would change it). Without git history: the day of the build.
+ */
+function buildDate(): string {
+  try {
+    const out = execSync('git log -1 --format=%cI', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    if (/^\d{4}-\d{2}-\d{2}/.test(out)) return out
+  } catch {
+    // no git here (a source archive): use the day of the build
+  }
+  return new Date().toISOString()
+}
+const BUILT_ON = buildDate()
+
+/*
  * Minimum app version (owner decision 2026-10-22, src/lib/pwa/minVersion.ts). app-version.json at the repository root holds this
  * build's `version` (a whole number, raised by hand when a release changes what the server accepts) and `minSupported`, the oldest
  * version that may still SAVE. The build bakes `version` into the app (__APP_VERSION__) and publishes both as /version.json
@@ -243,6 +259,7 @@ function appVersionFile(): Plugin {
 export default defineConfig(({ command, mode }) => ({
   define: {
     __APP_BUILD__: JSON.stringify(BUILD_ID),
+    __APP_BUILT_ON__: JSON.stringify(BUILT_ON),
     __OCR_DIR__: JSON.stringify(OCR_DIR),
     __APP_VERSION__: JSON.stringify(APP_VERSION.version),
     __REST_SAME_ORIGIN__: JSON.stringify(REST_SAME_ORIGIN),

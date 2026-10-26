@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "attachments": {
                   Row: {
-                    "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"expense_id": string | null,"file_name": string,"id": string,"invoice_id": string | null,"mime_type": string,"order_id": string | null,"path": string,"rfq_id": string | null,"size_bytes": number
+                    "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"expense_id": string | null,"file_name": string,"has_prices": boolean,"id": string,"invoice_id": string | null,"mime_type": string,"order_id": string | null,"path": string,"rfq_id": string | null,"size_bytes": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "bucket": string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name": string,"id"?: string,"invoice_id"?: string | null,"mime_type": string,"order_id"?: string | null,"path": string,"rfq_id"?: string | null,"size_bytes": number
+                    "bucket": string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name": string,"has_prices"?: boolean,"id"?: string,"invoice_id"?: string | null,"mime_type": string,"order_id"?: string | null,"path": string,"rfq_id"?: string | null,"size_bytes": number
                   }
                   Update: {
-                    "bucket"?: string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name"?: string,"id"?: string,"invoice_id"?: string | null,"mime_type"?: string,"order_id"?: string | null,"path"?: string,"rfq_id"?: string | null,"size_bytes"?: number
+                    "bucket"?: string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name"?: string,"has_prices"?: boolean,"id"?: string,"invoice_id"?: string | null,"mime_type"?: string,"order_id"?: string | null,"path"?: string,"rfq_id"?: string | null,"size_bytes"?: number
                   }
                   Relationships: [
                     {
@@ -131,14 +131,14 @@ isOneToOne: false
                   ]
                 },"brands": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"kind": string,"name": string
+                    "created_at": string,"created_by": string | null,"curated": boolean,"id": string,"kind": string,"name": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: string,"name": string
+                    "created_at"?: string,"created_by"?: string | null,"curated"?: boolean,"id"?: string,"kind"?: string,"name": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: string,"name"?: string
+                    "created_at"?: string,"created_by"?: string | null,"curated"?: boolean,"id"?: string,"kind"?: string,"name"?: string
                   }
                   Relationships: [
                     {
@@ -1049,14 +1049,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string
+                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"commissioning_time": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string,"visit_type": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"commissioning_time"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string,"visit_type"?: string | null
                   }
                   Update: {
-                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"commissioning_time"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string,"visit_type"?: string | null
                   }
                   Relationships: [
                     {
@@ -1101,6 +1101,36 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     },{
       foreignKeyName: "orders_rfq_id_fkey"
       columns: ["rfq_id"]
@@ -1411,14 +1441,14 @@ isOneToOne: false
                   ]
                 },"snoozes": {
                   Row: {
-                    "created_at": string,"id": string,"rule": string,"subject_id": string,"until_on": string,"user_id": string
+                    "created_at": string,"id": string,"rule": string,"subject_id": string,"until_change": boolean,"until_on": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"rule": string,"subject_id": string,"until_on": string,"user_id"?: string
+                    "created_at"?: string,"id"?: string,"rule": string,"subject_id": string,"until_change"?: boolean,"until_on": string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"rule"?: string,"subject_id"?: string,"until_on"?: string,"user_id"?: string
+                    "created_at"?: string,"id"?: string,"rule"?: string,"subject_id"?: string,"until_change"?: boolean,"until_on"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1431,14 +1461,14 @@ isOneToOne: false
                   ]
                 },"supplier_inquiries": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_confirmed_at": string | null,"sent_on": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {
@@ -1852,6 +1882,14 @@ isOneToOne: false
       referencedColumns: ["order_id"]
     }
                   ]
+                },"v_jobs": {
+                  Row: {
+                    "cancelled_orders": number | null,"company_id": string | null,"is_history": boolean | null,"items_summary": string | null,"job_key": string | null,"kind": string | null,"last_activity_on": string | null,"order_id": string | null,"owner_id": string | null,"repeat_of_job_key": string | null,"rfq_id": string | null,"site_id": string | null,"stage": string | null,"stage_detail": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_month_cash_flow": {
                   Row: {
                     "expenses_count": number | null,"frozen": boolean | null,"money_in": number | null,"money_out": number | null,"month": string | null,"payments_count": number | null
@@ -2194,6 +2232,14 @@ isOneToOne: false
       referencedColumns: ["supplier_id"]
     }
                   ]
+                },"v_supplier_category_evidence": {
+                  Row: {
+                    "asked": number | null,"family_id": string | null,"last_asked_on": string | null,"no_offer": number | null,"ordered": number | null,"quoted": number | null,"replied": number | null,"supplier_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_supplier_stats": {
                   Row: {
                     "asked": number | null,"brand_ids": (string)[] | null,"brand_names": (string)[] | null,"chosen": number | null,"chosen_of": number | null,"deliveries": number | null,"last_contact": string | null,"late": number | null,"legacy_asked": number | null,"median_days_late": number | null,"median_reply_days": number | null,"no_offer": number | null,"orders_count": number | null,"prices_hidden": number | null,"quoted": number | null,"replied": number | null,"reply_days_n": number | null,"supplier_id": string | null
@@ -2224,6 +2270,9 @@ isOneToOne: false
 "approve_expense_claim":
 { Args: { "p_category": string,"p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
                            },
+"attachment_is_priced":
+{ Args: { "p_bucket": string,"p_name": string }; Returns: boolean
+                           },
 "brand_tokens":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
@@ -2248,13 +2297,13 @@ isOneToOne: false
 { Args: { "p_month": string }; Returns: number
                            },
 "convert_rfq_to_order":
-{ Args: { "p_customer_po_number"?: string,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
+{ Args: { "p_customer_po_number"?: string,"p_expected_revision"?: number,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
                            },
 "correct_payment":
 { Args: { "p_amount": number,"p_new_id"?: string,"p_paid_via": string,"p_payment_id": string,"p_reason": string,"p_received_on": string,"p_reference": string }; Returns: string
                            },
 "create_repeat_order":
-{ Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string }; Returns: string
+{ Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string,"p_repeat_cancelled"?: boolean }; Returns: string
                            },
 "current_user_role":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -2319,7 +2368,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "issue_purchase_order":
-{ Args: { "p_delivery_terms"?: string,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
+{ Args: { "p_delivery_terms"?: string,"p_expected_revision"?: number,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
                            },
 "issue_quotation":
 { Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_item_ids"?: (string)[],"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
@@ -2329,6 +2378,11 @@ isOneToOne: false
                            },
 "item_text_norm":
 { Args: { "t": string }; Returns: string
+                           },
+"job_stage":
+{ Args: { "p_order_id": string,"p_rfq_id": string }; Returns: {
+              "is_history": boolean,"last_activity_on": string,"stage": string,"stage_detail": string
+            }[]
                            },
 "lead_time_upper_days":
 { Args: { "p_text": string }; Returns: number
@@ -2502,6 +2556,11 @@ isOneToOne: false
 "suggest_misc_categories":
 { Args: Record<PropertyKey, never>; Returns: {
               "misc_category_id": string,"spent": number,"title": string,"title_key": string,"uses": number
+            }[]
+                           },
+"supplier_category_price_wins":
+{ Args: { "p_family_ids": (string)[] }; Returns: {
+              "family_id": string,"of_ranked": number,"supplier_id": string,"wins": number
             }[]
                            },
 "supplier_item_evidence":

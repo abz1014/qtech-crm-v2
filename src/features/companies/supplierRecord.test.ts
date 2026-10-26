@@ -107,8 +107,8 @@ describe('recent quotes', () => {
       TODAY,
     )
     const by = Object.fromEntries(r.quotes.map(q => [q.rfqRef, q]))
-    expect(by['RFQ-0171']).toMatchObject({ outcome: 'waiting', itemNote: 'Sent 24 Nov, 3 days ago', pkrNote: 'Awaiting a quote' })
-    expect(by['RFQ-0088']).toMatchObject({ outcome: 'no-reply', itemNote: null, pkrNote: 'Sent 2 Jun, never answered' })
+    expect(by['RFQ-0171']).toMatchObject({ outcome: 'waiting', itemNote: 'Asked 24 Nov, 3 days ago', pkrNote: 'Awaiting a quote' })
+    expect(by['RFQ-0088']).toMatchObject({ outcome: 'no-reply', itemNote: null, pkrNote: 'Asked 2 Jun, never answered' })
     expect(by['RFQ-0104']).toMatchObject({ outcome: 'declined', pkrNote: "Doesn't carry this brand", qty: '+ 1 more item' })
     expect(by['RFQ-0171'].price.state).toBe('none')
   })
@@ -200,7 +200,7 @@ describe('open with them', () => {
 
   it('says what the last contact was', () => {
     const r = buildSupplierRecord(raw({ inquiries: [inq('open', 'r1', { sentOn: '2026-11-24' })], rfqs: [rfq('r1', 171)] }), TODAY)
-    expect(r.lastContact).toEqual(['Enquiry sent for ', { rfqId: 'r1', ref: 'RFQ-0171' }, '. No reply yet.'])
+    expect(r.lastContact).toEqual(['Enquiry asked for ', { rfqId: 'r1', ref: 'RFQ-0171' }, '. No reply yet.'])
   })
 
   it('says how often it was chased and when, and marks an imported leg', () => {
@@ -208,14 +208,14 @@ describe('open with them', () => {
       raw({ inquiries: [inq('i1', 'r1', { sentOn: '2026-11-12', lastChasedOn: '2026-11-19', chaseCount: 1 })], rfqs: [rfq('r1', 165)] }),
       TODAY,
     )
-    expect(chased.lastContact).toEqual(['Enquiry sent for ', { rfqId: 'r1', ref: 'RFQ-0165' }, '. Chased once on 19 Nov.'])
+    expect(chased.lastContact).toEqual(['Enquiry asked for ', { rfqId: 'r1', ref: 'RFQ-0165' }, '. Chased once on 19 Nov.'])
     const imported = buildSupplierRecord(raw({ legs: [leg('g', 20, { placedOn: '2026-09-07', legacy: true })] }), TODAY)
     expect(imported.lastContact).toEqual(['Supplier order for ORD-0020. Imported.'])
   })
 
   it('names how long it went unanswered, with the chases', () => {
     const r = buildSupplierRecord(raw({ inquiries: [inq('i1', 'r1', { sentOn: '2026-10-09', chaseCount: 1 })], items: [item('a', 'r1')], rfqs: [rfq('r1', 152)] }), TODAY)
-    expect(r.quotes[0].pkrNote).toBe('Sent 9 Oct, chased once, never answered')
+    expect(r.quotes[0].pkrNote).toBe('Asked 9 Oct, chased once, never answered')
   })
 
   it('counts delivery squares from the legs: an imported on-time delivery is drawn as estimated', () => {

@@ -42,7 +42,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
       <section aria-label={`Your Q${quarter} target`} data-target-empty className={cn('px-4 py-2 text-sm text-fg-muted', className)}>
         No Q{quarter} target set.{' '}
         {isAdmin ? (
-          <Link to="/settings/targets" className="font-medium text-primary underline underline-offset-2">
+          <Link to="/settings/targets" className="inline-flex min-h-touch items-center font-medium text-primary underline underline-offset-2">
             Set targets
           </Link>
         ) : (

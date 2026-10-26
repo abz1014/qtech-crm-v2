@@ -6,6 +6,7 @@ import { SessionProvider } from '@/app/SessionProvider'
 import { AppShell } from '@/app/shell/AppShell'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { businessToday } from '@/lib/dates'
+import { isMonday } from '@/features/today/weeklyReview'
 import { installFakeDb } from '@/test/fakeSupabase'
 
 /*
@@ -40,13 +41,13 @@ function mount(role: 'admin' | 'engineer', rfqs = [open(1)]) {
 describe('the top bar has one number: Today\'s "needs you"', () => {
   it('makes no head request for active orders: every number comes from the Today list', async () => {
     const { fake, bar } = mount('admin')
-    await within(bar).findByRole('link', { name: /^Today\s?, 1 need you$/ })
+    await within(bar).findByRole('link', { name: /^To do\s?, 1 need you$/ })
     expect(fake.calls.some(c => c.target === 'v_order_state' && /head|count/.test(JSON.stringify(c)))).toBe(false)
   })
 
   it('Today counts the items due today or late (three RFQs nobody asked suppliers about); RFQs, Orders and Money carry no number', async () => {
     const { bar } = mount('admin', [open(1), open(2), open(3)])
-    expect(await within(bar).findByRole('link', { name: /^Today\s?, 3 need you$/ })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: /^To do\s?, 3 need you$/ })).toBeInTheDocument()
     // "Plan commissioning" and the FBR roll-up are ready-to-move chores: listed on Today, never counted
     expect(within(bar).getByRole('link', { name: 'RFQs' })).toBeInTheDocument()
     expect(within(bar).getByRole('link', { name: 'Orders' })).toBeInTheDocument()
@@ -56,8 +57,10 @@ describe('the top bar has one number: Today\'s "needs you"', () => {
 
   it('an item older than 30 days is not counted (it waits in Today\'s grey fold)', async () => {
     const { fake, bar } = mount('admin', [open(1, '2025-01-27'), open(2)])
-    // the fresh one is counted, the one from January 2025 is not
-    expect(await within(bar).findByRole('link', { name: /^Today\s?, 1 need you$/ })).toBeInTheDocument()
+    // the fresh one is counted, the one from January 2025 is not (on a Monday the admin's weekly review row, which that old enquiry
+    // is on, is counted too: it is real work for that day)
+    const n = isMonday(businessToday()) ? 2 : 1
+    expect(await within(bar).findByRole('link', { name: new RegExp(`^To do\\s?, ${n} need you$`) })).toBeInTheDocument()
     expect(fake.calls.some(c => c.target === 'v_rfq_state')).toBe(true)
     expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
   })
