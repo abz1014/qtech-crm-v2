@@ -73,3 +73,13 @@ describe('the seven stops', () => {
     expect(stageModel({ stage: null, stageDetail: null, kind: 'enquiry' }).current).toBeNull()
   })
 })
+
+describe('what an engineer reads', () => {
+  it('leaves the money states out of the words', async () => {
+    const { officeDetail } = await import('@/features/jobs/lib/stages')
+    expect(officeDetail('supplier late, advance received')).toBe('supplier late')
+    expect(officeDetail('not invoiced yet, installation planned 28 Oct')).toBe('installation planned 28 Oct')
+    expect(officeDetail('part paid')).toBeNull()
+    expect(officeDetail(null)).toBeNull()
+  })
+})

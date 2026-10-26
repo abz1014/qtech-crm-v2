@@ -118,6 +118,7 @@ const routePrefetch: Partial<Record<ChunkKey, () => Promise<{ prefetch: Prefetch
   ordersList: () => import('@/features/orders/prefetch').then(m => ({ prefetch: m.prefetchList })),
   order: () => import('@/features/orders/prefetch').then(m => ({ prefetch: m.prefetchOrder })),
   jobsList: () => import('@/features/jobs/prefetch').then(m => ({ prefetch: m.prefetchList })),
+  job: () => import('@/features/jobs/prefetch').then(m => ({ prefetch: m.prefetchJob })),
   companiesList: () => import('@/features/companies/prefetch'),
   moneyReceivables: () => import('@/features/money/payments/prefetch'),
 }

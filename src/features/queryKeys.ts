@@ -326,9 +326,11 @@ function jobs() {
     detail: (key: string) => [...all, 'detail', key] as const,
     /** One slice of a job page. */
     part: (key: string, slice: JobPart) => [...all, 'detail', key, slice] as const,
+    /** Signed links for the files on a job's page. */
+    fileUrls: (signature: string) => [...all, 'file-urls', signature] as const,
   }
 }
-export type JobPart = 'files' | 'timeline' | 'contact' | 'cancelled' | 'quotations'
+export type JobPart = 'facts' | 'cancelled' | 'invoices'
 
 export const qk = {
   jobs: jobs(),

@@ -20,3 +20,21 @@ export function useJobSearch(text: string) {
   const t = text.trim()
   return useQuery({ ...jobSearchQuery(t), enabled: t !== '', staleTime: 15_000 })
 }
+
+/** The job page's first read: the view and the enquiry or order beside it, with the names, in one round. */
+export const jobFactsQuery = (key: string) => ({ queryKey: qk.jobs.part(key, 'facts'), queryFn: () => api.getJobFacts(key) })
+
+export function useJobFacts(key: string | undefined) {
+  return useQuery({ ...jobFactsQuery(key ?? ''), enabled: Boolean(key) })
+}
+
+export const cancelledOrdersQuery = (key: string, rfqId: string) => ({ queryKey: [...qk.jobs.part(key, 'cancelled'), rfqId], queryFn: () => api.listCancelledOrders(rfqId) })
+export function useCancelledOrders(key: string | undefined, rfqId: string | null | undefined, count: number) {
+  return useQuery({ ...cancelledOrdersQuery(key ?? '', rfqId ?? ''), enabled: Boolean(key && rfqId) && count > 0 })
+}
+
+export const jobInvoicesQuery = (key: string, orderId: string) => ({ queryKey: [...qk.jobs.part(key, 'invoices'), orderId], queryFn: () => api.listJobInvoices(orderId) })
+/** The job's invoices: admin and sales only, so an engineer's page never asks. */
+export function useJobInvoices(key: string | undefined, orderId: string | null | undefined, enabled: boolean) {
+  return useQuery({ ...jobInvoicesQuery(key ?? '', orderId ?? ''), enabled: enabled && Boolean(key && orderId) })
+}

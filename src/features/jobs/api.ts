@@ -199,3 +199,139 @@ export async function findJobs(text: string, signal?: AbortSignal, hits?: Search
     (a, b) => Number(b.key === key) - Number(a.key === key) || (b.lastActivityOn ?? '').localeCompare(a.lastActivityOn ?? '') || b.key.localeCompare(a.key, undefined, { numeric: true }),
   )
 }
+
+// ---------------------------------------------------------------- one job page
+
+/** Who to call and where the goods go: from the enquiry, else from the order. */
+export interface JobContact {
+  name: string
+  phone: string | null
+  email: string | null
+  jobTitle: string | null
+}
+
+/** What the job page's header, contact and notes need, read in ONE round (the view and the enquiry or order beside it, together). */
+export interface JobFacts {
+  job: JobRow
+  customerRef: string | null
+  receivedOn: string | null
+  dueOn: string | null
+  /** The enquiry's notes (rfqs.notes), else the order's. */
+  notes: string | null
+  closedOn: string | null
+  closeReason: string | null
+  contact: JobContact | null
+  site: { name: string; address: string | null } | null
+  /** The direct order's own number, shown beside "Job O-45" as ORD-0045. */
+  orderNumber: number | null
+}
+
+type One<T> = T | T[] | null | undefined
+const one = <T,>(v: One<T>): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null))
+
+interface HeadJoin {
+  id: string
+  number: number
+  notes: string | null
+  company: One<{ id: string; name: string }>
+  site: One<{ name: string; address: string | null }>
+  contact: One<{ name: string; phone: string | null; email: string | null; job_title: string | null }>
+  owner: One<{ id: string; name: string }>
+  customer_ref?: string | null
+  received_on?: string | null
+  due_on?: string | null
+  closed_on?: string | null
+  close_reason?: string | null
+}
+
+/**
+ * The job with its customer, site, contact and owner: the view and the enquiry (or the direct order) read together in one round,
+ * the names embedded as the order page does (perf/lcp: the customer's name is the page's largest text). Null when there is no such
+ * job (a mistyped address). `money` is not needed: the view has none, and the order's customer PO is read by the order panel.
+ */
+export async function getJobFacts(key: string): Promise<JobFacts | null> {
+  const db = requireSupabase()
+  const direct = /^O-(\d+)$/.exec(key)
+  const number = direct ? Number(direct[1]) : /^\d{1,9}$/.test(key) ? Number(key) : null
+  if (number === null) return null
+  const embeds = (t: 'rfqs' | 'orders', own: string) =>
+    `${own}, company:companies!${t}_company_id_fkey(id, name), site:company_sites!${t}_site_id_fkey(name, address), contact:contacts!${t}_contact_id_fkey(name, phone, email, job_title), owner:users!${t}_owner_id_fkey(id, name)`
+  const head = direct
+    ? db
+        .from('orders')
+        .select(embeds('orders', 'id, number, notes'))
+        .eq('number', number)
+        .is('rfq_id', null)
+        .maybeSingle()
+    : db
+        .from('rfqs')
+        .select(embeds('rfqs', 'id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason'))
+        .eq('number', number)
+        .maybeSingle()
+  const [view, headRes] = await Promise.all([db.from('v_jobs').select(JOB_COLUMNS).eq('job_key', key).maybeSingle(), head])
+  const v = unwrap(view) as JobView | null
+  const h = unwrap(headRes) as unknown as HeadJoin | null
+  if (!v || !h || !v.job_key || !v.company_id) return null
+  const company = one(h.company)
+  const site = one(h.site)
+  const contact = one(h.contact)
+  const owner = one(h.owner)
+  const job: JobRow = {
+    key: v.job_key,
+    kind: v.kind === 'direct' ? 'direct' : 'enquiry',
+    rfqId: v.rfq_id,
+    orderId: v.order_id,
+    companyId: v.company_id,
+    companyName: company?.name ?? 'Unknown company',
+    siteName: site?.name ?? null,
+    ownerId: v.owner_id,
+    ownerName: owner?.name ?? null,
+    items: v.items_summary ?? '',
+    stage: v.stage,
+    stageDetail: v.stage_detail,
+    isHistory: v.is_history === true,
+    lastActivityOn: v.last_activity_on,
+    repeatOf: v.repeat_of_job_key,
+    cancelledOrders: Number(v.cancelled_orders ?? 0),
+    engineerIds: [],
+  }
+  return {
+    job,
+    customerRef: h.customer_ref ?? null,
+    receivedOn: h.received_on ?? null,
+    dueOn: h.due_on ?? null,
+    notes: h.notes ?? null,
+    closedOn: h.closed_on ?? null,
+    closeReason: h.close_reason ?? null,
+    contact: contact ? { name: contact.name, phone: contact.phone, email: contact.email, jobTitle: contact.job_title } : null,
+    site: site ?? null,
+    orderNumber: direct ? number : null,
+  }
+}
+
+export interface CancelledOrder {
+  id: string
+  number: number
+  cancelledOn: string
+  reason: string | null
+}
+
+/** The orders of this enquiry that were cancelled: history inside the job (a cancel followed by a reorder is still one job). */
+export async function listCancelledOrders(rfqId: string): Promise<CancelledOrder[]> {
+  const rows = unwrap(await requireSupabase().from('orders').select('id, number, cancelled_on, cancel_reason').eq('rfq_id', rfqId).not('cancelled_on', 'is', null).order('number'))
+  return rows.flatMap(r => (r.cancelled_on ? [{ id: r.id, number: r.number, cancelledOn: r.cancelled_on, reason: r.cancel_reason }] : []))
+}
+
+export interface JobInvoice {
+  id: string
+  number: string | null
+  invoiceDate: string | null
+  /** net + GST: admin and sales only (an engineer's read is never made). */
+  gross: number
+}
+
+/** The invoices of the job's order (admin and sales; never called for an engineer). */
+export async function listJobInvoices(orderId: string): Promise<JobInvoice[]> {
+  const rows = unwrap(await requireSupabase().from('invoices').select('id, number, invoice_date, net_amount, gst_amount').eq('order_id', orderId).order('invoice_date'))
+  return rows.map(r => ({ id: r.id, number: r.number, invoiceDate: r.invoice_date, gross: Number(r.net_amount) + Number(r.gst_amount) }))
+}

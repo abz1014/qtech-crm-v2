@@ -32,7 +32,7 @@ export function jobNext({ stage, stageDetail: d, role }: NextInput): JobNext {
     case 'enquiry':
       return { text: 'Ask the suppliers for prices', tone: 'now', button: 'Ask suppliers', on: 'rfq' }
     case 'asking_suppliers':
-      return { text: `Waiting for supplier prices${d ? ` (${d})` : ''}`, tone: 'waiting', button: 'Open the enquiry', on: 'rfq' }
+      return { text: 'Waiting for supplier prices', tone: 'waiting', button: 'Open the enquiry', on: 'rfq' }
     case 'prices_in':
       return { text: 'Prices are in: send the quotation', tone: 'now', button: office ? null : 'Send quotation', on: office ? null : 'rfq', query: 'issue=1' }
     case 'quoted':

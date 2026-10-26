@@ -100,6 +100,15 @@ export function currentStopIndex(stage: string | null, detail: string | null): n
 
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
+/**
+ * An engineer's words leave out the money states ("advance received", "partly invoiced", "not paid yet"): the office handles
+ * invoices and payment, and the ruler's Invoice and Payment stops say so. Words only either way; this is what the page chooses to show.
+ */
+export function officeDetail(detail: string | null): string | null {
+  const kept = (detail ?? '').split(', ').filter(p => p && !/invoice|advance|paid/i.test(p))
+  return kept.length ? kept.join(', ') : null
+}
+
 /** The detail split into its parts ("not invoiced yet, advance received" -> two), each a sentence fragment. */
 const parts = (detail: string | null) => (detail ?? '').split(', ').map(s => s.trim()).filter(Boolean)
 
