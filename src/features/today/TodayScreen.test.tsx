@@ -91,9 +91,11 @@ describe('Today screen', () => {
   it('an engineer has no Money tab and never requests receivables, invoices or the month-end checks', async () => {
     fake = install()
     renderAs('engineer')
-    await screen.findByText('Needs suppliers')
-    expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
     await waitFor(() => expect(fake?.calls.length).toBeGreaterThan(0))
+    // phase 7: an engineer's list is their jobs; a sales rule (Needs suppliers) never reaches it, even for an RFQ they own
+    await screen.findByText('Nothing needs you today')
+    expect(screen.queryByText('Needs suppliers')).toBeNull()
+    expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
     const targets = fake?.calls.map(c => c.target) ?? []
     expect(targets).not.toContain('rpc:order_receivables')
     expect(targets).not.toContain('rpc:receivables_list')

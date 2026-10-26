@@ -16,6 +16,7 @@ import { useFirstUse } from '@/features/help/useFirstUse'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { needsYouItems } from '@/features/today/needsYou'
+import { engineerDayGroups } from '@/features/today/engineerDays'
 import { TargetTile } from '@/features/today/TargetTile'
 import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
@@ -83,8 +84,8 @@ const BLOCK: Record<Block, string> = {
   quiet: 'bg-block-quiet text-block-quiet-fg',
 }
 function blockOf(id: string, items: readonly TodayItem[], today: string): Block {
-  if (id === 'now') return items.some(i => i.actionDueOn !== null && i.actionDueOn < today) ? 'late' : 'today'
-  return id === 'soon' ? 'week' : 'quiet'
+  if (id.startsWith('now')) return items.some(i => i.actionDueOn !== null && i.actionDueOn < today) ? 'late' : 'today'
+  return id.startsWith('soon') ? 'week' : 'quiet'
 }
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
@@ -131,12 +132,12 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const imported = useMemo(() => (view ? view.imported.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const latePayments = useMemo(() => imported.filter(i => i.rule === 'payment_overdue'), [imported])
   const groups = useMemo(
-    () => (view ? [
+    () => (view && user.role === 'engineer' ? engineerDayGroups(view, today).map(g => ({ ...g, items: g.items.filter(inTab) })) : view ? [
       { id: 'now', title: 'Overdue or due today', items: view.now.filter(inTab) },
       { id: 'soon', title: 'Due in the next 5 days', items: view.soon.filter(inTab) },
       { id: 'ready', title: 'Ready to move', items: view.ready.filter(inTab) },
     ] : []),
-    [view, tab], // eslint-disable-line react-hooks/exhaustive-deps
+    [view, tab, user.role, today], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const all = useMemo(
     () => [...active, ...waiting, ...(importedOpen ? imported : []), ...(staleOpen ? stale : [])],
