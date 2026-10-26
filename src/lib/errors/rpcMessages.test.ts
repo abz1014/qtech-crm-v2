@@ -68,6 +68,17 @@ describe('mapPgError uses the table', () => {
     expect(m.message).toBe('Only an admin can close a month. Ask an admin if it needs doing.')
   })
 
+  it('0096 linking and review: the admin-only refusal says so, an unknown record says reload, the rest keep their plain text', () => {
+    expect(mapPgError({ code: '42501', message: 'Only an admin can link or review imported records.' }).message).toBe(
+      'Only an admin can do this. Nothing was saved. Ask an admin if it needs doing.',
+    )
+    expect(mapPgError({ code: 'P0002', message: 'Imported record not found' }).message).toMatch(/Reload the page/)
+    expect(mapPgError({ code: '23514', message: 'This invoice is already linked to an order. Unlink it first.' }).message).toBe(
+      'This invoice is already linked to an order. Unlink it first.',
+    )
+    expect(rpcMessage('set_legacy_review needs kind order or invoice, and state to_review, live or settled')).toBeNull()
+  })
+
   it('closed month passthrough is unchanged', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is closed. An admin can reopen it.' })
     expect(m).toEqual({ kind: 'closed-month', message: 'March 2026 is closed. An admin can reopen it.' })

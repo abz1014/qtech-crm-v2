@@ -267,6 +267,20 @@ export function useAddCashTopup() {
   return useMutation({ mutationFn: claims.addCashTopup, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
 }
 
+/** How many expenses came from a template, for the delete confirm. */
+export function useRecurringExpenseCount(templateId: string | null | undefined, enabled = true) {
+  return useQuery({ queryKey: [...qk.money.recurring.all, 'expense-count', templateId ?? ''] as const, queryFn: () => api.countRecurringExpenses(templateId as string), enabled: enabled && Boolean(templateId) })
+}
+
+/** Delete a recurring template: the due list, Today and the month-end "monthly bills recorded" check refresh. */
+export function useDeleteRecurring() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteRecurring(id),
+    onSuccess: () => invalidateAfter(client, 'recurring.record', {}),
+  })
+}
+
 /** 0091: one-off titles used 3+ times in 90 days (admin only: `enabled` is the admin check). */
 export function useMiscSuggestions(enabled = true) {
   return useQuery({ queryKey: [...qk.money.expenses.all, 'misc-suggestions'] as const, queryFn: api.listMiscSuggestions, enabled, staleTime: 60_000 })

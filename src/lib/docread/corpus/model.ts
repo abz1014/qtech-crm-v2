@@ -24,6 +24,10 @@ export type Block =
       /** Rows under the table (totals), drawn in the same columns. */
       foot?: string[][]
       size?: number
+      /** A picture of a cropped range: the table's width in pixels (otherwise it fills the page). */
+      maxWidth?: number
+      /** The colour of the grid's rules (otherwise the page's own). */
+      ruleColor?: string
     }
   | { k: 'chat'; msgs: ChatMsg[] }
   | { k: 'pagebreak' }

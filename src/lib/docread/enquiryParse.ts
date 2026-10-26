@@ -81,7 +81,7 @@ const PRODUCT =
   /\b(?:valves?|gauges?|transmitters?|sensors?|switch(?:es)?|meters?|pumps?|motors?|cables?|relays?|contactors?|breakers?|mcbs?|mccbs?|plcs?|hmis?|vfds?|drives?|inverters?|encoders?|actuators?|positioners?|controllers?|indicators?|thermocouples?|rtds?|pt100|bearings?|seals?|gaskets?|hoses?|fittings?|glands?|lugs?|trays?|panels?|transformers?|detectors?|analy[sz]ers?|recorders?|timers?|counters?|modules?|cpus?|ups|batter(?:y|ies)|lamps?|fans?|filters?|regulators?|cylinders?|solenoids?|manifolds?|thermowells?|probes?|electrodes?|scanners?|hooters?|sirens?|annunciators?|enclosures?|terminals?|connectors?|couplings?|belts?|chains?|gears?|gearbox(?:es)?|fuses?|isolators?|starters?|capacitors?|calibrators?|multimeters?|testers?|thermostats?|thermometers?|spares?)\b/i
 
 const COURTESY =
-  /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you|finds?\s+you\s+well|trust\s+(?:this|you))\b/i
+  /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you|finds?\s+you\s+well|trust\s+(?:this|you)|look(?:ing)?\s+forward|valued\s+order|business\s+relationship|possible\s+cooperation|appreciate|reminder)\b/i
 /** A sentence that only greets ("Hi Ali, hope you are well."). */
 const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|respected|asalam\w*|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
 
@@ -89,10 +89,10 @@ const SIGN_OFF =
   /^(?:(?:best|kind|warm|warmest|with)\s+regards?|regards?|thanks?(?:\s*(?:&|and)\s*(?:best\s+|kind\s+)?regards?)?|thank\s+you(?:\s+(?:and|&)\s+regards)?|thankyou|many\s+thanks|sincerely|yours\s+(?:sincerely|faithfully|truly)|br|cheers|allah\s+hafiz|jazak\s*allah(?:\s+khair)?|shukriya|shukria|thnx|thx|tks)[\s,.!]*$/i
 const SENT_FROM = /^sent\s+from\s+my\b/i
 const DISCLAIMER =
-  /^(?:\**\s*disclaimer|confidentiality\s+notice|this\s+(?:e-?mail|message)\s+(?:and\s+any|is\s+(?:confidential|intended)|may\s+contain|contains)|the\s+information\s+(?:contained|in\s+this)|if\s+you\s+(?:are\s+not|have\s+received)|please\s+consider\s+the\s+environment|caution\s*:|this\s+email\s+has\s+been\s+scanned)/i
+  /^(?:\**\s*disclaimer|confidentiality\s+notice|this\s+(?:e-?mail|message)\s+(?:and\s+any|is\s+(?:confidential|intended)|may\s+contain|contains)|the\s+information\s+(?:contained|in\s+this)|if\s+you\s+(?:are\s+not|have\s+received)|please\s+(?:consider\s+the\s+environment|(?:help\s+)?(?:save|think\s+before|think\s+of)\b[^.]{0,30}\b(?:tree|trees|printing|environment|paper))|caution\s*:|this\s+email\s+has\s+been\s+scanned)/i
 const REPLY_SEP = /^(?:-{2,}\s*original\s+message\s*-{2,}|_{5,}|-{5,})$|^on\s.{4,160}\swrote:?$/i
 const FORWARD_SEP = /^(?:-{2,}\s*forwarded\s+message\s*-{2,}|begin\s+forwarded\s+message:?)$/i
-const HEADER_LINE = /^(?:from|to|cc|bcc|sent|date|subject|reply-to|attachments?)\s*:/i
+const HEADER_LINE = /^(?:from|to|cc|bcc|sent|date|subject|reply-to|attachments?|importance|priority|sensitivity|categories|received|organi[sz]ation)\s*:/i
 const WA_PREFIX = /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?\]?\s*(?:-\s*)?(?:[^:\d][^:]{0,40}:\s)?/i
 /** WhatsApp Web's copy of several messages puts the time first: "[10:42, 19/10/2026] Name: ". */
 const WA_WEB_PREFIX = /^\s*\[\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?,\s*\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\]\s*(?:[^:\d][^:]{0,40}:\s)?/i
@@ -104,7 +104,15 @@ const CHAT_MEDIA =
 /** A chat reply that only acknowledges ("Noted", "Ok sir, will share today", "Sure, checking"). */
 const ACK = /^(?:ok(?:ay)?|noted|sure|done|received|thanks?|thank\s+you|thx|jee|ji|g\b|acha|theek|right|alright|great|will\s+(?:do|share|send|check|revert|update))\b/i
 const INSTRUCTION =
-  /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|please\s+(?:mention|confirm|include|specify|indicate|note|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note)|partial\s+(?:quotations?|offers?)|bid\s+security|earnest\s+money|performance\s+(?:bond|guarantee|security)|tender\s+(?:fee|documents?)|sealed\s+bids?|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
+  /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|(?:please|pl|plz|pls)\s+(?:mention|confirm|include|specify|indicate|note|share|advise|attach|send\s+(?:the\s+)?(?:datasheets?|pictures?|catalogue)|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note|share|advise)|partial\s+(?:quotations?|offers?)|bid\s+security|earnest\s+money|performance\s+(?:bond|guarantee|security)|tender\s+(?:fee|documents?)|sealed\s+bids?|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
+
+/**
+ * What a buyer's cover email asks of every quotation, in a bullet or a sentence ("Quotations with ready stock will be preferred",
+ * "mention the origin country", "datasheet of the offered model", "prices inclusive of GST", "validity", "delivery period"): terms
+ * for the offer, not items. Applied only to a line with no product word, model code or quantity of its own.
+ */
+const BUYER_TERM =
+  /\b(?:ready\s+stock|(?:given|gets?)\s+(?:the\s+)?preference|preference\s+(?:for|will|to)|data\s?sheets?|origin\s+countr(?:y|ies)|country\s+of\s+origin|(?:mention|state|specify|indicate|confirm|advise|share)\s+(?:the\s+|your\s+)?(?:origin|brand|make|delivery|lead\s+time|validity|price\s+basis|payment|warranty|picture|photo)|best\s+competitive|sharp\s+delivery|shortest\s+delivery|validity|gst|sales\s+tax|(?:in|ex)clusive\s+of|payment\s+terms?|delivery\s+(?:period|time|terms?|schedule))\b/i
 
 const COMPANY =
   /\b(?:ltd|limited|pvt|private|inc|llc|corp(?:oration)?|company|co\.|industries|mills|group|enterprises?|traders|associates|sons)\b/i
@@ -154,7 +162,8 @@ const OWN_UNITS: Record<string, string> = {
 export function unitOf(raw: string | null | undefined): string | null {
   if (!raw) return null
   const w = raw.trim().replace(/\.$/, '')
-  if (!w) return null
+  // A form's "no unit" mark ("***", "-", "N/A", "nil"): no unit.
+  if (!w || /^[*\-–—.\s]+$|^(?:n\/?a|nil|none)$/i.test(w)) return null
   return OWN_UNITS[w.toLowerCase()] ?? (/^[a-z]+$/i.test(w) ? w : normaliseUnit(w))
 }
 
@@ -536,6 +545,8 @@ function tableHeader(cells: string[]): TableCols | null {
     const before = cells[desc[0]! - 1] ?? ''
     if (before && !isHeaderCell(before) && !/[A-Za-z]{3}/.test(before)) desc = [desc[0]! - 1, ...desc]
   }
+  // A grid headed "Material Name" or "Material" (no word of description anywhere): its name column is the description.
+  if (desc.length === 0) desc = cells.map((c, i) => (/^(?:material(?:\s*name)?|name|goods|article)$/i.test(c) ? i : -1)).filter(i => i >= 0).slice(0, 1)
   if (desc.length === 0) return null
   const extra = cells
     .map((c, i) => ({ i, label: c.replace(/[:.]+$/, ''), codes: /^(?:material|item\s*code|code|material\s*(?:no|code)\.?)$/i.test(c) }))
@@ -558,7 +569,10 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   const cell = (i: number) => (i >= 0 ? (cells[i] ?? '').trim() : '')
   // Two description columns ("Item Description" and "Special Instructions"): both, unless one only repeats the other.
   const words = (t: string) => new Set(t.toLowerCase().match(/[a-z0-9]+/g) ?? [])
-  const parts = cols.desc.map(cell).filter(Boolean)
+  // The first words of a description that ran into the serial-number column ("5 . LEVEL" | "CONTROLLER TYPE: KZ-9021,").
+  const spill = cols.desc.includes(0) ? null : /^\d{1,3}\s*\.?\s+([A-Za-z][A-Za-z -]{1,24})$/.exec(cell(0))
+  const descCells = cols.desc.map(cell).filter(Boolean)
+  const parts = spill && descCells.length ? [`${spill[1]} ${descCells[0]}`, ...descCells.slice(1)] : descCells
   const main = parts
     .filter((p, i) => {
       const w = words(p)
@@ -582,6 +596,19 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
     qty: qm ? toQty(qm[1] as string) : unitQty(cell(cols.unit)),
     unit: unitOf(unitCell(cell(cols.unit)) || qm?.[2] || null),
   }
+}
+
+/**
+ * A part number a page break split: the item above ends on "Part # 6ES7" and the next page's first row starts with the rest of
+ * it ("418-2QT55-1BB7. PWR SUPPLY ..."). The rest goes back to the item it belongs to.
+ */
+function carryPartNumber(prev: ReadItem | undefined, next: ReadItem): void {
+  if (!prev) return
+  const tail = /(?:part\s*(?:no\.?|number|#)|p\/n|cat\.?\s*(?:no\.?|#)|model(?:\s*no\.?)?)\s*[#:]?\s*[A-Z0-9][A-Z0-9-]{1,9}$/i.test(prev.description)
+  const rest = /^([A-Z0-9][A-Z0-9-]*\d[A-Z0-9-]*)\.\s+(?=[A-Za-z])/.exec(next.description)
+  if (!tail || !rest || !/-/.test(rest[1] as string)) return
+  prev.description = tidy(`${prev.description} ${rest[1]}`)
+  next.description = tidy(next.description.slice(rest[0].length))
 }
 
 /** The unit in a unit cell: the cell itself, its letters run together ("Numbe rs"), or its first word ("PCS Stockitem"). */
@@ -900,6 +927,17 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     const c = splitCells(s.t)
     return c !== null && formRow(c) !== null
   })
+  // A form whose column header is printed again before every item row (an ERP form that starts a table for each item): each
+  // item's description wraps on the lines under its row, up to the next header; a line there is never an item of its own.
+  const headerRows = src.filter(s => {
+    const c = splitCells(s.t)
+    return c !== null && tableHeader(c) !== null
+  }).length
+  const formRowCount = src.filter(s => {
+    const c = splitCells(s.t)
+    return c !== null && formRow(c) !== null
+  }).length
+  const headerPerItem = formMode && headerRows >= 2 && headerRows >= formRowCount - 1
   // A column of short words in capitals at the end of the text cells ("PROD", "MECH", "UTIL": a department), when no header names
   // it: such a word on most form rows (at least 3), a few words over and over.
   const deptWords = new Set<string>()
@@ -916,6 +954,17 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
     const total = [...seen.values()].reduce((a, b) => a + b, 0)
     if (total >= 3 && total >= 0.6 * rowsSeen && seen.size < total) for (const w of seen.keys()) deptWords.add(w)
+    // A remark that runs down a column ("For Electrical Deptt.", "Required for Boiler House shutdown": a Required For column
+    // whose heading a picture lost): the same words on most rows, which no description does. Left out of the description.
+    const said = new Map<string, number>()
+    for (const s of src) {
+      const c = splitCells(s.t)
+      const f = c ? formCells(c) : null
+      const w = f && f.text.length > 1 ? (f.text[f.text.length - 1] as string) : null
+      if (w && /^[A-Z][\p{L}\p{N}&.,'()-]*(?: [\p{L}\p{N}&.,'()-]+){1,9}$/u.test(w)) said.set(w, (said.get(w) ?? 0) + 1)
+    }
+    const again = [...said.entries()].filter(([, n]) => n >= 2)
+    if (again.reduce((a, [, n]) => a + n, 0) >= Math.max(3, 0.6 * rowsSeen)) for (const [w] of again) deptWords.add(w)
   }
 
   const lines: EnquiryLine[] = []
@@ -1058,6 +1107,24 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         if (/^subject\s*:/i.test(t)) noteFacts(t, -5)
       }
       skip(t, 'quoted')
+      continue
+    }
+    // A bare name over a job title ("ABUBAKAR" / "PURCHASE OFFICER"): a signature, whatever the layout.
+    if (
+      zone === 'content' &&
+      t.split(' ').length <= 3 &&
+      !/\d/.test(t) &&
+      !PRODUCT.test(t) &&
+      !hasCode(t) &&
+      !isCourtesy(t) &&
+      !COMPANY.test(t) &&
+      !DESIGNATION.test(t) &&
+      DESIGNATION.test(nextT) &&
+      nextT.split(' ').length <= 4 &&
+      !/\d/.test(nextT) &&
+      !PRODUCT.test(nextT)
+    ) {
+      skip(t, 'signature')
       continue
     }
     if (/^>/.test(t)) {
@@ -1204,6 +1271,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         }
         if (it) {
           const d: Draft = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it }
+          carryPartNumber(drafts[drafts.length - 1]?.fromTable, it)
           drafts.push(d)
           row = formMode ? d : null
           lines.push({ text: t, kind: 'item', reason: null, marker: null })
@@ -1244,7 +1312,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         // So is a line that ends in the same line code as the row above ("... -01").
         const lineCode = /\s?-\d{2}$/.test(ft.description) && /\s?-\d{2}$/.test(t.trim()) && t.trim().split(/\s+/).length >= 3
         const ownProduct = PRODUCT.test(head) && t.trim().split(/\s+/).length >= 3 && PRODUCT.test(ft.description)
-        if (/^[A-Z]/.test(t.trim()) && (ownProduct || lineCode) && ft.qty !== null && continuesRow(t)) {
+        if (!headerPerItem && /^[A-Z]/.test(t.trim()) && (ownProduct || lineCode) && ft.qty !== null && continuesRow(t)) {
           row = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: { description: tidy(t), qty: 1, unit: null } }
           drafts.push(row)
           lines.push({ text: t, kind: 'item', reason: null, marker: null })
@@ -1336,7 +1404,23 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       !LABELLED_QTY.test(work) &&
       !new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?(?![A-Za-z])`, 'i').test(work) &&
       work.split(/\s+/).length >= 4
-    if ((INSTRUCTION.test(work) && !ATTR.test(work)) || termSentence) {
+    const buyerTerm =
+      BUYER_TERM.test(work) &&
+      work.split(/\s+/).length >= 2 &&
+      !PRODUCT.test(work) &&
+      !hasCode(work) &&
+      !LABELLED_QTY.test(work) &&
+      !new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?(?![A-Za-z])`, 'i').test(work)
+    // A sentence of a letter (twelve words or more, a pronoun or a helping verb, no quantity and unit): prose about an order or a
+    // delivery, never one item.
+    const prose =
+      work.split(/\s+/).length >= 12 &&
+      /\b(?:we|you|your|our|has|have|been|is|are|was|were|would|could|should|please)\b/i.test(work) &&
+      !/(?:\s|-)\d[\d,]*(?:\s+[A-Za-z.']{1,10})?[.\s]*$/.test(work) &&
+      !LABELLED_QTY.test(work) &&
+      !new RegExp(String.raw`\d\s*(?:${UNIT_SRC}|x)\.?(?![A-Za-z])`, 'i').test(work) &&
+      !t.includes('\t')
+    if ((INSTRUCTION.test(work) && !ATTR.test(work)) || termSentence || buyerTerm || prose) {
       close()
       skip(t, 'instruction')
       continue

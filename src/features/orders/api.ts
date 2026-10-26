@@ -400,6 +400,65 @@ export async function setGroupPrice(ids: readonly string[], unitPriceNet: number
   if (error) throw error
 }
 
+/** Remove one order line. The database refuses somebody else's line (HINT not_yours) and a closed month; this refuses a silent no-op. */
+export async function removeOrderItem(id: string): Promise<void> {
+  const { data, error } = await requireSupabase().from('order_items').delete().eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
+}
+
+// ================================================================ Delete an order (0092 delete_order)
+
+export interface OrderDeleteFacts {
+  /** The invoices of the order: "INV-x" (the number, or null for one with no number yet). Each blocks the delete. */
+  invoices: (string | null)[]
+  /** Payments recorded against the order, a voided one included (it is kept as history): blocks the delete. */
+  payments: number
+  /** Expenses recorded against the order: blocks the delete. */
+  expenses: number
+  /** Issued purchase orders (PO-YY-NNNN, first issue date) of its supplier orders: blocks the delete. */
+  pos: { number: number; issuedOn: string }[]
+  /** What goes with the order when nothing blocks it. */
+  lines: number
+  supplierOrders: number
+  files: number
+}
+
+/** What stops delete_order, and what would go with the order, read when the confirm opens. */
+export async function getOrderDeleteFacts(orderId: string): Promise<OrderDeleteFacts> {
+  const db = requireSupabase()
+  const [invoices, payments, expenses, legs, lines, files] = await Promise.all([
+    db.from('invoices').select('number').eq('order_id', orderId).order('invoice_date'),
+    db.from('payments_in').select('id', { count: 'exact', head: true }).eq('order_id', orderId),
+    db.from('expenses').select('id', { count: 'exact', head: true }).eq('order_id', orderId),
+    db.from('supplier_orders').select('id, purchase_orders(number, issued_on)').eq('order_id', orderId),
+    db.from('order_items').select('id', { count: 'exact', head: true }).eq('order_id', orderId),
+    db.from('attachments').select('id', { count: 'exact', head: true }).eq('order_id', orderId),
+  ])
+  for (const r of [payments, expenses, lines, files]) if (r.error) throw r.error
+  const inv = unwrap(invoices)
+  const legRows = unwrap(legs) as unknown as Array<{ id: string; purchase_orders: Array<{ number: number; issued_on: string }> | { number: number; issued_on: string } | null }>
+  const pos = legRows.flatMap(l => (Array.isArray(l.purchase_orders) ? l.purchase_orders : l.purchase_orders ? [l.purchase_orders] : []))
+  // a PO keeps its number across revisions: list each number once, by its first issue
+  const byNumber = new Map<number, string>()
+  for (const p of pos) if (!byNumber.has(p.number) || p.issued_on < (byNumber.get(p.number) as string)) byNumber.set(p.number, p.issued_on)
+  return {
+    invoices: inv.map(i => i.number ?? null),
+    payments: payments.count ?? 0,
+    expenses: expenses.count ?? 0,
+    pos: [...byNumber].map(([number, issuedOn]) => ({ number, issuedOn })),
+    lines: lines.count ?? 0,
+    supplierOrders: legRows.length,
+    files: files.count ?? 0,
+  }
+}
+
+/** delete_order: the rows are gone when this resolves; the files it names are the caller's to remove from storage. */
+export async function deleteOrder(orderId: string): Promise<Array<{ bucket: string; path: string }>> {
+  const rows = unwrap(await requireSupabase().rpc('delete_order', { p_order_id: orderId })) ?? []
+  return rows.map(r => ({ bucket: r.storage_bucket, path: r.storage_path }))
+}
+
 export async function updateItem(id: string, patch: { gst_rate?: number; is_service?: boolean; supplier_order_id?: string | null }): Promise<void> {
   const { error } = await requireSupabase().from('order_items').update(patch).eq('id', id)
   if (error) throw error
@@ -537,6 +596,8 @@ export async function getOrderMoney(orderId: string, role: 'admin' | 'sales'): P
 }
 
 export interface LegPo {
+  /** purchase_orders.id of this (the latest) revision: its history, and its delete. */
+  id?: string
   legId: string
   number: number
   revision: number
@@ -560,9 +621,9 @@ function poLines(json: unknown): LegPo['lines'] {
 export async function listLegPos(legIds: readonly string[], money = false): Promise<LegPo[]> {
   if (legIds.length === 0) return []
   const db = requireSupabase()
-  const rows: Array<{ supplier_order_id: string; number: number; revision: number; issued_on: string; lines?: unknown }> = money
-    ? unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on, lines').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
-    : unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
+  const rows: Array<{ id?: string; supplier_order_id: string; number: number; revision: number; issued_on: string; lines?: unknown }> = money
+    ? unwrap(await db.from('purchase_orders').select('id, supplier_order_id, number, revision, issued_on, lines').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
+    : unwrap(await db.from('purchase_orders').select('id, supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
   const seen = new Set<string>()
   const first = new Map<string, { revision: number; issuedOn: string }>()
   for (const r of rows) {
@@ -574,7 +635,7 @@ export async function listLegPos(legIds: readonly string[], money = false): Prom
     if (seen.has(r.supplier_order_id)) continue
     seen.add(r.supplier_order_id)
     const firstIssuedOn = first.get(r.supplier_order_id)?.issuedOn ?? r.issued_on
-    out.push({ legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on, firstIssuedOn, lines: 'lines' in r ? poLines(r.lines) : [] })
+    out.push({ id: r.id, legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on, firstIssuedOn, lines: 'lines' in r ? poLines(r.lines) : [] })
   }
   return out
 }

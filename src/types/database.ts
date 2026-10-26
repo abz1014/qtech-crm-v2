@@ -189,6 +189,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"checked_findings": {
+                  Row: {
+                    "checked_at": string,"checked_by": string,"finding_key": string,"message_hash": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "checked_at"?: string,"checked_by"?: string,"finding_key": string,"message_hash": string
+                  }
+                  Update: {
+                    "checked_at"?: string,"checked_by"?: string,"finding_key"?: string,"message_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "checked_findings_checked_by_fkey"
+      columns: ["checked_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clarifications": {
                   Row: {
                     "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
@@ -755,14 +775,14 @@ isOneToOne: false
                   ]
                 },"invoices": {
                   Row: {
-                    "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"wasif_receipt_on": string | null
+                    "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"wasif_receipt_on": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"net_amount": number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
+                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount": number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
                   }
                   Update: {
-                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount"?: number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"net_amount"?: number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
+                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount"?: number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount"?: number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
                   }
                   Relationships: [
                     {
@@ -1029,14 +1049,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string
+                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"commissioning_time": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string,"visit_type": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"commissioning_time"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string,"visit_type"?: string | null
                   }
                   Update: {
-                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"commissioning_time"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string,"visit_type"?: string | null
                   }
                   Relationships: [
                     {
@@ -1421,14 +1441,14 @@ isOneToOne: false
                   ]
                 },"snoozes": {
                   Row: {
-                    "created_at": string,"id": string,"rule": string,"subject_id": string,"until_on": string,"user_id": string
+                    "created_at": string,"id": string,"rule": string,"subject_id": string,"until_change": boolean,"until_on": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"rule": string,"subject_id": string,"until_on": string,"user_id"?: string
+                    "created_at"?: string,"id"?: string,"rule": string,"subject_id": string,"until_change"?: boolean,"until_on": string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"rule"?: string,"subject_id"?: string,"until_on"?: string,"user_id"?: string
+                    "created_at"?: string,"id"?: string,"rule"?: string,"subject_id"?: string,"until_change"?: boolean,"until_on"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1441,14 +1461,14 @@ isOneToOne: false
                   ]
                 },"supplier_inquiries": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_confirmed_at": string | null,"sent_on": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {
@@ -2359,6 +2379,14 @@ isOneToOne: false
 "lead_time_upper_days":
 { Args: { "p_text": string }; Returns: number
                            },
+"link_imported_invoice":
+{ Args: { "p_invoice_id": string,"p_order_id": string }; Returns: undefined
+                           },
+"link_imported_invoices":
+{ Args: { "p_dry_run"?: boolean }; Returns: {
+              "confidence": string,"invoice_id": string,"order_id": string,"reasons": (string)[]
+            }[]
+                           },
 "lookup_labels":
 { Args: { "p_company_ids"?: (string)[],"p_leg_ids"?: (string)[],"p_order_ids"?: (string)[] }; Returns: Json
                            },
@@ -2481,6 +2509,9 @@ isOneToOne: false
 "set_fx_rate":
 { Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
                            },
+"set_legacy_review":
+{ Args: { "id": string,"kind": string,"state": string }; Returns: undefined
+                           },
 "set_rfq_floated":
 { Args: { "p_floated": boolean,"p_rfq_id": string }; Returns: number
                            },
@@ -2542,6 +2573,9 @@ isOneToOne: false
                            },
 "tokens_without":
 { Args: { "p_drop": (string)[],"p_tokens": (string)[] }; Returns: (string)[]
+                           },
+"unlink_imported_invoice":
+{ Args: { "p_invoice_id": string }; Returns: undefined
                            },
 "void_payment":
 { Args: { "p_payment_id": string,"p_reason": string }; Returns: undefined

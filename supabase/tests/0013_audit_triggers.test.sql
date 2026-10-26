@@ -23,7 +23,7 @@ select is((select coalesce(array_agg(c.relname::text order by c.relname), '{}')
 select is((select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
            where t.tgfoid = 'public.audit_row_change()'::regprocedure and not t.tgisinternal
              and c.relnamespace = 'public'::regnamespace),
-  34, 'the audit trigger is attached to 34 tables (0090: history_sources)');
+  35, 'the audit trigger is attached to 35 tables (0090: history_sources, 0102: checked_findings)');
 select ok((select bool_and(t.tgtype & 1 = 1 and t.tgtype & 2 = 0) from pg_trigger t join pg_class c on c.oid = t.tgrelid
            where t.tgfoid = 'public.audit_row_change()'::regprocedure and not t.tgisinternal
              and c.relnamespace = 'public'::regnamespace),

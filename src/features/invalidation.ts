@@ -94,6 +94,8 @@ export interface WriteVars {
   'order.update': { orderId: string }
   /** O03: cancelling (or taking the cancel back) also moves the RFQ between won and open and the company role. */
   'order.cancel': { orderId: string }
+  /** 0092: an admin deleted an order (with its lines, supplier orders and files). */
+  'order.delete': { orderId: string }
   /** O07: issuing a supplier PO stamps the leg placed, writes the prices back to the order lines and moves Today's place-PO rule. */
   'po.issue': { orderId: string }
   /** O07: attaching a PO's PDF changes only the PO chips and View PO. */
@@ -219,6 +221,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // The customer's history shows each order's lifecycle and goods state, so it goes stale too.
   // An item or leg edit moves the supplier-price inputs of the Margin panel and the margins list (audit 2, performance §2.1).
   'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.companies.all, qk.money.orderCosts(v.orderId), qk.money.margins(), qk.onboarding.all],
+  'order.delete': () => [qk.orders.all, qk.rfqs.all, qk.today.all, qk.companies.all, qk.memory.all, qk.money.all],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all, qk.money.receivables.all],
   // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
   // The prices written back are the Margin panel's supplier-price inputs.

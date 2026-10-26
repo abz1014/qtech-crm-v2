@@ -593,3 +593,133 @@ describe('parseEnquiry: reader gaps (feat/reader-gaps)', () => {
     expect(r.facts.dueDate?.iso).toBe('2026-11-09')
   })
 })
+
+describe('parseEnquiry: a buyer cover email around an attached form (R-W2)', () => {
+  const cover = (body: string) => parse(body).items.map(i => i.description)
+
+  it('reads the buyer terms bullets as instructions, not items', () => {
+    expect(
+      cover(
+        [
+          'Enclosed please find inquiry for your URGENT QUOTATION with shortest delivery time of required items.',
+          'Note:',
+          '*\tThe Quotation(s) “with ready stock” will be given preference for ordering.',
+          '*\tPl share picture and datasheet of offered model(s)',
+          '*\tPl mention origin country of offered item(s)',
+          '*\tOrder will be issued in favor of the best competitive offered price(s) and sharp delivery time',
+          'Regards,',
+        ].join('\n'),
+      ),
+    ).toEqual([])
+    expect(cover('Prices inclusive of GST\nValidity of the offer\nMention delivery period in weeks')).toEqual([])
+  })
+
+  it('a line that names a product or a quantity is still an item next to such terms', () => {
+    const r = parse('Note:\n* Pl mention origin country\n2 nos proximity sensor M18\nPrices inclusive of GST')
+    expect(r.items).toEqual([{ description: 'proximity sensor M18', qty: 2, unit: 'nos' }])
+  })
+
+  it('Outlook header blocks of a forward (From / Sent / To / Subject / Importance) and closing courtesy are no items', () => {
+    const r = parse(
+      [
+        'From: Buyer Name [mailto:buyer@example-mills.example]',
+        'Sent: Wednesday, June 10, 2026 11:27 AM',
+        'To: Sales Desk <sales@example-sup.example>',
+        'Subject: PURCHASE INQUIRY-12345',
+        'Importance: High',
+        '',
+        'FYI/R',
+        '',
+        'We look forward to your valued order and continued business relationship',
+        'Regards,',
+      ].join('\n'),
+    )
+    expect(r.items).toEqual([])
+  })
+})
+
+describe('parseEnquiry: a letter in the body of the email (R-W2)', () => {
+  it('a long sentence about an order or a delivery is prose, not an item; a short item line with a code still is', () => {
+    const r = parse(
+      [
+        'Upon detailed verification, we confirm that the supplied unit RX-4410 is exactly as specified in your order and the issue is not on our side.',
+        'Valve actuator AX-210 - 2 nos',
+      ].join('\n'),
+    )
+    expect(r.items).toEqual([{ description: 'Valve actuator AX-210', qty: 2, unit: 'nos' }])
+  })
+})
+
+describe('parseEnquiry: a ruled grid read from a screenshot', () => {
+  const T = (cs: string[]) => cs.join('\t')
+  const rows = (text: string) => parse(text).items.map(i => `${i.description} | ${i.qty} ${i.unit ?? ''}`.trim())
+
+  it('takes a Required For column as no part of the description, and UOM after QTY as the unit', () => {
+    const text = [
+      T(['SR.', 'DESCRIPTION', 'REQUIRED FOR', 'QTY', 'UOM']),
+      T(['1', 'MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR).', 'Needed Soon For Kiln Section Deptt.', '2', 'NOS']),
+      T(['2', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted).', 'Needed Soon For Kiln Section Deptt.', '1', 'NOS']),
+      T(['3', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR.', 'For Boiler House Deptt.', '1', 'NOS']),
+    ].join('\n')
+    expect(rows(text)).toEqual(['MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR) | 2 nos', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted) | 1 nos', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR | 1 nos'])
+  })
+
+  it('reads every row of a Sr. / Material Name / UOM / QTY grid, wrapped names on one row, though the header lost its UOM and QTY', () => {
+    const text = [
+      T(['Sr.', 'Material Name']),
+      T(['1', 'Washer 12x30mm Zinc Plated', 'PCS', '24']),
+      T(['2', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA).', 'Pcs', '3']),
+      T(['3', 'Breaker 1P 25A (Aurion)', 'PCS', '6']),
+      T(['4', 'Capacitor 7.5Uf (Norvalt)', 'Pcs', '12']),
+    ].join('\n')
+    expect(rows(text)).toEqual(['Washer 12x30mm Zinc Plated | 24 PCS', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA) | 3 Pcs', 'Breaker 1P 25A (Aurion) | 6 PCS', 'Capacitor 7.5Uf (Norvalt) | 12 Pcs'])
+  })
+})
+
+describe('parseEnquiry: an ERP RFQ form that prints its header before every item (R-W3)', () => {
+  const HEAD = 'S.No.\tMaterial Description\tPur. Req.\tPlant\tUOM\tQuantity\tRate/Unit\tAmount'
+  const form = [
+    'EXAMPLE CEMENT COMPANY LIMITED',
+    'REQUEST FOR QUOTATION',
+    'SUPPLIER:\t7700000\tRFQ # : 1000099001',
+    'SUPPLIER NAME: COLLECTIVE NO.: 1000099000',
+    'RFQ DATE:\t14.10.2026',
+    'REPLY DUE DATE: 23.10.2026',
+    HEAD,
+    '1 .\tSOV TYP.AB-5-1/2,ACME\t1000099000\tPlant North\tEA\t12.00\t\t',
+    'SOLENOID VALVE (5-port)',
+    'Type: AB-5-1/2',
+    'Art No. 310477',
+    'Make ACME (Holland).',
+    HEAD,
+    '2 .\tFILTER SILENCER SIZE: 1/2",ACME\t1000099000\tPlant North\t***\t30.00\t\t',
+    'FILTER SILENCER (Material:',
+    'BRASS) FOR',
+    'SOV AB-5-1/2, Art No. 310477,',
+    'Make: ACME',
+    HEAD,
+    '3 .\tCPU XR30 7XY1 418-2QT55-1BB7,MAKER\t1000099000\tPlant\tEA\t2.00\t\t',
+    'SMART\tCPU XR30,CPU,\t\tNorth',
+    'AC/DC/relay, onboard I/O. Part # 7XY1',
+    'TOTAL AMOUNT:',
+    'Page: 1',
+    'of 2',
+    HEAD,
+    '4 . LEVEL\tCONTROLLER TYPE: KZ-9021,\t1000099000\tPlant\tEA\t2.00\t\t',
+    'MAKER\t\t\tNorth',
+    'Type: Floatless Liquid Level Control Relay',
+    'Make;MAKER',
+    'TOTAL AMOUNT:',
+    'Terms and Conditions',
+    '1. Please reply within due date.',
+  ].join('\n')
+
+  it('keeps every wrapped line with its own item: four rows, no extra items, "***" is no unit', () => {
+    const r = parse(form)
+    expect(r.items.map(i => [i.qty, i.unit])).toEqual([[12, 'EA'], [30, null], [2, 'EA'], [2, 'EA']])
+    expect(r.items).toHaveLength(4)
+    expect(r.items[0]?.description).toContain('310477')
+    expect(r.items[1]?.description).toContain('Art No. 310477')
+    expect(r.items[3]?.description).toMatch(/^LEVEL CONTROLLER/)
+  })
+})

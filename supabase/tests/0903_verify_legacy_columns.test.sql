@@ -151,6 +151,9 @@ update public.orders set created_at = now() - interval '1 day' where id in (pg_t
 -- An imported GST-register invoice with no order (the only kind that may be settled before cutover, 0068).
 insert into public.invoices (id, company_id, number, invoice_date, net_amount, gst_amount, legacy_source)
 values (pg_temp.f('e1'), pg_temp.f('01'), 'LEG-0903', public.today_pkt() - 3, 100, 18, '{"table":"gst_invoices","row":{"id":"old-1"}}');
+-- 0096: an imported order, whose review state (legacy_review) only an admin may change
+insert into public.orders (id, company_id, owner_id, legacy_source)
+values (pg_temp.f('e4'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"table":"orders","row":{"id":"old-o1"}}');
 
 -- ------------------------------------------------------------------ the probes (one INSERT and one UPDATE per table and column)
 -- writers: the personas that may write the table at all (DATA_MODEL s10); the others are refused by S14 already.
@@ -193,6 +196,13 @@ insert into legacy_probe values
    $q$update public.invoices set settled_before_cutover = true where id = @e1$q$,
    $q$select (select settled_before_cutover from public.invoices where id = @e1)$q$, '{admin,sales}');
 
+-- 0096: legacy_review is the owner's decision on an imported record (set_legacy_review, admin only): guard_legacy_review refuses everyone else
+insert into legacy_probe values
+  ('orders', 'legacy_review', 'U', $q$update public.orders set legacy_review = 'live' where id = @e4$q$,
+   $q$select (select legacy_review from public.orders where id = @e4) is not null$q$, '{sales,engineer}'),
+  ('invoices', 'legacy_review', 'U', $q$update public.invoices set legacy_review = 'live' where id = @e1$q$,
+   $q$select (select legacy_review from public.invoices where id = @e1) is not null$q$, '{sales,engineer}');
+
 -- ------------------------------------------------------------------ coverage
 select is((select coalesce(array_agg(x order by x), '{}') from (
              select c.table_name || '.' || c.column_name as x from information_schema.columns c
@@ -217,6 +227,14 @@ select ok(pg_temp.sets(p.stmt, p.chk, w) <> 'set',
   format('%s cannot set invoices.settled_before_cutover on %s (got %s)', w, p.op, pg_temp.sets(p.stmt, p.chk, w)))
 from legacy_probe p cross join unnest(p.writers) w
 where p.col = 'settled_before_cutover' order by p.op, w;
+
+-- ------------------------------------------------------------------ legacy_review: admin only (real assertions, 0096)
+select ok(pg_temp.sets(p.stmt, p.chk, w) <> 'set',
+  format('0096 %s cannot set %s.legacy_review (got %s)', w, p.obj, pg_temp.sets(p.stmt, p.chk, w)))
+from legacy_probe p cross join unnest(p.writers) w
+where p.col = 'legacy_review' order by p.obj, w;
+select is(pg_temp.sets(p.stmt, p.chk, 'admin'), 'set', format('0096 an admin can set %s.legacy_review', p.obj))
+from legacy_probe p where p.col = 'legacy_review' order by p.obj;
 
 -- ------------------------------------------------------------------ orders.legacy_flags: admin only (real assertions, 0065 M-1)
 select ok(pg_temp.sets(p.stmt, p.chk, w) <> 'set',
