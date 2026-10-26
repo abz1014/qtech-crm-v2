@@ -69,8 +69,15 @@ const tabs = () => within(screen.getByRole('navigation', { name: 'Money views' }
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
 describe('Money tabs and landing', () => {
-  it('opens on Who owes us, for admin and for sales', async () => {
+  it('opens on Money home for an admin (four numbers)', async () => {
     at('/money')
+    expect(await screen.findByTestId('money-blocks')).toBeInTheDocument()
+    expect(screen.getByTestId('where')).not.toHaveTextContent('/money/receivables')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Money')
+  })
+
+  it('sales go straight to Who owes us', async () => {
+    at('/money', 'sales')
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/receivables'))
     expect(screen.getByRole('link', { name: /^Who owes us/ })).toHaveAttribute('aria-current', 'page')
   })
