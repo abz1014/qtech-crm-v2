@@ -544,6 +544,8 @@ function tableHeader(cells: string[]): TableCols | null {
     const before = cells[desc[0]! - 1] ?? ''
     if (before && !isHeaderCell(before) && !/[A-Za-z]{3}/.test(before)) desc = [desc[0]! - 1, ...desc]
   }
+  // A grid headed "Material Name" or "Material" (no word of description anywhere): its name column is the description.
+  if (desc.length === 0) desc = cells.map((c, i) => (/^(?:material(?:\s*name)?|name|goods|article)$/i.test(c) ? i : -1)).filter(i => i >= 0).slice(0, 1)
   if (desc.length === 0) return null
   const extra = cells
     .map((c, i) => ({ i, label: c.replace(/[:.]+$/, ''), codes: /^(?:material|item\s*code|code|material\s*(?:no|code)\.?)$/i.test(c) }))
@@ -924,6 +926,17 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
     const total = [...seen.values()].reduce((a, b) => a + b, 0)
     if (total >= 3 && total >= 0.6 * rowsSeen && seen.size < total) for (const w of seen.keys()) deptWords.add(w)
+    // A remark that runs down a column ("For Electrical Deptt.", "Required for Boiler House shutdown": a Required For column
+    // whose heading a picture lost): the same words on most rows, which no description does. Left out of the description.
+    const said = new Map<string, number>()
+    for (const s of src) {
+      const c = splitCells(s.t)
+      const f = c ? formCells(c) : null
+      const w = f && f.text.length > 1 ? (f.text[f.text.length - 1] as string) : null
+      if (w && /^[A-Z][\p{L}\p{N}&.,'()-]*(?: [\p{L}\p{N}&.,'()-]+){1,9}$/u.test(w)) said.set(w, (said.get(w) ?? 0) + 1)
+    }
+    const again = [...said.entries()].filter(([, n]) => n >= 2)
+    if (again.reduce((a, [, n]) => a + n, 0) >= Math.max(3, 0.6 * rowsSeen)) for (const [w] of again) deptWords.add(w)
   }
 
   const lines: EnquiryLine[] = []

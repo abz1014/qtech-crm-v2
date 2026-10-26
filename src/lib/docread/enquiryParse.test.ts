@@ -649,3 +649,29 @@ describe('parseEnquiry: a letter in the body of the email (R-W2)', () => {
     expect(r.items).toEqual([{ description: 'Valve actuator AX-210', qty: 2, unit: 'nos' }])
   })
 })
+
+describe('parseEnquiry: a ruled grid read from a screenshot', () => {
+  const T = (cs: string[]) => cs.join('\t')
+  const rows = (text: string) => parse(text).items.map(i => `${i.description} | ${i.qty} ${i.unit ?? ''}`.trim())
+
+  it('takes a Required For column as no part of the description, and UOM after QTY as the unit', () => {
+    const text = [
+      T(['SR.', 'DESCRIPTION', 'REQUIRED FOR', 'QTY', 'UOM']),
+      T(['1', 'MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR).', 'Needed Soon For Kiln Section Deptt.', '2', 'NOS']),
+      T(['2', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted).', 'Needed Soon For Kiln Section Deptt.', '1', 'NOS']),
+      T(['3', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR.', 'For Boiler House Deptt.', '1', 'NOS']),
+    ].join('\n')
+    expect(rows(text)).toEqual(['MOTOR STARTER - 22KW (MODEL:XK40-300-60 ZENTAR) | 2 nos', 'JUNCTION BOX (Size - 12" x 12" x 6" x 18-Swg,Painted) | 1 nos', 'LEVEL TRANSMITTER VOLTREG - LX9Y-204KR | 1 nos'])
+  })
+
+  it('reads every row of a Sr. / Material Name / UOM / QTY grid, wrapped names on one row, though the header lost its UOM and QTY', () => {
+    const text = [
+      T(['Sr.', 'Material Name']),
+      T(['1', 'Washer 12x30mm Zinc Plated', 'PCS', '24']),
+      T(['2', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA).', 'Pcs', '3']),
+      T(['3', 'Breaker 1P 25A (Aurion)', 'PCS', '6']),
+      T(['4', 'Capacitor 7.5Uf (Norvalt)', 'Pcs', '12']),
+    ].join('\n')
+    expect(rows(text)).toEqual(['Washer 12x30mm Zinc Plated | 24 PCS', 'FLOW CONTROLLER - 72 X 72 MM.(MODEL:QR20CR-501000-E 0~400C MULTI INPUT TAVIRA) | 3 Pcs', 'Breaker 1P 25A (Aurion) | 6 PCS', 'Capacitor 7.5Uf (Norvalt) | 12 Pcs'])
+  })
+})
