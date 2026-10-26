@@ -29,7 +29,7 @@ const openStage = async (page: Page, name: RegExp) => {
 const phoneLabel = (page: Page) => page.locator('[data-stage-phone]')
 
 test('RFQ to payment through the Job page, and the money reconciles to the paisa', async ({ page }) => {
-  test.setTimeout(900_000)
+  test.setTimeout(420_000)
   await setProfile(true)
   const today = karachiDay(0)
   const customer = await createCompany(uniqueName('Flow Customer'))
@@ -114,7 +114,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
   })
 
   const paid = async (n: number, expectBalance: number) => {
-    await page.reload()
+    await page.goto(`/jobs/${rfq.number}`)
     // Record payment sits on the Invoice stage with Create invoice and the reminder (the Payment stage lists the payments made)
     await openStage(page, /^Invoice/)
     await stages(page).getByRole('button', { name: 'Record payment' }).first().click()
