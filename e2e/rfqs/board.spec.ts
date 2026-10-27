@@ -367,7 +367,8 @@ test.describe('loading, empty and error states', () => {
 
   test('loading shows skeleton rows, not a blank page', async ({ page }) => {
     await page.route(/\/rest\/v1\/v_rfq_state\?.*outcome=eq\.open/, async route => {
-      await new Promise(r => setTimeout(r, 2500))
+      // openAs now waits for the shell's Radix swap (about a second or two), so the answer is held back longer than that
+      await new Promise(r => setTimeout(r, 8000))
       await route.continue()
     })
     await openAs(page, 'admin', '/rfqs')
