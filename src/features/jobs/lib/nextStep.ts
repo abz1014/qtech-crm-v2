@@ -24,11 +24,19 @@ export interface NextInput {
   stage: string | null
   stageDetail: string | null
   role: Who
+  /** From the old CRM: it raises no task and is never red (owner decision 1b); its step is said in grey, as To do's fold says it. */
+  imported?: boolean
 }
 
 const has = (d: string | null, word: string) => (d ?? '').includes(word)
 
-export function jobNext({ stage, stageDetail: d, role }: NextInput): JobNext {
+export function jobNext(input: NextInput): JobNext {
+  const n = stepFor(input)
+  if (!input.imported || !n.text || n.tone === 'done' || n.tone === 'inert') return n
+  return { ...n, tone: 'inert', text: `Imported · ${n.text}` }
+}
+
+function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
   const office = role === 'engineer'
   switch (stage) {
     case 'enquiry':

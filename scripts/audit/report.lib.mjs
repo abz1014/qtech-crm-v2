@@ -106,17 +106,17 @@ export const TARGETS = [
   {
     key: 'greenAll',
     label: 'Green buttons on the whole screen (page + top bar)',
-    target: 'exactly 1',
-    source: 'rubric-10 "What stands out first": exactly one green main button on every screen',
+    target: 'exactly 1 (0 where the screen has data-no-primary)',
+    source: 'rubric-10 "What stands out first": exactly one green main button on every screen; a screen with no single next step marks itself data-no-primary and may have none; two or more always fails',
     value: c => c.metrics.primary.inMain + c.metrics.primary.inChrome,
-    pass: v => v === 1,
+    pass: (v, c) => v === 1 || (v === 0 && c?.metrics?.noPrimary === true),
     worse: 'higher',
   },
   {
     key: 'mainActionsFold',
     label: 'Buttons and links above the fold in the page (main)',
     target: 'at most 8',
-    source: 'rubric-10 "How crowded screens are": at most about 8 actions visible at once',
+    source: 'rubric-10 "How crowded screens are": at most about 8 page-level actions visible at once (per-row actions in a [data-row-actions] container are not counted)',
     value: c => c.metrics.actions.mainAboveFold ?? null,
     pass: v => v <= 8,
     worse: 'higher',
@@ -186,7 +186,8 @@ export const INFO = [
 ]
 
 const fmt = (def, v) => (v === null || v === undefined ? '-' : def.format ? def.format(v) : String(Math.round(v * 10) / 10))
-const measured = c => c.status === 'ok' && c.metrics
+// A legacy capture (the old RFQ and Orders pages kept to 2026-11-09, `legacy: true`) is drawn and listed but not scored.
+const measured = c => c.status === 'ok' && c.metrics && !c.legacy
 
 /** Merges result parts ({meta, captures}); a later part (by finishedAt) replaces an earlier capture of the same role, screen and viewport. */
 export function mergeParts(parts) {
@@ -227,7 +228,7 @@ export function score(c) {
   for (const t of TARGETS) {
     const v = t.value(c)
     if (v === null || v === undefined) continue
-    out[t.key] = { value: v, pass: t.pass(v) }
+    out[t.key] = { value: v, pass: t.pass(v, c) }
   }
   return out
 }
@@ -320,8 +321,9 @@ function details(group) {
       if (xs.length) bits.push(`${kind === 'scroller' ? 'scrolls sideways' : kind === 'cut' ? 'cut off' : 'past right edge'}: ${xs.slice(0, 3).map(x => x.what).join(', ')}`)
     }
     if (c.axe?.nodes) bits.push(`axe: ${Object.entries(c.axe.byRule).map(([k, v]) => `${k} x${v}`).join(', ')}`)
-    if (m.primary.inMain + m.primary.inChrome !== 1) bits.push(`green buttons ${m.primary.inMain} in page + ${m.primary.inChrome} in top bar${m.primary.labels.length ? ` (${m.primary.labels.map(l => `"${l}"`).join(', ')})` : ''}`)
-    if ((m.actions.mainAboveFold ?? 0) > 8) bits.push(`${m.actions.mainAboveFold} actions above the fold in the page`)
+    const greens = m.primary.inMain + m.primary.inChrome
+    if (greens !== 1 && !(greens === 0 && m.noPrimary)) bits.push(`green buttons ${m.primary.inMain} in page + ${m.primary.inChrome} in top bar${m.primary.labels.length ? ` (${m.primary.labels.map(l => `"${l}"`).join(', ')})` : ''}`)
+    if ((m.actions.mainAboveFold ?? 0) > 8) bits.push(`${m.actions.mainAboveFold} actions above the fold in the page${m.actions.mainLabels?.length ? ` (${m.actions.mainLabels.map(l => `"${l}"`).join(', ')})` : ''}`)
     if (m.overlap?.count) bits.push(`text over text: ${m.overlap.samples.slice(0, 3).join(', ')}`)
     if (isPhone(c.viewport) && m.strips?.count) bits.push(`scrolls sideways inside: ${m.strips.samples.slice(0, 3).join('; ')}`)
     if (m.contrastHi?.failing) bits.push(`low contrast on highlight: ${m.contrastHi.samples.slice(0, 3).join(', ')}`)

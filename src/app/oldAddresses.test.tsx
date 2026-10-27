@@ -95,6 +95,13 @@ describe('Money\'s red dot', () => {
     expect(navCountsFrom(view, 'sales').moneyLate).toBe(true)
     expect(navCountsFrom(view, 'engineer').moneyLate).toBeUndefined()
   })
+  it('is off when the only late payment is on an imported order (it waits in the grey fold and raises nothing)', () => {
+    const latePayment = { ...view.imported[0], rule: 'payment_overdue' as const, imported: true }
+    const importedOnly = { ...view, active: [], waiting: [], stale: [], imported: [latePayment] }
+    expect(view.imported.length, 'precondition: the fixture has imported tasks in the fold').toBeGreaterThan(0)
+    expect(navCountsFrom(importedOnly, 'admin').moneyLate).toBe(false)
+    expect(navCountsFrom(importedOnly, 'sales').moneyLate).toBe(false)
+  })
   it('is off when nothing is late', () => {
     const none = { ...view, active: view.active.filter(i => i.rule !== 'payment_overdue'), waiting: [] }
     expect(navCountsFrom(none, 'admin').moneyLate).toBe(false)

@@ -43,3 +43,15 @@ describe('next step in words', () => {
     expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'admin' }).tone).toBe('late')
   })
 })
+
+describe('an imported job', () => {
+  it('raises no red task: its step is said in grey, marked Imported', () => {
+    const live = jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'sales' })
+    const old = jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'sales', imported: true })
+    expect(live.tone).toBe('late')
+    expect(old.tone).toBe('inert')
+    expect(old.text).toBe('Imported · The goods are late: chase the supplier')
+    // a finished or already quiet step is left as it is
+    expect(jobNext({ stage: 'paid', stageDetail: null, role: 'admin', imported: true }).text).toBe('Done')
+  })
+})

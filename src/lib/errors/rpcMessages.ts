@@ -68,6 +68,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^record_history_rows is internal: call record_history$/, internal: true },
   // 0099 jobs: the migration refuses to run when create_repeat_order cannot be patched (never raised at run time)
   { match: /^create_repeat_order could not be patched for repeat_of_order_id$/, internal: true },
+  { match: /^record_history_rows could not be patched for priced files$/, internal: true },
   { match: /^The correction of this payment has been changed since\./ },
   { match: /^The date received is required\.$/ },
   { match: /^This payment is already voided\./ },

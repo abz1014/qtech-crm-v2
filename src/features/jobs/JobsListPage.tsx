@@ -1,3 +1,4 @@
+import { NoPrimary } from '@/ui/NoPrimary'
 import { useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FilePlus2 } from 'lucide-react'
@@ -30,7 +31,7 @@ import { stageModel } from '@/features/jobs/lib/stages'
 const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'History' }
 
 function NextText({ job, role }: { job: JobRow; role: Who['role'] }) {
-  const n = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role: role === '' ? 'sales' : role })
+  const n = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role: role === '' ? 'sales' : role, imported: job.imported })
   return n.text ? (
     <StatusText tone={n.tone} className="whitespace-normal">
       {n.text}
@@ -151,6 +152,7 @@ export default function JobsListPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
+      {money ? null : <NoPrimary />}
       <PageHeader
         title="Jobs"
         lede={lede}

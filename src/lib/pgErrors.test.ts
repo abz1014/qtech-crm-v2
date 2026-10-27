@@ -109,3 +109,13 @@ describe('mapPgError (U07)', () => {
     expect(mapPgError('nope').kind).toBe('unknown')
   })
 })
+
+describe('a customer PO already on another order (0095 orders_company_po_key; END-CHECKLIST 119)', () => {
+  it('reads as a plain sentence that names the thing and says what to do, with no constraint name or code in it', () => {
+    const m = mapPgError({ code: '23505', message: 'duplicate key value violates unique constraint "orders_company_po_key"' }, { entity: 'PO number' })
+    expect(m.kind).toBe('unique')
+    expect(m.message).toMatch(/PO number/i)
+    expect(m.message).toMatch(/Open the existing one/)
+    expect(m.message).not.toMatch(/orders_company_po_key|23505|constraint|duplicate key/i)
+  })
+})

@@ -61,9 +61,9 @@ export function RecipientRow({ channel, contact, lead = 'To', className }: { cha
   const detail = email ? contact?.email : contact?.phone
   return (
     <div className={cn('flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 text-sm text-fg-2', className)}>
-      <span className="inline-flex items-center gap-2">
+      <span className="inline-flex min-w-0 items-center gap-2">
         <Icon icon={email ? Mail : Phone} size="sm" className="text-fg-muted" />
-        {contact ? `${lead} ${contact.name}` : 'No contact on record'}
+        <span className="min-w-0 [overflow-wrap:anywhere]">{contact ? `${lead} ${contact.name}` : 'No contact on record'}</span>
       </span>
       {detail ? <span className="num">{detail}</span> : contact ? <span className="text-sm text-fg-muted">{email ? 'no email on file' : 'no phone on file'}</span> : null}
     </div>

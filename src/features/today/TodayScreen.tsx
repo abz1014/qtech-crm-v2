@@ -26,6 +26,7 @@ import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
 import { ACTION_LABEL, BLOCK_TITLE, WAITING_TITLE, blockOf, buildTodo, moreText, opensMessage, secondAction, type TodoBlock } from '@/features/today/todoModel'
 import type { Role, RuleKey, TodayItem } from '@/features/today/types'
+import { NoPrimary } from '@/ui/NoPrimary'
 
 /*
  * The context pane (what to do about an item: the chase text, the numbers, the buttons) is its own download (perf/lcp): on a
@@ -325,6 +326,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   if (team) {
     return (
       <div className="min-h-full bg-surface" data-user={name}>
+        <NoPrimary />
         <header className="grid gap-1 px-5 pb-1 pt-5">
           <h1 className="text-2xl font-heavy tracking-tight">To do</h1>
           <p className="text-base text-fg-muted">{headerDate(today)} · the team</p>
@@ -338,6 +340,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   return (
     // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
     <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
+      <NoPrimary />
       <div className="flex min-h-0 min-w-0 flex-col border-r bg-surface">
         {/* The target tile is the foot of the list, at every width: it scrolls with the list instead of taking a pinned block
             of the laptop's first screen from the jobs (audit T2). An engineer gets no tile at all: a target is PKR amounts, and an
@@ -410,7 +413,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
   const second = actions ? secondAction(item, role) : null
   const own = actions && !waiting // the row carries its own button and its own snooze
   return (
-    <li data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className="relative rounded-row bg-surface text-fg">
+    <li data-row-actions="" data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className="relative rounded-row bg-surface text-fg">
       <button
         type="button"
         onClick={onPick}

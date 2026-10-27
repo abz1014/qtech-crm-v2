@@ -252,7 +252,7 @@ function SiteBlock({
           {address ? <p className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{address}</p> : null}
         </div>
         {onEdit && onRemove ? (
-          <div className="-my-1 flex shrink-0 items-center">
+          <div className="-my-1 flex shrink-0 items-center" data-row-actions="">
             <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${name}`} onClick={onEdit} />
             <Button variant="quiet" size="sm" icon={Trash2} aria-label={`Remove ${name}`} data-remove-site={id} onClick={onRemove} />
           </div>

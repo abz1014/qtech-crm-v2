@@ -1,3 +1,4 @@
+import { NoPrimary } from '@/ui/NoPrimary'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ClipboardCheck } from 'lucide-react'
@@ -136,6 +137,7 @@ export function MarginsPage() {
   const [confirming, setConfirming] = useState(false)
   return (
     <MoneyFrame active={fromReports ? 'reports' : 'month-end'}>
+      <NoPrimary />
       <MoneySubHeader
         back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Lock a month' }}
         title="Order margins"

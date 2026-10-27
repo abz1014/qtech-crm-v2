@@ -17,7 +17,9 @@ export interface Metrics {
   /** Height of the whole page if nothing scrolled inside it (document or <main>). */
   contentHeight: number
   /** Visible elements with role button or link. mainAboveFold: those inside <main> that can be seen without scrolling. */
-  actions: { total: number; aboveFold: number; buttons: number; links: number; mainAboveFold?: number }
+  actions: { total: number; aboveFold: number; buttons: number; links: number; mainAboveFold?: number; rowActionsAboveFold?: number; mainLabels?: string[] }
+  /** The screen carries data-no-primary: it has no single next step, so zero green buttons is allowed (two or more never is). */
+  noPrimary?: boolean
   /**
    * Primary-variant buttons and links (class bg-primary, data-variant="primary" or the primary background colour). inMain counts the
    * enabled ones in <main>; disabled ones (drawn grey) are counted in disabledInMain; the top bar's are inChrome.
@@ -309,7 +311,16 @@ export function collect(opts: CollectOptions): Metrics {
     else actions.links++
     const fold = inFold(el)
     if (fold) actions.aboveFold++
-    if (fold && main?.contains(el)) actions.mainAboveFold = (actions.mainAboveFold ?? 0) + 1
+    // Not page-level actions, so left out of the 8-action target and counted apart: per-row actions of a list (a [data-row-actions]
+    // container, any table row or column header, any list item), and navigation and choice controls (a nav landmark, tab list, [data-nav-strip], a button group such as a month pager, a toggle or radio), and the
+    // (i) tips that explain a heading ([data-infotip]).
+    if (fold && main?.contains(el)) {
+      if (el.closest('[data-row-actions], tr, li, [role="row"], thead, nav, [role="tablist"], [role="group"], [role="radiogroup"], [data-nav-strip], [aria-pressed], [role="radio"], [data-infotip]')) actions.rowActionsAboveFold = (actions.rowActionsAboveFold ?? 0) + 1
+      else {
+        actions.mainAboveFold = (actions.mainAboveFold ?? 0) + 1
+        if ((actions.mainLabels?.length ?? 0) < 30) (actions.mainLabels ??= []).push(label(el))
+      }
+    }
     if (!isPrimary(el)) continue
     const inMain = Boolean(main?.contains(el))
     const disabled = (el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true'
@@ -769,6 +780,7 @@ export function collect(opts: CollectOptions): Metrics {
     viewport: { width: vw, height: vh },
     contentHeight,
     actions,
+    noPrimary: Boolean(main?.querySelector('[data-no-primary]') || main?.matches('[data-no-primary]')),
     primary,
     chips,
     tables,

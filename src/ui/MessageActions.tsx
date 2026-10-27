@@ -163,10 +163,11 @@ export function MessageActions({
   const reason = number.ok ? null : reasonText(to, number.reason)
   const tooLong = ' The message is too long to fill in: it is copied for you to paste.'
   const look = (key: ContactChannel | 'copy'): ButtonProps['variant'] => (key === primary ? 'primary' : 'secondary')
-  const width = fill ? 'flex-1' : undefined
+  // A long label wraps inside the box instead of running past it (a 320 px phone, a narrow card): the button grows, never clips.
+  const width = cn('max-w-full !h-auto min-h-touch whitespace-normal py-2 text-left leading-snug', fill && 'flex-1')
 
   return (
-    <div className={cn('grid gap-2', className)}>
+    <div className={cn('grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-2', className)}>
       <div role="group" aria-label={to?.name.trim() ? `Send to ${to.name.trim()}` : 'Send the message'} className="flex flex-wrap items-center gap-2">
         {slots.map(s =>
           s.key === 'whatsapp' ? (
