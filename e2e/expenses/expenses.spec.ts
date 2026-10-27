@@ -243,6 +243,8 @@ test.describe('expenses (M03, M11)', () => {
   test('a click on Save with a category half-typed saves the highlighted category; text that matches nothing is not saved', async ({ page }) => {
     const amount = base() + 88
     await openAs(page, 'admin', '/money/expenses')
+    // the category list is read after the page draws: Save before it arrives has nothing to refuse the text against
+    await page.waitForLoadState('networkidle')
     await page.getByRole('button', { name: 'Add expenses' }).click()
     await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
     await page.keyboard.type(String(amount))
