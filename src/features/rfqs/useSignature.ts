@@ -1,6 +1,6 @@
 import { useSession } from '@/app/session'
 import { useMySignature } from '@/features/rfqs/hooks'
-import { COMPANY_NAME, type ChaseSignature } from '@/features/rfqs/lib'
+import { COMPANY_NAME, type ChaseSignature } from '@/features/rfqs/lib/chaseCommon'
 
 /** The signature of every chase message: the signed-in person's name, job title and phone, and the company. One source for every surface. */
 export function useSignature(): ChaseSignature {

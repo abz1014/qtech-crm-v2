@@ -289,17 +289,8 @@ export async function listEngineerCandidates(): Promise<PersonRow[]> {
   return rows.map(u => ({ id: u.id, name: u.name }))
 }
 
-export interface RfqOrderRow {
-  id: string
-  number: number
-  cancelledOn: string | null
-}
-
-/** The orders an RFQ has produced (one RFQ may produce several). */
-export async function listOrdersForRfq(rfqId: string): Promise<RfqOrderRow[]> {
-  const rows = unwrap(await requireSupabase().from('orders').select('id, number, cancelled_on').eq('rfq_id', rfqId).order('number'))
-  return rows.map(r => ({ id: r.id, number: r.number, cancelledOn: r.cancelled_on }))
-}
+// The orders an RFQ has produced: orders/forRfq.ts (the RFQ page reads it without this file).
+export { listOrdersForRfq, type RfqOrderRow } from '@/features/orders/forRfq'
 
 /** The company's most recent order that has payment terms: the default for the next one (A3/O01). */
 export async function getLastTerms(companyId: string): Promise<{ days: number; orderNumber: number } | null> {

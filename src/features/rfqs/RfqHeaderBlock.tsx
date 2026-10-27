@@ -42,23 +42,12 @@ import { useEditRfqFlow } from '@/features/rfqs/useEditRfqFlow'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
-import { useOrdersForRfq } from '@/features/orders/hooks'
+import { useOrdersForRfq } from '@/features/orders/forRfq'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
-import {
-  CLOSE_REASONS,
-  closeReasonLabel,
-  defaultCloseReason,
-  dueChipLabel,
-  dueIsUrgent,
-  dueSubLabel,
-  nextStepSentence,
-  quotationSent,
-  refBreaks,
-  stageKey,
-  type CloseReason,
-  type RfqPrimary,
-} from '@/features/rfqs/lib'
+import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, type CloseReason } from '@/features/rfqs/lib/closeDefaults'
+import { dueChipLabel, dueIsUrgent, dueSubLabel, refBreaks } from '@/features/rfqs/lib/detailView'
+import { nextStepSentence, quotationSent, stageKey, type RfqPrimary } from '@/features/rfqs/lib/nextAction'
 
 /*
  * The top of the RFQ page (g2-rfq-detail header, the phone bar and the action bar), reworked by the UX audit of 2026-10-19:

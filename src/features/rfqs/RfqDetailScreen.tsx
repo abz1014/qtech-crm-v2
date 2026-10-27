@@ -14,17 +14,19 @@ import { rfqRef } from '@/lib/refs'
 import { Skeleton } from '@/ui/Skeleton'
 import { prefetchRfqParts, useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { primaryAction, quotationSent, coverageLine, suggestSuppliers, toRateTable, type RfqPrimary, type SuggestionItem } from '@/features/rfqs/lib'
+import { primaryAction, quotationSent, type RfqPrimary } from '@/features/rfqs/lib/nextAction'
+import { toRateTable } from '@/features/rfqs/lib/comparePrices'
+import type { SuggestionItem } from '@/features/rfqs/lib/supplierSuggestion'
 import { RfqActionBar, RfqHeaderBlock, type HeaderFacts } from '@/features/rfqs/RfqHeaderBlock'
 import { useQuotations } from '@/features/quotations/hooks'
 import type { QuotationRow } from '@/features/quotations/api'
-import { useOrdersForRfq } from '@/features/orders/hooks'
+import { useOrdersForRfq } from '@/features/orders/forRfq'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
-import { withShortlist } from '@/features/rfqs/askList'
+import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
 import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
 import { SentConfirm } from '@/features/rfqs/SentConfirm'
@@ -227,13 +229,14 @@ function Loaded({
     [inquiryList, candidateList],
   )
   const memory = useSupplierMemory(memoryItems, memorySuppliers, memorySuppliers.length > 0 && itemList.length > 0 && candidates.isSuccess, rfq.id)
-  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess)
+  const lib = useSuggestLib()
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess, lib)
   const suggestResult = useMemo(
-    () => (candidates.isSuccess ? suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
-    [candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
+    () => (lib && candidates.isSuccess ? lib.suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
+    [lib, candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
   )
   const suggestions = suggestResult?.suppliers
-  const coverage = suggestResult ? coverageLine(suggestResult.uncovered) : null
+  const coverage = lib && suggestResult ? lib.coverageLine(suggestResult.uncovered) : null
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
 
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
@@ -247,7 +250,7 @@ function Loaded({
   // in the Ask list, already ticked, and asking it stamps its inquiry sent (review item 3).
   const askedCount = inquiryList.filter(i => i.sentOn || i.noOfferOn).length
   const nobodyAsked = !loading && !loadError && askedCount === 0
-  const askList = useMemo(() => withShortlist(inquiryList, itemList, suggestions), [inquiryList, itemList, suggestions])
+  const askList = useMemo(() => (lib ? lib.withShortlist(inquiryList, itemList, suggestions) : []), [lib, inquiryList, itemList, suggestions])
 
   // The one green button (owner decision 2026-10-19): chosen by state. Until the items and replies are in, there is none.
   const quotations = useQuotations(rfq.id)

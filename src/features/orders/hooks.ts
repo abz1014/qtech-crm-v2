@@ -53,9 +53,7 @@ export function useEngineerCandidates(enabled: boolean) {
   return useQuery({ queryKey: qk.orders.engineers(), queryFn: api.listEngineerCandidates, enabled, staleTime: 60_000 })
 }
 
-export function useOrdersForRfq(rfqId: string | undefined) {
-  return useQuery({ queryKey: qk.orders.forRfq(rfqId ?? ''), queryFn: () => api.listOrdersForRfq(rfqId as string), enabled: Boolean(rfqId) })
-}
+export { useOrdersForRfq } from '@/features/orders/forRfq'
 
 export function useLastTerms(companyId: string | undefined, enabled: boolean) {
   return useQuery({ queryKey: qk.orders.lastTerms(companyId ?? ''), queryFn: () => api.getLastTerms(companyId as string), enabled: enabled && Boolean(companyId), staleTime: 0, gcTime: 0 })

@@ -1,24 +1,20 @@
 import {
-  createContext,
+  cloneElement,
   forwardRef,
-  useCallback,
+  isValidElement,
   useContext,
+  useEffect,
   useId,
-  useMemo,
-  useRef,
   useState,
   type ComponentPropsWithoutRef,
-  type ElementRef,
-  type KeyboardEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react'
-import * as RadixPopover from '@radix-ui/react-popover'
 import { Check, type LucideIcon } from 'lucide-react'
-import { useBackToClose } from '@/lib/useBackToClose'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
-import { rememberMenuTrigger } from '@/ui/menuTrigger'
+import { OpenState, preloadPopover, usePopoverImpl, Want } from '@/ui/popoverStore'
+import type * as Impl from '@/ui/popoverImpl'
 
 /*
  * Popover (INVENTORY: U03; D08 section 13). Two variants on one Radix primitive:
@@ -27,102 +23,92 @@ import { rememberMenuTrigger } from '@/ui/menuTrigger'
  *                is a menuitemradio (one choice of a few, such as Text size), shown with a tick.
  *   information  anchored detail that needs more than a tooltip but less than a panel. No form inside.
  * Opens 4px below its trigger. Esc, outside click and selecting an item close it; focus returns to the trigger.
+ *
+ * Radix (popper, floating-ui, presence, about a fifth of every page's first download) lives in popoverImpl.tsx and is downloaded
+ * after the first paint (preloadPopover, called by the shell), or at once when a trigger is reached for. Until then a trigger is a
+ * plain button that asks for it; a click before it has arrived opens the popover the moment it has (defaultOpen). The tests load it
+ * up front (src/test/setup.ts), so a popover there is the real one from the start.
  */
-const OpenState = createContext<{ open: boolean; close: () => void } | null>(null)
 
-/**
- * Radix's Root, with its open state known here so phone Back can close an open menu or popover instead of leaving the
- * page (hunt HE-19; dialogs and sheets already do this with useBackToClose). Controlled or uncontrolled, as Radix's.
- */
-export function Popover({ open: openProp, defaultOpen, onOpenChange, ...rest }: ComponentPropsWithoutRef<typeof RadixPopover.Root>) {
-  const [own, setOwn] = useState(defaultOpen ?? false)
-  const open = openProp ?? own
-  const controlled = openProp !== undefined
-  const set = useCallback(
-    (next: boolean) => {
-      if (!controlled) setOwn(next)
-      onOpenChange?.(next)
-    },
-    [controlled, onOpenChange],
-  )
-  const state = useMemo(() => ({ open, close: () => set(false) }), [open, set])
-  return (
-    <OpenState.Provider value={state}>
-      <RadixPopover.Root {...rest} open={open} onOpenChange={set} />
-    </OpenState.Provider>
-  )
-}
-export const PopoverTrigger = RadixPopover.Trigger
-export const PopoverAnchor = RadixPopover.Anchor
-export const PopoverClose = RadixPopover.Close
+type RootProps = ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Root>
 
-type ContentProps = Omit<ComponentPropsWithoutRef<typeof RadixPopover.Content>, 'role'> & {
-  variant?: 'menu' | 'information'
-  /** information only: 'dialog' names it as one (InfoTip). The menu variant is always role="menu". */
-  role?: 'dialog'
+/** A popover. Controlled or uncontrolled, as Radix's. */
+export function Popover(props: RootProps) {
+  const mod = usePopoverImpl()
+  const [wanted, setWanted] = useState(false)
+  const openNow = props.open ?? props.defaultOpen ?? false
+  useEffect(() => {
+    if (openNow) void preloadPopover()
+  }, [openNow])
+  if (!mod) {
+    return (
+      <Want.Provider
+        value={() => {
+          setWanted(true)
+          // A controlled popover (open={...}) ignores defaultOpen: ask its owner to open it, as Radix's trigger would have.
+          if (props.open === false) props.onOpenChange?.(true)
+          void preloadPopover()
+        }}
+      >
+        {props.children}
+      </Want.Provider>
+    )
+  }
+  return <mod.PopoverImpl {...props} defaultOpen={props.defaultOpen ?? wanted} />
 }
 
-const FOCUSABLE_ITEM = '[role="menuitem"]:not([disabled]),[role="menuitemradio"]:not([disabled])'
+type TriggerProps = ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Trigger>
 
-export const PopoverContent = forwardRef<ElementRef<typeof RadixPopover.Content>, ContentProps>(function PopoverContent(
-  { variant = 'information', role, className, sideOffset = 4, align = 'start', onKeyDown, onOpenAutoFocus, children, ...rest },
-  ref,
-) {
-  const isMenu = variant === 'menu'
-  const inner = useRef<HTMLDivElement | null>(null)
-  const state = useContext(OpenState)
-  // Phones only: there Back is the way out of a menu; on a desktop an extra history entry per menu would be noise.
-  const phone = useMediaQuery('(max-width: 767.98px)')
-  useBackToClose(Boolean(state?.open), () => state?.close(), { enabled: phone && state !== null })
-  const handleKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    onKeyDown?.(e)
-    if (!isMenu || e.defaultPrevented) return
-    const items = [...e.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE_ITEM)]
-    if (!items.length) return
-    const at = items.indexOf(document.activeElement as HTMLElement)
-    let next = -1
-    if (e.key === 'ArrowDown') next = (at + 1) % items.length
-    else if (e.key === 'ArrowUp') next = (at - 1 + items.length) % items.length
-    else if (e.key === 'Home') next = 0
-    else if (e.key === 'End') next = items.length - 1
-    if (next >= 0) {
-      e.preventDefault()
-      items[next].focus()
-    }
+export const PopoverTrigger = forwardRef<HTMLButtonElement, TriggerProps>(function PopoverTrigger({ asChild, children, onClick, ...rest }, ref) {
+  const mod = usePopoverImpl()
+  const want = useContext(Want)
+  if (mod) {
+    return (
+      <mod.PopoverTriggerImpl ref={ref} asChild={asChild} onClick={onClick} {...rest}>
+        {children}
+      </mod.PopoverTriggerImpl>
+    )
+  }
+  const press = (e: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(e)
+    if (!e.defaultPrevented) want?.()
+  }
+  const reach = () => void preloadPopover()
+  if (asChild && isValidElement(children)) {
+    const child = children as ReactElement<Record<string, unknown>>
+    const own = child.props.onClick as ((e: React.MouseEvent<HTMLButtonElement>) => void) | undefined
+    return cloneElement(child, {
+      ref,
+      'aria-haspopup': 'dialog',
+      'aria-expanded': false,
+      onPointerEnter: reach,
+      onFocus: reach,
+      onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
+        own?.(e)
+        press(e)
+      },
+    } as Record<string, unknown>)
   }
   return (
-    <RadixPopover.Portal>
-      <RadixPopover.Content
-        ref={node => {
-          inner.current = node
-          if (typeof ref === 'function') ref(node)
-          else if (ref) ref.current = node
-        }}
-        // A labelled information popover is a dialog (an aria-label on a role-less div is ignored, WCAG 4.1.2).
-        role={isMenu ? 'menu' : (role ?? (rest['aria-label'] || rest['aria-labelledby'] ? 'dialog' : undefined))}
-        onClickCapture={isMenu ? () => rememberMenuTrigger(inner.current) : undefined}
-        onKeyDownCapture={isMenu ? e => (e.key === 'Enter' || e.key === ' ') && rememberMenuTrigger(inner.current) : undefined}
-        sideOffset={sideOffset}
-        align={align}
-        collisionPadding={8}
-        onKeyDown={handleKey}
-        onOpenAutoFocus={e => {
-          onOpenAutoFocus?.(e)
-          if (!isMenu || e.defaultPrevented) return
-          e.preventDefault()
-          inner.current?.querySelector<HTMLElement>(FOCUSABLE_ITEM)?.focus()
-        }}
-        className={cn(
-          'z-50 animate-rise-4 rounded bg-surface shadow-pop focus:outline-none',
-          isMenu ? 'max-h-[var(--radix-popover-content-available-height)] min-w-[200px] overflow-y-auto p-1' : 'max-w-[320px] p-4 text-sm',
-          className,
-        )}
-        {...rest}
-      >
-        {children}
-      </RadixPopover.Content>
-    </RadixPopover.Portal>
+    <button ref={ref} type="button" aria-haspopup="dialog" aria-expanded={false} onPointerEnter={reach} onFocus={reach} onClick={press} {...rest}>
+      {children}
+    </button>
   )
+})
+
+export function PopoverAnchor({ children }: { children?: ReactNode; asChild?: boolean }) {
+  const mod = usePopoverImpl()
+  return mod ? <mod.PopoverAnchorImpl asChild>{children as ReactElement}</mod.PopoverAnchorImpl> : <>{children}</>
+}
+
+export function PopoverClose({ children, ...rest }: ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Close>) {
+  const mod = usePopoverImpl()
+  return mod ? <mod.PopoverCloseImpl {...rest}>{children}</mod.PopoverCloseImpl> : null
+}
+
+export const PopoverContent = forwardRef<HTMLDivElement, Impl.ContentProps>(function PopoverContent(props, ref) {
+  const mod = usePopoverImpl()
+  return mod ? <mod.PopoverContentImpl ref={ref} {...props} /> : null
 })
 
 interface MenuItemProps extends Omit<ComponentPropsWithoutRef<'button'>, 'children'> {
@@ -143,6 +129,7 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
   ref,
 ) {
   const radio = checked !== undefined
+  const state = useContext(OpenState)
   const row = (
     <button
       ref={ref}
@@ -150,7 +137,11 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
       role={radio ? 'menuitemradio' : 'menuitem'}
       aria-checked={radio ? checked : undefined}
       tabIndex={-1}
-      onClick={onClick}
+      onClick={e => {
+        onClick?.(e)
+        // Choosing an item closes the menu (the Radix Close this used to wrap), unless the item keeps it open.
+        if (!keepOpen && !e.defaultPrevented) state?.close()
+      }}
       className={cn(
         'flex h-control w-full items-center gap-2 rounded px-2 text-left text-sm transition-colors duration-fast ease-out',
         'hover:bg-sunken focus-visible:bg-selected focus-visible:outline-offset-[-2px] disabled:text-fg-disabled disabled:hover:bg-transparent',
@@ -165,7 +156,7 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
       {radio ? <Icon icon={Check} className={cn('text-primary', !checked && 'invisible')} /> : null}
     </button>
   )
-  return keepOpen ? row : <RadixPopover.Close asChild>{row}</RadixPopover.Close>
+  return row
 })
 
 /** A named run of menuitemradio choices inside a menu ("Text size: Normal, Smaller"), with its name shown above them. */

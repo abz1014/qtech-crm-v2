@@ -7,7 +7,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { useToast } from '@/ui/useToast'
 import type { RfqItemRow } from '@/features/rfqs/api'
 import { useCuratedCategories, useSetItemCategory } from '@/features/rfqs/hooks'
-import { withCategories, type SuggestionItem } from '@/features/rfqs/lib/supplierSuggestion'
+import type { SuggestionItem } from '@/features/rfqs/lib/supplierSuggestion'
+import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
 
 /*
  * The category of an RFQ item, as a chip with a picker (C4). The category is rfq_items.family_id (a curated product category); it
@@ -22,15 +23,18 @@ const chip = 'relative z-10 inline-flex min-h-touch items-center rounded border 
 export function CategoryChip({ rfqId, item }: { rfqId: string; item: Pick<RfqItemRow, 'id' | 'description' | 'familyId' | 'familyName'> }) {
   const session = useSession()
   const canPick = session.status === 'signed-in' && (session.user.role === 'admin' || session.user.role === 'sales')
-  const curated = useCuratedCategories(true)
+  // The category list is read once the suggestion code has arrived (after the first paint), not in the page's first round.
+  const lib = useSuggestLib()
+  const curated = useCuratedCategories(lib !== null)
   const set = useSetItemCategory(rfqId)
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const guess = useMemo(() => {
-    if (item.familyId) return null
-    const g = withCategories<SuggestionItem>([{ id: item.id, description: item.description, brandId: null, familyId: null }], curated.data ?? [])[0]
+    // The dictionary's guess arrives with the suggestion code, after the first paint (perf: the page's first download).
+    if (item.familyId || !lib) return null
+    const g = lib.withCategories<SuggestionItem>([{ id: item.id, description: item.description, brandId: null, familyId: null }], curated.data ?? [])[0]
     return g.familyId ? { id: g.familyId, name: g.familyName ?? '' } : null
-  }, [item.id, item.description, item.familyId, curated.data])
+  }, [lib, item.id, item.description, item.familyId, curated.data])
   const options = useMemo(() => {
     const list = curated.data ?? []
     const own = item.familyId && !list.some(c => c.id === item.familyId) ? [{ id: item.familyId, name: item.familyName ?? 'This category' }] : []

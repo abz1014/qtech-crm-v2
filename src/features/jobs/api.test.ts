@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { installFakeDb, opArgs } from '@/test/fakeSupabase'
-import { findJobs, jobKeyOf, quotationNumberOf } from '@/features/jobs/api'
+import { findJobs, getJobFactsFromOld, jobKeyOf, quotationNumberOf } from '@/features/jobs/api'
 
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
@@ -85,5 +85,23 @@ describe('findJobs: the one search behind the Jobs box and the palette', () => {
     const { calls } = installFakeDb(() => ({ data: [] }))
     expect(await findJobs('   ')).toEqual([])
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe('facts from an old address (one round)', () => {
+  const head = { id: 'r1', number: 139, notes: null, customer_ref: 'X-1', received_on: '2026-08-12', due_on: null, closed_on: null, close_reason: null, company: { id: 'c1', name: 'Harbour Textiles' }, site: null, contact: null, owner: { id: 'u1', name: 'Faizan' } }
+  it('/rfqs/<id>: the view and the enquiry by id, together, and nothing else', async () => {
+    const db = installFakeDb(c => (c.target === 'v_jobs' ? { data: row('139', { rfq_id: 'r1' }) } : { data: head }))
+    const f = await getJobFactsFromOld('rfq', 'r1')
+    expect(f?.job.key).toBe('139')
+    expect(f?.customerRef).toBe('X-1')
+    expect(db.calls.map(c => c.target).sort()).toEqual(['rfqs', 'rfqs', 'v_jobs'])
+  })
+  it('/orders/<id>: the view by order id and the order with its enquiry embedded; a direct order says nothing (the caller asks the slow way)', async () => {
+    const db = installFakeDb(c => (c.target === 'v_jobs' ? { data: row('139', { order_id: 'o1' }) } : { data: { rfq: head } }))
+    expect((await getJobFactsFromOld('order', 'o1'))?.job.key).toBe('139')
+    expect(db.calls.map(c => c.target).sort()).toEqual(['orders', 'rfqs', 'v_jobs'])
+    installFakeDb(c => (c.target === 'v_jobs' ? { data: row('O-45', { kind: 'direct', rfq_id: null, order_id: 'o2' }) } : { data: { rfq: null } }))
+    expect(await getJobFactsFromOld('order', 'o2')).toBeNull()
   })
 })

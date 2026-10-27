@@ -12,16 +12,17 @@ import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
-import { coverageLine, suggestSuppliers, toRateTable, quotationSent, type SuggestionItem } from '@/features/rfqs/lib'
-import { withShortlist } from '@/features/rfqs/askList'
+import { toRateTable } from '@/features/rfqs/lib/comparePrices'
+import { quotationSent } from '@/features/rfqs/lib/nextAction'
+import type { SuggestionItem } from '@/features/rfqs/lib/supplierSuggestion'
+import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
 import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { useQuotations } from '@/features/quotations/hooks'
-import { useOrdersForRfq } from '@/features/orders/hooks'
-import { useWonDialog } from '@/features/orders/useWonDialog'
+import { useOrdersForRfq } from '@/features/orders/forRfq'
 
 /*
  * The enquiry side of the job, on the job page (redesign P5-D1): ask suppliers, enter their prices, send the quotation, Mark won.
@@ -34,24 +35,7 @@ const QuotationsPanel = lazyWithReload(() => import('@/features/quotations/Quota
 const SuppliersAsked = lazyWithReload(() => import('@/features/rfqs/SuppliersAsked').then(m => ({ default: m.SuppliersAsked })))
 const SuppliersToAskCard = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.SuppliersToAskCard })))
 const FloatDialog = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.FloatDialog })))
-const ConvertDialog = lazyWithReload(() => import('@/features/orders/ConvertDialog').then(m => ({ default: m.ConvertDialog })))
 const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
-
-/** Mark won's Create order dialog, open while the address carries ?won=1 (admin and sales; the dialog refuses an engineer). */
-export function WonDialogHost({ rfqId }: { rfqId: string }) {
-  const [wonOpen, setWonOpen] = useWonDialog()
-  const prices = useSeesPrices()
-  const header = useRfqHeader(wonOpen ? rfqId : undefined)
-  const inquiries = useRfqInquiries(wonOpen ? rfqId : undefined)
-  const fx = useFxLatest()
-  const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
-  if (!wonOpen || !prices || !header.data || !inquiries.data) return null
-  return (
-    <Suspense fallback={null}>
-      <ConvertDialog rfq={header.data} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} />
-    </Suspense>
-  )
-}
 
 /** After an ask: the one enquiry (copied already) with Open in WhatsApp / Open in email for each supplier asked. */
 function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask: AskResult; inquiries: readonly InquiryRow[]; onClose: () => void }) {
@@ -120,19 +104,20 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
   const memoryItems = useMemo(() => itemList.map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: i.familyId })), [itemList])
   const memorySuppliers = useMemo(() => [...new Set([...inquiryList.filter(i => i.lines.length > 0).map(i => i.supplierId), ...candidateList.map(c => c.id)])].sort(), [inquiryList, candidateList])
   const memory = useSupplierMemory(memoryItems, memorySuppliers, memorySuppliers.length > 0 && itemList.length > 0 && candidates.isSuccess, rfq.id)
-  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess)
+  const lib = useSuggestLib()
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, candidates.isSuccess, lib)
   const suggestResult = useMemo(
-    () => (candidates.isSuccess ? suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
-    [candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
+    () => (lib && candidates.isSuccess ? lib.suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }) : undefined),
+    [lib, candidates.isSuccess, extras.items, extras.extra, candidateList, memory.data, today],
   )
   const suggestions = suggestResult?.suppliers
-  const coverage = suggestResult ? coverageLine(suggestResult.uncovered) : null
+  const coverage = lib && suggestResult ? lib.coverageLine(suggestResult.uncovered) : null
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
   const ranking = useRankedQuotes(rfq.id, hasPrices)
   const askedCount = inquiryList.filter(i => i.sentOn || i.noOfferOn).length
   const nobodyAsked = askedCount === 0
-  const askList = useMemo(() => withShortlist(inquiryList, itemList, suggestions), [inquiryList, itemList, suggestions])
+  const askList = useMemo(() => (lib ? lib.withShortlist(inquiryList, itemList, suggestions) : []), [lib, inquiryList, itemList, suggestions])
   const quotations = useQuotations(prices ? rfq.id : undefined)
   const orders = useOrdersForRfq(rfq.id)
   const quotationCount = quotations.data?.length ?? 0

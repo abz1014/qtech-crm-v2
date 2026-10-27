@@ -1,4 +1,5 @@
-import { Suspense, type ReactNode } from 'react'
+import { Suspense, useEffect, useState, type ReactNode } from 'react'
+import { isContentDrawn, whenContentDrawn } from '@/lib/afterContent'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
@@ -20,6 +21,15 @@ import { STOPS, type StageModel, type StopName, type StopState } from '@/feature
 
 // The enquiry side's real components (P5-D1): downloaded when the Quotation stage is first opened, not with the job page.
 const EnquiryWork = lazyWithReload(() => import('@/features/jobs/EnquiryWork'))
+
+/** The enquiry work is downloaded once the page's content is drawn (immediately on any later page), not before the first paint (perf: LCP). */
+function LaterEnquiryWork({ rfqId }: { rfqId: string }) {
+  const [ready, setReady] = useState(isContentDrawn())
+  useEffect(() => {
+    if (!ready) whenContentDrawn(() => setReady(true))
+  }, [ready])
+  return ready ? <EnquiryWork rfqId={rfqId} /> : <Skeleton className="h-40 w-full" />
+}
 
 /*
  * The job's stages as an accordion (plan "Page layout": the current stage open, earlier ones folded to one line each, later ones grey).
@@ -115,7 +125,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   ) : job.rfqId ? (
     // Ask suppliers, their replies and prices, the items, the quotation and Issue quotation: the RFQ page's own components.
     <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-      <EnquiryWork rfqId={job.rfqId} />
+      <LaterEnquiryWork rfqId={job.rfqId} />
     </Suspense>
   ) : (
     <div className="grid gap-3">

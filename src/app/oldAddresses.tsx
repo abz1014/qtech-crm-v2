@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
-import { jobKeyFor, wantsOld, chipForOldList, type OldKind } from '@/app/oldAddressesModel'
+import { queryClient } from '@/lib/queryClient'
+import { wantsOld, chipForOldList, type OldKind } from '@/app/oldAddressesModel'
 
 /*
  * The old RFQ and Order addresses (redesign phase 5, P5-F; owner decision 9: the old pages stay reachable for two weeks).
@@ -17,7 +18,8 @@ function ToJob({ kind, id, search }: { kind: OldKind; id: string; search: string
   const [state, setState] = useState<{ key: string | null } | 'loading' | 'failed'>('loading')
   useEffect(() => {
     let live = true
-    jobKeyFor(kind, id).then(
+    // The Jobs code and the key lookup are downloaded together; the app's own start has usually begun the lookup already (routeChunks.ts).
+    import('@/features/jobs/oldAddress').then(m => m.resolveOldAddress(queryClient, kind, id)).then(
       key => live && setState({ key }),
       () => live && setState('failed'),
     )

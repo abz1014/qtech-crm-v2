@@ -28,7 +28,11 @@ import { bandSizeOf, evidenceOf, reasonsFor, sellNote, whyNotCheapest, type Rank
 import { lastPriceChip, type MemoryRow } from '@/lib/memory'
 import type { FxLatestRow, InquiryRow, QuoteLineRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useRemoveQuoteLine, useRestoreQuoteLine } from '@/features/rfqs/hooks'
-import { cheapestFirst, comparePrices, itemCoverage, qtyText, reasonForItem, reasonLabel, type ComparedLine, type RateTable, type SupplierSuggestion } from '@/features/rfqs/lib'
+import { cheapestFirst, comparePrices, type ComparedLine, type RateTable } from '@/features/rfqs/lib/comparePrices'
+import { itemCoverage } from '@/features/rfqs/lib/detailView'
+import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
+import { reasonForItem, reasonLabel } from '@/features/rfqs/lib/cantQuote'
+import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
  * Items and supplier prices (g2-rfq-detail "Items and supplier replies", R07; the supplier comparison of R25; reworked by the UX

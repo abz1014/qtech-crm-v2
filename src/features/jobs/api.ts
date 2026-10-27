@@ -295,9 +295,57 @@ export async function getJobFacts(key: string): Promise<JobFacts | null> {
       return false // the grey mark is a nicety: a refusal must never keep the page from opening
     }
   })()
-  const [view, headRes, impRes] = await Promise.all([db.from('v_jobs').select(JOB_COLUMNS).eq('job_key', key).maybeSingle(), head, importedRead])
+  const [view, headRes, imported] = await Promise.all([db.from('v_jobs').select(JOB_COLUMNS).eq('job_key', key).maybeSingle(), head, importedRead])
+  return factsOf(unwrap(view) as JobView | null, unwrap(headRes) as unknown as HeadJoin | null, direct !== null, number, imported)
+}
+
+/**
+ * The same facts for an old address (/rfqs/<id>, /orders/<id>) in ONE round: the view by the RFQ's or order's id beside the enquiry
+ * (or the order, with its enquiry embedded), so the redirect to the Job page costs no extra round trip (perf/lcp). Null when it cannot
+ * say (a cancelled order, an unknown id, a direct order): the caller then asks for the key the slow way.
+ */
+export async function getJobFactsFromOld(kind: 'rfq' | 'order', id: string): Promise<JobFacts | null> {
+  const db = requireSupabase()
+  const person = (t: string) =>
+    `company:companies!${t}_company_id_fkey(id, name), site:company_sites!${t}_site_id_fkey(name, address), contact:contacts!${t}_contact_id_fkey(name, phone, email, job_title), owner:users!${t}_owner_id_fkey(id, name)`
+  // whether it came from the old CRM (the id only, as getJobFacts reads it), in the same round; a refusal never keeps the page from opening
+  const flag = async (q: PromiseLike<{ error: unknown; data: unknown[] | null }>): Promise<boolean> => {
+    try {
+      const r = await q
+      return !r.error && (r.data?.length ?? 0) > 0
+    } catch {
+      return false
+    }
+  }
+  if (kind === 'rfq') {
+    const [view, head, imported] = await Promise.all([
+      db.from('v_jobs').select(JOB_COLUMNS).eq('rfq_id', id).limit(1).maybeSingle(),
+      db
+        .from('rfqs')
+        .select(`id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')}`)
+        .eq('id', id)
+        .maybeSingle(),
+      flag(db.from('rfqs').select('id').eq('id', id).not('legacy_source', 'is', null).limit(1)),
+    ])
+    const v = unwrap(view) as JobView | null
+    return factsOf(v, unwrap(head) as unknown as HeadJoin | null, false, null, imported)
+  }
+  const [view, ord, imported] = await Promise.all([
+    db.from('v_jobs').select(JOB_COLUMNS).eq('order_id', id).limit(1).maybeSingle(),
+    db
+      .from('orders')
+      .select(`rfq:rfqs!orders_rfq_id_fkey(id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')})`)
+      .eq('id', id)
+      .maybeSingle(),
+    flag(db.from('rfqs').select('id, orders!orders_rfq_id_fkey!inner(id)').eq('orders.id', id).not('legacy_source', 'is', null).limit(1)),
+  ])
   const v = unwrap(view) as JobView | null
-  const h = unwrap(headRes) as unknown as HeadJoin | null
+  const o = unwrap(ord) as unknown as { rfq: One<HeadJoin> } | null
+  const head = one(o?.rfq)
+  return head && v && v.kind !== 'direct' ? factsOf(v, head, false, null, imported) : null
+}
+
+function factsOf(v: JobView | null, h: HeadJoin | null, direct: boolean, number: number | null, imported: boolean): JobFacts | null {
   if (!v || !h || !v.job_key || !v.company_id) return null
   const company = one(h.company)
   const site = one(h.site)
@@ -321,7 +369,7 @@ export async function getJobFacts(key: string): Promise<JobFacts | null> {
     repeatOf: v.repeat_of_job_key,
     cancelledOrders: Number(v.cancelled_orders ?? 0),
     engineerIds: [],
-    imported: impRes,
+    imported,
   }
   return {
     job,

@@ -22,6 +22,18 @@ describe('chunksForPath', () => {
     expect(chunksForPath('/login')).toEqual(['signIn'])
   })
 
+  it('a device that keeps the old pages (?old=1) fetches their downloads, not the Jobs ones', () => {
+    try {
+      expect(chunksForPath('/rfqs/abc', '?old=1')).toEqual(['rfqs', 'rfq'])
+      // remembered on the device: the next address needs no query
+      expect(chunksForPath('/orders/abc')).toEqual(['orders', 'order'])
+      expect(chunksForPath('/rfqs')).toEqual(['rfqs', 'rfqsBoard'])
+      expect(chunksForPath('/rfqs/abc', '?old=0')).toEqual(['jobs', 'job'])
+    } finally {
+      window.localStorage.clear()
+    }
+  })
+
   it('an address no page owns gets its screen only (it draws Not found), so no page data is read ahead', () => {
     expect(chunksForPath('/rfqs/abc/extra')).toEqual(['jobs'])
     expect(chunksForPath('/orders/abc/extra')).toEqual(['jobs'])

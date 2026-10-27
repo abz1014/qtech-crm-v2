@@ -25,6 +25,7 @@ import {
   RFQ_REF_PLACEHOLDER,
   coverageLine,
   suggestSuppliers,
+  withCategories,
   tickedIds,
   toEnquiryItems,
   toFloatItems,
@@ -530,7 +531,7 @@ function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMo
     candidateList.map(c => c.id),
     wantSuppliers && candidates.isSuccess,
   )
-  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess)
+  const extras = useSuggestionExtras(suggestionItems, candidateList, today, wantSuppliers && candidates.isSuccess, { withCategories })
   const suggestions = useMemo(
     () => suggestSuppliers(extras.items, { suppliers: candidateList, memory: memory.data ?? {}, ...extras.extra }, { today }),
     [extras.items, extras.extra, candidateList, memory.data, today],

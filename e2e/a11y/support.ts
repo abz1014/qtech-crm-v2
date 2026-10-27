@@ -245,6 +245,8 @@ export async function open(page: Page, path: string): Promise<void> {
   await page.locator('#main').waitFor()
   await page.locator('#main h1').first().waitFor({ state: 'attached' })
   await page.waitForLoadState('networkidle')
+  // The shell downloads Radix after first content and rebuilds the menu and dialog triggers when it lands: sweep a settled page.
+  await page.waitForFunction(() => document.documentElement.dataset.radixReady === '1', undefined, { timeout: 15_000 }).catch(() => undefined)
   await waitForAnimationsToFinish(page)
 }
 
