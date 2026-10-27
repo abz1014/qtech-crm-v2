@@ -378,8 +378,10 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     const part1 = (await orderLines(s.order.id))[0]
     await must(rest('sales', 'rpc/split_order_item', { method: 'POST', body: { p_item_id: part1.id, p_qty: 1, p_supplier_id: s.s3.id, p_currency: 'USD', p_supplier_unit_price: 450 } }))
     await page.reload()
+    // the order's panels draw after the page (lazy chunks, perf2), so give the indicator longer than the default 5 s
+    await legLoc(page, 'A').waitFor({ timeout: 20_000 })
     const changed = page.getByTestId('leg-A-changed')
-    await expect(changed).toContainText('Lines changed since')
+    await expect(changed).toContainText('Lines changed since', { timeout: 20_000 })
     await expect(changed).toContainText('was ×3, now ×2')
     await shot(page, 'a8-order-changed-since-po-1440')
 
