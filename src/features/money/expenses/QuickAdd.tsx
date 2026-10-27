@@ -101,7 +101,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   const paidVia: PaidVia = via ?? category?.defaultPaidVia ?? 'cash'
   const monthly = isMonthlyBill(categoryId, templates)
   const forKey = `${paidOn}|${categoryId}`
-  const period = monthly ? (forChoice?.key === forKey ? forChoice.value : forMonthOf(paidOn)) : null
+  const period = monthly ? (forChoice?.key === forKey ? forChoice.value : forMonthOf(paidOn, categoryId)) : null
 
   const isOther = !!category?.isMisc
   const matches = useMemo(() => {

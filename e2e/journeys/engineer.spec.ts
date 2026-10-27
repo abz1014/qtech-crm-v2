@@ -1,9 +1,8 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { API_URL, createCompany, karachiDay, must, rest, uniqueName } from '../support/stack'
 import { showAllTodo } from '../support/todo'
-import { waitForAnimationsToFinish } from '../support/axe'
 import { legLoc } from '../orders/fixtures'
-import { fe2, ordRef, openPage, pastePage, PNG_B64, readCount, resetCount, roleContext } from './support'
+import { fe2, ordRef, openPage, readCount, resetCount, roleContext } from './support'
 
 /*
  * P03, the engineer journey: a working day on the phone-sized core of the app, and not one rupee anywhere.
@@ -138,30 +137,14 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     await noMoneyOnScreen(page, 'the order page')
   })
 
-  // ---- 3. Capture a photo and a note into the order -------------------------------------------------------------------------------------
-  await test.step('add a photo and a note to the job', async () => {
-    const note = 'Site photo: nameplate on transmitter 1, tag PT-204.'
-    // The order has no enquiry, so its job is O-<number>. "Add to this job" takes a paste anywhere on the page: it guesses a note (an
-    // engineer is offered only a photo or a note, never a price), and one tap adds the note and the photo.
+  // ---- 3. No "Add to this job" for an engineer -------------------------------------------------------------------------------------------
+  await test.step('the job page does not offer Add to this job to an engineer', async () => {
+    // Owner decision: engineers simply do not see the card (nor its paste and drop handling). The order's notes and files stay on the order page.
     await page.goto(`/jobs/O-${s.order.number}`)
     await page.locator('#main').waitFor()
-    await expect(page.getByRole('region', { name: 'Add to this job' })).toBeVisible()
-    await resetCount(page)
-    await pastePage(page, { text: note, file: { name: 'nameplate.png', type: 'image/png', b64: PNG_B64 } })
-    await expect(page.getByTestId('guess-line')).toHaveText('Note')
-    await expect(page.getByRole('button', { name: 'Supplier price' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Customer answer' })).toHaveCount(0)
-    await waitForAnimationsToFinish(page)
-    await page.getByRole('button', { name: 'Add note and files' }).click()
-    await expect(page.getByRole('status').filter({ hasText: `Added to Job O-${s.order.number}` }).filter({ has: page.getByRole('button', { name: /Undo/ }) })).toBeVisible()
-    fe2('Add a photo and a note to the job (after the paste)', (await readCount(page)).mouse, 1)
-    const files = await must(rest<{ file_name: string; bucket: string }[]>('admin', `attachments?order_id=eq.${s.order.id}&select=file_name,bucket`))
-    expect(files).toEqual([{ file_name: 'nameplate.png', bucket: 'rfq-files' }])
-    const notes = await must(rest<{ notes: string | null }[]>('admin', `orders?id=eq.${s.order.id}&select=notes`))
-    expect(notes[0].notes).toContain(note)
-    expect(notes[0].notes).toContain('Gate pass needed 2 days ahead.') // the note was added to, not replaced
+    await expect(page.getByRole('region', { name: 'Add to this job' })).toHaveCount(0)
+    await expect(page.getByRole('textbox', { name: 'Paste here' })).toHaveCount(0)
     await page.goto(`/orders/${s.order.id}`)
-    await expect(page.getByRole('list', { name: 'Files on this order' }).getByText('nameplate.png')).toBeVisible()
   })
 
   // ---- 4. Commissioning done, goods delivered -----------------------------------------------------------------------------------------------

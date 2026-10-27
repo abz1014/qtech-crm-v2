@@ -500,7 +500,7 @@ async function loadRecurringFacts(today: string): Promise<RecurringFact[]> {
   const db = requireSupabase()
   const periods = billPeriods(today)
   const [templates, recorded] = await Promise.all([
-    db.from('recurring_expenses').select('id, label, day_of_month, active, start_month').eq('active', true).order('label'),
+    db.from('recurring_expenses').select('id, label, day_of_month, active, start_month, category_id').eq('active', true).order('label'),
     db.from('expenses').select('recurring_id, period').in('period', periods).not('recurring_id', 'is', null),
   ])
   const done = new Set((unwrap(recorded) ?? []).map(r => `${r.recurring_id as string}|${r.period as string}`))
@@ -510,7 +510,7 @@ async function loadRecurringFacts(today: string): Promise<RecurringFact[]> {
     dayOfMonth: t.day_of_month,
     active: t.active,
     startMonth: t.start_month,
-    recorded: done.has(`${t.id}|${billPeriod({ dayOfMonth: t.day_of_month }, today)}`),
+    recorded: done.has(`${t.id}|${billPeriod({ dayOfMonth: t.day_of_month, categoryId: t.category_id }, today)}`),
   }))
 }
 

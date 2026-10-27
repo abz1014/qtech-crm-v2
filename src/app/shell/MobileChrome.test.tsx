@@ -83,6 +83,8 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
   const search = async (u: ReturnType<typeof userEvent.setup>, q: string) => {
     await u.click(screen.getAllByRole('button', { name: 'Search or jump to' })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
+    // wait for the search box to take focus before typing: on a loaded runner the first keystrokes otherwise go nowhere
+    await waitFor(() => expect(within(dlg).getByRole('combobox')).toHaveFocus())
     await u.keyboard(q)
     return dlg
   }

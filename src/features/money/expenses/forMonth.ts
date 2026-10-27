@@ -1,12 +1,12 @@
-import { forMonthOf, monthKey, monthKeyLabel, shiftMonth, type Category, type RecurringTemplate } from '@/features/money/expenses/model'
+import { forMonthOf, RENT_CATEGORY_ID, monthKey, monthKeyLabel, shiftMonth, type Category, type RecurringTemplate } from '@/features/money/expenses/model'
 
-export { forMonthOf }
+export { forMonthOf, RENT_CATEGORY_ID }
 
 /*
  * For-month (redesign phase 1, owner approval 2026-10-22): a monthly bill (salaries, rent, internet) paid on or before the 10th is
  * for LAST month. September's salary paid on 5 October is filed "for September" (expenses.period), so the Expenses report, Month
  * end and the Expenses screen agree (screenshots 69 and 70 disagreed). Every other expense is for the month it was paid in, and
- * its period stays empty. Money "Paid out" figures stay by the day paid.
+ * its period stays empty. Exception (owner, 0106): Rent is paid in advance, so it is always for the month it is paid in. Money "Paid out" figures stay by the day paid.
  */
 
 /** The last day of the month on which a payment is still for the month before. */
@@ -31,8 +31,9 @@ export function isMonthlyBill(categoryId: string | null | undefined, templates: 
  * The month a template's bill is due for, seen from `today`: a template paid on day 1 to 10 pays LAST month's bill (salaries on the
  * 5th), any other (or one with no day) this month's.
  */
-export function billPeriod(t: Pick<RecurringTemplate, 'dayOfMonth'>, today: string): string {
+export function billPeriod(t: Pick<RecurringTemplate, 'dayOfMonth'> & { categoryId?: string | null }, today: string): string {
   const key = monthKey(today)
+  if (t.categoryId === RENT_CATEGORY_ID) return key
   return t.dayOfMonth !== null && t.dayOfMonth >= 1 && t.dayOfMonth <= BILL_CUTOFF_DAY ? shiftMonth(key, -1) : key
 }
 
