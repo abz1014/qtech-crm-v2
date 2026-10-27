@@ -335,9 +335,11 @@ test.describe('expenses (M03, M11)', () => {
     await page.getByRole('combobox', { name: 'Category' }).click()
     await page.keyboard.type('supplier pay')
     await expect(page.getByRole('option', { name: /^Supplier payment/ })).toHaveCount(0)
-    await page.keyboard.press('Escape')
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog')).toBeHidden()
+    // the first Escape closes the list, the next the dialog; the list's popover may still be arriving (perf2), so press until it is gone
+    await expect(async () => {
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toBeHidden({ timeout: 1_000 })
+    }).toPass({ timeout: 15_000 })
     await page.getByRole('button', { name: 'Add expenses' }).click()
     await page.getByRole('combobox', { name: 'Category, row 1' }).click()
     await page.keyboard.type('supplier pay')
