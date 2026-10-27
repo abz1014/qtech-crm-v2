@@ -105,9 +105,10 @@ select ok(not has_table_privilege('qtech_engineer', 'public.v_fx_latest', 'selec
 select is((select coalesce(array_agg(p.proname::text order by p.proname), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace
              and p.proname in ('rank_item_quotes', 'customer_price_memory', 'supplier_item_memory', 'po_line_prefill', 'issue_quotation',
-                               'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate')
+                               'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate',
+                               'link_imported_invoices', 'link_imported_invoice', 'unlink_imported_invoice', 'set_legacy_review')
              and has_function_privilege('qtech_engineer', p.oid, 'execute')),
-          '{}'::text[], 'qtech_engineer cannot run the price RPCs nor the pricing actions');
+          '{}'::text[], 'qtech_engineer cannot run the price RPCs nor the pricing actions, nor 0096''s linking and review of imported money');
 
 -- coverage: whatever authenticated may do in public, qtech_engineer may do too, except the prices above (a new object fails here)
 select is((select coalesce(array_agg(x order by x), '{}') from (
@@ -132,8 +133,9 @@ select is((select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}'
              and has_function_privilege('authenticated', p.oid, 'execute')
              and not has_function_privilege('qtech_engineer', p.oid, 'execute')
              and p.proname not in ('rank_item_quotes', 'customer_price_memory', 'supplier_item_memory', 'po_line_prefill', 'issue_quotation',
-                                   'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate')),
-          '{}'::text[], 'coverage: qtech_engineer runs every function authenticated runs (the price ones excepted)');
+                                   'issue_purchase_order', 'convert_rfq_to_order', 'create_repeat_order', 'split_order_item', 'set_fx_rate',
+                                   'link_imported_invoices', 'link_imported_invoice', 'unlink_imported_invoice', 'set_legacy_review')),   -- 0096: money, admin only
+          '{}'::text[], 'coverage: qtech_engineer runs every function authenticated runs (the price ones and 0096''s money RPCs excepted)');
 select is((select coalesce(array_agg(format('%s on %s', pol.polname, c.relname) order by 1), '{}')
            from pg_policy pol join pg_class c on c.oid = pol.polrelid
            where c.relnamespace = 'public'::regnamespace
@@ -214,6 +216,12 @@ select is(pg_temp.as_('engineer', $q$with i as (insert into public.order_items (
   'E:42501', 'nor can an engineer add a priced line to an order');
 select is(pg_temp.as_('engineer', $q$with u as (update public.rfq_items set quoted_unit_price_net = 1 where id = 'e0000000-0000-4000-8000-000000000a81' returning 1) select count(*)::text from u$q$),
   'E:42501', 'nor set a quoted price on an RFQ item and read it back');
+
+-- 0097: the To do columns carry no price, so the engineer reads and writes them (the stamp and the snooze flag)
+select is(pg_temp.as_('engineer', $q$with u as (update public.supplier_inquiries set sent_confirmed_at = now() where id = 'f0000000-0000-4000-8000-000000000a81' returning sent_confirmed_at) select (sent_confirmed_at is not null)::text from u$q$),
+  'true', 'an engineer can stamp sent_confirmed_at and read it back (0097)');
+select is(pg_temp.as_('engineer', $q$with u as (update public.snoozes set until_change = true where user_id = auth.uid() returning 1) select count(*)::text from u$q$),
+  '1', 'an engineer can mark their own snooze until_change (0097)');
 
 -- ------------------------------------------------------------------ admin and sales: unchanged
 select is(pg_temp.as_('sales', $q$select quoted_unit_price_net::text from public.rfq_items where id = 'e0000000-0000-4000-8000-000000000a81'$q$),

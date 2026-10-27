@@ -273,6 +273,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_report_float', 'items_quoted', 'info', null), ('v_report_float', 'items_total', 'info', null),
   ('v_rfq_state', 'items_quoted', 'info', null), ('v_rfq_state', 'items_total', 'info', null),
   ('v_supplier_stats', 'quoted', 'info', null), ('v_supplier_stats', 'prices_hidden', 'info', null),
+  ('v_jobs', 'cancelled_orders', 'info', null),   -- 0099: a count; v_jobs has no price, amount or rate column (its stage is a word, from job_stage)
   ('v_supplier_category_evidence', 'quoted', 'info', null),   -- 0093: a count of inquiries, not a price
   ('v_target_progress', 'target_net', 'hidden', null), ('v_target_progress', 'achieved_net', 'hidden', null),
   ('v_target_progress', 'on_pace_net', 'hidden', null);
@@ -432,6 +433,10 @@ from (values
   ('aging_as_of', 'select count(*) from public.aging_as_of(public.today_pkt())'),
   ('payables_as_of', 'select count(*) from public.payables_as_of(public.today_pkt())'),
   ('held_advances (0080)', 'select count(*) from public.held_advances()'),
+  ('link_imported_invoices (0096)', 'select count(*) from public.link_imported_invoices()'),
+  ('link_imported_invoice (0096)', 'select public.link_imported_invoice(gen_random_uuid(), gen_random_uuid())::text'),
+  ('unlink_imported_invoice (0096)', 'select public.unlink_imported_invoice(gen_random_uuid())::text'),
+  ('set_legacy_review (0096)', $q$select public.set_legacy_review('order', gen_random_uuid(), 'settled')::text$q$),
   ('cash_in_hand (0087)', 'select count(*) from public.cash_in_hand()'),
   ('order_receivables', 'select count(*) from public.order_receivables()'),
   ('order_receivables(order)', 'select count(*) from public.order_receivables(@20)'),

@@ -19,7 +19,7 @@ select columns_are('public', 'orders',
   array['id', 'created_at', 'created_by', 'updated_at', 'number', 'company_id', 'site_id', 'contact_id', 'rfq_id',
         'owner_id', 'customer_po_number', 'ordered_on', 'payment_terms_days', 'needs_commissioning',
         'commissioning_planned_on', 'commissioning_done_on', 'cancelled_on', 'cancel_reason', 'notes', 'legacy_flags',
-        'legacy_source'],
+        'legacy_source', 'legacy_review', 'commissioning_time', 'visit_type', 'repeat_of_order_id'],   -- 0096: legacy_review; 0101: commissioning_time, visit_type; 0099: repeat_of_order_id
   'orders has the section 2.12 columns and no money columns');
 select columns_are('public', 'order_items',
   array['id', 'created_at', 'created_by', 'order_id', 'position', 'description', 'brand_id', 'family_id', 'qty',

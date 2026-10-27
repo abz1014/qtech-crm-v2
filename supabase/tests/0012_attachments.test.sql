@@ -17,14 +17,14 @@ $f$;
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'attachments',
   array['id', 'created_at', 'created_by', 'bucket', 'path', 'file_name', 'mime_type', 'size_bytes', 'rfq_id',
-        'clarification_id', 'invoice_id', 'expense_id', 'order_id'],
-  'attachments has the section 2.20 columns (A6: expense_id; R22: order_id)');
+        'clarification_id', 'invoice_id', 'expense_id', 'order_id', 'has_prices'],
+  'attachments has the section 2.20 columns (A6: expense_id; R22: order_id; 0100: has_prices)');
 select ok((select relrowsecurity from pg_class where oid = 'public.attachments'::regclass),
   'RLS is enabled on attachments');
 select is((select array_agg(policyname::text order by policyname) from pg_policies
            where schemaname = 'public' and tablename = 'attachments'),
-  array['attachments_delete_by_parent', 'attachments_insert_by_parent', 'attachments_select_by_parent',
-        'attachments_update_by_parent'],
+  array['attachments_delete_by_parent', 'attachments_hide_priced_from_engineers', 'attachments_insert_by_parent',
+        'attachments_select_by_parent', 'attachments_update_by_parent'],
   'attachments policies');
 select ok(not (has_table_privilege('anon', 'public.attachments', 'SELECT')
             or has_table_privilege('anon', 'public.attachments', 'INSERT')
@@ -44,8 +44,8 @@ select is((select count(*)::int from storage.buckets
   'both buckets are private with a 5 MB file size limit');
 select is((select array_agg(policyname::text order by policyname) from pg_policies
            where schemaname = 'storage' and tablename = 'objects' and policyname like 'qtech\_objects\_%'),   -- 0087's qtech_claim_objects_* (claim-receipts) are its own test
-  array['qtech_objects_delete', 'qtech_objects_insert', 'qtech_objects_select', 'qtech_objects_update'],
-  'storage.objects has the four Q-Tech policies');
+  array['qtech_objects_delete', 'qtech_objects_hide_priced_from_engineers', 'qtech_objects_insert', 'qtech_objects_select', 'qtech_objects_update'],
+  'storage.objects has the four Q-Tech policies and the 0100 restrictive one');
 
 -- ------------------------------------------------------------------ fixtures (as owner)
 insert into public.companies (id, name) values ('c0000000-0000-4000-8000-000000000001', 'Customer');
@@ -60,14 +60,14 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
   ('b1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'INV-1', 100, 18);
 
 -- ------------------------------------------------------------------ table constraints
-select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id)
+select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices)
                   values ('e0000000-0000-4000-8000-000000000001', 'rfq-files', 'rfq1/a.jpg', 'a.jpg', 'image/jpeg',
-                          1000, 'd0000000-0000-4000-8000-000000000001')$$,
+                          1000, 'd0000000-0000-4000-8000-000000000001', false)$$,
   'an RFQ attachment is accepted');
 select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id,
-                                                  clarification_id)
+                                                  clarification_id, has_prices)
                   values ('e0000000-0000-4000-8000-000000000002', 'rfq-files', 'rfq1/b.jpg', 'b.jpg', 'image/jpeg',
-                          5242880, 'd0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001')$$,
+                          5242880, 'd0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', false)$$,
   'a clarification attachment of exactly 5 MB is accepted');
 select lives_ok($$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id)
                   values ('e0000000-0000-4000-8000-000000000003', 'gst-receipts', 'inv1/a.pdf', 'a.pdf',
@@ -104,8 +104,8 @@ select throws_ok($$insert into public.attachments (bucket, path, file_name, mime
                    values ('rfq-files', 'rfq1/a.jpg', 'a2.jpg', 'image/jpeg', 1,
                            'd0000000-0000-4000-8000-000000000001')$$,
   '23505', null, 'a (bucket, path) pair is unique');
-select lives_ok($$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id)
-                  values ('rfq-files', 'rfq2/a.jpg', 'a.jpg', 'image/jpeg', 1, 'd0000000-0000-4000-8000-000000000002')$$,
+select lives_ok($$insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices)
+                  values ('rfq-files', 'rfq2/a.jpg', 'a.jpg', 'image/jpeg', 1, 'd0000000-0000-4000-8000-000000000002', false)$$,
   'the same file name under another path is accepted');
 select throws_ok($$insert into public.attachments (bucket, path, mime_type, size_bytes, rfq_id)
                    values ('rfq-files', 'rfq2/z.jpg', 'image/jpeg', 1, 'd0000000-0000-4000-8000-000000000002')$$,
