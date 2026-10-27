@@ -30,7 +30,10 @@ export const prefetchJob: Prefetch = async ({ client, user, id, pathname }) => {
   const facts = await client.fetchQuery(jobFactsQuery(key))
   if (!facts) return
   const { rfqId, orderId } = facts.job
-  await Promise.all([
+  // Round two is NOT awaited: the page draws as soon as the job itself is known (its next-step band is the largest paint), and
+  // every panel finds its read already on the way under the same key. Waiting for all of them held the first paint back by a
+  // round trip (Job page LCP 2.53 s against the 2.5 s limit on Slow 4G).
+  void Promise.all([
     rfqId ? client.prefetchQuery(rfqItemsQuery(rfqId)) : null,
     rfqId ? client.prefetchQuery(rfqInquiriesQuery(rfqId, money)) : null,
     rfqId ? prefetchRfqParts(client, rfqId, money) : null,
