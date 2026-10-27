@@ -144,7 +144,7 @@ async function reachSuppliers(page: Page, s: Seed, itemsText: string): Promise<v
   await page.getByRole('option', { name: new RegExp(s.customer.name) }).click()
   await paste(page, itemsText)
   await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
-  await expect(page.locator(`label[for^="sup-"]`).first()).toBeVisible()
+  await expect(page.locator(`label[for^="sup-"]`).first()).toBeVisible({ timeout: 20_000 }) // the ask list is read after the page draws (perf2)
 }
 
 const order = (page: Page) => page.locator('label[for^="sup-"]').allInnerTexts()
