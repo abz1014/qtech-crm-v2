@@ -79,8 +79,8 @@ test('Settled, keep as history takes the imported order off Who owes us; Undo br
   await expect.poll(() => balance(s.order.id), 'a settled imported order owes nothing').toBe(0)
   expect(await outstanding(), 'To collect (Money home) drops by exactly what that order owed').toBeCloseTo(collect0 - 1180, 2)
 
-  // (the decision stays on the page with its Undo until the page is left)
-  await page.getByRole('listitem').filter({ hasText: s.co.name }).getByRole('button', { name: 'Undo' }).click()
+  // (the decision stays on the page with its Undo until the page is left; the toast's own Undo sits over the row's, so press that one)
+  await page.getByRole('region', { name: 'Notifications' }).getByRole('button', { name: /Undo/ }).first().click()
   await expect.poll(async () => (await db.one<{ legacy_review: string | null }>(`orders?id=eq.${s.order.id}&select=legacy_review`)).legacy_review).toBe('to_review')
   await expect.poll(() => balance(s.order.id), 'undo: the balance is back').toBe(1180)
   expect(await outstanding(), 'and To collect is back').toBeCloseTo(collect0, 2)
