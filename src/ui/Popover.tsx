@@ -45,6 +45,8 @@ export function Popover(props: RootProps) {
       <Want.Provider
         value={() => {
           setWanted(true)
+          // A controlled popover (open={...}) ignores defaultOpen: ask its owner to open it, as Radix's trigger would have.
+          if (props.open === false) props.onOpenChange?.(true)
           void preloadPopover()
         }}
       >
