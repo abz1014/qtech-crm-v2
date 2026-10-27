@@ -205,10 +205,14 @@ export function shiftMonth(key: string, by: number): string {
  * The month a monthly bill paid on `paidOn` is for (0087 for-month): last month when paid on day 1 to 10 (September's salary on
  * 5 October), else the month paid ("2026-10-05" -> "2026-09", "2026-10-22" -> "2026-10").
  */
-export function forMonthOf(paidOn: string): string {
+export function forMonthOf(paidOn: string, categoryId?: string | null): string {
+  if (categoryId === RENT_CATEGORY_ID) return monthKey(paidOn) // rent is paid in advance: always the month it is paid (0106)
   const day = Number(paidOn.slice(8, 10))
   return day >= 1 && day <= 10 ? shiftMonth(monthKey(paidOn), -1) : monthKey(paidOn)
 }
+
+/** Rent (seeded in 0025). The one monthly bill that is never "for last month": the owner pays it in advance, at the start of its month (0106). */
+export const RENT_CATEGORY_ID = 'ca7e0000-0000-4000-8000-000000000002'
 
 /** "2026-11" to "November 2026". */
 export const monthKeyLabel = (key: string): string => monthLabel(monthStart(key))
@@ -322,7 +326,7 @@ export function burstInserts(rows: readonly BurstRow[], categories: readonly Cat
     input_tax_pkr: showsInputTax(r.categoryId) ? (r.inputTax ?? 0) : 0,
     ...(r.orderId ? { order_id: r.orderId } : {}),
     // 0087: a bill paid by the 10th is for last month, the month its template is then due for (billPeriod)
-    ...(r.repeat && r.templateId ? { recurring_id: r.templateId, period: forMonthOf(r.date) } : {}),
+    ...(r.repeat && r.templateId ? { recurring_id: r.templateId, period: forMonthOf(r.date, r.categoryId) } : {}),
   }))
 }
 
@@ -346,7 +350,7 @@ export function repeatTemplates(rows: readonly BurstRow[], categories: readonly 
       categoryId: r.categoryId,
       amount: r.amount as number,
       dayOfMonth: Math.min(Number(r.date.slice(8, 10)) || 1, 28),
-      startMonth: forMonthOf(r.date),
+      startMonth: forMonthOf(r.date, r.categoryId),
       paidVia: effectivePaidVia(r, categories),
     }))
 }

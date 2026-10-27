@@ -242,7 +242,7 @@ function ExpenseFormReady({
         supplier_order_id: v.legId,
         payee_id: v.payeeId,
         // 0087 for-month: a monthly bill says which month it is for; an expense that is not one keeps its own month
-        ...(showFor ? { period: forChoice ?? expense?.period ?? forMonthOf(v.paidOn) } : expense ? { period: null } : {}),
+        ...(showFor ? { period: forChoice ?? expense?.period ?? forMonthOf(v.paidOn, v.categoryId) } : expense ? { period: null } : {}),
       }
       if (expense) {
         await update.mutateAsync({ id: expense.id, patch: base })
@@ -425,7 +425,7 @@ function ExpenseFormReady({
           <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border border-tone-info-fg/25 bg-tone-info-bg px-3 py-2 text-base">
             <span className="font-medium">This bill is for</span>
             <select
-              value={forChoice ?? expense?.period ?? forMonthOf(paidOnNow)}
+              value={forChoice ?? expense?.period ?? forMonthOf(paidOnNow, categoryId)}
               onChange={e => setForChoice(e.target.value)}
               className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
             >

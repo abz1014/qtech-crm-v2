@@ -166,12 +166,9 @@ describe('Add to this job: the customer answer and the engineer', () => {
     expect(patch.answer).toBe('Line size is 4 inch')
   })
 
-  it('an engineer is offered only Site photo and Note, and a price message is just a note', async () => {
+  it('an engineer does not see the card at all', () => {
     mount('engineer')
-    fireEvent.change(screen.getByRole('textbox', { name: 'Paste here' }), { target: { value: 'EUR 3,610 and EUR 980' } })
-    expect(await screen.findByTestId('guess-line')).toHaveTextContent('Note')
-    expect(screen.queryByRole('button', { name: 'Supplier price' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Customer answer' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Site photo' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Paste here' })).toBeNull()
+    expect(screen.queryByText(/Add to this job/i)).toBeNull()
   })
 })

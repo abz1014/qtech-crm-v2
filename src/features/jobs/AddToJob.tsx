@@ -28,14 +28,20 @@ import { allowedKinds, guessKind, guessLine, hasContent, KIND_LABEL, matchSuppli
  * corrects the guess. This replaces the six-destination Paste or photo sheet: the job is already known, so nothing asks where it
  * goes. A supplier's reply is read into prices and saved through the same reply save as the Suppliers asked row ("Accept N
  * prices"); a customer's answer is saved on the question it answers; a photo or a file is attached; a note is appended with the
- * author and time. An engineer can add only a photo or a note (never a price), and the page reads no price for them.
+ * author and time. An engineer does not see this card (owner decision); the photo-or-note-only guard in model.ts stays as a second lock.
  *
  * It also takes what other places hand it: the share target and the "Add to job…" picker open /jobs/<key> with
  * `state.addToJob = { text, files }`, and a paste or a drop anywhere on the job page lands here.
  */
 const PHOTO_TYPES = 'image/*'
 
-export default function AddToJob({ job: ctx }: JobSlotProps) {
+/** Engineers do not see this card at all (owner decision): the wrapper mounts nothing, so none of its paste, drop or share handlers run either. */
+export default function AddToJob(props: JobSlotProps) {
+  if (props.job.role === 'engineer') return null
+  return <AddToJobCard {...props} />
+}
+
+function AddToJobCard({ job: ctx }: JobSlotProps) {
   const { job, money } = ctx
   const rfqId = job.rfqId
   const orderId = job.orderId
