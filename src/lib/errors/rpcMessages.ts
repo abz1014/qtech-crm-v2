@@ -27,8 +27,8 @@ export interface RpcMessage {
   action?: RpcAction
 }
 
-const MONTH_END: RpcAction = { label: 'Open Month end', href: '/money/month-end' }
-const BANK: RpcAction = { label: 'Open Match bank statement', href: '/money/month-end/bank' }
+const MONTH_END: RpcAction = { label: 'Open Lock a month', href: '/money/month-end' }
+const BANK: RpcAction = { label: 'Open Bank check', href: '/money/month-end/bank' }
 const CATEGORIES: RpcAction = { label: 'Open categories', href: '/settings/categories' }
 const TEAM: RpcAction = { label: 'Open Team', href: '/settings/team' }
 
@@ -66,6 +66,9 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^You cannot see the history of this record\.$/ },
   { match: /^This kind of record has no history page\.$/, internal: true },
   { match: /^record_history_rows is internal: call record_history$/, internal: true },
+  // 0099 jobs: the migration refuses to run when create_repeat_order cannot be patched (never raised at run time)
+  { match: /^create_repeat_order could not be patched for repeat_of_order_id$/, internal: true },
+  { match: /^record_history_rows could not be patched for priced files$/, internal: true },
   { match: /^The correction of this payment has been changed since\./ },
   { match: /^The date received is required\.$/ },
   { match: /^This payment is already voided\./ },
@@ -166,6 +169,10 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // (not_yours, admin_only, not_found, has_order, has_invoice, has_payment, has_expense, has_po, bank_ticked, voided,
   // correction_chain, not_latest, in_use, linked_to_order) that mapPgError passes on as `hint`.
   { match: /^Only the person who entered this, or an admin, can change it\.$/ },
+  // 0101: an engineer's visit time and type, on a site assigned to them only (HINT not_assigned)
+  { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'You can set the visit time and type only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
+  // 0098: a product category is renamed and curated by an admin (HINT admin_only)
+  { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
   { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
   { match: /^This RFQ has an order\. / },
@@ -179,13 +186,23 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This company is used by RFQs, orders, invoices or expenses, / },
   { match: /^An order line is based on this item, / },
   { match: /^0092: /, internal: true },
+  // 0096 (money truth): linking imported invoices to their orders, and the owner's review of imported records. Already plain.
+  { match: /^Only an admin can link or review imported records\.$/, message: () => ADMIN_ONLY },
+  { match: /^Imported record not found$/, message: () => RELOAD },
+  { match: /^This record was not imported, so it has no review state\.$/ },
+  { match: /^This invoice was not imported, so it cannot be (linked|unlinked) here\.$/ },
+  { match: /^This invoice was paid before the new system started, so it has no order to link to\.$/ },
+  { match: /^This invoice is already linked to an order\. Unlink it first\.$/ },
+  { match: /^The invoice and the order belong to different customers\.$/ },
+  { match: /^This invoice is not linked to an order\.$/ },
+  { match: /^This invoice has no customer of its own, so it cannot be taken off its order\.$/ },
 
   // Not found
   { match: /^(RFQ|inquiry|order|order line|supplier order) (.+?) not found$/, message: () => RELOAD },
   { match: /^(brand|company) not found$/, message: () => RELOAD },
 
   // Programmer, import and migration-only
-  { match: /^(convert_rfq_to_order|create_repeat_order|float_rfq|issue_purchase_order|issue_quotation|set_rfq_floated|split_order_item) needs /, internal: true },
+  { match: /^(convert_rfq_to_order|create_repeat_order|float_rfq|issue_purchase_order|issue_quotation|set_legacy_review|set_rfq_floated|split_order_item) needs /, internal: true },
   { match: /^0074: /, internal: true },
   { match: /^import_purge_audit: /, internal: true },
   { match: /^audit_archive\./, internal: true },

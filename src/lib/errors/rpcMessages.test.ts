@@ -43,7 +43,7 @@ describe('rpcMessages (learnability spec 3.4)', () => {
 })
 
 describe('mapPgError uses the table', () => {
-  it('P0001 month still open says the fix and links to Month end', () => {
+  it('P0001 month still open says the fix and links to Lock a month', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is still open. Close earlier months first (close_months_through closes them all).' })
     expect(m.message).toBe('Close March 2026 first. Months close in order.')
     expect(m.action?.href).toBe('/money/month-end')
@@ -66,6 +66,17 @@ describe('mapPgError uses the table', () => {
     const m = mapPgError({ code: '42501', message: 'only an admin can close a month' })
     expect(m.kind).toBe('permission')
     expect(m.message).toBe('Only an admin can close a month. Ask an admin if it needs doing.')
+  })
+
+  it('0096 linking and review: the admin-only refusal says so, an unknown record says reload, the rest keep their plain text', () => {
+    expect(mapPgError({ code: '42501', message: 'Only an admin can link or review imported records.' }).message).toBe(
+      'Only an admin can do this. Nothing was saved. Ask an admin if it needs doing.',
+    )
+    expect(mapPgError({ code: 'P0002', message: 'Imported record not found' }).message).toMatch(/Reload the page/)
+    expect(mapPgError({ code: '23514', message: 'This invoice is already linked to an order. Unlink it first.' }).message).toBe(
+      'This invoice is already linked to an order. Unlink it first.',
+    )
+    expect(rpcMessage('set_legacy_review needs kind order or invoice, and state to_review, live or settled')).toBeNull()
   })
 
   it('closed month passthrough is unchanged', () => {
