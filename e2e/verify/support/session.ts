@@ -53,6 +53,7 @@ export async function open(context: BrowserContext, path: string): Promise<Page>
   const page = await context.newPage()
   await page.goto(path)
   await page.locator('#main').waitFor()
+  await page.waitForFunction(() => document.documentElement.dataset.radixReady === '1', undefined, { timeout: 15_000 }).catch(() => undefined)
   return page
 }
 

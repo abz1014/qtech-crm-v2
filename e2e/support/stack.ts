@@ -44,6 +44,15 @@ export async function login(role: Role): Promise<Session> {
  * Sign in through the real login form as a fixture user, then open `path`. Every data request the app makes
  * carries that person's token, so Row Level Security is what answers.
  */
+/**
+ * The shell downloads Radix (menus, dialogs, popovers) after first paint and rebuilds their triggers when it lands (AppShell sets
+ * documentElement.dataset.radixReady). A click on a trigger in that gap hits a button that is then replaced ("element is not stable /
+ * detached"): wait for it after a page load. Resolves quietly if the marker never comes.
+ */
+export async function radixReady(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.documentElement.dataset.radixReady === '1', undefined, { timeout: 15_000 }).catch(() => undefined)
+}
+
 export async function openAs(page: Page, role: Role, path: string): Promise<void> {
   await page.goto('/login')
   await page.getByLabel('Email').fill(EMAIL[role])
@@ -54,6 +63,7 @@ export async function openAs(page: Page, role: Role, path: string): Promise<void
   // (src/app/oldAddresses.tsx). A spec that wants Jobs opens a /jobs address, or /rfqs?old=0.
   await page.evaluate(() => window.localStorage.setItem('qtech.old-pages', '1'))
   await page.goto(path)
+  await radixReady(page)
   // The shell (and so the Ctrl+K handler) only exists once the session has resolved. Wait for it, so a key pressed right after this returns is not lost.
   await page.locator('#main').waitFor()
 }
