@@ -367,3 +367,76 @@ export function rebuildHeaderlessLists<T extends CellLine>(src: T[], opts: { ign
   }
   return changed
 }
+
+// ------------------------------------------------------------------------------------------------ grids a picture reader broke
+
+const HEAD_VOCAB = ['product', 'service', 'name', 'description', 'quantity', 'unit', 'price', 'total', 'amount', 'item', 'model', 'brand', 'currency', 'delivery']
+
+const editWithin1 = (a: string, b: string): boolean => {
+  if (a === b) return true
+  if (Math.abs(a.length - b.length) > 1) return false
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i++
+  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1)
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1)
+}
+
+/** A header cell as a picture reader may have misread it ("Product/Service Nase", "Unie Price (USD)", "Xo."), put right; null when it is not one. */
+function fuzzyHeaderCell(raw: string): string | null {
+  const t = raw.trim()
+  if (!t || t.length > 40 || /\d{2,}/.test(t.replace(/\([^)]*\)/g, ''))) return null
+  // The serial-number heading, one letter off ("Xo.", "Ne", "N0.").
+  if (/^[A-Za-z][Oo0]\.?$/.test(t)) return 'No.'
+  const words = t.split(/(\W+)/)
+  let hit = 0
+  const fixed = words.map(w => {
+    if (!/^[A-Za-z]{4,}$/.test(w)) return w
+    const lw = w.toLowerCase()
+    const v = HEAD_VOCAB.find(x => x === lw || (x.length >= 4 && editWithin1(lw, x)))
+    if (!v) return w
+    hit++
+    return w[0] === w[0]?.toUpperCase() ? v[0]!.toUpperCase() + v.slice(1) : v
+  })
+  return hit > 0 || isHeaderCell(t) ? fixed.join('') : null
+}
+
+/**
+ * A grid whose heading a picture reader gave one cell per line ("No." / "Product/Service Name" / "Unit Price (USD)" / "Quantity" /
+ * "Total Price (USD)"), with the rows under it as tab rows of that many cells: the heading is put back as one tab row, its
+ * misread words ("Nase", "Unie") put right, so a reader maps the columns by what they are called.
+ */
+export function joinSplitHeader(lines: string[]): string[] {
+  const out: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    let n = 0
+    while (i + n < lines.length && n < 12 && !(lines[i + n] ?? '').includes('\t') && fuzzyHeaderCell(lines[i + n] ?? '') !== null) n++
+    const row = lines[i + n] ?? ''
+    if (n >= 3 && row.includes('\t') && cellsOf(row).length === n) {
+      const cells = lines.slice(i, i + n).map(l => fuzzyHeaderCell(l) as string)
+      if (cells.filter(isHeaderCell).length >= 2) {
+        out.push(cells.join('\t'))
+        i += n - 1
+        continue
+      }
+    }
+    out.push(lines[i] as string)
+  }
+  return out
+}
+
+/**
+ * Grid rows a reader gave with single spaces between the cells ("1 PSR60-600-70 378 2 756"): a serial number, the item, then three
+ * amounts, on two or more lines running, become tab rows so the serial number is a column of its own and never a price.
+ */
+export function tabulateSpacedRows(lines: string[]): string[] {
+  const ROW = /^(\d{1,3})[ ]+(\S.*?)[ ]+(\d[\d,]*(?:\.\d+)?)[ ]+(\d[\d,]*(?:\.\d+)?)[ ]+(\d[\d,]*(?:\.\d+)?)\s*$/
+  const ok = (l: string | undefined) => {
+    const m = l !== undefined && !l.includes('\t') ? ROW.exec(l.trim()) : null
+    // (An item that ends in a plain number is one more column than three amounts: "1 Pump 5 48.00 240.00 4".)
+    return m !== null && /[A-Za-z]/.test(m[2] as string) && !/\s\d[\d,.]*$/.test(m[2] as string)
+  }
+  return lines.map((l, i) => {
+    if (!ok(l) || !(ok(lines[i - 1]) || ok(lines[i + 1]))) return l
+    return (ROW.exec(l.trim()) as RegExpExecArray).slice(1, 6).join('\t')
+  })
+}
