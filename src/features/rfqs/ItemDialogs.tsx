@@ -10,7 +10,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useRemoveRfqItem, useUpdateRfqItem } from '@/features/rfqs/hooks'
+import { useRemoveRfqItem, useRestoreRfqItem, useRfqInquiries, useUpdateRfqItem } from '@/features/rfqs/hooks'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
 
 /* The edit and remove dialogs of an RFQ item (see ItemEdit.tsx for the rules): their own module, so the RFQ page does not carry them. */
@@ -118,10 +118,19 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
   )
 }
 
+/**
+ * "Remove item" takes the item off the enquiry AND every supplier's price for it (the database cascades). That is not "Remove
+ * reply" (the ... on a price row), which only takes one supplier's price away and always keeps the item. The confirm names who
+ * quoted, and the toast has an Undo that puts the item and those prices back.
+ */
 export function RemoveItemConfirm({ rfq, item, onClose }: { rfq: RfqHeader; item: RfqItemRow; onClose: () => void }) {
   const { toast } = useToast()
   const del = useRemoveRfqItem(rfq.id)
+  const restore = useRestoreRfqItem(rfq.id)
+  const inquiries = useRfqInquiries(rfq.id)
   const access = useItemAccess(rfq)
+  const quoted = (inquiries.data ?? []).filter(i => i.lines.some(l => l.itemId === item.id))
+  const priced = quoted.map(i => i.supplierName)
   return (
     <ConfirmDelete
       open
@@ -130,11 +139,31 @@ export function RemoveItemConfirm({ rfq, item, onClose }: { rfq: RfqHeader; item
       }}
       thing={`item ${item.number}`}
       summary={`${rfqRef(rfq.number)} · ${item.description}`}
-      also={['any supplier replies entered for it']}
+      also={
+        priced.length > 0
+          ? [`the ${priced.length === 1 ? 'price' : 'prices'} from ${priced.join(', ')}. To take away only a supplier's price and keep the item, use Remove reply on the price row instead`]
+          : ['any supplier replies entered for it']
+      }
+      loading={inquiries.isPending && !inquiries.isError}
       blocked={access.can ? null : access.note}
       onConfirm={async () => {
-        await del.mutateAsync(item.id)
-        toast({ title: `Item ${item.number} removed`, body: `${rfqRef(rfq.number)} · ${item.description}`, tone: 'success' })
+        const lines = quoted.flatMap(i => i.lines.filter(l => l.itemId === item.id))
+        const declines = (inquiries.data ?? []).flatMap(i => (i.itemDeclines[item.id] ? [{ inquiryId: i.id, reason: i.itemDeclines[item.id] }] : []))
+        const snapshot = await del.mutateAsync(item.id)
+        toast({
+          title: `Item ${item.number} removed`,
+          body: `${rfqRef(rfq.number)} · ${item.description}${lines.length > 0 ? ` · ${lines.length} ${lines.length === 1 ? 'price' : 'prices'} removed with it` : ''}`,
+          tone: 'success',
+          undo: snapshot
+            ? {
+                onUndo: async () => {
+                  await restore.mutateAsync({ item, snapshot, lines, declines })
+                },
+                settledTitle: `Item ${item.number} removed`,
+                undoneTitle: `Item ${item.number} put back`,
+              }
+            : undefined,
+        })
       }}
       errorMessage={e => mapPgError(e, { entity: 'item' }).message}
     />

@@ -17,6 +17,7 @@ import type { JobFacts } from '@/features/jobs/api'
 import type { JobData } from '@/features/jobs/useJobData'
 import { HasPricesToggle } from '@/features/rfqs/HasPricesToggle'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
+import { latestQuotation } from '@/features/jobs/lib/latestQuotation'
 
 /*
  * The job page's right column: Contact (Call, WhatsApp), Money for this job (admin only), Notes and files (one timeline, newest
@@ -71,20 +72,46 @@ export function ContactPanel({ facts }: { facts: JobFacts }) {
   )
 }
 
-/** Admin only. "Costs not entered yet" while the costs are 0; the profit is "Not known yet" until the costs are marked final. */
-export function MoneyPanel({ data }: { data: JobData }) {
+/**
+ * Admin only. With no order yet (an enquiry-stage job) the order-money query is switched off, so it never leaves "pending": that
+ * made this card say "Loading..." forever. The card therefore asks about the order only when the job has one, and otherwise says
+ * plainly that there is no money yet, with the quoted value when a quotation was sent. "Costs not entered yet" while the costs are
+ * 0; the profit is "Not known yet" until the costs are marked final.
+ */
+export function MoneyPanel({ data, hasOrder }: { data: JobData; hasOrder: boolean }) {
   const m = data.orderMoney.data
+  if (!hasOrder) {
+    const q = latestQuotation(data.quotations.data)
+    return (
+      <Panel title="Money for this job">
+        {q ? (
+          <dl className="grid grid-cols-[1fr_auto] gap-y-2 text-base">
+            <dt className="text-fg-2">Quoted (with GST)</dt>
+            <dd className="pl-4 text-right"><Money value={q.netTotal + q.gstTotal} /></dd>
+          </dl>
+        ) : (
+          <p className="text-base text-fg-muted">No money yet: no quotation has been sent.</p>
+        )}
+        <p className="mt-2 text-base text-fg-muted">{q ? 'Nothing is owed until the customer places an order.' : 'Money appears here once a quotation is sent and an order is placed.'}</p>
+      </Panel>
+    )
+  }
   if (!m) {
     return (
       <Panel title="Money for this job">
-        {data.orderMoney.isPending ? (
+        {data.orderMoney.isError ? (
+          <p className="text-base text-fg-muted">
+            Could not load the money for this job. Nothing was changed.{' '}
+            <button type="button" className="font-medium text-fg underline" onClick={() => void data.orderMoney.refetch()}>
+              Try again
+            </button>
+          </p>
+        ) : (
           <div role="status" aria-busy="true" aria-label="Loading the money for this job" className="grid gap-3">
             {[0, 1, 2, 3].map(i => (
               <Skeleton key={i} className="h-5 w-full" />
             ))}
           </div>
-        ) : (
-          <p className="text-base text-fg-muted">Nothing to show until there is an order.</p>
         )}
       </Panel>
     )
