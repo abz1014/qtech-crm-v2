@@ -18,7 +18,7 @@ import { useClarifications, useRfqInquiries, useRfqItems, useSaveReply, useSetCl
 import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
 import { currencyForSupplier, draftFromLines, draftFromSuggestions, planReplySave, suggestFromReply, type SuggestionSet } from '@/features/rfqs/lib'
 import { deleteCapture, safely } from '@/lib/capture/store'
-import { getOrderNotes, getRfqNotes, setOrderNotes, setRfqNotes } from '@/features/capture/api'
+import { appendNotesSafely, setOrderNotes, setRfqNotes } from '@/features/capture/api'
 import { appendNote, noteStamp } from '@/features/capture/model'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import { allowedKinds, guessKind, guessLine, hasContent, KIND_LABEL, matchSupplier, type AddKind, type SupplierRef } from '@/features/jobs/addToJob/model'
@@ -154,15 +154,12 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
       const note = text.trim()
       let before: string | null = null
       if (note) {
-        before = orderId ? await getOrderNotes(orderId) : await getRfqNotes(rfqId as string)
-        const next = appendNote(before, note, noteStamp(user.name, new Date()))
-        if (orderId) {
-          await setOrderNotes(orderId, next)
-          await invalidateAfter(client, 'order.update', { orderId })
-        } else {
-          await setRfqNotes(rfqId as string, next)
-          await invalidateAfter(client, 'rfq.notes', { rfqId: rfqId as string })
-        }
+        // read, add the line and write only if nobody saved in between (appendNotesSafely re-reads and retries once)
+        const stamp = noteStamp(user.name, new Date())
+        const written = await appendNotesSafely(orderId ? 'orders' : 'rfqs', (orderId ?? rfqId) as string, current => appendNote(current, note, stamp))
+        before = written.before
+        if (orderId) await invalidateAfter(client, 'order.update', { orderId })
+        else await invalidateAfter(client, 'rfq.notes', { rfqId: rfqId as string })
       }
       void client.invalidateQueries({ queryKey: qk.jobs.all })
       const what = [note ? 'Added to the notes' : '', rows.length ? `${rows.length} ${rows.length === 1 ? (kindNow === 'photo' ? 'photo' : 'file') : kindNow === 'photo' ? 'photos' : 'files'} attached` : ''].filter(Boolean).join(' and ')

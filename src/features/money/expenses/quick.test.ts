@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { quickProblem } from '@/features/money/expenses/quick'
+import { AMOUNT_ABOVE_ZERO, claimAmountProblem, quickProblem } from '@/features/money/expenses/quick'
 
 const base = { categoryId: 'ca7e0000-0000-4000-8000-000000000004', inputTax: 0 }
 
@@ -14,5 +14,18 @@ describe('quickProblem: the amount', () => {
   it('an amount over the ceiling (999,999,999,999.99) is refused with its own message', () => {
     expect(quickProblem({ ...base, amount: 999_999_999_999 })).toBeNull()
     expect(quickProblem({ ...base, amount: 1_000_000_000_000 })).toBe('large')
+  })
+})
+
+describe('claimAmountProblem: the engineer "I paid" form says what Quick add says', () => {
+  it('nothing typed asks how much was paid', () => {
+    expect(claimAmountProblem(null)).toBe('Type how much you paid.')
+  })
+  it('0 and a negative amount use the Quick add message', () => {
+    expect(claimAmountProblem(0)).toBe(AMOUNT_ABOVE_ZERO)
+    expect(claimAmountProblem(-5)).toBe('The amount must be above zero.')
+  })
+  it('a positive amount is fine', () => {
+    expect(claimAmountProblem(250)).toBeNull()
   })
 })

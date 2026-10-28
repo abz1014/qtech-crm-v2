@@ -25,6 +25,7 @@ export const routeChunks = {
   rfqsBoard: () => import('@/features/rfqs/board/BoardPage'),
   rfq: () => import('@/features/rfqs/RfqDetailScreen'),
   rfqNew: () => import('@/features/rfqs/IntakeScreen'),
+  enquiryNew: () => import('@/features/enquiry/NewEnquiryPage'),
   orders: () => import('@/features/orders/OrdersScreen'),
   ordersList: () => import('@/features/orders/OrdersListPage'),
   order: () => import('@/features/orders/OrderDetailScreen'),
@@ -67,6 +68,8 @@ export function chunksForPath(pathname: string, search = ''): ChunkKey[] {
       if (n === 2 && sub === 'new') return ['rfqNew']
       if (wantsOld(search)) return n === 1 ? ['rfqs', 'rfqsBoard'] : n === 2 ? ['rfqs', 'rfq'] : ['rfqs']
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
+    case 'enquiries':
+      return n === 2 && sub === 'new' ? ['enquiryNew'] : []
     case 'orders':
       if (wantsOld(search)) return n === 1 ? ['orders', 'ordersList'] : n === 2 ? ['orders', 'order'] : ['orders']
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']

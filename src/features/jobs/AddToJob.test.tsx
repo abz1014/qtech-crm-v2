@@ -110,7 +110,7 @@ function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<Clarificatio
   state.inquiries = role === 'engineer' ? [] : [inquiry('i-rhein', 'Rhein Automation GmbH'), inquiry('i-shanghai', 'Shanghai Flowtech Co.', 'China')]
   state.items = ITEMS
   state.clars = clars
-  const db = installFakeDb((c: FakeCall) => respond?.(c) ?? (c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null } } : { data: [] }))
+  const db = installFakeDb((c: FakeCall) => respond?.(c) ?? (c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null, updated_at: 'T1' } } : { data: c.verb === 'update' ? [{ id: 'r-1' }] : [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const session: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }
   render(
@@ -187,7 +187,7 @@ describe('Add to this job: a kept share is deleted only after the save', () => {
     let fail = true
     const { user } = mount('sales', [], { text: 'Gate pass needed after 3pm', files: [], captureId: 'cap-1' }, c => {
       if (c.target === 'rfqs' && c.verb === 'update' && fail) return { error: { message: 'network down' } }
-      return c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null } } : { data: [] }
+      return c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null, updated_at: 'T1' } } : { data: [{ id: 'r-1' }] }
     })
     await user.click(await screen.findByRole('button', { name: 'Add note' }))
     await screen.findByText('Could not add it')

@@ -12,6 +12,8 @@ describe('chunksForPath', () => {
     expect(chunksForPath('/rfqs')).toEqual(['jobs', 'jobsList'])
     expect(chunksForPath('/rfqs/abc')).toEqual(['jobs', 'job'])
     expect(chunksForPath('/rfqs/new')).toEqual(['rfqNew'])
+    expect(chunksForPath('/enquiries/new')).toEqual(['enquiryNew'])
+    expect(chunksForPath('/enquiries')).toEqual([])
     expect(chunksForPath('/orders')).toEqual(['jobs', 'jobsList'])
     expect(chunksForPath('/orders/abc')).toEqual(['jobs', 'job'])
     expect(chunksForPath('/companies/abc')).toEqual(['companies', 'company'])

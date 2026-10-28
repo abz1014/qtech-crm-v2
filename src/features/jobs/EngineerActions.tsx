@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Camera, CloudOff, FileText, HardHat, Truck } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
@@ -12,7 +13,9 @@ import { TextArea } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderLegRow } from '@/features/orders/api'
 import { deleteCapture, safely } from '@/lib/capture/store'
-import { useUpdateOrder } from '@/features/orders/hooks'
+import { appendNotesSafely } from '@/features/capture/api'
+import { appendLine } from '@/features/capture/model'
+import { invalidateAfter } from '@/features/invalidation'
 import { useMarkDone } from '@/features/orders/commissioningActions'
 import { useLegActions } from '@/features/orders/useLegActions'
 import { VisitButton } from '@/features/orders/VisitDialog'
@@ -132,7 +135,8 @@ function PhotoOrNote({ facts, order, offline, shared, onClose }: { facts: JobFac
   const orderId = facts.job.orderId ?? undefined
   const rfqId = facts.job.rfqId ?? undefined
   const upload = useUploadAttachment(orderId ? undefined : rfqId, orderId)
-  const update = useUpdateOrder(orderId ?? '')
+  const client = useQueryClient()
+  const [noteBusy, setNoteBusy] = useState(false)
   const keepKey = `${NOTE_KEEP}${facts.job.key}`
   const [text, setText] = useState(() => {
     if (shared?.text?.trim()) return shared.text.trim()
@@ -196,8 +200,11 @@ function PhotoOrNote({ facts, order, offline, shared, onClose }: { facts: JobFac
     const line = text.trim()
     if (!line || !order) return
     const stamped = `${formatShortDate(businessToday())}, ${name}: ${line}`
+    setNoteBusy(true)
     try {
-      await update.mutateAsync({ notes: order.notes && order.notes.trim() ? `${order.notes.trimEnd()}\n${stamped}` : stamped })
+      // read the notes again and add to them only if nobody saved in between (two people on one job must not overwrite each other)
+      await appendNotesSafely('orders', order.id, current => appendLine(current, stamped))
+      await invalidateAfter(client, 'order.update', { orderId: order.id })
       setText('')
       if (sharedFiles.length === 0) keepDone()
       toast({ title: 'Note saved', body: facts.job.companyName, tone: 'success' })
@@ -205,22 +212,24 @@ function PhotoOrNote({ facts, order, offline, shared, onClose }: { facts: JobFac
     } catch (err) {
       // the typing stays in the box
       toast({ title: 'Could not save the note', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
+    } finally {
+      setNoteBusy(false)
     }
   }
 
   return (
-    <Dialog open busy={photoBusy || update.isPending} onOpenChange={o => (o ? null : onClose())}>
+    <Dialog open busy={photoBusy || noteBusy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         size="sm"
         title="Add photo or note"
         context={facts.job.companyName}
         footer={
           <>
-            <Button data-cancel size="lg" onClick={onClose} disabled={photoBusy || update.isPending}>
+            <Button data-cancel size="lg" onClick={onClose} disabled={photoBusy || noteBusy}>
               Close
             </Button>
             {canNote ? (
-              <Button size="lg" variant="primary" disabled={offline || !text.trim()} busy={update.isPending} busyLabel="Saving" onClick={() => void saveNote()}>
+              <Button size="lg" variant="primary" disabled={offline || !text.trim()} busy={noteBusy} busyLabel="Saving" onClick={() => void saveNote()}>
                 Save note
               </Button>
             ) : null}

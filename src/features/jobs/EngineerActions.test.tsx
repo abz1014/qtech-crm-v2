@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
@@ -8,6 +9,7 @@ import { qk } from '@/features/queryKeys'
 import type { JobFacts, JobRow } from '@/features/jobs/api'
 import JobsScreen from '@/features/jobs/JobsScreen'
 import { OFFLINE_TEXT } from '@/features/jobs/EngineerActions'
+import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 
 /*
  * The engineer's Job page (P7-B): three big buttons, one of them green, no price, and a plain line (and no sending) with no signal.
@@ -100,5 +102,27 @@ describe("the engineer's Job page", () => {
   it('arriving from Photo or note opens the photo-or-note box at once', async () => {
     mount({ state: { photoOrNote: true } })
     expect(await screen.findByRole('dialog', { name: /Add photo or note/ })).toBeInTheDocument()
+  })
+
+  it('Save note adds to the order notes as they are now (re-read, conditional on updated_at), never over a stale copy', async () => {
+    const db = installFakeDb((c: FakeCall) => {
+      if (c.target === 'orders' && c.verb === 'select' && c.ops.some(([n, a]) => n === 'select' && a[0] === 'notes, updated_at')) return { data: { notes: 'Gate pass at 3pm', updated_at: 'T1' } }
+      if (c.target === 'orders' && c.verb === 'update') return { data: [{ id: 'o1' }] }
+      return { data: [] }
+    })
+    try {
+      mount({ state: { photoOrNote: true } })
+      const user = userEvent.setup()
+      await user.type(await screen.findByRole('textbox', { name: 'Note' }), 'Valve was leaking')
+      await user.click(screen.getByRole('button', { name: 'Save note' }))
+      await waitFor(() => expect(db.calls.some(c => c.target === 'orders' && c.verb === 'update')).toBe(true))
+      const write = db.calls.find(c => c.target === 'orders' && c.verb === 'update') as FakeCall
+      const patch = opArgs(write, 'update')?.[0] as { notes: string }
+      expect(patch.notes.startsWith('Gate pass at 3pm' + String.fromCharCode(10))).toBe(true)
+      expect(patch.notes).toContain('Ali Raza: Valve was leaking')
+      expect(write.ops).toContainEqual(['eq', ['updated_at', 'T1']])
+    } finally {
+      db.uninstall()
+    }
   })
 })
