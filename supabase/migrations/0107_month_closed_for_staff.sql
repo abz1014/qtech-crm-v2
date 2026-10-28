@@ -19,7 +19,7 @@ end
 $$;
 
 revoke all on function public.month_closed(date) from public, anon;
-grant execute on function public.month_closed(date) to authenticated;
+grant execute on function public.month_closed(date) to authenticated, qtech_engineer;
 
 comment on function public.month_closed(date) is
   '0107: true when the month of d is closed. For the Invoice screen, where sales cannot read closed_months. Signed-in staff only.';
