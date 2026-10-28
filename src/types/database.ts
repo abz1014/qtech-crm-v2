@@ -2413,6 +2413,9 @@ isOneToOne: false
 "money_exceptions_input":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"month_closed":
+{ Args: { "d": string }; Returns: boolean
+                           },
 "month_end_check_details":
 { Args: { "p_month": string }; Returns: {
               "check_key": string,"detail": Json
