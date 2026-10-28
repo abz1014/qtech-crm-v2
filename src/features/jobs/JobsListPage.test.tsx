@@ -91,4 +91,11 @@ describe('Jobs list', () => {
     expect(screen.queryByRole('button', { name: 'New enquiry' })).toBeNull()
     expect(container.textContent).not.toMatch(/PKR|Rs\.? ?\d/)
   })
+
+  it('an engineer with no jobs sees the empty state and no "Showing 0" count line', async () => {
+    installFakeDb(c => (c.target === 'v_jobs' ? { data: rows.filter(r => r.owner_id === 'other') } : fake(c)))
+    mount('engineer')
+    expect(await screen.findByText('No jobs are assigned to you')).toBeInTheDocument()
+    expect(screen.queryByText(/Showing 0/)).toBeNull()
+  })
 })
