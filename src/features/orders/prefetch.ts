@@ -27,6 +27,6 @@ export const prefetchOrder: Prefetch = ({ client, user, id }) => {
     role === 'engineer' ? null : client.prefetchQuery(orderMoneyQuery(id, role)),
     // The header's terms fall back to the company's default terms: read in this round, not after the header is drawn (perf/lcp:
     // a read started as the header drew was one more round trip before the page counted as painted).
-    client.prefetchQuery(companyProfileQuery()),
+    client.prefetchQuery(companyProfileQuery(money)),
   ])
 }

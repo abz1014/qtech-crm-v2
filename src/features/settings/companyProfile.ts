@@ -44,7 +44,22 @@ export interface CompanyProfile {
   updated_at: string
 }
 
+/** Bank and tax identifiers: the database refuses these to an engineer (migration 0108), so no engineer screen may select them. */
+export const FINANCIAL_FIELDS = ['ntn', 'strn', 'bank_name', 'bank_account_title', 'bank_iban'] as const satisfies readonly TextField[]
+
 export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'default_payment_terms_days', 'updated_at'].join(', ')
+/** What an engineer may read: every column but the financial ones. */
+export const COLS_NO_FINANCIAL = [
+  ...TEXT_FIELDS.filter(f => !(FINANCIAL_FIELDS as readonly string[]).includes(f)),
+  'quotation_validity_days',
+  'default_payment_terms_days',
+  'updated_at',
+].join(', ')
+
+/** A row read without the financial columns, completed with nulls so it has the full shape. */
+export function withoutFinancials(row: Partial<CompanyProfile>): CompanyProfile {
+  return { ...row, ntn: null, strn: null, bank_name: null, bank_account_title: null, bank_iban: null } as CompanyProfile
+}
 
 /** 1234567-8, 12345678, 1234567, 35202-1234567-1, 3520212345671. */
 export const NTN_RE = /^(?:\d{7}(?:-?\d)?|\d{5}-?\d{7}-?\d)$/

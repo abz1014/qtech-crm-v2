@@ -12,11 +12,14 @@ import { setSupabaseForTests, type Db } from '@/lib/supabase'
 import { ToastProvider } from '@/ui/Toast'
 import { axeViolations } from '@/test/axe'
 
-const h = vi.hoisted(() => ({ row: null as unknown, update: vi.fn(), updated: [] as unknown[] }))
+const h = vi.hoisted(() => ({ row: null as unknown, update: vi.fn(), updated: [] as unknown[], selected: [] as string[] }))
 
 const fakeDb = {
   from: () => ({
-    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: h.row, error: null }) }) }),
+    select: (cols: string) => {
+      h.selected.push(cols)
+      return { eq: () => ({ single: () => Promise.resolve({ data: h.row, error: null }) }) }
+    },
     update: (patch: unknown) => {
       h.update(patch)
       return { eq: () => ({ select: () => Promise.resolve({ data: h.updated, error: null }) }) }
@@ -75,6 +78,7 @@ beforeEach(() => {
   h.row = FULL
   h.update.mockReset()
   h.updated = []
+  h.selected = []
 })
 
 afterEach(() => setSupabaseForTests(null))
@@ -235,7 +239,7 @@ describe('Company profile screen', () => {
     expect(name).toHaveValue('Q-Tech Solutions (Private) Limited')
   })
 
-  for (const role of ['sales', 'engineer']) {
+  for (const role of ['sales']) {
     it(`${role} reads the same record and cannot edit it`, async () => {
       mount(role)
       expect(await screen.findByText('Q-Tech Solutions (Private) Limited')).toBeInTheDocument()
@@ -248,6 +252,24 @@ describe('Company profile screen', () => {
       expect(screen.queryByText(/Printed in the letterhead/)).toBeNull() // read-only view carries titles only
     })
   }
+
+  it('an engineer never asks for, and is never shown, the bank and tax details (migration 0108)', async () => {
+    mount('engineer')
+    expect(await screen.findByText('Q-Tech Solutions (Private) Limited')).toBeInTheDocument()
+    expect(h.selected.length).toBeGreaterThan(0)
+    for (const cols of h.selected) expect(cols).not.toMatch(/ntn|strn|bank_/)
+    expect(screen.queryByText('Tax registration')).toBeNull()
+    expect(screen.queryByText('Bank details')).toBeNull()
+    expect(screen.queryByText('IBAN')).toBeNull()
+    expect(screen.queryByText('Not set')).toBeNull() // no NTN/STRN warning either: they are not the engineer's to see
+    expect(screen.getByText('Only an admin can edit')).toBeInTheDocument()
+  })
+
+  it('admin and sales ask for every column', async () => {
+    mount('sales')
+    await screen.findByText('Q-Tech Solutions (Private) Limited')
+    expect(h.selected[0]).toMatch(/ntn.*bank_iban/)
+  })
 
   it('non-admins are told to ask an admin when the profile is incomplete', async () => {
     h.row = EMPTY
