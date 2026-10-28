@@ -114,7 +114,7 @@ describe('relay', () => {
     expect(t).toContain('1. What flange?\n   see attached photo')
     expect(t).toContain('2. HART?\n   Plain 4-20 mA')
     expect(t).toContain('3. Probe?\n   PHC101 (see attached photo)')
-    expect(t).toContain('Assalam o Alaikum Bilal,')
+    expect(t).toContain('Hi Bilal, hope you are doing well,')
   })
 })
 

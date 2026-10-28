@@ -20,7 +20,7 @@ const qtyText = (i: SentPo['items'][number]): string => `${i.qty}${i.unit ? ` ${
 export function cancellationMessage(po: SentPo, ourName: string): string {
   const lines = po.items.map((i, n) => `${n + 1}. ${i.description}, ${qtyText(i)}`)
   return [
-    'Assalam o Alaikum,',
+    'Hi hope you are doing well,',
     '',
     `Regarding our purchase order *${po.ref}*: our customer has cancelled the order, so we have to ask you to cancel it as well.`,
     ...(lines.length ? ['', 'It covered:', ...lines] : []),
