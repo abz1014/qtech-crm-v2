@@ -32,8 +32,9 @@ const button = cva(
           'disabled:border-line disabled:bg-sunken disabled:text-fg-disabled',
         ],
         quiet: [
-          'border-transparent bg-transparent text-fg',
-          'hover:bg-sunken active:bg-selected',
+          // An underlined label is the affordance: a bare word read as plain text, not something to press (an icon-only quiet button has no text to underline).
+          'border-transparent bg-transparent text-fg underline decoration-fg/40 decoration-1 underline-offset-4',
+          'hover:bg-sunken hover:decoration-fg active:bg-selected',
           'disabled:bg-sunken disabled:text-fg-disabled',
         ],
         danger: [

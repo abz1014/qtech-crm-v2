@@ -292,11 +292,18 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : null}
 
       {facts.length > 0 ? (
-        <dl className={cn('grid grid-cols-2 overflow-hidden rounded-panel border bg-surface', !compact && 'lg:grid-cols-4')}>
+        <dl className={cn('grid grid-cols-2 overflow-hidden rounded-panel border bg-surface', !compact && (facts.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'))}>
           {facts.map(f => (
             <div
               key={f.label}
-              className={cn('grid content-start gap-1 border-b border-r p-3', compact ? '[&:nth-child(2n)]:border-r-0' : '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(4n)]:border-r-0')}
+              className={cn(
+                'grid content-start gap-1 border-b border-r p-3 [&:last-child:nth-child(odd)]:col-span-2 [&:last-child:nth-child(odd)]:border-r-0', // an odd last cell fills the row, no empty cell
+                compact
+                  ? '[&:nth-child(2n)]:border-r-0'
+                  : facts.length === 3
+                    ? '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:last-child:nth-child(odd)]:col-span-1'
+                    : '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(4n)]:border-r-0 lg:[&:last-child:nth-child(odd)]:col-span-1',
+              )}
             >
               <dt className={cn('flex items-center gap-2 text-xs', f.tone === 'warning' ? 'text-tone-warning-fg' : f.tone === 'success' ? 'text-tone-success-fg' : 'text-fg-muted')}>
                 {f.icon && !compact ? <Icon icon={f.icon} size="sm" /> : null}
@@ -352,7 +359,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
             </div>
           )}
           {!compact && !wasCopied ? (
-            <div className="flex flex-wrap items-center gap-2 border-b bg-sunken px-4 py-3" data-testid="pane-actions">
+            <div className="flex flex-wrap items-start gap-2 border-b bg-sunken px-4 py-3" data-testid="pane-actions">
               <MessageActions
                 to={draft.contact}
                 text={draft.whatsapp.body}
@@ -371,7 +378,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
                 Open {item.ref}
               </Button>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center">
                 <SnoozeMenu item={item} today={today} />
               </div>
             </div>
