@@ -873,7 +873,10 @@ function TableView<T>(props: DataTableProps<T>) {
       </div>
 
       {shown || hints || loading ? (
-        <div className={cn('min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted', !shown && !loading ? 'hidden sm:group-focus-within/dt:flex' : 'flex')}>
+        // The band's height never depends on focus. With no summary it is only the key legend (not drawn on a phone); a band that
+        // appeared while focus was in the table moved the page by its height when focus left, and a click on a control beside the
+        // table (Copy and mark reminded) lost its mouseup to that jump.
+        <div className={cn('min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted', !shown && !loading ? 'max-sm:hidden sm:flex' : 'flex')}>
           {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
           {hints ? (
             <span className="flex flex-wrap items-center justify-end gap-3 max-sm:hidden invisible group-focus-within/dt:visible" aria-hidden="true">
