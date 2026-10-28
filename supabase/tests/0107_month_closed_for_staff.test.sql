@@ -23,5 +23,8 @@ select is(public.month_closed(date '2019-02-28'), false, 'sales: the month befor
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
 select is(public.month_closed(date '2019-03-01'), true, 'engineer: closed month is closed');
 
+select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000004","role":"authenticated"}', true);
+select throws_ok($$select public.month_closed(date '2019-03-01')$$, '42501', null, 'a deactivated user is refused');
+
 select * from finish();
 rollback;

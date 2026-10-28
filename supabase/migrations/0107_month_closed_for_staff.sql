@@ -5,12 +5,17 @@
 -- It reveals nothing beyond what the lock's own refusal message already says ("September 2026 is closed").
 create function public.month_closed(d date)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
-  select case when auth.uid() is null then false else public.month_is_closed(d) end
+begin
+  if public.current_user_role() is null then
+    raise exception 'Only signed-in staff can ask this.' using errcode = '42501';
+  end if;
+  return public.month_is_closed(d);
+end
 $$;
 
 revoke all on function public.month_closed(date) from public, anon;
