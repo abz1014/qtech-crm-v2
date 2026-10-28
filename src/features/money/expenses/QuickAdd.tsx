@@ -294,7 +294,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                 aria-label="More categories"
                 value={top.some(c => c.id === categoryId) ? '' : categoryId}
                 onChange={e => e.target.value && pick(e.target.value)}
-                className={cn('w-auto max-w-full', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected font-medium' : 'border-line-strong')}
+                className={cn('w-auto max-w-full px-4 pr-10 font-medium text-fg', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected' : 'border-line-strong bg-surface')}
               >
                 <option value="">More…</option>
                 {more.map(g => (

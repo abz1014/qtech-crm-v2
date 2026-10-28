@@ -523,7 +523,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       {/* The header's More menu is hidden on a phone, and a closed RFQ has no action bar: so its actions are buttons here. */}
       {!open ? (
         <div className="mt-3 flex items-center gap-2 md:hidden">
-          <Button size="touch" icon={Pencil} onClick={edit.ask}>
+          <Button size="touch" variant="quiet" icon={Pencil} onClick={edit.ask}>
             Edit RFQ details
           </Button>
           {/* History and the destructive Delete sit in a menu, like the rest of the app: never a second button under the main action. */}

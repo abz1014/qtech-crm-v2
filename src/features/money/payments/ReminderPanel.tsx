@@ -154,7 +154,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
   const lead = row.invoiceNumbers[0]
   const meta = (
     <>
-      {row.companyName} · <span className="num">{row.invoiceNumbers.length > 1 ? `${lead} +${row.invoiceNumbers.length - 1}` : lead}</span>
+      {row.companyName} · <span className="num whitespace-nowrap">{row.invoiceNumbers.length > 1 ? `${lead} +${row.invoiceNumbers.length - 1}` : lead}</span>
     </>
   )
   // The remembered channel as a link (R2-07): "Email instead" / "WhatsApp instead"; Open in WhatsApp / Open in email is

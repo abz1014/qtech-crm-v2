@@ -66,6 +66,17 @@ import { useToast } from '@/ui/useToast'
  * brands. The money panel and the merge action are admin only; they are not rendered for anyone else, and
  * the database refuses them anyway (v_order_money and merge_companies check the role).
  */
+/** The record line's parts, with two number-led parts side by side ("quoted 4 · 4 orders") kept as one unit so a wrap never leaves "quoted 4" over "4 orders". */
+function recordUnits(line: string): string[][] {
+  const units: string[][] = []
+  for (const part of line.split(' · ')) {
+    const last = units[units.length - 1]
+    if (last && /\d$/.test(last[last.length - 1]!) && /^\d/.test(part)) last.push(part)
+    else units.push([part])
+  }
+  return units
+}
+
 export function CompanyPage() {
   const { id } = useParams()
   const company = useCompany(id)
@@ -322,8 +333,9 @@ function Loaded({ company }: { company: CompanyDetail }) {
           name={company.name}
           breadcrumb={[{ label: 'Companies', to: '/companies' }, { label: company.name }]}
           more={moreMenu(false)}
-          // the role is identity, not state: a Tag at the head of the meta line, never a chip in the h1
-          meta={[company.role ? <RoleChip key="role" role={company.role} /> : null, ...meta.map((m, i) => (i === 0 ? m : <span key={m} className="text-fg-muted">{m}</span>))]}
+          // the role is identity, not state: a Tag on its own row above the meta line (so no "·" follows it), never a chip in the h1
+          chips={company.role ? <RoleChip role={company.role} /> : undefined}
+          meta={meta.map((m, i) => (i === 0 ? m : <span key={m} className="text-fg-muted">{m}</span>))}
         >
           {supplierRecordLine && facts ? (
             // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
@@ -331,8 +343,8 @@ function Loaded({ company }: { company: CompanyDetail }) {
             // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
             <p className="mt-2 overflow-x-clip text-base text-fg-2" data-testid="supplier-record-line">
               <span className="-ml-5 flex flex-wrap items-center">
-                {supplierRecordLine.split(' · ').map((part, i) => (
-                  <span key={part} className={cn('inline-flex min-w-0 items-center', i === 0 && 'pl-5')}>
+                {recordUnits(supplierRecordLine).map((unit, i) => (
+                  <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
                     {i > 0 ? (
                       <>
                         {' '}
@@ -341,9 +353,12 @@ function Loaded({ company }: { company: CompanyDetail }) {
                         </span>{' '}
                       </>
                     ) : null}
-                    <span>
-                      <CountText text={part} />
-                    </span>
+                    {unit.map((part, j) => (
+                      <span key={part}>
+                        {j > 0 ? <span className="mx-2 text-fg-muted">{' · '}</span> : null}
+                        <CountText text={part} />
+                      </span>
+                    ))}
                   </span>
                 ))}
                 <InfoTip label="About these numbers" className="ml-1">

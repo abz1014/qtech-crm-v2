@@ -26,7 +26,7 @@ export function NextStepBox({ text, tone = 'action', action, loading = false }: 
       data-surface={quiet ? undefined : 'navy'}
       className={cn('mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-panel px-4 py-4 md:px-5', quiet ? 'border border-tone-info-fg/25 bg-tone-info-bg text-tone-info-fg' : 'bg-chrome text-fg')}
     >
-      <p className="min-w-0 text-lg">
+      <p className="min-w-0 text-lg [text-wrap:wrap]">
         <span className={cn('mr-2 text-base', quiet ? 'text-tone-info-fg' : 'text-fg-muted')}>Next step</span>
         <span className={cn('font-semibold', tone === 'late' && 'text-tone-danger-bg', quiet && 'font-medium text-tone-info-fg')}>{text}</span>
       </p>

@@ -132,11 +132,14 @@ export function CompaniesPage() {
       <PageHeader
         title="Companies"
         lede={
-          <span className="inline-flex items-center gap-1">
-            Customers and suppliers. Roles come from what happens.
-            <InfoTip label="About roles">
-              Nobody sets a role by hand. An RFQ or an order makes a company a customer (a prospect until it orders); asking it for prices, ordering from it or listing a brand makes it a supplier.
-            </InfoTip>
+          <span>
+            Customers and suppliers. Roles come from{' '}
+            <span className="whitespace-nowrap">
+              what happens.{' '}
+              <InfoTip label="About roles" className="align-middle">
+                Nobody sets a role by hand. An RFQ or an order makes a company a customer (a prospect until it orders); asking it for prices, ordering from it or listing a brand makes it a supplier.
+              </InfoTip>
+            </span>
           </span>
         }
         primary={

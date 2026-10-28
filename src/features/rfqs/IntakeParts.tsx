@@ -187,7 +187,7 @@ const STEP_LINE = ['Items', 'Suppliers', 'Message', 'Done'] as const
 export function StepLine({ step }: { step: Step }) {
   const at = STEP_INDEX[step]
   return (
-    <ol aria-label={`Step ${at} of 4`} className="m-0 grid list-none grid-cols-4 gap-x-1 p-0 text-sm sm:flex sm:items-center sm:gap-x-2 sm:gap-y-1" data-step-line>
+    <ol aria-label={`Step ${at} of 4`} className="m-0 flex list-none items-center justify-between gap-x-3 p-0 text-sm sm:justify-start sm:gap-x-2 sm:gap-y-1" data-step-line>
       {STEP_LINE.map((label, i) => {
         const n = i + 1
         const state = n < at || (step !== 'build' && step !== 'suppliers' && step !== 'enquiry' && n === 4) ? 'done' : n === at ? 'now' : 'todo'

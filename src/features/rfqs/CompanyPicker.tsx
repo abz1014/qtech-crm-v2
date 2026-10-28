@@ -92,7 +92,7 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
             spellCheck={false}
             autoFocus
             value={text}
-            placeholder={loadingName ? 'Opening the customer' : 'Search, or type a new company name'}
+            placeholder={loadingName ? 'Opening the customer' : 'Search or add a company'}
             onChange={e => {
               setText(e.target.value)
               setOpen(true)
