@@ -69,6 +69,14 @@ describe('old addresses open Jobs', () => {
     expect(chipForOldList('')).toBeNull()
   })
 
+  it('the list redirect keeps the other parameters: new=1 (Order without enquiry) and the search text', async () => {
+    mount('/orders?new=1')
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs?new=1'))
+    fake?.uninstall()
+    mount('/rfqs?owner=all&q=RST%201158&show=closed')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?q=RST+1158&chip=history'))
+  })
+
   it('?old=1 keeps the old page, and remembers it on this device', () => {
     mount('/rfqs?old=1')
     expect(screen.getByText('OLD RFQ PAGE')).toBeInTheDocument()

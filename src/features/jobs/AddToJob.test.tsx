@@ -11,6 +11,12 @@ import { allowedKinds, guessKind, matchSupplier } from '@/features/jobs/addToJob
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
+const kept = vi.hoisted(() => ({ deleted: [] as string[] }))
+vi.mock('@/lib/capture/store', async importOriginal => {
+  const real = await importOriginal<typeof import('@/lib/capture/store')>()
+  return { ...real, deleteCapture: (id: string) => { kept.deleted.push(id); return Promise.resolve() } }
+})
+
 const state = vi.hoisted(() => ({
   inquiries: [] as unknown[],
   items: [] as unknown[],
@@ -100,17 +106,17 @@ const inquiry = (id: string, name: string, country = 'Germany'): InquiryRow =>
     lines: [],
   }) as InquiryRow
 
-function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<ClarificationRow>[] = []) {
+function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<ClarificationRow>[] = [], handoff?: unknown, respond?: (c: FakeCall) => { data?: unknown; error?: { message: string } }) {
   state.inquiries = role === 'engineer' ? [] : [inquiry('i-rhein', 'Rhein Automation GmbH'), inquiry('i-shanghai', 'Shanghai Flowtech Co.', 'China')]
   state.items = ITEMS
   state.clars = clars
-  const db = installFakeDb((c: FakeCall) => (c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null } } : { data: [] }))
+  const db = installFakeDb((c: FakeCall) => respond?.(c) ?? (c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null } } : { data: [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const session: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }
   render(
     <QueryClientProvider client={client}>
       <SessionContext.Provider value={session}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[{ pathname: '/jobs/139', state: handoff ? { addToJob: handoff } : null }]}>
           <ToastProvider>
             <AddToJob job={{ job: JOB, role, money: role !== 'engineer' }} />
           </ToastProvider>
@@ -121,7 +127,10 @@ function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<Clarificatio
   return { db, user: userEvent.setup() }
 }
 
-afterEach(() => installFakeDb(() => ({})).uninstall())
+afterEach(() => {
+  installFakeDb(() => ({})).uninstall()
+  kept.deleted.length = 0
+})
 
 const WHATSAPP = ['Rhein Automation: dear Ayesha,', '1) Ultrasonic flowmeter RST 1158S EUR 3610 - 8 weeks', '2) Clamp-on transducer pair DN50 EUR 980 - 8 weeks'].join('\n')
 
@@ -170,5 +179,22 @@ describe('Add to this job: the customer answer and the engineer', () => {
     mount('engineer')
     expect(screen.queryByRole('textbox', { name: 'Paste here' })).toBeNull()
     expect(screen.queryByText(/Add to this job/i)).toBeNull()
+  })
+})
+
+describe('Add to this job: a kept share is deleted only after the save', () => {
+  it('arriving with a shared note does not delete the kept copy; a failed save keeps it; the successful save deletes it', async () => {
+    let fail = true
+    const { user } = mount('sales', [], { text: 'Gate pass needed after 3pm', files: [], captureId: 'cap-1' }, c => {
+      if (c.target === 'rfqs' && c.verb === 'update' && fail) return { error: { message: 'network down' } }
+      return c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null } } : { data: [] }
+    })
+    await user.click(await screen.findByRole('button', { name: 'Add note' }))
+    await screen.findByText('Could not add it')
+    expect(kept.deleted).toEqual([])
+    expect(screen.getByRole('textbox', { name: 'Paste here' })).toHaveValue('Gate pass needed after 3pm')
+    fail = false
+    await user.click(screen.getByRole('button', { name: 'Add note' }))
+    await waitFor(() => expect(kept.deleted).toEqual(['cap-1']))
   })
 })

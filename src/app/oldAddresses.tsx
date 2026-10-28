@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { queryClient } from '@/lib/queryClient'
-import { wantsOld, chipForOldList, type OldKind } from '@/app/oldAddressesModel'
+import { wantsOld, jobsSearchForOldList, type OldKind } from '@/app/oldAddressesModel'
 
 /*
  * The old RFQ and Order addresses (redesign phase 5, P5-F; owner decision 9: the old pages stay reachable for two weeks).
@@ -38,8 +38,7 @@ export function OldAddress({ kind, children }: { kind: OldKind; children: ReactN
   if (wantsOld(search)) return <>{children}</>
   const rest = pathname.split('/').filter(Boolean).slice(1)
   if (rest.length === 0) {
-    const chip = chipForOldList(search)
-    return <Navigate to={{ pathname: '/jobs', search: chip ? `?chip=${chip}` : '' }} replace />
+    return <Navigate to={{ pathname: '/jobs', search: jobsSearchForOldList(search) }} replace />
   }
   if (rest.length === 1) return <ToJob kind={kind} id={rest[0]} search={search} />
   return <NotFoundPage />

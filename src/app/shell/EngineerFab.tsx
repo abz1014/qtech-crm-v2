@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils'
 /*
  * The engineer's phone bar centre (redesign phase 5, P7-C): a big "Photo or note" button between To do and Jobs, and "I paid" beside it
  * (the engineer's own expense claims, /my-expenses). Navy, not green: the screen's own button (Delivered today, Installed today) is the
- * one green. Photo or note opens the job picker (/capture: "Add to job…", the only choice an engineer has there), which lands on the
- * job's page where "Add to this job" and lane L5's On site card take the photo or note.
+ * one green. Photo or note opens the job picker (/capture with nothing shared: which job?), which lands on the
+ * job's page with the On site card's photo-or-note box already open.
  * 56 px tall, so a thumb in a site glove finds it; below 360 px "I paid" keeps its icon and name for screen readers only.
  */
 export function EngineerFab({ className }: { className?: string }) {
