@@ -532,7 +532,7 @@ function TableView<T>(props: DataTableProps<T>) {
       )}
     >
       {selection ? (
-        <td className="h-9 w-10 border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5">
+        <td className="h-9 w-10 border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
           {groupIds
             ? checkbox(
                 groupIds.every(id => selected?.has(id)),
@@ -822,7 +822,7 @@ function TableView<T>(props: DataTableProps<T>) {
             ) : null}
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
-                <th className="sticky top-0 z-[1] h-head w-10 border-b-2 border-fg bg-surface px-[var(--cell-px)] first:pl-5 last:pr-5">
+                <th className="sticky top-0 z-[1] h-head w-10 border-b-2 border-fg bg-surface px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
                   {checkbox(headState, () => setMany(ids, !allOn), 'Select all rows')}
                 </th>
               ) : null}
@@ -846,7 +846,7 @@ function TableView<T>(props: DataTableProps<T>) {
                       <button
                         type="button"
                         onClick={() => cycleSort(c.id)}
-                        className="-mx-1 inline-flex h-6 items-center gap-1 rounded px-1 hover:bg-selected hover:text-fg"
+                        className={cn('-mx-1 inline-flex h-6 items-center gap-1 rounded px-1 hover:bg-selected hover:text-fg', alignRight(c) && 'flex-row-reverse')}
                       >
                         {c.header}
                         <Icon
