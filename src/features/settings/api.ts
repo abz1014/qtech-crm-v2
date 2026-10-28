@@ -1,4 +1,4 @@
-import { COLS, toRow, type CompanyProfile, type ProfileValues } from '@/features/settings/companyProfile'
+import { COLS, COLS_NO_FINANCIAL, toRow, withoutFinancials, type CompanyProfile, type ProfileValues } from '@/features/settings/companyProfile'
 import { WEAK_NEW, WRONG_CURRENT } from '@/features/settings/passwordText'
 import type { Category, CategoryGroup, ExpenseGroup, PaidVia } from '@/features/settings/categoriesModel'
 import type { ProgressRow, TargetRow } from '@/features/settings/targetsModel'
@@ -109,9 +109,14 @@ export async function getMyDetails(userId: string): Promise<MyDetails> {
 
 // ---------------------------------------------------------------- company profile
 
-export async function getCompanyProfile(): Promise<CompanyProfile> {
-  const res = await requireSupabase().from('company_profile').select(COLS).eq('id', 1).single()
-  return unwrap(res) as unknown as CompanyProfile
+/**
+ * `financial` is false for an engineer: the database refuses them the bank and tax columns (0108), so they are not selected and
+ * come back null.
+ */
+export async function getCompanyProfile(financial = true): Promise<CompanyProfile> {
+  const res = await requireSupabase().from('company_profile').select(financial ? COLS : COLS_NO_FINANCIAL).eq('id', 1).single()
+  const row = unwrap(res) as unknown as CompanyProfile
+  return financial ? row : withoutFinancials(row)
 }
 
 export async function saveCompanyProfile(values: ProfileValues): Promise<CompanyProfile> {

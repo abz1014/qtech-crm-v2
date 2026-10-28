@@ -1,7 +1,7 @@
 import { useRef, type ReactElement, type ReactNode } from 'react'
 import { CircleDot, Lock, TriangleAlert } from 'lucide-react'
 import { useController, useFormContext, type ControllerRenderProps } from 'react-hook-form'
-import { useSession } from '@/app/session'
+import { useSeesPrices, useSession } from '@/app/session'
 import { missingForDocuments, missingForPdf, toFormValues, type CompanyProfile, type DocumentField } from '@/features/settings/companyProfile'
 import { profileSchema, type ProfileValues } from '@/features/settings/companyProfileSchema'
 import { useCompanyProfile, useSaveCompanyProfile } from '@/features/settings/hooks'
@@ -44,6 +44,7 @@ const LABELS: Partial<Record<keyof ProfileValues, string>> = {
 export function CompanyProfilePage() {
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
+  const seesFinancials = useSeesPrices()
   const q = useCompanyProfile()
 
   return (
@@ -82,7 +83,7 @@ export function CompanyProfilePage() {
       ) : isAdmin ? (
         <ProfileForm profile={q.data} />
       ) : (
-        <ProfileReadOnly profile={q.data} />
+        <ProfileReadOnly profile={q.data} financial={seesFinancials} />
       )}
     </div>
   )
@@ -350,10 +351,11 @@ function Row({
 
 const KV = 'grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]'
 
-function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
+/** `financial` is false for an engineer: the database does not give them the tax and bank details, so those sections are not drawn. */
+function ProfileReadOnly({ profile: p, financial }: { profile: CompanyProfile; financial: boolean }) {
   return (
     <>
-      <MissingBanner profile={p} />
+      <MissingBanner profile={financial ? p : { ...p, ntn: 'n/a', strn: 'n/a' }} />
       <Section title="Business details">
         <dl className={KV}>
           <Row label="Legal name" value={p.legal_name} needed />
@@ -363,19 +365,23 @@ function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
           <Row label="Website" value={p.website} href={v => (/^https?:\/\//i.test(v.trim()) ? v.trim() : `https://${v.trim()}`)} />
         </dl>
       </Section>
-      <Section title="Tax registration">
-        <dl className={KV}>
-          <Row label="NTN" value={p.ntn} mono needed />
-          <Row label="STRN" value={p.strn} mono needed />
-        </dl>
-      </Section>
-      <Section title="Bank details">
-        <dl className={KV}>
-          <Row label="Bank" value={p.bank_name} />
-          <Row label="Account title" value={p.bank_account_title} />
-          <Row label="IBAN" value={p.bank_iban} mono />
-        </dl>
-      </Section>
+      {financial ? (
+        <>
+          <Section title="Tax registration">
+            <dl className={KV}>
+              <Row label="NTN" value={p.ntn} mono needed />
+              <Row label="STRN" value={p.strn} mono needed />
+            </dl>
+          </Section>
+          <Section title="Bank details">
+            <dl className={KV}>
+              <Row label="Bank" value={p.bank_name} />
+              <Row label="Account title" value={p.bank_account_title} />
+              <Row label="IBAN" value={p.bank_iban} mono />
+            </dl>
+          </Section>
+        </>
+      ) : null}
       <Section title="Payment terms">
         <dl className={KV}>
           <Row label="Default payment terms" value={`${p.default_payment_terms_days} days`} />

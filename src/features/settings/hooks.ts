@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSeesPrices } from '@/app/session'
 import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/settings/api'
@@ -84,10 +85,14 @@ export function useReactivatePerson() {
 }
 
 /** The one company-profile row; also read ahead by the order page (orders/prefetch.ts), whose header shows its default terms. */
-export const companyProfileQuery = () => ({ queryKey: qk.settings.profile(), queryFn: () => api.getCompanyProfile() })
+export const companyProfileQuery = (financial = true) => ({
+  queryKey: financial ? qk.settings.profile() : ([...qk.settings.profile(), 'no-financial'] as const),
+  queryFn: () => api.getCompanyProfile(financial),
+})
 
+/** An engineer reads the profile without the bank and tax columns (migration 0108). */
 export function useCompanyProfile() {
-  return useQuery(companyProfileQuery())
+  return useQuery(companyProfileQuery(useSeesPrices()))
 }
 
 export function useSaveCompanyProfile() {

@@ -91,7 +91,8 @@ insert into price values
   ('rfq_items', 'quoted_unit_price_net'), ('supplier_quote_lines', 'unit_price'), ('supplier_quote_lines', 'fx_rate_pkr'),
   ('quotations', 'lines'), ('quotations', 'net_total'), ('quotations', 'gst_total'),
   ('order_items', 'unit_price_net'), ('order_items', 'supplier_unit_price'),
-  ('purchase_orders', 'total'), ('purchase_orders', 'lines'), ('fx_rates', 'rate_pkr');
+  ('purchase_orders', 'total'), ('purchase_orders', 'lines'), ('fx_rates', 'rate_pkr'),
+  ('company_profile', 'ntn'), ('company_profile', 'strn'), ('company_profile', 'bank_name'), ('company_profile', 'bank_account_title'), ('company_profile', 'bank_iban');
 select is((select coalesce(array_agg(obj || '.' || col order by obj, col), '{}') from price
            where has_column_privilege('qtech_engineer', format('public.%I', obj), col, 'select')),
           '{}'::text[], 'qtech_engineer holds SELECT on none of the price, total and rate columns');
