@@ -279,7 +279,7 @@ export function repliesFact(s: MemoryStats | null | undefined): TwoLine {
     const days = Math.round(median)
     return { main: `answered ${replied} of ${asked}`, sub: days < 1 ? 'usually logs a reply the same day' : `usually logs a reply in ~${days} ${days === 1 ? 'day' : 'days'}` }
   }
-  return { main: `answered ${replied} of ${asked}`, sub: 'reply time needs 3 replies logged here' }
+  return { main: `answered ${replied} of ${asked}`, sub: 'not enough replies yet to say how fast they answer' }
 }
 
 /** "chosen 2 of 3 times" and "late 1 of 4 deliveries"; null when neither has anything behind it. */

@@ -900,11 +900,58 @@ export async function setRfqItemCategory(id: string, familyId: string | null): P
   if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
 }
 
-/** Remove an item. An item an order line is based on is refused by the database (HINT linked_to_order). */
-export async function removeRfqItem(id: string): Promise<void> {
-  const { data, error } = await requireSupabase().from('rfq_items').delete().eq('id', id).select('id')
+/** What the database held about a removed item beyond what the page shows, so an Undo can put the row back exactly as it was. */
+export interface RemovedItemSnapshot {
+  position: number
+  gstRate: number
+  createdAt: string | null
+  createdBy: string | null
+}
+
+/**
+ * Remove an item. This also removes every supplier's price for it (ON DELETE CASCADE on supplier_quote_lines and
+ * inquiry_item_declines): that is "Remove item". Taking one supplier's reply away is removeQuoteLine and never touches the item.
+ * An item an order line is based on is refused by the database (HINT linked_to_order). Returns what Undo needs.
+ */
+export async function removeRfqItem(id: string): Promise<RemovedItemSnapshot | null> {
+  const db = requireSupabase()
+  const before = await db.from('rfq_items').select('position, gst_rate, created_at, created_by').eq('id', id).maybeSingle()
+  const { data, error } = await db.from('rfq_items').delete().eq('id', id).select('id')
   if (error) throw error
   if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
+  const r = before.data
+  return r ? { position: Number(r.position), gstRate: Number(r.gst_rate), createdAt: r.created_at, createdBy: r.created_by } : null
+}
+
+/** Undo of "Remove item": the item with its old id, then the prices and "can't quote" reasons that went with it. */
+export async function restoreRfqItem(input: {
+  rfqId: string
+  item: Pick<RfqItemRow, 'id' | 'description' | 'brandId' | 'familyId' | 'qty' | 'unit'>
+  snapshot: RemovedItemSnapshot
+  lines: readonly QuoteLineRow[]
+  declines: ReadonlyArray<{ inquiryId: string; reason: string }>
+}): Promise<void> {
+  const db = requireSupabase()
+  const { item, snapshot } = input
+  const { error } = await db.from('rfq_items').upsert(
+    {
+      id: item.id,
+      rfq_id: input.rfqId,
+      position: snapshot.position,
+      description: item.description,
+      brand_id: item.brandId,
+      family_id: item.familyId,
+      qty: item.qty,
+      unit: item.unit,
+      gst_rate: snapshot.gstRate,
+      ...(snapshot.createdAt ? { created_at: snapshot.createdAt } : {}),
+      ...(snapshot.createdBy ? { created_by: snapshot.createdBy } : {}),
+    },
+    { onConflict: 'id', ignoreDuplicates: true },
+  )
+  if (error) throw error
+  for (const l of input.lines) await restoreQuoteLine(l)
+  for (const d of input.declines) await setItemDecline({ inquiryId: d.inquiryId, itemId: item.id, reason: d.reason })
 }
 
 /** Remove one supplier's price for one item. The row is returned so an Undo can put it back exactly as it was. */

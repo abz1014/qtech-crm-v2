@@ -28,13 +28,13 @@ describe('supplierMemoryLine', () => {
     expect(supplierMemoryLine({ asked: 1, replied: 0, median_reply_days: null }, 2)?.text).toBe('Asked once, no reply. Not enough history to say more.')
   })
   it('from three asks it adds the usual time, and how long this one has waited, amber when longer', () => {
-    expect(supplierMemoryLine({ asked: 7, replied: 5, median_reply_days: 2 }, 5)).toEqual({ text: 'Replied 5 of 7 · usually ~2 days, now 5 days', late: true })
-    expect(supplierMemoryLine({ asked: 7, replied: 5, median_reply_days: 2 }, 1)).toEqual({ text: 'Replied 5 of 7 · usually ~2 days, now 1 day', late: false })
-    expect(supplierMemoryLine({ asked: 8, replied: 8, median_reply_days: 0.2 }, null)).toEqual({ text: 'Replied 8 of 8 · usually the same day', late: false })
+    expect(supplierMemoryLine({ asked: 7, replied: 5, median_reply_days: 2 }, 5)).toEqual({ text: 'Has replied to 5 of the 7 requests we sent them · usually answers in ~2 days, now 5 days', late: true })
+    expect(supplierMemoryLine({ asked: 7, replied: 5, median_reply_days: 2 }, 1)).toEqual({ text: 'Has replied to 5 of the 7 requests we sent them · usually answers in ~2 days, now 1 day', late: false })
+    expect(supplierMemoryLine({ asked: 8, replied: 8, median_reply_days: 0.2 }, null)).toEqual({ text: 'Has replied to 8 of the 8 requests we sent them · usually answers the same day', late: false })
   })
   it('says nothing with no history, and is honest about a missing median', () => {
     expect(supplierMemoryLine(null, null)).toBeNull()
-    expect(supplierMemoryLine({ asked: 4, replied: 2, median_reply_days: null }, null)?.text).toContain('reply time needs 3 replies')
+    expect(supplierMemoryLine({ asked: 4, replied: 2, median_reply_days: null }, null)?.text).toBe('Has replied to 2 of the 4 requests we sent them.')
   })
 })
 

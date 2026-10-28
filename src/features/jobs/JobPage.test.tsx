@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -81,6 +81,23 @@ describe('Job page', () => {
     expect(money).toHaveTextContent('Costs not entered yet')
     expect(money).toHaveTextContent('Not known yet')
     expect(money).toHaveTextContent('974,680')
+  })
+
+  it('an enquiry-stage job (no order) never sits on Loading: the Money card says there is no money yet', async () => {
+    mount(job({ stage: 'quotation', stageDetail: 'waiting for supplier prices', orderId: null }), 'admin')
+    const money = await screen.findByRole('region', { name: 'Money for this job' })
+    expect(money).toHaveTextContent('No money yet: no quotation has been sent.')
+    expect(money).not.toHaveTextContent('Loading')
+  })
+
+  it('sales and engineers see no Money card on an enquiry-stage job', async () => {
+    mount(job({ stage: 'quotation', orderId: null }), 'sales')
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('region', { name: 'Money for this job' })).toBeNull()
+    cleanup()
+    mount(job({ stage: 'quotation', orderId: null }), 'engineer')
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('region', { name: 'Money for this job' })).toBeNull()
   })
 
   it('an engineer gets no Money panel, no amount and nothing about invoices or payment', async () => {

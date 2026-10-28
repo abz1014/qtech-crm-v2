@@ -39,7 +39,7 @@ describe('replies (low-data copy, D03)', () => {
   })
   it('shows counts out of counts, with the median only when the database gave one', () => {
     expect(repliesFact({ asked: 8, replied: 7, median_reply_days: 1 })).toEqual({ main: 'answered 7 of 8', sub: 'usually logs a reply in ~1 day' })
-    expect(repliesFact({ asked: 9, replied: 5, median_reply_days: null })).toEqual({ main: 'answered 5 of 9', sub: 'reply time needs 3 replies logged here' })
+    expect(repliesFact({ asked: 9, replied: 5, median_reply_days: null })).toEqual({ main: 'answered 5 of 9', sub: 'not enough replies yet to say how fast they answer' })
     expect(repliesFact({ asked: 4, replied: 4, median_reply_days: 0 }).sub).toBe('usually logs a reply the same day')
   })
   it('never prints a percentage', () => {

@@ -384,6 +384,14 @@ export function useRemoveRfqItem(rfqId: string) {
   })
 }
 
+export function useRestoreRfqItem(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Omit<Parameters<typeof api.restoreRfqItem>[0], 'rfqId'>) => api.restoreRfqItem({ rfqId, ...input }),
+    onSuccess: () => invalidateAfter(client, 'quote.save', { rfqId }).then(() => invalidateAfter(client, 'item.add', { rfqId })),
+  })
+}
+
 export function useRemoveQuoteLine(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
