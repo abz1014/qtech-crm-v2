@@ -161,6 +161,8 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
                   >
                     Record
                   </Button>
+                ) : t.active && t.startMonth && t.startMonth > periodOf(t) ? (
+                  <span className="text-sm text-fg-2 sm:w-[96px]">Starts {monthKeyLabel(t.startMonth).split(' ')[0]}</span>
                 ) : t.active ? (
                   <span className="inline-flex items-center gap-1 text-sm text-tone-success-fg sm:w-[96px]">
                     <Icon icon={Check} size="sm" />

@@ -510,14 +510,10 @@ async function loadRecurringFacts(today: string): Promise<RecurringFact[]> {
     db.from('expenses').select('recurring_id, period').in('period', periods).not('recurring_id', 'is', null),
   ])
   const done = new Set((unwrap(recorded) ?? []).map(r => `${r.recurring_id as string}|${r.period as string}`))
-  return (unwrap(templates) ?? []).map(t => ({
-    id: t.id,
-    label: t.label,
-    dayOfMonth: t.day_of_month,
-    active: t.active,
-    startMonth: t.start_month,
-    recorded: done.has(`${t.id}|${billPeriod({ dayOfMonth: t.day_of_month, categoryId: t.category_id }, today)}`),
-  }))
+  return (unwrap(templates) ?? []).map(t => {
+    const period = billPeriod({ dayOfMonth: t.day_of_month, categoryId: t.category_id }, today)
+    return { id: t.id, label: t.label, dayOfMonth: t.day_of_month, active: t.active, startMonth: t.start_month, period, recorded: done.has(`${t.id}|${period}`) }
+  })
 }
 
 async function loadSnoozes(today: string): Promise<SnoozeFact[]> {

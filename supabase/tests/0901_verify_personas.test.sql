@@ -393,7 +393,8 @@ insert into probes values
   ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
   ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$),
   ('job_stage', '', 'X', $q$select 1 from public.job_stage(@15, null)$q$),   -- 0099
-  ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'fixture.txt') is not null$q$);   -- 0100
+  ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'fixture.txt') is not null$q$),   -- 0100
+  ('month_closed', '', 'X', $q$select 1 where public.month_closed(date '2019-01-01') is not null$q$);   -- 0107
 
 
 -- ------------------------------------------------------------------ 0901: extra probes (privilege escalation through users)
@@ -532,9 +533,9 @@ from (values ('anon'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['attachment_is_priced', 'close_month', 'close_months_through', 'current_user_role', 'job_stage', 'my_target_progress',
+          array['attachment_is_priced', 'close_month', 'close_months_through', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
                 'order_receivables', 'receipt_locked', 'record_history_rows', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed eleven (0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy)');
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed twelve (0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

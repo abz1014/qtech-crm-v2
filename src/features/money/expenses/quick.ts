@@ -1,3 +1,4 @@
+import { MAX_AMOUNT } from '@/lib/formRules'
 import {
   cleanDetail,
   defaultGroupId,
@@ -75,11 +76,13 @@ export interface QuickEntry {
   inputTax: number
 }
 
-export type QuickProblem = 'amount' | 'category' | 'title' | 'tax'
+export type QuickProblem = 'amount' | 'positive' | 'large' | 'category' | 'title' | 'tax'
 
 /** What stops a quick entry from saving, in the order the person meets the fields; null when it can be saved. */
-export function quickProblem(e: Pick<QuickEntry, 'amount' | 'categoryId' | 'inputTax'> & { titleMissing?: boolean }): QuickProblem | null {
-  if (!(e.amount > 0) || !Number.isFinite(e.amount)) return 'amount'
+export function quickProblem(e: Pick<QuickEntry, 'categoryId' | 'inputTax'> & { amount: number | null; titleMissing?: boolean }): QuickProblem | null {
+  if (e.amount === null || !Number.isFinite(e.amount)) return 'amount' // nothing typed
+  if (e.amount <= 0) return 'positive' // typed, but 0 or below
+  if (e.amount > MAX_AMOUNT) return 'large'
   if (!e.categoryId || e.categoryId === SUPPLIER_PAYMENT_ID) return 'category'
   if (e.titleMissing) return 'title'
   if (e.inputTax < 0 || e.inputTax > e.amount) return 'tax'

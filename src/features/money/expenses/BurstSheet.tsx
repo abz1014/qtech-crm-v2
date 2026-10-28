@@ -30,9 +30,12 @@ import {
   useMostUsedCategory,
   useOrderOptions,
   useRecentDetails,
+  useRecordedBills,
+  useRecurring,
   useSaveRecurring,
   useUploadReceipt,
 } from '@/features/money/expenses/hooks'
+import { linkMonthlyBills } from '@/features/money/expenses/forMonth'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { OrderTagPicker } from '@/features/money/expenses/OrderTagPicker'
 import {
@@ -116,6 +119,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const compact = useMediaQuery('(max-width: 1023px)')
   const toast = useToast()
   const insert = useInsertExpenses()
+  const templatesQ = useRecurring()
+  const recordedQ = useRecordedBills(today)
   const orderQ = useOrderOptions(true)
   const orders: readonly OrderTagOption[] = orderQ.data ?? NO_ORDERS
   const uploadReceipt = useUploadReceipt()
@@ -251,13 +256,14 @@ function BurstContent({ onClose }: { onClose: () => void }) {
       // "Every month" rows: their templates go first (client ids: a retry adds each once), then the expenses that point at them.
       for (const t of repeatTemplates(settled, categories))
         await saveRecurring.mutateAsync({ newId: t.newId, label: t.label, categoryId: t.categoryId, amount: t.amount, dayOfMonth: t.dayOfMonth, active: true, startMonth: t.startMonth, notes: null, paidVia: t.paidVia })
-      const inserts = burstInserts(settled, categories)
+      // A monthly bill is filed under its month and settles its template, so it is not due again (and not recorded twice).
+      const inserts = linkMonthlyBills(burstInserts(settled, categories), templatesQ.data ?? [], recordedQ.data)
       await insert.mutateAsync(inserts)
       // Photos go after the rows are in. A photo that fails never undoes an expense.
       const withPhoto = settled.filter(r => r.photo && !r.photo.error && inserts.some(i => i.id === r.id))
       const failed = (await Promise.all(withPhoto.map(r => uploadReceipt.mutateAsync({ expenseId: r.id, file: (r.photo as { file: File }).file }).then(() => false, () => true)))).filter(Boolean).length
       const n = inserts.length
-      const monthly = inserts.filter(i => i.recurring_id).length
+      const monthly = settled.filter(r => r.repeat && r.templateId && inserts.some(i => i.id === r.id)).length
       toast.toast({
         title: n === 1 ? 'Added 1 expense' : `Added ${n} expenses`,
         body: `PKR ${fmt(inserts.reduce((s, i) => s + i.amount_pkr, 0))}${monthly ? ` · ${monthly} repeat${monthly === 1 ? 's' : ''} every month` : ''}${failed ? ` · ${failed} receipt ${failed === 1 ? 'photo' : 'photos'} did not upload` : ''}`,

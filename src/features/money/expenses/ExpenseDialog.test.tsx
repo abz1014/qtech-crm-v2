@@ -3,6 +3,8 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses/ExpenseDialog'
+import { businessToday } from '@/lib/dates'
+import { forMonthOf } from '@/features/money/expenses/forMonth'
 import { SUPPLIER_PAYMENT_ID, type ListedExpense } from '@/features/money/expenses/model'
 import { expenseDraftKey } from '@/features/money/expenses/addDraft'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
@@ -24,6 +26,7 @@ function setup(opts: { upsert?: () => FakeResult; del?: () => FakeResult; closed
       if (c.ops.some(([n]) => n === 'eq')) return { data: opts.lastForOrder ? [{ category_id: opts.lastForOrder }] : [] }
       return { data: [{ category_id: 'c-snacks', paid_on: '2026-11-01' }] }
     }
+    if (c.target === 'recurring_expenses') return { data: [{ id: 't-rent', label: 'Rent', category_id: 'c-rent', amount: 90000, day_of_month: 5, active: true, start_month: null, notes: null, paid_via: 'bank' }] }
     if (c.target === 'closed_months') return { data: (opts.closed ?? []).map(m => ({ month: `${m}-01`, closed_at: '2026-10-03T10:00:00Z', closed_by: 'u1', note: null })) }
     if (c.target === 'users') return { data: [{ id: 'u1', name: 'Wasif' }] }
     if (c.target === 'expenses' && c.verb === 'delete') return opts.del?.() ?? { data: [{ id: 'e1' }] }
@@ -75,6 +78,20 @@ describe('Add expense dialog (M03)', () => {
     await waitFor(() => expect(saves(db)).toHaveLength(1))
     const [row] = opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[]
     expect(row).toMatchObject({ amount_pkr: 384497, category_id: SUPPLIER_PAYMENT_ID, order_id: 'o1', supplier_order_id: 'leg1', payee_id: 'p1', paid_via: 'bank' })
+  })
+
+  it('a monthly bill settles its template for the month it is for, so it is not due again (M8)', async () => {
+    const user = userEvent.setup()
+    const db = setup()
+    await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    await user.click(screen.getByRole('combobox', { name: 'Category' }))
+    await user.keyboard('rent{Tab}')
+    await user.click(screen.getByRole('textbox', { name: 'Amount, PKR' }))
+    await user.keyboard('90000')
+    await user.click(screen.getByRole('button', { name: 'Save expense' }))
+    await waitFor(() => expect(saves(db)).toHaveLength(1))
+    const [row] = opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[]
+    expect(row).toMatchObject({ category_id: 'c-rent', recurring_id: 't-rent', period: forMonthOf(businessToday(), 'c-rent') })
   })
 
   it('from an order: the last category used on it', async () => {

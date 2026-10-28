@@ -280,7 +280,9 @@ export interface RecurringFact {
   active: boolean
   /** YYYY-MM, or null for "from the beginning". */
   startMonth: string | null
-  /** An expense with (recurring_id, period) already exists for the current month. */
+  /** The month its bill is for today (billPeriod: last month for a day 1 to 10 template, except rent). Absent means this month. */
+  period?: string
+  /** An expense with (recurring_id, period) already exists for `period`. */
   recorded: boolean
 }
 

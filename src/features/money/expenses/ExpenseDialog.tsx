@@ -35,11 +35,12 @@ import {
   useOrderOptions,
   useReceipts,
   useRecentDetails,
+  useRecordedBills,
   useRecurring,
   useUpdateExpense,
   useUploadReceipt,
 } from '@/features/money/expenses/hooks'
-import { forMonthChoices, isMonthlyBill } from '@/features/money/expenses/forMonth'
+import { forMonthChoices, isMonthlyBill, linkMonthlyBills } from '@/features/money/expenses/forMonth'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { clearExpenseDraft, expenseDraftKey, loadExpenseDraft, saveExpenseDraft } from '@/features/money/expenses/addDraft'
@@ -199,6 +200,7 @@ function ExpenseFormReady({
   const update = useUpdateExpense()
   const uploadReceipt = useUploadReceipt()
   const today = businessToday()
+  const recordedQ = useRecordedBills(today)
 
   // ---- the pre-fills, and where each came from (FE-2)
   const pre = (() => {
@@ -248,7 +250,9 @@ function ExpenseFormReady({
         await update.mutateAsync({ id: expense.id, patch: base })
         if (photo && !photo.error) await uploadReceipt.mutateAsync({ expenseId: expense.id, file: photo.file }).catch(() => failedPhoto())
       } else {
-        await insert.mutateAsync([{ id: requestId, ...base, reference: null }])
+        // A monthly bill also settles its template for that month, so Monthly bills stops showing it as not recorded.
+        const [row] = linkMonthlyBills([{ id: requestId, ...base, reference: null }], templates, recordedQ.data)
+        await insert.mutateAsync([row])
         if (photo && !photo.error) await uploadReceipt.mutateAsync({ expenseId: requestId, file: photo.file }).catch(() => failedPhoto())
       }
     },
