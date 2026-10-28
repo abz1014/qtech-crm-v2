@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { useContentDrawn } from '@/lib/useContentDrawn'
 import type { JobRow } from '@/features/jobs/api'
 import { JOB_SLOTS, type JobSlotName, type SlotComponent } from '@/features/jobs/slotRegistry'
 
@@ -43,7 +44,9 @@ export interface JobSlotProps {
 /** Draws every component plugged into `name`, or nothing. */
 export function JobSlot({ name, context, slots = JOB_SLOTS }: { name: JobSlotName; context: JobContext; slots?: Record<JobSlotName, readonly SlotComponent[]> }) {
   const parts = slots[name]
-  if (parts.length === 0) return null
+  // The first page's slots download once its content is drawn (perf/lcp): their code and reads are not part of the first paint.
+  const drawn = useContentDrawn()
+  if (parts.length === 0 || !drawn) return null
   return (
     <>
       {parts.map((Part, i) => (

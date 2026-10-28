@@ -1,4 +1,5 @@
 import type { Prefetch } from '@/app/routeChunks'
+import { whenContentDrawn } from '@/lib/afterContent'
 import { cancelledOrdersQuery, jobFactsQuery, jobInvoicesQuery, jobsListQuery } from '@/features/jobs/hooks'
 import { qk } from '@/features/queryKeys'
 import { resolveOldAddress } from '@/features/jobs/oldAddress'
@@ -30,10 +31,11 @@ export const prefetchJob: Prefetch = async ({ client, user, id, pathname }) => {
   const facts = await client.fetchQuery(jobFactsQuery(key))
   if (!facts) return
   const { rfqId, orderId } = facts.job
-  // Round two is NOT awaited: the page draws as soon as the job itself is known (its next-step band is the largest paint), and
-  // every panel finds its read already on the way under the same key. Waiting for all of them held the first paint back by a
-  // round trip (Job page LCP 2.53 s against the 2.5 s limit on Slow 4G).
-  void Promise.all([
+  // Round two is NOT awaited, and on the first page it does not start until the job's top is drawn: the next-step band is the
+  // largest paint and needs only the job itself, and every request made before it counts against it on Slow 4G (Lighthouse
+  // simulates the whole of them; round two at once was 2.48 s against the 2.5 s limit). The panels (useJobData) start at the same
+  // moment, on the same keys, so they find these reads already on the way and never ask twice.
+  whenContentDrawn(() => void Promise.all([
     rfqId ? client.prefetchQuery(rfqItemsQuery(rfqId)) : null,
     rfqId ? client.prefetchQuery(rfqInquiriesQuery(rfqId, money)) : null,
     rfqId ? prefetchRfqParts(client, rfqId, money) : null,
@@ -45,5 +47,5 @@ export const prefetchJob: Prefetch = async ({ client, user, id, pathname }) => {
     orderId && role !== 'engineer' ? client.prefetchQuery(jobInvoicesQuery(key, orderId)) : null,
     orderId ? client.prefetchQuery({ queryKey: qk.orders.part(orderId, 'files'), queryFn: () => listOrderAttachments(orderId) }) : null,
     rfqId && facts.job.cancelledOrders > 0 ? client.prefetchQuery(cancelledOrdersQuery(key, rfqId)) : null,
-  ])
+  ]))
 }

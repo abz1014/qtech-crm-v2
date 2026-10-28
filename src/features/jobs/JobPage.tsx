@@ -1,11 +1,12 @@
 import { NoPrimary } from '@/ui/NoPrimary'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CloudOff } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { cn } from '@/lib/utils'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
 import { DetailHeader } from '@/ui/DetailHeader'
@@ -24,7 +25,6 @@ import { currentStopIndex, stageModel } from '@/features/jobs/lib/stages'
 import { jobLabel } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
 import { WonDialogHost } from '@/features/jobs/WonDialogHost'
-import { EngineerActions } from '@/features/jobs/EngineerActions'
 
 /*
  * The Job page (redesign phase 5, P5-C): /jobs/:key, one page for a customer request from enquiry to payment.
@@ -37,6 +37,9 @@ import { EngineerActions } from '@/features/jobs/EngineerActions'
  * Reads: the job (the view and the enquiry or order, with the names) in one round, then every panel at once; the app starts both
  * before the page is drawn (prefetch.ts). An engineer asks for no price and no money panel; the database hides priced files.
  */
+// Only an engineer sees it: its visit dialog, photo capture and delivery buttons stay out of everyone else's download (perf/lcp).
+const EngineerActions = lazyWithReload(() => import('@/features/jobs/EngineerActions').then(m => ({ default: m.EngineerActions })))
+
 function Shell({ children, bar = false }: { children: ReactNode; bar?: boolean }) {
   return <div className={cn('mx-auto w-full max-w-detail px-4 pb-16 pt-4 md:px-8 md:pt-6', bar && 'max-md:pb-[calc(var(--control-lg-h)+2rem)]')}>{children}</div>
 }
@@ -201,7 +204,11 @@ function JobView({ facts }: { facts: JobFacts }) {
         <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} />
       ) : null}
 
-      {role === 'engineer' ? <EngineerActions facts={facts} data={data} /> : null}
+      {role === 'engineer' ? (
+        <Suspense fallback={null}>
+          <EngineerActions facts={facts} data={data} />
+        </Suspense>
+      ) : null}
       {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid min-w-0 gap-4">

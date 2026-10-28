@@ -175,9 +175,9 @@ export function useRfqInquiries(id: string | undefined) {
 }
 
 /** Today's rate per currency. Read-only here; a missing rate never blocks a price. Never read for an engineer (no amounts). */
-export function useFxLatest() {
+export function useFxLatest(open = true) {
   const prices = useSeesPrices()
-  return useQuery({ queryKey: qk.fx.latest(), queryFn: api.listFxLatest, staleTime: 60_000, enabled: prices })
+  return useQuery({ queryKey: qk.fx.latest(), queryFn: api.listFxLatest, staleTime: 60_000, enabled: prices && open })
 }
 
 export function useSaveReply(rfqId: string) {
