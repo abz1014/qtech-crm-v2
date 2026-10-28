@@ -199,7 +199,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // A new item changes the page, the board's counts and the coverage.
   'item.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId)],
   'item.edit': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId), qk.memory.all],
-  'item.remove': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId), qk.memory.all],
+  'item.remove': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.rfqs.statsAll(), qk.orders.rankedFor(v.rfqId), qk.memory.all],
   // A new customer, site or contact moves the RFQ between customers: the customer pages, Today and the orders that read the RFQ.
   'rfq.edit': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.rfqs.all, qk.companies.all, qk.today.all, qk.orders.all],
   // Asking another supplier adds an inquiry: the page, the board and the supplier's own counts.
@@ -207,8 +207,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'inquiry.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.today.all],
   // A price, a "can't quote" or a chase changes the RFQ page and the board's states, and the supplier's own counts.
   // The Mark won and Split line dialogs read the ranked quotes under the orders root, so they go stale too.
-  'quote.save': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all, qk.orders.rankedFor(v.rfqId)],
-  'inquiry.cantQuote': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all, qk.orders.rankedFor(v.rfqId)],
+  'quote.save': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.rfqs.statsAll(), qk.companies.all, qk.intake.all, qk.orders.rankedFor(v.rfqId)],
+  'inquiry.cantQuote': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.rfqs.statsAll(), qk.companies.all, qk.intake.all, qk.orders.rankedFor(v.rfqId)],
   'inquiry.chase': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
   // Bid sent only moves the RFQ itself (and the board's lists).
   'rfq.markBidSent': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],

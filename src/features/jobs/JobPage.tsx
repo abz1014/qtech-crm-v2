@@ -209,7 +209,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         </div>
         <aside aria-label="About this job" className="grid min-w-0 gap-4">
           <ContactPanel facts={facts} />
-          {role === 'admin' ? <MoneyPanel data={data} /> : null}
+          {role === 'admin' ? <MoneyPanel data={data} hasOrder={Boolean(job.orderId)} /> : null}
           <JobSlot name="side" context={ctx} />
           <NotesFilesPanel facts={facts} data={data} ctx={ctx} />
           <CancelledOrders data={data} />

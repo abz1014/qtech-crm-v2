@@ -614,11 +614,32 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await page.getByRole('menuitem', { name: 'Remove reply' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Reply removed' })).toBeVisible()
     await expect.poll(async () => (await linesOf(s.usd.inquiryId)).length).toBe(0)
+    // Job 178: taking a reply away never takes the enquiry's items with it
+    const itemIds = async () => (await must(rest<{ id: string }[]>('admin', `rfq_items?rfq_id=eq.${s.rfq.id}&select=id`))).map(r => r.id).sort()
+    expect(await itemIds()).toEqual(s.items.map(i => i.id).sort())
+    await expect(page.getByText('This RFQ has no items yet')).toHaveCount(0)
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect.poll(async () => (await linesOf(s.usd.inquiryId)).length).toBe(1)
     const [back] = await linesOf(s.usd.inquiryId)
     expect(back).toMatchObject({ currency: 'USD', unit_price: 100, lead_time: '3 weeks' })
     expect(Number(back.fx_rate_pkr)).toBe(280) // the rate it was entered at comes back with it
+  })
+
+  test('Remove item names the supplier prices that go with it, says Remove reply keeps the item, and Undo puts item and price back', async ({ page }) => {
+    const s = await seed()
+    await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '3 weeks' } }))
+    await openAs(page, 'admin', `/rfqs/${s.rfq.id}`)
+    await page.getByRole('button', { name: 'More for item 1' }).click()
+    await page.getByRole('menuitem', { name: 'Remove item' }).click()
+    const confirm = page.getByRole('dialog')
+    await expect(confirm).toContainText(s.usd.name)
+    await expect(confirm).toContainText('use Remove reply on the price row instead')
+    await confirm.getByRole('button', { name: 'Delete' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Item 1 removed' })).toBeVisible()
+    await expect.poll(async () => (await must(rest<unknown[]>('admin', `rfq_items?id=eq.${s.items[0].id}&select=id`))).length).toBe(0)
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await expect.poll(async () => (await must(rest<unknown[]>('admin', `rfq_items?id=eq.${s.items[0].id}&select=id`))).length).toBe(1)
+    await expect.poll(async () => (await linesOf(s.usd.inquiryId)).length).toBe(1)
   })
 
   test('Add item puts a new item on the RFQ: only the description is required', async ({ page }) => {

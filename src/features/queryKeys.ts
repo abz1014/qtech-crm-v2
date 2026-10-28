@@ -75,6 +75,8 @@ function rfqs() {
     part: (id: string, slice: RfqPart) => [...detail(id), slice] as const,
     /** Supplier stats for the memory lines on the RFQ page, by the suppliers' ids. */
     stats: (suppliers: string) => [...all, 'stats', suppliers] as const,
+    /** Every supplier-stats read: a reply added or removed changes asked/replied, so they refetch (they were stale for a minute). */
+    statsAll: () => [...all, 'stats'] as const,
     /** The signed-in person's job title and phone (chase signatures). */
     signature: (userId: string) => [...all, 'signature', userId] as const,
   }
