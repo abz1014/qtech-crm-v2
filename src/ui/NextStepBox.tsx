@@ -8,14 +8,14 @@ import { Skeleton } from '@/ui/Skeleton'
  * Direction C draws it as the navy band (data-surface="navy" re-inks the buttons inside; the green one gets its white ring):
  *   tone 'action'  a step to take: the navy band, the sentence in white
  *   tone 'late'    the same band, the sentence in the late block's tint (the danger family, 11.7:1 on navy)
- *   tone 'quiet'   nothing to do: a quiet block, the sentence in regular weight
+ *   tone 'quiet'   nothing to do: a calm tinted block (the info tint, 7.5:1 text), same padding and layout, no second green
  * `loading` draws a placeholder (aria-busy) until the page knows the step.
  */
 export function NextStepBox({ text, tone = 'action', action, loading = false }: { text?: ReactNode; tone?: 'action' | 'late' | 'quiet'; action?: ReactNode; loading?: boolean }) {
   if (loading) {
     return (
       <section aria-label="Next step" aria-busy="true" className="mt-4 rounded-panel bg-sunken px-4 py-4 md:px-5">
-        <Skeleton className="h-5 w-72 max-w-full" />
+        <Skeleton className="h-5 w-[18rem] max-w-full" />
       </section>
     )
   }
@@ -24,11 +24,11 @@ export function NextStepBox({ text, tone = 'action', action, loading = false }: 
     <section
       aria-label="Next step"
       data-surface={quiet ? undefined : 'navy'}
-      className={cn('mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-panel px-4 py-4 md:px-5', quiet ? 'bg-sunken' : 'bg-chrome text-fg')}
+      className={cn('mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-panel px-4 py-4 md:px-5', quiet ? 'border border-tone-info-fg/25 bg-tone-info-bg text-tone-info-fg' : 'bg-chrome text-fg')}
     >
       <p className="min-w-0 text-lg">
-        <span className="mr-2 text-base text-fg-muted">Next step</span>
-        <span className={cn('font-semibold', tone === 'late' && 'text-tone-danger-bg', quiet && 'font-regular text-fg-2')}>{text}</span>
+        <span className={cn('mr-2 text-base', quiet ? 'text-tone-info-fg' : 'text-fg-muted')}>Next step</span>
+        <span className={cn('font-semibold', tone === 'late' && 'text-tone-danger-bg', quiet && 'font-medium text-tone-info-fg')}>{text}</span>
       </p>
       {action}
     </section>

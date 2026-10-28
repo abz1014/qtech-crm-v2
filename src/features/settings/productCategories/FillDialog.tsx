@@ -87,7 +87,7 @@ export function FillDialog({ families, onClose }: { families: readonly CategoryO
           {phase.kind === 'reading' ? (
             <div role="status" aria-busy="true" aria-label="Reading the items" className="grid gap-2">
               <Skeleton className="h-6 w-2/3" />
-              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-[6rem] w-full" />
             </div>
           ) : null}
           {phase.kind === 'failed' ? (

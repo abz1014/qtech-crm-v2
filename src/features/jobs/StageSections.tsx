@@ -28,7 +28,7 @@ function LaterEnquiryWork({ rfqId }: { rfqId: string }) {
   useEffect(() => {
     if (!ready) whenContentDrawn(() => setReady(true))
   }, [ready])
-  return ready ? <EnquiryWork rfqId={rfqId} /> : <Skeleton className="h-40 w-full" />
+  return ready ? <EnquiryWork rfqId={rfqId} /> : <Skeleton className="h-[10rem] w-full" />
 }
 
 /*
@@ -124,7 +124,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
     <Note>No quotation: this job started as an order.</Note>
   ) : job.rfqId ? (
     // Ask suppliers, their replies and prices, the items, the quotation and Issue quotation: the RFQ page's own components.
-    <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+    <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
       <LaterEnquiryWork rfqId={job.rfqId} />
     </Suspense>
   ) : (

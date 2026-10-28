@@ -312,7 +312,7 @@ describe('companies list', () => {
     mount('/companies', <CompaniesPage />)
     await screen.findByRole('link', { name: 'Karachi Glassworks' })
     const search = screen.getByRole('textbox', { name: 'Search companies or contacts' })
-    expect(search).toHaveAttribute('placeholder', 'Search companies or contacts')
+    expect(search).toHaveAttribute('placeholder', 'Search companies')
 
     await user.type(search, 'naveed')
     expect(screen.getByRole('link', { name: 'Karachi Glassworks' }).closest('tr')).toHaveTextContent('Contact: Naveed Akhtar')

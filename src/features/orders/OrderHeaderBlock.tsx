@@ -350,7 +350,7 @@ export function OrderHeaderBlock({
               >
                 {m ? <StatusText dimension="payment" value={m.paymentState} /> : null}
                 {moneyLoading ? (
-                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-[8rem]" />
                 ) : !m ? (
                   <p className="text-sm text-fg-muted">The balance did not load. Reload to try again.</p>
                 ) : (

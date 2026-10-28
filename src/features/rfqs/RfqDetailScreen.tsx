@@ -89,12 +89,12 @@ function PageSkeleton() {
   return (
     <Shell>
       <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading RFQ">
-        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-4 w-[10rem]" />
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <Skeleton className="h-9 w-96 max-w-full" />
+          <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
           <div className="flex gap-2">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-[8rem]" />
+            <Skeleton className="h-8 w-[8rem]" />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -110,14 +110,14 @@ function PageSkeleton() {
         <div className="mt-2 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid gap-px rounded border">
             <Skeleton className="h-16 rounded-none" />
-            <Skeleton className="h-24 rounded-none" />
-            <Skeleton className="h-24 rounded-none" />
-            <Skeleton className="h-24 rounded-none" />
+            <Skeleton className="h-[6rem] rounded-none" />
+            <Skeleton className="h-[6rem] rounded-none" />
+            <Skeleton className="h-[6rem] rounded-none" />
           </div>
           <div className="grid gap-4">
-            <Skeleton className="h-40" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-24" />
+            <Skeleton className="h-[10rem]" />
+            <Skeleton className="h-[8rem]" />
+            <Skeleton className="h-[6rem]" />
           </div>
         </div>
       </div>
@@ -337,14 +337,14 @@ function Loaded({
               </EmptyState>
               <dl className="grid gap-1 px-5 pb-5 text-sm">
                 <div className="flex gap-4">
-                  <dt className="w-24 text-fg-muted">Last loaded</dt>
+                  <dt className="w-[6rem] text-fg-muted">Last loaded</dt>
                   <dd className="num m-0">{`${timeOf(headerAt)} today`}</dd>
                 </div>
                 {(() => {
                   const code = (inquiries.error as { code?: string } | null)?.code ?? (items.error as { code?: string } | null)?.code
                   return code ? (
                     <div className="flex gap-4">
-                      <dt className="w-24 text-fg-muted">Reference</dt>
+                      <dt className="w-[6rem] text-fg-muted">Reference</dt>
                       <dd className="num m-0">{code}</dd>
                     </div>
                   ) : null
@@ -353,8 +353,8 @@ function Loaded({
             </DetailPanel>
           ) : loading ? (
             <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading items and replies">
-              <Skeleton className="h-56 w-full" />
-              <Skeleton className="h-56 w-full" />
+              <Skeleton className="h-[14rem] w-full" />
+              <Skeleton className="h-[14rem] w-full" />
             </div>
           ) : (
             <ItemsPanel
@@ -370,7 +370,7 @@ function Loaded({
               onCopyEnquiry={(s, item) => void askFrom([s], [item])}
             />
           )}
-          <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+          <BelowTheFold fallback={<Skeleton className="h-[10rem] w-full" />}>
             <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
           </BelowTheFold>
         </div>
@@ -385,10 +385,10 @@ function Loaded({
               <p className="px-5 py-4 text-sm text-fg-muted">Not loaded. Try again to see who has replied.</p>
             </DetailPanel>
           ) : loading ? (
-            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-[10rem] w-full" />
           ) : null}
           {lastAsk && !loadError && !loading ? <SendToEachCard rfq={rfq} ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
-          <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+          <BelowTheFold fallback={<Skeleton className="h-[10rem] w-full" />}>
             {loadError || loading ? null : nobodyAsked ? (
               <SuppliersToAskCard
                 suggestions={askList}

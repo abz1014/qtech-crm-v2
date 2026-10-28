@@ -101,7 +101,7 @@ function Block({ to, label, value, prefix = 'PKR', sub, tone }: { to: string; la
     >
       <span className="text-base font-medium">{label}</span>
       {value === null ? (
-        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-[2.25rem] w-[10rem]" />
       ) : (
         <span className="num text-3xl font-semibold leading-tight tracking-snug">
           <span className="mr-1 text-base font-medium opacity-80">{prefix}</span>

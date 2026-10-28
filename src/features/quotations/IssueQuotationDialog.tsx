@@ -491,8 +491,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
       >
         {loading ? (
           <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the quotation">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-[6rem] w-full" />
+            <Skeleton className="h-[6rem] w-full" />
           </div>
         ) : loadFailed ? (
           <Banner tone="danger" title="Couldn't load the items to quote">

@@ -325,13 +325,13 @@ function ChecklistLoading() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading the month-end checklist" className="grid gap-4">
       <div className="grid gap-3 rounded-panel border bg-surface px-6 py-5 md:grid-cols-[1fr_auto]">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-10 w-40" />
+        <Skeleton className="h-6 w-[12rem]" />
+        <Skeleton className="h-10 w-[10rem]" />
       </div>
       <div className="grid overflow-hidden rounded-panel border bg-surface">
         {[0, 1, 2].map(i => (
           <div key={i} className="grid gap-2 border-t px-5 py-4 first:border-t-0">
-            <Skeleton className="h-4 w-56" />
+            <Skeleton className="h-4 w-[14rem]" />
             <Skeleton className="h-3 w-full max-w-[480px]" />
           </div>
         ))}

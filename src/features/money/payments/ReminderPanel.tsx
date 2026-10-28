@@ -311,7 +311,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
       <footer className="flex flex-wrap items-center gap-3 border-t bg-sunken px-5 py-3">
         {done ? (
           <>
-            <span role="status" className="inline-flex items-center gap-1.5 text-sm font-medium text-tone-success-fg">
+            <span role="status" className="inline-flex items-center gap-[0.375rem] text-sm font-medium text-tone-success-fg">
               <Icon icon={CircleCheck} size="sm" /> {done.copied ? 'Copied. ' : ''}Reminder <span className="num">{done.count}</span> recorded today.
             </span>
             <span className="flex-1" />

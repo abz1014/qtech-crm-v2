@@ -250,7 +250,7 @@ export function StatusMoneyTableSections() {
                 <span className="num shrink-0 text-xs text-fg-muted">{r.no}</span>
               </div>
               <span className="num text-xs text-fg-muted">Due {formatDay(r.due)}</span>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-[0.375rem]">
                 <StatusBadge dimension="sourcing" value={r.sourcing} />
                 {r.status === 'to_bid' ? <StatusBadge dimension="rfq-stage" value="ready" /> : <StatusBadge dimension="rfq-outcome" value={r.status === 'closed' ? 'closed' : 'open'} />}
               </div>

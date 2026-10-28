@@ -178,7 +178,7 @@ export function FloatDialog({
         }
       >
         {suggestions === undefined ? (
-          <Skeleton className="h-24" />
+          <Skeleton className="h-[6rem]" />
         ) : suggestions.length === 0 ? (
           <Empty coverage={coverage} />
         ) : (

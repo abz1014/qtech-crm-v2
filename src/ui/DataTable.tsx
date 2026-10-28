@@ -532,7 +532,7 @@ function TableView<T>(props: DataTableProps<T>) {
       )}
     >
       {selection ? (
-        <td className="h-9 w-10 border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
+        <td className="h-[2.25rem] w-10 border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
           {groupIds
             ? checkbox(
                 groupIds.every(id => selected?.has(id)),
@@ -544,7 +544,7 @@ function TableView<T>(props: DataTableProps<T>) {
       ) : null}
       <td
         colSpan={labelCols}
-        className={cn('h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
+        className={cn('h-[2.25rem] whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
       >
         {labelNode}
       </td>
@@ -552,7 +552,7 @@ function TableView<T>(props: DataTableProps<T>) {
         <td
           key={c.id}
           className={cn(
-            'h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5',
+            'h-[2.25rem] whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5',
             kind === 'foot' && 'border-t border-line-strong',
             kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong',
             alignRight(c) && 'text-right',
@@ -594,7 +594,7 @@ function TableView<T>(props: DataTableProps<T>) {
           )}
         >
           <td role="cell" className="flex min-h-[44px] items-start gap-3 px-4 py-3">
-            {selection ? <span className="pt-0.5">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
+            {selection ? <span className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
             <div className="min-w-0 flex-1">{mobileRow(row)}</div>
           </td>
         </tr>
@@ -750,7 +750,7 @@ function TableView<T>(props: DataTableProps<T>) {
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
-      className={cn('min-w-0 overflow-clip rounded-panel border bg-surface', className)}
+      className={cn('group/dt min-w-0 overflow-clip rounded-panel border bg-surface', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
@@ -874,9 +874,9 @@ function TableView<T>(props: DataTableProps<T>) {
 
       {shown || hints || loading ? (
         <div className="flex min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted">
-          {loading && !shown ? <Skeleton className="w-32" /> : <span>{shown}</span>}
+          {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
           {hints ? (
-            <span className="flex flex-wrap items-center justify-end gap-3 max-sm:hidden" aria-hidden="true">
+            <span className="flex flex-wrap items-center justify-end gap-3 max-sm:hidden invisible group-focus-within/dt:visible" aria-hidden="true">
               <span className="inline-flex items-center gap-[6px]"><Kbd>{'↑'}</Kbd><Kbd>{'↓'}</Kbd> move</span>
               {onRowOpen ? <span className="inline-flex items-center gap-[6px]"><Kbd>{'↵'}</Kbd> open</span> : null}
               {selection ? <span className="inline-flex items-center gap-[6px]"><Kbd>Space</Kbd> select</span> : null}

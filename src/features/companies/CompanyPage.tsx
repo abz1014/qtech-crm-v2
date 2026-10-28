@@ -125,12 +125,12 @@ function PageSkeleton() {
   return (
     <Shell>
       <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading company">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-8 w-80" />
-        <Skeleton className="h-4 w-56" />
+        <Skeleton className="h-4 w-[10rem]" />
+        <Skeleton className="h-8 w-[20rem]" />
+        <Skeleton className="h-4 w-[14rem]" />
         <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-[16rem] w-full" />
+          <Skeleton className="h-[16rem] w-full" />
         </div>
       </div>
     </Shell>

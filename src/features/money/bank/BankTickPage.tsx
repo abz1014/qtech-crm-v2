@@ -211,9 +211,9 @@ function Loading() {
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-cols-4">
         {[0, 1, 2, 3].map(i => (
           <div key={i} className="grid gap-2 bg-surface px-5 py-4">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-3 w-[6rem]" />
+            <Skeleton className="h-5 w-[8rem]" />
+            <Skeleton className="h-3 w-[10rem]" />
           </div>
         ))}
       </div>
@@ -221,7 +221,7 @@ function Loading() {
         {[0, 1].map(i => (
           <div key={i} className="rounded border bg-surface">
             <div className="flex min-h-[52px] items-center border-b px-5">
-              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-[7rem]" />
             </div>
             {[0, 1, 2, 3, 4].map(r => (
               <div key={r} className="flex min-h-[48px] items-center gap-3 border-b px-5">

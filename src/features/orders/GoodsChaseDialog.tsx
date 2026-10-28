@@ -192,7 +192,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
                 </span>
                 <ChannelLink value={channel} onChange={setChannel} />
               </div>
-              <pre data-testid="draft-text" className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded border bg-sunken p-3 font-sans text-sm text-fg">
+              <pre data-testid="draft-text" className="max-h-[18rem] overflow-auto whitespace-pre-wrap break-words rounded border bg-sunken p-3 font-sans text-sm text-fg">
                 {channel === 'email' && draft.email.subject ? `Subject: ${draft.email.subject}\n\n` : ''}
                 {(channel === 'email' ? draft.email : draft.whatsapp).body}
               </pre>

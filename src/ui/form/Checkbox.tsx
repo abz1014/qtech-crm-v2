@@ -17,7 +17,7 @@ import { Icon } from '@/ui/Icon'
 const TOUCH_LABEL = '[@media(pointer:coarse)]:py-[calc((var(--hit-touch)-var(--lh-sm))/2)]'
 const TOUCH_BOX = '[@media(pointer:coarse)]:mt-[calc((var(--hit-touch)-18px)/2)]'
 const SQUARE = [
-  'grid size-[18px] shrink-0 place-items-center rounded border border-line-input bg-surface text-primary-foreground',
+  'grid size-[18px] shrink-0 place-items-center rounded-[5px] border border-line-input bg-surface text-primary-foreground',
   'transition-colors duration-fast ease-out',
 ]
 const SQUARE_STATES =
@@ -63,7 +63,7 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
         id={id}
         aria-describedby={help ? `${id}-help` : undefined}
         className={cn(
-          'group mt-[calc((var(--lh-sm)-18px)/2)] grid size-[18px] shrink-0 place-items-center rounded disabled:cursor-not-allowed',
+          'group mt-[calc((var(--lh-sm)-18px)/2)] grid size-[18px] shrink-0 place-items-center rounded-[5px] disabled:cursor-not-allowed',
           '[@media(pointer:coarse)]:-m-[13px] [@media(pointer:coarse)]:size-touch',
           className,
         )}

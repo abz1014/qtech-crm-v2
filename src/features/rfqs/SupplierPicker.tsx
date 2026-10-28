@@ -224,8 +224,8 @@ export function SupplierPicker({
     <div className="grid gap-4">
       {loading ? (
         <div role="status" className="grid gap-3" aria-busy="true" aria-label="Finding suppliers">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-[6rem] w-full" />
+          <Skeleton className="h-[6rem] w-full" />
         </div>
       ) : error ? (
         <EmptyState

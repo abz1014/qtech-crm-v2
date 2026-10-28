@@ -21,6 +21,7 @@ export function TableFilter({
   value,
   onChange,
   label,
+  placeholder,
   hint,
   className,
 }: {
@@ -28,6 +29,8 @@ export function TableFilter({
   onChange: (next: string) => void
   /** "Search orders": the name and the placeholder. */
   label: string
+  /** Shorter text for the empty field when the label would be cut at 320 px; defaults to the label. */
+  placeholder?: string
   /** What it searches, in a sentence ("Finds an order by customer, item, order number or PO."). Screen readers hear it as the description. */
   hint?: string
   className?: string
@@ -60,14 +63,14 @@ export function TableFilter({
         aria-label={label}
         aria-keyshortcuts="/"
         aria-describedby={hint ? hintId : undefined}
-        placeholder={label}
+        placeholder={placeholder ?? label}
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         autoComplete="off"
-        className="pl-8 pr-[var(--control-h)]"
+        className={cn('pl-8', value !== '' ? 'pr-[var(--control-h)]' : 'max-md:pr-3 md:pr-[var(--control-h)]')}
       />
       {hint ? (
         <span id={hintId} hidden>

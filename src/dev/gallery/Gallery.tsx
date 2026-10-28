@@ -244,7 +244,7 @@ export default function Gallery() {
   const scene = params.get('scene')
   if (scene) return <SceneView name={scene} />
   return (
-    <main className="mx-auto grid max-w-[1280px] grid-cols-1 content-start gap-12 px-4 pb-24 pt-8 md:px-8 md:pt-10">
+    <main className="mx-auto grid max-w-[1280px] grid-cols-1 content-start gap-12 px-4 pb-[6rem] pt-8 md:px-8 md:pt-10">
       <header className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Component gallery</h1>
         <p className="max-w-prose text-sm text-fg-muted">

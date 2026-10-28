@@ -77,7 +77,7 @@ export default function EnquiryWork({ rfqId }: { rfqId: string }) {
   const header = useRfqHeader(rfqId)
   const items = useRfqItems(rfqId)
   const inquiries = useRfqInquiries(rfqId)
-  if (header.isPending || items.isPending || inquiries.isPending) return <Skeleton className="h-40 w-full" />
+  if (header.isPending || items.isPending || inquiries.isPending) return <Skeleton className="h-[10rem] w-full" />
   if (!header.data || items.isError || inquiries.isError) {
     return <p className="text-base text-fg-muted">The supplier details did not load. Open the enquiry page to try again.</p>
   }
@@ -130,7 +130,7 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
   return (
     <div className="grid gap-4" data-enquiry-work data-chaseable={chaseable}>
       {lastAsk ? <SendToEachCard rfq={rfq} ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
-      <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+      <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
         {nobodyAsked ? (
           <SuppliersToAskCard suggestions={askList} items={itemList} busy={asking} onAsk={ticked => void askFrom(ticked, itemList)} />
         ) : (
@@ -149,7 +149,7 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
         onAddItem={() => setAdding(true)}
         onCopyEnquiry={(s, item) => void askFrom([s], [item])}
       />
-      <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+      <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
       </Suspense>
       {adding ? (

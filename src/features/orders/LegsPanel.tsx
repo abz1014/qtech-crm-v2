@@ -261,7 +261,7 @@ function Leg({
           type="button"
           aria-expanded={false}
           onClick={() => setFolded(false)}
-          className="flex min-h-11 w-full flex-wrap items-center gap-x-2 gap-y-1 rounded text-left hover:bg-sunken"
+          className="flex min-h-[2.75rem] w-full flex-wrap items-center gap-x-2 gap-y-1 rounded text-left hover:bg-sunken"
         >
           <span className="min-w-0 break-words font-medium">{name}</span>
           <span data-testid={`leg-${letter}-state`} className="text-fg-2">

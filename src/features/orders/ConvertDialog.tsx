@@ -429,7 +429,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                         />
                         <span className="num pt-px text-fg-muted lg:hidden">{n}</span>
                       </div>
-                      <div className="grid min-w-0 gap-0.5">
+                      <div className="grid min-w-0 gap-[0.125rem]">
                         <b className="font-medium">
                           <span className="num hidden text-fg-muted lg:inline">{n}. </span>
                           {it.description}
@@ -437,7 +437,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                         {[it.brandName, it.familyName].filter(Boolean).length > 0 ? <span className="text-xs text-fg-muted">{[it.brandName, it.familyName].filter(Boolean).join(' · ')}</span> : null}
                         {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}
                       </div>
-                      <span className="num text-sm lg:pt-1.5 lg:text-right">
+                      <span className="num text-sm lg:pt-[0.375rem] lg:text-right">
                         {it.qty}
                         {it.unit ? <span className="text-fg-muted"> {unitWord(it.qty, it.unit)}</span> : null}
                       </span>
@@ -476,7 +476,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                               data-testid={`convert-item-${n}-part-${i + 1}`}
                             >
                               <span aria-hidden="true" className="hidden lg:block" />
-                              <div className="grid min-w-0 content-start justify-items-start gap-0.5 text-xs text-fg-muted">
+                              <div className="grid min-w-0 content-start justify-items-start gap-[0.125rem] text-xs text-fg-muted">
                                 <span>
                                   Part {i + 1} of {parts.length}
                                 </span>
@@ -486,7 +486,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                                   </Button>
                                 ) : null}
                               </div>
-                              <div className="grid justify-items-end gap-0.5">
+                              <div className="grid justify-items-end gap-[0.125rem]">
                                 <NumberInput
                                   value={p.qty === undefined ? null : qty}
                                   onChange={v => patchPart(it.id, p.key, { qty: v === null ? (i === 0 ? null : undefined) : v })}

@@ -15,7 +15,7 @@ export default function DeliveryWork({ job }: JobSlotProps) {
   // An engineer's Delivered today and Installed today are on the site card of their job page (EngineerActions): not a second one here.
   if (!w.orderId || job.role === 'engineer') return null
   if (w.failed) return <p className="text-base text-fg-muted">The delivery details did not load. Open the order page to try again.</p>
-  if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-40 w-full" />
+  if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-[10rem] w-full" />
   return (
     <div className="grid gap-3" data-delivery-work>
       {w.legs.data.length > 0 ? (

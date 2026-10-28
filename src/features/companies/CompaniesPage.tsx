@@ -175,7 +175,7 @@ export function CompaniesPage() {
         toolbar={
           // min-w-0: on a phone the filter scrolls inside its own track instead of pushing the search field past the edge.
           <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
-            <TableFilter label="Search companies or contacts" hint="Finds a company by name, city, or a contact's name or phone." value={text} onChange={v => setText(v)} />
+            <TableFilter label="Search companies or contacts" placeholder="Search companies" hint="Finds a company by name, city, or a contact's name or phone." value={text} onChange={v => setText(v)} />
             <SegmentedControl
               aria-label="Show"
               // a 2 by 2 grid on a phone (all four in view, none cut off), one row from sm up
