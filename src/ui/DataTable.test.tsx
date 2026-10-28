@@ -351,6 +351,16 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
     expect(el.textContent).not.toContain('select')
   })
 
+  it('the footer band keeps its size whether or not focus is in the table, so the page never moves when focus leaves it', () => {
+    mount(<DataTable label="x" columns={columns} rows={INVOICES} getRowId={r => r.id} />)
+    const band = () => el.querySelector<HTMLElement>('.min-h-10.border-t')
+    const before = band()?.className
+    expect(before).toBeDefined()
+    expect(before).not.toContain('focus-within')
+    act(() => el.querySelectorAll<HTMLElement>('[role="row"]')[1]?.focus())
+    expect(band()?.className).toBe(before)
+  })
+
   it('loading says what is loading and keeps a skeleton footer; the error has a default sentence and a stamp', () => {
     mount(<DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} loading toolbar={toolbar} />)
     expect(el.textContent).toContain('Loading RFQs')
