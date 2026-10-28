@@ -63,6 +63,15 @@ describe('Jobs list', () => {
     expect(container).toHaveTextContent('Repeat of Job 139')
   })
 
+  it('the customer and items cells show two lines at most, with the whole text in the title', async () => {
+    const longItems = 'Sample flow meter FM-100 DN50, sample pressure transmitter PT-20, sample level switch LS-3, sample junction box JB-9, sample cable gland M20'
+    installFakeDb((c: FakeCall) => (c.target === 'v_jobs' ? { data: [view('139', { items_summary: longItems })] } : fake(c)))
+    const { container } = mount('admin')
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    const clamped = [...container.querySelectorAll('table .line-clamp-2')] as HTMLElement[]
+    expect(clamped.map(e => e.getAttribute('title'))).toEqual(expect.arrayContaining(['Ibrahim Fibres Limited', longItems]))
+  })
+
   it('History shows only the rows the database marks is_history', async () => {
     installFakeDb(fake)
     const user = userEvent.setup()

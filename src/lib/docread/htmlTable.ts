@@ -4,7 +4,7 @@
 // a small walk over the DOM the browser parses. A paste with no table in it is read as plain text, exactly as before.
 
 const BLOCK = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'SECTION', 'ARTICLE', 'HR', 'TR', 'DL', 'DT', 'DD', 'FORM', 'ADDRESS'])
-const SKIP = new Set(['SCRIPT', 'STYLE', 'HEAD', 'TITLE', 'META', 'LINK', 'NOSCRIPT', 'TEMPLATE'])
+const SKIP = new Set(['SCRIPT', 'STYLE', 'HEAD', 'TITLE', 'META', 'LINK', 'NOSCRIPT', 'TEMPLATE', 'XML'])
 
 const clean = (s: string) => s.replace(/[\u00a0\u2007\u202f]/g, ' ').replace(/\s+/g, ' ').trim()
 
@@ -33,7 +33,11 @@ function tableLines(table: Element): string[] {
     // A row of a table nested in a cell is that cell's text, not a row of this table.
     if (tr.closest('table') !== table) continue
     const cells = Array.from(tr.children).filter(c => c.tagName === 'TD' || c.tagName === 'TH')
-    const texts = cells.map(cellText)
+    // A cell that spans columns (colspan) leaves the columns it covers empty, so the cells after it stay under their own headings.
+    const texts = cells.flatMap(c => {
+      const span = Math.min(Math.max(Number.parseInt(c.getAttribute('colspan') ?? '1', 10) || 1, 1), 20)
+      return [cellText(c), ...Array<string>(span - 1).fill('')]
+    })
     if (texts.some(Boolean)) lines.push(texts.join('\t').replace(/\t+$/, ''))
   }
   return lines
@@ -119,5 +123,10 @@ export async function readClipboardText(): Promise<string> {
       // not allowed or not supported: the plain text below
     }
   }
-  return clip?.readText ? await clip.readText() : ''
+  try {
+    return clip?.readText ? await clip.readText() : ''
+  } catch {
+    // Permission denied for the text too: nothing is read and the caller offers its paste box.
+    return ''
+  }
 }
