@@ -45,10 +45,10 @@ function PageSkeleton() {
   return (
     <Shell>
       <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading job">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-9 w-96 max-w-full" />
-        <Skeleton className="h-5 w-72 max-w-full" />
-        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-4 w-[10rem]" />
+        <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
+        <Skeleton className="h-5 w-[18rem] max-w-full" />
+        <Skeleton className="h-[5rem] w-full" />
         <Skeleton className="h-16 w-full" />
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid gap-2">
@@ -57,8 +57,8 @@ function PageSkeleton() {
             ))}
           </div>
           <div className="grid gap-4">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-40" />
+            <Skeleton className="h-[8rem]" />
+            <Skeleton className="h-[10rem]" />
           </div>
         </div>
       </div>

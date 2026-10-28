@@ -161,7 +161,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
       </div>
       {loading ? (
         <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading margin">
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-[6rem] w-full" />
           <Skeleton className="h-4 w-2/3" />
         </div>
       ) : error || !m ? (
@@ -224,7 +224,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               </span>
               {editing ? (
                 <span className="flex items-center gap-2">
-                  <NumberInput aria-label="Expected cost, PKR" value={draft} onChange={setDraft} prefix="PKR" min={0} autoFocus className="w-40" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void saveExpected(draft) } if (e.key === 'Escape') setEditing(false) }} />
+                  <NumberInput aria-label="Expected cost, PKR" value={draft} onChange={setDraft} prefix="PKR" min={0} autoFocus className="w-[10rem]" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void saveExpected(draft) } if (e.key === 'Escape') setEditing(false) }} />
                   <Button size="sm" variant="primary" onClick={() => void saveExpected(draft)} busy={setExpected.isPending} busyLabel="Saving" disabled={draft === null}>
                     Save
                   </Button>

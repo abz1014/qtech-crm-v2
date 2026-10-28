@@ -327,7 +327,7 @@ export function ReceivablesPage() {
         </div>
         {cards ? null : (
           <div ref={panelRef} className="scroll-mt-4">
-            <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+            <BelowTheFold fallback={<Skeleton className="h-[10rem] w-full" />}>
               <ReminderPanel row={selected} today={today} />
             </BelowTheFold>
           </div>

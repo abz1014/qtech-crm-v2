@@ -338,7 +338,7 @@ export function EnquiryCard({
       <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3 text-sm">
         <span className="text-fg-muted">Send to</span>
         {recipients.map(r => (
-          <span key={r.id} className="inline-flex min-h-7 items-center gap-1 rounded border border-line-strong bg-surface pl-2 pr-1 text-xs">
+          <span key={r.id} className="inline-flex min-h-[1.75rem] items-center gap-1 rounded border border-line-strong bg-surface pl-2 pr-1 text-xs">
             {r.name}
             {locked ? null : (
               <Button variant="quiet" size="sm" icon={X} aria-label={`Do not send to ${r.name}`} onClick={() => onRemoveRecipient(r.id)} />

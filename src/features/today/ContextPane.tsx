@@ -385,7 +385,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           ) : null}
           {compact ? null : <RecipientRow channel={channel} contact={draft.contact} />}
           {channel === 'email' && draft.email.subject ? <SubjectRow subject={draft.email.subject} /> : null}
-          <div className={cn('relative px-4 py-3', compact && !full && 'max-h-40 overflow-hidden')}>
+          <div className={cn('relative px-4 py-3', compact && !full && 'max-h-[10rem] overflow-hidden')}>
             <FormattedMessage text={shownMessage?.body ?? ''} testId="draft-text" />
           </div>
           {compact ? (

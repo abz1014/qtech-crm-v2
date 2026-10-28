@@ -74,7 +74,7 @@ export function InvoiceDetailDialog({ invoiceId, onClose }: { invoiceId: string;
         ) : q.isPending ? (
           <div className="grid gap-3" aria-busy="true">
             <Skeleton className="h-8" />
-            <Skeleton className="h-24" />
+            <Skeleton className="h-[6rem]" />
           </div>
         ) : q.data ? (
           <DetailForm invoice={q.data} onBusy={setBusy} onClose={onClose} />

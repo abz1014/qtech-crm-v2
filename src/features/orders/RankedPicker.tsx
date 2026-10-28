@@ -139,7 +139,7 @@ export function RankedPicker({
             </button>
           ))}
         </div>
-        {usedNote ? <p className="mt-0.5 border-t border-line px-2 pb-0.5 pt-1.5 text-xs text-fg-muted">{usedNote}</p> : null}
+        {usedNote ? <p className="mt-[0.125rem] border-t border-line px-2 pb-[0.125rem] pt-[0.375rem] text-xs text-fg-muted">{usedNote}</p> : null}
       </PopoverContent>
     </Popover>
   )

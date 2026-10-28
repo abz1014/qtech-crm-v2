@@ -56,7 +56,7 @@ function Loading() {
   return (
     <div className="grid gap-3" aria-busy="true">
       <Skeleton className="h-8" />
-      <Skeleton className="h-24" />
+      <Skeleton className="h-[6rem]" />
     </div>
   )
 }

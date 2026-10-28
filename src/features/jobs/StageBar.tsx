@@ -99,7 +99,7 @@ export function StageMini({ job }: { job: JobStanding }) {
   const m = stageModel(job)
   return (
     <span className="grid min-w-[160px] gap-1 whitespace-normal" data-stage-mini>
-      <span className="flex w-28 gap-[3px]" aria-hidden="true">
+      <span className="flex w-[7rem] gap-[3px]" aria-hidden="true">
         {m.stops.map(s => (
           <span key={s.name} className={cn('h-[6px] flex-1 rounded-round', SEG[s.state])} />
         ))}

@@ -125,7 +125,7 @@ export function SplitLineDialog({
         <div className="grid gap-4">
           <Field label="Move how many to another supplier" requirement="required" error={qtyError}>
             <div className="flex items-center gap-3">
-              <NumberInput value={qty} onChange={setQty} aria-label="Quantity to move" className="w-24" data-autofocus />
+              <NumberInput value={qty} onChange={setQty} aria-label="Quantity to move" className="w-[6rem]" data-autofocus />
               <span className="text-sm text-fg-muted">
                 of <span className="num">{item.qty}</span>
                 {qty !== null && valid ? (
@@ -238,7 +238,7 @@ export function SplitLineDialog({
           )}
 
           {resultText ? (
-            <div className="grid gap-0.5 rounded-row bg-sunken px-3 py-2 text-sm" data-testid="split-result">
+            <div className="grid gap-[0.125rem] rounded-row bg-sunken px-3 py-2 text-sm" data-testid="split-result">
               <span className="flex items-start gap-1">
                 <span>
                   <b className="font-medium">Result:</b> {resultText}
@@ -252,7 +252,7 @@ export function SplitLineDialog({
 
           {sourcePo ? (
             <div className="flex items-start gap-3 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
-              <Icon icon={TriangleAlert} className="mt-0.5 text-tone-warning-fg" />
+              <Icon icon={TriangleAlert} className="mt-[0.125rem] text-tone-warning-fg" />
               <p>
                 The PO to {sourceName}{' '}
                 <b className="num font-semibold">

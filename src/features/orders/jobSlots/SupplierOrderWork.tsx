@@ -71,7 +71,7 @@ export default function SupplierOrderWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
   if (!w.orderId) return null
   if (w.failed) return <p className="text-base text-fg-muted">The supplier orders did not load. Open the order page to try again.</p>
-  if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-40 w-full" />
+  if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-[10rem] w-full" />
   return (
     <div className="grid gap-3" data-supplier-order-work>
       {job.money && w.canEdit ? <ChooseSuppliers order={w.order} items={w.items.data} legs={w.legs.data} /> : null}

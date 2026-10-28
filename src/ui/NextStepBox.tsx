@@ -15,7 +15,7 @@ export function NextStepBox({ text, tone = 'action', action, loading = false }: 
   if (loading) {
     return (
       <section aria-label="Next step" aria-busy="true" className="mt-4 rounded-panel bg-sunken px-4 py-4 md:px-5">
-        <Skeleton className="h-5 w-72 max-w-full" />
+        <Skeleton className="h-5 w-[18rem] max-w-full" />
       </section>
     )
   }

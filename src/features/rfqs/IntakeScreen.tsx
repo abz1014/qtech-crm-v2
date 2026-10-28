@@ -912,7 +912,7 @@ function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMo
         }
 
   return (
-    <div className="mx-auto w-full max-w-table px-4 pb-40 pt-6 md:px-8">
+    <div className="mx-auto w-full max-w-table px-4 pb-[10rem] pt-6 md:px-8">
       {/* minmax(0,1fr) tracks: a long item name or supplier never widens the page past a phone screen (it truncates or wraps). */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">

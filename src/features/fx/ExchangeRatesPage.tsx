@@ -231,7 +231,7 @@ function HistoryDialog({ currency, onClose }: { currency: string | null; onClose
       {currency ? (
         <DialogContent title={`Recent ${currency} rates`} icon={History} footer={<Button data-cancel onClick={onClose}>Close</Button>}>
           {history.isPending ? (
-            <Skeleton className="h-24" />
+            <Skeleton className="h-[6rem]" />
           ) : history.isError ? (
             <p className="text-sm text-fg-muted">The history did not load. Try again in a moment.</p>
           ) : history.data.length === 0 ? (
@@ -290,7 +290,7 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
   }
 
   return (
-    <div ref={panelRef} className="scroll-mt-20">
+    <div ref={panelRef} className="scroll-mt-[5rem]">
       <Panel title="Add a rate by hand">
         <form
           className="grid gap-4 px-5 py-4"

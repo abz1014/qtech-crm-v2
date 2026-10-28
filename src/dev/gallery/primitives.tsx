@@ -120,7 +120,7 @@ function ReplyRow({ reply, start, error, saving }: { reply: Reply; start: 'resti
 }
 
 function InlineEditDemo() {
-  const head = 'grid h-9 items-center gap-2 bg-sunken px-3 text-xs font-medium text-fg-muted'
+  const head = 'grid h-[2.25rem] items-center gap-2 bg-sunken px-3 text-xs font-medium text-fg-muted'
   return (
     <div className="overflow-hidden rounded-panel border bg-surface">
       <div className={head} style={{ gridTemplateColumns: [...IE_COLS.map(c => c.width), '60px'].join(' ') }} aria-hidden="true">
@@ -307,7 +307,7 @@ export function TextSizeSection() {
 export function TooltipSection() {
   return (
     <Section id="tooltip" title="Tooltip variants" note="Hover for 400 ms or focus. The same five are photographed one at a time as scenes (Tooltip variants).">
-      <div className="rounded-panel border bg-surface p-6 pb-24">
+      <div className="rounded-panel border bg-surface p-6 pb-[6rem]">
         <TooltipVariants />
       </div>
     </Section>

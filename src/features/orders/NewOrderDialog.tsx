@@ -149,8 +149,8 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
             </div>
             {found.isPending ? (
               <div role="status" className="grid gap-2" aria-busy="true" aria-label="Searching">
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-[3.5rem] w-full" />
+                <Skeleton className="h-[3.5rem] w-full" />
               </div>
             ) : found.isError ? (
               <Banner tone="danger" title="Couldn't search the orders" action={<Button onClick={() => void found.refetch()}>Try again</Button>}>

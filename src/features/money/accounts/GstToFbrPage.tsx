@@ -45,8 +45,8 @@ export function GstToFbrPage() {
         </p>
       ) : !lines ? (
         <div className="grid gap-3" aria-busy="true">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+          <Skeleton className="h-[6rem]" />
+          <Skeleton className="h-[6rem]" />
         </div>
       ) : lines.length === 0 ? (
         <p className="rounded-panel border bg-surface px-5 py-4 text-base text-fg-2">No invoices yet, so no GST to pay.</p>

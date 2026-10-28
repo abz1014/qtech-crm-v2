@@ -130,7 +130,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           return (
             <li
               key={i.id}
-              className="grid scroll-mt-20 gap-1 border-t px-5 py-3 first:border-t-0"
+              className="grid scroll-mt-[5rem] gap-1 border-t px-5 py-3 first:border-t-0"
               data-supplier-asked={i.supplierId}
               data-reply-row={i.supplierId}
               data-folded={folded ? '' : undefined}

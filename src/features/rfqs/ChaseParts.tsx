@@ -136,7 +136,7 @@ export function ReplyByField({ label, value, onChange, note }: { label: string; 
     <div className="grid gap-2 border-b px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm font-medium">{label}</span>
-        <div className="w-48 max-w-full">
+        <div className="w-[12rem] max-w-full">
           <DateInput value={value} onChange={onChange} defaultToday={false} aria-label={label} />
         </div>
       </div>

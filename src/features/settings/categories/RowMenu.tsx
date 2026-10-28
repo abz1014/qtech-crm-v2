@@ -80,7 +80,7 @@ function ActionSheet({ title, subtitle, items, onClose }: { title: string; subti
           aria-describedby={undefined}
           className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] animate-sheet-in overflow-y-auto rounded-t bg-surface pb-[max(var(--sp-4),env(safe-area-inset-bottom,0px))] shadow-modal focus:outline-none"
         >
-          <div aria-hidden="true" className="mx-auto mb-1 mt-2 h-1 w-9 rounded-round bg-line-strong" />
+          <div aria-hidden="true" className="mx-auto mb-1 mt-2 h-1 w-[2.25rem] rounded-round bg-line-strong" />
           <div className="grid border-b px-4 pb-3 pt-2">
             <RadixDialog.Title className="min-w-0 text-base font-semibold text-fg [overflow-wrap:anywhere]">{title}</RadixDialog.Title>
             {subtitle ? <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{subtitle}</span> : null}

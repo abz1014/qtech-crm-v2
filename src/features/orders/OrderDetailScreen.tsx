@@ -56,23 +56,23 @@ function PageSkeleton() {
   return (
     <Shell>
       <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading order">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-9 w-96 max-w-full" />
-        <Skeleton className="h-5 w-72 max-w-full" />
+        <Skeleton className="h-4 w-[10rem]" />
+        <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
+        <Skeleton className="h-5 w-[18rem] max-w-full" />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[0, 1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-24 w-full" />
+            <Skeleton key={i} className="h-[6rem] w-full" />
           ))}
         </div>
-        <Skeleton className="h-72 w-full" />
+        <Skeleton className="h-[18rem] w-full" />
         <div className="mt-2 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid gap-6">
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-[16rem] w-full" />
+            <Skeleton className="h-[10rem] w-full" />
           </div>
           <div className="grid gap-6">
-            <Skeleton className="h-72 w-full" />
-            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-[18rem] w-full" />
+            <Skeleton className="h-[10rem] w-full" />
           </div>
         </div>
       </div>
@@ -195,17 +195,17 @@ export default function OrderDetailScreen() {
           </EmptyState>
         ) : !lists ? (
           <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading items and supplier orders">
-            <Skeleton className="h-56 w-full" />
-            <Skeleton className="h-56 w-full" />
+            <Skeleton className="h-[14rem] w-full" />
+            <Skeleton className="h-[14rem] w-full" />
           </div>
         ) : (
           <>
-            <BelowTheFold fallback={<Skeleton className="h-56 w-full" />}>
+            <BelowTheFold fallback={<Skeleton className="h-[14rem] w-full" />}>
               <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} pos={pos.data ?? []} />
             </BelowTheFold>
             <div className={isAdmin ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]' : 'grid gap-6'}>
               <div className="grid min-w-0 gap-6">
-                <BelowTheFold fallback={<Skeleton className="h-56 w-full" />}>
+                <BelowTheFold fallback={<Skeleton className="h-[14rem] w-full" />}>
                   <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
                   <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
                   {/* compact: a short drop zone, so an order with no files does not spend a screen on it (UX audit P9) */}
@@ -216,7 +216,7 @@ export default function OrderDetailScreen() {
                   invoiced and received figures are in the header's status strip, and the engineer's site is in the header's "Your job". */}
               {isAdmin ? (
                 <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:col-start-2 lg:row-start-1" aria-label="Margin and costs">
-                  <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+                  <BelowTheFold fallback={<Skeleton className="h-[10rem] w-full" />}>
                     <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} />
                     <InvoicesPanel orderId={order.id} orderNumber={order.number} />
                   </BelowTheFold>

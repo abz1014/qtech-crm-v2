@@ -102,7 +102,7 @@ function InvoiceLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
     return (
       <div className="grid gap-4" aria-busy="true">
         <Skeleton className="h-8" />
-        <Skeleton className="h-24" />
+        <Skeleton className="h-[6rem]" />
       </div>
     )
   if (!order.data) return <p role="alert" className="text-sm text-tone-danger-fg">This order is not here any more.</p>

@@ -332,7 +332,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         {loading ? (
           <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the purchase order">
             <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-[10rem] w-full" />
           </div>
         ) : loadFailed ? (
           <Banner tone="danger" title="Couldn't prepare the purchase order" action={<Button onClick={() => void prefill.refetch()}>Try again</Button>}>

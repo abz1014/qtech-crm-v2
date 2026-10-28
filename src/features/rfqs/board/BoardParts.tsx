@@ -41,7 +41,7 @@ function Refs({ row }: { row: BoardRow }) {
 export function RfqCell({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-[220px] max-w-[440px] gap-px whitespace-normal">
-      <span className="flex min-w-0 items-center gap-1.5">
+      <span className="flex min-w-0 items-center gap-[0.375rem]">
         <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="min-w-0 font-medium text-fg hover:underline [overflow-wrap:anywhere]">
           {row.companyName}
         </Link>
@@ -144,7 +144,7 @@ export function OpenCard({ row }: { row: BoardRow }) {
   const s = nextStepText(row)
   return (
     <div className="grid min-w-0 gap-1">
-      <span className="flex min-w-0 items-center gap-1.5">
+      <span className="flex min-w-0 items-center gap-[0.375rem]">
         <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="min-w-0 font-medium text-fg hover:underline [overflow-wrap:anywhere]">
           {row.companyName}
         </Link>

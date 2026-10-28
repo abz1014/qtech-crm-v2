@@ -73,7 +73,7 @@ export default function CaptureRoute() {
         </h1>
         <p className="text-base text-fg-2">{summary}</p>
       </header>
-      {text ? <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-row border bg-surface p-3 text-base [overflow-wrap:anywhere]">{text.length > 600 ? `${text.slice(0, 600)}…` : text}</pre> : null}
+      {text ? <pre className="max-h-[12rem] overflow-auto whitespace-pre-wrap rounded-row border bg-surface p-3 text-base [overflow-wrap:anywhere]">{text.length > 600 ? `${text.slice(0, 600)}…` : text}</pre> : null}
       {item.files.length > 0 ? (
         <ul className="grid gap-1 text-base" aria-label="Shared files">
           {item.files.map(f => (

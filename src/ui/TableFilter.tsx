@@ -67,7 +67,7 @@ export function TableFilter({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         autoComplete="off"
-        className="pl-8 pr-[var(--control-h)]"
+        className={cn('pl-8', value !== '' ? 'pr-[var(--control-h)]' : 'max-md:pr-3 md:pr-[var(--control-h)]')}
       />
       {hint ? (
         <span id={hintId} hidden>
