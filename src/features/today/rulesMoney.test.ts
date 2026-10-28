@@ -169,6 +169,12 @@ describe('M08 recurring due (admin only)', () => {
   it('skips recorded, inactive and not-yet-started templates', () => {
     expect(ruleRecurringDue(ctx({ recurring: [tpl({ recorded: true }), tpl({ id: 'b', active: false }), tpl({ id: 'c', startMonth: '2026-12' })] }))).toEqual([])
   })
+  it('a bill for last month whose template starts this month is not due: Monthly bills does not list it either', () => {
+    // Template day 5, started Oct: on 27 Oct its bill is September, which it never covered. Not "overdue".
+    expect(ruleRecurringDue(ctx({ today: '2026-10-27', recurring: [tpl({ startMonth: '2026-10', period: '2026-09' })] }))).toEqual([])
+    expect(ruleRecurringDue(ctx({ today: '2026-10-27', recurring: [tpl({ startMonth: '2026-09', period: '2026-09' })] }))).toHaveLength(1)
+    expect(ruleRecurringDue(ctx({ today: '2026-10-27', recurring: [tpl({ startMonth: '2026-10', period: '2026-10' })] }))).toHaveLength(1)
+  })
   it('lists at most three names', () => {
     const many = ['A', 'B', 'C', 'D', 'E'].map((l, i) => tpl({ id: `t${i}`, label: l, dayOfMonth: 1 }))
     expect(ruleRecurringDue(ctx({ recurring: many }))[0].party).toBe('A, B, C and 2 more')
@@ -197,5 +203,16 @@ describe('M08 in the whole list', () => {
   it('the subject ids are valid uuids', () => {
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/
     for (const id of [...Object.values(ROLLUP_SUBJECT), recurringSubjectId(TODAY)]) expect(id).toMatch(uuid)
+  })
+})
+
+describe('M08 recurring due: a template with no day is never overdue', () => {
+  it('is listed for the month with a neutral badge and no date', () => {
+    const [e] = ruleRecurringDue(ctx({ today: '2026-10-28', recurring: [tpl({ dayOfMonth: null })] }))
+    expect(e).toMatchObject({ actionDueOn: null, group: 'ready', badge: { text: 'This month', tone: 'neutral' } })
+  })
+  it('does not pull a dated template back to the 1st', () => {
+    const [e] = ruleRecurringDue(ctx({ today: '2026-10-28', recurring: [tpl({ dayOfMonth: null }), tpl({ id: 'b', label: 'Zed', dayOfMonth: 20 })] }))
+    expect(e.actionDueOn).toBe('2026-10-20')
   })
 })

@@ -27,6 +27,19 @@ export function chipForOldList(search: string): 'mine' | 'history' | null {
   return null
 }
 
+/**
+ * The Jobs list query string for an old list address: the chip it asks for, and every other parameter kept (new=1 opens the new-order
+ * dialog, q is the search text). The old list's own filters (show, tab, owner) and the ?old switch are consumed here.
+ */
+export function jobsSearchForOldList(search: string): string {
+  const chip = chipForOldList(search)
+  const next = new URLSearchParams(search)
+  for (const k of ['show', 'tab', 'owner', 'old', 'chip']) next.delete(k)
+  if (chip) next.set('chip', chip)
+  const out = next.toString()
+  return out ? `?${out}` : ''
+}
+
 /** The Job key for an RFQ or order id, or null when there is none (an address that never existed). */
 export async function jobKeyFor(kind: OldKind, id: string): Promise<string | null> {
   const db = requireSupabase()

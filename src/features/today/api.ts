@@ -408,7 +408,13 @@ async function loadGst(today: string): Promise<GstFact> {
 async function loadClaims(): Promise<ClaimsFact> {
   const db = requireSupabase()
   const rows = unwrap(await db.from('expense_claims').select('created_at').eq('status', 'pending').order('created_at').limit(500)) ?? []
-  return { pending: rows.length, oldestOn: rows[0]?.created_at ? rows[0].created_at.slice(0, 10) : null }
+  return claimsFactFrom(rows)
+}
+
+/** The pending count and the Pakistan day the oldest was made (created_at is a UTC timestamp: its first 10 characters can be the day before). */
+export function claimsFactFrom(rows: readonly { created_at: string | null }[]): ClaimsFact {
+  const first = rows[0]?.created_at
+  return { pending: rows.length, oldestOn: first ? toBusinessDate(new Date(first)) : null }
 }
 
 /** The close-month item reads only on the 1st to the 10th: one RPC and one tiny read, admin only. */
@@ -504,14 +510,10 @@ async function loadRecurringFacts(today: string): Promise<RecurringFact[]> {
     db.from('expenses').select('recurring_id, period').in('period', periods).not('recurring_id', 'is', null),
   ])
   const done = new Set((unwrap(recorded) ?? []).map(r => `${r.recurring_id as string}|${r.period as string}`))
-  return (unwrap(templates) ?? []).map(t => ({
-    id: t.id,
-    label: t.label,
-    dayOfMonth: t.day_of_month,
-    active: t.active,
-    startMonth: t.start_month,
-    recorded: done.has(`${t.id}|${billPeriod({ dayOfMonth: t.day_of_month, categoryId: t.category_id }, today)}`),
-  }))
+  return (unwrap(templates) ?? []).map(t => {
+    const period = billPeriod({ dayOfMonth: t.day_of_month, categoryId: t.category_id }, today)
+    return { id: t.id, label: t.label, dayOfMonth: t.day_of_month, active: t.active, startMonth: t.start_month, period, recorded: done.has(`${t.id}|${period}`) }
+  })
 }
 
 async function loadSnoozes(today: string): Promise<SnoozeFact[]> {

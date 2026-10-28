@@ -30,7 +30,7 @@ export function paymentBlockedNode(block: DeleteBlock, line: Pick<PaymentLine, '
     const month = (line.bankMonth ?? '').slice(0, 7)
     return (
       <>
-        This payment is ticked against the {month ? monthKeyLabel(month) : ''} bank statement. Untick it first, then delete it.{' '}
+        This payment is ticked against {month ? `the ${monthKeyLabel(month)} bank statement` : 'a bank statement'}. Untick it first, then delete it.{' '}
         <Link to={month ? `/money/month-end/bank?month=${month}` : '/money/month-end/bank'} className="font-medium text-primary underline">
           Open Bank check
         </Link>

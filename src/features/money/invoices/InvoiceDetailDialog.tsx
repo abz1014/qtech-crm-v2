@@ -26,7 +26,7 @@ import { useDeleteInvoiceReceipt, useGstRegister, useInvoice, useInvoiceReceipts
 import { GST_FILED_WARNING, gstReturnMayBeFiled, monthHasFbrRecord, round2 } from '@/features/money/invoices/model'
 import { useDeleteInvoiceFlow } from '@/features/money/invoices/InvoiceDelete'
 import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
-import { useClosedMonths } from '@/features/money/monthEnd/hooks'
+import { useClosedMonths, useMonthClosed } from '@/features/money/monthEnd/hooks'
 import { CLOSED_MONTH_LINE } from '@/features/money/expenses/deleteFlow'
 import { pkr } from '@/features/money/expenses/model'
 
@@ -101,8 +101,11 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const net = Number(invoice.net_amount)
   const gst = Number(invoice.gst_amount)
   const today = businessToday()
-  const closedQ = useClosedMonths()
-  const monthClosed = !!invoice.invoice_date && (closedQ.data ?? []).some(c => c.key === invoice.invoice_date?.slice(0, 7))
+  // Admins read the list of closed months; sales cannot (closed_months is admin-only), so they ask about this one month instead.
+  const closedQ = useClosedMonths(isAdmin)
+  const staffClosedQ = useMonthClosed(invoice.invoice_date, !isAdmin)
+  const monthClosed =
+    !!invoice.invoice_date && (isAdmin ? (closedQ.data ?? []).some(c => c.key === invoice.invoice_date?.slice(0, 7)) : staffClosedQ.data === true)
   const registerQ = useGstRegister()
   const [historyOpen, setHistoryOpen] = useState(false)
   /** The GST return of a month may be in when an FBR payment or PSID is on it, or the 18th of the next month has gone by. */
@@ -228,7 +231,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         {monthClosed ? (
           <p className="flex items-center gap-2 text-base text-fg-2" data-testid="invoice-closed-line">
             <Lock className="size-5 shrink-0 text-fg-muted" aria-hidden="true" />
-            {invoice.number ?? 'This invoice'} is in a closed month. {CLOSED_MONTH_LINE}
+            {invoice.number ?? 'This invoice'} is in a closed month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
           </p>
         ) : (
           <fieldset className="grid gap-4 md:grid-cols-2" data-testid="invoice-edit">

@@ -18,6 +18,15 @@ export const useMonthEndDetails = (month: string, enabled = true) =>
 export const useClosedMonths = (enabled = true) =>
   useQuery({ queryKey: qk.money.monthEnd.closed(), queryFn: api.loadClosedMonths, enabled, ...live })
 
+/** Is the month of `day` closed? For staff who cannot read the closed months list (sales). */
+export const useMonthClosed = (day: string | null | undefined, enabled = true) =>
+  useQuery({
+    queryKey: [...qk.money.monthEnd.closed(), 'on', (day ?? '').slice(0, 7)],
+    queryFn: () => api.isMonthClosed(day as string),
+    enabled: enabled && !!day,
+    ...live,
+  })
+
 /** Every month with money in it, each with its P&L (a row a month). */
 export const usePnlMonths = (enabled = true) =>
   useQuery({ queryKey: qk.money.monthEnd.pnl(), queryFn: api.loadPnlMonths, enabled, ...live })

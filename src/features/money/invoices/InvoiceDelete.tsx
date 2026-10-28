@@ -19,7 +19,9 @@ import { useDeleteInvoice } from '@/features/money/invoices/hooks'
  * The receipt files the database names are removed from storage afterwards; a file that will not go never undoes the delete.
  */
 export function bankTickedSentence(taxBankMonth: string): string {
-  return `This invoice has its tax deposit ticked against the ${monthKeyLabel(taxBankMonth.slice(0, 7))} bank statement. Untick it first, then delete it.`
+  // After a refusal this page does not know the statement month (it was ticked since the page loaded): say so rather than guess one.
+  const which = taxBankMonth ? `the ${monthKeyLabel(taxBankMonth.slice(0, 7))} bank statement` : 'a bank statement'
+  return `This invoice has its tax deposit ticked against ${which}. Untick it first, then delete it.`
 }
 
 export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled: boolean; onDeleted: () => void }) {
@@ -27,8 +29,8 @@ export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled:
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   // The server refused with bank_ticked although this page did not know of it (ticked since it was opened).
-  const [refusedMonth, setRefusedMonth] = useState<string | null>(null)
-  const ticked = invoice.tax_bank_month ?? refusedMonth
+  const [refused, setRefused] = useState(false)
+  const ticked = invoice.tax_bank_month ?? ''
   const gross = Number(invoice.net_amount) + Number(invoice.gst_amount)
   const name = invoice.number ? `invoice ${invoice.number}` : 'this invoice'
 
@@ -37,7 +39,7 @@ export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled:
     try {
       files = await del.mutateAsync(invoice.id)
     } catch (e) {
-      if (mapPgError(e).hint === 'bank_ticked') setRefusedMonth(invoice.tax_bank_month ?? invoice.invoice_date ?? '')
+      if (mapPgError(e).hint === 'bank_ticked') setRefused(true)
       throw e
     }
     // The rows are gone: nothing below may throw into the confirm.
@@ -47,10 +49,10 @@ export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled:
     opts.onDeleted()
   }
 
-  const blocked: ReactNode = ticked ? (
+  const blocked: ReactNode = ticked || refused ? (
     <>
-      {bankTickedSentence(ticked || invoice.invoice_date || '')}{' '}
-      <Link to={`/money/month-end/bank?month=${ticked.slice(0, 7)}`} className="font-medium text-primary underline">
+      {bankTickedSentence(ticked)}{' '}
+      <Link to={ticked ? `/money/month-end/bank?month=${ticked.slice(0, 7)}` : '/money/month-end/bank'} className="font-medium text-primary underline">
         Open Bank check
       </Link>
     </>

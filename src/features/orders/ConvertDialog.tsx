@@ -180,7 +180,9 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
   const totals = orderTotals(ordered.filter(it => (confirmed[it.id] ?? 0) > 0).map(it => ({ qty: checks[it.id]?.total ?? it.qty, unitPriceNet: confirmed[it.id] as number, gstRate: gstOf(it.id) })))
   const lineCount = orderLineCount(ordered, splits)
 
-  const setPrice = (id: string, v: number | null) => {
+  const setPrice = (id: string, raw: number | null) => {
+    // Money is kept to 2 places, so 0.001 and 0.004 are 0.00: refuse what the stored price will be, not what was typed.
+    const v = raw === null ? null : Math.round(raw * 100) / 100
     setTyped(t => ({ ...t, [id]: v }))
     if (v !== null && v > 0 && !included(id)) setTicks(t => ({ ...t, [id]: true }))
   }

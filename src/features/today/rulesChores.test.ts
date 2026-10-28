@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { needsYouItems } from './needsYou'
+import { claimsFactFrom } from './api'
 import { buildToday, ruleClaimsToApprove, ruleGstFbr } from './rules'
 import { buildTodo } from './todoModel'
 import type { ClaimsFact, GstFact, TodayInputs } from './types'
@@ -77,5 +78,17 @@ describe('I paid: N to approve', () => {
     expect(ruleClaimsToApprove(ctx('2026-10-26', { claims: null }))).toEqual([])
     expect(ruleClaimsToApprove(ctx('2026-10-26', { claims: claims(2), user: { id: 'u', role: 'sales' } }))).toEqual([])
     expect(ruleClaimsToApprove(ctx('2026-10-26', { claims: claims(2), user: { id: 'u', role: 'engineer' } }))).toEqual([])
+  })
+
+  it('a claim waiting more than 30 days stays in the To do count until it is handled', () => {
+    const view = buildToday(ctx('2026-10-26', { gst: null, claims: claims(1, '2026-08-01') }))
+    expect(needsYouItems(view).map(i => i.rule)).toEqual(['claims_to_approve'])
+    expect(view.stale).toEqual([])
+  })
+
+  it('the oldest claim date is the Pakistan day, not the UTC day', () => {
+    // 20:00 UTC on the 20th is 01:00 on the 21st in Pakistan
+    expect(claimsFactFrom([{ created_at: '2026-10-20T20:00:00+00:00' }, { created_at: '2026-10-25T08:00:00+00:00' }])).toEqual({ pending: 2, oldestOn: '2026-10-21' })
+    expect(claimsFactFrom([])).toEqual({ pending: 0, oldestOn: null })
   })
 })

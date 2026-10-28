@@ -30,5 +30,5 @@ export function useLinkOne() {
 
 export function useLinkAllCertain() {
   const client = useQueryClient()
-  return useMutation({ mutationFn: api.linkAllCertain, onSuccess: () => refresh(client) })
+  return useMutation({ mutationFn: api.linkAllCertain, onSettled: () => refresh(client) })
 }

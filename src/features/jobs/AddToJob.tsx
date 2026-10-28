@@ -17,6 +17,7 @@ import { deleteAttachment, type AttachmentRow, type InquiryRow, type RfqItemRow 
 import { useClarifications, useRfqInquiries, useRfqItems, useSaveReply, useSetClarificationAnswer, useSetItemDecline, useUploadAttachment } from '@/features/rfqs/hooks'
 import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
 import { currencyForSupplier, draftFromLines, draftFromSuggestions, planReplySave, suggestFromReply, type SuggestionSet } from '@/features/rfqs/lib'
+import { deleteCapture, safely } from '@/lib/capture/store'
 import { getOrderNotes, getRfqNotes, setOrderNotes, setRfqNotes } from '@/features/capture/api'
 import { appendNote, noteStamp } from '@/features/capture/model'
 import type { JobSlotProps } from '@/features/jobs/slots'
@@ -81,7 +82,12 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
     if (input.files?.length) void intakeFiles(input.files, { accept: RFQ_FILE_ACCEPT }).then(a => setFiles(prev => [...prev, ...a]))
     setKindChoice(null)
   }, [])
+  // The kept share this content came from (IndexedDB): deleted only once a save has gone through, so a failed save, a reload or an update keeps it.
+  const keptId = useRef<string | null>(null)
   const reset = () => {
+    const kept = keptId.current
+    keptId.current = null
+    if (kept) void safely(() => deleteCapture(kept), undefined)
     setText('')
     setFiles([])
     setKindChoice(null)
@@ -91,9 +97,10 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
   // What the share target or "Add to job…" handed over (read once), and a paste or a drop anywhere on the page.
   const handed = useRef(false)
   useEffect(() => {
-    const h = (location.state as { addToJob?: { text?: string; files?: File[] } } | null)?.addToJob
+    const h = (location.state as { addToJob?: { text?: string; files?: File[]; captureId?: string } } | null)?.addToJob
     if (!h || handed.current) return
     handed.current = true
+    keptId.current = h.captureId ?? null
     take({ text: h.text, files: h.files })
     navigate(location.pathname, { replace: true, state: null })
   }, [location.state, location.pathname, navigate, take])
