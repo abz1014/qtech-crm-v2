@@ -410,7 +410,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       ),
       {
         id: 'imported',
-        header: IMPORTED_GROUP_LABEL,
+        header: 'Imported, no order',
         kind: 'money',
         value: r => (r.importedUnlinked ? r.remaining : null),
         ...whole<AgingRow>(r => (r.importedUnlinked ? r.remaining : null)),
