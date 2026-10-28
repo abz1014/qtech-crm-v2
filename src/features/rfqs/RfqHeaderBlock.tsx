@@ -334,7 +334,7 @@ function RfqNextStep({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFac
     action = (
       <span data-slot="mark-won" className="flex flex-wrap gap-2">
         {main.liveOrders.map(o => (
-          <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+          <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:border-primary-active active:bg-primary-active max-md:h-touch [[data-surface=navy]_&]:shadow-on-navy">
             <Icon icon={Package} />
             Open {orderRef(o.number)}
           </Link>
