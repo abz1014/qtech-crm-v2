@@ -173,7 +173,7 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     expect(await rowOf(page, 'Item 1', s.bravo.name).evaluate(el => el.nextElementSibling?.hasAttribute('data-cheapest'))).toBe(true)
     // The supplier's own figure, in grey under the PKR one; the header explains "≈" once.
     await expect(rowOf(page, 'Item 1', s.apex.name).locator('[data-own-price]')).toHaveText('USD 100')
-    await expect(art.getByText('Price, PKR today (≈ = converted)')).toBeVisible()
+    await expect(art.getByText('Price, PKR today', { exact: true })).toBeVisible()
     await expect(art.getByText('Lowest', { exact: true })).toHaveCount(0)
     // The rule is one tip in the panel header, not a note above every item.
     await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(1)

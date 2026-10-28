@@ -105,7 +105,7 @@ test.describe('companies list search (audit F1)', () => {
     await openAs(page, 'sales', '/companies')
     await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
     const search = page.getByRole('textbox', { name: 'Search companies or contacts' })
-    await expect(search).toHaveAttribute('placeholder', 'Search companies or contacts')
+    await expect(search).toHaveAttribute('placeholder', 'Search companies')
 
     await search.fill(`rukhsana${tag}`)
     const row = page.getByRole('row', { name: new RegExp(company.name) })
@@ -135,9 +135,9 @@ test.describe('company page', () => {
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
-    // An RFQ and no order yet: the derived role, said once, as a Tag in the meta line under the name (never inside the h1).
+    // An RFQ and no order yet: the derived role, said once, as a Tag on its own row under the name (never inside the h1).
     await expect(page.getByRole('heading', { name: company.name, level: 1 })).not.toContainText('Prospect')
-    await expect(page.locator('header p').getByText('Prospect', { exact: true })).toBeVisible()
+    await expect(page.locator('header').getByText('Prospect', { exact: true })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Main plant' }).getByText(rfqRef(rfq.number))).toBeVisible()
     await expect(page.getByText('Karachi, Pakistan')).toBeVisible() // the place under the name: city, country
     await expect(page.getByText('Naveed Akhtar')).toBeVisible()
