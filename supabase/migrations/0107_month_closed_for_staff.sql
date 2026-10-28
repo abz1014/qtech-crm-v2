@@ -12,7 +12,7 @@ set search_path = ''
 as $$
 begin
   if public.current_user_role() is null then
-    raise exception 'Only signed-in staff can ask this.' using errcode = '42501';
+    raise exception 'Your session has ended. Sign in again.' using errcode = '42501';
   end if;
   return public.month_is_closed(d);
 end
