@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Camera, Check, Paperclip, X } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -18,7 +17,8 @@ import { useClarifications, useRfqInquiries, useRfqItems, useSaveReply, useSetCl
 import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
 import { currencyForSupplier, draftFromLines, draftFromSuggestions, planReplySave, suggestFromReply, type SuggestionSet } from '@/features/rfqs/lib'
 import { deleteCapture, safely } from '@/lib/capture/store'
-import { appendNotesSafely, setOrderNotes, setRfqNotes } from '@/features/capture/api'
+import { SHARED_GONE, useSharedItem } from '@/features/jobs/sharedItem'
+import { appendNotesSafely, undoAppendedNote } from '@/features/capture/api'
 import { appendNote, noteStamp } from '@/features/capture/model'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import { allowedKinds, guessKind, guessLine, hasContent, KIND_LABEL, matchSupplier, type AddKind, type SupplierRef } from '@/features/jobs/addToJob/model'
@@ -50,8 +50,6 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
   const user = session.status === 'signed-in' ? session.user : null
   const { toast } = useToast()
   const client = useQueryClient()
-  const location = useLocation()
-  const navigate = useNavigate()
 
   const sheet = money && rfqId ? rfqId : undefined
   const inquiries = useRfqInquiries(sheet)
@@ -84,26 +82,37 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
   }, [])
   // The kept share this content came from (IndexedDB): deleted only once a save has gone through, so a failed save, a reload or an update keeps it.
   const keptId = useRef<string | null>(null)
+  const [hasKept, setHasKept] = useState(false)
+  const sharedItem = useSharedItem()
+  const clearShared = sharedItem.clear
   const reset = () => {
     const kept = keptId.current
     keptId.current = null
-    if (kept) void safely(() => deleteCapture(kept), undefined)
+    if (kept) {
+      void safely(() => deleteCapture(kept), undefined)
+      setHasKept(false)
+      clearShared()
+    }
     setText('')
     setFiles([])
     setKindChoice(null)
     setSupplierChoice(null)
   }
 
-  // What the share target or "Add to job…" handed over (read once), and a paste or a drop anywhere on the page.
-  const handed = useRef(false)
+  // What the share target or "Add to job…" handed over: the address carries the kept item's id (?shared=<id>) and the item is read from this
+  // device each time the page loads, so a reload brings it back. The id leaves the address only when it is saved or discarded (reset).
+  const handed = useRef<string | null>(null)
+  const sharedState = sharedItem.state
   useEffect(() => {
-    const h = (location.state as { addToJob?: { text?: string; files?: File[]; captureId?: string } } | null)?.addToJob
-    if (!h || handed.current) return
-    handed.current = true
+    if (sharedState.status !== 'ready') return
+    const h = sharedState.shared
+    if (handed.current === (h.captureId ?? '')) return
+    handed.current = h.captureId ?? ''
     keptId.current = h.captureId ?? null
+    setHasKept(Boolean(h.captureId))
     take({ text: h.text, files: h.files })
-    navigate(location.pathname, { replace: true, state: null })
-  }, [location.state, location.pathname, navigate, take])
+  }, [sharedState, take])
+  // a paste or a drop anywhere on the page
   useEffect(() => {
     const editable = (t: EventTarget | null) => {
       const el = t as HTMLElement | null
@@ -152,12 +161,12 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         rows.push(await uploadToJob.mutateAsync({ clarificationId: null, file: f.file, path: attachmentPath(parentId, crypto.randomUUID(), f.file.name, f.file.type) }))
       }
       const note = text.trim()
-      let before: string | null = null
+      let saved: { before: string | null; after: string } | null = null
       if (note) {
         // read, add the line and write only if nobody saved in between (appendNotesSafely re-reads and retries once)
         const stamp = noteStamp(user.name, new Date())
         const written = await appendNotesSafely(orderId ? 'orders' : 'rfqs', (orderId ?? rfqId) as string, current => appendNote(current, note, stamp))
-        before = written.before
+        saved = { before: written.before, after: written.after }
         if (orderId) await invalidateAfter(client, 'order.update', { orderId })
         else await invalidateAfter(client, 'rfq.notes', { rfqId: rfqId as string })
       }
@@ -170,10 +179,8 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         tone: 'success',
         undo: {
           onUndo: async () => {
-            if (note) {
-              if (orderId) await setOrderNotes(orderId, before)
-              else await setRfqNotes(rfqId as string, before)
-            }
+            // back to what was there if nobody changed the notes since; otherwise only our own line is removed (or it says it cannot)
+            if (saved) await undoAppendedNote(orderId ? 'orders' : 'rfqs', (orderId ?? rfqId) as string, saved)
             for (const r of rows) await deleteAttachment(r)
             await Promise.all([
               orderId ? invalidateAfter(client, 'order.update', { orderId }) : invalidateAfter(client, 'rfq.notes', { rfqId: rfqId as string }),
@@ -232,6 +239,22 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         <p className="text-base text-fg-2">Paste a message, or add a photo or a file. We guess where it goes.</p>
       </div>
       <div className="grid gap-3 px-4 py-3">
+        {sharedState.status === 'gone' ? (
+          <p role="status" className="flex flex-wrap items-center gap-2 rounded-row border bg-sunken px-3 py-2 text-base" data-testid="shared-gone">
+            {SHARED_GONE}
+            <Button size="touch" variant="quiet" onClick={clearShared}>
+              Dismiss
+            </Button>
+          </p>
+        ) : null}
+        {hasKept ? (
+          <p className="flex flex-wrap items-center gap-2 text-base text-fg-2" data-testid="shared-kept">
+            What you shared is kept on this device until you add it or discard it.
+            <Button size="touch" variant="quiet" onClick={reset}>
+              Discard what was shared
+            </Button>
+          </p>
+        ) : null}
         <label className="grid gap-1 text-base font-medium">
           Paste here
           <textarea

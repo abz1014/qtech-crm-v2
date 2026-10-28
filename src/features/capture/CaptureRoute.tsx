@@ -13,7 +13,7 @@ import { useJobSearch } from '@/features/jobs/hooks'
  * /capture is where the Android share target lands (the service worker stores the shared item for 7 days and redirects here with
  * ?share=<id>), and where a sign-in redirect returns to. Two choices, nothing else (P4-B, the six-destination sheet is gone):
  *   New enquiry   the shared message, PDF or photo is read as a customer's enquiry (/enquiries/new)
- *   Add to job…   pick the job with a search box; the item is added on that job's page ("Add to this job" guesses what it is)
+ *   Add to job…   pick the job with a search box; the job page reads the kept item by its id (?shared=<id>, so a reload keeps it) and adds it
  * An engineer sees only Add to job: they add a photo or a note, and start no enquiry.
  * Opened with no ?share (the engineer's "Photo or note" button) there is nothing shared: the page asks which job, and the job page opens
  * its photo-or-note box (state.photoOrNote). Nothing is deleted here: the job page deletes a kept item only after it saved it.
@@ -102,7 +102,7 @@ export default function CaptureRoute() {
       </div>
       {picking ? (
         <JobPicker
-          onPick={key => navigate(`/jobs/${encodeURIComponent(key)}`, { replace: true, state: { addToJob: { text: item.text, files: files(item), captureId: item.id } } })}
+          onPick={key => navigate(`/jobs/${encodeURIComponent(key)}?shared=${encodeURIComponent(item.id)}`, { replace: true })}
         />
       ) : null}
     </main>

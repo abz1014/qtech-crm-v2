@@ -27,7 +27,7 @@ const leg = (over: Record<string, unknown> = {}) => ({
   last_chased_on: null, chase_count: 0, inquiry_id: null, created_at: '2026-10-01T00:00:00Z', ...over,
 })
 
-function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[]; state?: unknown } = {}) {
+function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[]; state?: unknown; url?: string } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
   client.setQueryData(qk.jobs.part(J.key, 'facts'), FACTS)
   client.setQueryData(qk.rfqs.part('r1', 'items'), [])
@@ -46,7 +46,7 @@ function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof le
     <QueryClientProvider client={client}>
       <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ali Raza', role: 'engineer' } }}>
         <ToastProvider>
-          <MemoryRouter initialEntries={[{ pathname: '/jobs/139', state: opts.state ?? null }]}>
+          <MemoryRouter initialEntries={[{ pathname: '/jobs/139', search: opts.url ? opts.url.slice(opts.url.indexOf('?')) : '', state: opts.state ?? null }]}>
             <Routes>
               <Route path="/jobs/*" element={<JobsScreen />} />
             </Routes>
@@ -57,7 +57,23 @@ function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof le
   )
 }
 
-afterEach(() => vi.restoreAllMocks())
+const kept = vi.hoisted(() => ({ deleted: [] as string[] }))
+vi.mock('@/lib/capture/store', async importOriginal => {
+  const real = await importOriginal<typeof import('@/lib/capture/store')>()
+  return {
+    ...real,
+    getCapture: (id: string) => Promise.resolve(id === 'cap-9' ? { id, text: 'Gate pass after 3pm', files: [], source: 'share', createdAt: 0, expiresAt: 1e15 } : null),
+    deleteCapture: (id: string) => {
+      kept.deleted.push(id)
+      return Promise.resolve()
+    },
+  }
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  kept.deleted.length = 0
+})
 
 describe("the engineer's Job page", () => {
   it('has the three big buttons, one green, and no price', async () => {
@@ -124,5 +140,20 @@ describe("the engineer's Job page", () => {
     } finally {
       db.uninstall()
     }
+  })
+
+  it('a shared item in the address (?shared=id) opens the box with it, and a reload (the same address again) brings it back', async () => {
+    const first = mount({ url: '/jobs/139?shared=cap-9' })
+    expect(await screen.findByRole('dialog', { name: /Add photo or note/ })).toBeInTheDocument()
+    expect(await screen.findByRole('textbox', { name: 'Note' })).toHaveValue('Gate pass after 3pm')
+    first.unmount()
+    mount({ url: '/jobs/139?shared=cap-9' })
+    expect(await screen.findByRole('textbox', { name: 'Note' })).toHaveValue('Gate pass after 3pm')
+    expect(kept.deleted).toEqual([])
+  })
+
+  it('an expired shared item says so in plain words', async () => {
+    mount({ url: '/jobs/139?shared=cap-none' })
+    expect(await screen.findByTestId('shared-gone')).toHaveTextContent('no longer on this device')
   })
 })

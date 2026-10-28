@@ -11,10 +11,10 @@ import { allowedKinds, guessKind, matchSupplier } from '@/features/jobs/addToJob
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
-const kept = vi.hoisted(() => ({ deleted: [] as string[] }))
+const kept = vi.hoisted(() => ({ deleted: [] as string[], items: {} as Record<string, { id: string; text: string; files: never[] }> }))
 vi.mock('@/lib/capture/store', async importOriginal => {
   const real = await importOriginal<typeof import('@/lib/capture/store')>()
-  return { ...real, deleteCapture: (id: string) => { kept.deleted.push(id); return Promise.resolve() } }
+  return { ...real, getCapture: (id: string) => Promise.resolve(kept.items[id] ?? null), deleteCapture: (id: string) => { kept.deleted.push(id); return Promise.resolve() } }
 })
 
 const state = vi.hoisted(() => ({
@@ -110,13 +110,17 @@ function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<Clarificatio
   state.inquiries = role === 'engineer' ? [] : [inquiry('i-rhein', 'Rhein Automation GmbH'), inquiry('i-shanghai', 'Shanghai Flowtech Co.', 'China')]
   state.items = ITEMS
   state.clars = clars
+  if (handoff) {
+    const h = handoff as { text: string; captureId: string; gone?: boolean }
+    if (!h.gone) kept.items[h.captureId] = { id: h.captureId, text: h.text, files: [] }
+  }
   const db = installFakeDb((c: FakeCall) => respond?.(c) ?? (c.target === 'rfqs' && c.verb === 'select' ? { data: { notes: null, updated_at: 'T1' } } : { data: c.verb === 'update' ? [{ id: 'r-1' }] : [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const session: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }
-  render(
+  const view = render(
     <QueryClientProvider client={client}>
       <SessionContext.Provider value={session}>
-        <MemoryRouter initialEntries={[{ pathname: '/jobs/139', state: handoff ? { addToJob: handoff } : null }]}>
+        <MemoryRouter initialEntries={[handoff ? `/jobs/139?shared=${(handoff as { captureId: string }).captureId}` : '/jobs/139']}>
           <ToastProvider>
             <AddToJob job={{ job: JOB, role, money: role !== 'engineer' }} />
           </ToastProvider>
@@ -124,12 +128,13 @@ function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<Clarificatio
       </SessionContext.Provider>
     </QueryClientProvider>,
   )
-  return { db, user: userEvent.setup() }
+  return { db, user: userEvent.setup(), unmount: view.unmount }
 }
 
 afterEach(() => {
   installFakeDb(() => ({})).uninstall()
   kept.deleted.length = 0
+  kept.items = {}
 })
 
 const WHATSAPP = ['Rhein Automation: dear Ayesha,', '1) Ultrasonic flowmeter RST 1158S EUR 3610 - 8 weeks', '2) Clamp-on transducer pair DN50 EUR 980 - 8 weeks'].join('\n')
@@ -196,5 +201,26 @@ describe('Add to this job: a kept share is deleted only after the save', () => {
     fail = false
     await user.click(screen.getByRole('button', { name: 'Add note' }))
     await waitFor(() => expect(kept.deleted).toEqual(['cap-1']))
+  })
+
+  it('a reload brings the shared item back (read again by its id from the address) and keeps it; Discard deletes it', async () => {
+    const first = mount('sales', [], { text: 'Gate pass needed after 3pm', files: [], captureId: 'cap-2' })
+    expect(await screen.findByRole('textbox', { name: 'Paste here' })).toHaveValue('Gate pass needed after 3pm')
+    first.unmount()
+    expect(kept.deleted).toEqual([])
+    // the same address, a fresh page: the item is read again
+    const second = mount('sales', [], { text: 'Gate pass needed after 3pm', files: [], captureId: 'cap-2' })
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Paste here' })).toHaveValue('Gate pass needed after 3pm'))
+    expect(kept.deleted).toEqual([])
+    await second.user.click(screen.getByRole('button', { name: 'Discard what was shared' }))
+    await waitFor(() => expect(kept.deleted).toEqual(['cap-2']))
+    expect(screen.getByRole('textbox', { name: 'Paste here' })).toHaveValue('')
+  })
+
+  it('an item that has expired says so in plain words and can be dismissed', async () => {
+    const { user } = mount('sales', [], { text: '', files: [], captureId: 'cap-gone', gone: true })
+    expect(await screen.findByTestId('shared-gone')).toHaveTextContent('no longer on this device')
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+    await waitFor(() => expect(screen.queryByTestId('shared-gone')).toBeNull())
   })
 })
