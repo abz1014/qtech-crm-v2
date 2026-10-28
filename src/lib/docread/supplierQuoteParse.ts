@@ -351,8 +351,8 @@ export function guardScrambledPrices(reply: ParsedReply, text: string): void {
         if (row.some(c => holdsPrice(c, price)) || (row[priceCol] ?? '') !== '') bad = true
         else continue
       }
-      // The cell under the quantity heading is not a quantity (the row's cells slipped, and the "price" is its quantity).
-      else if (row.length === head.length && qtyCol >= 0 && qtyCol !== priceCol && cellAt(qtyCol) !== '' && !/^\d[\d.,]*\s*[A-Za-z.]{0,8}$/.test(cellAt(qtyCol))) bad = true
+      // The cell under the quantity heading holds words, not a quantity (the row's cells slipped, and the "price" is its quantity).
+      else if (row.length === head.length && qtyCol >= 0 && qtyCol !== priceCol && /[A-Za-z]{4,}/.test(cellAt(qtyCol)) && !/^\d[\d.,]*\s*(?:pieces?|sets?|units?|met(?:er|re)s?|rolls?|boxes|packs?|lots?|each)\b/i.test(cellAt(qtyCol))) bad = true
       // The row's own quantity and total contradict it (the price and total of two different rows).
       else if (row.length === head.length && totalCol >= 0 && qtyCol >= 0) {
         const qty = cellNumber(cellAt(qtyCol))
