@@ -131,13 +131,13 @@ export function TeamPage() {
       id: 'actions',
       header: 'Actions', // hidden from sight by the table's className below, still the column's name for assistive tech
       align: 'right',
-      width: phone ? 52 : 164, // a phone has no room for the word: Reactivate is its icon (still named by aria-label)
+      width: 164,
       cell: m =>
         isActive(m) ? (
           <RowMenu member={m} onPick={open} />
         ) : (
-          <Button size="sm" icon={UserCheck} onClick={() => open('reactivate', m)} aria-label={`Reactivate ${m.name}`} className="max-sm:size-touch max-sm:px-0">
-            <span className="max-sm:sr-only">Reactivate</span>
+          <Button size="sm" icon={UserCheck} onClick={() => open('reactivate', m)} aria-label={`Reactivate ${m.name}`}>
+            Reactivate
           </Button>
         ),
     },
@@ -214,8 +214,9 @@ export function TeamPage() {
                 {roleLabel(m.role)}
                 {m.job_title ? ` · ${m.job_title}` : ''}
               </span>
+              {/* Under the name, not beside it: beside it the chip took the width and the name broke into 3-letter lines at 320 px. */}
+              {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" className="mt-1 justify-self-start" />}
             </span>
-            {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" />}
             <Icon icon={Ellipsis} className="shrink-0 text-fg-muted" />
           </span>
         )}
