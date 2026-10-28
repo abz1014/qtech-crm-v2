@@ -93,6 +93,8 @@ export function BottomTabs({
   const items = given ?? navItemsForRole(role)
   const config = useMobileBarConfig()
   if (config?.hideTabs) return null
+  // Four destinations or fewer (every real role): room to set the count clear of its icon and to pad the labels. Five or six keep the tight fit.
+  const roomy = items.length <= 4
   return (
     <nav
       aria-label="Main"
@@ -110,6 +112,9 @@ export function BottomTabs({
               cn(
                 // Under 360 px six 16 px labels need the tight tracking to share the width (the shell-widths check at 320).
                 'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] py-2 text-xs font-medium max-[359px]:tracking-[-0.04em]',
+                // beside the Photo or note button the two columns are narrow: a little more air so a label never sits on the screen edge
+                roomy && 'px-1',
+                fab && 'px-2',
                 isActive ? 'text-fg' : 'text-fg-2 hover:text-fg',
               )
             }
@@ -120,8 +125,8 @@ export function BottomTabs({
                 <span className="relative">
                   <Icon icon={item.icon} size="lg" />
                   {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
-                  <NeedsCount n={count} badge silent className="left-[calc(100%-2px)]" />
-                  {dots?.[item.key] ? <LateDot badge silent /> : null}
+                  <NeedsCount n={count} badge silent className={roomy ? 'left-[calc(100%+2px)]' : 'left-[calc(100%-2px)]'} />
+                  {dots?.[item.key] ? <LateDot badge silent className={roomy ? '-right-[14px]' : undefined} /> : null}
                 </span>
                 <span className="whitespace-nowrap">
                   {item.label}

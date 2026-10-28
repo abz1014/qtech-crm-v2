@@ -105,7 +105,7 @@ export function TeamPage() {
       sortable: false,
       value: m => roleLabel(m.role),
       cell: m => (
-        <span className={cn('flex flex-wrap items-center gap-2', dim(m))}>
+        <span className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 lg:flex-nowrap', dim(m))}>
           {roleLabel(m.role)}
           <FirstWeekBadge member={m} facts={firstWeek.data} />
         </span>

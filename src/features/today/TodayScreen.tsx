@@ -422,7 +422,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
         className={cn(
           'grid w-full grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 rounded-row px-3 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken md:px-4',
           // clear of the 44px snooze button (4px in from the edge) with a gap, down to a 320px phone
-          own && 'pr-16',
+          own && 'pr-16 md:pr-16',
           // The open row's ink ring (direction C, 18:1 against the white tile) is drawn on the whole tile, button row included: see the <li>.
           (waiting || faded) && 'bg-sunken',
           waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle',

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { CircleAlert, CircleCheck, Undo2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
@@ -128,6 +128,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const lift = useLiftAboveStickyBar(items.length > 0)
   const overDialog = useDialogOpen(items.length > 0)
+  const region = useRef<HTMLDivElement>(null)
+  useClearance(region, items.length > 0 && !overDialog)
 
   const api = useMemo<ToastApi>(() => ({ toast, dismiss }), [toast, dismiss])
   const card = (item: Item) => (
@@ -138,6 +140,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div
+        ref={region}
         role="region"
         aria-label="Notifications"
         data-over-dialog={overDialog || undefined}
@@ -158,6 +161,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       </div>
     </ToastContext.Provider>
   )
+}
+
+/**
+ * On a phone the toasts sit over the bottom of the page. While any show, the scrolling page (#main) gets that much room at its
+ * end, so the last card and its buttons can be scrolled clear of the toast ("Open in WhatsApp" was under the Undo toast).
+ */
+function useClearance(region: RefObject<HTMLDivElement | null>, active: boolean) {
+  useEffect(() => {
+    const main = typeof document === 'undefined' ? null : document.getElementById('main')
+    const box = region.current
+    if (!active || !main || !box || typeof window === 'undefined' || !window.matchMedia?.('(max-width: 767px)').matches) return
+    const apply = () => void (main.style.paddingBottom = `${box.offsetHeight + 16}px`)
+    apply()
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(apply)
+    ro?.observe(box)
+    return () => {
+      ro?.disconnect()
+      main.style.paddingBottom = ''
+    }
+  }, [region, active])
 }
 
 const DIALOG = '[role="dialog"],[role="alertdialog"]'
@@ -288,13 +311,13 @@ function ToastCard({
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
       className={cn(
-        // On a phone the card wraps: icon and words on the first row (never narrower than 10rem), Undo and Dismiss drop to the next.
-        'pointer-events-auto relative flex animate-rise-6 items-center gap-3 overflow-hidden rounded py-[10px] pl-[14px] pr-[10px] text-sm shadow-pop max-md:flex-wrap max-md:gap-y-2',
+        // On a phone a compact grid: icon, words and Dismiss on the first row (Dismiss inline, top right), Undo or the action under the words.
+        'pointer-events-auto relative flex animate-rise-6 items-center gap-3 overflow-hidden rounded py-[10px] pl-[14px] pr-[10px] text-sm shadow-pop max-md:grid max-md:grid-cols-[auto_minmax(0,1fr)_auto] max-md:items-start max-md:gap-x-3 max-md:gap-y-1',
         tone === 'danger' ? 'bg-tone-danger-fg text-tone-ink-fg' : 'bg-tone-ink-bg text-tone-ink-fg',
       )}
     >
-      <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0', tone === 'success' && 'text-tone-success-bg')} />
-      <div className="grid min-w-0 flex-1 text-pretty max-md:min-w-[10rem]">
+      <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0 max-md:col-start-1 max-md:row-start-1 max-md:mt-[2px]', tone === 'success' && 'text-tone-success-bg')} />
+      <div className="grid min-w-0 flex-1 text-pretty max-md:col-start-2 max-md:row-start-1">
         <span className="font-medium">{title}</span>
         {body ? <span className={cn('text-xs', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
         {undoable ? <span className="sr-only">{` Undo is available for ${u?.seconds ?? 10} seconds, or press Control+Z.`}</span> : null}
@@ -303,7 +326,7 @@ function ToastCard({
         <button
           type="button"
           onClick={onUndo}
-          className="inline-flex h-control-sm items-center gap-[6px] rounded border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:h-touch"
+          className="inline-flex h-control-sm items-center gap-[6px] rounded border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start"
         >
           <svg viewBox="0 0 18 18" aria-hidden="true" className="size-[18px] -rotate-90">
             <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" className="stroke-tone-ink-fg opacity-30" />
@@ -329,7 +352,7 @@ function ToastCard({
             input.action?.onClick()
             onDismiss()
           }}
-          className="inline-flex h-control-sm items-center rounded border border-tone-ink-fg/30 px-3 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:h-touch"
+          className="inline-flex h-control-sm items-center rounded border border-tone-ink-fg/30 px-3 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start"
         >
           {input.action.label}
         </button>
@@ -338,7 +361,7 @@ function ToastCard({
         type="button"
         aria-label="Dismiss"
         onClick={onDismiss}
-        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:ml-auto max-md:size-touch"
+        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:col-start-3 max-md:row-start-1 max-md:-my-2 max-md:-mr-2 max-md:size-10"
       >
         <Icon icon={X} />
       </button>

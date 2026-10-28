@@ -873,7 +873,7 @@ function TableView<T>(props: DataTableProps<T>) {
       </div>
 
       {shown || hints || loading ? (
-        <div className="flex min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted">
+        <div className={cn('min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted', !shown && !loading ? 'hidden sm:group-focus-within/dt:flex' : 'flex')}>
           {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
           {hints ? (
             <span className="flex flex-wrap items-center justify-end gap-3 max-sm:hidden invisible group-focus-within/dt:visible" aria-hidden="true">

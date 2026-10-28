@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChartColumn, ChevronLeft } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
@@ -39,15 +39,13 @@ export function MoneyFrame({
   const tabs = MONEY_TABS.filter(t => isAdmin || !t.adminOnly)
   const heading = title ?? moneyTabLabel(active)
   const toOf = (t: MoneyTab) => (t.key === 'reports' && month ? `${t.to}?month=${month}` : t.to)
-  // Five short labels do not fit one row at 320 px: admin's Reports sits beside the page action on a phone instead.
+  // Every tab stays in the strip on a phone, so the lit one is always there. Admin's five go three over two (6 columns, spans 2 and 3).
   const phone = useMediaQuery('(max-width: 767px)')
-  const crowded = tabs.length > 4
-  const phoneTabs = crowded ? tabs.filter(t => t.key !== 'reports') : tabs
-  const reportsTab = phone && crowded ? tabs.find(t => t.key === 'reports') : undefined
+  const twoRows = tabs.length > 4
   return (
     // One column no wider than the screen (minmax(0, 1fr)): a wide child (a register's table) scrolls inside its own card
     // instead of stretching the column, and every card with it, past the right edge of a phone.
-    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
+    <div className="mx-auto grid w-full min-w-0 max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
       {/* The phone bar's title. Rendered before the page, so a sub-page's own bar (MoneySubHeader) wins. */}
       <FrameBar title={heading} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4">
@@ -56,26 +54,11 @@ export function MoneyFrame({
           title={heading}
           lede={active === 'reports' ? undefined : <span className="max-md:hidden">All amounts in PKR</span>}
           primary={actions}
-          secondary={
-            reportsTab ? (
-              <Link
-                to={toOf(reportsTab)}
-                aria-current={active === 'reports' ? 'page' : undefined}
-                className={cn(
-                  'inline-flex h-touch items-center gap-2 rounded border px-3 text-sm font-medium',
-                  active === 'reports' ? 'border-chrome bg-chrome text-chrome-fg' : 'border-line-strong bg-surface text-fg',
-                )}
-              >
-                <Icon icon={ChartColumn} className={active === 'reports' ? 'text-chrome-fg-2' : 'text-fg-muted'} />
-                Reports
-              </Link>
-            ) : undefined
-          }
         />
         {phone ? (
-          <nav aria-label="Money views" className="grid min-w-0 gap-1 rounded bg-selected p-1" style={{ gridTemplateColumns: `repeat(${phoneTabs.length}, minmax(0, 1fr))` }} data-testid="money-tabs-phone">
-            {phoneTabs.map(t => (
-              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} phone />
+          <nav aria-label="Money views" className="grid min-w-0 gap-1 rounded bg-selected p-1" style={{ gridTemplateColumns: twoRows ? 'repeat(6, minmax(0, 1fr))' : `repeat(${tabs.length}, minmax(0, 1fr))` }} data-testid="money-tabs-phone">
+            {tabs.map((t, at) => (
+              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} phone span={twoRows ? (at < 3 ? 2 : 3) : undefined} />
             ))}
           </nav>
         ) : (
@@ -99,20 +82,20 @@ const FrameBar = memo(function FrameBar({ title }: { title: string }) {
 })
 
 /** One Money tab. A plain Link: the lit tab follows `active` (Lock a month stays lit on the pages reached from it), not the address. */
-function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolean; phone?: boolean }) {
+function TabLink({ tab, to, on, phone, span }: { tab: MoneyTab; to: string; on: boolean; phone?: boolean; span?: number }) {
   return (
     <Link
       to={to}
       aria-current={on ? 'page' : undefined}
+      style={span ? { gridColumn: `span ${span}` } : undefined}
       className={cn(
         'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
         phone ? 'min-h-touch min-w-0 justify-center gap-1 px-1 text-center text-sm leading-tight' : 'min-h-control gap-2 px-4 text-sm',
         on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg',
       )}
     >
-      {/* The name is the visible words plus, for a short phone label, the full name for screen readers (WCAG 2.5.3 label in name). */}
-      <span className={phone ? undefined : 'whitespace-nowrap'}>{phone ? tab.short : tab.label}</span>
-      {phone && tab.short !== tab.label ? <span className="sr-only">{` (${tab.label})`}</span> : null}
+      {/* One label on every screen: the full name. */}
+      <span className="whitespace-nowrap">{tab.label}</span>
     </Link>
   )
 }
@@ -144,8 +127,11 @@ export function MoneySubHeader({
         {back.label}
       </Link>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h2 className="text-xl font-semibold tracking-snug max-md:sr-only">{title}</h2>
-        {meta}
+        {/* The title and what explains it (the (i), a tag) stay together: a lone (i) under the phone bar pointed at nothing. So a view with `meta` draws its title on a phone too. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 className={cn('text-xl font-semibold tracking-snug', !meta && 'max-md:sr-only')}>{title}</h2>
+          {meta}
+        </div>
         <span className="flex-1 max-md:hidden" />
         {actions}
       </div>
