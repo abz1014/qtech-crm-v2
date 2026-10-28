@@ -53,6 +53,19 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(r.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs/139'))
   })
 
+  it('a failed lookup (offline, a server error) says so and offers Try again, not "not found"', async () => {
+    let fail = true
+    mount('/rfqs/offline-1', c => {
+      if (c.target === 'v_jobs') return fail ? { error: { message: 'Failed to fetch' } } : { data: [{ job_key: '139' }] }
+      return { data: [] }
+    })
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 4000 })
+    expect(screen.queryByText(/not found/i)).toBeNull()
+    fail = false
+    retry.click()
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139'))
+  })
+
   it('an id with no Job is page not found, not a blank page', async () => {
     mount('/rfqs/nope')
     expect(await screen.findByText(/not found/i)).toBeInTheDocument()

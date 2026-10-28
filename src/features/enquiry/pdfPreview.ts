@@ -15,12 +15,14 @@ export async function renderPdfPreview(file: File, opts: { pages?: number; width
   if (typeof document === 'undefined') return null
   const limit = opts.pages ?? 2
   const width = opts.width ?? 900
+  const urls: string[] = []
+  let task: { destroy: () => Promise<void> | void } | null = null
   try {
     const { pdfjs } = await import('@/lib/docread/pdfjsRuntime')
     const data = new Uint8Array(await file.arrayBuffer())
-    const task = pdfjs.getDocument({ data, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, enableXfa: false, verbosity: pdfjs.VerbosityLevel.ERRORS })
-    const doc = await task.promise
-    const urls: string[] = []
+    const loading = pdfjs.getDocument({ data, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, enableXfa: false, verbosity: pdfjs.VerbosityLevel.ERRORS })
+    task = loading
+    const doc = await loading.promise
     const count = Math.min(doc.numPages, limit)
     for (let n = 1; n <= count; n++) {
       if (opts.signal?.aborted) break
@@ -39,9 +41,13 @@ export async function renderPdfPreview(file: File, opts: { pages?: number; width
       page.cleanup()
       if (blob) urls.push(URL.createObjectURL(blob))
     }
-    void task.destroy()
+    void loading.destroy()
+    task = null
     return urls.length > 0 ? { urls, more: Math.max(0, doc.numPages - urls.length) } : null
   } catch {
+    // A page that fails to draw (page 2 of a damaged PDF) must not leave the pages already drawn, or the parsed document, behind.
+    for (const u of urls) URL.revokeObjectURL(u)
+    void task?.destroy()
     return null
   }
 }

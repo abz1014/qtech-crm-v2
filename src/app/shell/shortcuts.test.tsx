@@ -100,6 +100,17 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     expect(screen.getByTestId('where').textContent).toBe('/todo')
   })
 
+  it('N and the palette row New enquiry are for admin and sales: an engineer starts no enquiry', async () => {
+    const user = userEvent.setup()
+    shell('/todo', 'engineer')
+    press('n')
+    expect(screen.getByTestId('where').textContent).toBe('/todo')
+    await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
+    const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
+    expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
+    expect(within(dlg).getAllByRole('option').some(r => /New enquiry/.test(r.textContent ?? ''))).toBe(false)
+  })
+
   it('O starts an order without an enquiry (admin and sales)', () => {
     shell('/todo', 'sales')
     press('o')

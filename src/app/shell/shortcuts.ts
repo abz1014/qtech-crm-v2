@@ -29,7 +29,7 @@ export const KEY_WORDS: ReadonlySet<string> = new Set(['or', 'then'])
 
 /** One sentence under a group's heading, for what is not a key (the Add expenses legend moved here). */
 export const GROUP_NOTES: Partial<Record<ShortcutGroup, string>> = {
-  Anywhere: 'Single keys (N, E, O, C, G then T, /, ?) work outside a text box. You can turn them off in Settings, Your details.',
+  Anywhere: 'Single keys (N, E, O, G then T, /, ?) work outside a text box. You can turn them off in Settings, Your details.',
   'Add expenses': 'A dashed box was filled in for you: type over it to change it. A solid box is what you typed.',
 }
 
@@ -38,7 +38,7 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
   return [
     // Anywhere outside a text field
     { group: 'Anywhere', keys: [mod, 'K'], what: 'Search or jump to', where: 'Also works inside a text box', handles: ['k'] },
-    { group: 'Anywhere', keys: ['N'], what: 'New enquiry', handles: ['n'] },
+    { group: 'Anywhere', keys: ['N'], what: 'New enquiry', where: 'Admin and sales', handles: ['n'] },
     { group: 'Anywhere', keys: ['E'], what: 'Add an expense', where: 'Admin', handles: ['e'] },
     { group: 'Anywhere', keys: ['O'], what: 'Order without enquiry', where: 'Admin and sales', handles: ['o'] },
     { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to To do', handles: ['g', 't'] },
