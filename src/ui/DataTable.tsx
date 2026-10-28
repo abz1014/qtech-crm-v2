@@ -900,23 +900,38 @@ function TableView<T>(props: DataTableProps<T>) {
  */
 function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density, virtual: boolean): [RowMetrics, () => void] {
   const [m, setM] = useState<RowMetrics>(() => DEFAULT_ROW_METRICS[density])
-  const read = useCallback(() => {
-    const el = rootRef.current
-    if (!el) return
-    // Only a windowed table needs the drawn rows; any other table just reads the tokens.
-    const next = readRowMetrics(el, density, window, { rows: virtual })
-    setM(prev => (prev.row === next.row && prev.tall === next.tall && prev.head === next.head ? prev : next))
-  }, [rootRef, density, virtual])
+  /*
+   * `reset` (the tokens changed: density, text size, pointer) takes the new reading as it is. A reading taken because a new window
+   * of rows scrolled into view (reset false) can only raise the heights. Taking it as it is made the window and the heights
+   * chase each other: rows that wrap to three lines (a long company name in a narrow column) set a tall row height, the window
+   * moved to short rows, the height dropped, the window moved back to the tall rows, and so on without end until React threw
+   * "Maximum update depth exceeded" and the error screen came up. Raise-only is monotonic, so it settles.
+   */
+  const read = useCallback(
+    (reset = false) => {
+      const el = rootRef.current
+      if (!el) return
+      // Only a windowed table needs the drawn rows; any other table just reads the tokens.
+      const next = readRowMetrics(el, density, window, { rows: virtual })
+      setM(prev => {
+        const to = reset ? next : { row: Math.max(prev.row, next.row), tall: Math.max(prev.tall, next.tall), head: Math.max(prev.head, next.head) }
+        return prev.row === to.row && prev.tall === to.tall && prev.head === to.head ? prev : to
+      })
+    },
+    [rootRef, density, virtual],
+  )
   useLayoutEffect(() => {
-    read()
-    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(read)
+    const again = () => read(true)
+    again()
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(again)
     mo?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-text'] })
     const pointer = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
-    pointer?.addEventListener?.('change', read)
+    pointer?.addEventListener?.('change', again)
     return () => {
       mo?.disconnect()
-      pointer?.removeEventListener?.('change', read)
+      pointer?.removeEventListener?.('change', again)
     }
   }, [read])
-  return [m, read]
+  const remeasure = useCallback(() => read(false), [read])
+  return [m, remeasure]
 }

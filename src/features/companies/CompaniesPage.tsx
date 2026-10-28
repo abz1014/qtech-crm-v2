@@ -100,8 +100,8 @@ export function CompaniesPage() {
         // 768 px tablet (HE-16). It wraps inside its own column instead.
         cell: r => (
           <div className="grid min-w-0 gap-px whitespace-normal">
-            <NameLink row={r} />
-            <PlaceLine row={r} />
+            <NameLink row={r} clamp />
+            <PlaceLine row={r} clamp />
           </div>
         ),
       },
@@ -257,18 +257,32 @@ export function CompaniesPage() {
   )
 }
 
-function NameLink({ row }: { row: Shown }) {
+/*
+ * `clamp`: in the table (not the phone card) a long name shows two lines and the place line one, the full text in the title. The
+ * windowed table draws every row as tall as the tallest one in view, so unbounded wrapping made the whole list 250 px rows.
+ * The words are all still in the page for a screen reader; the clamp only cuts what is drawn.
+ */
+function NameLink({ row, clamp = false }: { row: Shown; clamp?: boolean }) {
   return (
-    <Link to={`/companies/${row.id}`} className="min-w-0 [overflow-wrap:anywhere] font-medium text-fg hover:underline">
+    <Link
+      to={`/companies/${row.id}`}
+      title={clamp ? row.name : undefined}
+      className={`min-w-0 [overflow-wrap:anywhere] font-medium text-fg hover:underline ${clamp ? 'line-clamp-2' : ''}`}
+    >
       {row.name}
     </Link>
   )
 }
 
 /** The city (or "City, Country" abroad), and the contact a search found it through. */
-function PlaceLine({ row }: { row: Shown }) {
+function PlaceLine({ row, clamp = false }: { row: Shown; clamp?: boolean }) {
   if (!row.place && !row.via) return null
-  return <span className="min-w-0 [overflow-wrap:anywhere] text-sm text-fg-muted">{[row.place, row.via ? `Contact: ${row.via}` : null].filter(Boolean).join(' · ')}</span>
+  const text = [row.place, row.via ? `Contact: ${row.via}` : null].filter(Boolean).join(' · ')
+  return (
+    <span title={clamp ? text : undefined} className={`min-w-0 [overflow-wrap:anywhere] text-sm text-fg-muted ${clamp ? 'line-clamp-1' : ''}`}>
+      {text}
+    </span>
+  )
 }
 
 function Role({ row }: { row: Shown }) {

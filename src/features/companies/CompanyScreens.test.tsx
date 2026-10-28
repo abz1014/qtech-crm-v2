@@ -303,6 +303,11 @@ describe('companies list', () => {
     expect(within(glass).getByText('Customer & supplier').closest('[data-status]')).toBeNull()
     expect((screen.getByRole('link', { name: 'Alpenmark Controls' }).closest('tr') as HTMLElement)).toHaveTextContent('Linz, Austria')
     expect((screen.getByRole('link', { name: 'Lahore Mills' }).closest('tr') as HTMLElement)).toHaveTextContent('Pakistan')
+    // The table keeps every row compact: a long name is clamped to two lines (full text in the title, still the link's name), so the
+    // windowed table's "as tall as the tallest row" height stays bounded (the scroll crash, 2026-10-28).
+    const nameLink = screen.getByRole('link', { name: 'Karachi Glassworks' })
+    expect(nameLink).toHaveClass('line-clamp-2')
+    expect(nameLink).toHaveAttribute('title', 'Karachi Glassworks')
     expect(await axeViolations(document.body)).toEqual([])
   })
 
