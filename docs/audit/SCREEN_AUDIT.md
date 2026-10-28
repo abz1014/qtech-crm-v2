@@ -63,8 +63,9 @@ the role can reach: Today (with items); RFQ list open and closed; an RFQ in each
 prices in, quotation sent, won and made into an order: `rfq-won`); the supplier comparison (4 suppliers in 3 currencies, scrolled to the ranked prices); Orders list; an order
 not placed, with a PO issued, delivered, invoiced, paid, and one with 3 supplier orders and commissioning; Companies, a customer and a
 supplier; every Money view (GST register, receivables, expenses, the month-end checklist, bank tick, the six month-end reports,
-margins, exceptions); Reports; every Settings page including Team; the Paste or photo sheet, empty and with a supplier's reply
-pasted in (`paste-or-photo-empty`, `paste-or-photo-pasted`; the draft is emptied and the sheet closed afterwards); the Issue quotation
+margins, exceptions); Reports; every Settings page including Team; the Job page's Add to this job card with a supplier's reply
+pasted in (`add-to-job-pasted`, admin and sales; the empty card is on every Job page capture; nothing is saved and the box is emptied afterwards); the weekly
+review (`weekly-review`), Photo or note's which-job page (`capture-pick-job`) and the engineer's I paid page (`engineer-i-paid`); the Issue quotation
 dialog on the prices-in RFQ (`issue-quotation`, admin and sales); and New RFQ steps 1 to 4 (items pasted, suppliers, the message,
 sent), driven through the real screen with the old and the plain-words button names (last, as it creates an RFQ).
 

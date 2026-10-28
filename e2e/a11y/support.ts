@@ -18,8 +18,9 @@ import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName, t
 export const UI = {
   signIn: { email: /^Email/, password: /^Password$/, submit: /^Sign in$/, wrong: /password is incorrect/i, deactivated: /deactivated/i },
   accountMenu: /^Account menu/,
-  capture: /^(Capture|Paste or photo)$/,
-  captureSheet: /^(Capture|Paste or photo)$/,
+  /** The Job page's "Add to this job" card (it replaced the old capture sheet) and the engineer's phone-bar button that opens it. */
+  addToJob: /^Add to this job$/,
+  photoOrNote: /^Photo or note$/,
   palette: /^Search or jump to$/,
   close: /^Close$/,
   rowActions: /^Actions for /,
@@ -60,7 +61,7 @@ export const BUGS = {
   shortcuts: { id: 'A11Y-01', sc: '2.1.4', what: 'single-key shortcuts N, C, G T and / act anywhere outside a text field and cannot be turned off', where: 'src/app/palette/PaletteHost.tsx:74-98, src/ui/DataTable.tsx:274-288, src/features/rfqs/board/BoardPage.tsx:87' },
   busyFocus: { id: 'A11Y-02', sc: '2.4.3', what: 'a busy button is disabled while it has focus, so focus falls to <body>', where: 'src/ui/Button.tsx:86 (disabled={disabled || busy}), src/ui/form/Form.tsx:33' },
   routeFocus: { id: 'A11Y-03', sc: '2.4.3', what: 'opening a row unmounts it and nothing takes focus on the new page', where: 'src/app/shell/AppShell.tsx:56-70 (no focus move on route change)' },
-  wideDialogs: { id: 'A11Y-05', sc: '1.4.10', what: 'fixed-width dialogs are wider than the window between 768 and ~1000 px (1366 at 175%), the Close button and footer are clipped; at 320x256 the sheet title starts above the window', where: 'src/features/capture/CaptureSheet.tsx:583 (md:w-[960px]), src/features/quotations/IssueQuotationDialog.tsx:397 (md:w-[900px]), src/features/purchaseOrders/IssuePoDialog.tsx:317 (md:w-[820px]), src/ui/Dialog.tsx:102,126' },
+  wideDialogs: { id: 'A11Y-05', sc: '1.4.10', what: 'fixed-width dialogs are wider than the window between 768 and ~1000 px (1366 at 175%), the Close button and footer are clipped; at 320x256 a dialog title starts above the window', where: 'src/features/quotations/IssueQuotationDialog.tsx:397 (md:w-[900px]), src/features/purchaseOrders/IssuePoDialog.tsx:317 (md:w-[820px]), src/ui/Dialog.tsx:102,126' },
   shortSheets: { id: 'A11Y-06', sc: '1.4.10', what: 'at 256 px tall the command palette is taller than the window', where: 'src/ui/CommandPalette.tsx:233,248' },
   toastLive: { id: 'A11Y-07', sc: '4.1.3', what: 'each toast mounts with its own role=status, so its words are not in a live region that was waiting', where: 'src/ui/Toast.tsx:109-117,183-184' },
   undoCountdown: { id: 'A11Y-08', sc: '4.1.3', what: 'the Undo countdown changes every second inside the atomic status, so it is re-read', where: 'src/ui/Toast.tsx:220' },
