@@ -952,24 +952,70 @@ function spillRow(cells: string[] | null, cols: TableCols, idx: ItemIndex[]): { 
   return { lead: lead.join(' '), price: first ? Number((first[1] as string).replace(/,/g, '')) : null, row }
 }
 
-function qtyPriceTotal(cells: string[]): { qty: number; price: number } | null {
+/** A leading serial-number cell ("3" before the item's own text, then two or more amounts) in a row that has no heading to say so. */
+function hasSerialCell(cells: string[]): boolean {
+  return cells.length >= 4 && cells.slice(2).filter(c => /^\d[\d,]*(?:\.\d+)?$/.test(c.trim())).length >= 2 && /^\d{1,3}\.?$/.test((cells[0] ?? '').trim()) && /[A-Za-z]/.test(cells[1] ?? '')
+}
+
+/**
+ * Every reading of a row as quantity, unit price and line total (quantity × price = total), as the cell positions of the quantity and
+ * the price. A leading serial number is never one of them. "378 | 2 | 756" reads both ways round (378 × 2 and 2 × 378).
+ */
+function qtyPriceTotals(cells: string[]): Array<{ qty: number; price: number; qi: number; pi: number }> {
+  const from = hasSerialCell(cells) ? 1 : 0
   const nums = cells.map((c, i) => {
+    if (i < from) return null
     const t = c.trim().replace(/^(?:[A-Za-z$€£¥]{1,4}\.?\s?)/, '')
     if (!/^\d[\d,]*(?:\.\d+)?$/.test(t)) return null
     const a = parseAmount(t)
     return a && a.value > 0 ? { i, v: a.value, whole: /^\d{1,6}$/.test(t) } : null
   })
   const ns = nums.filter((n): n is { i: number; v: number; whole: boolean } => n !== null)
+  const out: Array<{ qty: number; price: number; qi: number; pi: number }> = []
   for (let a = 0; a < ns.length; a++)
-    for (let b = a + 1; b < ns.length; b++)
-      for (let c = b + 1; c < ns.length; c++) {
+    for (let b = 0; b < ns.length; b++)
+      for (let c = 0; c < ns.length; c++) {
         const q = ns[a]!
         const p = ns[b]!
         const t = ns[c]!
+        // Quantity, price, total left to right; or price, quantity, total as three neighbouring cells ("378 | 2 | 756").
+        if (!(q.i < p.i && p.i < t.i) && !(p.i < q.i && q.i < t.i && q.i === p.i + 1 && t.i === q.i + 1)) continue
         if (!q.whole || q.v > 100000) continue
-        if (Math.abs(q.v * p.v - t.v) <= Math.max(0.011, 0.002 * t.v)) return { qty: q.v, price: p.v }
+        if (Math.abs(q.v * p.v - t.v) <= Math.max(0.011, 0.002 * t.v)) out.push({ qty: q.v, price: p.v, qi: q.i, pi: p.i })
       }
-  return null
+  return out
+}
+
+/**
+ * Which way round a heading-less grid reads: true when its quantity comes before its unit price ("Qty | Price | Total"). Decided by
+ * the rows together: the quantity column is the one of small whole numbers, the price column the one of bigger amounts.
+ */
+function qtyFirstInGrid(rows: string[][]): boolean | null {
+  let qtyFirst = 0
+  let priceFirst = 0
+  for (const cells of rows) {
+    for (const r of qtyPriceTotals(cells)) {
+      if (r.qty >= r.price) continue
+      if (r.qi < r.pi) qtyFirst++
+      else priceFirst++
+    }
+  }
+  return qtyFirst === priceFirst ? null : qtyFirst > priceFirst
+}
+
+/** The quantity and unit price of a heading-less row; `qtyFirst` (the grid's order) and `askedQty` (the RFQ item's) settle the two ways round. */
+function qtyPriceTotal(cells: string[], qtyFirst: boolean | null = null, askedQty: number | null = null): { qty: number; price: number } | null {
+  const all = qtyPriceTotals(cells)
+  if (!all.length) return null
+  const uniq = all.filter((r, k) => all.findIndex(x => x.qi === r.qi && x.pi === r.pi) === k)
+  if (uniq.length === 1) return uniq[0] as { qty: number; price: number }
+  const byAsked = askedQty === null ? [] : uniq.filter(r => r.qty === askedQty)
+  if (byAsked.length === 1) return byAsked[0] as { qty: number; price: number }
+  const byGrid = qtyFirst === null ? [] : uniq.filter(r => (r.qi < r.pi) === qtyFirst)
+  if (byGrid.length === 1) return byGrid[0] as { qty: number; price: number }
+  // Alone, the smaller whole number is the quantity.
+  const small = [...uniq].sort((x, y) => x.qty - y.qty)[0]
+  return small ?? null
 }
 
 const SEPARATOR_ROW =/^[\s|:\-+=_*]{3,}$/
@@ -979,6 +1025,8 @@ function analyseRow(cells: string[], cols: TableCols, today: string | undefined)
   const cell = (i: number) => (i >= 0 ? (cells[i] ?? '').trim() : '')
   const amount = (txt: string): PriceCand | null => {
     if (!txt || /^[-–—/n.a]+$/i.test(txt)) return null
+    // "7s", "02": a number with a stray letter stuck to it, or a whole number with a leading zero, is a misread cell, not a price.
+    if (/^\d[\d,.]*[A-Za-z]$/.test(txt.trim()) || /^0\d+$/.test(txt.trim())) return null
     const anch = findAnchoredPrices(txt, null)[0]
     if (anch) return anch
     const m = new RegExp(AMOUNT_SP).exec(txt)
@@ -1256,6 +1304,9 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
   const idx = indexItems(rfqItems)
   const nonEmpty = lines.filter(l => l.text).length
 
+  // Which way round the quantity and unit price sit in a grid with no heading, read from all its rows together.
+  const gridQtyFirst = qtyFirstInGrid(lines.flatMap(l => { const c = l.text.includes('	') ? splitCells(l.text) : null; return c && !tableHeader(c) ? [c] : [] }))
+
   const drafts: Draft[] = []
   const pending: Draft[] = []
   const declined: DeclinedItem[] = []
@@ -1315,7 +1366,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     const rowCols = cols && rowCells && rowCells.length === cols.n ? cols : null
     // A list number in front of a sentence ("3.) Payment terms: ...") is a list number, not a price.
     // (A table row under a heading: its serial number is not a price either.)
-    const analysable = cells ? (cols && !rowCols && cells.length <= 2 && cols.num >= 0 && /^\d{1,3}$/.test(cells[0] ?? '') ? cells.slice(1).join(String.fromCharCode(9)) : line.text) : line.text.replace(/^\s*\d{1,2}\s*[.)]+\s*(?=[A-Za-z])/, '')
+    const analysable = cells && !rowCols && hasSerialCell(cells) ? cells.slice(1).join(String.fromCharCode(9)) : cells ? (cols && !rowCols && cells.length <= 2 && cols.num >= 0 && /^\d{1,3}$/.test(cells[0] ?? '') ? cells.slice(1).join(String.fromCharCode(9)) : line.text) : line.text.replace(/^\s*\d{1,2}\s*[.)]+\s*(?=[A-Za-z])/, '')
     const f = rowCols && rowCells ? analyseRow(rowCells, rowCols, opts.today) : analyse(analysable, opts.today)
     // A row whose empty cells were trimmed ends in "NA.": no price for this item.
     if (!f.regret && !rowCols && cells && cells.length >= 3 && f.prices.length === 0 && /^(?:n\.?\/?a\.?|nil|not\s+available|unavailable)$/i.test(cells[cells.length - 1] ?? '')) {
@@ -1323,7 +1374,10 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     }
     // A table row with no heading to go by (a picture lost it): quantity × unit price = total names the unit price.
     if (!rowCols && cells) {
-      const qpt = qtyPriceTotal(cells)
+      const pre = matchByContent(line.text, idx)
+      const preIdx = pre ? pre.idx : markerNumber(line.text, idx.length)
+      const askedQty = preIdx !== null ? (idx[preIdx]?.qty ?? null) : null
+      const qpt = qtyPriceTotal(cells, gridQtyFirst, askedQty)
       if (qpt) {
         const cur = f.prices.find(p => p.currency)?.currency ?? null
         f.prices = [{ value: qpt.price, currency: cur, ambiguous: false, anchored: true, kind: 'unit', forQty: null, start: 0, end: 0 }]

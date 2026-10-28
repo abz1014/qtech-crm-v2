@@ -17,7 +17,7 @@
 
 import { parseLeadTime, parseSupplierReply, splitSentences, stripQuotedReply, normaliseCurrency, type LeadTime, type ParsedReply, type ParseReplyOptions, type ReplyCurrency, type ReplyItemRef } from '@/features/rfqs/lib/replyParse'
 import { businessToday } from '@/lib/dates'
-import { alignSpacedRows, foldWrappedTables, rebuildCellText } from './cellTable'
+import { alignSpacedRows, foldWrappedTables, joinSplitHeader, rebuildCellText, tabulateSpacedRows } from './cellTable'
 import { findDate } from './enquiryParse'
 
 export interface QuoteFacts {
@@ -293,7 +293,7 @@ export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: 
   const today = opts.today ?? businessToday()
   // A letterhead copied from a PDF keeps its two columns on one line ("Your Ref: RFQ-118        Currency: USD"): each labelled
   // part is a line of its own, so the quotation's own facts are not dropped with our reference.
-  const lines = rebuildCellText(foldWrappedTables(alignSpacedRows(stripQuotedReply(plainQuoteText(raw)).split('\n'))).join('\n'), t => TOTAL_LABEL.test(t) || BANK.test(t))
+  const lines = rebuildCellText(foldWrappedTables(alignSpacedRows(tabulateSpacedRows(joinSplitHeader(stripQuotedReply(plainQuoteText(raw)).split('\n'))))).join('\n'), t => TOTAL_LABEL.test(t) || BANK.test(t))
     .split('\n')
     // Terms written as a two-column table ("Validity | 30 days"): "Validity: 30 days", a line a term reader knows.
     .map(l => {
@@ -336,7 +336,11 @@ export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: 
     // ("VAT 5%" / "4100.50": the rate is part of the label.)
     afterTotal = isTotalRow(t) && !/\d/.test(t.replace(/\d+(?:\.\d+)?\s*%/g, ''))
     const first = cells(t).find(Boolean) ?? ''
+    // A stray digit a picture reader put in front of a contact line ("8 | Welhat: +86 ...") is not an item number.
+    const filled = cells(t).filter(Boolean)
+    const contactRow = filled.length >= 2 && /^\d{1,2}$/.test(filled[0] as string) && /^[A-Za-z]{3,12}:?\s*\+\d{1,3}/.test(filled[1] as string)
     const drop =
+      contactRow ||
       isTotalRow(t) ||
       BANK.test(t) ||
       (CONTACT.test(first) && !/\b(?:price|rate|delivery|lead|shipment|dispatch|validity|payment)\b/i.test(t)) ||
