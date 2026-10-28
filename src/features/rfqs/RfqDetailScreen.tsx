@@ -10,7 +10,6 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { MessageActions } from '@/ui/MessageActions'
 import { useChannelPreference } from '@/lib/useChannelPreference'
-import { rfqRef } from '@/lib/refs'
 import { Skeleton } from '@/ui/Skeleton'
 import { prefetchRfqParts, useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
@@ -457,7 +456,7 @@ function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask:
               size="sm"
               to={{ name: i.contactName ?? i.supplierName, phone: i.contactPhone, email: i.contactEmail }}
               text={ask.text}
-              email={{ subject: `Enquiry ${rfqRef(rfq.number)}` }}
+              email={{ subject: 'Request for quotation' }}
               copy={false}
               channel={channel}
               onChannelChange={setChannel}

@@ -291,7 +291,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await shot(page, `${W}-message-step`)
       await resetClipboard(page)
       await copy.dblclick()
-      const text = await readClipboardWhen(page, s => /RFQ-\d{4}/.test(s))
+      const text = await readClipboardWhen(page, s => s.includes('Hi hope you are doing well,'))
       for (const want of ['Pressure gauge 0-16 bar', 'پریشر', 'Flow switch paddle type'])
         if (!text.includes(want)) note(info, { kind: 'observation', where: `${W} copied message`, what: `the supplier message lacks "${want}"`, detail: text.slice(0, 600) })
       if (/RFQ-####|\{\{|undefined|NaN/.test(text)) note(info, { kind: 'observation', where: `${W} copied message`, what: 'placeholder or junk in the supplier message', detail: text.slice(0, 600) })

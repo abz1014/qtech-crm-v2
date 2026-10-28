@@ -97,13 +97,14 @@ describe('supplier chase text', () => {
     expect(t.subject).toBeNull()
     expect(t.body).toBe(
       [
-        'Assalam o Alaikum Mr. Imran,',
+        'Hi Mr. Imran, hope you are doing well,',
         '',
-        'Following up on our enquiry of *Monday 23 November* (ref *RFQ-0179*). Thank you for pricing item 1. We are still awaiting your price for:',
+        'Following up on our enquiry of *Monday 23 November*. Thank you for pricing item 1. We are still awaiting your price for:',
         '2. Yokogawa EJA530E pressure transmitter, 0-1 MPa, 3 nos',
         '3. Endress+Hauser Cerabar PMC71, 2 nos',
         '',
-        'Kindly send your price and lead time by *Tuesday 1 December*. If you cannot offer an item, a short note will help us approach others.',
+        'Kindly send your price, availability and lead time by *Tuesday 1 December*. If you cannot offer an item, a short note will help us approach others.',
+        'Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important).',
         '',
         'Thank you.',
         'Regards,',
@@ -114,24 +115,23 @@ describe('supplier chase text', () => {
   })
   it('asks for a "cannot offer" today from the second chase', () => {
     const t = generateSupplierChase({ ...input, chaseCount: 1 })
-    expect(t.body).toContain('A second reminder on our enquiry of *Monday 23 November* (ref *RFQ-0179*).')
+    expect(t.body).toContain('A second reminder on our enquiry of *Monday 23 November*.')
     expect(t.body).toContain('kindly let us know today so that we can move on.')
     expect(generateSupplierChase({ ...input, chaseCount: 2 }).body).toContain('A third reminder')
   })
   it('email carries a subject and the longer wording', () => {
     const t = generateSupplierChase({ ...input, variant: 'email', signature: { ...input.signature, jobTitle: 'Sales' } })
-    expect(t.subject).toBe('RFQ-0179: price needed for 2 items by Tuesday 1 December')
-    expect(t.body).toContain('Dear Mr. Imran,\nAssalam o Alaikum.')
-    expect(t.body).toContain('Thank you for your quotation on item 1.')
-    expect(t.body).toContain('Sales, Q-Tech Solutions')
-    const withPhone = generateSupplierChase({ ...input, variant: 'email', signature: { ...input.signature, jobTitle: 'Sales', phone: '+92 300 555 0188' } })
-    expect(withPhone.body.endsWith('Sales, Q-Tech Solutions\n+92 300 555 0188')).toBe(true)
-    expect(generateSupplierChase({ ...input, signature: { ...input.signature, phone: '+92 300 555 0188' } }).body).not.toContain('+92') // WhatsApp stays short
+    expect(t.subject).toBe('Request for quotation: reminder for 2 items')
+    expect(t.body).toContain('Hi Mr. Imran, hope you are doing well,')
+    expect(t.body).toContain('Thank you for pricing item 1.')
+    expect(t.body).toContain('(these 2 requirements are very important)')
+    expect(t.body.endsWith('Regards,\nAyesha Rana\nQ-Tech Solutions')).toBe(true)
+    expect(t.body + (t.subject ?? '')).not.toMatch(/RFQ|assalam|our ref/i)
   })
   it('never names the customer or a price, and copes with no contact, no bid date, nothing priced', () => {
     const t = generateSupplierChase({ ...input, contactName: null, dueOn: null, pricedNumbers: [], sentOn: null })
-    expect(t.body.startsWith('Assalam o Alaikum,\n')).toBe(true)
-    expect(t.body).toContain('our enquiry *RFQ-0179*. We are still awaiting')
+    expect(t.body.startsWith('Hi hope you are doing well,\n')).toBe(true)
+    expect(t.body).toContain('Following up on our enquiry. We are still awaiting')
     expect(t.replyBy).toBe('2026-12-02')
   })
 })

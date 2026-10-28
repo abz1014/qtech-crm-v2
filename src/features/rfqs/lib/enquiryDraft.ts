@@ -1,20 +1,17 @@
 // R04: enquiry-draft generator for the intake float screen. Pure and framework-free.
 //
-// One text goes to every ticked supplier ("One text for all three. Each supplier skips what they cannot offer."),
-// so the text names no supplier, no customer and no price of ours. Wording follows the approved mockup
-// (g2-intake-float.html frame 5) and the chase texts (g2-chase-texts.html): WhatsApp is short, with *bold* markers;
-// email adds a subject, a greeting and the sender's contact line.
+// One text goes to every ticked supplier, so it names no supplier, no customer and no price of ours. Wording is the
+// owner's own format (DECISIONS 2026-10-28): plain greeting, numbered items, a bullet list of what to include, the
+// data-sheet and pictures request, "Regards," and the sender. WhatsApp and email carry the same body; email adds a subject.
 //
 // Rules:
-//  - Each item lists description, qty, unit and a `Spec:` line. Spec is the item's own spec text, verbatim, or
-//    "left blank". The generator never writes anything into Spec that the item did not carry.
-//  - The text asks for: unit price and currency; lead time; origin and authenticity; stock; MOQ, offer validity
-//    and payment terms.
-//  - Reply-by = bid due date minus 3 days, with two guards (see computeReplyBy). No due date: no date is stated.
-//  - Brand is shown only if the item has one and its description does not already say it. A missing brand is simply
-//    not mentioned.
+//  - Each item lists description, qty and unit. An item that carries a spec gets an indented `Spec:` line; with no
+//    spec the line is left out. The generator never writes anything into Spec that the item did not carry.
+//  - No religious greeting and no RFQ number anywhere in the text or the subject (the app's own records still link the RFQ).
+//  - The text never states a reply-by date. computeReplyBy stays for the screens that show one.
+//  - Brand is shown only if the item has one and its description does not already say it.
 
-import { addDays, isWeekend, longDay, parseDay, weekdayOf } from './dateText'
+import { addDays, isWeekend, parseDay, weekdayOf } from './dateText'
 
 // ------------------------------------------------------------------------------------------------ types
 
@@ -45,8 +42,8 @@ export interface EnquirySignature {
 }
 
 export interface EnquiryInput {
-  /** The RFQ number as shown to people, e.g. "RFQ-0185". */
-  rfqRef: string
+  /** Not written into the supplier text (DECISIONS 2026-10-28). Kept optional so callers need not change. */
+  rfqRef?: string
   items: readonly EnquiryItem[]
   /** rfqs.due_on (YYYY-MM-DD) or null. */
   dueOn?: string | null
@@ -131,18 +128,19 @@ function itemTitle(item: EnquiryItem): string {
   return d
 }
 
-function specText(spec: string | null | undefined): string {
+function specText(spec: string | null | undefined): string | null {
   const lines = (spec ?? '')
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean)
-  return lines.length > 0 ? lines.join('\n   ') : 'left blank'
+  return lines.length > 0 ? lines.join('\n   ') : null
 }
 
 function itemLines(items: readonly EnquiryItem[]): string[] {
   return items.flatMap((it, i) => {
     const q = qtyText(it.qty, it.unit)
-    return [`${i + 1}. ${itemTitle(it)}${q ? `, ${q}` : ''}`, `   Spec: ${specText(it.spec)}`]
+    const spec = specText(it.spec)
+    return [`${i + 1}. ${itemTitle(it)}${q ? `, ${q}` : ''}`, ...(spec ? [`   Spec: ${spec}`] : [])]
   })
 }
 
@@ -152,74 +150,40 @@ const ASKS = [
   'Origin and authenticity (country of origin; original and genuine)',
   'Stock position',
   'MOQ, offer validity and payment terms',
+  'Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important)',
 ]
 
-const b = (variant: EnquiryVariant, s: string) => (variant === 'whatsapp' ? `*${s}*` : s)
-
-function signatureLines(sig: EnquirySignature, variant: EnquiryVariant): string[] {
-  if (variant === 'whatsapp') return ['Regards,', sig.name, sig.company]
-  const role = sig.jobTitle?.trim()
-  const lines = ['With best regards,', sig.name, role ? `${role}, ${sig.company}` : sig.company]
-  if (sig.phone?.trim()) lines.push(sig.phone.trim())
-  if (sig.email?.trim()) lines.push(sig.email.trim())
-  return lines
+/** "Request for quotation: <first item>" plus "and N more"; no RFQ number. */
+export function enquirySubject(items: readonly EnquiryItem[]): string {
+  const first = itemTitle(items[0])
+  const short = first.length > 60 ? `${first.slice(0, 59).trimEnd()}…` : first
+  return `Request for quotation: ${short}${items.length > 1 ? ` and ${items.length - 1} more` : ''}`
 }
 
 // ------------------------------------------------------------------------------------------------ main
 
 export function generateEnquiryDraft(input: EnquiryInput): EnquiryDraft {
-  const { rfqRef, items, signature, variant } = input
+  const { items, signature, variant } = input
   if (items.length === 0) throw new RangeError('An enquiry needs at least one item')
 
   const replyBy = computeReplyBy(input.dueOn, input.today)
-  const by = replyBy.date ? longDay(replyBy.date) : null
-  const out: string[] = []
+  const body = [
+    'Hi hope you are doing well,',
+    '',
+    'Please quote your best price, availability and lead time for the following :',
+    '',
+    ...itemLines(items),
+    '',
+    'Please include in your reply:',
+    ...ASKS.map((a) => `* ${a}`),
+    '',
+    'Kindly reply at your earliest convenience. If you cannot offer an item, please say so and we will look elsewhere.',
+    '',
+    'Thank you.',
+    'Regards,',
+    signature.name,
+    signature.company,
+  ].join('\n')
 
-  if (variant === 'whatsapp') {
-    out.push('Assalam o Alaikum,')
-    out.push(`Please quote your best price, availability and lead time for the following (our ref ${b(variant, rfqRef)}):`)
-  } else {
-    out.push('Dear Sir / Madam,', 'Assalam o Alaikum.', '')
-    out.push(
-      `We are preparing a quotation and would appreciate your best offer for the ${items.length === 1 ? 'item' : 'items'} below (our ref. ${rfqRef}):`,
-    )
-  }
-  out.push(...itemLines(items))
-  out.push('Please include in your reply:', ...ASKS.map((a) => `- ${a}`))
-
-  const closing = by
-    ? `Kindly reply by ${b(variant, by)}. If you cannot offer an item, please say so and we will look elsewhere.`
-    : 'Kindly reply at your earliest convenience. If you cannot offer an item, please say so and we will look elsewhere.'
-  out.push(closing)
-  if (variant === 'whatsapp') out.push('Thank you.')
-  else out.push('Thank you for your continued support.')
-  out.push(...signatureLines(signature, variant))
-
-  // Both variants get a blank line between paragraphs, as the mockup draws the WhatsApp text (g2-intake-float frame 5).
-  const body = paragraphs(out, variant)
-
-  const subject =
-    variant === 'email'
-      ? `${rfqRef}: quotation requested for ${items.length} ${items.length === 1 ? 'item' : 'items'}${by ? `, reply by ${by}` : ''}`
-      : null
-
-  return { variant, subject, body, replyBy }
-}
-
-/** Blank lines before the asks, the closing and the sign-off (and the reply line on WhatsApp); item lines stay together. */
-function paragraphs(lines: string[], variant: EnquiryVariant): string {
-  const breakBefore = (l: string) =>
-    l === 'Please include in your reply:' ||
-    l.startsWith('Kindly reply') ||
-    l === 'Thank you.' ||
-    l === 'Thank you for your continued support.' ||
-    l === 'With best regards,' ||
-    l.startsWith('1. ') ||
-    (variant === 'whatsapp' && l.startsWith('Please quote'))
-  const res: string[] = []
-  for (const l of lines) {
-    if (breakBefore(l) && res.length > 0 && res[res.length - 1] !== '') res.push('')
-    res.push(l)
-  }
-  return res.join('\n')
+  return { variant, subject: variant === 'email' ? enquirySubject(items) : null, body, replyBy }
 }

@@ -73,7 +73,7 @@ describe('useAskSuppliers', () => {
     const shortlisted = { id: 'inq-short', supplierId: 's-short', supplierName: 'Orient', sentOn: null, noOfferOn: null, lines: [] } as unknown as InquiryRow
     const { result } = renderHook(() => useAskSuppliers(rfq, [shortlisted]), { wrapper })
     await act(async () => {
-      expect(await result.current.ask({ supplierIds: ['s-short', 's-new'], names: ['Orient', 'Gateway'], items })).toMatchObject({ ok: true, supplierIds: ['s-short', 's-new'], text: expect.stringContaining('RFQ-') })
+      expect(await result.current.ask({ supplierIds: ['s-short', 's-new'], names: ['Orient', 'Gateway'], items })).toMatchObject({ ok: true, supplierIds: ['s-short', 's-new'], text: expect.stringContaining('Hi hope you are doing well,') })
     })
     const update = calls.find(c => c.target === 'supplier_inquiries' && c.verb === 'update') as FakeCall
     expect(opArgs(update, 'update')?.[0]).toEqual({ sent_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })

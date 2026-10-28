@@ -15,7 +15,6 @@ import { useRfqInquiries } from '@/features/rfqs/hooks'
 import { Button } from '@/ui/Button'
 import { ChannelLink } from '@/features/rfqs/ChaseParts'
 import { Icon } from '@/ui/Icon'
-import { InfoTip } from '@/ui/InfoTip'
 import { MoreMenu } from '@/ui/MoreMenu'
 import { MenuItem } from '@/ui/Popover'
 
@@ -320,15 +319,9 @@ export function EnquiryCard({
     <section aria-label="The message" className="overflow-hidden rounded-panel border bg-surface">
       <header className="flex flex-wrap items-start gap-3 border-b px-5 py-4">
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1">
-            <h2 className="m-0 text-base font-semibold">
-              {variant === 'email' ? 'Email' : 'WhatsApp message'} to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
-            </h2>
-            <InfoTip label="Why are the spec lines blank?">
-              Spec lines are blank on purpose. Type what the customer gave you under any item, or leave it: the app never writes a spec for you,
-              and a blank one is fine to send.
-            </InfoTip>
-          </span>
+          <h2 className="m-0 text-base font-semibold">
+            {variant === 'email' ? 'Email' : 'WhatsApp message'} to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
+          </h2>
           <p className="m-0 mt-1 text-sm text-fg-muted">
             {count === 1 ? 'The message for this supplier.' : `One message for all ${count}. Each supplier skips what they cannot offer.`}
           </p>
