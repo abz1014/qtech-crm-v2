@@ -438,7 +438,8 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
     }
     out.push(suggestion)
     keys.set(suggestion, {
-      ordered: catRow ? catRow.ordered : (sup.stats?.orders_count ?? found?.ev.count ?? 0),
+      // Inside "Deals in <category>" only that category's orders count; a tag-only supplier's overall orders are another kind of figure.
+      ordered: catRow ? catRow.ordered : group === 'deals_in' ? (found?.ev.count ?? 0) : (sup.stats?.orders_count ?? found?.ev.count ?? 0),
       catRate: ratePct(catRow?.replied, catRow?.asked) ?? -1,
       overallRate: ratePct(sup.stats?.replied, sup.stats?.asked) ?? -1,
       wins: w?.wins ?? 0,

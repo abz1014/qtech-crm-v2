@@ -537,7 +537,7 @@ function findAnchoredPrices(w: string, hintCurrency: ReplyCurrency | null): Pric
     const ctx = cut >= 0 ? before.slice(cut + 1) : before
     const after = w.slice(c.end, c.end + 22)
     const fq = FOR_QTY_RE.exec(after)
-    if (TOTAL_BEFORE_RE.test(ctx) || /^\s*(?:total|in\s+total|ttl)\b/i.test(after)) c.kind = 'total'
+    if (TOTAL_BEFORE_RE.test(ctx) || /^\s*(?:total|in\s+total|ttl)\b(?!\s*(?:price|amount|value|cost)?\s*[:=-]?\s*(?:is|of)?\s*[^\d\s]{0,4}\s*\d)/i.test(after)) c.kind = 'total'
     else if (fq && Number(fq[1]) > 1 && /(?:pcs|pc|nos|no|units|sets|set|pieces)/i.test(after)) {
       c.kind = 'total'
       c.forQty = Number(fq[1])
@@ -784,6 +784,8 @@ function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
     } else if (c > second) second = c
   })
   if (top >= 0 && topN >= 2 && second === 0) return { idx: top, by: 'description', score: 0.5 }
+  // One plain word that only one item has ("Transmitter: price 45,000"): better than the position fallback, but a weaker match.
+  if (top >= 0 && topN === 1 && second === 0) return { idx: top, by: 'description', score: 0.42 }
   if (best && tied) return { ...(best as Match), tied: tiedList }
   // The supplier's own number for a part we named another way ("XCPL-4410" for our "B 4410"): the same run of four or more digits
   // inside a code, on exactly one item.
@@ -1206,6 +1208,16 @@ function prepare(text: string): Line[] {
     if (marks.length >= 2 && nums.every((n, k) => k === 0 || n === (nums[k - 1] ?? 0) + 1)) {
       const starts = marks.map(m => m.index + (m[0].startsWith(' ') ? 1 : 0))
       starts.forEach((s, k) => out.push({ n: i + 1, text: t.slice(s, starts[k + 1] ?? t.length).trim() }))
+      return
+    }
+    // "Item 1 - 4500 Rs, Item 2 - 32000 Rs": one line quoting several items is one line each.
+    const im = [...t.matchAll(/(?:^|[\s,;])((?:item|itm|sr|#)\s*\.?\s*(\d{1,2})\b)/gi)]
+    const inums = im.map(m => Number(m[2]))
+    if (im.length >= 2 && !/\t|\|/.test(t) && inums.every((n, k) => k === 0 || n === (inums[k - 1] ?? 0) + 1)) {
+      const starts = im.map(m => m.index + m[0].length - (m[1] ?? '').length)
+      const head = t.slice(0, starts[0]).trim()
+      if (head) out.push({ n: i + 1, text: head })
+      starts.forEach((st, k) => out.push({ n: i + 1, text: t.slice(st, starts[k + 1] ?? t.length).replace(/[,;]\s*$/, '').trim() }))
       return
     }
     for (const piece of sentences(t)) out.push({ n: i + 1, text: piece })

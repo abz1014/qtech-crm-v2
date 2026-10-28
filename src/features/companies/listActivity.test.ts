@@ -75,3 +75,10 @@ describe('D9: imported quote lines and imported POs count', () => {
     expect(legDay({ placed_on: null, created_at: '2026-10-20T08:00:00Z', orders: null }, day)).toBe('2026-10-20')
   })
 })
+
+describe('RFQ-10: an imported quote line is dated by the Pakistan day', () => {
+  it('01:00 PKT on 1 Nov (20:00Z on 31 Oct) is 1 Nov, not 31 Oct', () => {
+    const asks = quoteAsks([{ created_at: '2026-10-31T22:00:00Z', supplier_inquiries: { supplier_id: 'keller', rfq_id: 'r1', sent_on: null } }])
+    expect(asks[0]?.sent_on).toBe('2026-11-01')
+  })
+})
