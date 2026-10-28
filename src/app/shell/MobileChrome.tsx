@@ -109,7 +109,9 @@ export function BottomTabs({
             className={({ isActive }) =>
               cn(
                 // Under 360 px six 16 px labels need the tight tracking to share the width (the shell-widths check at 320).
-                'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] py-2 text-xs font-medium max-[359px]:tracking-[-0.04em]',
+                'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] px-1 py-2 text-xs font-medium max-[359px]:tracking-[-0.04em]',
+                // beside the Photo or note button the two columns are narrow: a little more air so a label never sits on the screen edge
+                fab && 'px-2',
                 isActive ? 'text-fg' : 'text-fg-2 hover:text-fg',
               )
             }
@@ -120,8 +122,8 @@ export function BottomTabs({
                 <span className="relative">
                   <Icon icon={item.icon} size="lg" />
                   {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
-                  <NeedsCount n={count} badge silent className="left-[calc(100%-2px)]" />
-                  {dots?.[item.key] ? <LateDot badge silent /> : null}
+                  <NeedsCount n={count} badge silent className="left-[calc(100%+2px)]" />
+                  {dots?.[item.key] ? <LateDot badge silent className="-right-[14px]" /> : null}
                 </span>
                 <span className="whitespace-nowrap">
                   {item.label}

@@ -467,11 +467,13 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           className={v.advances.length ? 'rounded-b-none' : undefined}
           toolbar={
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-base font-semibold">What customers owe, by how late</h2>
-              <InfoTip label="About overdue by age">
-                As of {asOfLabel}. Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after{' '}
-                {asOfLabel} are left out.
-              </InfoTip>
+              <span className="flex min-w-0 items-center gap-3">
+                <h2 className="text-base font-semibold">What customers owe, by how late</h2>
+                <InfoTip label="About overdue by age">
+                  As of {asOfLabel}. Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after{' '}
+                  {asOfLabel} are left out.
+                </InfoTip>
+              </span>
               <span className="flex-1" />
               <AsOfControl asOf={asOf} chosen={chosen} onChange={setAsOf} />
             </div>
@@ -654,11 +656,13 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         footerLabel={plural(v.rows.length, 'supplier order')}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-base font-semibold">What we owe suppliers</h2>
-            <InfoTip label="About what we owe">
-              As of {asOfLabel}. Owed is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
-              paid. A supplier order paid to within 3% counts as paid.
-            </InfoTip>
+            <span className="flex min-w-0 items-center gap-3">
+              <h2 className="text-base font-semibold">What we owe suppliers</h2>
+              <InfoTip label="About what we owe">
+                As of {asOfLabel}. Owed is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
+                paid. A supplier order paid to within 3% counts as paid.
+              </InfoTip>
+            </span>
             <span className="flex-1" />
             <AsOfControl asOf={asOf} chosen={chosen} onChange={setAsOf} />
           </div>
@@ -777,11 +781,13 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-base font-semibold">GST and FBR, by invoice month</h2>
-            <ClockTag>By invoice date</ClockTag>
-            <InfoTip label="About GST and FBR">
-              FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
-              Sales see Invoices only, never input tax or this report.
-            </InfoTip>
+            <span className="flex min-w-0 items-center gap-3">
+              <ClockTag>By invoice date</ClockTag>
+              <InfoTip label="About GST and FBR">
+                FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
+                Sales see Invoices only, never input tax or this report.
+              </InfoTip>
+            </span>
           </div>
         }
         empty={<EmptyState title="No invoices yet">Invoices appear here by their date, with their PSID sets and deposits.</EmptyState>}
@@ -909,11 +915,13 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-base font-semibold">Net cash credited to each person</h2>
-            <ClockTag>By payment date</ClockTag>
-            <InfoTip label="About sales by person">
-              The total matches Received after GST on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net
-              and GST has no net, so nobody is credited for it.
-            </InfoTip>
+            <span className="flex min-w-0 items-center gap-3">
+              <ClockTag>By payment date</ClockTag>
+              <InfoTip label="About sales by person">
+                The total matches Received after GST on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net
+                and GST has no net, so nobody is credited for it.
+              </InfoTip>
+            </span>
           </div>
         }
         empty={<EmptyState title="Nobody is credited">No payment counted towards a person in {monthName(ctx.month)}.</EmptyState>}

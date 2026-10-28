@@ -292,13 +292,13 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : null}
 
       {facts.length > 0 ? (
-        <dl className={cn('grid grid-cols-2 overflow-hidden rounded-panel border bg-surface', !compact && (facts.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'))}>
+        <dl className={cn('grid grid-cols-2 overflow-hidden rounded-panel border bg-surface', !compact && (facts.length < 3 ? '' : facts.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'))}>
           {facts.map(f => (
             <div
               key={f.label}
               className={cn(
                 'grid content-start gap-1 border-b border-r p-3 [&:last-child:nth-child(odd)]:col-span-2 [&:last-child:nth-child(odd)]:border-r-0', // an odd last cell fills the row, no empty cell
-                compact
+                compact || facts.length < 3
                   ? '[&:nth-child(2n)]:border-r-0'
                   : facts.length === 3
                     ? '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:last-child:nth-child(odd)]:col-span-1'
@@ -761,7 +761,7 @@ function factsFor(
     }
     case 'job_commissioning':
     case 'job_on_site':
-      out.push({ label: 'Order', value: item.ref }, { label: 'Customer and site', value: item.party })
+      out.push({ label: 'Order', value: item.ref }, { label: 'Customer and site', value: item.visit ? [item.visit.customer, item.visit.site].filter(Boolean).join(', ') : item.party })
       break
     default:
       break

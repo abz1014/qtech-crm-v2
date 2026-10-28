@@ -35,6 +35,6 @@ describe('the engineer phone bar', () => {
 
   it('both buttons are at least 44 px tall (a class that sets 56)', () => {
     bar()
-    for (const name of ['Photo or note', 'I paid']) expect(screen.getByRole('button', { name }).className).toMatch(/min-h-\[56px\]/)
+    for (const name of ['Photo or note', 'I paid']) expect(screen.getByRole('button', { name }).className).toMatch(/(?<!min-)h-\[56px\]/)
   })
 })
