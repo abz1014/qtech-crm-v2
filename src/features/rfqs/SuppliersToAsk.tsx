@@ -60,12 +60,14 @@ function PickList({
                 {s.name}
                 {s.city ? <span className="ml-2 text-xs font-regular text-fg-muted">{s.city}</span> : null}
               </label>
-              {s.suppliedBefore ? (
-                <span className="relative inline-flex min-h-chip items-center rounded border border-tone-success-fg px-[6px] text-xs font-semibold text-tone-success-fg" data-badge="supplied-before">
+            </div>
+            {s.suppliedBefore ? (
+              <p className="pl-[30px]">
+                <span className="relative inline-flex min-h-chip items-center whitespace-nowrap rounded border border-tone-success-fg px-[6px] text-xs font-semibold text-tone-success-fg" data-badge="supplied-before">
                   Supplied this item before
                 </span>
-              ) : null}
-            </div>
+              </p>
+            ) : null}
             <p className="pl-[30px] text-xs text-fg-muted">{s.reason}</p>
             {s.evidence ? (
               <p className="flex items-start gap-[6px] pl-[30px] text-xs text-fg-2" data-evidence>

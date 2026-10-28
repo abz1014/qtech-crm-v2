@@ -4,7 +4,7 @@ import { ClipboardPaste, Plus, Scissors, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { pastedPictures } from '@/features/rfqs/lib/readPdf'
-import type { BrandRef, ParseResult } from '@/features/rfqs/lib/parseItems'
+import { textAfterMarker, type BrandRef, type ParseResult } from '@/features/rfqs/lib/parseItems'
 import { parseQtyCell, qtyProblem, type DraftItem } from '@/features/rfqs/lib/intakeModel'
 import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
 import { Button } from '@/ui/Button'
@@ -233,12 +233,12 @@ export function PastedPanel({ block }: { block: PastedBlock }) {
   const found = result.items.length
   return (
     <div className="overflow-hidden rounded-panel border bg-surface">
-      <div className="flex items-center gap-2 border-b bg-sunken px-4 py-2 text-xs text-fg-muted">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b bg-sunken px-4 py-2 text-xs text-fg-muted">
         <Icon icon={ClipboardPaste} size="sm" />
         <span>
           Pasted just now · <span className="num">{result.lineCount}</span> {result.lineCount === 1 ? 'line' : 'lines'}
         </span>
-        <span className="ml-auto inline-flex h-5 items-center gap-[5px] rounded border border-tone-success-fg/25 bg-tone-success-bg px-2 text-xs font-medium text-tone-success-fg">
+        <span className="ml-auto inline-flex h-5 shrink-0 items-center gap-[5px] whitespace-nowrap rounded border border-tone-success-fg/25 bg-tone-success-bg px-2 text-xs font-medium text-tone-success-fg">
           <Icon icon={Check} size="chip" />
           {found === 0 ? 'No items found' : `${found} ${found === 1 ? 'item' : 'items'} found`}
         </span>
@@ -248,7 +248,7 @@ export function PastedPanel({ block }: { block: PastedBlock }) {
           <span key={i} className={cn('block px-4', l.kind === 'skipped' && 'bg-tone-warning-bg')}>
             {l.marker ? <mark className="rounded bg-selected px-[2px] text-fg">{l.marker}</mark> : null}
             {l.marker ? ' ' : ''}
-            {l.text}
+            {textAfterMarker(l)}
           </span>
         ))}
       </pre>

@@ -649,3 +649,38 @@ describe('a quotation read from a picture (fictional OCR text)', () => {
     expect(r.offers.map(o => o.unitPrice)).toEqual([400])
   })
 })
+
+describe('logic-rfq fixes (synthetic)', () => {
+  it('H4: "unit price X total Y" keeps X as the unit price, Y as the total', () => {
+    const items: ReplyItemRef[] = [{ id: 'a', description: 'Widget alpha sensor', qty: 10 }]
+    const r = parseSupplierReply('Widget alpha sensor unit price 1,250 PKR total 12,500 PKR', items)
+    expect(one(r.offers, 'a')).toMatchObject({ unitPrice: 1250, currency: 'PKR' })
+    const r2 = parseSupplierReply('Widget alpha sensor 1,250 PKR total 12,500 PKR', items)
+    expect(one(r2.offers, 'a')).toMatchObject({ unitPrice: 1250 })
+  })
+})
+
+describe('RFQ-7: one distinctive word names the item', () => {
+  it('matches by description, not by position', () => {
+    const items: ReplyItemRef[] = [
+      { id: 'a', description: 'Siemens contactor 3RT2015-1AP01', qty: 1 },
+      { id: 'b', description: 'Pressure transmitter 0-10 bar 4-20mA', qty: 1 },
+    ]
+    const r = parseSupplierReply('Transmitter: price 45,000 PKR, valid 30 days, delivery 3 weeks', items)
+    const o = one(r.offers, 'b')
+    expect(o.unitPrice).toBe(45000)
+    expect(o.matchedBy).toBe('description')
+  })
+})
+
+describe('RFQ-8: one line quoting several items', () => {
+  it('keeps every item price', () => {
+    const items: ReplyItemRef[] = [
+      { id: 'a', description: 'Alpha relay', qty: 1 },
+      { id: 'b', description: 'Beta gauge', qty: 1 },
+    ]
+    const r = parseSupplierReply('Item 1 - 4500 Rs, Item 2 - 32000 Rs', items)
+    expect(one(r.offers, 'a').unitPrice).toBe(4500)
+    expect(one(r.offers, 'b').unitPrice).toBe(32000)
+  })
+})

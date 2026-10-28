@@ -54,7 +54,7 @@ export default function NewEnquiryPage() {
   const text = capture?.text?.trim() || pasted.trim()
   return (
     <div className="grid w-full min-w-0 gap-4 px-0 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-2 lg:pl-8" data-testid="new-enquiry">
-      <aside aria-label="The customer's document" className="grid min-w-0 content-start gap-3 px-4 pt-6 lg:sticky lg:top-0 lg:px-0 lg:pr-4">
+      <aside aria-label="The customer's document" className="grid min-w-0 content-start gap-3 px-4 pb-8 pt-6 max-lg:order-2 lg:sticky lg:top-0 lg:px-0 lg:pr-4">
         <h2 className="text-lg font-semibold tracking-snug">The customer&rsquo;s document</h2>
         {files.length > 0 ? (
           files.map(f => <Preview key={`${f.name}|${f.size}|${f.lastModified}`} file={f} />)
@@ -71,7 +71,7 @@ export default function NewEnquiryPage() {
         ) : null}
         {files.length > 0 || text ? <ChooseAnother onFiles={take} /> : null}
       </aside>
-      <div className="min-w-0">
+      <div className="min-w-0 max-lg:order-1">
         <IntakeScreen mode="enquiry" />
       </div>
     </div>

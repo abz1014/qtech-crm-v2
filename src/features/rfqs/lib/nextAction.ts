@@ -55,6 +55,8 @@ export interface NextStepInput {
   itemCount: number
   /** Suppliers asked who have not replied (no price, no "cannot quote"). */
   awaiting: number
+  /** Suppliers asked who still owe a price for at least one item (canChaseInquiry). Includes ones that priced only some items. */
+  chaseable?: number
   /** The customer's contact on the RFQ: once the quotation is out, the person to follow up with (grade-B R6). */
   contactName?: string | null
 }
@@ -76,8 +78,13 @@ export function nextStepSentence(i: NextStepInput): string {
       return i.bidState === 'quotation_expired'
         ? 'The quotation has expired. Mark it won if they ordered, or revise it from More.'
         : `Follow up with ${i.contactName || 'the customer'}. Mark it won when they order, or lost.`
-    case 'chase':
-      return `Waiting for prices from ${who}. Chase them.`
+    case 'chase': {
+      // `awaiting` counts suppliers with no price at all; a supplier that priced only some items is chaseable but not awaiting. Naming
+      // "0 suppliers" while every supplier has replied was the bug: count the ones that owe something instead.
+      if (n > 0) return `Waiting for prices from ${who}. Chase them.`
+      const c = i.chaseable ?? 0
+      return c > 0 ? `${c} ${c === 1 ? 'supplier has' : 'suppliers have'} not priced every item. Chase them.` : 'Some prices are still missing. Chase the suppliers.'
+    }
     default:
       if (i.itemCount === 0) return 'No items yet. Add what the customer asked for under Items.'
       if (n > 0) return `Waiting for prices from ${who}. Chased recently: nothing to do until they reply.`

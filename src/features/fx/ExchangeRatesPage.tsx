@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { History, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
+import { cn } from '@/lib/utils'
 import { formatDay } from '@/lib/formatDay'
 import { formatDateText } from '@/lib/dateInput'
 import { storedRate } from '@/lib/formRules'
@@ -94,6 +95,7 @@ export function ExchangeRatesPage() {
             <Panel
               title="Latest rate per currency"
               meta="PKR for 1 unit"
+              className="overflow-clip"
               actions={lastRun.data ? <span className="text-sm text-fg-muted" data-fx-auto-run>{autoRunStamp(lastRun.data)}</span> : undefined}
             >
               <RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} />
@@ -118,7 +120,7 @@ function RowActions({ r, onAdd, onHistory, touch }: { r: RateRow; onAdd: (c: str
   const size = touch ? 'touch' : 'sm'
   // In the table the two actions are icon buttons (a name and a tooltip each) so the Actions column stays narrow; on a phone they are words.
   return (
-    <span className="inline-flex flex-wrap items-center justify-end gap-1">
+    <span className={cn('inline-flex flex-wrap items-center gap-1', touch ? '-ml-3 justify-start' : 'justify-end')}>
       {touch ? (
         <>
           <Button size={size} variant="quiet" icon={Plus} onClick={() => onAdd(r.currency)} aria-label={`Add rate for ${r.currency}`}>
@@ -206,11 +208,11 @@ function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: st
       rows={rows}
       getRowId={r => r.currency}
       twoLine
-      className="[&_thead_th:last-child]:text-transparent"
+      className="rounded-none border-0 [&_thead_th:last-child]:text-transparent"
       mobileRow={r => (
         <span className="grid gap-2">
-          <span className="flex items-baseline justify-between gap-3">
-            <span className="text-base font-medium" data-rate-card={r.currency}>
+          <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <span className="min-w-0 text-base font-medium" data-rate-card={r.currency}>
               {rateCardLine(r)}
             </span>
             <AgeCell r={r} />

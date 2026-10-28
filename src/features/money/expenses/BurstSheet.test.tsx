@@ -51,7 +51,7 @@ describe('burst entry sheet (M11)', () => {
     const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
     const category = screen.getByRole('combobox', { name: 'Category, row 1' })
     expect(category).toHaveValue('Office supplies & snacks')
-    expect(category).toHaveClass('border-dashed') // filled in for you: the dashed edge, no words
+    expect(category).toHaveClass('text-fg-2') // filled in for you: muted text, no words
     expect(screen.getByText('today')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Paid via, row 1' })).toHaveValue('cash')
     for (const gone of ['most used', 'from category', 'adds a row', /saves all/, /Filled in for you/, 'You typed this', /Keyboard only/]) {
@@ -69,8 +69,8 @@ describe('burst entry sheet (M11)', () => {
     await waitFor(() => expect(first).toHaveFocus())
     await user.keyboard('450{Enter}600{Enter}3500{Enter}850{Enter}1200')
     expect(screen.getAllByRole('textbox', { name: /^Amount, row/ })).toHaveLength(5)
-    // the category carried down every row, shown by the dashed edge
-    for (const n of [2, 3, 4, 5]) expect(screen.getByRole('combobox', { name: `Category, row ${n}` })).toHaveClass('border-dashed')
+    // the category carried down every row, shown by the muted text
+    for (const n of [2, 3, 4, 5]) expect(screen.getByRole('combobox', { name: `Category, row ${n}` })).toHaveClass('text-fg-2')
     await user.keyboard('{Control>}{Enter}{/Control}')
     await waitFor(() => expect(saves(db)).toHaveLength(1))
     const rows = opArgs(saves(db)[0], 'upsert')?.[0] as { id: string; amount_pkr: number; paid_via: string }[]

@@ -128,6 +128,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill(String(amt))
     await pickCategory(qa, 'Salaries')
     await qa.getByLabel('Paid on').fill(paidOn)
+    await qa.getByLabel('Paid on').blur()
     await expect(page.getByTestId('quick-for-month')).toContainText('This bill is for')
     await expect(page.getByTestId('quick-for-month').getByRole('combobox')).toHaveValue(last)
     await review(page, 'p1-for-month-1440')

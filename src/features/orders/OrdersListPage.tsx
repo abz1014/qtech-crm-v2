@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CircleCheck, CopyPlus, Users } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -93,7 +93,16 @@ const doneMeaning = (role: string) =>
 function NextStepText({ step }: { step: NextStep }) {
   return (
     <StatusText tone={step.tone} className="whitespace-normal">
-      {step.text}
+      {/* An amount ("PKR 1,023,680") never splits across two lines. */}
+      {step.text.split(/(PKR [\d,.]+)/).map((part, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="whitespace-nowrap">
+            {part}
+          </span>
+        ) : (
+          <Fragment key={i}>{part}</Fragment>
+        ),
+      )}
     </StatusText>
   )
 }
@@ -115,10 +124,21 @@ function CustomerCell({ row }: { row: OrderListRow }) {
  * long PO never runs into the Value column beside it ("PO CPC/PO/INST/2219 · Test Admin" over "10,558,640", UX audit 2026-10-22 O1).
  */
 function OrderCell({ row }: { row: OrderListRow }) {
+  const parts = [row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean)
   return (
-    <span className="grid min-w-[140px] max-w-[240px] gap-px whitespace-normal">
-      <span className="num">{orderRef(row.number)}</span>
-      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:break-word]">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
+    <span className="grid min-w-[140px] max-w-[300px] gap-px whitespace-normal">
+      <span className="num whitespace-nowrap">{orderRef(row.number)}</span>
+      {/* Each part is kept whole ("PO RFF-PO-88213", "Test Sales"); the line breaks between them, never inside one. */}
+      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:break-word]">
+        {parts.length === 0
+          ? ' '
+          : parts.map((part, i) => (
+              <Fragment key={i}>
+                {i > 0 ? ' · ' : ''}
+                <span className="whitespace-nowrap">{part}</span>
+              </Fragment>
+            ))}
+      </span>
     </span>
   )
 }

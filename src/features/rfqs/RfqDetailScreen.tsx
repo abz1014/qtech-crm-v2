@@ -279,6 +279,7 @@ function Loaded({
     quotationCount,
     onAsk: () => setFloating(true),
     awaiting,
+    chaseable: chaseSuppliers,
     sentOn: latest?.issuedOn ?? rfq.quotedOn,
     validUntil: latest?.validUntil ?? null,
   }

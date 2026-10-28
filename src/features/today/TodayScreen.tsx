@@ -413,7 +413,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
   const second = actions ? secondAction(item, role) : null
   const own = actions && !waiting // the row carries its own button and its own snooze
   return (
-    <li data-row-actions="" data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className="relative rounded-row bg-surface text-fg">
+    <li data-row-actions="" data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className={cn('relative rounded-row bg-surface text-fg', open && 'after:pointer-events-none after:absolute after:inset-0 after:rounded-row after:ring-2 after:ring-inset after:ring-fg')}>
       <button
         type="button"
         onClick={onPick}
@@ -421,9 +421,9 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
         aria-current={wide && open ? 'true' : undefined}
         className={cn(
           'grid w-full grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 rounded-row px-3 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken md:px-4',
-          own && 'pr-12 md:pr-16',
-          // The open row: an ink ring inside the tile (direction C), 18:1 against the white tile.
-          open && 'ring-2 ring-inset ring-fg',
+          // clear of the 44px snooze button (4px in from the edge) with a gap, down to a 320px phone
+          own && 'pr-16',
+          // The open row's ink ring (direction C, 18:1 against the white tile) is drawn on the whole tile, button row included: see the <li>.
           (waiting || faded) && 'bg-sunken',
           waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle',
         )}
@@ -453,7 +453,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
             ) : (
               <span className={cn('min-w-0 text-base font-semibold', tone)}>{item.badge.text}</span>
             )}
-            {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('ml-auto shrink-0 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
+            {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('shrink-0 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
           </span>
         </span>
       </button>

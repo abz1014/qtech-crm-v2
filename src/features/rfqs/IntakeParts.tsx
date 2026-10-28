@@ -187,14 +187,14 @@ const STEP_LINE = ['Items', 'Suppliers', 'Message', 'Done'] as const
 export function StepLine({ step }: { step: Step }) {
   const at = STEP_INDEX[step]
   return (
-    <ol aria-label={`Step ${at} of 4`} className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-sm" data-step-line>
+    <ol aria-label={`Step ${at} of 4`} className="m-0 grid list-none grid-cols-4 gap-x-1 p-0 text-sm sm:flex sm:items-center sm:gap-x-2 sm:gap-y-1" data-step-line>
       {STEP_LINE.map((label, i) => {
         const n = i + 1
         const state = n < at || (step !== 'build' && step !== 'suppliers' && step !== 'enquiry' && n === 4) ? 'done' : n === at ? 'now' : 'todo'
         return (
-          <li key={label} className="flex items-center gap-2" aria-current={state === 'now' ? 'step' : undefined}>
-            {i > 0 ? <span aria-hidden="true" className="h-px w-3 bg-line-strong" /> : null}
-            <span className={cn('inline-flex items-center gap-1', state === 'now' ? 'font-semibold text-fg' : state === 'done' ? 'text-fg-2' : 'text-fg-muted')}>
+          <li key={label} className="flex min-w-0 items-center justify-center gap-2 sm:justify-start" aria-current={state === 'now' ? 'step' : undefined}>
+            {i > 0 ? <span aria-hidden="true" className="hidden h-px w-3 bg-line-strong sm:block" /> : null}
+            <span className={cn('inline-flex min-w-0 flex-col items-center gap-1 text-center sm:flex-row sm:text-left', state === 'now' ? 'font-semibold text-fg' : state === 'done' ? 'text-fg-2' : 'text-fg-muted')}>
               <Icon icon={state === 'done' ? CircleCheck : state === 'now' ? CircleDot : Circle} size="sm" className={state === 'todo' ? 'text-fg-muted' : 'text-brand-green'} />
               {label}
               <span className="sr-only">{state === 'done' ? ', done' : state === 'now' ? ', now' : ''}</span>

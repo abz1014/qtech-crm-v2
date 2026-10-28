@@ -533,7 +533,7 @@ function DetailOptions({ id, details, categoryId }: { id: string; details: reado
   )
 }
 
-const defaultEdge = 'border-dashed bg-surface text-fg-2'
+const defaultEdge = 'bg-surface text-fg-2'
 
 function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, details, groups, recent }: RowProps) {
   const paid = effectivePaidVia(row, categories)
@@ -589,7 +589,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         <TextField
           data-cell="detail"
           aria-label={`Detail, row ${index}`}
-          placeholder={isOther ? MISC_TITLE_LABEL : 'e.g. LESCO bill, LEA-1234'}
+          placeholder={isOther ? MISC_TITLE_LABEL : 'e.g. LESCO bill'}
           list={`detail-${row.id}`}
           autoComplete="off"
           value={row.note}
@@ -787,7 +787,7 @@ function CellDate({
           'num h-[36px] w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
           'aria-[invalid=true]:border-tone-danger-fg aria-[invalid=true]:bg-tone-danger-bg',
           isDefault && defaultEdge,
-          isDefault && 'pr-14',
+          isDefault && 'pr-[3.5rem]',
         )}
       />
       {isDefault ? <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs leading-none text-fg-muted">today</span> : null}
@@ -878,25 +878,28 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
           }}
         />
       </div>
-      <CategoryPicker
-        ref={categoryRef}
-        categories={categories}
-        value={row.categoryId}
-        aria-label={`Category, expense ${index}`}
-        size="phone"
-        prefilled={row.categorySource !== 'typed'}
-        onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
-        onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
-        onCreate={onCreate}
-        onMisc={(c, text) => onPatch({ categoryId: c.id, categorySource: 'typed', categoryText: undefined, note: text })}
-        groups={groups}
-        recent={recent}
-      />
+      <div className="grid gap-1">
+        <span aria-hidden="true" className="text-base font-medium text-fg-2">Category</span>
+        <CategoryPicker
+          ref={categoryRef}
+          categories={categories}
+          value={row.categoryId}
+          aria-label={`Category, expense ${index}`}
+          size="phone"
+          prefilled={row.categorySource !== 'typed'}
+          onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
+          onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
+          onCreate={onCreate}
+          onMisc={(c, text) => onPatch({ categoryId: c.id, categorySource: 'typed', categoryText: undefined, note: text })}
+          groups={groups}
+          recent={recent}
+        />
+      </div>
       <div className="grid grid-cols-1 min-[360px]:grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <label
           className={cn(
             'relative inline-flex h-touch min-w-0 items-center gap-2 rounded border px-3 text-sm text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
-            !row.dateTyped && row.date === today ? 'border-dashed border-line-input' : 'border-line-input',
+            'border-line-input',
             err && 'border-tone-danger-fg',
           )}
         >
@@ -921,32 +924,38 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
           ]}
         />
       </div>
-      <input
-        data-cell="detail"
-        aria-label={`Detail, expense ${index}`}
-        placeholder={isOther ? MISC_TITLE_LABEL : 'Detail: LESCO bill, LEA-1234'}
-        list={`detail-${row.id}`}
-        autoComplete="off"
-        value={row.note}
-        aria-invalid={row.noteError ? true : undefined}
-        aria-required={isOther || undefined}
-        onChange={e => onPatch({ note: e.target.value })}
-        className={cn(
-          'h-touch w-full rounded border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg',
-          row.noteError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
-        )}
-      />
+      <div className="grid gap-1">
+        <span aria-hidden="true" className="text-base font-medium text-fg-2">{isOther ? MISC_TITLE_LABEL : 'Detail, optional'}</span>
+        <input
+          data-cell="detail"
+          aria-label={`Detail, expense ${index}`}
+          placeholder={isOther ? 'e.g. Courier from shop to office' : 'e.g. LESCO bill, LEA-1234'}
+          list={`detail-${row.id}`}
+          autoComplete="off"
+          value={row.note}
+          aria-invalid={row.noteError ? true : undefined}
+          aria-required={isOther || undefined}
+          onChange={e => onPatch({ note: e.target.value })}
+          className={cn(
+            'h-touch w-full rounded border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg',
+            row.noteError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
+          )}
+        />
+      </div>
       {row.noteError ? <p className="text-base text-tone-danger-fg">{row.noteError}</p> : null}
       <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
-      <OrderTagPicker
-        orders={orders}
-        value={row.orderId}
-        size="phone"
-        placeholder="Order, optional"
-        aria-label={`Order, expense ${index}`}
-        onChange={id => onPatch({ orderId: id, orderText: undefined })}
-        onUnmatched={text => onPatch({ orderText: text ?? undefined })}
-      />
+      <div className="grid gap-1">
+        <span aria-hidden="true" className="text-base font-medium text-fg-2">Order, optional</span>
+        <OrderTagPicker
+          orders={orders}
+          value={row.orderId}
+          size="phone"
+          placeholder="Type an order number"
+          aria-label={`Order, expense ${index}`}
+          onChange={id => onPatch({ orderId: id, orderText: undefined })}
+          onUnmatched={text => onPatch({ orderText: text ?? undefined })}
+        />
+      </div>
       {showsInputTax(row.categoryId) ? <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} /> : null}
       <div className="flex items-center justify-between gap-2">
         <Checkbox

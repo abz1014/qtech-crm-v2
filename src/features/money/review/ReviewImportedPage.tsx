@@ -29,7 +29,7 @@ export function ReviewImportedPage() {
   const [error, setError] = useState<string | null>(null)
   const items = useMemo(() => sortReview(q.data ?? []), [q.data])
   const progress = reviewProgress(items, settledHere.filter(s => s.state === 'settled').length)
-  const pct = progress.total === 0 ? 100 : Math.round((progress.decided / progress.total) * 100)
+  const pct = progress.total === 0 ? 0 : Math.round((progress.decided / progress.total) * 100)
 
   const decide = (item: ReviewItem, state: ReviewState) => {
     setError(null)

@@ -144,7 +144,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   const orderBody = !job.orderId ? (
     <div className="grid gap-2">
       <Note>{direct ? 'The order is not available.' : "There is no order yet. It starts when the customer's order arrives and the enquiry is marked won."}</Note>
-      // once quoted, Mark won is the next-step band's green button: not repeated here
+      {/* once quoted, Mark won is the next-step band's green button: not repeated here */}
       {!direct && ctx.money && job.stage !== 'lost' && job.stage !== 'quoted' ? (
         <p>
           <Button onClick={markWon}>Mark won</Button>
@@ -291,7 +291,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle }: { fac
           <section key={s.stop} id={`stage-${s.index}`} data-stage={s.stop} className={cn('rounded-panel border bg-surface', (s.state === 'future' || none) && 'bg-sunken')}>
             <h2 className="text-base">
               {none ? (
-                <div className="flex min-h-touch items-center gap-2 px-4 py-2">{head}</div>
+                <div className="flex min-h-touch flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 max-sm:[&>span:nth-of-type(2)]:basis-[calc(100%-2rem)]">{head}</div>
               ) : (
                 <button
                   type="button"

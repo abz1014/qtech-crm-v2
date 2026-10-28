@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { guessBrandFamily, modelTokens, normaliseUnit, parseItemLine, parsePaste, type BrandRef } from './parseItems'
+import { guessBrandFamily, modelTokens, normaliseUnit, parseItemLine, parsePaste, textAfterMarker, type BrandRef } from './parseItems'
 
 // The email of the approved mockup (g2-intake-float frame 3): six lines, four items.
 const EMAIL = `Dear Sir, please quote the following for our Mianwali plant:
@@ -205,5 +205,18 @@ describe('guessBrandFamily with the category dictionary', () => {
   })
   it('a sure inference with no such family on file guesses nothing', () => {
     expect(guessBrandFamily('SOFT STARTER - 30KW', list).familyId).toBeNull()
+  })
+})
+
+describe('textAfterMarker (the pasted preview shows the marker once)', () => {
+  it('drops a marker the text repeats, so "1) 1) Item" is drawn as "1) Item"', () => {
+    expect(textAfterMarker({ marker: '1)', text: '1) Hach meter - 1 no' })).toBe('Hach meter - 1 no')
+  })
+  it('leaves text that does not repeat the marker, and unmarked lines, alone', () => {
+    expect(textAfterMarker({ marker: '1)', text: 'Hach meter - 1 no' })).toBe('Hach meter - 1 no')
+    expect(textAfterMarker({ marker: null, text: '1) Hach' })).toBe('1) Hach')
+  })
+  it('parsePaste lines never repeat their marker', () => {
+    for (const l of parsePaste('Dear Sir:\n1) A pump 2 nos\n2) B valve 1 no').lines) expect(textAfterMarker(l)).not.toMatch(/^\d\)/)
   })
 })

@@ -339,7 +339,7 @@ export function OrderItemsPanel({
   }
   const base: Column<Row>[] = [
     { id: 'item', header: 'Item', value: r => r.description, cell: itemCell },
-    { id: 'qty', header: 'Qty', kind: 'num', value: r => r.qty, cell: qtyCell },
+    { id: 'qty', header: 'Qty', kind: 'num', align: 'left', value: r => r.qty, cell: qtyCell },
   ]
   const supplierCol: Column<Row> = { id: 'supplier', header: 'Supplier', cell: supplierCell, hideBelowMd: true }
   const columns = !money ? [...base, supplierCol] : showEdit ? [...base, unitCol, gstCol, totalCol, serviceCol, actionsCol] : [...base, unitCol, totalCol, supplierCol]

@@ -332,3 +332,13 @@ describe('itemLabel', () => {
     expect(itemLabel({ id: 'x', description: 'Belimo LF24 actuator', brandId: 'b', brandName: 'Belimo', familyId: null, modelTokens: ['LF24'] })).toBe('Belimo LF24')
   })
 })
+
+describe('M10: inside Deals in, category orders rank before overall orders', () => {
+  it('a tag-only supplier with many unrelated orders does not outrank real category orders', () => {
+    const r = run(
+      [sup('alpha', 'Alpha', { brand_ids: [CONTACTORS], orders_count: 40 }), sup('beta', 'Beta')],
+      { categoryEvidence: [ev('beta', CONTACTORS, { asked: 6, replied: 6, quoted: 6, ordered: 4 })] },
+    )
+    expect(ids(r)).toEqual(['beta', 'alpha'])
+  })
+})
