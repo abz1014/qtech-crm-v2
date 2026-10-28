@@ -22,16 +22,18 @@ const INVOICE = {
   legacy_source: null,
 }
 
-function setup(over: Record<string, unknown> = {}, closed: string[] = []) {
+function setup(over: Record<string, unknown> = {}, closed: string[] = [], role = 'admin') {
   const d = installFakeDb((c: FakeCall) => {
     if (c.target === 'invoices' && c.verb === 'select') return { data: { ...INVOICE, ...over } }
+    if (c.target === 'rpc:delete_invoice' && over.refuse) return { error: { code: 'P0001', message: 'This invoice has its tax deposit ticked against the March 2026 bank statement. Untick it first (Money, Match bank statement), then delete it.', hint: 'bank_ticked' } }
+    if (c.target === 'rpc:month_closed') return { data: closed.includes('2025-01') }
     if (c.target === 'closed_months') return { data: closed.map(m => ({ month: `${m}-01`, closed_at: '2025-03-01T00:00:00Z', closed_by: 'u', note: null })) }
     return { data: [] }
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
-      <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Ayesha Rana', role: 'admin' } }}>
+      <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Ayesha Rana', role } as never }}>
         <MemoryRouter>
           <ToastProvider>
             <InvoiceDetailDialog invoiceId="i1" onClose={() => undefined} />
@@ -80,6 +82,18 @@ describe('Invoice: edit', () => {
   })
 })
 
+describe('Invoice: a closed month for sales (M4)', () => {
+  it('sales cannot read closed_months, so they ask the one month: read-only with the reason, no edit boxes', async () => {
+    setup({}, ['2025-01'], 'sales')
+    expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('INV-0012 is in a closed month. An admin can reopen it.')
+    expect(screen.queryByLabelText('Net amount, PKR')).toBeNull()
+  })
+  it('sales in an open month still edit', async () => {
+    setup({}, [], 'sales')
+    expect(await screen.findByLabelText('Net amount, PKR')).toBeInTheDocument()
+  })
+})
+
 describe('Invoice: delete', () => {
   it('a bank-ticked invoice says which statement, links to it, and has no Delete', async () => {
     const { user } = setup({ tax_bank_month: '2025-01-01' })
@@ -88,6 +102,17 @@ describe('Invoice: delete', () => {
     expect(within(dialog).getByText(/ticked against the January 2025 bank statement/)).toBeInTheDocument()
     expect(within(dialog).getByRole('link', { name: 'Open Bank check' })).toBeInTheDocument()
     expect(within(dialog).queryByRole('button', { name: 'Delete' })).toBeNull()
+  })
+
+  it('a refusal after the page loaded does not guess a statement month: it says a bank statement (M6)', async () => {
+    const { user } = setup({ refuse: true, invoice_date: '2025-01-28' })
+    await user.click(await screen.findByRole('button', { name: 'Delete invoice' }))
+    const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
+    await user.click(within(dialog).getByRole('checkbox', { name: 'I understand' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByText(/ticked against a bank statement\. Untick it first/)).toBeInTheDocument()
+    expect(screen.queryByText(/January 2025 bank statement/)).toBeNull()
+    expect(screen.getByRole('link', { name: 'Open Bank check' })).toHaveAttribute('href', '/money/month-end/bank')
   })
 
   it('a return that may be filed needs the tick before Delete, then delete_invoice runs', async () => {

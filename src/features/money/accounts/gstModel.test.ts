@@ -36,6 +36,11 @@ describe('GST to FBR: charged less paid on purchases is to pay', () => {
     expect(l.toPay).toBe('0.00')
     expect(l.credit).toBe('2000.00')
   })
+  it('never "late" when input tax covers the GST charged: nothing to pay (M7)', () => {
+    expect(gstLine(row('2026-10', { gst: '18000.00', inputTax: '25000.00' }), undefined, '2026-11-20').tone).toBe('nothing')
+    expect(gstLine(row('2026-10', { gst: '18000.00', inputTax: '18000.00' }), undefined, '2026-11-20').tone).toBe('nothing')
+    expect(gstLine(row('2026-10', { gst: '18000.00', inputTax: '17999.99' }), undefined, '2026-11-20').tone).toBe('late')
+  })
   it('a reader without input tax sees charged as to pay and no purchases figure', () => {
     const l = gstLine(row('2026-10', { inputTax: null }), undefined, '2026-11-02')
     expect(l.paidOnPurchases).toBeNull()

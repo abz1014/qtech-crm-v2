@@ -259,9 +259,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'recurring.save': () => [qk.money.recurring.all, qk.today.all],
   // Recording makes an expense (and a recurring item leaves Today).
   'recurring.record': () => [qk.money.expenses.all, qk.money.bank.all, qk.money.recurring.all, qk.today.all],
+  // An invoice is the order net sale once there is one, so Margins, Mistakes to fix and the company money page move with it.
   // A new invoice moves the register, the order's invoicing state and balance, receivables and Today (a payment reminder can become due).
-  'invoice.create': () => [qk.money.invoices.all, qk.money.bank.all, qk.money.receivables.all, qk.orders.all, qk.today.all, qk.onboarding.all],
-  'invoice.update': v => [qk.money.invoices.register(), qk.money.bank.all, qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.orders.all, qk.today.all],
+  'invoice.create': () => [qk.money.invoices.all, qk.money.bank.all, qk.money.receivables.all, qk.money.margins(), qk.money.exceptions(), qk.companies.all, qk.orders.all, qk.today.all, qk.onboarding.all],
+  'invoice.update': v => [qk.money.invoices.register(), qk.money.bank.all, qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.money.margins(), qk.money.exceptions(), qk.companies.all, qk.orders.all, qk.today.all],
   // Stamps move the register's tracks and the FBR / TCS items on Today.
   'invoice.stamp': () => [qk.money.invoices.all, qk.money.bank.all, qk.today.all],
   // One receipt covers a whole PSID group (audit T1): every invoice of the group is stamped, so all invoice reads go stale.

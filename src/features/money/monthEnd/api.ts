@@ -100,6 +100,16 @@ export async function loadClosedMonths(): Promise<ClosedMonth[]> {
   return rows.map(r => ({ key: monthOf(r.month), closedAt: r.closed_at, closedBy: names[r.closed_by] ?? null, note: r.note }))
 }
 
+/**
+ * Whether the month of `day` is closed, for any staff role (0107 month_closed; closed_months itself is admin-only). Before that
+ * migration is on the database the call fails: then it answers "not known", never "closed".
+ */
+export async function isMonthClosed(day: string): Promise<boolean> {
+  const db = requireSupabase()
+  const res = await db.rpc('month_closed', { d: day })
+  return res.error ? false : res.data === true
+}
+
 /** Closes exactly one month. The database refuses it while an earlier month with money in it is still open (0027). */
 export async function closeMonth(month: string): Promise<void> {
   const db = requireSupabase()

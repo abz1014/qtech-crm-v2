@@ -2423,6 +2423,9 @@ isOneToOne: false
               "check_key": string,"n": number
             }[]
                            },
+"month_closed":
+{ Args: { "d": string }; Returns: boolean
+                           },
 "month_is_closed":
 { Args: { "d": string }; Returns: boolean
                            },

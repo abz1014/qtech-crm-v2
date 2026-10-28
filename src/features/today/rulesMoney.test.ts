@@ -169,6 +169,12 @@ describe('M08 recurring due (admin only)', () => {
   it('skips recorded, inactive and not-yet-started templates', () => {
     expect(ruleRecurringDue(ctx({ recurring: [tpl({ recorded: true }), tpl({ id: 'b', active: false }), tpl({ id: 'c', startMonth: '2026-12' })] }))).toEqual([])
   })
+  it('a bill for last month whose template starts this month is not due: Monthly bills does not list it either', () => {
+    // Template day 5, started Oct: on 27 Oct its bill is September, which it never covered. Not "overdue".
+    expect(ruleRecurringDue(ctx({ today: '2026-10-27', recurring: [tpl({ startMonth: '2026-10', period: '2026-09' })] }))).toEqual([])
+    expect(ruleRecurringDue(ctx({ today: '2026-10-27', recurring: [tpl({ startMonth: '2026-09', period: '2026-09' })] }))).toHaveLength(1)
+    expect(ruleRecurringDue(ctx({ today: '2026-10-27', recurring: [tpl({ startMonth: '2026-10', period: '2026-10' })] }))).toHaveLength(1)
+  })
   it('lists at most three names', () => {
     const many = ['A', 'B', 'C', 'D', 'E'].map((l, i) => tpl({ id: `t${i}`, label: l, dayOfMonth: 1 }))
     expect(ruleRecurringDue(ctx({ recurring: many }))[0].party).toBe('A, B, C and 2 more')

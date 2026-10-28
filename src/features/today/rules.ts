@@ -854,7 +854,7 @@ export function ruleRecurringDue(ctx: TodayInputs): Entry[] {
   if (ctx.user.role !== 'admin') return []
   const period = ctx.today.slice(0, 7)
   const day = parseDay(ctx.today)?.d ?? 0
-  const due = (ctx.recurring ?? []).filter(t => t.active && !t.recorded && (!t.startMonth || t.startMonth <= period) && (t.dayOfMonth ?? 1) <= day)
+  const due = (ctx.recurring ?? []).filter(t => t.active && !t.recorded && (!t.startMonth || t.startMonth <= (t.period ?? period)) && (t.dayOfMonth ?? 1) <= day)
   if (due.length === 0) return []
   const firstDay = Math.min(...due.map(t => t.dayOfMonth ?? 1))
   const actionOn = `${period}-${String(firstDay).padStart(2, '0')}`

@@ -54,6 +54,7 @@ export function gstLine(row: GstMonthRow, filing: GstFiling | undefined, today: 
   let tone: GstTone
   if (row.invoiceCount === 0 || charged === 0n) tone = 'nothing'
   else if (allIn) tone = 'paid'
+  else if (net <= 0n) tone = 'nothing' // input tax covers it: there is nothing to pay, so it is never late
   else if (today > payBy) tone = 'late'
   else if (today > dayOf(row.month, 12)) tone = 'soon'
   else tone = 'ok'

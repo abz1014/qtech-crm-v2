@@ -70,6 +70,28 @@ export function templateToSettle(
   return open.length === 1 ? open[0] : null
 }
 
+/**
+ * New expenses of a monthly bill category that came in through Add expense or the Add expenses sheet: file each under its month
+ * (`period`, when the caller has not chosen one) and, when exactly one active template of the category is still open for that
+ * month, link it (`recurring_id`) so the bill is no longer due and cannot be recorded twice. Rows already linked (an "Every month"
+ * row) are left alone. `recorded` must hold the month, else nothing is linked (unknown is not the same as not recorded). A
+ * template settled by one row counts as recorded for the rows after it.
+ */
+export function linkMonthlyBills<T extends { category_id: string; paid_on: string; period?: string | null; recurring_id?: string }>(
+  rows: readonly T[],
+  templates: readonly RecurringTemplate[],
+  recorded: ReadonlyMap<string, ReadonlySet<string>> | undefined,
+): T[] {
+  const working = new Map([...(recorded ?? [])].map(([k, v]) => [k, new Set(v)]))
+  return rows.map(r => {
+    if (r.recurring_id || !isMonthlyBill(r.category_id, templates)) return r
+    const period = r.period ?? forMonthOf(r.paid_on, r.category_id)
+    const open = working.has(period) ? templateToSettle(r.category_id, period, templates, working) : null
+    if (open) working.get(period)?.add(open.id)
+    return { ...r, period, ...(open ? { recurring_id: open.id } : {}) }
+  })
+}
+
 /** "for September" when an expense is for another month than the one it was paid in, else null. */
 export function forMonthNote(paidOn: string, period: string | null | undefined): string | null {
   if (!period || period === monthKey(paidOn)) return null

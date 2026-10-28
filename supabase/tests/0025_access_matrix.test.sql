@@ -256,6 +256,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'close_month',           '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
   ('function', 'close_months_through',  '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
   ('function', 'reopen_month',          '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
+  ('function', 'month_closed',          '',      'X',    'X',    'X'),    -- 0107: closed or open for any staff (the Invoice screen); month_is_closed stays for the triggers
   ('function', 'month_is_closed',       '',      '',     '',     ''),     -- A6 A6.1: used by the lock triggers only, granted to nobody
   ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
@@ -569,6 +570,7 @@ insert into probes values
   ('close_month', '', 'X', $q$select public.close_month(date '2020-01-01')$q$),                -- A6
   ('close_months_through', '', 'X', $q$select public.close_months_through(date '2020-01-01')$q$),   -- A6
   ('reopen_month', '', 'X', $q$select public.reopen_month(date '2019-01-01')$q$),               -- A6
+  ('month_closed', '', 'X', $q$select public.month_closed(date '2019-01-01')$q$),         -- 0107
   ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6

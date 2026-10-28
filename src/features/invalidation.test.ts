@@ -153,6 +153,13 @@ afterEach(() => {
   onlineManager.setOnline(true)
 })
 
+describe('an invoice write refreshes everything an invoice feeds (M5)', () => {
+  it.each(['invoice.create', 'invoice.update'] as const)('%s also drops Margins, Mistakes to fix and the company page', name => {
+    const keys = keysFor(name, vars[name] as never).map(k => JSON.stringify(k))
+    for (const k of [qk.money.margins(), qk.money.exceptions(), qk.companies.all]) expect(keys).toContain(JSON.stringify(k))
+  })
+})
+
 describe('isMoneyKey', () => {
   it('names the money root and the money slice of an order or a company, nothing else', () => {
     expect(isMoneyKey(qk.money.receivables.list())).toBe(true)
