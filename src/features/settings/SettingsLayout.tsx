@@ -42,7 +42,7 @@ export function SettingsLayout() {
   const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => canOpenSettingsLink(l, role)) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
   return (
-    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[244px_minmax(0,1fr)]">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[280px_minmax(0,1fr)]">
       <NoPrimary />
       {/* Team sets its own phone bar; every other page under Settings gets the back arrow to the list. */}
       {!atHome && current && current.to !== '/settings/team' ? <BackToSettings title={current.label} /> : null}
@@ -52,14 +52,14 @@ export function SettingsLayout() {
           g.links.length ? (
             <div key={g.title} className="mb-3 grid gap-[2px]">
               <p className="px-3 pb-1 pt-2 text-sm font-medium text-fg-muted">{g.title}</p>
-              <ul className="grid gap-[2px]">
+              <ul className="grid min-w-0 gap-[2px]">
                 {g.links.map(l => (
-                  <li key={l.to}>
+                  <li key={l.to} className="min-w-0">
                     <NavLink
                       to={l.to}
                       className={({ isActive }) =>
                         cn(
-                          'relative flex h-control items-center gap-2 whitespace-nowrap rounded px-3 text-sm font-medium max-md:h-touch max-md:text-base',
+                          'relative flex h-control min-w-0 items-center gap-2 whitespace-nowrap rounded px-3 text-sm font-medium max-md:h-touch max-md:text-base',
                           isActive ? 'bg-selected text-fg' : 'text-fg-2 hover:bg-sunken hover:text-fg',
                         )
                       }
@@ -69,10 +69,10 @@ export function SettingsLayout() {
                           {isActive ? (
                             <span aria-hidden="true" className="absolute bottom-[6px] left-0 top-[6px] w-[3px] rounded-r-[2px] bg-brand-green" />
                           ) : null}
-                          <Icon icon={l.icon} className="text-fg-muted" />
-                          {l.label}
+                          <Icon icon={l.icon} className="shrink-0 text-fg-muted" />
+                          <span className="min-w-0">{l.label}</span>
                           {!isAdmin && l.tagForOthers ? (
-                            <span className="ml-auto inline-flex h-5 items-center rounded bg-selected px-[6px] text-xs font-medium text-fg-2">
+                            <span className="ml-auto inline-flex h-6 shrink-0 items-center rounded bg-canvas px-2 text-sm font-medium text-fg-2">
                               {l.tagForOthers}
                             </span>
                           ) : null}
@@ -111,8 +111,10 @@ function BackToSettings({ title }: { title: string }) {
 export function SettingsHome() {
   const isAdmin = useIsAdmin()
   const phone = usePhone()
-  // the list is the page on a phone: it still needs the page's one level-one heading
-  if (isAdmin) return phone ? <h1 className="sr-only">Settings</h1> : <Navigate to="/settings/team" replace />
+  // the list is the page on a phone, for every role (the rates were drawn under it, as a second page, and each has its own link in the
+  // list): it still needs the page's one level-one heading
+  if (phone) return <h1 className="sr-only">Settings</h1>
+  if (isAdmin) return <Navigate to="/settings/team" replace />
   return (
     <Suspense fallback={null}>
       <SettingsHomePage />

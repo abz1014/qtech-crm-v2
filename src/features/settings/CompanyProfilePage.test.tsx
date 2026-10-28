@@ -141,8 +141,8 @@ describe('Company profile screen', () => {
     expect(await screen.findByLabelText(/Legal name/)).toHaveValue('Q-Tech Solutions (Private) Limited')
     expect(screen.getByLabelText('Quotation validity')).toHaveValue('30')
     expect(screen.getByText('Nothing to save yet')).toBeInTheDocument()
-    // green but aria-disabled until something changes (one green button per screen)
-    expect(screen.getByRole('button', { name: 'Save changes' })).toHaveAttribute('aria-disabled', 'true')
+    // disabled until something changes
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Save changes' })).toHaveClass('bg-primary')
     // FULL has no STRN: the one banner names it, and nothing else (audit 2026-10-22)
     expect(screen.getByText('Missing for documents: STRN')).toBeInTheDocument()

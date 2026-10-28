@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 import { CircleDot } from 'lucide-react'
 import { z } from 'zod'
 import { useSession } from '@/app/session'
@@ -17,6 +18,9 @@ import { Field } from '@/ui/form/Field'
 import { Form, FormField } from '@/ui/form/Form'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
+
+/** A fact set by someone else: plain text at full contrast, no box (a greyed box reads as disabled, and it is not: it is just not yours to change). */
+const READ_ONLY = 'read-only:border-transparent read-only:bg-transparent read-only:px-0 read-only:text-fg read-only:hover:border-transparent'
 
 const schema = z.object({ phone: z.string().trim().max(PHONE_MAX, `Keep the phone number under ${PHONE_MAX} characters.`).pipe(phoneText) })
 
@@ -90,14 +94,14 @@ function DetailsForm({ details }: { details: MyDetails }) {
         <Section title="Your details" hint="Your name, email and job title are set by an admin.">
           <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
             <Field label="Name">
-              <TextField readOnly value={details.name} />
+              <TextField readOnly value={details.name} className={READ_ONLY} />
             </Field>
             <Field label="Email">
-              <TextField readOnly value={details.email ?? ''} className="num" />
+              <TextField readOnly value={details.email ?? ''} className={`num ${READ_ONLY}`} />
             </Field>
           </div>
           <Field label="Job title" help="Set by an admin" className="sm:max-w-[320px]">
-            <TextField readOnly value={details.job_title ?? ''} placeholder="Not set" />
+            <TextField readOnly value={details.job_title ?? ''} placeholder="Not set" className={READ_ONLY} />
           </Field>
           <FormField name="phone" label="Phone" requirement="optional" className="sm:max-w-[320px]">
             {f => <TextField {...f} type="tel" className="num" placeholder="0300 1234567" autoComplete="tel" />}
@@ -105,7 +109,8 @@ function DetailsForm({ details }: { details: MyDetails }) {
         </Section>
       </Form>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3">
+      {/* With unsaved changes the bar sticks above the phone's bottom tabs (the page scrolls inside <main>, which ends where the tabs start). */}
+      <div data-save-bar className={cn('flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3', dirty && 'sticky bottom-3 z-10 shadow-pop')}>
         {dirty ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
         <p role="status" className="text-sm text-fg-muted">
           {dirty ? '1 unsaved change: Phone' : 'Nothing to save yet'}
@@ -114,13 +119,8 @@ function DetailsForm({ details }: { details: MyDetails }) {
           <Button disabled={!dirty || sf.pending} onClick={() => sf.form.reset({ phone: details.phone ?? '' })}>
             Discard
           </Button>
-          <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Saving"
-            // the screen's one green button stays green; with nothing changed it is aria-disabled and does nothing
-            aria-disabled={!dirty || undefined}
-            onClick={e => {
-              if (!dirty) e.preventDefault()
-            }}
-          >
+          {/* nothing changed: Save is disabled, so it is plain that there is nothing to save */}
+          <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Saving" disabled={!dirty}>
             {sf.failed ? 'Try again' : 'Save changes'}
           </Button>
         </div>

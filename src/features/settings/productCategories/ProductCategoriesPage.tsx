@@ -108,7 +108,7 @@ export function ProductCategoriesPage() {
             <SegmentedControl aria-label="Show" value={view} onValueChange={v => setView(v as CategoryView)} options={VIEWS} />
             <div className="relative min-w-[14rem] flex-1 md:max-w-[22rem]">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
-              <TextField aria-label="Search product categories" placeholder="Search" className="pl-9" value={text} onChange={e => setText(e.target.value)} />
+              <TextField aria-label="Search product categories" placeholder="Search" className="pl-10" value={text} onChange={e => setText(e.target.value)} />
             </div>
           </div>
           {shown.length === 0 ? (

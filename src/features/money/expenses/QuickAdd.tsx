@@ -1,5 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Camera, Check, CircleAlert, X } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState, type SelectHTMLAttributes } from 'react'
+import { Camera, Check, ChevronDown, CircleAlert, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
@@ -9,6 +9,8 @@ import { Icon } from '@/ui/Icon'
 import { PaidByToggle } from '@/features/money/expenses/PaidByToggle'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
+import { DateInput } from '@/ui/form/DateInput'
+import { controlClass } from '@/ui/form/fieldContext'
 import { NumberInput } from '@/ui/form/NumberInput'
 import {
   useCategoryUse,
@@ -155,6 +157,10 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
 
   const save = async () => {
     if (busy) return
+    if (paidOn > today) {
+      setProblem('The date cannot be in the future.')
+      return
+    }
     const inputTax = hasGst ? (tax ?? 0) : 0
     const p = quickProblem({ amount: amount ?? 0, categoryId, inputTax, titleMissing: needsTitle(category, detail) })
     if (p === 'title') {
@@ -273,14 +279,11 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                   {c.isMisc ? 'Other' : c.name}
                 </button>
               ))}
-              <select
+              <QuickSelect
                 aria-label="More categories"
                 value={top.some(c => c.id === categoryId) ? '' : categoryId}
                 onChange={e => e.target.value && pick(e.target.value)}
-                className={cn(
-                  'min-h-touch max-w-full rounded border bg-surface px-3 text-base',
-                  categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected font-medium' : 'border-line-strong',
-                )}
+                className={cn('w-auto max-w-full', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected font-medium' : 'border-line-strong')}
               >
                 <option value="">More…</option>
                 {more.map(g => (
@@ -292,7 +295,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                     ))}
                   </optgroup>
                 ))}
-              </select>
+              </QuickSelect>
             </div>
             <div className="grid gap-2" data-testid="quick-find">
               <label htmlFor={`${uid}-find`} className="text-base text-fg-2">
@@ -335,18 +338,13 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
             <label htmlFor={`${uid}-other`} className="font-medium">
               Filed under
             </label>
-            <select
-              id={`${uid}-other`}
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-              className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
-            >
+            <QuickSelect id={`${uid}-other`} value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-auto">
               {others.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-            </select>
+            </QuickSelect>
             <span className="text-fg-2">Reports show it by what you write.</span>
           </div>
         ) : null}
@@ -356,18 +354,13 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
             <label htmlFor={`${uid}-for`} className="font-medium">
               This bill is for
             </label>
-            <select
-              id={`${uid}-for`}
-              value={period}
-              onChange={e => setForChoice({ key: forKey, value: e.target.value })}
-              className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
-            >
+            <QuickSelect id={`${uid}-for`} value={period} onChange={e => setForChoice({ key: forKey, value: e.target.value })} className="w-auto">
               {forMonthChoices(paidOn).map(o => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
+            </QuickSelect>
             <span className="text-fg-2">
               {Number(paidOn.slice(8, 10)) <= 10 ? 'Paid by the 10th, so last month.' : 'Paid after the 10th, so this month.'} Reports count it in that month.
             </span>
@@ -385,13 +378,15 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
             <label htmlFor={`${uid}-date`} className="text-base font-medium">
               Paid on
             </label>
-            <input
+            {/* Shows "Tue 27 Oct 2026", takes 27 oct, 27/10, yesterday typed (Enter only reads the date; it does not Save). */}
+            <DateInput
               id={`${uid}-date`}
-              type="date"
               value={paidOn}
-              max={today}
-              onChange={e => e.target.value && setPaidOn(e.target.value)}
-              className="num min-h-touch rounded border border-line-input bg-surface px-3 text-base"
+              defaultToday={false}
+              onChange={v => v && setPaidOn(v)}
+              onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
+              placeholder="e.g. 27 oct, yesterday"
+              className="h-auto min-h-touch w-[13.5rem] text-base max-md:text-base"
             />
           </div>
           <div className="grid min-w-0 gap-2 lg:flex-1">
@@ -461,7 +456,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         </div>
 
         <div className="grid gap-3">
-          <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} className="w-fit" />
+          <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} />
           {hasGst ? (
             <div className="flex flex-wrap items-center gap-3 rounded-row border bg-canvas px-4 py-3 text-base">
               <label htmlFor={`${uid}-tax`} className="font-medium">
@@ -484,5 +479,17 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         ) : null}
       </form>
     </section>
+  )
+}
+
+/** A native <select> (best list on a phone) drawn like the app's Select: same control look, chevron, 44 px tall, 16 px text. Kept local for the optgroups. */
+function QuickSelect({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div className="relative min-w-0">
+      <select {...rest} className={cn(controlClass, 'h-auto min-h-touch appearance-none pr-10 text-base max-md:text-base', className)}>
+        {children}
+      </select>
+      <Icon icon={ChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted" />
+    </div>
   )
 }

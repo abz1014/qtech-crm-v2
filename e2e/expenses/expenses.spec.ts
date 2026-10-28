@@ -142,7 +142,7 @@ test.describe('expenses (M03, M11)', () => {
     await expect(first).toBeFocused()
     await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office supplies & snacks')
     // filled in for you: a dashed edge, no "most used" tag on the cell (R2-12)
-    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveClass(/border-dashed/)
+    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveClass(/text-fg-2/)
     await startCounting(page)
     const b = base()
     const amounts = [b + 1, b + 2, b + 3, b + 4, b + 5]
@@ -151,7 +151,7 @@ test.describe('expenses (M03, M11)', () => {
       if (i < amounts.length - 1) await page.keyboard.press('Enter')
     }
     await expect(page.getByRole('textbox', { name: /^Amount, row/ })).toHaveCount(5)
-    await expect(page.getByRole('combobox', { name: 'Category, row 5' })).toHaveClass(/border-dashed/) // carried down, no tag
+    await expect(page.getByRole('combobox', { name: 'Category, row 5' })).toHaveClass(/text-fg-2/) // carried down, no tag
     await review(page, 'm11-burst-sheet-1440')
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
