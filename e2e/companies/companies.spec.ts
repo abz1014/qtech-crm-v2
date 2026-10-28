@@ -105,7 +105,7 @@ test.describe('companies list search (audit F1)', () => {
     await openAs(page, 'sales', '/companies')
     await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
     const search = page.getByRole('textbox', { name: 'Search companies or contacts' })
-    await expect(search).toHaveAttribute('placeholder', 'Search companies or contacts')
+    await expect(search).toHaveAttribute('placeholder', 'Search companies')
 
     await search.fill(`rukhsana${tag}`)
     const row = page.getByRole('row', { name: new RegExp(company.name) })
