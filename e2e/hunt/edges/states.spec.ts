@@ -12,6 +12,20 @@ test.beforeAll(async () => {
 })
 
 const OVERLAY = '[role="dialog"]:visible, [role="alertdialog"]:visible, [role="menu"]:visible'
+// Going back online lets the requests the offline navigation left in flight fail late. A goto issued in that window is aborted by the
+// browser (net::ERR_ABORTED) through no fault of the app, so wait for the page to go quiet and retry an aborted goto.
+async function gotoSteady(page: Page, path: string): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await page.goto(path)
+      return
+    } catch (e) {
+      if (attempt >= 3 || !/ERR_ABORTED/.test(String(e))) throw e
+      await settle(page)
+    }
+  }
+}
+
 const visibleOverlays = (page: Page) => page.locator(OVERLAY).count()
 
 test('offline: save, navigate, come back online', async ({ browser }, info) => {
@@ -41,7 +55,7 @@ test('offline: save, navigate, come back online', async ({ browser }, info) => {
   // Navigate while offline: lazy screens that were never loaded, and data that is not cached.
   for (const path of ['/settings/team', '/money/month-end', `/rfqs/${world.rfq.id}`, '/settings/exchange-rates']) {
     w.at(`${path} offline`)
-    await page.goto('/todo')
+    await gotoSteady(page, '/todo')
     await settle(page)
     await context.setOffline(true)
     await page.evaluate(p => {
@@ -53,6 +67,7 @@ test('offline: save, navigate, come back online', async ({ browser }, info) => {
     note({ kind: 'offline', path, detail: `in-app navigation while offline shows: "${body}"` })
     await shot(page, `offline_nav_${path}`)
     await context.setOffline(false)
+    await settle(page)
   }
   await context.close()
 })
