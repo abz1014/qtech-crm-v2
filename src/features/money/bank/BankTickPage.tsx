@@ -178,7 +178,7 @@ export function BankTickPage() {
               {/* The page's one green button, always in reach while ticking: how far along, and back to the checklist. */}
               <div
                 data-testid="bank-progress"
-                className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3 shadow-pop"
+                className="sticky bottom-3 z-10 mt-2 flex flex-wrap items-center gap-3 rounded-panel border border-line-strong bg-surface px-5 py-3 shadow-pop"
               >
                 <span className="text-base">
                   <b className="num font-semibold">{allLines - (openCount ?? 0)}</b> of <span className="num">{allLines}</span> matched

@@ -12,7 +12,7 @@ import { categoryMeta, defaultGroupId, guessGroupId, miscFor, sortGroups, type C
  * most in the last 30 days under "Recent", then every active category under its group ("Office running", "Vehicles"...). Two or
  * three letters narrow it across all groups; each match says its group and its own paid-via ("Vehicles · cash"). The first
  * match is already highlighted, Enter or Tab accepts it (Tab then carries on to the next cell), Up and Down choose, Esc closes
- * the list and only the list. The field shows "2 of 24" while typing. A dashed edge says the value was filled in for you (what
+ * the list and only the list. The field shows "2 of 24" while typing. A muted text colour says the value was filled in for you (what
  * the dashed edge means is in the keyboard shortcuts sheet, not in a tag on every cell: round 2, R2-12). Archived categories
  * are never offered (only the current value, if it is one).
  *
@@ -28,7 +28,7 @@ interface CategoryPickerProps {
   categories: readonly Category[]
   value: string | null | undefined
   onChange: (categoryId: string) => void
-  /** Filled in for you: a dashed edge (no words on the cell). */
+  /** Filled in for you: muted text (no words on the cell). */
   prefilled?: boolean
   /** 36 px in the sheet's cells; the form's 32 px control by default. */
   size?: 'cell' | 'field' | 'phone'
@@ -279,8 +279,8 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
               controlClass,
               size === 'cell' && 'h-[36px]',
               size === 'phone' && 'h-[44px] text-base',
-              prefilled && !typing && 'border-dashed text-fg-2',
-              typing && 'pr-24',
+              prefilled && !typing && 'text-fg-2',
+              typing && 'pr-[6rem]',
               chevron && !typing && 'pr-8',
               className,
             )}

@@ -37,11 +37,11 @@ export function CashInHandLine({ compact = false }: { compact?: boolean }) {
     >
       <Icon icon={Wallet} className="text-fg-muted" />
       {none ? (
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex-[1_1_16rem]">
           <b className="font-semibold">Cash in hand</b> is not set up. Count the office cash once to start; after that the app works out what should be there.
         </span>
       ) : (
-        <span className="min-w-0 flex-1" aria-live="polite">
+        <span className="min-w-0 flex-[1_1_16rem]" aria-live="polite">
           <b className="font-semibold">Cash in hand:</b> <b className="num font-semibold" data-testid="cash-expected">{pkr(c.expected ?? 0)}</b> expected
           <span className="text-fg-2">
             {' · '}

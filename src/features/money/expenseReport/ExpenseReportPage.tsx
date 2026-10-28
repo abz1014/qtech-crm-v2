@@ -488,7 +488,7 @@ function MiscTitles({ c }: { c: CategoryLine }) {
   const shown = titled.slice(0, 4)
   const rest = titled.length - shown.length
   return (
-    <ul className="grid gap-[2px] pl-7 text-base text-fg-2" data-testid="misc-titles" aria-label={`${c.name}, by title`}>
+    <ul className="grid gap-[2px] pl-[1.75rem] text-base text-fg-2" data-testid="misc-titles" aria-label={`${c.name}, by title`}>
       {shown.map(d => (
         <li key={d.key} className="[overflow-wrap:anywhere]">
           {d.detail}

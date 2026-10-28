@@ -497,7 +497,7 @@ function ExpenseFormReady({
             {f => <InputTax amount={typeof amount === 'number' ? amount : null} value={f.value ?? null} onChange={f.onChange} defaultOpen={!!expense?.inputTax || gstTick} />}
           </FormField>
         ) : (
-          <Checkbox label={<span className="text-base">More: has a GST invoice</span>} checked={gstTick} onCheckedChange={c => setGstTick(c === true)} className="w-fit" />
+          <Checkbox label={<span className="text-base">More: has a GST invoice</span>} checked={gstTick} onCheckedChange={c => setGstTick(c === true)} />
         )}
 
         {showPaidVia ? (
