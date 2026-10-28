@@ -112,7 +112,21 @@ describe('Review imported page', () => {
     await user.click(within(likely).getByRole('button', { name: 'Not this' }))
     expect(screen.getByTestId('match-counts')).toHaveTextContent('1 certain, 0 likely')
     await user.click(screen.getByRole('button', { name: /Link all certain/ }))
-    await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:link_imported_invoices' && (opArgs(c, 'args')?.[0] as { p_dry_run?: boolean }).p_dry_run === false)).toBe(true))
+    await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:link_imported_invoice')).toBe(true))
+    // the bulk RPC links everything certain, rejected or not: it must not be used
+    expect(db.calls.some(c => c.target === 'rpc:link_imported_invoices' && (opArgs(c, 'args')?.[0] as { p_dry_run?: boolean }).p_dry_run === false)).toBe(false)
+    expect(db.calls.filter(c => c.target === 'rpc:link_imported_invoice').map(c => opArgs(c, 'args')?.[0])).toEqual([{ p_invoice_id: 'i1', p_order_id: 'o9' }])
+  })
+
+  it('"Link all certain" does not link a certain proposal the owner turned down with Not this', async () => {
+    const { db, user } = mount()
+    await screen.findByTestId('review-list')
+    await user.click(screen.getByRole('button', { name: 'Find matches' }))
+    const list = await screen.findByTestId('match-list')
+    const certain = list.querySelector('[data-confidence="certain"]') as HTMLElement
+    await user.click(within(certain).getByRole('button', { name: 'Not this' }))
+    expect(screen.queryByRole('button', { name: /Link all certain/ })).toBeNull()
+    expect(db.calls.some(c => c.target === 'rpc:link_imported_invoice')).toBe(false)
   })
 
   it('Accept links one invoice to one order', async () => {
@@ -124,5 +138,15 @@ describe('Review imported page', () => {
     await user.click(within(likely).getByRole('button', { name: 'Accept' }))
     await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:link_imported_invoice')).toBe(true))
     expect(opArgs(db.calls.find(c => c.target === 'rpc:link_imported_invoice') as FakeCall, 'args')?.[0]).toEqual({ p_invoice_id: 'i7', p_order_id: 'o1' })
+  })
+
+  it('two rows decided back to back each keep their own result (one mutation per row)', async () => {
+    const { db, user } = mount()
+    const order = await screen.findByTestId('review-order-o1')
+    const invoice = screen.getByTestId('review-invoice-i7')
+    await user.click(within(order).getByRole('button', { name: 'Settled, keep as history' }))
+    await user.click(within(invoice).getByRole('button', { name: 'Settled, keep as history' }))
+    await waitFor(() => expect(db.calls.filter(c => c.target === 'rpc:set_legacy_review')).toHaveLength(2))
+    await waitFor(() => expect(screen.getAllByTestId('review-settled-here')).toHaveLength(2))
   })
 })

@@ -323,16 +323,21 @@ export function PaletteHost({
       onSelect: openShortcuts,
     };
     const items: PaletteItem[] = [
-      {
-        id: "new-rfq",
-        label: "New enquiry",
-        meta: "Go to intake",
-        icon: Plus,
-        shortcut: ["N"],
-        href: INTAKE_ROUTE,
-        // the old names stay findable: RFQ, and the top-bar button this replaced (P4-A)
-        keywords: ["new rfq", "rfq", "paste or photo", "paste", "capture", "photo", "pdf", "enquiry"],
-      },
+      // An engineer starts no enquiry (the + New menu has nothing for them): the N key and this row are the office's.
+      ...(role === "admin" || role === "sales"
+        ? [
+            {
+              id: "new-rfq",
+              label: "New enquiry",
+              meta: "Go to intake",
+              icon: Plus,
+              shortcut: ["N"],
+              href: INTAKE_ROUTE,
+              // the old names stay findable: RFQ, and the top-bar button this replaced (P4-A)
+              keywords: ["new rfq", "rfq", "paste or photo", "paste", "capture", "photo", "pdf", "enquiry"],
+            } satisfies PaletteItem,
+          ]
+        : []),
       ...(role === "admin"
         ? [{ id: "new-expense", label: "Add an expense", meta: "Quick add", icon: ReceiptText, shortcut: ["E"], onSelect: openQuickExpense } satisfies PaletteItem]
         : []),
@@ -385,8 +390,8 @@ export function PaletteHost({
       }
       const armed = Date.now() - armedAt < 1000;
       armedAt = 0;
-      // C (Paste or photo) is CaptureProvider's: it handles the key first and prevents default, so it is not matched here.
-      if (k === "n") {
+      // There is no C key any more (Paste or photo became New enquiry's paste box and the job page's Add to this job).
+      if (k === "n" && (role === "admin" || role === "sales")) {
         e.preventDefault();
         navigate(INTAKE_ROUTE);
       } else if (k === "e" && role === "admin") {

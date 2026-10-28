@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
+import { ToastProvider } from '@/ui/Toast'
 import JobsListPage from '@/features/jobs/JobsListPage'
 
 /*
@@ -38,7 +39,9 @@ function mount(role: 'admin' | 'sales' | 'engineer', path = '/jobs') {
     <QueryClientProvider client={client}>
       <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Faizan', role } }}>
         <MemoryRouter initialEntries={[path]}>
-          <JobsListPage />
+          <ToastProvider>
+            <JobsListPage />
+          </ToastProvider>
         </MemoryRouter>
       </SessionProvider>
     </QueryClientProvider>,
@@ -97,5 +100,18 @@ describe('Jobs list', () => {
     mount('engineer')
     expect(await screen.findByText('No jobs are assigned to you')).toBeInTheDocument()
     expect(screen.queryByText(/Showing 0/)).toBeNull()
+  })
+
+  it('/jobs?new=1 (Order without enquiry) opens the new-order dialog once, for the office only', async () => {
+    installFakeDb(fake)
+    mount('sales', '/jobs?new=1')
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('an engineer who lands on ?new=1 gets no dialog', async () => {
+    installFakeDb(fake)
+    mount('engineer', '/jobs?new=1')
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })

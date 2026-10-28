@@ -23,8 +23,8 @@ import type { RuleKey, Tone, TodayItem, TodayView } from './types'
 /** A task whose date is more than this many calendar days ago is stale (the plan's 30-day cut-off). */
 export const STALE_AFTER_DAYS = COUNT_WORDS_MAX_DAYS
 
-/** Late money: never stale, always counted while it is late. */
-const NEVER_STALE: ReadonlySet<RuleKey> = new Set<RuleKey>(['payment_overdue'])
+/** Late money: never stale, always counted while it is late. A pending "I paid" claim is the same: someone is out of pocket until it is handled. */
+const NEVER_STALE: ReadonlySet<RuleKey> = new Set<RuleKey>(['payment_overdue', 'claims_to_approve'])
 
 /** The only rules that may turn red: late money, and a promise made to a customer. */
 export const RED_RULES: ReadonlySet<RuleKey> = new Set<RuleKey>(['payment_overdue', 'bid_due', 'job_commissioning', 'gst_fbr'])

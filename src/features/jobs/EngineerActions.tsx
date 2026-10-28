@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Camera, CloudOff, FileText, HardHat, Truck } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
@@ -11,6 +11,7 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { TextArea } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderLegRow } from '@/features/orders/api'
+import { deleteCapture, safely } from '@/lib/capture/store'
 import { useUpdateOrder } from '@/features/orders/hooks'
 import { useMarkDone } from '@/features/orders/commissioningActions'
 import { useLegActions } from '@/features/orders/useLegActions'
@@ -55,7 +56,17 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   const legs = data.legs.data ?? []
   const online = useOnline()
   const offline = !online
-  const [adding, setAdding] = useState(false)
+  // The engineer's Photo or note button (/capture) and a share sent to a job arrive with this state: open the box at once (read once, then cleared).
+  const location = useLocation()
+  const navigate = useNavigate()
+  const arrived = location.state as { photoOrNote?: boolean; addToJob?: SharedIn } | null
+  const [shared] = useState<SharedIn | null>(() => arrived?.addToJob ?? null)
+  const [adding, setAdding] = useState(Boolean(arrived?.photoOrNote || arrived?.addToJob))
+  useEffect(() => {
+    if (arrived?.photoOrNote || arrived?.addToJob) navigate(location.pathname + location.search, { replace: true, state: null })
+    // once, on arrival
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   if (!facts.job.orderId && !facts.job.rfqId) return null
 
   const cancelled = order?.cancelledOn != null
@@ -101,13 +112,20 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
           ) : null}
         </div>
       ) : null}
-      {adding ? <PhotoOrNote facts={facts} order={order} offline={offline} onClose={() => setAdding(false)} /> : null}
+      {adding ? <PhotoOrNote facts={facts} order={order} offline={offline} shared={shared} onClose={() => setAdding(false)} /> : null}
     </section>
   )
 }
 
 /** A photo (the camera on a phone) or a note, saved on the order; on the enquiry before there is one. */
-function PhotoOrNote({ facts, order, offline, onClose }: { facts: JobFacts; order: OrderHeader | null; offline: boolean; onClose: () => void }) {
+/** What the share target or "Add to job…" handed to this page; captureId is the kept copy (IndexedDB), deleted only once it is saved. */
+interface SharedIn {
+  text?: string
+  files?: File[]
+  captureId?: string
+}
+
+function PhotoOrNote({ facts, order, offline, shared, onClose }: { facts: JobFacts; order: OrderHeader | null; offline: boolean; shared: SharedIn | null; onClose: () => void }) {
   const { toast } = useToast()
   const session = useSession()
   const name = session.status === 'signed-in' ? session.user.name : 'Engineer'
@@ -117,6 +135,7 @@ function PhotoOrNote({ facts, order, offline, onClose }: { facts: JobFacts; orde
   const update = useUpdateOrder(orderId ?? '')
   const keepKey = `${NOTE_KEEP}${facts.job.key}`
   const [text, setText] = useState(() => {
+    if (shared?.text?.trim()) return shared.text.trim()
     try {
       return window.sessionStorage.getItem(keepKey) ?? ''
     } catch {
@@ -134,6 +153,27 @@ function PhotoOrNote({ facts, order, offline, onClose }: { facts: JobFacts; orde
   const picker = useRef<HTMLInputElement>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
   const canNote = Boolean(orderId && order)
+  const sharedFiles = shared?.files ?? []
+  const keepDone = () => {
+    if (shared?.captureId) void safely(() => deleteCapture(shared.captureId as string), undefined)
+  }
+
+  const addShared = async () => {
+    const parent = orderId ?? rfqId
+    if (!parent || sharedFiles.length === 0) return
+    setPhotoBusy(true)
+    try {
+      for (const file of sharedFiles) await upload.mutateAsync({ clarificationId: null, file, path: attachmentPath(parent, crypto.randomUUID(), file.name, file.type) })
+      keepDone()
+      toast({ title: sharedFiles.length === 1 ? 'Photo added' : `${sharedFiles.length} photos added`, body: facts.job.companyName, tone: 'success' })
+      onClose()
+    } catch (err) {
+      // the shared copy stays on this device: share it again or open it from Photo or note
+      toast({ title: 'Could not add the shared photos', body: mapPgError(err, { entity: 'file' }).message, tone: 'danger' })
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
 
   const addPhoto = async (file: File | undefined) => {
     if (!file) return
@@ -159,6 +199,7 @@ function PhotoOrNote({ facts, order, offline, onClose }: { facts: JobFacts; orde
     try {
       await update.mutateAsync({ notes: order.notes && order.notes.trim() ? `${order.notes.trimEnd()}\n${stamped}` : stamped })
       setText('')
+      if (sharedFiles.length === 0) keepDone()
       toast({ title: 'Note saved', body: facts.job.companyName, tone: 'success' })
       onClose()
     } catch (err) {
@@ -196,6 +237,11 @@ function PhotoOrNote({ facts, order, offline, onClose }: { facts: JobFacts; orde
           <Button size="lg" icon={Camera} className="w-full justify-center" disabled={offline} busy={photoBusy} busyLabel="Adding" onClick={() => picker.current?.click()}>
             Take or choose a photo
           </Button>
+          {sharedFiles.length > 0 ? (
+            <Button size="lg" variant="primary" className="w-full justify-center" disabled={offline} busy={photoBusy} busyLabel="Adding" onClick={() => void addShared()}>
+              {sharedFiles.length === 1 ? 'Add the shared photo' : `Add the ${sharedFiles.length} shared photos`}
+            </Button>
+          ) : null}
           {canNote ? (
             <label className="grid gap-2 text-base font-medium">
               Note

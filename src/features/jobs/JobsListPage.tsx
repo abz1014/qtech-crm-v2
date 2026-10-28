@@ -1,5 +1,5 @@
 import { NoPrimary } from '@/ui/NoPrimary'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FilePlus2 } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -17,6 +17,10 @@ import { StageMini } from '@/features/jobs/StageBar'
 import { jobNext } from '@/features/jobs/lib/nextStep'
 import { byRecent, chipCounts, defaultChip, inChip, isChip, jobLabel, type Chip, type Who } from '@/features/jobs/lib/listModel'
 import { stageModel } from '@/features/jobs/lib/stages'
+import { lazyShown } from '@/lib/lazyDialog'
+
+// Downloaded the first time it opens (+ New > Order without enquiry arrives as /orders?new=1, which the old-address redirect carries here).
+const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog').then(m => m.NewOrderDialog))
 
 /*
  * Jobs (redesign phase 5, P5-B). One row per customer request from enquiry to payment ("Job 139"; "Job O-45" for an order with no
@@ -84,6 +88,21 @@ export default function JobsListPage() {
   const navigate = useNavigate()
   const jobs = useJobsList(role === '' ? null : user?.role ?? null)
   const who = useMemo<Who>(() => ({ userId: user?.id ?? null, role }), [user?.id, role])
+
+  const [creating, setCreating] = useState(false)
+  const openNew = params.get('new') === '1'
+  useEffect(() => {
+    if (!openNew || role === '') return
+    if (money) setCreating(true)
+    setParams(
+      p => {
+        const next = new URLSearchParams(p)
+        next.delete('new')
+        return next
+      },
+      { replace: true },
+    )
+  }, [openNew, role, money, setParams])
 
   const text = params.get('q') ?? ''
   const chipParam = params.get('chip')
@@ -196,6 +215,7 @@ export default function JobsListPage() {
         }
         empty={empty}
       />
+      {creating ? <NewOrderDialog onClose={() => setCreating(false)} /> : null}
     </div>
   )
 }

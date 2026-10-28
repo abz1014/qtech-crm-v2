@@ -54,7 +54,7 @@ export function Popover(props: RootProps) {
       </Want.Provider>
     )
   }
-  return <mod.PopoverImpl {...props} defaultOpen={props.defaultOpen ?? wanted} />
+  return <mod.PopoverImpl {...props} defaultOpen={Boolean(props.defaultOpen) || wanted} />
 }
 
 type TriggerProps = ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Trigger>
