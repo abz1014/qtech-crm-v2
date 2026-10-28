@@ -27,6 +27,17 @@ export interface PastedLine {
   marker: string | null
 }
 
+/**
+ * The text of a pasted line as drawn after its highlighted marker. Some parsers (docread) keep the marker inside `text` as well as in
+ * `marker`, which drew "1) 1) Item"; the marker is shown once, so it is dropped from the text here.
+ */
+export function textAfterMarker(l: Pick<PastedLine, 'text' | 'marker'>): string {
+  const { text, marker } = l
+  if (!marker) return text
+  const t = text.trimStart()
+  return t.startsWith(marker) ? t.slice(marker.length).trimStart() : text
+}
+
 export interface ParseResult {
   items: ParsedItem[]
   lines: PastedLine[]

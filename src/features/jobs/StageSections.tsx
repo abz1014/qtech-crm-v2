@@ -291,7 +291,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle }: { fac
           <section key={s.stop} id={`stage-${s.index}`} data-stage={s.stop} className={cn('rounded-panel border bg-surface', (s.state === 'future' || none) && 'bg-sunken')}>
             <h2 className="text-base">
               {none ? (
-                <div className="flex min-h-touch items-center gap-2 px-4 py-2">{head}</div>
+                <div className="flex min-h-touch flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 max-sm:[&>span:nth-of-type(2)]:basis-[calc(100%-2rem)]">{head}</div>
               ) : (
                 <button
                   type="button"

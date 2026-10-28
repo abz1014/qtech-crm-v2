@@ -327,17 +327,33 @@ function Loaded({ company }: { company: CompanyDetail }) {
         >
           {supplierRecordLine && facts ? (
             // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
-            <p className="mt-2 flex flex-wrap items-center gap-x-1 text-base text-fg-2" data-testid="supplier-record-line">
-              <span>
-                <CountText text={supplierRecordLine} />
+            // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
+            // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
+            <p className="mt-2 overflow-x-clip text-base text-fg-2" data-testid="supplier-record-line">
+              <span className="-ml-5 flex flex-wrap items-center">
+                {supplierRecordLine.split(' · ').map((part, i) => (
+                  <span key={part} className={cn('inline-flex min-w-0 items-center', i === 0 && 'pl-5')}>
+                    {i > 0 ? (
+                      <>
+                        {' '}
+                        <span aria-hidden="true" className="w-5 shrink-0 text-center text-fg-muted">
+                          ·
+                        </span>{' '}
+                      </>
+                    ) : null}
+                    <span>
+                      <CountText text={part} />
+                    </span>
+                  </span>
+                ))}
+                <InfoTip label="About these numbers" className="ml-1">
+                  <span className="grid gap-2">
+                    {factNotes(facts, record.view?.span ?? null).map(n => (
+                      <span key={n}>{n}</span>
+                    ))}
+                  </span>
+                </InfoTip>
               </span>
-              <InfoTip label="About these numbers">
-                <span className="grid gap-2">
-                  {factNotes(facts, record.view?.span ?? null).map(n => (
-                    <span key={n}>{n}</span>
-                  ))}
-                </span>
-              </InfoTip>
             </p>
           ) : null}
           <LastChanged table="companies" id={company.id} className="mt-2 text-base text-fg-2" />

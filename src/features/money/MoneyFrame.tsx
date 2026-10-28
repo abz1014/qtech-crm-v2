@@ -73,7 +73,7 @@ export function MoneyFrame({
           }
         />
         {phone ? (
-          <nav aria-label="Money views" className="flex min-w-0 gap-[2px] rounded bg-selected p-[2px]" data-testid="money-tabs-phone">
+          <nav aria-label="Money views" className="grid min-w-0 gap-1 rounded bg-selected p-1" style={{ gridTemplateColumns: `repeat(${phoneTabs.length}, minmax(0, 1fr))` }} data-testid="money-tabs-phone">
             {phoneTabs.map(t => (
               <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} phone />
             ))}
@@ -106,12 +106,12 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
       aria-current={on ? 'page' : undefined}
       className={cn(
         'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
-        phone ? 'min-h-touch min-w-0 flex-auto justify-center gap-1 px-1 text-xs' : 'min-h-control gap-2 px-4 text-sm',
+        phone ? 'min-h-touch min-w-0 justify-center gap-1 px-1 text-center text-sm leading-tight' : 'min-h-control gap-2 px-4 text-sm',
         on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg',
       )}
     >
       {/* The name is the visible words plus, for a short phone label, the full name for screen readers (WCAG 2.5.3 label in name). */}
-      <span className="whitespace-nowrap">{phone ? tab.short : tab.label}</span>
+      <span className={phone ? undefined : 'whitespace-nowrap'}>{phone ? tab.short : tab.label}</span>
       {phone && tab.short !== tab.label ? <span className="sr-only">{` (${tab.label})`}</span> : null}
     </Link>
   )
