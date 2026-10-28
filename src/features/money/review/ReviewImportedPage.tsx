@@ -90,15 +90,13 @@ function useDecide(item: ReviewItem, onDecided: (item: ReviewItem, state: Review
   const [error, setError] = useState<string | null>(null)
   const decide = (state: ReviewState) => {
     setError(null)
-    set.mutate(
-      { kind: item.kind, id: item.id, state },
-      {
-        onSuccess: () => {
-          onDecided(item, state)
-          toast({ title: state === 'settled' ? 'Kept as history' : state === 'live' ? 'Kept open' : 'Back to review', body: `${item.title} · ${item.company}`, tone: 'success' })
-        },
-        onError: e => setError(mapPgError(e).message),
+    // mutateAsync, not mutate's callbacks: the row unmounts when the refreshed list no longer holds it, and those callbacks would be dropped.
+    set.mutateAsync({ kind: item.kind, id: item.id, state }).then(
+      () => {
+        onDecided(item, state)
+        toast({ title: state === 'settled' ? 'Kept as history' : state === 'live' ? 'Kept open' : 'Back to review', body: `${item.title} · ${item.company}`, tone: 'success' })
       },
+      e => setError(mapPgError(e).message),
     )
   }
   return { decide, busy: set.isPending, error }
