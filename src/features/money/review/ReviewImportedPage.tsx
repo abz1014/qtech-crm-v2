@@ -23,27 +23,14 @@ import { countProposals, proposalKey, reviewProgress, sortReview, visibleProposa
  */
 export function ReviewImportedPage() {
   const q = useReviewItems()
-  const set = useSetReview()
-  const { toast } = useToast()
   const [settledHere, setSettledHere] = useState<{ item: ReviewItem; state: ReviewState }[]>([])
-  const [error, setError] = useState<string | null>(null)
   const items = useMemo(() => sortReview(q.data ?? []), [q.data])
   const progress = reviewProgress(items, settledHere.filter(s => s.state === 'settled').length)
   const pct = progress.total === 0 ? 100 : Math.round((progress.decided / progress.total) * 100)
 
-  const decide = (item: ReviewItem, state: ReviewState) => {
-    setError(null)
-    set.mutate(
-      { kind: item.kind, id: item.id, state },
-      {
-        onSuccess: () => {
-          setSettledHere(list => (state === 'to_review' ? list.filter(s => s.item.id !== item.id) : [...list.filter(s => s.item.id !== item.id), { item, state }]))
-          toast({ title: state === 'settled' ? 'Kept as history' : state === 'live' ? 'Kept open' : 'Back to review', body: `${item.title} · ${item.company}`, tone: 'success' })
-        },
-        onError: e => setError(mapPgError(e).message),
-      },
-    )
-  }
+  // Each row decides on its own mutation (useDecide): a second tap on another row must not lose the first row's result, Undo or error.
+  const decided = (item: ReviewItem, state: ReviewState) =>
+    setSettledHere(list => (state === 'to_review' ? list.filter(s => s.item.id !== item.id) : [...list.filter(s => s.item.id !== item.id), { item, state }]))
 
   return (
     <MoneyFrame active={null}>
@@ -63,11 +50,6 @@ export function ReviewImportedPage() {
             <div className="h-full bg-brand-green" style={{ width: `${pct}%` }} />
           </div>
         </header>
-        {error ? (
-          <p role="alert" className="border-b px-5 py-3 text-base text-tone-danger-fg">
-            {error}
-          </p>
-        ) : null}
         {q.isPending ? (
           <div className="grid gap-3 p-5" aria-busy="true">
             <Skeleton className="h-16" />
@@ -87,23 +69,12 @@ export function ReviewImportedPage() {
         ) : (
           <ul className="divide-y" data-testid="review-list">
             {items.map(i => (
-              <Row key={i.kind + i.id} item={i} busy={set.isPending && set.variables?.id === i.id} onDecide={s => decide(i, s)} />
+              <Row key={i.kind + i.id} item={i} onDecided={decided} />
             ))}
             {settledHere
               .filter(s => s.state === 'settled')
               .map(s => (
-                <li key={s.item.kind + s.item.id} className="grid gap-2 px-5 py-4 text-base sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" data-testid="review-settled-here">
-                  <span className="min-w-0">
-                    <b className="font-semibold">{s.item.title}</b> · {s.item.company}
-                    <span className="mt-1 inline-flex items-center gap-2 text-tone-success-fg sm:ml-3">
-                      <Icon icon={CircleCheck} />
-                      Settled, kept as history
-                    </span>
-                  </span>
-                  <Button size="touch" variant="quiet" onClick={() => decide(s.item, 'to_review')} disabled={set.isPending} className="text-base">
-                    Undo
-                  </Button>
-                </li>
+                <SettledRow key={s.item.kind + s.item.id} item={s.item} onDecided={decided} />
               ))}
           </ul>
         )}
@@ -112,7 +83,52 @@ export function ReviewImportedPage() {
   )
 }
 
-function Row({ item, busy, onDecide }: { item: ReviewItem; busy: boolean; onDecide: (s: ReviewState) => void }) {
+/** One record's decision: its own mutation, its own toast and its own error line. */
+function useDecide(item: ReviewItem, onDecided: (item: ReviewItem, state: ReviewState) => void) {
+  const set = useSetReview()
+  const { toast } = useToast()
+  const [error, setError] = useState<string | null>(null)
+  const decide = (state: ReviewState) => {
+    setError(null)
+    set.mutate(
+      { kind: item.kind, id: item.id, state },
+      {
+        onSuccess: () => {
+          onDecided(item, state)
+          toast({ title: state === 'settled' ? 'Kept as history' : state === 'live' ? 'Kept open' : 'Back to review', body: `${item.title} · ${item.company}`, tone: 'success' })
+        },
+        onError: e => setError(mapPgError(e).message),
+      },
+    )
+  }
+  return { decide, busy: set.isPending, error }
+}
+
+function SettledRow({ item, onDecided }: { item: ReviewItem; onDecided: (item: ReviewItem, state: ReviewState) => void }) {
+  const { decide, busy, error } = useDecide(item, onDecided)
+  return (
+    <li className="grid gap-2 px-5 py-4 text-base sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" data-testid="review-settled-here">
+      <span className="min-w-0">
+        <b className="font-semibold">{item.title}</b> · {item.company}
+        <span className="mt-1 inline-flex items-center gap-2 text-tone-success-fg sm:ml-3">
+          <Icon icon={CircleCheck} />
+          Settled, kept as history
+        </span>
+      </span>
+      <Button size="touch" variant="quiet" onClick={() => decide('to_review')} disabled={busy} className="text-base">
+        Undo
+      </Button>
+      {error ? (
+        <p role="alert" className="text-tone-danger-fg sm:col-span-2">
+          {error}
+        </p>
+      ) : null}
+    </li>
+  )
+}
+
+function Row({ item, onDecided }: { item: ReviewItem; onDecided: (item: ReviewItem, state: ReviewState) => void }) {
+  const { decide: onDecide, busy, error } = useDecide(item, onDecided)
   const live = item.state === 'live'
   return (
     <li className="grid gap-3 px-5 py-4 text-base lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-testid={`review-${item.kind}-${item.id}`}>
@@ -138,6 +154,11 @@ function Row({ item, busy, onDecide }: { item: ReviewItem; busy: boolean; onDeci
           Settled, keep as history
         </Button>
       </div>
+      {error ? (
+        <p role="alert" className="text-tone-danger-fg lg:col-span-2">
+          {error}
+        </p>
+      ) : null}
     </li>
   )
 }
@@ -173,12 +194,16 @@ function Matches() {
   }
   const all = () => {
     setError(null)
-    linkAll.mutate(undefined, {
+    // exactly the certain proposals on screen: the ones turned down with "Not this" are not in `shown`
+    linkAll.mutate(shown.filter(p => p.confidence === 'certain'), {
       onSuccess: n => {
         toast({ title: n === 1 ? 'Linked 1 invoice' : `Linked ${n} invoices`, body: 'Only the certain matches', tone: 'success' })
         run()
       },
-      onError: e => setError(mapPgError(e).message),
+      onError: e => {
+        setError(mapPgError(e).message)
+        run() // some may have been linked before the failure
+      },
     })
   }
 
