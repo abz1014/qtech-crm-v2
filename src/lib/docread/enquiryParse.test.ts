@@ -848,3 +848,13 @@ describe('parseEnquiry: a forwarding note is no item (round 2)', () => {
     expect(r.items.map(i => i.description)).toEqual(['valve'])
   })
 })
+
+describe('RFQ-9: impossible dates are not read', () => {
+  it('rejects 30 Feb and 31 Apr, keeps real days', async () => {
+    const { findDate } = await import('./enquiryParse')
+    expect(findDate('closing date 30th Feb', '2026-10-28', true)).toBeNull()
+    expect(findDate('31/04/2026', '2026-10-28')).toBeNull()
+    expect(findDate('28/02/2027', '2026-10-28')?.iso).toBe('2027-02-28')
+    expect(findDate('29 Feb', '2027-10-28', true)?.iso).toBe('2028-02-29')
+  })
+})

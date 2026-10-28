@@ -37,3 +37,18 @@ describe('htmlTableText', () => {
     expect(htmlTableText(html)).toBe('Item\tQty\nRelay 24V\t3')
   })
 })
+
+describe('M9: a layout table keeps its lines', () => {
+  const body = '<table><tr><td><p>Dear Sir,</p><p>1. Alpha relay 3RT-1 - 10 nos</p><p>2. Beta gauge 0-10 bar - 2 nos</p><p>3. Gamma sensor M18 - 5 nos</p><p>Regards</p></td></tr></table>'
+  it('puts each paragraph of a one-column wrapper on its own line', () => {
+    expect(htmlTableText(body)).toBe(['Dear Sir,', '1. Alpha relay 3RT-1 - 10 nos', '2. Beta gauge 0-10 bar - 2 nos', '3. Gamma sensor M18 - 5 nos', 'Regards'].join('\n'))
+  })
+  it('reads the third item with its quantity of 5', () => {
+    const r = parseEnquiry(htmlTableText(body) ?? '', { today: '2026-10-20' })
+    expect(r.items.find(i => /Gamma/.test(i.description))?.qty).toBe(5)
+  })
+  it('still reads a real data table as tab rows inside a wrapper', () => {
+    const wrapped = '<table><tr><td><p>Hello</p>' + OUTLOOK.replace(/<\/?(?:html|body)>/g, '') + '</td></tr></table>'
+    expect(htmlTableText(wrapped)).toContain('01\tFloat Switch XY-100 AV Make: Acme\t02')
+  })
+})

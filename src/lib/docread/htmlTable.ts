@@ -39,6 +39,13 @@ function tableLines(table: Element): string[] {
   return lines
 }
 
+/** A table with one column (every row has at most one cell): a wrapper around an email body, not a grid of data. */
+function isLayoutTable(table: Element): boolean {
+  const rows = Array.from(table.querySelectorAll('tr')).filter(tr => tr.closest('table') === table)
+  if (!rows.length) return false
+  return rows.every(tr => Array.from(tr.children).filter(c => c.tagName === 'TD' || c.tagName === 'TH').length <= 1)
+}
+
 /**
  * The text of a pasted HTML fragment with its tables as tab rows; null when the HTML holds no table (the caller then reads the
  * plain text). Block elements and line breaks end a line; inline text runs together.
@@ -64,14 +71,17 @@ export function htmlTableText(html: string): string | null {
     if (SKIP.has(el.tagName)) return
     if (el.tagName === 'TABLE') {
       flush()
-      lines.push(...tableLines(el))
-      return
+      // A layout table (an email body wrapped in one column) keeps its paragraphs and line breaks as lines; a data table's rows are tab rows.
+      if (!isLayoutTable(el)) {
+        lines.push(...tableLines(el))
+        return
+      }
     }
     if (el.tagName === 'BR') {
       flush()
       return
     }
-    const block = BLOCK.has(el.tagName)
+    const block = BLOCK.has(el.tagName) || el.tagName === 'TD' || el.tagName === 'TH' || el.tagName === 'TABLE'
     if (block) flush()
     for (const c of Array.from(el.childNodes)) walk(c)
     if (block) flush()
