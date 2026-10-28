@@ -367,7 +367,7 @@ describe('direction C: the colour blocks and what sits on them', () => {
     expect(contrast('block-week-fg', 'tone-info-bg')).toBeGreaterThanOrEqual(7)
   })
   it('the open To do tile: the ink ring is 3:1 against the white tile (WCAG 1.4.11)', () => {
-    expect(read('src/features/today/TodayScreen.tsx')).toContain("open && 'ring-2 ring-inset ring-fg'")
+    expect(read('src/features/today/TodayScreen.tsx')).toContain('after:ring-2 after:ring-inset after:ring-fg')
     expect(contrast('fg', 'bg-surface')).toBeGreaterThanOrEqual(3)
   })
   it('the table header rule (2 px ink) is 3:1 on the white table', () => {

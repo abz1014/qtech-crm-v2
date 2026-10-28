@@ -116,7 +116,7 @@ Blue-grey, hue about 218 degrees, plus a navy. Components never reference primit
 | `--neutral-400` | `#68758c` | field edge |
 | `--neutral-500` | `#56637a` | |
 | `--neutral-600` | `#4a566d` | |
-| `--neutral-650` | `#3f4b63` | hints |
+| `--neutral-650` | `#364259` | hints |
 | `--neutral-700` | `#28354d` | second line |
 | `--neutral-800` | `#1c2638` | |
 | `--neutral-900` | `#0c1526` | ink |
@@ -261,9 +261,9 @@ Computed from the token values in `tokens.css` (direction C, 2026-10-22); `src/l
 | fg-2 on surface | `#28354d` | `#ffffff` | 12.30:1 | 4.5:1 | pass |
 | fg-2 on canvas / sunken | `#28354d` | `#eef2f7` | 10.95:1 | 4.5:1 | pass |
 | fg-2 on selected | `#28354d` | `#e3eaf4` | 10.16:1 | 4.5:1 | pass |
-| fg-muted on surface | `#3f4b63` | `#ffffff` | 8.76:1 | 4.5:1 | pass |
-| fg-muted on canvas / sunken | `#3f4b63` | `#eef2f7` | 7.79:1 | 4.5:1 | pass |
-| fg-muted on selected | `#3f4b63` | `#e3eaf4` | 7.23:1 | 4.5:1 | pass |
+| fg-muted on surface | `#364259` | `#ffffff` | 10.09:1 | 4.5:1 | pass |
+| fg-muted on canvas / sunken | `#364259` | `#eef2f7` | 8.98:1 | 4.5:1 | pass |
+| fg-muted on selected | `#364259` | `#e3eaf4` | 8.34:1 | 4.5:1 | pass |
 | primary-text (green text) on surface | `#1a7645` | `#ffffff` | 5.64:1 | 4.5:1 | pass |
 | primary-text on canvas / sunken | `#1a7645` | `#eef2f7` | 5.02:1 | 4.5:1 | pass |
 | primary-text on selected | `#1a7645` | `#e3eaf4` | 4.66:1 | 4.5:1 | pass |
