@@ -109,18 +109,18 @@ export function BottomTabs({
             className={({ isActive }) =>
               cn(
                 // Under 360 px six 16 px labels need the tight tracking to share the width (the shell-widths check at 320).
-                'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] py-2 text-xs font-medium max-[359px]:tracking-tight',
+                'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] py-2 text-xs font-medium max-[359px]:tracking-tighter',
                 isActive ? 'text-fg' : 'text-fg-2 hover:text-fg',
               )
             }
           >
             {({ isActive }) => (
               <>
-                {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-3 -top-px h-1 rounded-b bg-brand-green" /> : null}
+                {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 top-0 h-1 rounded-b bg-brand-green" /> : null}
                 <span className="relative">
                   <Icon icon={item.icon} size="lg" />
                   {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
-                  <NeedsCount n={count} badge silent />
+                  <NeedsCount n={count} badge silent className="left-[calc(100%-2px)]" />
                   {dots?.[item.key] ? <LateDot badge silent /> : null}
                 </span>
                 <span className="whitespace-nowrap">

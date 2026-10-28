@@ -6,8 +6,8 @@ import { ToastContext, type ToastApi, type ToastInput } from '@/ui/useToast'
 
 /*
  * Toast (INVENTORY: U03; D08 section 08, g2-today-b2 "Copied"). Ink surface,
- * shadow-pop, 380px on desktop and full width minus the 16px gutters on a phone
- * (8px above the tab bar). At most three show, newest at the bottom; the oldest
+ * shadow-pop, 420px (never under 300) on desktop and full width minus the 16px gutters on a phone
+ * (above the tab bar and the home-bar inset); on a phone the card wraps so the words keep at least 10rem. At most three show, newest at the bottom; the oldest
  * is settled and removed first.
  *
  * Undo toast: the window is 10 s. A ring in the Undo button empties and the
@@ -143,7 +143,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         data-over-dialog={overDialog || undefined}
         style={lift && !overDialog ? { bottom: lift } : undefined}
         className={cn(
-          'pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[380px] max-w-full flex-col gap-2 max-md:inset-x-4 max-md:bottom-[76px] max-md:w-auto',
+          'pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[420px] min-w-[300px] max-w-[calc(100vw-2rem)] flex-col gap-2 max-md:inset-x-4 max-md:bottom-[calc(76px+env(safe-area-inset-bottom,0px))] max-md:w-auto max-md:min-w-0 max-md:max-w-none',
           // A phone with a dialog open: at the top, clear of the dialog's buttons (they sit at its bottom).
           overDialog && 'max-md:bottom-auto max-md:top-[calc(env(safe-area-inset-top)+8px)]',
         )}
@@ -288,12 +288,13 @@ function ToastCard({
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
       className={cn(
-        'pointer-events-auto relative flex animate-rise-6 items-center gap-3 overflow-hidden rounded py-[10px] pl-[14px] pr-[10px] text-sm shadow-pop',
+        // On a phone the card wraps: icon and words on the first row (never narrower than 10rem), Undo and Dismiss drop to the next.
+        'pointer-events-auto relative flex animate-rise-6 items-center gap-3 overflow-hidden rounded py-[10px] pl-[14px] pr-[10px] text-sm shadow-pop max-md:flex-wrap max-md:gap-y-2',
         tone === 'danger' ? 'bg-tone-danger-fg text-tone-ink-fg' : 'bg-tone-ink-bg text-tone-ink-fg',
       )}
     >
       <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0', tone === 'success' && 'text-tone-success-bg')} />
-      <div className="grid min-w-0 flex-1 text-pretty">
+      <div className="grid min-w-0 flex-1 text-pretty max-md:min-w-[10rem]">
         <span className="font-medium">{title}</span>
         {body ? <span className={cn('text-xs', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
         {undoable ? <span className="sr-only">{` Undo is available for ${u?.seconds ?? 10} seconds, or press Control+Z.`}</span> : null}
@@ -337,7 +338,7 @@ function ToastCard({
         type="button"
         aria-label="Dismiss"
         onClick={onDismiss}
-        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:size-touch"
+        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:ml-auto max-md:size-touch"
       >
         <Icon icon={X} />
       </button>

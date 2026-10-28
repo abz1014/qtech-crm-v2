@@ -23,7 +23,7 @@
   --neutral-400: #68758c;   /* form control edge: 4.65 on white, 4.14 on the field */
   --neutral-500: #56637a;
   --neutral-600: #4a566d;
-  --neutral-650: #3f4b63;   /* hints: 8.76 white, 7.79 field, 7.23 selected */
+  --neutral-650: #364259;   /* hints: 10.09 white, 8.98 field, 8.34 selected (darkened 2026-10-28: the owner finds secondary text faint) */
   --neutral-700: #28354d;   /* second line: 10.95 on the field */
   --neutral-800: #1c2638;
   --neutral-900: #0c1526;   /* ink: 18.25 on white */
