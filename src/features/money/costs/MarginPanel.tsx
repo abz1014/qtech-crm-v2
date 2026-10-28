@@ -149,13 +149,13 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
 
   return (
     <section aria-label="Margin" data-slot="margin-costs" className="rounded-panel border bg-surface">
-      <div className="flex items-center gap-2 border-b px-4 py-3 md:px-5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Margin</h2>
         <InfoTip label="About the margin">
           Net sale less the costs paid so far. GST sits outside the margin on both sides, and expenses count at true cost, without recoverable input tax. It is final once costs are marked complete.
         </InfoTip>
         {unknown ? <StatusBadge dimension="trust" value="basis-unknown" label="Is GST included?" /> : m ? <StatusBadge dimension="costs" value={complete ? 'complete' : 'provisional'} /> : null}
-        <span className="ml-auto inline-flex items-center gap-1 text-xs text-fg-muted">
+        <span className="ml-auto inline-flex items-center gap-1 whitespace-nowrap text-xs text-fg-muted">
           <Icon icon={Lock} size="chip" /> Admin only
         </span>
       </div>
