@@ -143,7 +143,7 @@ function replyByOf(due: string): string {
   return `${weekdays[d.getUTCDay()]} ${Number(iso.slice(8, 10))} ${months[Number(iso.slice(5, 7)) - 1]}`
 }
 
-test('asking a supplier: the copied enquiry names the RFQ, every item with its quantity and the reply-by date; the asking is recorded and Undo takes it back', async ({ browser }, info) => {
+test('asking a supplier: the copied enquiry carries no RFQ number, every item with its quantity and the reply-by date; the asking is recorded and Undo takes it back', async ({ browser }, info) => {
   const tag = letters()
   const brand = await post<{ id: string; name: string }>('brands', { name: `Verifyflow${tag}`, kind: 'brand' })
   const due = karachiDay(10)
@@ -166,7 +166,8 @@ test('asking a supplier: the copied enquiry names the RFQ, every item with its q
   await card.getByRole('button', { name: SALES.ask.copyFor(1) }).click()
   await expect(page.getByRole('status').filter({ hasText: SALES.ask.copied })).toBeVisible()
   const ref = `RFQ-${String(r.rfq.number).padStart(4, '0')}`
-  const text = await readClipboardWhen(page, ref)
+  const text = await readClipboardWhen(page, 'Hi hope you are doing well,') // the owner's format: no RFQ number in the message
+  expect(text).not.toContain(ref)
   expect(text).toContain(SALES.ask.itemLine(`Verifyflow${tag} electromagnetic flow meter DN80`, '3 nos'))
   expect(text).toContain(SALES.ask.itemLine(`Remote display for flow meter ${tag}`, '1 no'))
   expect(text).toMatch(SALES.ask.replyBy(replyByOf(due)))
