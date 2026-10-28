@@ -184,9 +184,9 @@ test.describe('Job page (P5-C, P5-D1)', () => {
 })
 
 test.describe('Money for this job card', () => {
-  test('an enquiry-stage job (no order) leaves Loading and says there is no money yet; with an order it shows the sale', async ({ page }) => {
+  test('an enquiry-stage job (no order) leaves Loading and says there is no money yet', async ({ page }) => {
     const f = await seed()
-    // the RFQ's job has the order too (seed): use a fresh enquiry with no order
+    // seed's RFQ has an order: make a fresh enquiry with none
     const tag = Math.random().toString(36).slice(2, 8).toUpperCase()
     const rfq = await createRfq(f.company.id, { customer_ref: `ENQ-${tag}`, due_on: karachiDay(5) })
     await openAs(page, 'admin', `/jobs/${rfq.number}`)
@@ -195,7 +195,10 @@ test.describe('Money for this job card', () => {
     await expect(card).toContainText('No money yet')
     await expect(card).not.toContainText('Loading')
     await expect(card.getByRole('status')).toHaveCount(0)
+  })
 
+  test('a job with an order shows the sale in the Money card, not Loading', async ({ page }) => {
+    const f = await seed()
     await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
     const ordered = page.getByRole('region', { name: 'Money for this job' })
     await expect(ordered).toContainText('Sale (with GST)')

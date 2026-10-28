@@ -627,7 +627,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
   test('Remove item names the supplier prices that go with it, says Remove reply keeps the item, and Undo puts item and price back', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '3 weeks' } }))
-    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openAs(page, 'admin', `/rfqs/${s.rfq.id}`)
     await page.getByRole('button', { name: 'More for item 1' }).click()
     await page.getByRole('menuitem', { name: 'Remove item' }).click()
     const confirm = page.getByRole('dialog')
