@@ -782,7 +782,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
 })
 
 test.describe('optional fields (migration 0039): bid time, company city, contact title, owner phone', () => {
-  test('they appear where the mockup shows them, and the phone prints under an email chase signature', async ({ page }) => {
+  test('they appear where the mockup shows them, and the email chase signature stays name and company only', async ({ page }) => {
     const s = await seed()
     const ADMIN = 'a0000000-0000-4000-8000-000000000001'
     const co = (await must(rest<{ company_id: string }[]>('admin', `rfqs?id=eq.${s.rfq.id}&select=company_id`)))[0].company_id
@@ -803,7 +803,8 @@ test.describe('optional fields (migration 0039): bid time, company city, contact
       const card = page.locator(`[data-chase-card="${s.china.id}"]`)
       await card.getByRole('button', { name: 'Show the whole message' }).click() // the other channel waits with the whole message
       await card.getByRole('button', { name: 'Email instead' }).click()
-      await expect(card.locator('pre')).toContainText('Q-Tech Solutions\n+92 300 555 0188')
+      await expect(card.locator('pre')).toContainText(/Regards,\s+\S.*\s+Q-Tech Solutions/) // the owner's format: no role or phone lines
+      await expect(card.locator('pre')).not.toContainText('+92 300 555 0188')
     } finally {
       await rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: null } })
     }

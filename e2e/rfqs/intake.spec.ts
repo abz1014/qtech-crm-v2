@@ -442,7 +442,8 @@ test.describe('save only, and no supplier ticked', () => {
     expect(shortlisted.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.carries.id].sort())
 
     await page.getByRole('button', { name: 'Write the message' }).click()
-    await expect(page.getByLabel('Message text')).toContainText(rfqRef(rfq.number))
+    await expect(page.getByLabel('Message text')).toContainText('Hi hope you are doing well,')
+    await expect(page.getByLabel('Message text')).not.toContainText(rfqRef(rfq.number))
     await page.getByRole('button', { name: 'Copy message for 2 suppliers' }).click()
     await expect(page.getByText(/is waiting for prices/)).toBeVisible()
     const floated = await inquiriesOf(rfq.id)
