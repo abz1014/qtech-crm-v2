@@ -145,7 +145,7 @@ function Line({
     <div
       role="row"
       className={cn(
-        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t px-5 first:border-t-0 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_9rem]',
+        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t px-5 first:border-t-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem]',
         tone === 'group' && 'min-h-[40px] bg-sunken text-sm font-semibold',
         tone === 'line' && 'min-h-[44px] text-table',
         tone === 'sub' && 'min-h-[36px] text-table',
@@ -227,7 +227,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             }
           >
             <div role="table" aria-label="Profit and loss">
-              <div role="row" className="hidden min-h-[36px] grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_9rem] items-center gap-x-4 border-b bg-sunken px-5 text-xs font-medium text-fg-muted md:grid">
+              <div role="row" className="hidden min-h-[36px] grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem] items-center gap-x-4 border-b bg-sunken px-5 text-xs font-medium text-fg-muted md:grid">
                 <span role="columnheader">Line</span>
                 <span role="columnheader">Basis</span>
                 <span role="columnheader" className="text-right">

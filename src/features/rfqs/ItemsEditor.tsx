@@ -328,7 +328,7 @@ export function ItemRows({
                     title={it.description}
                     className={cn(cell, 'order-2 col-span-3 truncate md:order-none md:col-span-1')}
                   />
-                  <div className={cn('order-3 col-span-3 flex flex-wrap items-center gap-3 md:order-none', familyColumn ? 'md:contents' : 'md:col-span-1 md:min-w-0 md:flex-col md:items-start md:gap-[2px]')}>
+                  <div className={cn('order-3 col-span-3 flex flex-wrap items-center gap-3 md:order-none', familyColumn ? 'md:contents' : 'md:col-span-1 md:min-w-0 md:flex-col md:items-start md:gap-[2px] md:py-1')}>
                     <PickCell
                       chip
                       label={`Brand of item ${n}`}
