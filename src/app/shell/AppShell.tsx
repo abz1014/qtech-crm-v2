@@ -56,6 +56,22 @@ export function AppShell({ counts }: AppShellProps) {
   )
 }
 
+/**
+ * The phone bar's title for the screens that live inside a destination but are not it (RFQs and Orders both light Jobs, the
+ * New RFQ and New enquiry wizards sit outside every destination): what the screen is, not its parent's name.
+ */
+function phoneTitle(pathname: string): string | undefined {
+  const at = (p: string) => pathname === p || pathname === `${p}/`
+  if (at('/enquiries/new')) return 'New enquiry'
+  if (at('/rfqs/new')) return 'New RFQ'
+  if (at('/rfqs')) return 'RFQs'
+  if (pathname.startsWith('/rfqs/')) return 'RFQ'
+  if (at('/orders')) return 'Orders'
+  if (pathname.startsWith('/orders/')) return 'Order'
+  if (at('/reports') || pathname.startsWith('/reports/')) return 'Reports'
+  return undefined
+}
+
 function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Record<CountKey, number>> }) {
   const [nav, setNav] = useState<{ counts: NavCounts; ready: boolean }>({ counts: {}, ready: false })
   const settled = usePageSettled()
@@ -83,7 +99,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   const { pathname } = useLocation()
   const active = navItemForPath(pathname)
   const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
-  const title = active?.label ?? (inSettings ? 'Settings' : 'Q-Tech CRM')
+  const title = phoneTitle(pathname) ?? active?.label ?? (inSettings ? 'Settings' : 'Q-Tech CRM')
 
   useRouteFocus(pathname, active?.label ?? (inSettings ? 'Settings' : null))
 

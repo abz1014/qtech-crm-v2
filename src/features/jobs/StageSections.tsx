@@ -144,7 +144,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   const orderBody = !job.orderId ? (
     <div className="grid gap-2">
       <Note>{direct ? 'The order is not available.' : "There is no order yet. It starts when the customer's order arrives and the enquiry is marked won."}</Note>
-      // once quoted, Mark won is the next-step band's green button: not repeated here
+      {/* once quoted, Mark won is the next-step band's green button: not repeated here */}
       {!direct && ctx.money && job.stage !== 'lost' && job.stage !== 'quoted' ? (
         <p>
           <Button onClick={markWon}>Mark won</Button>

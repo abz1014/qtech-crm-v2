@@ -159,7 +159,9 @@ export default {
       size: { 'icon-chip': v('icon-chip'), 'control-sm': v('control-sm-h'), touch: v('hit-touch') },
       // Page caps from DESIGN_SYSTEM 12: work lists 860, tables 1280 (content width).
       // detail: RFQ, Order and Company pages (round-2 spec 5.1); lists use table.
-      maxWidth: { list: '860px', table: '1280px', detail: '1440px', prose: '66ch' },
+      // One page frame: list (table) and detail pages share 1280, so a title sits at the same left edge when you go from a list to a record
+      // (it was 1440 for detail: x=32 against x=112 at 1440 wide). `list` is the narrow reading column (notices, forms).
+      maxWidth: { list: '860px', table: '1280px', detail: '1280px', prose: '66ch' },
     },
   },
   plugins: [animate],
