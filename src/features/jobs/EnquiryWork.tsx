@@ -2,7 +2,6 @@ import { Suspense, useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import { useSeesPrices } from '@/app/session'
 import { businessToday } from '@/lib/dates'
-import { rfqRef } from '@/lib/refs'
 import { useChannelPreference } from '@/lib/useChannelPreference'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { Button } from '@/ui/Button'
@@ -38,7 +37,7 @@ const FloatDialog = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk'
 const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
 
 /** After an ask: the one enquiry (copied already) with Open in WhatsApp / Open in email for each supplier asked. */
-function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask: AskResult; inquiries: readonly InquiryRow[]; onClose: () => void }) {
+function SendToEachCard({ ask, inquiries, onClose }: { ask: AskResult; inquiries: readonly InquiryRow[]; onClose: () => void }) {
   const [channel, setChannel] = useChannelPreference()
   const asked = ask.supplierIds.map(id => inquiries.find(i => i.supplierId === id)).filter((i): i is InquiryRow => Boolean(i))
   if (asked.length === 0) return null
@@ -60,7 +59,7 @@ function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask:
               size="sm"
               to={{ name: i.contactName ?? i.supplierName, phone: i.contactPhone, email: i.contactEmail }}
               text={ask.text}
-              email={{ subject: `Enquiry ${rfqRef(rfq.number)}` }}
+              email={{ subject: 'Request for quotation' }}
               copy={false}
               channel={channel}
               onChannelChange={setChannel}
@@ -129,7 +128,7 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
 
   return (
     <div className="grid gap-4" data-enquiry-work data-chaseable={chaseable}>
-      {lastAsk ? <SendToEachCard rfq={rfq} ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
+      {lastAsk ? <SendToEachCard ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
       <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
         {nobodyAsked ? (
           <SuppliersToAskCard suggestions={askList} items={itemList} busy={asking} onAsk={ticked => void askFrom(ticked, itemList)} />

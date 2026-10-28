@@ -289,18 +289,16 @@ describe('intake screen', () => {
     expect(screen.queryByLabelText('What we know about Orient Analytical')).not.toBeInTheDocument()
   })
 
-  it('Copy message copies the text with the real RFQ number and marks it sent once, even on a double tap', async () => {
+  it('Copy message copies the text without any RFQ number and marks it sent once, even on a double tap', async () => {
     const db = installFakeDb(respond)
     const user = setup()
     renderScreen()
     await reachEnquiry(user)
 
-    // Before the save there is no number: the preview says so in words, never "RFQ-####"; the spec note is an (i) tip.
+    // The supplier text carries no RFQ number and no blank Spec line (DECISIONS 2026-10-28).
     const preview = screen.getByRole('group', { name: 'Message text' })
-    expect(within(preview).getByText('RFQ number added when you copy')).toBeInTheDocument()
-    expect(preview.textContent).not.toContain('####')
-    expect(screen.getByRole('button', { name: 'Why are the spec lines blank?' })).toBeInTheDocument()
-    expect(screen.queryByText(/Spec lines are blank on purpose/)).toBeNull()
+    expect(preview.textContent).not.toMatch(/####|RFQ|Spec:/)
+    expect(preview.textContent).toContain('these 2 requirements are very important')
 
     const button = await screen.findByRole('button', { name: 'Copy message for 1 supplier' })
     await user.dblClick(button)
@@ -319,7 +317,8 @@ describe('intake screen', () => {
       { description: '24V actuator for ball valve', qty: 2, gst_rate: 18 },
     ])
     await waitFor(() => expect(copied).toHaveLength(1))
-    expect(copied[0]).toContain('our ref *RFQ-0185*')
+    expect(copied[0]).toContain('Hi hope you are doing well,')
+    expect(copied[0]).not.toMatch(/RFQ|Spec:|assalam/i)
     expect(copied[0]).not.toContain('####')
   })
 

@@ -157,9 +157,9 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     floatTaps++ // 1
     actions++
     await expect(page.getByRole('heading', { name: /WhatsApp message to 1 supplier/ })).toBeVisible()
-    await expect(page.getByLabel('Message text')).toContainText(/Spec:\s+left blank/)
-    // A blank Spec is drawn as a highlighted blank, not as plain text.
-    await expect(page.locator('[data-spec-blank]')).toHaveCount(2)
+    await expect(page.getByLabel('Message text')).toContainText('these 2 requirements are very important')
+    // A blank spec prints no Spec line at all.
+    await expect(page.getByLabel('Message text')).not.toContainText('Spec:')
     await review(page, 'intake-float-05-enquiry-1440')
     await resetClipboard(page)
     await page.getByRole('button', { name: 'Copy message for 1 supplier' }).click()
@@ -170,10 +170,10 @@ test.describe('canonical scenario (FE-2 counts)', () => {
 
     const [rfq] = await rfqsOf(s.customer.id)
     expect(rfq).toBeTruthy()
-    const text = await readClipboardWhen(page, `our ref *${rfqRef(rfq.number)}*`)
-    expect(text).toContain(`our ref *${rfqRef(rfq.number)}*`) // the number the database gave it, not the placeholder
-    expect(text).not.toContain('####')
-    expect(text).toMatch(/Spec: left blank/)
+    const text = await readClipboardWhen(page, 'Hi hope you are doing well,')
+    expect(text).not.toContain(rfqRef(rfq.number)) // the supplier text carries no RFQ number (DECISIONS 2026-10-28)
+    expect(text).not.toMatch(/####|assalam|Spec:/i)
+    expect(text).toContain('Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important)')
     expect(text).toContain(`${s.brand1} ${s.model} electromagnetic flow meter DN50, 2 nos`)
 
     // Entry burden: nothing was typed for these.

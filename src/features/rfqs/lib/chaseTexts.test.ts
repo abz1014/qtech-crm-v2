@@ -178,12 +178,13 @@ describe('supplier quote chase (R07 text, now with the firmer wording)', () => {
   })
   it('is firmer after 30 days, in both variants', () => {
     const w = generateSupplierChase({ ...base, ageDays: 31 })
-    expect(w.body).toContain('It is now over a month since our enquiry of *Monday 23 November* (ref *RFQ-0179*)')
+    expect(w.body).toContain('It is now over a month since our enquiry of *Monday 23 November*,')
     expect(w.body).toContain('Without a reply we will take it that you cannot offer them and move on.')
     const e = generateSupplierChase({ ...base, ageDays: 45, variant: 'email' })
-    expect(e.body).toContain('It is now more than a month since our enquiry of Monday 23 November')
-    expect(e.body).toContain('approach other sources')
-    expect(e.subject).toContain('RFQ-0179')
+    expect(e.body).toContain('It is now over a month since our enquiry of Monday 23 November,')
+    expect(e.body).toContain('move on.')
+    expect(e.subject).toBe('Request for quotation: reminder for 1 item')
+    expect(e.body + (e.subject ?? '')).not.toMatch(/RFQ|assalam|our ref/i)
   })
 })
 

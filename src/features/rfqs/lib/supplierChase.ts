@@ -23,7 +23,8 @@ export interface ChaseItem {
 }
 
 export interface SupplierChaseInput {
-  rfqRef: string
+  /** Not written into the supplier text (DECISIONS 2026-10-28). Kept optional so callers need not change. */
+  rfqRef?: string
   /** supplier_inquiries.sent_on, YYYY-MM-DD. */
   sentOn: string | null
   /** rfqs.due_on, or null. */
@@ -103,99 +104,52 @@ function itemLine(i: ChaseItem): string {
 const ordinal = (n: number) => (n === 1 ? 'second' : n === 2 ? 'third' : 'further')
 
 export function generateSupplierChase(input: SupplierChaseInput): SupplierChase {
-  const { variant, rfqRef, items, chaseCount } = input
+  const { variant, items, chaseCount } = input
   const replyBy = input.replyByOverride && /^\d{4}-\d{2}-\d{2}$/.test(input.replyByOverride) ? input.replyByOverride : supplierReplyBy(input.dueOn, input.today)
   const by = replyBy ? longDay(replyBy) : null
   const sent = input.sentOn ? longDay(input.sentOn) : null
   const email = variant === 'email'
   const firm = isFirm(input.ageDays)
   const bold = (t: string) => (email ? t : `*${t}*`)
-  const greeting = input.contactName
-    ? email
-      ? `Dear ${input.contactName},\nAssalam o Alaikum.`
-      : `Assalam o Alaikum ${input.contactName},`
-    : email
-      ? 'Dear Sir or Madam,\nAssalam o Alaikum.'
-      : 'Assalam o Alaikum,'
+  // Owner format (DECISIONS 2026-10-28): plain greeting, no religious greeting, no RFQ number.
+  const greeting = input.contactName ? `Hi ${input.contactName}, hope you are doing well,` : 'Hi hope you are doing well,'
 
   const list = items.map(itemLine).join('\n')
   const thanks = input.pricedNumbers.length > 0 ? ` Thank you for pricing ${numbersText(input.pricedNumbers)}.` : ''
-  const sentRef = sent ? `our enquiry of ${bold(sent)} (ref ${bold(rfqRef)})` : `our enquiry ${bold(rfqRef)}`
-  const sentRefPlain = sent ? `our enquiry of ${sent} (our ref. ${rfqRef})` : `our enquiry ${rfqRef}`
-  const pricedEmail = input.pricedNumbers.length > 0 ? ` Thank you for your quotation on ${numbersText(input.pricedNumbers)}.` : ''
+  const enquiry = sent ? `our enquiry of ${bold(sent)}` : 'our enquiry'
+  const reminder = 'Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important).'
 
-  const lines: string[] = []
-  if (!email) {
-    lines.push(greeting, '')
-    if (firm) {
-      lines.push(`It is now over a month since ${sentRef}, and we have still not received your price for:`)
-    } else if (chaseCount === 0) {
-      lines.push(`Following up on ${sentRef}.${thanks} We are still awaiting your price for:`)
-    } else {
-      lines.push(`A ${ordinal(chaseCount)} reminder on ${sentRef}. We have not yet received your price for:`)
-    }
-    lines.push(list, '')
-    if (firm) {
-      lines.push(
-        by
-          ? `Please send your price by ${bold(by)}, or tell us today that you cannot offer these items. Without a reply we will take it that you cannot offer them and move on.`
-          : 'Please send your price, or tell us today that you cannot offer these items. Without a reply we will take it that you cannot offer them and move on.',
-      )
-    } else if (chaseCount === 0) {
-      lines.push(
-        by
-          ? `Kindly send your price and lead time by ${bold(by)}. If you cannot offer an item, a short note will help us approach others.`
-          : 'Kindly send your price and lead time. If you cannot offer an item, a short note will help us approach others.',
-      )
-    } else {
-      lines.push(
-        by
-          ? `Could you please reply by ${bold(by)}? If these items are not available, kindly let us know today so that we can move on.`
-          : 'Could you please reply? If these items are not available, kindly let us know today so that we can move on.',
-      )
-    }
-    lines.push('', 'Thank you.', 'Regards,', input.signature.name, input.signature.company)
+  const lines: string[] = [greeting, '']
+  if (firm) {
+    lines.push(`It is now over a month since ${enquiry}, and we have still not received your price for:`)
+  } else if (chaseCount === 0) {
+    lines.push(`Following up on ${enquiry}.${thanks} We are still awaiting your price for:`)
   } else {
-    lines.push(greeting, '')
-    if (firm) {
-      lines.push(`It is now more than a month since ${sentRefPlain}, and we have still not received your price for the following items:`)
-    } else if (chaseCount === 0) {
-      lines.push(`We refer to ${sentRefPlain}.${pricedEmail} We have not yet received your price for the following items:`)
-    } else {
-      lines.push(`This is a ${ordinal(chaseCount)} reminder on ${sentRefPlain}. We have not yet received your price for:`)
-    }
-    lines.push(list, '')
-    if (firm) {
-      lines.push(
-        by
-          ? `Please send your price, availability and lead time by ${by}, or let us know today that you are unable to offer these items. Without a reply we will take it that you cannot offer them and approach other sources.`
-          : 'Please send your price, availability and lead time, or let us know today that you are unable to offer these items. Without a reply we will take it that you cannot offer them and approach other sources.',
-      )
-      lines.push('', 'Thank you.')
-    } else if (chaseCount === 0) {
-      lines.push(
-        by
-          ? `Kindly send your price, availability and lead time by ${by}, ahead of our own submission date. If you are unable to offer an item, a short note to that effect would be appreciated so that we can approach other sources.`
-          : 'Kindly send your price, availability and lead time. If you are unable to offer an item, a short note to that effect would be appreciated so that we can approach other sources.',
-      )
-      lines.push('', 'Thank you for your continued support.')
-    } else {
-      lines.push(
-        by
-          ? `Could you please reply by ${by}? If these items are not available, kindly let us know today so that we can move on.`
-          : 'Could you please reply? If these items are not available, kindly let us know today so that we can move on.',
-      )
-      lines.push('', 'Thank you.')
-    }
-    lines.push('With best regards,', input.signature.name, input.signature.jobTitle ? `${input.signature.jobTitle}, ${input.signature.company}` : input.signature.company)
-    if (input.signature.phone) lines.push(input.signature.phone)
+    lines.push(`A ${ordinal(chaseCount)} reminder on ${enquiry}. We have not yet received your price for:`)
   }
+  lines.push(list, '')
+  if (firm) {
+    lines.push(
+      by
+        ? `Please send your price, availability and lead time by ${bold(by)}, or tell us today that you cannot offer these items. Without a reply we will take it that you cannot offer them and move on.`
+        : 'Please send your price, availability and lead time, or tell us today that you cannot offer these items. Without a reply we will take it that you cannot offer them and move on.',
+    )
+  } else if (chaseCount === 0) {
+    lines.push(
+      by
+        ? `Kindly send your price, availability and lead time by ${bold(by)}. If you cannot offer an item, a short note will help us approach others.`
+        : 'Kindly send your price, availability and lead time. If you cannot offer an item, a short note will help us approach others.',
+    )
+  } else {
+    lines.push(
+      by
+        ? `Could you please reply by ${bold(by)}? If these items are not available, kindly let us know today so that we can move on.`
+        : 'Could you please reply? If these items are not available, kindly let us know today so that we can move on.',
+    )
+  }
+  lines.push(reminder, '', 'Thank you.', 'Regards,', input.signature.name, input.signature.company)
 
   const n = items.length
-  const subject = email
-    ? by
-      ? `${rfqRef}: price needed for ${n} ${n === 1 ? 'item' : 'items'} by ${by}`
-      : `${rfqRef}: price needed for ${n} ${n === 1 ? 'item' : 'items'}`
-    : null
+  const subject = email ? `Request for quotation: reminder for ${n} ${n === 1 ? 'item' : 'items'}` : null
   return { variant, subject, body: lines.join('\n'), replyBy }
 }

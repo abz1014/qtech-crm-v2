@@ -354,8 +354,9 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await resetClipboard(page)
     await card.getByRole('button', { name: 'Copy and mark chased' }).click() // the one tap
     await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
-    const text = await readClipboardWhen(page, `ref *RFQ-${String(s.rfq.number).padStart(4, '0')}*`)
-    expect(text).toContain(`ref *RFQ-${String(s.rfq.number).padStart(4, '0')}*`)
+    const text = await readClipboardWhen(page, 'Following up on our enquiry')
+    expect(text).not.toMatch(/RFQ-|assalam/i) // no RFQ number or religious greeting in the supplier text
+    expect(text).toContain('these 2 requirements are very important')
     expect(text).toContain('Following up on our enquiry')
     expect(text).toContain(s.items[0].description)
     expect(text).toContain(s.items[1].description)
@@ -394,7 +395,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.getByText('Email to Mr. Li Wei')).toBeVisible()
     await expect(card.getByText('li@hengxin.example', { exact: true })).toBeVisible()
     await expect(card.getByRole('button', { name: 'Copy subject' })).toBeVisible()
-    await expect(card.getByText(/^RFQ-\d+: price needed/)).toBeVisible()
+    await expect(card.getByText(/^Request for quotation: reminder for/)).toBeVisible()
     await expect(card.getByRole('button', { name: 'WhatsApp instead' })).toBeVisible()
     // Another supplier: the card's "Message for" picker switches it (one control, not a "Show message" on every row; grade-A 9).
     await expect(page.getByRole('button', { name: `Show message, ${s.usd.name}` })).toHaveCount(0)
@@ -721,7 +722,8 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     await expect(page.getByRole('status').filter({ hasText: 'Message copied' })).toBeVisible()
     const text = await readClipboardWhen(page, s.items[0].description)
     expect(text).toContain(s.items[0].description)
-    expect(text).toContain(`RFQ-${String(s.rfq.number).padStart(4, '0')}`)
+    expect(text).not.toContain(`RFQ-${String(s.rfq.number).padStart(4, '0')}`)
+    expect(text).not.toMatch(/assalam/i)
     expect(text).not.toContain(s.customer)
     const made = await must(rest<{ sent_on: string | null; id: string }[]>('admin', `supplier_inquiries?rfq_id=eq.${s.rfq.id}&supplier_id=eq.${s.carrier!.id}&select=id,sent_on`))
     expect(made).toHaveLength(1)
