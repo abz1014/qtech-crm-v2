@@ -270,7 +270,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
       {/* With unsaved changes the bar sticks to the bottom of the screen, so Save is never a long scroll away (audit 2026-10-22). */}
       <div
         data-save-bar
-        className={cn('flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3', dirty.length > 0 && 'sticky bottom-2 z-10 shadow-pop')}
+        className={cn('flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3', dirty.length > 0 && 'sticky bottom-3 z-10 shadow-pop')}
       >
         {dirty.length > 0 ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
         <p role="status" className="text-sm text-fg-muted">
@@ -288,11 +288,8 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             form={sf.formId}
             busy={sf.pending}
             busyLabel="Saving"
-            // the screen's one green button stays green; with nothing changed it is aria-disabled and does nothing
-            aria-disabled={dirty.length === 0 || undefined}
-            onClick={e => {
-              if (dirty.length === 0) e.preventDefault()
-            }}
+            // nothing changed: Save is disabled, so it is plain that there is nothing to save
+            disabled={dirty.length === 0}
           >
             {sf.failed ? 'Try again' : 'Save changes'}
           </Button>

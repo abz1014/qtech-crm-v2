@@ -26,7 +26,7 @@ export function ReviewImportedPage() {
   const [settledHere, setSettledHere] = useState<{ item: ReviewItem; state: ReviewState }[]>([])
   const items = useMemo(() => sortReview(q.data ?? []), [q.data])
   const progress = reviewProgress(items, settledHere.filter(s => s.state === 'settled').length)
-  const pct = progress.total === 0 ? 100 : Math.round((progress.decided / progress.total) * 100)
+  const pct = progress.total === 0 ? 0 : Math.round((progress.decided / progress.total) * 100)
 
   // Each row decides on its own mutation (useDecide): a second tap on another row must not lose the first row's result, Undo or error.
   const decided = (item: ReviewItem, state: ReviewState) =>

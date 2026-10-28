@@ -334,6 +334,12 @@ const NO_YEAR = DATE_RES.length - 1
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
+/** The day exists in the calendar (30 Feb and 31 Apr do not). */
+const realDate = (y: number, mo: number, d: number): boolean => {
+  const t = new Date(Date.UTC(y, mo - 1, d))
+  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d
+}
+
 /**
  * The first date written in the text, as YYYY-MM-DD. A day and month with no year ("22/10") is read only with `noYear`,
  * as the next such date on or after `today`; a month name with no year ("23rd October") is read the same way.
@@ -352,6 +358,13 @@ export function findDate(text: string, today: string, noYear = false): { iso: st
       y += 1
       iso = `${y}-${pad(mo)}-${pad(d)}`
     }
+    // No year and the day is 29 Feb: the next leap year, not an impossible date.
+    if (y0 === null && mo === 2 && d === 29) {
+      while (!realDate(y, mo, d)) y += 1
+      iso = `${y}-${pad(mo)}-${pad(d)}`
+    }
+    // "30 Feb", "31/04/2026": not a day that exists.
+    if (!realDate(y, mo, d)) continue
     if (!best || m.index < best.index) best = { iso, text: m[0], index: m.index }
   }
   return best

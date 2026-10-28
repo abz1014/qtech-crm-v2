@@ -62,8 +62,8 @@ describe('Your details screen', () => {
     expect(screen.getByLabelText(/Phone/)).not.toHaveAttribute('readonly')
     expect(screen.getByLabelText(/Phone/)).toHaveClass('num')
     expect(screen.getByText('Nothing to save yet')).toBeInTheDocument()
-    // green but aria-disabled until something changes (one green button per screen)
-    expect(screen.getByRole('button', { name: 'Save changes' })).toHaveAttribute('aria-disabled', 'true')
+    // disabled until something changes
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Save changes' })).toHaveClass('bg-primary')
   })
 

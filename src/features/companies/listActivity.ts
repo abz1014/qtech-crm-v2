@@ -4,6 +4,8 @@
  * about (a sent enquiry) and its orders the ones with a supplier order from it. A company that is both counts each RFQ and
  * each order once. Last activity is the latest of those dates. Pure, so the rule is tested without a database.
  */
+import { toBusinessDate } from '@/lib/dates'
+
 export interface CustomerRfq {
   id: string
   company_id: string
@@ -38,12 +40,12 @@ export interface QuoteOnUnsentAsk {
  * an ask for that supplier, dated by the day the price was recorded (the old CRM's own date for an imported one), so a supplier
  * known only by what it quoted is not shown as "no RFQs, no activity".
  */
-export function quoteAsks(rows: readonly QuoteOnUnsentAsk[]): SupplierAsk[] {
+export function quoteAsks(rows: readonly QuoteOnUnsentAsk[], toDay: (iso: string) => string = iso => toBusinessDate(new Date(iso))): SupplierAsk[] {
   const out: SupplierAsk[] = []
   for (const r of rows) {
     const i = Array.isArray(r.supplier_inquiries) ? r.supplier_inquiries[0] : r.supplier_inquiries
     if (!i) continue
-    out.push({ supplier_id: i.supplier_id, rfq_id: i.rfq_id, sent_on: i.sent_on ?? r.created_at.slice(0, 10) })
+    out.push({ supplier_id: i.supplier_id, rfq_id: i.rfq_id, sent_on: i.sent_on ?? toDay(r.created_at) })
   }
   return out
 }

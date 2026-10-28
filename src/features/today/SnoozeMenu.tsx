@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlarmClockOff, CalendarDays, ChevronRight, UserRoundX } from 'lucide-react'
+import { AlarmClock, AlarmClockOff, CalendarDays, ChevronRight, UserRoundX } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -47,9 +47,9 @@ export function SnoozeMenu({ item, today, iconOnly = false }: { item: TodayItem;
       <Popover>
         <PopoverTrigger asChild>
           {iconOnly ? (
-            <Button variant="secondary" icon={AlarmClockOff} aria-label="Snooze" size="touch" />
+            <Button variant="secondary" icon={AlarmClock} aria-label="Snooze" size="touch" className="text-fg [&_svg]:text-fg" />
           ) : (
-            <Button variant="quiet" icon={AlarmClockOff}>
+            <Button variant="quiet" icon={AlarmClock}>
               Snooze
             </Button>
           )}

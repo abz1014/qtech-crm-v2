@@ -165,7 +165,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.
   'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists(), qk.intake.all],
   'brand.create': () => [qk.brands.all],
-  'productCategory.edit': () => [qk.settings.productCategories(), qk.brands.all, qk.intake.all, qk.companies.all],
+  'productCategory.edit': () => [qk.settings.productCategories(), qk.brands.all, qk.intake.all, qk.companies.all, qk.rfqs.all, qk.orders.all, qk.jobs.all],
   'productCategory.merge': () => [qk.settings.productCategories(), qk.brands.all, qk.intake.all, qk.companies.all, qk.rfqs.all, qk.orders.all, qk.jobs.all],
   'productCategory.fill': () => [qk.settings.productCategories(), qk.intake.all, qk.rfqs.all, qk.orders.all, qk.jobs.all],
   // Every change to a person is read back from the admin-users function, the source of truth for the list.
@@ -347,7 +347,8 @@ function settled(client: QueryClient, queries: Query[]): Promise<void> {
  */
 export function invalidateAfter<N extends WriteName>(client: QueryClient, name: N, vars: WriteVars[N], options: InvalidateOptions = {}): Promise<void> {
   // Every job page and the Jobs list read rfqs, orders, invoices and payments through v_jobs, so any write makes them stale (qk.jobs).
-  const keys = withoutCovered([...keysFor(name, vars), qk.jobs.all])
+  // "Last changed by" (qk.history) reads the audit trail of whatever was just written, so it is stale after any write as well.
+  const keys = withoutCovered([...keysFor(name, vars), qk.jobs.all, qk.history.all])
   const cache = client.getQueryCache()
   const matched = new Set<Query>()
   for (const queryKey of keys) for (const q of cache.findAll({ queryKey })) matched.add(q)

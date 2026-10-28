@@ -236,10 +236,19 @@ function WaitingLine({ waiting }: { waiting: readonly InquiryRow[] }) {
   )
 }
 
+/** The dot before an item of the meta line: a 16px cell, so the line can be pulled left into a clipped edge (a dot that starts a wrapped line is clipped, never dangling). */
+function Bullet() {
+  return (
+    <span aria-hidden="true" className="flex h-5 w-4 shrink-0 items-center justify-center">
+      <span className="size-[3px] rounded-round bg-fg-muted" />
+    </span>
+  )
+}
+
 function Dot({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <span aria-hidden="true" className="size-[3px] rounded-round bg-fg-muted" />
+    <span className="inline-flex items-center">
+      <Bullet />
       {children}
     </span>
   )
@@ -404,24 +413,26 @@ export function ItemsPanel({
                         item.description
                       )}
                     </h3>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-fg-muted">
-                      {q ? <span className="num">{q}</span> : null}
+                    <p className="mt-1 overflow-x-clip text-sm text-fg-muted">
+                     <span className="-ml-4 flex flex-wrap items-start gap-y-1">
+                      {q ? <span className="num pl-4">{q}</span> : null}
                       {item.brandName ? <Dot>{item.brandName}</Dot> : null}
                       <Dot>
                         <CategoryChip rfqId={rfq.id} item={item} />
                       </Dot>
                       {sell ? (
-                        <span data-sell-note={sell.kind} className="inline-flex items-center gap-2">
-                          <span aria-hidden="true" className="size-[3px] rounded-round bg-fg-muted" />
+                        <span data-sell-note={sell.kind} className="inline-flex min-w-0 items-start">
+                          <Bullet />
                           {sell.kind === 'none' ? (
                             sell.text
                           ) : (
                             <span>
-                              Our price <span className="num font-medium text-fg-2">{sell.amount}</span> {sell.text}
+                              Our price <span className="num whitespace-nowrap font-medium text-fg-2">{sell.amount}</span> {sell.text}
                             </span>
                           )}
                         </span>
                       ) : null}
+                     </span>
                     </p>
                   </div>
                   {cov.value ? <StatusBadge dimension="item-price" value={cov.value} detail={cov.detail} /> : null}
@@ -473,7 +484,7 @@ export function ItemsPanel({
                         {entries.length > 0 && prices ? (
                           <div className={HEAD} aria-hidden="true">
                             <span>Supplier</span>
-                            <span className="text-right">Price, PKR today (≈ = converted)</span>
+                            <span className="text-right">Price, PKR today</span>
                             <span>Lead time</span>
                             <span>Stock</span>
                             <span />
@@ -508,6 +519,7 @@ export function ItemsPanel({
                                   {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
                                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                     <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
+                                    {isCheapestTag ? <CheapestTag /> : null}
                                     {mark ? (
                                       <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-tone-success-fg">
                                         <Icon icon={ThumbsUp} size="chip" />
@@ -520,7 +532,7 @@ export function ItemsPanel({
                                     {prices ? (
                                       <>
                                         <span className="md:text-right">
-                                          <PriceCell line={line} c={c} cheapest={isCheapestTag} />
+                                          <PriceCell line={line} c={c} cheapest={false} />
                                         </span>
                                         <span aria-hidden="true" className={cn('text-fg-muted md:hidden', !line.leadTime && 'hidden')}>
                                           ·

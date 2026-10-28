@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
  * (the engineer's own expense claims, /my-expenses). Navy, not green: the screen's own button (Delivered today, Installed today) is the
  * one green. Photo or note opens the job picker (/capture with nothing shared: which job?), which lands on the
  * job's page with the On site card's photo-or-note box already open.
- * 56 px tall, so a thumb in a site glove finds it; below 360 px "I paid" keeps its icon and name for screen readers only.
+ * 56 px tall, so a thumb in a site glove finds it; below 360 px "I paid" stacks its icon over its name, so the name is never dropped.
  */
 export function EngineerFab({ className }: { className?: string }) {
   const navigate = useNavigate()
@@ -17,7 +17,7 @@ export function EngineerFab({ className }: { className?: string }) {
       <button
         type="button"
         onClick={() => navigate('/capture')}
-        className="flex min-h-[56px] items-center gap-2 px-4 text-base font-semibold transition-colors duration-fast hover:bg-chrome-field active:bg-chrome-field"
+        className="flex min-h-[56px] items-center gap-2 px-4 text-base font-semibold transition-colors duration-fast hover:bg-chrome-field active:bg-chrome-field max-[359px]:px-3"
       >
         <Icon icon={Camera} size="lg" />
         Photo or note
@@ -26,10 +26,10 @@ export function EngineerFab({ className }: { className?: string }) {
         type="button"
         onClick={() => navigate('/my-expenses')}
         aria-label="I paid"
-        className="flex min-h-[56px] min-w-touch items-center justify-center gap-2 border-l border-chrome-edge px-3 text-base font-semibold transition-colors duration-fast hover:bg-chrome-field active:bg-chrome-field"
+        className="flex min-h-[56px] min-w-touch items-center justify-center gap-2 border-l border-chrome-edge px-3 text-base font-semibold transition-colors duration-fast hover:bg-chrome-field active:bg-chrome-field max-[359px]:flex-col max-[359px]:gap-0 max-[359px]:px-2"
       >
         <Icon icon={HandCoins} size="lg" />
-        <span className="max-[359px]:sr-only">I paid</span>
+        <span className="max-[359px]:text-sm">I paid</span>
       </button>
     </div>
   )

@@ -8,7 +8,6 @@ import {
   FilePlus2,
   FileText,
   Flag,
-  History as HistoryIcon,
   MapPin,
   MessageCircle,
   Package,
@@ -85,6 +84,7 @@ export interface HeaderFacts {
   onAsk: () => void
   /** Suppliers asked who have not replied yet, for the Next step sentence. */
   awaiting?: number
+  chaseable?: number
   /** When the latest quotation went out (or the RFQ was marked quotation sent), and until when it is valid (grade-B R6). */
   sentOn?: string | null
   validUntil?: string | null
@@ -334,7 +334,7 @@ function RfqNextStep({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFac
     action = (
       <span data-slot="mark-won" className="flex flex-wrap gap-2">
         {main.liveOrders.map(o => (
-          <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+          <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:border-primary-active active:bg-primary-active max-md:h-touch [[data-surface=navy]_&]:shadow-on-navy">
             <Icon icon={Package} />
             Open {orderRef(o.number)}
           </Link>
@@ -369,6 +369,7 @@ function RfqNextStep({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFac
       bidState: s?.bid_state,
       itemCount: facts.itemCount,
       awaiting: facts.awaiting ?? 0,
+      chaseable: facts.chaseable,
       contactName: rfq.contact?.name,
     })
     action = quiet ? null : <PrimaryButton rfq={rfq} facts={facts} className="max-md:hidden" />
@@ -521,19 +522,16 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       <RfqNextStep rfq={rfq} facts={facts} actions={actions} />
       {/* The header's More menu is hidden on a phone, and a closed RFQ has no action bar: so its actions are buttons here. */}
       {!open ? (
-        <div className="mt-3 flex flex-wrap gap-2 md:hidden">
+        <div className="mt-3 flex items-center gap-2 md:hidden">
           <Button size="touch" icon={Pencil} onClick={edit.ask}>
             Edit RFQ details
           </Button>
-          {prices ? (
-            <Button size="touch" icon={HistoryIcon} onClick={hist.ask}>
-              History
-            </Button>
-          ) : null}
-          {del.ask ? (
-            <Button size="touch" icon={Trash2} onClick={del.ask}>
-              Delete RFQ
-            </Button>
+          {/* History and the destructive Delete sit in a menu, like the rest of the app: never a second button under the main action. */}
+          {prices || del.ask ? (
+            <MoreMenu touch label="Other actions" menuClassName="min-w-[200px]">
+              {hist.item}
+              <DeleteItem onDelete={del.ask} separator={prices} />
+            </MoreMenu>
           ) : null}
         </div>
       ) : null}
@@ -542,7 +540,9 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       {edit.node}
       {hist.node}
 
-      <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line">
+      {/* Borders are on the cells (right and bottom, the grid pulled over the frame's edge), not divide-*: a hidden cell (Site on a phone) broke the dividers. */}
+      <div className="mt-4 overflow-hidden rounded border bg-surface">
+      <dl className="-mb-px -mr-px grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 [&>*]:border-b [&>*]:border-r [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>
           {/* A long ref ("RFF/PUR/261/1") breaks after its separators on a 320 phone, never mid-number (grade-B R8). */}
           <span className="num [overflow-wrap:anywhere]">
@@ -594,6 +594,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
           )}
         </Meta>
       </dl>
+      </div>
     </DetailHeader>
   )
 }

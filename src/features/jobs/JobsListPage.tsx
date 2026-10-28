@@ -47,8 +47,8 @@ function NextText({ job, role }: { job: JobRow; role: Who['role'] }) {
 
 function JobCell({ job }: { job: JobRow }) {
   return (
-    <span className="grid gap-px whitespace-normal">
-      <span className="num font-medium">{jobLabel(job.key)}</span>
+    <span className="grid min-w-[5.5rem] gap-px whitespace-normal">
+      <span className="num whitespace-nowrap font-medium">{jobLabel(job.key)}</span>
       {job.repeatOf ? <span className="text-sm text-fg-muted">{`Repeat of ${jobLabel(job.repeatOf)}`}</span> : null}
     </span>
   )

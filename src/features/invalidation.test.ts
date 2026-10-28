@@ -422,3 +422,16 @@ describe('ordering: a read sent before the write can never land as current', () 
     s.stop()
   })
 })
+
+describe('logic-rfq: stale pages after a rename and an edit', () => {
+  it('renaming a product category refreshes cached RFQ, order and job pages', () => {
+    const keys = keysFor('productCategory.edit', {})
+    expect(keys).toEqual(expect.arrayContaining([qk.rfqs.all, qk.orders.all, qk.jobs.all]))
+  })
+  it('any write refreshes the "Last changed by" history reads', async () => {
+    const client = new QueryClient()
+    client.setQueryData(qk.history.record('rfqs', 'r1'), { pages: [] })
+    await invalidateAfter(client, 'rfq.edit', { rfqId: 'r1' })
+    expect(client.getQueryState(qk.history.record('rfqs', 'r1'))?.isInvalidated).toBe(true)
+  })
+})

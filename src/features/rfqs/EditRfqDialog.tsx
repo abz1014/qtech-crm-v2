@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Pencil } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
-import { rfqRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Field } from '@/ui/form/Field'
@@ -11,6 +11,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useUpdateRfqHeader } from '@/features/rfqs/hooks'
+import { useOrdersForRfq } from '@/features/orders/forRfq'
 import { CompanyPicker, type IntakeCompany } from '@/features/rfqs/CompanyPicker'
 import { useCompanyContacts, useCompanySites } from '@/features/companies/hooks'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
@@ -36,6 +37,10 @@ export function EditRfqDialog({ rfq, onClose }: { rfq: RfqHeader; onClose: () =>
   const sites = useCompanySites(company.id)
   const contacts = useCompanyContacts(company.id)
   const locked = !access.can
+  // An order keeps the customer it was made for (its invoices and receivables name it): once the RFQ has one, the customer stays.
+  const orders = useOrdersForRfq(rfq.id)
+  const orderList = orders.data ?? []
+  const customerLocked = orders.isPending || orderList.length > 0
   const companyChanged = company.id !== rfq.company.id
   const dirty =
     companyChanged || siteId !== (rfq.siteId ?? null) || contactId !== rfq.contactId || customerRef.trim() !== (rfq.customerRef ?? '') || receivedOn !== rfq.receivedOn
@@ -103,12 +108,17 @@ export function EditRfqDialog({ rfq, onClose }: { rfq: RfqHeader; onClose: () =>
             <Field label="Customer">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="min-w-0 flex-1 text-base font-medium [overflow-wrap:anywhere]">{company.name}</span>
-                <Button type="button" disabled={locked} onClick={() => setChangingCompany(true)}>
+                <Button type="button" disabled={locked || customerLocked} onClick={() => setChangingCompany(true)}>
                   Change customer
                 </Button>
               </div>
             </Field>
           )}
+          {orderList.length > 0 ? (
+            <p role="status" className="text-base text-fg-2" data-slot="customer-locked">
+              The customer cannot be changed: this RFQ has order {orderList.map(o => orderRef(o.number)).join(', ')}, and the order, its invoices and payments belong to {rfq.company.name}.
+            </p>
+          ) : null}
           {companyChanged ? <p className="text-base text-fg-2">The site and contact were cleared: they belong to the old customer. Choose again below.</p> : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Site" requirement="optional">

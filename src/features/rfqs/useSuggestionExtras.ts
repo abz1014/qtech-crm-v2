@@ -15,7 +15,7 @@ export function useSuggestionExtras<T extends SuggestionItem>(items: readonly T[
   const resolved = useMemo(() => (lib ? lib.withCategories(items, categories.data ?? []) : items), [lib, items, categories.data])
   const familyIds = useMemo(() => resolved.flatMap(i => (i.familyId ? [i.familyId] : [])), [resolved])
   const supplierIds = useMemo(() => candidates.map(c => c.id), [candidates])
-  const data = useSupplierCategoryData(familyIds, supplierIds, today, enabled && familyIds.length > 0)
+  const data = useSupplierCategoryData(familyIds, supplierIds, today, enabled)
   const extra = useMemo<Pick<SupplierHistory, 'categoryEvidence' | 'priceWins' | 'recentAsks'>>(
     () => ({ categoryEvidence: data.data?.evidence, priceWins: data.data?.priceWins, recentAsks: data.data?.recentAsks }),
     [data.data],

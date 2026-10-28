@@ -70,11 +70,11 @@ const money = (n: number) => formatPaisa(BigInt(Math.round(n * 100)), 'auto')
 const MAX_AMOUNT = 999_999_999_999.99
 const MAX_PAISA = 99_999_999_999_999n
 
-function LeadHint({ item, inquiries }: { item: QuoteItem; inquiries: InquiryRow[] }) {
+function LeadHint({ item, inquiries, className }: { item: QuoteItem; inquiries: InquiryRow[]; className?: string }) {
   const said = inquiries.flatMap(i => i.lines.filter(l => l.itemId === item.id && l.leadTime?.trim()).map(l => ({ who: i.supplierName, text: l.leadTime as string })))
   if (said.length === 0) return null
   return (
-    <p className="flex items-start gap-1 text-xs text-fg-muted" data-testid="lead-hint">
+    <p className={`flex min-w-0 items-start gap-1 text-xs text-fg-muted ${className ?? ''}`} data-testid="lead-hint">
       <Icon icon={Info} size="chip" className="mt-[1px] shrink-0" />
       <span>Suppliers say {said.map(s => `${s.text} (${s.who})`).join(', ')}</span>
     </p>
@@ -100,7 +100,7 @@ function Chip({ label, value, selected, onPick, testId, disabled }: { label: str
 }
 
 // Each line is its own grid, so the tracks are fixed to line up; sized for 16px text (a 7-figure price, "Exempt", a 4-digit qty).
-const GRID = 'md:grid-cols-[28px_minmax(0,1.6fr)_56px_140px_108px_minmax(0,1.2fr)_128px]'
+const GRID = 'md:grid-cols-[28px_minmax(0,1.1fr)_56px_140px_108px_minmax(0,1.2fr)_128px]'
 
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()
@@ -466,16 +466,23 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         icon={FileText}
         size="lg"
         className="md:w-[min(900px,calc(100vw-2rem))]"
-        lead="Issuing marks the quotation sent today."
+        lead={
+          <>
+            Issuing marks the quotation sent today.
+            <InfoTip label="What issuing does" side="top" align="start">It gets a number and a PDF and cannot be edited. You can always Revise it; the first one stays on record.</InfoTip>
+          </>
+        }
         footer={
           <>
+            {/* Phone: Cancel and Preview share one row (the footer was a tall stack of three full-width buttons). */}
+            <div className="flex items-center gap-2 max-md:[&>button]:h-touch max-md:[&>button]:flex-1 md:contents">
             <Button data-cancel onClick={closeOnPurpose} disabled={busy}>
               Cancel
             </Button>
             <Button icon={Eye} onClick={() => void preview()} busy={previewing} busyLabel="Making the preview" disabled={busy || gaps.length > 0 || chosen.length === 0 || missing.length > 0 || tooBig.length > 0 || totalTooBig}>
               Preview PDF
             </Button>
-            <InfoTip label="What issuing does" side="top" align="end">It gets a number and a PDF and cannot be edited. You can always Revise it; the first one stays on record.</InfoTip>
+            </div>
             <Button variant="primary" icon={FileCheck} disabled={!ready} busy={busy} busyLabel={storePdf.isPending ? 'Making the PDF' : 'Issuing'} onClick={() => void submit()}>
               {previous ? 'Issue revised quotation' : 'Issue quotation'}
             </Button>
@@ -628,12 +635,13 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                             onChange={e => setLeads(l => ({ ...l, [it.id]: e.target.value }))}
                           />
                         </div>
-                        <LeadHint item={it} inquiries={inquiries} />
                       </div>
-                      <p className="num text-right text-sm font-medium text-fg max-md:col-start-2 md:pt-2">
+                      <p className="num whitespace-nowrap text-right text-sm font-medium text-fg max-md:order-2 max-md:col-start-2 md:col-start-7 md:row-start-1 md:pt-2">
                         <span className="sr-only">{`Line net, item ${n}: `}</span>
                         {on && a.priced ? `PKR ${formatPaisa(a.net, 'auto')}` : on ? 'No price yet' : 'Not included'}
                       </p>
+                      {/* What suppliers said about lead time: its own full-width line under the row, not a sliver in the narrow column. */}
+                      <LeadHint item={it} inquiries={inquiries} className="max-md:col-start-2 md:col-[2/-1]" />
                     </li>
                   )
                 })}

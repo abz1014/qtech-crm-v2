@@ -85,6 +85,13 @@ describe('the Next step sentence (the box under the title)', () => {
     expect(step({ primary: 'won', bidState: 'quotation_expired' })).toMatch(/^The quotation has expired\./)
     expect(step({ primary: 'chase', awaiting: 1 })).toBe('Waiting for prices from 1 supplier. Chase them.')
   })
+  it('never says "from 0 suppliers": when everyone has replied but some priced only part, it counts the chaseable ones', () => {
+    const t = step({ primary: 'chase', awaiting: 0, chaseable: 2 })
+    expect(t).not.toMatch(/\b0 suppliers/)
+    expect(t).toBe('2 suppliers have not priced every item. Chase them.')
+    expect(step({ primary: 'chase', awaiting: 0, chaseable: 1 })).toBe('1 supplier has not priced every item. Chase them.')
+    expect(step({ primary: 'chase', awaiting: 0 })).not.toMatch(/\b0 suppliers/)
+  })
   it('with nothing to do, says what it is waiting for', () => {
     expect(step({ itemCount: 0 })).toBe('No items yet. Add what the customer asked for under Items.')
     expect(step({ awaiting: 3 })).toBe('Waiting for prices from 3 suppliers. Chased recently: nothing to do until they reply.')

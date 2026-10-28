@@ -214,8 +214,9 @@ export function TeamPage() {
                 {roleLabel(m.role)}
                 {m.job_title ? ` · ${m.job_title}` : ''}
               </span>
+              {/* Under the name, not beside it: beside it the chip took the width and the name broke into 3-letter lines at 320 px. */}
+              {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" className="mt-1 justify-self-start" />}
             </span>
-            {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" />}
             <Icon icon={Ellipsis} className="shrink-0 text-fg-muted" />
           </span>
         )}
