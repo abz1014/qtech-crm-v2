@@ -62,14 +62,13 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
     : input.invoiceNumber
       ? `Sales Tax Invoice ${input.invoiceNumber}${input.invoiceDate ? ` dated ${dayMonthYear(input.invoiceDate)}` : ''}${po}`
       : `our order${po}`
-  const hello = input.contactName ? `Assalamu alaikum ${input.contactName},` : 'Assalamu alaikum,'
-  const greeting = email ? (input.contactName ? `Dear ${input.contactName},\nAssalamu alaikum.` : 'Dear Sir or Madam,\nAssalamu alaikum.') : hello
+  const greeting = input.contactName ? `Hi ${input.contactName}, hope you are doing well,` : 'Hi hope you are doing well,'
   const reminded =
     input.reminderCount > 0
       ? ` We have reminded you ${times(input.reminderCount)}${input.lastRemindedOn ? `, most recently on ${dayMonth(input.lastRemindedOn)}` : ''}.`
       : ''
 
-  const lines: string[] = [greeting, '', 'I hope you are well.']
+  const lines: string[] = [greeting, '']
   const facts = `${invoice} still has an outstanding balance of ${balance}${paid}.`
   // Sent before the due date (from the order page, "Customer owes ..."): a gentle note, not "fell due".
   const notDueYet = daysBetween(input.dueOn, today) < 0
@@ -102,7 +101,7 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
     lines.push(
       'We request you to treat this as a priority and confirm the payment date by return. If there is a query on the invoice, or a document you are waiting for from us, please tell us today so that we can resolve it at once.',
       '',
-      'Thank you for your understanding.',
+      'Thank you.',
     )
   } else {
     lines.push(
@@ -112,7 +111,7 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
     )
   }
   const sig = input.signature
-  lines.push('', ...(email ? ['With best regards,', sig.name, sig.jobTitle ? `${sig.jobTitle}, ${sig.company}` : sig.company, ...(sig.phone ? [sig.phone] : [])] : ['Regards,', sig.name, sig.company]))
+  lines.push('Regards,', sig.name, sig.company)
 
   const subject = email
     ? `${input.invoiceNumber ? `Invoice ${input.invoiceNumber}` : 'Our invoice'}: ${firm ? 'payment overdue' : 'payment due'}, PKR ${formatAmount(input.balance)} outstanding`

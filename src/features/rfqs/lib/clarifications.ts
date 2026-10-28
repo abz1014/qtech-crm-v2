@@ -115,7 +115,7 @@ export interface RelayLine {
 /** The text for one supplier. A photo-only answer reads "see attached photo". */
 export function relayText(input: { rfqRef: string; contactName: string | null; lines: readonly RelayLine[]; signature: { name: string; company: string } }): string {
   const { lines } = input
-  const out: string[] = [input.contactName ? `Assalam o Alaikum ${input.contactName},` : 'Assalam o Alaikum,', '']
+  const out: string[] = [input.contactName ? `Hi ${input.contactName}, hope you are doing well,` : 'Hi hope you are doing well,', '']
   out.push(lines.length === 1 ? `Here is the answer to your question on ${input.rfqRef}:` : `Here are the answers to your questions on ${input.rfqRef}:`, '')
   lines.forEach((l, i) => {
     const a = l.answer?.trim()

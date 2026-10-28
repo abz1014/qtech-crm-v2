@@ -91,7 +91,7 @@ export function generateGoodsChase(input: GoodsChaseInput): GoodsChase {
         ? `Please confirm a firm dispatch date by ${by}. If you are unable to supply, kindly let us know so that we can make other arrangements.`
         : `Could you please confirm the dispatch date, and the carrier and tracking details if the goods have already left, by ${by}?`,
     )
-    lines.push('', 'Thank you for your continued support.', ...signOff(variant, input.signature))
+    lines.push('', 'Thank you.', ...signOff(variant, input.signature))
   }
 
   const subject = email ? `${ref ? `Order ${ref}` : 'Our order'}: delivery date needed by ${by === '5:00 pm today' ? 'today' : by}` : null

@@ -81,7 +81,7 @@ describe('Payment-reminder panel (M09)', () => {
     db()
     mount(<ReminderPanel row={row()} today={TODAY} />)
     const text = await screen.findByTestId('reminder-text')
-    expect(text.textContent).toContain('Assalamu alaikum Mr. Faisal Qureshi,')
+    expect(text.textContent).toContain('Hi Mr. Faisal Qureshi, hope you are doing well,')
     expect(text.textContent).toContain('INV-2256')
     expect(text.textContent).toContain('PKR 1,111,600')
     expect(text.textContent).toContain('after your payment of PKR 800,000')

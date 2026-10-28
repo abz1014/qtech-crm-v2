@@ -35,14 +35,12 @@ export function byDayText(iso: string, today: string): string {
   return iso <= today ? '5:00 pm today' : longDay(iso)
 }
 
-/** Greeting in the approved shapes. Email has the salutation on two lines. */
-export function greetingFor(variant: EnquiryVariant, contactName: string | null): string {
-  if (variant === 'email') return contactName ? `Dear ${contactName},\nAssalam o Alaikum.` : 'Dear Sir or Madam,\nAssalam o Alaikum.'
-  return contactName ? `Assalam o Alaikum ${contactName},` : 'Assalam o Alaikum,'
+/** Greeting in the approved shape, the same for WhatsApp and email (no religious wording, owner 2026-10-28). */
+export function greetingFor(_variant: EnquiryVariant, contactName: string | null): string {
+  return contactName ? `Hi ${contactName}, hope you are doing well,` : 'Hi hope you are doing well,'
 }
 
-export function signOff(variant: EnquiryVariant, sig: ChaseSignature): string[] {
-  if (variant === 'email') return ['With best regards,', sig.name, sig.jobTitle ? `${sig.jobTitle}, ${sig.company}` : sig.company, ...(sig.phone ? [sig.phone] : [])]
+export function signOff(_variant: EnquiryVariant, sig: ChaseSignature): string[] {
   return ['Regards,', sig.name, sig.company]
 }
 

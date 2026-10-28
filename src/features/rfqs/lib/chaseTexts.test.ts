@@ -70,7 +70,7 @@ describe('customer clarification chase', () => {
     expect(g.confirmBy).toBe('2026-12-10')
     expect(g.body).toBe(
       [
-        'Assalam o Alaikum Mr. Tariq,',
+        'Hi Mr. Tariq, hope you are doing well,',
         '',
         'A gentle reminder about your RFQ *#74037*. To complete our quotation we still need your confirmation on:',
         '1. Line size and flange rating on the process line (item 2)',
@@ -78,7 +78,7 @@ describe('customer clarification chase', () => {
         '',
         'Kindly confirm by *Thursday 10 December*; our quotation is due on Friday 11 December.',
         '',
-        'Thank you for your support.',
+        'Thank you.',
         'Regards,',
         'Ayesha Rana',
         'Q-Tech Solutions',
@@ -102,9 +102,9 @@ describe('customer clarification chase', () => {
     const e = generateCustomerChase({ ...base, variant: 'email', itemTags: [{ number: 2, label: 'Endress+Hauser Proline Promag 400' }, null] })
     expect(e.body).toContain('(item 2, Endress+Hauser Proline Promag 400)')
   })
-  it('the email signature carries the job title and phone', () => {
+  it('the email signature is the same plain sign-off as WhatsApp', () => {
     const e = generateCustomerChase({ ...base, variant: 'email', signature: { ...sig, jobTitle: 'Sales', phone: '+92 300 555 0188' } })
-    expect(e.body.endsWith(['With best regards,', 'Ayesha Rana', 'Sales, Q-Tech Solutions', '+92 300 555 0188'].join(String.fromCharCode(10)))).toBe(true)
+    expect(e.body.endsWith(['Regards,', 'Ayesha Rana', 'Q-Tech Solutions'].join(String.fromCharCode(10)))).toBe(true)
   })
   it('the third ask offers a way out and gives the dates of the earlier messages', () => {
     const t = generateCustomerChase({ ...base, askCount: 2, lastAskedOn: '2026-11-25', dueOn: '2026-12-11' })
@@ -144,17 +144,17 @@ describe('customer clarification chase', () => {
   it('writes the email with a subject, the context and an offer to talk', () => {
     const t = generateCustomerChase({ ...base, variant: 'email', signature: { ...sig, jobTitle: 'Sales' } })
     expect(t.subject).toBe('RFQ #74037: your confirmation needed by Thursday 10 December')
-    expect(t.body).toContain('Dear Mr. Tariq,\nAssalam o Alaikum.')
+    expect(t.body).toContain('Hi Mr. Tariq, hope you are doing well,')
     expect(t.body).toContain('further to our message of Saturday 21 November')
     expect(t.body).toContain('If it is easier to discuss these over a call')
-    expect(t.body.endsWith('With best regards,\nAyesha Rana\nSales, Q-Tech Solutions')).toBe(true)
+    expect(t.body.endsWith('Regards,\nAyesha Rana\nQ-Tech Solutions')).toBe(true)
     expect(t.body).not.toContain('*')
     expect(chaseClipboardText(t).startsWith('Subject: RFQ #74037')).toBe(true)
   })
 
   it('has a plain greeting without a contact', () => {
-    expect(generateCustomerChase({ ...base, contactName: null }).body.startsWith('Assalam o Alaikum,\n')).toBe(true)
-    expect(generateCustomerChase({ ...base, contactName: null, variant: 'email' }).body.startsWith('Dear Sir or Madam,')).toBe(true)
+    expect(generateCustomerChase({ ...base, contactName: null }).body.startsWith('Hi hope you are doing well,\n')).toBe(true)
+    expect(generateCustomerChase({ ...base, contactName: null, variant: 'email' }).body.startsWith('Hi hope you are doing well,\n')).toBe(true)
   })
 })
 
@@ -210,7 +210,7 @@ describe('supplier goods chase', () => {
     expect(t.daysLate).toBe(5)
     expect(t.body).toBe(
       [
-        'Assalam o Alaikum Mr. Imran,',
+        'Hi Mr. Imran, hope you are doing well,',
         '',
         'Following up on our order *PO 253102* of Monday 2 November. It was due on *Sunday 22 November* and the goods have not yet been delivered:',
         '1. Yokogawa EJA530E pressure transmitter, 0-1 MPa, 3 nos',
@@ -283,15 +283,13 @@ describe('payment reminder', () => {
     expect(t.daysOverdue).toBe(38)
     expect(t.body).toBe(
       [
-        'Assalamu alaikum Mr. Faisal,',
+        'Hi Mr. Faisal, hope you are doing well,',
         '',
-        'I hope you are well.',
         'Our records show that Sales Tax Invoice INV-2256 dated 20 September 2026 (your PO 251992) still has an outstanding balance of PKR 1,111,600 (after your payment of PKR 800,000). It fell due on 20 October 2026 and is still unpaid. We have reminded you twice, most recently on 14 November.',
         '',
         'We request you to treat this as a priority and confirm the payment date by return. If there is a query on the invoice, or a document you are waiting for from us, please tell us today so that we can resolve it at once.',
         '',
-        'Thank you for your understanding.',
-        '',
+        'Thank you.',
         'Regards,',
         'Ayesha Rana',
         'Q-Tech Solutions',
@@ -314,8 +312,8 @@ describe('payment reminder', () => {
   it('the email has a subject with the balance and the same two tones', () => {
     const t = generatePaymentReminder({ ...base, variant: 'email', signature: { ...sig, jobTitle: 'Sales' } })
     expect(t.subject).toBe('Invoice INV-2256: payment overdue, PKR 1,111,600 outstanding')
-    expect(t.body).toContain('Dear Mr. Faisal,\nAssalamu alaikum.')
-    expect(t.body.endsWith('With best regards,\nAyesha Rana\nSales, Q-Tech Solutions')).toBe(true)
+    expect(t.body).toContain('Hi Mr. Faisal, hope you are doing well,')
+    expect(t.body.endsWith('Regards,\nAyesha Rana\nQ-Tech Solutions')).toBe(true)
     const polite = generatePaymentReminder({ ...base, variant: 'email', dueOn: '2026-11-10', reminderCount: 0, lastRemindedOn: null })
     expect(polite.subject).toBe('Invoice INV-2256: payment due, PKR 1,111,600 outstanding')
   })

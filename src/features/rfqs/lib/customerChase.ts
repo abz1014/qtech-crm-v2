@@ -127,7 +127,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
     } else {
       lines.push(`Kindly confirm by ${bold(by)}.`)
     }
-    lines.push('', kind === 'first' || kind === 'gentle' ? 'Thank you for your support.' : 'Thank you.', ...signOff(variant, input.signature))
+    lines.push('', 'Thank you.', ...signOff(variant, input.signature))
   } else {
     switch (kind) {
       case 'first':
