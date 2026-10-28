@@ -36,6 +36,7 @@ import {
   type Category,
   type PaidVia,
 } from '@/features/money/expenses/model'
+import { forMonthHelp } from '@/features/money/expenses/forMonth'
 import { pickableCategories, quickInsert, quickProblem, sessionTotal, topCategories } from '@/features/money/expenses/quick'
 
 /*
@@ -162,15 +163,25 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
       return
     }
     const inputTax = hasGst ? (tax ?? 0) : 0
-    const p = quickProblem({ amount: amount ?? 0, categoryId, inputTax, titleMissing: needsTitle(category, detail) })
+    const p = quickProblem({ amount, categoryId, inputTax, titleMissing: needsTitle(category, detail) })
     if (p === 'title') {
       setTitleError(MISC_TITLE_ERROR)
       detailRef.current?.focus()
       return
     }
     if (p) {
-      setProblem(p === 'amount' ? 'Type the amount first.' : p === 'category' ? 'Tap what it was for.' : 'The GST cannot be more than the amount.')
-      if (p === 'amount') amountRef.current?.focus()
+      setProblem(
+        p === 'amount'
+          ? 'Type the amount first.'
+          : p === 'positive'
+            ? 'The amount must be above zero.'
+            : p === 'large'
+              ? 'That amount is too large. Check it for an extra digit.'
+              : p === 'category'
+                ? 'Tap what it was for.'
+                : 'The GST cannot be more than the amount.',
+      )
+      if (p === 'amount' || p === 'positive' || p === 'large') amountRef.current?.focus()
       return
     }
     const recorded = recordedQ.data
@@ -362,7 +373,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
               ))}
             </QuickSelect>
             <span className="text-fg-2">
-              {Number(paidOn.slice(8, 10)) <= 10 ? 'Paid by the 10th, so last month.' : 'Paid after the 10th, so this month.'} Reports count it in that month.
+              {forMonthHelp(paidOn, categoryId)} Reports count it in that month.
             </span>
           </div>
         ) : null}

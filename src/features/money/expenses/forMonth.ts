@@ -92,6 +92,12 @@ export function linkMonthlyBills<T extends { category_id: string; paid_on: strin
   })
 }
 
+/** The sentence under the For box: why a payment on `paidOn` is for the month it is for (rent is always the month paid). */
+export function forMonthHelp(paidOn: string, categoryId?: string | null): string {
+  if (categoryId === RENT_CATEGORY_ID) return 'Rent is paid in advance, so it is for the month it is paid in.'
+  return Number(paidOn.slice(8, 10)) <= 10 ? 'Paid by the 10th, so last month.' : 'Paid after the 10th, so this month.'
+}
+
 /** "for September" when an expense is for another month than the one it was paid in, else null. */
 export function forMonthNote(paidOn: string, period: string | null | undefined): string | null {
   if (!period || period === monthKey(paidOn)) return null

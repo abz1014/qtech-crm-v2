@@ -205,3 +205,14 @@ describe('M08 in the whole list', () => {
     for (const id of [...Object.values(ROLLUP_SUBJECT), recurringSubjectId(TODAY)]) expect(id).toMatch(uuid)
   })
 })
+
+describe('M08 recurring due: a template with no day is never overdue', () => {
+  it('is listed for the month with a neutral badge and no date', () => {
+    const [e] = ruleRecurringDue(ctx({ today: '2026-10-28', recurring: [tpl({ dayOfMonth: null })] }))
+    expect(e).toMatchObject({ actionDueOn: null, group: 'ready', badge: { text: 'This month', tone: 'neutral' } })
+  })
+  it('does not pull a dated template back to the 1st', () => {
+    const [e] = ruleRecurringDue(ctx({ today: '2026-10-28', recurring: [tpl({ dayOfMonth: null }), tpl({ id: 'b', label: 'Zed', dayOfMonth: 20 })] }))
+    expect(e.actionDueOn).toBe('2026-10-20')
+  })
+})

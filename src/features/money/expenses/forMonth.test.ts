@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { billPeriod, forMonthOf, linkMonthlyBills, RENT_CATEGORY_ID } from '@/features/money/expenses/forMonth'
+import { billPeriod, forMonthOf, forMonthHelp, linkMonthlyBills, RENT_CATEGORY_ID } from '@/features/money/expenses/forMonth'
 import type { RecurringTemplate } from '@/features/money/expenses/model'
 
 const SALARIES = 'ca7e0000-0000-4000-8000-000000000001'
@@ -58,5 +58,13 @@ describe('linkMonthlyBills: a monthly bill entered one-off settles its template 
     expect(linkMonthlyBills([ordinary], [], recorded(['2026-10', []]))[0]).toEqual(ordinary)
     const repeat = row(SALARIES, '2026-10-05', { recurring_id: 'mine', period: '2026-09' })
     expect(linkMonthlyBills([repeat], [tpl('t-sal', SALARIES)], recorded(['2026-09', []]))[0]).toEqual(repeat)
+  })
+})
+
+describe('forMonthHelp', () => {
+  it('says the rent rule for rent, the 10th rule for the rest', () => {
+    expect(forMonthHelp('2026-10-05', RENT_CATEGORY_ID)).toContain('Rent is paid in advance')
+    expect(forMonthHelp('2026-10-05', SALARIES)).toBe('Paid by the 10th, so last month.')
+    expect(forMonthHelp('2026-10-20', SALARIES)).toBe('Paid after the 10th, so this month.')
   })
 })
