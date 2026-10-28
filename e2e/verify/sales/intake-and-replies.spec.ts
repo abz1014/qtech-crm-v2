@@ -9,8 +9,7 @@ import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
  * The sales side from the customer's message to the ranked supplier prices:
  *   - the enquiry as it really arrives (a WhatsApp chat copied with its time and name prefixes, an Excel block with a header, an
  *     unmarked email with a signature, the same message pasted twice) must give exactly the items in it, with their quantities;
- *   - the enquiry text sent to a supplier names the RFQ, every item with its quantity and the reply-by date (bid due less 3 days,
- *     moved off a weekend to the Friday before; DECISIONS R04);
+ *   - the enquiry text sent to a supplier carries no RFQ number or reply-by date, and lists every item with its quantity (the owner's format);
  *   - prices typed in three currencies are stored with the rate of the day and ranked by their PKR value, worked out by hand.
  */
 
@@ -130,20 +129,7 @@ test.describe('the enquiry as it arrives', () => {
   })
 })
 
-/** The reply-by rule as documented (BUILD_PLAN R04, enquiryDraft.ts): due less 3 days; a Saturday or Sunday moves to the Friday before. */
-function replyByOf(due: string): string {
-  const d = new Date(`${due}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() - 3)
-  const wd = d.getUTCDay()
-  if (wd === 6) d.setUTCDate(d.getUTCDate() - 1)
-  if (wd === 0) d.setUTCDate(d.getUTCDate() - 2)
-  const iso = d.toISOString().slice(0, 10)
-  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  return `${weekdays[d.getUTCDay()]} ${Number(iso.slice(8, 10))} ${months[Number(iso.slice(5, 7)) - 1]}`
-}
-
-test('asking a supplier: the copied enquiry carries no RFQ number, every item with its quantity and the reply-by date; the asking is recorded and Undo takes it back', async ({ browser }, info) => {
+test('asking a supplier: the copied enquiry carries no RFQ number, every item with its quantity and no reply-by line; the asking is recorded and Undo takes it back', async ({ browser }, info) => {
   const tag = letters()
   const brand = await post<{ id: string; name: string }>('brands', { name: `Verifyflow${tag}`, kind: 'brand' })
   const due = karachiDay(10)
@@ -170,7 +156,7 @@ test('asking a supplier: the copied enquiry carries no RFQ number, every item wi
   expect(text).not.toContain(ref)
   expect(text).toContain(SALES.ask.itemLine(`Verifyflow${tag} electromagnetic flow meter DN80`, '3 nos'))
   expect(text).toContain(SALES.ask.itemLine(`Remote display for flow meter ${tag}`, '1 no'))
-  expect(text).toMatch(SALES.ask.replyBy(replyByOf(due)))
+  expect(text).not.toContain('Kindly reply by') // the owner's format has no reply-by date line
   expect(text).not.toContain(r.customer.name)
   const inq = await db.one<{ id: string; sent_on: string | null; created_by: string }>(`supplier_inquiries?rfq_id=eq.${r.rfq.id}&supplier_id=eq.${carrier.id}&select=id,sent_on,created_by`)
   expect(inq).toMatchObject({ sent_on: karachiDay(0), created_by: USER.sales })
