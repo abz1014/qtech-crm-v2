@@ -24,18 +24,19 @@ test.beforeAll(async () => {
  * Keeps an item on this device as the Android share target does (IndexedDB 'qtech-capture', 7 days). The Paste or photo sheet is
  * gone (P4), so this is the one thing Capture still keeps: a shared item waiting for a person to choose New enquiry or Add to job.
  */
-async function keepSharedItem(page: Page, text: string): Promise<void> {
-  await page.evaluate(
+async function keepSharedItem(page: Page, text: string): Promise<string> {
+  return page.evaluate(
     t =>
-      new Promise<void>((resolve, reject) => {
+      new Promise<string>((resolve, reject) => {
         const open = indexedDB.open('qtech-capture', 1)
         open.onupgradeneeded = () => open.result.createObjectStore('items', { keyPath: 'id' })
         open.onerror = () => reject(open.error)
         open.onsuccess = () => {
           const tx = open.result.transaction('items', 'readwrite')
           const now = Date.now()
-          tx.objectStore('items').put({ id: crypto.randomUUID(), createdAt: now, expiresAt: now + 7 * 86_400_000, source: 'share', text: t, files: [] })
-          tx.oncomplete = () => resolve()
+          const id = crypto.randomUUID()
+          tx.objectStore('items').put({ id, createdAt: now, expiresAt: now + 7 * 86_400_000, source: 'share', text: t, files: [] })
+          tx.oncomplete = () => resolve(id)
           tx.onerror = () => reject(tx.error)
         }
       }),
@@ -251,7 +252,7 @@ test('sign-out clears the query cache, the shared items kept on the device and t
   await page.goto('/money/gst-register')
   await page.locator('#main').waitFor()
   // A shared item waiting on the device (kept in IndexedDB while signed in).
-  await keepSharedItem(page, secret)
+  const sharedId = await keepSharedItem(page, secret)
   expect((await storageState(page)).captures, 'the shared item is kept on the device while signed in').toBeGreaterThan(0)
   const withData = (await cachedQueries(page)) ?? []
   expect(withData.filter(q => q.hasData).length, 'precondition: the cache holds data while signed in').toBeGreaterThan(1)
@@ -269,7 +270,11 @@ test('sign-out clears the query cache, the shared items kept on the device and t
 
   // The next person on the same tab.
   await signIn(page, STAFF_EMAIL.engineer)
+  // /capture with no ?share is the "Which job?" page: it lists any kept item under "Shared earlier", so it must list none; the old link finds nothing.
   await page.goto('/capture')
+  await expect(page.getByTestId('photo-or-note')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Shared earlier' }), 'the next person is offered no shared item').toHaveCount(0)
+  await page.goto(`/capture?share=${sharedId}`)
   await expect(page.getByTestId('share-gone'), 'the next person finds no shared item').toBeVisible()
   await page.goto(`/orders/${world.order.id}`)
   await page.waitForLoadState('networkidle')
