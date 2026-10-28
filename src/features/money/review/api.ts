@@ -156,10 +156,16 @@ export async function linkOne(v: { invoiceId: string; orderId: string }): Promis
   if (error) throw error
 }
 
-/** Links every "certain" proposal in one go; returns how many were certain. */
-export async function linkAllCertain(): Promise<number> {
-  const db = requireSupabase()
-  const { data, error } = await db.rpc('link_imported_invoices', { p_dry_run: false })
-  if (error) throw error
-  return (data ?? []).filter(r => r.confidence === 'certain').length
+/**
+ * Links exactly the given proposals, one link_imported_invoice call each, and returns how many were linked. The bulk RPC
+ * (link_imported_invoices with p_dry_run = false) links every certain match it finds, so it would also link the ones the owner
+ * turned down with "Not this"; it takes no list. Stops at the first failure (the earlier links stay).
+ */
+export async function linkAllCertain(pairs: readonly { invoiceId: string; orderId: string }[]): Promise<number> {
+  let n = 0
+  for (const p of pairs) {
+    await linkOne({ invoiceId: p.invoiceId, orderId: p.orderId })
+    n++
+  }
+  return n
 }

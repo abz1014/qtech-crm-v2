@@ -167,6 +167,15 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
     expect(payload(db)).toBeNull()
   })
 
+  it.each(['0.001', '0.004', '0.00', '0'])('a price of %s rounds to nothing and is refused', async typedPrice => {
+    const db = setup()
+    const price = await screen.findByLabelText('Selling price, line 1')
+    fireEvent.change(price, { target: { value: typedPrice } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    expect(await screen.findByText('Type a selling price for line 1.')).toBeInTheDocument()
+    expect(payload(db)).toBeNull()
+  })
+
   it('nothing ticked: says so', async () => {
     const db = setup()
     const box = await screen.findByRole('checkbox', { name: 'Include line 1' })

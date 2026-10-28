@@ -53,6 +53,19 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(r.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs/139'))
   })
 
+  it('a failed lookup (offline, a server error) says so and offers Try again, not "not found"', async () => {
+    let fail = true
+    mount('/rfqs/offline-1', c => {
+      if (c.target === 'v_jobs') return fail ? { error: { message: 'Failed to fetch' } } : { data: [{ job_key: '139' }] }
+      return { data: [] }
+    })
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 4000 })
+    expect(screen.queryByText(/not found/i)).toBeNull()
+    fail = false
+    retry.click()
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139'))
+  })
+
   it('an id with no Job is page not found, not a blank page', async () => {
     mount('/rfqs/nope')
     expect(await screen.findByText(/not found/i)).toBeInTheDocument()
@@ -67,6 +80,14 @@ describe('old addresses open Jobs', () => {
     expect(chipForOldList('?owner=mine')).toBe('mine')
     expect(chipForOldList('?tab=closed')).toBe('history')
     expect(chipForOldList('')).toBeNull()
+  })
+
+  it('the list redirect keeps the other parameters: new=1 (Order without enquiry) and the search text', async () => {
+    mount('/orders?new=1')
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs?new=1'))
+    fake?.uninstall()
+    mount('/rfqs?owner=all&q=RST%201158&show=closed')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?q=RST+1158&chip=history'))
   })
 
   it('?old=1 keeps the old page, and remembers it on this device', () => {

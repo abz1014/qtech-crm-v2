@@ -25,7 +25,7 @@ const leg = (over: Record<string, unknown> = {}) => ({
   last_chased_on: null, chase_count: 0, inquiry_id: null, created_at: '2026-10-01T00:00:00Z', ...over,
 })
 
-function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[] } = {}) {
+function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[]; state?: unknown } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
   client.setQueryData(qk.jobs.part(J.key, 'facts'), FACTS)
   client.setQueryData(qk.rfqs.part('r1', 'items'), [])
@@ -44,7 +44,7 @@ function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof le
     <QueryClientProvider client={client}>
       <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ali Raza', role: 'engineer' } }}>
         <ToastProvider>
-          <MemoryRouter initialEntries={['/jobs/139']}>
+          <MemoryRouter initialEntries={[{ pathname: '/jobs/139', state: opts.state ?? null }]}>
             <Routes>
               <Route path="/jobs/*" element={<JobsScreen />} />
             </Routes>
@@ -95,5 +95,10 @@ describe("the engineer's Job page", () => {
     expect(within(card).getByRole('button', { name: 'Delivered today' })).toBeDisabled()
     expect(within(card).getByRole('button', { name: 'Installed today' })).toBeDisabled()
     expect(within(card).getByRole('button', { name: 'Add photo or note' })).toBeEnabled()
+  })
+
+  it('arriving from Photo or note opens the photo-or-note box at once', async () => {
+    mount({ state: { photoOrNote: true } })
+    expect(await screen.findByRole('dialog', { name: /Add photo or note/ })).toBeInTheDocument()
   })
 })

@@ -408,7 +408,13 @@ async function loadGst(today: string): Promise<GstFact> {
 async function loadClaims(): Promise<ClaimsFact> {
   const db = requireSupabase()
   const rows = unwrap(await db.from('expense_claims').select('created_at').eq('status', 'pending').order('created_at').limit(500)) ?? []
-  return { pending: rows.length, oldestOn: rows[0]?.created_at ? rows[0].created_at.slice(0, 10) : null }
+  return claimsFactFrom(rows)
+}
+
+/** The pending count and the Pakistan day the oldest was made (created_at is a UTC timestamp: its first 10 characters can be the day before). */
+export function claimsFactFrom(rows: readonly { created_at: string | null }[]): ClaimsFact {
+  const first = rows[0]?.created_at
+  return { pending: rows.length, oldestOn: first ? toBusinessDate(new Date(first)) : null }
 }
 
 /** The close-month item reads only on the 1st to the 10th: one RPC and one tiny read, admin only. */
