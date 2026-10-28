@@ -89,7 +89,7 @@ import {
  */
 const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_152px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-2 px-6'
+const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-2 px-6'
 
 const NO_ORDERS: readonly OrderTagOption[] = []
 const NO_GROUPS: readonly ExpenseGroup[] = []
@@ -401,7 +401,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => addRowAfter(rows[rows.length - 1].id)}
-                  className="flex h-touch items-center justify-center gap-2 rounded border border-dashed border-line-input text-sm font-medium text-fg-2"
+                  className="flex h-touch items-center justify-center gap-2 rounded border border-line-strong bg-surface text-sm font-medium text-fg-2"
                 >
                   <Icon icon={Plus} size="sm" />
                   Add a row
@@ -443,7 +443,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => addRowAfter(rows[rows.length - 1].id)}
-                  className="mx-6 mb-4 mt-2 flex h-10 w-[calc(100%-3rem)] items-center gap-3 rounded border border-dashed border-line-input px-4 text-sm text-fg-2 hover:bg-sunken"
+                  className="mx-6 mb-4 mt-2 flex h-10 w-[calc(100%-3rem)] items-center gap-3 rounded border border-line-strong bg-surface px-4 text-sm text-fg-2 hover:bg-sunken"
                 >
                   <Icon icon={Plus} size="sm" />
                   Add a row
@@ -787,10 +787,10 @@ function CellDate({
           'num h-[36px] w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
           'aria-[invalid=true]:border-tone-danger-fg aria-[invalid=true]:bg-tone-danger-bg',
           isDefault && defaultEdge,
-          isDefault && 'pr-[3.5rem]',
+          isDefault && 'pr-[4.5rem]',
         )}
       />
-      {isDefault ? <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs leading-none text-fg-muted">today</span> : null}
+      {isDefault ? <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs leading-none text-fg-muted">today</span> : null}
     </div>
   )
 }
@@ -824,7 +824,9 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
       onKeyDown={onKey}
       className={cn('grid gap-3 rounded-row border bg-surface px-3 pb-4 pt-3', err && 'border-tone-danger-fg/45')}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3">
+        <div className="grid gap-1">
+        <span aria-hidden="true" className="text-base font-medium text-fg-2">Amount, PKR</span>
         <label className="flex h-[44px] items-center gap-2 rounded border border-line-input px-3 focus-within:border-fg">
           <span className="text-xs text-fg-muted">PKR</span>
           <NumberInput
@@ -844,6 +846,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
             className="num h-full flex-1 border-0 bg-transparent p-0 text-xl font-medium outline-none hover:border-0 focus-visible:border-0 focus-visible:outline-none"
           />
         </label>
+        </div>
         <button
           type="button"
           aria-label={hasPhoto ? `Remove receipt photo, expense ${index}` : `Take a receipt photo, expense ${index}`}
@@ -895,7 +898,9 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
           recent={recent}
         />
       </div>
-      <div className="grid grid-cols-1 min-[360px]:grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+      <div className="grid grid-cols-1 items-end gap-3 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="grid min-w-0 gap-1">
+        <span aria-hidden="true" className="text-base font-medium text-fg-2">Paid on</span>
         <label
           className={cn(
             'relative inline-flex h-touch min-w-0 items-center gap-2 rounded border px-3 text-sm text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
@@ -913,7 +918,10 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
             className="absolute inset-0 size-full cursor-pointer opacity-0"
           />
         </label>
+        </div>
         {/* two values, both visible: one tap picks Cash or Bank (grader: the hidden tap-to-toggle chip is gone) */}
+        <div className="grid gap-1">
+        <span aria-hidden="true" className="text-base font-medium text-fg-2">Paid by</span>
         <SegmentedControl
           aria-label={`Paid via, expense ${index}`}
           value={paid}
@@ -923,6 +931,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
             { value: 'bank', label: PAID_VIA_LABEL.bank, icon: Landmark },
           ]}
         />
+        </div>
       </div>
       <div className="grid gap-1">
         <span aria-hidden="true" className="text-base font-medium text-fg-2">{isOther ? MISC_TITLE_LABEL : 'Detail, optional'}</span>

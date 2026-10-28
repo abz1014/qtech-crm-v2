@@ -145,7 +145,7 @@ function Line({
     <div
       role="row"
       className={cn(
-        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t px-5 first:border-t-0 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,auto)]',
+        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t px-5 first:border-t-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem]',
         tone === 'group' && 'min-h-[40px] bg-sunken text-sm font-semibold',
         tone === 'line' && 'min-h-[44px] text-table',
         tone === 'sub' && 'min-h-[36px] text-table',
@@ -227,7 +227,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             }
           >
             <div role="table" aria-label="Profit and loss">
-              <div role="row" className="hidden min-h-[36px] grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,auto)] items-center gap-x-4 border-b bg-sunken px-5 text-xs font-medium text-fg-muted md:grid">
+              <div role="row" className="hidden min-h-[36px] grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem] items-center gap-x-4 border-b bg-sunken px-5 text-xs font-medium text-fg-muted md:grid">
                 <span role="columnheader">Line</span>
                 <span role="columnheader">Basis</span>
                 <span role="columnheader" className="text-right">
@@ -305,26 +305,26 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         <div className="grid gap-6">
           <Panel title="Where the money went" meta={<span className="num text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
             <div className="grid gap-3 px-5 py-4">
-              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 overflow-hidden rounded-panel border bg-surface">
-                <i className="block bg-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />
-                <i className="block bg-fg-muted" style={{ width: w(toPaisa(v.overheads.net)) }} />
-                {resultPositive ? <i className="block flex-1 bg-surface" /> : null}
+              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 gap-[2px] overflow-hidden rounded-panel border bg-surface">
+                <i className="block bg-tone-info-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />
+                <i className="block bg-tone-warning-fg" style={{ width: w(toPaisa(v.overheads.net)) }} />
+                {resultPositive ? <i className="block flex-1 bg-brand-green" /> : null}
               </div>
               <ul className="grid gap-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <i className="size-[10px] rounded-[2px] bg-fg" />
+                  <i className="size-[10px] rounded-[2px] bg-tone-info-fg" />
                   Order costs <span className="text-xs text-fg-muted">{plural(v.orderCosts.count, 'expense')}</span>
                   <span className="flex-1" />
                   <Money value={v.orderCosts.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
-                  <i className="size-[10px] rounded-[2px] bg-fg-muted" />
+                  <i className="size-[10px] rounded-[2px] bg-tone-warning-fg" />
                   Overheads <span className="text-xs text-fg-muted">{plural(v.overheads.count, 'expense')}</span>
                   <span className="flex-1" />
                   <Money value={v.overheads.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
-                  <i className="size-[10px] rounded-[2px] border border-line-strong bg-surface" />
+                  <i className="size-[10px] rounded-[2px] bg-brand-green" />
                   Profit
                   <span className="flex-1" />
                   <Money value={v.result} prefix={false} paisa="never" plainNegative />

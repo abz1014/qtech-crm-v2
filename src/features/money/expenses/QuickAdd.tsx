@@ -294,7 +294,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                 aria-label="More categories"
                 value={top.some(c => c.id === categoryId) ? '' : categoryId}
                 onChange={e => e.target.value && pick(e.target.value)}
-                className={cn('w-auto max-w-full', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected font-medium' : 'border-line-strong')}
+                className={cn('w-auto max-w-full px-4 pr-10 font-medium text-fg', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected read-only:border-fg read-only:bg-selected' : 'border-line-strong bg-surface read-only:border-line-strong')}
               >
                 <option value="">More…</option>
                 {more.map(g => (
@@ -497,7 +497,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
 function QuickSelect({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="relative min-w-0">
-      <select {...rest} className={cn(controlClass, 'h-auto min-h-touch appearance-none pr-10 text-base max-md:text-base', className)}>
+      <select {...rest} className={cn(controlClass, 'h-auto min-h-touch appearance-none pr-10 text-base read-only:border-line-input read-only:bg-surface read-only:text-fg max-md:text-base', className)}>
         {children}
       </select>
       <Icon icon={ChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted" />

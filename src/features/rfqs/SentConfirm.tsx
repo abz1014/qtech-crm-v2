@@ -42,7 +42,7 @@ export function SentConfirm({ rfqId, inquiry, variant = 'ask' }: { rfqId: string
     )
   if (variant === 'later') {
     return (
-      <Button size="sm" variant="quiet" busy={confirm.isPending} busyLabel="Saving" onClick={yes} aria-label={`Yes, sent: ${inquiry.supplierName}`}>
+      <Button size="sm" busy={confirm.isPending} busyLabel="Saving" onClick={yes} aria-label={`Yes, sent: ${inquiry.supplierName}`}>
         Yes, sent
       </Button>
     )

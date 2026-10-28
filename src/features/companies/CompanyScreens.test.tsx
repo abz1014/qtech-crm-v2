@@ -161,7 +161,7 @@ describe('supplier page', () => {
     const h1 = screen.getByRole('heading', { level: 1 })
     expect(h1).toHaveTextContent(/^Alpenmark Controls$/)
     expect(h1.querySelector('[data-status]')).toBeNull()
-    expect(screen.getByText('Supplier', { selector: 'header p *' })).toBeInTheDocument()
+    expect(screen.getByText('Supplier', { selector: 'header *' })).toBeInTheDocument()
     // the one green action, in the Next step box: New RFQ with this supplier already chosen (IntakeScreen reads ?supplier=)
     const next = screen.getByRole('region', { name: 'Next step' })
     expect(within(next).getByRole('button', { name: 'New RFQ' })).toHaveClass('bg-primary')

@@ -401,7 +401,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
           ) : (
             <div className="overflow-hidden rounded-panel border" role="group" aria-label="Suppliers by line">
               <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-snug text-fg-muted', GRID)}>
-                <span className="sr-only">Include</span>
+                <span><span className="sr-only">Include</span></span>
                 <span>Item</span>
                 <span className="text-right">Qty</span>
                 <span>Buy from, ranked</span>

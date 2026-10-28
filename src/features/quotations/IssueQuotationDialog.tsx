@@ -6,6 +6,7 @@ import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { formatPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -100,10 +101,11 @@ function Chip({ label, value, selected, onPick, testId, disabled }: { label: str
 }
 
 // Each line is its own grid, so the tracks are fixed to line up; sized for 16px text (a 7-figure price, "Exempt", a 4-digit qty).
-const GRID = 'md:grid-cols-[28px_minmax(0,1.1fr)_56px_140px_108px_minmax(0,1.2fr)_128px]'
+const GRID = 'md:grid-cols-[28px_minmax(0,1.6fr)_72px_140px_108px_minmax(0,1fr)_128px]'
 
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()
+  const phone = useMediaQuery('(max-width: 767px)')
   const session = useSession()
   const items = useQuoteItems(rfq.id, true)
   const memory = usePriceMemory(rfq.id, true)
@@ -461,16 +463,21 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         context={
           previous
             ? `The quotation sent ${formatDay(previous.issuedOn)} stays exactly as it was. This makes a revised one under the same number.${rfq.customerRef ? ` Customer ref ${rfq.customerRef}.` : ''}`
-            : `${rfqRef(rfq.number)} · ${rfq.company.name}${rfq.customerRef ? ` · customer ref ${rfq.customerRef}` : ''}`
+            : `${rfqRef(rfq.number)} · ${rfq.company.name}${rfq.customerRef && !phone ? ` · customer ref ${rfq.customerRef}` : ''}`
         }
-        icon={FileText}
+        // A phone sheet: no icon tile (the title fits on one line), and a one-line note with no lone info glyph at its end.
+        icon={phone ? undefined : FileText}
         size="lg"
-        className="md:w-[min(900px,calc(100vw-2rem))]"
+        className="md:w-[min(1080px,calc(100vw-2rem))]"
         lead={
-          <>
-            Issuing marks the quotation sent today.
-            <InfoTip label="What issuing does" side="top" align="start">It gets a number and a PDF and cannot be edited. You can always Revise it; the first one stays on record.</InfoTip>
-          </>
+          phone ? (
+            'Issuing marks it sent today.'
+          ) : (
+            <>
+              Issuing marks the quotation sent today.
+              <InfoTip label="What issuing does" side="top" align="start">It gets a number and a PDF and cannot be edited. You can always Revise it; the first one stays on record.</InfoTip>
+            </>
+          )
         }
         footer={
           <>
@@ -596,7 +603,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           </div>
                         ) : null}
                       </div>
-                      <p className="num hidden text-right text-sm md:block">
+                      <p className="num hidden whitespace-nowrap text-right text-sm md:block">
                         {it.qty}
                         {it.unit ? <span className="block text-xs text-fg-muted">{it.unit}</span> : null}
                       </p>
@@ -631,7 +638,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           <TextField
                             aria-label={`Lead time we quote, item ${n}`}
                             value={leads[it.id] ?? ''}
-                            placeholder="e.g. 8 to 10 weeks from PO"
+                            placeholder="e.g. 8 to 10 weeks"
                             onChange={e => setLeads(l => ({ ...l, [it.id]: e.target.value }))}
                           />
                         </div>

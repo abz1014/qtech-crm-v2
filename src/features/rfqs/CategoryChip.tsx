@@ -15,10 +15,11 @@ import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
  * decides "Deals in <category>" on the ask list. A solid chip is the item's own category. An item with none shows the keyword
  * dictionary's guess as a DASHED chip ("Contactors, guessed"): a guess is never saved by itself, tapping it opens the picker with
  * that guess first, and picking a category (the guess included) writes it. "No category" is dashed and muted. Admin and sales pick;
- * an engineer sees the chip and cannot change it. The chip is a 44 px target, and sits above the item header's stretched tap target
+ * an engineer sees the chip and cannot change it. The chip is as tall as its line (22 px) and its 44 px tap target is an ::after that reaches past it, and sits above the item header's stretched tap target
  * (z-10, as the row menu does): without it, on a phone the header's ::after covered it and a Tab stop was hidden under it (2.4.11).
  */
-const chip = 'relative z-10 inline-flex min-h-touch items-center rounded border px-2 text-base'
+const chip =
+  "relative z-10 -my-px inline-flex items-center rounded border px-2 text-base leading-5 after:absolute after:inset-x-0 after:-inset-y-[11px] after:content-['']"
 
 export function CategoryChip({ rfqId, item }: { rfqId: string; item: Pick<RfqItemRow, 'id' | 'description' | 'familyId' | 'familyName'> }) {
   const session = useSession()

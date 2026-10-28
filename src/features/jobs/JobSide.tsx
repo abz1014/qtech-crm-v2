@@ -10,6 +10,7 @@ import { waLink } from '@/lib/messageLinks'
 import { isFinalMargin } from '@/lib/money'
 import { Money } from '@/ui/Money'
 import { Icon } from '@/ui/Icon'
+import { Skeleton } from '@/ui/Skeleton'
 import { qk } from '@/features/queryKeys'
 import { signFileUrls, type AttachmentRow } from '@/features/rfqs/api'
 import type { JobFacts } from '@/features/jobs/api'
@@ -76,7 +77,15 @@ export function MoneyPanel({ data }: { data: JobData }) {
   if (!m) {
     return (
       <Panel title="Money for this job">
-        <p className="text-base text-fg-muted">{data.orderMoney.isPending ? 'Loading…' : 'Nothing to show until there is an order.'}</p>
+        {data.orderMoney.isPending ? (
+          <div role="status" aria-busy="true" aria-label="Loading the money for this job" className="grid gap-3">
+            {[0, 1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-5 w-full" />
+            ))}
+          </div>
+        ) : (
+          <p className="text-base text-fg-muted">Nothing to show until there is an order.</p>
+        )}
       </Panel>
     )
   }
@@ -84,17 +93,17 @@ export function MoneyPanel({ data }: { data: JobData }) {
   const final = isFinalMargin(m.marginState as never)
   return (
     <Panel title="Money for this job">
-      <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-base">
+      <dl className="grid grid-cols-[1fr_auto] gap-y-2 text-base">
         <dt className="text-fg-2">Sale (with GST)</dt>
-        <dd className="text-right"><Money value={m.grossTarget} /></dd>
+        <dd className="pl-4 text-right"><Money value={m.grossTarget} /></dd>
         <dt className="text-fg-2">Received</dt>
-        <dd className="text-right"><Money value={m.settled} prefix={false} /></dd>
+        <dd className="pl-4 text-right"><Money value={m.settled} prefix={false} /></dd>
         <dt className="border-t pt-2 font-semibold">Still to collect</dt>
-        <dd className="border-t pt-2 text-right"><Money value={m.balance} prefix={false} strong /></dd>
+        <dd className="border-t pl-4 pt-2 text-right"><Money value={m.balance} prefix={false} strong /></dd>
         <dt className="text-fg-2">Costs so far</dt>
-        <dd className="text-right">{costs > 0 ? <Money value={costs} prefix={false} /> : <span className="text-fg-muted">Costs not entered yet</span>}</dd>
+        <dd className="pl-4 text-right">{costs > 0 ? <Money value={costs} prefix={false} /> : <span className="text-fg-muted">Costs not entered yet</span>}</dd>
         <dt className="text-fg-2">Profit</dt>
-        <dd className="text-right">{final && m.margin !== null ? <Money value={m.margin} prefix={false} /> : <span className="text-fg-muted">Not known yet</span>}</dd>
+        <dd className="pl-4 text-right">{final && m.margin !== null ? <Money value={m.margin} prefix={false} /> : <span className="text-fg-muted">Not known yet</span>}</dd>
       </dl>
       {!final && costs > 0 ? <p className="mt-3 text-base text-fg-muted">Freight and clearing may still come. Profit shows when the costs are marked final.</p> : null}
     </Panel>

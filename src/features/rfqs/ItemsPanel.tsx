@@ -247,7 +247,7 @@ function Bullet() {
 
 function Dot({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex items-start">
       <Bullet />
       {children}
     </span>

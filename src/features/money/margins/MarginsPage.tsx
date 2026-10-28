@@ -66,9 +66,9 @@ function MarginRowView({ r }: { r: MarginRow }) {
       {/* Phone: two lines (round 3: each card was about 230 px). */}
       <div className="grid gap-1 px-4 py-3 md:hidden">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="min-w-0 break-words font-medium">
-            {r.companyName}{' '}
-            <Link to={`/orders/${r.orderId}`} className="num whitespace-nowrap font-regular text-fg-2 hover:underline">
+          <span className="min-w-0">
+            <span className="block break-words font-medium">{r.companyName}</span>
+            <Link to={`/orders/${r.orderId}`} className="num whitespace-nowrap rounded font-regular text-fg-2 hover:underline">
               {orderRef(r.orderNumber)}
             </Link>
           </span>
