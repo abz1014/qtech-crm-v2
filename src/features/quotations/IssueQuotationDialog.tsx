@@ -21,8 +21,6 @@ import { Select } from '@/ui/form/Select'
 import { TextArea, TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader, InquiryRow } from '@/features/rfqs/api'
-import { useFxLatest } from '@/features/rfqs/hooks'
-import { comparePrices, toRateTable } from '@/features/rfqs/lib'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { loadPdfData, loadSignatory, type PdfData, type QuotationRow, type PriceMemory, type QuoteItem } from '@/features/quotations/api'
 import { useCompanyContacts, useIssueQuotation, usePriceMemory, useQuoteItems, useQuotations, useStorePdf } from '@/features/quotations/hooks'
@@ -112,10 +110,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const quotations = useQuotations(rfq.id)
   const contacts = useCompanyContacts(rfq.company.id, true)
   const profileQ = useCompanyProfile()
-  const fx = useFxLatest()
   const issue = useIssueQuotation(rfq.id)
   const storePdf = useStorePdf(rfq.id)
-  const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
 
   const previous = quotations.data?.[0] ?? null
   const firstIssuedOn = quotations.data && quotations.data.length > 0 ? quotations.data[quotations.data.length - 1].issuedOn : null
@@ -146,14 +142,9 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
 
   const byItem = useMemo(() => new Map((memory.data ?? []).map(m => [m.itemId, m] as const)), [memory.data])
 
-  /** The lowest supplier reply for an item, in PKR at today's rate (the mockup's "Best reply"), per unit. Null when none can be converted. */
-  const bestReply = (itemId: string): bigint | null => {
-    const lines = inquiries.flatMap(i => i.lines.filter(l => l.itemId === itemId).map(l => ({ id: l.id, amount: l.unitPrice, currency: l.currency })))
-    if (lines.length === 0) return null
-    const cmp = comparePrices(lines, rates)
-    const pkr = cmp.lines.map(l => l.pkrPaisa).filter((p): p is bigint => p !== null)
-    return pkr.length ? pkr.reduce((a, b) => (b < a ? b : a)) : null
-  }
+  // No supplier is singled out here (owner decision 2026-10-29: the CRM selects no supplier and shows no "best" or "lowest" reply).
+  // The replies are laid out side by side, with no mark, on the Comparative Statement; the selling price is typed by a person.
+  const replyCount = (itemId: string) => inquiries.filter(i => i.lines.some(l => l.itemId === itemId)).length
   const hasSupplierPrice = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId))
 
   // Seed once, when everything the defaults come from has arrived. Nothing here overwrites what is later typed.
@@ -558,7 +549,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   const price = prices[it.id] ?? null
                   const sold = m?.soldPrice ?? null
                   const quoted = m?.quotedPrice ?? null
-                  const best = bestReply(it.id)
+                  const replies = replyCount(it.id)
                   const n = idx + 1
                   const nothingToQuote = !on && price === null && !hasSupplierPrice(it.id) && sold === null && quoted === null
                   return (
@@ -576,7 +567,14 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           {it.qty}
                           {it.unit ? ` ${it.unit}` : ''}
                         </p>
-                        {best !== null ? <p className="text-xs text-fg-muted">Best reply ≈ PKR {formatPaisa(best, 'auto')} each</p> : null}
+                        {replies > 0 ? (
+                          <p className="text-sm text-fg-muted" data-testid={`supplier-replies-${n}`}>
+                            {`${replies} supplier ${replies === 1 ? 'reply' : 'replies'}. `}
+                            <a href={`/jobs/${rfq.number}/statement`} target="_blank" rel="noreferrer" className="rounded font-medium underline underline-offset-2 hover:text-fg">
+                              Compare them on the comparative statement
+                            </a>
+                          </p>
+                        ) : null}
                         {nothingToQuote ? <p className="text-xs">No supplier price yet, so there is nothing to quote. Add a reply to include it, or type a price.</p> : null}
                         {sold !== null || quoted !== null ? (
                           <div className="mt-1 grid justify-items-start gap-2">
