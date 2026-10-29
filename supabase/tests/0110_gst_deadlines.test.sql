@@ -55,14 +55,14 @@ select is((select updated_by::text from public.gst_deadline_overrides where mont
 -- ------------------------------------------------------------------ sales reads, never writes
 select is(pg_temp.as_('sales', $q$select pay_day::text || '/' || return_day::text from public.gst_deadline_settings$q$), '20/25', 'sales reads the days');
 select is(pg_temp.as_('sales', $q$select pay_by::text from public.gst_deadline_overrides where month = '2026-10-01'$q$), '2026-11-22', 'and the override');
-select is(pg_temp.as_('sales', $q$with u as (update public.gst_deadline_settings set pay_day = 1 returning 1) select count(*)::text from u$q$), '<none>', 'sales cannot change the days');
+select is(pg_temp.as_('sales', $q$with u as (update public.gst_deadline_settings set pay_day = 1 returning 1) select count(*)::text from u$q$), '0', 'sales cannot change the days');
 select is(pg_temp.as_('sales', $q$with i as (insert into public.gst_deadline_overrides (month, pay_by) values ('2026-09-01', '2026-10-20') returning 1) select count(*)::text from i$q$), 'E:42501', 'nor add an override');
-select is(pg_temp.as_('sales', $q$with d as (delete from public.gst_deadline_overrides returning 1) select count(*)::text from d$q$), '<none>', 'nor delete one');
+select is(pg_temp.as_('sales', $q$with d as (delete from public.gst_deadline_overrides returning 1) select count(*)::text from d$q$), '0', 'nor delete one');
 
 -- ------------------------------------------------------------------ an engineer sees nothing GST
 select is(pg_temp.as_('engineer', $q$select pay_day::text from public.gst_deadline_settings$q$), '<none>', 'an engineer reads no GST day');
 select is(pg_temp.as_('engineer', $q$select pay_by::text from public.gst_deadline_overrides$q$), '<none>', 'and no override');
-select is(pg_temp.as_('engineer', $q$with u as (update public.gst_deadline_settings set pay_day = 1 returning 1) select count(*)::text from u$q$), '<none>', 'an engineer cannot change the days');
+select is(pg_temp.as_('engineer', $q$with u as (update public.gst_deadline_settings set pay_day = 1 returning 1) select count(*)::text from u$q$), '0', 'an engineer cannot change the days');
 select is(pg_temp.as_('engineer', $q$with i as (insert into public.gst_deadline_overrides (month, pay_by) values ('2026-09-01', '2026-10-20') returning 1) select count(*)::text from i$q$), 'E:42501', 'nor add an override');
 select is(pg_temp.as_('deactivated', $q$select pay_day::text from public.gst_deadline_settings$q$), '<none>', 'a deactivated person reads nothing');
 

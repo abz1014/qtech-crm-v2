@@ -65,18 +65,18 @@ grant select, update on table public.gst_deadline_settings to authenticated, qte
 grant select, insert, update, delete on table public.gst_deadline_overrides to authenticated, qtech_engineer;
 
 create policy gst_deadline_settings_select on public.gst_deadline_settings for select to authenticated, qtech_engineer
-  using (public.current_user_role() in ('admin', 'sales'));
+  using ((select public.current_user_role()) in ('admin', 'sales'));
 create policy gst_deadline_settings_update_admin on public.gst_deadline_settings for update to authenticated, qtech_engineer
-  using (public.current_user_role() = 'admin') with check (public.current_user_role() = 'admin');
+  using ((select public.current_user_role()) = 'admin') with check ((select public.current_user_role()) = 'admin');
 
 create policy gst_deadline_overrides_select on public.gst_deadline_overrides for select to authenticated, qtech_engineer
-  using (public.current_user_role() in ('admin', 'sales'));
+  using ((select public.current_user_role()) in ('admin', 'sales'));
 create policy gst_deadline_overrides_insert_admin on public.gst_deadline_overrides for insert to authenticated, qtech_engineer
-  with check (public.current_user_role() = 'admin');
+  with check ((select public.current_user_role()) = 'admin');
 create policy gst_deadline_overrides_update_admin on public.gst_deadline_overrides for update to authenticated, qtech_engineer
-  using (public.current_user_role() = 'admin') with check (public.current_user_role() = 'admin');
+  using ((select public.current_user_role()) = 'admin') with check ((select public.current_user_role()) = 'admin');
 create policy gst_deadline_overrides_delete_admin on public.gst_deadline_overrides for delete to authenticated, qtech_engineer
-  using (public.current_user_role() = 'admin');
+  using ((select public.current_user_role()) = 'admin');
 
 create trigger gst_deadline_settings_audit after insert or update or delete on public.gst_deadline_settings
   for each row execute function public.audit_row_change();
