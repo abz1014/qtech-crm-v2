@@ -14,7 +14,7 @@ export function WonDialogHost({ rfqId }: { rfqId: string }) {
   const prices = useSeesPrices()
   const header = useRfqHeader(wonOpen ? rfqId : undefined)
   const inquiries = useRfqInquiries(wonOpen ? rfqId : undefined)
-  const fx = useFxLatest()
+  const fx = useFxLatest(wonOpen)
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   if (!wonOpen || !prices || !header.data || !inquiries.data) return null
   return (

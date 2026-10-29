@@ -15,7 +15,7 @@
 //
 // It never saves anything: the screen shows the offers and the person accepts them (R08).
 
-import { parseLeadTime, parseSupplierReply, splitSentences, stripQuotedReply, normaliseCurrency, type LeadTime, type ParsedReply, type ParseReplyOptions, type ReplyCurrency, type ReplyItemRef } from '@/features/rfqs/lib/replyParse'
+import { parseAmount, parseLeadTime, parseSupplierReply, splitSentences, stripQuotedReply, normaliseCurrency, type LeadTime, type ParsedReply, type ParseReplyOptions, type ReplyCurrency, type ReplyItemRef } from '@/features/rfqs/lib/replyParse'
 import { businessToday } from '@/lib/dates'
 import { alignSpacedRows, foldWrappedTables, joinSplitHeader, rebuildCellText, tabulateSpacedRows } from './cellTable'
 import { findDate } from './enquiryParse'
@@ -287,6 +287,89 @@ function readFacts(lines: string[], today: string): Omit<QuoteFacts, 'currency'>
   return f
 }
 
+// ------------------------------------------------------------------------------------------------ scrambled rows
+
+const PRICE_HEAD_CELL = /^(?:unit\s*)?(?:price|rate|cost)\b|\bunit\s*(?:price|rate|cost)\b|\bprice\s*(?:each|\/\s*(?:pc|unit|no)s?)\b/i
+const TOTAL_HEAD_CELL = /\b(?:total|amount|ext(?:ended)?|line\s+total|sub\s*total)\b/i
+const QTY_HEAD_CELL = /^(?:qty|quantity|q'ty|pcs|nos)\b/i
+
+/** The number a cell holds on its own ("USD 45.00", "1,200"), or null. */
+function cellNumber(cell: string): number | null {
+  const m = /^(?:[A-Za-z]{3}\s?|[$€£¥￥]\s?)?(\d[\d,.' ]*\d|\d)(?:\s?[A-Za-z]{3}|\s?\/-)?$/.exec(cell.trim())
+  return m ? (parseAmount(m[1] as string)?.value ?? null) : null
+}
+
+/** Whether a cell holds this figure as an amount ("USD 45.00", "3,500/-", "45 per pc"), not as a time ("2 weeks") or part of a name. */
+function holdsPrice(cell: string, price: number): boolean {
+  if (cellNumber(cell) === price) return true
+  for (const m of cell.matchAll(/\d[\d,.']*\d|\d/g)) {
+    const after = cell.slice((m.index ?? 0) + m[0].length)
+    if (parseAmount(m[0])?.value === price && /^\s*(?:\/|per\b|each\b|ea\b|pcs?\b|nos?\b|\/-)/i.test(after)) return true
+  }
+  return false
+}
+
+/**
+ * A quotation copied from a mail export can have its row cells out of place (a price on the next row's line, a lead time under the
+ * price heading). The line reader takes the first figure it finds, so such a row would get another row's or column's figure as its
+ * price without a word. Under a table heading that names a price column, a price that was read from a tab-separated line but not from
+ * the cell under that heading, or that does not fit the row's quantity and total, is not trusted: the offer is kept (item, lead time),
+ * its price is left blank and flagged `price_uncertain`, with the figure in `suspectPrice`, for the person to check against the quotation.
+ */
+export function guardScrambledPrices(reply: ParsedReply, text: string): void {
+  const head = text
+    .split('\n')
+    .map(l => cells(l))
+    .find(c => c.length >= 3 && c.some(x => PRICE_HEAD_CELL.test(x.trim())))
+  if (!head) return
+  const col = (re: RegExp, not?: RegExp) => head.findIndex(x => re.test(x.trim()) && !(not && not.test(x.trim())))
+  const priceCol = col(PRICE_HEAD_CELL, TOTAL_HEAD_CELL)
+  if (priceCol < 0) return
+  const totalCol = head.findIndex((x, i) => i !== priceCol && TOTAL_HEAD_CELL.test(x.trim()))
+  const qtyCol = col(QTY_HEAD_CELL)
+  const tabRows = text
+    .split('\n')
+    .map(l => l.replace(/\s+$/, ''))
+    .filter(l => l.includes('\t'))
+  for (const o of reply.offers) {
+    if (o.unitPrice === null || o.flags.includes('derived_from_total')) continue
+    const price = o.unitPrice
+    let bad = false
+    // The lines behind the offer: the tab rows of the text that its snippet holds whole (the snippet joins lines with " / ", which a description can hold too).
+    for (const seg of tabRows.filter(l => o.snippet.includes(l.trim()))) {
+      const row = seg.split('\t').map(x => x.trim())
+      // A column of this row: counted from the left, or from the right when the row has another number of cells than the heading (the
+      // reader merges or drops an empty cell; the columns at the right of a quotation are the numbers).
+      const cellAt = (c: number) => (row.length === head.length ? row[c] : row[row.length - (head.length - c)]) ?? ''
+      // Only a row that has the figure somewhere is judged (the other lines behind the offer are its name and terms).
+      if (!row.some(c => [...c.matchAll(/\d[\d,.']*\d|\d/g)].some(m => parseAmount(m[0])?.value === price))) continue
+      const near = row.length >= head.length - 1 && row.length <= head.length
+      const atPrice = [priceCol, ...(near ? [row.length - (head.length - priceCol)] : [])].some(i => i >= 0 && holdsPrice(row[i] ?? '', price))
+      // The price is not under the price heading but under another one, or the cell under the heading holds something else (a lead
+      // time, a name): a row whose cells slipped sideways. An empty cell under it is a price on the next line, which is read.
+      if (!atPrice) {
+        const under = row[priceCol] ?? ''
+        if (/\b(?:days?|weeks?|wks?|months?)\b/i.test(under) || (under === '' && row.some(c => holdsPrice(c, price)))) bad = true
+        else continue
+      }
+      // The cell under the quantity heading holds words, not a quantity (the row's cells slipped, and the "price" is its quantity).
+      else if (row.length === head.length && qtyCol >= 0 && qtyCol !== priceCol && /[A-Za-z]{4,}\s+[A-Za-z]{3,}/.test(cellAt(qtyCol)) && !/^\d[\d.,]*\s*(?:pieces?|sets?|units?|met(?:er|re)s?|rolls?|boxes|packs?|lots?|each)\b/i.test(cellAt(qtyCol))) bad = true
+      // The row's own quantity and total contradict it (the price and total of two different rows).
+      else if (row.length === head.length && totalCol >= 0 && qtyCol >= 0) {
+        const qty = cellNumber(cellAt(qtyCol))
+        const total = cellNumber(cellAt(totalCol))
+        if (qty !== null && total !== null && total > 0 && Math.abs(price * qty - total) > Math.max(1, total * 0.02)) bad = true
+      }
+      break
+    }
+    if (!bad) continue
+    o.suspectPrice = price
+    o.unitPrice = null
+    o.flags = [...o.flags.filter(f => f !== 'currency_missing' && f !== 'bare_number'), 'price_uncertain', 'price_missing']
+    o.confidence = 'low'
+  }
+}
+
 // ------------------------------------------------------------------------------------------------ main
 
 export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: ParseReplyOptions = {}): SupplierQuoteParse {
@@ -369,6 +452,7 @@ export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: 
   const named = /\b(?:USD|EUR|CNY|RMB|AED|GBP|PKR)\b|[$€£¥￥元]/.test(text)
   const only = onTotals.size === 1 ? [...onTotals][0] : null
   const reply = parseSupplierReply(only && !named ? `Currency: ${only}\n${text}` : text, rfqItems, { ...opts, today })
+  guardScrambledPrices(reply, text)
   const facts = readFacts(lines, today)
   // Payment terms are the supplier's own wording ("Bonifico bancario 30 gg d.f."): read before units are turned into English.
   for (const l of stripQuotedReply(plainQuoteText(raw, 'payment')).split('\n').flatMap(x => splitSentences(x))) {

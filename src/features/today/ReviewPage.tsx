@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
+import { NoPrimary } from '@/ui/NoPrimary'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
@@ -125,6 +126,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
 
   return (
     <div className="mx-auto grid max-w-[920px] gap-5 px-4 py-5 md:px-6" data-review>
+      <NoPrimary />
       <header className="grid gap-1">
         <Link to="/todo" className="inline-flex min-h-touch items-center gap-1 justify-self-start rounded text-base font-medium text-primary underline-offset-2 hover:underline max-md:hidden">
           <Icon icon={ChevronLeft} size="sm" /> To do

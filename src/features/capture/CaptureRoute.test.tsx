@@ -12,7 +12,7 @@ import CaptureRoute from '@/features/capture/CaptureRoute'
 vi.mock('@/lib/capture/store', async importOriginal => {
   const real = await importOriginal<typeof import('@/lib/capture/store')>()
   const old = { id: 'old', source: 'share', text: 'old share', files: [], createdAt: 0, expiresAt: 1e15 }
-  return { ...real, listCaptures: () => Promise.resolve([old]), getCapture: () => Promise.resolve(null), deleteCapture: vi.fn() }
+  return { ...real, listCaptures: () => Promise.resolve([old]), getCapture: (id: string) => Promise.resolve(id === 'old' ? old : null), deleteCapture: vi.fn() }
 })
 vi.mock('@/features/jobs/hooks', () => ({
   useJobSearch: (q: string) => ({ isPending: false, data: q.trim() ? [{ key: '139', companyName: 'Harbour Textiles Limited', items: 'Flowmeter' }] : [] }),
@@ -20,7 +20,7 @@ vi.mock('@/features/jobs/hooks', () => ({
 
 function Where() {
   const l = useLocation()
-  return <p data-testid="where">{l.pathname + JSON.stringify(l.state)}</p>
+  return <p data-testid="where">{l.pathname + l.search + JSON.stringify(l.state)}</p>
 }
 
 describe('Capture route: Photo or note with nothing shared', () => {
@@ -44,5 +44,25 @@ describe('Capture route: Photo or note with nothing shared', () => {
     await user.type(screen.getByLabelText('Find the job'), 'Harbour')
     await user.click(await screen.findByRole('button', { name: /Job 139/ }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139{"photoOrNote":true}'))
+  })
+
+  it('Add to job opens the job with only the id of the kept item in the address, so a reload keeps it', async () => {
+    const user = userEvent.setup()
+    render(
+      <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ali', role: 'engineer' } }}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={['/capture?share=old']}>
+            <Routes>
+              <Route path="/capture" element={<CaptureRoute />} />
+              <Route path="/jobs/*" element={<Where />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
+      </SessionProvider>,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Add to job…' }))
+    await user.type(screen.getByLabelText('Find the job'), 'Harbour')
+    await user.click(await screen.findByRole('button', { name: /Job 139/ }))
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139?shared=oldnull'))
   })
 })

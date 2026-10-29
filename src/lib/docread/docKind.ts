@@ -352,12 +352,28 @@ function classify(text: string): DocKindResult {
   if (asks || qtyHead) {
     return done('rfq', 0.5 + Math.min(0.45, 0.1 * rfqHits + (qtyHead ? 0.2 : 0) + (RFQ_DATE.test(body) ? 0.1 : 0) + (qtyRows ? 0.1 : 0)), [...(rfqHits ? [plural(rfqHits, 'request phrases')] : []), ...(qtyHead ? ['a quantity column'] : []), ...(qtyRows ? [plural(qtyRows, 'lines with a quantity')] : [])])
   }
+  // A short reply that gives a price for an item with its quantity ("6 pcs ball valve DN50 @ 45 each", "price 45 per piece, lead time
+  // 2 weeks") is a supplier's price before it is an enquiry: a price, currency or per-unit cue outweighs the quantity. The wording of
+  // a reply on top of it (lead time, stock, validity) makes it a quotation; the price alone leaves it undecided, so a pasted reply is
+  // not held as an enquiry and a one-line enquiry with its own price idea is not held as a quotation.
+  if (qtyRows > 0 && !asks && !qtyHead && lines.some(l => UNIT_PRICE_CUE.test(l) && !PRICE_TARGET.test(l))) {
+    return quotePhrases > 0 || count(REPLY_CUE, body) > 0 ? done('supplier-quote', 0.5, ['a price per unit', 'quotation wording', plural(qtyRows, 'lines with a quantity')]) : done('unknown', 0.3, ['a quantity with a price per unit'])
+  }
   // A line with a quantity and an amount of money and nothing else ("FM-100 DN50: EUR 1.234 each") is a supplier's one-line price at
   // least as much as an enquiry's line: left undecided, so a pasted reply is not held.
   if (qtyRows > 0 && !asks && !qtyHead && /(?:\b(?:usd|eur|aed|cny|rmb|gbp|pkr)\s?\d|\d\s?(?:usd|eur|aed|cny|rmb|gbp|pkr)\b|[$\u20ac\u00a3\u00a5]\s?\d)/i.test(text)) return done('unknown', 0.3, ['one line with a quantity and an amount'])
   if (qtyRows > 0) return done('rfq', 0.4, [plural(qtyRows, 'lines with a quantity')])
   return done('unknown', 0.2, ['nothing that settles it'])
 }
+
+/** A unit price written as a price: "price 45", "rate is Rs 4500", "unit price: 45.00", "@ 45", "45 per piece", "USD 45 each". */
+const CUR = String.raw`(?:(?:[A-Za-z]{3}|rs\.?|[$\u20ac\u00a3\u00a5\uffe5])\s?)?`
+const UNIT_PRICE_CUE = new RegExp(
+  String.raw`\b(?:unit\s+(?:price|rate)|price|rate|cost|offer(?:ed)?)\s*(?:is|of|was|=|:|-|@)?\s*${CUR}\d[\d,.]*|@\s*${CUR}\d|\d\s*(?:\/\s*|per\s+)(?:pcs?|pieces?|nos?|units?|sets?|ea|mtrs?|meters?)\b|(?:\b(?:usd|eur|aed|cny|rmb|gbp|pkr|rs\.?)\s?|[$\u20ac\u00a3\u00a5])\d[\d,.]*\s*(?:each|ea\b|per\b|\/)`,
+  'i',
+)
+/** A price the customer wrote about what they would like, not one offered. */
+const PRICE_TARGET = /\b(?:target|budget|estimated|expected|last|previous|old|earlier)\b/i
 
 /** Kinds the screens warn about before reading a document as an enquiry; `rfq` and `unknown` pass. Nothing is ever dropped: the person can read it anyway. */
 export const NOT_AN_ENQUIRY: readonly DocKind[] = ['own-rfq', 'own-quote', 'po', 'invoice', 'brochure', 'marketing', 'follow-up', 'supplier-quote']

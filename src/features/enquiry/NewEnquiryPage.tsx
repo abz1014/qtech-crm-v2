@@ -32,7 +32,12 @@ export default function NewEnquiryPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const capture = (location.state as { capture?: Capture } | null)?.capture
-  const files = useMemo(() => (capture?.files ?? []).filter(f => isReadableFile(f)), [capture])
+  // A file chosen with the intake's own "Choose PDF or photo" button is read by the intake; it is shown here the way a dropped one is
+  // (the newest file replaces the one before). A new capture (a drop, "Use a different file") starts the left side again.
+  const [picked, setPicked] = useState<File[]>([])
+  const captureId = capture?.id
+  useEffect(() => setPicked([]), [captureId])
+  const files = useMemo(() => (picked.length > 0 ? picked : (capture?.files ?? [])).filter(f => isReadableFile(f)), [capture, picked])
   const [pasted, setPasted] = useState('')
 
   // The pasted message is read by the intake itself (it listens for paste); this only shows it beside the result.
@@ -72,7 +77,7 @@ export default function NewEnquiryPage() {
         {files.length > 0 || text ? <ChooseAnother onFiles={take} /> : null}
       </aside>
       <div className="min-w-0 max-lg:order-1">
-        <IntakeScreen mode="enquiry" />
+        <IntakeScreen mode="enquiry" onFilePicked={f => setPicked([f])} />
       </div>
     </div>
   )

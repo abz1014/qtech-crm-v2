@@ -37,7 +37,7 @@ import {
   type PaidVia,
 } from '@/features/money/expenses/model'
 import { forMonthHelp } from '@/features/money/expenses/forMonth'
-import { pickableCategories, quickInsert, quickProblem, sessionTotal, topCategories } from '@/features/money/expenses/quick'
+import { AMOUNT_ABOVE_ZERO, pickableCategories, quickInsert, quickProblem, sessionTotal, topCategories } from '@/features/money/expenses/quick'
 
 /*
  * Quick add (redesign phase 1, owner: expenses are "utmost priority"). One row on the Expenses screen, open all the time:
@@ -174,7 +174,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         p === 'amount'
           ? 'Type the amount first.'
           : p === 'positive'
-            ? 'The amount must be above zero.'
+            ? AMOUNT_ABOVE_ZERO
             : p === 'large'
               ? 'That amount is too large. Check it for an extra digit.'
               : p === 'category'

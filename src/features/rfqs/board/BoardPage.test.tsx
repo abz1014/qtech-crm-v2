@@ -109,6 +109,17 @@ describe('RFQ board', () => {
     expect(screen.getByRole('radio', { name: 'All' })).toBeInTheDocument()
   })
 
+  it('a long company name and customer reference are clamped in the table, the whole text kept in the title', async () => {
+    const long = 'Sample Industrial Holdings and Allied Manufacturing Company Private Limited'
+    db([state({ rfq_id: 'a', number: 177, owner_id: ME, companies: { name: long } })])
+    renderBoard('sales')
+    const link = await screen.findByRole('link', { name: new RegExp(long) })
+    expect(link).toHaveClass('line-clamp-2')
+    expect(link).toHaveAttribute('title', long)
+    const asked = within(screen.getByRole('table', { name: 'Open RFQs' })).getByText(/Cerabar/, { selector: '[data-asked]' })
+    expect(asked).toHaveClass('line-clamp-2')
+  })
+
   it('opens on All for an engineer, overdue first, with the due date in the danger tone', async () => {
     db()
     renderBoard('engineer')

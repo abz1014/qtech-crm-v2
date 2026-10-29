@@ -51,7 +51,7 @@ const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage')
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
 /** New enquiry (P4-A): the document beside what was read; wraps the intake. */
-const NewEnquiryPage = lazy(() => import('@/features/enquiry/NewEnquiryPage'))
+const NewEnquiryPage = lazy(routeChunks.enquiryNew)
 /** The old pages keep the access they had: every staff role. */
 const oldItem = (label: string, path: string): NavItem => ({ key: 'jobs', label, path, icon: Briefcase, roles: ['admin', 'sales', 'engineer'] })
 const rfqsItem = oldItem('RFQs', '/rfqs')

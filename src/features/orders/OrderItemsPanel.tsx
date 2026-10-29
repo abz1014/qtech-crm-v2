@@ -165,7 +165,9 @@ export function OrderItemsPanel({
     const st = legState({ placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }, today)
     return (
       <span className="grid min-w-[140px] max-w-[260px] gap-px whitespace-normal">
-        <span className="break-words">{leg.supplierName}</span>
+        <span className="line-clamp-2 break-words" title={leg.supplierName}>
+          {leg.supplierName}
+        </span>
         <span className="text-xs text-fg-muted">
           <span className={cn(st === 'late' && 'font-medium text-tone-danger-fg')}>{STATE_WORDS[st]}</span>
           {money ? (
@@ -219,7 +221,9 @@ export function OrderItemsPanel({
       <span className="num text-xs text-fg-muted">{r.no}</span>
       {r.kind === 'head' ? (
         <span className="grid min-w-0 gap-px">
-          <span className="break-words font-medium">{r.description}</span>
+          <span className="line-clamp-2 break-words font-medium" title={r.description}>
+            {r.description}
+          </span>
           <span className="inline-flex w-fit items-center gap-1 text-xs text-fg-muted">
             <Split size={12} aria-hidden="true" />
             split across {r.members?.length ?? 0} suppliers
@@ -243,7 +247,9 @@ export function OrderItemsPanel({
         </span>
       ) : (
         <span className="grid min-w-0 gap-px">
-          <span className="break-words">{r.description}</span>
+          <span className="line-clamp-2 break-words" title={r.description}>
+            {r.description}
+          </span>
           <span className="text-xs text-fg-muted">
             {r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}
             {/* below 1024 the unit price folds into the item line */}

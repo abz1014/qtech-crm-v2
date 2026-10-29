@@ -2,6 +2,7 @@ import type { JobFacts } from '@/features/jobs/api'
 import { useCancelledOrders, useJobInvoices } from '@/features/jobs/hooks'
 import { useOrderEngineers, useOrderHeader, useOrderItems, useOrderLegs, useOrderMoney } from '@/features/orders/hooks'
 import { useQuotations } from '@/features/quotations/hooks'
+import { useContentDrawn } from '@/lib/useContentDrawn'
 import { useOrderAttachments, useRfqAttachments, useRfqInquiries, useRfqItems } from '@/features/rfqs/hooks'
 
 /*
@@ -12,8 +13,11 @@ import { useOrderAttachments, useRfqAttachments, useRfqInquiries, useRfqItems } 
 export function useJobData(facts: JobFacts, role: 'admin' | 'sales' | 'engineer') {
   const { job } = facts
   const money = role !== 'engineer'
-  const rfqId = job.rfqId ?? undefined
-  const orderId = job.orderId ?? undefined
+  // On the first page the app opens, the panels' reads start once the job's top is drawn (prefetch.ts starts them at the same moment),
+  // not with the first paint: they would hold it back on Slow 4G. Every later page reads at once.
+  const drawn = useContentDrawn()
+  const rfqId = drawn ? (job.rfqId ?? undefined) : undefined
+  const orderId = drawn ? (job.orderId ?? undefined) : undefined
   const items = useRfqItems(rfqId)
   const inquiries = useRfqInquiries(rfqId)
   const quotations = useQuotations(money ? rfqId : undefined)

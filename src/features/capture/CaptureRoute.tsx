@@ -4,6 +4,7 @@ import { Camera, FilePlus2, Search, Share2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { NoPrimary } from '@/ui/NoPrimary'
 import { useToast } from '@/ui/useToast'
 import { getCapture, listCaptures, safely, takeBackFromSignIn, type CaptureItem } from '@/lib/capture/store'
 import { countsText } from '@/features/capture/model'
@@ -13,7 +14,7 @@ import { useJobSearch } from '@/features/jobs/hooks'
  * /capture is where the Android share target lands (the service worker stores the shared item for 7 days and redirects here with
  * ?share=<id>), and where a sign-in redirect returns to. Two choices, nothing else (P4-B, the six-destination sheet is gone):
  *   New enquiry   the shared message, PDF or photo is read as a customer's enquiry (/enquiries/new)
- *   Add to job…   pick the job with a search box; the item is added on that job's page ("Add to this job" guesses what it is)
+ *   Add to job…   pick the job with a search box; the job page reads the kept item by its id (?shared=<id>, so a reload keeps it) and adds it
  * An engineer sees only Add to job: they add a photo or a note, and start no enquiry.
  * Opened with no ?share (the engineer's "Photo or note" button) there is nothing shared: the page asks which job, and the job page opens
  * its photo-or-note box (state.photoOrNote). Nothing is deleted here: the job page deletes a kept item only after it saved it.
@@ -46,11 +47,11 @@ export default function CaptureRoute() {
 
   if (!id) return <JobFirst />
 
-  if (item === undefined) return <main className="px-4 py-8 text-base text-fg-2">Opening what you shared…</main>
+  if (item === undefined) return <div className="px-4 py-8 text-base text-fg-2">Opening what you shared…</div>
 
   if (item === null)
     return (
-      <main className="mx-auto grid max-w-xl gap-4 px-4 py-8" data-testid="share-gone">
+      <div className="mx-auto grid max-w-xl gap-4 px-4 py-8" data-testid="share-gone">
         <h1 className="text-2xl font-semibold tracking-tight">Nothing to add</h1>
         <p className="text-base text-fg-2">That shared item is no longer on this device (shared items are kept for 7 days). Share it again from WhatsApp, or start from a job.</p>
         <div>
@@ -58,7 +59,7 @@ export default function CaptureRoute() {
             Open Jobs
           </Button>
         </div>
-      </main>
+      </div>
     )
 
   const text = item.text.trim()
@@ -66,7 +67,7 @@ export default function CaptureRoute() {
   const summary = countsText(item.source, item.text, item.files)
 
   return (
-    <main className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="share-target">
+    <div className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="share-target">
       <header className="grid gap-1">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Icon icon={Share2} className="text-fg-muted" />
@@ -102,10 +103,10 @@ export default function CaptureRoute() {
       </div>
       {picking ? (
         <JobPicker
-          onPick={key => navigate(`/jobs/${encodeURIComponent(key)}`, { replace: true, state: { addToJob: { text: item.text, files: files(item), captureId: item.id } } })}
+          onPick={key => navigate(`/jobs/${encodeURIComponent(key)}?shared=${encodeURIComponent(item.id)}`, { replace: true })}
         />
       ) : null}
-    </main>
+    </div>
   )
 }
 
@@ -163,7 +164,8 @@ function JobFirst() {
     }
   }, [])
   return (
-    <main className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="photo-or-note">
+    <div className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="photo-or-note">
+      <NoPrimary />
       <header className="grid gap-1">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Icon icon={Camera} className="text-fg-muted" />
@@ -186,6 +188,6 @@ function JobFirst() {
           </ul>
         </section>
       ) : null}
-    </main>
+    </div>
   )
 }

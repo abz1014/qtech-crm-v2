@@ -110,11 +110,14 @@ function NextStepText({ step }: { step: NextStep }) {
 function CustomerCell({ row }: { row: OrderListRow }) {
   return (
     <span className="grid min-w-[180px] max-w-[460px] gap-px whitespace-normal">
-      <span className="font-medium">
+      {/* Two lines at most each, the whole text in the title: a long name or item list must not make the row (and a windowed list's row height) tall. */}
+      <span className="line-clamp-2 min-w-0 font-medium [overflow-wrap:anywhere]" title={row.siteName ? `${row.companyName} · ${row.siteName}` : row.companyName}>
         {row.companyName}
         {row.siteName ? <span className="font-regular text-fg-muted">{` · ${row.siteName}`}</span> : null}
       </span>
-      <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{row.what ? `${row.what}${row.moreLines ? ' + more' : ''}` : <span className="text-fg-muted">No lines yet</span>}</span>
+      <span className="line-clamp-2 min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]" title={row.what ? `${row.what}${row.moreLines ? ' + more' : ''}` : undefined}>
+        {row.what ? `${row.what}${row.moreLines ? ' + more' : ''}` : <span className="text-fg-muted">No lines yet</span>}
+      </span>
     </span>
   )
 }
@@ -129,7 +132,7 @@ function OrderCell({ row }: { row: OrderListRow }) {
     <span className="grid min-w-[140px] max-w-[300px] gap-px whitespace-normal">
       <span className="num whitespace-nowrap">{orderRef(row.number)}</span>
       {/* Each part is kept whole ("PO RFF-PO-88213", "Test Sales"); the line breaks between them, never inside one. */}
-      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:break-word]">
+      <span className="line-clamp-2 min-w-0 text-sm text-fg-muted [overflow-wrap:break-word]" title={parts.length ? parts.join(' · ') : undefined}>
         {parts.length === 0
           ? ' '
           : parts.map((part, i) => (

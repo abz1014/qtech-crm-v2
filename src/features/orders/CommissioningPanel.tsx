@@ -24,8 +24,11 @@ import { DEFAULT_VISIT_TYPE, visitPatch, visitTypeLabel, type VisitValue } from 
  * is in the header: when that is "Mark done today" it is not repeated here). An engineer has no button here and works from "Your job" at
  * the top of the page: "Mark done today" (1 tap, nothing typed) and "Change planned date".
  *
- * A3: scope, gate pass and site phone are not fields; they live in the order notes and the site contact, shown read only to an engineer.
+ * A3: scope, gate pass and site phone are not fields; they live in the order notes and the site contact, shown to an engineer, who can add a note (On site card) but not edit.
  */
+/** What an engineer is told under Order notes: they cannot edit the order's notes, but they can add a line from the On site card. */
+export const ENGINEER_NOTES_HINT = 'Add a note with Add photo or note'
+
 export function CommissioningPanel({
   order,
   engineers,
@@ -101,7 +104,7 @@ export function CommissioningPanel({
               Order notes
               {isEngineer ? (
                 <span className="inline-flex items-center gap-1">
-                  <Icon icon={Lock} size="chip" /> Read only
+                  <Icon icon={Lock} size="chip" /> {ENGINEER_NOTES_HINT}
                 </span>
               ) : canEdit ? (
                 <Button size="sm" variant="quiet" icon={Pencil} onClick={() => setEditingNotes(true)}>

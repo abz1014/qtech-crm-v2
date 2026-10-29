@@ -49,12 +49,16 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await page.getByRole('textbox', { name: 'Find the job' }).fill(s.customer)
     await page.getByRole('button', { name: new RegExp(`Job ${s.rfq.number} · ${s.customer}`) }).click()
 
-    await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}$`))
+    await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}\\?shared=`))
     await expect(page.getByTestId('guess-line')).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Paste here' })).toHaveValue(/gate pass is needed/)
+    // a reload keeps the shared message: it is read again from this device by the id in the address
+    await page.reload()
     await expect(page.getByRole('textbox', { name: 'Paste here' })).toHaveValue(/gate pass is needed/)
     await page.getByRole('button', { name: 'Note', exact: true }).click()
     await page.getByRole('button', { name: 'Add note' }).click()
     await expect(page.getByRole('status').filter({ hasText: `Added to Job ${s.rfq.number}` })).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}$`))
     const notes = await must(rest<{ notes: string | null }[]>('admin', `rfqs?id=eq.${s.rfq.id}&select=notes`))
     expect(notes[0].notes).toContain('the gate pass is needed 2 days ahead')
   })

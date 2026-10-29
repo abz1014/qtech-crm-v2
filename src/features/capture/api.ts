@@ -1,94 +1,59 @@
-import { requireSupabase, unwrap } from '@/lib/supabase'
-import type { RecentVisit } from '@/lib/capture/recents'
-import { sortOpenQuestions, type Candidate, type OrderCandidate } from '@/features/capture/model'
+import { PlainError } from '@/lib/errors/plainError'
+import { requireSupabase } from '@/lib/supabase'
 
-/*
- * Capture reads and the one write of its own (R22). The destinations reuse the RFQ writes (answer a question, add questions,
- * attach a file in src/features/rfqs/api.ts); this file only lists the RFQs to offer and appends to an RFQ's notes.
- */
-type Row = { id: string; number: number; company_id: string; owner_id: string | null }
+/* Capture's note reads and writes (R22): the notes text of an RFQ or an order. */
+
+/** Raised when a note could not be added because someone else kept changing the same notes. Nothing was written. */
+export const NOTES_CHANGED = 'Someone else changed these notes at the same moment. Nothing was lost: try again.'
 
 /**
- * The RFQs Capture offers: those opened recently on this device (always), and the person's own open RFQs that have a question
- * waiting. Each comes with its open questions (unanswered, not withdrawn).
+ * Change the notes of an order or an RFQ without overwriting what someone else saved in between. The notes are one text column,
+ * so two people saving at once (read, change, write) would lose one change. There is no migration: the write is conditional on
+ * the row's `updated_at` as last read (a trigger moves it on every change), and when another save got in first the row matches
+ * nothing, so the notes are read again and `build` is applied to the fresh text. One retry, then a plain message.
+ * `build` gets the current notes and returns the whole new text (or null for none); it may throw a PlainError to stop.
+ * Returns what was there when the write went through (`before`), what was written (`after`) and the row's new `updated_at`.
  */
-export async function listCandidates(recents: readonly RecentVisit[], userId: string): Promise<Candidate[]> {
+export async function changeNotesSafely(
+  table: 'orders' | 'rfqs',
+  id: string,
+  build: (current: string | null) => string | null,
+): Promise<{ before: string | null; after: string | null; updatedAt: string | null }> {
   const db = requireSupabase()
-  const recentIds = recents.map(r => r.id)
-  const [byRecent, mine] = await Promise.all([
-    recentIds.length ? db.from('rfqs').select('id, number, company_id, owner_id').in('id', recentIds) : Promise.resolve({ data: [] as Row[], error: null }),
-    db.from('rfqs').select('id, number, company_id, owner_id').eq('owner_id', userId).is('closed_on', null).order('number', { ascending: false }).limit(40),
-  ])
-  const rows = new Map<string, Row>()
-  for (const r of [...unwrap(byRecent), ...unwrap(mine)]) rows.set(r.id, r)
-  const ids = [...rows.keys()]
-  if (ids.length === 0) return []
-  const [companies, clars] = await Promise.all([
-    db.from('companies').select('id, name, city').in('id', [...new Set([...rows.values()].map(r => r.company_id))]),
-    db.from('clarifications').select('id, rfq_id, question, created_at, last_asked_at, ask_count').in('rfq_id', ids).is('answered_at', null).is('withdrawn_at', null),
-  ])
-  const companyRows = unwrap(companies)
-  const names = new Map(companyRows.map(c => [c.id, c.name]))
-  const cityOf = new Map(companyRows.map(c => [c.id, c.city]))
-  const openBy = new Map<string, Candidate['open']>()
-  for (const c of unwrap(clars)) {
-    const list = openBy.get(c.rfq_id) ?? []
-    list.push({ id: c.id, question: c.question, asked: Boolean(c.last_asked_at) || c.ask_count > 0, askedAt: c.last_asked_at, createdAt: c.created_at })
-    openBy.set(c.rfq_id, list)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const read = await db.from(table).select('notes, updated_at').eq('id', id).maybeSingle()
+    if (read.error) throw read.error
+    const row = read.data as { notes: string | null; updated_at: string } | null
+    if (!row) throw new PlainError('That job could not be found.')
+    const after = build(row.notes ?? null)
+    const write = await db.from(table).update({ notes: after }).eq('id', id).eq('updated_at', row.updated_at).select('id, updated_at')
+    if (write.error) throw write.error
+    const written = (write.data ?? []) as { updated_at?: string }[]
+    if (written.length > 0) return { before: row.notes ?? null, after, updatedAt: written[0].updated_at ?? null }
   }
-  const visited = new Map(recents.map(r => [r.id, r.at]))
-  return [...rows.values()]
-    .map<Candidate>(r => ({
-      id: r.id,
-      number: r.number,
-      companyName: names.get(r.company_id) ?? 'Unknown company',
-      ownerId: r.owner_id,
-      city: cityOf.get(r.company_id) ?? null,
-      openedAt: visited.get(r.id) ?? null,
-      open: sortOpenQuestions(openBy.get(r.id) ?? []),
-    }))
-    .filter(c => c.openedAt !== null || c.open.length > 0)
+  throw new PlainError(NOTES_CHANGED)
 }
 
-export async function getRfqNotes(rfqId: string): Promise<string | null> {
-  const db = requireSupabase()
-  const { data, error } = await db.from('rfqs').select('notes').eq('id', rfqId).maybeSingle()
-  if (error) throw error
-  return (data as { notes: string | null } | null)?.notes ?? null
+/** Add to the notes (see changeNotesSafely): `build` returns the whole new text. */
+export async function appendNotesSafely(table: 'orders' | 'rfqs', id: string, build: (current: string | null) => string) {
+  const out = await changeNotesSafely(table, id, build)
+  return { before: out.before, after: out.after as string, updatedAt: out.updatedAt }
 }
 
-export async function setRfqNotes(rfqId: string, notes: string | null): Promise<void> {
-  const db = requireSupabase()
-  const { error } = await db.from('rfqs').update({ notes }).eq('id', rfqId)
-  if (error) throw error
-}
+export const CANNOT_UNDO_NOTE = 'The note could not be taken back: the notes were changed after you saved it. Nothing was changed.'
 
-/** The orders opened lately on this device (R22), newest first. */
-export async function listOrderCandidates(recents: readonly RecentVisit[]): Promise<OrderCandidate[]> {
-  const ids = recents.map(r => r.id)
-  if (ids.length === 0) return []
-  const db = requireSupabase()
-  const { data, error } = await db.from('orders').select('id, number, companies(name)').in('id', ids)
-  if (error) throw error
-  type Row = { id: string; number: number; companies: { name: string } | { name: string }[] | null }
-  const visited = new Map(recents.map(r => [r.id, r.at]))
-  return ((data ?? []) as unknown as Row[])
-    .map(r => {
-      const c = Array.isArray(r.companies) ? r.companies[0] : r.companies
-      return { id: r.id, number: r.number, companyName: c?.name ?? 'Unknown company', openedAt: visited.get(r.id) ?? null }
-    })
-    .sort((a, b) => (b.openedAt ?? 0) - (a.openedAt ?? 0))
-}
-
-export async function getOrderNotes(orderId: string): Promise<string | null> {
-  const db = requireSupabase()
-  const { data, error } = await db.from('orders').select('notes').eq('id', orderId).maybeSingle()
-  if (error) throw error
-  return (data as { notes: string | null } | null)?.notes ?? null
-}
-
-export async function setOrderNotes(orderId: string, notes: string | null): Promise<void> {
-  const db = requireSupabase()
-  const { error } = await db.from('orders').update({ notes }).eq('id', orderId)
-  if (error) throw error
+/**
+ * Take back the note a save appended. `before` and `after` are the notes around that save. If the notes are still exactly `after`
+ * (updated_at unchanged, which the conditional write checks) they go back to `before`; if someone changed them since, only our own
+ * appended text is removed from the fresh notes, and if that text is no longer there the undo stops with a plain message.
+ */
+export function undoAppendedNote(table: 'orders' | 'rfqs', id: string, saved: { before: string | null; after: string }) {
+  const entry = saved.after.slice(saved.before?.trim() ? saved.before.trimEnd().length : 0)
+  return changeNotesSafely(table, id, current => {
+    if (current === saved.after) return saved.before
+    const at = current === null ? -1 : current.lastIndexOf(entry)
+    if (current === null || at < 0) throw new PlainError(CANNOT_UNDO_NOTE)
+    const left = (current.slice(0, at) + current.slice(at + entry.length)).trimEnd()
+    return left.trim() ? left : null
+  })
 }
