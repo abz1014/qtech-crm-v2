@@ -374,6 +374,8 @@ export interface QuoteLineRow {
   weightUnit?: 'kg' | 'g' | 'lb'
   /** Country of origin the supplier gave, else null. */
   origin?: string | null
+  /** The note on the line (supplier_quote_lines.notes), else null. */
+  notes?: string | null
 }
 
 export interface InquiryRow {
@@ -413,7 +415,7 @@ export interface InquiryRow {
 }
 
 /** Quote line columns with prices (admin and sales) and without (an engineer never fetches a price: owner decision 2026-10-22). */
-const QUOTE_LINE_COLS = 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on, origin, weight, weight_unit'
+const QUOTE_LINE_COLS = 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on, origin, weight, weight_unit, notes'
 const QUOTE_LINE_COLS_NO_PRICES = 'id, inquiry_id, rfq_item_id, currency, lead_time, in_stock'
 
 /**
@@ -470,7 +472,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
   }
   for (const l of unwrap(legs)) if (l.currency && !lastCurrency.has(l.supplier_id)) lastCurrency.set(l.supplier_id, l.currency.trim())
   const linesBy = new Map<string, QuoteLineRow[]>()
-  type DbLine = { id: string; inquiry_id: string; rfq_item_id: string; unit_price?: number; currency: string; lead_time: string | null; in_stock: boolean | null; fx_rate_pkr?: number | null; fx_rate_on?: string | null; origin?: string | null; weight?: number | null; weight_unit?: string }
+  type DbLine = { id: string; inquiry_id: string; rfq_item_id: string; unit_price?: number; currency: string; lead_time: string | null; in_stock: boolean | null; fx_rate_pkr?: number | null; fx_rate_on?: string | null; origin?: string | null; weight?: number | null; weight_unit?: string; notes?: string | null }
   for (const l of unwrap(lines) as unknown as DbLine[]) {
     const row: QuoteLineRow = {
       id: l.id,
@@ -485,6 +487,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       weight: l.weight === null || l.weight === undefined ? null : Number(l.weight),
       weightUnit: l.weight_unit === 'g' || l.weight_unit === 'lb' ? l.weight_unit : 'kg',
       origin: l.origin ?? null,
+      notes: l.notes ?? null,
     }
     linesBy.set(l.inquiry_id, [...(linesBy.get(l.inquiry_id) ?? []), row])
   }
