@@ -34,6 +34,7 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'team.deactivate': {},
   'team.reactivate': {},
   'company-profile.update': {},
+  'gst-deadlines.save': {},
   'target.save': {},
   'category.save': {},
   'category.merge': {},

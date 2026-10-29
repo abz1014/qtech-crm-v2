@@ -169,8 +169,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // (not_yours, admin_only, not_found, has_order, has_invoice, has_payment, has_expense, has_po, bank_ticked, voided,
   // correction_chain, not_latest, in_use, linked_to_order) that mapPgError passes on as `hint`.
   { match: /^Only the person who entered this, or an admin, can change it\.$/ },
-  // 0101: an engineer's visit time and type, on a site assigned to them only (HINT not_assigned)
-  { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'You can set the visit time and type only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
+  // 0101: an engineer's visit type, on a site assigned to them only (HINT not_assigned)
+  { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'You can set the visit type only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
   // 0098: a product category is renamed and curated by an admin (HINT admin_only)
   { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },

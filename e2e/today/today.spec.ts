@@ -245,7 +245,7 @@ test.describe('Today: role-aware', () => {
     const job = page.locator('li[data-rule="job_commissioning"]').filter({ hasText: planned.ref })
     // by day (redesign phase 7): the job is under Tomorrow, the row says the customer and the kind of visit
     await expect(page.getByRole('region', { name: 'Tomorrow' }).locator('li[data-rule="job_commissioning"]').filter({ hasText: planned.ref })).toHaveCount(1)
-    await expect(job).toContainText('Commissioning')
+    await expect(job).toContainText('Installation') // a planned visit with no type is an installation (0109)
     await expect(job).toContainText(planned.customer)
     await expect(page.locator('li[data-rule="job_on_site"]').filter({ hasText: onSite.ref })).toContainText('Goods delivered to site: set the commissioning date')
     // one list for an engineer: no Quotations / Suppliers / Money tabs

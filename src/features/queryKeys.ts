@@ -163,6 +163,8 @@ function settings() {
     all,
     team: () => [...all, 'team'] as const,
     profile: () => [...all, 'company-profile'] as const,
+    /** 0110: the GST pay-by and file-by days and the one-off dates. */
+    gstDeadlines: () => [...all, 'gst-deadlines'] as const,
     /** The signed-in person's own users row (Your details). */
     myDetails: () => [...all, 'my-details'] as const,
     /** M06: every targets read (rows and progress); invalidate this one after any target write. */

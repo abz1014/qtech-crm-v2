@@ -43,7 +43,6 @@ export const header = (over: Partial<OrderHeader> = {}, state: Partial<NonNullab
   paymentTermsDays: 30,
   needsCommissioning: false,
   plannedOn: null,
-  visitTime: null,
   visitType: null,
   doneOn: null,
   cancelledOn: null,

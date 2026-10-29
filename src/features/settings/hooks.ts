@@ -3,9 +3,11 @@ import { useSeesPrices } from '@/app/session'
 import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/settings/api'
+import * as gstApi from '@/features/settings/gstApi'
 import type { Role } from '@/features/settings/api'
 import type { CategoryGroup } from '@/features/settings/categoriesModel'
 import type { ProfileValues } from '@/features/settings/companyProfile'
+import { DEFAULT_GST_DEADLINES } from '@/features/settings/gstDeadlines'
 
 /*
  * Settings hooks (R01 pattern): keys from the factory, what refreshes after a write from the
@@ -103,6 +105,42 @@ export function useSaveCompanyProfile() {
       client.setQueryData(qk.settings.profile(), saved)
       return invalidateAfter(client, 'company-profile.update', {})
     },
+  })
+}
+
+/**
+ * The GST pay-by and file-by dates (0110). Admin and sales read them; an engineer sees nothing GST, so nothing is requested for them
+ * and they get the starting days (which nothing of theirs shows).
+ */
+export const gstDeadlinesQuery = () => ({ queryKey: qk.settings.gstDeadlines(), queryFn: () => gstApi.getGstDeadlines(), staleTime: 60_000 })
+
+export function useGstDeadlines() {
+  const sees = useSeesPrices()
+  const q = useQuery({ ...gstDeadlinesQuery(), enabled: sees })
+  return { ...q, deadlines: q.data ?? DEFAULT_GST_DEADLINES }
+}
+
+export function useSaveGstDays() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { payDay: number; returnDay: number }) => gstApi.saveGstDays(v.payDay, v.returnDay),
+    onSuccess: () => invalidateAfter(client, 'gst-deadlines.save', {}),
+  })
+}
+
+export function useSaveGstOverride() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { month: string; payBy: string | null; returnBy: string | null }) => gstApi.saveGstOverride(v),
+    onSuccess: () => invalidateAfter(client, 'gst-deadlines.save', {}),
+  })
+}
+
+export function useDeleteGstOverride() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (month: string) => gstApi.deleteGstOverride(month),
+    onSuccess: () => invalidateAfter(client, 'gst-deadlines.save', {}),
   })
 }
 

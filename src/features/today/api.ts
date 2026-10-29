@@ -1,8 +1,9 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { toBusinessDate } from '@/lib/dates'
-import { visitTime } from '@/features/orders/lib/visit'
 import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart, today1 } from '@/features/today/rules'
+import { getGstDeadlines } from '@/features/settings/gstApi'
+import { gstDatesFor } from '@/features/settings/gstDeadlines'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { fetchReceivablesList, type ReceivablesListRow } from '@/features/money/payments/api'
 import { billPeriod, billPeriods } from '@/features/money/expenses/forMonth'
@@ -307,7 +308,6 @@ type JobOrderRow = {
   owner_id: string | null
   company_id: string
   commissioning_planned_on: string | null
-  commissioning_time?: string | null
   visit_type?: string | null
   company_sites: { name: string } | { name: string }[] | null
 }
@@ -328,7 +328,7 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
     const chunk = ids.slice(i, i + 100)
     const [states, orders, legs, imported] = await Promise.all([
       db.from('v_order_state').select('order_id, lifecycle, goods_state, commissioning_state, data_trust').in('order_id', chunk).eq('lifecycle', 'active'),
-      db.from('orders').select('id, number, owner_id, company_id, commissioning_planned_on, commissioning_time, visit_type, company_sites(name)').in('id', chunk) as unknown as PromiseLike<{ data: JobOrderRow[] | null; error: PgError | null }>,
+      db.from('orders').select('id, number, owner_id, company_id, commissioning_planned_on, visit_type, company_sites(name)').in('id', chunk) as unknown as PromiseLike<{ data: JobOrderRow[] | null; error: PgError | null }>,
       db.from('supplier_orders').select('order_id, delivered_on').in('order_id', chunk).not('delivered_on', 'is', null),
       // which of them came from the old CRM: the ids only (legacy_source itself may hold old prices, so it is never read here)
       db.from('orders').select('id').in('id', chunk).not('legacy_source', 'is', null),
@@ -352,7 +352,6 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
         goodsState: s.goods_state ?? 'n_a',
         commissioningState: s.commissioning_state ?? 'n_a',
         plannedOn: o.commissioning_planned_on,
-        visitTime: visitTime(o.commissioning_time),
         visitType: o.visit_type ?? null,
         deliveredOn: delivered.get(o.id) ?? null,
         legacy: legacy.has(o.id) || s.data_trust === 'estimated_dates',
@@ -401,7 +400,9 @@ async function loadGst(today: string): Promise<GstFact> {
         .is('legacy_source', null)
         .eq('settled_before_cutover', false),
     ) ?? []
-  return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length }
+  // the dates are the admin's settings (0110), not a fixed 15th and 18th
+  const { payBy, returnBy } = gstDatesFor(await getGstDeadlines(), month)
+  return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length, payBy, returnBy }
 }
 
 /** P3-D, admin only: engineers' pending "I paid" claims (0087): how many, and the day the oldest was made. */

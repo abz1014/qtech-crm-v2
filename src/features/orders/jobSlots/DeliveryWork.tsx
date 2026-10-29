@@ -7,7 +7,7 @@ import { useOrderWork } from '@/features/orders/jobSlots/useOrderWork'
 /*
  * The Delivery stage of the job page (P5-D2): the goods coming in and the installation. "Delivered today" (ONE button per supplier
  * order, here and nowhere else on this page), Chase goods and the expected date (taps to edit) come from LegsPanel with
- * part="delivery"; then Commissioning (plan it: date, visit time and type, engineers; Mark done), the order page's own panel.
+ * part="delivery"; then Commissioning (plan it: date, visit type, engineers; Mark done), the order page's own panel.
  * An engineer gets neither: their buttons are on the site card (EngineerActions).
  */
 export default function DeliveryWork({ job }: JobSlotProps) {
