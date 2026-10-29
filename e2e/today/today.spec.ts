@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName, type Role } from '../support/stack'
-import { showAllTodo } from '../support/todo'
+import { dueRows, showAllTodo } from '../support/todo'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
@@ -116,8 +116,8 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
     await expect(row).toBeVisible()
     // Asked 9 days ago, bid in 14 days: the chase has been due for days, so it is in "Overdue or due today" and the chip says how late.
-    const overdue = page.locator('section[data-block="late"], section[data-block="today"]')
-    await expect(overdue.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible()
+    // Late or today, wherever it is drawn: a block, or the "N more" fold when older late rows of the shared data take the seven places.
+    await expect(dueRows(page).and(page.locator('li[data-rule="chase_customer"]')).filter({ hasText: s.ref })).toBeVisible()
     await expect(row.getByText(/^\d+ days? overdue$/)).toBeVisible()
     await expect(page.getByRole('region', { name: 'Ready to move' }).filter({ hasText: s.ref })).toHaveCount(0)
     await expect(page.locator('[data-needs-you-count]')).not.toHaveText('0') // the one count (redesign phase 0)
