@@ -129,27 +129,31 @@ export function PasteZone({
     setHint(null)
     try {
       const clip = navigator.clipboard
-      if (clip?.read) {
-        for (const item of await clip.read()) {
-          const picture = item.types.find(t => t.startsWith('image/'))
-          if (picture && onPicture) {
-            const blob = await item.getType(picture)
-            onPicture(new File([blob], `pasted.${picture.split('/')[1] ?? 'png'}`, { type: picture }))
-            return
-          }
-          const fromHtml = item.types.includes('text/html') ? htmlTableText(await (await item.getType('text/html')).text()) : null
-          if (fromHtml?.trim()) {
-            onText(fromHtml)
-            return
-          }
-          if (item.types.includes('text/plain')) {
-            const text = await (await item.getType('text/plain')).text()
-            if (text.trim()) {
-              onText(text)
+      try {
+        if (clip?.read) {
+          for (const item of await clip.read()) {
+            const picture = item.types.find(t => t.startsWith('image/'))
+            if (picture && onPicture) {
+              const blob = await item.getType(picture)
+              onPicture(new File([blob], `pasted.${picture.split('/')[1] ?? 'png'}`, { type: picture }))
               return
+            }
+            const fromHtml = item.types.includes('text/html') ? htmlTableText(await (await item.getType('text/html')).text()) : null
+            if (fromHtml?.trim()) {
+              onText(fromHtml)
+              return
+            }
+            if (item.types.includes('text/plain')) {
+              const text = await (await item.getType('text/plain')).text()
+              if (text.trim()) {
+                onText(text)
+                return
+              }
             }
           }
         }
+      } catch {
+        // The rich read (pictures, HTML) was refused: the plain text is tried next, before giving up.
       }
       const text = clip?.readText ? await clip.readText() : ''
       if (text.trim()) {

@@ -30,7 +30,7 @@ function Priority() {
 /** "RFQ-0177 · their ref ENQ-2211": its own line, under what was asked. */
 function Refs({ row }: { row: BoardRow }) {
   return (
-    <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]" data-refs>
+    <span className="line-clamp-1 min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]" data-refs title={row.customerRef ? `${rfqRef(row.number)} · their ref ${row.customerRef}` : undefined}>
       <span className="num">{rfqRef(row.number)}</span>
       {row.customerRef ? ` · their ref ${row.customerRef}` : null}
     </span>
@@ -42,12 +42,12 @@ export function RfqCell({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-[220px] max-w-[440px] gap-px whitespace-normal">
       <span className="flex min-w-0 items-center gap-[0.375rem]">
-        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="min-w-0 font-medium text-fg hover:underline [overflow-wrap:anywhere]">
+        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="line-clamp-2 min-w-0 font-medium text-fg hover:underline [overflow-wrap:anywhere]">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
       </span>
-      <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]" data-asked title={askedText(row, 500)}>
+      <span className="line-clamp-2 min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]" data-asked title={askedText(row, 500)}>
         {askedText(row)}
       </span>
       <Refs row={row} />

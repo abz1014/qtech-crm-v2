@@ -108,6 +108,7 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
     const itemNumber = o.rfqItemId ? (numberOf.get(o.rfqItemId) ?? null) : null
     let blocked: string | null = null
     if (!o.rfqItemId || itemNumber === null) blocked = 'No matching item: enter this one by hand'
+    else if (o.unitPrice === null && o.flags.includes('price_uncertain')) blocked = `A price (${o.suspectPrice ?? '?'}) sits where it may belong to another row or column: check the quotation and enter it by hand`
     else if (o.unitPrice === null) blocked = o.flags.includes('ambiguous_separator') ? 'The figure could be read two ways (1.234 or 1,234): enter it by hand' : 'No price found on this line'
     else if (!o.currency && !currency) blocked = 'No currency stated: pick the supplier’s currency above first'
     else if (o.currency && currency && o.currency !== currency) blocked = `${o.currency} price: this row is in ${currency}, enter it separately`

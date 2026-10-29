@@ -57,8 +57,14 @@ function JobCell({ job }: { job: JobRow }) {
 function CustomerCell({ job }: { job: JobRow }) {
   return (
     <span className="grid min-w-[160px] max-w-[320px] gap-px whitespace-normal">
-      <span className="font-medium">{job.companyName}</span>
-      {job.siteName ? <span className="text-sm text-fg-muted">{job.siteName}</span> : null}
+      <span className="line-clamp-2 min-w-0 font-medium [overflow-wrap:anywhere]" title={job.companyName}>
+        {job.companyName}
+      </span>
+      {job.siteName ? (
+        <span className="line-clamp-1 min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]" title={job.siteName}>
+          {job.siteName}
+        </span>
+      ) : null}
     </span>
   )
 }
@@ -130,7 +136,12 @@ export default function JobsListPage() {
       header: 'Items',
       value: j => j.items,
       hideBelowMd: true,
-      cell: j => <span className="block min-w-[160px] max-w-[320px] whitespace-normal text-fg-2 [overflow-wrap:anywhere]">{j.items || <span className="text-fg-muted">No items yet</span>}</span>,
+      // Two lines at most (a long item list would make the row, and with it every row of a windowed list, very tall); the whole list is the title.
+      cell: j => (
+        <span className="line-clamp-2 min-w-[160px] max-w-[320px] whitespace-normal text-fg-2 [overflow-wrap:anywhere]" title={j.items || undefined}>
+          {j.items || <span className="text-fg-muted">No items yet</span>}
+        </span>
+      ),
     },
     {
       id: 'stands',

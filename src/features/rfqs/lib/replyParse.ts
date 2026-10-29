@@ -34,6 +34,8 @@ export type OfferFlag =
   | 'derived_from_total'
   | 'match_by_position'
   | 'no_item_match'
+  /** The price was read from a cell that is not under the table's price heading, or does not fit the row's quantity and total: it may belong to another row. The price is left blank (`suspectPrice` keeps the figure) for the person to check. */
+  | 'price_uncertain'
   /** The supplier offers another model than the one asked for (`offeredPn`). */
   | 'substitute'
 
@@ -80,6 +82,8 @@ export interface ReplyOffer {
   moq: number | null
   validityText: string | null
   validityDays: number | null
+  /** With `price_uncertain`: the figure that was read and left out, shown so the person can check it against the quotation. */
+  suspectPrice?: number
   /** Further prices on the same line (price breaks, "was/now"); the first one is `unitPrice`. */
   otherPrices: Array<{ unitPrice: number; currency: ReplyCurrency | null }>
   /** Fields filled from the reply's own general statements, not from this item's line. */
