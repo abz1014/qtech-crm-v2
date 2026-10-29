@@ -294,6 +294,12 @@ function ExpenseFormReady({
   // Amount first: the person types it and presses Enter (A6.5: one expense in the default category). After a restore the
   // focus waits a tick, so the amount field shows the kept number (a focused number field does not take outside changes).
   const draftKey = expense ? null : expenseDraftKey(context?.orderId, context?.legId)
+  // Focus follows the render that carries the restored values (a timer could win the race on a loaded machine, leaving the focused
+  // field empty and deaf to the restored amount).
+  const [focusAfterRestore, setFocusAfterRestore] = useState(false)
+  useEffect(() => {
+    if (focusAfterRestore) amountRef.current?.focus()
+  }, [focusAfterRestore])
   useEffect(() => {
     const kept = draftKey ? loadExpenseDraft(draftKey) : null
     if (!kept) {
@@ -302,7 +308,7 @@ function ExpenseFormReady({
       for (const k of ['amount', 'categoryId', 'paidOn', 'note'] as const)
         if (kept[k] !== undefined) form.setValue(k, kept[k] as never, { shouldDirty: true })
       if (kept.note) setShowNote(true)
-      setTimeout(() => amountRef.current?.focus(), 0)
+      setFocusAfterRestore(true)
     }
     if (!draftKey) return
     const sub = form.watch(v =>
