@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
@@ -8,6 +9,7 @@ import { qk } from '@/features/queryKeys'
 import type { JobFacts, JobRow } from '@/features/jobs/api'
 import JobsScreen from '@/features/jobs/JobsScreen'
 import { OFFLINE_TEXT } from '@/features/jobs/EngineerActions'
+import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 
 /*
  * The engineer's Job page (P7-B): three big buttons, one of them green, no price, and a plain line (and no sending) with no signal.
@@ -25,7 +27,7 @@ const leg = (over: Record<string, unknown> = {}) => ({
   last_chased_on: null, chase_count: 0, inquiry_id: null, created_at: '2026-10-01T00:00:00Z', ...over,
 })
 
-function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[]; state?: unknown } = {}) {
+function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[]; state?: unknown; url?: string } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
   client.setQueryData(qk.jobs.part(J.key, 'facts'), FACTS)
   client.setQueryData(qk.rfqs.part('r1', 'items'), [])
@@ -44,7 +46,7 @@ function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof le
     <QueryClientProvider client={client}>
       <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ali Raza', role: 'engineer' } }}>
         <ToastProvider>
-          <MemoryRouter initialEntries={[{ pathname: '/jobs/139', state: opts.state ?? null }]}>
+          <MemoryRouter initialEntries={[{ pathname: '/jobs/139', search: opts.url ? opts.url.slice(opts.url.indexOf('?')) : '', state: opts.state ?? null }]}>
             <Routes>
               <Route path="/jobs/*" element={<JobsScreen />} />
             </Routes>
@@ -55,7 +57,23 @@ function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof le
   )
 }
 
-afterEach(() => vi.restoreAllMocks())
+const kept = vi.hoisted(() => ({ deleted: [] as string[] }))
+vi.mock('@/lib/capture/store', async importOriginal => {
+  const real = await importOriginal<typeof import('@/lib/capture/store')>()
+  return {
+    ...real,
+    getCapture: (id: string) => Promise.resolve(id === 'cap-9' ? { id, text: 'Gate pass after 3pm', files: [], source: 'share', createdAt: 0, expiresAt: 1e15 } : null),
+    deleteCapture: (id: string) => {
+      kept.deleted.push(id)
+      return Promise.resolve()
+    },
+  }
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  kept.deleted.length = 0
+})
 
 describe("the engineer's Job page", () => {
   it('has the three big buttons, one green, and no price', async () => {
@@ -100,5 +118,42 @@ describe("the engineer's Job page", () => {
   it('arriving from Photo or note opens the photo-or-note box at once', async () => {
     mount({ state: { photoOrNote: true } })
     expect(await screen.findByRole('dialog', { name: /Add photo or note/ })).toBeInTheDocument()
+  })
+
+  it('Save note adds to the order notes as they are now (re-read, conditional on updated_at), never over a stale copy', async () => {
+    const db = installFakeDb((c: FakeCall) => {
+      if (c.target === 'orders' && c.verb === 'select' && c.ops.some(([n, a]) => n === 'select' && a[0] === 'notes, updated_at')) return { data: { notes: 'Gate pass at 3pm', updated_at: 'T1' } }
+      if (c.target === 'orders' && c.verb === 'update') return { data: [{ id: 'o1' }] }
+      return { data: [] }
+    })
+    try {
+      mount({ state: { photoOrNote: true } })
+      const user = userEvent.setup()
+      await user.type(await screen.findByRole('textbox', { name: 'Note' }), 'Valve was leaking')
+      await user.click(screen.getByRole('button', { name: 'Save note' }))
+      await waitFor(() => expect(db.calls.some(c => c.target === 'orders' && c.verb === 'update')).toBe(true))
+      const write = db.calls.find(c => c.target === 'orders' && c.verb === 'update') as FakeCall
+      const patch = opArgs(write, 'update')?.[0] as { notes: string }
+      expect(patch.notes.startsWith('Gate pass at 3pm' + String.fromCharCode(10))).toBe(true)
+      expect(patch.notes).toContain('Ali Raza: Valve was leaking')
+      expect(write.ops).toContainEqual(['eq', ['updated_at', 'T1']])
+    } finally {
+      db.uninstall()
+    }
+  })
+
+  it('a shared item in the address (?shared=id) opens the box with it, and a reload (the same address again) brings it back', async () => {
+    const first = mount({ url: '/jobs/139?shared=cap-9' })
+    expect(await screen.findByRole('dialog', { name: /Add photo or note/ })).toBeInTheDocument()
+    expect(await screen.findByRole('textbox', { name: 'Note' })).toHaveValue('Gate pass after 3pm')
+    first.unmount()
+    mount({ url: '/jobs/139?shared=cap-9' })
+    expect(await screen.findByRole('textbox', { name: 'Note' })).toHaveValue('Gate pass after 3pm')
+    expect(kept.deleted).toEqual([])
+  })
+
+  it('an expired shared item says so in plain words', async () => {
+    mount({ url: '/jobs/139?shared=cap-none' })
+    expect(await screen.findByTestId('shared-gone')).toHaveTextContent('no longer on this device')
   })
 })

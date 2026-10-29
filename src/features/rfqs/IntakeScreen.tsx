@@ -127,7 +127,7 @@ const newKey = () => `i${++keySeq}`
  */
 export type IntakeMode = 'rfq' | 'enquiry'
 
-export default function IntakeScreen({ mode = 'rfq' }: { mode?: IntakeMode } = {}) {
+export default function IntakeScreen({ mode = 'rfq', onFilePicked }: { mode?: IntakeMode; /** A file chosen with this form's own "Choose PDF or photo" button (New enquiry shows it on its left side). */ onFilePicked?: (file: File) => void } = {}) {
   const [round, setRound] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
@@ -142,6 +142,7 @@ export default function IntakeScreen({ mode = 'rfq' }: { mode?: IntakeMode } = {
     <IntakeForm
       key={`${round}|${captureId}|${companyParam}|${supplierParam}`}
       mode={mode}
+      onFilePicked={onFilePicked}
       onAnother={() => {
         // A fresh form does not take again what the last one arrived with (a company, a supplier, a captured message).
         if (captureId || companyParam || supplierParam) navigate(mode === 'enquiry' ? '/enquiries/new' : '/rfqs/new', { replace: true })
@@ -151,7 +152,7 @@ export default function IntakeScreen({ mode = 'rfq' }: { mode?: IntakeMode } = {
   )
 }
 
-function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMode }) {
+function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; mode: IntakeMode; onFilePicked?: (file: File) => void }) {
   const enquiry = mode === 'enquiry'
   const navigate = useNavigate()
   const nextJob = useNextJobNumber(enquiry)
@@ -1064,7 +1065,10 @@ function IntakeForm({ onAnother, mode }: { onAnother: () => void; mode: IntakeMo
                       <PdfPickButton
                         label="Choose PDF or photo"
                         subject="items"
-                        onFile={f => pickedFiles.current.push(f)}
+                        onFile={f => {
+                          pickedFiles.current.push(f)
+                          onFilePicked?.(f)
+                        }}
                         onText={(t, from) => takePaste(t, from)}
                         onMessage={setPdfNote}
                       />

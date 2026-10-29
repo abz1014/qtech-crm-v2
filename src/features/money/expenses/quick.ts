@@ -19,6 +19,15 @@ import {
  *   - Cash or bank comes from the category until the person taps the other.
  */
 
+/** The words for a zero or negative amount: Quick add and "I paid" say the same thing. */
+export const AMOUNT_ABOVE_ZERO = 'The amount must be above zero.'
+
+/** What is wrong with the amount typed on the engineer's "I paid" form, in words; null when it is fine. */
+export function claimAmountProblem(amount: number | null): string | null {
+  if (amount === null || Number.isNaN(amount)) return 'Type how much you paid.'
+  return amount > 0 ? null : AMOUNT_ABOVE_ZERO
+}
+
 export const BANK_CHARGES_ID = 'ca7e0000-0000-4000-8000-000000000008'
 
 /** The small spends offered before there is any history (Fuel & travel, Office supplies & snacks, Water, Staff meals, Courier, Repairs). */

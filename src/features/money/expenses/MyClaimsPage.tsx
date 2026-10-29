@@ -16,6 +16,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { useCreateClaim, useMyClaims, useOrderOptions, useWithdrawClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, type Claim } from '@/features/money/expenses/claimsApi'
 import { pkr } from '@/features/money/expenses/model'
+import { AMOUNT_ABOVE_ZERO, claimAmountProblem } from '@/features/money/expenses/quick'
 
 /*
  * "I paid" (0087, owner decision 2026-10-22: engineers may record what they paid themselves). An engineer types the amount, what it
@@ -49,8 +50,9 @@ function MyClaims() {
   const pending = useMemo(() => (claims.data ?? []).filter(c => c.status === 'pending'), [claims.data])
 
   const submit = () => {
-    if (!amount || amount <= 0) {
-      setError('Type how much you paid.')
+    const amountProblem = claimAmountProblem(amount)
+    if (amountProblem || amount === null) {
+      setError(amountProblem ?? AMOUNT_ABOVE_ZERO)
       return
     }
     setError(null)

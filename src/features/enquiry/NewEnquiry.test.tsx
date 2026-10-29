@@ -68,6 +68,17 @@ describe('New enquiry', () => {
     expect(screen.queryByRole('button', { name: 'Looks right: find suppliers' })).toBeNull()
   })
 
+  it('a photo chosen with the Choose PDF or photo button in the intake is shown on the left too, like a dropped file', async () => {
+    installFakeDb(respond)
+    const user = userEvent.setup()
+    renderPage()
+    expect(screen.queryByTestId('source-file')).toBeNull()
+    const file = new File(['x'], 'site-enquiry.jpg', { type: 'image/jpeg' })
+    await user.upload(await screen.findByTestId('pdf-input-items'), file)
+    expect(await screen.findByTestId('source-file')).toHaveTextContent('site-enquiry.jpg')
+    expect(screen.queryByTestId('enquiry-dropzone')).toBeNull()
+  })
+
   it('a file chosen on the drop zone is shown on the left and handed to the intake', async () => {
     installFakeDb(respond)
     const user = userEvent.setup()
