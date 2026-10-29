@@ -263,6 +263,9 @@ export interface GstFact {
   month: string
   invoices: number
   undeposited: number
+  /** The pay-by and file-by dates of this month's GST, from Settings > Tax deadlines (0110). Absent: the starting 15th and 18th. */
+  payBy?: string
+  returnBy?: string
 }
 
 /** P3-D, admin only: engineers' "I paid" claims waiting for approval (0087), and the day the oldest was made. */

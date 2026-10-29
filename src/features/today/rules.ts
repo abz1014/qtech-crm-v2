@@ -16,6 +16,7 @@ import { formatShortDate } from '@/lib/formatDay'
 import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { ageOrSince, dateWords, dueWord, sinceWords } from '@/lib/timeWords'
+import { DEFAULT_GST_DEADLINES, gstDatesFor } from '@/features/settings/gstDeadlines'
 import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { isStale, STALE_AFTER_DAYS, toneFor } from './needsYou'
 import { buildReview, isMonday, reviewCount } from './weeklyReview'
@@ -1013,22 +1014,23 @@ export function groupItems(all: readonly Entry[]): TodayView {
 }
 
 /**
- * GST to FBR (redesign phase 3, P3-D; owner default Q8: pay by the 15th, file the return by the 18th). Admin only. ONE chore row for
- * last month's GST, from the 1st until every one of that month's invoices has its tax deposit recorded:
- *   1st to 12th   grey, "Pay by 15 Oct" (in This week, not counted: nothing is due yet)
- *   13th to 15th  amber, the days to the 15th (due today on the 15th, which counts)
- *   after the 15th red, "N days overdue" (the payment day has gone), and it still says return by the 18th
+ * GST to FBR (redesign phase 3, P3-D; owner answer to Q8: the pay-by and file-by days are settings the admin edits, Settings > Tax
+ * deadlines, 15 and 18 to start with, and one month can carry a one-off date). Admin only. ONE chore row for last month's GST, from the
+ * 1st until every one of that month's invoices has its tax deposit recorded. The dates come with the fact (ctx.gst.payBy and returnBy,
+ * read from the settings by the loader); with none, the starting days:
+ *   until 3 days before the pay-by date   grey, "Pay by 15 Oct" (in This week, not counted: nothing is due yet)
+ *   the last 3 days to the pay-by date    amber, the days left (due today on the day, which counts)
+ *   after the pay-by date                 red, "N days overdue" (the payment day has gone), and it still says return by the file-by date
  * The amount is not worked out here (GST charged less GST paid on purchases is the Money screen's); the row says how many invoices.
  */
-export const GST_DAYS = { amberAfter: 12, payBy: 15, returnBy: 18 } as const
+export const GST_AMBER_DAYS = 3
 
 export function ruleGstFbr(ctx: TodayInputs): Entry[] {
   if (ctx.user.role !== 'admin' || !ctx.gst || ctx.gst.undeposited === 0) return []
-  const day = parseDay(ctx.today)?.d ?? 1
-  const month = ctx.today.slice(0, 7)
-  const payOn = `${month}-${GST_DAYS.payBy}`
-  const returnOn = `${month}-${GST_DAYS.returnBy}`
-  const early = day <= GST_DAYS.amberAfter
+  const fallback = gstDatesFor(DEFAULT_GST_DEADLINES, ctx.gst.month)
+  const payOn = ctx.gst.payBy ?? fallback.payBy
+  const returnOn = ctx.gst.returnBy ?? fallback.returnBy
+  const early = daysBetween(ctx.today, payOn) >= GST_AMBER_DAYS
   const name = MONTH_NAMES[Number(ctx.gst.month.slice(5, 7)) - 1]
   const n = ctx.gst.undeposited
   const due = dueBadge(payOn, ctx.today, 'gst_fbr')
@@ -1041,10 +1043,10 @@ export function ruleGstFbr(ctx: TodayInputs): Entry[] {
         title: `GST to FBR: ${name}, ${n} ${n === 1 ? 'invoice' : 'invoices'} to pay`,
         ref: 'GST to FBR',
         party: `Pay by ${formatShortDate(payOn)} · return by ${formatShortDate(returnOn)}`,
-        // grey and ready from the 1st; from the 13th the 15th is its date, so it is due soon, then due, then late
+        // grey and ready from the 1st; in the last days before the pay-by date that date is its date, so it is due soon, then due, then late
         actionDueOn: early ? today1(ctx.today) : payOn,
         group: early ? 'ready' : groupFor(payOn, ctx.today),
-        badge: early ? { text: `Pay by ${formatShortDate(payOn)}`, tone: 'neutral' } : { text: due.text, tone: day > GST_DAYS.payBy ? 'danger' : 'warning' },
+        badge: early ? { text: `Pay by ${formatShortDate(payOn)}`, tone: 'neutral' } : { text: due.text, tone: ctx.today > payOn ? 'danger' : 'warning' },
         isPriority: false,
         href: '/money/gst-register',
         number: 0,

@@ -23,6 +23,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { signReceipt, type InvoiceRow } from '@/features/money/invoices/api'
 import { useDeleteInvoiceReceipt, useGstRegister, useInvoice, useInvoiceReceipts, useUpdateInvoice, useUploadInvoiceReceipt } from '@/features/money/invoices/hooks'
+import { useGstDeadlines } from '@/features/settings/hooks'
 import { GST_FILED_WARNING, gstReturnMayBeFiled, monthHasFbrRecord, round2 } from '@/features/money/invoices/model'
 import { useDeleteInvoiceFlow } from '@/features/money/invoices/InvoiceDelete'
 import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
@@ -109,7 +110,8 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const registerQ = useGstRegister()
   const [historyOpen, setHistoryOpen] = useState(false)
   /** The GST return of a month may be in when an FBR payment or PSID is on it, or the 18th of the next month has gone by. */
-  const mayBeFiled = (d: string | null | undefined) => gstReturnMayBeFiled(d, today, monthHasFbrRecord(registerQ.data ?? [], d))
+  const gstDl = useGstDeadlines()
+  const mayBeFiled = (d: string | null | undefined) => gstReturnMayBeFiled(d, today, monthHasFbrRecord(registerQ.data ?? [], d), gstDl.deadlines)
   const deleteFlow = useDeleteInvoiceFlow(invoice, { gstMayBeFiled: mayBeFiled(invoice.invoice_date), onDeleted: onClose })
 
   const sf = useSubmitForm({

@@ -2,6 +2,8 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { toBusinessDate } from '@/lib/dates'
 import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart, today1 } from '@/features/today/rules'
+import { getGstDeadlines } from '@/features/settings/api'
+import { gstDatesFor } from '@/features/settings/gstDeadlines'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { fetchReceivablesList, type ReceivablesListRow } from '@/features/money/payments/api'
 import { billPeriod, billPeriods } from '@/features/money/expenses/forMonth'
@@ -398,7 +400,9 @@ async function loadGst(today: string): Promise<GstFact> {
         .is('legacy_source', null)
         .eq('settled_before_cutover', false),
     ) ?? []
-  return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length }
+  // the dates are the admin's settings (0110), not a fixed 15th and 18th
+  const { payBy, returnBy } = gstDatesFor(await getGstDeadlines(), month)
+  return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length, payBy, returnBy }
 }
 
 /** P3-D, admin only: engineers' pending "I paid" claims (0087): how many, and the day the oldest was made. */

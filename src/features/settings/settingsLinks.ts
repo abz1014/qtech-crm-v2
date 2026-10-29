@@ -1,4 +1,4 @@
-import { Boxes, Building2, KeyRound, Receipt, RefreshCw, Target, User, Users, type LucideIcon } from 'lucide-react'
+import { Boxes, Building2, CalendarClock, KeyRound, Receipt, RefreshCw, Target, User, Users, type LucideIcon } from 'lucide-react'
 import { seesPrices } from '@/app/session'
 
 /*
@@ -28,6 +28,7 @@ export const SETTINGS_GROUPS: readonly { title: string; links: readonly Settings
       { to: '/settings/targets', label: 'Targets', icon: Target, adminOnly: true },
       { to: '/settings/categories', label: 'Expense categories', icon: Receipt, adminOnly: true },
       { to: '/settings/product-categories', label: 'Product categories', icon: Boxes, adminOnly: true },
+      { to: '/settings/tax-deadlines', label: 'Tax deadlines', icon: CalendarClock, pricesOnly: true, tagForOthers: 'View only' },
       { to: '/settings/exchange-rates', label: 'Exchange rates', icon: RefreshCw, pricesOnly: true },
     ],
   },

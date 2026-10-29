@@ -1,4 +1,5 @@
-import { monthKey, monthLabel, shiftMonth } from '@/features/money/expenses/model'
+import { monthKey, monthLabel } from '@/features/money/expenses/model'
+import { DEFAULT_GST_DEADLINES, gstDatesFor, type GstDeadlines } from '@/features/settings/gstDeadlines'
 import { divRoundHalfUp, gstWholeRupeesPaisa, paisaToFixed, productPaisa, toPaisa, type Amount } from '@/lib/money'
 
 /*
@@ -316,10 +317,10 @@ export const invoiceNumberOk = (n: string): boolean => n.trim().length > 0 && n.
 export const GST_FILED_WARNING = "This month's GST return may already be filed. File a revised return with FBR."
 
 /**
- * The day after which a month's GST return is taken as filed: the 18th of the month that follows (the return is due on the 18th;
- * the GST itself on the 15th).
+ * The day after which a month's GST return is taken as filed: the return's file-by date, from Settings > Tax deadlines (the 18th of
+ * the month that follows to start with, or the month's one-off date when FBR moved it).
  */
-export const gstReturnDueDay = (invoiceDate: string): string => `${shiftMonth(monthKey(invoiceDate), 1)}-18`
+export const gstReturnDueDay = (invoiceDate: string, deadlines: GstDeadlines = DEFAULT_GST_DEADLINES): string => gstDatesFor(deadlines, monthKey(invoiceDate)).returnBy
 
 /** An FBR GST payment (tax deposited) or a PSID is recorded on an invoice of that month. */
 export function monthHasFbrRecord(rows: readonly Pick<GstRow, 'invoiceDate' | 'psid' | 'taxDepositedOn'>[], invoiceDate: string | null | undefined): boolean {
@@ -330,9 +331,9 @@ export function monthHasFbrRecord(rows: readonly Pick<GstRow, 'invoiceDate' | 'p
 
 /**
  * The GST return of the invoice's month may already be filed: an FBR GST payment or a PSID is recorded for the month, or today is
- * past the 18th of the following month. A guess that errs towards warning; the person ticks and goes on.
+ * past the file-by date of the following month. A guess that errs towards warning; the person ticks and goes on.
  */
-export function gstReturnMayBeFiled(invoiceDate: string | null | undefined, today: string, fbrRecorded: boolean): boolean {
+export function gstReturnMayBeFiled(invoiceDate: string | null | undefined, today: string, fbrRecorded: boolean, deadlines: GstDeadlines = DEFAULT_GST_DEADLINES): boolean {
   if (!invoiceDate) return false
-  return fbrRecorded || today > gstReturnDueDay(invoiceDate)
+  return fbrRecorded || today > gstReturnDueDay(invoiceDate, deadlines)
 }
