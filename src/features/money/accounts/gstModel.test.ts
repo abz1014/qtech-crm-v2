@@ -74,3 +74,19 @@ describe('GST to FBR: the months and their payment slips', () => {
     expect(l.psids).toEqual(['1023-4471', '9999'])
   })
 })
+
+describe('GST to FBR: the dates are settings the admin edits', () => {
+  const settings = { payDay: 20, returnDay: 25, overrides: [{ month: '2026-10-01', payBy: '2026-11-27', returnBy: null }] }
+  it('uses the days that were set, and amber is the 2 days before the pay-by date', () => {
+    const l = gstLine(row('2026-09'), undefined, '2026-10-16', settings)
+    expect(l.payBy).toBe('2026-10-20')
+    expect(l.returnBy).toBe('2026-10-25')
+    expect(l.tone).toBe('ok')
+    expect(gstLine(row('2026-09'), undefined, '2026-10-18', settings).tone).toBe('soon')
+    expect(gstLine(row('2026-09'), undefined, '2026-10-21', settings).tone).toBe('late')
+  })
+  it('a one-off date moves one month only and says so', () => {
+    const l = gstLine(row('2026-10'), undefined, '2026-11-25', settings)
+    expect(l).toMatchObject({ payBy: '2026-11-27', returnBy: '2026-11-25', payOverridden: true, returnOverridden: false, tone: 'soon' })
+  })
+})
