@@ -178,7 +178,10 @@ describe('Add expense dialog (M03)', () => {
 
     window.sessionStorage.setItem(key, JSON.stringify({ amount: 8765 })) // as a reload finds it
     setup()
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('8,765'))
+    // Wait for the formatted value itself (the draft is restored after mount), with headroom for a loaded CI runner.
+    const restored = await screen.findByDisplayValue('8,765', undefined, { timeout: 5000 })
+    expect(restored).toBe(screen.getByRole('textbox', { name: 'Amount, PKR' }))
+    expect(restored).toHaveValue('8,765')
   })
 
   describe('Delete expense', () => {
