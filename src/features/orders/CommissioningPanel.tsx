@@ -16,7 +16,7 @@ import type { OrderHeader, PersonRow } from '@/features/orders/api'
 import { useAddEngineer, useEngineerCandidates, useRemoveEngineer, useUpdateOrder } from '@/features/orders/hooks'
 import { useMarkDone } from '@/features/orders/commissioningActions'
 import { VisitFields } from '@/features/orders/VisitDialog'
-import { VISIT_TYPE_LABEL, isVisitType, visitChanged, visitPatch, visitValueOf, type VisitValue } from '@/features/orders/lib/visit'
+import { DEFAULT_VISIT_TYPE, visitPatch, visitTypeLabel, type VisitValue } from '@/features/orders/lib/visit'
 
 /*
  * Commissioning (O03; g2-order-detail.html "Commissioning"): planned on, done on, the engineers, and the order notes and site contact.
@@ -64,11 +64,9 @@ export function CommissioningPanel({
               <span className={order.plannedOn ? 'num text-sm' : 'text-sm text-fg-muted'}>{order.plannedOn ? formatDay(order.plannedOn) : 'Not planned'}</span>
             </div>
             <div className="grid content-start gap-1">
-              <span className="text-xs text-fg-muted">Visit</span>
-              <span className={order.visitTime || order.visitType ? 'text-sm' : 'text-sm text-fg-muted'} data-testid="visit-line">
-                {order.visitTime || order.visitType
-                  ? [order.visitTime, isVisitType(order.visitType) ? VISIT_TYPE_LABEL[order.visitType] : null].filter(Boolean).join(' · ')
-                  : 'Time and type not set'}
+              <span className="text-xs text-fg-muted">Visit type</span>
+              <span className={order.visitType ? 'text-sm' : 'text-sm text-fg-muted'} data-testid="visit-line">
+                {visitTypeLabel(order.visitType) || 'Not set'}
               </span>
             </div>
             <div className="grid content-start gap-1">
@@ -145,18 +143,21 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
   const candidates = useEngineerCandidates(true)
   const [needs, setNeeds] = useState(order.needsCommissioning)
   const [planned, setPlanned] = useState(order.plannedOn ?? '')
-  const startVisit = visitValueOf(order)
-  const [visit, setVisit] = useState<VisitValue>(startVisit)
+  // a visit is an installation unless someone says survey or service; the database files the same default (0109)
+  const storedType = order.visitType ?? DEFAULT_VISIT_TYPE
+  const [visit, setVisit] = useState<VisitValue>({ type: storedType })
   const free = (candidates.data ?? []).filter(c => !engineers.some(e => e.id === c.id))
   const fail = (title: string) => (err: unknown) => toast({ title, body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-  const changed = needs !== order.needsCommissioning || (planned || null) !== order.plannedOn || (needs && visitChanged(visit, startVisit))
+  // a planned visit with no type on file is saved with the default, so the order always says what the visit is
+  const typeChanged = needs && (visit.type !== storedType || (planned !== '' && order.visitType === null))
+  const changed = needs !== order.needsCommissioning || (planned || null) !== order.plannedOn || typeChanged
 
   const save = async () => {
     try {
       await update.mutateAsync({
         needs_commissioning: needs,
         commissioning_planned_on: needs ? planned || null : order.plannedOn,
-        ...(needs && visitChanged(visit, startVisit) ? visitPatch(visit) : {}),
+        ...(typeChanged ? visitPatch(visit) : {}),
       })
       onClose()
     } catch (err) {

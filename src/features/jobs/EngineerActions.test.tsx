@@ -33,7 +33,7 @@ function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof le
   client.setQueryData(qk.rfqs.part('r1', 'attachments'), [])
   client.setQueryData(qk.orders.part('o1', 'header'), {
     id: 'o1', number: 1, companyId: 'c1', companyName: 'Harbour Textiles Limited', rfqId: 'r1', customerPo: null, orderedOn: '2026-09-02', paymentTermsDays: null,
-    needsCommissioning: opts.needsCommissioning ?? true, plannedOn: null, visitTime: null, visitType: null, doneOn: null, cancelledOn: null, cancelReason: null, imported: false,
+    needsCommissioning: opts.needsCommissioning ?? true, plannedOn: null, visitType: null, doneOn: null, cancelledOn: null, cancelReason: null, imported: false,
     notes: null, site: null, contact: null, owner: null, state: null,
   })
   client.setQueryData(qk.orders.part('o1', 'items'), [])

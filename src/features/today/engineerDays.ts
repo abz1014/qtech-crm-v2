@@ -1,9 +1,9 @@
 // An engineer's list, grouped by day (redesign phase 7, plan (j2)): Missed, Today, Tomorrow, then each later day by name, then the
-// jobs whose goods are on site and have no date yet. A row reads "10:00 · Install · customer · site" (visit.ts); a job with no time
-// sorts after the timed ones on its day. Pure: TodayScreen draws it, the rules (rules.ts ENGINEER_RULES) decide what is in it.
+// jobs whose goods are on site and have no date yet. A row reads "Install · customer · site" (visit.ts); a visit has a date and a
+// type and no time of day, so the jobs of a day go in order number. Pure: TodayScreen draws it, the rules (rules.ts ENGINEER_RULES) decide what is in it.
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { formatDay } from '@/lib/formatDay'
-import { VISIT_TYPE_LABEL, isVisitType, visitLine } from '@/features/orders/lib/visit'
+import { visitLine, visitTypeLabel } from '@/features/orders/lib/visit'
 import type { TodoBlock } from '@/features/today/todoModel'
 import type { TodayItem, TodayView } from '@/features/today/types'
 
@@ -18,16 +18,11 @@ export interface DayGroup {
 export function dayRow(item: TodayItem, today: string): TodayItem {
   if (item.rule !== 'job_commissioning' || !item.visit) return item
   const late = !!item.actionDueOn && item.actionDueOn < today
-  const type = isVisitType(item.visit.type) ? VISIT_TYPE_LABEL[item.visit.type] : 'Commissioning'
+  const type = visitTypeLabel(item.visit.type) || 'Commissioning'
   return { ...item, title: visitLine(item.visit), party: late ? item.title : type }
 }
 
-const byTime = (a: TodayItem, b: TodayItem) => {
-  const ta = a.visit?.time ?? null
-  const tb = b.visit?.time ?? null
-  if (ta !== tb) return ta === null ? 1 : tb === null ? -1 : ta < tb ? -1 : 1
-  return a.number - b.number
-}
+const byNumber = (a: TodayItem, b: TodayItem) => a.number - b.number
 
 export function engineerDayGroups(view: TodayView, today: string): DayGroup[] {
   const jobs = view.active.filter(i => i.rule === 'job_commissioning' && i.actionDueOn)
@@ -35,10 +30,10 @@ export function engineerDayGroups(view: TodayView, today: string): DayGroup[] {
   const tomorrow = addDays(today, 1)
   const days = [...new Set(jobs.map(i => i.actionDueOn as string).filter(d => d >= today))].sort()
   const out: DayGroup[] = []
-  const missed = jobs.filter(i => (i.actionDueOn as string) < today).sort(byTime)
+  const missed = jobs.filter(i => (i.actionDueOn as string) < today).sort(byNumber)
   if (missed.length) out.push({ id: 'now-missed', title: 'Missed', items: missed.map(i => dayRow(i, today)) })
   for (const d of days) {
-    const items = jobs.filter(i => i.actionDueOn === d).sort(byTime).map(i => dayRow(i, today))
+    const items = jobs.filter(i => i.actionDueOn === d).sort(byNumber).map(i => dayRow(i, today))
     const title = d === today ? 'Today' : d === tomorrow ? 'Tomorrow' : formatDay(d)
     out.push({ id: d === today ? 'now' : `soon-${d}`, title, items })
   }

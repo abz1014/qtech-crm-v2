@@ -33,7 +33,7 @@ const day = (n: number) => {
 
 const order: OrderHeader = {
   id: 'o1', number: 38, companyId: 'c1', companyName: 'Punjab Cement Ltd', rfqId: null, customerPo: 'PO-1', orderedOn: day(-12), paymentTermsDays: 30,
-  needsCommissioning: false, plannedOn: null, visitTime: null, visitType: null, doneOn: null, cancelledOn: null, cancelReason: null, imported: false, notes: null, site: null, contact: null, owner: null,
+  needsCommissioning: false, plannedOn: null, visitType: null, doneOn: null, cancelledOn: null, cancelReason: null, imported: false, notes: null, site: null, contact: null, owner: null,
   state: { lifecycle: 'active', goods: 'late', commissioning: 'n_a', invoicing: 'not_invoiced', dataTrust: 'ok', net: 100000, gst: 18000, gross: 118000, invoiced: 0 },
 }
 const legBase = { reference: null, receivedOn: null, deliveredOn: null, lastChasedOn: null, chaseCount: 0, inquiryId: null, leadTimes: [] as string[] }

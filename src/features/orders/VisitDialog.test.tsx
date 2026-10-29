@@ -19,17 +19,17 @@ function open() {
   )
 }
 
-describe('Visit time and type', () => {
-  it('saves the time and the type on the order', async () => {
+describe('Visit type', () => {
+  it('saves the type on the order, and no time', async () => {
     fake = installFakeDb(() => ({ data: null }))
     open()
-    fireEvent.change(screen.getByRole('combobox', { name: /Visit type/ }), { target: { value: 'installation' } })
-    fireEvent.change(document.querySelector('input[type="time"]') as HTMLInputElement, { target: { value: '10:00' } })
+    fireEvent.change(screen.getByRole('combobox', { name: /Visit type/ }), { target: { value: 'survey' } })
+    expect(document.querySelector('input[type="time"]')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(fake?.calls.some(c => c.verb === 'update')).toBe(true))
     const call = fake!.calls.find(c => c.verb === 'update')!
     expect(call.target).toBe('orders')
-    expect(opArgs(call, 'update')?.[0]).toEqual({ commissioning_time: '10:00', visit_type: 'installation' })
+    expect(opArgs(call, 'update')?.[0]).toEqual({ visit_type: 'survey' })
   })
 
   it('says in plain words when the person is not assigned to the site', async () => {

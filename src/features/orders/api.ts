@@ -1,6 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { poRef } from '@/lib/refs'
-import { visitTime } from '@/features/orders/lib/visit'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
 import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
@@ -31,8 +30,6 @@ export interface OrderHeader {
   paymentTermsDays: number | null
   needsCommissioning: boolean
   plannedOn: string | null
-  /** orders.commissioning_time as "HH:MM" (0101), or null. */
-  visitTime: string | null
   /** orders.visit_type (0101): installation, survey, service, or null. */
   visitType: string | null
   doneOn: string | null
@@ -100,7 +97,6 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
     paymentTermsDays: o.payment_terms_days,
     needsCommissioning: o.needs_commissioning,
     plannedOn: o.commissioning_planned_on,
-    visitTime: visitTime(o.commissioning_time),
     visitType: o.visit_type,
     doneOn: o.commissioning_done_on,
     cancelledOn: o.cancelled_on,

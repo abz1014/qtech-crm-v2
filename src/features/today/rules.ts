@@ -16,6 +16,7 @@ import { formatShortDate } from '@/lib/formatDay'
 import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { ageOrSince, dateWords, dueWord, sinceWords } from '@/lib/timeWords'
+import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { isStale, STALE_AFTER_DAYS, toneFor } from './needsYou'
 import { buildReview, isMonday, reviewCount } from './weeklyReview'
 import {
@@ -898,14 +899,16 @@ export function ruleJobCommissioning(ctx: TodayInputs): Entry[] {
     if (j.legacy || j.commissioningState !== 'planned' || !j.plannedOn || stale(j.plannedOn, ctx.today)) continue
     if (j.plannedOn > ctx.today && businessDaysBetween(ctx.today, j.plannedOn) > THRESHOLDS.jobAheadDays) continue
     const d = daysBetween(ctx.today, j.plannedOn)
+    // the visit's type in the words (Installation, Survey, Service); "Commissioning" when an old row has none
+    const kind = visitTypeLabel(j.visitType) || 'Commissioning'
     const title =
       d < 0
-        ? `Commissioning was planned for ${longDay(j.plannedOn)}: mark it done or move it`
+        ? `${kind} was planned for ${longDay(j.plannedOn)}: mark it done or move it`
         : d === 0
-          ? 'Commissioning today'
+          ? `${kind} today`
           : d === 1
-            ? 'Commissioning tomorrow'
-            : `Commissioning on ${longDay(j.plannedOn)}`
+            ? `${kind} tomorrow`
+            : `${kind} on ${longDay(j.plannedOn)}`
     out.push(
       build(
         {
@@ -921,7 +924,7 @@ export function ruleJobCommissioning(ctx: TodayInputs): Entry[] {
           orderId: j.orderId,
           href: `/orders/${j.orderId}`,
           number: j.orderNumber,
-          visit: { time: j.visitTime ?? null, type: j.visitType ?? null, customer: j.customerName, site: j.siteName },
+          visit: { type: j.visitType ?? null, customer: j.customerName, site: j.siteName },
         },
         ctx.today,
       ),
