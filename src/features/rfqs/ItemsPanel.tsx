@@ -332,24 +332,24 @@ export function ItemsPanel({
         </>
       }
       actions={
-        <>
-          {prices && statementTo && responders.length > 0 ? (
-            <Link
-              to={statementTo}
-              data-testid="open-statement"
-              className="inline-flex h-control items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
-            >
-              <Icon icon={Table2} size="sm" />
-              Comparative statement
-            </Link>
-          ) : null}
-          <Button icon={Plus} onClick={onAddItem}>
-            Add item
-          </Button>
-        </>
+        <Button icon={Plus} onClick={onAddItem}>
+          Add item
+        </Button>
       }
     >
       {!nobodyAsked && rateBar.length > 0 ? <RateBar entries={rateBar} /> : null}
+      {prices && statementTo && responders.length > 0 ? (
+        <p className="border-b px-5 py-1">
+          <Link
+            to={statementTo}
+            data-testid="open-statement"
+            className="inline-flex min-h-touch items-center gap-2 rounded text-base font-medium text-primary underline-offset-4 hover:underline"
+          >
+            <Icon icon={Table2} size="sm" />
+            Open the comparative statement
+          </Link>
+        </p>
+      ) : null}
       {nobodyAsked && items.length > 0 ? (
         <p className="border-b px-5 py-4 text-fg-2">
           <b className="font-semibold text-fg">Ask suppliers for prices.</b> One tap copies a message listing every item, ready to paste into WhatsApp or email.
