@@ -1,4 +1,3 @@
-import { shiftMonth } from '@/features/money/expenses/model'
 
 /*
  * GST deadlines (migration 0110; owner answer to Q8, 2026-10-28). The day GST is paid to FBR and the day the return is filed are NOT
@@ -33,6 +32,13 @@ export interface GstDates {
   /** A one-off date is in force for this date. */
   payOverridden: boolean
   returnOverridden: boolean
+}
+
+/** "2026-10" moved by `by` months (kept here so Today's first load does not pull the expenses model in). */
+function shiftMonth(key: string, by: number): string {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(Date.UTC(y, m - 1 + by, 1))
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')

@@ -82,7 +82,7 @@ test('admin gives one month a one-off date, and takes it away again', async ({ p
   await page.getByRole('combobox', { name: 'GST for the month of' }).selectOption(monthStart)
   const pay = page.getByRole('textbox', { name: 'New pay-by date' })
   await pay.fill(slash(moved))
-  await pay.press('Enter')
+  await pay.blur() // leaving the field reads the date; Enter would also send the form
   await page.getByRole('button', { name: 'Save one-off date' }).click()
   await expect.poll(async () => (await must(rest<{ month: string; pay_by: string | null; return_by: string | null }[]>('admin', 'gst_deadline_overrides?select=month,pay_by,return_by')))[0]).toEqual({ month: monthStart, pay_by: moved, return_by: null })
   await expect(page.getByTestId('overrides')).toContainText('Pay by')

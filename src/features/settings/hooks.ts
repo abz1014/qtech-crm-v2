@@ -3,6 +3,7 @@ import { useSeesPrices } from '@/app/session'
 import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/settings/api'
+import * as gstApi from '@/features/settings/gstApi'
 import type { Role } from '@/features/settings/api'
 import type { CategoryGroup } from '@/features/settings/categoriesModel'
 import type { ProfileValues } from '@/features/settings/companyProfile'
@@ -111,7 +112,7 @@ export function useSaveCompanyProfile() {
  * The GST pay-by and file-by dates (0110). Admin and sales read them; an engineer sees nothing GST, so nothing is requested for them
  * and they get the starting days (which nothing of theirs shows).
  */
-export const gstDeadlinesQuery = () => ({ queryKey: qk.settings.gstDeadlines(), queryFn: () => api.getGstDeadlines(), staleTime: 60_000 })
+export const gstDeadlinesQuery = () => ({ queryKey: qk.settings.gstDeadlines(), queryFn: () => gstApi.getGstDeadlines(), staleTime: 60_000 })
 
 export function useGstDeadlines() {
   const sees = useSeesPrices()
@@ -122,7 +123,7 @@ export function useGstDeadlines() {
 export function useSaveGstDays() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { payDay: number; returnDay: number }) => api.saveGstDays(v.payDay, v.returnDay),
+    mutationFn: (v: { payDay: number; returnDay: number }) => gstApi.saveGstDays(v.payDay, v.returnDay),
     onSuccess: () => invalidateAfter(client, 'gst-deadlines.save', {}),
   })
 }
@@ -130,7 +131,7 @@ export function useSaveGstDays() {
 export function useSaveGstOverride() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { month: string; payBy: string | null; returnBy: string | null }) => api.saveGstOverride(v),
+    mutationFn: (v: { month: string; payBy: string | null; returnBy: string | null }) => gstApi.saveGstOverride(v),
     onSuccess: () => invalidateAfter(client, 'gst-deadlines.save', {}),
   })
 }
@@ -138,7 +139,7 @@ export function useSaveGstOverride() {
 export function useDeleteGstOverride() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (month: string) => api.deleteGstOverride(month),
+    mutationFn: (month: string) => gstApi.deleteGstOverride(month),
     onSuccess: () => invalidateAfter(client, 'gst-deadlines.save', {}),
   })
 }
