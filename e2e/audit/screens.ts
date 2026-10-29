@@ -273,6 +273,30 @@ const markWon: Visit = {
   },
 }
 
+/**
+ * "Add to this job" (the Job page's side card; it replaced the Paste or photo sheet) with a supplier's reply pasted in: the card
+ * guesses what it is and shows its choices. Nothing is saved; the box is emptied afterwards. The card is for admin and sales (an
+ * engineer's Job page has none: owner decision). The empty card is part of every Job page capture.
+ */
+const addToJobPasted: Visit = {
+  id: 'add-to-job-pasted',
+  title: 'Job page: Add to this job with a supplier reply pasted in',
+  roles: MONEY,
+  screens: ['add-to-job-pasted'],
+  run: async (page, fx, capture) => {
+    await open(page, withOld(`/rfqs/${fx.rfq.waiting}`, '0'))
+    const box = page.getByRole('textbox', { name: 'Paste here' })
+    await box.scrollIntoViewIfNeeded()
+    await box.fill('Dear sir, thank you for your enquiry. Our best price is USD 412 per unit, delivery 3 weeks ex works, offer valid 14 days. Regards')
+    await page.getByTestId('add-guess').waitFor({ timeout: 10_000 })
+    try {
+      await capture('add-to-job-pasted', { scrollTo: '[data-testid="add-to-job"]' })
+    } finally {
+      await box.fill('').catch(() => undefined)
+    }
+  },
+}
+
 export const VISITS: readonly Visit[] = [
   // The Jobs screens (redesign phases 4 to 7). The rfq-* and order-* captures below open the same Job pages through the old addresses and are
   // kept until 2026-11-09, so a before and after can be compared; after that date they can go.
@@ -289,6 +313,9 @@ export const VISITS: readonly Visit[] = [
   screen('enquiry-new', 'New enquiry', MONEY, () => '/enquiries/new'),
   screen('review-imported', 'Money: Review imported', ADMIN, () => '/money/review-imported'),
   screen('today', 'Today, with items', ALL, () => '/todo'),
+  screen('weekly-review', 'To do: weekly review', ADMIN, () => '/todo/review'),
+  screen('capture-pick-job', 'Photo or note: which job (the share target with nothing shared)', ALL, () => '/capture'),
+  screen('engineer-i-paid', 'I paid: my expense claims', ['engineer'], () => '/my-expenses'),
   screen('rfqs-open', 'RFQ list, open', ALL, () => '/rfqs'),
   screen('rfqs-closed', 'RFQ list, closed', ALL, () => '/rfqs?tab=closed'),
   screen('rfq-not-sent', 'RFQ page: not sent to suppliers', ALL, fx => `/rfqs/${fx.rfq.notSent}`),
@@ -336,7 +363,6 @@ export const VISITS: readonly Visit[] = [
   screen('money-exceptions', 'Money: exceptions (mistakes to fix)', ADMIN, () => '/money/exceptions'),
   // round 3: the two Money screens the audit could not grade from a capture
   screen('money-in-out', 'Money: money in and out (In vs out)', ADMIN, () => '/money/reports/in-out'),
-  screen('money-add-expenses', 'Money: Add expenses sheet', ADMIN, () => '/money/expenses?burst=1'),
   screen('reports', 'Reports', MONEY, () => '/reports'),
   screen('settings', 'Settings home', ['sales', 'engineer'], () => '/settings'),
   screen('settings-team', 'Settings: team', ADMIN, () => '/settings/team'),
@@ -347,6 +373,7 @@ export const VISITS: readonly Visit[] = [
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
   screen('settings-exchange-rates', 'Settings: exchange rates', MONEY, () => '/settings/exchange-rates'), // engineers: no currency amounts (2026-10-22)
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
+  addToJobPasted,
   issueQuotation,
   markWon,
   // Last: it creates an RFQ, which would otherwise show on the lists above.

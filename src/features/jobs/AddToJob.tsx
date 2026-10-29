@@ -232,6 +232,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
 
   const primary = kind === 'answer' ? { label: tickedIds.size === 1 ? 'Save answer' : `Save answer to ${tickedIds.size} questions`, run: () => void saveAnswer(), disabled: tickedIds.size === 0 } : kind === 'photo' || kind === 'note' ? { label: kind === 'photo' ? (good.length > 1 ? `Add ${good.length} photos` : 'Add photo') : good.length > 0 && text.trim() ? 'Add note and files' : good.length > 0 ? 'Add file' : 'Add note', run: () => void saveTo(kind), disabled: !parentId } : null
 
+  // The card's confirm buttons are secondary: the Job page keeps its one green button (the next step), also while something is pasted.
   return (
     <section aria-label="Add to this job" className="rounded-panel border bg-surface" data-testid="add-to-job">
       <div className="border-b px-4 py-3">
@@ -351,7 +352,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
 
             {primary ? (
               <div>
-                <Button variant="primary" size="touch" icon={Check} onClick={primary.run} disabled={primary.disabled} busy={busy} busyLabel="Saving" className="text-base">
+                <Button variant="secondary" size="touch" icon={Check} onClick={primary.run} disabled={primary.disabled} busy={busy} busyLabel="Saving" className="text-base">
                   {primary.label}
                 </Button>
               </div>
@@ -545,7 +546,7 @@ function PriceSection({
       )}
       {set && set.suggestions.length > 0 && inquiry ? (
         <div>
-          <Button variant="primary" size="touch" icon={Check} onClick={() => void accept()} disabled={selected.size === 0} busy={busy} busyLabel="Saving" className="text-base">
+          <Button variant="secondary" size="touch" icon={Check} onClick={() => void accept()} disabled={selected.size === 0} busy={busy} busyLabel="Saving" className="text-base">
             {selected.size === 1 ? 'Accept 1 price' : `Accept ${selected.size} prices`}
           </Button>
         </div>

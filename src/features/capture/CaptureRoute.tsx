@@ -46,11 +46,11 @@ export default function CaptureRoute() {
 
   if (!id) return <JobFirst />
 
-  if (item === undefined) return <main className="px-4 py-8 text-base text-fg-2">Opening what you shared…</main>
+  if (item === undefined) return <div className="px-4 py-8 text-base text-fg-2">Opening what you shared…</div>
 
   if (item === null)
     return (
-      <main className="mx-auto grid max-w-xl gap-4 px-4 py-8" data-testid="share-gone">
+      <div className="mx-auto grid max-w-xl gap-4 px-4 py-8" data-testid="share-gone">
         <h1 className="text-2xl font-semibold tracking-tight">Nothing to add</h1>
         <p className="text-base text-fg-2">That shared item is no longer on this device (shared items are kept for 7 days). Share it again from WhatsApp, or start from a job.</p>
         <div>
@@ -58,7 +58,7 @@ export default function CaptureRoute() {
             Open Jobs
           </Button>
         </div>
-      </main>
+      </div>
     )
 
   const text = item.text.trim()
@@ -66,7 +66,7 @@ export default function CaptureRoute() {
   const summary = countsText(item.source, item.text, item.files)
 
   return (
-    <main className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="share-target">
+    <div className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="share-target">
       <header className="grid gap-1">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Icon icon={Share2} className="text-fg-muted" />
@@ -105,7 +105,7 @@ export default function CaptureRoute() {
           onPick={key => navigate(`/jobs/${encodeURIComponent(key)}?shared=${encodeURIComponent(item.id)}`, { replace: true })}
         />
       ) : null}
-    </main>
+    </div>
   )
 }
 
@@ -163,7 +163,7 @@ function JobFirst() {
     }
   }, [])
   return (
-    <main className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="photo-or-note">
+    <div className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="photo-or-note">
       <header className="grid gap-1">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Icon icon={Camera} className="text-fg-muted" />
@@ -186,6 +186,6 @@ function JobFirst() {
           </ul>
         </section>
       ) : null}
-    </main>
+    </div>
   )
 }
