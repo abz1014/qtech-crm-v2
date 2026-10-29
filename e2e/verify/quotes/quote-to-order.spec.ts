@@ -4,6 +4,7 @@ import { company, karachiDay, letters, order, quote, ref, rfq, setProfile, suppl
 import { open, signedIn } from '../support/session'
 import { QUOTES, pkr } from '../support/text'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../../support/pdf'
+import { chooseAllSuppliers } from '../../support/supplierChoice'
 
 /*
  * From the quotation to the order, with figures worked by hand: an exempt line, a decimal quantity and prices with paisa; the order
@@ -81,6 +82,7 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
   await test.step('Mark won: the order lines are the quoted lines, and the order totals are the quotation totals', async () => {
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: QUOTES.won.markWon }).click()
     await expect(dialog(page).getByRole('heading', { name: QUOTES.won.heading })).toBeVisible()
+    await chooseAllSuppliers(page, dialog(page))
     await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     const o = await db.one<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
@@ -127,6 +129,7 @@ test('a lost RFQ can still be won: Mark won reopens it and makes the order, and 
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/rfqs/${r.rfq.id}`)
   await page.locator('[data-slot="mark-won"]').getByRole('button', { name: QUOTES.won.markWon }).click()
+  await chooseAllSuppliers(page, dialog(page))
   await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
   await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
   expect(await db.one(`rfqs?id=eq.${r.rfq.id}&select=closed_on,close_reason`)).toEqual({ closed_on: null, close_reason: null })

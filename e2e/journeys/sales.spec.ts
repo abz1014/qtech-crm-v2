@@ -4,6 +4,7 @@ import { fetchStoredPdf, pdfIsValid, pdfText } from '../support/pdf'
 import { legLoc, setProfile } from '../orders/fixtures'
 import { fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
+import { chooseSupplier } from '../support/supplierChoice'
 
 /*
  * P03, the sales journey: one working day from a WhatsApp enquiry to a payment on the books, through the real screens, on the CI stack.
@@ -393,20 +394,24 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect.poll(async () => (await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`)))[0].ask_count).toBe(3)
   })
 
-  // ---- 9. Won: convert with rank 1 pre-picked and one split ------------------------------------------------------------------------
-  await test.step('mark won: rank 1 pre-picked on every line, one item split across two suppliers', async () => {
+  // ---- 9. Won: convert with a supplier chosen on every line by a person, and one split ------------------------------------------------
+  await test.step('mark won: no supplier is pre-chosen, the person picks each one, one item is split across two suppliers', async () => {
     await resetCount(page)
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Mark won' })).toBeVisible()
-    // Rank 1 is already chosen for each line, with the reason under the name; nothing was tapped for it.
-    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.alpen.name)
-    await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.lahore.name)
-    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
+    // Nothing is chosen for the person, however clear the ranking is.
+    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Choose a supplier')
+    await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Choose a supplier')
     await expect(d.getByText('Creates 2 order lines.')).toBeVisible()
-    // Split line 1 (4 pieces): the next-ranked supplier is offered for part 2; one quantity typed, the first part takes the remainder.
+    await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.alpen.name))
+    await chooseSupplier(page, d, 'Supplier for line 2', new RegExp(s.lahore.name))
+    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.alpen.name)
+    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
+    // Split line 1 (4 pieces): the new part starts with no supplier; the person picks it, and types one quantity. The first part takes the remainder.
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
-    await expect(d.getByRole('button', { name: 'Supplier for part 2, line 1' })).toContainText(s.lahore.name)
+    await expect(d.getByRole('button', { name: 'Supplier for part 2, line 1' })).toContainText('Choose a supplier')
+    await chooseSupplier(page, d, 'Supplier for part 2, line 1', new RegExp(s.lahore.name))
     await d.getByLabel('Quantity, part 2, line 1').fill('1')
     const typed = 1
     await expect(d.getByLabel('Quantity, part 1, line 1')).toHaveValue('3')
@@ -415,8 +420,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await d.getByRole('button', { name: 'Create order' }).click()
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     const taps = (await readCount(page)).mouse
-    // Mark won + Create order are the 2 taps of an unchanged win; the split adds Split this item (1 tap) and the quantity (1 typed).
-    fe2('Win with one split: taps (Mark won, Split this item, Create order)', taps, 3)
+    // Mark won, two taps for each of the three suppliers chosen, Split this item, Create order. (The count is the page's own mouse counter.)
+    fe2('Win with one split: taps (Mark won, three suppliers chosen, Split this item, Create order)', taps, 1 + 6 + 1 + 1)
     fe2('Win with one split: quantities typed', typed, 1)
 
     const orders = await must(rest<{ id: string; number: number }[]>('admin', `orders?rfq_id=eq.${rfq.id}&select=id,number`))

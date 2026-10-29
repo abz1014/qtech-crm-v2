@@ -2,13 +2,14 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
+import { chooseAllSuppliers, chooseSupplier } from '../support/supplierChoice'
 
 /*
  * O01 (convert an RFQ to an order) and O03 (the order page), end to end against the local CI stack, as the fixture users through the
  * real login form. Every test makes its own customer, RFQ and order.
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2 and A3):
- *   win an RFQ                       2 taps: Mark won, Create order (nothing typed)
+ *   win an RFQ                       Mark won, 2 taps a line to choose its supplier (nothing is pre-chosen: owner decision 2026-10-29), Create order
  *   mark a leg placed / delivered   1 tap each (there is no receiving step: owner decision 2026-10-15)
  *   engineer: commissioning done    1 tap, 0 typed
  * and the rule that an engineer is never sent a price, a receivable or a cost.
@@ -234,7 +235,12 @@ test.describe('O01: Mark won creates the order', () => {
     expect(await dialogViolations(page)).toEqual([])
     await shot(page, 'a1-markwon-owner-shape-375')
     await page.setViewportSize({ width: 1440, height: 900 })
-    // not stuck: Create order is pressable and says what is missing, then takes the person to the field
+    // not stuck: Create order is pressable and says what is missing (first the supplier, which is never chosen for the person), then takes the person to the field
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Choose a supplier')
+    await dialog.getByRole('button', { name: 'Create order' }).click()
+    await expect(dialog).toContainText('Choose the supplier for line 1.')
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toBeFocused()
+    await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(supplier.name))
     await dialog.getByRole('button', { name: 'Create order' }).click()
     await expect(dialog).toContainText('Type a selling price for line 1.')
     await expect(price(dialog, 1)).toBeFocused()
@@ -252,7 +258,7 @@ test.describe('O01: Mark won creates the order', () => {
     expect(await get(`quotations?rfq_id=eq.${rfq.id}&select=id`)).toHaveLength(0)
   })
 
-  test('typing every price: suppliers come from the ranking, terms from the last order, and a double submit makes one order', async ({ page }) => {
+  test('typing every price: suppliers are chosen by the person, terms from the last order, and a double submit makes one order', async ({ page }) => {
     const s = await seedRfq()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
@@ -265,15 +271,18 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByLabel('Payment terms in days')).toHaveValue('45')
     await expect(dialog).toContainText('from the last order')
     await expect(dialog.getByRole('checkbox', { name: 'Needs commissioning' })).toBeChecked()
-    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.supplierB.name)
-    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
-    await expect(dialog.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.supplierA.name)
+    // nothing is chosen for the person; line 3 has no quote at all, so it is simply not sourced
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Choose a supplier')
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Choose a supplier')
     await expect(dialog.getByRole('button', { name: 'Supplier for line 3' })).toContainText('Not sourced yet')
+    await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(s.supplierB.name), t.tap)
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
+    await chooseSupplier(page, dialog, 'Supplier for line 2', new RegExp(s.supplierA.name), t.tap)
     for (const [n, v] of [['1', '1000'], ['2', '2000'], ['3', '500']]) await t.typed(price(dialog, Number(n)), v)
 
     await t.doubleTap(dialog.getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
-    expect(t.count).toBe(1 + 3 + 1) // Mark won, three prices typed, Create order
+    expect(t.count).toBe(1 + 4 + 3 + 1) // Mark won, two suppliers chosen (2 taps each), three prices typed, Create order
 
     const orders = await get<{ id: string; customer_po_number: string | null; payment_terms_days: number | null }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,customer_po_number,payment_terms_days`)
     expect(orders).toHaveLength(1)
@@ -313,6 +322,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByText('Creates 2 order lines.')).toBeVisible()
     await dialog.getByRole('button', { name: 'Supplier for line 1' }).click()
     await page.getByRole('option', { name: new RegExp(s.supplierA.name) }).click()
+    await chooseAllSuppliers(page, dialog)
     await dialog.getByLabel('Customer PO number').fill(`CPO-${s.tag}`)
     await dialog.getByRole('button', { name: 'Create order' }).click()
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
@@ -339,6 +349,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked()
     await expect(dialog.getByRole('checkbox', { name: 'Include line 2' })).not.toBeChecked()
     await expect(dialog.getByTestId('convert-item-2-not-in')).toContainText(/R1/)
+    await chooseAllSuppliers(page, dialog)
     await dialog.getByRole('button', { name: 'Create order' }).click()
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${s.rfq.id}&select=id`)
@@ -377,6 +388,7 @@ test.describe('O01: Mark won creates the order', () => {
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
     const dialog = page.getByRole('dialog')
+    await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(supplierB.name)) // the warnings are about the quote chosen
     await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('may belong to another item')
     await expect(dialog.getByTestId('convert-item-1')).toContainText('currency of this supplier quote was not confirmed')
     await expect(price(dialog, 1)).toHaveValue('')
@@ -402,6 +414,7 @@ test.describe('O01: Mark won creates the order', () => {
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
     const dialog = page.getByRole('dialog')
+    await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(supplier.name))
     await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('No current SEK rate: pick the supplier')
     await expect(dialog.getByRole('button', { name: 'Create order' })).toBeEnabled()
     await price(dialog, 1).fill('300000')
@@ -409,7 +422,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
   })
 
-  test('Mark won once the quotation is issued: 2 taps', async ({ page }) => {
+  test('Mark won once the quotation is issued: Mark won, a supplier chosen on each line, Create order', async ({ page }) => {
     const s = await seedRfq({ prices: true })
     await must(rest('admin', 'rpc/issue_quotation', { method: 'POST', body: { p_quotation_id: crypto.randomUUID(), p_rfq_id: s.rfq.id } }))
     const t = tapper()
@@ -417,9 +430,13 @@ test.describe('O01: Mark won creates the order', () => {
     // Mark won is not repeated on the quotation row: it is the page's one green button once a quotation is out.
     await expect(page.getByTestId('quotation-0').getByRole('button', { name: 'Mark won' })).toHaveCount(0)
     await t.tap(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
-    await t.tap(page.getByRole('dialog').getByRole('button', { name: 'Create order' }))
+    const d = page.getByRole('dialog')
+    // seedRfq prices three items; the two with a quote need a supplier chosen (2 taps each), the third has none to choose
+    await chooseSupplier(page, d, 'Supplier for line 1', undefined, t.tap)
+    await chooseSupplier(page, d, 'Supplier for line 2', undefined, t.tap)
+    await t.tap(d.getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
-    expect(t.count).toBe(2)
+    expect(t.count).toBe(1 + 4 + 1)
   })
 })
 

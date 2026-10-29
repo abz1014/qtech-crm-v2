@@ -6,6 +6,7 @@ import { amount } from '../../verify/support/text'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../../support/pdf'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 import { ctxAs, layout, note, probe, settle, shot, tag, visit, watch, type Viewport } from './support'
+import { chooseAllSuppliers } from '../../support/supplierChoice'
 
 /*
  * Bug hunt, the sales workflow (SALES, admin where it matters), at 1366x768 and at 375x812 with touch. Every step is a probe: a
@@ -1035,6 +1036,7 @@ async function winFromLost(page: Page, info: TestInfo, rfqId: string, W: string,
   if (!(await d.isVisible().catch(() => false))) await vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).click()
   await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
   const create = d.getByRole('button', { name: 'Create order' })
+  await chooseAllSuppliers(page, d)
   if (vp === 'phone') await create.scrollIntoViewIfNeeded()
   await create.dblclick()
   await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/, T)

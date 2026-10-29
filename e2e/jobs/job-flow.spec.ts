@@ -3,6 +3,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } 
 import { setProfile } from '../orders/fixtures'
 import { db, num } from '../verify/support/db'
 import { amount } from '../verify/support/text'
+import { chooseAllSuppliers } from '../support/supplierChoice'
 
 /*
  * The whole job on the Job page (VERIFY, END-CHECKLIST 65), fictional data, as the admin:
@@ -54,6 +55,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
     const d = page.getByRole('dialog')
     await expect(d.getByRole('heading', { name: 'Mark won' })).toBeVisible()
     await d.getByLabel('Selling price, line 1').fill(String(PRICE))
+    await chooseAllSuppliers(page, d) // no supplier is chosen for the person: the one quote is picked from the list
     await d.getByRole('button', { name: 'Create order' }).click()
     await expect.poll(async () => (await db.rows(`orders?rfq_id=eq.${rfq.id}&select=id`)).length, { timeout: 60_000 }).toBe(1)
   })

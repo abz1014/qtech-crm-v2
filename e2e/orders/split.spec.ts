@@ -2,15 +2,15 @@ import { test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { expect, get, legLoc, setProfile, shot, tapper } from './fixtures'
+import { chooseAllSuppliers, chooseSupplier } from '../support/supplierChoice'
 
 /*
  * A8 (O08, O09): splitting an RFQ item across suppliers, end to end against the local CI stack, as the fixture users through the real
  * login form. Every test makes its own customer, RFQ, suppliers and order.
  *
  * Interaction counts asserted (BUILD_PLAN FE-2, Amendment A8):
- *   convert with no changes            2 taps (Mark won, Create order), nothing typed, every item on its rank-1 quote
- *   split in the convert dialog        on top of those 2: Split this item (1) + 1 quantity typed when the offered next-ranked supplier is fine;
- *                                      3 taps + 1 quantity typed when another supplier is picked (Split this item, open the picker, choose)
+ *   convert, nothing split             Mark won, then 2 taps per line to choose its supplier (nothing is pre-chosen: owner decision 2026-10-29), Create order
+ *   split in the convert dialog        on top of that: Split this item (1), the new part's supplier (2 taps) and 1 quantity typed
  *   Split line on the order page       4 taps + 1 quantity typed (Edit GST and lines, Split line on the row, choose the supplier, Split line in the dialog)
  *   re-issue a changed PO              1 tap on the indicator, then Issue in the dialog
  *   edit the selling price of a group  1 tap + 1 typed, once for every part
@@ -109,7 +109,7 @@ const markWon = (page: Page) => page.locator('[data-slot="mark-won"]').getByRole
 const partQty = (page: Page, part: number, line = 1) => dialog(page).getByLabel(`Quantity, part ${part}, line ${line}`)
 
 test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
-  test('nothing changed: 2 taps, 0 typed, every item on its rank-1 quote with the reason, and the order has one line per item', async ({ page }) => {
+  test('nothing is chosen for the person: every line starts on "Choose a supplier", Create order asks, and the order follows the suppliers picked', async ({ page }) => {
     const s = await seed()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
@@ -117,17 +117,27 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Mark won' })).toBeVisible()
 
-    // rank 1 by price; s2 is inside the 2% band, so s1 reads "Within 2%" (a tie decided by record), and the single-quote item reads "Best price"
+    // no supplier is chosen, not even for the lone quote or the cheapest
+    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Choose a supplier')
+    await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Choose a supplier')
+    await expect(d.getByText('Creates 2 order lines.')).toBeVisible()
+    await shot(page, 'a8-convert-nothing-chosen-1440')
+    // Create order says what is missing and takes the person to the first picker; nothing is created
+    await d.getByRole('button', { name: 'Create order' }).click()
+    await expect(d.getByText('Choose the supplier for line 1.')).toBeVisible()
+    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toBeFocused()
+    expect(await get(`orders?rfq_id=eq.${s.rfq.id}&select=id`)).toHaveLength(0)
+
+    // the picker lists the quotes with the reason (the ranking stays information); the person picks
+    await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name), t.tap)
     await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.s1.name)
     await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
-    await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.s1.name)
+    await chooseSupplier(page, d, 'Supplier for line 2', new RegExp(s.s1.name), t.tap)
     await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Best price')
-    await expect(d.getByText('Creates 2 order lines.')).toBeVisible()
-    await shot(page, 'a8-convert-nothing-changed-1440')
 
     await t.tap(d.getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
-    expect(t.count).toBe(2) // Mark won, Create order: nothing typed
+    expect(t.count).toBe(1 + 2 + 2 + 1) // Mark won, two taps a line to choose, Create order
 
     const order = await orderFor(s.rfq.id)
     const lines = await orderLines(order.id)
@@ -135,21 +145,24 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
       [4, 400],
       [2, 1985],
     ])
-    // both items sit on the rank-1 supplier's one leg
+    // both items sit on the chosen supplier's one leg
     expect(new Set(lines.map(l => l.supplier_order_id)).size).toBe(1)
   })
 
-  test('split an item: Split this item (1) + the quantity typed; the first part takes the remainder; each part gets its own leg; the order total does not change', async ({ page }) => {
+  test('split an item: choose, Split this item (1), the part supplier, the quantity typed; the first part takes the remainder; each part gets its own leg; the order total does not change', async ({ page }) => {
     const s = await seed()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await t.tap(markWon(page))
     const d = dialog(page)
 
+    await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name), t.tap)
     await t.tap(d.getByRole('button', { name: 'Split this item, line 1' }))
-    // the offered part is the next ranked supplier (s2), with no quantity yet: Create order waits for it
-    await expect(d.getByRole('button', { name: 'Supplier for part 2, line 1' })).toContainText(s.s2.name)
+    // the new part starts with no supplier and no quantity: the person picks both, and Create order waits for them
+    await expect(d.getByRole('button', { name: 'Supplier for part 2, line 1' })).toContainText('Choose a supplier')
     await expect(d.getByRole('button', { name: 'Create order' })).toBeDisabled()
+    await chooseSupplier(page, d, 'Supplier for part 2, line 1', new RegExp(s.s2.name), t.tap)
+    await chooseSupplier(page, d, 'Supplier for line 2', new RegExp(s.s1.name), t.tap)
     await t.typed(partQty(page, 2), '1')
     await expect(partQty(page, 1)).toHaveValue('3')
     await expect(d.getByText('remainder, auto')).toBeVisible()
@@ -160,8 +173,8 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
 
     await t.tap(d.getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
-    // Mark won (2 with Create order) + Split this item (1) + the quantity typed (1)
-    expect(t.count).toBe(4)
+    // Mark won, line 1's supplier (2), Split this item (1), part 2's supplier (2), line 2's supplier (2), the quantity typed (1), Create order
+    expect(t.count).toBe(1 + 2 + 1 + 2 + 2 + 1 + 1)
 
     const order = await orderFor(s.rfq.id)
     const lines = await orderLines(order.id)
@@ -179,12 +192,13 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await expect(page.getByText('split across 2 suppliers').first()).toBeVisible()
   })
 
-  test('split with another supplier picked: Split this item, open the picker, choose = 3 taps, plus the quantity typed', async ({ page }) => {
+  test('split with another supplier picked: Split this item, open the picker, choose, plus the quantity typed', async ({ page }) => {
     const s = await seed()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await t.tap(markWon(page))
     const d = dialog(page)
+    await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name), t.tap)
     await t.tap(d.getByRole('button', { name: 'Split this item, line 1' }))
     await t.tap(d.getByRole('button', { name: 'Supplier for part 2, line 1' }))
     // the picker lists the ranked quotes with the reason; a supplier used by the other part cannot be picked again
@@ -193,7 +207,8 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await shot(page, 'a8-convert-picker-1440')
     await t.tap(page.getByRole('option', { name: new RegExp(s.s3.name) }))
     await t.typed(partQty(page, 2), '1')
-    expect(t.count).toBe(1 + 1 + 1 + 1 + 1) // Mark won, Split this item, picker, choose, quantity
+    await chooseSupplier(page, d, 'Supplier for line 2', undefined, t.tap)
+    expect(t.count).toBe(1 + 2 + 1 + 1 + 1 + 1 + 2) // Mark won, line 1's supplier, Split this item, picker, choose, quantity, line 2's supplier
     await t.tap(d.getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
 
@@ -210,7 +225,10 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await markWon(page).click()
     const d = dialog(page)
+    await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name))
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
+    await chooseSupplier(page, d, 'Supplier for part 2, line 1', new RegExp(s.s2.name))
+    await chooseAllSuppliers(page, d)
     await partQty(page, 1).fill('3')
     await partQty(page, 2).fill('2')
     await expect(d.getByRole('alert')).toContainText('Parts add up to 5, but the item is 4.')
@@ -228,6 +246,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await markWon(page).click()
     const d = dialog(page)
+    await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name))
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
     await d.getByRole('button', { name: 'Remove part 2, line 1' }).click()
     await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.s1.name)
@@ -260,6 +279,7 @@ test.describe('lifecycle audit fixes: commissioning toggle and default expected 
     const box = d.getByRole('checkbox', { name: 'Needs commissioning' })
     await expect(box).not.toBeChecked()
     await box.click()
+    await chooseAllSuppliers(page, d)
     await d.getByRole('button', { name: 'Create order' }).click()
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     const order = await orderFor(s.rfq.id)
@@ -434,8 +454,10 @@ for (const width of [1440, 375]) {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await markWon(page).click()
     const d = dialog(page)
+    await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name))
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
     await partQty(page, 2).fill('1')
+    await chooseAllSuppliers(page, d)
     expect(await dialogViolations(page)).toEqual([])
     await shot(page, `a8-convert-split-${width}`)
     await d.getByRole('button', { name: 'Supplier for part 2, line 1' }).click()
