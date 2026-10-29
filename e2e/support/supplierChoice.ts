@@ -22,6 +22,8 @@ const UNCHOSEN = /Supplier for (?:line \d+|part \d+, line \d+): Choose a supplie
 
 /** Picks the first quote of every picker still on "Choose a supplier" (or `who` on each, when it is one of that line's quotes). */
 export async function chooseAllSuppliers(page: Page, d: Locator, who?: string | RegExp): Promise<void> {
+  // the list of lines is drawn once the quotes have loaded; before that there is nothing to count
+  await d.getByRole('group', { name: 'Suppliers by line' }).waitFor()
   for (let guard = 0; guard < 30; guard++) {
     const open = d.getByRole('button', { name: UNCHOSEN })
     if ((await open.count()) === 0) return
