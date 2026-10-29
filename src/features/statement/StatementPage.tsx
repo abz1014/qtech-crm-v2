@@ -54,7 +54,7 @@ export default function StatementPage() {
         <div data-testid="statement-no-access">
         <EmptyState
           icon={ShieldAlert}
-          title="The comparative statement is for admin and sales"
+          title="The comparative statement is for admins and sales"
           actions={
             key ? (
               <Link to={`/jobs/${encodeURIComponent(key)}`} className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken">

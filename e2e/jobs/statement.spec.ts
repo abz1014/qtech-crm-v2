@@ -157,7 +157,7 @@ test('the job page links to the statement for sales; an engineer has no link and
     if (u.includes('/rest/v1/') && /unit_price|weight/.test(u)) priced.push(u)
   })
   await page.goto(`/jobs/${s.rfq.number}/statement`)
-  await expect(page.getByTestId('statement-no-access')).toContainText('The comparative statement is for admin and sales')
+  await expect(page.getByTestId('statement-no-access')).toContainText('The comparative statement is for admins and sales')
   await expect(page.getByTestId('statement')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Export PDF' })).toHaveCount(0)
   expect(priced).toEqual([])
