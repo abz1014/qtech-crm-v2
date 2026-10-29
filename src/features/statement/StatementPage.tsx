@@ -53,6 +53,7 @@ export default function StatementPage() {
       <Shell>
         <div data-testid="statement-no-access">
         <EmptyState
+          mood="warning"
           icon={ShieldAlert}
           title="The comparative statement is for admins and sales"
           actions={
