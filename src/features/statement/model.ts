@@ -234,3 +234,19 @@ export function buildStatement(items: readonly RfqItemRow[], inquiries: readonly
 
   return { sections, totals, noReplyCount: asked.filter(i => i.lines.length === 0).length }
 }
+
+const SORT_WORDS: Record<SortKey, string> = {
+  supplier: 'supplier name',
+  unit: 'unit cost',
+  total: 'line total',
+  lead: 'lead time',
+  weight: 'weight',
+  origin: 'country of origin',
+}
+
+/** What the person is looking at, in words: printed on screen and on the PDF so an order is never read as a ranking. */
+export function orderNote(sort: SortSpec): string {
+  if (sort.key === 'supplier' && sort.dir === 'asc') return 'Suppliers are listed by name, A to Z. Nothing is selected or recommended.'
+  const dir = sort.key === 'supplier' ? (sort.dir === 'asc' ? 'A to Z' : 'Z to A') : sort.dir === 'asc' ? 'low to high' : 'high to low'
+  return `Sorted by ${SORT_WORDS[sort.key]}, ${dir}${sort.key === 'unit' || sort.key === 'total' ? ' (within each currency)' : ''}. This is only an order on the page: nothing is selected or recommended.`
+}

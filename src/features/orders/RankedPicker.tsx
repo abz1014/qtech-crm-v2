@@ -55,6 +55,7 @@ export function RankedOptionRow({ q, among, className }: { q: RankedQuote; among
 }
 
 export function RankedPicker({
+  id,
   label,
   value,
   quotes,
@@ -62,8 +63,10 @@ export function RankedPicker({
   usedLineIds,
   usedNote,
   onChange,
-  header = 'Ranked quotes for this item, with the reason',
+  header = 'Quotes for this item, with the reason',
 }: {
+  /** The trigger's id, so a message can take the person to it. */
+  id?: string
   label: string
   value: string
   quotes: readonly RankedQuote[]
@@ -87,6 +90,7 @@ export function RankedPicker({
       <PopoverTrigger asChild>
         <button
           type="button"
+          id={id}
           aria-haspopup="listbox"
           className="grid min-h-[36px] w-full grid-cols-[24px_minmax(0,1fr)_16px] items-center gap-2 rounded border border-line-input bg-surface px-2 py-1 text-left hover:border-fg-muted"
         >

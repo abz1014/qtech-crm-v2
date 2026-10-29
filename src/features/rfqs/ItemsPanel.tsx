@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react'
-import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
+import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, Table2, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useSeesPrices } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -279,6 +280,7 @@ export function ItemsPanel({
   ranking,
   onAddItem,
   onCopyEnquiry,
+  statementTo,
 }: {
   rfq: RfqHeader
   items: RfqItemRow[]
@@ -293,6 +295,8 @@ export function ItemsPanel({
   ranking?: ReadonlyMap<string, RankRow>
   onAddItem: () => void
   onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void
+  /** Where the Comparative statement is (admin and sales). Absent: no link. */
+  statementTo?: string
 }) {
   const today = businessToday()
   // Every price (supplier, selling, spread) is for admin and sales only (owner decision 2026-10-22); an engineer's lines carry none.
@@ -328,9 +332,21 @@ export function ItemsPanel({
         </>
       }
       actions={
-        <Button icon={Plus} onClick={onAddItem}>
-          Add item
-        </Button>
+        <>
+          {prices && statementTo && responders.length > 0 ? (
+            <Link
+              to={statementTo}
+              data-testid="open-statement"
+              className="inline-flex h-control items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
+            >
+              <Icon icon={Table2} size="sm" />
+              Comparative statement
+            </Link>
+          ) : null}
+          <Button icon={Plus} onClick={onAddItem}>
+            Add item
+          </Button>
+        </>
       }
     >
       {!nobodyAsked && rateBar.length > 0 ? <RateBar entries={rateBar} /> : null}

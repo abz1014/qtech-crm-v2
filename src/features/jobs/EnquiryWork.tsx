@@ -72,7 +72,7 @@ function SendToEachCard({ ask, inquiries, onClose }: { ask: AskResult; inquiries
 }
 
 /** The work of the Quotation stage: suppliers to ask or asked (with their replies), the items with prices, and the quotations. */
-export default function EnquiryWork({ rfqId }: { rfqId: string }) {
+export default function EnquiryWork({ rfqId, jobKey }: { rfqId: string; jobKey?: string }) {
   const header = useRfqHeader(rfqId)
   const items = useRfqItems(rfqId)
   const inquiries = useRfqInquiries(rfqId)
@@ -80,10 +80,10 @@ export default function EnquiryWork({ rfqId }: { rfqId: string }) {
   if (!header.data || items.isError || inquiries.isError) {
     return <p className="text-base text-fg-muted">The supplier details did not load. Open the enquiry page to try again.</p>
   }
-  return <Work rfq={header.data} itemList={items.data ?? []} inquiryList={inquiries.data ?? []} />
+  return <Work rfq={header.data} itemList={items.data ?? []} inquiryList={inquiries.data ?? []} jobKey={jobKey} />
 }
 
-function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqItemRow[]; inquiryList: InquiryRow[] }) {
+function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList: RfqItemRow[]; inquiryList: InquiryRow[]; jobKey?: string }) {
   const prices = useSeesPrices()
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
@@ -147,6 +147,7 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
         ranking={ranking.byLine}
         onAddItem={() => setAdding(true)}
         onCopyEnquiry={(s, item) => void askFrom([s], [item])}
+        statementTo={jobKey ? `/jobs/${encodeURIComponent(jobKey)}/statement` : undefined}
       />
       <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />

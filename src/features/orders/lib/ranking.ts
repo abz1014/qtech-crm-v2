@@ -40,9 +40,6 @@ export function mapRankRows(rows: readonly RankRow[], supplierNames: ReadonlyMap
 
 export const forItem = (all: readonly RankedQuote[], itemId: string): RankedQuote[] => all.filter(q => q.itemId === itemId)
 
-/** The rank-1 line of an item: what Create order takes when nobody chooses. */
-export const rankOne = (quotes: readonly RankedQuote[]): RankedQuote | undefined => quotes.find(q => q.rank === 1)
-
 /** The selling price and spread reach the strings only when the database sent them (it sends NULL to an engineer). */
 const reasons = (q: RankedQuote, among: readonly RankedQuote[]) =>
   reasonsFor(q.row, { showSell: q.row.sell_source !== null, bandSize: bandSizeOf(among.map(a => a.row)) })
