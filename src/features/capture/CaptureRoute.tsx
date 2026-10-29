@@ -4,6 +4,7 @@ import { Camera, FilePlus2, Search, Share2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { NoPrimary } from '@/ui/NoPrimary'
 import { useToast } from '@/ui/useToast'
 import { getCapture, listCaptures, safely, takeBackFromSignIn, type CaptureItem } from '@/lib/capture/store'
 import { countsText } from '@/features/capture/model'
@@ -164,6 +165,7 @@ function JobFirst() {
   }, [])
   return (
     <div className="mx-auto grid max-w-xl gap-5 px-4 py-8" data-testid="photo-or-note">
+      <NoPrimary />
       <header className="grid gap-1">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Icon icon={Camera} className="text-fg-muted" />

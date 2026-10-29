@@ -535,6 +535,14 @@ export function collect(opts: CollectOptions): Metrics {
     if (hidesX && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1) axis = 'x'
     else if (hidesY && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 1 && rect(el).height > 2) axis = 'y'
     if (!axis) continue
+    // A deliberate line clamp (an ellipsis shows the cut, the whole text is in the title: a long item list in a windowed table) is a
+    // shown cut, counted with the ellipses, as the "Text cut" check below does. A clamp without the whole text in a title still fails.
+    const clamp = s.getPropertyValue('-webkit-line-clamp')
+    const clamped = !!clamp && clamp !== 'none' && axis === 'y' && !!(el.getAttribute('title') ?? '').trim()
+    if (clamped) {
+      clipped.ellipsis++
+      continue
+    }
     clipped.count++
     if (ellipsis) clipped.ellipsis++
     if (clipped.samples.length < 12) clipped.samples.push({ text: (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60), axis, ellipsis })

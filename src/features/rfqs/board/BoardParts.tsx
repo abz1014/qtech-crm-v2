@@ -30,7 +30,7 @@ function Priority() {
 /** "RFQ-0177 · their ref ENQ-2211": its own line, under what was asked. */
 function Refs({ row }: { row: BoardRow }) {
   return (
-    <span className="line-clamp-1 min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]" data-refs title={row.customerRef ? `${rfqRef(row.number)} · their ref ${row.customerRef}` : undefined}>
+    <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]" data-refs title={row.customerRef ? `${rfqRef(row.number)} · their ref ${row.customerRef}` : undefined}>
       <span className="num">{rfqRef(row.number)}</span>
       {row.customerRef ? ` · their ref ${row.customerRef}` : null}
     </span>
