@@ -205,7 +205,8 @@ describe('Add to this job: a kept share is deleted only after the save', () => {
 
   it('a reload brings the shared item back (read again by its id from the address) and keeps it; Discard deletes it', async () => {
     const first = mount('sales', [], { text: 'Gate pass needed after 3pm', files: [], captureId: 'cap-2' })
-    expect(await screen.findByRole('textbox', { name: 'Paste here' })).toHaveValue('Gate pass needed after 3pm')
+    // the box exists before the shared text is put in it: wait for the text, not just the box (slow machines raced here)
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Paste here' })).toHaveValue('Gate pass needed after 3pm'))
     first.unmount()
     expect(kept.deleted).toEqual([])
     // the same address, a fresh page: the item is read again
