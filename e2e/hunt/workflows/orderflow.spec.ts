@@ -585,12 +585,12 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
   const ep = await newPage(engPhone, info, 'B engineer phone')
   const log = restLog(ep)
 
-  await probe(info, ep, 'B engineer phone Today: "Commissioning today"', async () => {
+  await probe(info, ep, 'B engineer phone Today: the visit type', async () => {
     await visit(ep, info, '/todo')
     await ep.getByRole('heading', { level: 1, name: 'To do' }).waitFor({ timeout: T })
     const li = ep.locator('li[data-rule="job_commissioning"]').filter({ hasText: oref })
     want(info, 'B engineer Today', (await li.count()) === 1, `engineer Today has ${await li.count()} job_commissioning items for ${oref}`)
-    if (await li.count()) want(info, 'B engineer Today', /Commissioning today/.test(await li.innerText()), 'the item does not say "Commissioning today"', await li.innerText())
+    if (await li.count()) want(info, 'B engineer Today', /Install/.test(await li.innerText()), 'the item does not say the visit type (Install)', await li.innerText())
     await layout(ep, info, 'B engineer phone Today')
     await shot(ep, 'B-engineer-phone-today')
   })

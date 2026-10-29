@@ -715,6 +715,46 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"gst_deadline_overrides": {
+                  Row: {
+                    "month": string,"note": string | null,"pay_by": string | null,"return_by": string | null,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "month": string,"note"?: string | null,"pay_by"?: string | null,"return_by"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "month"?: string,"note"?: string | null,"pay_by"?: string | null,"return_by"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "gst_deadline_overrides_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"gst_deadline_settings": {
+                  Row: {
+                    "id": number,"pay_day": number,"return_day": number,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: number,"pay_day"?: number,"return_day"?: number,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "id"?: number,"pay_day"?: number,"return_day"?: number,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "gst_deadline_settings_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"history_sources": {
                   Row: {
                     "child_table": string,"label_col": string | null,"parent_col": string,"parent_table": string,"roles": (string)[]

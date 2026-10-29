@@ -109,7 +109,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     await resetCount(page)
     const row = page.getByRole('region', { name: 'Tomorrow' }).locator('li[data-rule="job_commissioning"]').filter({ hasText: ref })
     await expect(row).toBeVisible()
-    await expect(row).toContainText('Commissioning')
+    await expect(row).toContainText('Installation') // the visit type; a planned visit with no type is an installation (0109)
     await expect(row).toContainText(s.customer.name)
     fe2('Today: taps to see the engineer\'s work', (await readCount(page)).mouse, 0)
     await expect(page.getByRole('radio', { name: /^Money/ })).toHaveCount(0) // no Money tab on Today
