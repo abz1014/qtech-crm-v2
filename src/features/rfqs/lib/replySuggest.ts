@@ -9,8 +9,8 @@
 // Nothing here writes. "Accept" in the screen turns the selected suggestions into a ReplyDraft and saves it.
 
 import type { CantQuoteReason } from './cantQuote'
-import type { ParsedReply, RegretKind, ReplyItemRef, ReplyOffer } from './replyParse'
-import type { ReplyDraft } from './replySave'
+import type { ParsedReply, RegretKind, ReplyItemRef, ReplyOffer, WeightUnit } from './replyParse'
+import type { ItemExtras, ReplyDraft } from './replySave'
 
 export interface SuggestItem extends ReplyItemRef {
   /** 1-based number on the RFQ. */
@@ -31,6 +31,10 @@ export interface Suggestion {
   currencyFrom: 'reply' | 'supplier'
   leadTimeText: string | null
   inStock: boolean | null
+  /** Weight of one unit and where it is made, as the reply said (null: not said). */
+  weight: number | null
+  weightUnit: WeightUnit | null
+  origin: string | null
   confidence: 'high' | 'medium' | 'low'
   /** Why the engineer should look at this offer before accepting. Empty: nothing to check. */
   check: string[]
@@ -124,6 +128,9 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
       currencyFrom: o.currency ? 'reply' : 'supplier',
       leadTimeText: o.leadTimeText,
       inStock: o.inStock,
+      weight: o.weight,
+      weightUnit: o.weightUnit,
+      origin: o.origin,
       confidence: o.confidence,
       check: checksFor(o),
       selectable: blocked === null,
@@ -146,11 +153,22 @@ export function draftFromSuggestions(base: ReplyDraft, set: SuggestionSet, selec
   if (chosen.length === 0) return base
   const prices = { ...base.prices }
   for (const s of chosen) prices[s.itemId as string] = s.unitPrice
+  const extras: Record<string, ItemExtras | undefined> = { ...base.extras }
+  for (const s of chosen) {
+    if (s.weight === null && !s.origin) continue
+    const had = extras[s.itemId as string]
+    extras[s.itemId as string] = {
+      weight: s.weight ?? had?.weight ?? null,
+      weightUnit: s.weight !== null ? (s.weightUnit ?? 'kg') : (had?.weightUnit ?? 'kg'),
+      origin: s.origin ?? had?.origin ?? '',
+    }
+  }
   const stocks = new Set(chosen.map(s => s.inStock).filter((v): v is boolean => v !== null))
   return {
     currency: set.currency,
     prices,
     leadTime: base.leadTime.trim() || (chosen.find(s => s.leadTimeText)?.leadTimeText ?? ''),
     inStock: base.inStock ?? (stocks.size === 1 ? [...stocks][0] : null),
+    ...(Object.keys(extras).length > 0 ? { extras } : {}),
   }
 }

@@ -2,6 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
 import type { EvidenceFeedRow } from '@/features/rfqs/lib/ranking/reasons'
+import type { PlannedPrice } from '@/features/rfqs/lib/replySave'
 import type { AskOutcome, CategoryEvidenceRow, CategoryOption, PriceWinsRow, SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
@@ -368,6 +369,11 @@ export interface QuoteLineRow {
   inStock: boolean | null
   fxRatePkr: number | null
   fxRateOn: string | null
+  /** Weight of ONE unit in weightUnit (0111), else null. Admin and sales only: an engineer's read never asks for it. */
+  weight?: number | null
+  weightUnit?: 'kg' | 'g' | 'lb'
+  /** Country of origin the supplier gave, else null. */
+  origin?: string | null
 }
 
 export interface InquiryRow {
@@ -407,7 +413,7 @@ export interface InquiryRow {
 }
 
 /** Quote line columns with prices (admin and sales) and without (an engineer never fetches a price: owner decision 2026-10-22). */
-const QUOTE_LINE_COLS = 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on'
+const QUOTE_LINE_COLS = 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on, origin, weight, weight_unit'
 const QUOTE_LINE_COLS_NO_PRICES = 'id, inquiry_id, rfq_item_id, currency, lead_time, in_stock'
 
 /**
@@ -464,7 +470,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
   }
   for (const l of unwrap(legs)) if (l.currency && !lastCurrency.has(l.supplier_id)) lastCurrency.set(l.supplier_id, l.currency.trim())
   const linesBy = new Map<string, QuoteLineRow[]>()
-  type DbLine = { id: string; inquiry_id: string; rfq_item_id: string; unit_price?: number; currency: string; lead_time: string | null; in_stock: boolean | null; fx_rate_pkr?: number | null; fx_rate_on?: string | null }
+  type DbLine = { id: string; inquiry_id: string; rfq_item_id: string; unit_price?: number; currency: string; lead_time: string | null; in_stock: boolean | null; fx_rate_pkr?: number | null; fx_rate_on?: string | null; origin?: string | null; weight?: number | null; weight_unit?: string }
   for (const l of unwrap(lines) as unknown as DbLine[]) {
     const row: QuoteLineRow = {
       id: l.id,
@@ -476,6 +482,9 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       inStock: l.in_stock,
       fxRatePkr: l.fx_rate_pkr === null || l.fx_rate_pkr === undefined ? null : Number(l.fx_rate_pkr),
       fxRateOn: l.fx_rate_on ?? null,
+      weight: l.weight === null || l.weight === undefined ? null : Number(l.weight),
+      weightUnit: l.weight_unit === 'g' || l.weight_unit === 'lb' ? l.weight_unit : 'kg',
+      origin: l.origin ?? null,
     }
     linesBy.set(l.inquiry_id, [...(linesBy.get(l.inquiry_id) ?? []), row])
   }
@@ -546,7 +555,7 @@ export interface SaveReplyInput {
   leadTime: string | null
   inStock: boolean | null
   /** Items with a price now. Existing lines for these items are updated in place. */
-  prices: Array<{ itemId: string; unitPrice: number }>
+  prices: PlannedPrice[]
   /** Items whose line goes: the price was cleared, or the currency changed (the line is then re-entered at today's rate). */
   removeItemIds: string[]
 }
@@ -567,6 +576,9 @@ export async function saveReply(input: SaveReplyInput): Promise<number> {
       currency: input.currency,
       lead_time: input.leadTime,
       in_stock: input.inStock,
+      // Weight and origin are written only when the form held them (a missing key leaves the saved value alone).
+      ...(p.weight !== undefined ? { weight: p.weight, weight_unit: p.weightUnit ?? 'kg' } : {}),
+      ...(p.origin !== undefined ? { origin: p.origin } : {}),
     })),
     { onConflict: 'inquiry_id,rfq_item_id' },
   )
@@ -974,6 +986,8 @@ export async function restoreQuoteLine(line: QuoteLineRow): Promise<void> {
       in_stock: line.inStock,
       fx_rate_pkr: line.fxRatePkr,
       fx_rate_on: line.fxRateOn,
+      ...(line.weight !== undefined ? { weight: line.weight, weight_unit: line.weightUnit ?? 'kg' } : {}),
+      ...(line.origin !== undefined ? { origin: line.origin } : {}),
     },
     { onConflict: 'inquiry_id,rfq_item_id' },
   )

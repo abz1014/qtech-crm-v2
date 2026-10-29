@@ -39,7 +39,9 @@ import {
   reasonLabel,
   type RateTable,
   type SuggestionSet,
+  type ItemExtras,
   type ReplyDraft,
+  type WeightUnit,
 } from '@/features/rfqs/lib'
 import { parseReplyPrice, replyPriceProblem } from '@/features/rfqs/lib/replyPrice'
 
@@ -126,6 +128,12 @@ export function CantQuoteMenu({ supplierName, busy, onPick, className }: { suppl
   )
 }
 
+const WEIGHT_UNITS = [
+  { value: 'kg', label: 'kg' },
+  { value: 'g', label: 'g' },
+  { value: 'lb', label: 'lb' },
+]
+
 /** The one-tap chips for a supplier with no currency on file: the usual four first, then the rest. */
 const CURRENCY_CHIPS = ['USD', 'EUR', 'CNY', 'PKR', ...REPLY_CURRENCIES.filter(c => !['USD', 'EUR', 'CNY', 'PKR'].includes(c))]
 
@@ -154,7 +162,7 @@ export function SupplierReplyDialog({
   const itemReason = useSetItemDecline(rfq.id)
 
   const prefill = currencyForSupplier(inquiry.lastCurrency, inquiry.supplierCountry)
-  const existing = inquiry.lines.map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock }))
+  const existing = inquiry.lines.map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock, weight: l.weight, weightUnit: l.weightUnit, origin: l.origin }))
   const [draft, setDraft] = useState<ReplyDraft>(() => draftFromLines(existing, prefill.currency))
   const [changeCurrency, setChangeCurrency] = useState(false)
   const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
@@ -490,6 +498,48 @@ export function SupplierReplyDialog({
                   />
                 </label>
               </div>
+              <details className="text-sm" open={Object.keys(draft.extras ?? {}).length > 0 || undefined} data-reply-extras="">
+                <summary className="w-fit cursor-pointer text-fg-muted hover:text-fg">Weight and country of origin (optional)</summary>
+                <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement; nothing is worked out from it.</p>
+                <ul className="mt-2 grid gap-3">
+                  {items
+                    .filter(it => !inquiry.itemDeclines[it.id])
+                    .map(it => {
+                      const x = draft.extras?.[it.id] ?? { weight: null, weightUnit: 'kg' as const, origin: '' }
+                      const patch = (p: Partial<ItemExtras>) => setDraft(d => ({ ...d, extras: { ...d.extras, [it.id]: { ...x, ...p } } }))
+                      return (
+                        <li key={it.id} className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+                          <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
+                            <span className="num mr-2 text-fg-muted">{it.number}</span>
+                            {it.description}
+                          </span>
+                          <span className="grid grid-cols-[minmax(0,1fr)_84px_minmax(0,1.3fr)] gap-2">
+                            <NumberInput
+                              aria-label={`Weight of one unit, item ${it.number} from ${inquiry.supplierName}`}
+                              value={x.weight}
+                              onChange={v => patch({ weight: v })}
+                              placeholder="Weight"
+                              min={0}
+                            />
+                            <Select
+                              aria-label={`Weight unit, item ${it.number} from ${inquiry.supplierName}`}
+                              options={WEIGHT_UNITS}
+                              value={x.weightUnit}
+                              onChange={e => patch({ weightUnit: e.target.value as WeightUnit })}
+                            />
+                            <TextField
+                              aria-label={`Country of origin, item ${it.number} from ${inquiry.supplierName}`}
+                              value={x.origin}
+                              onChange={e => patch({ origin: e.target.value })}
+                              placeholder="Country"
+                              maxLength={60}
+                            />
+                          </span>
+                        </li>
+                      )
+                    })}
+                </ul>
+              </details>
               {draft.currency ? (
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
                   <span>{`Prices in ${currencyNote}.`}</span>

@@ -6,12 +6,24 @@
 //    (the capture trigger only runs on insert).
 //  - A price that was cleared removes its line. A blank item that never had a line writes nothing.
 
+import type { WeightUnit } from './replyParse'
+
+/** What a supplier said about one item besides its price (0111): weight of ONE unit, and where it is made. */
+export interface ItemExtras {
+  weight: number | null
+  weightUnit: WeightUnit
+  origin: string
+}
+
 export interface ExistingLine {
   itemId: string
   unitPrice: number
   currency: string
   leadTime: string | null
   inStock: boolean | null
+  weight?: number | null
+  weightUnit?: WeightUnit | null
+  origin?: string | null
 }
 
 export interface ReplyDraft {
@@ -21,15 +33,27 @@ export interface ReplyDraft {
   prices: Readonly<Record<string, number | null | undefined>>
   leadTime: string
   inStock: boolean | null
+  /** Weight and origin per item id. A missing entry leaves what is saved alone. */
+  extras?: Readonly<Record<string, ItemExtras | undefined>>
+}
+
+export interface PlannedPrice {
+  itemId: string
+  unitPrice: number
+  /** Set only when the draft holds extras for the item; absent means "do not touch". */
+  weight?: number | null
+  weightUnit?: WeightUnit
+  origin?: string | null
 }
 
 export interface ReplyPlan {
-  prices: Array<{ itemId: string; unitPrice: number }>
+  prices: PlannedPrice[]
   removeItemIds: string[]
   leadTime: string | null
   inStock: boolean | null
 }
 
+const validWeight = (n: number | null | undefined): number | null => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null)
 const valid = (n: number | null | undefined): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0
 
 export function planReplySave(existing: readonly ExistingLine[], draft: ReplyDraft): ReplyPlan {
@@ -41,7 +65,8 @@ export function planReplySave(existing: readonly ExistingLine[], draft: ReplyDra
     const typed = draft.prices[itemId]
     const had = byItem.get(itemId)
     if (valid(typed)) {
-      prices.push({ itemId, unitPrice: typed })
+      const x = draft.extras?.[itemId]
+      prices.push(x ? { itemId, unitPrice: typed, weight: validWeight(x.weight), weightUnit: x.weightUnit, origin: x.origin.trim() || null } : { itemId, unitPrice: typed })
       if (had && had.currency !== draft.currency) removeItemIds.push(itemId)
     } else if (had) {
       removeItemIds.push(itemId)
@@ -59,6 +84,8 @@ export function isReplyDirty(existing: readonly ExistingLine[], draft: ReplyDraf
     const had = byItem.get(p.itemId)
     if (!had || had.unitPrice !== p.unitPrice) return true
     if ((had.leadTime ?? null) !== plan.leadTime || (had.inStock ?? null) !== plan.inStock) return true
+    if (p.weight !== undefined && ((had.weight ?? null) !== p.weight || (p.weight !== null && (had.weightUnit ?? 'kg') !== p.weightUnit))) return true
+    if (p.origin !== undefined && (had.origin?.trim() || null) !== p.origin) return true
   }
   return false
 }
@@ -66,7 +93,17 @@ export function isReplyDirty(existing: readonly ExistingLine[], draft: ReplyDraf
 /** The row's starting values from what is already saved: the first line's currency, lead time and stock. */
 export function draftFromLines(existing: readonly ExistingLine[], fallbackCurrency: string): ReplyDraft {
   const prices: Record<string, number> = {}
-  for (const l of existing) prices[l.itemId] = l.unitPrice
+  const extras: Record<string, ItemExtras> = {}
+  for (const l of existing) {
+    prices[l.itemId] = l.unitPrice
+    if (l.weight != null || l.origin) extras[l.itemId] = { weight: l.weight ?? null, weightUnit: l.weightUnit ?? 'kg', origin: l.origin ?? '' }
+  }
   const first = existing[0]
-  return { currency: first?.currency ?? fallbackCurrency, prices, leadTime: first?.leadTime ?? '', inStock: first?.inStock ?? null }
+  return {
+    currency: first?.currency ?? fallbackCurrency,
+    prices,
+    leadTime: first?.leadTime ?? '',
+    inStock: first?.inStock ?? null,
+    ...(Object.keys(extras).length > 0 ? { extras } : {}),
+  }
 }

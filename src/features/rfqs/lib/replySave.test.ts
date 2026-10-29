@@ -61,3 +61,33 @@ describe('draftFromLines', () => {
     expect(d).toEqual({ currency: 'EUR', prices: { a: 1 }, leadTime: '4 weeks', inStock: false })
   })
 })
+
+describe('weight and origin (0111)', () => {
+  const x = { weight: 2.5, weightUnit: 'kg' as const, origin: ' Germany ' }
+  it('adds weight, unit and a trimmed origin to the planned price only when the draft holds them', () => {
+    const p = planReplySave([], { currency: 'USD', prices: { a: 10, b: 20 }, leadTime: '', inStock: null, extras: { a: x } })
+    expect(p.prices).toEqual([
+      { itemId: 'a', unitPrice: 10, weight: 2.5, weightUnit: 'kg', origin: 'Germany' },
+      { itemId: 'b', unitPrice: 20 },
+    ])
+  })
+  it('writes a cleared weight and origin as null', () => {
+    const p = planReplySave([], { currency: 'USD', prices: { a: 10 }, leadTime: '', inStock: null, extras: { a: { weight: 0, weightUnit: 'g', origin: '  ' } } })
+    expect(p.prices).toEqual([{ itemId: 'a', unitPrice: 10, weight: null, weightUnit: 'g', origin: null }])
+  })
+  it('reads the saved weight and origin back into the draft, and is not dirty until one changes', () => {
+    const existing = [line('a', 10, 'USD', { weight: 2.5, weightUnit: 'kg', origin: 'Germany' })]
+    const base = draftFromLines(existing, 'USD')
+    expect(base.extras).toEqual({ a: { weight: 2.5, weightUnit: 'kg', origin: 'Germany' } })
+    expect(isReplyDirty(existing, base)).toBe(false)
+    expect(isReplyDirty(existing, { ...base, extras: { a: { ...base.extras!.a!, weight: 3 } } })).toBe(true)
+    expect(isReplyDirty(existing, { ...base, extras: { a: { ...base.extras!.a!, weightUnit: 'lb' } } })).toBe(true)
+    expect(isReplyDirty(existing, { ...base, extras: { a: { ...base.extras!.a!, origin: 'China' } } })).toBe(true)
+  })
+  it('keeps weight and origin when the currency changes and the line is entered again', () => {
+    const existing = [line('a', 10, 'USD', { weight: 2.5, weightUnit: 'kg', origin: 'Germany' })]
+    const p = planReplySave(existing, { ...draftFromLines(existing, 'USD'), currency: 'EUR' })
+    expect(p.removeItemIds).toEqual(['a'])
+    expect(p.prices[0]).toMatchObject({ itemId: 'a', weight: 2.5, origin: 'Germany' })
+  })
+})
