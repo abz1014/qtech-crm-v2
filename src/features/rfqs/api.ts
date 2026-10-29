@@ -571,21 +571,24 @@ export async function saveReply(input: SaveReplyInput): Promise<number> {
     if (error) throw error
   }
   if (input.prices.length === 0) return 0
-  const { error } = await db.from('supplier_quote_lines').upsert(
-    input.prices.map(p => ({
-      inquiry_id: input.inquiryId,
-      rfq_item_id: p.itemId,
-      unit_price: p.unitPrice,
-      currency: input.currency,
-      lead_time: input.leadTime,
-      in_stock: input.inStock,
-      // Weight and origin are written only when the form held them (a missing key leaves the saved value alone).
-      ...(p.weight !== undefined ? { weight: p.weight, weight_unit: p.weightUnit ?? 'kg' } : {}),
-      ...(p.origin !== undefined ? { origin: p.origin } : {}),
-    })),
-    { onConflict: 'inquiry_id,rfq_item_id' },
-  )
-  if (error) throw error
+  const rows = input.prices.map(p => ({
+    inquiry_id: input.inquiryId,
+    rfq_item_id: p.itemId,
+    unit_price: p.unitPrice,
+    currency: input.currency,
+    lead_time: input.leadTime,
+    in_stock: input.inStock,
+    // Weight and origin are written only when the form held them (a missing key leaves the saved value alone).
+    ...(p.weight !== undefined ? { weight: p.weight, weight_unit: p.weightUnit ?? 'kg' } : {}),
+    ...(p.origin !== undefined ? { origin: p.origin } : {}),
+  }))
+  // One bulk upsert needs every row to carry the same keys, so rows with and without weight and origin go in separate calls.
+  const groups = new Map<string, typeof rows>()
+  for (const r of rows) groups.set(Object.keys(r).sort().join(','), [...(groups.get(Object.keys(r).sort().join(',')) ?? []), r])
+  for (const group of groups.values()) {
+    const { error } = await db.from('supplier_quote_lines').upsert(group, { onConflict: 'inquiry_id,rfq_item_id' })
+    if (error) throw error
+  }
   return input.prices.length
 }
 

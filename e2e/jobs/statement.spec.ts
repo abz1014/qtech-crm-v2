@@ -148,6 +148,11 @@ test('the job page links to the statement for sales; an engineer has no link and
   await expect(page.getByTestId('statement')).toBeVisible()
 
   // an engineer: no link on the job page, and the address itself shows a notice and asks the database for no price
+  await page.context().clearCookies()
+  await page.evaluate(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
   await openAs(page, 'engineer', `/jobs/${s.rfq.number}`)
   await page.waitForLoadState('networkidle')
   await expect(page.getByTestId('open-statement')).toHaveCount(0)
