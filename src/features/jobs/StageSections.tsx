@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState, type ReactNode } from 'react'
+import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { isContentDrawn, whenContentDrawn } from '@/lib/afterContent'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { Button } from '@/ui/Button'
@@ -181,7 +182,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
       <p>{legs.length ? `${delivered} of ${legs.length} supplier ${legs.length === 1 ? 'order' : 'orders'} delivered to the customer.` : 'No goods to deliver.'}</p>
       {order?.needsCommissioning ? (
         <p>
-          {order.doneOn ? <>Installation done {day(order.doneOn)}.</> : order.plannedOn ? <>Installation planned {day(order.plannedOn)}.</> : 'Installation needs a date.'}
+          {order.doneOn ? <>{visitTypeLabel(order.visitType) || 'Installation'} done {day(order.doneOn)}.</> : order.plannedOn ? <>{visitTypeLabel(order.visitType) || 'Installation'} planned {day(order.plannedOn)}.</> : 'Installation needs a date.'}
           {d.engineers.data?.length ? ` Engineer: ${d.engineers.data.map(e => e.name).join(', ')}.` : ''}
         </p>
       ) : (
@@ -232,7 +233,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
           .join(' · '),
     job.orderId ? [order?.orderedOn ? `Ordered ${formatShortDate(order.orderedOn, today)}` : orderRef(order?.number ?? 0), ctx.money && order?.customerPo ? `customer's order ${order.customerPo}` : null].filter(Boolean).join(' · ') : "Waiting for the customer's order",
     legs.length ? `${legs.length} supplier ${legs.length === 1 ? 'order' : 'orders'}${delivered ? ` · ${delivered} delivered` : ''}` : job.orderId ? 'To source and place' : 'Starts after the order',
-    detailFor(4) ?? (order?.needsCommissioning ? (order.doneOn ? 'Installation done' : order.plannedOn ? `Installation planned ${formatShortDate(order.plannedOn, today)}` : 'Installation needs a date') : job.orderId ? 'Goods to the customer' : 'Starts after the goods arrive'),
+    detailFor(4) ?? (order?.needsCommissioning ? (order.doneOn ? `${visitTypeLabel(order.visitType) || 'Installation'} done` : order.plannedOn ? `${visitTypeLabel(order.visitType) || 'Installation'} planned ${formatShortDate(order.plannedOn, today)}` : 'Installation needs a date') : job.orderId ? 'Goods to the customer' : 'Starts after the goods arrive'),
     ctx.money ? (invoices.length ? `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}` : 'Invoice after delivery') : 'Handled by the office',
     ctx.money ? (m ? (m.balance <= 0 && m.settled > 0 ? 'Paid' : m.settled > 0 ? 'Part paid, the rest to collect' : 'Not paid yet') : 'Starts after the invoice') : 'Handled by the office',
   ]

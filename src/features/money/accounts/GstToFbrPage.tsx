@@ -13,11 +13,14 @@ import { monthKeyLabel } from '@/features/money/expenses/model'
 import { MoneySubHeader, MoneyFrame } from '@/features/money/MoneyFrame'
 import { loadGstMonths } from '@/features/money/monthEnd/api'
 import { loadGstFilings } from '@/features/money/accounts/api'
-import { gstLines, GST_PAY_DAY, GST_RETURN_DAY, type GstLine } from '@/features/money/accounts/gstModel'
+import { gstLines, type GstLine } from '@/features/money/accounts/gstModel'
+import { dayWords } from '@/features/settings/gstDeadlines'
+import { useGstDeadlines } from '@/features/settings/hooks'
+import { useSession } from '@/app/session'
 
 /*
  * Money > Accounts > GST to FBR (P6-B). Admin only. Per month: GST charged on invoices, less GST paid on purchases, is what is to
- * pay; due the 15th of the next month, the return the 18th; then who paid and the payment slip number (PSID). Plain words, 16 px,
+ * pay; due on the pay-by day of the next month and the return on the file-by day (both set in Settings > Tax deadlines); then who paid and the payment slip number (PSID). Plain words, 16 px,
  * one column below 768 px (a card a month, no sideways scroll at 320 px). Nothing is edited here: the PSID and the deposit are
  * stamped on the invoices (Invoices, a month at a time), and this page reads them back.
  */
@@ -27,14 +30,23 @@ export function GstToFbrPage() {
   const today = businessToday()
   const months = useQuery({ queryKey: qk.money.monthEnd.gst(), queryFn: loadGstMonths, staleTime: 0 })
   const filings = useQuery({ queryKey: [...qk.money.monthEnd.gst(), 'filings'], queryFn: loadGstFilings, staleTime: 0 })
-  const lines = useMemo(() => (months.data && filings.data ? gstLines(months.data, filings.data, today) : null), [months.data, filings.data, today])
+  const dl = useGstDeadlines()
+  const session = useSession()
+  const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
+  const lines = useMemo(
+    () => (months.data && filings.data && !dl.isPending ? gstLines(months.data, filings.data, today, 6, dl.deadlines) : null),
+    [months.data, filings.data, today, dl.isPending, dl.deadlines],
+  )
   const failed = months.isError || filings.isError
   return (
     <MoneyFrame active={null}>
       <MoneySubHeader back={{ to: '/money', label: 'Money' }} title="GST to FBR" />
       <p className="max-w-prose text-base text-fg-2">
-        GST charged on invoices, less GST paid on purchases, is what you pay FBR. Pay by the {GST_PAY_DAY}th of the next month and file the return by
-        the {GST_RETURN_DAY}th.
+        GST charged on invoices, less GST paid on purchases, is what you pay FBR. Pay by the <span data-testid="gst-pay-day">{dayWords(dl.deadlines.payDay)}</span> of the next month and
+        file the return by the <span data-testid="gst-return-day">{dayWords(dl.deadlines.returnDay)}</span>.{' '}
+        <Link to="/settings/tax-deadlines" className="font-medium text-primary underline underline-offset-2">
+          {isAdmin ? 'Change these days' : 'See these days'}
+        </Link>
       </p>
       {failed ? (
         <p role="alert" className="rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3 text-base text-tone-danger-fg">
@@ -130,9 +142,9 @@ function Status({ l }: { l: GstLine }) {
     <div className="grid gap-px text-base" data-testid={`status-${l.month}`}>
       <span className="inline-flex items-center gap-2 font-medium">
         <Icon icon={l.tone === 'late' ? CircleAlert : Clock} />
-        {l.tone === 'late' ? `Late: was due ${formatDay(l.payBy)}` : `Pay by ${formatDay(l.payBy)}`}
+        {l.tone === 'late' ? `Late: was due ${formatDay(l.payBy)}` : `Pay by ${formatDay(l.payBy)}${l.payOverridden ? ' (date moved)' : ''}`}
       </span>
-      <span>Return by {formatDay(l.returnBy)}</span>
+      <span>Return by {formatDay(l.returnBy)}{l.returnOverridden ? ' (date moved)' : ''}</span>
       {l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">PSID {l.psids.join(', ')} (not deposited yet)</span> : null}
     </div>
   )

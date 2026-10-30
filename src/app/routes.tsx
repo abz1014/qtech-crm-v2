@@ -36,6 +36,7 @@ const OldOrders = lazy(routeChunks.orders)
 /** The weekly owner review (redesign phase 3): /todo/review, admin only. */
 const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
+const TaxDeadlinesPage = lazy(() => import('@/features/settings/TaxDeadlinesPage').then(m => ({ default: m.TaxDeadlinesPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
 const ProductCategoriesPage = lazy(() => import('@/features/settings/productCategories/ProductCategoriesPage').then(m => ({ default: m.ProductCategoriesPage })))
@@ -226,6 +227,16 @@ function AppRouteTable() {
                 <Suspense fallback={null}>
                   <MyDetailsPage />
                 </Suspense>
+              }
+            />
+            <Route
+              path="tax-deadlines"
+              element={
+                <PricesOnly area="Tax deadlines">
+                  <Suspense fallback={null}>
+                    <TaxDeadlinesPage />
+                  </Suspense>
+                </PricesOnly>
               }
             />
             <Route

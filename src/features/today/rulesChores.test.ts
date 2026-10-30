@@ -64,6 +64,26 @@ describe('GST to FBR', () => {
   })
 })
 
+describe('GST to FBR: the dates come from the settings', () => {
+  const settings = (payBy: string, returnBy: string) => ({ gst: { month: '2026-09-01', invoices: 5, undeposited: 3, payBy, returnBy } as GstFact })
+  it('moves the whole chore when the admin changes the days', () => {
+    const early = row('2026-10-16', settings('2026-10-20', '2026-10-25'))
+    expect(early.party).toBe('Pay by 20 Oct · return by 25 Oct')
+    expect(early.badge).toEqual({ text: 'Pay by 20 Oct', tone: 'neutral' })
+    expect(early.group).toBe('ready')
+    expect(row('2026-10-18', settings('2026-10-20', '2026-10-25')).badge.tone).toBe('warning')
+    expect(row('2026-10-21', settings('2026-10-20', '2026-10-25')).badge.tone).toBe('danger')
+  })
+  it('follows a one-off date that falls in the next month', () => {
+    const r = row('2026-10-28', settings('2026-11-04', '2026-11-10'))
+    expect(r.badge.tone).toBe('neutral')
+    expect(r.badge.text).toBe('Pay by 4 Nov')
+  })
+  it('is still red on the 16th with the starting days, so nothing changes until the admin edits them', () => {
+    expect(row('2026-10-16').badge.tone).toBe('danger')
+  })
+})
+
 describe('I paid: N to approve', () => {
   const claims = (n: number, oldestOn: string | null = '2026-10-20'): ClaimsFact => ({ pending: n, oldestOn })
   it('is one row for the admin while claims wait, with how long the oldest has waited', () => {

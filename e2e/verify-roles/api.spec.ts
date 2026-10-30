@@ -314,15 +314,15 @@ test('0100/0103: a customer PO uploaded by SALES through the app is closed to an
   }
 })
 
-test('0101 (phase 7): an engineer sets the visit time and type on their own site only, and the engineer view of an order still holds no money', async () => {
-  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { commissioning_time: '10:00', visit_type: 'installation' }, prefer: 'return=representation' })
-  expect(mine.status, 'the assigned engineer sets time and type').toBeLessThan(300)
-  const back = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,commissioning_time,visit_type`)
-  expect(back.body).toEqual([{ id: world.order.id, commissioning_time: '10:00:00', visit_type: 'installation' }])
+test('0101 (phase 7): an engineer sets the visit type on their own site only, and the engineer view of an order still holds no money', async () => {
+  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { visit_type: 'installation' }, prefer: 'return=representation' })
+  expect(mine.status, 'the assigned engineer sets the type').toBeLessThan(300)
+  const back = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,visit_type`)
+  expect(back.body).toEqual([{ id: world.order.id, visit_type: 'installation' }])
   const theirs = await api('engineer', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
   expect(theirs.status, 'an engineer not assigned to the site is refused').toBeGreaterThanOrEqual(400)
   expect(JSON.stringify(theirs.body)).toContain('not_assigned')
-  const sales = await api('sales', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey', commissioning_time: '09:30' }, prefer: 'return=representation' })
+  const sales = await api('sales', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
   expect(sales.status, 'sales set them on any order').toBeLessThan(300)
   const money = await api('engineer', `/rest/v1/v_jobs?select=*`)
   const keys = new Set((Array.isArray(money.body) ? (money.body as Record<string, unknown>[]) : []).flatMap(r => Object.keys(r)))

@@ -34,6 +34,7 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
 import { CopyReminderButton } from '@/features/orders/CopyReminderButton'
 import { legState } from '@/features/orders/lib/legModel'
+import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { orderFacts, pageStep, recordPaymentPlace, type PrimaryAction } from '@/features/orders/lib/primaryAction'
 import type { OrderStep } from '@/features/orders/lib/orderSteps'
 import { useLegActions } from '@/features/orders/useLegActions'
@@ -689,7 +690,13 @@ function EngineerJob({
           </span>
           {order.needsCommissioning ? (
             <>
-              <span className="font-medium">{order.doneOn ? `Done ${formatShortDate(order.doneOn, today)}` : order.plannedOn ? `Planned ${formatDay(order.plannedOn)}${order.visitTime ? ` at ${order.visitTime}` : ''}` : 'No date yet'}</span>
+              <span className="font-medium" data-testid="job-visit">
+                {order.doneOn
+                  ? `${visitTypeLabel(order.visitType) || 'Visit'} done ${formatShortDate(order.doneOn, today)}`
+                  : order.plannedOn
+                    ? `${visitTypeLabel(order.visitType) || 'Visit'} planned ${formatDay(order.plannedOn)}`
+                    : 'No date yet'}
+              </span>
               {engineers.length ? <span className="text-sm text-fg-2">With {engineers.map(e => e.name).join(' and ')}</span> : null}
             </>
           ) : (

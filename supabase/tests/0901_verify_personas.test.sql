@@ -164,6 +164,7 @@ insert into public.expense_claims (id, created_by, amount_pkr) values (pg_temp.f
 insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);   -- 0087
 insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);   -- 0087
 insert into public.checked_findings (finding_key, message_hash) values ('probe-key', 'probe-hash');   -- 0102
+insert into public.gst_deadline_overrides (month, pay_by) values ('2019-01-01', '2019-02-20');   -- 0110
 insert into public.orders (id, company_id, owner_id, legacy_source) values   -- 0096: an imported order, an unlinked imported invoice and a linked one
   (pg_temp.f('e7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"sheet":"orders"}');
 insert into public.invoices (id, company_id, number, net_amount, gst_amount, legacy_source) values
@@ -252,6 +253,8 @@ insert into spec values
   ('fx_fetch_log', '', 'id = @3e', 'detail', $q$insert into public.fx_fetch_log (kind, detail) values ('info', 'probe')$q$),   -- R23 (0038)
   ('quotations', '', 'id = @3a', 'pdf_path', $q$insert into public.quotations (id, rfq_id, number, revision, valid_until, lines) values (@b4, @16, 7101, 0, current_date + 1, '[{"qty":1,"unit_price_net":1,"gst_rate":0}]')$q$),
   ('purchase_orders', '', 'id = @3b', 'pdf_path', $q$insert into public.purchase_orders (id, supplier_order_id, number, revision, currency, total, lines) values (@b5, @24, 7102, 0, 'USD', 0, '[{"qty":1,"unit_price":1}]')$q$),
+  ('gst_deadline_settings', '', 'id = 1', 'pay_day', $q$insert into public.gst_deadline_settings (id) values (2)$q$),   -- 0110
+  ('gst_deadline_overrides', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.gst_deadline_overrides (month, pay_by) values ('2019-02-01', '2019-03-20')$q$),   -- 0110
   ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$);
 
 
