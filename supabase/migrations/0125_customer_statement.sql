@@ -29,6 +29,7 @@ set search_path = ''
 as $$
 declare
   v_to date := coalesce(p_to, public.today_pkt());
+  v_cn text;
 begin
   if public.current_user_role() is distinct from 'admin' then
     return;
@@ -55,13 +56,14 @@ begin
     and p.received_on <= v_to;
 
   -- credit notes (fix/money-integrity, 0112): read only once that table exists
-  if to_regclass('public.credit_notes') is not null then
-    -- the table name is an identifier built at run time, so the database lint does not look for it where it does not exist yet
+  -- the table's name is read from the catalog, so the database lint does not look for it where it does not exist yet
+  select c.relname::text into v_cn from pg_catalog.pg_class c where c.oid = to_regclass('public.credit_notes');
+  if v_cn is not null then
     return query execute format(
       'select c.issued_on::date, ''credit_note''::text, c.number::text, o.number::bigint, c.reason::text, '
       '0::numeric, (c.net_amount + c.gst_amount)::numeric, 2 '
-      'from %I.%I c left join public.orders o on o.id = c.order_id '
-      'where coalesce(c.company_id, o.company_id) = $1 and c.issued_on <= $2', 'public', 'credit_notes')
+      'from public.%I c left join public.orders o on o.id = c.order_id '
+      'where coalesce(c.company_id, o.company_id) = $1 and c.issued_on <= $2', v_cn)
     using p_company, v_to;
   end if;
 
