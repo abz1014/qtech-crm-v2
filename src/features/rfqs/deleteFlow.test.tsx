@@ -153,7 +153,7 @@ describe('the delete RFQ flow', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
   })
 
-  it('removes the returned files grouped by bucket, goes to the RFQ list and says it is deleted', async () => {
+  it('leaves the returned files in storage (they are purged after 30 days), goes to the RFQ list and says it is deleted', async () => {
     const { removed, fake, invalidate } = setup({
       rpc: () => ({
         data: [
@@ -167,10 +167,7 @@ describe('the delete RFQ flow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText('RFQ list page')).toBeInTheDocument()
     expect(fake.calls.find(c => c.target === 'rpc:delete_rfq')?.ops[0]).toEqual(['args', [{ p_rfq_id: 'r-1' }]])
-    expect(removed).toEqual([
-      ['rfq-files', ['r-1/a.pdf', 'r-1/b.png']],
-      ['generated-docs', ['q/12-0.pdf']],
-    ])
+    expect(removed).toEqual([])
     expect(await screen.findByText('RFQ-0177 deleted')).toBeInTheDocument()
     expect(screen.queryByText('Some files were not removed')).toBeNull()
     // the RFQ lists, Today and the companies refresh
@@ -178,21 +175,6 @@ describe('the delete RFQ flow', () => {
     const keys = invalidate.mock.calls.map(c => JSON.stringify(c[0]?.queryKey))
     expect(keys.some(k => k?.includes('rfqs'))).toBe(true)
     expect(keys.some(k => k?.includes('today'))).toBe(true)
-  })
-
-  it('a file that will not be removed does not undo the delete: a quiet note, and the person still lands on the list', async () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    setup({
-      rpc: () => ({ data: [{ storage_bucket: 'rfq-files', storage_path: 'r-1/a.pdf' }] }),
-      remove: () => ({ error: { message: 'storage is down' } }),
-    })
-    await openConfirm()
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
-    expect(await screen.findByText('RFQ list page')).toBeInTheDocument()
-    expect(await screen.findByText('RFQ-0177 deleted')).toBeInTheDocument()
-    expect(await screen.findByText('Some files were not removed')).toBeInTheDocument()
-    expect(log).toHaveBeenCalled()
-    log.mockRestore()
   })
 
   it('another server error is shown in the dialog and nothing is navigated or removed', async () => {

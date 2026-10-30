@@ -235,40 +235,91 @@ Checking it (Dashboard):
 
 The Free plan has no platform backups, so the repository makes its own. Cost: $0 (public repo, standard runners).
 
-**What is backed up.** The whole `public` schema, structure and data (`public.dump`: tables, sequences such as the quotation numbers,
-views, functions, policies, grants), plus the data of `auth.users`, `auth.identities`, `storage.buckets` and `storage.objects`
-(`authstorage.dump`). It also holds `counts.tsv` (a row count per table), `migrations.txt` (applied migration versions),
-`roles.txt` and `manifest.txt`. Hosted Postgres does not allow a roles dump, and the platform roles are managed by Supabase,
-so only custom roles are listed.
+**What is backed up, every night.**
+1. The database, in `backup-<stamp>`: the whole `public` schema, structure and data (`public.dump`: tables, sequences such as the
+   quotation numbers, views, functions, policies, grants); the two archive schemas `legacy_archive` and `audit_archive`
+   (`archive.dump`; a plain `pg_dump -n public` leaves them out); and the data of `auth.users`, `auth.identities`,
+   `storage.buckets` and `storage.objects` (`authstorage.dump`). Also `counts.tsv` (a row count per table), `checksums.tsv` (money
+   sums and per-month counts, and a content hash of every table), `migrations.txt`, `roles.txt` and `manifest.txt`. Hosted Postgres does
+   not allow a roles dump, and the platform roles are managed by Supabase, so only custom roles are listed. Everything in the dump
+   is taken at ONE snapshot (`pg_export_snapshot` + `pg_dump --snapshot`), so the files agree with each other even while the app is
+   being used. `manifest.txt` says `one_snapshot=yes`.
+2. Every file in Storage (customer POs, supplier quotes, receipts, tax-deposit receipts, generated PDFs), in a second artifact
+   `backup-files-<stamp>`: `qtech-files-<stamp>.tar.gz.age`, holding `files/<bucket>/<path>`, `files.tsv` (bucket, path, size as the
+   database lists them) and `SHA256SUMS`. After the download the job checks that every file the database listed is there with the
+   right size; a short backup fails the run.
 
-**What is NOT backed up: the files themselves.** Storage objects (RFQ files, GST receipts, expense receipts, generated PDFs)
-live in object storage, not in the database. Downloading them needs either the service-role key (we do not put that in GitHub)
-or a signed-in user session (that would mean an admin password in GitHub). Neither was accepted, so only the object
-metadata is saved: after a loss you can see exactly which files existed (bucket, path, size, who, when). Generated PDFs
-(quotations, purchase orders) can be regenerated from their stored lines. For the rest, download the buckets by hand from the dashboard
-(Storage) now and then, until a read-only backup user exists (a possible follow-up: a dedicated role plus a signed-in-user mirror step).
+Both artifacts are encrypted with `age` before upload (see "Where and how long"). The nightly run also prints the sizes in its
+summary and records them in the app (Settings, Backups and usage).
 
-**Where and how long.** Nightly at 01:30 Karachi (20:30 UTC), `backup.yml` makes one workflow artifact
-`backup-<UTC date>`: `qtech-crm-<stamp>.tar.gz.age`, kept 30 days (about 30 copies; the cap on a public repo is 90 days). Artifacts of a
-public repo can be downloaded by any signed-in GitHub user, which is why the file is encrypted with `age` to a PUBLIC key
-before it leaves the runner. Without the private key it is unreadable. The workflow refuses to run with no recipient, and
-refuses a recipient that is a private key. Size is small (the Free database is capped at 500 MB, and a custom-format dump is compressed);
-artifact storage on a public repo is not billed. GitHub turns scheduled workflows off after 60 days without repository activity:
-re-enable under Actions if that happens. A Release asset would be public and never expire, so it was not chosen.
+**Files: the credentials.** The backup so far used one credential, the database password. That cannot read file contents (they
+live in object storage, not in Postgres). The service-role key could, but it opens everything, so it is not used. Instead the
+`backup` environment holds a **Supabase Storage S3 access key** (Dashboard, Storage, S3 Configuration, New access key). It reaches
+Storage only (not the database, Auth or the REST API) and never goes to the browser or to Vercel. If the two secrets
+(`STORAGE_S3_ACCESS_KEY_ID`, `STORAGE_S3_SECRET_ACCESS_KEY`) are missing, the nightly run still backs up the database, prints a
+warning annotation "Files are NOT backed up", and Settings shows "files NOT backed up". It never pretends.
+
+**Size and limits.** The Free plan caps Storage at 1 GB and the database at 500 MB, so a nightly artifact is at most about 1 GB
+(files already compressed, so they are gzipped at level 1; the database dump is compressed by pg_dump). 30 nights of that is far below
+what a public repository can hold, and artifacts on a public repository are not billed. The run's summary reports the sizes and
+warns above 1.5 GB. If the plan is ever upgraded and files grow past that, make the files artifact incremental (only objects changed
+since the last full copy, a full copy weekly); `files.tsv` and `SHA256SUMS` already carry what that needs.
+
+**Deleted records keep their files for 30 days (migration 0120).** Deleting an RFQ, order, invoice, expense, a quotation or
+PO revision, or a single attached file used to remove the stored files at once. Now a database trigger lists each file in
+`qtech_ops.pending_file_deletes` and the app removes nothing; the file stays at its own path. After the nightly backup has
+uploaded the files, `scripts/backup/purge-trash.sh` removes the files that have been waiting more than 30 days, through the Storage S3
+API, so a deleted file is always in at least one backup first. A path that a live record points at again is released, not removed.
+Settings, Backups and usage shows how many files wait. To keep a file for good, re-attach it before the 30 days are over (the file is
+still at its path), or take it from a backup. The deleted record itself is not restored by this; it is still gone from the database
+(the audit log keeps the old rows). Not covered: the photos of an engineer's "I paid" claim (a separate bucket, removed when the claim
+is withdrawn), and the upload that fails halfway (cleaned up at once, it never had a record).
+
+**Where and how long.** Nightly at 01:30 Karachi (20:30 UTC), `backup.yml` makes the workflow artifacts `backup-<UTC date>` and
+`backup-files-<UTC date>`, kept 30 days (about 30 copies; the cap on a public repo is 90 days). Artifacts of a public repo can be
+downloaded by any signed-in GitHub user, which is why both files are encrypted with `age` to a PUBLIC key before they leave the
+runner. Without the private key they are unreadable. The workflow refuses to run with no recipient, refuses a recipient that is a
+private key, and fails if anything in the upload folder is not an age file. A Release asset would be public and never expire, so it
+was not chosen.
 
 **Connection.** Plain `pg_dump` (the postgres:17 image, so the version matches the server) through the Supabase session pooler,
 `aws-N-<region>.pooler.supabase.com:5432` as user `postgres.<ref>`. The direct host `db.<ref>.supabase.co` is IPv6 only on the
 Free plan and GitHub runners have no IPv6; the session pooler is IPv4 and keeps pg_dump's session semantics (the transaction
-pooler on 6543 does not). The CLI's `supabase db dump` was not used: it needs `link`, which needs an access token (one more secret),
-and it skips `auth`. `scripts/backup/find-pooler.sh` finds the host by trying the known regions; set the `SUPABASE_POOLER_HOST`
-variable to skip the search.
+pooler on 6543 does not), which the single snapshot also needs. The CLI's `supabase db dump` was not used: it needs `link`, which needs
+an access token (one more secret), and it skips `auth`. `scripts/backup/find-pooler.sh` finds the host by trying the known regions;
+set the `SUPABASE_POOLER_HOST` variable to skip the search. The Storage S3 signing region is read from that host name
+(`aws-0-ap-south-1...` means `ap-south-1`); set the `STORAGE_S3_REGION` variable to override.
 
 **Restore drill (weekly, Monday 03:00 Karachi, and on dispatch).** The drill cannot decrypt (no private key on GitHub), so it makes its
 own fresh dump of the live database, never uploads it, restores it into the CI local Supabase stack (migrations that are not live yet
-are left out so the schema matches), and compares every row count with `counts.tsv`. The log prints only tables that differ.
-The scripts themselves are tested on every change by `backup-checks.yml` (encryption round trip with a throwaway key, and
-dump, wipe, restore, compare against the local stack with the seed), so a green drill means the live data restores with the same code.
-Run the check on a quiet moment: a write between the dump and the count would show as a one-row difference; run it again.
+are left out so the schema matches), and verifies the copy:
+1. every row count matches `counts.tsv` (public, legacy_archive, audit_archive, auth users and identities, storage);
+2. the **money checksums** match `checksums.tsv`: invoices (count, net, GST), payments in (count, total, total of the unvoided),
+   expenses (count, total), and the count and sums per month of each, plus a content hash of every table, so a changed value that a
+   row count would miss is caught;
+3. every foreign key holds (a query per key, because the load runs with triggers off and the keys are enforced by triggers),
+   constraints left NOT VALID are validated, no trigger is left disabled, and `session_replication_role` is back to `origin`;
+4. a smoke query reads every view and calls the first functions on the restored copy.
+
+The log prints only the NAMES of lines that differ, never a value or a sum (the repository is public). The result (passed or FAILED)
+is written back to the live database for the app. The dump and the checks all use the same snapshot, so a write during the run cannot
+show as a difference. (If a snapshot cannot be exported, the run says so with a warning and falls back to separate reads.)
+The scripts themselves are tested on every change by `backup-checks.yml`: the encryption round trip with a throwaway key; dump, wipe,
+restore and verify against the local stack with the seed, including that a changed amount, a missing row, an orphan row and a
+disabled trigger are each caught; and the storage download, the encrypted files artifact, the 30-day trash and the purge, with files
+uploaded through the local stack's S3 endpoint. So a green drill means the live data restores with the same code.
+
+**Seeing it in the app.** Settings, Backups and usage (admin only) shows the last backup (date and sizes), the last drill, the files
+waiting in the trash, the Free-plan meters and the monthly key check. To do shows an admin: a red row "Backup is N days old" when
+the last successful backup is more than 2 days old (or none has ever reported since migration 0120), an amber row when the database
+(500 MB) or Storage (1 GB) is 70% full, and a grey "Test-decrypt last night's backup" row every month. The sizes come from
+`pg_database_size` and the sum of `storage.objects` metadata, through the admin-only function `admin_health()`.
+
+**Schedules switch themselves off.** GitHub turns scheduled workflows off after 60 days without repository activity. `keepalive.yml`
+runs on the 1st of every month and, with the built-in `GITHUB_TOKEN` (`actions: write`, no secret), calls "enable workflow" for the
+backup, the smoke test and itself; that re-enables any that were off and restarts the 60-day clock of the others. If even that is off
+(a very long quiet period before its first run), the app notices within two days: the last-backup time stops moving and To do turns red.
+To fix by hand: Actions, pick the workflow, Enable workflow.
 
 ### Orchestrator: create the `backup` environment (once)
 
@@ -282,14 +333,18 @@ gh api -X POST repos/$R/environments/backup/deployment-branches -f name=main -f 
 # secrets (values supplied by the owner; gh prompts, nothing goes in the shell history)
 gh secret set SUPABASE_DB_PASSWORD  --env backup --repo $R
 gh secret set SUPABASE_PROJECT_REF  --env backup --repo $R      # yafbphagorydbitfgfmg
+# Storage S3 access key (Dashboard, Storage, S3 Configuration, New access key). Storage only; this is NOT the service-role key.
+gh secret set STORAGE_S3_ACCESS_KEY_ID      --env backup --repo $R
+gh secret set STORAGE_S3_SECRET_ACCESS_KEY  --env backup --repo $R
 # variables (not secret): the PUBLIC age key, and optionally the pooler host
 gh variable set BACKUP_AGE_RECIPIENT  --env backup --repo $R --body 'age1....'
 gh variable set SUPABASE_POOLER_HOST  --env backup --repo $R --body 'aws-0-<region>.pooler.supabase.com'   # optional
+gh variable set STORAGE_S3_REGION      --env backup --repo $R --body '<project region, e.g. ap-south-1>'   # optional: read from the pooler host when empty
 # first run, after the owner has made the key:
 gh workflow run backup.yml --repo $R -f run=both
 ```
 
-The pooler host is on the dashboard: Connect, Session pooler. The environment never holds a service-role key or an access token.
+The pooler host is on the dashboard: Connect, Session pooler. The environment never holds a service-role key or an access token. After merging migration `0120` and the workflows to `main`, apply the migration to the live project (the status table, the trash and `admin_health()` live there), then dispatch `backup.yml` with `run=both` once to see the first files artifact and the first recorded status, and dispatch `keepalive.yml` once too.
 
 ### Owner: make the key pair (Windows, once)
 
@@ -299,7 +354,36 @@ The pooler host is on the dashboard: Connect, Session pooler. The environment ne
    an offline USB stick. Never email it, never commit it. If it is lost, every backup is unreadable; if it leaks, make a new pair and change the variable.
 4. Test it once the first artifact exists: Actions, Backup, the run, download `backup-<date>`, unzip to get the `.age` file, then
    `.\age.exe -d -i backup-key.txt -o backup.tar.gz qtech-crm-<stamp>.tar.gz.age` and `tar -xzf backup.tar.gz` (Windows 10+ has `tar`).
-   Inside is a folder with `public.dump`, `authstorage.dump`, `counts.tsv`, `migrations.txt`, `roles.txt`, `manifest.txt`.
+   Inside is a folder with `public.dump`, `archive.dump`, `authstorage.dump`, `counts.tsv`, `checksums.tsv`, `migrations.txt`, `roles.txt`, `manifest.txt`.
+   The files artifact (`backup-files-<date>`) opens the same way and holds `files/<bucket>/<path>`.
+
+### Owner: test-decrypt last night's backup (monthly, Windows)
+
+A backup nobody can open is not a backup. Once a month, prove that your private key still opens last night's file. It takes five
+minutes and needs no Docker. The app reminds you: To do shows "Test-decrypt last night's backup (monthly)" when 31 days have passed.
+
+1. Open GitHub, the repository, Actions, **Backup**, and click the latest run with a green tick (it should be from last night).
+2. Under Artifacts, download **backup-<date>** (the database, a few MB). Unzip it: you get one file `qtech-crm-<stamp>.tar.gz.age`.
+   (**backup-files-<date>** holds the stored files; it is large, you do not need to download it every month.)
+3. Get your private key out of your password manager: paste it into a file `C:\age\backup-key.txt` (or plug in the USB stick). Never
+   save it inside the repository folder.
+4. In PowerShell:
+
+   ```powershell
+   cd C:\age
+   .\age.exe -d -i backup-key.txt -o backup.tar.gz C:\Users\<you>\Downloads\qtech-crm-<stamp>.tar.gz.age
+   tar -xzf backup.tar.gz
+   dir qtech-crm-<stamp>
+   ```
+
+5. The folder must list `public.dump`, `archive.dump`, `authstorage.dump`, `counts.tsv`, `checksums.tsv`, `migrations.txt`,
+   `roles.txt` and `manifest.txt`. Open `manifest.txt` in Notepad: `created_utc` must be last night.
+6. Delete the decrypted copy (`backup.tar.gz` and the folder) and, if the key lives in the password manager, the key file. The decrypted
+   data is your customers' money records: do not leave it in Downloads.
+7. In the app, Settings, Backups and usage, press **I opened a backup with my key today**. That records the date and clears the To do row.
+
+If step 4 says "no identity matched", the key is not the one the backup was made for: stop, find the right key, or make a new pair
+and change the `BACKUP_AGE_RECIPIENT` variable (older backups still need the older key, so keep both).
 
 ### Restore, step by step (owner, real file)
 
@@ -308,10 +392,10 @@ Needs Docker Desktop (the same one the Supabase CLI uses) and the key.
 1. Decrypt and unpack as above (or with Git Bash: `bash scripts/backup/decrypt.sh FILE.age backup-key.txt out`).
 2. Practice locally first (recommended every few months): `npx supabase start`, `npx supabase db reset --local`, then in Git Bash
    `PGHOST=127.0.0.1 PGPORT=54322 PGUSER=supabase_admin PGPASSWORD=postgres bash scripts/backup/restore.sh out/qtech-crm-<stamp>`.
-   The last line must read `restore ok: N tables, every row count matches`. Check the app against it.
+   It must end with `restore verified: counts, checksums, foreign keys, triggers, views`. Check the app against it.
 3. Real recovery into a NEW Supabase project: create the project, `npx supabase link`, `npx supabase db push` (migrations up to the versions in
    `migrations.txt`), then run `restore.sh` with that project's session-pooler details (`PGHOST`, `PGPORT=5432`, `PGUSER=postgres.<newref>`,
-   `PGPASSWORD`, `PGSSLMODE=require`). Then re-deploy the Edge Function, point the app's env at the new project and re-upload files from your own copies.
+   `PGPASSWORD`, `PGSSLMODE=require`). Then re-deploy the Edge Function, point the app's env at the new project and put the files back from `backup-files-<date>` (upload each `files/<bucket>/<path>` to the same bucket and path, for example `aws s3 cp --recursive files/<bucket> s3://<bucket> --endpoint-url https://<newref>.supabase.co/storage/v1/s3` with a new S3 access key).
    `restore.sh` replaces public, `auth.users`, `auth.identities` and `storage.*` rows, so never point it at a project you want to keep.
 4. Users keep their passwords (the hashes are in `auth.users`).
 

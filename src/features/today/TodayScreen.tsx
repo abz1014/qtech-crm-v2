@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Banknote, CalendarCheck, Calculator, ClipboardCheck, ChevronDown, ChevronRight, FileCheck, HandCoins, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarCheck, Calculator, ClipboardCheck, ChevronDown, ChevronRight, DatabaseBackup, FileCheck, HandCoins, HardHat, Hourglass, KeyRound, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -71,6 +71,9 @@ const ICON: Record<RuleKey, LucideIcon> = {
   weekly_review: ClipboardCheck,
   gst_fbr: Landmark,
   claims_to_approve: HandCoins,
+  backup_stale: DatabaseBackup,
+  usage_high: DatabaseBackup,
+  decrypt_test: KeyRound,
 }
 
 const NONE: TodayItem[] = []

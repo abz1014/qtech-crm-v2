@@ -1,15 +1,20 @@
 name: Backup
 
-# R13: nightly encrypted database backup and a weekly restore drill, for the live Supabase project (Free plan: no
-# platform backups). Design and owner steps: docs/SUPABASE.md, "Backups".
+# R13: nightly encrypted backup (database AND stored files) and a weekly restore drill, for the live Supabase project (Free plan:
+# no platform backups). Design and owner steps: docs/SUPABASE.md, "Backups".
 #
 # - Runs only from main, in the `backup` environment (secrets only, branch-restricted to main, no reviewer, because a
 #   schedule cannot wait for approval).
 # - The repository is public and artifacts are downloadable by any signed-in GitHub user, so the dump is encrypted with
 #   age to a PUBLIC key before it leaves the runner. The private key is held only by the owner, offline.
-# - No service-role key and no access token are used. The connection is the database password over the session pooler.
-# - Drill: dumps the live database again, never uploads that dump, restores it into the CI local Supabase stack and
-#   compares row counts. Only counts of mismatching tables are ever printed.
+# - No service-role key and no access token are used. The database connection is the database password over the session pooler.
+#   The files are downloaded with Supabase Storage S3 access keys (they reach Storage only, not the database, Auth or the REST API).
+# - Two artifacts a night, both age-encrypted before upload: backup-<stamp> (the database) and backup-files-<stamp> (every Storage
+#   bucket). Nothing unencrypted is ever uploaded. 30 days.
+# - After the files are safely uploaded the job removes the files whose records were deleted more than 30 days ago (the trash,
+#   migration 0120), and records "last successful backup" in the database for Settings and the To do warning.
+# - Drill: dumps the live database again, never uploads that dump, restores it into the CI local Supabase stack and verifies it:
+#   row counts, money checksums and table hashes, foreign keys, triggers, views. Only names of mismatching items are ever printed.
 on:
   schedule:
     - cron: "30 20 * * *"   # nightly, 01:30 Asia/Karachi
@@ -40,6 +45,9 @@ jobs:
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST }}
       BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      STORAGE_S3_ACCESS_KEY_ID: ${{ secrets.STORAGE_S3_ACCESS_KEY_ID }}
+      STORAGE_S3_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_S3_SECRET_ACCESS_KEY }}
+      STORAGE_S3_REGION: ${{ vars.STORAGE_S3_REGION }}
     steps:
       - name: Guard - main only, and the target must be the new CRM project
         run: |
@@ -61,6 +69,12 @@ jobs:
           if [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
             echo "::error::BACKUP_AGE_RECIPIENT is empty: refusing to make an unencrypted backup"; exit 1
           fi
+          if [ -n "${STORAGE_S3_ACCESS_KEY_ID:-}" ] && [ -n "${STORAGE_S3_SECRET_ACCESS_KEY:-}" ]; then
+            echo "BACKUP_FILES=yes" >> "$GITHUB_ENV"
+          else
+            echo "BACKUP_FILES=no" >> "$GITHUB_ENV"
+            echo "::warning title=Files are NOT backed up::STORAGE_S3_ACCESS_KEY_ID / STORAGE_S3_SECRET_ACCESS_KEY are not set in the backup environment, so only the database is backed up tonight. See docs/SUPABASE.md, Backups."
+          fi
           echo "Guard passed."
 
       - uses: actions/checkout@v7
@@ -78,6 +92,12 @@ jobs:
             echo "PGPORT=5432"
             echo "PGUSER=postgres.$SUPABASE_PROJECT_REF"
             echo "PGSSLMODE=require"
+            # Storage S3 endpoint of the project; the signing region is the project's region, which is in the pooler host name
+            echo "STORAGE_S3_ENDPOINT=https://$SUPABASE_PROJECT_REF.supabase.co/storage/v1/s3"
+            if [ -z "${STORAGE_S3_REGION:-}" ]; then
+              region="$(printf '%s' "$host" | sed -nE 's/^aws-[0-9]+-([a-z0-9-]+)\.pooler\.supabase\.com$/\1/p')"
+              echo "STORAGE_S3_REGION=${region:-us-east-1}"
+            fi
           } >> "$GITHUB_ENV"
 
       - name: Dump the live database
@@ -87,22 +107,80 @@ jobs:
           echo "STAMP=$stamp" >> "$GITHUB_ENV"
           bash scripts/backup/dump.sh "$RUNNER_TEMP/plain/qtech-crm-$stamp"
 
+      - name: Download every Storage bucket (S3 access keys, Storage only)
+        if: ${{ env.BACKUP_FILES == 'yes' }}
+        run: |
+          set -euo pipefail
+          aws --version
+          bash scripts/backup/storage-download.sh "$RUNNER_TEMP/plainfiles/qtech-files-$STAMP"
+          d="$RUNNER_TEMP/plainfiles/qtech-files-$STAMP"
+          echo "FILES_BYTES=$(du -sb "$d/files" | cut -f1)" >> "$GITHUB_ENV"
+          echo "FILES_OBJECTS=$(wc -l < "$d/files.tsv" | tr -d ' ')" >> "$GITHUB_ENV"
+
       - name: Encrypt (age, public key only) and delete the plain files
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/out"
           bash scripts/backup/encrypt.sh "$RUNNER_TEMP/plain/qtech-crm-$STAMP" "$RUNNER_TEMP/out/qtech-crm-$STAMP.tar.gz.age"
           rm -rf "$RUNNER_TEMP/plain"
+          if [ "$BACKUP_FILES" = "yes" ]; then
+            # the files are mostly PDFs and photos that are already compressed: gzip -1 keeps the nightly run short
+            GZIP_LEVEL=1 bash scripts/backup/encrypt.sh "$RUNNER_TEMP/plainfiles/qtech-files-$STAMP" "$RUNNER_TEMP/out/qtech-files-$STAMP.tar.gz.age"
+            rm -rf "$RUNNER_TEMP/plainfiles"
+          fi
+          # nothing but age files may leave the runner
+          if [ -n "$(find "$RUNNER_TEMP/out" -type f ! -name '*.age')" ]; then
+            echo "::error::a file that is not age-encrypted is in the upload folder"; exit 1
+          fi
+          for f in "$RUNNER_TEMP"/out/*.age; do
+            head -c 21 "$f" | grep -q '^age-encryption.org' || { echo "::error::$(basename "$f") is not an age file"; exit 1; }
+          done
           ls -l "$RUNNER_TEMP/out"
+          db_bytes="$(wc -c < "$RUNNER_TEMP/out/qtech-crm-$STAMP.tar.gz.age" | tr -d ' ')"
+          echo "DB_ARTIFACT_BYTES=$db_bytes" >> "$GITHUB_ENV"
+          files_bytes=0
+          if [ "$BACKUP_FILES" = "yes" ]; then files_bytes="$(wc -c < "$RUNNER_TEMP/out/qtech-files-$STAMP.tar.gz.age" | tr -d ' ')"; fi
+          {
+            echo "### Backup $STAMP"
+            echo "- database artifact: $db_bytes bytes (encrypted)"
+            echo "- files artifact: $files_bytes bytes (encrypted), ${FILES_OBJECTS:-0} files, ${FILES_BYTES:-0} bytes before compression"
+          } >> "$GITHUB_STEP_SUMMARY"
+          # GitHub artifacts of this size are fine; at 1.5 GB per night it is time to make the files incremental (docs/SUPABASE.md)
+          if [ "$files_bytes" -gt 1610612736 ]; then
+            echo "::warning title=Files artifact is large::$files_bytes bytes. The free Storage cap is 1 GB, so this should not happen on the Free plan."
+          fi
 
-      - name: Upload the encrypted backup (30 days)
+      - name: Upload the encrypted database backup (30 days)
         uses: actions/upload-artifact@v7
         with:
           name: backup-${{ env.STAMP }}
-          path: ${{ runner.temp }}/out/*.age
+          path: ${{ runner.temp }}/out/qtech-crm-*.age
           retention-days: 30
           if-no-files-found: error
           compression-level: 0
+
+      - name: Upload the encrypted files backup (30 days)
+        if: ${{ env.BACKUP_FILES == 'yes' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: backup-files-${{ env.STAMP }}
+          path: ${{ runner.temp }}/out/qtech-files-*.age
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Remove files deleted more than 30 days ago (the trash; only after the files are backed up)
+        if: ${{ env.BACKUP_FILES == 'yes' }}
+        run: bash scripts/backup/purge-trash.sh
+
+      - name: Record the successful backup for the app
+        run: |
+          set -euo pipefail
+          if [ "$BACKUP_FILES" = "yes" ]; then
+            bash scripts/backup/record-status.sh backup "$DB_ARTIFACT_BYTES" "$FILES_BYTES" "$FILES_OBJECTS"
+          else
+            bash scripts/backup/record-status.sh backup-db-only "$DB_ARTIFACT_BYTES"
+          fi
 
   drill:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run != 'backup' || github.event.schedule == '0 22 * * 0' }}
@@ -175,13 +253,33 @@ jobs:
           npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
           npx supabase db reset --local
 
-      - name: Restore into the local stack and compare row counts
+      - name: Restore into the local stack and verify (counts, money checksums, foreign keys, triggers, views)
         run: |
           set -euo pipefail
           # Local credentials only. The live PG* variables are not exported in this step.
           export PGHOST=127.0.0.1 PGPORT=54322 PGUSER=supabase_admin PGPASSWORD=postgres PGDATABASE=postgres
           unset PGSSLMODE
           bash scripts/backup/restore.sh "$RUNNER_TEMP/drill"
+
+      - name: Record the drill result for the app (passed)
+        if: ${{ success() }}
+        env:
+          PGPORT: "5432"
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          export PGHOST="$LIVE_HOST" PGUSER="postgres.$SUPABASE_PROJECT_REF"
+          bash scripts/backup/record-status.sh drill ok
+
+      - name: Record the drill result for the app (FAILED)
+        if: ${{ failure() && env.LIVE_HOST != '' }}
+        env:
+          PGPORT: "5432"
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          export PGHOST="$LIVE_HOST" PGUSER="postgres.$SUPABASE_PROJECT_REF"
+          bash scripts/backup/record-status.sh drill fail
 
       - name: Delete the dump and stop Supabase
         if: always()

@@ -47,7 +47,7 @@ async function objectStatus(path: string): Promise<number> {
 const openMore = (page: Page) => page.getByRole('button', { name: 'More', exact: true }).click()
 
 test.describe('delete an RFQ', () => {
-  test('an admin deletes an RFQ with no order: the confirm lists the file, the RFQ and the file are gone, the list is shown', async ({ page }) => {
+  test('an admin deletes an RFQ with no order: the confirm lists the file, the RFQ is gone and its file waits 30 days in the trash, the list is shown', async ({ page }) => {
     const { rfq, company } = await seedRfq()
     const photo = await seedPhoto(rfq.id)
     expect(await objectStatus(photo)).toBe(200)
@@ -70,9 +70,11 @@ test.describe('delete an RFQ', () => {
     await expect(page).toHaveURL(/\/rfqs$/)
     await expect(page.getByRole('status').filter({ hasText: `${rfqRef(rfq.number)} deleted` })).toBeVisible()
 
-    // Gone from the database and from the list after a reload; the stored file is gone too.
+    // Gone from the database and from the list after a reload. The stored file is kept for 30 days (0120): still readable, and listed in the trash.
     expect(await must(rest<unknown[]>('admin', `rfqs?id=eq.${rfq.id}&select=id`))).toEqual([])
-    await expect.poll(() => objectStatus(photo)).not.toBe(200)
+    expect(await objectStatus(photo)).toBe(200)
+    const health = await must(rest<{ trash_files: number }[]>('admin', 'rpc/admin_health', { method: 'POST', body: {} }))
+    expect(Number(health[0].trash_files)).toBeGreaterThanOrEqual(1)
     await page.reload()
     await expect(page.locator('#main')).toBeVisible()
     await expect(page.getByText(company)).toHaveCount(0)

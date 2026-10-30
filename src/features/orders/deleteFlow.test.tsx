@@ -120,14 +120,14 @@ describe('the delete order flow', () => {
     expect(fake.calls.some(c => c.target === 'rpc:delete_order')).toBe(false)
   })
 
-  it('says what goes, deletes, removes the returned files and lands on the order list', async () => {
+  it('says what goes, deletes, leaves the files for the 30-day purge and lands on the order list', async () => {
     const { fake, removed } = setup({ rpc: () => ({ data: [{ storage_bucket: 'order-files', storage_path: 'o-1/a.pdf' }] }) })
     await userEvent.click(screen.getByRole('button', { name: 'Delete order' }))
     expect((await screen.findByText(/Also deletes:/)).parentElement).toHaveTextContent('Also deletes: 3 lines, 2 supplier orders, 1 file')
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText('Order list page')).toBeInTheDocument()
     expect(fake.calls.find(c => c.target === 'rpc:delete_order')?.ops[0]).toEqual(['args', [{ p_order_id: 'o-1' }]])
-    expect(removed).toEqual([['order-files', ['o-1/a.pdf']]])
+    expect(removed).toEqual([])
     expect(await screen.findByText('ORD-0038 deleted')).toBeInTheDocument()
   })
 })

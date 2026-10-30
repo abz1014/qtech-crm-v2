@@ -9,7 +9,7 @@ import { requireSupabase, setSupabaseForTests, type Db } from '@/lib/supabase'
 import { installFakeDb } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
-/* W12a: only an admin, only the latest revision, the PDF removed from storage; a PO revision likewise. */
+/* W12a: only an admin, only the latest revision, the PDF kept 30 days (0120); a PO revision likewise. */
 
 afterEach(() => {
   cleanup()
@@ -38,7 +38,7 @@ const menu = (over: Partial<React.ComponentProps<typeof RevisionMenu>> = {}) => 
 )
 
 describe('the quotation revision menu', () => {
-  it('an admin deletes the latest revision: the rpc runs and its PDF is removed from storage', async () => {
+  it('an admin deletes the latest revision: the rpc runs and its PDF stays in storage for the 30-day purge', async () => {
     const { fake, removed } = setup(menu())
     await userEvent.click(screen.getByRole('button', { name: 'More for QT-26-0012 revision 1' }))
     await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Delete revision' }))
@@ -46,7 +46,7 @@ describe('the quotation revision menu', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText('QT-26-0012 revision 1 deleted')).toBeInTheDocument()
     expect(fake.calls.find(c => c.target === 'rpc:delete_quotation_revision')?.ops[0]).toEqual(['args', [{ p_quotation_id: 'q-1' }]])
-    expect(removed).toEqual([['generated-docs', ['q/12-1.pdf']]])
+    expect(removed).toEqual([])   // the PDF stays for the 30-day purge (0120)
   })
 
   it('an older revision, or anyone but an admin, gets History only', async () => {
@@ -70,6 +70,6 @@ describe('delete the latest PO revision', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText('PO-26-0017 R2 deleted')).toBeInTheDocument()
     expect(fake.calls.find(c => c.target === 'rpc:delete_po_revision')?.ops[0]).toEqual(['args', [{ p_po_id: 'p-1' }]])
-    expect(removed).toEqual([['generated-docs', ['q/12-1.pdf']]])
+    expect(removed).toEqual([])   // the PDF stays for the 30-day purge (0120)
   })
 })

@@ -1,13 +1,15 @@
 name: Backup checks
 
-# R13 tests. No secrets, no live project: lints backup.yml, round-trips the encryption with a throwaway key, and runs
-# the dump/restore scripts against the CI local Supabase stack.
+# R13 tests. No secrets, no live project: lints backup.yml and keepalive.yml, round-trips the encryption with a throwaway key, and
+# runs the dump / restore / checksum scripts and the storage download, trash and purge against the CI local Supabase stack (seeded,
+# with files uploaded through its S3 endpoint).
 on:
   push:
     branches: ["**"]
     paths:
       - "scripts/backup/**"
       - ".github/workflows/backup.yml"
+      - ".github/workflows/keepalive.yml"
       - ".github/workflows/backup-checks.yml"
       - "supabase/migrations/**"
   workflow_dispatch:
@@ -26,11 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: YAML parses
-        run: python3 -c "import sys,yaml; [yaml.safe_load(open(f)) for f in sys.argv[1:]]; print('yaml ok')" .github/workflows/backup.yml .github/workflows/backup-checks.yml
+        run: python3 -c "import sys,yaml; [yaml.safe_load(open(f)) for f in sys.argv[1:]]; print('yaml ok')" .github/workflows/backup.yml .github/workflows/backup-checks.yml .github/workflows/keepalive.yml
       - name: actionlint
-        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color .github/workflows/backup.yml .github/workflows/backup-checks.yml
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color .github/workflows/backup.yml .github/workflows/backup-checks.yml .github/workflows/keepalive.yml
       - name: shellcheck the scripts
         run: shellcheck -S warning scripts/backup/*.sh || true
+      - name: Every script parses
+        run: for f in scripts/backup/*.sh; do bash -n "$f"; done
       - name: Policy - the backup workflow must stay safe
         run: |
           set -euo pipefail
@@ -43,6 +47,22 @@ jobs:
           ! grep -nE 'path:.*plain' "$f" || { echo "::error::do not upload the plain dump"; exit 1; }
           grep -q 'yafbphagorydbitfgfmg' "$f"
           grep -q 'vptyhluvgnjpvkcbhxsf' "$f"
+          # the files go up encrypted too: a second artifact, only *.age, and the upload folder is checked
+          grep -q 'backup-files-' "$f"
+          grep -q "find .*! -name '\*.age'" "$f"
+          ! grep -nE 'path:.*plainfiles' "$f" || { echo "::error::do not upload the plain files"; exit 1; }
+          [ "$(grep -cE '^\s+path: .*\.age$' "$f")" -ge 2 ] || { echo "::error::both uploads must be *.age paths"; exit 1; }
+          # the file backup uses Storage S3 keys, never the service-role key
+          grep -q 'STORAGE_S3_ACCESS_KEY_ID' "$f"
+          # purge only after the files artifact is uploaded
+          up="$(grep -n 'Upload the encrypted files backup' "$f" | head -1 | cut -d: -f1)"
+          pg="$(grep -n 'scripts/backup/purge-trash.sh' "$f" | head -1 | cut -d: -f1)"
+          [ "$up" -lt "$pg" ] || { echo "::error::purge must come after the files upload"; exit 1; }
+          # keepalive: no secret, only actions: write
+          k=.github/workflows/keepalive.yml
+          ! grep -nE 'secrets\.[A-Z_]+' "$k" | grep -v GITHUB_TOKEN || { echo "::error::keepalive must use GITHUB_TOKEN only"; exit 1; }
+          grep -q 'actions: write' "$k"
+          ! grep -nE 'pull_request' "$k" || { echo "::error::keepalive must not run on pull_request"; exit 1; }
           echo "policy ok"
 
   crypto:
@@ -63,12 +83,23 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq age
       - name: Start local Supabase and apply the migrations plus seed
         run: |
           npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
           npx supabase db reset --local
-      - name: Dump, wipe, restore, compare
+      - name: Dump (one snapshot), wipe, restore, verify (counts, checksums, foreign keys, triggers, views)
         run: bash scripts/backup/selftest-restore.sh
+      - name: Storage download, encrypted files artifact, 30-day trash and purge
+        run: |
+          set -euo pipefail
+          aws --version
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          export STORAGE_S3_ENDPOINT="${API_URL:-http://127.0.0.1:54321}/storage/v1/s3"
+          export STORAGE_S3_REGION="${S3_PROTOCOL_REGION:-local}"
+          export STORAGE_S3_ACCESS_KEY_ID="${S3_PROTOCOL_ACCESS_KEY_ID:-625729a08b95bf1b7ff351a663f3a23c}"
+          export STORAGE_S3_SECRET_ACCESS_KEY="${S3_PROTOCOL_ACCESS_KEY_SECRET:-850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907}"
+          bash scripts/backup/selftest-storage.sh
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup

@@ -431,7 +431,9 @@ insert into probes values
   ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
   ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
   ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
-  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x'),   -- 0092
+  ('admin_health', '', 'X', 'select 1 from public.admin_health()'),   -- 0120
+  ('confirm_backup_decrypt_test', '', 'X', 'select 1 from (select public.confirm_backup_decrypt_test() r) x');   -- 0120
 
 -- 0074 receivables: money, so an engineer is refused too (they run order_receivables()).
 select is(pg_temp.actual(f, '', 'engineer'), '', format('engineer gets nothing from %s', f))
@@ -536,9 +538,9 @@ from (values ('anon'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['attachment_is_priced', 'close_month', 'close_months_through', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
+          array['admin_health', 'attachment_is_priced', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
                 'order_receivables', 'receipt_locked', 'record_history_rows', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed twelve (0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed fourteen (0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

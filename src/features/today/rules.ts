@@ -17,6 +17,7 @@ import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { ageOrSince, dateWords, dueWord, sinceWords } from '@/lib/timeWords'
 import { DEFAULT_GST_DEADLINES, gstDatesFor } from '@/features/settings/gstDeadlines'
+import { BACKUP_STALE_DAYS, DECRYPT_TEST_EVERY_DAYS, FREE_DB_BYTES, FREE_STORAGE_BYTES, USAGE_WARN_AT, fullestUsage, percentText } from '@/features/settings/health'
 import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { isStale, STALE_AFTER_DAYS, toneFor } from './needsYou'
 import { buildReview, isMonday, reviewCount } from './weeklyReview'
@@ -165,6 +166,9 @@ function tabFor(rule: RuleKey): TodayTab {
     case 'recurring_due':
     case 'gst_fbr':
     case 'claims_to_approve':
+    case 'backup_stale':
+    case 'usage_high':
+    case 'decrypt_test':
     case 'weekly_review':
       return 'money'
     case 'job_commissioning':
@@ -1083,6 +1087,89 @@ export function ruleClaimsToApprove(ctx: TodayInputs): Entry[] {
 }
 
 /**
+ * Backups and the free plan (0120), admin only. Three chores, each only when there is something to do:
+ *   backup_stale   the last successful nightly backup is more than 2 days old (or none was ever recorded since tracking began): red.
+ *   usage_high     the database (500 MB) or the file storage (1 GB) of the free plan is 70% full or more: amber.
+ *   decrypt_test   the monthly "open last night's backup with your private key" check is 31 days old: grey, in This week.
+ * They all open Settings > Backups and usage.
+ */
+const HEALTH_HREF = '/settings/backups'
+const healthId = (n: number) => `00000000-0000-4000-8004-${String(n).padStart(12, '0')}`
+
+export function ruleHealth(ctx: TodayInputs): Entry[] {
+  const h = ctx.health
+  if (ctx.user.role !== 'admin' || !h) return []
+  const out: Entry[] = []
+  const age = daysBetween(h.backupOn, ctx.today)
+  if (age > BACKUP_STALE_DAYS) {
+    out.push(
+      build(
+        {
+          rule: 'backup_stale',
+          subjectId: healthId(1),
+          tab: tabFor('backup_stale'),
+          title: h.backupRecorded ? `Backup is ${age} days old: check GitHub` : 'No backup has reported yet: check GitHub',
+          ref: 'Backups',
+          party: 'The nightly backup should run every night',
+          actionDueOn: today1(ctx.today),
+          group: 'now',
+          badge: { text: h.backupRecorded ? `${age} days since` : 'Never ran', tone: 'danger' },
+          isPriority: false,
+          href: HEALTH_HREF,
+          number: 0,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  const u = fullestUsage(h.dbBytes, h.storageBytes)
+  if (u.share >= USAGE_WARN_AT) {
+    out.push(
+      build(
+        {
+          rule: 'usage_high',
+          subjectId: healthId(2),
+          tab: tabFor('usage_high'),
+          title: `Free plan ${percentText(u.share)} full (${u.what})`,
+          ref: 'Free plan',
+          party: `Limits: ${FREE_DB_BYTES / 1048576} MB database, ${FREE_STORAGE_BYTES / 1073741824} GB files`,
+          actionDueOn: today1(ctx.today),
+          group: 'now',
+          badge: { text: percentText(u.share), tone: u.share >= 0.9 ? 'danger' : 'warning' },
+          isPriority: false,
+          href: HEALTH_HREF,
+          number: 0,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  const sinceCheck = daysBetween(h.decryptOn, ctx.today)
+  if (sinceCheck >= DECRYPT_TEST_EVERY_DAYS) {
+    out.push(
+      build(
+        {
+          rule: 'decrypt_test',
+          subjectId: healthId(3),
+          tab: tabFor('decrypt_test'),
+          title: "Test-decrypt last night's backup (monthly)",
+          ref: 'Backup key check',
+          party: 'Prove your private key still opens a backup',
+          actionDueOn: today1(ctx.today),
+          group: 'ready',
+          badge: { text: `${sinceCheck} days since`, tone: 'neutral' },
+          isPriority: false,
+          href: HEALTH_HREF,
+          number: 0,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  return out
+}
+
+/**
  * The weekly owner review (redesign phase 3, P3-C1): one row for the admin every Monday, "Weekly review: 7 to decide", that opens
  * /todo/review. Only when there is something to decide. Never for sales or an engineer: the owner decides what is closed as lost.
  */
@@ -1135,6 +1222,9 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   weekly_review: ruleWeeklyReview,
   gst_fbr: ruleGstFbr,
   claims_to_approve: ruleClaimsToApprove,
+  backup_stale: ctx => ruleHealth(ctx).filter(i => i.rule === 'backup_stale'),
+  usage_high: ctx => ruleHealth(ctx).filter(i => i.rule === 'usage_high'),
+  decrypt_test: ctx => ruleHealth(ctx).filter(i => i.rule === 'decrypt_test'),
 }
 
 /**
@@ -1193,6 +1283,9 @@ export const NAV_SECTION: Record<RuleKey, NavSection> = {
   weekly_review: 'money', // an admin chore
   gst_fbr: 'money',
   claims_to_approve: 'money',
+  backup_stale: 'money',
+  usage_high: 'money',
+  decrypt_test: 'money',
 }
 
 export const navSectionOf = (item: Pick<TodayItem, 'rule'>): NavSection => NAV_SECTION[item.rule]

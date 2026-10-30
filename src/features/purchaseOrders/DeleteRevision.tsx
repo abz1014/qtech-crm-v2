@@ -2,7 +2,6 @@ import { mapPgError } from '@/lib/pgErrors'
 import { poRef } from '@/lib/refs'
 import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { useToast } from '@/ui/useToast'
-import { removeStoredFiles } from '@/features/rfqs/api'
 import { useDeletePoRevision } from '@/features/purchaseOrders/hooks'
 
 /*
@@ -34,10 +33,8 @@ export function DeletePoRevisionConfirm({
       summary={`${ref} · ${supplierName}. Supplier prices it already wrote onto the order's lines stay as they are.`}
       also={['its PDF']}
       onConfirm={async () => {
-        const files = await del.mutateAsync(po.id)
-        const failed = await removeStoredFiles(files)
+        await del.mutateAsync(po.id)
         toast({ title: `${ref} deleted`, body: supplierName, tone: 'success' })
-        if (failed.length > 0) toast({ title: 'The PDF was not removed', body: `It stayed in storage. ${ref} itself is deleted.` })
       }}
       errorMessage={e => mapPgError(e, { entity: 'PO' }).message}
     />

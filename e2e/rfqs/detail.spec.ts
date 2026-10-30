@@ -369,7 +369,8 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await resetClipboard(page)
     await card.getByRole('button', { name: 'Copy and mark chased' }).click()
     await readClipboardWhen(page, 'A second reminder')
-    expect((await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
+    // the stamp is written just after the text is copied: poll, do not read once
+    await expect.poll(async () => (await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
   })
 
   test('the card shows a short preview and the recipient; the whole message lists only the items still without a price; Email is a link; another supplier is one choice away', async ({ page }) => {

@@ -83,6 +83,7 @@ export function useTodayView(
       monthEnd: data.monthEnd,
       gst: data.gst,
       claims: data.claims,
+      health: data.health,
       costs: data.costs,
       invoices: data.invoices,
       recurring: data.recurring,

@@ -6,7 +6,6 @@ import { Button } from '@/ui/Button'
 import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { useToast } from '@/ui/useToast'
-import { removeStoredFiles } from '@/features/rfqs/api'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import { useDeleteQuotationRevision } from '@/features/quotations/hooks'
 
@@ -98,10 +97,8 @@ function DeleteRevisionConfirm({
       }
       also={hasPdf ? ['its PDF'] : undefined}
       onConfirm={async () => {
-        const files = await del.mutateAsync(quotationId)
-        const failed = await removeStoredFiles(files)
+        await del.mutateAsync(quotationId)
         toast({ title: `${label} deleted`, tone: 'success' })
-        if (failed.length > 0) toast({ title: 'The PDF was not removed', body: `It stayed in storage. ${label} itself is deleted.` })
       }}
       errorMessage={e => mapPgError(e, { entity: 'quotation' }).message}
     />
