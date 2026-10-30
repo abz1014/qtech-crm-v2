@@ -97,7 +97,7 @@ for (const role of ['sales', 'admin'] as const) {
 
     // no mark, no recommendation, nothing ticked or chosen
     await expect(statement).not.toContainText(/cheap|lowest|best|recommend|winner|preferred/i)
-    await expect(page.locator('#main [aria-checked="true"], #main [aria-pressed="true"], #main [aria-selected="true"], #main input:checked')).toHaveCount(0)
+    await expect(statement.locator('[aria-checked="true"], [aria-pressed="true"], [aria-selected="true"], input:checked')).toHaveCount(0)
     await expect(page.locator('#main [data-recommended], #main [data-lowest], #main [data-best]')).toHaveCount(0)
     // the suppliers that did not reply or did not quote are ONE compact line under the item, not rows
     await expect(page.locator('[data-statement-item="1"] [data-statement-noreply]')).toHaveText(`No reply: ${s.names.silent}`)
@@ -215,8 +215,8 @@ test('weight and country of origin are typed beside the prices in the reply dial
   await expect.poll(async () => (await must(rest<{ origin: string | null }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.inquiries.silent}&select=origin`)))[0].origin).toBe('Japan')
 
   // and the statement shows it
-  await page.waitForLoadState('networkidle')
-  await page.goto(`/jobs/${s.rfq.number}/statement`)
+  await page.getByTestId('open-statement').click()
+  await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}/statement$`))
   const row = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${name}"]`)
   await expect(row).toContainText('1.25 lb')
   await expect(row).toContainText('Japan')
