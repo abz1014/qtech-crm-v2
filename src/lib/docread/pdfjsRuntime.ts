@@ -7,6 +7,12 @@ import './promiseWithResolvers'
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
+// Where Workers exist (every browser we support), pdf.js gets our own worker, which polyfills Promise.withResolvers for older
+// phones (pdfWorker.ts). Without Worker (Node unit tests) it keeps the stock worker file and runs in-process.
+if (typeof Worker !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerPort = new Worker(new URL('./pdfWorker.ts', import.meta.url), { type: 'module' })
+} else {
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
+}
 
 export { pdfjs }
