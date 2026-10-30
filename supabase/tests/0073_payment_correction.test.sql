@@ -61,7 +61,7 @@ select is((select coalesce(array_agg(x.name order by x.name), '{}') from (
              where v.schemaname = 'public'
                and v.definition ~ '\mpayments_in\M' and v.definition !~ '\mvoided_at\M'
            ) x),
-  array['close_month', 'close_months_through', 'enforce_month_lock', 'payments_in_invoice_guard', 'record_history', 'take_month_snapshot'],   -- 0123: the guard copies the tie of the payment a correction replaces
+  array['close_month', 'close_months_through', 'enforce_month_lock', 'record_history', 'take_month_snapshot'],   -- (0123: payments_in_invoice_guard copies a correction's tie and names voided_at, so it is not listed)
   'every other view and function that reads payments_in leaves voided payments out');
 
 -- ================================================================== fixtures (table owner, admin claims)
