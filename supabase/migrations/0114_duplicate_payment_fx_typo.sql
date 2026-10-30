@@ -31,7 +31,7 @@ begin
   end if;
   select o.company_id into v_company from public.orders o where o.id = p_order_id;
   if not found then
-    raise exception 'That order is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
+    raise exception 'This order is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
   end if;
   if not coalesce(p_confirm_duplicate, false) then
     select p.received_on into v_dup
@@ -55,7 +55,7 @@ end;
 $$;
 
 revoke all on function public.record_payment(uuid, uuid, date, numeric, text, text, boolean) from public, anon, authenticated;
-grant execute on function public.record_payment(uuid, uuid, date, numeric, text, text, boolean) to authenticated;
+grant execute on function public.record_payment(uuid, uuid, date, numeric, text, text, boolean) to authenticated, qtech_engineer;   -- 0081 mirror; refused inside for anyone but an admin
 
 -- ================================================================ M7
 drop function public.set_fx_rate(text, numeric, date);

@@ -1,6 +1,7 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
 import { toBusinessDate } from '@/lib/dates'
 import type { InvoicePdfSource } from '@/features/money/invoices/pdf/doc'
+import type { CreditNotePdfSource } from '@/features/money/invoices/pdf/creditNoteDoc'
 import type { BuyerTax } from '@/features/money/invoices/pdf/model'
 
 /*
@@ -106,6 +107,35 @@ export async function loadInvoicePdfSource(invoiceId: string): Promise<InvoicePd
       // the due basis order_receivables uses (0076): the invoice date, else the order date, else the day it was imported
       dueBasis: o.invoice_date ?? order?.ordered_on ?? (o.created_at ? toBusinessDate(new Date(o.created_at)) : null),
     })),
+  }
+}
+
+/** Everything one credit note's PDF needs (0112): the note, the invoice it credits, the order, the buyer and the delivery site's address. */
+export async function loadCreditNotePdfSource(creditNoteId: string): Promise<CreditNotePdfSource | null> {
+  const db = requireSupabase()
+  const { data: cn, error } = await db
+    .from('credit_notes')
+    .select('id, number, issued_on, net_amount, gst_amount, reason, invoice_id, order_id, company_id')
+    .eq('id', creditNoteId)
+    .maybeSingle()
+  if (error) throw error
+  if (!cn) return null
+  const inv = await db.from('invoices').select('number, invoice_date').eq('id', cn.invoice_id).maybeSingle()
+  if (inv.error) throw inv.error
+  let order: { number: number; customer_po_number: string | null; site_id: string | null; company_id: string } | null = null
+  if (cn.order_id) {
+    const res = await db.from('orders').select('number, customer_po_number, site_id, company_id').eq('id', cn.order_id).maybeSingle()
+    if (res.error) throw res.error
+    order = res.data
+  }
+  const companyId = order?.company_id ?? cn.company_id
+  const [buyer, site] = await Promise.all([companyId ? readBuyer(companyId) : null, order?.site_id ? readSite(order.site_id) : null])
+  return {
+    creditNote: { id: cn.id, number: cn.number, issuedOn: cn.issued_on, net: cn.net_amount, gst: cn.gst_amount, reason: cn.reason },
+    invoice: { number: inv.data?.number ?? null, invoiceDate: inv.data?.invoice_date ?? null },
+    order: order ? { number: Number(order.number), customerPo: order.customer_po_number } : null,
+    buyer: buyer ? toBuyer(buyer) : null,
+    siteAddress: site?.address ?? null,
   }
 }
 

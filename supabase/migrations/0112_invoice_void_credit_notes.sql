@@ -84,7 +84,7 @@ begin
   new.number := btrim(new.number);
   select * into v from public.invoices i where i.id = new.invoice_id for update;
   if not found then
-    raise exception 'That invoice is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
+    raise exception 'This invoice is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
   end if;
   if v.voided_at is not null then
     raise exception 'Invoice % is void, so it cannot take a credit note.', v.number using errcode = 'P0001', hint = 'invoice_void';
@@ -173,7 +173,7 @@ begin
   end if;
   select * into v from public.invoices i where i.id = p_invoice_id for update;
   if not found then
-    raise exception 'That invoice is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
+    raise exception 'This invoice is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
   end if;
   select coalesce(sum(c.net_amount), 0), coalesce(sum(c.gst_amount), 0) into v_net, v_gst
   from public.credit_notes c where c.invoice_id = p_invoice_id;
@@ -345,7 +345,7 @@ cross join lateral (
   from public.invoices v
   where v.order_id = o.id and v.voided_at is null
 ) i
-where public.current_user_role() = 'admin';
+where (select public.current_user_role()) = 'admin';
 
 -- ---------------------------------------------------------------- order_receivables
 create or replace function public.order_receivables(p_order_id uuid default null)
@@ -620,7 +620,7 @@ select
   end as data_trust
 from public.orders o
 join public.v_order_items_total t on t.order_id = o.id
-cross join lateral (select public.current_user_role() as role) r
+cross join lateral (select (select public.current_user_role()) as role) r
 cross join lateral (
   select
     count(*) filter (where not i.is_service) as goods_items,
@@ -1255,7 +1255,7 @@ select
   coalesce(i.deposited_count, 0)                                   as deposited_count,
   coalesce(i.deposited_amount, 0)                                  as deposited_amount,
   coalesce(i.gst_to_deposit, 0) - coalesce(c.credit_gst, 0)        as gst_to_deposit,
-  case when public.current_user_role() = 'admin' then coalesce(x.input_tax, 0) end as input_tax,
+  case when (select public.current_user_role()) = 'admin' then coalesce(x.input_tax, 0) end as input_tax,
   coalesce(c.credit_note_count, 0)                                 as credit_note_count,
   coalesce(c.credit_net, 0)                                        as credit_net,
   coalesce(c.credit_gst, 0)                                        as credit_gst
@@ -1263,4 +1263,4 @@ from months m
 left join inv i on i.month = m.month
 left join cn c on c.month = m.month
 left join itx x on x.month = m.month
-where public.current_user_role() in ('admin', 'sales');
+where (select public.current_user_role()) in ('admin', 'sales');

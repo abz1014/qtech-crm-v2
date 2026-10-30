@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { PlainError } from '@/lib/errors/plainError'
 import { orderRef } from '@/lib/refs'
 import { lookupLabels } from '@/features/money/lookupLabels'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
@@ -30,6 +31,11 @@ const toRow = (r: ViewRow<'v_gst_register'>): GstRow => ({
   needsAttention: !!r.needs_fbr_attention,
   psid: r.psid,
   taxDepositedOn: r.tax_deposited_on,
+  rowKind: r.row_kind === 'credit_note' ? 'credit_note' : 'invoice',
+  voided: r.voided_at !== null && r.voided_at !== undefined,
+  voidReason: r.void_reason,
+  againstInvoiceId: r.against_invoice_id,
+  againstNumber: r.against_number,
 })
 
 /** Every invoice, newest first. The register is small (a few hundred a year), so it is read whole and grouped by month on screen. */
@@ -69,10 +75,21 @@ export interface InvoicePatch {
   notes: string | null
 }
 
-export async function updateInvoice(id: string, patch: Partial<InvoicePatch>): Promise<void> {
+/** The code of the refusal when the invoice was changed by someone else after this person opened it (M1). */
+export const INVOICE_CHANGED = 'invoice_changed'
+const CHANGED_MESSAGE = 'Someone else changed this invoice while you had it open. Nothing was saved. Reload the page to see their change, then make yours again.'
+
+/**
+ * Saves a change to an invoice. With `expectedUpdatedAt` (the updated_at the person's copy came with) the write only lands when the
+ * row is still that version: if someone else changed it first, nothing is written and the person is told so (M1, no last write wins).
+ */
+export async function updateInvoice(id: string, patch: Partial<InvoicePatch>, expectedUpdatedAt?: string): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('invoices').update(patch).eq('id', id)
+  let q = db.from('invoices').update(patch).eq('id', id)
+  if (expectedUpdatedAt) q = q.eq('updated_at', expectedUpdatedAt)
+  const { data, error } = await q.select('id')
   if (error) throw error
+  if (expectedUpdatedAt && (data ?? []).length === 0) throw new PlainError(CHANGED_MESSAGE, INVOICE_CHANGED)
 }
 
 // ------------------------------------------------------------------ create
@@ -106,14 +123,16 @@ export async function orderForInvoice(orderId: string): Promise<OrderForInvoice 
   const { data: order, error } = await db.from('orders').select('id, number, company_id, payment_terms_days, cancelled_on').eq('id', orderId).maybeSingle()
   if (error) throw error
   if (!order) return null
-  const [company, totals, items, invoices] = await Promise.all([
+  const [company, totals, items, invoices, creditNotes] = await Promise.all([
     db.from('companies').select('name').eq('id', order.company_id).maybeSingle(),
     db.from('v_order_items_total').select('net, gst').eq('order_id', orderId).maybeSingle(),
     db.from('order_items').select('qty, unit_price_net, gst_rate').eq('order_id', orderId),
-    db.from('invoices').select('net_amount, gst_amount, invoice_date').eq('order_id', orderId),
+    db.from('invoices').select('net_amount, gst_amount, invoice_date').eq('order_id', orderId).is('voided_at', null),
+    db.from('credit_notes').select('net_amount, gst_amount').eq('order_id', orderId),
   ])
   const lines = unwrap(items) ?? []
   const inv = unwrap(invoices) ?? []
+  const credits = unwrap(creditNotes) ?? []
   return {
     id: order.id,
     number: Number(order.number),
@@ -125,8 +144,9 @@ export async function orderForInvoice(orderId: string): Promise<OrderForInvoice 
       itemsGst: num(unwrap(totals)?.gst),
       lineCount: lines.length,
       exemptLineCount: lines.filter(l => Number(l.gst_rate) === 0).length,
-      invoicedNet: inv.reduce((s, i) => s + num(i.net_amount), 0),
-      invoicedGst: inv.reduce((s, i) => s + num(i.gst_amount), 0),
+      // a void invoice is already 0 / 0; a credit note takes its net and GST off what the order is invoiced for (0112)
+      invoicedNet: inv.reduce((s, i) => s + num(i.net_amount), 0) - credits.reduce((s, c) => s + num(c.net_amount), 0),
+      invoicedGst: inv.reduce((s, i) => s + num(i.gst_amount), 0) - credits.reduce((s, c) => s + num(c.gst_amount), 0),
       earliestInvoiceDate: inv.reduce<string | null>((m, i) => (i.invoice_date && (m === null || i.invoice_date < m) ? i.invoice_date : m), null),
       paymentTermsDays: order.payment_terms_days === null ? null : Number(order.payment_terms_days),
       lines: lines.map(l => lineMoneyOf(l.qty, l.unit_price_net, l.gst_rate)),
@@ -220,15 +240,41 @@ export async function stampDeposited(ids: readonly string[]): Promise<number> {
   return Number(data ?? 0)
 }
 
-/** Undo of a stamp: every invoice that was changed goes back to the values it had before. */
-export async function restoreStamp(before: readonly StampSnapshot[], fields: ReadonlyArray<keyof Omit<StampSnapshot, 'id'>>): Promise<void> {
+/** The version (updated_at) each of these invoices is at now: read right after a stamp, so its Undo can tell whether anyone touched them since. */
+export async function versionsOf(ids: readonly string[]): Promise<Record<string, string>> {
   const db = requireSupabase()
+  if (ids.length === 0) return {}
+  const rows = unwrap(await db.from('invoices').select('id, updated_at').in('id', [...ids])) ?? []
+  return Object.fromEntries(rows.map(r => [r.id, r.updated_at]))
+}
+
+/**
+ * Undo of a stamp: every invoice that was changed goes back to the values it had before, unless someone changed it since (its
+ * updated_at is no longer the version `after` names). Those are left as they are and the person is told (M1); the rest are restored.
+ */
+export async function restoreStamp(
+  before: readonly StampSnapshot[],
+  fields: ReadonlyArray<keyof Omit<StampSnapshot, 'id'>>,
+  after?: Readonly<Record<string, string>>,
+): Promise<void> {
+  const db = requireSupabase()
+  let skipped = 0
   for (const b of before) {
     const patch: Record<string, string | number | null> = {}
     // the fields come from the stamped set, all columns of InvoicePatch
     for (const f of fields) patch[f] = b[f]
-    const { error } = await db.from("invoices").update(patch as Partial<InvoicePatch>).eq("id", b.id)
+    let q = db.from('invoices').update(patch as Partial<InvoicePatch>).eq('id', b.id)
+    const version = after?.[b.id]
+    if (version) q = q.eq('updated_at', version)
+    const { data, error } = await q.select('id')
     if (error) throw error
+    if (version && (data ?? []).length === 0) skipped += 1
+  }
+  if (skipped > 0) {
+    throw new PlainError(
+      `Someone else changed ${skipped === 1 ? 'an invoice' : `${skipped} invoices`} after the stamp, so ${skipped === 1 ? 'it was' : 'they were'} left as ${skipped === 1 ? 'it is' : 'they are'}. The others were put back.`,
+      INVOICE_CHANGED,
+    )
   }
 }
 

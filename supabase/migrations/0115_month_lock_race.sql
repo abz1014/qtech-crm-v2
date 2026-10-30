@@ -59,6 +59,8 @@ begin
   end if;
   patched := replace(def, a1, r1);
   patched := replace(patched, a2, r2 || a2);
+  -- the imported-invoice allowance reads old.legacy_source; a table without that column (order_costs) must not fail on it
+  patched := replace(patched, 'old.legacy_source is not null', '(to_jsonb(old) ->> ''legacy_source'') is not null');
   if patched = def then
     raise exception '0115: the month lock function was not changed';
   end if;

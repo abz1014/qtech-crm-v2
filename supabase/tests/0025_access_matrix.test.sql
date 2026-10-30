@@ -130,6 +130,11 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'order_engineers',     '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_engineers"
   ('table', 'order_costs',         '',           'SIUD', '',     ''),     -- s10 "order_costs"
   ('table', 'invoices',            '',           'SIUD', 'SIU',  ''),     -- s10 "invoices (changed, A2)"
+  ('table', 'credit_notes',        '',           'SI',   'S',    ''),     -- 0112: admin issues (create_credit_note), admin and sales read, nobody edits or deletes one
+  ('function', 'create_credit_note', '',         'X',    '',     ''),     -- 0112: admin only (42501 for everyone else)
+  ('function', 'void_invoice',     '',           'X',    '',     ''),     -- 0112: admin only
+  ('function', 'record_payment',   '',           'X',    '',     ''),     -- 0114: admin only
+  ('function', 'next_credit_note_number', '',    'X',    'X',    'X'),    -- 0112: the next CN number (an engineer sees no credit note, so the first)
   ('table', 'payments_in',         '',           'SIUD', '',     ''),     -- s10 "payments_in"
   ('table', 'expenses',            '',           'SIUD', '',     ''),     -- s10 "expenses"
   ('table', 'recurring_expenses',  '',           'SIUD', '',     ''),     -- s10 "recurring_expenses"
@@ -350,7 +355,11 @@ insert into public.order_items (id, order_id, position, description, unit_price_
 insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('20'), 5);
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
-  (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
+  (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18),
+  (pg_temp.f('d2'), pg_temp.f('20'), 'INV-M3', 100, 18);
+-- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
+update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
+insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.payments_in (id, order_id, amount, voided_at, voided_by, void_reason) values   -- 0073: voided just now by the admin
   (pg_temp.f('c0'), pg_temp.f('20'), 50, now(), 'a0000000-0000-4000-8000-000000000001', 'fixture');
@@ -441,6 +450,7 @@ insert into spec values
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
+  ('credit_notes', '', 'id = @d3', 'reason', $q$insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (@d4, 'CN-P', @26, 10, 2, 'probe')$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
   ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000005')$q$),
@@ -598,6 +608,10 @@ insert into probes values
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
+  ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
+  ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
+  ('record_payment', '', 'X', $q$select 1 from (select public.record_payment(gen_random_uuid(), @20, public.today_pkt(), 7, null, 'bank', true) r) x$q$),   -- 0114
+  ('next_credit_note_number', '', 'X', 'select 1 where public.next_credit_note_number() is not null'),   -- 0112
   ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
   ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
   ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),

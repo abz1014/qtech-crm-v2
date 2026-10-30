@@ -19,7 +19,8 @@ select columns_are('public', 'invoices',
   array['id', 'created_at', 'created_by', 'updated_at', 'order_id', 'company_id', 'number', 'invoice_date',
         'net_amount', 'gst_amount', 'copy_received_on', 'tcs_sent_on', 'tcs_number', 'client_received_on', 'psid',
         'wasif_receipt_on', 'tax_deposited_on', 'tax_deposit_amount', 'notes', 'last_reminded_on', 'reminder_count',
-        'legacy_flags', 'legacy_source', 'tax_bank_month', 'settled_before_cutover', 'legacy_review'],   -- 0096: legacy_review
+        'legacy_flags', 'legacy_source', 'tax_bank_month', 'settled_before_cutover', 'legacy_review',   -- 0096: legacy_review
+        'voided_at', 'voided_by', 'void_reason', 'voided_net', 'voided_gst'],   -- 0112: void
   'invoices has the section 2.16 columns (reminder stamps, no tax_deposit_bank)');
 select hasnt_column('public', 'invoices', 'tax_deposit_bank', 'invoices.tax_deposit_bank is dropped (A3-2)');
 select columns_are('public', 'payments_in',
@@ -325,8 +326,8 @@ select lives_ok($$insert into public.recurring_expenses (id, label, category_id,
   'admin inserts a recurring expense');
 select is(public.t_rows($q$delete from public.recurring_expenses where id = 'b3000000-0000-4000-8000-0000000000a1'$q$), 1,
   'admin deletes a recurring expense');
-select is(public.t_rows($q$delete from public.invoices where id = 'b1000000-0000-4000-8000-0000000000a2'$q$), 1,
-  'admin deletes an invoice');
+select is(public.t_rows($q$update public.invoices set number = null, legacy_flags = array['undated'] where id = 'b1000000-0000-4000-8000-0000000000a2'$q$), 1,
+  'admin changes an invoice (0112: a numbered invoice is voided, never deleted; the delete of an unnumbered one is in 0112_money_integrity)');
 
 -- ------------------------------------------------------------------ anon
 reset role;

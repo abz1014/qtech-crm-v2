@@ -197,5 +197,5 @@ $$;
 
 revoke all on function public.invoices_integrity() from public, anon, authenticated;
 
-create trigger invoices_integrity before insert or update on public.invoices
+create trigger invoices_zintegrity before insert or update on public.invoices
   for each row execute function public.invoices_integrity();
