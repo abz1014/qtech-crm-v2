@@ -54,7 +54,7 @@ function db(openRows: unknown[] | Error = OPEN, closedRows: unknown[] = []) {
       if (openRows instanceof Error) return { error: { message: openRows.message } }
       return { data: openRows }
     }
-    if (c.target === 'rfqs') return { data: [{ id: 'a', customer_ref: 'ENQ-2211', rfq_items: [{ description: 'Cerabar PMC71 pressure transmitter', position: 0 }] }] }
+    if (c.target === 'rfqs') return { data: [{ id: 'a', customer_ref: 'ENQ-2211', rfq_items: [{ description: 'Cerabar PMC71 pressure transmitter', position: 0 }] }], count: 1 }
     return { data: [] }
   })
 }

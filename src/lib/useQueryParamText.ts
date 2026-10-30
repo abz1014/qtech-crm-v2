@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 /*
@@ -12,9 +12,27 @@ import { useSearchParams } from 'react-router-dom'
  */
 export function useQueryParamText(key = 'q'): [string, (next: string, also?: Record<string, string | null>) => void] {
   const [params, setParams] = useSearchParams()
-  const value = params.get(key) ?? ''
+  const urlValue = params.get(key) ?? ''
+  // The box shows what was typed at once. React Router 7 applies the address change inside a transition, so a field that shows the
+  // address value would lag and drop letters typed quickly ("nc" became "c"). The address follows the typing; an address change
+  // that is not our own (Back, a link, a clear button elsewhere) replaces the typing.
+  const [draft, setDraft] = useState(urlValue)
+  const pushed = useRef<string[]>([])
+  const urlRef = useRef(urlValue)
+  urlRef.current = urlValue
+  useEffect(() => {
+    const at = pushed.current.indexOf(urlValue)
+    if (at >= 0) {
+      pushed.current.splice(0, at + 1)
+      return
+    }
+    pushed.current = []
+    setDraft(urlValue)
+  }, [urlValue])
   const set = useCallback(
     (next: string, also?: Record<string, string | null>) => {
+      setDraft(next)
+      if (next !== urlRef.current || pushed.current.length > 0) pushed.current.push(next)
       setParams(
         prev => {
           const p = new URLSearchParams(prev)
@@ -31,7 +49,7 @@ export function useQueryParamText(key = 'q'): [string, (next: string, also?: Rec
     },
     [key, setParams],
   )
-  return [value, set]
+  return [draft, set]
 }
 
 /** Every word must match, case-insensitive (the board's rule, spec 3.1). `haystack` is the row's searchable text joined. */

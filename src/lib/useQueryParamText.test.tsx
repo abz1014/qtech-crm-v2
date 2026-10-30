@@ -31,6 +31,19 @@ describe('useQueryParamText', () => {
     expect(screen.getByTestId('where')).toHaveTextContent(/^\?tab=done$/)
   })
 
+  it('keeps every letter typed without a pause (the address change is applied in a transition)', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(
+      <MemoryRouter initialEntries={['/list']}>
+        <Harness />
+      </MemoryRouter>,
+    )
+    const box = screen.getByRole('textbox', { name: 'Search' })
+    await user.type(box, 'nc pump')
+    expect(box).toHaveValue('nc pump')
+    expect(screen.getByTestId('where')).toHaveTextContent('?q=nc+pump')
+  })
+
   it('takes another key', () => {
     render(
       <MemoryRouter initialEntries={['/list?search=pump']}>
