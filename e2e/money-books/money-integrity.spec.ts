@@ -55,7 +55,6 @@ test.describe('void and credit notes (C1)', () => {
     expect(Number(rec[0].balance)).toBe(118000)
 
     await page.goto('/money/gst-register')
-    await page.getByRole('searchbox', { name: /Search invoices/ }).fill(inv.number)
     await expect(page.getByRole('row', { name: new RegExp(inv.number) })).toContainText('Void')
   })
 
@@ -95,11 +94,9 @@ test.describe('void and credit notes (C1)', () => {
     const reg = await must(rest<{ row_kind: string; net_amount: number; gst_amount: number; number: string }[]>('admin', `v_gst_register?number=eq.${notes[0].number}&select=*`))
     expect(reg[0]).toMatchObject({ row_kind: 'credit_note', net_amount: -40000, gst_amount: -7200 })
     await page.goto('/money/gst-register')
-    await page.getByRole('searchbox', { name: /Search invoices/ }).fill(notes[0].number)
     await expect(page.getByRole('row', { name: new RegExp(notes[0].number) })).toContainText('Credit note')
 
     // its PDF
-    await page.getByRole('searchbox', { name: /Search invoices/ }).fill(inv.number)
     await page.getByRole('row', { name: new RegExp(inv.number) }).first().click()
     const popup = context.waitForEvent('page')
     await page.getByRole('button', { name: 'Print credit note' }).click()
