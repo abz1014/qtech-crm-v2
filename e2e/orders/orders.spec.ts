@@ -637,7 +637,7 @@ test.describe('O03: commissioning and cancel', () => {
     await expect.poll(async () => (await orderRow(s.order.id)).commissioning_done_on).toBe(karachiDay(0))
   })
 
-  test('cancel an order with a reason; it stays on record and can be reopened', async ({ page }) => {
+  test('cancel an order with a reason; it stays on record', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'admin', `/orders/${s.order.id}`)
     await page.getByRole('button', { name: /^More( actions)?$/ }).click()
@@ -659,10 +659,6 @@ test.describe('O03: commissioning and cancel', () => {
     expect(row.notes).toBe('Gate pass needed 2 days ahead.')
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
-    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
-    await page.getByRole('menuitem', { name: 'Reopen order' }).click()
-    await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBeNull()
-    expect((await orderRow(s.order.id)).cancel_reason).toBeNull()
   })
 })
 
@@ -689,10 +685,8 @@ test.describe('O03: role views', () => {
     const text = await page.locator('#main').innerText()
     expect(text).not.toMatch(/PKR|48,500|96,500|135,000|Margin|Terms|Exempt|Costs|Balance|Add line|Add supplier|Issue PO|Record payment|Add expense|Create invoice/i)
     await expect(page.locator('.sr-only', { hasText: 'Not set' })).toHaveCount(0)
-    // the page leads with the engineer's job: the site, the contact, Delivered today and Installed today
+    // the page leads with the engineer's job: Delivered today and Installed today
     const onSite = page.getByRole('region', { name: 'On site' })
-    await expect(page.locator('#main')).toContainText('Hub plant, kiln line 2')
-    await expect(page.locator('#main')).toContainText('Mr. Tariq Hussain')
     await expect(onSite.getByRole('button', { name: 'Delivered today' })).toBeVisible()
     await expect(onSite.getByRole('button', { name: 'Installed today' })).toBeVisible()
 

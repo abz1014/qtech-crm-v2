@@ -195,7 +195,7 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
       // The whole report per screen (open it in https://googlechrome.github.io/lighthouse/viewer/): the request chain and the
       // LCP element and its phases say what to fix.
       mkdirSync('test-results/lighthouse', { recursive: true })
-      writeFileSync(`test-results/lighthouse/${name.replaceAll(' ', '-').toLowerCase()}.json`, JSON.stringify(run?.lhr ?? null))
+      writeFileSync(`test-results/lighthouse/${name.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}.json`, JSON.stringify(run?.lhr ?? null))
       const a = run?.lhr.audits ?? {}
       const lcp = a['largest-contentful-paint']?.numericValue
       const fcp = a['first-contentful-paint']?.numericValue

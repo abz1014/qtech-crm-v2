@@ -1,6 +1,7 @@
 import { NoPrimary } from '@/ui/NoPrimary'
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useIssueDialog } from '@/features/quotations/useIssueDialog'
 import { CloudOff } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
@@ -112,9 +113,16 @@ function JobView({ facts }: { facts: JobFacts }) {
   const current = currentStopIndex(job.stage, job.stageDetail)
   const first = current === null ? null : Math.min(current, 6)
   const [open, setOpen] = useState<number | null>(first)
-  useEffect(() => setOpen(first), [first, job.key])
+  const [, openIssue] = useIssueDialog()
   // A link that carries ?issue=1 (the RFQ page's own address for the Issue quotation dialog) lands on the stage that holds it.
   const wantsIssue = params.get('issue') === '1'
+  // Issuing the quotation moves the job on (to Order), which folds the Quotation stage; the Issue dialog lives in that stage, so folding it
+  // would take the dialog away at the moment it offers Share and Download. While the dialog is open the stage stays.
+  const dialogOpen = useRef(wantsIssue)
+  dialogOpen.current = wantsIssue
+  useEffect(() => {
+    if (!dialogOpen.current) setOpen(first)
+  }, [first, job.key])
   useEffect(() => {
     if (wantsIssue) setOpen(1)
   }, [wantsIssue])
@@ -140,10 +148,8 @@ function JobView({ facts }: { facts: JobFacts }) {
       setParams(p, { replace: true })
       return
     }
-    if (next.query === 'issue=1') {
-      p.set('issue', '1')
-      setParams(p, { replace: true })
-    }
+    // the same opener as the Quotations block: on a computer it adds a history entry, so Back closes the dialog and stays on the page (HW-9)
+    if (next.query === 'issue=1') openIssue(true)
     select(1)
   }
   // An engineer's one green button is on the site card (EngineerActions: Delivered today, Installed today, Add photo or note), so the

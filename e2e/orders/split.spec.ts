@@ -176,7 +176,8 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     // same total as the unsplit order: 4 x 134,000 + 2 x 612,000
     expect(lines.reduce((sum, l) => sum + Number(l.qty) * Number(l.unit_price_net), 0)).toBe(4 * 134000 + 2 * 612000)
 
-    // the order page groups the two parts under the one item
+    // the order stage groups the two parts under the one item
+    await openStage(page, 'Order')
     await expect(page.getByText('split across 2 suppliers').first()).toBeVisible()
   })
 
