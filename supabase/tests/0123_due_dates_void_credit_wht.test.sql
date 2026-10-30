@@ -22,7 +22,7 @@ insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst
 select pg_temp.u(o || k), pg_temp.u(o), 'T123-' || o || k, case k when '1' then date '2024-02-09' else date '2024-03-01' end, 500, 90
 from unnest(array['10', '20', '30', '40', '50']) o cross join unnest(array['1', '2']) k;
 insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst_amount) values
-  (pg_temp.u('61'), pg_temp.u('60'), 'T123-601', '2024-02-09', 1000, 180);
+  (pg_temp.u('601'), pg_temp.u('60'), 'T123-601', '2024-02-09', 1000, 180);
 
 -- WHT counts as settled money, tied or not
 insert into public.payments_in (id, order_id, received_on, amount, wht_amount) values
