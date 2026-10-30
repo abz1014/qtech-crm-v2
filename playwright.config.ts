@@ -20,10 +20,6 @@ import { defineConfig, devices } from '@playwright/test'
  *      E2E_SUITE=auth npx playwright test --project=auth
  *    The tests read API_URL and SERVICE_ROLE_KEY from the environment (local keys only).
  *
- *  - rfq-board (R06): the RFQ board over a fixture set of RFQs, with axe at 1440 and 375 and the review screenshots.
- *    Same server, build and stack as 'companies' (.github/workflows/e2e.yml):
- *      E2E_SUITE=rfq-board REVIEW_DIR=review-shots npx playwright test --project=rfq-board
- *
  *  - companies (R02): the Companies screens, signed in through the login form as the fixture users, with its data
  *    set up through the REST API as those users. Same server and build as 'auth' (.github/workflows/e2e.yml):
  *      E2E_SUITE=companies REVIEW_DIR=review-shots npx playwright test --project=companies
@@ -34,7 +30,7 @@ import { defineConfig, devices } from '@playwright/test'
  *    Undo, the double-tap guard and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-intake REVIEW_DIR=review-shots npx playwright test --project=rfq-intake
  *
- *  - rfq-detail (R07, R09, R10): the RFQ detail page on the same stack and build; clarifications.spec.ts adds the questions panel and the files.
+ *  - rfq-detail (R07, R09, R10): the Job page of an enquiry on the same stack and build.
  *    Reply capture, can't quote, the lowest mark, chase, close, the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-detail REVIEW_DIR=review-shots npx playwright test --project=rfq-detail
  *
@@ -148,7 +144,7 @@ const HUNT_FILES: Record<string, string> = {
 }
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'jobs', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
+const dbSuites = ['db', 'auth', 'companies', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'jobs', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
@@ -210,13 +206,6 @@ export default defineConfig({
       },
     },
     {
-      name: 'rfq-board',
-      testMatch: /rfqs\/board\.spec\.ts/,
-      fullyParallel: false,
-      retries: process.env.CI ? 1 : 0,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
-    },
-    {
       name: 'rfq-intake',
       testMatch: /rfqs\/intake\.spec\.ts/,
       fullyParallel: false,
@@ -232,7 +221,7 @@ export default defineConfig({
     },
     {
       name: 'rfq-detail',
-      testMatch: /rfqs\/(detail|clarifications|delete)\.spec\.ts/,
+      testMatch: /rfqs\/detail\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: {

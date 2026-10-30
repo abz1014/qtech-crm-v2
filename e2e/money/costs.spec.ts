@@ -74,68 +74,6 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.setViewportSize(before)
 }
 
-test.describe('Margin panel on the order page (admin)', () => {
-  test('the estimate fills an empty expected cost once and never overwrites; costs complete turns the margin final', async ({ page }) => {
-    await setEurRate()
-    const o = await seedOrder()
-    await openAs(page, 'admin', `/orders/${o.id}`)
-    const panel = page.getByRole('region', { name: 'Margin' })
-    await expect(panel.getByText('Not final', { exact: true }).first()).toBeVisible()
-
-    // Supplier price x today's rate: 2 x EUR 100 x 300 = PKR 60,000; the line with no supplier price is counted, not guessed.
-    const estimate = panel.getByTestId('cost-estimate')
-    await expect(estimate).toContainText('Supplier-price estimate: PKR 60,000 at today')
-    await expect(estimate).toContainText('excludes freight, duty and service')
-    await expect(estimate).toContainText('1 line has no supplier price yet')
-
-    await panel.getByRole('button', { name: 'Use as the expected cost' }).click()
-    await expect(panel.getByText('60,000').first()).toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Use as the expected cost' })).toHaveCount(0)
-    expect(await must(rest<{ expected_cost_pkr: number }[]>('admin', `order_costs?order_id=eq.${o.id}&select=expected_cost_pkr`))).toEqual([{ expected_cost_pkr: 60000 }])
-
-    // A typed value stands, and the estimate (still shown as information) cannot replace it.
-    await panel.getByRole('button', { name: 'Edit the expected cost' }).click()
-    await panel.getByRole('textbox', { name: 'Expected cost, PKR' }).fill('55000')
-    await panel.getByRole('button', { name: 'Save' }).click()
-    await expect(panel.getByText('55,000').first()).toBeVisible()
-    expect(await must(rest<{ expected_cost_pkr: number }[]>('admin', `order_costs?order_id=eq.${o.id}&select=expected_cost_pkr`))).toEqual([{ expected_cost_pkr: 55000 }])
-    // The conditional fill the button uses matches nothing once a value exists.
-    const guarded = await must(rest<unknown[]>('admin', `order_costs?order_id=eq.${o.id}&expected_cost_pkr=is.null`, { method: 'PATCH', body: { expected_cost_pkr: 1 } }))
-    expect(guarded).toEqual([])
-
-    // Costs paid out: net sale 13,000 less 10,000 so far = 3,000, still provisional.
-    await expense(o.id, 10000)
-    await page.reload()
-    await expect(panel.getByText('Actual cost, 1 tagged expense')).toBeVisible()
-    await expect(panel.locator('[data-margin-state="provisional"]')).toBeVisible()
-    await expect(panel.getByTestId('margin-expenses')).toContainText('Supplier payment')
-    await expect(panel.getByTestId('margin-expenses')).toContainText('10,000')
-
-    await panel.getByRole('button', { name: 'Mark costs complete' }).click()
-    await expect(panel.locator('[data-margin-state="final"]')).toBeVisible()
-    await expect(panel.locator('[data-status="costs:complete"]')).toHaveCount(0) // the normal state draws no chip (R2-01 rule 2)
-    await expect(panel.getByRole('button', { name: 'Reopen costs' })).toBeVisible()
-    const done = await must(rest<{ costs_complete_at: string | null; costs_complete_by: string | null }[]>('admin', `order_costs?order_id=eq.${o.id}&select=costs_complete_at,costs_complete_by`))
-    expect(done[0].costs_complete_at).not.toBeNull()
-    expect(done[0].costs_complete_by).not.toBeNull()
-
-    await panel.getByRole('button', { name: 'Reopen costs' }).click()
-    await expect(panel.locator('[data-margin-state="provisional"]')).toBeVisible()
-    await shot(page, 'm04-order-margin-panel-1440')
-  })
-
-  test('an order with an unknown price basis shows no margin and says why', async ({ page }) => {
-    const o = await seedOrder({ flags: ['value_basis_unknown'] })
-    await expense(o.id, 640000)
-    await openAs(page, 'admin', `/orders/${o.id}`)
-    const panel = page.getByRole('region', { name: 'Margin' })
-    await expect(panel.locator('[data-margin-state="basis_unknown"]')).toBeVisible()
-    await expect(panel.getByText('Not calculated')).toBeVisible()
-    await expect(panel.getByText('Imported costs of PKR 640,000 are on file.')).toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Mark costs complete' })).toBeDisabled()
-  })
-})
-
 test.describe('Money > Margins (admin)', () => {
   test('only costs-complete orders are totalled; provisional margins are marked; an unknown basis is labelled and left out', async ({ page }) => {
     const done = await seedOrder({ lines: [{ qty: 1, net: 1000000, supplierPrice: null }] })
@@ -224,7 +162,7 @@ test.describe('who sees money', () => {
         if (MONEY.test(r.url())) seen.push(`${r.method()} ${r.url()}`)
       })
       await openAs(page, role, `/orders/${o.id}`)
-      await expect(page.locator('#main').getByText(ordRef(o.number)).first()).toBeVisible()
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job O-${o.number}`)
       await page.waitForLoadState('networkidle')
       await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
       for (const path of ['/money/margins', '/money/exceptions']) {
@@ -253,18 +191,13 @@ test.describe('who sees money', () => {
 
 for (const width of [1440, 375]) {
   test.describe(`axe at ${width}`, () => {
-    test('the Margin panel, Margins and Mistakes to fix have no violations', async ({ page }) => {
+    test('Margins and Mistakes to fix have no violations', async ({ page }) => {
       await setEurRate()
       const o = await seedOrder()
       await expense(o.id, 4000)
       await post('payments_in', { order_id: o.id, amount: 20000, received_on: today() })
       await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
-      await openAs(page, 'admin', `/orders/${o.id}`)
-      await expect(page.getByRole('region', { name: 'Margin' })).toBeVisible()
-      await expect(page.getByTestId('cost-estimate')).toBeVisible()
-      expect(await axeViolations(page), 'order page').toEqual([])
-      await shot(page, `m04-order-margin-panel-${width}`)
-      await page.goto('/money/margins')
+      await openAs(page, 'admin', '/money/margins')
       await expect(page.getByRole('heading', { name: 'Order margins' })).toBeVisible()
       expect(await axeViolations(page), 'margins').toEqual([])
       await shot(page, `m04-money-margins-${width}`)

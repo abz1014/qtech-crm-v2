@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, rest, rfqRef, uniqueName } from '../support/stack'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../support/pdf'
 import { legLoc, setProfile } from '../orders/fixtures'
+import { JOB_URL, markWonButton, openStage, stagesOf } from '../support/job'
 import { fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
@@ -38,8 +39,6 @@ const reply = async (page: Page, name: string) => {
 }
 
 type Co = { id: string; name: string }
-
-const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString()
 
 async function post<T = { id: string }>(table: string, body: unknown): Promise<T> {
   return (await must(rest<T[]>('admin', table, { method: 'POST', body })))[0]
@@ -183,30 +182,10 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number), s.lahore.name], true)
   })
 
-  // ---- 3. The RFQ page: ask the customer a question ----------------------------------------------------------------------------
-  await test.step('open the RFQ and ask the customer a question: 1 paste + 1 tap, then 1 tap to copy', async () => {
-    const open = page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` })
-    if (await open.count()) await open.first().click()
-    else await page.goto(`/rfqs/${rfq.id}`)
-    await expect(page.getByRole('heading', { level: 1, name: new RegExp(`RFQ-0*${rfq.number}`) })).toBeVisible()
-    const panel = page.locator('[data-slot="clarifications"]')
-    await resetCount(page)
-    await panel.getByRole('button', { name: 'Add question', exact: true }).click() // opens the box (hidden until needed: grade-B R9)
-    await panel.getByRole('textbox', { name: 'Add questions' }).fill('Flange rating and line size on the process line, please?') // the paste
-    await panel.getByRole('button', { name: 'Add question', exact: true }).click()
-    await expect(page.getByRole('status').filter({ hasText: /questions? added/i }).first()).toBeVisible()
-    fe2('Add a question: open + 1 paste + 1 tap', (await readCount(page)).mouse, 2)
-    await resetCount(page)
-    await resetClipboard(page)
-    await panel.getByRole('button', { name: 'Copy questions for customer' }).click()
-    await expect(toast(page, 'Questions copied')).toBeVisible()
-    fe2('Copy the question for the customer', (await readCount(page)).mouse, 1)
-    await readClipboardWhen(page, 'Flange rating and line size on the process line')
-    const [q] = await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`))
-    expect(q.ask_count).toBe(1)
-    // Hand-off: asked eight days ago (moved back), so the customer is due a chase.
-    await must(rest('admin', `clarifications?rfq_id=eq.${rfq.id}`, { method: 'PATCH', body: { first_asked_at: daysAgo(8), last_asked_at: daysAgo(8) }, prefer: 'return=minimal' }))
-    await todayHas(salesCtx, 'chase_customer', [rfqRef(rfq.number)], true)
+  // ---- 3. The job page ---------------------------------------------------------------------------------------------------------------------
+  await test.step('open the job from the Jobs list or by its address', async () => {
+    await page.goto(`/rfqs/${rfq.id}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
   })
 
   // ---- 4. Supplier replies: one typed, one pasted -------------------------------------------------------------------------------
@@ -304,7 +283,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 6. Issue the quotation PDF --------------------------------------------------------------------------------------------------
   await test.step('issue the quotation: one price per item, Issue, Share', async () => {
     await resetCount(page)
-    await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: /Issue/ }).click()
+    await page.getByRole('button', { name: 'Issue quotation', exact: true }).first().click()
     await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible()
     const d = dialog(page)
     await expect(d.getByLabel('Addressed to')).toContainText('Mr. Kamran Zafar')
@@ -357,46 +336,13 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const quoted = await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${rfq.id}&select=quoted_on`))
     expect(quoted[0].quoted_on).toBe(today) // issuing the quotation marked it sent: no further tap is needed
     // The quotation is out: the page's one green button is now Mark won.
-    await expect(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).toBeVisible()
-
-    // The sales person also quotes by phone: that quotation has no PDF. It is a rare case, so it lives in More (2 taps): the
-    // owner's decision of 2026-10-19 keeps one green button per screen and puts the rest in one menu.
-    const verbal = await createRfq(s.customer.id, { due_on: karachiDay(5), owner_id: 'a0000000-0000-4000-8000-000000000002' })
-    await post('rfq_items', { rfq_id: verbal.id, position: 0, description: `Spare gasket set ${letters()}`, qty: 1 })
-    // Hand-off: nobody has been asked and its quotation is due in five days: both reminders are listed until it is sent.
-    await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], true)
-    await todayHas(salesCtx, 'bid_due', [rfqRef(verbal.number)], true)
-    const side = await openPage(salesCtx, `/rfqs/${verbal.id}`)
-    await resetCount(side)
-    await side.getByRole('button', { name: 'More', exact: true }).click()
-    await side.getByRole('menuitem', { name: /Mark quotation sent/ }).click()
-    await expect(toast(side, 'Marked quotation sent')).toBeVisible()
-    fe2('Mark quotation sent (a verbal quotation): More, then the item', (await readCount(side)).mouse, 2)
-    const after = await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${verbal.id}&select=quoted_on`))
-    expect(after[0].quoted_on).toBe(today)
-    await side.close()
-    await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], false)
-    await todayHas(salesCtx, 'bid_due', [rfqRef(verbal.number)], false)
-  })
-
-  // ---- 8. Chase the customer -------------------------------------------------------------------------------------------------------
-  await test.step('chase the customer: Copy chase text is one tap', async () => {
-    await page.reload() // the Today chase was made on another page
-    const panel = page.locator('[data-slot="clarifications"]')
-    await expect(panel.getByText('Asked ×2')).toBeVisible() // the Today chase was the second ask
-    await resetCount(page)
-    await resetClipboard(page)
-    await panel.getByRole('button', { name: 'Copy chase text' }).click()
-    await expect(toast(page, 'Chase text copied')).toBeVisible()
-    fe2('Chase the customer', (await readCount(page)).mouse, 1)
-    await readClipboardWhen(page, `our ref *${rfqRef(rfq.number)}*`)
-    await expect.poll(async () => (await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`)))[0].ask_count).toBe(3)
+    await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toBeVisible()
   })
 
   // ---- 9. Won: convert with rank 1 pre-picked and one split ------------------------------------------------------------------------
   await test.step('mark won: rank 1 pre-picked on every line, one item split across two suppliers', async () => {
     await resetCount(page)
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    await (await markWonButton(page)).click()
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Mark won' })).toBeVisible()
     // Rank 1 is already chosen for each line, with the reason under the name; nothing was tapped for it.
@@ -413,7 +359,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(d.getByTestId('convert-item-1-sum')).toContainText('3 + 1 = 4')
     await expect(d.getByText('Creates 3 order lines.')).toBeVisible()
     await d.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await expect(page).toHaveURL(JOB_URL)
     const taps = (await readCount(page)).mouse
     // Mark won + Create order are the 2 taps of an unchanged win; the split adds Split this item (1 tap) and the quantity (1 typed).
     fe2('Win with one split: taps (Mark won, Split this item, Create order)', taps, 3)
@@ -432,6 +378,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     ])
     const legs = await must(rest<{ id: string; supplier_id: string }[]>('admin', `supplier_orders?order_id=eq.${order.id}&select=id,supplier_id`))
     expect(legs.map(l => l.supplier_id).sort()).toEqual([s.alpen.id, s.lahore.id].sort())
+    await openStage(page, 'Order')
     await expect(page.getByText('split across 2 suppliers').first()).toBeVisible()
     // Hand-off: two legs, neither ordered from the supplier yet.
     await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.alpen.name], true)
@@ -440,6 +387,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
 
   // ---- 10. The supplier PO ---------------------------------------------------------------------------------------------------------------
   await test.step('issue the supplier PO to Alpenmark: every line priced, 2 taps, nothing typed', async () => {
+    await openStage(page, 'Supplier order')
     const letter = (await legLoc(page, 'A').innerText()).includes(s.alpen.name) ? 'A' : 'B'
     expect((await legLoc(page, letter).innerText()).includes(s.alpen.name)).toBe(true)
     await resetCount(page)
@@ -482,6 +430,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const letterOf = async (name: string) => ((await legLoc(page, 'A').innerText()).includes(name) ? 'A' : 'B')
     const lLetter = await letterOf(s.lahore.name)
     const aLetter = await letterOf(s.alpen.name)
+    await openStage(page, 'Supplier order')
     await resetCount(page)
     // ordered by phone, no PO: from the row's menu ("Mark placed, no PO"; Issue PO is the 1-tap way and it is on the row)
     await legLoc(page, lLetter).getByRole('button', { name: `More for ${s.lahore.name}` }).click()
@@ -492,6 +441,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await must(rest('admin', `supplier_orders?id=eq.${lahoreLeg}`, { method: 'PATCH', body: { expected_on: karachiDay(-2) }, prefer: 'return=minimal' }))
     await todayHas(salesCtx, 'goods_late', [s.lahore.name], true)
     // Delivered: one tap each, and nothing is late any more.
+    await openStage(page, 'Delivery')
     for (const [letter, id, name] of [[aLetter, alpenLeg, s.alpen.name], [lLetter, lahoreLeg, s.lahore.name]] as const) {
       await resetCount(page)
       await legLoc(page, letter).getByRole('button', { name: `Delivered today, ${name}` }).click()
@@ -505,10 +455,11 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
 
   // ---- 11. The invoice ----------------------------------------------------------------------------------------------------------------------
   await test.step('create the invoice: 2 taps, nothing typed', async () => {
-    await resetCount(page)
-    // everything is delivered, so Create invoice is the page's one green button
+    // everything is delivered, so Create invoice is the page's one green button and the job is on its Invoice stage
     await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Create invoice'])
-    await page.getByRole('button', { name: 'Create invoice' }).click()
+    await openStage(page, 'Invoice')
+    await resetCount(page)
+    await stagesOf(page).getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await expect(d.getByRole('textbox', { name: 'Invoice number' })).toHaveValue(/.+/)
     await expect(d.getByText('GST, 18%')).toBeVisible()
@@ -532,9 +483,10 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 12. Admin records the payment ---------------------------------------------------------------------------------------------------------
   await test.step('(admin) record the payment in full: 2 taps, the amount is the balance due', async () => {
     const admin = await openPage(adminCtx, `/orders/${order.id}`)
-    await expect(admin.locator('#main').getByText(ordRef(order.number)).first()).toBeVisible()
+    await expect(admin.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
+    await openStage(admin, 'Invoice')
     await resetCount(admin)
-    await admin.getByRole('button', { name: 'Record payment' }).click()
+    await stagesOf(admin).getByRole('button', { name: 'Record payment' }).first().click()
     const d = admin.getByRole('dialog', { name: 'Record payment' })
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('316,240')
     await d.getByRole('button', { name: 'Save payment' }).click()

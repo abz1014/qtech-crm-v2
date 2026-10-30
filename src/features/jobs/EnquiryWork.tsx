@@ -77,7 +77,7 @@ export default function EnquiryWork({ rfqId }: { rfqId: string }) {
   const inquiries = useRfqInquiries(rfqId)
   if (header.isPending || items.isPending || inquiries.isPending) return <Skeleton className="h-[10rem] w-full" />
   if (!header.data || items.isError || inquiries.isError) {
-    return <p className="text-base text-fg-muted">The supplier details did not load. Open the enquiry page to try again.</p>
+    return <p className="text-base text-fg-muted">The supplier details did not load. Reload the page to try again.</p>
   }
   return <Work rfq={header.data} itemList={items.data ?? []} inquiryList={inquiries.data ?? []} />
 }

@@ -20,14 +20,14 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
   await pressOnNavLink(page, 'n')
   await expect(page).toHaveURL(/\/enquiries\/new$/)
 
-  await open(page, '/rfqs')
+  await open(page, '/jobs')
   await pressOnNavLink(page, 'g')
   await page.keyboard.press('t')
   await expect(page).toHaveURL(/\/todo$/)
 
-  await open(page, '/rfqs')
+  await open(page, '/jobs')
   await pressOnNavLink(page, '/')
-  expect(await focusedThing(page)).toMatch(/Search RFQs/)
+  expect(await focusedThing(page)).toMatch(/Search jobs/)
 
   // Inside a text field the keys are only text.
   await open(page, '/companies')
@@ -50,7 +50,7 @@ test('a single printable key never acts unless the person can turn it off (WCAG 
 })
 
 test('? opens the keyboard shortcuts sheet on a computer; a phone shows no key hints (consistency spec 4.4)', async ({ page }) => {
-  await open(page, '/rfqs')
+  await open(page, '/jobs')
   const width = page.viewportSize()?.width ?? 1440
   if (width < 768) {
     // No keyboard on a phone: no key cap may be visible on a list page.

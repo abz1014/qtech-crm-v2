@@ -102,9 +102,8 @@ const rfqOf = (id: string) => must(rest<{ quoted_on: string | null }[]>('admin',
 const refOf = (q: Q, first: Q = q) => `QT-${first.issued_on.slice(2, 4)}-${String(q.number).padStart(4, '0')}`
 
 const openIssue = async (page: Page) => {
-  // The header button on a wide screen; on a phone the same action lives in the sticky bar at the foot.
-  const phone = (page.viewportSize()?.width ?? 1440) < 768
-  await (phone ? page.locator('[data-action-bar]') : page.locator('[data-slot="issue-quotation"]')).getByRole('button', { name: /Issue/ }).click()
+  // The job page's one green button (in the next-step band; on a phone, in the sticky bar at the foot).
+  await page.getByRole('button', { name: 'Issue quotation', exact: true }).first().click()
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible()
 }
 /** A review screenshot, taken once the dialog has finished rising (otherwise it is caught half transparent). */
@@ -266,7 +265,7 @@ test.describe('re-issue', () => {
     expect(pdfIsValid(pdf0)).toBe(true)
 
     // A quotation is out: Mark won is the green button, and the Quotations panel offers Revise quotation.
-    await expect(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toBeVisible()
     await page.locator('[data-slot="quotations"]').getByRole('button', { name: 'Revise quotation' }).click()
     await expect(dialog(page).getByRole('heading', { name: `Revise quotation ${refOf(r0)}` })).toBeVisible()
     await expect(dialog(page).getByText('Revision 1', { exact: true })).toBeVisible()

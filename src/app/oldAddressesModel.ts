@@ -25,8 +25,12 @@ export function jobsSearchForOldList(search: string): string {
   return out ? `?${out}` : ''
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** The Job key for an RFQ or order id, or null when there is none (an address that never existed). */
 export async function jobKeyFor(kind: OldKind, id: string): Promise<string | null> {
+  // A hand-typed or mangled id is not a record: say "not found" at once, instead of letting the database refuse the lookup (which reads as a lost connection)
+  if (!UUID.test(id)) return null
   const db = requireSupabase()
   let rfqId: string | null = kind === 'rfq' ? id : null
   if (kind === 'order') {

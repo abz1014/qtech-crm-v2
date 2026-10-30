@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { axeViolations } from '../support/axe'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { openStage } from '../support/job'
 
 /*
  * A8 (R25, R26) end to end, against the local CI stack: the ranked comparison on the RFQ page, and the track record in the float
@@ -350,6 +351,7 @@ test.describe('R26 float suggestions: ordered by track record, citing the eviden
   test('inside the reason, proven comes first, then unproven, then often late; the order is cited; nothing new is ticked', async ({ page }) => {
     const s = await seedFloat()
     await openAs(page, 'sales', `/rfqs/${s.rfqId}`)
+    await openStage(page, 'Quotation') // nobody is asked yet, so the job is still at the Enquiry stage
     const card = page.locator('[data-slot="suppliers-to-ask"]')
     // the list also holds a group heading row (C3): the supplier rows are the ones with a tick box
     const supplierRows = card.locator('li', { has: page.getByRole('checkbox') })

@@ -49,7 +49,7 @@ function CustomerPo({ order }: { order: OrderHeader }) {
 export default function OrderWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
   if (!w.orderId) return null
-  if (w.failed) return <p className="text-base text-fg-muted">The order did not load. Open the order page to try again.</p>
+  if (w.failed) return <p className="text-base text-fg-muted">The order did not load. Reload the page to try again.</p>
   if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-[10rem] w-full" />
   const basisUnknown = w.order.state?.dataTrust === 'basis_unknown'
   return (

@@ -36,8 +36,8 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
     name: 'Issue quotation dialog',
     open: async (page, w) => {
       await open(page, `/rfqs/${w.rfq.id}`)
-      // The header button from 768 up; below it the same action is in the sticky bar at the foot.
-      await page.locator('[data-slot="issue-quotation"], [data-action-bar]').getByRole('button', { name: UI.issue }).filter({ visible: true }).first().click()
+      // The next-step band's green button; on a phone the same action is in the sticky bar at the foot.
+      await page.getByRole('button', { name: UI.issue }).filter({ visible: true }).first().click()
       await expect(page.getByRole('dialog')).toBeVisible()
     },
   },

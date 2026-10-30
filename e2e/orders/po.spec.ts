@@ -1,6 +1,7 @@
 import { test, type Page } from '@playwright/test'
 import { karachiDay, must, openAs, rest } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { openStage } from '../support/job'
 import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../support/pdf'
 import { expect, get, legLoc, seedPo, setProfile, shot, tapper } from './fixtures'
 
@@ -35,6 +36,7 @@ test.describe('O07: Issue PO', () => {
   test('every line carries its price source; the terms come from the last PO; one typed price, then Issue; the PO, its PDF, the written-back prices and the placed stamp are stored', async ({ page }) => {
     const s = await seedPo()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText('No PO yet')
     await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
 
@@ -119,6 +121,7 @@ test.describe('O07: Issue PO', () => {
 
     // the supplier order shows the PO chip; View PO and the next revision are in its menu
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
+    await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
     await expect(page.getByRole('menuitem', { name: 'View PO' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Revise PO (R1)' })).toBeVisible()
@@ -131,6 +134,7 @@ test.describe('O07: Issue PO', () => {
     const s = await seedPo({ allPriced: true })
     const t = tapper()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await t.tap(legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }))
     await expect(dialog(page).getByTestId('po-source-1')).toBeVisible()
     await expect(dialog(page).getByTestId('po-missing')).toHaveCount(0)
@@ -144,9 +148,11 @@ test.describe('O07: Issue PO', () => {
   test('re-issue makes the next revision under the same number; the PDF of each revision is kept', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     await dialog(page).getByRole('button', { name: 'Issue PO' }).click()
     await expect(dialog(page)).toHaveCount(0, { timeout: 30_000 })
+    await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
     const button = page.getByRole('menuitem', { name: 'Revise PO (R1)' })
     await expect(button).toBeVisible()
@@ -172,6 +178,7 @@ test.describe('O07: Issue PO', () => {
     await must(rest('admin', `supplier_orders?id=eq.${s.leg}`, { method: 'PATCH', body: { currency: null }, prefer: 'return=minimal' }))
     await setProfile(false)
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     const d = dialog(page)
     await expect(d.getByRole('button', { name: 'Issue PO' })).toBeDisabled()
@@ -191,6 +198,7 @@ test.describe('O07: Issue PO', () => {
   test('Preview PDF opens a PDF without issuing anything', async ({ page, context }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     // headless Chromium has no PDF viewer: pointing the new tab at the PDF makes it a download, which is the proof that a PDF was made
     let downloaded = 0
@@ -203,6 +211,8 @@ test.describe('O07: Issue PO', () => {
   test('Pay <supplier> on a supplier order opens the Pay dialog: the one door for a supplier payment (0087)', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
+    await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
     await page.getByRole('menuitem', { name: `Pay ${s.supplier.name}` }).click()
     const d = dialog(page)
@@ -216,6 +226,7 @@ test.describe('O07: Issue PO', () => {
     const s = await seedPo({ allPriced: true })
     await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: s.leg } }))
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
     await expect(page.getByRole('button', { name: /Issue PO|View PO|Revise PO/ })).toHaveCount(0)
     await expect(page.getByRole('menuitem', { name: /View PO|Revise PO/ })).toHaveCount(0)
@@ -233,10 +244,12 @@ test.describe('O07: Issue PO', () => {
     )
     await expect.poll(async () => (await get<{ invoicing_state: string }>(`v_order_state?order_id=eq.${s.order.id}&select=invoicing_state`))[0].invoicing_state).toBe('fully_invoiced')
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     const leg = legLoc(page, 'A')
     await expect(leg).toBeVisible()
     await expect(leg.getByTestId('leg-A-po')).toHaveCount(0)
     await expect(leg.getByRole('button', { name: `Issue PO, ${s.supplier.name}` })).toHaveCount(0)
+    await openStage(page, 'Supplier order')
     await leg.getByRole('button', { name: `More for ${s.supplier.name}` }).click()
     await expect(page.getByRole('menuitem', { name: 'Issue PO' })).toBeVisible()
   })
@@ -246,6 +259,7 @@ test.describe('O07: Issue PO', () => {
       const s = await seedPo()
       await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
       await openAs(page, 'sales', `/orders/${s.order.id}`)
+      await openStage(page, 'Supplier order')
       await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
       await expect(dialog(page).getByTestId('po-source-4')).toBeVisible()
       expect(await dialogViolations(page)).toEqual([])

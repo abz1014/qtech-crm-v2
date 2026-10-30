@@ -70,7 +70,7 @@ function ChooseSuppliers({ order, items, legs }: { order: OrderHeader; items: re
 export default function SupplierOrderWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
   if (!w.orderId) return null
-  if (w.failed) return <p className="text-base text-fg-muted">The supplier orders did not load. Open the order page to try again.</p>
+  if (w.failed) return <p className="text-base text-fg-muted">The supplier orders did not load. Reload the page to try again.</p>
   if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-[10rem] w-full" />
   return (
     <div className="grid gap-3" data-supplier-order-work>

@@ -29,13 +29,14 @@ async function paste(page: Page, text: string): Promise<void> {
   }, text)
 }
 
-test('HE-1 an Orders link with an old or hand-typed filter value (?invoicing=open) crashes the whole screen', async ({ browser }, info) => {
+test('HE-1 an old Orders link with an old or hand-typed filter value (?invoicing=open) crashes the whole screen', async ({ browser }, info) => {
   const context = await contextAs(browser, info, 'admin', vp('w1366'))
   const page = await context.newPage()
   await page.goto('/orders?invoicing=open&payment=unpaid')
   await settle(page)
   await expect(page.getByRole('heading', { name: 'Something went wrong' })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
+  // the old Orders address opens the Jobs list, the old filters dropped
+  await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
   await context.close()
 })
 
@@ -193,7 +194,7 @@ test('HE-12 Targets: typing junk ("abc") over a saved target and pressing Enter 
 test('HE-14 closing Help (Account menu > Help) with Esc drops focus on the page body', async ({ browser }, info) => {
   const context = await contextAs(browser, info, 'admin', vp('w1366'))
   const page = await context.newPage()
-  await page.goto('/orders')
+  await page.goto('/jobs')
   await settle(page)
   await page.getByRole('button', { name: /Account menu/ }).click()
   await page.getByRole('menuitem', { name: /Help/ }).first().click()
@@ -290,7 +291,8 @@ test('HE-19 phone Back with a More menu open on an order leaves the order page',
   await expect(page.getByRole('menu').first()).toBeVisible()
   await page.goBack()
   await page.waitForTimeout(1000)
-  expect(new URL(page.url()).pathname).toBe(`/orders/${world.order.id}`)
+  // the old order address is replaced by the order's job page: Back from the menu stays on it
+  expect(new URL(page.url()).pathname).toMatch(/^\/jobs\//)
   await context.close()
 })
 

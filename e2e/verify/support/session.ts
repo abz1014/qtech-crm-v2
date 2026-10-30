@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync } from 'node:fs'
+import { markWonButton } from '../../support/job'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, type Browser, type BrowserContext, type Page, type Request, type TestInfo } from '@playwright/test'
@@ -58,19 +59,11 @@ export async function open(context: BrowserContext, path: string): Promise<Page>
 }
 
 /**
- * Opens the Mark won dialog on an RFQ page. It is the green button (data-slot="mark-won") once a quotation is out or the RFQ is
- * closed; before that it is an item in the header's More menu.
+ * Opens the Mark won dialog on a job page. It is the next-step band's green button once a quotation is out; before that it is the
+ * Order stage's own button (e2e/support/job.ts).
  */
 export async function openMarkWon(page: Page): Promise<void> {
-  const more = page.getByRole('button', { name: 'More', exact: true }).first()
-  await more.waitFor()
-  const slot = page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })
-  if ((await slot.count()) > 0 && (await slot.first().isVisible())) {
-    await slot.first().click()
-    return
-  }
-  await more.click()
-  await page.getByRole('menuitem', { name: /^Mark won/ }).click()
+  await (await markWonButton(page)).click()
 }
 
 /** Every request a page sends to the database's REST API, for "no money is ever asked for" checks. */

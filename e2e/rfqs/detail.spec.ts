@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
+import { openStage, stagesOf } from '../support/job'
 
 /*
  * R07 end to end, against the local CI stack: the RFQ detail page, as the fixture users through the real login form.
@@ -22,14 +23,6 @@ const violations = (page: Page): Promise<string[]> => axeViolations(page)
 const overlayViolations = (page: Page): Promise<string[]> => axeViolations(page, { landmarks: false })
 
 const today = () => karachiDay(0)
-
-/** "Tue 1 Dec", the way the page writes a day. */
-const formatLong = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00Z`)
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}`
-}
 
 /** Manual rates: USD fresh today, EUR 12 days old (stale). CNY and AED are left without a rate on purpose. */
 async function setRates(): Promise<void> {
@@ -114,14 +107,11 @@ const inquiryOf = (id: string) =>
   must(rest<{ no_offer_on: string | null; no_offer_reason: string | null; notes: string | null; chase_count: number; last_chased_on: string | null }[]>('admin', `supplier_inquiries?id=eq.${id}&select=no_offer_on,no_offer_reason,notes,chase_count,last_chased_on`)).then(r => r[0])
 const declinesOf = (inquiryId: string) =>
   must(rest<{ rfq_item_id: string; reason: string }[]>('admin', `inquiry_item_declines?inquiry_id=eq.${inquiryId}&select=rfq_item_id,reason`))
-const rfqOf = (id: string) =>
-  must(rest<{ quoted_on: string | null; closed_on: string | null; close_reason: string | null }[]>('admin', `rfqs?id=eq.${id}&select=quoted_on,closed_on,close_reason`)).then(r => r[0])
-
 test.describe('supplier reply (FE-2: one typed price per item, currency never typed)', () => {
   test('currency is pre-filled, two prices are typed, one tap saves, a missing rate does not block', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await expect(page.getByRole('heading', { level: 1, name: new RegExp(`RFQ-0*${s.rfq.number}`) })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${s.rfq.number}`)
     await review(page, 'rfq-detail-01-populated-1440')
 
     // China, no earlier reply: the country map fills CNY. The USD supplier's last reply fills USD. Nobody types a currency.
@@ -427,130 +417,23 @@ test.describe('chase (FE-2: 1 tap)', () => {
   })
 })
 
-const more = (page: Page) => page.getByRole('button', { name: 'More', exact: true })
-
-test.describe('quotation sent and close or lose (the More menu)', () => {
-  test('mark quotation sent (no PDF) is 2 taps from More, with an Undo; then the green button is Mark won, and More keeps Quotation sent again', async ({ page }) => {
-    const s = await seed()
-    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    let taps = 0
-    await more(page).click()
-    taps++
-    await page.getByRole('menuitem', { name: /Mark quotation sent/ }).click()
-    taps++
-    expect(taps).toBe(2)
-    await expect(page.getByRole('status').filter({ hasText: 'Marked quotation sent' })).toBeVisible()
-    await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBe(today())
-    await expect(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).toBeVisible() // now the green one
-    await expect(page.locator('[data-stage]')).toHaveText('Quotation sent')
-    // Sent (grade-B R6, R3): no due chip but the day it went; Mark lost is a quiet menu beside Mark won; no supplier chase left.
-    await expect(page.locator('[data-sent]')).toHaveText(`Sent ${formatLong(today())}`)
-    await expect(page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'Mark lost' })).not.toHaveClass(/bg-primary/)
-    await expect(page.locator('[data-chase-card]')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: `Chase ${s.usd.name}`, exact: true })).toHaveCount(0)
-    await more(page).click()
-    await expect(page.getByRole('menuitem', { name: /Quotation sent again/ })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: /Mark quotation sent/ })).toHaveCount(0) // already sent
-    await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: 'Undo' }).click()
-    await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBeNull()
-
-    // Quotation sent again re-stamps the date (an older date is moved to today).
-    await must(rest('admin', `rfqs?id=eq.${s.rfq.id}`, { method: 'PATCH', body: { quoted_on: karachiDay(-5) } }))
-    await page.reload()
-    await more(page).click()
-    await page.getByRole('menuitem', { name: /Quotation sent again/ }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Quotation date updated' })).toBeVisible()
-    await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBe(today())
-  })
-
-  test('close or lose is two taps (open More, choose the reason); the reason the state points to is marked suggested', async ({ page }) => {
-    const s = await seed()
-    // Nobody can supply it: that reason is the suggested one.
-    await must(rest('admin', 'supplier_inquiries?rfq_id=eq.' + s.rfq.id, { method: 'PATCH', body: { no_offer_on: karachiDay(0) } }))
-    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    // Everyone said no: the green button asks someone else.
-    await expect(page.locator('[data-slot="ask-suppliers"]').getByRole('button', { name: 'Ask more suppliers' })).toBeVisible()
-    let taps = 0
-    await more(page).click()
-    taps++
-    await expect(page.getByRole('menuitem', { name: /We could not source it/ })).toContainText('suggested')
-    await page.getByRole('menuitem', { name: /We could not source it/ }).click()
-    taps++
-    expect(taps).toBeLessThanOrEqual(2)
-    await expect(page.getByRole('status').filter({ hasText: 'Closed' })).toBeVisible()
-    await expect.poll(async () => (await rfqOf(s.rfq.id)).close_reason).toBe('could_not_source')
-    expect((await rfqOf(s.rfq.id)).closed_on).toBe(today())
-    await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible()
-    await page.getByRole('button', { name: 'Reopen' }).click()
-    await expect.poll(async () => (await rfqOf(s.rfq.id)).closed_on).toBeNull()
-  })
-})
 
 test.describe('states', () => {
-  test('an RFQ that does not exist says so', async ({ page }) => {
+  test('an enquiry that does not exist says so', async ({ page }) => {
     await openAs(page, 'sales', '/rfqs/00000000-0000-4000-8000-00000000dead')
-    await expect(page.getByText("This RFQ isn't here")).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
   })
 
-  test('the clarifications panel (R09) and the quotations block (R19) are both built', async ({ page }) => {
+  test('an engineer sees who was asked but has no Enter or Edit reply', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
-    await expect(page.locator('[data-slot="clarifications"]')).toContainText('Questions for the customer')
-    await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
+    await expect(stagesOf(page)).toBeVisible()
     // Owner decision 2026-10-22: a reply is prices, so an engineer sees who was asked but has no Enter or Edit reply.
-    await expect(page.locator('aside').getByRole('heading', { name: 'Suppliers asked' })).toBeVisible()
     await expect(page.getByRole('button', { name: /^(Enter|Edit) reply, / })).toHaveCount(0)
   })
 })
 
 test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
-  test('one Items and supplier prices panel with Add item; Quotations under it; Suppliers asked (with each reply), Questions and Files in the rail', async ({ page }) => {
-    const s = await seed()
-    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const items = page.locator('[data-slot="items"]')
-    await expect(items.getByRole('heading', { name: 'Items and supplier prices', level: 2 })).toBeVisible()
-    // Suppliers are listed once (grade-B R4): no separate replies panel; Enter reply sits on each supplier in the rail.
-    await expect(page.locator('[data-slot="replies"]')).toHaveCount(0)
-    await expect(page.locator('aside').getByRole('button', { name: /^Enter reply, / })).toHaveCount(3)
-    await expect(items.getByRole('button', { name: 'Add item' })).toBeVisible()
-    await expect(items).toContainText('2 items · 3 suppliers asked · 0 items have a price')
-    await expect(page.locator('[data-slot="quotations"]')).toBeVisible()
-    await expect(page.locator('aside [data-slot="quotations"]')).toHaveCount(0) // not in the rail
-    const rail = page.locator('aside')
-    await expect(rail.getByRole('heading', { name: 'Suppliers asked' })).toBeVisible()
-    await expect(rail).toContainText('3 asked · 0 replied')
-    await expect(rail.getByRole('heading', { name: 'Questions for the customer' })).toBeVisible()
-    await expect(rail.getByRole('heading', { name: 'Files' })).toBeVisible()
-    // The header: at most two chips, ONE green button by state (waiting for prices: the supplier chase in the rail), the rest in More.
-    // Due in 6 days is not close yet: only the stage chip, and the Quotation due tile is not orange (grade-B R7).
-    await expect(page.locator('header:has(h1) > div [data-status]')).toHaveCount(1) // the chip row under the title, none in the h1
-    await expect(page.locator('dt', { hasText: 'Quotation due' })).not.toHaveClass(/text-tone-warning-fg/)
-    await expect(page.locator('h1 [data-status]')).toHaveCount(0)
-    await expect(page.locator('[data-stage]')).toHaveText('Waiting for prices')
-    // The h1 is the company, a link to it; the facts strip has no Company cell.
-    await expect(page.getByRole('heading', { level: 1 }).getByRole('link')).toHaveAttribute('href', /\/companies\//)
-    await expect(page.locator('dt', { hasText: /^Company$/ })).toHaveCount(0)
-    await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)
-    // The green one is in the Next step box under the title (coordinator decision 2026-10-20), and goes to the chase in the rail.
-    const next = page.getByRole('region', { name: 'Next step' })
-    await expect(next).toContainText('Waiting for prices from 3 suppliers. Chase them.')
-    await expect(next.getByRole('button', { name: 'Chase suppliers' })).toHaveClass(/bg-primary/)
-    await expect(page.locator(`[data-chase-card="${s.china.id}"]`).getByRole('button', { name: 'Copy and mark chased' })).not.toHaveClass(/bg-primary/)
-    await next.getByRole('button', { name: 'Chase suppliers' }).click()
-    await expect(page.locator(`[data-chase-card="${s.china.id}"]`).getByRole('button', { name: 'Copy and mark chased' })).toBeFocused()
-    // Issue quotation is never silently disabled: it is in More and opens (prices can be typed in the dialog).
-    await more(page).click()
-    await expect(page.getByRole('menuitem', { name: /Issue quotation/ })).toBeEnabled()
-    await expect(page.getByRole('menuitem', { name: /Mark won/ })).toContainText('no quotation yet')
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('button', { name: 'Bid and close' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Close or lose' })).toHaveCount(0)
-    // The owner's role sits under the name in the facts strip; "Customer since" moved to the meta line under the title (R2 DetailHeader).
-    await expect(page.getByText(/^(Customer since .+|New customer)$/).first()).toBeVisible()
-    await expect(page.locator('dl').first()).toContainText('Admin')
-  })
-
   test('coverage reads "1 price so far" while a supplier has said nothing, "1 price" when everybody has answered', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD' } }))
@@ -559,8 +442,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect(one.getByText('1 price so far', { exact: true })).toBeVisible()
     await expect(one.locator(`[data-waiting~="${s.china.id}"]`)).toHaveText('Waiting on 2 suppliers') // China and Germany, one line
     // A price is in: Issue quotation is the green button.
-    await expect(page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: 'Issue quotation' })).toBeVisible()
-    await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Issue quotation', exact: true }).first()).toBeVisible()
     // The others answer something: nobody is waiting any more.
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: [
       { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[1].id, unit_price: 5, currency: 'CNY' },
@@ -757,18 +639,12 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
   test('nobody asked yet: Ask suppliers is the green button, every item needs suppliers, and Suppliers to ask copies one message for every item', async ({ page }) => {
     const s = await seed({ brand: true, asked: false })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openStage(page, 'Quotation') // nobody is asked yet, so the job is still at the Enquiry stage
     const panel = page.locator('[data-slot="items"]')
     await expect(panel).toContainText('2 items · nobody asked yet')
     await expect(panel).toContainText('Ask suppliers for prices. One tap copies a message listing every item')
     await expect(page.getByText('No supplier has been asked about this item.')).toHaveCount(2)
     await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-status]')).toHaveCount(0) // no item chip while nobody is asked: the header says it
-    await expect(page.locator('[data-stage]')).toHaveText('Needs suppliers')
-    await expect(page.locator('[data-slot="ask-suppliers"]').getByRole('button', { name: 'Ask suppliers' })).toHaveClass(/bg-primary/)
-    await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)
-    // The green button opens the same list as a dialog.
-    await page.locator('[data-slot="ask-suppliers"]').getByRole('button', { name: 'Ask suppliers' }).click()
-    await expect(page.getByRole('dialog', { name: /Ask suppliers/ })).toContainText(s.carrier!.name)
-    await page.keyboard.press('Escape')
     const card = page.locator('[data-slot="suppliers-to-ask"]')
     await expect(card).toContainText('suggested')
     await expect(card).toContainText(s.carrier!.name)
@@ -802,36 +678,6 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
   })
 })
 
-test.describe('optional fields (migration 0039): bid time, company city, contact title, owner phone', () => {
-  test('they appear where the mockup shows them, and the email chase signature stays name and company only', async ({ page }) => {
-    const s = await seed()
-    const ADMIN = 'a0000000-0000-4000-8000-000000000001'
-    const co = (await must(rest<{ company_id: string }[]>('admin', `rfqs?id=eq.${s.rfq.id}&select=company_id`)))[0].company_id
-    const contact = (await must(rest<{ id: string }[]>('admin', 'contacts', { method: 'POST', body: { company_id: co, name: 'Mr. Tariq Mehmood', phone: '+92 300 555 0142', job_title: 'Procurement Manager' } })))[0]
-    await must(rest('admin', `rfqs?id=eq.${s.rfq.id}`, { method: 'PATCH', body: { due_time: '17:00', contact_id: contact.id } }))
-    await must(rest('admin', `companies?id=eq.${co}`, { method: 'PATCH', body: { city: 'Faisalabad' } }))
-    await must(rest('admin', `companies?id=eq.${s.china.id}`, { method: 'PATCH', body: { city: 'Shenzhen' } }))
-    await must(rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: '+92 300 555 0188' } }))
-    try {
-      await openAs(page, 'admin', `/rfqs/${s.rfq.id}`)
-      const meta = page.locator('dl').first()
-      await expect(meta).toContainText(`${formatLong(s.dueDate)}, 17:00`) // the bid time
-      await expect(meta).toContainText('Faisalabad') // under the site
-      await expect(meta).toContainText('Procurement Manager') // under the contact
-      await expect(meta).toContainText('+92 300 555 0188') // the owner's phone, beside the role
-      await expect(await row(page, s.china.name)).toContainText('Shenzhen, China')
-      await page.keyboard.press('Escape')
-      const card = page.locator(`[data-chase-card="${s.china.id}"]`)
-      await card.getByRole('button', { name: 'Show the whole message' }).click() // the other channel waits with the whole message
-      await card.getByRole('button', { name: 'Email instead' }).click()
-      await expect(card.locator('pre')).toContainText(/Regards,\s+\S.*\s+Q-Tech Solutions/) // the owner's format: no role or phone lines
-      await expect(card.locator('pre')).not.toContainText('+92 300 555 0188')
-    } finally {
-      await rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: null } })
-    }
-  })
-})
-
 /** The page's own content never scrolls sideways. */
 async function noSidewaysScroll(page: Page) {
   const m = await page.evaluate(() => {
@@ -848,123 +694,6 @@ async function noSidewaysScroll(page: Page) {
   expect(m.right, 'the content is wider than the window').toBeLessThanOrEqual(m.view + 1)
 }
 
-test.describe('the phone layout (C-100 to C-105; UX audit: one bar)', () => {
-  test('ONE bar with back and the number, no bottom tabs, and a sticky action bar with the green action, Chase and More', async ({ page }) => {
-    const s = await seed()
-    await page.setViewportSize({ width: 375, height: 812 })
-    // Opened from the board, inside the app: back returns there (history), not to a fixed place.
-    await openAs(page, 'sales', '/rfqs?owner=all')
-    await page.getByRole('textbox', { name: 'Search RFQs' }).fill(s.customer)
-    await page.getByRole('link', { name: s.customer }).first().click()
-    await expect(page).toHaveURL(new RegExp(`/rfqs/${s.rfq.id}$`))
-    const bar = page.locator('header[data-mobile-bar="detail"]')
-    await expect(bar).toBeVisible()
-    await expect(bar).toContainText(`RFQ-${String(s.rfq.number).padStart(4, '0')}`)
-    await expect(page.locator('header[data-mobile-bar="default"]')).toHaveCount(0) // one bar, not two
-    await expect(page.locator('[data-page-bar]')).toHaveCount(0)
-    await expect(page.locator('nav[aria-label="Main"]:visible')).toHaveCount(0) // the tabs step aside for the action bar
-    // Four meta cells, no icons: customer ref, quotation due, contact, owner.
-    await expect(page.locator('dl > div:visible')).toHaveCount(4)
-    const actions = page.locator('[data-action-bar]')
-    await expect(actions).toBeVisible()
-    const box = await actions.boundingBox()
-    expect(box!.height).toBeGreaterThanOrEqual(44) // 44 px tap targets
-    // Waiting for prices: the green action is the supplier chase.
-    for (const name of ['Chase suppliers', 'Chase', 'More actions']) {
-      const b = await actions.getByRole('button', { name, exact: true }).boundingBox()
-      expect(b!.height, name).toBeGreaterThanOrEqual(44)
-    }
-    await expect(actions.getByRole('button', { name: 'Chase suppliers', exact: true })).toHaveClass(/bg-primary/)
-    await noSidewaysScroll(page)
-    // It stays at the foot while the page scrolls.
-    await page.evaluate(() => document.getElementById('main')?.scrollTo(0, 600))
-    await expect(actions).toBeInViewport()
-    await actions.getByRole('button', { name: 'Chase', exact: true }).click()
-    await expect(page.getByRole('menuitem', { name: /Chase suppliers/ })).toContainText('3')
-    await page.getByRole('menuitem', { name: /Chase suppliers/ }).click()
-    await expect(page.locator('[data-slot="suppliers-asked"]')).toBeInViewport()
-    await actions.getByRole('button', { name: 'More actions' }).click()
-    await expect(page.getByRole('menuitem', { name: /Mark won/ })).toBeVisible() // reachable for the odd case, marked
-    await expect(page.getByRole('menuitem', { name: /Mark won/ })).toContainText('no quotation yet')
-    await expect(page.getByRole('menuitem', { name: /Mark quotation sent/ })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: /Issue quotation/ })).toBeEnabled()
-    await page.keyboard.press('Escape')
-    // P9: a flex title with a basis class that is not a token (basis-48, basis-64) has no basis at all, so on a phone it is squeezed
-    // to the width of its neighbours. Every title that sets a basis must keep at least 10rem of its row.
-    const squeezed = await page.evaluate(() =>
-      Array.from(document.querySelectorAll<HTMLElement>('[class*="basis-["]')).filter(e => e.offsetParent !== null && e.getBoundingClientRect().width < 150).map(e => `${e.tagName} ${e.className}`),
-    )
-    expect(squeezed, 'no title with a flex basis is squeezed at 375').toEqual([])
-    await review(page, 'rfq-detail-mobile-bar-375')
-    // Back goes to where the person came from.
-    await bar.getByRole('button', { name: 'Back' }).click()
-    await expect(page).toHaveURL(/\/rfqs\?owner=all(&q=[^&]*)?$/)
-  })
-
-  test('with prices in, at 320 and 375: nothing scrolls sideways, and the green action is Issue quotation', async ({ page }) => {
-    const s = await seed()
-    await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: [
-      { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '8 to 10 weeks from PO', in_stock: true },
-      { inquiry_id: s.germany.inquiryId, rfq_item_id: s.items[0].id, unit_price: 90, currency: 'EUR', lead_time: null, in_stock: false },
-    ] }))
-    await page.setViewportSize({ width: 320, height: 740 })
-    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    for (const width of [320, 375]) {
-      if (width !== 320) {
-        await page.setViewportSize({ width, height: 740 })
-        await page.reload()
-      }
-      await expect(page.getByRole('article', { name: 'Item 1' })).toBeVisible()
-      await expect(page.locator('[data-action-bar]').getByRole('button', { name: 'Issue quotation', exact: true })).toHaveClass(/bg-primary/)
-      await noSidewaysScroll(page)
-      const one = page.getByRole('article', { name: 'Item 1' })
-      await one.getByRole('button', { name: `Show details for ${s.usd.name}` }).click()
-      await noSidewaysScroll(page)
-      await review(page, `rfq-detail-prices-${width}`)
-    }
-  })
-})
-
-test.describe('the side column at 1366 (UX audit: never longer than the page beside it)', () => {
-  test('with three suppliers asked, questions waiting and replies in, the rail ends before the main column', async ({ page }) => {
-    const s = await seed()
-    await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: [
-      { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '3 weeks', in_stock: true },
-      { inquiry_id: s.germany.inquiryId, rfq_item_id: s.items[1].id, unit_price: 90, currency: 'EUR', lead_time: '2 weeks', in_stock: false },
-    ] }))
-    const ago = new Date(Date.now() - 4 * 86_400_000).toISOString()
-    await must(rest('admin', 'clarifications', { method: 'POST', body: [
-      // A bulk insert needs the same keys on every row.
-      { rfq_id: s.rfq.id, question: 'Is the line size DN50 or DN80?', first_asked_at: ago, last_asked_at: ago, ask_count: 1 },
-      { rfq_id: s.rfq.id, question: 'Which output, HART or 4 to 20 mA?', first_asked_at: null, last_asked_at: null, ask_count: 0 },
-    ], prefer: 'return=minimal' }))
-    await page.setViewportSize({ width: 1366, height: 768 })
-    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    // Prices are in, so no chase card shows by itself (round 3 R): open the waiting supplier's message so the rail is at its fullest.
-    await page.getByRole('button', { name: `Show message, ${s.china.name}`, exact: true }).click()
-    await expect(page.locator(`[data-chase-card="${s.china.id}"]`)).toBeVisible()
-    await expect(page.locator('[data-slot="clarifications"]')).toContainText('Is the line size DN50 or DN80?')
-    const h = await page.evaluate(() => {
-      const aside = document.querySelector('aside[aria-label="Suppliers, questions and files"]') as HTMLElement | null
-      const mainCol = aside?.previousElementSibling
-      return {
-        rail: aside?.getBoundingClientRect().height ?? 0,
-        main: mainCol?.getBoundingClientRect().height ?? 0,
-        sticky: aside ? getComputedStyle(aside).position : '',
-        content: aside?.scrollHeight ?? 0,
-      }
-    })
-    // The rail stays beside the page and scrolls on its own: it never runs on below the main column, whatever it holds.
-    expect(h.sticky).toBe('sticky')
-    expect(h.rail, `rail ${h.rail}px (content ${h.content}px) against main ${h.main}px`).toBeLessThanOrEqual(h.main)
-    // Everything in it is still reachable: the last panel scrolls into view inside the rail.
-    await page.locator('aside').getByRole('heading', { name: 'Files', level: 2 }).scrollIntoViewIfNeeded()
-    await expect(page.getByRole('heading', { name: 'Files', level: 2 })).toBeInViewport()
-    await noSidewaysScroll(page)
-    await review(page, 'rfq-detail-rail-1366')
-  })
-})
-
 for (const width of [1440, 375]) {
   test(`axe (WCAG 2.2 AA) and review screenshots at ${width}`, async ({ page }) => {
     const s = await seed()
@@ -977,27 +706,14 @@ for (const width of [1440, 375]) {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await expect(page.getByRole('article', { name: 'Item 1' })).toBeVisible()
     expect(await violations(page)).toEqual([])
+    await noSidewaysScroll(page)
     await review(page, `rfq-detail-populated-${width}`)
 
-    if (width > 800) {
-      await more(page).click()
-      await expect(page.getByRole('menu', { name: 'More' })).toBeVisible()
-      expect(await overlayViolations(page)).toEqual([])
-      await review(page, `rfq-detail-more-menu-${width}`)
-      await page.keyboard.press('Escape')
-      // The tip that explains the order opens and is clean too.
-      await page.getByRole('button', { name: 'How are prices compared?' }).click()
-      await expect(page.getByRole('dialog', { name: 'How are prices compared?' })).toBeVisible()
-      expect(await overlayViolations(page)).toEqual([])
-      await page.keyboard.press('Escape')
-    } else {
-      await expect(page.locator('[data-action-bar]')).toBeVisible()
-      await page.getByRole('button', { name: 'Chase', exact: true }).click()
-      await expect(page.getByRole('menu', { name: 'Chase' })).toBeVisible()
-      expect(await overlayViolations(page)).toEqual([])
-      await review(page, `rfq-detail-chase-menu-${width}`)
-      await page.keyboard.press('Escape')
-    }
+    // The tip that explains the order opens and is clean too.
+    await page.getByRole('button', { name: 'How are prices compared?' }).click()
+    await expect(page.getByRole('dialog', { name: 'How are prices compared?' })).toBeVisible()
+    expect(await overlayViolations(page)).toEqual([])
+    await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Ask more suppliers' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await overlayViolations(page)).toEqual([])

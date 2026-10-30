@@ -191,41 +191,6 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
   }
 })
 
-test('the margin of an order: net sale less costs net of input tax, provisional until costs are marked complete, then final', async ({ browser }, info) => {
-  // 3 x 45,678.90 = 137,036.70 net (not invoiced: the margin uses the item net).
-  // Costs tagged to the order: Supplier payment 59,000 with input tax 9,000 (cost 50,000) and Freight 7,345.67 (cost 7,345.67).
-  // Actual cost 57,345.67; margin 137,036.70 - 57,345.67 = 79,691.03.
-  const FREIGHT = 'ca7e0000-0000-4000-8000-000000000012'
-  const seed = await order({ lines: [{ description: 'Endress+Hauser Micropilot FMR20 radar', qty: 3, price: 45678.9 }], owner: 'sales' })
-  await post('expenses', { paid_on: karachiDay(0), paid_via: 'bank', category_id: SUPPLIER_PAYMENT, amount_pkr: 59000, input_tax_pkr: 9000, order_id: seed.order.id, description: 'Supplier advance' })
-  await post('expenses', { paid_on: karachiDay(0), paid_via: 'cash', category_id: FREIGHT, amount_pkr: 7345.67, order_id: seed.order.id, description: 'Freight to site' })
-  const m = async () => (await db.view<{ net_sale: number; actual_cost: number; margin: number; margin_state: string; costs_state: string }>(`v_order_money?order_id=eq.${seed.order.id}&select=net_sale,actual_cost,margin,margin_state,costs_state`))[0]
-  expect(await m().then(r => [num(r.net_sale), num(r.actual_cost), num(r.margin), r.margin_state])).toEqual([137036.7, 57345.67, 79691.03, 'provisional'])
-
-  const admin = await signedIn(browser, info, 'admin')
-  const page = await open(admin, `/orders/${seed.order.id}`)
-  const panel = page.getByRole('region', { name: BOOKS.margin.panel })
-  await expect(panel).toContainText(amount(79691.03))
-  await expect(panel).toContainText(amount(137036.7))
-  await expect(panel.getByText(BOOKS.margin.provisionalNoExpected)).toBeVisible()
-
-  await panel.getByRole('button', { name: BOOKS.margin.markComplete }).click()
-  await expect(page.getByRole('status').filter({ hasText: BOOKS.margin.markedToast })).toBeVisible()
-  await expect(panel.getByText(BOOKS.margin.final)).toBeVisible()
-  const costs = await db.one<{ costs_complete_at: string | null; costs_complete_by: string | null }>(`order_costs?order_id=eq.${seed.order.id}&select=costs_complete_at,costs_complete_by`)
-  expect(costs.costs_complete_at).not.toBeNull()
-  expect(costs.costs_complete_by).toBe(USER.admin)
-  expect(await m().then(r => [num(r.margin), r.margin_state])).toEqual([79691.03, 'final'])
-
-  // Reopen costs: provisional again, and the stamp is cleared.
-  await page.goto(`/orders/${seed.order.id}`)
-  await panel.getByRole('button', { name: BOOKS.margin.reopenCosts }).click()
-  await expect(panel.getByText(BOOKS.margin.provisionalNoExpected)).toBeVisible()
-  expect((await db.one<{ costs_complete_at: string | null }>(`order_costs?order_id=eq.${seed.order.id}&select=costs_complete_at`)).costs_complete_at).toBeNull()
-  expect((await m()).margin_state).toBe('provisional')
-  await admin.close()
-})
-
 test('we owe a supplier: the leg total in USD at the rate, less the supplier payment made from the leg', async ({ browser }, info) => {
   // The leg: 3 x USD 612.35 = 1,837.05 and 2 x USD 98.10 = 196.20; committed USD 2,033.25.
   // At USD 280.25: round(2,033.25 x 280.25, 2) = round(569,818.3125, 2) = 569,818.31 PKR.

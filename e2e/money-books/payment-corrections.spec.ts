@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { openStage } from '../support/job'
 
 /*
  * Payment corrections (0073) and the invoice PDF button, end to end against the local CI stack, as the fixture users:
@@ -31,7 +32,8 @@ test.describe('payment corrections (0073)', () => {
     const order = await seed()
     expect(await balance(order.id)).toBe(68000)
     await openAs(page, 'admin', `/orders/${order.id}`)
-    const panel = page.locator('[data-slot="invoices-payments"]')
+    await openStage(page, 'Payment')
+    const panel = page.getByTestId('order-payment-lines')
     await panel.getByRole('button', { name: /Change payment of PKR 50,000/ }).click()
     await page.getByRole('menuitem', { name: /Void/ }).click()
     const dialog = page.getByRole('dialog', { name: 'Void payment' })
@@ -39,18 +41,17 @@ test.describe('payment corrections (0073)', () => {
     await review(page, 'r2-void-payment-1440')
     await dialog.getByRole('button', { name: 'Void payment' }).click()
     await expect(dialog).toBeHidden()
-    await expect(page.getByTestId('order-balance')).toHaveText('118,000')
     await expect.poll(() => balance(order.id)).toBe(118000)
     await expect(panel.getByRole('button', { name: 'Voided (1)' })).toBeVisible()
     await page.getByRole('status').filter({ hasText: 'Voided payment' }).getByRole('button', { name: /Undo/ }).click()
     await expect.poll(() => balance(order.id)).toBe(68000)
-    await expect(page.getByTestId('order-balance')).toHaveText('68,000')
   })
 
   test('correct records the new figures, keeps the old one voided and tags the correction', async ({ page }) => {
     const order = await seed()
     await openAs(page, 'admin', `/orders/${order.id}`)
-    const panel = page.locator('[data-slot="invoices-payments"]')
+    await openStage(page, 'Payment')
+    const panel = page.getByTestId('order-payment-lines')
     await panel.getByRole('button', { name: /Change payment of PKR 50,000/ }).click()
     await page.getByRole('menuitem', { name: /Correct/ }).click()
     const dialog = page.getByRole('dialog', { name: 'Correct payment' })
@@ -80,6 +81,7 @@ test.describe('Print invoice button', () => {
       const ctx = await browser.newContext()
       const p = await ctx.newPage()
       await openAs(p, role, `/orders/${order.id}`)
+      await openStage(p, 'Invoice')
       await expect(p.getByRole('button', { name: 'Print invoice' })).toBeVisible()
       await ctx.close()
     }

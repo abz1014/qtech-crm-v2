@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { FileText, MessageCircle, Phone } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
@@ -126,7 +125,7 @@ export function MoneyPanel({ data, hasOrder }: { data: JobData; hasOrder: boolea
         <dt className="text-fg-2">Received</dt>
         <dd className="pl-4 text-right"><Money value={m.settled} prefix={false} /></dd>
         <dt className="border-t pt-2 font-semibold">Still to collect</dt>
-        <dd className="border-t pl-4 pt-2 text-right"><Money value={m.balance} prefix={false} strong /></dd>
+        <dd className="border-t pl-4 pt-2 text-right" data-testid="order-balance"><Money value={m.balance} prefix={false} strong /></dd>
         <dt className="text-fg-2">Costs so far</dt>
         <dd className="pl-4 text-right">{costs > 0 ? <Money value={costs} prefix={false} /> : <span className="text-fg-muted">Costs not entered yet</span>}</dd>
         <dt className="text-fg-2">Profit</dt>
@@ -202,9 +201,7 @@ export function CancelledOrders({ data }: { data: JobData }) {
       <ul className="grid gap-2 text-base">
         {rows.map(o => (
           <li key={o.id}>
-            <Link to={`/orders/${o.id}`} className="num inline-flex min-h-touch items-center rounded font-medium text-primary hover:underline">
-              {orderRef(o.number)}
-            </Link>{' '}
+            <span className="num font-medium">{orderRef(o.number)}</span>{' '}
             <span className="text-fg-2">{`cancelled ${formatShortDate(o.cancelledOn, today)}${cancelReasonLabel(o.reason) ? `: ${cancelReasonLabel(o.reason)}` : ''}`}</span>
           </li>
         ))}

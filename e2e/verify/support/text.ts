@@ -119,7 +119,8 @@ export const QUOTES = {
     ] as const,
   },
   repeat: {
-    ordersPath: '/orders?owner=all',
+    /** + New, Order without enquiry: the dialog opens by itself on the Jobs list. */
+    ordersPath: '/jobs?new=1',
     /** Was "New order" until the plain-words decision of 2026-10-19 (src/features/orders/NewOrderDialog.tsx). */
     newOrder: 'Repeat a past order',
     heading: 'Repeat a past order',

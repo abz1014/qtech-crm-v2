@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Camera, CloudOff, FileText, HardHat, Truck } from 'lucide-react'
+import { Camera, CloudOff, HardHat, Truck } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
@@ -109,12 +109,6 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
       {order || facts.job.orderId ? (
         <div className="flex flex-wrap items-center gap-2">
           {order && order.needsCommissioning && !order.doneOn && !cancelled ? <VisitButton order={order} /> : null}
-          {facts.job.orderId ? (
-            <Link to={`/orders/${facts.job.orderId}`} className="inline-flex min-h-touch items-center gap-2 rounded px-3 text-base font-semibold text-primary hover:underline">
-              <FileText aria-hidden="true" className="size-5" />
-              Open the order
-            </Link>
-          ) : null}
         </div>
       ) : null}
       {adding && sharedItem.state.status !== 'loading' ? (

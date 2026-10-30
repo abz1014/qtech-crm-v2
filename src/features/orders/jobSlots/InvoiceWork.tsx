@@ -14,7 +14,7 @@ import { useOrderWork } from '@/features/orders/jobSlots/useOrderWork'
 export default function InvoiceWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
   if (!w.orderId || !job.money) return null
-  if (w.failed) return <p className="text-base text-fg-muted">The invoice details did not load. Open the order page to try again.</p>
+  if (w.failed) return <p className="text-base text-fg-muted">The invoice details did not load. Reload the page to try again.</p>
   if (!w.ready || !w.order) return <Skeleton className="h-16 w-full" />
   const order = w.order
   const invoiced = order.state?.invoiced ?? 0
