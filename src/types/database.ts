@@ -514,6 +514,18 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
+      foreignKeyName: "expense_claims_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "expense_categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expense_claims_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "v_month_expense_category"
+      referencedColumns: ["category_id"]
+    },{
       foreignKeyName: "expense_claims_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -1227,6 +1239,24 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "invoices"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "v_gst_register"
+      referencedColumns: ["invoice_id"]
+    },{
+      foreignKeyName: "payments_in_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "v_invoice_state"
+      referencedColumns: ["invoice_id"]
     },{
       foreignKeyName: "payments_in_order_id_fkey"
       columns: ["order_id"]
@@ -2353,6 +2383,11 @@ isOneToOne: false
               "quoted_number": number,"quoted_on": string,"quoted_price": number,"quoted_revision": number,"quoted_tier": number,"rfq_item_id": string,"sold_on": string,"sold_order_number": number,"sold_price": number,"sold_tier": number
             }[]
                            },
+"customer_statement":
+{ Args: { "p_company": string,"p_to"?: string }; Returns: {
+              "credit": number,"debit": number,"kind": string,"line_on": string,"note": string,"order_number": number,"ref": string,"seq": number
+            }[]
+                           },
 "delete_company":
 { Args: { "p_company_id": string }; Returns: undefined
                            },
@@ -2392,11 +2427,6 @@ isOneToOne: false
                            },
 "fx_wanted_currencies":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
-                           },
-"customer_statement":
-{ Args: { "p_company": string,"p_to"?: string }; Returns: {
-              "credit": number,"debit": number,"kind": string,"line_on": string,"note": string,"order_number": number,"ref": string,"seq": number
-            }[]
                            },
 "held_advances":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -2495,19 +2525,14 @@ isOneToOne: false
               "last_date": string,"last_number": string,"next_number": string
             }[]
                            },
-"order_receivables":
-{ Args: { "p_order_id"?: string }; Returns: {
-              "balance": number,"company_id": string,"data_trust": string,"due_on": string,"gross_target": number,"is_overdue": boolean,"last_reminded_on": string,"order_id": string,"order_number": number,"overpaid_by": number,"owner_id": string,"payment_state": string,"reminder_count": number,"settled": number
-            }[]
-                           },
-"payables_as_of":
-{ Args: { "p_date": string }; Returns: {
-              "cancelled_with_supplier_on": string,"committed": number,"committed_pkr": number,"currency": string,"flag": string,"fx_rate": number,"order_id": string,"order_number": number,"owed_pkr": number,"paid_pkr": number,"state": string,"supplier_id": string,"supplier_name": string,"supplier_order_id": string
-            }[]
-                           },
 "open_work_of":
 { Args: { "p_user": string }; Returns: {
               "orders": number,"rfqs": number
+            }[]
+                           },
+"order_receivables":
+{ Args: { "p_order_id"?: string }; Returns: {
+              "balance": number,"company_id": string,"data_trust": string,"due_on": string,"gross_target": number,"is_overdue": boolean,"last_reminded_on": string,"order_id": string,"order_number": number,"overpaid_by": number,"owner_id": string,"payment_state": string,"reminder_count": number,"settled": number
             }[]
                            },
 "owe_expense_claim":
@@ -2515,6 +2540,11 @@ isOneToOne: false
                            },
 "pay_back_expense_claim":
 { Args: { "p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
+                           },
+"payables_as_of":
+{ Args: { "p_date": string }; Returns: {
+              "cancelled_with_supplier_on": string,"committed": number,"committed_pkr": number,"currency": string,"flag": string,"fx_rate": number,"order_id": string,"order_number": number,"owed_pkr": number,"paid_pkr": number,"state": string,"supplier_id": string,"supplier_name": string,"supplier_order_id": string
+            }[]
                            },
 "po_line_prefill":
 { Args: { "p_supplier_order_id": string }; Returns: {
@@ -2529,6 +2559,17 @@ isOneToOne: false
               "asked": number,"comparable": boolean,"currency": string,"deliveries": number,"fx_age_days": number,"fx_rate_on": string,"fx_rate_pkr": number,"fx_state": string,"in_stock": boolean,"item_qty": number,"last_order_delivered_after_days": number,"last_order_number": number,"last_order_on": string,"late": number,"lead_time": string,"median_days_late": number,"on_time": number,"orders_count": number,"orders_value_pkr": number,"pct_above_best": number,"pkr_unit_price": number,"price": number,"quote_line_id": string,"rank": number,"reliability_band": number,"replied": number,"rfq_item_id": string,"sell_on": string,"sell_order_number": number,"sell_source": string,"sell_unit_net": number,"spread_total": number,"spread_unit": number,"supplier_id": string,"within_band": boolean
             }[]
                            },
+"reassign_open_work":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "orders": number,"rfqs": number
+            }[]
+                           },
+"reassign_owner":
+{ Args: { "p_id": string,"p_kind": string,"p_to": string }; Returns: number
+                           },
+"reassign_owner_check":
+{ Args: { "p_to": string }; Returns: undefined
+                           },
 "receipt_locked":
 { Args: { "p_bucket": string,"p_name": string }; Returns: boolean
                            },
@@ -2541,17 +2582,6 @@ isOneToOne: false
 { Args: { "p_today"?: string }; Returns: {
               "gross": number,"not_invoiced": number,"not_invoiced_count": number,"not_yet_due": number,"not_yet_due_count": number,"open_count": number,"outstanding": number,"overdue": number,"overdue_count": number,"reminder_due_count": number,"settled": number,"settled_count": number
             }[]
-                           },
-"reassign_open_work":
-{ Args: { "p_from": string,"p_to": string }; Returns: {
-              "orders": number,"rfqs": number
-            }[]
-                           },
-"reassign_owner":
-{ Args: { "p_id": string,"p_kind": string,"p_to": string }; Returns: number
-                           },
-"reassign_owner_check":
-{ Args: { "p_to": string }; Returns: undefined
                            },
 "record_history":
 { Args: { "p_before"?: string,"p_id": string,"p_limit"?: number,"p_table": string }; Returns: Json
@@ -2584,9 +2614,6 @@ isOneToOne: false
               "rfq_id": string,"total": number
             }[]
                            },
-"set_supplier_order_cancelled":
-{ Args: { "p_cancelled": boolean,"p_leg": string,"p_on"?: string }; Returns: undefined
-                           },
 "set_fx_rate":
 { Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
                            },
@@ -2595,6 +2622,9 @@ isOneToOne: false
                            },
 "set_rfq_floated":
 { Args: { "p_floated": boolean,"p_rfq_id": string }; Returns: number
+                           },
+"set_supplier_order_cancelled":
+{ Args: { "p_cancelled": boolean,"p_leg": string,"p_on"?: string }; Returns: undefined
                            },
 "similar_enough":
 { Args: { "p_a": string,"p_b": string,"p_threshold": number }; Returns: boolean
