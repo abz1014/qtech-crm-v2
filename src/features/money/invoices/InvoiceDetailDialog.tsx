@@ -147,6 +147,8 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
     routeError: e => {
       if (e.kind === 'closed-month') return { field: 'invoiceDate' }
       if (e.kind === 'unique' && /invoices_number/.test(e.constraint ?? '')) return { field: 'number', message: 'This invoice number is already in the register. Use another.' }
+      // 0119: clearing a PSID or a deposit date is the admin's; the sentence sits under the PSID
+      if (e.hint === 'admin_only_unfile') return { field: invoice.psid?.trim() ? 'psid' : 'depositedOn' }
       return undefined
     },
     onSubmit: async v => {
@@ -322,7 +324,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         </fieldset>
         <fieldset className="grid gap-4 md:grid-cols-2">
           <legend className="mb-2 text-sm font-semibold">FBR</legend>
-          <FormField<Values, 'psid'> name="psid" label="PSID" requirement="optional">
+          <FormField<Values, 'psid'> name="psid" label="PSID" requirement="optional" help={!isAdmin && invoice.psid?.trim() ? 'Change it if it was typed wrong. Only an admin can clear it.' : undefined}>
             {f => <TextField {...f} autoComplete="off" spellCheck={false} className="num" />}
           </FormField>
           {date('receiptOn', 'Receipt received')}

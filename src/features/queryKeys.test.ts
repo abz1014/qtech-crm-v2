@@ -112,6 +112,9 @@ describe('invalidation map (R01)', () => {
     'payment.void': { orderId: 'o1' },
     'payment.correct': { orderId: 'o1' },
     'payment.restore': { orderId: 'o1' },
+    'refund.record': { companyId: 'c1' },
+    'credit.apply': { companyId: 'c1' },
+    'credit.remove': { companyId: 'c1' },
   }
 
   it('names at least one key for every write', () => {
@@ -263,6 +266,13 @@ describe('invalidation map: stale screens found in review', () => {
     ]
     for (const w of ['payment.void', 'payment.correct', 'payment.restore'] as const) {
       for (const key of keys) expect(await staleAfter(w, { orderId: 'o1' }, key), `${w} ${JSON.stringify(key)}`).toBe(true)
+    }
+  })
+
+  it('a refund or applied credit (0117, 0118) refreshes the customer credit, the cash figures and every balance', async () => {
+    for (const w of ['refund.record', 'credit.apply', 'credit.remove'] as const) {
+      for (const key of [qk.companies.part('c1', 'credit'), qk.money.monthEnd.cashFlow(), qk.money.receivables.list(), qk.companies.part('c1', 'money')])
+        expect(await staleAfter(w, { companyId: 'c1' }, key), `${w} ${JSON.stringify(key)}`).toBe(true)
     }
   })
 

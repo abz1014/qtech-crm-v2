@@ -71,6 +71,9 @@ export interface FlowRow {
   moneyOut: string
   expenses: number
   frozen: boolean
+  /** 0117: money paid back to customers (cash out, not an expense). Absent means none. */
+  refunds?: string
+  refundCount?: number
 }
 
 export interface ProfitRow {
@@ -102,9 +105,12 @@ const minus = (a: Amount, b: Amount): string => paisaToFixed(toPaisa(a) - toPais
 export interface CashTotals {
   in: string
   out: string
+  /** 0117: refunds paid back to customers in the period; the net takes them off as well. */
+  refunds: string
   net: string
   payments: number
   expenses: number
+  refundCount: number
   /** Months of the period that are closed (their figures frozen at close), and how many months it has. */
   frozenMonths: number
   months: number
@@ -115,12 +121,15 @@ export function cashTotals(p: Period, flows: readonly FlowRow[]): CashTotals {
   const rows = flows.filter(f => ms.has(f.month))
   const inn = sum(rows.map(r => r.moneyIn))
   const out = sum(rows.map(r => r.moneyOut))
+  const refunds = sum(rows.map(r => r.refunds ?? 0))
   return {
     in: inn,
     out,
-    net: minus(inn, out),
+    refunds,
+    net: minus(minus(inn, out), refunds),
     payments: rows.reduce((s, r) => s + r.payments, 0),
     expenses: rows.reduce((s, r) => s + r.expenses, 0),
+    refundCount: rows.reduce((s, r) => s + (r.refundCount ?? 0), 0),
     frozenMonths: rows.filter(r => r.frozen).length,
     months: ms.size,
   }
@@ -157,11 +166,12 @@ export function profitTotals(p: Period, profits: readonly ProfitRow[]): ProfitTo
 
 /**
  * Why profit and cash differ in a period, line by line (0079 header):
- *   profit - cash net = owedMore - gst + costsAhead + drawingsAndTax + other
+ *   profit - cash net = owedMore - gst + costsAhead + drawingsAndTax + refunds + other
  *   owedMore         invoiced (with GST) less cash received: customers now owe us more (+), or paid off earlier invoices (-)
  *   gst              GST inside the invoices: collected for FBR, not ours
  *   costsAhead       supplier costs paid before their sale is invoiced, held for it (+), or matched now from earlier (-)
  *   drawingsAndTax   owner drawings and loan repayments, and input tax: cash out that is not a cost
+ *   refunds          money paid back to customers (0117): cash out that is not a cost
  *   other            what is left; 0 unless a closed month's frozen cash figure differs from the books
  */
 export interface Reconcile {
@@ -170,6 +180,7 @@ export interface Reconcile {
   gst: string
   costsAhead: string
   drawingsAndTax: string
+  refunds: string
   other: string
 }
 
@@ -185,7 +196,8 @@ export function reconcile(cash: CashTotals, profit: ProfitTotals): Reconcile {
     gst: paisaToFixed(gst),
     costsAhead: paisaToFixed(costsAhead),
     drawingsAndTax: paisaToFixed(drawingsAndTax),
-    other: paisaToFixed(gap - (owedMore - gst + costsAhead + drawingsAndTax)),
+    refunds: paisaToFixed(toPaisa(cash.refunds)),
+    other: paisaToFixed(gap - (owedMore - gst + costsAhead + drawingsAndTax + toPaisa(cash.refunds))),
   }
 }
 
@@ -259,7 +271,8 @@ export function trend(p: Period, flows: readonly FlowRow[], profits: readonly Pr
   const n = p.kind === 'month' ? 6 : 4
   return Array.from({ length: n }, (_, i) => shiftPeriod(p, i - n + 1)).map(q => {
     const c = cashTotals(q, flows)
-    return { period: q, label: periodShort(q), in: c.in, out: c.out, net: c.net, profit: profitTotals(q, profits).profit }
+    // 0117: the trend's out is all cash out (expenses and refunds), so in less out is the net beside it
+    return { period: q, label: periodShort(q), in: c.in, out: sum([c.out, c.refunds]), net: c.net, profit: profitTotals(q, profits).profit }
   })
 }
 
@@ -311,6 +324,9 @@ export function inOutCsv(v: InOutView): { headers: string[]; rows: unknown[][] }
   const rows: unknown[][] = [
     ['Cash', v.label, 'Money in (payments received, GST included)', '', v.cash.payments, n(v.cash.in), n(v.prevCash.in)],
     ['Cash', v.label, 'Money out (expenses and supplier payments, input tax included)', '', v.cash.expenses, n(v.cash.out), n(v.prevCash.out)],
+    ...(toPaisa(v.cash.refunds) !== 0n || toPaisa(v.prevCash.refunds) !== 0n
+      ? [['Cash', v.label, 'Refunds paid back to customers', '', v.cash.refundCount, n(v.cash.refunds), n(v.prevCash.refunds)]]
+      : []),
     ['Cash', v.label, 'Cash net (in less out)', '', '', n(v.cash.net), n(v.prevCash.net)],
     ['Profit', v.label, 'Sales invoiced, GST taken out', '', v.profit.invoices, n(v.profit.sales), n(v.prevProfit.sales)],
     ['Profit', v.label, 'Order costs counted with their sales', '', '', n(v.profit.orderCosts), n(v.prevProfit.orderCosts)],
@@ -321,6 +337,7 @@ export function inOutCsv(v: InOutView): { headers: string[]; rows: unknown[][] }
     ['Why they differ', v.label, 'less GST in the invoices (for FBR)', '', '', -n(v.reconcile.gst), ''],
     ['Why they differ', v.label, 'Supplier costs paid ahead of their sale (+) or matched now (-)', '', '', n(v.reconcile.costsAhead), ''],
     ['Why they differ', v.label, 'Drawings, loan repayments and input tax (cash out, not cost)', '', '', n(v.reconcile.drawingsAndTax), ''],
+    ...(toPaisa(v.reconcile.refunds) !== 0n ? [['Why they differ', v.label, 'Refunds paid back to customers (cash out, not cost)', '', '', n(v.reconcile.refunds), '']] : []),
     ['Why they differ', v.label, 'Other', '', '', n(v.reconcile.other), ''],
   ]
   for (const c of v.categories) {

@@ -64,20 +64,20 @@ select is(pg_temp.code_('sales', 'select count(*)::text from public.v_company_cr
 select is(pg_temp.code_('engineer', 'select count(*)::text from public.v_company_credit'), 'ok:0', 'an engineer sees none');
 
 -- ================================================================== record_refund
-select is(pg_temp.code_('sales', $q$select public.record_refund(@50, @01, null, public.today_pkt(), 10)::text$q$), 'E:42501:admin_only', 'a refund is the admin''s');
-select is(pg_temp.code_('engineer', $q$select public.record_refund(@50, @01, null, public.today_pkt(), 10)::text$q$), 'E:42501:admin_only', 'not an engineer''s');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, null, public.today_pkt(), 0)::text$q$), 'E:22023:amount', 'a refund of nothing is refused');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, null, public.today_pkt(), 400)::text$q$), 'E:P0001:refund_exceeds_credit', 'a refund above the credit is refused');
-select alike(pg_temp.try_('admin', $q$select public.record_refund(@50, @01, null, public.today_pkt(), 400)::text$q$), '%holds Rs 320.00 of credit%', 'with the balance in the sentence');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @02, null, public.today_pkt(), 1)::text$q$), 'E:P0001:refund_exceeds_credit', 'a customer with no credit is refused too');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, @20, public.today_pkt(), 10)::text$q$), 'E:P0001:order_company', 'an order of another customer is refused');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, @14, public.today_pkt(), 100, 'bank', 'RF-1', 'goodwill')::text$q$, true), 'ok:', 'a refund of 100 is recorded');
+select is(pg_temp.code_('sales', $q$select public.record_refund(@50, @01, public.today_pkt(), 10)::text$q$), 'E:42501:admin_only', 'a refund is the admin''s');
+select is(pg_temp.code_('engineer', $q$select public.record_refund(@50, @01, public.today_pkt(), 10)::text$q$), 'E:42501:admin_only', 'not an engineer''s');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 0)::text$q$), 'E:22023:amount', 'a refund of nothing is refused');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 400)::text$q$), 'E:P0001:refund_exceeds_credit', 'a refund above the credit is refused');
+select alike(pg_temp.try_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 400)::text$q$), '%holds Rs 320.00 of credit%', 'with the balance in the sentence');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @02, public.today_pkt(), 1)::text$q$), 'E:P0001:refund_exceeds_credit', 'a customer with no credit is refused too');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 10, @20)::text$q$), 'E:P0001:order_company', 'an order of another customer is refused');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 100, @14, 'bank', 'RF-1', 'goodwill')::text$q$, true), 'ok:', 'a refund of 100 is recorded');
 select is((select balance from public.v_company_credit where company_id = pg_temp.u('01')), 220.00::numeric, 'the balance is 220');
 select is((select refunded from public.v_company_credit where company_id = pg_temp.u('01')), 100.00::numeric, 'refunded 100');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, null, public.today_pkt(), 100)::text$q$), 'E:P0001:duplicate_refund', 'the same amount on the same day is a duplicate');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, null, public.today_pkt() - 4, 30, 'bank', ' rf-1 ')::text$q$), 'E:P0001:duplicate_refund', 'so is the same reference, capitals and spaces ignored');
-select alike(pg_temp.try_('admin', $q$select public.record_refund(@51, @01, null, public.today_pkt(), 100)::text$q$), 'E:P0001:duplicate_refund|Looks like a refund already recorded on %.', 'the message names the date');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, null, public.today_pkt(), 100, 'bank', null, null, true)::text$q$, true), 'ok:', 'confirmed, it goes in');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, public.today_pkt(), 100)::text$q$), 'E:P0001:duplicate_refund', 'the same amount on the same day is a duplicate');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, public.today_pkt() - 4, 30, null, 'bank', ' rf-1 ')::text$q$), 'E:P0001:duplicate_refund', 'so is the same reference, capitals and spaces ignored');
+select alike(pg_temp.try_('admin', $q$select public.record_refund(@51, @01, public.today_pkt(), 100)::text$q$), 'E:P0001:duplicate_refund|Looks like a refund already recorded on %.', 'the message names the date');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, public.today_pkt(), 100, null, 'bank', null, null, true)::text$q$, true), 'ok:', 'confirmed, it goes in');
 select is((select balance from public.v_company_credit where company_id = pg_temp.u('01')), 120.00::numeric, 'the balance is 120');
 
 -- ================================================================== apply_credit

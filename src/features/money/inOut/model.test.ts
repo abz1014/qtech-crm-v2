@@ -84,9 +84,9 @@ describe('buildInOut (the 0079 fixture)', () => {
   })
 
   it('explains the gap exactly: 12,599.50 = 7,799.50 - 1,800.00 - 3,400.00 + 10,000.00', () => {
-    expect(q1.reconcile).toEqual({ gap: '12599.50', owedMore: '7799.50', gst: '1800.00', costsAhead: '-3400.00', drawingsAndTax: '10000.00', other: '0.00' })
+    expect(q1.reconcile).toEqual({ gap: '12599.50', owedMore: '7799.50', gst: '1800.00', costsAhead: '-3400.00', drawingsAndTax: '10000.00', refunds: '0.00', other: '0.00' })
     const q4 = buildInOut({ kind: 'quarter', key: '2019-Q4' }, FLOWS, PROFITS, DETAILS, NAMES)
-    expect(q4.reconcile).toEqual({ gap: '-1900.00', owedMore: '-5900.00', gst: '0.00', costsAhead: '3400.00', drawingsAndTax: '600.00', other: '0.00' })
+    expect(q4.reconcile).toEqual({ gap: '-1900.00', owedMore: '-5900.00', gst: '0.00', costsAhead: '3400.00', drawingsAndTax: '600.00', refunds: '0.00', other: '0.00' })
   })
 
   it('money out by category, biggest first, adds up to money out; the previous quarter per category', () => {
@@ -135,3 +135,44 @@ describe('buildInOut (the 0079 fixture)', () => {
     expect(csv.headers[6]).toBe('Previous: Q4 2019 (Oct to Dec) (PKR)')
   })
 })
+
+describe('refunds paid back to customers (0117)', () => {
+  const withRefund = (rows: FlowRow[]): FlowRow[] => rows.map(r => (r.month === '2020-01' ? { ...r, refunds: '500.00', refundCount: 2 } : r))
+
+  it('cash net takes the refunds off; money out stays the expenses', () => {
+    const v = buildInOut(periodOf('quarter', '2020-02'), withRefund(FLOWS), PROFITS, DETAILS, NAMES)
+    expect(v.cash.out).toBe('14500.00')
+    expect(v.cash.refunds).toBe('500.00')
+    expect(v.cash.refundCount).toBe(2)
+    expect(v.cash.net).toBe('-10999.50')
+  })
+
+  it('the explanation gains a refunds line and still adds up with nothing left over', () => {
+    const v = buildInOut(periodOf('quarter', '2020-02'), withRefund(FLOWS), PROFITS, DETAILS, NAMES)
+    expect(v.reconcile.refunds).toBe('500.00')
+    expect(v.reconcile.gap).toBe('13099.50')
+    expect(v.reconcile.other).toBe('0.00')
+  })
+
+  it('with no refund nothing changes: the same net and no refunds line in the CSV', () => {
+    const v = buildInOut(periodOf('quarter', '2020-02'), FLOWS, PROFITS, DETAILS, NAMES)
+    expect(v.cash.refunds).toBe('0.00')
+    expect(v.cash.net).toBe('-10499.50')
+    expect(inOutCsv(v).rows.some(r => String(r[2]).startsWith('Refunds paid back'))).toBe(false)
+  })
+
+  it('the trend counts refunds as cash out, so in less out is the net beside it', () => {
+    const v = buildInOut(periodOf('month', '2020-01'), withRefund(FLOWS), PROFITS, DETAILS, NAMES)
+    const jan = v.trend.find(t => t.label === 'Jan 2020')!
+    expect(jan.out).toBe('4500.00')
+    expect(jan.net).toBe('-1499.50')
+  })
+
+  it('the CSV carries the refunds line', () => {
+    const v = buildInOut(periodOf('quarter', '2020-02'), withRefund(FLOWS), PROFITS, DETAILS, NAMES)
+    const rows = inOutCsv(v).rows
+    expect(rows.find(r => String(r[2]).startsWith('Refunds paid back to customers') && r[0] === 'Cash')?.[5]).toBe(500)
+    expect(rows.find(r => r[0] === 'Why they differ' && String(r[2]).startsWith('Refunds paid back'))?.[5]).toBe(500)
+  })
+})
+

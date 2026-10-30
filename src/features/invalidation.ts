@@ -136,6 +136,10 @@ export interface WriteVars {
   'payment.void': { orderId: string }
   'payment.correct': { orderId: string }
   'payment.restore': { orderId: string }
+  /** 0117, 0118: a refund recorded, credit applied to an order, or either taken back: the customer's balance and the cash figures move. */
+  'refund.record': { companyId: string }
+  'credit.apply': { companyId: string }
+  'credit.remove': { companyId: string }
 }
 
 export type WriteName = keyof WriteVars
@@ -277,6 +281,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'payment.void': paymentChange,
   'payment.correct': paymentChange,
   'payment.restore': paymentChange,
+  'refund.record': paymentChange,
+  'credit.apply': paymentChange,
+  'credit.remove': paymentChange,
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

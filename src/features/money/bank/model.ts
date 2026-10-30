@@ -8,7 +8,7 @@ import { GROUP_LABEL, monthEnd, monthKeyLabel, monthStart, type CategoryGroup } 
  * A statement month M ("2026-10") shows, for money in (bank payments) and money out (bank expenses plus FBR deposits):
  *  - the lines already ticked against M (bank_month / tax_bank_month = M), whatever their own date;
  *  - the lines not ticked yet and dated up to the end of M. Those dated before M are "older".
- * Cash items never appear (paid_via = 'cash'). An FBR deposit is one bank debit for a PSID, however many invoices it
+ * Cash items never appear (paid_via = 'cash'). A refund paid back to a customer by bank (0117) is money out like a bank expense. An FBR deposit is one bank debit for a PSID, however many invoices it
  * covers, so the invoices of a PSID are ONE line that ticks together. Amounts are the bank amounts: for an expense the
  * full debit (amount_pkr, input tax included), for a deposit the deposit amount (the GST amount when none was typed).
  */
@@ -47,10 +47,23 @@ export interface RawDeposit {
   bankMonth: string | null
 }
 
+/** 0117: a refund paid back to a customer by bank: money out on the statement. */
+export interface RawRefund {
+  id: string
+  refundedOn: string
+  amount: string
+  reference: string | null
+  orderRef: string | null
+  company: string | null
+  bankMonth: string | null
+}
+
 export interface RawBank {
   payments: RawPayment[]
   expenses: RawExpense[]
   deposits: RawDeposit[]
+  /** Optional so a reader that predates refunds still type-checks; absent means none. */
+  refunds?: RawRefund[]
 }
 
 export interface BankKid {
@@ -64,7 +77,7 @@ export interface BankKid {
 export interface BankLine {
   /** Stable key: the row id, or "psid:<psid>" for a group. */
   key: string
-  kind: 'payment' | 'expense' | 'fbr'
+  kind: 'payment' | 'expense' | 'fbr' | 'refund'
   dir: 'in' | 'out'
   /** The database rows this line ticks: one id, or every invoice of the PSID. */
   ids: string[]
@@ -152,6 +165,23 @@ function expenseLine(e: RawExpense, month: string): BankLine {
   }
 }
 
+function refundLine(r: RawRefund, month: string): BankLine {
+  const ticked = r.bankMonth === monthStart(month)
+  const older = !ticked && r.refundedOn < monthStart(month)
+  return {
+    key: r.id,
+    kind: 'refund',
+    dir: 'out',
+    ids: [r.id],
+    date: r.refundedOn,
+    title: r.company ?? 'Refund to a customer',
+    sub: older ? present(['Refund', olderNote(r.refundedOn)]) : present(['Refund to customer', r.orderRef, r.reference]),
+    amount: r.amount,
+    ticked,
+    older,
+  }
+}
+
 /** FBR deposits: one line per PSID (an invoice with no PSID is a line of its own). */
 function depositLines(deps: readonly RawDeposit[], month: string): BankLine[] {
   const groups = new Map<string, RawDeposit[]>()
@@ -210,7 +240,8 @@ export function buildBankView(raw: RawBank, month: string): BankView {
     raw.deposits.filter(d => inPlay(d.bankMonth, d.depositedOn)),
     month,
   )
-  const outs = [...exps, ...deps]
+  const refs = (raw.refunds ?? []).filter(r => inPlay(r.bankMonth, r.refundedOn)).map(r => refundLine(r, month))
+  const outs = [...exps, ...refs, ...deps]
 
   const split = (lines: BankLine[]): BankSide => ({
     ticked: lines.filter(l => l.ticked).sort(byDateDesc),
@@ -247,6 +278,11 @@ export function applyTick(raw: RawBank, line: Pick<BankLine, 'kind' | 'ids'>, mo
     return {
       ...raw,
       expenses: raw.expenses.map(e => (hit(e.id) ? { ...e, bankMonth } : e)),
+    }
+  if (line.kind === 'refund')
+    return {
+      ...raw,
+      refunds: (raw.refunds ?? []).map(r => (hit(r.id) ? { ...r, bankMonth } : r)),
     }
   return {
     ...raw,

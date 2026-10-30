@@ -231,3 +231,44 @@ describe('one definition of "to match" (round 3: Lock a month said 5, this page 
     expect(buildChecklist([{ check_key: 'bank_unticked', n: 5 }, { check_key: 'fbr_deposits_unticked', n: 3 }], '2026-09', { bank_unticked: { in_n: 1, out_n: 4 }, fbr_deposits_unticked: { amount: 609580, groups: 2 } })[0].n).toBe(onPage)
   })
 })
+
+describe('refunds on the bank statement (0117)', () => {
+  const refund = (id: string, refundedOn: string, amount: string, bankMonth: string | null = null) => ({
+    id,
+    refundedOn,
+    amount,
+    reference: 'RF-1',
+    orderRef: 'ORD-0042',
+    company: 'Sargodha Fertilizer Co.',
+    bankMonth,
+  })
+
+  it('a bank refund is money out, with the customer as its title, beside the expenses', () => {
+    const raw: RawBank = { payments: [], expenses: [exp('e1', '2026-10-05', '1000.00')], deposits: [], refunds: [refund('r1', '2026-10-09', '250.00')] }
+    const v = buildBankView(raw, '2026-10')
+    expect(v.out.open.map(l => l.kind)).toEqual(['refund', 'expense'])
+    expect(v.out.open[0]).toMatchObject({ dir: 'out', title: 'Sargodha Fertilizer Co.', amount: '250.00', sub: ['Refund to customer', 'ORD-0042', 'RF-1'] })
+    expect(bankTotals(v).openOut).toMatchObject({ amount: '1250.00', count: 2 })
+  })
+
+  it('an unticked refund of an earlier month is older; a ticked one is in its month', () => {
+    const raw: RawBank = { payments: [], expenses: [], deposits: [], refunds: [refund('r1', '2026-09-20', '40.00'), refund('r2', '2026-09-21', '60.00', OCT)] }
+    const v = buildBankView(raw, '2026-10')
+    expect(v.out.older.map(l => l.key)).toEqual(['r1'])
+    expect(v.out.ticked.map(l => l.key)).toEqual(['r2'])
+    expect(v.out.older[0].sub).toEqual(['Refund', olderNote('2026-09-20')])
+  })
+
+  it('a ticked refund of this month moves to the ticked side at once, and back when unticked', () => {
+    const raw: RawBank = { payments: [], expenses: [], deposits: [], refunds: [refund('r1', '2026-10-09', '250.00')] }
+    const ticked = applyTick(raw, { kind: 'refund', ids: ['r1'] }, '2026-10')
+    expect(ticked.refunds?.[0].bankMonth).toBe(OCT)
+    expect(buildBankView(ticked, '2026-10').out.ticked).toHaveLength(1)
+    expect(applyTick(ticked, { kind: 'refund', ids: ['r1'] }, null).refunds?.[0].bankMonth).toBeNull()
+  })
+
+  it('a bank that predates refunds (none given) still builds', () => {
+    expect(buildBankView({ payments: [], expenses: [], deposits: [] }, SEP.slice(0, 7)).out.open).toEqual([])
+  })
+})
+

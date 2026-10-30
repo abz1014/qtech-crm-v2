@@ -443,7 +443,7 @@ insert into probes values
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
   ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
-  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, null, public.today_pkt(), 1, 'bank', null, null, true) r) x$q$),   -- 0118
+  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0118
   ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0118
   ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
   ('record_payment', '', 'X', $q$select 1 from (select public.record_payment(gen_random_uuid(), @20, public.today_pkt(), 7, null, 'bank', true) r) x$q$),   -- 0114

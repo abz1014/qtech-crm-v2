@@ -91,6 +91,9 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'payment.void': { orderId: 'o1' },
   'payment.correct': { orderId: 'o1' },
   'payment.restore': { orderId: 'o1' },
+  'refund.record': { companyId: 'c1' },
+  'credit.apply': { companyId: 'c1' },
+  'credit.remove': { companyId: 'c1' },
 }
 const writes = Object.keys(vars) as WriteName[]
 const run = (client: QueryClient, name: WriteName, options?: InvalidateOptions) => invalidateAfter(client, name, vars[name] as never, options)

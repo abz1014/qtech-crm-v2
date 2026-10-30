@@ -13,7 +13,7 @@ export async function loadCashFlow(): Promise<FlowRow[]> {
   const db = requireSupabase()
   const rows = await fetchAll((from, to) => db.from('v_month_cash_flow').select('*').order('month').range(from, to))
   return rows.flatMap(r =>
-    r.month ? [{ month: key(r.month), moneyIn: fx(r.money_in), payments: r.payments_count ?? 0, moneyOut: fx(r.money_out), expenses: r.expenses_count ?? 0, frozen: !!r.frozen }] : [],
+    r.month ? [{ month: key(r.month), moneyIn: fx(r.money_in), payments: r.payments_count ?? 0, moneyOut: fx(r.money_out), expenses: r.expenses_count ?? 0, frozen: !!r.frozen, refunds: fx(r.refunds_out), refundCount: r.refunds_count ?? 0 }] : [],
   )
 }
 

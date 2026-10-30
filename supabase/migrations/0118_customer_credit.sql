@@ -68,8 +68,8 @@ grant select on public.v_company_credit to qtech_engineer;   -- 0081 mirror; the
 
 -- ================================================================ record_refund
 create function public.record_refund(
-  p_id uuid, p_company_id uuid, p_order_id uuid, p_refunded_on date, p_amount numeric,
-  p_paid_via text default 'bank', p_reference text default null, p_reason text default null,
+  p_id uuid, p_company_id uuid, p_refunded_on date, p_amount numeric,
+  p_order_id uuid default null, p_paid_via text default 'bank', p_reference text default null, p_reason text default null,
   p_confirm_duplicate boolean default false)
 returns void
 language plpgsql
@@ -116,8 +116,8 @@ begin
 end;
 $$;
 
-revoke all on function public.record_refund(uuid, uuid, uuid, date, numeric, text, text, text, boolean) from public, anon, authenticated;
-grant execute on function public.record_refund(uuid, uuid, uuid, date, numeric, text, text, text, boolean) to authenticated, qtech_engineer;   -- 0081 mirror; refused inside for anyone but an admin
+revoke all on function public.record_refund(uuid, uuid, date, numeric, uuid, text, text, text, boolean) from public, anon, authenticated;
+grant execute on function public.record_refund(uuid, uuid, date, numeric, uuid, text, text, text, boolean) to authenticated, qtech_engineer;   -- 0081 mirror; refused inside for anyone but an admin
 
 -- ================================================================ apply_credit
 create function public.apply_credit(

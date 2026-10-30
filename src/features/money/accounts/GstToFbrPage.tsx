@@ -1,18 +1,22 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CircleAlert, CircleCheck, Clock } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatAmount } from '@/lib/money'
 import { cn } from '@/lib/utils'
+import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { TextField } from '@/ui/form/TextField'
+import { mapPgError } from '@/lib/pgErrors'
 import { Skeleton } from '@/ui/Skeleton'
 import { qk } from '@/features/queryKeys'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { MoneySubHeader, MoneyFrame } from '@/features/money/MoneyFrame'
 import { loadGstMonths } from '@/features/money/monthEnd/api'
-import { loadGstFilings, loadWhtDeducted } from '@/features/money/accounts/api'
+import { loadGstFilings, loadWhtDeducted, saveWhtCertificate, type WhtRow } from '@/features/money/accounts/api'
+import { signReceipt } from '@/features/money/expenses/api'
 import { orderRef } from '@/lib/refs'
 import { gstLines, type GstLine } from '@/features/money/accounts/gstModel'
 import { dayWords } from '@/features/settings/gstDeadlines'
@@ -153,6 +157,94 @@ function Status({ l }: { l: GstLine }) {
 }
 
 /**
+ * One payment's certificate: the number and/or the file the customer sent (0119). The missing flag is gone when either exists. The row says
+ * which it has, opens the file, and offers Add / Change: a number, a file, or both, each optional.
+ */
+function WhtCertificate({ row, onSaved }: { row: WhtRow; onSaved: () => void }) {
+  const client = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [number, setNumber] = useState(row.certificateNo ?? '')
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const openFile = async () => {
+    try {
+      window.open(await signReceipt(row.certificatePath as string), '_blank', 'noopener')
+    } catch (e) {
+      setError(mapPgError(e).message)
+    }
+  }
+  const save = async () => {
+    const nextNumber = number.trim()
+    const numberChanged = nextNumber !== (row.certificateNo ?? '')
+    if (!numberChanged && !file) {
+      setOpen(false)
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await saveWhtCertificate({ paymentId: row.paymentId, number: numberChanged ? nextNumber : null, file, oldPath: row.certificatePath })
+      await client.invalidateQueries({ queryKey: qk.money.monthEnd.gst() })
+      setOpen(false)
+      setFile(null)
+      onSaved()
+    } catch (e) {
+      setError(mapPgError(e).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <span className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-3 gap-y-1">
+      {row.certificateMissing ? (
+        <span className="font-medium text-tone-warning-fg">No certificate yet</span>
+      ) : (
+        <span className="num text-fg-2">
+          {row.certificateNo ? `Certificate ${row.certificateNo}` : 'Certificate file'}
+          {row.certificatePath ? (
+            <>
+              {' '}
+              <button type="button" onClick={() => void openFile()} className="rounded font-medium text-primary underline underline-offset-2" aria-label={`Open the certificate file of ${orderRef(row.orderNumber)}`}>
+                {row.certificateName ?? 'Open file'}
+              </button>
+            </>
+          ) : null}
+        </span>
+      )}
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="rounded font-medium text-primary underline underline-offset-2" aria-label={`${row.certificateMissing ? 'Add' : 'Change'} the certificate of ${orderRef(row.orderNumber)}`}>
+          {row.certificateMissing ? 'Add certificate' : 'Change'}
+        </button>
+      ) : null}
+      {open ? (
+        <span className="grid w-full gap-2 pt-1 md:max-w-md" data-testid="wht-edit">
+          <label className="grid gap-1 text-sm">
+            <span>Certificate or challan number</span>
+            <TextField value={number} onChange={e => setNumber(e.target.value)} autoComplete="off" aria-label="Certificate number" />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>Certificate file (photo or PDF), optional</span>
+            <input type="file" accept="image/*,application/pdf" aria-label="Certificate file" onChange={e => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+          </label>
+          {error ? <span role="alert" className="text-sm text-tone-danger-fg">{error}</span> : null}
+          <span className="flex gap-2">
+            <Button size="sm" variant="primary" busy={busy} busyLabel="Saving" onClick={() => void save()}>
+              Save
+            </Button>
+            <Button size="sm" variant="quiet" disabled={busy} onClick={() => { setOpen(false); setError(null) }}>
+              Cancel
+            </Button>
+          </span>
+        </span>
+      ) : error ? (
+        <span role="alert" className="w-full text-sm text-tone-danger-fg">{error}</span>
+      ) : null}
+    </span>
+  )
+}
+
+/**
  * WHT deducted by customers (0116): the tax customers held back when they paid, listed by month with a flag for a missing certificate.
  * It is a tax credit to claim, not money received: the payment's cash is what In vs out and the bank check count.
  */
@@ -177,7 +269,7 @@ function WhtDeducted() {
         <>
           {missing > 0 ? (
             <p role="status" className="font-medium text-tone-warning-fg" data-testid="wht-missing">
-              {missing === 1 ? '1 payment has' : `${missing} payments have`} no certificate number yet.
+              {missing === 1 ? '1 payment has' : `${missing} payments have`} no certificate number or file yet.
             </p>
           ) : null}
           {months.map(m => {
@@ -199,11 +291,7 @@ function WhtDeducted() {
                         {r.companyName ?? ''} · {formatDay(r.receivedOn)}
                       </span>
                       <span className="num">PKR {rs(r.amount)}</span>
-                      {r.certificateMissing ? (
-                        <span className="font-medium text-tone-warning-fg">No certificate yet</span>
-                      ) : (
-                        <span className="num text-fg-2">Certificate {r.certificateNo}</span>
-                      )}
+                      <WhtCertificate row={r} onSaved={() => void q.refetch()} />
                     </li>
                   ))}
                 </ul>

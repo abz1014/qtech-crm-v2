@@ -199,13 +199,18 @@ export function GstRegisterPage() {
         title: `Marked ${res.n} ${word} ${what}`,
         body: `Today, ${formatDay(businessToday())}`,
         tone: 'success',
-        undo: {
-          onUndo: async () => {
-            await res.undo()
-          },
-          settledTitle: `Marked ${res.n} ${word} ${what}`,
-          undoneTitle: 'Stamp taken back',
-        },
+        // 0119: taking a PSID or a deposit date back off an invoice is the admin's (the database refuses sales), so only the
+        // admin is offered Undo on those two stamps; sending to the customer can still be taken back by sales
+        undo:
+          kind === 'tcs' || isAdmin
+            ? {
+                onUndo: async () => {
+                  await res.undo()
+                },
+                settledTitle: `Marked ${res.n} ${word} ${what}`,
+                undoneTitle: 'Stamp taken back',
+              }
+            : undefined,
       })
       if (kind === 'psid') setPsid('')
     } catch (err) {
