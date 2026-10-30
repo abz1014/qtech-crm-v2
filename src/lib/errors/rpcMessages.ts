@@ -195,6 +195,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Only an admin can see a person's open work\./ },
   { match: /^Choose someone else to take the work over\./ },
   { match: /^Unknown kind /, internal: true },
+  { match: /^Only an admin pays back an expense claim\./ },
+  { match: /^This claim is not waiting to be paid back\./ },
   { match: /^That invoice is not on this order\./ },
   // 0096 (money truth): linking imported invoices to their orders, and the owner's review of imported records. Already plain.
   { match: /^Only an admin can link or review imported records\.$/, message: () => ADMIN_ONLY },

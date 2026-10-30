@@ -8,6 +8,7 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
+import { OwedToStaff } from '@/features/money/expenses/OwedToStaff'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { useMoneyHome } from '@/features/money/home/hooks'
 import { ACCOUNTS_LINKS, countWord, type MoneyHomeFigures } from '@/features/money/home/model'
@@ -45,6 +46,7 @@ export function MoneyHome() {
       ) : null}
       <Blocks f={f} />
       <Sentences f={f} />
+      <OwedToStaff summary />
       <CashInHandLine />
       <Accounts />
     </MoneyFrame>

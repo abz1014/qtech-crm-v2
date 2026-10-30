@@ -248,6 +248,20 @@ export function useApproveClaim() {
   return useMutation({ mutationFn: claims.approveClaim, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
 }
 
+export function useOweClaim() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: claims.oweClaim, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
+}
+
+export function usePayBackClaim() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: claims.payBackClaim, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
+}
+
+export function useOwedClaims(enabled = true) {
+  return useQuery({ queryKey: qk.money.expenses.claims('owed'), queryFn: claims.listOwedClaims, enabled })
+}
+
 export function useRejectClaim() {
   const client = useQueryClient()
   return useMutation({ mutationFn: claims.rejectClaim, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })

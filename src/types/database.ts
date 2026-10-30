@@ -503,14 +503,14 @@ isOneToOne: false
                   ]
                 },"expense_claims": {
                   Row: {
-                    "amount_pkr": number,"created_at": string,"created_by": string | null,"decided_at": string | null,"decided_by": string | null,"expense_id": string | null,"id": string,"note": string | null,"order_id": string | null,"paid_how": string | null,"reject_reason": string | null,"spent_on": string,"status": string
+                    "amount_pkr": number,"category_id": string | null,"created_at": string,"created_by": string | null,"decided_at": string | null,"decided_by": string | null,"expense_id": string | null,"id": string,"note": string | null,"order_id": string | null,"paid_how": string | null,"reject_reason": string | null,"spent_on": string,"status": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_pkr": number,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"spent_on"?: string,"status"?: string
+                    "amount_pkr": number,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"spent_on"?: string,"status"?: string
                   }
                   Update: {
-                    "amount_pkr"?: number,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"spent_on"?: string,"status"?: string
+                    "amount_pkr"?: number,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"spent_on"?: string,"status"?: string
                   }
                   Relationships: [
                     {
@@ -2504,6 +2504,12 @@ isOneToOne: false
 { Args: { "p_user": string }; Returns: {
               "orders": number,"rfqs": number
             }[]
+                           },
+"owe_expense_claim":
+{ Args: { "p_category": string,"p_claim": string }; Returns: undefined
+                           },
+"pay_back_expense_claim":
+{ Args: { "p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
                            },
 "po_line_prefill":
 { Args: { "p_supplier_order_id": string }; Returns: {

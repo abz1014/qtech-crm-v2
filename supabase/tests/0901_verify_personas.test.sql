@@ -428,6 +428,8 @@ insert into probes values
   ('record_history_rows', '', 'X', $q$select 1 from (select set_config('qtech.history_for', 'rfqs:' || @15::text, true)) m where public.record_history_rows('rfqs', @15) is not null$q$),   -- 0090: with the mark record_history sets
   -- 0087
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
+  ('owe_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004')$q$),   -- 0124
+  ('pay_back_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004'), public.pay_back_expense_claim(@e0, 'bank')$q$),   -- 0124: owed, then paid back
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$),
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
