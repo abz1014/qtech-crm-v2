@@ -475,6 +475,56 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"delivery_challans": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"deliver_to": string | null,"id": string,"issued_on": string,"lines": NonNullable<Json>,"notes": string | null,"number": string,"order_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"deliver_to"?: string | null,"id"?: string,"issued_on"?: string,"lines": NonNullable<Json>,"notes"?: string | null,"number": string,"order_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"deliver_to"?: string | null,"id"?: string,"issued_on"?: string,"lines"?: NonNullable<Json>,"notes"?: string | null,"number"?: string,"order_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_challans_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delivery_challans_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delivery_challans_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "delivery_challans_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "delivery_challans_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "delivery_challans_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    }
+                  ]
                 },"expense_categories": {
                   Row: {
                     "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"is_misc": boolean,"monthly_budget_pkr": number | null,"name": string,"sort": number
@@ -963,30 +1013,6 @@ isOneToOne: true
       referencedColumns: ["order_id"]
     }
                   ]
-                },"delivery_challans": {
-                  Row: {
-                    "created_at": string,"created_by": string | null,"deliver_to": string | null,"id": string,"issued_on": string,"lines": Json,"notes": string | null,"number": string,"order_id": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"deliver_to"?: string | null,"id"?: string,"issued_on"?: string,"lines": Json,"notes"?: string | null,"number": string,"order_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string | null,"deliver_to"?: string | null,"id"?: string,"issued_on"?: string,"lines"?: Json,"notes"?: string | null,"number"?: string,"order_id"?: string
-                  }
-                  Relationships: []
-                },"order_visits": {
-                  Row: {
-                    "created_at": string,"created_by": string | null,"done_on": string | null,"engineer_id": string | null,"id": string,"notes": string | null,"order_id": string,"updated_at": string,"visit_on": string | null,"visit_type": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id": string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id"?: string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
-                  }
-                  Relationships: []
                 },"order_engineers": {
                   Row: {
                     "order_id": string,"user_id": string
@@ -1109,6 +1135,62 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "supplier_orders"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"order_visits": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"done_on": string | null,"engineer_id": string | null,"id": string,"notes": string | null,"order_id": string,"updated_at": string,"visit_on": string | null,"visit_type": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id": string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id"?: string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_visits_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_visits_engineer_id_fkey"
+      columns: ["engineer_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     }
                   ]
                 },"orders": {
@@ -2366,6 +2448,24 @@ isOneToOne: false
 "correct_payment":
 { Args: { "p_amount": number,"p_new_id"?: string,"p_paid_via": string,"p_payment_id": string,"p_reason": string,"p_received_on": string,"p_reference": string }; Returns: string
                            },
+"create_delivery_challan":
+{ Args: { "p_deliver_to"?: string,"p_lines"?: Json,"p_notes"?: string,"p_order_id": string }; Returns: {
+              "created_at": string,
+"created_by": string | null,
+"deliver_to": string | null,
+"id": string,
+"issued_on": string,
+"lines": NonNullable<Json>,
+"notes": string | null,
+"number": string,
+"order_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "delivery_challans"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "create_repeat_order":
 { Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string,"p_repeat_cancelled"?: boolean }; Returns: string
                            },
@@ -2509,9 +2609,6 @@ isOneToOne: false
               "achieved_net": number,"behind_pace": number,"excluded_count": number,"gap": number,"on_pace_net": number,"quarter": number,"quarter_end": string,"target_net": number,"year": number
             }[]
                            },
-"create_delivery_challan":
-{ Args: { "p_deliver_to"?: string,"p_lines"?: Json,"p_notes"?: string,"p_order_id": string }; Returns: Database["public"]["Tables"]["delivery_challans"]["Row"]
-                           },
 "next_challan_number":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -2523,6 +2620,11 @@ isOneToOne: false
 "order_receivables":
 { Args: { "p_order_id"?: string }; Returns: {
               "balance": number,"company_id": string,"data_trust": string,"due_on": string,"gross_target": number,"is_overdue": boolean,"last_reminded_on": string,"order_id": string,"order_number": number,"overpaid_by": number,"owner_id": string,"payment_state": string,"reminder_count": number,"settled": number
+            }[]
+                           },
+"order_visit_summary":
+{ Args: { "p_order_id": string }; Returns: {
+              "done_on": string,"planned_on": string,"visit_type": string
             }[]
                            },
 "payables_as_of":
@@ -2648,6 +2750,9 @@ isOneToOne: false
                            },
 "supplier_median_delivery_days":
 { Args: { "p_supplier_id": string }; Returns: number
+                           },
+"sync_order_visit_summary":
+{ Args: { "p_order_id": string }; Returns: undefined
                            },
 "today_inquiry_facts":
 { Args: Record<PropertyKey, never>; Returns: {
