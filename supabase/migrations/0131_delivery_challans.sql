@@ -60,7 +60,8 @@ language sql
 stable
 set search_path = ''
 as $$
-  select 'DC-' || lpad((coalesce(max(substr(c.number, 4)::bigint), 0) + 1)::text, 4, '0')
+  select case when public.current_user_role() is null then null
+         else 'DC-' || lpad((coalesce(max(substr(c.number, 4)::bigint), 0) + 1)::text, 4, '0') end
   from public.delivery_challans c
   where c.number ~* '^DC-[0-9]{1,15}$'
 $$;
