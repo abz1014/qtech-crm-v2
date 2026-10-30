@@ -494,7 +494,6 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
               Edit RFQ details
             </MenuItem>
             {hist.item}
-              {reassign.item}
             <DeleteItem onDelete={del.ask} separator />
           </MoreMenu>
         )

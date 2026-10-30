@@ -181,12 +181,11 @@ export function dueOn(invoiceDate: string, terms: number | null): string | null 
 }
 
 /**
- * The order's due date once this invoice exists: the EARLIEST invoice date plus the terms, the date order_receivables, Today and
- * the Receivables page use (DATA_MODEL section 5). A second or part invoice does not move it later.
+ * This invoice's own due date (0123, process audit 2): its date plus the terms. A later part invoice is due from ITS date, not from
+ * the first invoice's, so it is not overdue the day it is issued. The order follows its oldest unpaid invoice.
  */
-export function orderDueOn(invoiceDate: string, earliestInvoiceDate: string | null | undefined, terms: number | null): string | null {
-  const first = earliestInvoiceDate && earliestInvoiceDate < invoiceDate ? earliestInvoiceDate : invoiceDate
-  return dueOn(first, terms)
+export function invoiceDueOn(invoiceDate: string, terms: number | null): string | null {
+  return dueOn(invoiceDate, terms)
 }
 
 // ------------------------------------------------------------------ the register

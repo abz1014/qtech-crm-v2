@@ -1193,14 +1193,14 @@ isOneToOne: false
                   ]
                 },"payments_in": {
                   Row: {
-                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null
+                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"invoice_id": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
+                    "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"invoice_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
                   }
                   Update: {
-                    "amount"?: number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
+                    "amount"?: number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"invoice_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
                   }
                   Relationships: [
                     {

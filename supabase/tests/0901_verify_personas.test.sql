@@ -359,6 +359,11 @@ insert into probes values
   ('link_imported_invoice', '', 'X', 'select public.link_imported_invoice(@e8, @e7)'),   -- 0096: the unlinked imported invoice onto the imported order (same customer)
   ('unlink_imported_invoice', '', 'X', 'select public.unlink_imported_invoice(@e9)'),   -- 0096
   ('set_legacy_review', '', 'X', $q$select public.set_legacy_review('order', @e7, 'live')$q$),   -- 0096
+  ('set_supplier_order_cancelled', '', 'X', 'select public.set_supplier_order_cancelled(@23, false)'),   -- 0121: refused for everyone but an admin
+  ('reassign_owner_check', '', 'X', $q$select public.reassign_owner_check('a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('reassign_owner', '', 'X', $q$select public.reassign_owner('rfq', gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('open_work_of', '', 'X', $q$select 1 from public.open_work_of('a0000000-0000-4000-8000-000000000001') limit 1$q$),   -- 0122
+  ('reassign_open_work', '', 'X', $q$select 1 from public.reassign_open_work(gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)

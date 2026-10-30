@@ -147,20 +147,24 @@ export async function listHeldAdvances(): Promise<HeldAdvance[]> {
 export interface PaymentOrder {
   row: ReceivableRow
   prior: PriorPayment[]
+  /** 0123: the order's invoices, so a payment can be tied to one of them ("this was for INV-12"). */
+  invoices?: Array<{ id: string; number: string | null; gross: number }>
 }
 
 /** One order for the record-payment dialog: its balance (receivables_list for the order) and the payments already recorded (admin). */
 export async function getPaymentOrder(orderId: string): Promise<PaymentOrder | null> {
   const db = requireSupabase()
-  const [rows, payments] = await Promise.all([
+  const [rows, payments, invoices] = await Promise.all([
     fetchReceivablesList({ p_order_id: orderId }),
     db.from('payments_in').select('received_on, amount').eq('order_id', orderId).is('voided_at', null).order('received_on'),
+    db.from('invoices').select('id, number, net_amount, gst_amount').eq('order_id', orderId).order('invoice_date').order('number'),
   ])
   const raw = rows[0]
   if (!raw) return null
   return {
     row: toReceivableRow(raw, (await fetchImportedOrderIds()).has(raw.order_id)),
     prior: (unwrap(payments) ?? []).map(p => ({ receivedOn: p.received_on, amount: Number(p.amount) })),
+    invoices: (unwrap(invoices) ?? []).map(i => ({ id: i.id, number: i.number, gross: Number(i.net_amount) + Number(i.gst_amount) })),
   }
 }
 
@@ -171,6 +175,8 @@ export interface PaymentInsert {
   amount: number
   reference: string | null
   paidVia: PaidVia
+  /** 0123: the invoice the customer said this was for; null: not tied, it settles the oldest unpaid invoice first. */
+  invoiceId?: string | null
 }
 
 /** The id comes from the form, so a retry cannot record the same payment twice. credited_user_id is filled from the order's owner by the database. */
@@ -178,6 +184,6 @@ export async function recordPayment(v: PaymentInsert): Promise<void> {
   const db = requireSupabase()
   const { error } = await db
     .from('payments_in')
-    .insert({ id: v.id, order_id: v.orderId, received_on: v.receivedOn, amount: v.amount, reference: v.reference, paid_via: v.paidVia })
+    .insert({ id: v.id, order_id: v.orderId, received_on: v.receivedOn, amount: v.amount, reference: v.reference, paid_via: v.paidVia, ...(v.invoiceId ? { invoice_id: v.invoiceId } : {}) })
   if (error) throw error
 }

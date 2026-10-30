@@ -264,6 +264,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     unit_price_net: m('Unit price, net'),
   },
   supplier_orders: {
+    cancelled_with_supplier_on: d('Cancelled with supplier on'),
     chase_count: hide,
     currency: t('Currency'),
     delivered_on: d('Delivered on'),

@@ -186,6 +186,16 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This company is used by RFQs, orders, invoices or expenses, / },
   { match: /^An order line is based on this item, / },
   { match: /^0092: /, internal: true },
+  // 0121 (supplier debt on a cancelled order) and 0122 (reassign owner): already plain.
+  { match: /^Only an admin cancels a supplier order with the supplier\./ },
+  { match: /^That supplier order was not found\./ },
+  { match: /^This supplier order was never placed, so there is nothing to cancel with the supplier\./ },
+  { match: /^Only an admin can change who owns an enquiry, job or order\./ },
+  { match: /^Choose a current salesperson or admin as the new owner\./ },
+  { match: /^Only an admin can see a person's open work\./ },
+  { match: /^Choose someone else to take the work over\./ },
+  { match: /^Unknown kind /, internal: true },
+  { match: /^That invoice is not on this order\./ },
   // 0096 (money truth): linking imported invoices to their orders, and the owner's review of imported records. Already plain.
   { match: /^Only an admin can link or review imported records\.$/, message: () => ADMIN_ONLY },
   { match: /^Imported record not found$/, message: () => RELOAD },

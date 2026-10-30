@@ -2,7 +2,7 @@ import type { Amount } from '@/lib/money'
 import { orderRef } from '@/lib/refs'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
 import { amountInWords } from '@/features/quotations/lib/totals'
-import { orderDueOn } from '@/features/money/invoices/model'
+import { invoiceDueOn } from '@/features/money/invoices/model'
 import {
   buyerAddress,
   buyerRegistered,
@@ -46,8 +46,8 @@ export interface InvoiceDoc {
   invoiceDate: string
   copy: InvoiceCopy
   /**
-   * The order's due date: its EARLIEST invoice plus the payment terms (else the company default), the date order_receivables,
-   * Today and To collect use (HW-12). A second or part invoice does not move it later. Null without terms.
+   * This invoice's own due date: its date plus the payment terms (else the company default) (0123, process audit 2). A later part
+   * invoice is due from its own date. Null without terms.
    */
   dueOn: string | null
   orderRef: string | null
@@ -63,11 +63,6 @@ export interface InvoiceDoc {
 export type BuildResult =
   | { ok: true; doc: InvoiceDoc; readiness: Readiness }
   | { ok: false; readiness: Readiness; problem: FiguresProblem | null }
-
-/** The earliest due basis among the order's other invoices, or null. */
-function earliestOther(src: InvoicePdfSource): string | null {
-  return src.otherInvoices.reduce<string | null>((m, o) => (o.dueBasis && (m === null || o.dueBasis < m) ? o.dueBasis : m), null)
-}
 
 export function readinessOf(src: InvoicePdfSource, profile: CompanyProfile | null | undefined): Readiness {
   return invoiceReadiness({
@@ -101,7 +96,7 @@ export function buildInvoiceDoc(
       number: src.invoice.number.trim(),
       invoiceDate: src.invoice.invoiceDate,
       copy,
-      dueOn: orderDueOn(src.invoice.invoiceDate, earliestOther(src), terms),
+      dueOn: invoiceDueOn(src.invoice.invoiceDate, terms),
       orderRef: src.order ? orderRef(src.order.number) : null,
       customerPo: src.order?.customerPo?.trim() || null,
       poDate: src.order?.customerPo?.trim() ? src.order.orderedOn : null,
