@@ -64,8 +64,8 @@ for (const role of ['sales', 'admin'] as const) {
     const statement = page.getByTestId('statement')
     await expect(statement.locator('[data-statement-item]')).toHaveCount(2)
     await expect(page.locator('[data-statement-item="1"]')).toContainText('Pressure transmitter 0-10 bar, 4-20 mA')
-    await expect(page.locator('[data-statement-item="1"]')).toContainText('Quantity 4 pcs')
-    await expect(page.locator('[data-statement-item="2"]')).toContainText('Quantity 2.5 m')
+    await expect(page.locator('[data-statement-item="1"]')).toContainText('Qty: 4 pcs')
+    await expect(page.locator('[data-statement-item="2"]')).toContainText('Qty: 2.5 m')
 
     // by supplier name, A to Z (Alpha, Mid, Zeta), though Mid is cheapest in rupees terms and Zeta quoted both items
     expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.mid, s.names.zeta])
@@ -215,6 +215,7 @@ test('weight and country of origin are typed beside the prices in the reply dial
   await expect.poll(async () => (await must(rest<{ origin: string | null }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.inquiries.silent}&select=origin`)))[0].origin).toBe('Japan')
 
   // and the statement shows it
+  await page.waitForLoadState('networkidle')
   await page.goto(`/jobs/${s.rfq.number}/statement`)
   const row = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${name}"]`)
   await expect(row).toContainText('1.25 lb')
