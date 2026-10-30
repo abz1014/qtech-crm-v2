@@ -146,8 +146,10 @@ test('only an admin can export; the file has the rows', async ({ page }) => {
   const d = await download
   expect(d.suggestedFilename()).toMatch(/^qtech-companies-\d{4}-\d{2}-\d{2}\.csv$/)
   expect(company.id).toBeTruthy()
+})
+
+test('an engineer has no export page and the database gives them no payment', async ({ page }) => {
   await openAs(page, 'engineer', '/settings/export')
   await expect(page.getByTestId('export-page')).toHaveCount(0)
-  // the database says the same: an engineer reads no invoice and no payment
   expect((await rest('engineer', 'payments_in?select=amount')).body).toEqual([])
 })

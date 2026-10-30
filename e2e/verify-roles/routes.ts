@@ -183,6 +183,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/settings', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^Exchange rates$/] },
   { path: '/settings/team', admin: 'ok', sales: 'no', engineer: 'no', openers: [{ name: /^Add person$/, roles: A }] },
   { path: '/settings/targets', admin: 'ok', sales: 'no', engineer: 'no' },
+  { path: '/settings/export', admin: 'ok', sales: 'no', engineer: 'no', note: 'Export data (CSV): admin only' },
   { path: '/settings/categories', admin: 'ok', sales: 'no', engineer: 'no' },
   { path: '/settings/product-categories', admin: 'ok', sales: 'no', engineer: 'no', note: 'C4: Product categories, admin only (the 0098 trigger says so in the database too)' },
   { path: '/settings/company', admin: 'ok', sales: 'ok', engineer: 'ok' },
@@ -194,7 +195,7 @@ export const ROUTES: readonly RouteSpec[] = [
   // ------------------------------------------------------------------ redesign phase 3 to 5 additions
   { path: '/enquiries/new', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'New enquiry (one intake page); no price for an engineer' },
   { path: '/todo/review', admin: 'ok', sales: 'no', engineer: 'no', note: 'the weekly review is admin only' },
-  { path: '/my-expenses', admin: 'no', sales: 'no', engineer: 'ok', note: '"I paid": only an engineer has it (their own claims)' },
+  { path: '/my-expenses', admin: 'no', sales: 'ok', engineer: 'ok', note: '"I paid": an engineer or a salesperson records what they paid (their own claims only, 0124)' },
   { path: '/jobs/{job}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation on the Job page (an engineer gets the page without the dialog)' },
   { path: '/jobs/{job}?won=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Mark won on the Job page (an engineer gets the page without the dialog)' },
   { path: '/capture', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'opens the Capture sheet' },
