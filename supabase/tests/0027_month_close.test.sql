@@ -41,10 +41,10 @@ select ok(exists (select 1 from pg_trigger where tgrelid = 'public.closed_months
 select is((select count(*)::int from pg_trigger t
            where t.tgfoid = 'public.enforce_month_lock()'::regprocedure and not t.tgisinternal
              and t.tgtype & 1 = 1 and t.tgtype & 2 = 2),
-  3, 'the lock trigger is BEFORE ... FOR EACH ROW on three tables');
+  7, 'the lock trigger is BEFORE ... FOR EACH ROW on seven tables (0115 added credit notes, cash top-ups, cash counts and order costs)');
 select is((select array_agg(c.relname::text order by c.relname) from pg_trigger t join pg_class c on c.oid = t.tgrelid
            where t.tgfoid = 'public.enforce_month_lock()'::regprocedure and not t.tgisinternal),
-  array['expenses', 'invoices', 'payments_in'], 'the lock covers payments_in, expenses and invoices');
+  array['cash_counts', 'cash_topups', 'credit_notes', 'expenses', 'invoices', 'order_costs', 'payments_in'], 'the lock covers payments_in, expenses and invoices, and (0115) credit notes, cash top-ups, cash counts and order costs');
 select ok(not has_function_privilege('authenticated', 'public.month_is_closed(date)', 'execute')
       and not has_function_privilege('anon', 'public.month_is_closed(date)', 'execute'),
   'month_is_closed is for the triggers only: no client grant');

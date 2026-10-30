@@ -36,7 +36,7 @@ function lastMonthKey(): string {
 
 export async function seedWorld(label = 'VR'): Promise<World> {
   const tag = `${label}${Date.now().toString(36).slice(-5)}${Math.random().toString(36).slice(2, 5)}`
-  const amounts = { sell: 187431, supplier: 98123, invoiceNet: 374869, invoiceGst: 67471, payment: 100009, expense: 196246, cost: 196511, legacyValue: 250777, legacyCost: 180333 }
+  const amounts = { sell: 187431, supplier: 98123, invoiceNet: 374861, invoiceGst: 67474, payment: 100009, expense: 196246, cost: 196511, legacyValue: 250777, legacyCost: 180333 }
   const today = karachiToday()
 
   const company = await adminPost<{ id: string; name: string }>('companies', { name: `${tag} Customer Mills` })

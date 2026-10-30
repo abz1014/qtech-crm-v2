@@ -35,9 +35,10 @@ export async function getLastAutoRun(): Promise<string | null> {
 }
 
 /** set_fx_rate: a manual rate for the day (today when `asOf` is omitted). Entering it twice for the same day replaces it. */
-export async function setFxRate(input: { currency: string; ratePkr: number; asOf?: string }): Promise<string> {
+export async function setFxRate(input: { currency: string; ratePkr: number; asOf?: string; confirm?: boolean }): Promise<string> {
   const db = requireSupabase()
-  const { data, error } = await db.rpc('set_fx_rate', { p_currency: input.currency, p_rate_pkr: input.ratePkr, p_as_of: input.asOf })
+  // 0114: a rate more than 20 percent away from the latest is refused (HINT fx_rate_far) until `confirm` is true
+  const { data, error } = await db.rpc('set_fx_rate', { p_currency: input.currency, p_rate_pkr: input.ratePkr, p_as_of: input.asOf, p_confirm: input.confirm ?? false })
   if (error) throw error
   return data as string
 }

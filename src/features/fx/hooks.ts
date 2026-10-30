@@ -14,7 +14,7 @@ export function useFxLastAutoRun() {
 export function useSetFxRate() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { currency: string; ratePkr: number; asOf?: string }) => api.setFxRate(input),
+    mutationFn: (input: { currency: string; ratePkr: number; asOf?: string; confirm?: boolean }) => api.setFxRate(input),
     onSuccess: () => invalidateAfter(client, 'fx.set', {}),
   })
 }

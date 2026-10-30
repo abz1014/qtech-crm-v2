@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSession } from '@/app/session'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
-import { Camera, Check, ExternalLink, History as HistoryIcon, Lock, Trash2 } from 'lucide-react'
+import { Ban, Camera, Check, ExternalLink, FilePlus2, History as HistoryIcon, Lock, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, DEFAULT_ACCEPT } from '@/lib/fileIntake'
@@ -25,7 +25,9 @@ import { signReceipt, type InvoiceRow } from '@/features/money/invoices/api'
 import { useDeleteInvoiceReceipt, useGstRegister, useInvoice, useInvoiceReceipts, useUpdateInvoice, useUploadInvoiceReceipt } from '@/features/money/invoices/hooks'
 import { useGstDeadlines } from '@/features/settings/hooks'
 import { GST_FILED_WARNING, gstReturnMayBeFiled, monthHasFbrRecord, round2 } from '@/features/money/invoices/model'
-import { useDeleteInvoiceFlow } from '@/features/money/invoices/InvoiceDelete'
+import { useCreditNoteFlow, useDeleteInvoiceFlow, useVoidInvoiceFlow } from '@/features/money/invoices/InvoiceVoid'
+import { useCreditNotes } from '@/features/money/invoices/creditNotes'
+import { CreditNotePdfButton } from '@/features/money/invoices/pdf/CreditNotePdfButton'
 import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
 import { useClosedMonths, useMonthClosed } from '@/features/money/monthEnd/hooks'
 import { CLOSED_MONTH_LINE } from '@/features/money/expenses/deleteFlow'
@@ -113,6 +115,13 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const gstDl = useGstDeadlines()
   const mayBeFiled = (d: string | null | undefined) => gstReturnMayBeFiled(d, today, monthHasFbrRecord(registerQ.data ?? [], d), gstDl.deadlines)
   const deleteFlow = useDeleteInvoiceFlow(invoice, { gstMayBeFiled: mayBeFiled(invoice.invoice_date), onDeleted: onClose })
+  const creditNoteFlow = useCreditNoteFlow(invoice)
+  const voidFlow = useVoidInvoiceFlow(invoice, { monthClosed, onDone: onClose, onCreditNote: creditNoteFlow.ask })
+  const creditNotes = useCreditNotes(invoice.id, invoice.number !== null)
+  /** Filed with FBR (a PSID or a tax deposit), void, or in a closed month: the number, date, net and GST are fixed (0113). A credit note corrects them. */
+  const filed = !!invoice.psid?.trim() || !!invoice.tax_deposited_on
+  const voided = invoice.voided_at !== null
+  const figuresLocked = monthClosed || filed || voided
 
   const sf = useSubmitForm({
     schema,
@@ -144,11 +153,14 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
       onBusy(true)
       try {
         await update.mutateAsync({
+         // M1: the save lands only on the version this screen was opened with; someone else's change in between is not overwritten
+         expectedUpdatedAt: invoice.updated_at,
+         patch: {
           // only what changed is sent: the "whose is it" rule (0092) looks at these four columns and nothing else
-          ...(!monthClosed && v.number.trim() !== (invoice.number ?? '') ? { number: v.number.trim() } : {}),
-          ...(!monthClosed && v.invoiceDate !== (invoice.invoice_date ?? '') ? { invoice_date: v.invoiceDate } : {}),
-          ...(!monthClosed && v.net !== net ? { net_amount: v.net } : {}),
-          ...(!monthClosed && v.gst !== gst ? { gst_amount: v.gst } : {}),
+          ...(!figuresLocked && v.number.trim() !== (invoice.number ?? '') ? { number: v.number.trim() } : {}),
+          ...(!figuresLocked && v.invoiceDate !== (invoice.invoice_date ?? '') ? { invoice_date: v.invoiceDate } : {}),
+          ...(!figuresLocked && v.net !== net ? { net_amount: v.net } : {}),
+          ...(!figuresLocked && v.gst !== gst ? { gst_amount: v.gst } : {}),
           copy_received_on: val(v.copyReceivedOn),
           tcs_sent_on: val(v.tcsSentOn),
           tcs_number: val(v.tcsNumber),
@@ -158,6 +170,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
           tax_deposited_on: val(v.depositedOn),
           tax_deposit_amount: v.depositAmount,
           notes: val(v.notes),
+         },
         })
       } finally {
         onBusy(false)
@@ -171,7 +184,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
 
   const [wNumber, wDate, wNet, wGst] = sf.form.watch(['number', 'invoiceDate', 'net', 'gst'])
   const changedCore =
-    !monthClosed && (wNumber.trim() !== (invoice.number ?? '') || wDate !== (invoice.invoice_date ?? '') || wNet !== net || wGst !== gst)
+    !figuresLocked && (wNumber.trim() !== (invoice.number ?? '') || wDate !== (invoice.invoice_date ?? '') || wNet !== net || wGst !== gst)
   const ackNeeded = changedCore && (mayBeFiled(invoice.invoice_date) || mayBeFiled(wDate))
   const ack = sf.form.watch('ack')
   const { setValue } = sf.form
@@ -210,9 +223,37 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
     </FormField>
   )
 
+  if (voided) {
+    return (
+      <>
+        <div role="status" className="grid gap-1 rounded-row border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3 text-base" data-testid="invoice-void-banner">
+          <p className="font-semibold">Void: {invoice.number} is kept in the register but counts for nothing.</p>
+          <p>
+            {invoice.void_reason}
+            {invoice.voided_at ? ` (${formatDay(invoice.voided_at.slice(0, 10))})` : ''}
+          </p>
+          <p className="num text-fg-2">
+            It was {pkr(Number(invoice.voided_net ?? 0))} + GST {pkr(Number(invoice.voided_gst ?? 0))}.
+          </p>
+        </div>
+        <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
+          <Button variant="quiet" size="lg" icon={HistoryIcon} onClick={() => setHistoryOpen(true)} className="text-base">
+            History
+          </Button>
+          <Button variant="primary" onClick={onClose} data-cancel>
+            Close
+          </Button>
+        </div>
+        {historyOpen ? (
+          <LazyHistoryPanel open onOpenChange={o => !o && setHistoryOpen(false)} table="invoices" id={invoice.id} context={invoice.number ?? 'Invoice'} imported={invoice.legacy_source !== null} />
+        ) : null}
+      </>
+    )
+  }
+
   return (
     <>
-      {monthClosed ? (
+      {figuresLocked ? (
       <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-panel border bg-line text-sm">
         {[
           ['Net', net],
@@ -230,10 +271,18 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
       ) : null}
       <Form sf={sf} labels={{ number: 'Invoice number', invoiceDate: 'Invoice date', net: 'Net amount', gst: 'GST', ack: 'The GST return warning' }} className="grid gap-5">
         <button type="submit" hidden tabIndex={-1} />
-        {monthClosed ? (
+        {figuresLocked ? (
           <p className="flex items-center gap-2 text-base text-fg-2" data-testid="invoice-closed-line">
             <Lock className="size-5 shrink-0 text-fg-muted" aria-hidden="true" />
-            {invoice.number ?? 'This invoice'} is in a closed month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
+            {monthClosed ? (
+              <>
+                {invoice.number ?? 'This invoice'} is in a closed month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
+              </>
+            ) : (
+              <span data-testid="invoice-filed-line">
+                {invoice.number ?? 'This invoice'} has a PSID or a tax deposit recorded, so its number, date and amounts are fixed.{isAdmin ? ' To correct it, issue a credit note.' : ' An admin can issue a credit note to correct it.'}
+              </span>
+            )}
           </p>
         ) : (
           <fieldset className="grid gap-4 md:grid-cols-2" data-testid="invoice-edit">
@@ -287,6 +336,22 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         </FormField>
       </Form>
 
+      {(creditNotes.data ?? []).length > 0 ? (
+        <section aria-label="Credit notes" className="grid gap-2" data-testid="invoice-credit-notes">
+          <h3 className="text-sm font-semibold">Credit notes</h3>
+          <ul className="grid gap-1">
+            {(creditNotes.data ?? []).map(n => (
+              <li key={n.id} className="flex items-center justify-between gap-3 rounded-row border px-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="num font-medium">{n.number}</span> · {formatDay(n.issuedOn)} · <span className="num">{pkr(n.net + n.gst)}</span> · {n.reason}
+                </span>
+                <CreditNotePdfButton creditNoteId={n.id} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section aria-label="Receipts" className="grid gap-2">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold">FBR receipt</h3>
@@ -320,10 +385,20 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
       </section>
 
       <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
-        {isAdmin && !monthClosed ? (
+        {isAdmin && invoice.number === null && !monthClosed ? (
           <Button variant="secondary" size="lg" icon={Trash2} className="min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg" onClick={deleteFlow.ask} disabled={sf.pending}>
             Delete invoice
           </Button>
+        ) : null}
+        {isAdmin && invoice.number !== null ? (
+          <>
+            <Button variant="secondary" size="lg" icon={FilePlus2} className="min-h-[44px] text-base" onClick={creditNoteFlow.ask} disabled={sf.pending}>
+              Create credit note
+            </Button>
+            <Button variant="secondary" size="lg" icon={Ban} className="min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg" onClick={voidFlow.ask} disabled={sf.pending}>
+              Void invoice
+            </Button>
+          </>
         ) : null}
         <Button variant="quiet" size="lg" icon={HistoryIcon} onClick={() => setHistoryOpen(true)} className="text-base">
           History
@@ -342,6 +417,8 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         </Button>
       </div>
       {deleteFlow.node}
+      {voidFlow.node}
+      {creditNoteFlow.node}
       {historyOpen ? (
         <LazyHistoryPanel
           open

@@ -111,6 +111,8 @@ insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst
    'a0000000-0000-4000-8000-000000000001');
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id) values
   (pg_temp.u('35'), 'gst-receipts', 'm92/r.pdf', 'r.pdf', 'application/pdf', 10, pg_temp.u('34'));
+-- 0112: a numbered invoice is voided, never deleted, so the invoices these delete tests use carry no number (a legacy row)
+update public.invoices set number = null, legacy_flags = array['undated'] where id in (pg_temp.u('32'), pg_temp.u('33'), pg_temp.u('34'));
 
 -- payments: 40 plain, 41 bank-ticked, 44 corrected by 43, 45 in January 2019, 46 plain (deleted below);
 -- 47 the only payment of order 61, 48 the only payment of order 62 (voided)
@@ -299,7 +301,7 @@ select is(pg_temp.code_('sales', $q$update public.invoices set number = 'T92-X' 
 select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 where id = @30 returning 1'), 'E:42501:not_yours', 'nor its amount');
 select is(pg_temp.code_('sales', $q$update public.invoices set notes = 'chased', last_reminded_on = current_date where id = @30 returning 1$q$),
   'ok:1', 'but notes and reminders stay open');
-select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 where id = @31 returning 1'), 'ok:1',
+select is(pg_temp.code_('sales', $q$update public.invoices set number = 'T92-2B' where id = @31 returning 1$q$), 'ok:1',
   'sales change an invoice they entered');
 select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), 'E:P0001:',
   'in a closed month the month lock answers first, not the guard (even for an invoice that is not theirs)');
@@ -307,7 +309,7 @@ select alike(pg_temp.try_('sales', 'update public.invoices set net_amount = 200 
   'with its own sentence');
 select is(pg_temp.code_('admin', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), 'E:P0001:',
   'and an admin is refused the same: a locked month must be reopened first');
-select is(pg_temp.code_('admin', 'update public.invoices set net_amount = 200 where id = @30 returning 1'), 'ok:1', 'an admin changes any invoice in an open month');
+select is(pg_temp.code_('admin', $q$update public.invoices set number = 'T92-1B' where id = @30 returning 1$q$), 'ok:1', 'an admin changes any invoice in an open month');
 
 -- ================================================================== an RFQ item an order line is based on stays
 select is(pg_temp.try_('admin', 'delete from public.rfq_items where id = @16 returning 1'),

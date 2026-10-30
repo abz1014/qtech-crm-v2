@@ -28,8 +28,10 @@ import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDial
 import { useGstRegister, useStamps } from '@/features/money/invoices/hooks'
 import { InvoiceDetailDialog } from '@/features/money/invoices/InvoiceDetailDialog'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
+import { CreditNotePdfButton } from '@/features/money/invoices/pdf/CreditNotePdfButton'
 import {
   invoiceNextStep,
+  isCreditNote,
   cleanPsid,
   matchesSearch,
   needsAttention,
@@ -127,7 +129,13 @@ export function GstRegisterPage() {
         kind: 'date',
         sortable: true,
         value: r => r.number,
-        cell: r => <span className="num">{r.number ?? <span className="font-sans text-fg-muted">No number</span>}</span>,
+        cell: r => (
+          <span className="num">
+            {r.number ?? <span className="font-sans text-fg-muted">No number</span>}
+            {isCreditNote(r) ? <span className="ml-2 font-sans text-xs text-fg-2">Credit note</span> : null}
+            {r.voided ? <span className="ml-2 font-sans text-xs text-tone-danger-fg">Void</span> : null}
+          </span>
+        ),
       },
       { id: 'date', header: 'Date', kind: 'date', sortable: true, value: r => r.invoiceDate, cell: r => (r.invoiceDate ? formatDay(r.invoiceDate).replace(/^\w+ /, '') : '—') },
       {
@@ -154,7 +162,11 @@ export function GstRegisterPage() {
         // stop the row's own click (it opens the invoice) for the button and for its dialog, whose events bubble through the portal
         cell: r => (
           <span onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-            <InvoicePdfButton invoiceId={r.invoiceId} iconOnly size="sm" label={`Print invoice ${r.number ?? ''}`.trim()} />
+            {isCreditNote(r) ? (
+              <CreditNotePdfButton creditNoteId={r.invoiceId} />
+            ) : r.voided ? null : (
+              <InvoicePdfButton invoiceId={r.invoiceId} iconOnly size="sm" label={`Print invoice ${r.number ?? ''}`.trim()} />
+            )}
           </span>
         ),
       },
@@ -205,8 +217,8 @@ export function GstRegisterPage() {
 
   const exportCsv = () => {
     const csv = generateCSV(
-      ['Invoice', 'Date', 'Customer', 'Order', 'Net', 'GST', 'Gross', 'Courier (TCS)', 'FBR', 'PSID', 'Deposited on'],
-      shown.map(r => [r.number, r.invoiceDate, r.companyName, r.orderNumber === null ? '' : orderRef(r.orderNumber), r.net, r.gst, r.gross, r.courierState, r.fbrState, r.psid, r.taxDepositedOn]),
+      ['Invoice', 'Type', 'Date', 'Customer', 'Order', 'Net', 'GST', 'Gross', 'Courier (TCS)', 'FBR', 'PSID', 'Deposited on'],
+      shown.map(r => [r.number, isCreditNote(r) ? 'Credit note' : r.voided ? 'Void' : 'Invoice', r.invoiceDate, r.companyName, r.orderNumber === null ? '' : orderRef(r.orderNumber), r.net, r.gst, r.gross, r.courierState, r.fbrState, r.psid, r.taxDepositedOn]),
     )
     downloadCSV(csv, 'gst-register.csv')
   }
@@ -284,7 +296,7 @@ export function GstRegisterPage() {
         twoLine
         group={r => ({ key: rowMonth(r), label: `${rowMonth(r)} · ${monthCounts.get(rowMonth(r)) ?? 0} ${(monthCounts.get(rowMonth(r)) ?? 0) === 1 ? 'invoice' : 'invoices'}` })}
         selection={{ selected: ticked, onChange: s => setTicked(s), rowLabel: r => r.number ?? 'invoice' }}
-        onRowOpen={r => setOpening(r.invoiceId)}
+        onRowOpen={r => setOpening(isCreditNote(r) ? (r.againstInvoiceId ?? r.invoiceId) : r.invoiceId)}
         footerLabel={`All ${totals.count} ${totals.count === 1 ? 'invoice' : 'invoices'} shown`}
         loading={register.isPending}
         error={
@@ -355,7 +367,10 @@ export function GstRegisterPage() {
         mobileRow={r => (
           <div className="grid gap-2">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="num font-medium">{r.number ?? 'No number'}</span>
+              <span className="num font-medium">
+                {r.number ?? 'No number'}
+                {isCreditNote(r) ? ' (credit note)' : r.voided ? ' (void)' : ''}
+              </span>
               <Money value={r.gross} prefix={false} />
             </div>
             <span className="min-w-0 [overflow-wrap:anywhere] text-sm">{r.companyName}</span>

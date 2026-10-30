@@ -47,7 +47,7 @@ export function useCreateInvoice() {
 export function useUpdateInvoice(invoiceId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (patch: Partial<api.InvoicePatch>) => api.updateInvoice(invoiceId, patch),
+    mutationFn: (v: { patch: Partial<api.InvoicePatch>; expectedUpdatedAt?: string }) => api.updateInvoice(invoiceId, v.patch, v.expectedUpdatedAt),
     onSuccess: () => invalidateAfter(client, 'invoice.update', { invoiceId }),
   })
 }
@@ -85,22 +85,25 @@ export function useStamps() {
     async tcs(ids: readonly string[]) {
       const before = await api.snapshotForStamp(ids)
       const n = await api.stampTcsSent(ids)
-      await done()
       const changed = before.filter(b => b.tcs_sent_on === null)
-      return { n, undo: async () => { await api.restoreStamp(changed, ['tcs_sent_on', 'tcs_number']); await done() } }
+      const after = await api.versionsOf(changed.map(b => b.id))
+      await done()
+      return { n, undo: async () => { try { await api.restoreStamp(changed, ['tcs_sent_on', 'tcs_number'], after) } finally { await done() } } }
     },
     async psid(ids: readonly string[], psid: string) {
       const before = await api.snapshotForStamp(ids)
       const n = await api.stampPsid(ids, psid)
+      const after = await api.versionsOf(before.map(b => b.id))
       await done()
-      return { n, undo: async () => { await api.restoreStamp(before, ['psid']); await done() } }
+      return { n, undo: async () => { try { await api.restoreStamp(before, ['psid'], after) } finally { await done() } } }
     },
     async deposited(ids: readonly string[]) {
       const before = await api.snapshotForStamp(ids)
       const n = await api.stampDeposited(ids)
-      await done()
       const changed = before.filter(b => b.tax_deposited_on === null)
-      return { n, undo: async () => { await api.restoreStamp(changed, ['tax_deposited_on', 'tax_deposit_amount']); await done() } }
+      const after = await api.versionsOf(changed.map(b => b.id))
+      await done()
+      return { n, undo: async () => { try { await api.restoreStamp(changed, ['tax_deposited_on', 'tax_deposit_amount'], after) } finally { await done() } } }
     },
   }
 }

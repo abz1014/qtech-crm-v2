@@ -12,7 +12,8 @@ import { qk } from '@/features/queryKeys'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { MoneySubHeader, MoneyFrame } from '@/features/money/MoneyFrame'
 import { loadGstMonths } from '@/features/money/monthEnd/api'
-import { loadGstFilings } from '@/features/money/accounts/api'
+import { loadGstFilings, loadWhtDeducted } from '@/features/money/accounts/api'
+import { orderRef } from '@/lib/refs'
 import { gstLines, type GstLine } from '@/features/money/accounts/gstModel'
 import { dayWords } from '@/features/settings/gstDeadlines'
 import { useGstDeadlines } from '@/features/settings/hooks'
@@ -69,6 +70,7 @@ export function GstToFbrPage() {
           ))}
         </ul>
       )}
+      {isAdmin ? <WhtDeducted /> : null}
       <p className="text-base text-fg-2">
         To stamp a month&rsquo;s payment slip number and deposit date, open{' '}
         <Link to="/money/gst-register" className="font-medium text-primary underline underline-offset-2">
@@ -147,5 +149,69 @@ function Status({ l }: { l: GstLine }) {
       <span>Return by {formatDay(l.returnBy)}{l.returnOverridden ? ' (date moved)' : ''}</span>
       {l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">PSID {l.psids.join(', ')} (not deposited yet)</span> : null}
     </div>
+  )
+}
+
+/**
+ * WHT deducted by customers (0116): the tax customers held back when they paid, listed by month with a flag for a missing certificate.
+ * It is a tax credit to claim, not money received: the payment's cash is what In vs out and the bank check count.
+ */
+function WhtDeducted() {
+  const q = useQuery({ queryKey: [...qk.money.monthEnd.gst(), 'wht'], queryFn: loadWhtDeducted, staleTime: 0 })
+  const rows = q.data ?? []
+  const months = Array.from(new Set(rows.map(r => r.month))).sort().reverse()
+  const missing = rows.filter(r => r.certificateMissing).length
+  return (
+    <section aria-label="WHT deducted by customers" className="grid gap-3 rounded-panel border bg-surface px-5 py-4" data-testid="wht-deducted">
+      <h2 className="text-lg font-semibold">WHT deducted by customers</h2>
+      <p className="text-base text-fg-2">
+        Tax your customers held back when they paid. It is not money received; it settles the invoice together with the cash. Keep each certificate to claim the credit.
+      </p>
+      {q.isError ? (
+        <p role="alert" className="text-base text-tone-danger-fg">The list could not be loaded.</p>
+      ) : q.isPending ? (
+        <Skeleton className="h-[4rem]" />
+      ) : rows.length === 0 ? (
+        <p className="text-base text-fg-2">No customer has deducted withholding tax yet.</p>
+      ) : (
+        <>
+          {missing > 0 ? (
+            <p role="status" className="font-medium text-tone-warning-fg" data-testid="wht-missing">
+              {missing === 1 ? '1 payment has' : `${missing} payments have`} no certificate number yet.
+            </p>
+          ) : null}
+          {months.map(m => {
+            const list = rows.filter(r => r.month === m)
+            const total = list.reduce((s, r) => s + r.amount, 0)
+            return (
+              <div key={m} className="grid gap-1" data-testid={`wht-${m.slice(0, 7)}`}>
+                <h3 className="flex items-baseline justify-between gap-3 text-base font-semibold">
+                  <span>{monthKeyLabel(m.slice(0, 7))}</span>
+                  <span className="num">PKR {rs(total)}</span>
+                </h3>
+                <ul className="grid gap-1">
+                  {list.map(r => (
+                    <li key={r.paymentId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-row border px-3 py-2 text-base">
+                      <span className="min-w-0 [overflow-wrap:anywhere]">
+                        <Link to={`/orders/${r.orderId}#payments`} className="num font-medium text-primary underline underline-offset-2">
+                          {orderRef(r.orderNumber)}
+                        </Link>{' '}
+                        {r.companyName ?? ''} · {formatDay(r.receivedOn)}
+                      </span>
+                      <span className="num">PKR {rs(r.amount)}</span>
+                      {r.certificateMissing ? (
+                        <span className="font-medium text-tone-warning-fg">No certificate yet</span>
+                      ) : (
+                        <span className="num text-fg-2">Certificate {r.certificateNo}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
+        </>
+      )}
+    </section>
   )
 }

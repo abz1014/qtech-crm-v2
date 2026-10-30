@@ -114,7 +114,8 @@ insert into public.clarifications (id, rfq_id, question) values
 update public.clarifications set first_asked_at = now(), last_asked_at = now() where id = pg_temp.f('1e');   -- P01 (0053): one asked question, so v_report_clarification_turnaround has a row to probe
 insert into public.orders (id, company_id, owner_id) values
   (pg_temp.f('20'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'),
-  (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');
+  (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'),
+  (pg_temp.f('d7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0116: holds the payment with withholding tax
 update public.orders set customer_po_number = 'PO-M1' where id = pg_temp.f('20');   -- P02 (0054): search_all customer PO
 insert into public.supplier_orders (id, order_id, supplier_id, currency) values
   (pg_temp.f('23'), pg_temp.f('20'), pg_temp.f('03'), 'USD'),
@@ -126,6 +127,9 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
+insert into public.payments_in (id, order_id, amount, wht_amount) values (pg_temp.f('d6'), pg_temp.f('d7'), 5, 3);   -- 0116: a payment with withholding tax
+insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values   -- 0112
+  (pg_temp.f('d9'), 'CN-M1', pg_temp.f('26'), 50, 9, 'fixture');
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
@@ -215,6 +219,8 @@ insert into money_cols (obj, col, rule, bug) values
   ('fx_rates', 'rate_pkr', 'supplier', null),
   ('invoices', 'net_amount', 'hidden', null), ('invoices', 'gst_amount', 'hidden', null), ('invoices', 'tax_deposit_amount', 'hidden', null),
   ('invoices', 'legacy_source', 'hidden', null),
+  ('invoices', 'voided_net', 'hidden', null), ('invoices', 'voided_gst', 'hidden', null),   -- 0112: the figures a voided invoice had
+  ('credit_notes', 'net_amount', 'hidden', null), ('credit_notes', 'gst_amount', 'hidden', null),   -- 0112
   ('month_snapshots', 'pnl', 'hidden', null), ('month_snapshots', 'adjust', 'hidden', null), ('month_snapshots', 'status', 'hidden', null),
   ('month_snapshots', 'categories', 'hidden', null), ('month_snapshots', 'team', 'hidden', null), ('month_snapshots', 'payments', 'hidden', null),
   ('month_snapshots', 'via', 'hidden', null), ('month_snapshots', 'aging', 'hidden', null), ('month_snapshots', 'payables', 'hidden', null),
@@ -229,6 +235,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('order_items', 'legacy_source', 'hidden', null),
   ('orders', 'legacy_source', 'hidden', null),
   ('payments_in', 'amount', 'hidden', null), ('payments_in', 'legacy_source', 'hidden', null),
+  ('payments_in', 'wht_amount', 'hidden', null),   -- 0116: withholding tax deducted by the customer
   ('purchase_orders', 'total', 'supplier', null), ('purchase_orders', 'lines', 'supplier', null),
   ('quotations', 'net_total', 'm3', null), ('quotations', 'gst_total', 'm3', null), ('quotations', 'lines', 'm3', null),
   ('recurring_expenses', 'amount', 'hidden', null),
@@ -244,7 +251,10 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_cash_month', 'net_received', 'hidden', null), ('v_cash_month', 'unresolved_gross', 'hidden', null),
   ('v_fx_latest', 'rate_pkr', 'supplier', null),
   ('v_gst_month', 'net', 'hidden', null), ('v_gst_month', 'gst', 'hidden', null), ('v_gst_month', 'deposited_amount', 'hidden', null),
-  ('v_gst_month', 'gst_to_deposit', 'hidden', null), ('v_gst_month', 'input_tax', 'hidden', null), ('v_gst_month', 'deposited_count', 'info', null),
+  ('v_gst_month', 'gst_to_deposit', 'hidden', null),
+  ('v_wht_deducted', 'wht_amount', 'hidden', null),   -- 0116
+  ('v_gst_month', 'credit_net', 'hidden', null), ('v_gst_month', 'credit_gst', 'hidden', null), ('v_gst_month', 'credit_note_count', 'info', null),
+  ('v_gst_month', 'input_tax', 'hidden', null), ('v_gst_month', 'deposited_count', 'info', null),   -- 0112: the first three
   ('v_gst_register', 'net_amount', 'hidden', null), ('v_gst_register', 'gst_amount', 'hidden', null), ('v_gst_register', 'gross_amount', 'hidden', null),
   ('v_gst_register', 'tax_deposit_amount', 'hidden', null),
   ('v_inquiry_state', 'items_quoted', 'info', null), ('v_inquiry_state', 'items_total', 'info', null),

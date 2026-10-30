@@ -4,7 +4,10 @@ import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
 import { orderRef } from '@/lib/refs'
+import { mapPgError } from '@/lib/pgErrors'
+import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { Checkbox } from '@/ui/form/Checkbox'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
@@ -84,6 +87,14 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
   const record = useRecordPayment(row.orderId)
   const [showRef, setShowRef] = useState(false)
   const [showVia, setShowVia] = useState(false)
+  // 0114: the server says it looks like a payment already recorded; the person ticks to record it anyway and saves again
+  const [duplicate, setDuplicate] = useState<string | null>(null)
+  const [allowDuplicate, setAllowDuplicate] = useState(false)
+  // 0116: withholding tax the customer deducted; not cash, it settles the order together with the cash
+  const [showWht, setShowWht] = useState(false)
+  const [wht, setWht] = useState('')
+  const [whtCert, setWhtCert] = useState('')
+  const whtAmount = Number(wht.replace(/,/g, '').trim() || 0)
   const amountRef = useRef<HTMLInputElement | null>(null)
   const facts = { gross: row.gross, settled: row.settled, balance: row.balance, invoiced: row.invoiceNumbers.length > 0, prior: data.prior }
 
@@ -98,8 +109,25 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
     } satisfies Partial<Values>,
     // the month lock answers about the date, so the sentence sits under it and every entry stays
     routeError: e => (e.kind === 'closed-month' ? { field: 'receivedOn' } : undefined),
-    onSubmit: (v, { requestId }) =>
-      record.mutateAsync({ id: requestId, orderId: row.orderId, receivedOn: v.receivedOn, amount: v.amount, reference: v.reference.trim() || null, paidVia: v.paidVia as PaidVia }),
+    onSubmit: async (v, { requestId }) => {
+      try {
+        await record.mutateAsync({
+          id: requestId,
+          orderId: row.orderId,
+          receivedOn: v.receivedOn,
+          amount: v.amount,
+          reference: v.reference.trim() || null,
+          paidVia: v.paidVia as PaidVia,
+          confirmDuplicate: allowDuplicate,
+          whtAmount: Number.isFinite(whtAmount) && whtAmount > 0 ? whtAmount : 0,
+          whtCertificate: whtCert.trim() || null,
+        })
+      } catch (e) {
+        const m = mapPgError(e)
+        if (m.hint === 'duplicate_payment') setDuplicate(m.message)
+        throw e
+      }
+    },
     onSuccess: v => {
       toast.toast({ title: 'Recorded payment', body: `${orderRef(row.orderNumber)} · ${pkr(v.amount)}`, tone: 'success' })
       onDone()
@@ -121,6 +149,11 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
       </p>
       <Form sf={sf} labels={{ amount: 'Amount received', receivedOn: 'Date received' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
+        {duplicate ? (
+          <div data-testid="duplicate-payment"><Banner tone="warning" title={duplicate}>
+            <Checkbox label="Record it anyway" checked={allowDuplicate} onCheckedChange={c => setAllowDuplicate(c === true)} />
+          </Banner></div>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           <FormField<Values, 'amount'> name="amount" label="Amount received, PKR" source={{ label: `Balance due on ${orderRef(row.orderNumber)}` }}>
             {f => (
@@ -158,6 +191,22 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
             {f => <TextField {...f} autoComplete="off" />}
           </FormField>
         ) : null}
+        {showWht ? (
+          <fieldset className="grid gap-3 md:grid-cols-2" data-testid="wht-fields">
+            <legend className="mb-1 text-sm font-medium">Withholding tax the customer deducted</legend>
+            <label className="grid gap-1 text-sm">
+              <span>Tax deducted, PKR</span>
+              <TextField value={wht} onChange={e => setWht(e.target.value)} inputMode="decimal" className="num" aria-label="Withholding tax deducted" />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span>Certificate or challan number</span>
+              <TextField value={whtCert} onChange={e => setWhtCert(e.target.value)} autoComplete="off" aria-label="Withholding tax certificate number" />
+            </label>
+            <p className="text-xs text-fg-muted md:col-span-2">
+              It is not money received: it settles the invoice together with the cash, and is listed under GST to FBR until the certificate arrives.
+            </p>
+          </fieldset>
+        ) : null}
         {showVia ? (
           <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" help="Bank payments are matched to the bank statement at month end; cash is not.">
             {f => <Select {...f} options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))} />}
@@ -167,6 +216,11 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
           {!showRef ? (
             <span>
               <LinkButton onClick={() => setShowRef(true)}>Add a reference</LinkButton>, optional: transfer or cheque number.
+            </span>
+          ) : null}
+          {!showWht ? (
+            <span>
+              <LinkButton onClick={() => setShowWht(true)}>Withholding tax deducted</LinkButton>, if the customer paid short by the tax.
             </span>
           ) : null}
           {!showVia ? (

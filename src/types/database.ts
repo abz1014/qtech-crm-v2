@@ -63,12 +63,6 @@ isOneToOne: false
       foreignKeyName: "attachments_invoice_id_fkey"
       columns: ["invoice_id"]
 isOneToOne: false
-      referencedRelation: "v_gst_register"
-      referencedColumns: ["invoice_id"]
-    },{
-      foreignKeyName: "attachments_invoice_id_fkey"
-      columns: ["invoice_id"]
-isOneToOne: false
       referencedRelation: "v_invoice_state"
       referencedColumns: ["invoice_id"]
     },{
@@ -475,6 +469,92 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"credit_notes": {
+                  Row: {
+                    "company_id": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_id": string,"issued_on": string,"net_amount": number,"number": string,"order_id": string | null,"reason": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_id": string,"issued_on"?: string,"net_amount": number,"number": string,"order_id"?: string | null,"reason": string
+                  }
+                  Update: {
+                    "company_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount"?: number,"id"?: string,"invoice_id"?: string,"issued_on"?: string,"net_amount"?: number,"number"?: string,"order_id"?: string | null,"reason"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "credit_notes_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "credit_notes_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "credit_notes_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "credit_notes_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
+      foreignKeyName: "credit_notes_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "credit_notes_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "invoices"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "credit_notes_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "v_invoice_state"
+      referencedColumns: ["invoice_id"]
+    },{
+      foreignKeyName: "credit_notes_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "credit_notes_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "credit_notes_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "credit_notes_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "credit_notes_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    }
+                  ]
                 },"expense_categories": {
                   Row: {
                     "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"is_misc": boolean,"monthly_budget_pkr": number | null,"name": string,"sort": number
@@ -815,14 +895,14 @@ isOneToOne: false
                   ]
                 },"invoices": {
                   Row: {
-                    "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"wasif_receipt_on": string | null
+                    "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"voided_gst": number | null,"voided_net": number | null,"wasif_receipt_on": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount": number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
+                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount": number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"voided_gst"?: number | null,"voided_net"?: number | null,"wasif_receipt_on"?: string | null
                   }
                   Update: {
-                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount"?: number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount"?: number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
+                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount"?: number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount"?: number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"voided_gst"?: number | null,"voided_net"?: number | null,"wasif_receipt_on"?: string | null
                   }
                   Relationships: [
                     {
@@ -885,6 +965,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_voided_by_fkey"
+      columns: ["voided_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
     }
                   ]
                 },"month_snapshots": {
@@ -1193,14 +1279,14 @@ isOneToOne: false
                   ]
                 },"payments_in": {
                   Row: {
-                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null
+                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"wht_amount": number,"wht_certificate_no": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
+                    "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"wht_amount"?: number,"wht_certificate_no"?: string | null
                   }
                   Update: {
-                    "amount"?: number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
+                    "amount"?: number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"wht_amount"?: number,"wht_certificate_no"?: string | null
                   }
                   Relationships: [
                     {
@@ -1214,6 +1300,12 @@ isOneToOne: false
       columns: ["corrects_payment_id"]
 isOneToOne: false
       referencedRelation: "v_payment_net"
+      referencedColumns: ["payment_id"]
+    },{
+      foreignKeyName: "payments_in_corrects_payment_id_fkey"
+      columns: ["corrects_payment_id"]
+isOneToOne: false
+      referencedRelation: "v_wht_deducted"
       referencedColumns: ["payment_id"]
     },{
       foreignKeyName: "payments_in_created_by_fkey"
@@ -1772,7 +1864,7 @@ isOneToOne: false
                   ]
                 },"v_gst_month": {
                   Row: {
-                    "deposited_amount": number | null,"deposited_count": number | null,"gst": number | null,"gst_to_deposit": number | null,"input_tax": number | null,"invoice_count": number | null,"month": string | null,"net": number | null,"psid_set_count": number | null
+                    "credit_gst": number | null,"credit_net": number | null,"credit_note_count": number | null,"deposited_amount": number | null,"deposited_count": number | null,"gst": number | null,"gst_to_deposit": number | null,"input_tax": number | null,"invoice_count": number | null,"month": string | null,"net": number | null,"psid_set_count": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -1780,41 +1872,11 @@ isOneToOne: false
                   ]
                 },"v_gst_register": {
                   Row: {
-                    "company_id": string | null,"company_name": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"invoice_month": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"order_number": number | null,"psid": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null
+                    "against_invoice_id": string | null,"against_number": string | null,"company_id": string | null,"company_name": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"invoice_month": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"order_number": number | null,"psid": string | null,"row_kind": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"void_reason": string | null,"voided_at": string | null
                   }
                   ComputedFields: never
                   Relationships: [
-                    {
-      foreignKeyName: "invoices_order_id_fkey"
-      columns: ["order_id"]
-isOneToOne: false
-      referencedRelation: "orders"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "invoices_order_id_fkey"
-      columns: ["order_id"]
-isOneToOne: false
-      referencedRelation: "v_order_basis"
-      referencedColumns: ["order_id"]
-    },{
-      foreignKeyName: "invoices_order_id_fkey"
-      columns: ["order_id"]
-isOneToOne: false
-      referencedRelation: "v_order_items_total"
-      referencedColumns: ["order_id"]
-    },{
-      foreignKeyName: "invoices_order_id_fkey"
-      columns: ["order_id"]
-isOneToOne: false
-      referencedRelation: "v_order_money"
-      referencedColumns: ["order_id"]
-    },{
-      foreignKeyName: "invoices_order_id_fkey"
-      columns: ["order_id"]
-isOneToOne: false
-      referencedRelation: "v_order_state"
-      referencedColumns: ["order_id"]
-    }
+                    
                   ]
                 },"v_inquiry_state": {
                   Row: {
@@ -1862,7 +1924,7 @@ isOneToOne: false
                   ]
                 },"v_invoice_state": {
                   Row: {
-                    "company_id": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"last_reminded_on": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"reminder_count": number | null,"reminder_state": string | null
+                    "company_id": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"last_reminded_on": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"reminder_count": number | null,"reminder_state": string | null,"void_reason": string | null,"voided_at": string | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -2296,6 +2358,68 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"v_wht_deducted": {
+                  Row: {
+                    "certificate_missing": boolean | null,"certificate_no": string | null,"company_id": string | null,"company_name": string | null,"month": string | null,"order_id": string | null,"order_number": number | null,"payment_id": string | null,"received_on": string | null,"wht_amount": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    }
+                  ]
                 }
           }
           Functions: {
@@ -2349,6 +2473,11 @@ isOneToOne: false
                            },
 "correct_payment":
 { Args: { "p_amount": number,"p_new_id"?: string,"p_paid_via": string,"p_payment_id": string,"p_reason": string,"p_received_on": string,"p_reference": string }; Returns: string
+                           },
+"create_credit_note":
+{ Args: { "p_gst"?: number,"p_invoice_id": string,"p_issued_on"?: string,"p_net": number,"p_reason": string }; Returns: {
+              "credit_note_id": string,"number": string
+            }[]
                            },
 "create_repeat_order":
 { Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string,"p_repeat_cancelled"?: boolean }; Returns: string
@@ -2493,6 +2622,9 @@ isOneToOne: false
               "achieved_net": number,"behind_pace": number,"excluded_count": number,"gap": number,"on_pace_net": number,"quarter": number,"quarter_end": string,"target_net": number,"year": number
             }[]
                            },
+"next_credit_note_number":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "next_invoice_number":
 { Args: Record<PropertyKey, never>; Returns: {
               "last_date": string,"last_number": string,"next_number": string
@@ -2540,6 +2672,9 @@ isOneToOne: false
 "record_history_rows":
 { Args: { "p_before"?: string,"p_id": string,"p_limit"?: number,"p_table": string }; Returns: Json
                            },
+"record_payment":
+{ Args: { "p_amount": number,"p_confirm_duplicate"?: boolean,"p_id": string,"p_order_id": string,"p_paid_via"?: string,"p_received_on": string,"p_reference"?: string,"p_wht_amount"?: number,"p_wht_certificate"?: string }; Returns: undefined
+                           },
 "reopen_month":
 { Args: { "p_month": string,"p_note"?: string }; Returns: undefined
                            },
@@ -2566,7 +2701,7 @@ isOneToOne: false
             }[]
                            },
 "set_fx_rate":
-{ Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
+{ Args: { "p_as_of"?: string,"p_confirm"?: boolean,"p_currency": string,"p_rate_pkr": number }; Returns: string
                            },
 "set_legacy_review":
 { Args: { "id": string,"kind": string,"state": string }; Returns: undefined
@@ -2640,6 +2775,9 @@ isOneToOne: false
                            },
 "unlink_imported_invoice":
 { Args: { "p_invoice_id": string }; Returns: undefined
+                           },
+"void_invoice":
+{ Args: { "p_invoice_id": string,"p_reason": string }; Returns: undefined
                            },
 "void_payment":
 { Args: { "p_payment_id": string,"p_reason": string }; Returns: undefined

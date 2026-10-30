@@ -87,9 +87,9 @@ describe('Record payment (M02)', () => {
     expect(screen.getByText(`Balance due on ORD-0038`)).toBeInTheDocument()
     expect(screen.getByTestId('payment-note')).toHaveTextContent('This settles the order: PKR 1,600,764 of 2,300,764 gross, after the advance of 700,000 on 9 Nov')
     await user.click(screen.getByRole('button', { name: 'Save payment' }))
-    await waitFor(() => expect(d.calls.some(c => c.target === 'payments_in' && c.verb === 'insert')).toBe(true))
-    const call = d.calls.find(c => c.target === 'payments_in' && c.verb === 'insert')!
-    expect(opArgs(call, 'insert')?.[0]).toMatchObject({ order_id: 'o38', amount: 1600764, received_on: TODAY, paid_via: 'bank', reference: null })
+    await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:record_payment')).toBe(true))
+    const call = d.calls.find(c => c.target === 'rpc:record_payment')!
+    expect(opArgs(call, 'args')?.[0]).toMatchObject({ p_order_id: 'o38', p_amount: 1600764, p_received_on: TODAY, p_paid_via: 'bank', p_confirm_duplicate: false, p_wht_amount: 0 })
   })
 
   it('a smaller amount is a part payment, and says what stays due', async () => {
@@ -104,7 +104,7 @@ describe('Record payment (M02)', () => {
 
   it('a closed month shows the sentence under the date and keeps the amount', async () => {
     const user = userEvent.setup()
-    db(c => (c.target === 'payments_in' && c.verb === 'insert' ? { error: { code: 'P0001', message: 'September 2026 is closed. An admin can reopen it.' } } : undefined))
+    db(c => (c.target === 'rpc:record_payment' ? { error: { code: 'P0001', message: 'September 2026 is closed. An admin can reopen it.' } } : undefined))
     mount(<RecordPaymentDialog open onOpenChange={() => {}} orderId="o38" />)
     await screen.findByRole('textbox', { name: 'Amount received, PKR' })
     await user.click(screen.getByRole('button', { name: 'Save payment' }))

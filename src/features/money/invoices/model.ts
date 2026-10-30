@@ -208,7 +208,19 @@ export interface GstRow {
   needsAttention: boolean
   psid: string | null
   taxDepositedOn: string | null
+  /** 'credit_note' rows (0112) are negative lines: invoiceId is the credit note's id, againstInvoiceId the invoice it credits. */
+  rowKind?: 'invoice' | 'credit_note'
+  /** The invoice was voided (0112): it keeps its number and shows 0. */
+  voided?: boolean
+  voidReason?: string | null
+  againstInvoiceId?: string | null
+  againstNumber?: string | null
 }
+
+/** A credit note line of the register (not an invoice). */
+export const isCreditNote = (r: Pick<GstRow, 'rowKind'>): boolean => r.rowKind === 'credit_note'
+/** A line that no stamp, courier step or FBR step applies to: a credit note, or a void invoice. */
+export const isInert = (r: Pick<GstRow, 'rowKind' | 'voided'>): boolean => r.rowKind === 'credit_note' || r.voided === true
 
 const MONTH_ONLY = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -245,6 +257,8 @@ export interface InvoiceNextStep {
  * courier), then depositing its GST, else Done.
  */
 export function invoiceNextStep(r: GstRow): InvoiceNextStep {
+  if (isCreditNote(r)) return { tone: 'done', label: 'Credit note', detail: r.againstNumber ? `Against ${r.againstNumber}` : undefined }
+  if (r.voided) return { tone: 'done', label: 'Void', detail: r.voidReason ?? undefined }
   if (r.fbrException) {
     const noPsid = (r.fbrState === 'deposited' || r.fbrState === 'receipt_received') && !r.psid
     return { tone: 'now', label: noPsid ? 'Add the PSID' : 'Add deposit receipt', detail: attentionReason(r) ?? undefined }
@@ -256,19 +270,20 @@ export function invoiceNextStep(r: GstRow): InvoiceNextStep {
 }
 
 /** No courier date yet (not started, or only the optional "copy received"): the register's "Not sent by TCS" filter. */
-export const tcsNotSent = (r: Pick<GstRow, 'courierState'>): boolean => r.courierState === 'not_started' || r.courierState === 'copy_received'
+export const tcsNotSent = (r: Pick<GstRow, 'courierState' | 'rowKind' | 'voided'>): boolean => !isInert(r) && (r.courierState === 'not_started' || r.courierState === 'copy_received')
 
 /** Search the register by invoice number, customer or order number. */
 export function matchesSearch(r: GstRow, text: string): boolean {
   const words = text.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return true
-  const hay = `${r.number ?? ''} ${r.companyName ?? ''} ORD-${String(r.orderNumber ?? '').padStart(4, '0')}`.toLowerCase()
+  const hay = `${r.number ?? ''} ${r.againstNumber ?? ''} ${r.companyName ?? ''} ORD-${String(r.orderNumber ?? '').padStart(4, '0')}`.toLowerCase()
   return words.every(w => hay.includes(w))
 }
 
 export function registerTotals(rows: readonly GstRow[]): { count: number; net: number; gst: number; gross: number } {
   return {
-    count: rows.length,
+    // invoices only: a void invoice and a credit note are lines of the register but not another invoice (their figures still add in)
+    count: rows.filter(r => !isInert(r)).length,
     net: round2(rows.reduce((s, r) => s + r.net, 0)),
     gst: round2(rows.reduce((s, r) => s + r.gst, 0)),
     gross: round2(rows.reduce((s, r) => s + r.gross, 0)),
@@ -291,7 +306,8 @@ export function rangeLabel(rows: readonly GstRow[]): string {
 export type StampKind = 'tcs' | 'psid' | 'deposit'
 
 /** Which of the ticked invoices a stamp would change (a date stamp never overwrites a date already there). */
-export function stampable(rows: readonly GstRow[], kind: StampKind): GstRow[] {
+export function stampable(all: readonly GstRow[], kind: StampKind): GstRow[] {
+  const rows = all.filter(r => !isInert(r))
   switch (kind) {
     case 'tcs':
       return rows.filter(r => r.courierState === 'not_started' || r.courierState === 'copy_received')
