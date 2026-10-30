@@ -16,6 +16,7 @@ import type { OrderHeader, PersonRow } from '@/features/orders/api'
 import { useAddEngineer, useEngineerCandidates, useRemoveEngineer, useUpdateOrder } from '@/features/orders/hooks'
 import { useMarkDone } from '@/features/orders/commissioningActions'
 import { VisitFields } from '@/features/orders/VisitDialog'
+import { VisitsSection } from '@/features/orders/visits/VisitsSection'
 import { DEFAULT_VISIT_TYPE, visitPatch, visitTypeLabel, type VisitValue } from '@/features/orders/lib/visit'
 
 /*
@@ -97,6 +98,8 @@ export function CommissioningPanel({
         ) : (
           <p className="text-sm text-fg-muted">Supply only, no commissioning.</p>
         )}
+
+        {order.needsCommissioning ? <VisitsSection order={order} engineers={engineers} isEngineer={isEngineer} canEdit={canEdit} /> : null}
 
         <div className="grid gap-5 border-t pt-4 md:grid-cols-2">
           <div className="grid content-start gap-1">

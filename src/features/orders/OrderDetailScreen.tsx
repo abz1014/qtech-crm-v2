@@ -22,6 +22,7 @@ import { BelowTheFold } from '@/ui/BelowTheFold'
 const OrderItemsPanel = lazyWithReload(() => import('@/features/orders/OrderItemsPanel').then(m => ({ default: m.OrderItemsPanel })))
 const LegsPanel = lazyWithReload(() => import('@/features/orders/LegsPanel').then(m => ({ default: m.LegsPanel })))
 const CommissioningPanel = lazyWithReload(() => import('@/features/orders/CommissioningPanel').then(m => ({ default: m.CommissioningPanel })))
+const ChallansPanel = lazyWithReload(() => import('@/features/orders/challans/ChallansPanel').then(m => ({ default: m.ChallansPanel })))
 const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
 const MarginPanel = lazyWithReload(() => import('@/features/orders/MoneyPanels').then(m => ({ default: m.MarginPanel })))
 const InvoicesPanel = lazyWithReload(() => import('@/features/orders/MoneyPanels').then(m => ({ default: m.InvoicesPanel })))
@@ -208,6 +209,7 @@ export default function OrderDetailScreen() {
                 <BelowTheFold fallback={<Skeleton className="h-[14rem] w-full" />}>
                   <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
                   <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
+                  <ChallansPanel order={order} items={items.data} />
                   {/* compact: a short drop zone, so an order with no files does not spend a screen on it (UX audit P9) */}
                   <AttachmentsPanel orderId={order.id} compact />
                 </BelowTheFold>

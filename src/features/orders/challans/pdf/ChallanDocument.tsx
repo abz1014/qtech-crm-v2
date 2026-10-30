@@ -1,6 +1,7 @@
 import { Document, Page, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
-import { Letterhead, longDay, PageFooter, qty, s, SignatureRow, splitDescription } from '@/features/orders/pdf/shared'
+import { Letterhead, PageFooter, SignatureRow, TextLines } from '@/features/orders/pdf/shared'
+import { longDay, qty, s, splitDescription } from '@/features/orders/pdf/styles'
 import type { ChallanDoc } from '@/features/orders/challans/pdf/doc'
 
 /*
@@ -38,7 +39,7 @@ export function ChallanDocument({ doc, profile, logoSrc }: { doc: ChallanDoc; pr
           <View style={[s.box, s.boxL]}>
             <Text style={s.boxLabel}>Deliver to</Text>
             <Text style={[s.strongText, { fontSize: 10 }]}>{doc.customer}</Text>
-            {doc.deliverTo ? <Text>{doc.deliverTo}</Text> : null}
+            {doc.deliverTo ? <TextLines text={doc.deliverTo} /> : null}
           </View>
           <View style={[s.box, s.boxR]}>
             <Text style={s.boxLabel}>References</Text>
@@ -79,7 +80,7 @@ export function ChallanDocument({ doc, profile, logoSrc }: { doc: ChallanDoc; pr
         {doc.notes ? (
           <View style={{ marginTop: 12 }} wrap={false}>
             <Text style={s.secTitle}>Notes</Text>
-            <Text>{doc.notes}</Text>
+            <TextLines text={doc.notes} />
           </View>
         ) : null}
 

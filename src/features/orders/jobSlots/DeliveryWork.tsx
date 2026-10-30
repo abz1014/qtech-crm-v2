@@ -1,5 +1,6 @@
 import { Skeleton } from '@/ui/Skeleton'
 import type { JobSlotProps } from '@/features/jobs/slots'
+import { ChallansPanel } from '@/features/orders/challans/ChallansPanel'
 import { CommissioningPanel } from '@/features/orders/CommissioningPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import { useOrderWork } from '@/features/orders/jobSlots/useOrderWork'
@@ -22,6 +23,7 @@ export default function DeliveryWork({ job }: JobSlotProps) {
         <LegsPanel order={w.order} legs={w.legs.data} items={w.items.data} pos={w.pos.data ?? []} money={job.money} isAdmin={job.role === 'admin'} canEdit={w.canEdit} part="delivery" />
       ) : null}
       <CommissioningPanel order={w.order} engineers={w.engineers.data ?? []} isEngineer={false} canEdit={w.canEdit} />
+      <ChallansPanel order={w.order} items={w.items.data} />
     </div>
   )
 }

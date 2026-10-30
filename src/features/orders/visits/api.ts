@@ -1,4 +1,5 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
+import type { TableUpdate } from '@/features/dbTypes'
 import { draftPatch, sortVisits, toVisit, type VisitDraft, type VisitRow } from '@/features/orders/visits/model'
 
 /* Every database call for the visits of an order (migration 0130). Row Level Security decides who may write; this file only asks. */
@@ -19,7 +20,7 @@ export async function createVisit(orderId: string, draft: VisitDraft): Promise<v
   if (error) throw error
 }
 
-export async function updateVisit(id: string, patch: ReturnType<typeof draftPatch> | { done_on: string | null }): Promise<void> {
+export async function updateVisit(id: string, patch: TableUpdate<'order_visits'>): Promise<void> {
   const { error } = await requireSupabase().from('order_visits').update(patch).eq('id', id)
   if (error) throw error
 }

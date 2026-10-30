@@ -1,6 +1,7 @@
 import { Document, Page, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
-import { C, Letterhead, longDay, PageFooter, qty, s, SignatureRow, splitDescription } from '@/features/orders/pdf/shared'
+import { Letterhead, PageFooter, SignatureRow, TextLines } from '@/features/orders/pdf/shared'
+import { C, longDay, qty, s, splitDescription } from '@/features/orders/pdf/styles'
 import type { ServiceReportDoc } from '@/features/orders/visits/pdf/doc'
 
 /*
@@ -45,7 +46,7 @@ export function ServiceReportDocument({ doc, profile, logoSrc }: { doc: ServiceR
             <Text style={s.boxLabel}>Customer</Text>
             <Text style={[s.strongText, { fontSize: 10 }]}>{doc.customer}</Text>
             {doc.siteName ? <Text>{doc.siteName}</Text> : null}
-            {doc.siteAddress ? <Text>{doc.siteAddress}</Text> : null}
+            {doc.siteAddress ? <TextLines text={doc.siteAddress} /> : null}
           </View>
           <View style={[s.box, s.boxR]}>
             <Text style={s.boxLabel}>Contact and references</Text>
@@ -70,7 +71,7 @@ export function ServiceReportDocument({ doc, profile, logoSrc }: { doc: ServiceR
 
         <View style={{ marginTop: 14 }}>
           <Text style={s.secTitle}>Work done</Text>
-          {doc.workDone ? <Text>{doc.workDone}</Text> : null}
+          {doc.workDone ? <TextLines text={doc.workDone} /> : null}
           {/* a few ruled lines to write on when nothing was typed, or to add to what was */}
           {[0, 1, 2].map(i => (
             <View key={i} style={{ height: 18, borderBottomWidth: 0.5, borderBottomColor: C.strong }} />
