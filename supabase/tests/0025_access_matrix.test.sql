@@ -355,9 +355,12 @@ insert into public.order_items (id, order_id, position, description, unit_price_
   (pg_temp.f('25'), pg_temp.f('20'), 0, 'Fixture order item', 100, pg_temp.f('23'), 10);
 insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('20'), 5);
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
+insert into public.orders (id, company_id, owner_id) values   -- 0112 and 0116: an order with no payment (the void probe) and one that holds a payment with WHT
+  (pg_temp.f('d5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'), (pg_temp.f('d7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');
+insert into public.payments_in (id, order_id, amount, wht_amount, wht_certificate_no) values (pg_temp.f('d6'), pg_temp.f('d7'), 5, 3, null);
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18),
-  (pg_temp.f('d2'), pg_temp.f('20'), 'INV-M3', 100, 18);
+  (pg_temp.f('d2'), pg_temp.f('d5'), 'INV-M3', 100, 18);
 -- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
 update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
