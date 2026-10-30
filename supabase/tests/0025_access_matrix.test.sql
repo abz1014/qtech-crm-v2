@@ -572,7 +572,7 @@ insert into probes values
   ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),
   ('search_all', 'supplier_po', 'X', $q$select 1 from public.search_all('PO-7002', 5) where kind = 'po'$q$),
   ('next_invoice_number', '', 'X', 'select * from public.next_invoice_number()'),
-  ('next_challan_number', '', 'X', 'select public.next_challan_number()'),   -- 0131
+  ('next_challan_number', '', 'X', 'select 1 where public.next_challan_number() is not null'),   -- 0131
   ('create_delivery_challan', '', 'X', 'select public.create_delivery_challan(@20)'),   -- 0131: every goods line of the fixture order, rolled back
   ('order_visit_summary', '', 'X', 'select * from public.order_visit_summary(@20)'),   -- 0130
   ('sync_order_visit_summary', '', 'X', 'select public.sync_order_visit_summary(@20)'),   -- 0130

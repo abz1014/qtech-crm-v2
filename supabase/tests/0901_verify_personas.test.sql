@@ -337,7 +337,7 @@ insert into probes values
   ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),
   ('search_all', 'supplier_po', 'X', $q$select 1 from public.search_all('PO-7002', 5) where kind = 'po'$q$),
   ('next_invoice_number', '', 'X', 'select * from public.next_invoice_number()'),
-  ('next_challan_number', '', 'X', 'select public.next_challan_number()'),   -- 0131
+  ('next_challan_number', '', 'X', 'select 1 where public.next_challan_number() is not null'),   -- 0131
   ('create_delivery_challan', '', 'X', 'select public.create_delivery_challan(@20)'),   -- 0131
   ('stamp_payment_reminder', '', 'X', 'select 1 from (select public.stamp_payment_reminder(array[@26]) r) x where r > 0'),
   ('stamp_tcs_sent', '', 'X', 'select 1 from (select public.stamp_tcs_sent(array[@26]) r) x where r > 0'),
