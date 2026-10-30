@@ -102,6 +102,11 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     tcs_number: t('TCS number'),
     tcs_sent_on: d('TCS sent on'),
     wasif_receipt_on: d('Owner receipt on'),
+    void_reason: t('Why it was voided'),
+    voided_at: dt('Voided at'),
+    voided_by: r('Voided by'),
+    voided_gst: m('GST before it was voided'),
+    voided_net: m('Net amount before it was voided'),
   },
   payments_in: {
     amount: m('Amount'),
@@ -115,6 +120,8 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     void_reason: t('Why it was cancelled'),
     voided_at: dt('Cancelled at'),
     voided_by: r('Cancelled by'),
+    wht_amount: m('Withholding tax deducted'),
+    wht_certificate_no: t('Withholding tax certificate'),
   },
   expenses: {
     amount_pkr: m('Amount'),
