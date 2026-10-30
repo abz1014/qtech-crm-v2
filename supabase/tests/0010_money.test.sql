@@ -25,7 +25,7 @@ select hasnt_column('public', 'invoices', 'tax_deposit_bank', 'invoices.tax_depo
 select columns_are('public', 'payments_in',
   array['id', 'created_at', 'created_by', 'order_id', 'received_on', 'amount', 'credited_user_id', 'reference',
         'legacy_flags', 'legacy_source', 'paid_via', 'bank_month', 'voided_at', 'voided_by', 'void_reason',
-        'corrects_payment_id'],
+        'corrects_payment_id', 'invoice_id'],   -- 0123: the invoice a payment was received for
   'payments_in has the section 2.17 columns (0073: void and correction) and no tax_withheld');
 select columns_are('public', 'expenses',
   array['id', 'created_at', 'created_by', 'paid_on', 'amount_pkr', 'category_id', 'description', 'order_id',

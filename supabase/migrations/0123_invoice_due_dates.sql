@@ -137,7 +137,7 @@ begin
                                                                           rows between unbounded preceding and 1 preceding), 0), 0)) > 1) as unpaid
       from (
         select v.id, v.number, v.last_reminded_on, v.reminder_count,
-               (v.legacy_review = 'settled') as reviewed,
+               coalesce(v.legacy_review = 'settled', false) as reviewed,
                coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) as inv_date,
                coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) + coalesce(o.payment_terms_days, cp.days)::int as due_on,
                (v.net_amount + v.gst_amount) - least(v.net_amount + v.gst_amount, tp.tied) as r_open,
@@ -234,7 +234,7 @@ cross join lateral (
                                                                         rows between unbounded preceding and 1 preceding), 0), 0)) > 1) as unpaid
     from (
       select v.id, v.number,
-             (v.legacy_review = 'settled') as reviewed,
+             coalesce(v.legacy_review = 'settled', false) as reviewed,
              coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) as inv_date,
              coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) + coalesce(o.payment_terms_days, cp.days)::int as due_on,
              (v.net_amount + v.gst_amount) - least(v.net_amount + v.gst_amount, tp.tied) as r_open,
