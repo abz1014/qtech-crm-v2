@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 
@@ -72,7 +73,7 @@ test.describe('void and credit notes (C1)', () => {
     expect(JSON.stringify(r.body)).toContain('credit note')
   })
 
-  test('credit note: issued from the invoice, in the register as a negative line, with a PDF', async ({ page, context }) => {
+  test('credit note: issued from the invoice, in the register as a negative line, with a PDF', async ({ page }) => {
     const order = await seedOrder()
     const inv = await makeInvoice(order, { psid: `PSID-${unique()}` })
     await openAs(page, 'admin', `/money/gst-register?invoice=${inv.id}`)
@@ -98,16 +99,15 @@ test.describe('void and credit notes (C1)', () => {
 
     // its PDF
     await page.getByRole('row', { name: new RegExp(inv.number) }).first().click()
-    const popup = context.waitForEvent('page')
-    await page.getByRole('button', { name: 'Print credit note' }).click()
-    const pdfPage = await popup
-    await expect.poll(() => pdfPage.url(), { timeout: 30_000 }).toMatch(/^blob:/)
-    const head = await pdfPage.evaluate(async () => {
-      const buf = new Uint8Array(await (await fetch(location.href)).arrayBuffer())
-      return { size: buf.length, magic: String.fromCharCode(...buf.slice(0, 5)) }
+    // no pop-up in the test browser: the app then downloads the file instead (CreditNotePdfButton)
+    await page.evaluate(() => {
+      window.open = () => null
     })
-    expect(head.magic).toBe('%PDF-')
-    expect(head.size).toBeGreaterThan(2000)
+    const [download] = await Promise.all([page.waitForEvent('download', { timeout: 45_000 }), page.getByRole('button', { name: 'Print credit note' }).click()])
+    expect(download.suggestedFilename()).toBe(`${notes[0].number}.pdf`)
+    const bytes = readFileSync((await download.path()) as string)
+    expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-')
+    expect(bytes.length).toBeGreaterThan(2000)
   })
 
   test('the totals agree after a void and a credit note: receivables, the GST month and the register', async () => {
