@@ -108,6 +108,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     bank_month: ticked,
     corrects_payment_id: hide,
     credited_user_id: r('Credited to'),
+    invoice_id: hide,
     order_id: hide,
     paid_via: paidVia(),
     received_on: d('Date received'),
