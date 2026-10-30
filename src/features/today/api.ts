@@ -401,8 +401,42 @@ async function loadGst(today: string): Promise<GstFact> {
         .eq('settled_before_cutover', false),
     ) ?? []
   // the dates are the admin's settings (0110), not a fixed 15th and 18th
-  const { payBy, returnBy } = gstDatesFor(await getGstDeadlines(), month)
-  return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length, payBy, returnBy }
+  const deadlines = await getGstDeadlines()
+  const { payBy, returnBy } = gstDatesFor(deadlines, month)
+  // 0121 (process audit 6): every OLDER month with GST not yet deposited stays on To do until it is done
+  const old = unwrap(
+    await db
+      .from('invoices')
+      .select('invoice_date')
+      .lt('invoice_date', month)
+      .gt('gst_amount', 0)
+      .is('legacy_source', null)
+      .eq('settled_before_cutover', false)
+      .is('tax_deposited_on', null)
+      .not('invoice_date', 'is', null)
+      .limit(5000),
+  ) ?? []
+  return {
+    month,
+    invoices: rows.length,
+    undeposited: rows.filter(r => !r.tax_deposited_on).length,
+    payBy,
+    returnBy,
+    earlier: olderGstMonths(old.map(r => r.invoice_date), deadlines),
+  }
+}
+
+/** Group undeposited invoice dates by month (oldest first), each with its own pay-by and return-by dates. */
+export function olderGstMonths(dates: readonly (string | null)[], deadlines: Parameters<typeof gstDatesFor>[0]): GstFact[] {
+  const count = new Map<string, number>()
+  for (const d of dates) {
+    if (!d) continue
+    const m = `${d.slice(0, 7)}-01`
+    count.set(m, (count.get(m) ?? 0) + 1)
+  }
+  return [...count.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([m, n]) => ({ month: m, invoices: n, undeposited: n, ...gstDatesFor(deadlines, m) }))
 }
 
 /** P3-D, admin only: engineers' pending "I paid" claims (0087): how many, and the day the oldest was made. */
@@ -530,7 +564,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   const [{ rfqs, open }, companies, users, snoozes] = await Promise.all([
     loadRfqs(),
     fetchAll((from, to) => db.from('companies').select('id, name, city').order('name').range(from, to)),
-    db.from('users').select('id, role, name, job_title, phone'),
+    db.from('users').select('id, role, name, job_title, phone, deactivated_at'),
     loadSnoozes(today),
   ])
   const names = new Map(companies.map(c => [c.id, c.name]))
@@ -567,11 +601,19 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     recurring,
     jobs,
     snoozes,
-    roles: Object.fromEntries(userRows.map(u => [u.id, u.role as Role])),
+    roles: activeRoles(userRows),
     jobTitle: userRows.find(u => u.id === user.id)?.job_title ?? null,
     phone: userRows.find(u => u.id === user.id)?.phone ?? null,
     names: Object.fromEntries(userRows.map(u => [u.id, u.name])),
   }
+}
+
+/**
+ * users.role by id for the people who still work here. A deactivated owner has no role entry, so the rules treat their items as
+ * "no owner" and the admin sees them (a departed salesperson no longer hides money follow-ups).
+ */
+export function activeRoles(rows: readonly { id: string; role: string; deactivated_at?: string | null }[]): Record<string, Role> {
+  return Object.fromEntries(rows.filter(u => !u.deactivated_at).map(u => [u.id, u.role as Role]))
 }
 
 export interface TargetProgress {

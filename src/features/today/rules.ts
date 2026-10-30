@@ -1026,34 +1026,38 @@ export function groupItems(all: readonly Entry[]): TodayView {
 export const GST_AMBER_DAYS = 3
 
 export function ruleGstFbr(ctx: TodayInputs): Entry[] {
-  if (ctx.user.role !== 'admin' || !ctx.gst || ctx.gst.undeposited === 0) return []
-  const fallback = gstDatesFor(DEFAULT_GST_DEADLINES, ctx.gst.month)
-  const payOn = ctx.gst.payBy ?? fallback.payBy
-  const returnOn = ctx.gst.returnBy ?? fallback.returnBy
+  if (ctx.user.role !== 'admin' || !ctx.gst) return []
+  // last month, then every older month whose GST was never deposited: each stays until it is done (a missed month is not forgotten)
+  const facts = [...(ctx.gst.earlier ?? []), ctx.gst].filter(f => f.undeposited > 0)
+  return facts.map(g => gstEntry(ctx, g))
+}
+
+function gstEntry(ctx: TodayInputs, g: NonNullable<TodayInputs['gst']>): Entry {
+  const fallback = gstDatesFor(DEFAULT_GST_DEADLINES, g.month)
+  const payOn = g.payBy ?? fallback.payBy
+  const returnOn = g.returnBy ?? fallback.returnBy
   const early = daysBetween(ctx.today, payOn) >= GST_AMBER_DAYS
-  const name = MONTH_NAMES[Number(ctx.gst.month.slice(5, 7)) - 1]
-  const n = ctx.gst.undeposited
+  const name = MONTH_NAMES[Number(g.month.slice(5, 7)) - 1]
+  const n = g.undeposited
   const due = dueBadge(payOn, ctx.today, 'gst_fbr')
-  return [
-    build(
-      {
-        rule: 'gst_fbr',
-        subjectId: `00000000-0000-4000-8002-${ctx.gst.month.slice(0, 7).replace('-', '').padStart(12, '0')}`,
-        tab: tabFor('gst_fbr'),
-        title: `GST to FBR: ${name}, ${n} ${n === 1 ? 'invoice' : 'invoices'} to pay`,
-        ref: 'GST to FBR',
-        party: `Pay by ${formatShortDate(payOn)} · return by ${formatShortDate(returnOn)}`,
-        // grey and ready from the 1st; in the last days before the pay-by date that date is its date, so it is due soon, then due, then late
-        actionDueOn: early ? today1(ctx.today) : payOn,
-        group: early ? 'ready' : groupFor(payOn, ctx.today),
-        badge: early ? { text: `Pay by ${formatShortDate(payOn)}`, tone: 'neutral' } : { text: due.text, tone: ctx.today > payOn ? 'danger' : 'warning' },
-        isPriority: false,
-        href: '/money/gst-register',
-        number: 0,
-      },
-      ctx.today,
-    ),
-  ]
+  return build(
+    {
+      rule: 'gst_fbr',
+      subjectId: `00000000-0000-4000-8002-${g.month.slice(0, 7).replace('-', '').padStart(12, '0')}`,
+      tab: tabFor('gst_fbr'),
+      title: `GST to FBR: ${name}, ${n} ${n === 1 ? 'invoice' : 'invoices'} to pay`,
+      ref: 'GST to FBR',
+      party: `Pay by ${formatShortDate(payOn)} · return by ${formatShortDate(returnOn)}`,
+      // grey and ready from the 1st; in the last days before the pay-by date that date is its date, so it is due soon, then due, then late
+      actionDueOn: early ? today1(ctx.today) : payOn,
+      group: early ? 'ready' : groupFor(payOn, ctx.today),
+      badge: early ? { text: `Pay by ${formatShortDate(payOn)}`, tone: 'neutral' } : { text: due.text, tone: ctx.today > payOn ? 'danger' : 'warning' },
+      isPriority: false,
+      href: '/money/gst-register',
+      number: 0,
+    },
+    ctx.today,
+  )
 }
 
 /** "I paid: N to approve" (0087): engineers' claims waiting for the admin, one weekly-ish row. Admin only. */
