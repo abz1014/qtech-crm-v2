@@ -674,6 +674,8 @@ export interface PayableRow {
   owedPkr: string | null
   state: 'settled' | 'owing' | 'unpriced' | 'no_rate'
   flag: string | null
+  /** 0121: the day the supplier agreed to cancel this supplier order. A leg still on the list after that has a payment on it. */
+  cancelledWithSupplierOn?: string | null
 }
 
 export interface PayablesView {
@@ -720,6 +722,7 @@ export function buildPayables(asOf: string, rows: readonly PayableRow[]): Payabl
  */
 export function payableStateWord(r: PayableRow): string {
   if (r.state === 'unpriced') return 'No price yet'
+  if (r.cancelledWithSupplierOn) return r.state === 'settled' ? 'Cancelled, paid' : 'Cancelled with supplier, part paid'
   if (r.state === 'settled') return r.flag === 'overpaid' ? 'Paid over' : 'Paid'
   return toPaisa(r.paidPkr) === 0n ? 'Not paid' : 'Part paid'
 }

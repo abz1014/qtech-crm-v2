@@ -538,6 +538,8 @@ export interface Leg {
   priced: Array<[string, string]>
   /** Latest PO revision: total (paisa-scaled in the PO currency) and its currency; null when no PO. */
   po: { total: Paisa; currency: string } | null
+  /** 0121: the day the supplier agreed to cancel it ("cancelled with supplier"); absent or null: still live with the supplier. */
+  cancelledWithSupplierOn?: string | null
 }
 
 export interface Rate {
@@ -561,15 +563,17 @@ export interface Payable {
   overpaid: boolean
 }
 
-export function payablesAsOf(asOf: string, legs: readonly Leg[], orders: readonly Order[], expenses: readonly Expense[], rates: readonly Rate[]): Payable[] {
+export function payablesAsOf(asOf: string, legs: readonly Leg[], _orders: readonly Order[], expenses: readonly Expense[], rates: readonly Rate[]): Payable[] {
   const out: Payable[] = []
   for (const l of legs) {
     if (l.placedOn === null || l.placedOn > asOf) continue
-    const o = orders.find(x => x.id === l.orderId) as Order
-    if (o.cancelledOn !== null && o.cancelledOn <= asOf) continue
+    // 0121: the customer order being cancelled does not clear what we owe the supplier; only the supplier cancelling does
+    const cancelledBy = l.cancelledWithSupplierOn && l.cancelledWithSupplierOn <= asOf ? l.cancelledWithSupplierOn : null
     const currency = (l.po ? l.po.currency : l.currency) ?? 'PKR'
     const committed7 = l.po ? l.po.total * 100_000n : l.priced.length ? l.priced.reduce((s, [q, p]) => s + dec(q, 3) * dec(p, 4), 0n) : null
     const paid = sumP(expenses.filter(e => e.legId === l.id && e.supplierPayment && e.date <= asOf).map(e => e.amount - e.inputTax))
+    // 0121: cancelled with the supplier and nothing paid: nothing is owed
+    if (cancelledBy !== null && !expenses.some(e => e.legId === l.id && e.supplierPayment && e.date <= asOf)) continue
     let rate: string | null = null
     if (currency === 'PKR') rate = '1'
     else {
@@ -592,7 +596,19 @@ export function payablesAsOf(asOf: string, legs: readonly Leg[], orders: readonl
       committedPkr,
       paid,
       owed: raw === null ? null : maxP(raw, 0n),
-      state: committed7 === null ? 'unpriced' : rate === null ? 'no_rate' : (raw as Paisa) * 100n <= 3n * (committedPkr as Paisa) ? 'settled' : 'owing',
+      // 0121: 3% is exchange-rate slippage (foreign legs only); a rupee leg is settled within Rs 1
+      state:
+        committed7 === null
+          ? 'unpriced'
+          : rate === null
+            ? 'no_rate'
+            : currency !== 'PKR'
+              ? (raw as Paisa) * 100n <= 3n * (committedPkr as Paisa)
+                ? 'settled'
+                : 'owing'
+              : (raw as Paisa) <= 100n
+                ? 'settled'
+                : 'owing',
       overpaid: raw !== null && raw < 0n,
     })
   }

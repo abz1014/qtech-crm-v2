@@ -1563,14 +1563,14 @@ isOneToOne: false
                   ]
                 },"supplier_orders": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_by": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
+                    "cancelled_with_supplier_on": string | null,"chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_by": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
+                    "cancelled_with_supplier_on"?: string | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
+                    "cancelled_with_supplier_on"?: string | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {
@@ -2497,7 +2497,7 @@ isOneToOne: false
                            },
 "payables_as_of":
 { Args: { "p_date": string }; Returns: {
-              "committed": number,"committed_pkr": number,"currency": string,"flag": string,"fx_rate": number,"order_id": string,"order_number": number,"owed_pkr": number,"paid_pkr": number,"state": string,"supplier_id": string,"supplier_name": string,"supplier_order_id": string
+              "cancelled_with_supplier_on": string,"committed": number,"committed_pkr": number,"currency": string,"flag": string,"fx_rate": number,"order_id": string,"order_number": number,"owed_pkr": number,"paid_pkr": number,"state": string,"supplier_id": string,"supplier_name": string,"supplier_order_id": string
             }[]
                            },
 "po_line_prefill":
@@ -2556,6 +2556,9 @@ isOneToOne: false
 { Args: { "p_limit"?: number,"p_offset"?: number,"p_text": string }; Returns: {
               "rfq_id": string,"total": number
             }[]
+                           },
+"set_supplier_order_cancelled":
+{ Args: { "p_cancelled": boolean,"p_leg": string,"p_on"?: string }; Returns: undefined
                            },
 "set_fx_rate":
 { Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
