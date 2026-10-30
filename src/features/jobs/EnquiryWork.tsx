@@ -41,7 +41,7 @@ function Fold({ title, count, children }: { title: string; count: number; childr
   const [chosen, setChosen] = useState<boolean | null>(null)
   const open = chosen ?? count > 0
   return (
-    <section aria-label={title} data-fold={title}>
+    <div data-fold={title}>
       <button
         type="button"
         aria-expanded={open}
@@ -53,7 +53,7 @@ function Fold({ title, count, children }: { title: string; count: number; childr
         <span className="num text-fg-muted">{count > 0 ? `(${count})` : 'none yet'}</span>
       </button>
       {open ? <Suspense fallback={<Skeleton className="h-8 w-full" />}>{children}</Suspense> : null}
-    </section>
+    </div>
   )
 }
 
