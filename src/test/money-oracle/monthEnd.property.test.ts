@@ -262,8 +262,8 @@ describe('we owe (buildPayables) shows the oracle legs', () => {
         expect(toPaisa(v.paid)).toBe(sumP(pay.map(p => p.paid)))
         expect(toPaisa(v.committed)).toBe(sumP(pay.filter(p => p.committedPkr !== null).map(p => p.committedPkr as bigint)))
         expect(toPaisa(v.paidOver)).toBe(sumP(pay.filter(p => p.overpaid).map(p => p.paid - (p.committedPkr as bigint))))
-        // a settled leg has at most 3% of its committed amount left
-        for (const p of pay) if (p.state === 'settled') expect((p.owed as bigint) * 100n <= 3n * (p.committedPkr as bigint)).toBe(true)
+        // a settled foreign leg has at most 3% of its committed amount left; a settled rupee leg has at most Rs 1 left (0121)
+        for (const p of pay) if (p.state === 'settled') expect(p.currency === 'PKR' ? (p.owed as bigint) <= 100n : (p.owed as bigint) * 100n <= 3n * (p.committedPkr as bigint)).toBe(true)
         // a foreign leg never uses a rate more than 30 days old
         for (const p of pay) if (p.currency !== 'PKR' && p.rate !== null) expect(rates.some(r => r.currency === p.currency && r.rate === p.rate && r.asOf <= asOf && daysFrom(r.asOf, asOf) <= 30)).toBe(true)
       }),

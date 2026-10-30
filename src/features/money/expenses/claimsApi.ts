@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { orderRef } from '@/lib/refs'
 import { lookupLabels } from '@/features/money/lookupLabels'
+import { uploadReceipt } from '@/features/money/expenses/api'
 
 /*
  * Engineers' "I paid" claims and the office cash box (0087). Claims: an engineer adds their own and reads only their own (row
@@ -9,7 +10,8 @@ import { lookupLabels } from '@/features/money/lookupLabels'
  */
 export const CLAIM_BUCKET = 'claim-receipts'
 
-export type ClaimStatus = 'pending' | 'approved' | 'rejected'
+/** 'owed' (0124): approved, not paid yet: "Approved, owed to <person>". Paid back, it becomes 'approved'. */
+export type ClaimStatus = 'pending' | 'approved' | 'rejected' | 'owed'
 export type PaidHow = 'cash_back' | 'petty_cash' | 'bank'
 
 export const PAID_HOW_LABEL: Record<PaidHow, string> = {
@@ -118,11 +120,75 @@ export async function withdrawClaim(id: string): Promise<void> {
   if (photos.length) await db.storage.from(CLAIM_BUCKET).remove(photos.map(p => p.path))
 }
 
+/**
+ * Carries the claim's receipt photos to the expense it became (process audit 5): the expense shows them in its own receipts. The storage
+ * files are copied here because SQL cannot copy them. Returns how many could not be carried (the claim photo is still on the claim).
+ */
+export async function carryReceipts(claimId: string, expenseId: string): Promise<number> {
+  const db = requireSupabase()
+  let failed = 0
+  const photos = await listClaimPhotos(claimId).catch(() => [])
+  for (const p of photos) {
+    try {
+      const dl = await db.storage.from(CLAIM_BUCKET).download(p.path)
+      if (dl.error || !dl.data) throw dl.error ?? new Error('no file')
+      await uploadReceipt(expenseId, new File([dl.data], p.name, { type: dl.data.type || 'application/octet-stream' }))
+    } catch {
+      failed += 1
+    }
+  }
+  return failed
+}
+
 export async function approveClaim(v: { id: string; categoryId: string; paidHow: PaidHow }): Promise<string> {
   const db = requireSupabase()
   const { data, error } = await db.rpc('approve_expense_claim', { p_claim: v.id, p_category: v.categoryId, p_paid_how: v.paidHow })
   if (error) throw error
-  return data as string
+  const expenseId = data as string
+  await carryReceipts(v.id, expenseId)
+  return expenseId
+}
+
+/** Approve a claim as owed (0124): the person is owed the money and nothing has left the bank or the cash box yet. */
+export async function oweClaim(v: { id: string; categoryId: string }): Promise<void> {
+  const { error } = await requireSupabase().rpc('owe_expense_claim', { p_claim: v.id, p_category: v.categoryId })
+  if (error) throw error
+}
+
+/** Mark an owed claim paid back (0124): writes the expense on the day it was paid, in the way chosen. */
+export async function payBackClaim(v: { id: string; paidHow: PaidHow; paidOn?: string }): Promise<string> {
+  const { data, error } = await requireSupabase().rpc('pay_back_expense_claim', { p_claim: v.id, p_paid_how: v.paidHow, ...(v.paidOn ? { p_paid_on: v.paidOn } : {}) })
+  if (error) throw error
+  const expenseId = data as string
+  await carryReceipts(v.id, expenseId)
+  return expenseId
+}
+
+/** The admin's "Owed to staff": every claim approved but not paid back yet, oldest first. */
+export async function listOwedClaims(): Promise<Claim[]> {
+  const db = requireSupabase()
+  const rows = await fetchAll<ClaimRow>((from, to) => db.from('expense_claims').select(COLS).eq('status', 'owed').order('created_at').range(from, to))
+  return toClaims(rows)
+}
+
+export interface OwedToPerson {
+  personId: string | null
+  name: string
+  total: number
+  count: number
+}
+
+/** What is owed to each person, largest first. */
+export function owedByPerson(claims: readonly Claim[]): OwedToPerson[] {
+  const by = new Map<string, OwedToPerson>()
+  for (const c of claims) {
+    const key = c.createdBy ?? c.byName
+    const cur = by.get(key) ?? { personId: c.createdBy, name: c.byName, total: 0, count: 0 }
+    cur.total = Math.round((cur.total + c.amount) * 100) / 100
+    cur.count += 1
+    by.set(key, cur)
+  }
+  return [...by.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
 }
 
 export async function rejectClaim(v: { id: string; reason: string | null }): Promise<void> {

@@ -660,7 +660,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <h2 className="text-base font-semibold">What we owe suppliers</h2>
               <InfoTip label="About what we owe">
                 As of {asOfLabel}. Owed is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
-                paid. A supplier order paid to within 3% counts as paid.
+                paid. A supplier order in a foreign currency paid to within 3% counts as paid (exchange-rate slippage); in rupees it counts as paid when Rs 1 or less is left.
               </InfoTip>
             </span>
             <span className="flex-1" />

@@ -362,11 +362,17 @@ insert into probes values
   ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
+  ('customer_statement', '', 'X', 'select 1 from public.customer_statement(@01) limit 1'),   -- 0125
   ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080
   ('link_imported_invoices', '', 'X', 'select 1 where (select count(*) from public.link_imported_invoices()) >= 0'),   -- 0096: refused for everyone but an admin
   ('link_imported_invoice', '', 'X', 'select public.link_imported_invoice(@e8, @e7)'),   -- 0096: the unlinked imported invoice onto the imported order (same customer)
   ('unlink_imported_invoice', '', 'X', 'select public.unlink_imported_invoice(@e9)'),   -- 0096
   ('set_legacy_review', '', 'X', $q$select public.set_legacy_review('order', @e7, 'live')$q$),   -- 0096
+  ('set_supplier_order_cancelled', '', 'X', 'select public.set_supplier_order_cancelled(@23, false)'),   -- 0121: refused for everyone but an admin
+  ('reassign_owner_check', '', 'X', $q$select public.reassign_owner_check('a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('reassign_owner', '', 'X', $q$select public.reassign_owner('rfq', gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('open_work_of', '', 'X', $q$select 1 from public.open_work_of('a0000000-0000-4000-8000-000000000001') limit 1$q$),   -- 0122
+  ('reassign_open_work', '', 'X', $q$select 1 from public.reassign_open_work(gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
@@ -431,6 +437,8 @@ insert into probes values
   ('record_history_rows', '', 'X', $q$select 1 from (select set_config('qtech.history_for', 'rfqs:' || @15::text, true)) m where public.record_history_rows('rfqs', @15) is not null$q$),   -- 0090: with the mark record_history sets
   -- 0087
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
+  ('owe_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004')$q$),   -- 0124
+  ('pay_back_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004'), public.pay_back_expense_claim(@e0, 'bank')$q$),   -- 0124: owed, then paid back
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$),
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back

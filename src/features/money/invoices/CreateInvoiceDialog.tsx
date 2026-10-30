@@ -24,7 +24,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import type { NextNumber, OrderForInvoice } from '@/features/money/invoices/api'
 import { useCreateInvoice, useInvoiceableOrders, useNextInvoiceNumber, useOrderForInvoice } from '@/features/money/invoices/hooks'
-import { GST_OPTION_LABEL, gstForNet, gstIsShare, gstRowLabel, invoiceStart, orderDueOn, overInvoiced, round2, type GstOption, type InvoiceStart } from '@/features/money/invoices/model'
+import { GST_OPTION_LABEL, gstForNet, gstIsShare, gstRowLabel, invoiceStart, invoiceDueOn, overInvoiced, round2, type GstOption, type InvoiceStart } from '@/features/money/invoices/model'
 import { formatPaisa, toPaisa } from '@/lib/money'
 
 /*
@@ -177,7 +177,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   const over = typeof net === 'number' ? overInvoiced(net, start, order.amounts.itemsNet) : null
   const profileQ = useCompanyProfile()
   const terms = effectiveTerms(order.amounts.paymentTermsDays, profileQ.data?.default_payment_terms_days)
-  const due = orderDueOn(date, order.amounts.earliestInvoiceDate, terms.days)
+  const due = invoiceDueOn(date, terms.days)
 
   const setNet = (v: number | null) => {
     form.setValue('net', v as number, { shouldDirty: true })

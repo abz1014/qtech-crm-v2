@@ -48,6 +48,7 @@ describe('invalidation map (R01)', () => {
     'team.set-job-title': {},
     'team.set-phone': {},
     'team.deactivate': {},
+    'owner.reassign': {},
     'team.reactivate': {},
     'company-profile.update': {},
     'gst-deadlines.save': {},

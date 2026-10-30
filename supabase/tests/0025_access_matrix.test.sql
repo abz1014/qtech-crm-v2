@@ -266,6 +266,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'month_is_closed',       '',      '',     '',     ''),     -- A6 A6.1: used by the lock triggers only, granted to nobody
   ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'customer_statement',    '',      'X',    '',     ''),     -- 0125: admin only (zero rows for the others)
   ('function', 'held_advances',         '',      'X',    '',     ''),     -- 0080 (owner decision 2026-10-22): admin only (zero rows for the others)
   ('function', 'month_end_status',      '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'month_end_check_details', '', 'X',    '',     ''),     -- 0064: admin only (zero rows for the others)
@@ -289,7 +290,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'orders',            'visit',       'SU', 'SU', 'SU'),       -- 0101: visit time and type; an engineer on an order assigned to them (fixture @20)
   ('table', 'orders',            'visit_other', 'SU', 'SU', 'S'),        -- 0101: an engineer is refused on an order that is not theirs (fixture @21)
   ('function', 'receipt_locked', '', 'X', 'X', ''),                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
-  ('table', 'expense_claims',    'own',   'SUD',  '',     'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; sales nothing
+  ('table', 'expense_claims',    'own',   'SUD',  'I',    'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; 0124: sales may add their own claim (the fixture claim is the engineer's, so sales read none)thing
   ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
   ('table', 'cash_topups',       '',      'SIUD', '',     ''),            -- 0087: cash drawn from the bank, admin only
   ('table', 'cash_counts',       '',      'SID',  '',     ''),            -- 0087: cash counts, admin only, never edited (delete and count again)
@@ -300,7 +301,14 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'link_imported_invoice',   '', 'X', '',     ''),           -- 0096: admin only
   ('function', 'unlink_imported_invoice', '', 'X', '',     ''),           -- 0096: admin only
   ('function', 'set_legacy_review',       '', 'X', '',     ''),           -- 0096: admin only
+  ('function', 'set_supplier_order_cancelled', '', 'X', '', ''),   -- 0121: admin only
+  ('function', 'reassign_owner_check', '', 'X', '', ''),   -- 0122: admin only
+  ('function', 'reassign_owner', '', 'X', '', ''),   -- 0122: admin only
+  ('function', 'open_work_of', '', 'X', '', ''),   -- 0122: admin only
+  ('function', 'reassign_open_work', '', 'X', '', ''),   -- 0122: admin only
   ('function', 'approve_expense_claim', '', 'X',  '',     ''),            -- 0087: admin only (42501 for everyone else)
+  ('function', 'owe_expense_claim', '', 'X', '', ''),   -- 0124: admin only (42501 for everyone else)
+  ('function', 'pay_back_expense_claim', '', 'X', '', ''),   -- 0124: admin only
   ('function', 'cash_in_hand',   '',      'X',    '',     ''),            -- 0087: admin only (no row for the others)
   ('function', 'claim_object_ok', '',     'X',    '',     'X'),           -- 0087: storage helper; true for the admin and for the engineer on their own pending claim
   ('function', 'delete_rfq',            '',    'X',    '',     ''),     -- 0092 (owner decision): permanent delete, admin only (42501 inside for everyone else)
@@ -595,11 +603,17 @@ insert into probes values
   ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
+  ('customer_statement', '', 'X', 'select 1 from public.customer_statement(@01) limit 1'),   -- 0125: the fixture customer has an invoice
   ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080: the cancelled order @2e holds 40
   ('link_imported_invoices', '', 'X', 'select 1 where (select count(*) from public.link_imported_invoices()) >= 0'),   -- 0096: refused for everyone but an admin
   ('link_imported_invoice', '', 'X', 'select public.link_imported_invoice(@e8, @e7)'),   -- 0096: the unlinked imported invoice onto the imported order (same customer)
   ('unlink_imported_invoice', '', 'X', 'select public.unlink_imported_invoice(@e9)'),   -- 0096
   ('set_legacy_review', '', 'X', $q$select public.set_legacy_review('order', @e7, 'live')$q$),   -- 0096
+  ('set_supplier_order_cancelled', '', 'X', 'select public.set_supplier_order_cancelled(@23, false)'),   -- 0121: refused for everyone but an admin
+  ('reassign_owner_check', '', 'X', $q$select public.reassign_owner_check('a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('reassign_owner', '', 'X', $q$select public.reassign_owner('rfq', gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('open_work_of', '', 'X', $q$select 1 from public.open_work_of('a0000000-0000-4000-8000-000000000001') limit 1$q$),   -- 0122
+  ('reassign_open_work', '', 'X', $q$select 1 from public.reassign_open_work(gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
@@ -609,6 +623,8 @@ insert into probes values
   ('correct_payment', '', 'X', $q$select public.correct_payment(@28, 100, public.today_pkt(), 'bank', null, 'probe')$q$),   -- 0073
   ('restore_payment', '', 'X', $q$select public.restore_payment(@c0)$q$),   -- 0073: @c0 was voided by the admin in this transaction
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),   -- 0087
+  ('owe_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004')$q$),   -- 0124
+  ('pay_back_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004'), public.pay_back_expense_claim(@e0, 'bank')$q$),   -- 0124: owed, then paid back
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),   -- 0087: one row for the admin, none for the others
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', true)$q$),   -- 0087
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back

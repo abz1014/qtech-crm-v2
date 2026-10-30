@@ -32,6 +32,7 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'team.set-job-title': {},
   'team.set-phone': {},
   'team.deactivate': {},
+  'owner.reassign': {},
   'team.reactivate': {},
   'company-profile.update': {},
   'gst-deadlines.save': {},

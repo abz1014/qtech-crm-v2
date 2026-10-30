@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Ellipsis, KeyRound, Pencil, Phone, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
+import { Ellipsis, KeyRound, Pencil, Phone, Shield, UserCheck, UserPlus, UserRoundCog, UserX } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
 import { PasswordDialog } from '@/features/settings/PasswordDialog'
+import { ReassignWorkDialog } from '@/features/owners/ReassignDialogs'
 import { RowActionSheet, type RowAction } from '@/features/settings/RowActionSheet'
 import {
   AddPersonDialog,
@@ -268,6 +269,7 @@ export function TeamPage() {
           }}
         />
       ) : null}
+      {dialog?.kind === 'reassign' ? <ReassignWorkDialog fromId={dialog.member.id} fromName={dialog.member.name} onClose={close} /> : null}
       {dialog?.kind === 'deactivate' ? <DeactivateDialog member={dialog.member} members={members} onClose={close} /> : null}
       {dialog?.kind === 'reactivate' ? <ReactivateDialog member={dialog.member} onClose={close} /> : null}
       {dialog?.kind === 'secret' ? (
@@ -295,6 +297,9 @@ function RowMenu({ member, onPick }: { member: TeamMember; onPick: (kind: RowAct
         </MenuItem>
         <MenuItem icon={KeyRound} onClick={() => onPick('reset', member)}>
           Reset password
+        </MenuItem>
+        <MenuItem icon={UserRoundCog} onClick={() => onPick('reassign', member)}>
+          Move open work
         </MenuItem>
         <MenuSeparator />
         <MenuItem icon={UserX} danger onClick={() => onPick('deactivate', member)}>

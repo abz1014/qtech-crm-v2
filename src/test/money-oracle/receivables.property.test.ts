@@ -1,7 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { toPaisa } from '@/lib/money'
-import { dueOn, gstForNet, gstOn, invoiceStart, orderDueOn, registerTotals, type GstRow } from '@/features/money/invoices/model'
+import { dueOn, gstForNet, gstOn, invoiceDueOn, invoiceStart, registerTotals, type GstRow } from '@/features/money/invoices/model'
 import { defaultPaymentAmount, filterReceivables, paymentNote, receivableTotals, reminderDue, type ReceivableRow } from '@/features/money/payments/model'
 import { marginTotals, type MarginRow } from '@/features/money/margins/model'
 import { estimateExpectedCost, type EstItem } from '@/features/money/lib/costEstimate'
@@ -174,11 +174,9 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
     expect(dueOn('2024-12-31', 1)).toBe('2025-01-01')
   })
 
-  // BUG-M6: the Create invoice dialog prints "Due <this invoice's date + terms>", but every money figure (order_receivables,
-  // v_order_money, Today's "payment overdue", the receivables page) dates the whole order from its EARLIEST invoice
-  // (DATA_MODEL section 5: "the earliest invoice date plus payment_terms_days"). On a second or part invoice the dialog promises a
-  // later date than the one the books use, and the order can already be overdue when the new invoice is saved.
-  it('BUG-M6: the due date the dialog shows for a later invoice is the order due date the books use', () => {
+  // Process audit 2 (0123): a due date per INVOICE. The Create invoice dialog and the PDF print "this invoice's date + terms", and once
+  // the earlier invoices are paid that is exactly the order due date the books use: a later part invoice is not overdue the day it is issued.
+  it('0123: with the earlier invoice paid, a later invoice is due on its own date plus the terms, as the books say', () => {
     fc.assert(
       fc.property(dateArb, fc.integer({ min: 1, max: 200 }), fc.constantFrom(0, 15, 30, 60), (first, gap, terms) => {
         const order: Order = { id: 'o', number: 1, companyId: 'c', ownerId: null, lines: [{ qty: '1.000', price: '100.00', rate: '18' }], terms, cancelledOn: null, basisUnknown: false, costsComplete: false, expectedCost: null }
@@ -187,24 +185,40 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
           { id: 'a', orderId: 'o', number: 'INV-1', date: first, net: 5000n, gst: 900n },
           { id: 'b', orderId: 'o', number: 'INV-2', date: second, net: 5000n, gst: 900n },
         ]
-        const books: Books = { orders: [order], invoices, payments: [], expenses: [], defaultTerms: 30 }
-        expect(orderDueOn(second, first, terms)).toBe(receivableOf(order, books, second).dueOn)
+        const payments = [{ id: 'p', orderId: 'o', date: second, amount: 5900n, credited: null }]
+        const books: Books = { orders: [order], invoices, payments, expenses: [], defaultTerms: 30 }
+        expect(invoiceDueOn(second, terms)).toBe(receivableOf(order, books, second).dueOn)
       }),
       { numRuns: 200, seed: 20261020 },
     )
   })
 
-  it('BUG-M6 regression: a second invoice shows the order due date', () => {
-    // first invoice 1 Aug 2026, 30 days: the order is due 31 Aug. A second invoice on 20 Oct shows "Due 19 Nov 2026"
+  it('0123 regression: the first invoice paid, a second one issued 20 Oct is due 19 Nov and not overdue; unpaid, the oldest drives', () => {
     const order: Order = { id: 'o', number: 1, companyId: 'c', ownerId: null, lines: [{ qty: '2.000', price: '500.00', rate: '18' }], terms: 30, cancelledOn: null, basisUnknown: false, costsComplete: false, expectedCost: null }
     const invoices: Invoice[] = [
       { id: 'a', orderId: 'o', number: 'INV-1', date: '2026-08-01', net: 50000n, gst: 9000n },
       { id: 'b', orderId: 'o', number: 'INV-2', date: '2026-10-20', net: 50000n, gst: 9000n },
     ]
-    const r = receivableOf(order, { invoices, payments: [], defaultTerms: 30 }, '2026-10-20')
-    expect(orderDueOn('2026-10-20', '2026-08-01', 30)).toBe('2026-08-31') // what the dialog prints (was 19 Nov 2026)
-    expect(r.dueOn).toBe('2026-08-31') // what order_receivables / Today use: already overdue on the day it is invoiced
-    expect(r.overdue).toBe(true)
+    const paid = receivableOf(order, { invoices, payments: [{ id: 'p', orderId: 'o', date: '2026-08-20', amount: 59000n, credited: null }], defaultTerms: 30 }, '2026-10-20')
+    expect(invoiceDueOn('2026-10-20', 30)).toBe('2026-11-19') // what the dialog and the PDF print
+    expect(paid.dueOn).toBe('2026-11-19') // what order_receivables / Today use
+    expect(paid.overdue).toBe(false)
+    const unpaid = receivableOf(order, { invoices, payments: [], defaultTerms: 30 }, '2026-10-20')
+    expect(unpaid.dueOn).toBe('2026-08-31') // the oldest unpaid invoice drives
+    expect(unpaid.overdue).toBe(true)
+  })
+
+  it('0123: a payment tied to the later invoice leaves the older one unpaid and driving; an untied one goes oldest first', () => {
+    const order: Order = { id: 'o', number: 1, companyId: 'c', ownerId: null, lines: [{ qty: '2.000', price: '500.00', rate: '18' }], terms: 30, cancelledOn: null, basisUnknown: false, costsComplete: false, expectedCost: null }
+    const invoices: Invoice[] = [
+      { id: 'a', orderId: 'o', number: 'INV-1', date: '2026-08-01', net: 50000n, gst: 9000n },
+      { id: 'b', orderId: 'o', number: 'INV-2', date: '2026-10-01', net: 50000n, gst: 9000n },
+    ]
+    const tied = receivableOf(order, { invoices, payments: [{ id: 'p', orderId: 'o', date: '2026-10-05', amount: 59000n, credited: null, invoiceId: 'b' }], defaultTerms: 30 }, '2026-10-20')
+    expect(tied.dueOn).toBe('2026-08-31')
+    const untied = receivableOf(order, { invoices, payments: [{ id: 'p', orderId: 'o', date: '2026-10-05', amount: 59000n, credited: null }], defaultTerms: 30 }, '2026-10-20')
+    expect(untied.dueOn).toBe('2026-10-31')
+    expect(untied.overdue).toBe(false)
   })
 
   it('GST register totals are exact sums of the rows', () => {

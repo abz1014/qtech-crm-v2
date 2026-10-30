@@ -21,6 +21,9 @@ import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGro
 import { poChange } from '@/features/orders/lib/poChange'
 import { defaultExpected, legLetter, legState, legSupplierTotal, type LegDates } from '@/features/orders/lib/legModel'
 import { useLegActions } from '@/features/orders/useLegActions'
+import { useSetLegCancelled } from '@/features/orders/hooks'
+import { useToast } from '@/ui/useToast'
+import { mapPgError } from '@/lib/pgErrors'
 import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
 import { useOrderCosts } from '@/features/money/costs/hooks'
 import { estimateExpectedCost, stillOwedOnLeg } from '@/features/money/lib/costEstimate'
@@ -202,6 +205,17 @@ function Leg({
   // Folded only if it was delivered when the page opened: stamping "Delivered today" keeps the row open, with its dates, for the Undo.
   const [folded, setFolded] = useState(() => collapsible && leg.deliveredOn !== null)
   const [addingExpense, setAddingExpense] = useState(false)
+  const setCancelled = useSetLegCancelled(order.id)
+  const { toast } = useToast()
+  const cancelledWithSupplier = leg.cancelledWithSupplierOn ?? null
+  const toggleCancelled = () =>
+    setCancelled.mutate(
+      { id: leg.id, cancelled: cancelledWithSupplier === null },
+      {
+        onSuccess: () => toast({ title: cancelledWithSupplier === null ? 'Cancelled with the supplier' : 'Live with the supplier again', body: leg.supplierName }),
+        onError: err => toast({ title: 'Could not save', body: mapPgError(err, { entity: 'supplier order' }).message, tone: 'danger' }),
+      },
+    )
   const dates: LegDates = { placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }
   const state = legState(dates, today)
   const stamp = actions.stamp
@@ -292,6 +306,11 @@ function Leg({
           <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-chip items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
+          ) : null}
+          {cancelledWithSupplier ? (
+            <span data-testid={`leg-${letter}-cancelled`} className="inline-flex h-chip items-center rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-[6px] text-xs text-tone-warning-fg">
+              {`Cancelled with supplier ${formatShortDate(cancelledWithSupplier, today)}`}
+            </span>
           ) : null}
           {fromSplit ? (
             <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
@@ -410,6 +429,11 @@ function Leg({
                       {`Pay ${name}`}
                     </MenuItem>
                   ) : null}
+                  {isAdmin && money && leg.placedOn && part !== 'delivery' ? (
+                    <MenuItem icon={Trash2} onClick={toggleCancelled} disabled={setCancelled.isPending}>
+                      {cancelledWithSupplier ? 'Live with the supplier again' : 'Cancelled with supplier'}
+                    </MenuItem>
+                  ) : null}
                 </PopoverContent>
               </Popover>
             ) : null}
@@ -418,6 +442,17 @@ function Leg({
           <Button size="sm" variant="quiet" icon={FileText} onClick={onViewPo} busy={viewingPo} busyLabel="Opening" aria-label={`View PO, ${name}`}>
             View PO
           </Button>
+        ) : null}
+        {/* 0121: the customer order is cancelled but the supplier may still be owed: the admin can still pay, and say when the supplier cancelled */}
+        {!canEdit && isAdmin && money && leg.placedOn ? (
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <Button size="sm" icon={Receipt} onClick={() => setAddingExpense(true)} aria-label={`Pay ${name}`}>
+              {`Pay ${name}`}
+            </Button>
+            <Button size="sm" variant="quiet" onClick={toggleCancelled} busy={setCancelled.isPending} busyLabel="Saving">
+              {cancelledWithSupplier ? 'Live with the supplier again' : 'Cancelled with supplier'}
+            </Button>
+          </div>
         ) : null}
       </div>
       {money && po?.id ? poHistory.node : null}

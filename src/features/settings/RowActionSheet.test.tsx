@@ -24,13 +24,13 @@ describe('Team row actions on a phone (bottom sheet)', () => {
     expect(screen.getByRole('dialog', { name: 'Ayesha Rana' })).toBeInTheDocument()
     expect(screen.getByText('Sales · Sales engineer')).toBeInTheDocument()
     const labels = screen.getAllByRole('button').map(b => b.textContent)
-    expect(labels).toEqual(['Edit job title', 'Edit phone', 'Change role', 'Reset password', 'Deactivate'])
+    expect(labels).toEqual(['Edit job title', 'Edit phone', 'Change role', 'Reset password', 'Move open work', 'Deactivate'])
     await user.click(screen.getByRole('button', { name: 'Reset password' }))
     expect(onPick).toHaveBeenCalledWith('reset', expect.objectContaining({ id: 'ayesha' }))
   })
 
-  it('offers Reactivate alone for a deactivated person', () => {
+  it('offers Reactivate and Move open work for a deactivated person', () => {
     render(<RowActionSheet member={person({ deactivated_at: '2026-02-01T00:00:00Z' })} onPick={() => undefined} onClose={() => undefined} />)
-    expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(['Reactivate'])
+    expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(['Reactivate', 'Move open work'])
   })
 })

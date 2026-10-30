@@ -1,6 +1,6 @@
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { useBackToClose } from '@/lib/useBackToClose'
-import { KeyRound, Pencil, Phone, Shield, UserCheck, UserX, type LucideIcon } from 'lucide-react'
+import { KeyRound, Pencil, Phone, Shield, UserCheck, UserRoundCog, UserX, type LucideIcon } from 'lucide-react'
 import type { TeamMember } from '@/features/settings/api'
 import { isActive, roleLabel } from '@/features/settings/teamModel'
 import { cn } from '@/lib/utils'
@@ -12,16 +12,20 @@ import { Icon } from '@/ui/Icon'
  * the person (avatar, name, "Role · Job title"), then 44px rows, Deactivate last and red. A person
  * who is deactivated gets Reactivate alone. Opened by pressing the row; the desktop keeps its menu.
  */
-export type RowAction = 'title' | 'phone' | 'role' | 'reset' | 'deactivate' | 'reactivate'
+export type RowAction = 'title' | 'phone' | 'role' | 'reset' | 'reassign' | 'deactivate' | 'reactivate'
 
 const ACTIVE: readonly { kind: RowAction; label: string; icon: LucideIcon; danger?: boolean }[] = [
   { kind: 'title', label: 'Edit job title', icon: Pencil },
   { kind: 'phone', label: 'Edit phone', icon: Phone },
   { kind: 'role', label: 'Change role', icon: Shield },
   { kind: 'reset', label: 'Reset password', icon: KeyRound },
+  { kind: 'reassign', label: 'Move open work', icon: UserRoundCog },
   { kind: 'deactivate', label: 'Deactivate', icon: UserX, danger: true },
 ]
-const INACTIVE = [{ kind: 'reactivate', label: 'Reactivate', icon: UserCheck }] as const
+const INACTIVE = [
+  { kind: 'reactivate', label: 'Reactivate', icon: UserCheck },
+  { kind: 'reassign', label: 'Move open work', icon: UserRoundCog },
+] as const
 
 export function RowActionSheet({
   member,

@@ -215,6 +215,8 @@ export interface Payment {
   credited: string | null
   /** Voided (0073): kept as history, left out of every figure. */
   voided?: boolean
+  /** 0123: the invoice the customer said this was for. Null/absent: not tied, it settles the oldest unpaid invoice first. */
+  invoiceId?: string | null
 }
 
 export type Group = 'overhead' | 'order_cost' | 'non_pnl'
@@ -316,12 +318,39 @@ export interface Books {
   defaultTerms: number
 }
 
+/**
+ * 0123: what is still open on each of an order's invoices as of `asOf`. A payment tied to an invoice goes to it first; what is over its
+ * gross joins the untied money, which then fills the oldest invoices first (date, number, id).
+ */
+export function openByInvoice(invoices: readonly Invoice[], payments: readonly Payment[]): Array<{ invoice: Invoice; open: Paisa }> {
+  const sorted = [...invoices].sort((a, b) => cmp(a.date as string, b.date as string) || cmp(a.number, b.number) || cmp(a.id, b.id))
+  const ids = new Set(sorted.map(i => i.id))
+  let pool = 0n
+  for (const p of payments) if (!p.invoiceId || !ids.has(p.invoiceId)) pool += p.amount
+  const rest = sorted.map(i => {
+    const gross = i.net + i.gst
+    const tied = sumP(payments.filter(p => p.invoiceId === i.id).map(p => p.amount))
+    pool += maxP(tied - gross, 0n)
+    return { invoice: i, open: gross - minP(gross, tied) }
+  })
+  return rest.map(r => {
+    const applied = minP(r.open, maxP(pool, 0n))
+    pool -= applied
+    return { invoice: r.invoice, open: r.open - applied }
+  })
+}
+
 export function receivableOf(order: Order, books: Pick<Books, 'invoices' | 'payments' | 'defaultTerms'>, today: string): Receivable {
   const b = basisOf(order, books.invoices)
   const settled = sumP(books.payments.filter(p => p.orderId === order.id).map(p => p.amount))
   const settledOk = b.g > 0n && settled >= b.g - 100n
-  const dates = books.invoices.filter(i => i.orderId === order.id && i.date !== null).map(i => i.date as string).sort()
-  const dueOn = dates.length ? addDays(dates[0], order.terms ?? books.defaultTerms) : null
+  // 0123: a due date per invoice (its date + terms); the order follows its OLDEST UNPAID invoice (more than Rs 1 open), else its earliest
+  const mine = books.invoices.filter(i => i.orderId === order.id && i.date !== null && !i.settledBeforeCutover)
+  const open = openByInvoice(mine, books.payments.filter(p => p.orderId === order.id && !p.voided))
+  const dueOf = (i: Invoice) => addDays(i.date as string, order.terms ?? books.defaultTerms)
+  const unpaid = open.filter(x => x.open > 100n).map(x => dueOf(x.invoice)).sort()
+  const anyDue = mine.map(dueOf).sort()
+  const dueOn = unpaid.length ? unpaid[0] : anyDue.length ? anyDue[0] : null
   const overdue = dueOn !== null && dueOn < today && !settledOk
   return {
     orderId: order.id,
@@ -409,13 +438,18 @@ export function agingAsOf(
     if (invoiced > 0n && (paidBy.get(orderId) ?? 0n) >= invoiced - 100n) continue
     // oldest first: date, then number, then id (byte order, as Postgres "C"-like comparison of these ASCII strings)
     const sorted = [...list].sort((a, b) => cmp(a.date as string, b.date as string) || cmp(a.number, b.number) || cmp(a.id, b.id))
-    let left = paidBy.get(orderId) ?? 0n
-    for (const i of sorted) {
+    // 0123: a payment tied to an invoice goes to it first; the rest is placed oldest first
+    const mineP = books.payments.filter(p => p.orderId === orderId && p.date <= asOf)
+    const tiedOf = (i: Invoice) => sumP(mineP.filter(p => p.invoiceId === i.id).map(p => p.amount))
+    const tiedApplied = sorted.map(i => minP(i.net + i.gst, tiedOf(i)))
+    let left = (paidBy.get(orderId) ?? 0n) - sumP(tiedApplied)
+    sorted.forEach((i, k) => {
       const gross = i.net + i.gst
-      const applied = minP(gross, maxP(left, 0n))
-      left -= applied
-      push(i, applied)
-    }
+      const room = gross - tiedApplied[k]
+      const extra = minP(room, maxP(left, 0n))
+      left -= extra
+      push(i, tiedApplied[k] + extra)
+    })
   }
   for (const i of unlinked) push(i, 0n)
   const advances: { orderId: string; held: Paisa; cancelled: boolean }[] = []
@@ -538,6 +572,8 @@ export interface Leg {
   priced: Array<[string, string]>
   /** Latest PO revision: total (paisa-scaled in the PO currency) and its currency; null when no PO. */
   po: { total: Paisa; currency: string } | null
+  /** 0121: the day the supplier agreed to cancel it ("cancelled with supplier"); absent or null: still live with the supplier. */
+  cancelledWithSupplierOn?: string | null
 }
 
 export interface Rate {
@@ -561,15 +597,17 @@ export interface Payable {
   overpaid: boolean
 }
 
-export function payablesAsOf(asOf: string, legs: readonly Leg[], orders: readonly Order[], expenses: readonly Expense[], rates: readonly Rate[]): Payable[] {
+export function payablesAsOf(asOf: string, legs: readonly Leg[], _orders: readonly Order[], expenses: readonly Expense[], rates: readonly Rate[]): Payable[] {
   const out: Payable[] = []
   for (const l of legs) {
     if (l.placedOn === null || l.placedOn > asOf) continue
-    const o = orders.find(x => x.id === l.orderId) as Order
-    if (o.cancelledOn !== null && o.cancelledOn <= asOf) continue
+    // 0121: the customer order being cancelled does not clear what we owe the supplier; only the supplier cancelling does
+    const cancelledBy = l.cancelledWithSupplierOn && l.cancelledWithSupplierOn <= asOf ? l.cancelledWithSupplierOn : null
     const currency = (l.po ? l.po.currency : l.currency) ?? 'PKR'
     const committed7 = l.po ? l.po.total * 100_000n : l.priced.length ? l.priced.reduce((s, [q, p]) => s + dec(q, 3) * dec(p, 4), 0n) : null
     const paid = sumP(expenses.filter(e => e.legId === l.id && e.supplierPayment && e.date <= asOf).map(e => e.amount - e.inputTax))
+    // 0121: cancelled with the supplier and nothing paid: nothing is owed
+    if (cancelledBy !== null && !expenses.some(e => e.legId === l.id && e.supplierPayment && e.date <= asOf)) continue
     let rate: string | null = null
     if (currency === 'PKR') rate = '1'
     else {
@@ -592,7 +630,19 @@ export function payablesAsOf(asOf: string, legs: readonly Leg[], orders: readonl
       committedPkr,
       paid,
       owed: raw === null ? null : maxP(raw, 0n),
-      state: committed7 === null ? 'unpriced' : rate === null ? 'no_rate' : (raw as Paisa) * 100n <= 3n * (committedPkr as Paisa) ? 'settled' : 'owing',
+      // 0121: 3% is exchange-rate slippage (foreign legs only); a rupee leg is settled within Rs 1
+      state:
+        committed7 === null
+          ? 'unpriced'
+          : rate === null
+            ? 'no_rate'
+            : currency !== 'PKR'
+              ? (raw as Paisa) * 100n <= 3n * (committedPkr as Paisa)
+                ? 'settled'
+                : 'owing'
+              : (raw as Paisa) <= 100n
+                ? 'settled'
+                : 'owing',
       overpaid: raw !== null && raw < 0n,
     })
   }

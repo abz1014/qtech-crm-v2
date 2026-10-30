@@ -295,6 +295,7 @@ insert into money_fns values
   ('payables_as_of', 'committed', 'hidden'), ('payables_as_of', 'committed_pkr', 'hidden'), ('payables_as_of', 'fx_rate', 'hidden'),
   ('payables_as_of', 'paid_pkr', 'hidden'), ('payables_as_of', 'owed_pkr', 'hidden'),
   ('held_advances', 'held', 'hidden'),   -- 0080: advances held on cancelled orders, admin only
+  ('customer_statement', 'debit', 'hidden'), ('customer_statement', 'credit', 'hidden'),   -- 0125: a customer's statement of account, admin only
   ('cash_in_hand', 'base_pkr', 'hidden'), ('cash_in_hand', 'topups_pkr', 'hidden'), ('cash_in_hand', 'cash_out_pkr', 'hidden'),   -- 0087
   ('cash_in_hand', 'expected_pkr', 'hidden'), ('cash_in_hand', 'last_difference_pkr', 'hidden'), ('cash_in_hand', 'cash_out_count', 'info'),
   ('order_receivables', 'gross_target', 'hidden'), ('order_receivables', 'settled', 'hidden'), ('order_receivables', 'balance', 'hidden'),
@@ -443,6 +444,7 @@ from (values
   ('aging_as_of', 'select count(*) from public.aging_as_of(public.today_pkt())'),
   ('payables_as_of', 'select count(*) from public.payables_as_of(public.today_pkt())'),
   ('held_advances (0080)', 'select count(*) from public.held_advances()'),
+  ('customer_statement (0125)', 'select count(*) from public.customer_statement(gen_random_uuid())'),
   ('link_imported_invoices (0096)', 'select count(*) from public.link_imported_invoices()'),
   ('link_imported_invoice (0096)', 'select public.link_imported_invoice(gen_random_uuid(), gen_random_uuid())::text'),
   ('unlink_imported_invoice (0096)', 'select public.unlink_imported_invoice(gen_random_uuid())::text'),

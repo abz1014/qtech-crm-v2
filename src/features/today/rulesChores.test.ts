@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { needsYouItems } from './needsYou'
-import { claimsFactFrom } from './api'
+import { claimsFactFrom, olderGstMonths, activeRoles } from './api'
+import { DEFAULT_GST_DEADLINES } from '@/features/settings/gstDeadlines'
 import { buildToday, ruleClaimsToApprove, ruleGstFbr } from './rules'
 import { buildTodo } from './todoModel'
 import type { ClaimsFact, GstFact, TodayInputs } from './types'
@@ -81,6 +82,27 @@ describe('GST to FBR: the dates come from the settings', () => {
   })
   it('is still red on the 16th with the starting days, so nothing changes until the admin edits them', () => {
     expect(row('2026-10-16').badge.tone).toBe('danger')
+  })
+})
+
+describe('GST to FBR: an older month stays until it is done (process audit 6)', () => {
+  it('shows one row per month still owing, oldest first, even when last month is all deposited', () => {
+    const gst: GstFact = { month: '2026-09-01', invoices: 5, undeposited: 0, earlier: [{ month: '2026-07-01', invoices: 2, undeposited: 2 }, { month: '2026-08-01', invoices: 1, undeposited: 1 }] }
+    const rows = ruleGstFbr(ctx('2026-10-20', { gst }))
+    expect(rows.map(r => r.title)).toEqual(['GST to FBR: July, 2 invoices to pay', 'GST to FBR: August, 1 invoice to pay'])
+    expect(rows.every(r => r.badge.tone === 'danger')).toBe(true)
+    expect(new Set(rows.map(r => r.subjectId)).size).toBe(2)
+  })
+  it('groups undeposited invoice dates by month, each with its own dates', () => {
+    const m = olderGstMonths(['2026-08-30', '2026-07-02', '2026-08-01', null], DEFAULT_GST_DEADLINES)
+    expect(m.map(x => [x.month, x.undeposited, x.payBy])).toEqual([['2026-07-01', 1, '2026-08-15'], ['2026-08-01', 2, '2026-09-15']])
+  })
+})
+
+describe('a departed owner (process audit 1)', () => {
+  it('has no role, so their items have no owner and the admin sees them', () => {
+    const r = activeRoles([{ id: 'a', role: 'sales', deactivated_at: null }, { id: 'b', role: 'sales', deactivated_at: '2026-10-01T00:00:00Z' }])
+    expect(r).toEqual({ a: 'sales' })
   })
 })
 

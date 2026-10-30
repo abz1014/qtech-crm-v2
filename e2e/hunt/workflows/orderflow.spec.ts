@@ -1296,7 +1296,7 @@ test('HW-11 (fixed): a part invoice of exactly the 18% line of a mixed order get
   await ctx.close()
 })
 
-test('HW-12 (fixed): the second invoice\'s PDF prints "Payment due" as the order\'s due date (first invoice + terms)', async ({ browser }, info) => {
+test('HW-12 (0123): the second invoice\'s PDF prints "Payment due" as its OWN due date (its date + terms); the order follows its oldest unpaid invoice', async ({ browser }, info) => {
   await ensureProfileStrn()
   const cust = await company('Hunt HW12 Customer', { city: 'Karachi' })
   await setBuyerTax(cust)
@@ -1325,8 +1325,8 @@ test('HW-12 (fixed): the second invoice\'s PDF prints "Payment due" as the order
   const text = pdf ? pdfText(pdf) : null
   test.skip(text === null, 'pdftotext (poppler) is not installed')
   expect(pdfHas(text ?? '', second.number)).toBe(true)
-  // HW-12 fixed: the PDF prints the order's due date (first invoice + terms), as order_receivables does
-  expect(pdfHas(text ?? '', pdfDay(orderDue))).toBe(true)
+  // 0123 (process audit 2): the PDF prints this invoice's own due date (today + 30 days); the order itself is still due from the unpaid first invoice
+  expect(pdfHas(text ?? '', pdfDay(addDays(karachiDay(), 30)))).toBe(true)
   await ctx.close()
 })
 

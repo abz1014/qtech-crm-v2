@@ -48,7 +48,7 @@ export function AccountMenuImpl({ user, touch = false, defaultOpen = false }: { 
           <span className="text-xs text-fg-muted">{ROLE_LABEL[user.role] ?? user.role}</span>
         </div>
         <MenuSeparator />
-        {user.role === 'engineer' ? (
+        {user.role === 'engineer' || user.role === 'sales' ? (
           // 0087 (owner decision 2026-10-22): engineers record what they paid themselves, for the admin to approve
           <MenuItem icon={Receipt} onClick={() => navigate('/my-expenses')}>
             I paid

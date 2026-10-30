@@ -226,7 +226,7 @@ function money() {
       /** Every expense paid from one month to another (the Expenses report's period, 0086). */
       range: (from: string, to: string) => [...expenses, 'range', from, to] as const,
       /** 0087: engineers' "I paid" claims: 'pending' (the admin's To approve) or 'mine' (an engineer's own), and one claim's photos. */
-      claims: (scope: 'pending' | 'mine') => [...expenses, 'claims', scope] as const,
+      claims: (scope: 'pending' | 'mine' | 'owed') => [...expenses, 'claims', scope] as const,
       claimPhotos: (claimId: string) => [...expenses, 'claims', 'photos', claimId] as const,
       /** 0087: the office cash box (cash in hand), which every cash expense moves. */
       cash: () => [...expenses, 'cash-in-hand'] as const,

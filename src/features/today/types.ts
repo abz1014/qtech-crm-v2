@@ -272,6 +272,8 @@ export interface GstFact {
   /** The pay-by and file-by dates of this month's GST, from Settings > Tax deadlines (0110). Absent: the starting 15th and 18th. */
   payBy?: string
   returnBy?: string
+  /** Older months (before `month`) whose GST is still not deposited, oldest first. Each stays on To do until it is done. */
+  earlier?: GstFact[]
 }
 
 /**

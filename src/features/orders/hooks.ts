@@ -133,6 +133,17 @@ export function useUpdateLeg(orderId: string) {
   })
 }
 
+export function useSetLegCancelled(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; cancelled: boolean }) => api.setSupplierOrderCancelled(v.id, v.cancelled),
+    onSuccess: () => {
+      invalidateAfter(client, 'order.update', { orderId })
+      invalidateAfter(client, 'expense.save', {})
+    },
+  })
+}
+
 export function useAddEngineer(orderId: string) {
   const client = useQueryClient()
   return useMutation({
