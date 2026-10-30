@@ -28,9 +28,9 @@ async function seedOrder() {
     rest('admin', 'order_items', {
       method: 'POST',
       body: [
-        { order_id: order.id, position: 0, description: 'Fixture actuator', qty: 6, unit: 'pcs', unit_price_net: 1500 },
-        { order_id: order.id, position: 1, description: 'Fixture cable', qty: 40, unit: 'm', unit_price_net: 90 },
-        { order_id: order.id, position: 2, description: 'Commissioning', qty: 1, unit_price_net: 5000, is_service: true },
+        { order_id: order.id, position: 0, description: 'Fixture actuator', qty: 6, unit: 'pcs', unit_price_net: 1500, is_service: false },
+        { order_id: order.id, position: 1, description: 'Fixture cable', qty: 40, unit: 'm', unit_price_net: 90, is_service: false },
+        { order_id: order.id, position: 2, description: 'Commissioning', qty: 1, unit: 'job', unit_price_net: 5000, is_service: true },
       ],
       prefer: 'return=minimal',
     }),
