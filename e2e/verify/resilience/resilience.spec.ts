@@ -5,6 +5,7 @@ import { karachiDay, order, quotedRfq, quote, rfq, setProfile, supplier, uniqueN
 import { open, openMarkWon, signedIn } from '../support/session'
 import { COMMON, RESILIENCE as R, amount } from '../support/text'
 import { openAs } from '../../support/stack'
+import { chooseAllSuppliers } from '../../support/supplierChoice'
 
 /*
  * What happens when things go wrong: the connection drops while saving, an answer is lost on the way back, the session runs out, a
@@ -243,9 +244,11 @@ test.describe('two people on the same record', () => {
       await openMarkWon(p)
       await expect(p.getByRole('dialog').getByRole('heading', { name: R.rfq.wonDialog })).toBeVisible()
     }
+    await chooseAllSuppliers(pa, pa.getByRole('dialog'))
     await pa.getByRole('dialog').getByRole('button', { name: R.rfq.createOrder }).click()
     await expect(pa).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     const first = pa.url().split('/orders/')[1]
+    await chooseAllSuppliers(pb, pb.getByRole('dialog'))
     await pb.getByRole('dialog').getByRole('button', { name: R.rfq.createOrder }).click()
     // BUG-CONC-1 (fixed in 0077): the second person is taken to the order the first one made, not shown an error.
     await expect(pb).toHaveURL(new RegExp(`/orders/${first}$`))

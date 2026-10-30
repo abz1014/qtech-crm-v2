@@ -2,11 +2,12 @@ import { expect, test, type Browser, type BrowserContext, type Locator, type Pag
 import { openStage } from '../../support/job'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { db, num } from '../../verify/support/db'
-import { company, quote, rfq, setProfile, setRates, supplier, type Co } from '../../verify/support/fixtures'
+import { company, karachiDay, quote, quotedRfq, rfq, setProfile, setRates, supplier, type Co } from '../../verify/support/fixtures'
 import { amount } from '../../verify/support/text'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../../support/pdf'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 import { ctxAs, layout, note, probe, settle, shot, tag, visit, watch, type Viewport } from './support'
+import { chooseAllSuppliers } from '../../support/supplierChoice'
 
 /*
  * Bug hunt, the sales workflow (SALES, admin where it matters), at 1366x768 and at 375x812 with touch. Every step is a probe: a
@@ -47,6 +48,7 @@ test.beforeAll(async () => {
 const dialog = (p: Page) => p.getByRole('dialog')
 const toast = (p: Page, t: string | RegExp) => p.getByRole('status').filter({ hasText: t })
 const vis = (l: Locator) => l.filter({ visible: true }).first()
+const moreButton = (p: Page) => vis(p.getByRole('button', { name: /^More( actions)?$/ }))
 const T = { timeout: 15_000 }
 /** New RFQ's save-only action (r3/rfq-orders renamed "Save without asking"); on a phone it sits in the step bar's ⋯ menu. */
 const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
@@ -635,12 +637,10 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       // On a phone the items are an accordion (r3/rfq-orders): a folded item with prices opens with a tap on its header.
       const folded = art.locator('h3').getByRole('button', { expanded: false })
       if (vp === 'phone' && (await folded.isVisible().catch(() => false))) await folded.click()
-      await expect(art.locator('li[data-ranked]').first()).toBeVisible(T)
-      const rows = (await art.locator('li[data-ranked]').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').slice(0, 120))
-      note(info, { kind: 'observation', where: `${W} ranked comparison`, what: 'item 1 ranking as shown', detail: rows })
-      const values = rows.map(s => Number((s.match(/([\d,]+(?:\.\d+)?)/g) ?? []).map(x => x.replace(/,/g, '')).find(x => Number(x) >= 1) ?? NaN))
-      for (let i = 1; i < values.length; i++)
-        if (values[i] < values[i - 1]) note(info, { kind: 'observation', where: `${W} ranked comparison`, what: `row ${i + 1} reads cheaper than row ${i}`, detail: rows })
+      await expect(art.locator('li[data-price-row]').first()).toBeVisible(T)
+      const rows = (await art.locator('li[data-price-row]').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').slice(0, 120))
+      note(info, { kind: 'observation', where: `${W} ranked comparison`, what: 'item 1 prices as shown (by supplier name, nothing marked)', detail: rows })
+      if (rows.some(r => /Recommended|Lowest price|Cheapest/.test(r))) note(info, { kind: 'observation', where: `${W} price rows`, what: 'a row is marked as best', detail: rows })
       await layout(page, info, `${W} ranking`)
       await shot(page, `${W}-ranking`)
     })
@@ -994,6 +994,114 @@ test('two tabs on one RFQ: a stale Issue after another tab issued, and a quantit
     await a.close()
   }
   await ctx.close()
+})
+
+// ================================================================================================ 6. close, reopen, won
+
+const REASONS = [
+  ['competitor', 'The customer chose a competitor'],
+  ['price', 'Price too high'],
+  ['no_reply_to_clarification', 'No reply to our questions'],
+  ['customer_cancelled', 'The customer cancelled'],
+  ['could_not_source', 'We could not source it'],
+  ['we_were_late', 'We were too late'],
+  ['other', 'Another reason'],
+] as const
+
+async function closeWith(page: Page, label: string): Promise<void> {
+  await moreButton(page).click()
+  await page.getByRole('menuitem', { name: new RegExp(`^${label}`) }).click()
+  await expect(toast(page, 'Closed').first()).toBeVisible(T)
+}
+
+async function rfqRow(id: string): Promise<RfqRow> {
+  return db.one<RfqRow>(`rfqs?id=eq.${id}&select=id,number,closed_on,close_reason,quoted_on`)
+}
+
+async function winFromLost(page: Page, info: TestInfo, rfqId: string, W: string, vp: Viewport): Promise<void> {
+  const won = vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
+  await won.click()
+  const d = page.getByRole('dialog', { name: 'Mark won' })
+  await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
+  await layout(page, info, `${W} mark won dialog`)
+  await shot(page, `${W}-mark-won-dialog`)
+  // Back with the dialog open.
+  await page.goBack()
+  await settle(page)
+  const url = page.url().replace(/^https?:\/\/[^/]+/, '')
+  const open = await d.isVisible().catch(() => false)
+  if (!url.startsWith(`/rfqs/${rfqId}`) || open) note(info, { kind: 'observation', where: `${W} Back with Mark won open`, what: `after Back: url ${url}, dialog ${open ? 'still open' : 'closed'}` })
+  if (!url.startsWith(`/rfqs/${rfqId}`)) await visit(page, info, `/rfqs/${rfqId}`, W)
+  if (!(await d.isVisible().catch(() => false))) await vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).click()
+  await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
+  const create = d.getByRole('button', { name: 'Create order' })
+  await chooseAllSuppliers(page, d)
+  if (vp === 'phone') await create.scrollIntoViewIfNeeded()
+  await create.dblclick()
+  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/, T)
+  await settle(page)
+  await layout(page, info, `${W} order`)
+  await shot(page, `${W}-order`)
+}
+
+test('close and win: every close reason and Reopen, won from lost with Back and a double Create order, desktop and phone', async ({ browser }, info) => {
+  test.setTimeout(300_000)
+  const today = karachiDay(0)
+  for (const vp of ['desktop', 'phone'] as Viewport[]) {
+    const W = `close/${vp}`
+    const t = tag()
+    const r = await quotedRfq({
+      items: [
+        { description: `Hunt gas detector ${t}`, qty: 2, price: 50000, supplierPrice: 40000 },
+        { description: `Hunt installation ${t}`, qty: 1.5, price: 1000, supplierPrice: 700, gst: 0 },
+      ],
+    })
+    const ctx = await ctxAs(browser, info, 'sales', vp)
+    // The RFQ list first, so Back (with Mark won open) has a real page to go to.
+    const page = await openPage(ctx, info, '/rfqs', `sales/${vp}`)
+    await visit(page, info, `/rfqs/${r.rfq.id}`, `sales/${vp}`)
+    await layout(page, info, `${W} open rfq`)
+    await shot(page, `${W}-open-rfq`)
+    const reasons = vp === 'desktop' ? REASONS : REASONS.filter(([k]) => k === 'could_not_source' || k === 'other')
+    for (const [key, label] of reasons) {
+      await probe(info, page, `${W} close: ${key}`, async () => {
+        await closeWith(page, label)
+        await expect.poll(async () => (await rfqRow(r.rfq.id)).close_reason, T).toBe(key)
+        const row = await rfqRow(r.rfq.id)
+        if (row.closed_on !== today) note(info, { kind: 'observation', where: `${W} close: ${key}`, what: `closed_on is ${row.closed_on}, expected ${today}` })
+        await expect(page.getByText(new RegExp(`Closed .*: ${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.`)).first()).toBeVisible(T)
+        if (key === 'other' || vp === 'phone') {
+          await layout(page, info, `${W} closed`)
+          await shot(page, `${W}-closed-${key}`)
+        }
+        await vis(page.getByRole('button', { name: 'Reopen', exact: true })).click()
+        await expect.poll(async () => (await rfqRow(r.rfq.id)).closed_on, T).toBeNull()
+        const after = await rfqRow(r.rfq.id)
+        if (after.close_reason !== null) note(info, { kind: 'observation', where: `${W} reopen after ${key}`, what: `reopened but close_reason is still ${after.close_reason}` })
+        await page.waitForTimeout(300)
+      })
+    }
+    await probe(info, page, `${W} won from lost`, async () => {
+      await closeWith(page, 'Price too high')
+      await expect.poll(async () => (await rfqRow(r.rfq.id)).close_reason, T).toBe('price')
+      await winFromLost(page, info, r.rfq.id, W, vp)
+      await page.waitForTimeout(1500)
+      const orders = await db.rows<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
+      if (orders.length !== 1) note(info, { kind: 'observation', where: `${W} double Create order`, what: `${orders.length} orders for one RFQ` })
+      const lines = await db.rows<{ qty: number; unit_price_net: number; gst_rate: number }>(`order_items?order_id=eq.${orders[0].id}&select=qty,unit_price_net,gst_rate&order=position,created_at`)
+      const got = lines.map(l => [num(l.qty), num(l.unit_price_net), num(l.gst_rate)])
+      if (JSON.stringify(got) !== JSON.stringify([[2, 50000, 18], [1.5, 1000, 0]])) note(info, { kind: 'observation', where: `${W} won from lost`, what: 'order lines differ from the quoted lines', detail: got })
+      const row = await rfqRow(r.rfq.id)
+      if (row.closed_on !== null || row.close_reason !== null)
+        note(info, { kind: 'observation', where: `${W} won from lost`, what: `the RFQ is won with an order but still carries closed_on ${row.closed_on} / close_reason ${row.close_reason} (lost-reason reports would count it)` })
+      // The RFQ page after winning: does it still say lost anywhere?
+      await visit(page, info, `/rfqs/${r.rfq.id}`, W)
+      const text = await main(page)
+      if (/Closed .*Price too high/.test(text)) note(info, { kind: 'observation', where: `${W} won from lost`, what: 'the RFQ page still says it was closed for price after winning' })
+      await shot(page, `${W}-rfq-after-win`)
+    })
+    await ctx.close()
+  }
 })
 
 // ================================================================================================ pinned bugs (HW-n)

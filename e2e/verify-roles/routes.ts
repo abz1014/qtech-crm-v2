@@ -158,6 +158,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/my-expenses', admin: 'no', sales: 'no', engineer: 'ok', note: '"I paid": only an engineer has it (their own claims)' },
   { path: '/jobs/{job}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation on the Job page (an engineer gets the page without the dialog)' },
   { path: '/jobs/{job}?won=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Mark won on the Job page (an engineer gets the page without the dialog)' },
+  { path: '/jobs/{job}/statement', admin: 'ok', sales: 'ok', engineer: 'no', note: 'the Comparative Statement: what suppliers charge, so admin and sales only (the database refuses an engineer the prices as well)' },
   { path: '/capture', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'opens the Capture sheet' },
 ]
 

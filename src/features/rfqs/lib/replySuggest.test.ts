@@ -123,3 +123,15 @@ describe('draftFromSuggestions', () => {
     expect(draftFromSuggestions(empty, set, new Set()).prices).toEqual({})
   })
 })
+
+describe('weight and origin from a reply (0111)', () => {
+  it('carries the weight and origin of an accepted offer into the draft', () => {
+    const items = [{ id: 'z1', number: 1, description: 'Siemens SITRANS P320 pressure transmitter', qty: 2 }]
+    const parsed = parseSupplierReply('1) SITRANS P320 pressure transmitter USD 412.50 each, net wt 2.5 kg, made in Germany', items)
+    const set = suggestFromReply(parsed, items, 'USD')
+    const s = set.suggestions[0]
+    expect(s).toMatchObject({ weight: 2.5, weightUnit: 'kg', origin: 'Germany' })
+    const d = draftFromSuggestions({ currency: '', prices: {}, leadTime: '', inStock: null }, set, new Set([s.key]))
+    expect(d.extras).toEqual({ z1: { weight: 2.5, weightUnit: 'kg', origin: 'Germany' } })
+  })
+})

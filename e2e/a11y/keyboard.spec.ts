@@ -138,7 +138,10 @@ test.describe('a new page starts at the top (2.4.3)', () => {
     await page.getByRole('navigation', { name: 'Main' }).filter({ visible: true }).locator('a[href="/companies"]').click()
     await page.waitForURL(/\/companies$/)
     await page.waitForLoadState('networkidle')
-    expect(await page.locator('#main').evaluate(m => m.scrollHeight - m.clientHeight), 'Companies must be tall enough to scroll at 330px').toBeGreaterThan(0)
+    // React Router 7 commits the new screen inside a transition: the address changes first, the list a moment later.
+    await expect
+      .poll(() => page.locator('#main').evaluate(m => m.scrollHeight - m.clientHeight), { message: 'Companies must be tall enough to scroll at 330px' })
+      .toBeGreaterThan(0)
     expect(await page.locator('#main').evaluate(m => m.scrollTop)).toBe(0)
   })
 })

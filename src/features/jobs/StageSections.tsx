@@ -23,12 +23,12 @@ import { STOPS, type StageModel, type StopName, type StopState } from '@/feature
 const EnquiryWork = lazyWithReload(() => import('@/features/jobs/EnquiryWork'))
 
 /** The enquiry work is downloaded once the page's content is drawn (immediately on any later page), not before the first paint (perf: LCP). */
-function LaterEnquiryWork({ rfqId }: { rfqId: string }) {
+function LaterEnquiryWork({ rfqId, jobKey }: { rfqId: string; jobKey: string }) {
   const [ready, setReady] = useState(isContentDrawn())
   useEffect(() => {
     if (!ready) whenContentDrawn(() => setReady(true))
   }, [ready])
-  return ready ? <EnquiryWork rfqId={rfqId} /> : <Skeleton className="h-[10rem] w-full" />
+  return ready ? <EnquiryWork rfqId={rfqId} jobKey={jobKey} /> : <Skeleton className="h-[10rem] w-full" />
 }
 
 /*
@@ -124,7 +124,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   ) : job.rfqId ? (
     // Ask suppliers, their replies and prices, the items, the quotation and Issue quotation: the RFQ page's own components.
     <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
-      <LaterEnquiryWork rfqId={job.rfqId} />
+      <LaterEnquiryWork rfqId={job.rfqId} jobKey={job.key} />
     </Suspense>
   ) : (
     <div className="grid gap-3">

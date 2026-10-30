@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import type { Role } from '../support/stack'
+import { must, rest, type Role } from '../support/stack'
 import type { Fixture } from './seed'
 
 /*
@@ -307,6 +307,19 @@ export const VISITS: readonly Visit[] = [
   screen('job-order-not-placed', 'Job page: order, supplier order not placed', ALL, fx => `/orders/${fx.order.notPlaced}`),
   screen('job-invoiced', 'Job page: order, invoiced, not paid', ALL, fx => `/orders/${fx.order.invoiced}`),
   screen('job-compare', 'Job page: supplier comparison (4 suppliers, 3 currencies)', ALL, fx => `/rfqs/${fx.rfq.compare}`, { scrollTo: '[data-compared]' }),
+  {
+    // The Comparative Statement of the compare job (4 suppliers, 3 currencies), with the "did not reply" rows on. Admin and sales only.
+    id: 'job-statement',
+    title: 'Job page: Comparative statement (4 suppliers, 3 currencies)',
+    roles: MONEY,
+    screens: ['job-statement'],
+    run: async (page, fx, capture) => {
+      const [rfq] = await must(rest<{ number: number }[]>('admin', `rfqs?id=eq.${fx.rfq.compare}&select=number`))
+      await open(page, `/jobs/${rfq.number}/statement`)
+      await page.getByTestId('statement').waitFor()
+      await capture('job-statement')
+    },
+  },
   screen('companies', 'Companies list', ALL, () => '/companies'),
   screen('company-customer', 'Company page: customer', ALL, fx => `/companies/${fx.company.customer}`),
   screen('company-supplier', 'Company page: supplier', ALL, fx => `/companies/${fx.company.supplier}`),

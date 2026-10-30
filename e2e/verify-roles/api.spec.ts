@@ -123,7 +123,7 @@ test('a person with no users row cannot give themselves one, and nobody changes 
 // (403); every other column still reads. So selling and supplier prices (m3, supplier) are leaks now, like hidden money.
 const PRICE_COLUMNS: Record<string, string[]> = {
   rfq_items: ['quoted_unit_price_net'],
-  supplier_quote_lines: ['unit_price', 'fx_rate_pkr'],
+  supplier_quote_lines: ['unit_price', 'fx_rate_pkr', 'weight', 'weight_unit'], // weight: 0111 (the comparative statement is admin and sales only)
   quotations: ['lines', 'net_total', 'gst_total'],
   order_items: ['unit_price_net', 'supplier_unit_price'],
   purchase_orders: ['total', 'lines'],

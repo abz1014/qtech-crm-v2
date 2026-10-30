@@ -14,7 +14,7 @@ import { TextField } from '@/ui/form/TextField'
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Enter the company name.'),
-  amount: z.number({ invalid_type_error: 'Enter an amount.', required_error: 'Enter an amount.' }).min(1, 'Enter an amount.'),
+  amount: z.number({ error: 'Enter an amount.' }).min(1, 'Enter an amount.'),
   on: z.string().min(1, 'Choose a date.'),
 })
 type In = z.input<typeof schema>

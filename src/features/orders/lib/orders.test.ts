@@ -3,7 +3,7 @@ import { guessCommissioning } from '@/features/orders/lib/convert'
 import { defaultExpected, leadTimeUpperDays, medianDeliveryDays, suggestExpected } from '@/features/orders/lib/leadTime'
 import { before, editPatch, expectedAfterIssue, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, type LegDates } from '@/features/orders/lib/legModel'
 import { isExemptAll, lineGstPaisa, orderTotals } from '@/features/orders/lib/orderMath'
-import { buildPayload, defaultChoices, unpricedItems, type ConvertItem, type ConvertQuote } from '@/features/orders/lib/convert'
+import { buildPayload, unpricedItems, type ConvertItem } from '@/features/orders/lib/convert'
 
 const none: LegDates = { placedOn: null, expectedOn: null, receivedOn: null, deliveredOn: null }
 
@@ -90,38 +90,13 @@ describe('order arithmetic mirrors the view', () => {
   })
 })
 
-describe('convert: supplier per line from the lowest comparable quote (O01)', () => {
+describe('convert: the order payload (O01); the supplier is chosen by a person', () => {
   const items: ConvertItem[] = [
     { id: 'i1', description: 'Actuator', qty: 2, unit: 'ea', quotedUnitPriceNet: 1000 },
     { id: 'i2', description: 'Sensor', qty: 1, unit: 'ea', quotedUnitPriceNet: 500 },
     { id: 'i3', description: 'Cable', qty: 5, unit: 'ea', quotedUnitPriceNet: null },
     { id: 'i4', description: 'Odd', qty: 1, unit: null, quotedUnitPriceNet: 10 },
   ]
-  const q = (lineId: string, itemId: string, supplierName: string, unitPrice: number, currency: string): ConvertQuote => ({ lineId, itemId, supplierName, unitPrice, currency })
-  const rates = { USD: { rate: 280, ageDays: 1 }, EUR: { rate: 330, ageDays: 1 } }
-  const quotes = [
-    q('a1', 'i1', 'Alpenmark', 214, 'EUR'), // 70,620 PKR
-    q('b1', 'i1', 'Dubai', 250, 'USD'), // 70,000 PKR: the lowest
-    q('b2', 'i2', 'Dubai', 40, 'USD'),
-    q('a4', 'i4', 'Alpenmark', 9, 'EUR'),
-    q('c4', 'i4', 'Local', 8, 'XYZ'), // no rate: not comparable
-  ]
-  const choices = defaultChoices(items, quotes, rates)
-  const by = (id: string) => choices.find(c => c.itemId === id)!
-
-  it('picks the lowest at today rates and says so', () => {
-    expect(by('i1')).toMatchObject({ choice: 'b1', fromLowest: true })
-    expect(by('i1').options.find(o => o.value === 'b1')?.lowest).toBe(true)
-  })
-  it('a lone quote is taken; a line nobody quoted is not sourced; an uncomparable pair is left for the person', () => {
-    expect(by('i2')).toMatchObject({ choice: 'b2', fromLowest: false })
-    expect(by('i3').choice).toBe('none')
-    expect(by('i4')).toMatchObject({ choice: 'none' })
-  })
-  it('every line may be changed to the other quotes or to a service', () => {
-    expect(by('i1').options.map(o => o.value)).toEqual(['a1', 'b1', 'none', 'service'])
-    expect(by('i2').options.map(o => o.value)).toEqual(['b2', 'service'])
-  })
   it('builds the RPC payload: quote ids, the service flag, and typed prices only for unpriced lines', () => {
     const payload = buildPayload(items, { i1: 'a1', i2: 'service', i3: 'none', i4: 'none' }, { i3: 125, i1: 9999 })
     expect(payload).toEqual([

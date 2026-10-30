@@ -77,6 +77,6 @@ test('a rate entered by hand is stored as today’s manual rate and re-ranks the
   await expect.poll(async () => num((await db.one<{ rate_pkr: number }>(`fx_rates?currency=eq.USD&as_of=eq.${karachiDay(0)}&source=eq.manual&select=rate_pkr`)).rate_pkr)).toBe(290)
   expect(await first()).toBe(pkr.id)
   await page.goto(`/rfqs/${r.rfq.id}`)
-  await expect(page.getByRole('article', { name: 'Item 1' }).locator('li[data-ranked="1"]')).toContainText(pkr.name)
+  await expect(page.getByRole('article', { name: 'Item 1' }).locator('li[data-price-row]', { hasText: pkr.name })).toBeVisible()
   await admin.close()
 })

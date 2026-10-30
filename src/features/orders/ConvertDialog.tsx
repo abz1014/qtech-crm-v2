@@ -28,8 +28,8 @@ import { RankedPicker } from '@/features/orders/RankedPicker'
 import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
 import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
 import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
-import { forItem, priceTexts, rankOne, type RankedQuote } from '@/features/orders/lib/ranking'
-import { buildSplitPayload, checkSplit, isSplit, nextRanked, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
+import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
+import { buildSplitPayload, checkSplit, hasFreeQuote, isSplit, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
 import { orderRef } from '@/lib/refs'
 
 /*
@@ -37,18 +37,21 @@ import { orderRef } from '@/lib/refs'
  * One confirm creates the order through convert_rfq_to_order with an id made here, so a double submit (a double click, Enter twice, a
  * retry after a dropped connection) creates one order. Afterwards the order opens.
  *
- * Every item arrives already assigned to its rank-1 quote (rank_item_quotes: lowest PKR price at today's rate, a 2% tie band, then delivery
- * record, then order history), with the reason printed under the supplier. Splitting an item's quantity across suppliers is opt-in.
+ * NO SUPPLIER IS CHOSEN FOR THE PERSON (owner decision 2026-10-29: "I don't want the software to select a supplier for us"). Every item
+ * with a quote starts on "Choose a supplier"; Create order waits until each ticked line has one, picked from its list of quotes (the list
+ * lists each item's quotes by supplier name, with prices and no mark, rank or reason). An item nobody quoted needs no supplier. Splitting an item's quantity across
+ * suppliers is opt-in, and a new part also starts on "Choose a supplier".
  *
  * FE-2 entry burden, listed for the commit:
  *   required     nothing when a price is known. Every ticked line is sold at a price confirmed here, pre-filled from the latest issued
  *                quotation, else the Issue quotation draft or the customer's price memory (sellPrefill.ts). A ticked line with no price
  *                asks for one, typed from the owner's costing sheet; the CRM never computes a sell price. Typed prices are not written back.
- *   pre-filled   the supplier on each line (its rank-1 quote), the payment terms (the company's last order), prices, delivery and the
- *                rest from the RFQ, the date (today) and the owner (the RFQ's).
+ *   required     a supplier chosen on every ticked line that has quotes (one tap on the list), a selling price per ticked line.
+ *   pre-filled   the payment terms (the company's last order), prices, delivery and the rest from the RFQ, the date (today) and the
+ *                owner (the RFQ's). Never the supplier.
  *   optional     the customer PO number (it can be added from the order later), a different supplier on any line, splitting an item.
- *   interactions Mark won (1), Create order (2). A split adds: Split this item (1), the supplier picker (2), a supplier (3) and one
- *                quantity typed; if the next-ranked supplier it offers is fine, 1 tap and 1 quantity. The first part takes the remainder.
+ *   interactions Mark won (1), a supplier per line (2 each: open the list, pick), Create order. A split adds: Split this item (1), the
+ *                supplier picker and a supplier for the new part (2) and one quantity typed. The first part takes the remainder.
  *   not blocked  parts that do not add up to the RFQ quantity: a warning only (the backend allows a partial order). A part with no
  *                quantity yet holds Create order, because a line of nothing cannot be ordered.
  */
@@ -63,6 +66,8 @@ type Props = {
 
 // Sized for 16px text: the quantity, a supplier price with its currency, and our net price fit their tracks (UX foundation review).
 const GRID = 'lg:grid lg:grid-cols-[26px_minmax(0,1.25fr)_72px_minmax(0,1.55fr)_148px_216px] lg:items-start lg:gap-x-3'
+/** The state of a supplier picker nobody has used: nothing is chosen for the person. */
+const UNCHOSEN = ''
 const EXTRAS = [
   { value: 'none', label: 'Not sourced yet' },
   { value: 'service', label: 'Service, no supplier' },
@@ -129,11 +134,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     else if (termsQ.data) setTerms(termsQ.data.days)
   }, [termsQ.data, termsTouched, quotedDays])
 
-  /** What an item is assigned to when nobody chooses: its rank-1 quote; a lone quote that cannot be ranked; otherwise nothing yet. */
-  const defaultOf = (id: string): SupplierChoice => {
-    const qs = byItem[id] ?? []
-    return rankOne(qs)?.lineId ?? (qs.length === 1 ? qs[0].lineId : 'none')
-  }
+  /** What an item is assigned to when nobody chooses: NOTHING (UNCHOSEN) when it has quotes; an item nobody quoted has no supplier to choose. */
+  const defaultOf = (id: string): SupplierChoice => ((byItem[id] ?? []).length > 0 ? UNCHOSEN : 'none')
   const choiceOf = (id: string): SupplierChoice => choices[id] ?? defaultOf(id)
   const effective = Object.fromEntries(items.map(i => [i.id, choiceOf(i.id)])) as Record<string, SupplierChoice>
   const checks: Record<string, SplitCheck | null> = Object.fromEntries(items.map(i => [i.id, isSplit(splits[i.id]) ? checkSplit(i.qty, splits[i.id]) : null]))
@@ -192,6 +194,13 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     if (ordered.length === 0) return { message: 'Tick at least one line to create the order.', focusId: items[0] ? `convert-include-${items[0].id}` : undefined }
     for (const it of ordered) {
       const n = items.indexOf(it) + 1
+      const parts = splits[it.id]
+      if (isSplit(parts)) {
+        const p = parts.findIndex(x => x.lineId === UNCHOSEN)
+        if (p >= 0) return { message: `Choose the supplier for part ${p + 1} of line ${n}.`, focusId: `convert-supplier-${it.id}-${p + 1}`, line: it.id }
+      } else if (effective[it.id] === UNCHOSEN) {
+        return { message: `Choose the supplier for line ${n}.`, focusId: `convert-supplier-${it.id}`, line: it.id }
+      }
       const price = confirmed[it.id]
       if (price === null || price === undefined || !(price > 0)) return { message: `Type a selling price for line ${n}.`, focusId: `convert-price-${it.id}`, line: it.id }
       if (price > MAX_AMOUNT) return { message: `The price of line ${n} is too large. A unit price can be at most PKR 999,999,999,999.99.`, focusId: `convert-price-${it.id}`, line: it.id }
@@ -227,9 +236,9 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     const qs = byItem[itemId] ?? []
     setSplits(s => {
       const parts: Part[] = s[itemId] ? [...s[itemId]] : [{ key: crypto.randomUUID(), lineId: choiceOf(itemId), qty: null }]
-      const next = nextRanked(qs, new Set(parts.map(p => p.lineId)))
-      if (!next) return s
-      return { ...s, [itemId]: [...parts, { key: crypto.randomUUID(), lineId: next.lineId, qty: undefined }] }
+      // The new part starts with no supplier: the person picks it.
+      if (!hasFreeQuote(qs, new Set(parts.map(p => p.lineId)))) return s
+      return { ...s, [itemId]: [...parts, { key: crypto.randomUUID(), lineId: UNCHOSEN, qty: undefined }] }
     })
   }
   const patchPart = (itemId: string, key: string, patch: Partial<Part>) =>
@@ -365,10 +374,10 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
         <div className="grid gap-4">
           <p className="flex items-center gap-1 text-sm text-fg-2">
             <span>
-              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with its best-ranked supplier.
+              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with the supplier you choose for it.
             </span>
             <InfoTip label="How the order is made">
-              Each item is assigned to the best-ranked quote: change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation.
+              No supplier is chosen for you. Pick one for each item from its quotes, or split an item between two suppliers. Prices and terms copy from the quotation.
             </InfoTip>
           </p>
 
@@ -404,7 +413,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                 <span><span className="sr-only">Include</span></span>
                 <span>Item</span>
                 <span className="text-right">Qty</span>
-                <span>Buy from, ranked</span>
+                <span>Buy from</span>
                 <span className="text-right">Supplier price</span>
                 <span className="text-right">Sell at, net</span>
               </div>
@@ -416,7 +425,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                 const chk = checks[it.id]
                 const choice = choiceOf(it.id)
                 const q = qs.find(x => x.lineId === choice)
-                const canSplit = qs.length >= 2 && (isSplitItem ? nextRanked(qs, new Set(parts.map(p => p.lineId))) !== undefined : choice !== 'none' && choice !== 'service')
+                const canSplit = qs.length >= 2 && (isSplitItem ? hasFreeQuote(qs, new Set(parts.map(p => p.lineId))) : choice !== 'none' && choice !== 'service' && choice !== UNCHOSEN)
                 return (
                   <div key={it.id} className="border-t border-line-strong first:border-t-0" data-testid={`convert-item-${n}`}>
                     <div className={cn('grid gap-2 px-4 py-3 text-sm leading-5', GRID)}>
@@ -452,6 +461,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                       ) : (
                         <>
                           <RankedPicker
+                            id={`convert-supplier-${it.id}`}
                             label={`Supplier for line ${n}`}
                             value={choice}
                             quotes={qs}
@@ -496,12 +506,13 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                                 <span className="text-xs leading-snug text-fg-muted">{auto ? 'remainder, auto' : p.qty === undefined ? 'type it' : 'typed'}</span>
                               </div>
                               <RankedPicker
+                                id={`convert-supplier-${it.id}-${i + 1}`}
                                 label={`Supplier for part ${i + 1}, line ${n}`}
                                 value={p.lineId}
                                 quotes={qs}
                                 usedLineIds={new Set(parts.filter(x => x.key !== p.key).map(x => x.lineId))}
                                 usedNote="A supplier used by another part of this item cannot be picked twice. Quotes from other suppliers can be added from the RFQ."
-                                header={`Ranked quotes for item ${n}, with the reason`}
+                                header={`Quotes for item ${n}, with the reason`}
                                 onChange={v => patchPart(it.id, p.key, { lineId: v })}
                               />
                               {supplierCell(pq)}
@@ -547,7 +558,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                         <Button size="sm" icon={Split} onClick={() => split(it.id)} aria-label={`Split this item, line ${n}`}>
                           Split this item
                         </Button>
-                        <span className="text-xs text-fg-muted">Adds a part with the next supplier in the ranking. Type its quantity; the first part takes the rest.</span>
+                        <span className="text-xs text-fg-muted">Adds a part. Choose its supplier and type its quantity; the first part takes the rest.</span>
                       </div>
                     ) : null}
                   </div>

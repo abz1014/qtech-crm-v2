@@ -203,7 +203,7 @@ test('an engineer walking every screen asks for no money and never sees a price 
   const item = page.getByRole('article', { name: 'Item 1' })
   await expect(item).toContainText('Verify Lahore Stockist')
   await expect(item).toContainText('Verify Walk Second Supplier')
-  await expect(page.locator('li[data-ranked]')).toHaveCount(0)
+  await expect(page.locator('li[data-lowest], li[data-recommended]')).toHaveCount(0)
   await expect(page.getByText(ROLES.rfq.spread)).toHaveCount(0)
   const rfqText = await page.locator('#main').innerText()
   expect.soft(rfqText, 'the engineer RFQ page shows no PKR amount').not.toMatch(/PKR\s*[\d≈]|≈\s*PKR/)

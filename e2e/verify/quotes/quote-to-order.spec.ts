@@ -1,10 +1,11 @@
 import { JOB_URL, markWonButton, orderCreated } from '../../support/job'
 import { expect, test, type Page } from '@playwright/test'
 import { db, num } from '../support/db'
-import { karachiDay, letters, order, quote, ref, rfq, setProfile, supplier } from '../support/fixtures'
+import { company, karachiDay, letters, order, quote, ref, rfq, setProfile, supplier } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
 import { QUOTES, pkr } from '../support/text'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../../support/pdf'
+import { chooseAllSuppliers } from '../../support/supplierChoice'
 
 /*
  * From the quotation to the order, with figures worked by hand: an exempt line, a decimal quantity and prices with paisa; the order
@@ -82,6 +83,7 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
   await test.step('Mark won: the order lines are the quoted lines, and the order totals are the quotation totals', async () => {
     await (await markWonButton(page)).click()
     await expect(dialog(page).getByRole('heading', { name: QUOTES.won.heading })).toBeVisible()
+    await chooseAllSuppliers(page, dialog(page))
     await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
     await orderCreated(page)
     const o = await db.one<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
@@ -96,6 +98,47 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
     const st = await db.view<{ outcome: string; outcome_clash: boolean }>(`v_rfq_state?rfq_id=eq.${r.rfq.id}&select=outcome,outcome_clash`)
     expect(st[0]).toMatchObject({ outcome: 'won', outcome_clash: false })
   })
+  await sales.close()
+})
+
+test('every close reason on the Bid and close menu is stored as itself, and the outcomes report counts each one once', async ({ browser }, info) => {
+  const outcomes = async () =>
+    Object.fromEntries((await db.view<{ close_reason: string | null; outcome: string; rfqs: number }>('v_report_rfq_outcomes?select=close_reason,outcome,rfqs')).filter(o => o.close_reason).map(o => [o.close_reason as string, Number(o.rfqs)]))
+  const before = await outcomes()
+  const sales = await signedIn(browser, info, 'sales')
+  const page = await open(sales, '/todo')
+  const customer = await company('Verify Lost Customer')
+  for (const [key, label] of QUOTES.close.reasons) {
+    const r = await rfq({ customer, items: [{ description: `Lost item ${key}`, qty: 1 }] })
+    await page.goto(`/rfqs/${r.rfq.id}`)
+    await page.locator('#main').waitFor()
+    await page.getByRole('button', { name: QUOTES.close.menu, exact: true }).click()
+    await page.getByRole('menuitem', { name: new RegExp(`^${label}`) }).click()
+    await expect(page.getByRole('status').filter({ hasText: QUOTES.close.closedToast }).first()).toBeVisible()
+    await expect.poll(() => db.one(`rfqs?id=eq.${r.rfq.id}&select=close_reason,closed_on`), { message: `closing with "${label}"` }).toEqual({ close_reason: key, closed_on: karachiDay(0) })
+  }
+  const after = await outcomes()
+  for (const [key] of QUOTES.close.reasons) expect.soft((after[key] ?? 0) - (before[key] ?? 0), `the outcomes report for ${key}`).toBe(1)
+  await sales.close()
+})
+
+test('a lost RFQ can still be won: Mark won reopens it and makes the order, and the RFQ reads won with no clash', async ({ browser }, info) => {
+  const r = await rfq({ items: [{ description: `Late win item ${letters()}`, qty: 2 }] })
+  await db.patch(`rfq_items?rfq_id=eq.${r.rfq.id}`, { quoted_unit_price_net: 15250.75 })
+  await db.adminRpc('issue_quotation', { p_quotation_id: crypto.randomUUID(), p_rfq_id: r.rfq.id })
+  await db.patch(`rfqs?id=eq.${r.rfq.id}`, { closed_on: karachiDay(-6), close_reason: 'price' })
+  const sales = await signedIn(browser, info, 'sales')
+  const page = await open(sales, `/rfqs/${r.rfq.id}`)
+  await page.locator('[data-slot="mark-won"]').getByRole('button', { name: QUOTES.won.markWon }).click()
+  await chooseAllSuppliers(page, dialog(page))
+  await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
+  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+  expect(await db.one(`rfqs?id=eq.${r.rfq.id}&select=closed_on,close_reason`)).toEqual({ closed_on: null, close_reason: null })
+  const [o] = await db.rows<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
+  // 2 x 15,250.75 = 30,501.50 net; GST 5,490.27 -> 5,490; gross 35,991.50
+  const [t] = await db.view<{ net: number; gst: number; gross: number }>(`v_order_items_total?order_id=eq.${o.id}&select=net,gst,gross`)
+  expect([num(t.net), num(t.gst), num(t.gross)]).toEqual([30501.5, 5490, 35991.5])
+  expect((await db.view<{ outcome: string; outcome_clash: boolean }>(`v_rfq_state?rfq_id=eq.${r.rfq.id}&select=outcome,outcome_clash`))[0]).toMatchObject({ outcome: 'won', outcome_clash: false })
   await sales.close()
 })
 

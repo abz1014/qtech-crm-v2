@@ -70,7 +70,7 @@ export function useSubmitForm<S extends z.ZodTypeAny>({
 }: UseSubmitFormOptions<S>): SubmitForm<z.input<S> & FieldValues, z.output<S>> {
   type TIn = z.input<S> & FieldValues
   const form = useForm<TIn, unknown, z.output<S>>({
-    resolver: zodResolver(schema) as unknown as Resolver<TIn, unknown, z.output<S>>,
+    resolver: zodResolver(schema as never) as unknown as Resolver<TIn, unknown, z.output<S>>,
     defaultValues: defaultValues as DefaultValues<TIn>,
   })
   useDirtyFlag(form.formState.isDirty)

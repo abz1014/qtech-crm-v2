@@ -18,7 +18,6 @@ import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
 import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
-import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { useQuotations } from '@/features/quotations/hooks'
 import { useOrdersForRfq } from '@/features/orders/forRfq'
@@ -71,7 +70,7 @@ function SendToEachCard({ ask, inquiries, onClose }: { ask: AskResult; inquiries
 }
 
 /** The work of the Quotation stage: suppliers to ask or asked (with their replies), the items with prices, and the quotations. */
-export default function EnquiryWork({ rfqId }: { rfqId: string }) {
+export default function EnquiryWork({ rfqId, jobKey }: { rfqId: string; jobKey?: string }) {
   const header = useRfqHeader(rfqId)
   const items = useRfqItems(rfqId)
   const inquiries = useRfqInquiries(rfqId)
@@ -79,10 +78,10 @@ export default function EnquiryWork({ rfqId }: { rfqId: string }) {
   if (!header.data || items.isError || inquiries.isError) {
     return <p className="text-base text-fg-muted">The supplier details did not load. Reload the page to try again.</p>
   }
-  return <Work rfq={header.data} itemList={items.data ?? []} inquiryList={inquiries.data ?? []} />
+  return <Work rfq={header.data} itemList={items.data ?? []} inquiryList={inquiries.data ?? []} jobKey={jobKey} />
 }
 
-function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqItemRow[]; inquiryList: InquiryRow[] }) {
+function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList: RfqItemRow[]; inquiryList: InquiryRow[]; jobKey?: string }) {
   const prices = useSeesPrices()
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
@@ -112,7 +111,6 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
   const coverage = lib && suggestResult ? lib.coverageLine(suggestResult.uncovered) : null
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
-  const ranking = useRankedQuotes(rfq.id, hasPrices)
   const askedCount = inquiryList.filter(i => i.sentOn || i.noOfferOn).length
   const nobodyAsked = askedCount === 0
   const askList = useMemo(() => (lib ? lib.withShortlist(inquiryList, itemList, suggestions) : []), [lib, inquiryList, itemList, suggestions])
@@ -143,9 +141,9 @@ function Work({ rfq, itemList, inquiryList }: { rfq: RfqHeader; itemList: RfqIte
         fxRows={fx.data ?? []}
         memory={memory.data}
         suggestions={suggestions}
-        ranking={ranking.byLine}
         onAddItem={() => setAdding(true)}
         onCopyEnquiry={(s, item) => void askFrom([s], [item])}
+        statementTo={jobKey ? `/jobs/${encodeURIComponent(jobKey)}/statement` : undefined}
       />
       <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
