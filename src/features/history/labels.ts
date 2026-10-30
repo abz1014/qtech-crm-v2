@@ -122,6 +122,8 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     voided_by: r('Cancelled by'),
     wht_amount: m('Withholding tax deducted'),
     wht_certificate_no: t('Withholding tax certificate'),
+    wht_certificate_name: t('Withholding tax certificate file'),
+    wht_certificate_path: hide,
   },
   expenses: {
     amount_pkr: m('Amount'),

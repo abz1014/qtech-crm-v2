@@ -95,7 +95,7 @@ function CreditLine({ companyId, event, orderRef }: { companyId: string; event: 
               </Link>
             </>
           ) : null}
-          <Fine className="mt-0.5">
+          <Fine className="mt-px">
             {formatDay(event.date)}
             {event.detail ? ` · ${event.detail}` : ''}
           </Fine>
