@@ -20,7 +20,7 @@ export async function renderPdfPreview(file: File, opts: { pages?: number; width
   try {
     const { pdfjs } = await import('@/lib/docread/pdfjsRuntime')
     const data = new Uint8Array(await file.arrayBuffer())
-    const loading = pdfjs.getDocument({ data, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, enableXfa: false, verbosity: pdfjs.VerbosityLevel.ERRORS })
+    const loading = pdfjs.getDocument({ data, disableFontFace: true, useSystemFonts: false, enableXfa: false, verbosity: pdfjs.VerbosityLevel.ERRORS })
     task = loading
     const doc = await loading.promise
     const count = Math.min(doc.numPages, limit)
