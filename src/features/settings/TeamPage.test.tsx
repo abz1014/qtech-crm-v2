@@ -100,6 +100,19 @@ async function openRowMenu(user: ReturnType<typeof setupUser>, name: string, ite
 }
 
 describe('Team screen', () => {
+  it('warns when there is only one active admin and points to the recovery help', async () => {
+    mount()
+    expect(await screen.findByText('Only one active admin')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'How to get back in' })).toHaveAttribute('href', '/?help=lone-admin-recovery')
+  })
+
+  it('shows no warning once there are two active admins', async () => {
+    h.list.mockResolvedValue([...TEAM, member('zain', 'Zain Malik', 'admin')])
+    mount()
+    expect(await screen.findByText('Ayesha Rana')).toBeInTheDocument()
+    expect(screen.queryByText('Only one active admin')).toBeNull()
+  })
+
   it('lists everyone with role and status, marks you, and shows counts', async () => {
     mount()
     expect(await screen.findByText('Ayesha Rana')).toBeInTheDocument()

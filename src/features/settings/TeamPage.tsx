@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Ellipsis, KeyRound, Pencil, Phone, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
@@ -14,7 +15,7 @@ import {
   ReactivateDialog,
   ResetPasswordDialog,
 } from '@/features/settings/TeamDialogs'
-import { filterTeam, isActive, roleLabel, teamCounts, type TeamFilter } from '@/features/settings/teamModel'
+import { filterTeam, hasLoneAdmin, isActive, LONE_ADMIN_BODY, LONE_ADMIN_TITLE, roleLabel, teamCounts, type TeamFilter } from '@/features/settings/teamModel'
 import { useTeam } from '@/features/settings/hooks'
 import { FirstWeekBadge } from '@/features/help/FirstWeekBadge'
 import { useFirstWeek } from '@/features/help/useFirstWeek'
@@ -22,6 +23,7 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useQueryParamText } from '@/lib/useQueryParamText'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
+import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -160,6 +162,20 @@ export function TeamPage() {
           </Button>
         }
       />
+
+      {isAdmin && team.isSuccess && hasLoneAdmin(members) ? (
+        <Banner
+          tone="warning"
+          title={LONE_ADMIN_TITLE}
+          action={
+            <Link to="?help=lone-admin-recovery" className="text-sm font-medium text-primary underline">
+              How to get back in
+            </Link>
+          }
+        >
+          {LONE_ADMIN_BODY}
+        </Banner>
+      ) : null}
 
       <DataTable
         label="Team"
