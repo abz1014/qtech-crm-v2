@@ -99,6 +99,8 @@ test.describe('void and credit notes (C1)', () => {
 
     // its PDF
     await page.getByRole('row', { name: new RegExp(inv.number) }).first().click()
+    // the PDF needs the seller's name on the letterhead (Settings, Company)
+    await must(rest('admin', 'company_profile?id=eq.1', { method: 'PATCH', body: { legal_name: 'Q-Tech Test (Pvt) Ltd', address: 'Karachi' }, prefer: 'return=minimal' }))
     // no pop-up in the test browser: the app then downloads the file instead (CreditNotePdfButton)
     await page.evaluate(() => {
       window.open = () => null
