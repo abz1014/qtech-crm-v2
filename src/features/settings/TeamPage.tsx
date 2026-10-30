@@ -168,7 +168,7 @@ export function TeamPage() {
           tone="warning"
           title={LONE_ADMIN_TITLE}
           action={
-            <Link to="?help=lone-admin-recovery" className="text-sm font-medium text-primary underline">
+            <Link to="?help=lone-admin-recovery" className="inline-flex min-h-touch items-center text-sm font-medium text-primary underline underline-offset-4">
               How to get back in
             </Link>
           }
