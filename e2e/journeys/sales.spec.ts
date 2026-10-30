@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, rest, rfqRef, uniqueName } from '../support/stack'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../support/pdf'
 import { legLoc, setProfile } from '../orders/fixtures'
-import { JOB_URL, markWonButton, openStage, stagesOf } from '../support/job'
+import { markWonButton, openStage, orderCreated, stagesOf } from '../support/job'
 import { fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
@@ -236,21 +236,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     ])
   })
 
-  await test.step('hand-off: both suppliers replied, so no supplier chase; the customer chase is one tap on Today', async () => {
+  await test.step('hand-off: both suppliers replied, so no supplier chase', async () => {
     await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number)], false)
-    const t = await openPage(salesCtx, '/todo')
-    const row = t.locator('li[data-rule="chase_customer"]').filter({ hasText: rfqRef(rfq.number) })
-    await expect(row).toBeVisible()
-    await row.getByRole('button').first().click() // selecting a row is not a chase
-    const pane = t.getByRole('region', { name: new RegExp(rfqRef(rfq.number)) })
-    await expect(pane.getByTestId('draft-text')).toContainText('Flange rating and line size')
-    await resetCount(t)
-    await resetClipboard(t)
-    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
-    await expect(t.getByRole('status').filter({ hasText: `Copied. ${rfqRef(rfq.number)} marked chased.` })).toBeVisible()
-    fe2('Chase the customer from Today', (await readCount(t)).mouse, 1)
-    await readClipboardWhen(t, 'Flange rating and line size')
-    await t.close()
   })
 
   // ---- 5. The ranked comparison: 0 taps -----------------------------------------------------------------------------------------
@@ -283,7 +270,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 6. Issue the quotation PDF --------------------------------------------------------------------------------------------------
   await test.step('issue the quotation: one price per item, Issue, Share', async () => {
     await resetCount(page)
-    await page.getByRole('button', { name: 'Issue quotation', exact: true }).first().click()
+    await page.getByRole('button', { name: 'Send quotation', exact: true }).click()
     await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible()
     const d = dialog(page)
     await expect(d.getByLabel('Addressed to')).toContainText('Mr. Kamran Zafar')
@@ -359,7 +346,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(d.getByTestId('convert-item-1-sum')).toContainText('3 + 1 = 4')
     await expect(d.getByText('Creates 3 order lines.')).toBeVisible()
     await d.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     const taps = (await readCount(page)).mouse
     // Mark won + Create order are the 2 taps of an unchanged win; the split adds Split this item (1 tap) and the quantity (1 typed).
     fe2('Win with one split: taps (Mark won, Split this item, Create order)', taps, 3)

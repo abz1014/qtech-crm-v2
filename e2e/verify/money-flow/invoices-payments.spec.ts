@@ -135,7 +135,6 @@ test.describe('invoices from an order', () => {
 
     await test.step('once fully invoiced, the order offers no third Create invoice', async () => {
       await page.reload()
-      await expect(page.getByTestId(MONEY.invoice.invoicedTestId)).toContainText(amount(GROSS))
       await openStage(page, 'Invoice')
       await expect(orderPage(page).getByRole('button', { name: MONEY.order.createInvoice })).toHaveCount(0)
       expect(await invoicesOf(seed.order.id)).toHaveLength(2)

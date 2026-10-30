@@ -37,7 +37,7 @@ test('company profile: the legal name, NTN and validity typed by the admin are w
     await quote(r.rfq.id, sup, [{ itemId: r.items[0].id, price: 900 }], 'PKR')
     const sales = await signedIn(browser, info, 'sales')
     const sp = await open(sales, `/rfqs/${r.rfq.id}`)
-    await sp.getByRole('button', { name: ADMIN.quote.open, exact: true }).first().click()
+    await sp.getByRole('button', { name: ADMIN.quote.open, exact: true }).click()
     await sp.getByRole('dialog').getByLabel(ADMIN.quote.price(1)).fill('1250')
     await sp.getByRole('dialog').getByRole('button', { name: ADMIN.quote.issue }).click()
     await expect(sp.getByRole('dialog').getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })

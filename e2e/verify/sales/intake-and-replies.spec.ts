@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openStage } from '../../support/job'
 import { db, num, USER } from '../support/db'
 import { company, karachiDay, letters, post, quote, rfq, setRates, supplier } from '../support/fixtures'
 import { open, openMarkWon, signedIn } from '../support/session'
@@ -146,6 +147,7 @@ test('asking a supplier: the copied enquiry carries no RFQ number, every item wi
 
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/rfqs/${r.rfq.id}`)
+  await openStage(page, 'Quotation') // nobody is asked yet, so the job is still at the Enquiry stage
   const card = page.locator(`[data-slot="${SALES.ask.toAskSlot}"]`)
   await card.locator('label', { hasText: carrier.name }).click()
   await resetClipboard(page)
@@ -189,6 +191,7 @@ test('prices in three currencies are stored with the rate of the day and ranked 
     [houston, '101.20'],
   ] as const) {
     // Each supplier is listed once, in Suppliers asked: "Enter reply" opens its price form in a dialog (grade-B R2/R4).
+    await openStage(page, 'Quotation')
     await page.getByRole('button', { name: `Enter reply, ${sup.name}`, exact: true }).click()
     const region = page.getByRole('dialog', { name: sup.name, exact: true })
     await region.getByLabel(SALES.reply.price(1, sup.name)).fill(price)

@@ -1,4 +1,4 @@
-import { JOB_URL, markWonButton } from '../../support/job'
+import { JOB_URL, markWonButton, orderCreated } from '../../support/job'
 import { expect, test, type Page } from '@playwright/test'
 import { db, num } from '../support/db'
 import { karachiDay, letters, order, quote, ref, rfq, setProfile, supplier } from '../support/fixtures'
@@ -35,7 +35,7 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
   const page = await open(sales, `/rfqs/${r.rfq.id}`)
 
   await test.step('the dialog totals', async () => {
-    await page.getByRole('button', { name: QUOTES.issue.open, exact: true }).first().click()
+    await page.getByRole('button', { name: QUOTES.issue.open, exact: true }).click()
     await expect(page.getByRole('list', { name: QUOTES.issue.itemsList })).toBeVisible()
     await dialog(page).getByLabel(QUOTES.issue.price(1)).fill('12345.67')
     await dialog(page).getByLabel(QUOTES.issue.price(2)).fill('7500.40')
@@ -83,7 +83,7 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
     await (await markWonButton(page)).click()
     await expect(dialog(page).getByRole('heading', { name: QUOTES.won.heading })).toBeVisible()
     await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     const o = await db.one<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
     const lines = await db.rows<{ qty: number; unit_price_net: number; gst_rate: number }>(`order_items?order_id=eq.${o.id}&select=qty,unit_price_net,gst_rate&order=position`)
     expect(lines.map(l => [num(l.qty), num(l.unit_price_net), num(l.gst_rate)])).toEqual([

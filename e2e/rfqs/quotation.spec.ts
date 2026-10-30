@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openStage } from '../support/job'
 import { createCompany, createRfq, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../support/pdf'
@@ -102,8 +103,8 @@ const rfqOf = (id: string) => must(rest<{ quoted_on: string | null }[]>('admin',
 const refOf = (q: Q, first: Q = q) => `QT-${first.issued_on.slice(2, 4)}-${String(q.number).padStart(4, '0')}`
 
 const openIssue = async (page: Page) => {
-  // The job page's one green button (in the next-step band; on a phone, in the sticky bar at the foot).
-  await page.getByRole('button', { name: 'Issue quotation', exact: true }).first().click()
+  // The job page's one green button, Send quotation (in the next-step band; on a phone, in the sticky bar at the foot).
+  await page.getByRole('button', { name: 'Send quotation', exact: true }).click()
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible()
 }
 /** A review screenshot, taken once the dialog has finished rising (otherwise it is caught half transparent). */
@@ -120,6 +121,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await noShareApi(page)
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openStage(page, 'Quotation')
     await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
     await openIssue(page)
     await expect(dialog(page).getByRole('heading', { name: 'Issue quotation' })).toBeVisible()
@@ -232,6 +234,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     })
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openStage(page, 'Quotation')
     await openIssue(page)
     await dialog(page).getByTestId('chip-sold-1').click()
     await price(page, 2).fill('300')
@@ -251,6 +254,7 @@ test.describe('re-issue', () => {
     await noShareApi(page)
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openStage(page, 'Quotation')
     await openIssue(page)
     await dialog(page).getByTestId('chip-quoted-1').click()
     await price(page, 2).fill('700')
@@ -318,6 +322,7 @@ test.describe('expired state', () => {
     await must(rest('admin', `rfq_items?rfq_id=eq.${s.rfq.id}`, { method: 'PATCH', body: { quoted_unit_price_net: 500 }, prefer: 'return=minimal' }))
     await issueViaRpc(s.rfq.id, { p_valid_until: karachiDay(-2) })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openStage(page, 'Quotation')
     const row = page.getByTestId('quotation-0')
     await expect(row).toContainText('Quotation expired')
     await expect(row.locator('[data-status="bid:expired"]')).toBeVisible()
@@ -331,6 +336,7 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
     await setProfile(false)
     try {
       await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+      await openStage(page, 'Quotation')
       await openIssue(page)
       const gap = dialog(page).getByText("The PDF needs the company's legal name and address")
       await expect(gap).toBeVisible()
@@ -381,6 +387,7 @@ test.describe('a long quotation', () => {
     )
     await issueViaRpc(rfq.id)
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
+    await openStage(page, 'Quotation')
     const popup = context.waitForEvent('page')
     await page.getByTestId('quotation-0').getByRole('button', { name: 'Open PDF' }).click()
     await popup
@@ -412,6 +419,7 @@ test.describe('partial quotations and Preview PDF', () => {
     })
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openStage(page, 'Quotation')
     await openIssue(page)
     // Quote only item 2: untick item 1 (it has price sources, so it started ticked) and type a price for item 2.
     await dialog(page).getByRole('checkbox', { name: 'Include item 1' }).click()
@@ -461,6 +469,7 @@ for (const width of [1440, 375]) {
     const s = await seed()
     await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openStage(page, 'Quotation')
     await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
     expect(await pageViolations(page)).toEqual([])
 
@@ -500,6 +509,7 @@ test.describe('what an engineer sees on the quotation screens (owner decision 20
     const urls: string[] = []
     page.on('request', r => urls.push(decodeURIComponent(r.url())))
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}?issue=1`)
+    await openStage(page, 'Quotation')
     const block = page.locator('[data-slot="quotations"]')
     await expect(block.getByRole('row', { name: /QT-/ })).toHaveCount(1)
     await page.waitForLoadState('networkidle')

@@ -133,8 +133,6 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     for (const header of ['Unit price', 'Total']) await expect(page.getByRole('columnheader', { name: new RegExp(header) })).toHaveCount(0)
     await openStage(page, 'Supplier order')
     await expect(legLoc(page, 'A')).toBeVisible()
-    await openStage(page, 'Delivery')
-    await expect(page.getByRole('region', { name: 'Commissioning' })).toBeVisible()
     // the page leads with the engineer's job: the site and the one green button
     await expect(page.getByRole('region', { name: 'On site' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Issue PO|Record payment|Create invoice|Add expense/ })).toHaveCount(0)

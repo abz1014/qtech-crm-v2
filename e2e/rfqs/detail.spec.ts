@@ -442,7 +442,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect(one.getByText('1 price so far', { exact: true })).toBeVisible()
     await expect(one.locator(`[data-waiting~="${s.china.id}"]`)).toHaveText('Waiting on 2 suppliers') // China and Germany, one line
     // A price is in: Issue quotation is the green button.
-    await expect(page.getByRole('button', { name: 'Issue quotation', exact: true }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Send quotation', exact: true })).toBeVisible()
     // The others answer something: nobody is waiting any more.
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: [
       { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[1].id, unit_price: 5, currency: 'CNY' },

@@ -181,7 +181,7 @@ const hasFigure = (text: string, n: number) => text.includes(amount(n)) || text.
 
 /** The green Issue quotation button; when the page offers another green button, the address that opens the same dialog (noted). */
 async function openIssue(page: Page, info: TestInfo, rfqId: string, where: string): Promise<void> {
-  const button = vis(page.getByRole('button', { name: 'Issue quotation', exact: true }))
+  const button = vis(page.getByRole('button', { name: 'Send quotation', exact: true }))
   if (await button.waitFor({ timeout: 8_000 }).then(() => true).catch(() => false)) await button.click()
   else {
     note(info, { kind: 'observation', where, what: 'Issue quotation is not the green button on an RFQ with every item priced by a supplier' })
@@ -1141,7 +1141,7 @@ test('HW-9: Back with the Issue quotation dialog open leaves the RFQ page and di
   await page.goBack()
   await settle(page)
   // Fixed (HW-9): Back closes the dialog and stays on the RFQ page; the typed price is kept as a draft, also over a reload.
-  await expect(page).toHaveURL(new RegExp(`/rfqs/${r.rfq.id}`), { timeout: 3_000 })
+  await expect(page).toHaveURL(new RegExp(`/jobs/${r.rfq.number}`), { timeout: 3_000 })
   await openIssue(page, info, r.rfq.id, 'HW-9')
   await expect(dialog(page).getByLabel('Unit price, net PKR, item 1')).toHaveValue('125,000.00', T)
   await page.reload()

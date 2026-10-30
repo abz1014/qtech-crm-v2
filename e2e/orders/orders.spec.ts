@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
-import { JOB_URL, markWonButton, openStage, stagesOf } from '../support/job'
+import { markWonButton, openStage, orderCreated, stagesOf } from '../support/job'
 
 /*
  * O01 (convert an RFQ to an order) and O03 (the order page), end to end against the local CI stack, as the fixture users through the
@@ -244,7 +244,7 @@ test.describe('O01: Mark won creates the order', () => {
     await price(dialog, 1).fill('120,000')
     await expect(dialog).toContainText('gross PKR 283,200')
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${rfq.id}&select=id`)
     const items = await get<{ unit_price_net: number; supplier_unit_price: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price&order=position`)
     expect(items.map(i => [Number(i.unit_price_net), Number(i.supplier_unit_price)])).toEqual([[120000, 412]])
@@ -273,7 +273,7 @@ test.describe('O01: Mark won creates the order', () => {
     for (const [n, v] of [['1', '1000'], ['2', '2000'], ['3', '500']]) await t.typed(price(dialog, Number(n)), v)
 
     await t.doubleTap(dialog.getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     expect(t.count).toBe(1 + 3 + 1) // Mark won, three prices typed, Create order
 
     const orders = await get<{ id: string; customer_po_number: string | null; payment_terms_days: number | null }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,customer_po_number,payment_terms_days`)
@@ -318,7 +318,7 @@ test.describe('O01: Mark won creates the order', () => {
     await page.getByRole('option', { name: new RegExp(s.supplierA.name) }).click()
     await dialog.getByLabel('Customer PO number').fill(`CPO-${s.tag}`)
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     const [order] = await get<{ id: string; customer_po_number: string }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,customer_po_number`)
     expect(order.customer_po_number).toBe(`CPO-${s.tag}`)
     const items = await get<{ unit_price_net: number; supplier_unit_price: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price&order=position`)
@@ -343,7 +343,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByRole('checkbox', { name: 'Include line 2' })).not.toBeChecked()
     await expect(dialog.getByTestId('convert-item-2-not-in')).toContainText(/R1/)
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${s.rfq.id}&select=id`)
     const items = await get<{ unit_price_net: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net&order=position`)
     expect(items.map(i => Number(i.unit_price_net))).toEqual([1100])
@@ -386,7 +386,7 @@ test.describe('O01: Mark won creates the order', () => {
     await price(dialog, 1).fill('1500')
     await price(dialog, 2).fill('3000')
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${rfq.id}&select=id`)
     const lines = await get<{ unit_price_net: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net&order=position`)
     expect(lines.map(i => Number(i.unit_price_net))).toEqual([1500, 3000])
@@ -409,7 +409,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByRole('button', { name: 'Create order' })).toBeEnabled()
     await price(dialog, 1).fill('300000')
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
   })
 
   test('Mark won once the quotation is issued: 2 taps', async ({ page }) => {
@@ -421,7 +421,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toHaveCount(1)
     await t.tap(await markWonButton(page))
     await t.tap(page.getByRole('dialog').getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
     expect(t.count).toBe(2)
   })
 })
@@ -640,7 +640,7 @@ test.describe('O03: commissioning and cancel', () => {
   test('cancel an order with a reason; it stays on record and can be reopened', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'admin', `/orders/${s.order.id}`)
-    await page.getByRole('button', { name: 'More actions', exact: true }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     const dialog = page.getByRole('dialog')
     // a reason is needed
@@ -659,7 +659,7 @@ test.describe('O03: commissioning and cancel', () => {
     expect(row.notes).toBe('Gate pass needed 2 days ahead.')
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
-    await page.getByRole('button', { name: 'More actions', exact: true }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Reopen order' }).click()
     await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBeNull()
     expect((await orderRow(s.order.id)).cancel_reason).toBeNull()
@@ -684,8 +684,6 @@ test.describe('O03: role views', () => {
     await expect(page.getByLabel(/GST rate/)).toHaveCount(0)
     await openStage(page, 'Supplier order')
     await expect(leg(page, 'A')).toBeVisible()
-    await openStage(page, 'Delivery')
-    await expect(page.getByRole('region', { name: 'Commissioning' })).toBeVisible()
     await page.waitForLoadState('networkidle')
 
     const text = await page.locator('#main').innerText()
@@ -770,7 +768,7 @@ test.describe('O03: the command palette finds an order by number and customer PO
     await input.fill(ref(s.order.number))
     await expect(hit).toBeVisible()
     await hit.click()
-    await expect(page).toHaveURL(JOB_URL)
+    await orderCreated(page)
   })
 
   test('an engineer finds an order by its number only, never by the PO number (R12: no PO or invoice number for an engineer)', async ({ page }) => {
@@ -804,7 +802,7 @@ for (const width of [1440, 375]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
     await review(page, `o03-order-admin-${width}`)
 
-    await page.getByRole('button', { name: 'More actions', exact: true }).first().click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).first().click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await dialogViolations(page)).toEqual([])

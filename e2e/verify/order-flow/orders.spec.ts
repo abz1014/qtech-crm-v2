@@ -39,6 +39,7 @@ test('line totals with GST per line, and a line made exempt: the page and the da
 
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/orders/${seed.order.id}`)
+  await openStage(page, 'Order')
   const table = page.getByRole('table', { name: ORDERS.items.table })
   // Since the UX audit the table shows each line's total before GST; the bar under it gives GST and the total with GST.
   const footer = table.getByRole('row').filter({ hasText: ORDERS.items.footer(3) })
@@ -67,6 +68,7 @@ test('a line offers only the GST rates the owner allows: 18% or exempt', async (
   const seed = await order({ lines: [{ description: 'Ball valve 2 inch', qty: 1, price: 15000 }], owner: 'sales' })
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/orders/${seed.order.id}`)
+  await openStage(page, 'Order')
   await page.getByRole('button', { name: ORDERS.items.edit }).click()
   const select = page.getByLabel(ORDERS.items.gstRate(1))
   await expect(select).toBeVisible()
@@ -89,6 +91,7 @@ test('a service-only job: plan commissioning, the engineer marks it done, then t
 
   await test.step('the salesperson plans it for the engineer', async () => {
     const page = await open(sales, `/orders/${seed.order.id}`)
+    await openStage(page, 'Delivery')
     const section = page.getByRole('region', { name: ORDERS.commissioning.region })
     await section.getByRole('button', { name: ORDERS.commissioning.edit, exact: true }).click()
     const d = page.getByRole('dialog')

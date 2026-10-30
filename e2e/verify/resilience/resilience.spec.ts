@@ -127,7 +127,8 @@ test.describe('the session', () => {
     const before = await editStoredSession(page, { expired: true })
     await page.reload()
     await page.locator('#main').waitFor()
-    await expect(page).toHaveURL(new RegExp(`/orders/${seed.order.id}$`))
+    // the old order address opens the order's job page; the person stays on it
+    await expect(page).toHaveURL(/\/jobs\/O-\d+$/)
     await expect.poll(() => storedToken(page)).not.toBe(before)
     // 3 x 8,765.43 = 26,296.29 net; GST 4,733.33 -> 4,733; gross 31,029.29
     await openStage(page, 'Invoice')
@@ -149,7 +150,8 @@ test.describe('the session', () => {
     await page.getByLabel(R.signIn.email).fill('sales@test.invalid')
     await page.getByLabel(R.signIn.password, { exact: true }).fill(FIXTURE_PASSWORD)
     await page.getByRole('button', { name: R.signIn.button }).click()
-    await expect(page).toHaveURL(new RegExp(`${path}$`))
+    // signing in returns to the address that was open: the old order address, which opens the order's job page
+    await expect(page).toHaveURL(/\/(orders\/[0-9a-f-]{36}|jobs\/O-\d+)$/)
     await page.locator('#main').waitFor()
     // Nothing was half-saved on the way: the order is as it was.
     expect(await db.count(`invoices?order_id=eq.${seed.order.id}&select=id`)).toBe(0)
@@ -285,6 +287,7 @@ test.describe('Undo restores the record exactly', () => {
     const page = await open(sales, `/orders/${seed.order.id}`)
     const legA = page.getByTestId('leg-A')
 
+    await openStage(page, 'Supplier order')
     await legA.getByRole('button', { name: R.order.moreFor(sup.name) }).click()
     await page.getByRole('menuitem', { name: R.order.markPlacedNoPo }).click()
     await expect.poll(async () => (await dates()).placed_on).toBe(karachiDay(0))
@@ -296,6 +299,7 @@ test.describe('Undo restores the record exactly', () => {
     // Placed again (an earlier placed date, so Delivered is offered), then Delivered and its Undo.
     await db.patch(`supplier_orders?id=eq.${leg}`, { placed_on: karachiDay(-9), expected_on: karachiDay(-1) })
     await page.reload()
+    await openStage(page, 'Delivery')
     await legA.getByRole('button', { name: R.order.deliveredToday(sup.name) }).click()
     await expect.poll(async () => (await dates()).delivered_on).toBe(karachiDay(0))
     expect((await dates()).received_on).toBe(karachiDay(0))

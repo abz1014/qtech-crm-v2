@@ -92,7 +92,7 @@ export const SALES = {
 /** Words the verify-quotes suite looks for. */
 export const QUOTES = {
   issue: {
-    open: /Issue/,
+    open: 'Send quotation',
     itemsList: 'Items to quote',
     price: (n: number) => `Unit price, net PKR, item ${n}`,
     gstRate: (n: number) => `GST rate, item ${n}`,
@@ -307,7 +307,7 @@ export const ADMIN = {
     save: 'Save rate',
   },
   quote: {
-    open: /Issue/,
+    open: 'Send quotation',
     price: (n: number) => `Unit price, net PKR, item ${n}`,
     issue: 'Issue quotation',
   },

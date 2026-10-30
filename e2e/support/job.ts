@@ -39,3 +39,11 @@ export async function markWonButton(page: Page): Promise<Locator> {
   if ((await won.count()) === 0) await openStage(page, 'Order')
   return won
 }
+
+/**
+ * After "Create order" on a job page: the dialog goes away once the order exists (the job page's address does not change, because the
+ * enquiry and its order are one job). The old address /orders/<id> the dialog navigates to redirects back to the job.
+ */
+export async function orderCreated(page: Page): Promise<void> {
+  await expect(page.getByRole('dialog')).toBeHidden({ timeout: 30_000 })
+}

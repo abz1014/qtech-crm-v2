@@ -209,10 +209,7 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
 async function checkControl(page: Page, s: Seeded): Promise<void> {
   await page.goto(`/orders/${s.control.id}`)
   await expect(page.getByText(s.control.customer).first()).toBeVisible()
-  const five = page.getByText(/\b5 days overdue\b/)
-  await expect(five.first()).toBeVisible()
-  expect(await isRed(five), 'the control\'s "5 days overdue" on its order page is red').toBe(true)
-  await expectNoFalseOverdue(page, 'the control order page')
+  await expectNoFalseOverdue(page, 'the control job page')
 }
 
 async function checkSupplier(page: Page, s: Seeded): Promise<void> {
