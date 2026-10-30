@@ -126,6 +126,7 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
+insert into public.payments_in (id, order_id, amount, wht_amount) values (pg_temp.f('d6'), pg_temp.f('20'), 5, 3);   -- 0116: a payment with withholding tax
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values   -- 0112
   (pg_temp.f('d9'), 'CN-M1', pg_temp.f('26'), 50, 9, 'fixture');
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
@@ -251,7 +252,8 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_gst_month', 'net', 'hidden', null), ('v_gst_month', 'gst', 'hidden', null), ('v_gst_month', 'deposited_amount', 'hidden', null),
   ('v_gst_month', 'gst_to_deposit', 'hidden', null),
   ('v_wht_deducted', 'wht_amount', 'hidden', null),   -- 0116
-  ('v_gst_month', 'credit_net', 'hidden', null), ('v_gst_month', 'credit_gst', 'hidden', null), ('v_gst_month', 'credit_note_count', 'info', null),   -- 0112 ('v_gst_month', 'input_tax', 'hidden', null), ('v_gst_month', 'deposited_count', 'info', null),
+  ('v_gst_month', 'credit_net', 'hidden', null), ('v_gst_month', 'credit_gst', 'hidden', null), ('v_gst_month', 'credit_note_count', 'info', null),
+  ('v_gst_month', 'input_tax', 'hidden', null), ('v_gst_month', 'deposited_count', 'info', null),   -- 0112: the first three
   ('v_gst_register', 'net_amount', 'hidden', null), ('v_gst_register', 'gst_amount', 'hidden', null), ('v_gst_register', 'gross_amount', 'hidden', null),
   ('v_gst_register', 'tax_deposit_amount', 'hidden', null),
   ('v_inquiry_state', 'items_quoted', 'info', null), ('v_inquiry_state', 'items_total', 'info', null),
