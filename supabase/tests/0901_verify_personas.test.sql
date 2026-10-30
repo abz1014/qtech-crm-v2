@@ -144,6 +144,8 @@ insert into public.order_items (id, order_id, position, description, unit_price_
   (pg_temp.f('25'), pg_temp.f('20'), 0, 'Fixture order item', 100, pg_temp.f('23'), 10);
 insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('20'), 5);
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
+insert into public.order_visits (id, order_id, engineer_id) values (pg_temp.f('f2'), pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');   -- 0130
+insert into public.delivery_challans (id, order_id, number, lines) values (pg_temp.f('f5'), pg_temp.f('20'), 'DC-0001', '[{"description":"Fixture order item","qty":1}]');   -- 0131
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
@@ -224,6 +226,8 @@ insert into spec values
   ('orders', '', 'id = @21', 'notes', $q$insert into public.orders (id, company_id, owner_id) values (@a9, @01, 'a0000000-0000-4000-8000-000000000002')$q$),
   ('order_items', '', 'id = @25', 'description', $q$insert into public.order_items (id, order_id, description, unit_price_net) values (@aa, @20, 'probe', 1)$q$),
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
+  ('order_visits', '', 'id = @f2', 'notes', $q$insert into public.order_visits (id, order_id, visit_on) values (@f4, @21, current_date)$q$),   -- 0130
+  ('delivery_challans', '', 'id = @f5', 'notes', $q$insert into public.delivery_challans (id, order_id, number, lines) values (@f6, @21, 'DC-9999', '[{"description":"x","qty":1}]')$q$),   -- 0131
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),

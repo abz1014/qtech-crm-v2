@@ -45,6 +45,9 @@ create policy delivery_challans_insert_staff on public.delivery_challans for ins
 create policy delivery_challans_delete_admin on public.delivery_challans for delete to authenticated, qtech_engineer
   using ((select public.current_user_role()) = 'admin');
 
+create trigger delivery_challans_force_created_by before insert or update on public.delivery_challans
+  for each row execute function public.force_created_by();   -- 0065 L-1: a signed-in caller is always the creator
+
 create trigger delivery_challans_audit after insert or update or delete on public.delivery_challans
   for each row execute function public.audit_row_change();
 

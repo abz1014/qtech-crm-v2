@@ -234,5 +234,8 @@ revoke all on function public.orders_mirror_visit_fields() from public, anon, au
 create trigger orders_mirror_visit_fields after insert or update of commissioning_planned_on, commissioning_done_on, visit_type on public.orders
   for each row execute function public.orders_mirror_visit_fields();
 
+create trigger order_visits_force_created_by before insert or update on public.order_visits
+  for each row execute function public.force_created_by();   -- 0065 L-1: a signed-in caller is always the creator
+
 create trigger order_visits_audit after insert or update or delete on public.order_visits
   for each row execute function public.audit_row_change();

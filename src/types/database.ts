@@ -963,6 +963,30 @@ isOneToOne: true
       referencedColumns: ["order_id"]
     }
                   ]
+                },"delivery_challans": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"deliver_to": string | null,"id": string,"issued_on": string,"lines": Json,"notes": string | null,"number": string,"order_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"deliver_to"?: string | null,"id"?: string,"issued_on"?: string,"lines": Json,"notes"?: string | null,"number": string,"order_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"deliver_to"?: string | null,"id"?: string,"issued_on"?: string,"lines"?: Json,"notes"?: string | null,"number"?: string,"order_id"?: string
+                  }
+                  Relationships: []
+                },"order_visits": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"done_on": string | null,"engineer_id": string | null,"id": string,"notes": string | null,"order_id": string,"updated_at": string,"visit_on": string | null,"visit_type": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id": string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id"?: string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
+                  }
+                  Relationships: []
                 },"order_engineers": {
                   Row: {
                     "order_id": string,"user_id": string
@@ -2484,6 +2508,12 @@ isOneToOne: false
 { Args: { "p_at": string }; Returns: {
               "achieved_net": number,"behind_pace": number,"excluded_count": number,"gap": number,"on_pace_net": number,"quarter": number,"quarter_end": string,"target_net": number,"year": number
             }[]
+                           },
+"create_delivery_challan":
+{ Args: { "p_deliver_to"?: string,"p_lines"?: Json,"p_notes"?: string,"p_order_id": string }; Returns: Database["public"]["Tables"]["delivery_challans"]["Row"]
+                           },
+"next_challan_number":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "next_invoice_number":
 { Args: Record<PropertyKey, never>; Returns: {
