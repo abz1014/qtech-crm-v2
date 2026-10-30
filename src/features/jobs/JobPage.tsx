@@ -10,6 +10,7 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
 import { DetailHeader } from '@/ui/DetailHeader'
+import { useReassignOwnerItem } from '@/features/owners/useReassignOwner'
 import { EmptyState } from '@/ui/EmptyState'
 import { NextStepBox } from '@/ui/NextStepBox'
 import { Skeleton } from '@/ui/Skeleton'
@@ -157,6 +158,7 @@ function JobView({ facts }: { facts: JobFacts }) {
     </Button>
   ) : undefined
 
+  const reassign = useReassignOwnerItem({ kind: job.rfqId ? 'job' : 'order', id: (job.rfqId ?? job.orderId) as string, label: `${jobLabel(job.key)} · ${job.companyName}`, ownerId: job.ownerId, ownerName: job.ownerName })
   const meta = [
     job.ownerName ? `Owner ${job.ownerName}` : 'No owner yet',
     facts.customerRef ? `Their ref ${facts.customerRef}` : null,
@@ -174,6 +176,14 @@ function JobView({ facts }: { facts: JobFacts }) {
         breadcrumb={[{ label: 'Jobs', to: '/jobs' }, { label: jobLabel(job.key), mono: true }]}
         meta={meta}
       >
+        {reassign.ask && (job.rfqId ?? job.orderId) ? (
+          <p className="mt-2">
+            <Button size="sm" variant="quiet" onClick={reassign.ask}>
+              Reassign owner
+            </Button>
+          </p>
+        ) : null}
+        {reassign.node}
         {job.repeatOf ? (
           <p className="mt-2 text-base">
             <Link to={`/jobs/${encodeURIComponent(job.repeatOf)}`} className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline">

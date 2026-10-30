@@ -40,6 +40,7 @@ import { useDeleteRfqFlow } from '@/features/rfqs/deleteFlow'
 import { useEditRfqFlow } from '@/features/rfqs/useEditRfqFlow'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
+import { useReassignOwnerItem } from '@/features/owners/useReassignOwner'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/forRfq'
 import { useWonDialog } from '@/features/orders/useWonDialog'
@@ -450,6 +451,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
   const edit = useEditRfqFlow(rfq)
   const prices = useSeesPrices()
   const hist = useHistoryPanel({ table: 'rfqs', id: rfq.id, context: `${rfqRef(rfq.number)} · ${rfq.company.name}` })
+  const reassign = useReassignOwnerItem({ kind: 'rfq', id: rfq.id, label: `${rfqRef(rfq.number)} · ${rfq.company.name}`, ownerId: rfq.owner?.id ?? null, ownerName: rfq.owner?.name ?? null })
   const main = useMainActions(rfq, facts)
   const s = rfq.state
   const ref = rfqRef(rfq.number)
@@ -485,13 +487,14 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       // A closed or won RFQ has no other actions, but an admin can still delete a mistake: a More menu with only that.
       more={
         open ? (
-          <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} history={hist.item} />
+          <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} history={<>{hist.item}{reassign.item}</>} />
         ) : (
           <MoreMenu label="More" menuClassName="min-w-[200px]">
             <MenuItem icon={Pencil} onClick={edit.ask}>
               Edit RFQ details
             </MenuItem>
             {hist.item}
+              {reassign.item}
             <DeleteItem onDelete={del.ask} separator />
           </MoreMenu>
         )
@@ -530,6 +533,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
           {prices || del.ask ? (
             <MoreMenu touch label="Other actions" menuClassName="min-w-[200px]">
               {hist.item}
+              {reassign.item}
               <DeleteItem onDelete={del.ask} separator={prices} />
             </MoreMenu>
           ) : null}
@@ -539,6 +543,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
       {del.node}
       {edit.node}
       {hist.node}
+      {reassign.node}
 
       {/* Borders are on the cells (right and bottom, the grid pulled over the frame's edge), not divide-*: a hidden cell (Site on a phone) broke the dividers. */}
       <div className="mt-4 overflow-hidden rounded border bg-surface">
@@ -614,6 +619,7 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
   const del = useDeleteRfqFlow(rfq)
   const edit = useEditRfqFlow(rfq)
   const hist = useHistoryPanel({ table: 'rfqs', id: rfq.id, context: `${rfqRef(rfq.number)} · ${rfq.company.name}` })
+  const reassign = useReassignOwnerItem({ kind: 'rfq', id: rfq.id, label: `${rfqRef(rfq.number)} · ${rfq.company.name}`, ownerId: rfq.owner?.id ?? null, ownerName: rfq.owner?.name ?? null })
   if ((rfq.state?.outcome ?? 'open') !== 'open') return null
   return (
     <>
@@ -635,11 +641,12 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
           </PopoverContent>
         </Popover>
       }
-      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} history={hist.item} touch />}
+      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} onDelete={del.ask} onEdit={edit.ask} history={<>{hist.item}{reassign.item}</>} touch />}
     />
       {del.node}
       {edit.node}
       {hist.node}
+      {reassign.node}
     </>
   )
 }

@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { FileText, History, KeyRound, LogOut, Pencil, Phone, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { z } from 'zod'
 import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
@@ -13,6 +13,9 @@ import {
 } from '@/features/settings/hooks'
 import { firstName, isOnlyActiveAdmin, PHONE_MAX, ROLE_OPTIONS, roleLabel } from '@/features/settings/teamModel'
 import { phoneText } from '@/lib/formRules'
+import { workSentence } from '@/features/owners/api'
+import { OwnerPicker } from '@/features/owners/ReassignDialogs'
+import { useOpenWork, useReassignOpenWork } from '@/features/owners/hooks'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -340,13 +343,25 @@ export function DeactivateDialog({ member, members, onClose }: Base & { member: 
   const deactivate = useDeactivatePerson()
   const locked = isOnlyActiveAdmin(member, members)
   const first = firstName(member.name)
+  // process audit 1: offer to hand their open enquiries and live orders to someone else before they go
+  const work = useOpenWork(member.id)
+  const move = useReassignOpenWork()
+  const [to, setTo] = useState('')
+  const openCount = (work.data?.rfqs ?? 0) + (work.data?.orders ?? 0)
   const sf = useSubmitForm({
     schema: none,
     entity: 'person',
     defaultValues: {},
-    onSubmit: () => deactivate.mutateAsync(member.id),
+    onSubmit: async () => {
+      if (to && openCount > 0) await move.mutateAsync({ from: member.id, to })
+      await deactivate.mutateAsync(member.id)
+    },
     onSuccess: () => {
-      toast({ title: `${member.name} deactivated`, body: 'They are signed out everywhere.', tone: 'success' })
+      toast({
+        title: `${member.name} deactivated`,
+        body: to && openCount > 0 ? `They are signed out everywhere. ${workSentence(work.data ?? { rfqs: 0, orders: 0 })} moved to the new owner.` : 'They are signed out everywhere.',
+        tone: 'success',
+      })
       onClose()
     },
   })
@@ -390,6 +405,15 @@ export function DeactivateDialog({ member, members, onClose }: Base & { member: 
                 Their RFQs, orders and notes stay exactly as they are, with their name as the author.
               </Consequence>
               <Consequence icon={History}>You can reactivate them at any time. Their role and job title are kept.</Consequence>
+              {openCount > 0 ? (
+                <li className="grid gap-2 rounded-row border bg-sunken px-3 py-3" data-testid="deactivate-open-work">
+                  <span className="text-pretty">
+                    {first} still has {workSentence(work.data ?? { rfqs: 0, orders: 0 })}. Until it is moved, the money follow-ups on their orders go to the admin.
+                  </span>
+                  <OwnerPicker value={to} onChange={setTo} exclude={member.id} />
+                  <span className="text-sm text-fg-muted">Choose who takes it over now, or leave it and use Move open work later. Payments already received keep their credit toward targets.</span>
+                </li>
+              ) : null}
             </ul>
           )}
         </Form>

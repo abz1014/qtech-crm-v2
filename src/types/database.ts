@@ -2500,6 +2500,11 @@ isOneToOne: false
               "cancelled_with_supplier_on": string,"committed": number,"committed_pkr": number,"currency": string,"flag": string,"fx_rate": number,"order_id": string,"order_number": number,"owed_pkr": number,"paid_pkr": number,"state": string,"supplier_id": string,"supplier_name": string,"supplier_order_id": string
             }[]
                            },
+"open_work_of":
+{ Args: { "p_user": string }; Returns: {
+              "orders": number,"rfqs": number
+            }[]
+                           },
 "po_line_prefill":
 { Args: { "p_supplier_order_id": string }; Returns: {
               "description": string,"order_item_id": string,"position": number,"price_source": string,"qty": number,"source_number": number,"source_on": string,"source_revision": number,"unit": string,"unit_price": number
@@ -2525,6 +2530,17 @@ isOneToOne: false
 { Args: { "p_today"?: string }; Returns: {
               "gross": number,"not_invoiced": number,"not_invoiced_count": number,"not_yet_due": number,"not_yet_due_count": number,"open_count": number,"outstanding": number,"overdue": number,"overdue_count": number,"reminder_due_count": number,"settled": number,"settled_count": number
             }[]
+                           },
+"reassign_open_work":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "orders": number,"rfqs": number
+            }[]
+                           },
+"reassign_owner":
+{ Args: { "p_id": string,"p_kind": string,"p_to": string }; Returns: number
+                           },
+"reassign_owner_check":
+{ Args: { "p_to": string }; Returns: undefined
                            },
 "record_history":
 { Args: { "p_before"?: string,"p_id": string,"p_limit"?: number,"p_table": string }; Returns: Json

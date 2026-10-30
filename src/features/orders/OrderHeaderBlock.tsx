@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Icon } from '@/ui/Icon'
+import { useReassignOwnerItem } from '@/features/owners/useReassignOwner'
 import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, CopyPlus, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Trash2, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
@@ -407,6 +408,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false, aft
   const today = businessToday()
   const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName }, afterDelete)
   const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
+  const reassign = useReassignOwnerItem({ kind: 'order', id: order.id, label: `${ref} · ${order.companyName}`, ownerId: order.owner?.id ?? null, ownerName: order.owner?.name ?? null })
 
   const reopen = () =>
     once(async () => {
@@ -435,6 +437,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false, aft
     <>
       <MoreMenu touch={touch} label="More actions">
           {history.item}
+          {reassign.item}
           {recordPayment ? (
             <MenuItem icon={Banknote} onClick={() => setPaying(true)}>
               Record payment
@@ -460,6 +463,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false, aft
       </MoreMenu>
       {del.node}
       {history.node}
+      {reassign.node}
       {recordPayment ? <RecordPaymentDialog open={paying} onOpenChange={setPaying} orderId={order.id} /> : null}
       {cancelling ? (
         <CancelDialog
