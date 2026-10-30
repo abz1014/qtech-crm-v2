@@ -56,8 +56,8 @@ echo "PASS: the files artifact is encrypted and opens with the key"
 
 # ---- the 30-day trash: deleting a record lists its file and removes nothing
 sql "insert into public.companies (id, name) values ('c0de0000-0000-4000-8000-0000000000a1', 'Trash Customer');
-     insert into public.rfqs (id, company_id) values ('c0de0000-0000-4000-8000-0000000000a2', 'c0de0000-0000-4000-8000-0000000000a1'),
-                                                    ('c0de0000-0000-4000-8000-0000000000a3', 'c0de0000-0000-4000-8000-0000000000a1');
+     insert into public.rfqs (id, company_id, owner_id) values ('c0de0000-0000-4000-8000-0000000000a2', 'c0de0000-0000-4000-8000-0000000000a1', 'a0000000-0000-4000-8000-000000000002'),
+                                                    ('c0de0000-0000-4000-8000-0000000000a3', 'c0de0000-0000-4000-8000-0000000000a1', 'a0000000-0000-4000-8000-000000000002');
      insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id) values
        ('rfq-files', 'selftest/a.pdf', 'a.pdf', 'application/pdf', 22, 'c0de0000-0000-4000-8000-0000000000a2'),
        ('rfq-files', 'selftest/b.pdf', 'b.pdf', 'application/pdf', 40, 'c0de0000-0000-4000-8000-0000000000a2');
