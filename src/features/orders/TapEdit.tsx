@@ -19,7 +19,8 @@ interface TapDateProps {
   /** Names the date for assistive tech and the editor ("Placed date, Alpenmark Controls"). */
   label: string
   today: string
-  onSave: (value: string | null) => void | Promise<void>
+  /** Resolve `false` when the save did not go through: the editor stays open with what was typed. */
+  onSave: (value: string | null) => void | boolean | Promise<void | boolean>
   disabled?: boolean
   /** Draw a labelled Button instead of the date text (the engineer's "Change planned date"). */
   button?: { text: string; icon: LucideIcon }
@@ -38,8 +39,7 @@ export function TapDate({ value, label, today, onSave, disabled, button, empty =
   const save = async (next: string | null) => {
     setBusy(true)
     try {
-      await onSave(next)
-      setOpen(false)
+      if ((await onSave(next)) !== false) setOpen(false)
     } finally {
       setBusy(false)
     }
@@ -85,7 +85,8 @@ interface TapTextProps {
   /** What an empty value reads as, and the tap target ("Add reference"). */
   empty: string
   render?: (value: string) => ReactNode
-  onSave: (value: string | null) => void | Promise<void>
+  /** Resolve `false` when the save did not go through: the editor stays open with what was typed. */
+  onSave: (value: string | null) => void | boolean | Promise<void | boolean>
   disabled?: boolean
   placeholder?: string
   className?: string
@@ -101,8 +102,7 @@ export function TapText({ value, label, empty, render, onSave, disabled, placeho
   const save = async () => {
     setBusy(true)
     try {
-      await onSave(draft.trim() || null)
-      setOpen(false)
+      if ((await onSave(draft.trim() || null)) !== false) setOpen(false)
     } finally {
       setBusy(false)
     }

@@ -215,6 +215,7 @@ export function OrderHeaderBlock({
             await update.mutateAsync({ customer_po_number: v })
           } catch (err) {
             toast({ title: 'Could not save the PO number', body: mapPgError(err, { entity: 'PO number' }).message, tone: 'danger' })
+            return false // the editor stays open with what was typed
           }
         }}
       />

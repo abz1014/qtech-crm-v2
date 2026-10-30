@@ -46,7 +46,7 @@ export function useSetPlanned(order: OrderHeader) {
   const { toast } = useToast()
   const update = useUpdateOrder(order.id, order.updatedAt)
   const undoUpdate = useUpdateOrder(order.id)
-  return async (value: string | null) => {
+  return async (value: string | null): Promise<boolean | void> => {
     const previous = order.plannedOn
     try {
       await update.mutateAsync({ commissioning_planned_on: value })
@@ -63,6 +63,7 @@ export function useSetPlanned(order: OrderHeader) {
       })
     } catch (err) {
       toast({ title: 'Could not change the date', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
+      return false // the editor stays open with the date that was picked
     }
   }
 }
