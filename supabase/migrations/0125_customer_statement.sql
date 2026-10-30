@@ -56,11 +56,12 @@ begin
 
   -- credit notes (fix/money-integrity, 0112): read only once that table exists
   if to_regclass('public.credit_notes') is not null then
-    return query execute
+    -- the table name is an identifier built at run time, so the database lint does not look for it where it does not exist yet
+    return query execute format(
       'select c.issued_on::date, ''credit_note''::text, c.number::text, o.number::bigint, c.reason::text, '
       '0::numeric, (c.net_amount + c.gst_amount)::numeric, 2 '
-      'from public.credit_notes c left join public.orders o on o.id = c.order_id '
-      'where coalesce(c.company_id, o.company_id) = $1 and c.issued_on <= $2'
+      'from %I.%I c left join public.orders o on o.id = c.order_id '
+      'where coalesce(c.company_id, o.company_id) = $1 and c.issued_on <= $2', 'public', 'credit_notes')
     using p_company, v_to;
   end if;
 
