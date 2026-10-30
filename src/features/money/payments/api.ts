@@ -173,6 +173,9 @@ export interface PaymentInsert {
   paidVia: PaidVia
   /** The person saw "Looks like a payment already recorded on ..." and chose to record it anyway (0114). */
   confirmDuplicate?: boolean
+  /** Withholding tax the customer deducted (0116): not cash, but it settles the order with the cash. */
+  whtAmount?: number
+  whtCertificate?: string | null
 }
 
 /**
@@ -190,6 +193,8 @@ export async function recordPayment(v: PaymentInsert): Promise<void> {
     p_reference: v.reference ?? undefined,
     p_paid_via: v.paidVia,
     p_confirm_duplicate: v.confirmDuplicate ?? false,
+    p_wht_amount: v.whtAmount ?? 0,
+    p_wht_certificate: v.whtCertificate ?? undefined,
   })
   if (error) throw error
 }

@@ -214,6 +214,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This invoice is for Rs (.+?) but only Rs (.+?) is left to invoice on this order\. / },
   { match: /^The GST on this invoice \(Rs / },
   { match: /^Only an admin records a payment\.$/, message: () => ADMIN_ONLY },
+  { match: /^The withholding tax cannot be below zero\.$/ },
   { match: /^Looks like a payment already recorded on / },
   { match: /^Rs (.+?) for 1 (.+?) is more than 20 percent away from the latest rate / },
   { match: /^0115: /, internal: true },
