@@ -112,7 +112,7 @@ function InvoiceLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
 const baseSchema = z.object({
   number: z.string().trim().min(1, 'Enter the invoice number').max(40, 'Keep the number under 40 characters'),
   invoiceDate: z.string().min(1, 'Choose a date'),
-  net: z.number({ invalid_type_error: 'Enter the net amount', required_error: 'Enter the net amount' }).positive('The net amount must be above zero').max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit'),
+  net: z.number({ error: 'Enter the net amount' }).positive('The net amount must be above zero').max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit'),
   gst: z.number().min(0, 'GST cannot be below zero').max(MAX_AMOUNT, 'That GST is too large'),
   option: z.enum(['18', 'exempt', 'mixed']),
 })
