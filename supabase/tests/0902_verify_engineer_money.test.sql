@@ -233,6 +233,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('order_items', 'legacy_source', 'hidden', null),
   ('orders', 'legacy_source', 'hidden', null),
   ('payments_in', 'amount', 'hidden', null), ('payments_in', 'legacy_source', 'hidden', null),
+  ('payments_in', 'wht_amount', 'hidden', null),   -- 0116: withholding tax deducted by the customer
   ('purchase_orders', 'total', 'supplier', null), ('purchase_orders', 'lines', 'supplier', null),
   ('quotations', 'net_total', 'm3', null), ('quotations', 'gst_total', 'm3', null), ('quotations', 'lines', 'm3', null),
   ('recurring_expenses', 'amount', 'hidden', null),
@@ -249,6 +250,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_fx_latest', 'rate_pkr', 'supplier', null),
   ('v_gst_month', 'net', 'hidden', null), ('v_gst_month', 'gst', 'hidden', null), ('v_gst_month', 'deposited_amount', 'hidden', null),
   ('v_gst_month', 'gst_to_deposit', 'hidden', null),
+  ('v_wht_deducted', 'wht_amount', 'hidden', null),   -- 0116
   ('v_gst_month', 'credit_net', 'hidden', null), ('v_gst_month', 'credit_gst', 'hidden', null), ('v_gst_month', 'credit_note_count', 'info', null),   -- 0112 ('v_gst_month', 'input_tax', 'hidden', null), ('v_gst_month', 'deposited_count', 'info', null),
   ('v_gst_register', 'net_amount', 'hidden', null), ('v_gst_register', 'gst_amount', 'hidden', null), ('v_gst_register', 'gross_amount', 'hidden', null),
   ('v_gst_register', 'tax_deposit_amount', 'hidden', null),
