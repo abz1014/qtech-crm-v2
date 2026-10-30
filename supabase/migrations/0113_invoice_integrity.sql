@@ -9,7 +9,7 @@
 --           on the lines shared out in proportion to the net, 18% of the net, nothing (exempt lines), or the GST of a set of
 --           whole order lines whose nets add up to the net (up to 12 priced lines are searched; the lines' own GST uses the
 --           per-line rounding of v_order_items_total).
---       Only rows the API writes are checked (auth.uid() is set); an imported row (legacy source or flags), an invoice with no
+--       Only rows the API roles write are checked (authenticated, qtech_engineer: a migration, the importer and the table owner are not); an imported row (legacy source or flags), an invoice with no
 --       order, an order with no priced lines, and an UPDATE that leaves order, net and GST alone (a stamp, a PSID, a reminder)
 --       are not.
 --   H2. Filed invoices. Once an invoice has a PSID or a tax deposit, its number, date, net and GST cannot change; the correction is
@@ -124,7 +124,8 @@ begin
   end if;
 
   -- H1: only what the API writes, and only when order, net or GST is new
-  if auth.uid() is null or new.order_id is null or new.legacy_source is not null or cardinality(new.legacy_flags) > 0 then
+  if coalesce(current_setting('role', true), '') not in ('authenticated', 'qtech_engineer')
+     or new.order_id is null or new.legacy_source is not null or cardinality(new.legacy_flags) > 0 then
     return new;
   end if;
   if tg_op = 'UPDATE'

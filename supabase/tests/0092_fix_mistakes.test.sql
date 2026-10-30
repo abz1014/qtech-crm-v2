@@ -111,6 +111,8 @@ insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst
    'a0000000-0000-4000-8000-000000000001');
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id) values
   (pg_temp.u('35'), 'gst-receipts', 'm92/r.pdf', 'r.pdf', 'application/pdf', 10, pg_temp.u('34'));
+-- 0112: a numbered invoice is voided, never deleted, so the invoices these delete tests use carry no number (a legacy row)
+update public.invoices set number = null, legacy_flags = array['undated'] where id in (pg_temp.u('32'), pg_temp.u('33'), pg_temp.u('34'));
 
 -- payments: 40 plain, 41 bank-ticked, 44 corrected by 43, 45 in January 2019, 46 plain (deleted below);
 -- 47 the only payment of order 61, 48 the only payment of order 62 (voided)

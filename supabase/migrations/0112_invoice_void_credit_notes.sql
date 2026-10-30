@@ -307,7 +307,8 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if old.number is not null then
+  -- the API roles only (the table owner, a migration and the importer are not limited, as with the other guards)
+  if old.number is not null and current_user in ('authenticated', 'qtech_engineer') then
     raise exception 'Invoice % has a number, so it is kept. Void it instead: the number stays in the register.', old.number
       using errcode = 'P0001', hint = 'use_void';
   end if;
