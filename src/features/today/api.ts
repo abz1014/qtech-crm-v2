@@ -3,6 +3,7 @@ import { toBusinessDate } from '@/lib/dates'
 import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart, today1 } from '@/features/today/rules'
 import { getGstDeadlines } from '@/features/settings/gstApi'
+import { getHealth } from '@/features/settings/healthApi'
 import { gstDatesFor } from '@/features/settings/gstDeadlines'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { fetchReceivablesList, type ReceivablesListRow } from '@/features/money/payments/api'
@@ -23,6 +24,7 @@ import type {
   SnoozeFact,
   GstFact,
   ClaimsFact,
+  HealthFact,
 } from '@/features/today/types'
 
 /*
@@ -48,6 +50,8 @@ export interface TodayData {
   gst: GstFact | null
   /** P3-D. Admin only: engineers' "I paid" claims waiting. Null otherwise. */
   claims: ClaimsFact | null
+  /** 0120. Admin only: backup age, plan usage and the monthly key check. Null otherwise, and when the function cannot be read. */
+  health: HealthFact | null
   /** M08. Admin only; empty otherwise. */
   costs: CostFact[]
   /** M08. Admin and sales only; empty for an engineer (the read is never made). */
@@ -405,6 +409,26 @@ async function loadGst(today: string): Promise<GstFact> {
   return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length, payBy, returnBy }
 }
 
+/**
+ * 0120, admin only: the backup and plan-usage facts. A failure here must never take the whole list down (the function may not exist yet on
+ * an older database), so it returns null and the three health rows are simply absent.
+ */
+async function loadHealth(): Promise<HealthFact | null> {
+  try {
+    const h = await getHealth()
+    if (!h) return null
+    return {
+      backupOn: toBusinessDate(new Date(h.lastBackupAt ?? h.trackingSince)),
+      backupRecorded: h.lastBackupAt !== null,
+      decryptOn: toBusinessDate(new Date(h.lastDecryptTestAt ?? h.trackingSince)),
+      dbBytes: h.dbBytes,
+      storageBytes: h.storageBytes,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** P3-D, admin only: engineers' pending "I paid" claims (0087): how many, and the day the oldest was made. */
 async function loadClaims(): Promise<ClaimsFact> {
   const db = requireSupabase()
@@ -537,7 +561,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   /** Customers read "Name — City"; suppliers stay plain. */
   const labels = new Map(companies.map(c => [c.id, withCity(c.name, c.city)]))
   const money = role === 'admin' || role === 'sales'
-  const [clarifications, inquiries, legs, orders, receivables, monthEnd, gst, claims, costs, invoices, recurring, jobs] = await Promise.all([
+  const [clarifications, inquiries, legs, orders, receivables, monthEnd, gst, claims, health, costs, invoices, recurring, jobs] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open),
     loadLegs(names, labels),
@@ -546,6 +570,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     role === 'admin' ? loadMonthEnd(today) : Promise.resolve<MonthEndFact | null>(null),
     role === 'admin' ? loadGst(today) : Promise.resolve<GstFact | null>(null),
     role === 'admin' ? loadClaims() : Promise.resolve<ClaimsFact | null>(null),
+    role === 'admin' ? loadHealth() : Promise.resolve<HealthFact | null>(null),
     role === 'admin' ? loadCosts() : Promise.resolve<CostFact[]>([]),
     money ? loadInvoiceFacts(today) : Promise.resolve<InvoiceFact[]>([]),
     role === 'admin' ? loadRecurringFacts(today) : Promise.resolve<RecurringFact[]>([]),
@@ -562,6 +587,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     monthEnd,
     gst,
     claims,
+    health,
     costs,
     invoices,
     recurring,

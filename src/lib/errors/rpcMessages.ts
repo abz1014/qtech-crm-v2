@@ -174,6 +174,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // 0098: a product category is renamed and curated by an admin (HINT admin_only)
   { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
+  { match: /^Only an admin can (see|do) this\.$/, message: () => ADMIN_ONLY },   // 0120: admin_health, confirm_backup_decrypt_test
   { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
   { match: /^This RFQ has an order\. / },
   { match: /^This order has an invoice\. / },

@@ -825,12 +825,11 @@ export async function setAttachmentHasPrices(id: string, hasPrices: boolean): Pr
   if (error) throw error
 }
 
-/** The row first, then the object: a failed object removal leaves an orphan (swept later), never a row pointing at nothing. */
+/** Deletes the record only. The file stays in storage for 30 days (migration 0120's trigger lists it for the nightly purge), so a mistaken delete can be undone from a backup or by the admin. */
 export async function deleteAttachment(att: Pick<AttachmentRow, 'id' | 'path'>): Promise<void> {
   const db = requireSupabase()
   const { error } = await db.from('attachments').delete().eq('id', att.id)
   if (error) throw error
-  await db.storage.from(FILE_BUCKET).remove([att.path])
 }
 
 /** Short-lived links for showing and opening files (the bucket is private). Keyed by path. */
@@ -1117,28 +1116,8 @@ export interface StoredFile {
   path: string
 }
 
-/** delete_rfq: the rows are gone when this resolves; the files it names are the caller's to remove from storage. */
+/** delete_rfq: the rows are gone when this resolves. The files it names stay in storage for 30 days (migration 0120 lists them for the nightly purge); nothing removes them here. */
 export async function deleteRfq(rfqId: string): Promise<StoredFile[]> {
   const rows = unwrap(await requireSupabase().rpc('delete_rfq', { p_rfq_id: rfqId })) ?? []
   return rows.map(r => ({ bucket: r.storage_bucket, path: r.storage_path }))
-}
-
-/**
- * Removes stored files, one call per bucket. A file that will not go must not undo a delete that already happened, so this never
- * throws: it returns the files it could not remove.
- */
-export async function removeStoredFiles(files: readonly StoredFile[]): Promise<StoredFile[]> {
-  const byBucket = new Map<string, string[]>()
-  for (const f of files) byBucket.set(f.bucket, [...(byBucket.get(f.bucket) ?? []), f.path])
-  const failed: StoredFile[] = []
-  for (const [bucket, paths] of byBucket) {
-    try {
-      const { error } = await requireSupabase().storage.from(bucket).remove(paths)
-      if (error) throw error
-    } catch (e) {
-      console.error(`Could not remove ${paths.length} file(s) from ${bucket} after deleting an RFQ`, e)
-      failed.push(...paths.map(path => ({ bucket, path })))
-    }
-  }
-  return failed
 }

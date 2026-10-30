@@ -372,6 +372,7 @@ export const VISITS: readonly Visit[] = [
   screen('settings-company', 'Settings: company profile', ALL, () => '/settings/company'),
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
   screen('settings-exchange-rates', 'Settings: exchange rates', MONEY, () => '/settings/exchange-rates'), // engineers: no currency amounts (2026-10-22)
+  screen('settings-backups', 'Settings: backups and usage', ADMIN, () => '/settings/backups'),
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
   addToJobPasted,
   issueQuotation,

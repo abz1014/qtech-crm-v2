@@ -304,6 +304,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'delete_quotation_revision', '', 'X',  '',     ''),     -- 0092: admin only
   ('function', 'delete_po_revision',    '',    'X',    '',     ''),     -- 0092: admin only
   ('function', 'delete_company',        '',    'X',    '',     ''),     -- 0092: admin only
+  ('function', 'admin_health',          '',    'X',    '',     ''),     -- 0120: admin only (42501 for everyone else)
+  ('function', 'confirm_backup_decrypt_test', '', 'X', '',     ''),     -- 0120: admin only
   ('bucket', 'claim-receipts',   'own',   'SID',  '',     'SID'),         -- 0087: receipt photos under <claim id>/: the admin, and the engineer on their own pending claim
   ('bucket', 'claim-receipts',   'other', 'SID',  '',     '');            -- 0087: another person's claim photos are closed to an engineer
 
@@ -601,7 +603,9 @@ insert into probes values
   ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
   ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
   ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
-  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x'),   -- 0092
+  ('admin_health', '', 'X', 'select 1 from public.admin_health()'),   -- 0120: one row for the admin, 42501 for the others
+  ('confirm_backup_decrypt_test', '', 'X', 'select 1 from (select public.confirm_backup_decrypt_test() r) x');   -- 0120
 
 -- ------------------------------------------------------------------ probes: storage buckets
 -- Storage refuses a direct SQL DELETE on storage.objects for every role (its protect_delete guard fires before row

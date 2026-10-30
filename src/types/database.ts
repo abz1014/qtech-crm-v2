@@ -2299,7 +2299,12 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "aging_as_of":
+            "admin_health":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "db_bytes": number,"last_backup_at": string,"last_backup_bytes": number,"last_backup_objects": number,"last_backup_storage_bytes": number,"last_decrypt_test_at": string,"last_drill_at": string,"last_drill_ok": boolean,"storage_bytes": number,"storage_objects": number,"tracking_since": string,"trash_files": number,"trash_oldest": string
+            }[]
+                           },
+"aging_as_of":
 { Args: { "p_date": string }; Returns: {
               "advance_held": number,"age_days": number,"applied": number,"bucket": string,"company_id": string,"gross": number,"invoice_date": string,"invoice_id": string,"invoice_number": string,"kind": string,"order_id": string,"order_number": number,"remaining": number
             }[]
@@ -2335,6 +2340,9 @@ isOneToOne: false
                            },
 "close_months_through":
 { Args: { "p_month": string }; Returns: number
+                           },
+"confirm_backup_decrypt_test":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "convert_rfq_to_order":
 { Args: { "p_customer_po_number"?: string,"p_expected_revision"?: number,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string

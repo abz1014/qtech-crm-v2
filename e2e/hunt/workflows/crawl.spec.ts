@@ -68,6 +68,7 @@ function routes(): { path: string; who: Role[] }[] {
     { path: '/settings/team', who: a },
     { path: '/settings/targets', who: a },
     { path: '/settings/categories', who: a },
+    { path: '/settings/backups', who: a },
     { path: '/settings/company', who: all },
     { path: '/settings/details', who: all },
     { path: '/settings/exchange-rates', who: all },

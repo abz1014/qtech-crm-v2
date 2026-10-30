@@ -13,6 +13,7 @@ const SETTINGS: Array<[string, string]> = [
   ['My details', '/settings/details'],
   ['Company profile', '/settings/company'],
   ['Exchange rates', '/settings/exchange-rates'],
+  ['Backups and usage', '/settings/backups'],
 ]
 
 for (const viewport of [

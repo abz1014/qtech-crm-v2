@@ -49,6 +49,9 @@ export const ACTION_LABEL: Record<RuleKey, string> = {
   weekly_review: 'Start review',
   gst_fbr: 'Open GST',
   claims_to_approve: 'Approve',
+  backup_stale: 'Open backups',
+  usage_high: 'See usage',
+  decrypt_test: 'Open backups',
 }
 
 /** Rules whose button opens the prepared message (the context pane holds Copy, Open in WhatsApp and Mark chased). */

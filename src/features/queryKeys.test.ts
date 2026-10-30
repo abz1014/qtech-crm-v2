@@ -51,6 +51,7 @@ describe('invalidation map (R01)', () => {
     'team.reactivate': {},
     'company-profile.update': {},
     'gst-deadlines.save': {},
+    'health.confirm-decrypt': {},
     'target.save': {},
     'category.save': {},
     'category.merge': {},

@@ -4,7 +4,6 @@ import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { useToast } from '@/ui/useToast'
-import { removeStoredFiles } from '@/features/rfqs/api'
 import { monthKeyLabel, pkr } from '@/features/money/expenses/model'
 import { GST_FILED_WARNING } from '@/features/money/invoices/model'
 import type { InvoiceRow } from '@/features/money/invoices/api'
@@ -35,17 +34,14 @@ export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled:
   const name = invoice.number ? `invoice ${invoice.number}` : 'this invoice'
 
   const confirm = async () => {
-    let files: Awaited<ReturnType<typeof del.mutateAsync>>
     try {
-      files = await del.mutateAsync(invoice.id)
+      await del.mutateAsync(invoice.id)
     } catch (e) {
       if (mapPgError(e).hint === 'bank_ticked') setRefused(true)
       throw e
     }
-    // The rows are gone: nothing below may throw into the confirm.
-    const failed = await removeStoredFiles(files)
+    // The rows are gone. The receipt files stay in storage for 30 days (migration 0120 lists them for the nightly purge).
     toast({ title: `Deleted ${name}`, body: `${pkr(gross)}${invoice.invoice_date ? ` · ${formatShortDate(invoice.invoice_date, undefined, true)}` : ''}`, tone: 'success' })
-    if (failed.length > 0) toast({ title: 'Some files were not removed', body: `${failed.length} receipt ${failed.length === 1 ? 'file' : 'files'} stayed in storage. The invoice itself is deleted.` })
     opts.onDeleted()
   }
 

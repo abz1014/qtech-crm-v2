@@ -4,6 +4,7 @@ import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/settings/api'
 import * as gstApi from '@/features/settings/gstApi'
+import * as healthApi from '@/features/settings/healthApi'
 import type { Role } from '@/features/settings/api'
 import type { CategoryGroup } from '@/features/settings/categoriesModel'
 import type { ProfileValues } from '@/features/settings/companyProfile'
@@ -113,6 +114,19 @@ export function useSaveCompanyProfile() {
  * and they get the starting days (which nothing of theirs shows).
  */
 export const gstDeadlinesQuery = () => ({ queryKey: qk.settings.gstDeadlines(), queryFn: () => gstApi.getGstDeadlines(), staleTime: 60_000 })
+
+/** Backups, usage and the trash (0120). Admin only: the page is behind AdminOnly and the function refuses anyone else. */
+export function useHealth() {
+  return useQuery({ queryKey: qk.settings.health(), queryFn: () => healthApi.getHealth(), staleTime: 30_000 })
+}
+
+export function useConfirmDecryptTest() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => healthApi.confirmDecryptTest(),
+    onSuccess: () => invalidateAfter(client, 'health.confirm-decrypt', {}),
+  })
+}
 
 export function useGstDeadlines() {
   const sees = useSeesPrices()

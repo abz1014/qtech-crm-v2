@@ -6,7 +6,6 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
 import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { useToast } from '@/ui/useToast'
-import { removeStoredFiles } from '@/features/rfqs/api'
 import { refreshAfterOrderDelete, useDeleteOrder, useOrderDeleteFacts } from '@/features/orders/hooks'
 import type { OrderDeleteFacts, OrderHeader } from '@/features/orders/api'
 
@@ -66,15 +65,11 @@ export function useDeleteOrderFlow(order: Pick<OrderHeader, 'id' | 'number' | 'c
     ) : null
 
   const confirm = async () => {
-    const files = await del.mutateAsync(order.id)
-    // The rows are gone. Nothing below may throw into the confirm, or the person would be told the delete failed.
-    const failed = await removeStoredFiles(files)
+    await del.mutateAsync(order.id)
+    // The rows are gone. Their files stay in storage for 30 days (migration 0120 lists them for the nightly purge).
     navigate(to)
     void refreshAfterOrderDelete(client, order.id)
     toast({ title: `${ref} deleted`, body: order.companyName, tone: 'success' })
-    if (failed.length > 0) {
-      toast({ title: 'Some files were not removed', body: `${plural(failed.length, 'file')} stayed in storage. ${ref} itself is deleted.` })
-    }
   }
 
   const node: ReactNode =
