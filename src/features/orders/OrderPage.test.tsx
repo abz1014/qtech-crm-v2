@@ -4,18 +4,17 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
-import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
+import { installFakeDb } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 import { businessToday } from '@/lib/dates'
 import type { OrderHeader, OrderItemRow, OrderLegRow, OrderMoney } from '@/features/orders/api'
 import { OrderHeaderBlock } from '@/features/orders/OrderHeaderBlock'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
-import OrdersListPage from '@/features/orders/OrdersListPage'
 
 /*
- * The order page and the orders list after the UX audit of 2026-10-19: one primary (green) button for the whole page, chosen by state;
- * no duplicate Record payment; five item columns; "Supplier orders" in plain words; the list's one Next step column.
+ * The order page after the UX audit of 2026-10-19: one primary (green) button for the whole page, chosen by state;
+ * no duplicate Record payment; five item columns; "Supplier orders" in plain words.
  */
 const TODAY = businessToday()
 const day = (n: number) => {
@@ -262,74 +261,6 @@ describe('supplier orders, in plain words', () => {
     expect(within(panel).getByRole('button', { name: 'Delivered today, Dubai Instrumentation' })).toBeInTheDocument()
     // goods from Dubai are late: Chase goods is on the row
     expect(within(panel).getByRole('button', { name: 'Chase goods, Dubai Instrumentation' })).toBeInTheDocument()
-  })
-})
-
-describe('the orders list: one Next step column', () => {
-  const listRows = [
-    { id: 'a', number: 38, customer_po_number: '253074', ordered_on: day(-5), owner_id: 'u', company_id: 'c', commissioning_planned_on: null, companies: { name: 'Punjab Cement Ltd' }, company_sites: { name: 'Hub plant' }, order_items: [{ description: 'Belimo actuator', qty: 6, position: 0, supplier_order_id: 'la', is_service: false }, { description: 'pH sensor', qty: 2, position: 1 }, { description: 'Cable', qty: 1, position: 2 }], supplier_orders: [{ id: 'la', placed_on: null, expected_on: null, delivered_on: null, companies: { name: 'Alpenmark Controls' } }, { id: 'empty', placed_on: null, expected_on: null, delivered_on: null, companies: { name: 'Empty Co' } }] },
-    { id: 'b', number: 39, customer_po_number: null, ordered_on: day(-9), owner_id: 'u', company_id: 'c2', commissioning_planned_on: null, companies: { name: 'Faisalabad Textile Mills' }, company_sites: null, order_items: [] },
-  ]
-  const states = [
-    { order_id: 'a', lifecycle: 'active', goods_state: 'to_place', commissioning_state: 'n_a', data_trust: 'ok', invoicing_state: 'not_invoiced', gross: 730420 },
-    { order_id: 'b', lifecycle: 'active', goods_state: 'late', commissioning_state: 'n_a', data_trust: 'ok', invoicing_state: 'not_invoiced', gross: 1000 },
-  ]
-  const fake = (c: FakeCall) => {
-    // the id-only read of imported orders (legacy_source is not null): none of these are
-    if (c.target === 'orders' && c.ops.some(([m]) => m === 'not')) return { data: [] }
-    if (c.target === 'orders') return { data: listRows }
-    if (c.target === 'v_order_state') return { data: states }
-    if (c.target === 'users') return { data: [{ id: 'u', name: 'Ayesha' }] }
-    if (c.target === 'v_order_money') return { data: [{ order_id: 'a', payment_state: 'unpaid', receivable: 730420, due_on: null, costs_state: 'provisional' }] }
-    return { data: [] }
-  }
-
-  it('leads with the customer and what was ordered, then one plain next step, then the order number; no state chips', async () => {
-    installFakeDb(fake)
-    const { container } = mount(<OrdersListPage />, 'admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0038/ }).length).toBeGreaterThan(0))
-    const a = screen.getAllByRole('row', { name: /ORD-0038/ })[0]
-    expect(a).toHaveTextContent('Belimo actuator ×6, pH sensor ×2 + more')
-    // the supplier is named; a supplier order with no goods line is not counted
-    expect(a).toHaveTextContent('Place the order with Alpenmark Controls')
-    expect(screen.getAllByRole('row', { name: /ORD-0039/ })[0]).toHaveTextContent('Chase the supplier: goods late')
-    expect(container.querySelectorAll('tbody [data-status]')).toHaveLength(0)
-    // the Next step is status text (icon and words, no box)
-    expect(a.querySelector('[data-tone="now"]')).not.toBeNull()
-    const headers = screen
-      .getAllByRole('columnheader')
-      .map(h => h.textContent?.trim())
-      .filter(Boolean)
-    expect(headers.slice(0, 3)).toEqual(['Customer and items', 'Next step', 'Order'])
-    expect(screen.getByRole('button', { name: 'Repeat a past order' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'New order' })).toBeNull()
-  })
-
-  it('the active list starts with the most urgent step, not the newest order (R2-05)', async () => {
-    // ORD-0038 is late, ORD-0039 only needs placing: by rank 38 comes first, though it is the older order
-    installFakeDb(c => (c.target === 'v_order_state' ? { data: [{ ...states[0], goods_state: 'late' }, { ...states[1], goods_state: 'to_place' }] } : fake(c)))
-    mount(<OrdersListPage />, 'admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0038/ }).length).toBeGreaterThan(0))
-    const order = screen.getAllByRole('row').map(r => r.textContent ?? '').filter(t => /ORD-00(38|39)/.test(t))
-    expect(order[0]).toMatch(/ORD-0038/)
-    expect(order[1]).toMatch(/ORD-0039/)
-  })
-
-  it('the state filters sit behind one Filters button', async () => {
-    installFakeDb(fake)
-    const user = userEvent.setup()
-    mount(<OrdersListPage />, 'admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0038/ }).length).toBeGreaterThan(0))
-    expect(screen.queryByLabelText('Goods state')).toBeNull()
-    // one toolbar row: Mine or All, the search, Filters. Who acts next is in Filters, with no "Any" segment (UX audit 2026-10-22, O2)
-    expect(screen.queryByRole('radiogroup', { name: 'Who acts next' })).toBeNull()
-    expect(screen.queryByRole('radio', { name: 'Any' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Filters' }))
-    expect(screen.getByLabelText('Goods state')).toBeInTheDocument()
-    expect(screen.getByLabelText('Payment state')).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Who acts next'), 'need')
-    expect(screen.getByRole('button', { name: 'Filters · 1 on' })).toBeInTheDocument()
-    expect(screen.getAllByRole('row', { name: /ORD-0039/ }).length).toBeGreaterThan(0)
   })
 })
 

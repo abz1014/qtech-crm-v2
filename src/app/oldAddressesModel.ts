@@ -1,22 +1,7 @@
 import { requireSupabase } from '@/lib/supabase'
 
-/* The pure parts of the old-address redirects (oldAddresses.tsx): which chip a list asks for, the remembered choice, the Job lookup. */
+/* The pure parts of the old-address redirects (oldAddresses.tsx): which chip a list asks for, the Job lookup. */
 export type OldKind = 'rfq' | 'order'
-
-/** localStorage: "show the old RFQ and Order pages on this device" (set by ?old=1, cleared by ?old=0). Storage may be refused: then ?old=1 works per visit. */
-export const OLD_PAGES_KEY = 'qtech.old-pages'
-
-export function wantsOld(search: string): boolean {
-  const asked = new URLSearchParams(search).get('old')
-  try {
-    if (asked === '1') window.localStorage.setItem(OLD_PAGES_KEY, '1')
-    else if (asked === '0') window.localStorage.removeItem(OLD_PAGES_KEY)
-    else return window.localStorage.getItem(OLD_PAGES_KEY) === '1'
-  } catch {
-    return asked === '1'
-  }
-  return asked === '1'
-}
 
 /** The Jobs list chip an old list address asks for: its closed or history views are History, "mine" is Mine, the rest the default. */
 export function chipForOldList(search: string): 'mine' | 'history' | null {
@@ -59,3 +44,11 @@ export async function jobKeyFor(kind: OldKind, id: string): Promise<string | nul
   return byRfq.data?.[0]?.job_key ?? null
 }
 
+
+/** A query string without the retired ?old switch (?old=1 and ?old=0 used to pick the old pages; every other parameter is kept). */
+export function withoutOldSwitch(search: string): string {
+  const next = new URLSearchParams(search)
+  next.delete('old')
+  const out = next.toString()
+  return out ? `?${out}` : ''
+}

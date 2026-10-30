@@ -3,7 +3,7 @@ id: goods-delivered
 title: Mark goods delivered
 roles: engineer, sales, admin
 keywords: delivered, delivery, goods, arrived, received, site, supplier order
-screens: /orders, /todo, /jobs
+screens: /jobs, /todo
 related: commissioning-done
 ---
 1. Open the job from [To do] or [Jobs]. When the goods are here its green next step is [Deliver the goods].

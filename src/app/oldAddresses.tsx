@@ -1,18 +1,17 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { queryClient } from '@/lib/queryClient'
 import { Button } from '@/ui/Button'
-import { wantsOld, jobsSearchForOldList, type OldKind } from '@/app/oldAddressesModel'
+import { jobsSearchForOldList, withoutOldSwitch, type OldKind } from '@/app/oldAddressesModel'
 
 /*
- * The old RFQ and Order addresses (redesign phase 5, P5-F; owner decision 9: the old pages stay reachable for two weeks).
- * RFQs and Orders are no longer destinations: one customer request is one Job.
+ * The old RFQ and Order addresses (redesign phase 5, P5-F; owner decision 9). RFQs and Orders are no longer destinations: one customer
+ * request is one Job. The old pages themselves were removed on 2026-10-30 (owner decision, ahead of the planned 2026-11-09), but
+ * bookmarks and links in old messages keep working:
  *   /rfqs/<id>, /orders/<id>   open the Job that holds that RFQ or order (v_jobs gives the key), the query string kept
  *   /rfqs, /orders             open the Jobs list with the matching filter (Mine, Open or History)
- *   any of them with ?old=1     the old page, exactly as it was, until the removal date in docs/DECISIONS.md and END-CHECKLIST.md.
- *                               The choice is remembered on this device (OLD_PAGES_KEY), so the old pages' own links keep working;
- *                               ?old=0 goes back to Jobs.
+ * The retired ?old=1 / ?old=0 switch is simply dropped from the address it came on, so an old link with it lands on Jobs too.
  * /rfqs/new is not here: New enquiry keeps its own address.
  */
 function ToJob({ kind, id, search }: { kind: OldKind; id: string; search: string }) {
@@ -45,13 +44,12 @@ function ToJob({ kind, id, search }: { kind: OldKind; id: string; search: string
       </main>
     )
   if (state.key === null) return <NotFoundPage />
-  return <Navigate to={{ pathname: `/jobs/${encodeURIComponent(state.key)}`, search }} replace />
+  return <Navigate to={{ pathname: `/jobs/${encodeURIComponent(state.key)}`, search: withoutOldSwitch(search) }} replace />
 }
 
-/** Wraps the old screen of /rfqs or /orders: the old page with ?old=1, otherwise the Jobs page for the same thing. */
-export function OldAddress({ kind, children }: { kind: OldKind; children: ReactNode }) {
+/** An old /rfqs or /orders address: the Jobs page for the same thing (a list opens the Jobs list, an id opens its Job). */
+export function OldAddress({ kind }: { kind: OldKind }) {
   const { pathname, search } = useLocation()
-  if (wantsOld(search)) return <>{children}</>
   const rest = pathname.split('/').filter(Boolean).slice(1)
   if (rest.length === 0) {
     return <Navigate to={{ pathname: '/jobs', search: jobsSearchForOldList(search) }} replace />

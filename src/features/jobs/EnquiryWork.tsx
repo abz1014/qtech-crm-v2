@@ -26,9 +26,8 @@ import { useOrdersForRfq } from '@/features/orders/forRfq'
 /*
  * The enquiry side of the job, on the job page (redesign P5-D1): ask suppliers, enter their prices, send the quotation, Mark won.
  * Every piece is the component the RFQ page already uses (SuppliersToAskCard, SuppliersAsked with its reply dialog, ItemsPanel,
- * QuotationsPanel with its Issue quotation dialog, FloatDialog, ConvertDialog), wired as RfqDetailScreen wires them, so the old RFQ
- * page and this one behave the same and nothing is written twice. The dialogs open by the address (?issue=1, ?won=1), as on the
- * RFQ page, so the next-step button of the job page opens the same dialogs. The old RFQ page keeps working.
+ * QuotationsPanel with its Issue quotation dialog, FloatDialog, ConvertDialog), as the old RFQ page (removed 2026-10-30) wired them.
+ * The dialogs open by the address (?issue=1, ?won=1), so the next-step button of the job page opens the same dialogs.
  */
 const QuotationsPanel = lazyWithReload(() => import('@/features/quotations/QuotationsPanel').then(m => ({ default: m.QuotationsPanel })))
 const SuppliersAsked = lazyWithReload(() => import('@/features/rfqs/SuppliersAsked').then(m => ({ default: m.SuppliersAsked })))

@@ -3,7 +3,7 @@ id: hide-priced-file
 title: Hide a file with prices from engineers
 roles: admin
 keywords: file, prices, engineer, hide, customer order, supplier quote, has prices
-screens: /jobs, /rfqs, /orders
+screens: /jobs
 related: read-a-job
 ---
 1. Open the job, or the RFQ or order, and find the file in Notes and files, or Files.

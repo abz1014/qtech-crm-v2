@@ -34,10 +34,10 @@ const panel = () => screen.getByRole('dialog', { name: 'Help' })
 describe('Help panel', () => {
   it('lists the screen\'s recipes, then the role\'s own by area; other roles only on request', async () => {
     const user = userEvent.setup()
-    render(<Harness role="engineer" pathname="/orders/123" />)
+    render(<Harness role="engineer" pathname="/jobs/123" />)
     const forScreen = within(panel()).getByRole('region', { name: 'For this screen' })
     expect(within(forScreen).getAllByRole('button').length).toBeLessThanOrEqual(3)
-    const orders = within(panel()).getByRole('region', { name: 'Orders' })
+    const orders = within(panel()).getByRole('region', { name: 'Jobs' })
     expect(within(orders).getByRole('button', { name: 'Mark goods delivered' })).toBeInTheDocument()
     expect(within(panel()).queryByRole('region', { name: 'Money' })).toBeNull()
     expect(within(panel()).queryByRole('button', { name: 'Close a month' })).toBeNull()

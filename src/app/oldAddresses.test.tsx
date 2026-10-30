@@ -10,7 +10,7 @@ import { importedStyleInputs } from '@/features/today/importedFixture'
 
 /*
  * P5-F: the old RFQ and Order addresses open Jobs (an id opens its Job through v_jobs, a list opens the Jobs list with the matching
- * chip); ?old=1 keeps the old page. And Money's red dot: only while a real invoice is late.
+ * chip), with or without the retired ?old=1. And Money's red dot: only while a real invoice is late.
  */
 function Where() {
   const l = useLocation()
@@ -25,8 +25,8 @@ function mount(path: string, respond: (c: FakeCall) => { data?: unknown } = () =
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/rfqs/*" element={<><OldAddress kind="rfq"><p>OLD RFQ PAGE</p></OldAddress><Where /></>} />
-        <Route path="/orders/*" element={<><OldAddress kind="order"><p>OLD ORDER PAGE</p></OldAddress><Where /></>} />
+        <Route path="/rfqs/*" element={<><OldAddress kind="rfq" /><Where /></>} />
+        <Route path="/orders/*" element={<><OldAddress kind="order" /><Where /></>} />
         <Route path="/jobs/*" element={<Where />} />
       </Routes>
     </MemoryRouter>,
@@ -90,22 +90,29 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?q=RST+1158&chip=history'))
   })
 
-  it('?old=1 keeps the old page, and remembers it on this device', () => {
+  it('the retired ?old=1 and ?old=0 switches are dropped: an old link with one still lands on the Job or the Jobs list', async () => {
+    mount('/rfqs/abc?old=1&x=1', c => (c.target === 'v_jobs' ? { data: [{ job_key: '139' }] } : { data: [] }))
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139?x=1'))
+    fake?.uninstall()
+    mount('/orders/o1?old=0', c => (c.target === 'v_jobs' ? { data: [{ job_key: 'O-45' }] } : { data: [] }))
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs/O-45'))
+    fake?.uninstall()
     mount('/rfqs?old=1')
-    expect(screen.getByText('OLD RFQ PAGE')).toBeInTheDocument()
-    expect(screen.getByTestId('where').textContent).toBe('/rfqs?old=1')
-    expect(window.localStorage.getItem('qtech.old-pages')).toBe('1')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs'))
+    fake?.uninstall()
+    mount('/orders?old=1&show=closed')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history'))
   })
 
-  it('once remembered, the old pages own links work without the flag; ?old=0 goes back to Jobs', async () => {
+  it('a device that remembered the old pages (the retired localStorage flag) still opens Jobs', async () => {
     window.localStorage.setItem('qtech.old-pages', '1')
-    const r = mount('/orders/o1')
-    expect(r.getByText('OLD ORDER PAGE')).toBeInTheDocument()
-    r.unmount()
-    fake?.uninstall()
-    mount('/orders?old=0')
-    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs'))
-    expect(window.localStorage.getItem('qtech.old-pages')).toBeNull()
+    mount('/orders/o1', c => (c.target === 'v_jobs' ? { data: [{ job_key: 'O-45' }] } : { data: [] }))
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/O-45'))
+  })
+
+  it('an address deeper than an id is page not found', async () => {
+    mount('/orders/o1/extra')
+    expect(await screen.findByText(/not found/i)).toBeInTheDocument()
   })
 })
 

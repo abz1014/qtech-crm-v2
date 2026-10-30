@@ -3,7 +3,7 @@ id: whatsapp-or-email
 title: Send a message by WhatsApp or by email
 roles: sales, admin
 keywords: whatsapp, email, channel, message, copy, send, open
-screens: /todo, /rfqs, /money, /jobs
+screens: /todo, /jobs, /money
 ---
 1. Every message is ready for the channel you used last. Tap [Email instead] or [WhatsApp instead] to switch (on an RFQ, under [Show the whole message]).
 2. The app remembers your choice on this device.
