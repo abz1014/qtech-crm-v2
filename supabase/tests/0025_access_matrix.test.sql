@@ -280,6 +280,11 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
   ('table', 'supplier_inquiries', 'sent_confirmed', 'SU', 'SU', 'SU'),   -- 0097: "Did you send it? Yes, sent": every active role stamps an inquiry it can see
   ('table', 'snoozes',           'until_change', 'SU', 'SU', 'SU'),      -- 0097: "Not ours to chase": each role flips it on its own snoozes
+  ('table', 'delivery_challans', '',          'SID',  'SI',   'SI'),      -- 0131: a challan is issued by any active role and never edited; only an admin deletes one
+  ('function', 'create_delivery_challan', '',  'X',    'X',    'X'),       -- 0131: issues a challan (its own DC- number); lines and quantities only
+  ('function', 'next_challan_number', '',      'X',    'X',    'X'),       -- 0131: the next number in the DC- series
+  ('function', 'order_visit_summary', '',      '',     '',     ''),        -- 0130: internal (the trigger that keeps the order's visit summary); no client persona
+  ('function', 'sync_order_visit_summary', '', '',     '',     ''),        -- 0130: internal; no client persona
   ('table', 'order_visits',      '',          'SIUD', 'SIUD', 'SU'),      -- 0130: one visit of an order; an engineer edits (never adds or deletes) a visit assigned to them (fixture @f2)
   ('table', 'order_visits',      'other',     'SUD',  'SUD',  'S'),       -- 0130: a visit with no engineer on an order that is not theirs (fixture @f3): an engineer only reads it
   ('table', 'orders',            'visit',       'SU', 'SU', 'SU'),       -- 0101: visit time and type; an engineer on an order assigned to them (fixture @20)
@@ -351,6 +356,8 @@ insert into public.order_items (id, order_id, position, description, unit_price_
   (pg_temp.f('25'), pg_temp.f('20'), 0, 'Fixture order item', 100, pg_temp.f('23'), 10);
 insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('20'), 5);
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
+insert into public.delivery_challans (id, order_id, number, lines) values   -- 0131
+  (pg_temp.f('f5'), pg_temp.f('20'), 'DC-0001', '[{"description":"Fixture order item","qty":1}]');
 insert into public.order_visits (id, order_id, engineer_id) values   -- 0130: @f2 is the engineer's (order @20), @f3 has no engineer on an order that is not theirs (@21)
   (pg_temp.f('f2'), pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003'),
   (pg_temp.f('f3'), pg_temp.f('21'), null);
@@ -444,6 +451,7 @@ insert into spec values
   ('orders', '', 'id = @21', 'notes', $q$insert into public.orders (id, company_id, owner_id) values (@a9, @01, 'a0000000-0000-4000-8000-000000000002')$q$),
   ('order_items', '', 'id = @25', 'description', $q$insert into public.order_items (id, order_id, description, unit_price_net) values (@aa, @20, 'probe', 1)$q$),
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
+  ('delivery_challans', '', 'id = @f5', 'notes', $q$insert into public.delivery_challans (id, order_id, number, lines) values (@f6, @21, 'DC-9999', '[{"description":"x","qty":1}]')$q$),   -- 0131
   ('order_visits', '', 'id = @f2', 'notes', $q$insert into public.order_visits (id, order_id, visit_on) values (@f4, @21, current_date)$q$),   -- 0130
   ('order_visits', 'other', 'id = @f3', 'notes', null),   -- 0130
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
@@ -564,6 +572,10 @@ insert into probes values
   ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),
   ('search_all', 'supplier_po', 'X', $q$select 1 from public.search_all('PO-7002', 5) where kind = 'po'$q$),
   ('next_invoice_number', '', 'X', 'select * from public.next_invoice_number()'),
+  ('next_challan_number', '', 'X', 'select public.next_challan_number()'),   -- 0131
+  ('create_delivery_challan', '', 'X', 'select public.create_delivery_challan(@20)'),   -- 0131: every goods line of the fixture order, rolled back
+  ('order_visit_summary', '', 'X', 'select * from public.order_visit_summary(@20)'),   -- 0130
+  ('sync_order_visit_summary', '', 'X', 'select public.sync_order_visit_summary(@20)'),   -- 0130
   ('stamp_payment_reminder', '', 'X', 'select 1 from (select public.stamp_payment_reminder(array[@26]) r) x where r > 0'),
   ('stamp_tcs_sent', '', 'X', 'select 1 from (select public.stamp_tcs_sent(array[@26]) r) x where r > 0'),
   ('stamp_fbr_psid', '', 'X', $q$select 1 from (select public.stamp_fbr_psid(array[@26], 'P1') r) x where r > 0$q$),
@@ -670,7 +682,7 @@ insert into probes values
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
   'coverage: the matrix lists every table in schema public (39)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 41, 'coverage: 41 tables');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 43, 'coverage: 43 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');
