@@ -180,7 +180,7 @@ function DecryptSection({ h }: { h: HealthRow }) {
         {due ? ' It is due.' : ''}
       </p>
       <div>
-        <Button variant={due ? 'primary' : 'secondary'} onClick={() => void done()} busy={confirm.isPending} busyLabel="Saving">
+        <Button variant={due ? 'primary' : 'secondary'} className="h-auto min-h-control whitespace-normal py-2 leading-snug" onClick={() => void done()} busy={confirm.isPending} busyLabel="Saving">
           I opened a backup with my key today
         </Button>
       </div>
