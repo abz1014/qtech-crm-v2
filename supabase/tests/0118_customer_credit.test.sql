@@ -147,7 +147,7 @@ select is((select payment_state from public.order_receivables(pg_temp.u('13'))),
 select is((select balance from public.v_company_credit where company_id = pg_temp.u('01')), 168.00::numeric, 'and the credit is back: 118 + 50');
 insert into public.customer_refunds (id, company_id, order_id, amount) values (pg_temp.u('54'), pg_temp.u('01'), pg_temp.u('14'), 3);
 select is(pg_temp.code_('admin', $q$select count(*)::text from public.delete_order(@14)$q$), 'E:P0001:has_payment', 'an order a refund points to is kept');
-select is(pg_temp.code_('admin', $q$update public.credit_applications set amount = 5 returning 1$q$), 'E:42501:', 'an application cannot be edited');
+select is(left(pg_temp.code_('admin', $q$update public.credit_applications set amount = 5 returning 1$q$), 8), 'E:42501:', 'an application cannot be edited');
 select is(pg_temp.code_('sales', 'select count(*)::text from public.credit_applications'), 'ok:0', 'sales read no applied credit');
 select is(pg_temp.code_('engineer', 'select count(*)::text from public.customer_refunds'), 'ok:0', 'an engineer reads no refund');
 

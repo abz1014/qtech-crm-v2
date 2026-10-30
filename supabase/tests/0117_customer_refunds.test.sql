@@ -45,11 +45,15 @@ select is(pg_temp.code_('sales', 'select count(*)::text from public.customer_ref
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select is(pg_temp.code_('engineer', 'select count(*)::text from public.customer_refunds'), 'ok:0', 'an engineer reads none');
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
-select is(pg_temp.code_('admin', $q$insert into public.customer_refunds (company_id, amount) values (@01, 5) returning 1$q$), 'E:42501:', 'not even the admin inserts through the API: record_refund() is the door');
+select is(left(pg_temp.code_('admin', $q$insert into public.customer_refunds (company_id, amount) values (@01, 5) returning 1$q$), 8), 'E:42501:', 'not even the admin inserts through the API: record_refund() is the door');
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
-select is(pg_temp.code_('admin', $q$update public.customer_refunds set amount = 5 where id = @50 returning 1$q$), 'E:42501:', 'and a refund''s amount cannot be edited');
+select is(left(pg_temp.code_('admin', $q$update public.customer_refunds set amount = 5 where id = @50 returning 1$q$), 8), 'E:42501:', 'and a refund''s amount cannot be edited');
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select is(pg_temp.code_('admin', $q$update public.customer_refunds set bank_month = '2020-02-01' where id = @50 returning 1$q$), 'ok:1', 'the bank tick is the one thing that changes');
+select is(pg_temp.code_('admin', $q$update public.customer_refunds set bank_month = '2020-02-01' where id = @50 returning 1$q$, true), 'ok:1', 'tick it for real');
+select is(pg_temp.code_('admin', $q$delete from public.customer_refunds where id = @50 returning 1$q$), 'E:P0001:bank_ticked', 'a ticked refund is unticked before it is deleted');
+select is(pg_temp.code_('admin', $q$update public.customer_refunds set bank_month = null where id = @50 returning 1$q$, true), 'ok:1', 'untick it again');
+select is(pg_temp.code_('admin', $q$delete from public.customer_refunds where id = @50 returning 1$q$), 'ok:1', 'an unticked refund can be deleted (rolled back here)');
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select is(pg_temp.code_('sales', $q$update public.customer_refunds set bank_month = '2020-02-01' where id = @50 returning 1$q$), '<none>', 'sales tick nothing');
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);

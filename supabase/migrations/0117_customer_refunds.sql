@@ -74,6 +74,14 @@ as $$
 declare
   v_company uuid;
 begin
+  if tg_op = 'DELETE' then
+    -- like a payment (delete_payment, 0092): a refund ticked against a bank statement is unticked first
+    if old.bank_month is not null then
+      raise exception 'This refund is ticked against the % bank statement. Untick it first, then delete it.', to_char(old.bank_month, 'FMMonth YYYY')
+        using errcode = 'P0001', hint = 'bank_ticked';
+    end if;
+    return old;
+  end if;
   if tg_op = 'UPDATE' then
     if tg_table_name = 'customer_refunds' then
       if (to_jsonb(new) - 'company_id' - 'bank_month') is distinct from (to_jsonb(old) - 'company_id' - 'bank_month') then
@@ -112,7 +120,7 @@ $$;
 
 revoke all on function public.customer_money_guard() from public, anon, authenticated;
 
-create trigger customer_refunds_guard before insert or update on public.customer_refunds
+create trigger customer_refunds_guard before insert or update or delete on public.customer_refunds
   for each row execute function public.customer_money_guard();
 create trigger credit_applications_guard before insert or update on public.credit_applications
   for each row execute function public.customer_money_guard();

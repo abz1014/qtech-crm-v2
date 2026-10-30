@@ -87,7 +87,7 @@ begin
     raise exception 'Enter the amount refunded.' using errcode = '22023', hint = 'amount';
   end if;
   if not exists (select 1 from public.companies c where c.id = p_company_id) then
-    raise exception 'This customer is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
+    raise exception 'This company is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('customer_credit:' || p_company_id::text, 0));
   select coalesce(sum(v.balance), 0) into v_balance from public.v_company_credit v where v.company_id = p_company_id;

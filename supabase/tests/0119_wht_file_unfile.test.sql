@@ -79,11 +79,11 @@ select is(pg_temp.code_('sales', $q$update public.invoices set tcs_sent_on = pub
 select is(pg_temp.code_('admin', $q$update public.invoices set psid = null where id = @30 returning 1$q$, true), 'ok:1', 'the admin clears the PSID');
 select is(pg_temp.code_('admin', $q$update public.invoices set tax_deposited_on = null where id = @30 returning 1$q$, true), 'ok:1', 'and the deposit date');
 select ok((select count(*) = 1 from public.audit_log l
-           where l.table_name = 'invoices' and l.record_id = pg_temp.u('30') and l.action = 'update'
+           where l.table_name = 'invoices' and l.record_id = pg_temp.u('30')::text and l.action = 'update'
              and l.changed_by = 'a0000000-0000-4000-8000-000000000001' and l.old_value ->> 'psid' = 'P119' and (l.new_value ->> 'psid') is null),
   'the PSID clearing is in the audit log with the admin as the actor');
 select ok((select count(*) = 1 from public.audit_log l
-           where l.table_name = 'invoices' and l.record_id = pg_temp.u('30') and l.action = 'update'
+           where l.table_name = 'invoices' and l.record_id = pg_temp.u('30')::text and l.action = 'update'
              and l.changed_by = 'a0000000-0000-4000-8000-000000000001' and (l.old_value ->> 'tax_deposited_on') is not null and (l.new_value ->> 'tax_deposited_on') is null),
   'and so is the deposit date');
 select is(pg_temp.code_('sales', $q$update public.invoices set psid = 'P119-C' where id = @30 returning 1$q$, true), 'ok:1', 'a PSID that is empty can be set by sales again');
