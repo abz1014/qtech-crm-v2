@@ -8,7 +8,7 @@
 --         - refuses a GST that is not within Rs 1 of what the browser would have worked out (model.ts gstForNet): the GST left
 --           on the lines shared out in proportion to the net, 18% of the net, nothing (exempt lines), or the GST of a set of
 --           whole order lines whose nets add up to the net (up to 12 priced lines are searched; the lines' own GST uses the
---           per-line rounding of v_order_items_total).
+--           per-line rounding of v_order_items_total). GST 0 is always accepted: Exempt is a choice on the invoice screen.
 --       Only rows the API roles write are checked (authenticated, qtech_engineer: a migration, the importer and the table owner are not); an imported row (legacy source or flags), an invoice with no
 --       order, an order with no priced lines, and an UPDATE that leaves order, net and GST alone (a stamp, a PSID, a reminder)
 --       are not.
@@ -167,7 +167,7 @@ begin
 
   -- GST: within Rs 1 of any figure the invoice screen would have offered
   if v_n18 > 0 then v_cand := v_cand || round(new.net_amount * 18 / 100, 0); end if;
-  if v_n0 > 0 or v_n18 = 0 then v_cand := v_cand || 0::numeric; end if;
+  v_cand := v_cand || 0::numeric;   -- an exempt invoice (GST 0) is always a choice on the screen (gstOn(net, 'exempt'))
   if v_rem_n > 0 then v_cand := v_cand || round(v_rem_g * new.net_amount / v_rem_n, 0); end if;
   if coalesce(array_length(v_nets, 1), 0) between 1 and 12 then
     for v_mask in 1 .. (power(2, array_length(v_nets, 1))::integer - 1) loop

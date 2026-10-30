@@ -54,7 +54,7 @@ test.describe('void and credit notes (C1)', () => {
     const rec = await must(rest<{ balance: number }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: order.id } }))
     expect(Number(rec[0].balance)).toBe(118000)
 
-    await openAs(page, 'admin', '/money/gst-register')
+    await page.goto('/money/gst-register')
     await page.getByRole('searchbox', { name: /Search invoices/ }).fill(inv.number)
     await expect(page.getByRole('row', { name: new RegExp(inv.number) })).toContainText('Void')
   })
@@ -94,7 +94,7 @@ test.describe('void and credit notes (C1)', () => {
     // the GST register lists it as a negative line
     const reg = await must(rest<{ row_kind: string; net_amount: number; gst_amount: number; number: string }[]>('admin', `v_gst_register?number=eq.${notes[0].number}&select=*`))
     expect(reg[0]).toMatchObject({ row_kind: 'credit_note', net_amount: -40000, gst_amount: -7200 })
-    await openAs(page, 'admin', '/money/gst-register')
+    await page.goto('/money/gst-register')
     await page.getByRole('searchbox', { name: /Search invoices/ }).fill(notes[0].number)
     await expect(page.getByRole('row', { name: new RegExp(notes[0].number) })).toContainText('Credit note')
 
