@@ -364,6 +364,7 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
       // Once the profile is complete, opening the quotation makes its PDF and stores it.
       await setProfile(true)
       await page.reload()
+      await openStage(page, 'Quotation')
       await expect(page.getByTestId('quotation-0')).toBeVisible()
       const popup = context.waitForEvent('page')
       await page.getByTestId('quotation-0').getByRole('button', { name: 'Open PDF' }).click()

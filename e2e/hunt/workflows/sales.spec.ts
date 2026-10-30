@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { openStage } from '../../support/job'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { db, num } from '../../verify/support/db'
 import { company, quote, rfq, setProfile, setRates, supplier, type Co } from '../../verify/support/fixtures'
@@ -46,7 +47,6 @@ test.beforeAll(async () => {
 const dialog = (p: Page) => p.getByRole('dialog')
 const toast = (p: Page, t: string | RegExp) => p.getByRole('status').filter({ hasText: t })
 const vis = (l: Locator) => l.filter({ visible: true }).first()
-const moreButton = (p: Page) => vis(p.getByRole('button', { name: /^More( actions)?$/ }))
 const T = { timeout: 15_000 }
 /** New RFQ's save-only action (r3/rfq-orders renamed "Save without asking"); on a phone it sits in the step bar's ⋯ menu. */
 const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
@@ -190,10 +190,10 @@ async function openIssue(page: Page, info: TestInfo, rfqId: string, where: strin
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
 }
 
-/** Revise from the header's More menu (it puts ?issue=1 in the address, as the first issue does). */
+/** Revise from the Quotations block on the job page's Quotation stage (it puts ?issue=1 in the address, as the first issue does). */
 async function openReviseFromMenu(page: Page): Promise<void> {
-  await moreButton(page).click()
-  await page.getByRole('menuitem', { name: /^Revise quotation/ }).click()
+  await openStage(page, 'Quotation')
+  await page.getByRole('button', { name: 'Revise quotation' }).click()
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
 }
 
