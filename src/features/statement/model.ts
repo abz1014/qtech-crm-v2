@@ -1,6 +1,5 @@
 import { formatPaisa, productPaisa } from '@/lib/money'
 import type { InquiryRow, QuoteLineRow, RfqItemRow } from '@/features/rfqs/api'
-import { reasonLabel } from '@/features/rfqs/lib/cantQuote'
 import { parseLeadTime, type WeightUnit } from '@/features/rfqs/lib/replyParse'
 
 /*
@@ -30,7 +29,7 @@ export interface QuotedRow {
   supplierId: string
   supplierName: string
   currency: string
-  /** The supplier's unit cost as a number (for sorting) and as it is shown: "412.5" is "412.50", "0.0125" stays "0.0125". */
+  /** The supplier's unit cost as a number (for sorting) and as it is shown: always 2 decimals, thousands grouped (rounded for display only). */
   unitCost: number
   unitCostText: string
   /** qty x unit cost, in the minor unit (paisa/cents), and as shown (the currency code goes in front). */
@@ -41,28 +40,29 @@ export interface QuotedRow {
   /** Weight of ONE unit, in the unit the supplier gave. Null: not stated. */
   weightEach: number | null
   weightUnit: WeightUnit
+  /** "0.4 kg": the weight of ONE unit, as the supplier gave it. */
   weightEachText: string | null
-  weightTotalText: string | null
   /** The same weight in kg, for sorting. */
   weightKg: number | null
   origin: string | null
   note: string | null
 }
 
-export interface NoQuoteRow {
-  kind: 'none'
-  supplierId: string
-  supplierName: string
-  /** "No reply", "Can't quote: not our brand" or "Did not quote this item". */
-  reason: string
+/** Suppliers asked who gave no price for an item, grouped on one compact line: "No reply: A, B" and "Did not quote: C". */
+export interface NoQuoteGroup {
+  /** "No reply", "Can't quote" or "Did not quote". */
+  label: string
+  names: string[]
 }
 
 export interface StatementSection {
   item: RfqItemRow
   quantityText: string
   rows: QuotedRow[]
-  /** Suppliers asked who gave no price for this item. Only built when asked for (the "No reply" toggle). */
-  noQuote: NoQuoteRow[]
+  /** The currency every row shares, else null (each cell then carries its own). Shown once in the column headings. */
+  sharedCurrency: string | null
+  /** Suppliers asked who gave no price for this item. Only built when asked for (the "did not reply" toggle). */
+  noQuote: NoQuoteGroup[]
 }
 
 export interface SupplierTotal {
@@ -85,12 +85,9 @@ const KG_PER: Record<WeightUnit, number> = { kg: 1, g: 0.001, lb: 0.45359237 }
 
 const group = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-/** "1650" -> "1,650.00", "0.0125" -> "0.0125", "412.5" -> "412.50": at least 2 decimals, at most 4, thousands grouped. */
+/** Always 2 decimals, thousands grouped: 115.8948 is "115.89", 1650 is "1,650.00". Rounds half away from zero, for display only. */
 export function costText(value: number): string {
-  const [whole, frac = ''] = value.toFixed(4).split('.')
-  let f = frac.replace(/0+$/, '')
-  if (f.length < 2) f = f.padEnd(2, '0')
-  return `${group(whole)}.${f}`
+  return formatPaisa(productPaisa(1, value), 'always')
 }
 
 /** A quantity or weight, up to 3 decimals, no trailing zeros: 2.5, 400, 0.125. */
@@ -122,7 +119,6 @@ function rowOf(item: RfqItemRow, inquiry: InquiryRow, l: QuoteLineRow): QuotedRo
     weightEach: each,
     weightUnit: unit,
     weightEachText: each === null ? null : `${plainNumber(each)} ${unit}`,
-    weightTotalText: each === null ? null : `${plainNumber(Number((each * item.qty).toFixed(3)))} ${unit}`,
     weightKg: each === null ? null : each * KG_PER[unit],
     origin: l.origin?.trim() || null,
     note: l.notes?.trim() || null,
@@ -186,7 +182,7 @@ export function buildStatement(items: readonly RfqItemRow[], inquiries: readonly
   const asked = inquiries.filter(wasAsked)
   const sections: StatementSection[] = items.map(item => {
     const rows: QuotedRow[] = []
-    const noQuote: NoQuoteRow[] = []
+    const noQuote = new Map<string, string[]>()
     for (const inq of asked) {
       const line = inq.lines.find(l => l.itemId === item.id)
       if (line) {
@@ -195,17 +191,14 @@ export function buildStatement(items: readonly RfqItemRow[], inquiries: readonly
       }
       if (!opts.showNoReply) continue
       const declined = inq.itemDeclines[item.id]
-      const reason =
-        inq.lines.length === 0 && inq.noOfferOn
-          ? `Can't quote${inq.noOfferReason ? `: ${reasonLabel(inq.noOfferReason)}` : ''}`
-          : declined
-            ? `Can't quote: ${reasonLabel(declined)}`
-            : inq.lines.length === 0
-              ? 'No reply'
-              : 'Did not quote this item'
-      noQuote.push({ kind: 'none', supplierId: inq.supplierId, supplierName: inq.supplierName, reason })
+      const label = inq.lines.length === 0 && inq.noOfferOn ? "Can't quote" : declined ? "Can't quote" : inq.lines.length === 0 ? 'No reply' : 'Did not quote'
+      noQuote.set(label, [...(noQuote.get(label) ?? []), inq.supplierName])
     }
-    return { item, quantityText: quantityText(item.qty, item.unit), rows: sortRows(rows, opts.sort), noQuote: noQuote.sort(byName) }
+    const currencies = [...new Set(rows.map(r => r.currency))]
+    const groups: NoQuoteGroup[] = ['No reply', "Can't quote", 'Did not quote']
+      .filter(l => noQuote.has(l))
+      .map(l => ({ label: l, names: (noQuote.get(l) as string[]).sort((x, y) => x.localeCompare(y, 'en', { sensitivity: 'base' })) }))
+    return { item, quantityText: quantityText(item.qty, item.unit), rows: sortRows(rows, opts.sort), sharedCurrency: currencies.length === 1 ? currencies[0] : null, noQuote: groups }
   })
 
   const totals: SupplierTotal[] = asked
@@ -245,8 +238,9 @@ const SORT_WORDS: Record<SortKey, string> = {
 }
 
 /** What the person is looking at, in words: printed on screen and on the PDF so an order is never read as a ranking. */
-export function orderNote(sort: SortSpec): string {
-  if (sort.key === 'supplier' && sort.dir === 'asc') return 'Suppliers are listed by name, A to Z. Nothing is selected or recommended.'
+/** Said on screen only when a person has sorted by a column: it is an order on the page and nothing more. */
+export function orderNote(sort: SortSpec): string | null {
+  if (sort.key === 'supplier' && sort.dir === 'asc') return null
   const dir = sort.key === 'supplier' ? (sort.dir === 'asc' ? 'A to Z' : 'Z to A') : sort.dir === 'asc' ? 'low to high' : 'high to low'
-  return `Sorted by ${SORT_WORDS[sort.key]}, ${dir}${sort.key === 'unit' || sort.key === 'total' ? ' (within each currency)' : ''}. This is only an order on the page: nothing is selected or recommended.`
+  return `Sorted by ${SORT_WORDS[sort.key]}, ${dir}${sort.key === 'unit' || sort.key === 'total' ? ' (within each currency)' : ''}. This only changes the order on the page.`
 }

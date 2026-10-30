@@ -1,78 +1,87 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
-import type { Statement } from '@/features/statement/model'
+import type { QuotedRow, Statement } from '@/features/statement/model'
 
 /*
- * The Comparative Statement PDF (owner request, 2026-10-29). A4 LANDSCAPE, Geist, the company letterhead (company_profile and the
- * wordmark), like the invoice and the quotation. The tables are the screen's: one band per item (description, quantity), then one
- * row per supplier that quoted it, with lead time, weight and country of origin. The column headings are `fixed`, so they repeat at
- * the top of every page; every page has "Page n of N" at the foot.
+ * The Comparative Statement PDF (owner request, 2026-10-29; made simpler and clearer the same day). A4 LANDSCAPE, Geist, the company
+ * letterhead (company_profile and the wordmark) like the invoice and the quotation.
  *
- * It selects nothing and says so: no "cheapest", no "recommended", suppliers in name order (or the order the person had sorted the
- * screen into). Costs are what the suppliers asked, never a selling price. Totals are per supplier and per currency.
+ * Per item: a bold heading band ("1. Pressure transmitter, Qty: 12.5 m", the spec in smaller type under it), then one row per supplier that
+ * quoted: Supplier | Unit cost | Total cost | Lead time | Weight (of one unit) | Country of origin. A note, when there is one, is a small
+ * grey line under its row. Suppliers that did not reply or did not quote are ONE compact grey line under the item. An item is kept on one
+ * page where it fits, and has its own column headings, so every page has them. Money has thousands separators and exactly 2 decimals
+ * (rounded for display only); the currency is in the column heading when every row shares it, else in each cell. Empty cells show a dash.
+ * The sheet ends with "Totals by supplier" (supplier, currency, total cost of the items it quoted, items quoted X of Y), and every page
+ * has "Page n of N".
+ *
+ * It selects nothing and says nothing about a better supplier: no "cheapest", no "recommended"; suppliers are in name order (or the order
+ * the person had sorted the screen into). Costs are what the suppliers quoted, never a selling price.
  *
  * This module imports @react-pdf/renderer, so it is only reached through generate.ts's dynamic import (its own chunk).
  * No lineHeight on the page: react-pdf drops render-prop text when a page sets one, and the page number needs it.
  */
 export interface StatementPdfData {
   statement: Statement
-  /** "Job 139" and, when different, the RFQ it came from. */
+  /** "Job 139 (RFQ-0139)". */
   reference: string
   customer: string
   /** ISO day. */
   date: string
   preparedBy: string
-  /** The "No reply" rows are on the sheet (the person ticked the toggle). */
+  /** The "did not reply" lines are on the sheet (the person ticked the toggle). */
   showNoReply: boolean
-  /** "Sorted by supplier name" or the column the person sorted by; printed under the title so the order is never read as a ranking. */
-  orderNote: string
 }
 
 const C = {
   ink: '#111113',
   muted: '#5a5a63',
-  strong: '#d2d2d8',
-  sunken: '#f4f4f6',
-  band: '#e9e9ee',
+  soft: '#8a8a94',
+  line: '#e4e4e9',
+  strong: '#c8c8d0',
+  band: '#eeeef2',
+  head: '#f6f6f8',
 }
 
 const s = StyleSheet.create({
-  page: { fontFamily: 'Geist', fontSize: 9, color: C.ink, paddingTop: 30, paddingBottom: 40, paddingHorizontal: 30 },
-  mono: { fontFamily: 'Geist Mono' },
+  page: { fontFamily: 'Geist', fontSize: 10.5, color: C.ink, paddingTop: 44, paddingBottom: 46, paddingHorizontal: 34 },
   muted: { color: C.muted },
-  strongText: { fontWeight: 600 },
+  bold: { fontWeight: 600 },
   right: { textAlign: 'right' },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 10, borderBottomWidth: 1.5, borderBottomColor: C.ink },
-  logo: { width: 140, height: 34, objectFit: 'contain' },
-  company: { alignItems: 'flex-end', maxWidth: 330 },
-  companyName: { fontSize: 10.5, fontWeight: 600 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: 6 },
-  h1: { fontSize: 20, fontWeight: 600, letterSpacing: -0.4, marginBottom: 3 },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 12, borderBottomWidth: 1.5, borderBottomColor: C.ink },
+  logo: { width: 150, height: 36, objectFit: 'contain' },
+  company: { alignItems: 'flex-end', maxWidth: 340 },
+  companyName: { fontSize: 11.5, fontWeight: 600 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 14 },
+  h1: { fontSize: 22, fontWeight: 600 },
   meta: { width: 300 },
-  metaRow: { flexDirection: 'row', marginBottom: 2.5 },
-  metaLabel: { width: 76, textAlign: 'right', color: C.muted, paddingRight: 10 },
+  metaRow: { flexDirection: 'row', marginBottom: 4 },
+  metaLabel: { width: 82, textAlign: 'right', color: C.muted, paddingRight: 10 },
   metaValue: { flex: 1 },
-  th: { flexDirection: 'row', backgroundColor: C.sunken, borderTopWidth: 0.75, borderBottomWidth: 0.75, borderColor: C.strong, marginTop: 8, paddingVertical: 4, fontWeight: 600, fontSize: 8.5 },
-  itemBand: { flexDirection: 'row', backgroundColor: C.band, paddingVertical: 4, paddingHorizontal: 4, marginTop: 6, fontWeight: 600 },
-  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 4 },
-  cSup: { width: 150, paddingLeft: 4, paddingRight: 6 },
-  cUnit: { width: 92, textAlign: 'right', paddingRight: 6 },
-  cTot: { width: 98, textAlign: 'right', paddingRight: 6 },
-  cLead: { width: 92, paddingRight: 6 },
-  cWt: { width: 62, textAlign: 'right', paddingRight: 6 },
-  cWtT: { width: 66, textAlign: 'right', paddingRight: 6 },
-  cOrg: { width: 82, paddingRight: 6 },
-  cNote: { flex: 1, paddingRight: 4 },
-  secTitle: { fontWeight: 600, fontSize: 10.5, paddingBottom: 3, marginBottom: 5, borderBottomWidth: 0.75, borderBottomColor: C.strong },
-  totRow: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 4 },
-  tSup: { width: 240, paddingLeft: 4, paddingRight: 6 },
-  tCount: { width: 90, paddingRight: 6 },
-  tAmt: { width: 150, textAlign: 'right', paddingRight: 6 },
-  note: { color: C.muted, fontSize: 8.5, marginTop: 10 },
-  run: { position: 'absolute', top: 12, left: 30, right: 30 },
+  item: { marginBottom: 18 },
+  itemBand: { backgroundColor: C.band, paddingVertical: 7, paddingHorizontal: 8 },
+  itemTitle: { fontSize: 12, fontWeight: 600 },
+  itemSpec: { fontSize: 9.5, color: C.muted, marginTop: 2 },
+  th: { flexDirection: 'row', backgroundColor: C.head, borderBottomWidth: 0.75, borderBottomColor: C.strong, paddingVertical: 5, fontSize: 9.5, fontWeight: 600, color: C.muted },
+  tr: { borderBottomWidth: 0.5, borderBottomColor: C.line, paddingVertical: 7 },
+  trRow: { flexDirection: 'row' },
+  rowNote: { fontSize: 9.5, color: C.soft, paddingLeft: 8, paddingTop: 2 },
+  cSup: { width: 210, paddingLeft: 8, paddingRight: 8 },
+  cUnit: { width: 112, textAlign: 'right', paddingRight: 14 },
+  cTot: { width: 124, textAlign: 'right', paddingRight: 14 },
+  cLead: { width: 130, paddingRight: 8 },
+  cWt: { width: 84, textAlign: 'right', paddingRight: 14 },
+  cOrg: { flex: 1, paddingRight: 8 },
+  noQuote: { fontSize: 9.5, color: C.soft, paddingTop: 6, paddingLeft: 8 },
+  secTitle: { fontSize: 12, fontWeight: 600, marginBottom: 6 },
+  tSup: { width: 280, paddingLeft: 8, paddingRight: 8 },
+  tCur: { width: 90 },
+  tAmt: { width: 150, textAlign: 'right', paddingRight: 14 },
+  tCount: { flex: 1, paddingLeft: 14 },
+  note: { color: C.soft, fontSize: 9.5, marginTop: 12 },
+  run: { position: 'absolute', top: 14, left: 34, right: 34 },
   runInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  runLogo: { width: 56, height: 14, objectFit: 'contain' },
-  foot: { position: 'absolute', left: 30, right: 30, bottom: 16, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: C.strong, paddingTop: 4, fontSize: 8.5, color: C.muted },
+  runLogo: { width: 60, height: 14.5, objectFit: 'contain' },
+  foot: { position: 'absolute', left: 34, right: 34, bottom: 18, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: C.line, paddingTop: 5, fontSize: 9.5, color: C.soft },
 })
 
 const longDay = (iso: string): string => {
@@ -81,11 +90,30 @@ const longDay = (iso: string): string => {
   return `${d} ${months[m - 1]} ${y}`
 }
 
-/** The first line of a description is the item, any further lines are its detail. */
-function splitDescription(text: string): { title: string; detail: string | null } {
+/** The first line of a description is the item, any further lines are its spec. */
+function splitDescription(text: string): { title: string; spec: string | null } {
   const [first, ...rest] = text.split(/\r?\n/)
-  const detail = rest.join(' ').trim()
-  return { title: first.trim(), detail: detail || null }
+  const spec = rest.join(' ').trim()
+  return { title: first.trim(), spec: spec || null }
+}
+
+const DASH = '—'
+
+function SupplierRow({ r, shared }: { r: QuotedRow; shared: string | null }) {
+  const money = (t: string) => (shared ? t : `${r.currency} ${t}`)
+  return (
+    <View style={s.tr} wrap={false}>
+      <View style={s.trRow}>
+        <Text style={[s.cSup, s.bold]}>{r.supplierName}</Text>
+        <Text style={s.cUnit}>{money(r.unitCostText)}</Text>
+        <Text style={s.cTot}>{money(r.totalText)}</Text>
+        <Text style={s.cLead}>{r.leadTime ?? DASH}</Text>
+        <Text style={s.cWt}>{r.weightEachText ?? DASH}</Text>
+        <Text style={s.cOrg}>{r.origin ?? DASH}</Text>
+      </View>
+      {r.note ? <Text style={s.rowNote}>{r.note}</Text> : null}
+    </View>
+  )
 }
 
 export function StatementDocument({ data, profile, logoSrc }: { data: StatementPdfData; profile: CompanyProfile; logoSrc: string }) {
@@ -104,7 +132,7 @@ export function StatementDocument({ data, profile, logoSrc }: { data: StatementP
             pageNumber > 1 ? (
               <View style={s.runInner}>
                 <Image src={logoSrc} style={s.runLogo} />
-                <Text style={[s.muted, { fontSize: 8.5, textAlign: 'right' }]}>
+                <Text style={[s.muted, { fontSize: 9.5, textAlign: 'right' }]}>
                   Comparative Statement  {data.reference}  {data.customer}  {longDay(data.date)}
                 </Text>
               </View>
@@ -121,14 +149,11 @@ export function StatementDocument({ data, profile, logoSrc }: { data: StatementP
         </View>
 
         <View style={s.titleRow}>
-          <View>
-            <Text style={s.h1}>Comparative Statement</Text>
-            <Text style={s.muted}>{data.orderNote}</Text>
-          </View>
+          <Text style={s.h1}>Comparative Statement</Text>
           <View style={s.meta}>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Job / RFQ</Text>
-              <Text style={[s.metaValue, s.mono, s.strongText]}>{data.reference}</Text>
+              <Text style={[s.metaValue, s.bold]}>{data.reference}</Text>
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Customer</Text>
@@ -140,94 +165,68 @@ export function StatementDocument({ data, profile, logoSrc }: { data: StatementP
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Prepared by</Text>
-              <Text style={s.metaValue}>{data.preparedBy}</Text>
+              <Text style={s.metaValue}>{data.preparedBy || DASH}</Text>
             </View>
           </View>
         </View>
 
-        {/* The column headings repeat at the top of every page. */}
-        <View style={s.th} fixed>
-          <Text style={s.cSup}>Supplier</Text>
-          <Text style={s.cUnit}>Unit cost</Text>
-          <Text style={s.cTot}>Line total</Text>
-          <Text style={s.cLead}>Lead time</Text>
-          <Text style={s.cWt}>Weight each</Text>
-          <Text style={s.cWtT}>Weight total</Text>
-          <Text style={s.cOrg}>Country of origin</Text>
-          <Text style={s.cNote}>Notes</Text>
-        </View>
-
-        {st.sections.length === 0 ? <Text style={[s.muted, { marginTop: 10 }]}>This RFQ has no items.</Text> : null}
+        {st.sections.length === 0 ? <Text style={s.muted}>This RFQ has no items.</Text> : null}
         {st.sections.map(sec => {
           const d = splitDescription(sec.item.description)
+          const cur = sec.sharedCurrency ? ` (${sec.sharedCurrency})` : ''
           return (
-            <View key={sec.item.id}>
-              <View style={s.itemBand} minPresenceAhead={50} wrap={false}>
-                <Text style={{ width: 20 }}>{sec.item.number}</Text>
-                <Text style={{ flex: 1, paddingRight: 8 }}>
-                  {d.title}
-                  {d.detail ? <Text style={[s.muted, { fontWeight: 400 }]}>{`   ${d.detail}`}</Text> : null}
-                </Text>
-                <Text style={[s.mono, { fontWeight: 500 }]}>Qty {sec.quantityText}</Text>
+            <View key={sec.item.id} style={s.item} wrap={sec.rows.length > 10}>
+              <View style={s.itemBand} minPresenceAhead={90}>
+                <Text style={s.itemTitle}>{`${sec.item.number}. ${d.title} — Qty: ${sec.quantityText}`}</Text>
+                {d.spec ? <Text style={s.itemSpec}>{d.spec}</Text> : null}
               </View>
-              {sec.rows.length === 0 && sec.noQuote.length === 0 ? (
-                <View style={s.tr} wrap={false}>
-                  <Text style={[s.cSup, s.muted]}>No supplier has quoted this item yet.</Text>
+              {sec.rows.length > 0 ? (
+                <View style={s.th} fixed={false}>
+                  <Text style={s.cSup}>Supplier</Text>
+                  <Text style={s.cUnit}>{`Unit cost${cur}`}</Text>
+                  <Text style={s.cTot}>{`Total cost${cur}`}</Text>
+                  <Text style={s.cLead}>Lead time</Text>
+                  <Text style={s.cWt}>Weight</Text>
+                  <Text style={s.cOrg}>Country of origin</Text>
                 </View>
-              ) : null}
+              ) : (
+                <Text style={s.noQuote}>No supplier has quoted this item yet.</Text>
+              )}
               {sec.rows.map(r => (
-                <View key={r.lineId} style={s.tr} wrap={false}>
-                  <Text style={[s.cSup, s.strongText]}>{r.supplierName}</Text>
-                  <Text style={[s.cUnit, s.mono]}>{`${r.currency} ${r.unitCostText}`}</Text>
-                  <Text style={[s.cTot, s.mono]}>{`${r.currency} ${r.totalText}`}</Text>
-                  <Text style={s.cLead}>{r.leadTime ?? ''}</Text>
-                  <Text style={[s.cWt, s.mono]}>{r.weightEachText ?? ''}</Text>
-                  <Text style={[s.cWtT, s.mono]}>{r.weightTotalText ?? ''}</Text>
-                  <Text style={s.cOrg}>{r.origin ?? ''}</Text>
-                  <Text style={[s.cNote, s.muted]}>{r.note ?? ''}</Text>
-                </View>
+                <SupplierRow key={r.lineId} r={r} shared={sec.sharedCurrency} />
               ))}
-              {data.showNoReply
-                ? sec.noQuote.map(r => (
-                    <View key={`n-${r.supplierId}`} style={s.tr} wrap={false}>
-                      <Text style={[s.cSup, s.muted]}>{r.supplierName}</Text>
-                      <Text style={[s.muted, { flex: 1 }]}>{r.reason}</Text>
-                    </View>
-                  ))
-                : null}
+              {data.showNoReply && sec.noQuote.length > 0 ? (
+                <Text style={s.noQuote}>{sec.noQuote.map(g => `${g.label}: ${g.names.join(', ')}`).join('  ·  ')}</Text>
+              ) : null}
             </View>
           )
         })}
 
         {st.totals.length > 0 ? (
-          <View style={{ marginTop: 18 }} wrap={false} minPresenceAhead={60}>
-            <Text style={s.secTitle}>Totals per supplier</Text>
-            <View style={[s.totRow, { borderTopWidth: 0.75, borderTopColor: C.strong, backgroundColor: C.sunken, fontWeight: 600, fontSize: 8.5 }]}>
+          <View wrap={false}>
+            <Text style={s.secTitle}>Totals by supplier</Text>
+            <View style={s.th}>
               <Text style={s.tSup}>Supplier</Text>
-              <Text style={s.tCount}>Items quoted</Text>
+              <Text style={s.tCur}>Currency</Text>
               <Text style={s.tAmt}>Total cost</Text>
+              <Text style={s.tCount}>Items quoted</Text>
             </View>
-            {st.totals.map(t => (
-              <View key={t.supplierId} style={s.totRow}>
-                <Text style={[s.tSup, s.strongText]}>{t.supplierName}</Text>
-                <Text style={s.tCount}>{`${t.itemsQuoted} of ${t.itemCount}`}</Text>
-                <View style={{ width: 150, paddingRight: 6 }}>
-                  {t.byCurrency.map(c => (
-                    <Text key={c.currency} style={[s.mono, s.right]}>{`${c.currency} ${c.totalText}`}</Text>
-                  ))}
+            {st.totals.flatMap(t =>
+              t.byCurrency.map((c, i) => (
+                <View key={`${t.supplierId}-${c.currency}`} style={[s.tr, s.trRow]}>
+                  <Text style={[s.tSup, s.bold]}>{i === 0 ? t.supplierName : ''}</Text>
+                  <Text style={s.tCur}>{c.currency}</Text>
+                  <Text style={s.tAmt}>{c.totalText}</Text>
+                  <Text style={s.tCount}>{i === 0 ? `${t.itemsQuoted} of ${t.itemCount}` : ''}</Text>
                 </View>
-              </View>
-            ))}
+              )),
+            )}
+            <Text style={s.note}>
+              Cost is what each supplier quoted: quantity times unit cost. A total covers only the items that supplier quoted, and different currencies are never added together.
+            </Text>
           </View>
-        ) : null}
-        {st.totals.length > 0 ? (
-          <Text style={s.note}>
-              Costs are what the suppliers quoted, quantity times unit cost. Totals are per supplier and per currency; different currencies are never added together. A total only
-              covers the items that supplier quoted. No supplier has been selected and no selling price is worked out here.
-              {data.showNoReply && st.noReplyCount > 0 ? ` ${st.noReplyCount} ${st.noReplyCount === 1 ? 'supplier asked has' : 'suppliers asked have'} not replied.` : ''}
-          </Text>
         ) : (
-          <Text style={s.note}>No supplier has quoted yet. No supplier has been selected and no selling price is worked out here.</Text>
+          <Text style={s.note}>No supplier has quoted yet.</Text>
         )}
 
         <View fixed style={s.foot}>

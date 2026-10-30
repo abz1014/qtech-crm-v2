@@ -130,20 +130,18 @@ function PageSkeleton() {
   )
 }
 
-const COLUMNS: Array<{ key: SortKey | null; label: string; align?: 'right'; help?: string }> = [
+const COLUMNS: Array<{ key: SortKey; label: string; align?: 'right' }> = [
   { key: 'supplier', label: 'Supplier' },
   { key: 'unit', label: 'Unit cost', align: 'right' },
-  { key: 'total', label: 'Line total', align: 'right' },
+  { key: 'total', label: 'Total cost', align: 'right' },
   { key: 'lead', label: 'Lead time' },
-  { key: 'weight', label: 'Weight each', align: 'right' },
-  { key: null, label: 'Weight total', align: 'right' },
+  { key: 'weight', label: 'Weight', align: 'right' },
   { key: 'origin', label: 'Country of origin' },
-  { key: null, label: 'Notes' },
 ]
 
 /** The columns of an item's quotes, as a grid: the table roles are on the elements (the raw table tags are for DataTable only). */
-const ROW = 'grid grid-cols-[minmax(11rem,1.5fr)_minmax(8rem,1fr)_minmax(9rem,1fr)_minmax(7rem,1fr)_minmax(6rem,0.8fr)_minmax(6rem,0.8fr)_minmax(8rem,1fr)_minmax(8rem,1.2fr)] items-start'
-const TOTAL_ROW = 'grid grid-cols-[minmax(12rem,2fr)_minmax(7rem,1fr)_minmax(10rem,1.5fr)] items-start'
+const ROW = 'grid grid-cols-[minmax(12rem,2fr)_minmax(8rem,1fr)_minmax(9rem,1fr)_minmax(8rem,1fr)_minmax(6rem,0.8fr)_minmax(8rem,1.2fr)] items-start'
+const TOTAL_ROW = 'grid grid-cols-[minmax(12rem,2fr)_minmax(6rem,0.7fr)_minmax(10rem,1.3fr)_minmax(7rem,1fr)] items-start'
 
 const SORT_CHOICES = [
   { value: 'supplier:asc', label: 'Supplier name, A to Z' },
@@ -167,7 +165,7 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
   const items = useRfqItems(rfqId)
   const inquiries = useRfqInquiries(rfqId)
   const profile = useCompanyProfile()
-  const [showNoReply, setShowNoReply] = useState(false)
+  const [showNoReply, setShowNoReply] = useState(true)
   const [sort, setSort] = useState<SortSpec>(DEFAULT_SORT)
   const [busy, setBusy] = useState(false)
   const phone = useMediaQuery('(max-width: 767px)')
@@ -219,7 +217,6 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
           date: businessToday(),
           preparedBy: session.status === 'signed-in' ? session.user.name : '',
           showNoReply,
-          orderNote: orderNote(sort),
         },
         profile.data,
       )
@@ -295,125 +292,106 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
 
 function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: StatementSection; sort: SortSpec; onSort: (k: SortKey) => void; showNoReply: boolean; phone: boolean }) {
   const { item } = sec
+  const [title, ...rest] = item.description.split(/\r?\n/)
+  const spec = rest.join(' ').trim()
+  const cur = sec.sharedCurrency ? ` (${sec.sharedCurrency})` : ''
+  const noQuote =
+    showNoReply && sec.noQuote.length > 0 ? (
+      <p className="border-t px-4 py-3 text-base text-fg-muted" data-statement-noreply="">
+        {sec.noQuote.map(g => `${g.label}: ${g.names.join(', ')}`).join(' · ')}
+      </p>
+    ) : null
   return (
     <section aria-label={`Item ${item.number}`} className="min-w-0 rounded-panel border bg-surface" data-statement-item={item.number}>
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b bg-sunken px-4 py-3">
-        <h2 className="min-w-0 flex-1 basis-[16rem] break-words text-base font-semibold">
-          <span className="num mr-2 text-fg-muted">{item.number}</span>
-          {item.description}
-        </h2>
-        <span className="num text-base text-fg-2">{`Quantity ${sec.quantityText}`}</span>
+      <header className="border-b bg-sunken px-4 py-4">
+        <h2 className="break-words text-lg font-semibold">{`${item.number}. ${title.trim()} — Qty: ${sec.quantityText}`}</h2>
+        {spec ? <p className="mt-1 break-words text-base text-fg-muted">{spec}</p> : null}
       </header>
-      {sec.rows.length === 0 && !(showNoReply && sec.noQuote.length > 0) ? (
+      {sec.rows.length === 0 ? (
         <p className="px-4 py-4 text-base text-fg-muted">No supplier has quoted this item yet.</p>
       ) : phone ? (
         <ul className="divide-y">
           {sec.rows.map(r => (
-            <RowCard key={r.lineId} r={r} />
+            <RowCard key={r.lineId} r={r} shared={sec.sharedCurrency} />
           ))}
-          {showNoReply
-            ? sec.noQuote.map(r => (
-                <li key={`n-${r.supplierId}`} className="grid gap-1 px-4 py-4 text-fg-muted" data-statement-noreply={r.supplierName}>
-                  <span className="text-base font-medium">{r.supplierName}</span>
-                  <span className="text-base">{r.reason}</span>
-                </li>
-              ))
-            : null}
         </ul>
       ) : (
         <div className="overflow-x-auto">
-          <div role="table" aria-label={`Quotes for item ${item.number}`} className="min-w-[56rem] text-left text-base">
+          <div role="table" aria-label={`Quotes for item ${item.number}`} className="min-w-[48rem] text-left text-base">
             <div role="rowgroup">
               <div role="row" className={cn(ROW, 'border-b text-sm text-fg-muted')}>
                 {COLUMNS.map(c => {
-                  const active = c.key !== null && sort.key === c.key
+                  const active = sort.key === c.key
+                  const label = (c.key === 'unit' || c.key === 'total') && cur ? `${c.label}${cur}` : c.label
                   return (
                     <div
                       key={c.label}
                       role="columnheader"
-                      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : c.key ? 'none' : undefined}
+                      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                       className={cn('px-4 py-2 font-medium', c.align === 'right' && 'text-right')}
                     >
-                      {c.key ? (
-                        <button
-                          type="button"
-                          onClick={() => onSort(c.key as SortKey)}
-                          className={cn('inline-flex items-center gap-1 rounded hover:text-fg', c.align === 'right' && 'flex-row-reverse', active && 'text-fg')}
-                          aria-label={`Sort by ${c.label.toLowerCase()}`}
-                        >
-                          {c.label}
-                          {active ? <Icon icon={sort.dir === 'asc' ? ArrowUp : ArrowDown} size="chip" /> : null}
-                        </button>
-                      ) : (
-                        c.label
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => onSort(c.key)}
+                        className={cn('inline-flex items-center gap-1 rounded hover:text-fg', c.align === 'right' && 'flex-row-reverse', active && 'text-fg')}
+                        aria-label={`Sort by ${c.label.toLowerCase()}`}
+                      >
+                        {label}
+                        {active ? <Icon icon={sort.dir === 'asc' ? ArrowUp : ArrowDown} size="chip" /> : null}
+                      </button>
                     </div>
                   )
                 })}
               </div>
             </div>
             <div role="rowgroup">
-              {sec.rows.map(r => (
-                <div key={r.lineId} role="row" className={cn(ROW, 'border-b last:border-b-0')} data-statement-row={r.supplierName}>
-                  <div role="rowheader" className="min-w-0 break-words px-4 py-3 font-medium">
-                    {r.supplierName}
-                  </div>
-                  <div role="cell" className="num whitespace-nowrap px-4 py-3 text-right">
-                    <span className="mr-1 font-sans text-sm text-fg-muted">{r.currency}</span>
-                    {r.unitCostText}
-                  </div>
-                  <div role="cell" className="num whitespace-nowrap px-4 py-3 text-right">
-                    <span className="mr-1 font-sans text-sm text-fg-muted">{r.currency}</span>
-                    {r.totalText}
-                  </div>
-                  <div role="cell" className="min-w-0 break-words px-4 py-3">
-                    {r.leadTime ?? <span className="text-fg-muted">Not stated</span>}
-                  </div>
-                  <div role="cell" className="num whitespace-nowrap px-4 py-3 text-right">
-                    {r.weightEachText ?? <span className="font-sans text-fg-muted">Not stated</span>}
-                  </div>
-                  <div role="cell" className="num whitespace-nowrap px-4 py-3 text-right">
-                    {r.weightTotalText ?? <span className="font-sans text-fg-muted">Not stated</span>}
-                  </div>
-                  <div role="cell" className="min-w-0 break-words px-4 py-3">
-                    {r.origin ?? <span className="text-fg-muted">Not stated</span>}
-                  </div>
-                  <div role="cell" className="min-w-0 break-words px-4 py-3 text-fg-2">
-                    {r.note ?? ''}
-                  </div>
-                </div>
-              ))}
-              {showNoReply
-                ? sec.noQuote.map(r => (
-                    <div key={`n-${r.supplierId}`} role="row" className={cn(ROW, 'border-b text-fg-muted last:border-b-0')} data-statement-noreply={r.supplierName}>
-                      <div role="rowheader" className="min-w-0 break-words px-4 py-3">
+              {sec.rows.map(r => {
+                const money = (t: string) => (sec.sharedCurrency ? t : `${r.currency} ${t}`)
+                return (
+                  <div key={r.lineId} role="row" className="border-b border-line last:border-b-0" data-statement-row={r.supplierName}>
+                    <div className={ROW}>
+                      <div role="rowheader" className="min-w-0 break-words px-4 py-3 font-medium">
                         {r.supplierName}
                       </div>
-                      <div role="cell" className="col-span-7 px-4 py-3">
-                        {r.reason}
+                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
+                        {money(r.unitCostText)}
+                      </div>
+                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
+                        {money(r.totalText)}
+                      </div>
+                      <div role="cell" className="min-w-0 break-words px-4 py-3">
+                        {r.leadTime ?? '—'}
+                      </div>
+                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
+                        {r.weightEachText ?? '—'}
+                      </div>
+                      <div role="cell" className="min-w-0 break-words px-4 py-3">
+                        {r.origin ?? '—'}
                       </div>
                     </div>
-                  ))
-                : null}
+                    {r.note ? <p className="px-4 pb-3 text-sm text-fg-muted">{r.note}</p> : null}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
       )}
+      {noQuote}
     </section>
   )
 }
 
 /** One supplier's quote for one item on a phone: its name, then each fact under its label. */
-function RowCard({ r }: { r: QuotedRow }) {
+function RowCard({ r, shared }: { r: QuotedRow; shared: string | null }) {
+  const money = (t: string) => (shared ? `${shared} ${t}` : `${r.currency} ${t}`)
   const facts: Array<[string, ReactNode]> = [
-    ['Unit cost', <span key="u" className="num">{`${r.currency} ${r.unitCostText}`}</span>],
-    ['Line total', <span key="t" className="num">{`${r.currency} ${r.totalText}`}</span>],
-    ['Lead time', r.leadTime ?? <span className="text-fg-muted">Not stated</span>],
-    ['Weight each', r.weightEachText ?? <span className="text-fg-muted">Not stated</span>],
-    ['Weight total', r.weightTotalText ?? <span className="text-fg-muted">Not stated</span>],
-    ['Country of origin', r.origin ?? <span className="text-fg-muted">Not stated</span>],
+    ['Unit cost', <span key="u" className="[font-variant-numeric:tabular-nums]">{money(r.unitCostText)}</span>],
+    ['Total cost', <span key="t" className="[font-variant-numeric:tabular-nums]">{money(r.totalText)}</span>],
+    ['Lead time', r.leadTime ?? '—'],
+    ['Weight', r.weightEachText ?? '—'],
+    ['Country of origin', r.origin ?? '—'],
   ]
-  if (r.note) facts.push(['Notes', r.note])
   return (
     <li className="grid gap-2 px-4 py-4" data-statement-row={r.supplierName}>
       <p className="break-words text-base font-medium">{r.supplierName}</p>
@@ -425,6 +403,7 @@ function RowCard({ r }: { r: QuotedRow }) {
           </Fragment>
         ))}
       </dl>
+      {r.note ? <p className="text-sm text-fg-muted">{r.note}</p> : null}
     </li>
   )
 }
@@ -432,10 +411,10 @@ function RowCard({ r }: { r: QuotedRow }) {
 function Totals({ totals, quotedAny, phone }: { totals: SupplierTotal[]; quotedAny: boolean; phone: boolean }) {
   if (!quotedAny) return null
   return (
-    <section aria-label="Totals per supplier" className="min-w-0 rounded-panel border bg-surface" data-statement-totals>
-      <header className="border-b bg-sunken px-4 py-3">
-        <h2 className="text-base font-semibold">Totals per supplier</h2>
-        <p className="mt-1 text-base text-fg-2">Quantity times unit cost, added up for each supplier in its own currency. A total only covers the items that supplier quoted.</p>
+    <section aria-label="Totals by supplier" className="min-w-0 rounded-panel border bg-surface" data-statement-totals>
+      <header className="border-b bg-sunken px-4 py-4">
+        <h2 className="text-lg font-semibold">Totals by supplier</h2>
+        <p className="mt-1 text-base text-fg-muted">Quantity times unit cost, for the items each supplier quoted. Currencies are never added together.</p>
       </header>
       {phone ? (
         <ul className="divide-y">
@@ -444,46 +423,50 @@ function Totals({ totals, quotedAny, phone }: { totals: SupplierTotal[]; quotedA
               <p className="break-words text-base font-medium">{t.supplierName}</p>
               <p className="text-base text-fg-muted">{`${t.itemsQuoted} of ${t.itemCount} items quoted`}</p>
               {t.byCurrency.map(c => (
-                <p key={c.currency} className="num text-base">
-                  <span className="mr-1 font-sans text-sm text-fg-muted">{c.currency}</span>
-                  {c.totalText}
-                </p>
+                <p key={c.currency} className="text-base [font-variant-numeric:tabular-nums]">{`${c.currency} ${c.totalText}`}</p>
               ))}
             </li>
           ))}
         </ul>
       ) : (
         <div className="overflow-x-auto">
-          <div role="table" aria-label="Totals per supplier" className="min-w-[32rem] text-left text-base">
+          <div role="table" aria-label="Totals by supplier" className="min-w-[36rem] text-left text-base">
             <div role="rowgroup">
               <div role="row" className={cn(TOTAL_ROW, 'border-b text-sm text-fg-muted')}>
                 <div role="columnheader" className="px-4 py-2 font-medium">
                   Supplier
                 </div>
                 <div role="columnheader" className="px-4 py-2 font-medium">
-                  Items quoted
+                  Currency
                 </div>
                 <div role="columnheader" className="px-4 py-2 text-right font-medium">
                   Total cost
+                </div>
+                <div role="columnheader" className="px-4 py-2 font-medium">
+                  Items quoted
                 </div>
               </div>
             </div>
             <div role="rowgroup">
               {totals.map(t => (
-                <div key={t.supplierId} role="row" className={cn(TOTAL_ROW, 'border-b last:border-b-0')} data-statement-total={t.supplierName}>
-                  <div role="rowheader" className="min-w-0 break-words px-4 py-3 font-medium">
-                    {t.supplierName}
-                  </div>
-                  <div role="cell" className="num px-4 py-3">{`${t.itemsQuoted} of ${t.itemCount}`}</div>
-                  <div role="cell" className="num px-4 py-3 text-right">
-                    {t.byCurrency.map(c => (
-                      <span key={c.currency} className="block whitespace-nowrap">
-                        <span className="mr-1 font-sans text-sm text-fg-muted">{c.currency}</span>
+                <Fragment key={t.supplierId}>
+                  {t.byCurrency.map((c, i) => (
+                    <div key={c.currency} role="row" className={cn(TOTAL_ROW, 'border-b border-line')} data-statement-total={t.supplierName}>
+                      <div role="rowheader" className="min-w-0 break-words px-4 py-3 font-medium">
+                        {i === 0 ? t.supplierName : ''}
+                      </div>
+                      <div role="cell" className="px-4 py-3">
+                        {c.currency}
+                      </div>
+                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
                         {c.totalText}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                      </div>
+                      <div role="cell" className="px-4 py-3">
+                        {i === 0 ? `${t.itemsQuoted} of ${t.itemCount}` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </Fragment>
               ))}
             </div>
           </div>

@@ -70,7 +70,7 @@ for (const role of ['sales', 'admin'] as const) {
     // by supplier name, A to Z (Alpha, Mid, Zeta), though Mid is cheapest in rupees terms and Zeta quoted both items
     expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.mid, s.names.zeta])
     expect(await rowNames(page, 2)).toEqual([s.names.zeta])
-    await expect(page.getByTestId('statement-order-note')).toContainText('Nothing is selected or recommended')
+    await expect(page.getByTestId('statement-order-note')).toHaveText('') // no sentence about the order unless a person has sorted by a column
 
     // cost, lead time, weight and origin of one row
     const zeta = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.zeta}"]`)
@@ -79,11 +79,11 @@ for (const role of ['sales', 'admin'] as const) {
     await expect(zeta).toContainText('400.00') // 4 x 100
     await expect(zeta).toContainText('3 weeks')
     await expect(zeta).toContainText('2.5 kg')
-    await expect(zeta).toContainText('10 kg') // 4 x 2.5
+    await expect(zeta).not.toContainText('10 kg') // the weight of ONE unit only
     await expect(zeta).toContainText('Germany')
     const alpha = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.alpha}"]`)
     await expect(alpha).toContainText('400 g')
-    await expect(alpha).toContainText('1,600 g')
+    await expect(page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.mid}"]`)).toContainText('—') // no origin: a dash
     await expect(page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.mid}"]`)).toContainText('6 lb')
 
     // totals: per supplier, each in its own currency, never added across currencies
@@ -99,11 +99,12 @@ for (const role of ['sales', 'admin'] as const) {
     await expect(statement).not.toContainText(/cheap|lowest|best|recommend|winner|preferred/i)
     await expect(page.locator('#main [aria-checked="true"], #main [aria-pressed="true"], #main [aria-selected="true"], #main input:checked')).toHaveCount(0)
     await expect(page.locator('#main [data-recommended], #main [data-lowest], #main [data-best]')).toHaveCount(0)
-    // the suppliers that never replied are not listed until asked for
-    await expect(page.locator('[data-statement-noreply]')).toHaveCount(0)
+    // the suppliers that did not reply or did not quote are ONE compact line under the item, not rows
+    await expect(page.locator('[data-statement-item="1"] [data-statement-noreply]')).toHaveText(`No reply: ${s.names.silent}`)
+    await expect(page.locator('[data-statement-item="2"] [data-statement-noreply]')).toHaveText(`No reply: ${s.names.silent} · Did not quote: ${s.names.alpha}, ${s.names.mid}`)
+    await expect(page.locator('[data-statement-item] [role="row"][data-statement-row]').filter({ hasText: s.names.silent })).toHaveCount(0)
     await page.getByRole('checkbox', { name: 'Show suppliers that did not reply' }).click()
-    await expect(page.locator(`[data-statement-item="1"] [data-statement-noreply="${s.names.silent}"]`)).toContainText('No reply')
-    await expect(page.locator(`[data-statement-item="2"] [data-statement-noreply="${s.names.alpha}"]`)).toContainText('Did not quote this item')
+    await expect(page.locator('[data-statement-noreply]')).toHaveCount(0)
   })
 }
 
@@ -115,13 +116,13 @@ test('a column can be sorted by hand, only moves the rows, and the page says so'
   // unit cost: grouped by currency (EUR, PKR, USD), never compared as numbers across currencies
   await first.getByRole('button', { name: 'Sort by unit cost' }).click()
   await expect(page.getByTestId('statement-order-note')).toContainText('Sorted by unit cost')
-  await expect(page.getByTestId('statement-order-note')).toContainText('nothing is selected or recommended')
+  await expect(page.getByTestId('statement-order-note')).toContainText('only changes the order on the page')
   expect(await rowNames(page, 1)).toEqual([s.names.mid, s.names.alpha, s.names.zeta])
   await first.getByRole('button', { name: 'Sort by lead time' }).click()
   expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.zeta, s.names.mid]) // 10 days, 3 weeks, 6 weeks
   await first.getByRole('button', { name: 'Sort by supplier' }).click()
   expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.mid, s.names.zeta])
-  await expect(page.getByTestId('statement-order-note')).toContainText('Nothing is selected or recommended')
+  await expect(page.getByTestId('statement-order-note')).toHaveText('')
 })
 
 test('Export PDF downloads an A4 landscape PDF named for the job', async ({ page }) => {
@@ -217,7 +218,6 @@ test('weight and country of origin are typed beside the prices in the reply dial
   await page.goto(`/jobs/${s.rfq.number}/statement`)
   const row = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${name}"]`)
   await expect(row).toContainText('1.25 lb')
-  await expect(row).toContainText('5 lb') // 4 x 1.25
   await expect(row).toContainText('Japan')
 })
 

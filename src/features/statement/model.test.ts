@@ -52,11 +52,12 @@ const ALPHA = inquiry('a', 'alpha Instruments', [line('a', 'i1', 9000, 'PKR', { 
 const MID = inquiry('m', 'Mid Supply', [line('m', 'i1', 95.5, 'EUR', { leadTime: '6 weeks', weight: 6, weightUnit: 'lb' })])
 
 describe('number text', () => {
-  it('shows at least 2 and at most 4 decimals, grouped', () => {
+  it('always shows exactly 2 decimals, thousands grouped, rounded for display only', () => {
     expect(costText(412.5)).toBe('412.50')
-    expect(costText(0.0125)).toBe('0.0125')
+    expect(costText(115.8948)).toBe('115.89')
+    expect(costText(0.0125)).toBe('0.01')
     expect(costText(1650)).toBe('1,650.00')
-    expect(costText(12345.6789)).toBe('12,345.6789')
+    expect(costText(12345.6789)).toBe('12,345.68')
   })
   it('shows a quantity or weight without trailing zeros', () => {
     expect(plainNumber(2.5)).toBe('2.5')
@@ -100,9 +101,9 @@ describe('buildStatement', () => {
   it('shows the weight of one unit and of the whole quantity in the supplier\'s unit, and the origin and lead time', () => {
     const s = buildStatement(ITEMS, [ZED, ALPHA])
     const zed = s.sections[0].rows.find(r => r.supplierName === 'Zed Controls')!
-    expect(zed).toMatchObject({ weightEachText: '2.5 kg', weightTotalText: '10 kg', origin: 'Germany', leadTime: '3 weeks', unitCostText: '100.00' })
+    expect(zed).toMatchObject({ weightEachText: '2.5 kg', origin: 'Germany', leadTime: '3 weeks', unitCostText: '100.00' })
     const alpha = s.sections[0].rows.find(r => r.supplierName.startsWith('alpha'))!
-    expect(alpha).toMatchObject({ weightEachText: '400 g', weightTotalText: '1,600 g', note: 'valid 7 days' })
+    expect(alpha).toMatchObject({ weightEachText: '400 g', note: 'valid 7 days' })
     const noWeight = s.sections[1].rows[0]
     expect(noWeight.weightEachText).toBeNull()
     expect(noWeight.origin).toBeNull()
@@ -128,14 +129,13 @@ describe('buildStatement', () => {
     const all = [ZED, silent, cant, partial, shortlisted]
     expect(buildStatement(ITEMS, all).sections[0].noQuote).toEqual([])
     const s = buildStatement(ITEMS, all, { showNoReply: true })
-    expect(s.sections[0].noQuote.map(r => [r.supplierName, r.reason])).toEqual([
-      ['Cant Ltd', "Can't quote: Doesn't carry this brand"],
-      ['Silent Ltd', 'No reply'],
+    expect(s.sections[0].noQuote).toEqual([
+      { label: 'No reply', names: ['Silent Ltd'] },
+      { label: "Can't quote", names: ['Cant Ltd'] },
     ])
-    expect(s.sections[1].noQuote.map(r => [r.supplierName, r.reason])).toEqual([
-      ['Cant Ltd', "Can't quote: Doesn't carry this brand"],
-      ['Partial Ltd', "Can't quote: Item discontinued"],
-      ['Silent Ltd', 'No reply'],
+    expect(s.sections[1].noQuote).toEqual([
+      { label: 'No reply', names: ['Silent Ltd'] },
+      { label: "Can't quote", names: ['Cant Ltd', 'Partial Ltd'] },
     ])
     expect(s.noReplyCount).toBe(2)
     // a supplier with no price has no totals row
@@ -161,5 +161,14 @@ describe('sortRows (only when a person asks)', () => {
   it('sorts weights in a common unit', () => {
     // 400 g < 2.5 kg < 6 lb (2.72 kg)
     expect(sortRows(rows, { key: 'weight', dir: 'asc' }).map(r => r.supplierName)).toEqual(['alpha Instruments', 'Zed Controls', 'Mid Supply'])
+  })
+})
+
+describe('sections', () => {
+  it('say which currency every row shares, else null; and the unit cost never shows 4 decimals', () => {
+    const s = buildStatement(ITEMS, [ZED, ALPHA, MID, inquiry('d', 'Dec Co', [line('d', 'i2', 115.8948, 'USD')])])
+    expect(s.sections[0].sharedCurrency).toBeNull() // USD, PKR and EUR
+    expect(s.sections[1].sharedCurrency).toBe('USD')
+    expect(s.sections[1].rows.find(r => r.supplierName === 'Dec Co')?.unitCostText).toBe('115.89')
   })
 })

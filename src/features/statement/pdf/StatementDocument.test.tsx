@@ -101,7 +101,6 @@ export function sampleData(itemCount: number, showNoReply = true): StatementPdfD
     date: '2026-10-29',
     preparedBy: 'Sana Sales',
     showNoReply,
-    orderNote: 'Suppliers are listed by name. Nothing is selected.',
   }
 }
 
@@ -121,10 +120,10 @@ describe('StatementDocument', () => {
     }
   }, 60_000)
 
-  it('renders a one-page statement, and one with nothing quoted yet', async () => {
+  it('renders a short statement (the item and the totals), and one with nothing quoted yet', async () => {
     const one = await renderToBuffer(<StatementDocument data={sampleData(1, false)} profile={PROFILE} logoSrc={LOGO} />)
     if (process.env.STATEMENT_SAMPLE_PDF) (await import('node:fs')).writeFileSync(`${process.env.STATEMENT_SAMPLE_PDF}.small.pdf`, one)
-    expect(pages(one)).toBe(1)
+    expect(pages(one)).toBeLessThanOrEqual(2)
     const empty = sampleData(2, false)
     empty.statement = buildStatement([], [])
     const none = await renderToBuffer(<StatementDocument data={empty} profile={PROFILE} logoSrc={LOGO} />)
