@@ -1,9 +1,9 @@
-// A8: the ranked supplier quotes of one RFQ, as the convert dialog and the Split line dialog show them. Pure and framework-free.
-// The database (rank_item_quotes) decides the order and the 2% band; this file maps its rows and asks reasons.ts (R25, the one module
-// that words them) for the reasons. Selling price and spread arrive only for admin and sales (NULL for engineers).
+// The supplier quotes of one RFQ, as the convert dialog and the Split line dialog list them. Pure and framework-free.
+// The rows come from rank_item_quotes (its prices and PKR figures), but NOTHING here ranks, recommends or explains: a supplier is never
+// singled out (owner decision 2026-10-29). The quotes of an item are listed by supplier name.
 
 import { formatAmount } from '@/lib/money'
-import { bandSizeOf, reasonsFor, type RankRow } from '@/features/rfqs/lib/ranking/reasons'
+import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 
 export interface RankedQuote {
   lineId: string
@@ -38,24 +38,9 @@ export function mapRankRows(rows: readonly RankRow[], supplierNames: ReadonlyMap
   }))
 }
 
-export const forItem = (all: readonly RankedQuote[], itemId: string): RankedQuote[] => all.filter(q => q.itemId === itemId)
-
-/** The selling price and spread reach the strings only when the database sent them (it sends NULL to an engineer). */
-const reasons = (q: RankedQuote, among: readonly RankedQuote[]) =>
-  reasonsFor(q.row, { showSell: q.row.sell_source !== null, bandSize: bandSizeOf(among.map(a => a.row)) })
-
-/** The line under a supplier name on the button: the price reason, then the delivery record. "Best price · On time 5 of 6 deliveries". */
-export function shortReason(q: RankedQuote, among: readonly RankedQuote[]): string {
-  const set = reasons(q, among)
-  const price = set.short.find(r => r.id === 'price' || r.id === 'unranked')
-  const record = set.short.find(r => r.id === 'record')
-  return [price, record].filter(Boolean).map(r => (r as { text: string }).text).join(' · ')
-}
-
-/** The full short line in the picker: every key behind the rank, in the words used on the RFQ page. */
-export function longReason(q: RankedQuote, among: readonly RankedQuote[]): string {
-  return reasons(q, among).short.map(r => r.text).join(' · ')
-}
+/** The quotes of one item, by supplier name (never by price or rank). */
+export const forItem = (all: readonly RankedQuote[], itemId: string): RankedQuote[] =>
+  all.filter(q => q.itemId === itemId).sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'en', { sensitivity: 'base' }) || a.price - b.price)
 
 /** "USD 412.00" and, under it, "≈ PKR 114,701" or "no conversion". */
 export function priceTexts(q: RankedQuote): { price: string; pkr: string } {

@@ -18,7 +18,6 @@ import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
 import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
-import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { useQuotations } from '@/features/quotations/hooks'
 import { useOrdersForRfq } from '@/features/orders/forRfq'
@@ -113,7 +112,6 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
   const coverage = lib && suggestResult ? lib.coverageLine(suggestResult.uncovered) : null
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
-  const ranking = useRankedQuotes(rfq.id, hasPrices)
   const askedCount = inquiryList.filter(i => i.sentOn || i.noOfferOn).length
   const nobodyAsked = askedCount === 0
   const askList = useMemo(() => (lib ? lib.withShortlist(inquiryList, itemList, suggestions) : []), [lib, inquiryList, itemList, suggestions])
@@ -144,7 +142,6 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
         fxRows={fx.data ?? []}
         memory={memory.data}
         suggestions={suggestions}
-        ranking={ranking.byLine}
         onAddItem={() => setAdding(true)}
         onCopyEnquiry={(s, item) => void askFrom([s], [item])}
         statementTo={jobKey ? `/jobs/${encodeURIComponent(jobKey)}/statement` : undefined}

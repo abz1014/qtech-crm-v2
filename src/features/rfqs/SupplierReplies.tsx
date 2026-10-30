@@ -54,7 +54,7 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  * one row per supplier with "Enter reply" or "Edit reply". That opens this dialog (a bottom sheet on a phone), and only then the
  * price form: a price per item, the currency already filled in (the supplier's last currency, else the country map: "there is
  * nothing to pick"), lead time and stock once for the whole reply. While a price is typed the row says what it reads as in PKR at
- * today's rate, and whether it would be the lowest; with no rate it says the reply can be saved and the rate added afterwards.
+ * today's rate (never whether it is the lowest); with no rate it says the reply can be saved and the rate added afterwards.
  *
  *   FE-2  supplier reply   Enter reply, one typed price per item, currency never typed, then Save reply
  *         can't quote      Enter reply, Can't quote, the reason (the five reasons sit behind one menu, not five buttons)
@@ -76,8 +76,8 @@ export function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCou
   return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `chased ×${inquiry.chaseCount}` : undefined} />
 }
 
-/** What a typed price reads as in PKR at today's rate, and whether it would be the lowest (C-40). */
-function PricePreview({ itemId, amount, currency, others, rates }: { itemId: string; amount: number; currency: string; others: InquiryRow[]; rates: RateTable }) {
+/** What a typed price reads as in PKR at today's rate. It never says whether it is the lowest: the CRM suggests no supplier. */
+function PricePreview({ amount, currency, rates }: { amount: number; currency: string; rates: RateTable }) {
   if (!currency || currency === 'PKR') return null
   const rate = rates[currency]
   const usable = rate && rate.staleness !== 'unusable' && rate.ageDays <= 30
@@ -91,15 +91,12 @@ function PricePreview({ itemId, amount, currency, others, rates }: { itemId: str
       </p>
     )
   }
-  const existing = others.flatMap(i => i.lines.filter(l => l.itemId === itemId).map(l => ({ id: l.id, amount: l.unitPrice, currency: l.currency })))
-  const cmp = comparePrices([...existing, { id: 'new', amount, currency }], rates)
+  const cmp = comparePrices([{ id: 'new', amount, currency }], rates)
   const mine = cmp.lines.find(l => l.id === 'new')
   if (!mine || mine.pkrPaisa === null) return null
-  const lowest = mine.lowest
   return (
     <p className="text-sm text-fg-muted" data-preview="rate">
       {`Reads as ≈ PKR ${formatPaisa(mine.pkrPaisa)} at today's ${currency} rate.`}
-      {lowest ? ` It would be the lowest of ${cmp.comparableCount} comparable prices.` : ''}
     </p>
   )
 }
@@ -141,7 +138,6 @@ export function SupplierReplyDialog({
   rfq,
   items,
   inquiry,
-  inquiries,
   rates,
   focusItemId,
   onClose,
@@ -149,7 +145,8 @@ export function SupplierReplyDialog({
   rfq: RfqHeader
   items: RfqItemRow[]
   inquiry: InquiryRow
-  inquiries: InquiryRow[]
+  /** The other suppliers' replies. No longer read here (the price preview names no lowest), kept so callers need no change. */
+  inquiries?: InquiryRow[]
   rates: RateTable
   /** The item whose price box gets the cursor ("Edit reply" on a price row); else the first price box. */
   focusItemId?: string
@@ -177,7 +174,6 @@ export function SupplierReplyDialog({
   // the guard does not switch off and on again between keystrokes (HW-48).
   const unread = items.some(it => !inquiry.itemDeclines[it.id] && typeof draft.prices[it.id] !== 'number' && replyPriceProblem(priceText[it.id] ?? '') !== null)
   const typed = Object.values(draft.prices).filter(p => typeof p === 'number' && p > 0).length
-  const others = inquiries.filter(i => i.id !== inquiry.id)
 
   const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : prefill.source === 'none' ? `${draft.currency}, picked by you` : `${draft.currency}, changed by you`
   const currencyOptions = [...new Set([draft.currency, prefill.currency, ...REPLY_CURRENCIES].filter(Boolean))].map(c => ({ value: c, label: c }))
@@ -468,7 +464,7 @@ export function SupplierReplyDialog({
                           {problem}
                         </p>
                       ) : null}
-                      {!reason && typeof price === 'number' && price > 0 ? <PricePreview itemId={it.id} amount={price} currency={draft.currency} others={others} rates={rates} /> : null}
+                      {!reason && typeof price === 'number' && price > 0 ? <PricePreview amount={price} currency={draft.currency} rates={rates} /> : null}
                     </li>
                   )
                 })}

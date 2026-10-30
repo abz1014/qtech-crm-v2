@@ -275,31 +275,25 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await t.close()
   })
 
-  // ---- 5. The ranked comparison: 0 taps -----------------------------------------------------------------------------------------
-  await test.step('the ranked comparison is on the page with 0 taps', async () => {
+  // ---- 5. The supplier prices: 0 taps, nothing ranked ---------------------------------------------------------------------------
+  await test.step('the supplier prices are on the page with 0 taps, by supplier name, with no mark', async () => {
     await resetCount(page)
-    // Item 1: Alpenmark EUR 90 = PKR 27,000, Lahore USD 100 = PKR 28,000 (3.7% dearer: outside the 2% band). Item 2: Lahore USD 190 = 53,200 beats Alpenmark 60,000.
-    const rank = async (item: string) => {
+    // Item 1: Alpenmark EUR 90 = PKR 27,000, Lahore USD 100 = PKR 28,000. Item 2: Lahore USD 190 = 53,200, Alpenmark 60,000.
+    // The CRM never suggests a supplier (owner decision 2026-10-29): both items list Alpenmark then Lahore, whatever the prices.
+    const rowsOf = async (item: string) => {
       const art = page.getByRole('article', { name: item })
-      await expect(art.locator('li[data-ranked]')).toHaveCount(2)
-      return {
-        order: await art.locator('li[data-ranked]').evaluateAll(els => els.map(e => e.getAttribute('data-ranked'))),
-        names: await art.locator('li[data-ranked]').allInnerTexts(),
-        art,
-      }
+      await expect(art.locator('li[data-price-row]')).toHaveCount(2)
+      return { names: await art.locator('li[data-price-row]').allInnerTexts(), art }
     }
-    const one = await rank('Item 1')
-    expect(one.order).toEqual(['1', '2'])
-    expect(one.names[0]).toContain(s.alpen.name)
-    expect(one.names[1]).toContain(s.lahore.name)
-    await expect(one.art.locator('li[data-ranked]').first()).toContainText('Recommended') // one mark, no rank squares
-    await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(1)
-    await expect(one.art.locator('[data-sell-note]')).toContainText('No selling price yet') // nothing is quoted yet, so no spread is invented
-    const two = await rank('Item 2')
-    expect(two.order).toEqual(['1', '2'])
-    expect(two.names[0]).toContain(s.lahore.name)
-    expect(two.names[1]).toContain(s.alpen.name)
-    fe2('Ranked comparison: taps to see it', (await readCount(page)).mouse, 0)
+    for (const item of ['Item 1', 'Item 2']) {
+      const r = await rowsOf(item)
+      expect(r.names[0]).toContain(s.alpen.name)
+      expect(r.names[1]).toContain(s.lahore.name)
+      await expect(r.art).not.toContainText(/Recommended|Cheapest|Lowest price|Best price/)
+      await expect(r.art.locator('[data-sell-note]')).toHaveCount(0)
+    }
+    await expect(page.getByRole('button', { name: 'How are prices shown?' })).toHaveCount(1)
+    fe2('Supplier prices: taps to see them', (await readCount(page)).mouse, 0)
   })
 
   // ---- 6. Issue the quotation PDF --------------------------------------------------------------------------------------------------
@@ -329,11 +323,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     fe2('Issue quotation: Issue + Share, with the one tap that opens the dialog', c.mouse, 3)
     await d.getByRole('button', { name: 'Done' }).click()
 
-    // With a selling price in, the salesperson's comparison shows the spread (an engineer's never does). Opening the reasons is optional.
-    const first = page.getByRole('article', { name: 'Item 1' }).locator('li[data-ranked="1"]')
-    const reasons = first.getByRole('button', { name: `Show details for ${s.alpen.name}` })
-    if (await reasons.count()) await reasons.click()
-    await expect(first).toContainText('Spread ≈ PKR 7,000 each, PKR 28,000 for 4, against our quoted PKR 34,000')
+    // With a selling price in, the supplier prices still show no spread or margin: the CRM works out neither.
+    await expect(page.getByRole('article', { name: 'Item 1' })).not.toContainText(/Spread|Our price/)
 
     const [q] = await must(
       rest<{ id: string; number: number; issued_on: string; net_total: number; gst_total: number; pdf_path: string | null }[]>('admin', `quotations?rfq_id=eq.${rfq.id}&select=id,number,issued_on,net_total,gst_total,pdf_path`),
@@ -407,7 +398,6 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.alpen.name))
     await chooseSupplier(page, d, 'Supplier for line 2', new RegExp(s.lahore.name))
     await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.alpen.name)
-    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
     // Split line 1 (4 pieces): the new part starts with no supplier; the person picks it, and types one quantity. The first part takes the remainder.
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
     await expect(d.getByRole('button', { name: 'Supplier for part 2, line 1' })).toContainText('Choose a supplier')

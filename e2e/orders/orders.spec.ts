@@ -276,7 +276,6 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Choose a supplier')
     await expect(dialog.getByRole('button', { name: 'Supplier for line 3' })).toContainText('Not sourced yet')
     await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(s.supplierB.name), t.tap)
-    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
     await chooseSupplier(page, dialog, 'Supplier for line 2', new RegExp(s.supplierA.name), t.tap)
     for (const [n, v] of [['1', '1000'], ['2', '2000'], ['3', '500']]) await t.typed(price(dialog, Number(n)), v)
 

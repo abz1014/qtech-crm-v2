@@ -29,7 +29,7 @@ import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/fea
 import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
 import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
-import { buildSplitPayload, checkSplit, isSplit, nextRanked, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
+import { buildSplitPayload, checkSplit, hasFreeQuote, isSplit, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
 import { orderRef } from '@/lib/refs'
 
 /*
@@ -39,7 +39,7 @@ import { orderRef } from '@/lib/refs'
  *
  * NO SUPPLIER IS CHOSEN FOR THE PERSON (owner decision 2026-10-29: "I don't want the software to select a supplier for us"). Every item
  * with a quote starts on "Choose a supplier"; Create order waits until each ticked line has one, picked from its list of quotes (the list
- * still shows the ranking and its reasons as information). An item nobody quoted needs no supplier. Splitting an item's quantity across
+ * lists each item's quotes by supplier name, with prices and no mark, rank or reason). An item nobody quoted needs no supplier. Splitting an item's quantity across
  * suppliers is opt-in, and a new part also starts on "Choose a supplier".
  *
  * FE-2 entry burden, listed for the commit:
@@ -237,7 +237,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     setSplits(s => {
       const parts: Part[] = s[itemId] ? [...s[itemId]] : [{ key: crypto.randomUUID(), lineId: choiceOf(itemId), qty: null }]
       // The new part starts with no supplier: the person picks it.
-      if (!nextRanked(qs, new Set(parts.map(p => p.lineId)))) return s
+      if (!hasFreeQuote(qs, new Set(parts.map(p => p.lineId)))) return s
       return { ...s, [itemId]: [...parts, { key: crypto.randomUUID(), lineId: UNCHOSEN, qty: undefined }] }
     })
   }
@@ -425,7 +425,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                 const chk = checks[it.id]
                 const choice = choiceOf(it.id)
                 const q = qs.find(x => x.lineId === choice)
-                const canSplit = qs.length >= 2 && (isSplitItem ? nextRanked(qs, new Set(parts.map(p => p.lineId))) !== undefined : choice !== 'none' && choice !== 'service' && choice !== UNCHOSEN)
+                const canSplit = qs.length >= 2 && (isSplitItem ? hasFreeQuote(qs, new Set(parts.map(p => p.lineId))) : choice !== 'none' && choice !== 'service' && choice !== UNCHOSEN)
                 return (
                   <div key={it.id} className="border-t border-line-strong first:border-t-0" data-testid={`convert-item-${n}`}>
                     <div className={cn('grid gap-2 px-4 py-3 text-sm leading-5', GRID)}>

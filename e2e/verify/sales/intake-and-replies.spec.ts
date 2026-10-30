@@ -205,11 +205,12 @@ test('prices in three currencies are stored with the rate of the day and ranked 
   }
 
   const art = page.getByRole('article', { name: 'Item 1' })
-  await expect(art.locator('li[data-ranked]')).toHaveCount(3)
-  const ranked = await art.locator('li[data-ranked]').allInnerTexts()
-  expect(ranked[0]).toContain(germany.name)
-  expect(ranked[1]).toContain(lahore.name)
-  expect(ranked[2]).toContain(houston.name)
+  await expect(art.locator('li[data-price-row]')).toHaveCount(3)
+  // listed by supplier name, never by price or rank (owner decision 2026-10-29)
+  const shown = await art.locator('li[data-price-row]').allInnerTexts()
+  const byName = [germany, lahore, houston].sort((x, y) => x.name.localeCompare(y.name, 'en', { sensitivity: 'base' }))
+  byName.forEach((sup, i) => expect(shown[i]).toContain(sup.name))
+  await expect(art).not.toContainText(/Recommended|Cheapest|Lowest price|Best price/)
   const rank = await db.adminRpc<{ supplier_id: string; rank: number; pkr_unit_price: number }[]>('rank_item_quotes', { p_rfq_id: r.rfq.id })
   const byId = Object.fromEntries(rank.map(x => [x.supplier_id, [Number(x.rank), num(x.pkr_unit_price)]]))
   expect(byId[germany.id]).toEqual([1, 25572.55])

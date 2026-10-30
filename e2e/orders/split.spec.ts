@@ -131,9 +131,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     // the picker lists the quotes with the reason (the ranking stays information); the person picks
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name), t.tap)
     await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.s1.name)
-    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
     await chooseSupplier(page, d, 'Supplier for line 2', new RegExp(s.s1.name), t.tap)
-    await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Best price')
 
     await t.tap(d.getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
@@ -201,9 +199,9 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name), t.tap)
     await t.tap(d.getByRole('button', { name: 'Split this item, line 1' }))
     await t.tap(d.getByRole('button', { name: 'Supplier for part 2, line 1' }))
-    // the picker lists the ranked quotes with the reason; a supplier used by the other part cannot be picked again
+    // the picker lists the quotes by supplier name, with prices and no rank or reason; a supplier used by the other part cannot be picked again
     await expect(page.getByRole('option', { name: new RegExp(s.s1.name) })).toBeDisabled()
-    await expect(page.getByRole('option', { name: new RegExp(s.s3.name) })).toContainText('above the best')
+    await expect(page.getByRole('option', { name: new RegExp(s.s3.name) })).not.toContainText(/above the best|Best price|Within 2%/)
     await shot(page, 'a8-convert-picker-1440')
     await t.tap(page.getByRole('option', { name: new RegExp(s.s3.name) }))
     await t.typed(partQty(page, 2), '1')

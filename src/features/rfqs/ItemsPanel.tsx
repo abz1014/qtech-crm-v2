@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, Table2, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
+import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, Table2, Trash2, TriangleAlert } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useSeesPrices } from '@/app/session'
 import { cn } from '@/lib/utils'
@@ -24,12 +24,10 @@ import { RateBar } from '@/features/rfqs/RateBar'
 import { InfoTip } from '@/ui/InfoTip'
 import { focusReplyInput } from '@/features/rfqs/replyFocus'
 import { buildRateBar } from '@/features/fx/ratesModel'
-import { ReasonBlock } from '@/features/rfqs/ranking/RankParts'
-import { bandSizeOf, evidenceOf, reasonsFor, sellNote, whyNotCheapest, type RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import { lastPriceChip, type MemoryRow } from '@/lib/memory'
 import type { FxLatestRow, InquiryRow, QuoteLineRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useRemoveQuoteLine, useRestoreQuoteLine } from '@/features/rfqs/hooks'
-import { cheapestFirst, comparePrices, type ComparedLine, type RateTable } from '@/features/rfqs/lib/comparePrices'
+import { comparePrices, type ComparedLine, type RateTable } from '@/features/rfqs/lib/comparePrices'
 import { itemCoverage } from '@/features/rfqs/lib/detailView'
 import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
 import { reasonForItem, reasonLabel } from '@/features/rfqs/lib/cantQuote'
@@ -38,14 +36,12 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
 /*
  * Items and supplier prices (g2-rfq-detail "Items and supplier replies", R07; the supplier comparison of R25; reworked by the UX
  * audit of 2026-10-19). One panel: its header with the counts, Add item and one tip that says how prices are compared; the rate
- * bar; then every item with what each supplier quoted for it, best first.
+ * bar; then every item with what each supplier quoted for it, in supplier-name order.
  *
  * Each price is ONE line: the supplier, the price in PKR at today's rate (the figure people compare), the lead time and the stock.
  * The supplier's own currency and figure, the rate and its age, the rate captured when the price was entered, the last price for
- * the item and the ranking's reasons open under the line (rows start closed). One mark per item: "Recommended" on the database's
- * rank 1 (rank_item_quotes, R25); when the cheapest is someone else (the 2% rule ordered them by delivery record) a plain
- * "Cheapest: ..." line says so. Without the ranking (still loading, or one price only) the lowest of two or more comparable prices
- * is marked "Lowest price". A price with no usable rate is shown and never blocks anything (BUILD_PLAN A3/A4); it is not compared.
+ * the item open under the line (rows start closed). NO SUPPLIER IS SINGLED OUT (owner decision 2026-10-29): no "Recommended", "Lowest" or
+ * "Cheapest" mark, no reasons, no ranking; the suppliers are listed by name. A price with no usable rate is shown and never blocks anything (BUILD_PLAN A3/A4); it is not compared.
  * Entering replies lives once per supplier in Suppliers asked (SuppliersAsked.tsx opens SupplierReplies.tsx).
  *
  * Fewer actions on show (grade-A 9 fix 3): a price line has ONE control, its chevron; its "..." menu (Edit reply, Copy price,
@@ -79,25 +75,11 @@ interface Entry {
   c: ComparedLine
 }
 
-/** The "Cheapest" tag beside a price, when the Recommended supplier is someone else (UX audit C1). */
-function CheapestTag() {
-  return (
-    <span className="whitespace-nowrap rounded border border-line-strong px-1 font-sans text-sm font-medium text-fg-2" data-cheapest-tag>
-      Cheapest
-    </span>
-  )
-}
-
-/**
- * The price people compare: PKR at today's rate when there is a usable rate, with the supplier's own figure in grey under it
- * (UX audit C2); else the supplier's own figure, marked not compared. Desktop: right-aligned, one figure per line. Phone: left-aligned.
- */
-function PriceCell({ line, c, cheapest }: { line: QuoteLineRow; c: ComparedLine; cheapest: boolean }) {
+function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
   if (line.currency === 'PKR' || c.pkrPaisa !== null) {
     return (
       <span className="inline-grid justify-items-start gap-x-2 md:grid md:justify-items-end">
         <span className="flex flex-wrap items-center gap-x-2 md:justify-end">
-          {cheapest ? <CheapestTag /> : null}
           <span className="num whitespace-nowrap text-base font-medium">
             {/* A real space, not a margin: a screen reader reads "≈ PKR 33,600", not "PKR33,600". */}
             <span className="font-sans text-sm font-regular text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
@@ -115,7 +97,6 @@ function PriceCell({ line, c, cheapest }: { line: QuoteLineRow; c: ComparedLine;
   return (
     <span className="inline-grid justify-items-start md:grid md:justify-items-end">
       <span className="flex flex-wrap items-center gap-x-2 md:justify-end">
-        {cheapest ? <CheapestTag /> : null}
         <span className="num whitespace-nowrap text-base font-medium">
           <span className="font-sans text-sm font-regular text-fg-muted">{line.currency}</span>{' '}
           {formatAmount(line.unitPrice, 'always')}
@@ -148,7 +129,12 @@ function PriceDetail({ line, inquiry, c, rates }: { line: QuoteLineRow; inquiry:
             </span>
           </span>
         ) : (
-          <span className="text-fg-muted">{c.notCompared === 'unusable' ? 'not compared — rate too old' : 'not compared — no rate'}</span>
+          <span className="inline-flex flex-wrap items-center gap-x-3 text-fg-muted">
+            {c.notCompared === 'unusable' ? 'not compared — rate too old' : 'not compared — no rate'}
+            <Link to="/settings/exchange-rates" className="rounded font-medium underline underline-offset-2 hover:text-fg">
+              {`Add ${line.currency} rate`}
+            </Link>
+          </span>
         )}
         {/* The rate captured at entry: a chip only when it is a problem (Old rate, No rate); a fresh one is its age in words. */}
         {line.currency === 'PKR' ? null : line.fxRatePkr !== null && line.fxRateOn ? (
@@ -255,16 +241,13 @@ function Dot({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** The panel's one explanation of how the order is decided (was a note above every item). */
+/** The panel's one explanation of the figures. It says nothing about which supplier is better: the CRM never suggests one. */
 function HowCompared() {
   return (
-    <InfoTip label="How are prices compared?">
-      <p>Every price is turned into PKR at today&apos;s rate, and the list for each item starts with the best.</p>
-      <p className="mt-2">
-        The cheapest is recommended, unless other suppliers are within 2% of it. Among those, the better delivery record wins; if the records
-        are the same, the supplier we have ordered from more often; then the one we ordered from most recently; then the lower price.
-      </p>
-      <p className="mt-2">A price with no current rate is shown but not compared. Add the rate in Exchange rates and the list sorts itself.</p>
+    <InfoTip label="How are prices shown?">
+      <p>Every price is shown in PKR at today&apos;s rate, with the supplier&apos;s own figure under it. Suppliers are listed by name.</p>
+      <p className="mt-2">A price with no current rate is shown as the supplier gave it. Add the rate in Exchange rates to see it in PKR.</p>
+      <p className="mt-2">The comparative statement lays the replies side by side. You choose the supplier, per item, when you create the order.</p>
     </InfoTip>
   )
 }
@@ -277,7 +260,6 @@ export function ItemsPanel({
   fxRows,
   memory,
   suggestions,
-  ranking,
   onAddItem,
   onCopyEnquiry,
   statementTo,
@@ -291,8 +273,6 @@ export function ItemsPanel({
   memory?: Readonly<Record<string, readonly MemoryRow[] | undefined>>
   /** Suppliers worth asking that have not been asked yet (R03). Absent while loading: the uncovered block then has no list. */
   suggestions?: readonly SupplierSuggestion[]
-  /** rank_item_quotes() rows by quote line id (R25). Absent while loading or if the read failed: the plain comparison is shown. */
-  ranking?: ReadonlyMap<string, RankRow>
   onAddItem: () => void
   onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void
   /** Where the Comparative statement is (admin and sales). Absent: no link. */
@@ -301,7 +281,6 @@ export function ItemsPanel({
   const today = businessToday()
   // Every price (supplier, selling, spread) is for admin and sales only (owner decision 2026-10-22); an engineer's lines carry none.
   const prices = useSeesPrices()
-  const showSell = prices
   const [opened, setOpened] = useState<Readonly<Record<string, boolean>>>({})
   const phone = useMediaQuery('(max-width: 767px)')
   // Phone: the one item open (undefined: the first item with something to show; null: all closed by the person).
@@ -367,33 +346,8 @@ export function ItemsPanel({
               rates,
             )
             for (const { l, i } of lines) entries.push({ line: l, inquiry: i, c: cmp.lines.find(x => x.id === l.id) as ComparedLine })
-            // The database's ranking (R25) when it has every line of this item. The rows are always cheapest first (UX audit C1): the
-            // Recommended mark stays where the ranking put it, wherever that row lands; lines left out of the comparison come last.
-            const rankOf = (l: QuoteLineRow) => ranking?.get(l.id)
-            const ranked = prices && lines.length >= 2 && lines.every(({ l }) => rankOf(l) !== undefined)
-            // An engineer's lines carry no price: listed by supplier name.
-            if (!prices) entries.sort((a, b) => a.inquiry.supplierName.localeCompare(b.inquiry.supplierName))
-            else
-              entries.sort((a, b) =>
-                cheapestFirst({ c: a.c, amount: a.line.unitPrice }, { c: b.c, amount: b.line.unitPrice }, () => {
-                  const ra = rankOf(a.line)?.rank ?? null
-                  const rb = rankOf(b.line)?.rank ?? null
-                  if (ra !== rb) return ra === null ? 1 : rb === null ? -1 : ra - rb
-                  return a.inquiry.supplierName.localeCompare(b.inquiry.supplierName)
-                }),
-              )
-            const itemRanks = ranked ? entries.map(e => rankOf(e.line) as RankRow) : []
-            const bandSize = bandSizeOf(itemRanks)
-            const rankedCount = itemRanks.filter(r => r.rank !== null).length
-            // One mark per item: the database's rank 1 when two or more lines are ranked; else the plain lowest of two or more.
-            const markOf = (e: Entry): 'recommended' | 'lowest' | null => {
-              if (ranked) return rankedCount >= 2 && rankOf(e.line)?.rank === 1 ? 'recommended' : null
-              return prices && e.c.lowest ? 'lowest' : null
-            }
-            const recommended = ranked && rankedCount >= 2 ? entries.find(e => rankOf(e.line)?.rank === 1) : undefined
-            const cheapest = prices ? entries.find(e => e.c.lowest) : undefined
-            const cheaperElsewhere = recommended && cheapest && cheapest.line.id !== recommended.line.id ? cheapest : undefined
-            const sell = ranked ? sellNote(itemRanks, showSell) : null
+            // Suppliers are listed by name, never by price, and nothing is marked (owner decision 2026-10-29).
+            entries.sort((x, y) => x.inquiry.supplierName.localeCompare(y.inquiry.supplierName))
             const declined = inquiries
               .filter(i => !i.lines.some(l => l.itemId === item.id))
               .map(i => ({ i, reason: reasonForItem(item.id, i) }))
@@ -436,18 +390,6 @@ export function ItemsPanel({
                       <Dot>
                         <CategoryChip rfqId={rfq.id} item={item} />
                       </Dot>
-                      {sell ? (
-                        <span data-sell-note={sell.kind} className="inline-flex min-w-0 items-start">
-                          <Bullet />
-                          {sell.kind === 'none' ? (
-                            sell.text
-                          ) : (
-                            <span>
-                              Our price <span className="num whitespace-nowrap font-medium text-fg-2">{sell.amount}</span> {sell.text}
-                            </span>
-                          )}
-                        </span>
-                      ) : null}
                      </span>
                     </p>
                   </div>
@@ -517,38 +459,25 @@ export function ItemsPanel({
                             const { line, inquiry, c } = entry
                             const memRow = memory?.[item.id]?.find(r => r.supplier_id === inquiry.supplierId)
                             const chip = lastPriceChip(memRow, today)
-                            const rk = ranked ? (rankOf(line) as RankRow) : null
-                            const reasons = rk ? reasonsFor(rk, { showSell, bandSize, evidence: evidenceOf(memRow), names: { brand: item.brandName, family: item.familyName } }) : null
                             const open = opened[line.id] ?? false
-                            const mark = markOf(entry)
                             const detailId = `price-detail-${line.id}`
-                            const isCheapestTag = cheaperElsewhere?.line.id === line.id
                             return (
                               <Fragment key={line.id}>
                                 <li
-                                  className={cn(prices ? ROW : ROW_NO_PRICES, rk && rk.rank === null && 'bg-canvas')}
-                                  data-lowest={prices && c.lowest ? '' : undefined}
-                                  data-recommended={mark === 'recommended' ? '' : undefined}
+                                  className={prices ? ROW : ROW_NO_PRICES}
+                                  data-price-row=""
                                   data-compared={prices && c.compared && c.pkrPaisa !== null ? '' : undefined}
-                                  data-ranked={rk ? (rk.rank ?? 'none') : undefined}
                                 >
                                   {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
                                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                     <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
-                                    {isCheapestTag ? <CheapestTag /> : null}
-                                    {mark ? (
-                                      <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-tone-success-fg">
-                                        <Icon icon={ThumbsUp} size="chip" />
-                                        {mark === 'recommended' ? 'Recommended' : 'Lowest price'}
-                                      </span>
-                                    ) : null}
                                   </span>
                                   {/* Phone: price · lead time · stock on the second line (an engineer: lead time · stock). Desktop: the wrapper dissolves into the columns. */}
                                   <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 md:contents">
                                     {prices ? (
                                       <>
                                         <span className="md:text-right">
-                                          <PriceCell line={line} c={c} cheapest={false} />
+                                          <PriceCell line={line} c={c} />
                                         </span>
                                         <span aria-hidden="true" className={cn('text-fg-muted md:hidden', !line.leadTime && 'hidden')}>
                                           ·
@@ -595,21 +524,9 @@ export function ItemsPanel({
                                     <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
                                       <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
                                       {chip ? <LastPriceChipView chip={chip} /> : null}
-                                      {rk && reasons ? <ReasonBlock set={reasons} supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} /> : null}
                                     </div>
                                   ) : null}
                                 </li>
-                                {/* Why the Recommended supplier is not the cheapest, directly under the Recommended row (UX audit C1). */}
-                                {prices && cheaperElsewhere && recommended?.line.id === line.id ? (
-                                  <li className="px-5 pb-3 text-fg-2" data-cheapest>
-                                    Cheapest: <b className="font-semibold text-fg">{cheaperElsewhere.inquiry.supplierName}</b>
-                                    {(() => {
-                                      const rec = rankOf(recommended.line)
-                                      const low = rankOf(cheaperElsewhere.line)
-                                      return rec && low ? `. ${recommended.inquiry.supplierName} ${whyNotCheapest(rec, low)}.` : '.'
-                                    })()}
-                                  </li>
-                                ) : null}
                               </Fragment>
                             )
                           })}
