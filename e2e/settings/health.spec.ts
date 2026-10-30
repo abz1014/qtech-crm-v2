@@ -28,7 +28,7 @@ test('admin sees backup status and usage, and records the monthly key check', as
   await expect(page.locator('li[data-rule="backup_stale"], li[data-rule="usage_high"], li[data-rule="decrypt_test"]')).toHaveCount(0)
 })
 
-test('admin_health is the admin only: the function, the page and the menu', async ({ page }) => {
+test('admin_health answers the admin and refuses sales and engineers', async () => {
   const admin = await must(rest<{ db_bytes: number; storage_bytes: number }[]>('admin', 'rpc/admin_health', { method: 'POST', body: {} }))
   expect(Number(admin[0].db_bytes)).toBeGreaterThan(0)
   expect(Number(admin[0].storage_bytes)).toBeGreaterThanOrEqual(0)
@@ -38,9 +38,15 @@ test('admin_health is the admin only: the function, the page and the menu', asyn
     const c = await rest(who, 'rpc/confirm_backup_decrypt_test', { method: 'POST', body: {} })
     expect(c.status).toBeGreaterThanOrEqual(400)
   }
+})
+
+test('sales has no Backups and usage page and no menu entry', async ({ page }) => {
   await openAs(page, 'sales', '/settings/backups')
   await expect(page.locator('#main')).toContainText('Backups and usage is for')
   await expect(page.getByRole('link', { name: 'Backups and usage' })).toHaveCount(0)
+})
+
+test('an engineer has no Backups and usage page', async ({ page }) => {
   await openAs(page, 'engineer', '/settings/backups')
   await expect(page.locator('#main')).toContainText('Backups and usage is for')
 })
