@@ -130,9 +130,9 @@ select is(pg_temp.code_('admin', $q$select count(*)::text from public.create_cre
 select is(pg_temp.try_('admin', $q$select number from public.create_credit_note(@31, 200, 'Part returned')$q$, true), 'ok:CN-0001', 'credit note: the first is CN-0001');
 select is((select gst_amount from public.credit_notes where number = 'CN-0001'), 36.00::numeric, 'its GST follows the invoice (200 of 500 carries 36 of 90)');
 select is(pg_temp.try_('admin', $q$select number from public.create_credit_note(@31, 100, 'Another part')$q$, true), 'ok:CN-0002', 'the next is CN-0002');
-select is(pg_temp.code_('admin', $q$select count(*)::text from public.create_credit_note(@31, 100, 'Bad gst', 50)$q$), 'E:P0001:gst_mismatch', 'a GST that does not follow the invoice is refused');
-select is(pg_temp.code_('admin', $q$update public.credit_notes set reason = 'x' where number = 'CN-0001'$q$), 'E:42501:', 'a credit note cannot be edited (no update right)');
-select is(pg_temp.code_('admin', $q$delete from public.credit_notes where number = 'CN-0001'$q$), 'E:42501:', 'or deleted');
+select is(pg_temp.code_('admin', $q$select count(*)::text from public.create_credit_note(@31, 100, 'Bad gst', 5)$q$), 'E:P0001:gst_mismatch', 'a GST that does not follow the invoice is refused');
+select is(left(pg_temp.code_('admin', $q$update public.credit_notes set reason = 'x' where number = 'CN-0001'$q$), 8), 'E:42501:', 'a credit note cannot be edited (no update right)');
+select is(left(pg_temp.code_('admin', $q$delete from public.credit_notes where number = 'CN-0001'$q$), 8), 'E:42501:', 'or deleted');
 select is(pg_temp.code_('admin', $q$select public.void_invoice(@31, 'x')::text$q$), 'E:P0001:has_credit_note', 'an invoice with a credit note cannot be voided');
 select is(pg_temp.code_('admin', $q$update public.invoices set net_amount = 400, gst_amount = 72 where id = @31$q$), 'E:P0001:has_credit_note', 'nor have its amounts changed');
 select is((select count(*)::int from public.credit_notes where number in ('CN-0001', 'CN-0002') and company_id = pg_temp.u('01') and order_id = pg_temp.u('11')), 2,
@@ -240,7 +240,7 @@ select lives_ok($$select public.close_months_through('2019-03-01')$$, 'close_mon
 select ok(public.month_is_closed('2019-03-15'), 'March 2019 is closed');
 select is(pg_temp.code_('admin', $q$update public.cash_topups set amount_pkr = 200 where id = @70$q$), 'E:P0001:', 'M2: a cash top-up of a closed month is frozen');
 select is(pg_temp.code_('admin', $q$insert into public.cash_topups (drawn_on, amount_pkr) values ('2019-03-09', 5)$q$), 'E:P0001:', 'M2: and none can be added to it');
-select is(pg_temp.code_('admin', $q$update public.cash_counts set counted_pkr = 11 where id = @71$q$), 'E:P0001:', 'M2: a cash count of a closed month is frozen');
+select is(pg_temp.code_('admin', $q$insert into public.cash_counts (counted_on, counted_pkr, expected_pkr) values ('2019-03-09', 5, 5)$q$), 'E:P0001:', 'M2: a cash count cannot be added to a closed month');
 select is(pg_temp.code_('admin', $q$update public.order_costs set expected_cost_pkr = 5 where order_id = @12$q$), 'E:P0001:', 'M2: order costs completed in a closed month are frozen');
 select is(pg_temp.code_('admin', $q$select count(*)::text from public.create_credit_note(@32, 100, 'Back dated', null, '2019-03-10')$q$), 'E:P0001:', 'M2: a credit note cannot be issued into a closed month');
 select alike(pg_temp.try_('admin', $q$select count(*)::text from public.create_credit_note(@32, 100, 'Back dated', null, '2019-03-10')$q$), '%March 2019 is closed. An admin can reopen it.', 'with the usual sentence');

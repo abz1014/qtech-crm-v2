@@ -160,6 +160,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_order_state',       '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_invoice_state',     '',           'S',    'S',    ''),     -- s10 "v_invoice_state, v_gst_register"
   ('view',  'v_gst_register',      '',           'S',    'S',    ''),     -- s10 (same row)
+  ('view',  'v_wht_deducted',      '',           'S',    '',     ''),     -- 0116: withholding tax the customers deducted, admin only
   ('view',  'v_order_money',       '',           'S',    '',     ''),     -- s10 "v_order_money, v_cash_month, v_payment_net, v_target_progress"
   ('view',  'v_cash_month',        '',           'S',    '',     ''),     -- s10 (same row)
   ('view',  'v_payment_net',       '',           'S',    '',     ''),     -- s10 (same row)
@@ -356,7 +357,7 @@ insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18),
-  (pg_temp.f('d2'), pg_temp.f('21'), 'INV-M3', 100, 18);
+  (pg_temp.f('d2'), pg_temp.f('20'), 'INV-M3', 100, 18);
 -- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
 update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
@@ -511,7 +512,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
-                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
+                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
