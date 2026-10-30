@@ -24,6 +24,7 @@ import { factNotes, recordLine, supplierFacts } from '@/features/companies/suppl
 import { earliestYear } from '@/features/companies/supplierRecord'
 import { copyToClipboard } from '@/lib/clipboard'
 import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
+import { StatementButton } from '@/features/money/statement/StatementDialog'
 import { BuyerTaxFields } from '@/features/money/invoices/pdf/BuyerTaxFields'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -309,6 +310,9 @@ function Loaded({ company }: { company: CompanyDetail }) {
                 { key: 'Balance', value: <Money value={money.data.balance} strong /> },
               ]}
             />
+            <div className="mt-3">
+              <StatementButton companyId={company.id} companyName={company.name} />
+            </div>
           </div>
         </Panel>
       ) : null}

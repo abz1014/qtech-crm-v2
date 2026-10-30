@@ -2393,6 +2393,11 @@ isOneToOne: false
 "fx_wanted_currencies":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"customer_statement":
+{ Args: { "p_company": string,"p_to"?: string }; Returns: {
+              "credit": number,"debit": number,"kind": string,"line_on": string,"note": string,"order_number": number,"ref": string,"seq": number
+            }[]
+                           },
 "held_advances":
 { Args: Record<PropertyKey, never>; Returns: {
               "cancelled_on": string,"company_id": string,"company_name": string,"held": number,"order_id": string,"order_number": number
