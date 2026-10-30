@@ -114,7 +114,8 @@ insert into public.clarifications (id, rfq_id, question) values
 update public.clarifications set first_asked_at = now(), last_asked_at = now() where id = pg_temp.f('1e');   -- P01 (0053): one asked question, so v_report_clarification_turnaround has a row to probe
 insert into public.orders (id, company_id, owner_id) values
   (pg_temp.f('20'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'),
-  (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');
+  (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'),
+  (pg_temp.f('d7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0116: holds the payment with withholding tax
 update public.orders set customer_po_number = 'PO-M1' where id = pg_temp.f('20');   -- P02 (0054): search_all customer PO
 insert into public.supplier_orders (id, order_id, supplier_id, currency) values
   (pg_temp.f('23'), pg_temp.f('20'), pg_temp.f('03'), 'USD'),
@@ -126,7 +127,7 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
-insert into public.payments_in (id, order_id, amount, wht_amount) values (pg_temp.f('d6'), pg_temp.f('20'), 5, 3);   -- 0116: a payment with withholding tax
+insert into public.payments_in (id, order_id, amount, wht_amount) values (pg_temp.f('d6'), pg_temp.f('d7'), 5, 3);   -- 0116: a payment with withholding tax
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values   -- 0112
   (pg_temp.f('d9'), 'CN-M1', pg_temp.f('26'), 50, 9, 'fixture');
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
