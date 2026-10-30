@@ -11,7 +11,8 @@ import { useUpdateOrder } from '@/features/orders/hooks'
 /** The one-tap "Mark done today" and its Undo. Used by the page header (engineer) and by the panel (admin and sales). */
 export function useMarkDone(order: OrderHeader) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
+  const undoUpdate = useUpdateOrder(order.id) // an undo is explicit: it is not held to the version the screen loaded
   const once = useInFlight() // HW-15: a double tap sends one write, one toast, one Undo
   return {
     pending: update.isPending,
@@ -27,7 +28,7 @@ export function useMarkDone(order: OrderHeader) {
             body: `${order.companyName}, today`,
             undo: {
               onUndo: async () => {
-                await update.mutateAsync({ commissioning_done_on: previous })
+                await undoUpdate.mutateAsync({ commissioning_done_on: previous })
               },
               settledTitle: 'Commissioning marked done',
               undoneTitle: 'Taken back',
@@ -43,7 +44,8 @@ export function useMarkDone(order: OrderHeader) {
 /** Moves the planned date (used by the panel and by the engineer's "Change planned date"). */
 export function useSetPlanned(order: OrderHeader) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
+  const undoUpdate = useUpdateOrder(order.id)
   return async (value: string | null) => {
     const previous = order.plannedOn
     try {
@@ -53,7 +55,7 @@ export function useSetPlanned(order: OrderHeader) {
         body: value ? formatDay(value) : order.companyName,
         undo: {
           onUndo: async () => {
-            await update.mutateAsync({ commissioning_planned_on: previous })
+            await undoUpdate.mutateAsync({ commissioning_planned_on: previous })
           },
           settledTitle: value ? 'Planned date changed' : 'Planned date cleared',
           undoneTitle: 'Taken back',

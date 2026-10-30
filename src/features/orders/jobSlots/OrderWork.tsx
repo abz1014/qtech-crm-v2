@@ -16,7 +16,7 @@ import type { OrderHeader } from '@/features/orders/api'
  */
 function CustomerPo({ order }: { order: OrderHeader }) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const entry = useEntryAccess({ createdBy: order.createdBy ?? null, ownerId: order.owner?.id ?? null })
   const cancelled = order.cancelledOn !== null
   return (

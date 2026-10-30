@@ -140,7 +140,7 @@ export function CommissioningPanel({
 /** Needs it, the planned date and the engineers. Engineers are added and removed at once; the rest saves with the button. */
 export function CommissioningEditDialog({ order, engineers, onClose }: { order: OrderHeader; engineers: readonly PersonRow[]; onClose: () => void }) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const add = useAddEngineer(order.id)
   const remove = useRemoveEngineer(order.id)
   const candidates = useEngineerCandidates(true)
@@ -224,7 +224,7 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
 
 function NotesDialog({ order, onClose }: { order: OrderHeader; onClose: () => void }) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const [text, setText] = useState(order.notes ?? '')
   const save = async () => {
     try {

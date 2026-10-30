@@ -1,5 +1,6 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { poRef } from '@/lib/refs'
+import { PlainError } from '@/lib/errors/plainError'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
 import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
@@ -19,6 +20,8 @@ export type OrderStateRow = ViewRow<'v_order_state'>
 
 export interface OrderHeader {
   id: string
+  /** orders.updated_at as loaded: edits are conditional on it (updateOrder), so a second saver is told rather than overwriting. */
+  updatedAt?: string | null
   number: number
   companyId: string
   companyName: string
@@ -99,6 +102,7 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
     plannedOn: o.commissioning_planned_on,
     visitType: o.visit_type,
     doneOn: o.commissioning_done_on,
+    updatedAt: o.updated_at,
     cancelledOn: o.cancelled_on,
     cancelReason: o.cancel_reason,
     imported: o.legacy_source !== null,
@@ -341,9 +345,24 @@ export function existingOrderOf(err: { hint?: string | null } | null | undefined
   return m ? m[1] : null
 }
 
-export async function updateOrder(id: string, patch: TableUpdate<'orders'>): Promise<void> {
-  const { error } = await requireSupabase().from('orders').update(patch).eq('id', id)
+/** What an edit says when the order changed under it (the conditional write below matched no row). */
+export const ORDER_CHANGED = 'Someone else changed this order. Reload to see their changes.'
+
+/**
+ * Updates an order. With `expectedUpdatedAt` (the order's `updated_at` as the screen last loaded it) the write is conditional on it, the
+ * pattern of changeNotesSafely (capture/api.ts): if somebody else saved first, nothing is written and a PlainError says so, so the
+ * second saver never silently overwrites the first. Without it the write is unconditional (an undo, a first write on a fresh row).
+ */
+export async function updateOrder(id: string, patch: TableUpdate<'orders'>, expectedUpdatedAt?: string | null): Promise<void> {
+  const q = requireSupabase().from('orders').update(patch).eq('id', id)
+  if (!expectedUpdatedAt) {
+    const { error } = await q
+    if (error) throw error
+    return
+  }
+  const { data, error } = await q.eq('updated_at', expectedUpdatedAt).select('id')
   if (error) throw error
+  if (!data || data.length === 0) throw new PlainError(ORDER_CHANGED, 'order_changed')
 }
 
 /** The ranked quotes of an RFQ (rank_item_quotes), with supplier names. Selling price and spread come back NULL for an engineer (the database decides). */

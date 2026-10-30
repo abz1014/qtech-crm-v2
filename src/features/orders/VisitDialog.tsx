@@ -44,7 +44,7 @@ export function VisitButton({ order, className }: { order: OrderHeader; classNam
 
 export function VisitDialog({ order, onClose }: { order: OrderHeader; onClose: () => void }) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const start: VisitValue = { type: order.visitType ?? DEFAULT_VISIT_TYPE }
   const [value, setValue] = useState<VisitValue>(start)
   const [refused, setRefused] = useState<string | null>(null)
