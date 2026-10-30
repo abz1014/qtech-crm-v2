@@ -134,7 +134,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'create_credit_note', '',         'X',    '',     ''),     -- 0112: admin only (42501 for everyone else)
   ('function', 'void_invoice',     '',           'X',    '',     ''),     -- 0112: admin only
   ('function', 'record_payment',   '',           'X',    '',     ''),     -- 0114: admin only
-  ('function', 'next_credit_note_number', '',    'X',    'X',    'X'),    -- 0112: the next CN number (an engineer sees no credit note, so the first)
+  ('function', 'next_credit_note_number', '',    'X',    'X',    ''),     -- 0112: the next CN number, admin and sales
   ('table', 'payments_in',         '',           'SIUD', '',     ''),     -- s10 "payments_in"
   ('table', 'expenses',            '',           'SIUD', '',     ''),     -- s10 "expenses"
   ('table', 'recurring_expenses',  '',           'SIUD', '',     ''),     -- s10 "recurring_expenses"
@@ -356,7 +356,7 @@ insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18),
-  (pg_temp.f('d2'), pg_temp.f('20'), 'INV-M3', 100, 18);
+  (pg_temp.f('d2'), pg_temp.f('21'), 'INV-M3', 100, 18);
 -- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
 update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
@@ -677,7 +677,7 @@ insert into probes values
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
   'coverage: the matrix lists every table in schema public (39)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 41, 'coverage: 41 tables');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 42, 'coverage: 42 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

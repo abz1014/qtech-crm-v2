@@ -77,6 +77,9 @@ declare
   v_gst   numeric;
   v_exp   numeric;
 begin
+  if tg_op = 'UPDATE' and (to_jsonb(new) - 'company_id') = (to_jsonb(old) - 'company_id') then
+    return new;   -- merge_companies re-points the customer; nothing else about a credit note ever changes
+  end if;
   if tg_op <> 'INSERT' then
     raise exception 'A credit note is kept as it was issued. Issue another credit note to correct it.'
       using errcode = 'P0001', hint = 'credit_note_kept';
@@ -124,23 +127,31 @@ create trigger credit_notes_audit after insert or update or delete on public.cre
 alter table public.credit_notes enable row level security;
 revoke all on table public.credit_notes from public, anon, authenticated;
 grant select, insert on table public.credit_notes to authenticated, qtech_engineer;   -- 0081 mirror; the policies below admit admin and sales only
+grant update (company_id) on table public.credit_notes to authenticated, qtech_engineer;   -- merge_companies only (the guard allows nothing else)
 
 create policy credit_notes_select on public.credit_notes for select to authenticated, qtech_engineer
   using ((select public.current_user_role()) in ('admin', 'sales'));
+create policy credit_notes_update on public.credit_notes for update to authenticated, qtech_engineer
+  using ((select public.current_user_role()) = 'admin') with check ((select public.current_user_role()) = 'admin');
 create policy credit_notes_insert on public.credit_notes for insert to authenticated, qtech_engineer
   with check ((select public.current_user_role()) = 'admin');
 
 -- Next number: CN-0001, CN-0002, ... one past the highest. create_credit_note holds an advisory lock, so two never read the same.
 create function public.next_credit_note_number()
 returns text
-language sql
+language plpgsql
 stable
 security invoker
 set search_path = ''
 as $$
-  select 'CN-' || lpad((coalesce(max(substr(c.number, 4)::bigint), 0) + 1)::text, 4, '0')
-  from public.credit_notes c
-  where c.number ~ '^CN-[0-9]{1,15}$'
+begin
+  if public.current_user_role() is null or public.current_user_role() not in ('admin', 'sales') then
+    raise exception 'Only admin and sales can see credit note numbers.' using errcode = '42501', hint = 'admin_only';
+  end if;
+  return (select 'CN-' || lpad((coalesce(max(substr(c.number, 4)::bigint), 0) + 1)::text, 4, '0')
+          from public.credit_notes c
+          where c.number ~ '^CN-[0-9]{1,15}$');
+end;
 $$;
 
 revoke all on function public.next_credit_note_number() from public, anon, authenticated;
@@ -231,7 +242,7 @@ begin
   if exists (select 1 from public.credit_notes c where c.invoice_id = v.id) then
     raise exception 'Invoice % already has a credit note, so it cannot be voided.', v.number using errcode = 'P0001', hint = 'has_credit_note';
   end if;
-  if v.invoice_date is not null and public.month_is_closed(v.invoice_date) then
+  if v.invoice_date is not null and public.month_closed(v.invoice_date) then
     raise exception '% is closed, so invoice % cannot be voided. Issue a credit note instead.',
       to_char(v.invoice_date, 'FMMonth YYYY'), v.number using errcode = 'P0001', hint = 'month_closed';
   end if;

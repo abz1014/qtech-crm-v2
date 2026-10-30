@@ -277,15 +277,23 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
     rateRef.current?.focus({ preventScroll: true })
   }, [focusTick])
 
-  const submit = async () => {
+  // 0114: the server found the rate more than 20 percent from the latest: the person confirms it or changes it
+  const [far, setFar] = useState<string | null>(null)
+  const submit = async (confirm = false) => {
     if (rate === null || blocked) return
     try {
-      await save.mutateAsync({ currency, ratePkr: rate, asOf: asOf || undefined })
+      await save.mutateAsync({ currency, ratePkr: rate, asOf: asOf || undefined, confirm })
+      setFar(null)
       // The rate as numeric(14,6) keeps it, and the date with its year (hunt HE-9, HE-10).
       toast({ title: 'Rate saved', body: `${currency} ${storedRate(rate)} for ${formatDateText(asOf || businessToday())}`, tone: 'success' })
       setRateText('')
     } catch (err) {
-      toast({ title: 'Could not save the rate', body: mapPgError(err, { entity: 'rate' }).message, tone: 'danger' })
+      const m = mapPgError(err, { entity: 'rate' })
+      if (m.hint === 'fx_rate_far') {
+        setFar(m.message)
+        return
+      }
+      toast({ title: 'Could not save the rate', body: m.message, tone: 'danger' })
     }
   }
 
@@ -296,7 +304,7 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
           className="grid gap-4 px-5 py-4"
           onSubmit={e => {
             e.preventDefault()
-            void submit()
+            void submit(false)
           }}
         >
           <Field label="Currency" help={lastAuto ? `Last automatic: ${formatRate(lastAuto.ratePkr)} on ${shortDay(lastAuto.asOf)}` : undefined}>
@@ -307,8 +315,20 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
             help={check.warning ?? "For example the bank's TT rate."}
             error={check.field === 'rate' ? (check.error ?? undefined) : undefined}
           >
-            <TextField ref={rateRef} inputMode="decimal" className="num text-right" value={rateText} onChange={e => setRateText(e.target.value)} placeholder="0.00" autoComplete="off" />
+            <TextField ref={rateRef} inputMode="decimal" className="num text-right" value={rateText} onChange={e => { setRateText(e.target.value); setFar(null) }} placeholder="0.00" autoComplete="off" />
           </Field>
+          {far ? (
+            <div data-testid="fx-rate-far"><Banner tone="warning" title={far}>
+              <span className="flex flex-wrap gap-2">
+                <Button size="sm" variant="primary" onClick={() => void submit(true)} busy={save.isPending} busyLabel="Saving">
+                  Use this rate
+                </Button>
+                <Button size="sm" onClick={() => { setFar(null); rateRef.current?.focus() }}>
+                  Change it
+                </Button>
+              </span>
+            </Banner></div>
+          ) : null}
           <Field label="As of" error={check.field === 'asOf' ? (check.error ?? undefined) : undefined}>
             <DateInput value={asOf} onChange={setAsOf} />
           </Field>

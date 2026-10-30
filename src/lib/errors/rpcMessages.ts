@@ -190,6 +190,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // server texts are already plain and each carries a HINT (use_void, filed, paid, month_closed, has_credit_note, over_credited,
   // gst_mismatch, over_invoiced, invoice_filed, invoice_void, duplicate_payment, fx_rate_far) that mapPgError passes on as `hint`.
   { match: /^A credit note is kept as it was issued\./ },
+  { match: /^Only admin and sales can see credit note numbers\.$/, message: () => ADMIN_SALES },
   { match: /^Invoice (.+?) is void, so it cannot take a credit note\.$/ },
   { match: /^This invoice has no number, so a credit note cannot be issued against it\.$/ },
   { match: /^Credit notes on (.+?) would come to more than the invoice itself / },

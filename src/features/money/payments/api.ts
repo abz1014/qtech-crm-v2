@@ -171,13 +171,25 @@ export interface PaymentInsert {
   amount: number
   reference: string | null
   paidVia: PaidVia
+  /** The person saw "Looks like a payment already recorded on ..." and chose to record it anyway (0114). */
+  confirmDuplicate?: boolean
 }
 
-/** The id comes from the form, so a retry cannot record the same payment twice. credited_user_id is filled from the order's owner by the database. */
+/**
+ * The id comes from the form, so a retry cannot record the same payment twice. credited_user_id is filled from the order's owner by the
+ * database. record_payment (0114) refuses a payment that looks like one already recorded for the customer (same amount and day, or the
+ * same reference) with HINT duplicate_payment, until the person confirms.
+ */
 export async function recordPayment(v: PaymentInsert): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db
-    .from('payments_in')
-    .insert({ id: v.id, order_id: v.orderId, received_on: v.receivedOn, amount: v.amount, reference: v.reference, paid_via: v.paidVia })
+  const { error } = await db.rpc('record_payment', {
+    p_id: v.id,
+    p_order_id: v.orderId,
+    p_received_on: v.receivedOn,
+    p_amount: v.amount,
+    p_reference: v.reference ?? undefined,
+    p_paid_via: v.paidVia,
+    p_confirm_duplicate: v.confirmDuplicate ?? false,
+  })
   if (error) throw error
 }

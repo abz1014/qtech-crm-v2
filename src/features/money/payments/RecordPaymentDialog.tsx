@@ -4,7 +4,10 @@ import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
 import { orderRef } from '@/lib/refs'
+import { mapPgError } from '@/lib/pgErrors'
+import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { Checkbox } from '@/ui/form/Checkbox'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
@@ -84,6 +87,9 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
   const record = useRecordPayment(row.orderId)
   const [showRef, setShowRef] = useState(false)
   const [showVia, setShowVia] = useState(false)
+  // 0114: the server says it looks like a payment already recorded; the person ticks to record it anyway and saves again
+  const [duplicate, setDuplicate] = useState<string | null>(null)
+  const [allowDuplicate, setAllowDuplicate] = useState(false)
   const amountRef = useRef<HTMLInputElement | null>(null)
   const facts = { gross: row.gross, settled: row.settled, balance: row.balance, invoiced: row.invoiceNumbers.length > 0, prior: data.prior }
 
@@ -98,8 +104,23 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
     } satisfies Partial<Values>,
     // the month lock answers about the date, so the sentence sits under it and every entry stays
     routeError: e => (e.kind === 'closed-month' ? { field: 'receivedOn' } : undefined),
-    onSubmit: (v, { requestId }) =>
-      record.mutateAsync({ id: requestId, orderId: row.orderId, receivedOn: v.receivedOn, amount: v.amount, reference: v.reference.trim() || null, paidVia: v.paidVia as PaidVia }),
+    onSubmit: async (v, { requestId }) => {
+      try {
+        await record.mutateAsync({
+          id: requestId,
+          orderId: row.orderId,
+          receivedOn: v.receivedOn,
+          amount: v.amount,
+          reference: v.reference.trim() || null,
+          paidVia: v.paidVia as PaidVia,
+          confirmDuplicate: allowDuplicate,
+        })
+      } catch (e) {
+        const m = mapPgError(e)
+        if (m.hint === 'duplicate_payment') setDuplicate(m.message)
+        throw e
+      }
+    },
     onSuccess: v => {
       toast.toast({ title: 'Recorded payment', body: `${orderRef(row.orderNumber)} · ${pkr(v.amount)}`, tone: 'success' })
       onDone()
@@ -121,6 +142,11 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
       </p>
       <Form sf={sf} labels={{ amount: 'Amount received', receivedOn: 'Date received' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
+        {duplicate ? (
+          <div data-testid="duplicate-payment"><Banner tone="warning" title={duplicate}>
+            <Checkbox label="Record it anyway" checked={allowDuplicate} onCheckedChange={c => setAllowDuplicate(c === true)} />
+          </Banner></div>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           <FormField<Values, 'amount'> name="amount" label="Amount received, PKR" source={{ label: `Balance due on ${orderRef(row.orderNumber)}` }}>
             {f => (

@@ -301,7 +301,7 @@ select is(pg_temp.code_('sales', $q$update public.invoices set number = 'T92-X' 
 select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 where id = @30 returning 1'), 'E:42501:not_yours', 'nor its amount');
 select is(pg_temp.code_('sales', $q$update public.invoices set notes = 'chased', last_reminded_on = current_date where id = @30 returning 1$q$),
   'ok:1', 'but notes and reminders stay open');
-select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 where id = @31 returning 1'), 'ok:1',
+select is(pg_temp.code_('sales', $q$update public.invoices set number = 'T92-2B' where id = @31 returning 1$q$), 'ok:1',
   'sales change an invoice they entered');
 select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), 'E:P0001:',
   'in a closed month the month lock answers first, not the guard (even for an invoice that is not theirs)');
@@ -309,7 +309,7 @@ select alike(pg_temp.try_('sales', 'update public.invoices set net_amount = 200 
   'with its own sentence');
 select is(pg_temp.code_('admin', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), 'E:P0001:',
   'and an admin is refused the same: a locked month must be reopened first');
-select is(pg_temp.code_('admin', 'update public.invoices set net_amount = 200 where id = @30 returning 1'), 'ok:1', 'an admin changes any invoice in an open month');
+select is(pg_temp.code_('admin', $q$update public.invoices set number = 'T92-1B' where id = @30 returning 1$q$), 'ok:1', 'an admin changes any invoice in an open month');
 
 -- ================================================================== an RFQ item an order line is based on stays
 select is(pg_temp.try_('admin', 'delete from public.rfq_items where id = @16 returning 1'),
