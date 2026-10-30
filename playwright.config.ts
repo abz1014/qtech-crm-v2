@@ -221,7 +221,7 @@ export default defineConfig({
     },
     {
       name: 'rfq-detail',
-      testMatch: /rfqs\/detail\.spec\.ts/,
+      testMatch: /rfqs\/(detail|clarifications|delete)\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: {

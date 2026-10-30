@@ -1,5 +1,5 @@
-import { Suspense, useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import { Suspense, useMemo, useState, type ReactNode } from 'react'
+import { ChevronRight, X } from 'lucide-react'
 import { useSeesPrices } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { useChannelPreference } from '@/lib/useChannelPreference'
@@ -10,7 +10,7 @@ import { Skeleton } from '@/ui/Skeleton'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
+import { useClarifications, useFxLatest, useRfqAttachments, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib/comparePrices'
 import { quotationSent } from '@/features/rfqs/lib/nextAction'
 import type { SuggestionItem } from '@/features/rfqs/lib/supplierSuggestion'
@@ -32,7 +32,46 @@ const QuotationsPanel = lazyWithReload(() => import('@/features/quotations/Quota
 const SuppliersAsked = lazyWithReload(() => import('@/features/rfqs/SuppliersAsked').then(m => ({ default: m.SuppliersAsked })))
 const SuppliersToAskCard = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.SuppliersToAskCard })))
 const FloatDialog = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.FloatDialog })))
+const ClarificationsPanel = lazyWithReload(() => import('@/features/rfqs/ClarificationsPanel').then(m => ({ default: m.ClarificationsPanel })))
+const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
 const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
+
+/** A compact section: one line (the title and how many) that opens its panel, open from the start only when there is something in it. */
+function Fold({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  const [chosen, setChosen] = useState<boolean | null>(null)
+  const open = chosen ?? count > 0
+  return (
+    <section aria-label={title} data-fold={title}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setChosen(!open)}
+        className="flex min-h-touch w-full items-center gap-2 rounded px-2 text-left text-base font-medium hover:bg-sunken"
+      >
+        <ChevronRight aria-hidden="true" className={open ? 'size-4 rotate-90' : 'size-4'} />
+        {title}
+        <span className="num text-fg-muted">{count > 0 ? `(${count})` : 'none yet'}</span>
+      </button>
+      {open ? <Suspense fallback={<Skeleton className="h-8 w-full" />}>{children}</Suspense> : null}
+    </section>
+  )
+}
+
+/** The customer's questions and the enquiry's files (the old RFQ page's side panels), under the quotations. */
+function EnquiryExtras({ rfq, inquiries }: { rfq: RfqHeader; inquiries: InquiryRow[] }) {
+  const clars = useClarifications(rfq.id)
+  const files = useRfqAttachments(rfq.id)
+  return (
+    <div className="grid gap-2">
+      <Fold title="Questions for the customer" count={clars.data?.length ?? 0}>
+        <ClarificationsPanel rfq={rfq} inquiries={inquiries} />
+      </Fold>
+      <Fold title="Files" count={files.data?.length ?? 0}>
+        <AttachmentsPanel rfqId={rfq.id} compact slimWhenEmpty />
+      </Fold>
+    </div>
+  )
+}
 
 /** After an ask: the one enquiry (copied already) with Open in WhatsApp / Open in email for each supplier asked. */
 function SendToEachCard({ ask, inquiries, onClose }: { ask: AskResult; inquiries: readonly InquiryRow[]; onClose: () => void }) {
@@ -148,6 +187,7 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
       <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
       </Suspense>
+      <EnquiryExtras rfq={rfq} inquiries={inquiryList} />
       {adding ? (
         <Suspense fallback={null}>
           <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} />

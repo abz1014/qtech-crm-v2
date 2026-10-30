@@ -18,11 +18,6 @@ export const orderItemsQuery = (id: string, money: boolean) => ({ queryKey: qk.o
 export const orderLegsQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'legs'), queryFn: () => api.fetchOrderLegs(id) })
 export const orderEngineersQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'engineers'), queryFn: () => api.listOrderEngineers(id) })
 export const orderMoneyQuery = (id: string, role: 'admin' | 'sales') => ({ queryKey: qk.orders.part(id, 'money'), queryFn: () => api.getOrderMoney(id, role) })
-export const ordersListQuery = (role: 'admin' | 'sales' | 'engineer' | null) => ({
-  queryKey: qk.orders.board(role ?? ''),
-  queryFn: () => api.listOrders(role as 'admin' | 'sales' | 'engineer'),
-})
-
 export function useOrderHeader(id: string | undefined, money: boolean) {
   return useQuery({ ...orderHeaderQuery(id ?? '', money), enabled: Boolean(id) })
 }
@@ -196,11 +191,6 @@ export function useResolveBasis(orderId: string) {
 
 export function useSupplierChoices(enabled: boolean) {
   return useQuery({ queryKey: qk.orders.supplierChoices(), queryFn: api.listSupplierChoices, enabled, staleTime: 60_000 })
-}
-
-/** O04: the orders list. `role` is in the key because the request itself differs by role. */
-export function useOrdersList(role: 'admin' | 'sales' | 'engineer' | null) {
-  return useQuery({ ...ordersListQuery(role), enabled: role !== null })
 }
 
 /** O02: past orders matching what is typed (nothing typed: the most recent). Read only while the dialog is open. */

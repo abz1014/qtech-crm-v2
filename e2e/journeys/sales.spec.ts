@@ -316,6 +316,25 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(quoted[0].quoted_on).toBe(today) // issuing the quotation marked it sent: no further tap is needed
     // The quotation is out: the page's one green button is now Mark won.
     await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toBeVisible()
+
+    // The sales person also quotes by phone: that quotation has no PDF. It is a rare case, so it lives in More (2 taps): the
+    // owner's decision of 2026-10-19 keeps one green button per screen and puts the rest in one menu.
+    const verbal = await createRfq(s.customer.id, { due_on: karachiDay(5), owner_id: 'a0000000-0000-4000-8000-000000000002' })
+    await post('rfq_items', { rfq_id: verbal.id, position: 0, description: `Spare gasket set ${letters()}`, qty: 1 })
+    // Hand-off: nobody has been asked and its quotation is due in five days: both reminders are listed until it is sent.
+    await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], true)
+    await todayHas(salesCtx, 'bid_due', [rfqRef(verbal.number)], true)
+    const side = await openPage(salesCtx, `/rfqs/${verbal.id}`)
+    await resetCount(side)
+    await side.getByRole('button', { name: /^More( actions)?$/ }).click()
+    await side.getByRole('menuitem', { name: /Mark quotation sent/ }).click()
+    await expect(toast(side, 'Marked quotation sent')).toBeVisible()
+    fe2('Mark quotation sent (a verbal quotation): More, then the item', (await readCount(side)).mouse, 2)
+    const after = await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${verbal.id}&select=quoted_on`))
+    expect(after[0].quoted_on).toBe(today)
+    await side.close()
+    await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], false)
+    await todayHas(salesCtx, 'bid_due', [rfqRef(verbal.number)], false)
   })
 
   // ---- 9. Won: convert with a supplier chosen on every line by a person, and one split ------------------------------------------------

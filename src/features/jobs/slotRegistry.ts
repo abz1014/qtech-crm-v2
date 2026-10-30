@@ -11,7 +11,7 @@ export type SlotComponent = LazyExoticComponent<ComponentType<JobSlotProps>>
 
 /** One line per plugged-in component. Empty until a lane adds its own. */
 export const JOB_SLOTS: Record<JobSlotName, readonly SlotComponent[]> = {
-  'next-step': [lazy(() => import('@/features/orders/jobSlots/OrderMore'))],
+  'next-step': [lazy(() => import('@/features/orders/jobSlots/OrderMore')), lazy(() => import('@/features/rfqs/jobSlots/RfqMore'))],
   // P4-B: Add to this job (paste, photo or file; a guess of what it is, one tap to confirm).
   side: [lazy(() => import('@/features/jobs/AddToJob'))],
   files: [],

@@ -222,7 +222,7 @@ function JobView({ facts }: { facts: JobFacts }) {
           {role === 'admin' ? <MoneyPanel data={data} hasOrder={Boolean(job.orderId)} /> : null}
           <JobSlot name="side" context={ctx} />
           <NotesFilesPanel facts={facts} data={data} ctx={ctx} />
-          <CancelledOrders data={data} />
+          <CancelledOrders data={data} money={role !== 'engineer'} />
         </aside>
       </div>
     </Shell>

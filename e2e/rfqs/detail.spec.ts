@@ -417,6 +417,61 @@ test.describe('chase (FE-2: 1 tap)', () => {
 })
 
 
+const rfqOf = (id: string) =>
+  must(rest<{ quoted_on: string | null; closed_on: string | null; close_reason: string | null }[]>('admin', `rfqs?id=eq.${id}&select=quoted_on,closed_on,close_reason`)).then(r => r[0])
+const more = (page: Page) => page.getByRole('button', { name: /^More( actions)?$/ })
+
+test.describe('quotation sent and close or lose (the More menu of the job page)', () => {
+  test('mark quotation sent (no PDF) is 2 taps from More, with an Undo; then More keeps Quotation sent again', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    let taps = 0
+    await more(page).click()
+    taps++
+    await page.getByRole('menuitem', { name: /Mark quotation sent/ }).click()
+    taps++
+    expect(taps).toBe(2)
+    await expect(page.getByRole('status').filter({ hasText: 'Marked quotation sent' })).toBeVisible()
+    await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBe(today())
+    // Sent: Mark won is the next-step band's green button, and the menu offers the date again
+    await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toBeVisible()
+    await more(page).click()
+    await expect(page.getByRole('menuitem', { name: /Quotation sent again/ })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /Mark quotation sent/ })).toHaveCount(0) // already sent
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBeNull()
+
+    // Quotation sent again re-stamps the date (an older date is moved to today).
+    await must(rest('admin', `rfqs?id=eq.${s.rfq.id}`, { method: 'PATCH', body: { quoted_on: karachiDay(-5) } }))
+    await page.reload()
+    await more(page).click()
+    await page.getByRole('menuitem', { name: /Quotation sent again/ }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Quotation date updated' })).toBeVisible()
+    await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBe(today())
+  })
+
+  test('close or lose is two taps (open More, choose the reason); the reason the state points to is marked suggested; Reopen brings it back', async ({ page }) => {
+    const s = await seed()
+    // Nobody can supply it: that reason is the suggested one.
+    await must(rest('admin', 'supplier_inquiries?rfq_id=eq.' + s.rfq.id, { method: 'PATCH', body: { no_offer_on: karachiDay(0) } }))
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    let taps = 0
+    await more(page).click()
+    taps++
+    await expect(page.getByRole('menuitem', { name: /We could not source it/ })).toContainText('suggested')
+    await page.getByRole('menuitem', { name: /We could not source it/ }).click()
+    taps++
+    expect(taps).toBeLessThanOrEqual(2)
+    await expect(page.getByRole('status').filter({ hasText: 'Closed' })).toBeVisible()
+    await expect.poll(async () => (await rfqOf(s.rfq.id)).close_reason).toBe('could_not_source')
+    expect((await rfqOf(s.rfq.id)).closed_on).toBe(today())
+    await more(page).click()
+    await page.getByRole('menuitem', { name: 'Reopen' }).click()
+    await expect.poll(async () => (await rfqOf(s.rfq.id)).closed_on).toBeNull()
+  })
+})
+
 test.describe('states', () => {
   test('an enquiry that does not exist says so', async ({ page }) => {
     await openAs(page, 'sales', '/rfqs/00000000-0000-4000-8000-00000000dead')

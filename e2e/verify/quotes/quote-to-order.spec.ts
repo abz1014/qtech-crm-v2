@@ -112,7 +112,7 @@ test('every close reason on the Bid and close menu is stored as itself, and the 
     const r = await rfq({ customer, items: [{ description: `Lost item ${key}`, qty: 1 }] })
     await page.goto(`/rfqs/${r.rfq.id}`)
     await page.locator('#main').waitFor()
-    await page.getByRole('button', { name: QUOTES.close.menu, exact: true }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: new RegExp(`^${label}`) }).click()
     await expect(page.getByRole('status').filter({ hasText: QUOTES.close.closedToast }).first()).toBeVisible()
     await expect.poll(() => db.one(`rfqs?id=eq.${r.rfq.id}&select=close_reason,closed_on`), { message: `closing with "${label}"` }).toEqual({ close_reason: key, closed_on: karachiDay(0) })
@@ -129,10 +129,12 @@ test('a lost RFQ can still be won: Mark won reopens it and makes the order, and 
   await db.patch(`rfqs?id=eq.${r.rfq.id}`, { closed_on: karachiDay(-6), close_reason: 'price' })
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/rfqs/${r.rfq.id}`)
-  await page.locator('[data-slot="mark-won"]').getByRole('button', { name: QUOTES.won.markWon }).click()
+  // a lost job offers no Mark won button: the More menu does
+  await page.getByRole('button', { name: /^More( actions)?$/ }).click()
+  await page.getByRole('menuitem', { name: QUOTES.won.markWon }).click()
   await chooseAllSuppliers(page, dialog(page))
   await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
-  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+  await orderCreated(page)
   expect(await db.one(`rfqs?id=eq.${r.rfq.id}&select=closed_on,close_reason`)).toEqual({ closed_on: null, close_reason: null })
   const [o] = await db.rows<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
   // 2 x 15,250.75 = 30,501.50 net; GST 5,490.27 -> 5,490; gross 35,991.50

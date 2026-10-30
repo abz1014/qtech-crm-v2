@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, MessageCircle, Phone } from 'lucide-react'
+import { FileText, MessageCircle, Phone, RotateCcw } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
@@ -9,7 +9,11 @@ import { waLink } from '@/lib/messageLinks'
 import { isFinalMargin } from '@/lib/money'
 import { Money } from '@/ui/Money'
 import { Icon } from '@/ui/Icon'
+import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
+import { useToast } from '@/ui/useToast'
+import { mapPgError } from '@/lib/pgErrors'
+import { useCancelOrder } from '@/features/orders/hooks'
 import { qk } from '@/features/queryKeys'
 import { signFileUrls, type AttachmentRow } from '@/features/rfqs/api'
 import type { JobFacts } from '@/features/jobs/api'
@@ -192,7 +196,43 @@ export function NotesFilesPanel({ facts, data, ctx }: { facts: JobFacts; data: J
 }
 
 /** A cancelled order is history inside its job; a cancel followed by a reorder stays one job. */
-export function CancelledOrders({ data }: { data: JobData }) {
+function ReopenOrder({ id, number, reason, cancelledOn }: { id: string; number: number; reason: string | null; cancelledOn: string }) {
+  const { toast } = useToast()
+  const cancel = useCancelOrder(id)
+  const ref = orderRef(number)
+  return (
+    <Button
+      size="sm"
+      variant="quiet"
+      icon={RotateCcw}
+      busy={cancel.isPending}
+      aria-label={`Reopen order ${ref}`}
+      onClick={async () => {
+        try {
+          // the reason goes with the date: the database refuses a reason on an active order
+          await cancel.mutateAsync({ cancelled_on: null, cancel_reason: null })
+          toast({
+            title: 'Order reopened',
+            body: ref,
+            undo: {
+              onUndo: async () => {
+                await cancel.mutateAsync({ cancelled_on: cancelledOn, cancel_reason: reason })
+              },
+              settledTitle: 'Order reopened',
+              undoneTitle: 'Cancelled again',
+            },
+          })
+        } catch (err) {
+          toast({ title: 'Could not reopen', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
+        }
+      }}
+    >
+      Reopen order
+    </Button>
+  )
+}
+
+export function CancelledOrders({ data, money = false }: { data: JobData; money?: boolean }) {
   const rows = data.cancelled.data ?? []
   if (rows.length === 0) return null
   const today = businessToday()
@@ -203,6 +243,7 @@ export function CancelledOrders({ data }: { data: JobData }) {
           <li key={o.id}>
             <span className="num font-medium">{orderRef(o.number)}</span>{' '}
             <span className="text-fg-2">{`cancelled ${formatShortDate(o.cancelledOn, today)}${cancelReasonLabel(o.reason) ? `: ${cancelReasonLabel(o.reason)}` : ''}`}</span>
+            {money ? <ReopenOrder id={o.id} number={o.number} reason={o.reason ?? null} cancelledOn={o.cancelledOn} /> : null}
           </li>
         ))}
       </ul>

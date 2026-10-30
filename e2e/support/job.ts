@@ -47,3 +47,17 @@ export async function markWonButton(page: Page): Promise<Locator> {
 export async function orderCreated(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeHidden({ timeout: 30_000 })
 }
+
+/** Opens a compact section of the enquiry stage ("Questions for the customer", "Files"): it is shut while it is empty. */
+export async function openFold(page: Page, title: 'Questions for the customer' | 'Files'): Promise<void> {
+  const head = page.locator(`[data-fold="${title}"]`).getByRole('button').first()
+  await head.waitFor()
+  if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click()
+}
+
+/** The enquiry stage with both sections open. */
+export async function openEnquiryPanels(page: Page): Promise<void> {
+  await openStage(page, 'Quotation')
+  await openFold(page, 'Questions for the customer')
+  await openFold(page, 'Files')
+}

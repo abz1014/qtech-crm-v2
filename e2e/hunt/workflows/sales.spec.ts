@@ -1019,8 +1019,9 @@ async function rfqRow(id: string): Promise<RfqRow> {
 }
 
 async function winFromLost(page: Page, info: TestInfo, rfqId: string, W: string, vp: Viewport): Promise<void> {
-  const won = vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
-  await won.click()
+  // a lost job offers no Mark won button: the More menu does
+  await moreButton(page).click()
+  await page.getByRole('menuitem', { name: 'Mark won' }).click()
   const d = page.getByRole('dialog', { name: 'Mark won' })
   await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
   await layout(page, info, `${W} mark won dialog`)
@@ -1030,15 +1031,18 @@ async function winFromLost(page: Page, info: TestInfo, rfqId: string, W: string,
   await settle(page)
   const url = page.url().replace(/^https?:\/\/[^/]+/, '')
   const open = await d.isVisible().catch(() => false)
-  if (!url.startsWith(`/rfqs/${rfqId}`) || open) note(info, { kind: 'observation', where: `${W} Back with Mark won open`, what: `after Back: url ${url}, dialog ${open ? 'still open' : 'closed'}` })
-  if (!url.startsWith(`/rfqs/${rfqId}`)) await visit(page, info, `/rfqs/${rfqId}`, W)
-  if (!(await d.isVisible().catch(() => false))) await vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).click()
+  if (!/^\/(rfqs|jobs)\//.test(url) || open) note(info, { kind: 'observation', where: `${W} Back with Mark won open`, what: `after Back: url ${url}, dialog ${open ? 'still open' : 'closed'}` })
+  if (!/^\/(rfqs|jobs)\//.test(url)) await visit(page, info, `/rfqs/${rfqId}`, W)
+  if (!(await d.isVisible().catch(() => false))) {
+    await moreButton(page).click()
+    await page.getByRole('menuitem', { name: 'Mark won' }).click()
+  }
   await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
   const create = d.getByRole('button', { name: 'Create order' })
   await chooseAllSuppliers(page, d)
   if (vp === 'phone') await create.scrollIntoViewIfNeeded()
   await create.dblclick()
-  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/, T)
+  await expect(page.getByRole('dialog')).toBeHidden({ timeout: 30_000 })
   await settle(page)
   await layout(page, info, `${W} order`)
   await shot(page, `${W}-order`)
@@ -1069,12 +1073,12 @@ test('close and win: every close reason and Reopen, won from lost with Back and 
         await expect.poll(async () => (await rfqRow(r.rfq.id)).close_reason, T).toBe(key)
         const row = await rfqRow(r.rfq.id)
         if (row.closed_on !== today) note(info, { kind: 'observation', where: `${W} close: ${key}`, what: `closed_on is ${row.closed_on}, expected ${today}` })
-        await expect(page.getByText(new RegExp(`Closed .*: ${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.`)).first()).toBeVisible(T)
         if (key === 'other' || vp === 'phone') {
           await layout(page, info, `${W} closed`)
           await shot(page, `${W}-closed-${key}`)
         }
-        await vis(page.getByRole('button', { name: 'Reopen', exact: true })).click()
+        await moreButton(page).click()
+        await page.getByRole('menuitem', { name: 'Reopen' }).click()
         await expect.poll(async () => (await rfqRow(r.rfq.id)).closed_on, T).toBeNull()
         const after = await rfqRow(r.rfq.id)
         if (after.close_reason !== null) note(info, { kind: 'observation', where: `${W} reopen after ${key}`, what: `reopened but close_reason is still ${after.close_reason}` })

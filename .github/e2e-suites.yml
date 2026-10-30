@@ -27,6 +27,8 @@ rfq-intake: # weight=60
   - 'e2e/rfqs/intake.spec.ts'
 rfq-detail: # weight=119
   - 'e2e/rfqs/detail.spec.ts'
+  - 'e2e/rfqs/clarifications.spec.ts'
+  - 'e2e/rfqs/delete.spec.ts'
 rfq-quotation: # weight=55 (installs poppler)
   - 'e2e/rfqs/quotation.spec.ts'
 rfq-memory: # weight=45

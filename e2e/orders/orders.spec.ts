@@ -653,7 +653,7 @@ test.describe('O03: commissioning and cancel', () => {
     await expect.poll(async () => (await orderRow(s.order.id)).commissioning_done_on).toBe(karachiDay(0))
   })
 
-  test('cancel an order with a reason; it stays on record', async ({ page }) => {
+  test('cancel an order with a reason; it stays on record and can be reopened', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'admin', `/orders/${s.order.id}`)
     await page.getByRole('button', { name: /^More( actions)?$/ }).click()
@@ -675,6 +675,10 @@ test.describe('O03: commissioning and cancel', () => {
     expect(row.notes).toBe('Gate pass needed 2 days ahead.')
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
+    // a cancelled job keeps the order in its Cancelled orders list, with Reopen
+    await page.getByRole('button', { name: /^Reopen order ORD-/ }).click()
+    await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBeNull()
+    expect((await orderRow(s.order.id)).cancel_reason).toBeNull()
   })
 })
 
