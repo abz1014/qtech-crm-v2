@@ -125,6 +125,12 @@ function setup(w: World = {}, role = 'sales', onClose = () => {}) {
   return db
 }
 
+/** Owner decision 2026-10-29: no supplier is chosen for the person, so every test that creates an order picks one first. */
+const choose = async (line: number, supplier = 'Alpenmark') => {
+  fireEvent.click(await screen.findByRole('button', { name: new RegExp(`Supplier for line ${line}`) }))
+  fireEvent.click(await screen.findByRole('option', { name: new RegExp(supplier) }))
+}
+
 const payload = (db: ReturnType<typeof setup>) => {
   const call = db.calls.find(c => c.target === 'rpc:convert_rfq_to_order')
   return call ? (call.ops[0][1][0] as { p_items: Array<Record<string, unknown>> }).p_items : null
@@ -133,6 +139,38 @@ const payload = (db: ReturnType<typeof setup>) => {
 afterEach(() => {
   installFakeDb(() => ({})).uninstall()
   window.sessionStorage.clear()
+})
+
+describe('Mark won chooses no supplier for the person', () => {
+  it('starts every item on "Choose a supplier", even with one quote or a clear lowest, and asks before creating the order', async () => {
+    const db = setup({ items: [item('i1', 1), item('i2', 2)], ranks: [rank('i1', 'l1'), rank('i2', 'l2')] })
+    const picker1 = await screen.findByRole('button', { name: /Supplier for line 1/ })
+    const picker2 = await screen.findByRole('button', { name: /Supplier for line 2/ })
+    expect(picker1).toHaveTextContent('Choose a supplier')
+    expect(picker2).toHaveTextContent('Choose a supplier')
+    fireEvent.change(await screen.findByLabelText('Selling price, line 1'), { target: { value: '1,000' } })
+    fireEvent.change(await screen.findByLabelText('Selling price, line 2'), { target: { value: '2,000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    expect(await screen.findByText('Choose the supplier for line 1.')).toBeInTheDocument()
+    expect(payload(db)).toBeNull()
+    await waitFor(() => expect(picker1).toHaveFocus())
+    await choose(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    expect(await screen.findByText('Choose the supplier for line 2.')).toBeInTheDocument()
+    expect(payload(db)).toBeNull()
+    await choose(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
+    await waitFor(() => expect(payload(db)).toEqual([
+      { rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1000 },
+      { rfq_item_id: 'i2', quote_line_id: 'l2', unit_price_net: 2000 },
+    ]))
+  })
+
+  it('does not tell the person which supplier is best: no "best" wording on the dialog', async () => {
+    setup()
+    await screen.findByRole('button', { name: /Supplier for line 1/ })
+    expect(screen.queryByText(/best-ranked|rank-1|Best price/i)).toBeNull()
+  })
 })
 
 describe('Mark won, the owner shape: marked sent, no quotation, one supplier reply', () => {
@@ -147,6 +185,7 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
     expect(screen.queryByText(/suggested/)).toBeNull()
     expect(create).toBeEnabled()
 
+    await choose(1)
     fireEvent.click(create)
     expect(await screen.findByText('Type a selling price for line 1.')).toBeInTheDocument()
     expect(payload(db)).toBeNull()
@@ -161,6 +200,7 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
   it('a price of 0 is not a price', async () => {
     const db = setup()
     const price = await screen.findByLabelText('Selling price, line 1')
+    await choose(1)
     fireEvent.change(price, { target: { value: '0' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     expect(await screen.findByText('Type a selling price for line 1.')).toBeInTheDocument()
@@ -170,6 +210,7 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
   it.each(['0.001', '0.004', '0.00', '0'])('a price of %s rounds to nothing and is refused', async typedPrice => {
     const db = setup()
     const price = await screen.findByLabelText('Selling price, line 1')
+    await choose(1)
     fireEvent.change(price, { target: { value: typedPrice } })
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     expect(await screen.findByText('Type a selling price for line 1.')).toBeInTheDocument()
@@ -189,6 +230,7 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
   it('warns, without blocking, when the typed price is below the supplier cost', async () => {
     const db = setup()
     const price = await screen.findByLabelText('Selling price, line 1')
+    await choose(1)
     fireEvent.change(price, { target: { value: '100,000' } })
     expect(await screen.findByText(/Below the supplier's cost of PKR 114,701/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
@@ -202,6 +244,7 @@ describe('Mark won with an issued quotation', () => {
     const price = await screen.findByLabelText('Selling price, line 1')
     await waitFor(() => expect(price).toHaveValue('1,500'))
     expect(screen.getAllByText(/from QT-26-0058 R0/).length).toBeGreaterThan(0)
+    await choose(1)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     await waitFor(() => expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1500 }]))
   })
@@ -216,6 +259,7 @@ describe('Mark won with an issued quotation', () => {
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Include line 2' })).not.toBeChecked())
     expect(screen.getByTestId('convert-item-2-not-in')).toHaveTextContent('Not in QT-26-0058 R1')
     // R0's 700 for item 2 is not sent
+    await choose(1)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     await waitFor(() => expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1500 }]))
   })
@@ -224,6 +268,8 @@ describe('Mark won with an issued quotation', () => {
     const db = setup({ items: [item('i1', 1), item('i2', 2)], ranks: [rank('i1', 'l1'), rank('i2', 'l2')], quotations: [quotation(1, ['i1'])] })
     const box = await screen.findByRole('checkbox', { name: 'Include line 2' })
     fireEvent.click(box)
+    await choose(1)
+    await choose(2)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     expect(await screen.findByText('Type a selling price for line 2.')).toBeInTheDocument()
     expect(payload(db)).toBeNull()
@@ -235,6 +281,7 @@ describe('Mark won with an issued quotation', () => {
     await waitFor(() => expect(price).toHaveValue('1,500'))
     fireEvent.change(price, { target: { value: '1,650' } })
     expect(screen.getByText('Typed by you', { selector: '[data-source]' })).toBeInTheDocument()
+    await choose(1)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     await waitFor(() => expect(payload(db)?.[0].unit_price_net).toBe(1650))
   })
@@ -244,6 +291,7 @@ describe('imported and stale quotes', () => {
   it('warns on an item_guessed quote and on a stale rate, and still lets the price be typed', async () => {
     const db = setup({ ranks: [rank('i1', 'l1', { pkr_unit_price: null, fx_state: 'unusable', comparable: false, rank: null })], flags: { l1: ['item_guessed', 'currency_unverified'] } })
     await screen.findByLabelText('Selling price, line 1')
+    await choose(1) // the warnings are about the quote the person chose
     await waitFor(() => expect(screen.getAllByTestId('convert-item-1-warning').length).toBeGreaterThanOrEqual(3))
     const text = screen.getAllByTestId('convert-item-1-warning').map(e => e.textContent).join(' ')
     expect(text).toMatch(/may belong to another item/)

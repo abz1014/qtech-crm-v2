@@ -22,8 +22,8 @@ select columns_are('public', 'supplier_inquiries',
 select columns_are('public', 'supplier_quote_lines',
   array['id', 'created_at', 'created_by', 'inquiry_id', 'rfq_item_id', 'unit_price', 'currency', 'lead_time',
         'origin', 'in_stock', 'notes', 'legacy_flags', 'legacy_source',
-        'fx_rate_pkr', 'fx_rate_on'],
-  'supplier_quote_lines has the section 2.10 columns (FX columns from S17)');
+        'fx_rate_pkr', 'fx_rate_on', 'weight', 'weight_unit'],
+  'supplier_quote_lines has the section 2.10 columns (FX columns from S17, weight from 0111)');
 select columns_are('public', 'clarifications',
   array['id', 'created_at', 'created_by', 'rfq_id', 'raised_by_inquiry_id', 'question', 'first_asked_at',
         'last_asked_at', 'ask_count', 'answer', 'answered_at', 'withdrawn_at', 'rfq_item_id', 'last_asked_by'],

@@ -15,7 +15,7 @@ import { Select } from '@/ui/form/Select'
 import { useToast } from '@/ui/useToast'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useRankedQuotes, useSplitOrderItem, useSupplierChoices } from '@/features/orders/hooks'
-import { RankBadge, RankedOptionRow } from '@/features/orders/RankedPicker'
+import { RankedOptionRow } from '@/features/orders/RankedPicker'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
 import { CURRENCIES } from '@/features/orders/lib/currencies'
 import { supplierTargetProblem } from '@/features/orders/lib/splitLine'
@@ -167,9 +167,9 @@ export function SplitLineDialog({
             <div className="grid gap-2">
               <span className="text-sm font-medium">Move to</span>
               {rankQ.isPending ? (
-                <p className="text-sm text-fg-muted">Loading the ranked quotes</p>
+                <p className="text-sm text-fg-muted">Loading the quotes</p>
               ) : rankQ.isError ? (
-                <Banner tone="danger" title="Couldn't load the ranked quotes" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
+                <Banner tone="danger" title="Couldn't load the quotes" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
                   Nothing was changed.
                 </Banner>
               ) : (
@@ -193,8 +193,7 @@ export function SplitLineDialog({
                           className={cn('block w-full rounded p-2 text-left hover:bg-sunken disabled:opacity-55 disabled:hover:bg-transparent', on && 'bg-selected')}
                         >
                           {isHere ? (
-                            <span className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-start gap-2">
-                              <RankBadge rank={q.rank} />
+                            <span className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                               <span className="grid">
                                 <b className="text-sm font-medium">{q.supplierName}</b>
                                 <span className="text-xs text-fg-muted">Where it is now</span>

@@ -1661,14 +1661,14 @@ isOneToOne: false
                   ]
                 },"supplier_quote_lines": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"currency": string,"fx_rate_on": string | null,"fx_rate_pkr": number | null,"id": string,"in_stock": boolean | null,"inquiry_id": string,"lead_time": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"origin": string | null,"rfq_item_id": string,"unit_price": number
+                    "created_at": string,"created_by": string | null,"currency": string,"fx_rate_on": string | null,"fx_rate_pkr": number | null,"id": string,"in_stock": boolean | null,"inquiry_id": string,"lead_time": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"origin": string | null,"rfq_item_id": string,"unit_price": number,"weight": number | null,"weight_unit": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"currency": string,"fx_rate_on"?: string | null,"fx_rate_pkr"?: number | null,"id"?: string,"in_stock"?: boolean | null,"inquiry_id": string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id": string,"unit_price": number
+                    "created_at"?: string,"created_by"?: string | null,"currency": string,"fx_rate_on"?: string | null,"fx_rate_pkr"?: number | null,"id"?: string,"in_stock"?: boolean | null,"inquiry_id": string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id": string,"unit_price": number,"weight"?: number | null,"weight_unit"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"currency"?: string,"fx_rate_on"?: string | null,"fx_rate_pkr"?: number | null,"id"?: string,"in_stock"?: boolean | null,"inquiry_id"?: string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id"?: string,"unit_price"?: number
+                    "created_at"?: string,"created_by"?: string | null,"currency"?: string,"fx_rate_on"?: string | null,"fx_rate_pkr"?: number | null,"id"?: string,"in_stock"?: boolean | null,"inquiry_id"?: string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id"?: string,"unit_price"?: number,"weight"?: number | null,"weight_unit"?: string
                   }
                   Relationships: [
                     {

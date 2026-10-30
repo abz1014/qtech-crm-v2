@@ -82,7 +82,7 @@ export function PasteReplyPanel({
           {set.suggestions.map(s => {
             const flagged = s.check.length > 0
             const name = itemName(s.itemNumber)
-            const detail = [stockText(s.inStock), s.leadTimeText].filter(Boolean).join(' · ')
+            const detail = [stockText(s.inStock), s.leadTimeText, s.weight !== null ? `${s.weight} ${s.weightUnit ?? 'kg'} each` : null, s.origin ? `Made in ${s.origin}` : null].filter(Boolean).join(' · ')
             return (
               <li
                 key={s.key}

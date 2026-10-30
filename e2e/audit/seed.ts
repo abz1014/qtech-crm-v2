@@ -73,6 +73,9 @@ interface QuoteSpec {
   lead?: string
   stock?: boolean
   origin?: string
+  /** Weight of one unit (0111), in `weightUnit` (default kg). */
+  weight?: number
+  weightUnit?: 'kg' | 'g' | 'lb'
 }
 interface InquirySpec {
   supplier: string
@@ -142,6 +145,8 @@ async function makeRfq(s: RfqSpec, brands: Record<string, string>): Promise<{ id
           lead_time: q.lead ?? null,
           in_stock: q.stock ?? null,
           origin: q.origin ?? null,
+          weight: q.weight ?? null,
+          weight_unit: q.weightUnit ?? 'kg',
         })),
       )
     }
@@ -525,8 +530,8 @@ async function seedAll(): Promise<Fixture> {
           currency: 'EUR',
           sent: -5,
           quotes: [
-            { i: 0, price: 3640, lead: '5 weeks', origin: 'Netherlands' },
-            { i: 1, price: 2280, lead: '3 weeks', origin: 'Germany' },
+            { i: 0, price: 3640, lead: '5 weeks', origin: 'Netherlands', weight: 18.5 },
+            { i: 1, price: 2280, lead: '3 weeks', origin: 'Germany', weight: 4.2 },
           ],
         },
         {
@@ -534,7 +539,7 @@ async function seedAll(): Promise<Fixture> {
           currency: 'USD',
           sent: -5,
           quotes: [
-            { i: 0, price: 3890, lead: '7 weeks', origin: 'China' },
+            { i: 0, price: 3890, lead: '7 weeks', origin: 'China', weight: 40, weightUnit: 'lb' },
             { i: 1, price: 2410, lead: '6 weeks' },
           ],
         },

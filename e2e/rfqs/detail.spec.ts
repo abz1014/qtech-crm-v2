@@ -171,7 +171,7 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.usd.name)
     await r.getByLabel(`Price for item 1 from ${s.usd.name}`).fill('100')
-    // The live preview: what it reads as in PKR at today's rate, and that it would be the lowest (C-40).
+    // The live preview: what it reads as in PKR at today's rate (and nothing about being the lowest).
     await expect(r.getByText("Reads as ≈ PKR 28,000 at today's USD rate.")).toBeVisible()
     await r.getByLabel(`Lead time from ${s.usd.name}`).fill('3 weeks')
     await r.getByRole('button', { name: 'Save reply' }).click()
@@ -243,10 +243,10 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
 })
 
 test.describe('comparison', () => {
-  test('one Recommended mark at today\'s rate; stale rates are labelled in the details; a line with no rate is left out', async ({ page }) => {
+  test('no supplier is singled out: names in order, no mark; stale rates are labelled in the details; a line with no rate is shown as given', async ({ page }) => {
     const s = await seed()
     const item = s.items[0].id
-    // USD 100 = PKR 28,000; EUR 90 at 300 = PKR 27,000 (lowest, on a 12-day-old rate); CNY has no rate.
+    // USD 100 = PKR 28,000; EUR 90 at 300 = PKR 27,000 (on a 12-day-old rate); CNY has no rate.
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: [
       { inquiry_id: s.usd.inquiryId, rfq_item_id: item, unit_price: 100, currency: 'USD' },
       { inquiry_id: s.germany.inquiryId, rfq_item_id: item, unit_price: 90, currency: 'EUR' },
@@ -254,32 +254,31 @@ test.describe('comparison', () => {
     ] }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const art = page.getByRole('article', { name: 'Item 1' })
-    const lowest = art.locator('[data-lowest]')
-    await expect(lowest).toHaveCount(1)
-    await expect(lowest).toContainText(s.germany.name)
-    await expect(lowest).toContainText('Recommended') // the cheapest is ranked first: one mark, no "Cheapest" line
-    await expect(art.getByText('Recommended', { exact: true })).toHaveCount(1)
-    await expect(art.locator('[data-cheapest]')).toHaveCount(0)
-    await expect(lowest).toContainText('27,000')
+    // The CRM never suggests a supplier (owner decision 2026-10-29): no Recommended, Lowest price or Cheapest, in any form.
+    await expect(art.locator('li[data-price-row]')).toHaveCount(3)
+    await expect(art).not.toContainText(/Recommended|Lowest price|Cheapest|Best price/)
+    await expect(art.locator('[data-lowest], [data-recommended], [data-ranked], [data-cheapest], [data-cheapest-tag]')).toHaveCount(0)
+    // listed by supplier name, whatever the price
+    const names = [s.usd.name, s.germany.name, s.china.name].sort((x, y) => x.localeCompare(y, 'en', { sensitivity: 'base' }))
+    const shown = await art.locator('li[data-price-row]').evaluateAll(els => els.map(e => e.textContent ?? ''))
+    expect(names.map(n => shown.findIndex(t => t.includes(n)))).toEqual([0, 1, 2])
+    const eur = art.locator('li[data-price-row]', { hasText: s.germany.name })
+    await expect(eur).toContainText('27,000')
     // The rate behind the figure is one tap away.
-    await lowest.getByRole('button', { name: `Show details for ${s.germany.name}` }).click()
-    await expect(lowest).toContainText('rate 12 days old')
-    await expect(lowest.locator('[data-status="fx:stale"]')).toContainText('Old rate')
-    // The CNY line is out of the comparison: its own figure, marked not compared, listed after the ranked ones.
-    const cny = art.locator('li[data-ranked]', { hasText: s.china.name })
+    await eur.getByRole('button', { name: `Show details for ${s.germany.name}` }).click()
+    await expect(eur).toContainText('rate 12 days old')
+    await expect(eur.locator('[data-status="fx:stale"]')).toContainText('Old rate')
+    // The CNY line has no rate: its own figure, marked not compared.
+    const cny = art.locator('li[data-price-row]', { hasText: s.china.name })
     await expect(cny).toContainText('not compared, no rate')
-    await expect(cny.locator('[data-lowest]')).toHaveCount(0)
-    await cny.getByRole('button', { name: `Show details for ${s.china.name}` }).click()
-    await expect(cny).toContainText('Not ranked: no current CNY rate. Add one.')
-    await expect(cny.getByRole('link', { name: 'Add CNY rate' })).toBeVisible()
-    // The rule is said once, in a tip in the panel header, not above every item.
-    await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(1)
-    // Item 2 has no prices: nothing is marked.
-    await expect(page.getByRole('article', { name: 'Item 2' }).locator('[data-lowest]')).toHaveCount(0)
+    // The panel's tip says how the figures are shown, once, and names no better supplier.
+    await expect(page.getByRole('button', { name: 'How are prices shown?' })).toHaveCount(1)
+    // Item 2 has no prices.
+    await expect(page.getByRole('article', { name: 'Item 2' }).locator('li[data-price-row]')).toHaveCount(0)
     await review(page, 'rfq-detail-02-rate-states-1440')
   })
 
-  test('only one comparable line means no lowest mark', async ({ page }) => {
+  test('two lines, one without a rate: nothing is marked', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: [
       { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD' },
@@ -287,7 +286,7 @@ test.describe('comparison', () => {
     ] }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await expect(page.getByRole('article', { name: 'Item 1' }).getByText('2 prices so far', { exact: true })).toBeVisible()
-    await expect(page.locator('[data-lowest]')).toHaveCount(0)
+    await expect(page.locator('[data-lowest], [data-recommended]')).toHaveCount(0)
   })
 
   test('an item nobody priced is flagged uncovered once someone has replied', async ({ page }) => {
@@ -675,8 +674,8 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     await expect(bar.locator('[data-rate="EUR"]')).toContainText('12 days old')
     await expect(bar.locator('[data-rate="EUR"]')).toHaveAttribute('data-band', 'stale')
     await expect(bar.locator('[data-rate="JPY"]')).toContainText(/JPY\s*no rate, not compared/)
-    // JPY is not compared: EUR is the lowest of the two that are.
-    await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-lowest]')).toContainText(s.china.name)
+    // JPY is not compared (no rate): that line shows the supplier's own figure. Nothing is marked.
+    await expect(page.getByRole('article', { name: 'Item 1' }).locator('li[data-price-row]', { hasText: s.germany.name })).toContainText('not compared, no rate')
 
     await bar.getByRole('link', { name: 'Edit exchange rates' }).click()
     await expect(page).toHaveURL(/\/settings\/exchange-rates$/)
@@ -696,8 +695,7 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     await review(page, 'exchange-rates-1440')
 
     await page.goto(`/rfqs/${s.rfq.id}`)
-    const lowest = page.getByRole('article', { name: 'Item 1' }).locator('[data-lowest]')
-    await expect(lowest).toContainText(s.germany.name)
+    const lowest = page.getByRole('article', { name: 'Item 1' }).locator('li[data-price-row]', { hasText: s.germany.name })
     await expect(lowest).toContainText('9,000')
     await expect(page.locator('[data-ratebar] [data-rate="JPY"]')).toContainText('JPY 1.80')
   })
@@ -985,9 +983,9 @@ for (const width of [1440, 375]) {
       expect(await overlayViolations(page)).toEqual([])
       await review(page, `rfq-detail-more-menu-${width}`)
       await page.keyboard.press('Escape')
-      // The tip that explains the order opens and is clean too.
-      await page.getByRole('button', { name: 'How are prices compared?' }).click()
-      await expect(page.getByRole('dialog', { name: 'How are prices compared?' })).toBeVisible()
+      // The tip that explains the figures opens and is clean too.
+      await page.getByRole('button', { name: 'How are prices shown?' }).click()
+      await expect(page.getByRole('dialog', { name: 'How are prices shown?' })).toBeVisible()
       expect(await overlayViolations(page)).toEqual([])
       await page.keyboard.press('Escape')
     } else {

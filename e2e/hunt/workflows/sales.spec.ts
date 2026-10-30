@@ -6,6 +6,7 @@ import { amount } from '../../verify/support/text'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../../support/pdf'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 import { ctxAs, layout, note, probe, settle, shot, tag, visit, watch, type Viewport } from './support'
+import { chooseAllSuppliers } from '../../support/supplierChoice'
 
 /*
  * Bug hunt, the sales workflow (SALES, admin where it matters), at 1366x768 and at 375x812 with touch. Every step is a probe: a
@@ -635,12 +636,10 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       // On a phone the items are an accordion (r3/rfq-orders): a folded item with prices opens with a tap on its header.
       const folded = art.locator('h3').getByRole('button', { expanded: false })
       if (vp === 'phone' && (await folded.isVisible().catch(() => false))) await folded.click()
-      await expect(art.locator('li[data-ranked]').first()).toBeVisible(T)
-      const rows = (await art.locator('li[data-ranked]').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').slice(0, 120))
-      note(info, { kind: 'observation', where: `${W} ranked comparison`, what: 'item 1 ranking as shown', detail: rows })
-      const values = rows.map(s => Number((s.match(/([\d,]+(?:\.\d+)?)/g) ?? []).map(x => x.replace(/,/g, '')).find(x => Number(x) >= 1) ?? NaN))
-      for (let i = 1; i < values.length; i++)
-        if (values[i] < values[i - 1]) note(info, { kind: 'observation', where: `${W} ranked comparison`, what: `row ${i + 1} reads cheaper than row ${i}`, detail: rows })
+      await expect(art.locator('li[data-price-row]').first()).toBeVisible(T)
+      const rows = (await art.locator('li[data-price-row]').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').slice(0, 120))
+      note(info, { kind: 'observation', where: `${W} ranked comparison`, what: 'item 1 prices as shown (by supplier name, nothing marked)', detail: rows })
+      if (rows.some(r => /Recommended|Lowest price|Cheapest/.test(r))) note(info, { kind: 'observation', where: `${W} price rows`, what: 'a row is marked as best', detail: rows })
       await layout(page, info, `${W} ranking`)
       await shot(page, `${W}-ranking`)
     })
@@ -1035,6 +1034,7 @@ async function winFromLost(page: Page, info: TestInfo, rfqId: string, W: string,
   if (!(await d.isVisible().catch(() => false))) await vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).click()
   await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
   const create = d.getByRole('button', { name: 'Create order' })
+  await chooseAllSuppliers(page, d)
   if (vp === 'phone') await create.scrollIntoViewIfNeeded()
   await create.dblclick()
   await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/, T)

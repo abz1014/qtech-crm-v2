@@ -89,6 +89,7 @@ select ok(not exists (select 1 from pg_proc p where p.pronamespace = 'qtech_priv
 create temp table price (obj text, col text);
 insert into price values
   ('rfq_items', 'quoted_unit_price_net'), ('supplier_quote_lines', 'unit_price'), ('supplier_quote_lines', 'fx_rate_pkr'),
+  ('supplier_quote_lines', 'weight'), ('supplier_quote_lines', 'weight_unit'),
   ('quotations', 'lines'), ('quotations', 'net_total'), ('quotations', 'gst_total'),
   ('order_items', 'unit_price_net'), ('order_items', 'supplier_unit_price'),
   ('purchase_orders', 'total'), ('purchase_orders', 'lines'), ('fx_rates', 'rate_pkr'),

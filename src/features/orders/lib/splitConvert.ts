@@ -46,10 +46,9 @@ export function checkSplit(itemQty: number, parts: readonly Part[]): SplitCheck 
   }
 }
 
-/** The next supplier to offer for a new part: the best-ranked quote not used yet (unranked ones last). */
-export function nextRanked(quotes: readonly RankedQuote[], usedLineIds: ReadonlySet<string>): RankedQuote | undefined {
-  const free = quotes.filter(q => !usedLineIds.has(q.lineId))
-  return [...free].sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))[0]
+/** Whether another quote is still free for a new part (a quote line can be used once). Nothing is offered or chosen for the person. */
+export function hasFreeQuote(quotes: readonly RankedQuote[], usedLineIds: ReadonlySet<string>): boolean {
+  return quotes.some(q => !usedLineIds.has(q.lineId))
 }
 
 export function isSplit(parts: readonly Part[] | undefined): parts is readonly Part[] {
