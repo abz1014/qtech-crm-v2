@@ -8,13 +8,13 @@ num() { case "$1" in ''|*[!0-9]*) echo "::error::not a number: $1"; exit 1 ;; es
 case "${1:?usage: record-status.sh backup|backup-db-only|drill ...}" in
   backup)
     num "${2:?}"; num "${3:?}"; num "${4:?}"
-    sql="select qtech_private.record_backup($2, $3, $4)" ;;
+    sql="select qtech_ops.record_backup($2, $3, $4)" ;;
   backup-db-only)
     num "${2:?}"
-    sql="select qtech_private.record_backup($2, null, null)" ;;
+    sql="select qtech_ops.record_backup($2, null, null)" ;;
   drill)
     case "${2:?}" in ok) v=true ;; fail) v=false ;; *) echo "::error::drill ok|fail"; exit 1 ;; esac
-    sql="select qtech_private.record_drill($v)" ;;
+    sql="select qtech_ops.record_drill($v)" ;;
   *) echo "::error::unknown status $1"; exit 1 ;;
 esac
 if pgx "$t" psql -X -At -v ON_ERROR_STOP=1 -c "$sql" > /dev/null 2> "$t/err"; then

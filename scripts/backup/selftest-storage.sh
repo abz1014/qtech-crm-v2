@@ -62,7 +62,7 @@ sql "insert into public.companies (id, name) values ('c0de0000-0000-4000-8000-00
        ('rfq-files', 'selftest/a.pdf', 'a.pdf', 'application/pdf', 22, 'c0de0000-0000-4000-8000-0000000000a2'),
        ('rfq-files', 'selftest/b.pdf', 'b.pdf', 'application/pdf', 40, 'c0de0000-0000-4000-8000-0000000000a2');
      delete from public.rfqs where id = 'c0de0000-0000-4000-8000-0000000000a2';"
-[ "$(sql "select count(*) from qtech_private.pending_file_deletes")" = "2" ] || { echo "FAIL: the deleted record's files are not in the trash"; exit 1; }
+[ "$(sql "select count(*) from qtech_ops.pending_file_deletes")" = "2" ] || { echo "FAIL: the deleted record's files are not in the trash"; exit 1; }
 [ "$(sql "select count(*) from storage.objects where name like 'selftest/%'")" = "3" ] || { echo "FAIL: deleting a record removed a file"; exit 1; }
 echo "PASS: deleting a record lists its files in the trash and removes nothing"
 
@@ -74,18 +74,18 @@ echo "PASS: purge removes nothing inside the 30 days"
 
 # ---- purge after 30 days: a.pdf goes, b.pdf was re-attached to another RFQ so it stays, c.pdf was never deleted
 sql "insert into public.attachments (bucket, path, file_name, mime_type, size_bytes, rfq_id) values ('rfq-files', 'selftest/b.pdf', 'b.pdf', 'application/pdf', 40, 'c0de0000-0000-4000-8000-0000000000a3');
-     update qtech_private.pending_file_deletes set purge_after = now() - interval '1 day';"
+     update qtech_ops.pending_file_deletes set purge_after = now() - interval '1 day';"
 bash "$here/purge-trash.sh" | tee "$t/purge2.out"
 grep -q '1 removed from storage' "$t/purge2.out" || { echo "FAIL: purge did not remove exactly the due file"; exit 1; }
 [ "$(sql "select count(*) from storage.objects where name = 'selftest/a.pdf'")" = "0" ] || { echo "FAIL: the due file is still in storage"; exit 1; }
 [ "$(sql "select count(*) from storage.objects where name in ('selftest/b.pdf', 'selftest/c.pdf')")" = "2" ] || { echo "FAIL: purge removed a file it must keep"; exit 1; }
-[ "$(sql "select count(*) from qtech_private.pending_file_deletes")" = "0" ] || { echo "FAIL: the trash is not empty after the purge"; exit 1; }
+[ "$(sql "select count(*) from qtech_ops.pending_file_deletes")" = "0" ] || { echo "FAIL: the trash is not empty after the purge"; exit 1; }
 echo "PASS: purge removed the due file, kept the re-attached one and the untouched one, and emptied the trash"
 
 # ---- what the app reads
 bash "$here/record-status.sh" backup 1234 5678 3 | grep -q 'status recorded'
 bash "$here/record-status.sh" drill ok | grep -q 'status recorded'
-[ "$(sql "select (last_backup_at > now() - interval '5 minutes' and last_backup_bytes = 1234 and last_storage_bytes = 5678 and last_storage_objects = 3 and last_drill_ok) from qtech_private.backup_status")" = "t" ] || { echo "FAIL: the status was not recorded"; exit 1; }
+[ "$(sql "select (last_backup_at > now() - interval '5 minutes' and last_backup_bytes = 1234 and last_storage_bytes = 5678 and last_storage_objects = 3 and last_drill_ok) from qtech_ops.backup_status")" = "t" ] || { echo "FAIL: the status was not recorded"; exit 1; }
 if bash "$here/record-status.sh" backup 12x 1 1 > /dev/null 2>&1; then echo "FAIL: a non-number was accepted"; exit 1; fi
 echo "PASS: the backup status is recorded for the app, and a bad value is refused"
 

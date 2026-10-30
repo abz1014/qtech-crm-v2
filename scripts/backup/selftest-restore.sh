@@ -63,13 +63,13 @@ echo "PASS: the archive schemas came back"
 echo "PASS: a second restore is idempotent"
 
 # H4: a changed amount (same row counts) is caught by the checksums
-sql "update public.invoices set net_amount = net_amount + 1 where id = 'c0de0000-0000-4000-8000-000000000003'"
+PGOPTIONS="-c session_replication_role=replica" pgx "$t" psql -X -v ON_ERROR_STOP=1 -q -c "update public.invoices set net_amount = net_amount + 1 where id = 'c0de0000-0000-4000-8000-000000000003'"
 "$here/compare-counts.sh" "$t/d" > /dev/null
 if bash "$here/compare-checksums.sh" "$t/d" > "$t/cs.out" 2>&1; then echo "FAIL: a changed invoice amount was not noticed"; exit 1; fi
 grep -q 'invoices.net_sum' "$t/cs.out" && grep -q 'hash.public.invoices' "$t/cs.out" || { echo "FAIL: the differing lines were not named"; cat "$t/cs.out"; exit 1; }
 if grep -q '123457' "$t/cs.out"; then echo "FAIL: a value was printed"; exit 1; fi
 echo "PASS: a changed amount with equal row counts is caught, by name, without printing a value"
-sql "update public.invoices set net_amount = net_amount - 1 where id = 'c0de0000-0000-4000-8000-000000000003'"
+PGOPTIONS="-c session_replication_role=replica" pgx "$t" psql -X -v ON_ERROR_STOP=1 -q -c "update public.invoices set net_amount = net_amount - 1 where id = 'c0de0000-0000-4000-8000-000000000003'"
 bash "$here/compare-checksums.sh" "$t/d" > /dev/null
 
 # H4: an orphan row (loaded with triggers off, so no foreign key stopped it) is caught by the FK check

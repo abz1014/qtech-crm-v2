@@ -267,7 +267,7 @@ since the last full copy, a full copy weekly); `files.tsv` and `SHA256SUMS` alre
 
 **Deleted records keep their files for 30 days (migration 0120).** Deleting an RFQ, order, invoice, expense, a quotation or
 PO revision, or a single attached file used to remove the stored files at once. Now a database trigger lists each file in
-`qtech_private.pending_file_deletes` and the app removes nothing; the file stays at its own path. After the nightly backup has
+`qtech_ops.pending_file_deletes` and the app removes nothing; the file stays at its own path. After the nightly backup has
 uploaded the files, `scripts/backup/purge-trash.sh` removes the files that have been waiting more than 30 days, through the Storage S3
 API, so a deleted file is always in at least one backup first. A path that a live record points at again is released, not removed.
 Settings, Backups and usage shows how many files wait. To keep a file for good, re-attach it before the 30 days are over (the file is

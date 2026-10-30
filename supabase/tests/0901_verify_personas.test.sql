@@ -431,7 +431,9 @@ insert into probes values
   ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
   ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
   ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
-  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x'),   -- 0092
+  ('admin_health', '', 'X', 'select 1 from public.admin_health()'),   -- 0120
+  ('confirm_backup_decrypt_test', '', 'X', 'select 1 from (select public.confirm_backup_decrypt_test() r) x');   -- 0120
 
 -- 0074 receivables: money, so an engineer is refused too (they run order_receivables()).
 select is(pg_temp.actual(f, '', 'engineer'), '', format('engineer gets nothing from %s', f))
