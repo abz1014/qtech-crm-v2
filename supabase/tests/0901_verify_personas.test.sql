@@ -153,10 +153,10 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
 -- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
 update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
-insert into public.orders (id, company_id, owner_id) values (pg_temp.f('f5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0118: an order that still owes
+insert into public.orders (id, company_id, owner_id) values (pg_temp.f('f5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0127: an order that still owes
 insert into public.order_items (id, order_id, position, description, unit_price_net) values (pg_temp.f('f6'), pg_temp.f('f5'), 0, 'Owing line', 100);
-insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0117
-insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0118
+insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0126
+insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0127
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
@@ -237,8 +237,8 @@ insert into spec values
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
-  ('customer_refunds', '', 'id = @f1', 'bank_month', $q$insert into public.customer_refunds (id, company_id, amount) values (@f3, @01, 5)$q$),   -- 0117
-  ('credit_applications', '', 'id = @f2', 'company_id', $q$insert into public.credit_applications (id, company_id, to_order_id, amount) values (@f4, @01, @f5, 5)$q$),   -- 0118
+  ('customer_refunds', '', 'id = @f1', 'bank_month', $q$insert into public.customer_refunds (id, company_id, amount) values (@f3, @01, 5)$q$),   -- 0126
+  ('credit_applications', '', 'id = @f2', 'company_id', $q$insert into public.credit_applications (id, company_id, to_order_id, amount) values (@f4, @01, @f5, 5)$q$),   -- 0127
   ('credit_notes', '', 'id = @d3', 'reason', $q$insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (@d4, 'CN-P', @26, 10, 2, 'probe')$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
@@ -443,8 +443,8 @@ insert into probes values
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
   ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
-  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0118
-  ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0118
+  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0127
+  ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0127
   ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
   ('record_payment', '', 'X', $q$select 1 from (select public.record_payment(gen_random_uuid(), @20, public.today_pkt(), 7, null, 'bank', true) r) x$q$),   -- 0114
   ('next_credit_note_number', '', 'X', 'select 1 where public.next_credit_note_number() is not null'),   -- 0112
@@ -558,7 +558,7 @@ select is((select array_agg(p.proname::text order by p.proname::text) from pg_pr
              and has_function_privilege('authenticated', p.oid, 'execute')),
           array['apply_credit', 'attachment_is_priced', 'close_month', 'close_months_through', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
                 'order_receivables', 'receipt_locked', 'record_history_rows', 'record_refund', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed fourteen (0118: record_refund and apply_credit, admin only, which write the one door each tables give the API no INSERT; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed fourteen (0127: record_refund and apply_credit, admin only, which write the one door each tables give the API no INSERT; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

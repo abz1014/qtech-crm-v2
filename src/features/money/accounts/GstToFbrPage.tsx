@@ -157,7 +157,7 @@ function Status({ l }: { l: GstLine }) {
 }
 
 /**
- * One payment's certificate: the number and/or the file the customer sent (0119). The missing flag is gone when either exists. The row says
+ * One payment's certificate: the number and/or the file the customer sent (0128). The missing flag is gone when either exists. The row says
  * which it has, opens the file, and offers Add / Change: a number, a file, or both, each optional.
  */
 function WhtCertificate({ row, onSaved }: { row: WhtRow; onSaved: () => void }) {

@@ -22,7 +22,7 @@ import { refundDefault, refundNote, type CreditSummary } from '@/features/money/
 import { useCompanyOrders, useRecordRefund } from '@/features/money/credit/hooks'
 
 /*
- * Refund a customer (0117, 0118). Admin only. Money paid back out of the customer's credit balance: the amount starts at the whole
+ * Refund a customer (0126, 0127). Admin only. Money paid back out of the customer's credit balance: the amount starts at the whole
  * balance and the date is today, so refunding it all is: open it (1), Save refund (2). The optional parts (a reference, a reason,
  * the order it is for, and paid by bank or cash) stay folded away until asked for. The server refuses more than the balance and
  * asks "Record it anyway?" when the same customer already has a refund of that amount that day or with that reference.

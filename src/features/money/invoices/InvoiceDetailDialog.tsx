@@ -147,7 +147,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
     routeError: e => {
       if (e.kind === 'closed-month') return { field: 'invoiceDate' }
       if (e.kind === 'unique' && /invoices_number/.test(e.constraint ?? '')) return { field: 'number', message: 'This invoice number is already in the register. Use another.' }
-      // 0119: clearing a PSID or a deposit date is the admin's; the sentence sits under the PSID
+      // 0128: clearing a PSID or a deposit date is the admin's; the sentence sits under the PSID
       if (e.hint === 'admin_only_unfile') return { field: invoice.psid?.trim() ? 'psid' : 'depositedOn' }
       return undefined
     },

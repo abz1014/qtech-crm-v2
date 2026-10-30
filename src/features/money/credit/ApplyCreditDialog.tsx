@@ -20,7 +20,7 @@ import { applyDefault, applyNote, type ApplyTarget, type CreditSummary } from '@
 import { useApplyCredit, useApplyTargets } from '@/features/money/credit/hooks'
 
 /*
- * Apply credit to another order of the same customer (0118). Admin only. An allocation record, not a payment: no cash moves, the
+ * Apply credit to another order of the same customer (0127). Admin only. An allocation record, not a payment: no cash moves, the
  * target order is settled by it (up to what it owes) and the customer's credit balance goes down by the same amount. The order is
  * chosen from the customer's orders that still owe money; the amount starts at the smaller of the credit and what the order owes.
  */

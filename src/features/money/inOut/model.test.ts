@@ -136,7 +136,7 @@ describe('buildInOut (the 0079 fixture)', () => {
   })
 })
 
-describe('refunds paid back to customers (0117)', () => {
+describe('refunds paid back to customers (0126)', () => {
   const withRefund = (rows: FlowRow[]): FlowRow[] => rows.map(r => (r.month === '2020-01' ? { ...r, refunds: '500.00', refundCount: 2 } : r))
 
   it('cash net takes the refunds off; money out stays the expenses', () => {

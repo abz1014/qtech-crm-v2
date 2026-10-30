@@ -1,15 +1,15 @@
 -- 0117_customer_refunds (owner request 2026-10-30): money handed back to a customer, and where it shows.
 --
 -- Today an overpayment only shows as overpaid_by in the views. This migration adds the refund record and puts it in the cash
--- figures and the books; 0118 adds the customer credit balance and applying credit, 0119 the WHT certificate file and the
+-- figures and the books; 0127 adds the customer credit balance and applying credit, 0128 the WHT certificate file and the
 -- rule on clearing a filing.
 --
 --   customer_refunds     one row per refund: company, optional order, amount PKR, refunded_on, paid_via (bank | cash, as payments_in),
 --                        reference, reason, bank_month (the bank tick, as payments_in). Admin only. It is cash OUT. Rows are made by
---                        record_refund() (0118), the one door that checks the customer has the credit; the table gives the API no
+--                        record_refund() (0127), the one door that checks the customer has the credit; the table gives the API no
 --                        INSERT. The audit trigger records every row; a refund is removed by deleting it (admin, open month).
---   credit_applications  credit of a customer put against another order of the same customer (0118 makes the rows): not a payment,
---                        no cash moves. It settles the target order the way a payment would (0118).
+--   credit_applications  credit of a customer put against another order of the same customer (0127 makes the rows): not a payment,
+--                        no cash moves. It settles the target order the way a payment would (0127).
 --   The month lock       enforce_month_lock covers both tables (by refunded_on / applied_on); close_month and close_months_through
 --                        lock them (in the 0115 order: credit_applications, credit_notes, customer_refunds, ...) and count them
 --                        in the "earlier months first" check.
@@ -39,7 +39,7 @@ create table public.customer_refunds (
 );
 
 comment on table public.customer_refunds is
-  '0117: money paid back to a customer (cash OUT). Made by record_refund(); bank_month is the bank tick. Admin only.';
+  '0126: money paid back to a customer (cash OUT). Made by record_refund(); bank_month is the bank tick. Admin only.';
 
 create index customer_refunds_company_idx on public.customer_refunds (company_id);
 create index customer_refunds_order_idx on public.customer_refunds (order_id) where order_id is not null;
@@ -57,8 +57,8 @@ create table public.credit_applications (
 );
 
 comment on table public.credit_applications is
-  '0117: credit a customer already holds (overpayments and credit notes not refunded) put against another order of the same customer. '
-  'Not a payment: no cash moves. It counts as settled money on to_order_id (0118). Made by apply_credit(). Admin only.';
+  '0126: credit a customer already holds (overpayments and credit notes not refunded) put against another order of the same customer. '
+  'Not a payment: no cash moves. It counts as settled money on to_order_id (0127). Made by apply_credit(). Admin only.';
 
 create index credit_applications_company_idx on public.credit_applications (company_id);
 create index credit_applications_order_idx on public.credit_applications (to_order_id);
@@ -136,7 +136,7 @@ create trigger credit_applications_audit after insert or update or delete on pub
 alter table public.customer_refunds enable row level security;
 alter table public.credit_applications enable row level security;
 revoke all on table public.customer_refunds, public.credit_applications from public, anon, authenticated;
--- 0081 mirror: granted like every table; the policies admit the admin only. No INSERT: the rows are made by the two RPCs (0118).
+-- 0081 mirror: granted like every table; the policies admit the admin only. No INSERT: the rows are made by the two RPCs (0127).
 grant select, delete on table public.customer_refunds, public.credit_applications to authenticated, qtech_engineer;
 grant update (bank_month, company_id) on table public.customer_refunds to authenticated, qtech_engineer;   -- the bank tick; merge_companies
 grant update (company_id) on table public.credit_applications to authenticated, qtech_engineer;            -- merge_companies only
@@ -170,7 +170,7 @@ declare
 begin
   def := pg_catalog.pg_get_functiondef('public.enforce_month_lock()'::regprocedure);
   if strpos(def, a1) = 0 then
-    raise exception '0117: the month lock function was not in the expected shape';
+    raise exception '0126: the month lock function was not in the expected shape';
   end if;
   patched := replace(def, a1, r1);
   execute patched;
@@ -181,7 +181,7 @@ begin
     pg_catalog.pg_get_functiondef('public.close_months_through(date)'::regprocedure)] loop
     if strpos(def, 'public.credit_notes, public.expenses,') = 0
        or strpos(def, 'select date_trunc(''month'', issued_on)::date from public.credit_notes') = 0 then
-      raise exception '0117: a close function was not in the expected shape';
+      raise exception '0126: a close function was not in the expected shape';
     end if;
     patched := replace(def, 'public.credit_notes, public.expenses,', 'public.credit_applications, public.credit_notes, public.customer_refunds, public.expenses,');
     patched := replace(patched, 'select date_trunc(''month'', issued_on)::date from public.credit_notes',
@@ -243,7 +243,7 @@ left join refunds f on f.month = m.month
 where (select public.current_user_role()) = 'admin';
 
 comment on view public.v_cash_month is
-  '0015, 0117: cash clocks per month: money in (payments by received_on), money out (expenses by paid_on) and refunds_out (customer refunds by refunded_on, cash out too). Admin only.';
+  '0015, 0126: cash clocks per month: money in (payments by received_on), money out (expenses by paid_on) and refunds_out (customer refunds by refunded_on, cash out too). Admin only.';
 
 -- v_month_cash_flow: refunds_out and refunds_count at the end. money_out stays the expenses (a closed month answers from its
 -- snapshot); a refund is locked in a closed month, so refunds are always read live.
@@ -295,7 +295,7 @@ left join live_refunds f on f.month = k.month
 where (select public.current_user_role()) = 'admin';
 
 comment on view public.v_month_cash_flow is
-  '0079, 0117: cash in vs out per month, gross, voided payments left out, every expense category; refunds_out is what was paid back to customers (not in money_out). A closed month answers from its snapshot. Admin only.';
+  '0079, 0126: cash in vs out per month, gross, voided payments left out, every expense category; refunds_out is what was paid back to customers (not in money_out). A closed month answers from its snapshot. Admin only.';
 
 -- cash_in_hand: refunds paid in cash leave the box like a cash expense (latest count + top-ups - cash expenses - cash refunds, since the count).
 create or replace function public.cash_in_hand()
@@ -376,7 +376,7 @@ as $$
                and p.voided_at is null)
           + (select count(*) from public.expenses e, b
              where e.paid_via = 'bank' and e.bank_month is null and e.paid_on <= b.m_end)
-          + (select count(*) from public.customer_refunds r, b   -- 0117: a refund paid by bank is ticked too
+          + (select count(*) from public.customer_refunds r, b   -- 0126: a refund paid by bank is ticked too
              where r.paid_via = 'bank' and r.bank_month is null and r.refunded_on <= b.m_end))::int as n
     union all
     select 'fbr_deposits_unticked',
@@ -446,7 +446,7 @@ as $$
     select e.amount_pkr as amount, e.paid_on from public.expenses e, b
     where e.paid_via = 'bank' and e.bank_month is null and e.paid_on <= b.m_end
     union all
-    select r.amount, r.refunded_on from public.customer_refunds r, b   -- 0117: a refund paid by bank is money out on the statement
+    select r.amount, r.refunded_on from public.customer_refunds r, b   -- 0126: a refund paid by bank is money out on the statement
     where r.paid_via = 'bank' and r.bank_month is null and r.refunded_on <= b.m_end
   ),
   prior as (

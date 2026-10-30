@@ -60,7 +60,7 @@ left join app a on a.company_id = c.company_id
 where (select public.current_user_role()) = 'admin';
 
 comment on view public.v_company_credit is
-  '0118: the unapplied money a customer holds: overpayments (credit notes included, they lower the order gross) less refunds less credit applied to other orders. Admin only.';
+  '0127: the unapplied money a customer holds: overpayments (credit notes included, they lower the order gross) less refunds less credit applied to other orders. Admin only.';
 
 revoke all on public.v_company_credit from public, anon, authenticated;
 grant select on public.v_company_credit to authenticated;
@@ -173,7 +173,7 @@ declare
 begin
   def := pg_catalog.pg_get_functiondef('public.void_invoice(uuid, text)'::regprocedure);
   if strpos(def, a1) = 0 then
-    raise exception '0118: void_invoice was not in the expected shape';
+    raise exception '0127: void_invoice was not in the expected shape';
   end if;
   patched := replace(def, a1, 'select coalesce(sum(p.amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = v.order_id)
       into v_paid from public.payments_in p where p.order_id = v.order_id and p.voided_at is null;');
@@ -181,7 +181,7 @@ begin
 
   def := pg_catalog.pg_get_functiondef('public.delete_order(uuid)'::regprocedure);
   if strpos(def, a2) = 0 then
-    raise exception '0118: delete_order was not in the expected shape';
+    raise exception '0127: delete_order was not in the expected shape';
   end if;
   patched := replace(def, a2, 'if exists (select 1 from public.payments_in p where p.order_id = p_order_id)
      or exists (select 1 from public.credit_applications a where a.to_order_id = p_order_id)
@@ -264,7 +264,7 @@ begin
     select case when iv.invoice_count > 0 then iv.invoice_gross else t.gross end as g
   ) b
   cross join lateral (
-    select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as settled   -- 0118: plus the credit applied to this order
+    select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as settled   -- 0127: plus the credit applied to this order
     from public.payments_in p where p.order_id = o.id and p.voided_at is null
   ) s
   cross join lateral (
@@ -336,7 +336,7 @@ cross join lateral (
 ) rv
 left join public.order_costs oc on oc.order_id = o.id
 cross join lateral (
-  select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as settled   -- 0118: plus the credit applied to this order
+  select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as settled   -- 0127: plus the credit applied to this order
   from public.payments_in p where p.order_id = o.id and p.voided_at is null
 ) s
 cross join lateral (
@@ -389,7 +389,7 @@ as $$
       and (select public.current_user_role()) = 'admin'
   ),
   paid as (
-    -- 0118: cash + WHT by the day received, and the credit applied to the order by the day it was applied
+    -- 0127: cash + WHT by the day received, and the credit applied to the order by the day it was applied
     select x.ordid, sum(x.amt) as paid
     from (
       select p.order_id as ordid, p.amount + p.wht_amount as amt
@@ -519,7 +519,7 @@ as $$
       where v.order_id = o.id and v.voided_at is null
     ) iv
     cross join lateral (
-      select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as settled, max(p.received_on) as last_paid_on   -- 0118: plus applied credit
+      select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as settled, max(p.received_on) as last_paid_on   -- 0127: plus applied credit
       from public.payments_in p
       where p.order_id = o.id and p.voided_at is null
     ) py
@@ -687,7 +687,7 @@ as $$
                and p.voided_at is null)
           + (select count(*) from public.expenses e, b
              where e.paid_via = 'bank' and e.bank_month is null and e.paid_on <= b.m_end)
-          + (select count(*) from public.customer_refunds r, b   -- 0117: a refund paid by bank is ticked too
+          + (select count(*) from public.customer_refunds r, b   -- 0126: a refund paid by bank is ticked too
              where r.paid_via = 'bank' and r.bank_month is null and r.refunded_on <= b.m_end))::int as n
     union all
     select 'fbr_deposits_unticked',
@@ -717,7 +717,7 @@ as $$
               and ob.g > 0
               and (select coalesce(sum(p.amount + p.wht_amount), 0) from public.payments_in p
                    where p.order_id = o.id and p.received_on <= b.m_end and p.voided_at is null)
-                   + (select coalesce(sum(a.amount), 0) from public.credit_applications a   -- 0118: credit applied counts as settled
+                   + (select coalesce(sum(a.amount), 0) from public.credit_applications a   -- 0127: credit applied counts as settled
                       where a.to_order_id = o.id and a.applied_on <= b.m_end) >= ob.g - 1)::int
     union all
     select 'fbr_pending',
@@ -759,7 +759,7 @@ as $$
     select e.amount_pkr as amount, e.paid_on from public.expenses e, b
     where e.paid_via = 'bank' and e.bank_month is null and e.paid_on <= b.m_end
     union all
-    select r.amount, r.refunded_on from public.customer_refunds r, b   -- 0117: a refund paid by bank is money out on the statement
+    select r.amount, r.refunded_on from public.customer_refunds r, b   -- 0126: a refund paid by bank is money out on the statement
     where r.paid_via = 'bank' and r.bank_month is null and r.refunded_on <= b.m_end
   ),
   prior as (
@@ -800,7 +800,7 @@ as $$
       and ob.g > 0
       and (select coalesce(sum(p.amount + p.wht_amount), 0) from public.payments_in p
            where p.order_id = o.id and p.received_on <= b.m_end and p.voided_at is null)
-                   + (select coalesce(sum(a.amount), 0) from public.credit_applications a   -- 0118: credit applied counts as settled
+                   + (select coalesce(sum(a.amount), 0) from public.credit_applications a   -- 0127: credit applied counts as settled
                       where a.to_order_id = o.id and a.applied_on <= b.m_end) >= ob.g - 1
   ),
   pending as (

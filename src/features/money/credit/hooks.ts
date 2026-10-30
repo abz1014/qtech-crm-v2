@@ -3,7 +3,7 @@ import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/money/credit/api'
 
-/** Customer credit hooks (0117, 0118). Admin only: pass `enabled = isAdmin`, so nobody else makes the request. */
+/** Customer credit hooks (0126, 0127). Admin only: pass `enabled = isAdmin`, so nobody else makes the request. */
 export function useCompanyCredit(companyId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: qk.companies.part(companyId ?? '', 'credit'),

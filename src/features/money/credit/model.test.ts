@@ -3,7 +3,7 @@ import { applyDefault, applyNote, creditEvents, NO_CREDIT, refundDefault, refund
 
 const credit = (balance: number): CreditSummary => ({ overpaid: balance, refunded: 0, applied: 0, balance })
 
-describe('customer credit rules (0117, 0118)', () => {
+describe('customer credit rules (0126, 0127)', () => {
   it('the panel shows with credit to give out, or a history to read, and not otherwise', () => {
     expect(showCredit(NO_CREDIT, 0, 0)).toBe(false)
     expect(showCredit(credit(320), 0, 0)).toBe(true)

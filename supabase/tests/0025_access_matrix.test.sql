@@ -130,12 +130,12 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'order_engineers',     '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_engineers"
   ('table', 'order_costs',         '',           'SIUD', '',     ''),     -- s10 "order_costs"
   ('table', 'invoices',            '',           'SIUD', 'SIU',  ''),     -- s10 "invoices (changed, A2)"
-  ('table', 'customer_refunds',    '',           'SUD',  '',     ''),     -- 0117: cash out, admin only; made by record_refund, only the bank tick is edited
-  ('table', 'credit_applications', '',           'SUD',  '',     ''),     -- 0117: credit put against another order, admin only; made by apply_credit
+  ('table', 'customer_refunds',    '',           'SUD',  '',     ''),     -- 0126: cash out, admin only; made by record_refund, only the bank tick is edited
+  ('table', 'credit_applications', '',           'SUD',  '',     ''),     -- 0126: credit put against another order, admin only; made by apply_credit
   ('table', 'credit_notes',        '',           'SI',   'S',    ''),     -- 0112: admin issues (create_credit_note), admin and sales read, nobody edits or deletes one
   ('function', 'create_credit_note', '',         'X',    '',     ''),     -- 0112: admin only (42501 for everyone else)
-  ('function', 'record_refund',    '',           'X',    '',     ''),     -- 0118: admin only
-  ('function', 'apply_credit',     '',           'X',    '',     ''),     -- 0118: admin only
+  ('function', 'record_refund',    '',           'X',    '',     ''),     -- 0127: admin only
+  ('function', 'apply_credit',     '',           'X',    '',     ''),     -- 0127: admin only
   ('function', 'void_invoice',     '',           'X',    '',     ''),     -- 0112: admin only
   ('function', 'record_payment',   '',           'X',    '',     ''),     -- 0114: admin only
   ('function', 'next_credit_note_number', '',    'X',    'X',    ''),     -- 0112: the next CN number, admin and sales
@@ -164,7 +164,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_order_state',       '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_invoice_state',     '',           'S',    'S',    ''),     -- s10 "v_invoice_state, v_gst_register"
   ('view',  'v_gst_register',      '',           'S',    'S',    ''),     -- s10 (same row)
-  ('view',  'v_company_credit',    '',           'S',    '',     ''),     -- 0118: what a customer holds unapplied, admin only
+  ('view',  'v_company_credit',    '',           'S',    '',     ''),     -- 0127: what a customer holds unapplied, admin only
   ('view',  'v_wht_deducted',      '',           'S',    '',     ''),     -- 0116: withholding tax the customers deducted, admin only
   ('view',  'v_order_money',       '',           'S',    '',     ''),     -- s10 "v_order_money, v_cash_month, v_payment_net, v_target_progress"
   ('view',  'v_cash_month',        '',           'S',    '',     ''),     -- s10 (same row)
@@ -369,10 +369,10 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
 -- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
 update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
-insert into public.orders (id, company_id, owner_id) values (pg_temp.f('f5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0118: an order that still owes
+insert into public.orders (id, company_id, owner_id) values (pg_temp.f('f5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0127: an order that still owes
 insert into public.order_items (id, order_id, position, description, unit_price_net) values (pg_temp.f('f6'), pg_temp.f('f5'), 0, 'Owing line', 100);
-insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0117
-insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0118
+insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0126
+insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0127
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.payments_in (id, order_id, amount, voided_at, voided_by, void_reason) values   -- 0073: voided just now by the admin
   (pg_temp.f('c0'), pg_temp.f('20'), 50, now(), 'a0000000-0000-4000-8000-000000000001', 'fixture');
@@ -463,8 +463,8 @@ insert into spec values
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
-  ('customer_refunds', '', 'id = @f1', 'bank_month', $q$insert into public.customer_refunds (id, company_id, amount) values (@f3, @01, 5)$q$),   -- 0117
-  ('credit_applications', '', 'id = @f2', 'company_id', $q$insert into public.credit_applications (id, company_id, to_order_id, amount) values (@f4, @01, @f5, 5)$q$),   -- 0118
+  ('customer_refunds', '', 'id = @f1', 'bank_month', $q$insert into public.customer_refunds (id, company_id, amount) values (@f3, @01, 5)$q$),   -- 0126
+  ('credit_applications', '', 'id = @f2', 'company_id', $q$insert into public.credit_applications (id, company_id, to_order_id, amount) values (@f4, @01, @f5, 5)$q$),   -- 0127
   ('credit_notes', '', 'id = @d3', 'reason', $q$insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (@d4, 'CN-P', @26, 10, 2, 'probe')$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
@@ -624,8 +624,8 @@ insert into probes values
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
   ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
-  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0118
-  ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0118
+  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0127
+  ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0127
   ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
   ('record_payment', '', 'X', $q$select 1 from (select public.record_payment(gen_random_uuid(), @20, public.today_pkt(), 7, null, 'bank', true) r) x$q$),   -- 0114
   ('next_credit_note_number', '', 'X', 'select 1 where public.next_credit_note_number() is not null'),   -- 0112

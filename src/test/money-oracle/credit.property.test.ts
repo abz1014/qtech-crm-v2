@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { maxP, minP, sumP, type Paisa } from '@/test/money-oracle/oracle'
 
 /*
- * The oracle for customer credit (0117, 0118), written from the rules and not from the app:
+ * The oracle for customer credit (0126, 0127), written from the rules and not from the app:
  *   settled(order)   cash received + WHT deducted + credit applied to it
  *   receivable       max(gross - settled, 0)                overpaid   max(settled - gross, 0)
  *   credit balance   sum of the customer's overpaid - refunds - credit applied

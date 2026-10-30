@@ -13,7 +13,7 @@ import { useCompanyCredit, useRemoveCreditEntry } from '@/features/money/credit/
 import { creditEvents, showCredit, type CreditEvent } from '@/features/money/credit/model'
 
 /*
- * "Credit balance Rs X" on the company page (0117, 0118). Admin only: it is not rendered for anyone else, and the database refuses
+ * "Credit balance Rs X" on the company page (0126, 0127). Admin only: it is not rendered for anyone else, and the database refuses
  * every read and write of it. The balance is what the customer's orders hold above what they are worth (an overpayment, or a credit
  * note on a paid invoice) less what was refunded and what was put against another order. Two actions: Refund (cash out) and Apply to
  * an order (an allocation: no cash moves). Shown only when there is credit to give or a refund or applied credit to read.

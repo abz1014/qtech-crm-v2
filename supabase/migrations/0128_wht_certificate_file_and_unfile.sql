@@ -18,7 +18,7 @@ alter table public.payments_in
   add constraint payments_in_wht_file_pair check ((wht_certificate_path is null) = (wht_certificate_name is null));
 
 comment on column public.payments_in.wht_certificate_path is
-  '0119: storage path (bucket expense-receipts, wht/{payment_id}/{uuid}.ext) of the WHT certificate the customer sent; optional.';
+  '0128: storage path (bucket expense-receipts, wht/{payment_id}/{uuid}.ext) of the WHT certificate the customer sent; optional.';
 
 create or replace view public.v_wht_deducted with (security_invoker = true) as
 select
@@ -48,7 +48,7 @@ declare
   patched text;
 begin
   if strpos(def, a1) = 0 then
-    raise exception '0119: the month lock function was not in the expected shape';
+    raise exception '0128: the month lock function was not in the expected shape';
   end if;
   patched := replace(def, a1,
     'v_touched := (to_jsonb(new) - ''bank_month'' - ''wht_certificate_path'' - ''wht_certificate_name'')

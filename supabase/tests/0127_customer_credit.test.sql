@@ -1,4 +1,4 @@
--- 0118 customer credit: the balance (overpayments incl. credit notes, less refunds, less credit applied), record_refund and
+-- 0127 customer credit: the balance (overpayments incl. credit notes, less refunds, less credit applied), record_refund and
 -- apply_credit, applied credit as settled money everywhere (order_receivables, v_order_money, aging_as_of), and the money oracle:
 -- receivables = order money = basis = aging, cash month matches, with refunds and applied credit in play.
 -- Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02, engineer a0..03. Fixtures are written as the table owner.
@@ -37,7 +37,7 @@ select pg_temp.adm();
 
 -- Customer 01: order 10 (one line 1000 at 18%: gross 1180, invoiced, paid 1500: overpaid 320), order 11 (one exempt line 500,
 -- invoiced, unpaid), order 13 (one exempt line 50, invoiced, unpaid), order 14 (a line, no invoice). Customer 02: order 20.
-insert into public.companies (id, name) values (pg_temp.u('01'), '0118 Customer'), (pg_temp.u('02'), '0118 Other customer');
+insert into public.companies (id, name) values (pg_temp.u('01'), '0127 Customer'), (pg_temp.u('02'), '0127 Other customer');
 insert into public.orders (id, company_id, owner_id, created_by) values
   (pg_temp.u('10'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001'),
   (pg_temp.u('11'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001'),

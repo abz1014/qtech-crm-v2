@@ -128,8 +128,8 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.payments_in (id, order_id, amount, wht_amount) values (pg_temp.f('d6'), pg_temp.f('d7'), 5, 3);   -- 0116: a payment with withholding tax
-insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0117
-insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('d7'), 5);   -- 0118
+insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0126
+insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('d7'), 5);   -- 0127
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values   -- 0112
   (pg_temp.f('d9'), 'CN-M1', pg_temp.f('26'), 50, 9, 'fixture');
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
@@ -238,11 +238,11 @@ insert into money_cols (obj, col, rule, bug) values
   ('orders', 'legacy_source', 'hidden', null),
   ('payments_in', 'amount', 'hidden', null), ('payments_in', 'legacy_source', 'hidden', null),
   ('payments_in', 'wht_amount', 'hidden', null),   -- 0116: withholding tax deducted by the customer
-  ('customer_refunds', 'amount', 'hidden', null), ('credit_applications', 'amount', 'hidden', null),   -- 0117, 0118
+  ('customer_refunds', 'amount', 'hidden', null), ('credit_applications', 'amount', 'hidden', null),   -- 0126, 0127
   ('v_company_credit', 'overpaid', 'hidden', null), ('v_company_credit', 'refunded', 'hidden', null),
-  ('v_company_credit', 'applied', 'hidden', null), ('v_company_credit', 'balance', 'hidden', null),   -- 0118
+  ('v_company_credit', 'applied', 'hidden', null), ('v_company_credit', 'balance', 'hidden', null),   -- 0127
   ('v_cash_month', 'refunds_out', 'hidden', null), ('v_month_cash_flow', 'refunds_out', 'hidden', null),
-  ('v_month_cash_flow', 'refunds_count', 'info', null),   -- 0117
+  ('v_month_cash_flow', 'refunds_count', 'info', null),   -- 0126
   ('purchase_orders', 'total', 'supplier', null), ('purchase_orders', 'lines', 'supplier', null),
   ('quotations', 'net_total', 'm3', null), ('quotations', 'gst_total', 'm3', null), ('quotations', 'lines', 'm3', null),
   ('recurring_expenses', 'amount', 'hidden', null),

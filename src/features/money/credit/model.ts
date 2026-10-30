@@ -1,7 +1,7 @@
 import { formatAmount, paisaToFixed, toPaisa } from '@/lib/money'
 
 /*
- * Customer credit (0117, 0118): the pure rules. No React and no database.
+ * Customer credit (0126, 0127): the pure rules. No React and no database.
  *
  * A customer's credit balance is what their orders hold above what they are worth (overpayments; a credit note on a paid invoice
  * shows up there too), less what was refunded, less what was put against another order. The database works it out (v_company_credit);

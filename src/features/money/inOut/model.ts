@@ -71,7 +71,7 @@ export interface FlowRow {
   moneyOut: string
   expenses: number
   frozen: boolean
-  /** 0117: money paid back to customers (cash out, not an expense). Absent means none. */
+  /** 0126: money paid back to customers (cash out, not an expense). Absent means none. */
   refunds?: string
   refundCount?: number
 }
@@ -105,7 +105,7 @@ const minus = (a: Amount, b: Amount): string => paisaToFixed(toPaisa(a) - toPais
 export interface CashTotals {
   in: string
   out: string
-  /** 0117: refunds paid back to customers in the period; the net takes them off as well. */
+  /** 0126: refunds paid back to customers in the period; the net takes them off as well. */
   refunds: string
   net: string
   payments: number
@@ -171,7 +171,7 @@ export function profitTotals(p: Period, profits: readonly ProfitRow[]): ProfitTo
  *   gst              GST inside the invoices: collected for FBR, not ours
  *   costsAhead       supplier costs paid before their sale is invoiced, held for it (+), or matched now from earlier (-)
  *   drawingsAndTax   owner drawings and loan repayments, and input tax: cash out that is not a cost
- *   refunds          money paid back to customers (0117): cash out that is not a cost
+ *   refunds          money paid back to customers (0126): cash out that is not a cost
  *   other            what is left; 0 unless a closed month's frozen cash figure differs from the books
  */
 export interface Reconcile {
@@ -271,7 +271,7 @@ export function trend(p: Period, flows: readonly FlowRow[], profits: readonly Pr
   const n = p.kind === 'month' ? 6 : 4
   return Array.from({ length: n }, (_, i) => shiftPeriod(p, i - n + 1)).map(q => {
     const c = cashTotals(q, flows)
-    // 0117: the trend's out is all cash out (expenses and refunds), so in less out is the net beside it
+    // 0126: the trend's out is all cash out (expenses and refunds), so in less out is the net beside it
     return { period: q, label: periodShort(q), in: c.in, out: sum([c.out, c.refunds]), net: c.net, profit: profitTotals(q, profits).profit }
   })
 }

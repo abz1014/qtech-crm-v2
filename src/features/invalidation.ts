@@ -136,7 +136,7 @@ export interface WriteVars {
   'payment.void': { orderId: string }
   'payment.correct': { orderId: string }
   'payment.restore': { orderId: string }
-  /** 0117, 0118: a refund recorded, credit applied to an order, or either taken back: the customer's balance and the cash figures move. */
+  /** 0126, 0127: a refund recorded, credit applied to an order, or either taken back: the customer's balance and the cash figures move. */
   'refund.record': { companyId: string }
   'credit.apply': { companyId: string }
   'credit.remove': { companyId: string }

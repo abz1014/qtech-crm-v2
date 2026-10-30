@@ -1,4 +1,4 @@
--- 0119: the WHT certificate file (the missing flag clears on a number OR a file, attaching works in a closed month, admin only) and
+-- 0128: the WHT certificate file (the missing flag clears on a number OR a file, attaching works in a closed month, admin only) and
 -- clearing a PSID or a tax deposit date on a filed invoice (admin only, audited). Fixture users come from supabase/seed.sql:
 -- admin a0..01, sales a0..02, engineer a0..03. Fixtures are written as the table owner.
 begin;
@@ -34,7 +34,7 @@ create function pg_temp.code_(persona text, stmt text, keep boolean default fals
 
 select pg_temp.adm();
 
-insert into public.companies (id, name) values (pg_temp.u('01'), '0119 Customer');
+insert into public.companies (id, name) values (pg_temp.u('01'), '0128 Customer');
 insert into public.orders (id, company_id, owner_id, created_by) values
   (pg_temp.u('10'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001');
 insert into public.order_items (id, order_id, position, description, unit_price_net, gst_rate, created_by) values

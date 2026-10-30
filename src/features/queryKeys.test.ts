@@ -269,7 +269,7 @@ describe('invalidation map: stale screens found in review', () => {
     }
   })
 
-  it('a refund or applied credit (0117, 0118) refreshes the customer credit, the cash figures and every balance', async () => {
+  it('a refund or applied credit (0126, 0127) refreshes the customer credit, the cash figures and every balance', async () => {
     for (const w of ['refund.record', 'credit.apply', 'credit.remove'] as const) {
       for (const key of [qk.companies.part('c1', 'credit'), qk.money.monthEnd.cashFlow(), qk.money.receivables.list(), qk.companies.part('c1', 'money')])
         expect(await staleAfter(w, { companyId: 'c1' }, key), `${w} ${JSON.stringify(key)}`).toBe(true)

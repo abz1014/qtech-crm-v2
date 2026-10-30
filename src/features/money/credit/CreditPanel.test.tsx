@@ -7,7 +7,7 @@ import { CreditPanel } from '@/features/money/credit/CreditPanel'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
-/* 0117, 0118: the company page's "Credit balance" with Refund and Apply to an order (admin only, short forms). */
+/* 0126, 0127: the company page's "Credit balance" with Refund and Apply to an order (admin only, short forms). */
 
 const VIEW = { company_id: 'c1', overpaid: 320, refunded: 100, applied: 0, balance: 220 }
 const REFUND = { id: 'r1', company_id: 'c1', order_id: null, refunded_on: '2026-10-09', amount: 100, paid_via: 'bank', reference: 'RF-1', reason: 'goodwill', bank_month: null, created_at: '2026-10-09T10:00:00+00:00', created_by: 'u' }

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 
 /*
- * Customer refunds and credit (migrations 0117 to 0119), end to end against the local CI stack, through the real login form and the same
+ * Customer refunds and credit (migrations 0126 to 0128), end to end against the local CI stack, through the real login form and the same
  * REST door the app uses: an overpayment becomes a credit balance on the company page, Refund pays part of it back (cash out), Apply
  * puts the rest against another order of the same customer (no cash moves), a WHT certificate file clears the missing flag, and sales
  * cannot clear a PSID. Synthetic data only.

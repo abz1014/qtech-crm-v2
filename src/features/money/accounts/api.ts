@@ -26,9 +26,9 @@ export interface WhtRow {
   month: string
   amount: number
   certificateNo: string | null
-  /** The missing flag clears when a number OR a file exists (0119). */
+  /** The missing flag clears when a number OR a file exists (0128). */
   certificateMissing: boolean
-  /** 0119: the certificate file, kept in the admin-only expense-receipts bucket. */
+  /** 0128: the certificate file, kept in the admin-only expense-receipts bucket. */
   certificatePath: string | null
   certificateName: string | null
 }
@@ -70,7 +70,7 @@ export async function loadWhtDeducted(): Promise<WhtRow[]> {
   }))
 }
 
-/** The bucket a WHT certificate file lives in: payments are admin only, and so is this one (0119). */
+/** The bucket a WHT certificate file lives in: payments are admin only, and so is this one (0128). */
 export const WHT_BUCKET = 'expense-receipts'
 
 export interface WhtCertificateSave {
@@ -85,7 +85,7 @@ export interface WhtCertificateSave {
 
 /**
  * Save the certificate number and/or file of one payment with WHT. The file goes to wht/{payment_id}/{uuid}.ext; a row that cannot
- * be written takes its new object back out. Attaching is allowed in a closed month (0119); the number is not (0116's month lock).
+ * be written takes its new object back out. Attaching is allowed in a closed month (0128); the number is not (0116's month lock).
  */
 export async function saveWhtCertificate(v: WhtCertificateSave): Promise<void> {
   const db = requireSupabase()

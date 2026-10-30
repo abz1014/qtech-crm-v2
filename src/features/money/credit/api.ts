@@ -6,7 +6,7 @@ import { orderRef } from '@/lib/refs'
 import { NO_CREDIT, type ApplyTarget, type CreditApplication, type CreditRefund, type CreditSummary } from '@/features/money/credit/model'
 
 /*
- * Customer credit (0117, 0118): every database call for this area. Admin only, enforced by Row Level Security; the hooks pass
+ * Customer credit (0126, 0127): every database call for this area. Admin only, enforced by Row Level Security; the hooks pass
  * `enabled`, so nobody else makes these requests. A refund and an applied credit are written by record_refund() and apply_credit(),
  * the one door for each (the tables give the API no INSERT).
  */
@@ -74,7 +74,7 @@ export interface RefundInsert {
   paidVia: PaidVia
   reference: string | null
   reason: string | null
-  /** The person saw "Looks like a refund already recorded on ..." and chose to record it anyway (0118). */
+  /** The person saw "Looks like a refund already recorded on ..." and chose to record it anyway (0127). */
   confirmDuplicate?: boolean
 }
 

@@ -1,4 +1,4 @@
--- 0117 customer refunds: the table is admin only and has no API insert, a refund is cash OUT in v_cash_month, v_month_cash_flow,
+-- 0126 customer refunds: the table is admin only and has no API insert, a refund is cash OUT in v_cash_month, v_month_cash_flow,
 -- cash_in_hand and the bank tick, and the month lock covers it. Fixture users come from supabase/seed.sql: admin a0..01,
 -- sales a0..02, engineer a0..03. Fixtures are written as the table owner. Dates are in 2020 so no other test row shares the month.
 begin;
@@ -32,7 +32,7 @@ create function pg_temp.code_(persona text, stmt text, keep boolean default fals
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
-insert into public.companies (id, name) values (pg_temp.u('01'), '0117 Customer');
+insert into public.companies (id, name) values (pg_temp.u('01'), '0126 Customer');
 insert into public.orders (id, company_id, owner_id, created_by) values
   (pg_temp.u('10'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001');
 insert into public.payments_in (id, order_id, received_on, amount) values (pg_temp.u('40'), pg_temp.u('10'), '2020-02-03', 1500);

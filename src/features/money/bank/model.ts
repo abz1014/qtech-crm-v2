@@ -8,7 +8,7 @@ import { GROUP_LABEL, monthEnd, monthKeyLabel, monthStart, type CategoryGroup } 
  * A statement month M ("2026-10") shows, for money in (bank payments) and money out (bank expenses plus FBR deposits):
  *  - the lines already ticked against M (bank_month / tax_bank_month = M), whatever their own date;
  *  - the lines not ticked yet and dated up to the end of M. Those dated before M are "older".
- * Cash items never appear (paid_via = 'cash'). A refund paid back to a customer by bank (0117) is money out like a bank expense. An FBR deposit is one bank debit for a PSID, however many invoices it
+ * Cash items never appear (paid_via = 'cash'). A refund paid back to a customer by bank (0126) is money out like a bank expense. An FBR deposit is one bank debit for a PSID, however many invoices it
  * covers, so the invoices of a PSID are ONE line that ticks together. Amounts are the bank amounts: for an expense the
  * full debit (amount_pkr, input tax included), for a deposit the deposit amount (the GST amount when none was typed).
  */
@@ -47,7 +47,7 @@ export interface RawDeposit {
   bankMonth: string | null
 }
 
-/** 0117: a refund paid back to a customer by bank: money out on the statement. */
+/** 0126: a refund paid back to a customer by bank: money out on the statement. */
 export interface RawRefund {
   id: string
   refundedOn: string
