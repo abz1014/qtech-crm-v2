@@ -18,12 +18,12 @@ export const profileSchema = z.object({
   bank_account_title: text(200, 'the account title'),
   bank_iban: text(60, 'the IBAN'),
   quotation_validity_days: z
-    .number({ invalid_type_error: 'Enter the number of days a quotation stays valid.' })
+    .number({ error: 'Enter the number of days a quotation stays valid.' })
     .int('Use whole days.')
     .min(1, 'A quotation must be valid for at least 1 day.')
     .max(365, 'Keep the validity to a year or less.'),
   default_payment_terms_days: z
-    .number({ invalid_type_error: 'Enter the number of days customers have to pay.' })
+    .number({ error: 'Enter the number of days customers have to pay.' })
     .int('Use whole days.')
     .min(0, 'Payment terms cannot be negative.')
     .max(365, 'Keep the terms to a year or less.'),

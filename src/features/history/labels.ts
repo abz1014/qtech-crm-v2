@@ -42,6 +42,8 @@ export const HISTORY_CHILD_TABLES = [
   'supplier_orders',
   'order_costs',
   'order_engineers',
+  'customer_refunds',
+  'credit_applications',
 ] as const
 
 export const LABELS: Record<string, Record<string, ColumnSpec>> = {
@@ -113,6 +115,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     bank_month: ticked,
     corrects_payment_id: hide,
     credited_user_id: r('Credited to'),
+    invoice_id: hide,
     order_id: hide,
     paid_via: paidVia(),
     received_on: d('Date received'),
@@ -195,6 +198,25 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     site_id: r('Site'),
   },
   company_sites: { address: t('Address'), company_id: hide, name: t('Site name') },
+  // 0126: money paid back to a customer, and credit put against another order (admin only, under the company)
+  customer_refunds: {
+    amount: m('Refund'),
+    bank_month: ticked,
+    company_id: hide,
+    order_id: r('Paid back from order'),
+    paid_via: paidVia(),
+    reason: t('Reason'),
+    reference: t('Reference'),
+    refunded_on: d('Date refunded'),
+  },
+  credit_applications: {
+    amount: m('Credit applied'),
+    applied_on: d('Date applied'),
+    company_id: hide,
+    from_order_id: r('Taken from order'),
+    note: t('Note'),
+    to_order_id: r('Applied to order'),
+  },
   recurring_expenses: {
     active: b('Active'),
     amount: m('Amount'),
@@ -273,6 +295,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     unit_price_net: m('Unit price, net'),
   },
   supplier_orders: {
+    cancelled_with_supplier_on: d('Cancelled with supplier on'),
     chase_count: hide,
     currency: t('Currency'),
     delivered_on: d('Delivered on'),

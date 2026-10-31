@@ -73,6 +73,10 @@ select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @02, public
 select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 10, @20)::text$q$), 'E:P0001:order_company', 'an order of another customer is refused');
 select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 100, @14, 'bank', 'RF-1', 'goodwill')::text$q$, true), 'ok:', 'a refund of 100 is recorded');
 select is((select balance from public.v_company_credit where company_id = pg_temp.u('01')), 220.00::numeric, 'the balance is 220');
+select is((select overpaid_by from public.order_receivables(pg_temp.u('10'))), 220.00::numeric, 'the refund came out of order 10''s overpayment (the oldest order that held enough): it is overpaid by 220 now, not 320');
+select is((select overpaid_by from public.v_order_money where order_id = pg_temp.u('10')), 220.00::numeric, 'order money says the same');
+select is((select order_id from public.customer_refunds where id = pg_temp.u('50')), pg_temp.u('10'), 'and the refund names its source order');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@5a, @01, public.today_pkt(), 10, @11)::text$q$), 'E:P0001:refund_exceeds_order', 'a refund from an order that holds no credit is refused');
 select is((select refunded from public.v_company_credit where company_id = pg_temp.u('01')), 100.00::numeric, 'refunded 100');
 select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, public.today_pkt(), 100)::text$q$), 'E:P0001:duplicate_refund', 'the same amount on the same day is a duplicate');
 select is(pg_temp.code_('admin', $q$select public.record_refund(@51, @01, public.today_pkt() - 4, 30, null, 'bank', ' rf-1 ')::text$q$), 'E:P0001:duplicate_refund', 'so is the same reference, capitals and spaces ignored');
@@ -90,6 +94,22 @@ select throws_ok($$select public.apply_credit(gen_random_uuid(), gen_random_uuid
 select is((select receivable from public.v_order_money where order_id = pg_temp.u('11')), 500.00::numeric, 'before: order 11 owes 500');
 select is(pg_temp.code_('admin', $q$select public.apply_credit(@60, @11, 120, null, 'from the overpayment')::text$q$, true), 'ok:', '120 of credit goes to order 11');
 select is((select balance from public.v_company_credit where company_id = pg_temp.u('01')), 0.00::numeric, 'the balance is used up');
+select is((select overpaid_by from public.order_receivables(pg_temp.u('10'))), 0.00::numeric, 'order 10 no longer shows as overpaid: the 320 went out as refunds and applied credit');
+select is((select from_order_id from public.credit_applications where id = pg_temp.u('60')), pg_temp.u('10'), 'the applied credit names its source order');
+select is(pg_temp.code_('admin', $q$select public.apply_credit(@64, @11, 1, null, null, @13)::text$q$), 'E:P0001:credit_exceeds_balance', 'nothing is left to apply from anywhere');
+select is(pg_temp.code_('admin', $q$select public.void_payment(@40, 'typed twice')::text$q$), 'E:P0001:credit_overdrawn', 'GUARD: voiding the payment that funded the refunds and applied credit is refused');
+select is(pg_temp.code_('admin', $q$select public.delete_payment(@40)::text$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is deleting it');
+select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 2, 'STATEMENT: the two refunds are rows');
+select is((select sum(debit) from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 200.00::numeric, 'as debits (they raise what the customer owes)');
+select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'credit_applied' and debit = 0 and credit = 0 and order_number = 11), 1,
+  'STATEMENT: the applied credit is one memo row on the target order, no debit and no credit');
+select is((select sum(debit) - sum(credit) from public.customer_statement(pg_temp.u('01'))),
+          (select coalesce(sum(r.balance), 0) from public.order_receivables() r where r.company_id = pg_temp.u('01')
+             and exists (select 1 from public.invoices v where v.order_id = r.order_id and v.voided_at is null)) - (select balance from public.v_company_credit where company_id = pg_temp.u('01')),
+  'STATEMENT: the closing balance is what the orders owe less the credit held');
+select is(public.company_credit_balance(pg_temp.u('01')), (select balance from public.v_company_credit where company_id = pg_temp.u('01')), 'the role-free balance equals the view');
+select is((select count(*)::int from public.order_credit_rows(pg_temp.u('01')) r join public.v_order_money m on m.order_id = r.order_id
+           where r.available is distinct from m.overpaid_by), 0, 'and the role-free per order credit equals overpaid_by on every order');
 select is((select applied from public.v_company_credit where company_id = pg_temp.u('01')), 120.00::numeric, 'applied 120');
 select is(pg_temp.code_('admin', $q$select public.apply_credit(@61, @11, 1)::text$q$), 'E:P0001:credit_exceeds_balance', 'and no more can be applied');
 select is((select count(*)::int from public.payments_in where order_id = pg_temp.u('11')), 0, 'applied credit is an allocation record: no payment row');
@@ -145,6 +165,7 @@ select is(pg_temp.code_('admin', $q$select public.void_invoice(@31, 'wrong')::te
 select is(pg_temp.code_('admin', $q$delete from public.credit_applications where to_order_id = @13 returning 1$q$, true), 'ok:1', 'an applied credit is removed by deleting it (open month)');
 select is((select payment_state from public.order_receivables(pg_temp.u('13'))), 'unpaid', 'order 13 owes again');
 select is((select balance from public.v_company_credit where company_id = pg_temp.u('01')), 168.00::numeric, 'and the credit is back: 118 + 50');
+insert into public.payments_in (id, order_id, received_on, amount) values (pg_temp.u('42'), pg_temp.u('14'), public.today_pkt(), 80);   -- order 14 is worth 70: 10 over
 insert into public.customer_refunds (id, company_id, order_id, amount) values (pg_temp.u('54'), pg_temp.u('01'), pg_temp.u('14'), 3);
 select is(pg_temp.code_('admin', $q$select count(*)::text from public.delete_order(@14)$q$), 'E:P0001:has_payment', 'an order a refund points to is kept');
 select is(left(pg_temp.code_('admin', $q$update public.credit_applications set amount = 5 returning 1$q$), 8), 'E:42501:', 'an application cannot be edited');
@@ -158,7 +179,7 @@ select is(pg_temp.code_('admin', $q$select public.apply_credit(@63, @13, 5, '201
 -- merge_companies carries refunds and applied credit to the kept customer
 select lives_ok($$select public.merge_companies('11800000-0000-4000-8000-000000000002', '11800000-0000-4000-8000-000000000001')$$, 'merging customer 01 into 02 works');
 select is((select count(*)::int from public.customer_refunds where company_id = pg_temp.u('02')), 3, 'the refunds moved with it');
-select is((select balance from public.v_company_credit where company_id = pg_temp.u('02')), 165.00::numeric, 'and the balance stays 165 (the 3 refund is taken off)');
+select is((select balance from public.v_company_credit where company_id = pg_temp.u('02')), 175.00::numeric, 'and the balance stays 175 (the 10 order 14 holds, less the 3 refunded from it)');
 
 select * from finish();
 rollback;

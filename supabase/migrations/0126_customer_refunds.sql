@@ -4,7 +4,7 @@
 -- figures and the books; 0127 adds the customer credit balance and applying credit, 0128 the WHT certificate file and the
 -- rule on clearing a filing.
 --
---   customer_refunds     one row per refund: company, optional order, amount PKR, refunded_on, paid_via (bank | cash, as payments_in),
+--   customer_refunds     one row per refund: company, optional order (the order whose overpayment it was paid back from), amount PKR, refunded_on, paid_via (bank | cash, as payments_in),
 --                        reference, reason, bank_month (the bank tick, as payments_in). Admin only. It is cash OUT. Rows are made by
 --                        record_refund() (0127), the one door that checks the customer has the credit; the table gives the API no
 --                        INSERT. The audit trigger records every row; a refund is removed by deleting it (admin, open month).
@@ -51,6 +51,8 @@ create table public.credit_applications (
   created_by  uuid default auth.uid() references public.users (id) on delete restrict,
   company_id  uuid not null references public.companies (id) on delete restrict,
   to_order_id uuid not null references public.orders (id) on delete restrict,
+  -- the order whose overpayment the credit comes from, when known: that order's overpaid_by drops by the amount (0127)
+  from_order_id uuid references public.orders (id) on delete restrict,
   applied_on  date not null default public.today_pkt(),
   amount      numeric(14,2) not null check (amount > 0 and amount < 100000000),
   note        text check (char_length(note) <= 300)
@@ -62,6 +64,7 @@ comment on table public.credit_applications is
 
 create index credit_applications_company_idx on public.credit_applications (company_id);
 create index credit_applications_order_idx on public.credit_applications (to_order_id);
+create index credit_applications_from_idx on public.credit_applications (from_order_id) where from_order_id is not null;
 create index credit_applications_applied_idx on public.credit_applications (applied_on);
 
 -- Structure only (the credit checks are in record_refund / apply_credit). A refund's order must be the customer's own; an application
@@ -112,6 +115,14 @@ begin
       raise exception 'That order belongs to another customer.' using errcode = 'P0001', hint = 'order_company';
     end if;
     new.company_id := v_company;
+    if new.from_order_id is not null then
+      if new.from_order_id = new.to_order_id then
+        raise exception 'Credit cannot be applied from an order to itself.' using errcode = 'P0001', hint = 'same_order';
+      end if;
+      if (select o.company_id from public.orders o where o.id = new.from_order_id) is distinct from v_company then
+        raise exception 'That order belongs to another customer.' using errcode = 'P0001', hint = 'order_company';
+      end if;
+    end if;
     new.note := nullif(btrim(new.note), '');
   end if;
   return new;
@@ -153,6 +164,11 @@ create policy credit_applications_update on public.credit_applications for updat
   using ((select public.current_user_role()) = 'admin') with check ((select public.current_user_role()) = 'admin');
 create policy credit_applications_delete on public.credit_applications for delete to authenticated, qtech_engineer
   using ((select public.current_user_role()) = 'admin');
+
+-- Record history (0090): both tables are children of the company, shown to the admin under the company's history.
+insert into public.history_sources (child_table, parent_table, parent_col, label_col, roles) values
+  ('customer_refunds',   'companies', 'company_id', 'reference', '{admin}'),
+  ('credit_applications', 'companies', 'company_id', 'note',      '{admin}');
 
 -- ================================================================ the month lock
 do $do$

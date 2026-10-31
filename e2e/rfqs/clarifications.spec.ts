@@ -315,13 +315,13 @@ test.describe('files (R10)', () => {
     await expect(pdfLink).toHaveAttribute('target', '_blank')
     expect(await pdfLink.getAttribute('href')).toContain('/storage/v1/object/sign/rfq-files/')
 
-    // Delete asks once, then removes the row and the object.
+    // Delete asks once, then removes the row; the object stays in storage for 30 days (0120).
     await files.getByRole('button', { name: 'Delete enquiry.pdf' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Delete file' }).click()
     await expect(toast(page, 'File deleted')).toBeVisible()
     const pdf = atts.find(a => a.file_name === 'enquiry.pdf') as (typeof atts)[number]
     await expect.poll(async () => (await attsOf(s.rfq.id)).length).toBe(2)
-    await expect.poll(() => objectStatus(pdf.path)).not.toBe(200)
+    expect(await objectStatus(pdf.path)).toBe(200)
     await expect(files.getByRole('listitem')).toHaveCount(2)
   })
 

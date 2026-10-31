@@ -300,7 +300,7 @@ export default defineConfig(({ command, mode }) => ({
               // The picture reader (tesseract.js, src/lib/docread/ocrRuntime.ts: its lazy chunk, and its worker, engine and language
               // data under assets/ocr/) is the same: about 6 MB, fetched the first time a picture is read. So is the spreadsheet reader
               // (SheetJS, src/lib/docread/sheetRuntime.ts), fetched the first time an .xlsx, .xls or .csv is read.
-              globIgnores: ['**/assets/pdfjsRuntime-*', '**/assets/pdf.worker*', '**/assets/ocrRuntime-*', '**/assets/ocr/**', '**/assets/sheetRuntime-*'],
+              globIgnores: ['**/assets/pdfjsRuntime-*', '**/assets/pdf.worker*', '**/assets/pdfWorker-*', '**/assets/ocrRuntime-*', '**/assets/ocr/**', '**/assets/sheetRuntime-*'],
               maximumFileSizeToCacheInBytes: 5_000_000,
               manifestTransforms: [
                 async entries => ({

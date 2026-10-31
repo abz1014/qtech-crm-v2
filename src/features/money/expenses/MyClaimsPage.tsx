@@ -28,7 +28,7 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'ima
 
 export function MyClaimsPage() {
   const session = useSession()
-  if (session.status !== 'signed-in' || session.user.role !== 'engineer') return <NoAccessPage area="I paid" />
+  if (session.status !== 'signed-in' || session.user.role !== 'engineer' && session.user.role !== 'sales') return <NoAccessPage area="I paid" />
   return <MyClaims />
 }
 
@@ -78,7 +78,7 @@ function MyClaims() {
 
   return (
     <div className="mx-auto grid w-full max-w-[720px] grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
-      <PageHeader title="I paid" lede={<span className="text-base">Money you paid yourself for work. The office pays you back once it is approved.</span>} />
+      <PageHeader title="I paid" lede={<span className="text-base">Money you paid yourself for work. The office pays you back once it is approved, now or a little later.</span>} />
       <form
         className="grid gap-4 rounded-panel border bg-surface p-4 text-base"
         autoComplete="off"
@@ -180,6 +180,10 @@ function ClaimLine({ claim, onWithdraw, busy }: { claim: Claim; onWithdraw: () =
     claim.status === 'pending' ? (
       <StatusText tone="waiting" className="text-base">
         Waiting
+      </StatusText>
+    ) : claim.status === 'owed' ? (
+      <StatusText tone="waiting" className="text-base">
+        Approved, the office owes you
       </StatusText>
     ) : claim.status === 'approved' ? (
       <StatusText tone="done" className="text-base">

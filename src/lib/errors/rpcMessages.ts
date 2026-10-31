@@ -174,6 +174,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   // 0098: a product category is renamed and curated by an admin (HINT admin_only)
   { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
+  { match: /^Only an admin can (see|do) this\.$/, message: () => ADMIN_ONLY },   // 0120: admin_health, confirm_backup_decrypt_test
   { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
   { match: /^This RFQ has an order\. / },
   { match: /^This order has an invoice\. / },
@@ -218,6 +219,19 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Looks like a payment already recorded on / },
   { match: /^Rs (.+?) for 1 (.+?) is more than 20 percent away from the latest rate / },
   { match: /^0115: /, internal: true },
+  // 0121 (supplier debt on a cancelled order) and 0122 (reassign owner): already plain.
+  { match: /^Only an admin cancels a supplier order with the supplier\./ },
+  { match: /^That supplier order was not found\./ },
+  { match: /^This supplier order was never placed, so there is nothing to cancel with the supplier\./ },
+  { match: /^Only an admin can change who owns an enquiry, job or order\./ },
+  { match: /^Choose a current salesperson or admin as the new owner\./ },
+  { match: /^Only an admin can see a person's open work\./ },
+  { match: /^Choose someone else to take the work over\./ },
+  { match: /^Unknown kind /, internal: true },
+  { match: /^Only an admin pays back an expense claim\./ },
+  { match: /^This claim is not waiting to be paid back\./ },
+  { match: /^That invoice is not on this order\./ },
+  { match: /^That invoice is void, so a payment cannot be tied to it\./ },
   // 0126 to 0128: customer refunds, credit balance and applied credit, the WHT certificate file, clearing a filing. Already plain; the HINTs
   // (refund_exceeds_credit, duplicate_refund, credit_exceeds_balance, credit_exceeds_order, order_company, admin_only_unfile) pass on as `hint`.
   { match: /^Only an admin (records a refund|applies credit)\.$/, message: () => ADMIN_ONLY },
@@ -229,6 +243,10 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This customer holds Rs (.+?) of credit, / },
   { match: /^Looks like a refund already recorded on / },
   { match: /^That order only owes Rs / },
+  { match: /^That order holds only Rs / },
+  { match: /^The source order holds only Rs / },
+  { match: /^Credit cannot be applied from an order to itself\.$/ },
+  { match: /^This would leave more refunded or applied credit than / },
   { match: /^Only an admin can clear a PSID or a tax deposit date once it is recorded\.$/, message: () => ADMIN_ONLY },
   { match: /^012[678]: /, internal: true },
   // 0096 (money truth): linking imported invoices to their orders, and the owner's review of imported records. Already plain.

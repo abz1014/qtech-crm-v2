@@ -55,6 +55,10 @@ test.describe('customer refunds and credit', () => {
     const cash = await must(rest<{ refunds_out: number }[]>('admin', `v_cash_month?month=eq.${month}&select=refunds_out`))
     expect(Number(cash[0].refunds_out)).toBeGreaterThanOrEqual(10000)
 
+    // the refund came out of order A's overpayment: A is overpaid by 22,000 now, not 32,000
+    const aAfterRefund = await must(rest<{ overpaid_by: number }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: a.id } }))
+    expect(Number(aAfterRefund[0].overpaid_by)).toBe(22000)
+
     // the same refund again is a duplicate until confirmed
     await panel.getByRole('button', { name: 'Refund' }).click()
     const again = page.getByRole('dialog').last()
@@ -82,6 +86,8 @@ test.describe('customer refunds and credit', () => {
     const money = await must(rest<{ receivable: number; settled: number }[]>('admin', `v_order_money?order_id=eq.${b.id}&select=receivable,settled`))
     expect(Number(money[0].receivable)).toBe(1600)
     expect(Number(money[0].settled)).toBe(22000)
+    const aAfterApply = await must(rest<{ overpaid_by: number }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: a.id } }))
+    expect(Number(aAfterApply[0].overpaid_by)).toBe(0)
     const credit = await must(rest<{ balance: number; refunded: number; applied: number }[]>('admin', `v_company_credit?company_id=eq.${company.id}&select=*`))
     expect(credit[0]).toMatchObject({ balance: 0, refunded: 10000, applied: 22000 })
     await expect(panel.getByRole('button', { name: 'Refund' })).toHaveCount(0)

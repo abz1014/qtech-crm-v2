@@ -349,7 +349,6 @@ export async function deleteReceipt(r: Pick<InvoiceReceipt, 'id' | 'path'>): Pro
   const db = requireSupabase()
   const { error } = await db.from('attachments').delete().eq('id', r.id)
   if (error) throw error
-  await db.storage.from(RECEIPT_BUCKET).remove([r.path])
 }
 
 export async function signReceipt(path: string, seconds = 600): Promise<string> {

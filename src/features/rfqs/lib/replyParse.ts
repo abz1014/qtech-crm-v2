@@ -79,6 +79,9 @@ export interface ReplyOffer {
   /** true: ex-stock / in stock. false: out of stock / made to order. null: not said. */
   inStock: boolean | null
   origin: string | null
+  /** Weight of ONE unit as the supplier wrote it, with its unit (kg, g or lb), else null. */
+  weight: number | null
+  weightUnit: WeightUnit | null
   moq: number | null
   validityText: string | null
   validityDays: number | null
@@ -381,6 +384,54 @@ function findOrigin(w: string, raw: string): ({ text: string } & Span) | null {
   return { text: [...new Set(parts)].join(', '), start, end }
 }
 
+// ------------------------------------------------------------------------------------------------ weight
+
+export type WeightUnit = 'kg' | 'g' | 'lb'
+export interface ParsedWeight {
+  value: number
+  unit: WeightUnit
+}
+
+/** "kg", "kgs", "kilos", "gm", "grams", "lbs", "pounds" to the stored unit; null for anything else. */
+export function weightUnitOf(text: string): WeightUnit | null {
+  const t = text.trim().toLowerCase().replace(/\.$/, '')
+  if (/^(?:kgs?|kilograms?|kilos?)$/.test(t)) return 'kg'
+  if (/^(?:g|gm|gms|grams?)$/.test(t)) return 'g'
+  if (/^(?:lbs?|pounds?)$/.test(t)) return 'lb'
+  return null
+}
+
+const WEIGHT_UNIT_SRC = String.raw`kgs?|kilograms?|kilos?|gms?|grams?|g|lbs?|pounds?`
+const WEIGHT_LABEL_RE = new RegExp(
+  String.raw`\b(net\s*(?:wt|weight)|gross\s*(?:wt|weight)|unit\s*(?:wt|weight)|weight|wt)\b\.?\s*(?:\([^)]{0,12}\))?\s*[:=-]?\s*(?:approx\.?|about|~)?\s*(\d[\d,]*(?:\.\d+)?)\s*(${WEIGHT_UNIT_SRC})\b`,
+  'gi',
+)
+
+/** The weight in the reply's own words ("Net wt 2.5 kg", "Weight: 400 g", "gross weight 3 lbs"); net beats gross when both are given. */
+function findWeight(w: string): ({ weight: ParsedWeight } & Span) | null {
+  let best: { weight: ParsedWeight; rank: number; start: number; end: number } | null = null
+  WEIGHT_LABEL_RE.lastIndex = 0
+  for (let m = WEIGHT_LABEL_RE.exec(w); m; m = WEIGHT_LABEL_RE.exec(w)) {
+    const unit = weightUnitOf(m[3] ?? '')
+    const value = Number((m[2] ?? '').replace(/,/g, ''))
+    if (!unit || !Number.isFinite(value) || value <= 0) continue
+    const label = (m[1] ?? '').toLowerCase()
+    const rank = label.startsWith('net') || label.startsWith('unit') ? 0 : label.startsWith('gross') ? 2 : 1
+    if (!best || rank < best.rank) best = { weight: { value, unit }, rank, start: m.index, end: m.index + m[0].length }
+  }
+  return best ? { weight: best.weight, start: best.start, end: best.end } : null
+}
+
+/** A weight cell of a table ("0.1 kg", "250 g", or a bare "2.5" under a heading that names the unit). */
+function weightFromCell(cell: string, headUnit: WeightUnit | null): ParsedWeight | null {
+  const m = /^~?\s*(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z.]*)$/.exec(cell.trim())
+  if (!m) return null
+  const value = Number((m[1] ?? '').replace(/,/g, ''))
+  if (!Number.isFinite(value) || value <= 0) return null
+  const unit = m[2] ? weightUnitOf(m[2]) : headUnit ?? 'kg'
+  return unit ? { value, unit } : null
+}
+
 // ------------------------------------------------------------------------------------------------ regret
 
 const REGRET_RE = new RegExp(
@@ -434,6 +485,7 @@ interface LineFields {
   lead: LeadTime | null
   inStock: boolean | null
   origin: string | null
+  weight: ParsedWeight | null
   moq: number | null
   validityText: string | null
   validityDays: number | null
@@ -593,7 +645,7 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
   const orig = raw.replace(/\u00a0/g, ' ')
   let w = orig.replace(/[–—−]/g, '-').replace(/×/g, 'x')
   const f: LineFields = {
-    prices: [], lead: null, inStock: null, origin: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null, question: false,
+    prices: [], lead: null, inStock: null, origin: null, weight: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null, question: false,
   }
 
   const v = findValidity(w, orig, today)
@@ -620,6 +672,11 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
   if (org) {
     f.origin = org.text
     w = blank(w, org)
+  }
+  const wt = findWeight(w)
+  if (wt) {
+    f.weight = wt.weight
+    w = blank(w, wt)
   }
   const q = findQty(w)
   if (q) {
@@ -665,7 +722,7 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
 }
 
 const hasData = (f: LineFields): boolean =>
-  f.prices.length > 0 || f.lead !== null || f.inStock !== null || f.origin !== null || f.moq !== null || f.validityText !== null
+  f.prices.length > 0 || f.lead !== null || f.inStock !== null || f.origin !== null || f.weight !== null || f.moq !== null || f.validityText !== null
 
 // ------------------------------------------------------------------------------------------------ item matching
 
@@ -828,6 +885,8 @@ interface TableCols {
   qty: number
   lead: number
   origin: number
+  weight: number
+  weightUnit: WeightUnit | null
   moq: number
   valid: number
   cur: number
@@ -849,7 +908,7 @@ function splitCells(line: string): string[] | null {
   return cells.length >= 2 ? cells : null
 }
 
-const HEADER_WORD = /^(?:#|no\.?|sr\.?|s\/n|sl|item|items|description|desc|product|particulars|qty|quantity|unit\s*price|price|rate|lead\s*time|lead|delivery|total|amount|origin|country|moq|currency|brand|make|model|part\s*(?:no|number)?|validity|remarks?|unit|uom|stock|availability|pos|menge|einzelpreis|gesamtpreis|beschreibung|bezeichnung|artikel|lieferzeit)\b/i
+const HEADER_WORD = /^(?:#|no\.?|sr\.?|s\/n|sl|item|items|description|desc|product|particulars|qty|quantity|unit\s*price|price|rate|lead\s*time|lead|delivery|total|amount|origin|country|weight|wt|gewicht|moq|currency|brand|make|model|part\s*(?:no|number)?|validity|remarks?|unit|uom|stock|availability|pos|menge|einzelpreis|gesamtpreis|beschreibung|bezeichnung|artikel|lieferzeit)\b/i
 
 function tableHeader(cells: string[]): TableCols | null {
   if (cells.length < 3) return null
@@ -873,6 +932,8 @@ function tableHeader(cells: string[]): TableCols | null {
     qty: find(/^(?:qty|quantity|q'ty|nos|menge|anzahl)\b/i),
     lead: leadAt,
     origin: find(/origin|country/i),
+    weight: find(/weight|\bwt\b|gewicht/i),
+    weightUnit: weightUnitOf(/\b(kgs?|kilos?|gms?|grams?|g|lbs?|pounds?)\b/i.exec(cells[find(/weight|\bwt\b|gewicht/i)] ?? '')?.[1] ?? ''),
     moq: find(/moq/i),
     valid: find(/valid/i),
     cur: find(/^(?:currency|cur|ccy)$/i),
@@ -905,6 +966,7 @@ function alignShortRow(cells: string[], cols: TableCols): string[] | null {
     if (i === cols.qty) return empty ? -1 : /^\d+(?:\.\d+)?$/.test(c) ? 2 : -2
     if (i === cols.lead) return empty ? 0 : findLeadTime(c, c) ? 2 : -1
     if (i === cols.origin) return empty ? 0 : /^[A-Za-z][A-Za-z .&/-]*$/.test(c) && !/\d/.test(c) ? 1 : -1
+    if (i === cols.weight) return empty ? 0 : weightFromCell(c, cols.weightUnit) ? 1 : -1
     if (i === cols.moq) return empty ? 0 : /^\d+$/.test(c) ? 1 : -1
     if (i === cols.cur) return empty ? 0 : normaliseCurrency(c) ? 1 : -1
     return 0
@@ -1065,6 +1127,7 @@ function analyseRow(cells: string[], cols: TableCols, today: string | undefined)
     }
   }
   if (cols.origin >= 0 && !f.origin && cell(cols.origin) && !/^[-–—]+$/.test(cell(cols.origin))) f.origin = cell(cols.origin)
+  if (cols.weight >= 0 && !f.weight) f.weight = weightFromCell(cell(cols.weight), cols.weightUnit)
   if (cols.moq >= 0 && f.moq === null && /^\d+$/.test(cell(cols.moq))) f.moq = Number(cell(cols.moq))
   if (cols.valid >= 0 && !f.validityText && cell(cols.valid)) {
     const vv = findValidity(`valid ${cell(cols.valid)}`, `valid ${cell(cols.valid)}`, today)
@@ -1317,7 +1380,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
   const regretLines: Array<{ kind: RegretKind; text: string }> = []
   const questionLines: string[] = []
   const globals: LineFields = {
-    prices: [], lead: null, inStock: null, origin: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null, question: false,
+    prices: [], lead: null, inStock: null, origin: null, weight: null, moq: null, validityText: null, validityDays: null, qty: null, declaredCurrency: null, regret: null, question: false,
   }
   let current: Draft | null = null
   /** The item of a table row that only points to the next row ("pls see below"). */
@@ -1331,6 +1394,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     t.lead ??= f.lead
     t.inStock ??= f.inStock
     t.origin ??= f.origin
+    t.weight ??= f.weight
     t.moq ??= f.moq
     t.validityText ??= f.validityText
     if (t.validityDays === null) t.validityDays = f.validityDays
@@ -1624,6 +1688,8 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
       leadTimeDaysMin: lead?.daysMin ?? null,
       inStock,
       origin,
+      weight: d.f.weight?.value ?? null,
+      weightUnit: d.f.weight?.unit ?? null,
       moq: d.f.moq,
       validityText,
       validityDays,

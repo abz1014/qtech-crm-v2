@@ -39,7 +39,9 @@ import {
   reasonLabel,
   type RateTable,
   type SuggestionSet,
+  type ItemExtras,
   type ReplyDraft,
+  type WeightUnit,
 } from '@/features/rfqs/lib'
 import { parseReplyPrice, replyPriceProblem } from '@/features/rfqs/lib/replyPrice'
 
@@ -52,7 +54,7 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  * one row per supplier with "Enter reply" or "Edit reply". That opens this dialog (a bottom sheet on a phone), and only then the
  * price form: a price per item, the currency already filled in (the supplier's last currency, else the country map: "there is
  * nothing to pick"), lead time and stock once for the whole reply. While a price is typed the row says what it reads as in PKR at
- * today's rate, and whether it would be the lowest; with no rate it says the reply can be saved and the rate added afterwards.
+ * today's rate (never whether it is the lowest); with no rate it says the reply can be saved and the rate added afterwards.
  *
  *   FE-2  supplier reply   Enter reply, one typed price per item, currency never typed, then Save reply
  *         can't quote      Enter reply, Can't quote, the reason (the five reasons sit behind one menu, not five buttons)
@@ -74,8 +76,8 @@ export function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCou
   return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `chased ×${inquiry.chaseCount}` : undefined} />
 }
 
-/** What a typed price reads as in PKR at today's rate, and whether it would be the lowest (C-40). */
-function PricePreview({ itemId, amount, currency, others, rates }: { itemId: string; amount: number; currency: string; others: InquiryRow[]; rates: RateTable }) {
+/** What a typed price reads as in PKR at today's rate. It never says whether it is the lowest: the CRM suggests no supplier. */
+function PricePreview({ amount, currency, rates }: { amount: number; currency: string; rates: RateTable }) {
   if (!currency || currency === 'PKR') return null
   const rate = rates[currency]
   const usable = rate && rate.staleness !== 'unusable' && rate.ageDays <= 30
@@ -89,15 +91,12 @@ function PricePreview({ itemId, amount, currency, others, rates }: { itemId: str
       </p>
     )
   }
-  const existing = others.flatMap(i => i.lines.filter(l => l.itemId === itemId).map(l => ({ id: l.id, amount: l.unitPrice, currency: l.currency })))
-  const cmp = comparePrices([...existing, { id: 'new', amount, currency }], rates)
+  const cmp = comparePrices([{ id: 'new', amount, currency }], rates)
   const mine = cmp.lines.find(l => l.id === 'new')
   if (!mine || mine.pkrPaisa === null) return null
-  const lowest = mine.lowest
   return (
     <p className="text-sm text-fg-muted" data-preview="rate">
       {`Reads as ≈ PKR ${formatPaisa(mine.pkrPaisa)} at today's ${currency} rate.`}
-      {lowest ? ` It would be the lowest of ${cmp.comparableCount} comparable prices.` : ''}
     </p>
   )
 }
@@ -126,6 +125,12 @@ export function CantQuoteMenu({ supplierName, busy, onPick, className }: { suppl
   )
 }
 
+const WEIGHT_UNITS = [
+  { value: 'kg', label: 'kg' },
+  { value: 'g', label: 'g' },
+  { value: 'lb', label: 'lb' },
+]
+
 /** The one-tap chips for a supplier with no currency on file: the usual four first, then the rest. */
 const CURRENCY_CHIPS = ['USD', 'EUR', 'CNY', 'PKR', ...REPLY_CURRENCIES.filter(c => !['USD', 'EUR', 'CNY', 'PKR'].includes(c))]
 
@@ -133,7 +138,6 @@ export function SupplierReplyDialog({
   rfq,
   items,
   inquiry,
-  inquiries,
   rates,
   focusItemId,
   onClose,
@@ -141,7 +145,8 @@ export function SupplierReplyDialog({
   rfq: RfqHeader
   items: RfqItemRow[]
   inquiry: InquiryRow
-  inquiries: InquiryRow[]
+  /** The other suppliers' replies. No longer read here (the price preview names no lowest), kept so callers need no change. */
+  inquiries?: InquiryRow[]
   rates: RateTable
   /** The item whose price box gets the cursor ("Edit reply" on a price row); else the first price box. */
   focusItemId?: string
@@ -154,7 +159,7 @@ export function SupplierReplyDialog({
   const itemReason = useSetItemDecline(rfq.id)
 
   const prefill = currencyForSupplier(inquiry.lastCurrency, inquiry.supplierCountry)
-  const existing = inquiry.lines.map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock }))
+  const existing = inquiry.lines.map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock, weight: l.weight, weightUnit: l.weightUnit, origin: l.origin }))
   const [draft, setDraft] = useState<ReplyDraft>(() => draftFromLines(existing, prefill.currency))
   const [changeCurrency, setChangeCurrency] = useState(false)
   const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
@@ -169,7 +174,6 @@ export function SupplierReplyDialog({
   // the guard does not switch off and on again between keystrokes (HW-48).
   const unread = items.some(it => !inquiry.itemDeclines[it.id] && typeof draft.prices[it.id] !== 'number' && replyPriceProblem(priceText[it.id] ?? '') !== null)
   const typed = Object.values(draft.prices).filter(p => typeof p === 'number' && p > 0).length
-  const others = inquiries.filter(i => i.id !== inquiry.id)
 
   const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : prefill.source === 'none' ? `${draft.currency}, picked by you` : `${draft.currency}, changed by you`
   const currencyOptions = [...new Set([draft.currency, prefill.currency, ...REPLY_CURRENCIES].filter(Boolean))].map(c => ({ value: c, label: c }))
@@ -460,7 +464,7 @@ export function SupplierReplyDialog({
                           {problem}
                         </p>
                       ) : null}
-                      {!reason && typeof price === 'number' && price > 0 ? <PricePreview itemId={it.id} amount={price} currency={draft.currency} others={others} rates={rates} /> : null}
+                      {!reason && typeof price === 'number' && price > 0 ? <PricePreview amount={price} currency={draft.currency} rates={rates} /> : null}
                     </li>
                   )
                 })}
@@ -490,6 +494,48 @@ export function SupplierReplyDialog({
                   />
                 </label>
               </div>
+              <details className="text-sm" open={Object.keys(draft.extras ?? {}).length > 0 || undefined} data-reply-extras="">
+                <summary className="w-fit cursor-pointer text-fg-muted hover:text-fg">Weight and country of origin (optional)</summary>
+                <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement; nothing is worked out from it.</p>
+                <ul className="mt-2 grid gap-3">
+                  {items
+                    .filter(it => !inquiry.itemDeclines[it.id])
+                    .map(it => {
+                      const x = draft.extras?.[it.id] ?? { weight: null, weightUnit: 'kg' as const, origin: '' }
+                      const patch = (p: Partial<ItemExtras>) => setDraft(d => ({ ...d, extras: { ...d.extras, [it.id]: { ...x, ...p } } }))
+                      return (
+                        <li key={it.id} className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+                          <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
+                            <span className="num mr-2 text-fg-muted">{it.number}</span>
+                            {it.description}
+                          </span>
+                          <span className="grid grid-cols-[minmax(0,1fr)_84px_minmax(0,1.3fr)] gap-2">
+                            <NumberInput
+                              aria-label={`Weight of one unit, item ${it.number} from ${inquiry.supplierName}`}
+                              value={x.weight}
+                              onChange={v => patch({ weight: v })}
+                              placeholder="Weight"
+                              min={0}
+                            />
+                            <Select
+                              aria-label={`Weight unit, item ${it.number} from ${inquiry.supplierName}`}
+                              options={WEIGHT_UNITS}
+                              value={x.weightUnit}
+                              onChange={e => patch({ weightUnit: e.target.value as WeightUnit })}
+                            />
+                            <TextField
+                              aria-label={`Country of origin, item ${it.number} from ${inquiry.supplierName}`}
+                              value={x.origin}
+                              onChange={e => patch({ origin: e.target.value })}
+                              placeholder="Country"
+                              maxLength={60}
+                            />
+                          </span>
+                        </li>
+                      )
+                    })}
+                </ul>
+              </details>
               {draft.currency ? (
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
                   <span>{`Prices in ${currencyNote}.`}</span>

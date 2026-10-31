@@ -166,6 +166,7 @@ function settings() {
     profile: () => [...all, 'company-profile'] as const,
     /** 0110: the GST pay-by and file-by days and the one-off dates. */
     gstDeadlines: () => [...all, 'gst-deadlines'] as const,
+    health: () => [...all, 'health'] as const,
     /** The signed-in person's own users row (Your details). */
     myDetails: () => [...all, 'my-details'] as const,
     /** M06: every targets read (rows and progress); invalidate this one after any target write. */
@@ -226,7 +227,7 @@ function money() {
       /** Every expense paid from one month to another (the Expenses report's period, 0086). */
       range: (from: string, to: string) => [...expenses, 'range', from, to] as const,
       /** 0087: engineers' "I paid" claims: 'pending' (the admin's To approve) or 'mine' (an engineer's own), and one claim's photos. */
-      claims: (scope: 'pending' | 'mine') => [...expenses, 'claims', scope] as const,
+      claims: (scope: 'pending' | 'mine' | 'owed') => [...expenses, 'claims', scope] as const,
       claimPhotos: (claimId: string) => [...expenses, 'claims', 'photos', claimId] as const,
       /** 0087: the office cash box (cash in hand), which every cash expense moves. */
       cash: () => [...expenses, 'cash-in-hand'] as const,

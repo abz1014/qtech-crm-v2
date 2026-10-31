@@ -6,7 +6,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
-import { useApproveClaim, useClaimPhotos, usePendingClaims, useRejectClaim } from '@/features/money/expenses/hooks'
+import { useApproveClaim, useClaimPhotos, useOweClaim, usePendingClaims, useRejectClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, signClaimPhoto, type Claim, type PaidHow } from '@/features/money/expenses/claimsApi'
 import { miscCategories, pkr, sortGroups, type Category, type ExpenseGroup } from '@/features/money/expenses/model'
 import { pickableCategories } from '@/features/money/expenses/quick'
@@ -43,6 +43,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
 function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: readonly Category[]; groups: readonly ExpenseGroup[] }) {
   const toast = useToast()
   const approve = useApproveClaim()
+  const owe = useOweClaim()
   const reject = useRejectClaim()
   const photos = useClaimPhotos(claim.id)
   const [categoryId, setCategoryId] = useState('ca7e0000-0000-4000-8000-000000000004')
@@ -56,7 +57,7 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
       .map(g => ({ g, items: ok.filter(c => c.groupId === g.id).sort((a, b) => a.sort - b.sort) }))
       .filter(x => x.items.length > 0)
   }, [categories, groups])
-  const busy = approve.isPending || reject.isPending
+  const busy = approve.isPending || reject.isPending || owe.isPending
   const others = useMemo(() => miscCategories(categories, groups), [categories, groups])
   const isOther = !!categories.find(c => c.id === categoryId)?.isMisc
   const title = [claim.note?.trim(), claim.byName].filter(Boolean).join(' · ')
@@ -165,6 +166,26 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
           <span className="flex flex-wrap gap-2">
             <Button size="touch" variant="quiet" onClick={() => setRejecting(true)} disabled={busy} aria-label={`Not approved…, ${label}`} className="text-base">
               Not approved…
+            </Button>
+            <Button
+              size="touch"
+              variant="quiet"
+              busy={owe.isPending}
+              busyLabel="Saving"
+              disabled={busy}
+              aria-label={`Approve, pay later: ${label}`}
+              onClick={() =>
+                owe.mutate(
+                  { id: claim.id, categoryId },
+                  {
+                    onSuccess: () => toast.toast({ title: `Approved, owed to ${claim.byName}`, body: `${label} · ${categories.find(c => c.id === categoryId)?.name ?? ''} · mark it paid back when you pay`, tone: 'success' }),
+                    onError: e => setError(mapPgError(e, { entity: 'expense' }).message),
+                  },
+                )
+              }
+              className="text-base"
+            >
+              Approve, pay later
             </Button>
             <Button
               size="touch"

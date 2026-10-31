@@ -161,9 +161,9 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
           </FormField>
         ) : null}
         {showOrder ? (
-          <FormField<Values, 'orderId'> name="orderId" label="For order" requirement="optional" help="Only to remember which order it was for. It changes no balance.">
+          <FormField<Values, 'orderId'> name="orderId" label="Paid back from order" requirement="optional" help="Which order's overpayment it comes from. Left empty, it is taken from the oldest order that holds enough.">
             {f => (
-              <Select {...f} options={[{ value: '', label: 'No particular order' }, ...(orders.data ?? []).map(o => ({ value: o.orderId, label: orderRef(o.orderNumber) }))]} />
+              <Select {...f} options={[{ value: '', label: 'Oldest order that holds enough' }, ...(orders.data ?? []).map(o => ({ value: o.orderId, label: orderRef(o.orderNumber) }))]} />
             )}
           </FormField>
         ) : null}
@@ -175,7 +175,7 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
           {!showRef ? <LinkButton onClick={() => setShowRef(true)}>Add a reference</LinkButton> : null}
           {!showReason ? <LinkButton onClick={() => setShowReason(true)}>Add a reason</LinkButton> : null}
-          {!showOrder ? <LinkButton onClick={() => setShowOrder(true)}>Link to an order</LinkButton> : null}
+          {!showOrder ? <LinkButton onClick={() => setShowOrder(true)}>Choose the order</LinkButton> : null}
           {!showVia ? (
             <span>
               Paid via <b className="font-medium text-fg-2">{PAID_VIA_LABEL[paidVia as PaidVia]}</b>. <LinkButton onClick={() => setShowVia(true)}>Change</LinkButton>

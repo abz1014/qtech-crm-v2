@@ -194,8 +194,7 @@ export async function readPdfText(input: Input, opts: ReadPdfOptions = {}): Prom
 
   const task = pdfjs.getDocument({
     data: bytes,
-    // The CSP has no 'unsafe-eval': pdf.js must not even probe for it.
-    isEvalSupported: false,
+    // pdf.js 6 has no eval path (the isEvalSupported option is gone), so the CSP needs no 'unsafe-eval'.
     disableFontFace: true,
     useSystemFonts: false,
     enableXfa: false,

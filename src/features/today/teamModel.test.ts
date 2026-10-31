@@ -23,6 +23,7 @@ function data(): TodayData {
     ...base,
     gst: null,
     claims: null,
+    health: null,
     clarifications: [],
     legs: [],
     jobs: [],

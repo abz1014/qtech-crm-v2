@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ConvertItem } from '@/features/orders/lib/convert'
 import type { RankedQuote } from '@/features/orders/lib/ranking'
-import { buildSplitPayload, checkSplit, nextRanked, orderLineCount, partQuantities, type Part } from '@/features/orders/lib/splitConvert'
+import { buildSplitPayload, checkSplit, hasFreeQuote, orderLineCount, partQuantities, type Part } from '@/features/orders/lib/splitConvert'
 
 const item = (id: string, qty: number, price: number | null = 100): ConvertItem => ({ id, description: id, qty, unit: null, quotedUnitPriceNet: price })
 const q = (lineId: string, rank: number | null): RankedQuote => ({
@@ -34,12 +34,12 @@ describe('split quantities', () => {
   })
 })
 
-describe('next ranked supplier', () => {
-  it('offers the best-ranked quote that is not used, unranked last', () => {
-    const quotes = [q('U', null), q('B', 2), q('A', 1), q('C', 3)]
-    expect(nextRanked(quotes, new Set(['A']))?.lineId).toBe('B')
-    expect(nextRanked(quotes, new Set(['A', 'B', 'C']))?.lineId).toBe('U')
-    expect(nextRanked([q('A', 1)], new Set(['A']))).toBeUndefined()
+describe('free quotes for a new part', () => {
+  it('says whether a quote is still unused; it picks none', () => {
+    const quotes = [q('U', null), q('B', 2), q('A', 1)]
+    expect(hasFreeQuote(quotes, new Set(['A']))).toBe(true)
+    expect(hasFreeQuote(quotes, new Set(['A', 'B', 'U']))).toBe(false)
+    expect(hasFreeQuote([q('A', 1)], new Set(['A']))).toBe(false)
   })
 })
 

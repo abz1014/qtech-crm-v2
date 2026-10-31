@@ -24,7 +24,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import type { NextNumber, OrderForInvoice } from '@/features/money/invoices/api'
 import { useCreateInvoice, useInvoiceableOrders, useNextInvoiceNumber, useOrderForInvoice } from '@/features/money/invoices/hooks'
-import { GST_OPTION_LABEL, gstForNet, gstIsShare, gstRowLabel, invoiceStart, orderDueOn, overInvoiced, round2, type GstOption, type InvoiceStart } from '@/features/money/invoices/model'
+import { GST_OPTION_LABEL, gstForNet, gstIsShare, gstRowLabel, invoiceStart, invoiceDueOn, overInvoiced, round2, type GstOption, type InvoiceStart } from '@/features/money/invoices/model'
 import { formatPaisa, toPaisa } from '@/lib/money'
 
 /*
@@ -112,7 +112,7 @@ function InvoiceLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
 const baseSchema = z.object({
   number: z.string().trim().min(1, 'Enter the invoice number').max(40, 'Keep the number under 40 characters'),
   invoiceDate: z.string().min(1, 'Choose a date'),
-  net: z.number({ invalid_type_error: 'Enter the net amount', required_error: 'Enter the net amount' }).positive('The net amount must be above zero').max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit'),
+  net: z.number({ error: 'Enter the net amount' }).positive('The net amount must be above zero').max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit'),
   gst: z.number().min(0, 'GST cannot be below zero').max(MAX_AMOUNT, 'That GST is too large'),
   option: z.enum(['18', 'exempt', 'mixed']),
 })
@@ -177,7 +177,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   const over = typeof net === 'number' ? overInvoiced(net, start, order.amounts.itemsNet) : null
   const profileQ = useCompanyProfile()
   const terms = effectiveTerms(order.amounts.paymentTermsDays, profileQ.data?.default_payment_terms_days)
-  const due = orderDueOn(date, order.amounts.earliestInvoiceDate, terms.days)
+  const due = invoiceDueOn(date, terms.days)
 
   const setNet = (v: number | null) => {
     form.setValue('net', v as number, { shouldDirty: true })

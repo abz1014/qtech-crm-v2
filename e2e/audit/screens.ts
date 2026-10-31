@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import type { Role } from '../support/stack'
+import { must, rest, type Role } from '../support/stack'
 import type { Fixture } from './seed'
 
 /*
@@ -315,7 +315,7 @@ export const VISITS: readonly Visit[] = [
   screen('today', 'Today, with items', ALL, () => '/todo'),
   screen('weekly-review', 'To do: weekly review', ADMIN, () => '/todo/review'),
   screen('capture-pick-job', 'Photo or note: which job (the share target with nothing shared)', ALL, () => '/capture'),
-  screen('engineer-i-paid', 'I paid: my expense claims', ['engineer'], () => '/my-expenses'),
+  screen('engineer-i-paid', 'I paid: my expense claims', ['sales', 'engineer'], () => '/my-expenses'),
   screen('rfqs-open', 'RFQ list, open', ALL, () => '/rfqs'),
   screen('rfqs-closed', 'RFQ list, closed', ALL, () => '/rfqs?tab=closed'),
   screen('rfq-not-sent', 'RFQ page: not sent to suppliers', ALL, fx => `/rfqs/${fx.rfq.notSent}`),
@@ -333,6 +333,19 @@ export const VISITS: readonly Visit[] = [
       if (!fx.rfq.won) throw new Error('the seed has no won RFQ (an older seed.json); reseed to capture it')
       await open(page, withOld(`/rfqs/${fx.rfq.won}`, '1'))
       await capture('rfq-won')
+    },
+  },
+  {
+    // The Comparative Statement of the compare job (4 suppliers, 3 currencies), with the "did not reply" rows on. Admin and sales only.
+    id: 'job-statement',
+    title: 'Job page: Comparative statement (4 suppliers, 3 currencies)',
+    roles: MONEY,
+    screens: ['job-statement'],
+    run: async (page, fx, capture) => {
+      const [rfq] = await must(rest<{ number: number }[]>('admin', `rfqs?id=eq.${fx.rfq.compare}&select=number`))
+      await open(page, `/jobs/${rfq.number}/statement`)
+      await page.getByTestId('statement').waitFor()
+      await capture('job-statement')
     },
   },
   screen('rfq-compare', 'Supplier comparison (4 suppliers, 3 currencies)', ALL, fx => `/rfqs/${fx.rfq.compare}`, { scrollTo: '[data-compared]' }),
@@ -367,11 +380,13 @@ export const VISITS: readonly Visit[] = [
   screen('settings', 'Settings home', ['sales', 'engineer'], () => '/settings'),
   screen('settings-team', 'Settings: team', ADMIN, () => '/settings/team'),
   screen('settings-targets', 'Settings: targets', ADMIN, () => '/settings/targets'),
+  screen('settings-export', 'Settings: export data', ADMIN, () => '/settings/export'),
   screen('settings-categories', 'Settings: expense categories', ADMIN, () => '/settings/categories'),
   screen('settings-product-categories', 'Settings: product categories', ADMIN, () => '/settings/product-categories'),
   screen('settings-company', 'Settings: company profile', ALL, () => '/settings/company'),
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
   screen('settings-exchange-rates', 'Settings: exchange rates', MONEY, () => '/settings/exchange-rates'), // engineers: no currency amounts (2026-10-22)
+  screen('settings-backups', 'Settings: backups and usage', ADMIN, () => '/settings/backups'),
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
   addToJobPasted,
   issueQuotation,

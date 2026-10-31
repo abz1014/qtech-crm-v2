@@ -49,10 +49,13 @@ export interface WriteVars {
   /** users.phone, written straight to the users row (own row, or any row for an admin). */
   'team.set-phone': Record<string, never>
   'team.deactivate': Record<string, never>
+  'owner.reassign': Record<string, never>
   'team.reactivate': Record<string, never>
   'company-profile.update': Record<string, never>
   /** 0110: the admin changed the GST days or a month's one-off date. */
   'gst-deadlines.save': Record<string, never>
+  /** 0120: the admin said they opened a backup with their key (the monthly check). Today's chore row reads it. */
+  'health.confirm-decrypt': Record<string, never>
   /** M06: setting, clearing or copying targets. Today's own tile reads the same numbers. */
   'target.save': Record<string, never>
   /** M13: any change to a category (name, group, paid via, order, active, add, delete). */
@@ -182,11 +185,14 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.set-job-title': () => [qk.settings.team()],
   'team.set-phone': () => [qk.settings.team(), qk.settings.myDetails(), qk.onboarding.all],
   'team.deactivate': () => [qk.settings.team(), qk.onboarding.all],
+  // Who owns an enquiry, job or order shows on every list and header, and on Today (each person's To do is by owner).
+  'owner.reassign': () => [qk.rfqs.all, qk.orders.all, qk.jobs.all, qk.today.all, qk.companies.all, qk.settings.team()],
   'team.reactivate': () => [qk.settings.team(), qk.onboarding.all],
   // The default payment terms move every due date for orders with no terms of their own.
   'company-profile.update': () => [qk.settings.profile(), qk.money.receivables.all, qk.today.all],
   // Every reminder and GST screen reads the dates: the Today list, the GST page and the month-end GST read.
   'gst-deadlines.save': () => [qk.settings.gstDeadlines(), qk.today.all, qk.money.monthEnd.gst()],
+  'health.confirm-decrypt': () => [qk.settings.health(), qk.today.all],
   'target.save': () => [qk.settings.targets(), qk.today.target()],
   // Money's own category list (new expense forms, the Expenses list) reads the same rows, so it goes stale too.
   'category.save': () => [qk.settings.categories(), qk.money.categories(), qk.money.groups()],

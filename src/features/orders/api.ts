@@ -186,6 +186,8 @@ export interface OrderLegRow {
   lastChasedOn: string | null
   chaseCount: number
   inquiryId: string | null
+  /** 0121: the day the supplier agreed to cancel it. Null: still live with the supplier (what is unpaid is still owed). */
+  cancelledWithSupplierOn?: string | null
   /** The lead times the supplier quoted for the lines on this leg (text as written), for the suggested expected date. */
   leadTimes: string[]
 }
@@ -205,6 +207,7 @@ export interface OrderLegsRaw {
     chase_count: number
     inquiry_id: string | null
     created_at: string
+    cancelled_with_supplier_on?: string | null
   }>
   names: ReadonlyMap<string, string>
   quoteLines: ReadonlyArray<{ inquiry_id: string; rfq_item_id: string; lead_time: string | null }>
@@ -249,6 +252,7 @@ export function shapeOrderLegs(raw: OrderLegsRaw, itemRows: readonly Pick<OrderI
       lastChasedOn: l.last_chased_on,
       chaseCount: l.chase_count,
       inquiryId: l.inquiry_id,
+      cancelledWithSupplierOn: l.cancelled_with_supplier_on ?? null,
       leadTimes: raw.quoteLines.filter(q => q.inquiry_id === l.inquiry_id && itemIds.has(q.rfq_item_id) && q.lead_time).map(q => q.lead_time as string),
     }
   })
@@ -468,6 +472,12 @@ export async function setItemRates(rates: ReadonlyArray<{ id: string; gstRate: n
 
 export async function updateLeg(id: string, patch: LegPatch & { reference?: string | null }): Promise<void> {
   const { error } = await requireSupabase().from('supplier_orders').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/** 0121: mark a supplier order cancelled with the supplier (or live again). Admin only; the money follows (We owe suppliers). */
+export async function setSupplierOrderCancelled(legId: string, cancelled: boolean): Promise<void> {
+  const { error } = await requireSupabase().rpc('set_supplier_order_cancelled', { p_leg: legId, p_cancelled: cancelled })
   if (error) throw error
 }
 

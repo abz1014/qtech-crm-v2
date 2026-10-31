@@ -6,6 +6,7 @@ import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { BurstSheet } from '@/features/money/expenses/BurstSheet'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { ClaimsReview } from '@/features/money/expenses/ClaimsReview'
+import { OwedToStaff } from '@/features/money/expenses/OwedToStaff'
 import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses/ExpenseDialog'
 import { ExpensesTab } from '@/features/money/expenses/ExpensesTab'
 import { MiscPromoteBanners } from '@/features/money/expenses/MiscPromote'
@@ -63,6 +64,7 @@ export function ExpensesPage() {
       }
     >
       {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
+      <OwedToStaff />
       {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
       <MiscPromoteBanners />
       <CashInHandLine />

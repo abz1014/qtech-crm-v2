@@ -27,6 +27,9 @@ export type RuleKey =
   | 'weekly_review'
   | 'gst_fbr'
   | 'claims_to_approve'
+  | 'backup_stale'
+  | 'usage_high'
+  | 'decrypt_test'
 
 /** The rule key written to snoozes.rule (DATA_MODEL 2.21 gives `chase_customer_clarification` as the example). */
 export const SNOOZE_RULE: Record<RuleKey, string> = {
@@ -52,6 +55,9 @@ export const SNOOZE_RULE: Record<RuleKey, string> = {
   weekly_review: 'weekly_review',
   gst_fbr: 'gst_fbr',
   claims_to_approve: 'claims_to_approve',
+  backup_stale: 'backup_stale',
+  usage_high: 'usage_high',
+  decrypt_test: 'decrypt_test',
 }
 
 export type TodayTab = 'bids' | 'sourcing' | 'money'
@@ -266,6 +272,21 @@ export interface GstFact {
   /** The pay-by and file-by dates of this month's GST, from Settings > Tax deadlines (0110). Absent: the starting 15th and 18th. */
   payBy?: string
   returnBy?: string
+  /** Older months (before `month`) whose GST is still not deposited, oldest first. Each stays on To do until it is done. */
+  earlier?: GstFact[]
+}
+
+/**
+ * 0120, admin only: the health of the backups and of the free plan. `backupOn` is the Pakistan day of the last successful backup, or of
+ * the day tracking began when none was ever recorded (`backupRecorded` false), so a job that never ran still goes stale. `decryptOn`
+ * likewise for the monthly "open a backup with your key" check.
+ */
+export interface HealthFact {
+  backupOn: string
+  backupRecorded: boolean
+  decryptOn: string
+  dbBytes: number
+  storageBytes: number
 }
 
 /** P3-D, admin only: engineers' "I paid" claims waiting for approval (0087), and the day the oldest was made. */
@@ -314,6 +335,8 @@ export interface TodayInputs {
   gst?: GstFact | null
   /** P3-D. Admin only: engineers' claims to approve. Absent or null for everyone else (never requested). */
   claims?: ClaimsFact | null
+  /** 0120. Admin only: backup age, plan usage, the monthly key check. Absent or null for everyone else (never requested). */
+  health?: HealthFact | null
   /** M08. Admin only: paid orders whose costs are provisional. Absent or empty for everyone else (never requested). */
   costs?: readonly CostFact[]
   /** M08. Admin and sales only: the invoices the FBR and TCS rules read. Absent or empty for an engineer (never requested). */

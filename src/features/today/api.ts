@@ -3,6 +3,7 @@ import { toBusinessDate } from '@/lib/dates'
 import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart, today1 } from '@/features/today/rules'
 import { getGstDeadlines } from '@/features/settings/gstApi'
+import { getHealth } from '@/features/settings/healthApi'
 import { gstDatesFor } from '@/features/settings/gstDeadlines'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { fetchReceivablesList, type ReceivablesListRow } from '@/features/money/payments/api'
@@ -23,6 +24,7 @@ import type {
   SnoozeFact,
   GstFact,
   ClaimsFact,
+  HealthFact,
 } from '@/features/today/types'
 
 /*
@@ -48,6 +50,8 @@ export interface TodayData {
   gst: GstFact | null
   /** P3-D. Admin only: engineers' "I paid" claims waiting. Null otherwise. */
   claims: ClaimsFact | null
+  /** 0120. Admin only: backup age, plan usage and the monthly key check. Null otherwise, and when the function cannot be read. */
+  health: HealthFact | null
   /** M08. Admin only; empty otherwise. */
   costs: CostFact[]
   /** M08. Admin and sales only; empty for an engineer (the read is never made). */
@@ -401,8 +405,62 @@ async function loadGst(today: string): Promise<GstFact> {
         .eq('settled_before_cutover', false),
     ) ?? []
   // the dates are the admin's settings (0110), not a fixed 15th and 18th
-  const { payBy, returnBy } = gstDatesFor(await getGstDeadlines(), month)
-  return { month, invoices: rows.length, undeposited: rows.filter(r => !r.tax_deposited_on).length, payBy, returnBy }
+  const deadlines = await getGstDeadlines()
+  const { payBy, returnBy } = gstDatesFor(deadlines, month)
+  // 0121 (process audit 6): every OLDER month with GST not yet deposited stays on To do until it is done
+  const old = unwrap(
+    await db
+      .from('invoices')
+      .select('invoice_date')
+      .lt('invoice_date', month)
+      .gt('gst_amount', 0)
+      .is('legacy_source', null)
+      .eq('settled_before_cutover', false)
+      .is('tax_deposited_on', null)
+      .not('invoice_date', 'is', null)
+      .limit(5000),
+  ) ?? []
+  return {
+    month,
+    invoices: rows.length,
+    undeposited: rows.filter(r => !r.tax_deposited_on).length,
+    payBy,
+    returnBy,
+    earlier: olderGstMonths(old.map(r => r.invoice_date), deadlines),
+  }
+}
+
+/** Group undeposited invoice dates by month (oldest first), each with its own pay-by and return-by dates. */
+export function olderGstMonths(dates: readonly (string | null)[], deadlines: Parameters<typeof gstDatesFor>[0]): GstFact[] {
+  const count = new Map<string, number>()
+  for (const d of dates) {
+    if (!d) continue
+    const m = `${d.slice(0, 7)}-01`
+    count.set(m, (count.get(m) ?? 0) + 1)
+  }
+  return [...count.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([m, n]) => ({ month: m, invoices: n, undeposited: n, ...gstDatesFor(deadlines, m) }))
+}
+
+/**
+ * 0120, admin only: the backup and plan-usage facts. A failure here must never take the whole list down (the function may not exist yet on
+ * an older database), so it returns null and the three health rows are simply absent.
+ */
+async function loadHealth(): Promise<HealthFact | null> {
+  try {
+    const h = await getHealth()
+    if (!h) return null
+    return {
+      backupOn: toBusinessDate(new Date(h.lastBackupAt ?? h.trackingSince)),
+      backupRecorded: h.lastBackupAt !== null,
+      decryptOn: toBusinessDate(new Date(h.lastDecryptTestAt ?? h.trackingSince)),
+      dbBytes: h.dbBytes,
+      storageBytes: h.storageBytes,
+    }
+  } catch {
+    return null
+  }
 }
 
 /** P3-D, admin only: engineers' pending "I paid" claims (0087): how many, and the day the oldest was made. */
@@ -530,14 +588,14 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   const [{ rfqs, open }, companies, users, snoozes] = await Promise.all([
     loadRfqs(),
     fetchAll((from, to) => db.from('companies').select('id, name, city').order('name').range(from, to)),
-    db.from('users').select('id, role, name, job_title, phone'),
+    db.from('users').select('id, role, name, job_title, phone, deactivated_at'),
     loadSnoozes(today),
   ])
   const names = new Map(companies.map(c => [c.id, c.name]))
   /** Customers read "Name — City"; suppliers stay plain. */
   const labels = new Map(companies.map(c => [c.id, withCity(c.name, c.city)]))
   const money = role === 'admin' || role === 'sales'
-  const [clarifications, inquiries, legs, orders, receivables, monthEnd, gst, claims, costs, invoices, recurring, jobs] = await Promise.all([
+  const [clarifications, inquiries, legs, orders, receivables, monthEnd, gst, claims, health, costs, invoices, recurring, jobs] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open),
     loadLegs(names, labels),
@@ -546,6 +604,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     role === 'admin' ? loadMonthEnd(today) : Promise.resolve<MonthEndFact | null>(null),
     role === 'admin' ? loadGst(today) : Promise.resolve<GstFact | null>(null),
     role === 'admin' ? loadClaims() : Promise.resolve<ClaimsFact | null>(null),
+    role === 'admin' ? loadHealth() : Promise.resolve<HealthFact | null>(null),
     role === 'admin' ? loadCosts() : Promise.resolve<CostFact[]>([]),
     money ? loadInvoiceFacts(today) : Promise.resolve<InvoiceFact[]>([]),
     role === 'admin' ? loadRecurringFacts(today) : Promise.resolve<RecurringFact[]>([]),
@@ -562,16 +621,25 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     monthEnd,
     gst,
     claims,
+    health,
     costs,
     invoices,
     recurring,
     jobs,
     snoozes,
-    roles: Object.fromEntries(userRows.map(u => [u.id, u.role as Role])),
+    roles: activeRoles(userRows),
     jobTitle: userRows.find(u => u.id === user.id)?.job_title ?? null,
     phone: userRows.find(u => u.id === user.id)?.phone ?? null,
     names: Object.fromEntries(userRows.map(u => [u.id, u.name])),
   }
+}
+
+/**
+ * users.role by id for the people who still work here. A deactivated owner has no role entry, so the rules treat their items as
+ * "no owner" and the admin sees them (a departed salesperson no longer hides money follow-ups).
+ */
+export function activeRoles(rows: readonly { id: string; role: string; deactivated_at?: string | null }[]): Record<string, Role> {
+  return Object.fromEntries(rows.filter(u => !u.deactivated_at).map(u => [u.id, u.role as Role]))
 }
 
 export interface TargetProgress {

@@ -8,7 +8,6 @@ import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { TextArea, TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
-import { removeStoredFiles } from '@/features/rfqs/api'
 import { monthKeyLabel, pkr } from '@/features/money/expenses/model'
 import { GST_FILED_WARNING } from '@/features/money/invoices/model'
 import type { InvoiceRow } from '@/features/money/invoices/api'
@@ -28,7 +27,7 @@ import { creditGst, useCreateCreditNote, useCreditNotes, useVoidInvoice } from '
  *   - ticked against a bank statement (tax_bank_month set, hint bank_ticked): the invoice cannot go until it is unticked in Match
  *     bank statement, so there is no Delete, only the sentence and the way there;
  *   - the month's GST return may already be filed (2026-10-26 owner decision): a warning and a tick, then Delete. Never a block.
- * The receipt files the database names are removed from storage afterwards; a file that will not go never undoes the delete.
+ * The receipt files are kept 30 days in the trash, then purged (0120).
  */
 export function bankTickedSentence(taxBankMonth: string): string {
   // After a refusal this page does not know the statement month (it was ticked since the page loaded): say so rather than guess one.
@@ -47,17 +46,14 @@ export function useDeleteInvoiceFlow(invoice: InvoiceRow, opts: { gstMayBeFiled:
   const name = invoice.number ? `invoice ${invoice.number}` : 'this invoice'
 
   const confirm = async () => {
-    let files: Awaited<ReturnType<typeof del.mutateAsync>>
     try {
-      files = await del.mutateAsync(invoice.id)
+      await del.mutateAsync(invoice.id)
     } catch (e) {
       if (mapPgError(e).hint === 'bank_ticked') setRefused(true)
       throw e
     }
-    // The rows are gone: nothing below may throw into the confirm.
-    const failed = await removeStoredFiles(files)
+    // The rows are gone: nothing below may throw into the confirm. Their files stay 30 days in the trash (0120).
     toast({ title: `Deleted ${name}`, body: `${pkr(gross)}${invoice.invoice_date ? ` · ${formatShortDate(invoice.invoice_date, undefined, true)}` : ''}`, tone: 'success' })
-    if (failed.length > 0) toast({ title: 'Some files were not removed', body: `${failed.length} receipt ${failed.length === 1 ? 'file' : 'files'} stayed in storage. The invoice itself is deleted.` })
     opts.onDeleted()
   }
 

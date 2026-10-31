@@ -630,6 +630,12 @@ function howTo(item: TodayItem): string {
       return 'The goods have reached the site and the commissioning has no date yet. Open the order and set the planned date.'
     case 'gst_fbr':
       return 'Last month GST is paid to FBR by the 15th and the return is filed by the 18th. Open Invoices, deposit the tax and record the payment slip number (PSID).'
+    case 'backup_stale':
+      return 'The nightly backup has not run for more than two days. Open GitHub, Actions, Backup, look at the latest run and fix what it says. Until it runs, nothing protects the data.'
+    case 'usage_high':
+      return 'The free plan is filling up. Open Settings, Backups and usage, to see the database and the files. Old files can be deleted; a full plan stops saving.'
+    case 'decrypt_test':
+      return "Once a month, download last night's backup from GitHub and open it with your private key (steps in docs/SUPABASE.md). Then press the button in Settings, Backups and usage."
     case 'claims_to_approve':
       return 'An engineer paid for something and asked to be paid back. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':

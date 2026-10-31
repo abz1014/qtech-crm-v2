@@ -151,6 +151,12 @@ describe('0903 money payables', () => {
     { id: 'L3', orderId: 'P1', currency: 'USD', placedOn: '2025-03-01', priced: [['3.000', '9.0000']], po: { total: 3002n, currency: 'EUR' } },
     { id: 'L8', orderId: 'P1', currency: 'PKR', placedOn: '2025-03-01', priced: [['1.000', '1000.0000']], po: null },
     { id: 'L9', orderId: 'P1', currency: 'PKR', placedOn: '2025-03-01', priced: [['1.000', '1000.0000']], po: null },
+    { id: 'L10', orderId: 'P1', currency: 'PKR', placedOn: '2025-03-01', priced: [['1.000', '1000.0000']], po: null },
+    { id: 'L11', orderId: 'P1', currency: 'PKR', placedOn: '2025-03-01', priced: [['1.000', '1000.0000']], po: null },
+    { id: 'L12', orderId: 'P1', currency: 'USD', placedOn: '2025-03-01', priced: [['1.000', '100.0000']], po: null },
+    { id: 'L13', orderId: 'P2', currency: 'PKR', placedOn: '2025-03-01', priced: [['1.000', '100.0000']], po: null, cancelledWithSupplierOn: '2025-03-20' },
+    { id: 'L14', orderId: 'P2', currency: 'PKR', placedOn: '2025-03-01', priced: [['1.000', '100.0000']], po: null, cancelledWithSupplierOn: '2025-03-20' },
+    { id: 'L6', orderId: 'P2', currency: 'PKR', placedOn: '2025-03-01', priced: [['1.000', '100.0000']], po: null },
   ]
   const rates = [
     { currency: 'USD', rate: '280.000000', asOf: '2025-02-01', manual: false },
@@ -159,8 +165,8 @@ describe('0903 money payables', () => {
     { currency: 'EUR', rate: '300.000000', asOf: '2025-03-01', manual: true },
   ]
   const sp = (id: string, date: string, amount: string, tax: string, legId: string): Expense => exp(id, date, amount, tax, 'order_cost', { legId, supplierPayment: true, orderId: 'P1' })
-  const expenses = [sp('x1', '2025-03-05', '2360', '360', 'L1'), sp('x2', '2025-04-10', '1000', '0', 'L1'), exp('fr', '2025-03-06', '500', '0', 'order_cost', { legId: 'L1' }), sp('x8', '2025-03-07', '970', '0', 'L8'), sp('x9', '2025-03-07', '969.99', '0', 'L9')]
-  const at = (d: string, leg: string) => payablesAsOf(d, legs, [o], expenses, rates).find(p => p.legId === leg)
+  const expenses = [sp('x1', '2025-03-05', '2360', '360', 'L1'), sp('x2', '2025-04-10', '1000', '0', 'L1'), exp('fr', '2025-03-06', '500', '0', 'order_cost', { legId: 'L1' }), sp('x8', '2025-03-07', '970', '0', 'L8'), sp('x9', '2025-03-07', '969.99', '0', 'L9'), sp('x10', '2025-03-07', '999', '0', 'L10'), sp('x11', '2025-03-07', '998.99', '0', 'L11'), sp('x12', '2025-03-07', '27300', '0', 'L12'), sp('x14', '2025-03-10', '40', '0', 'L14')]
+  const at = (d: string, leg: string) => payablesAsOf(d, legs, [o, order('P2', { cancelledOn: '2025-03-15' })], expenses, rates).find(p => p.legId === leg)
 
   it('the legs on the dates the SQL test reads', () => {
     expect(at('2025-03-31', 'L1')).toMatchObject({ committedPkr: 300100n, paid: 200000n, owed: 100100n, state: 'owing' })
@@ -170,8 +176,17 @@ describe('0903 money payables', () => {
     expect(at('2025-04-02', 'L2')?.rate).toBe('281.250000')
     expect(at('2025-04-03', 'L2')).toMatchObject({ state: 'no_rate', rate: null, committedPkr: null })
     expect(at('2025-03-10', 'L3')).toMatchObject({ currency: 'EUR', committedPkr: 900600n })
-    expect(at('2025-03-31', 'L8')).toMatchObject({ owed: 3000n, state: 'settled' })
+    // 0121: the 3% is for foreign legs; a rupee leg is settled within Rs 1
+    expect(at('2025-03-31', 'L8')).toMatchObject({ owed: 3000n, state: 'owing' })
     expect(at('2025-03-31', 'L9')).toMatchObject({ owed: 3001n, state: 'owing' })
+    expect(at('2025-03-31', 'L10')).toMatchObject({ owed: 100n, state: 'settled' })
+    expect(at('2025-03-31', 'L11')).toMatchObject({ owed: 101n, state: 'owing' })
+    expect(at('2025-03-31', 'L12')).toMatchObject({ committedPkr: 2812500n, owed: 82500n, state: 'settled' })
+    // 0121: a leg of a cancelled customer order is still owed until the supplier cancels it
+    expect(at('2025-03-31', 'L6')).toMatchObject({ owed: 10000n, state: 'owing' })
+    expect(at('2025-03-19', 'L13')).toMatchObject({ owed: 10000n })
+    expect(at('2025-03-20', 'L13')).toBeUndefined()
+    expect(at('2025-03-31', 'L14')).toMatchObject({ paid: 4000n, owed: 6000n, state: 'owing' })
   })
 })
 

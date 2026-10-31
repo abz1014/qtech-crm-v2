@@ -78,6 +78,7 @@ const schema = z.object({
   receivedOn: z.string().min(1, 'Choose a date').superRefine(inDateRange(() => businessDateRange())),
   reference: z.string(),
   paidVia: z.enum(['bank', 'cash']),
+  invoiceId: z.string().optional(),
 })
 type Values = z.input<typeof schema>
 
@@ -95,6 +96,8 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
   const [wht, setWht] = useState('')
   const [whtCert, setWhtCert] = useState('')
   const whtAmount = Number(wht.replace(/,/g, '').trim() || 0)
+  const [showTie, setShowTie] = useState(false)
+  const invoices = data.invoices ?? []
   const amountRef = useRef<HTMLInputElement | null>(null)
   const facts = { gross: row.gross, settled: row.settled, balance: row.balance, invoiced: row.invoiceNumbers.length > 0, prior: data.prior }
 
@@ -106,6 +109,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
       receivedOn: businessToday(),
       reference: '',
       paidVia: 'bank',
+      invoiceId: '',
     } satisfies Partial<Values>,
     // the month lock answers about the date, so the sentence sits under it and every entry stays
     routeError: e => (e.kind === 'closed-month' ? { field: 'receivedOn' } : undefined),
@@ -121,6 +125,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
           confirmDuplicate: allowDuplicate,
           whtAmount: Number.isFinite(whtAmount) && whtAmount > 0 ? whtAmount : 0,
           whtCertificate: whtCert.trim() || null,
+          invoiceId: v.invoiceId || null,
         })
       } catch (e) {
         const m = mapPgError(e)
@@ -212,7 +217,17 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
             {f => <Select {...f} options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))} />}
           </FormField>
         ) : null}
+        {showTie ? (
+          <FormField<Values, 'invoiceId'> name="invoiceId" label="This payment is for" help="Leave it on the oldest unpaid invoice unless the customer named one.">
+            {f => <Select {...f} placeholder="The oldest unpaid invoice" options={invoices.map(i => ({ value: i.id, label: `${i.number ?? 'Invoice'} · ${pkr(i.gross)}` }))} />}
+          </FormField>
+        ) : null}
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
+          {invoices.length > 1 && !showTie ? (
+            <span>
+              Payments settle the oldest invoice first. <LinkButton onClick={() => setShowTie(true)}>This payment is for one invoice</LinkButton>
+            </span>
+          ) : null}
           {!showRef ? (
             <span>
               <LinkButton onClick={() => setShowRef(true)}>Add a reference</LinkButton>, optional: transfer or cheque number.

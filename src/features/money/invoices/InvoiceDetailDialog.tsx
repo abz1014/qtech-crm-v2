@@ -47,8 +47,8 @@ const schema = z
   .object({
   number: z.string().trim().min(1, 'Enter the invoice number').max(40, 'Keep the number under 40 characters'),
   invoiceDate: z.string().min(1, 'Choose a date'),
-  net: z.number({ invalid_type_error: 'Enter the net amount', required_error: 'Enter the net amount' }).positive('The net amount must be above zero').max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit'),
-  gst: z.number({ invalid_type_error: 'Enter the GST, or 0', required_error: 'Enter the GST, or 0' }).min(0, 'GST cannot be below zero').max(MAX_AMOUNT, 'That GST is too large'),
+  net: z.number({ error: 'Enter the net amount' }).positive('The net amount must be above zero').max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit'),
+  gst: z.number({ error: 'Enter the GST, or 0' }).min(0, 'GST cannot be below zero').max(MAX_AMOUNT, 'That GST is too large'),
   /** Set from what was changed: the GST return of the month may be filed, so the change needs the tick below. */
   ackNeeded: z.boolean(),
   ack: z.boolean(),

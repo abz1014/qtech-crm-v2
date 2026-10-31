@@ -300,6 +300,7 @@ export async function loadPayables(asOf: string): Promise<PayableRow[]> {
     owedPkr: r.owed_pkr === null || r.owed_pkr === undefined ? null : fx(r.owed_pkr),
     state: (r.state ?? 'owing') as PayableRow['state'],
     flag: r.flag ?? null,
+    cancelledWithSupplierOn: r.cancelled_with_supplier_on ?? null,
   }))
 }
 

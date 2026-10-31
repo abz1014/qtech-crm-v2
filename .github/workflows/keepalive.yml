@@ -1,0 +1,46 @@
+name: Keep schedules alive
+
+# GitHub switches OFF scheduled workflows of a public repository after 60 days without repository activity. The nightly backup and
+# the nightly smoke test are scheduled workflows, so a quiet two months would silently stop both. Once a month this job calls the
+# "enable workflow" endpoint for the scheduled workflows (and itself): that re-enables any that were already switched off and
+# restarts the 60-day clock of the others. It needs only the built-in GITHUB_TOKEN with actions: write; no secret, no environment.
+#
+# If this workflow itself is ever switched off (a very long quiet period before the first run), the app tells the admin within two
+# days: Settings, Backups and usage, and the To do warning, read the time of the last successful backup, which stops moving.
+# To switch things back on by hand: Actions, pick the workflow, Enable workflow.
+on:
+  schedule:
+    - cron: "11 3 1 * *"   # the 1st of every month, 08:11 Asia/Karachi
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable every scheduled workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ok=0; failed=0
+          for wf in backup.yml smoke.yml keepalive.yml; do
+            state="$(gh api "repos/$REPO/actions/workflows/$wf" --jq .state 2> /dev/null || echo missing)"
+            if [ "$state" = "missing" ]; then echo "$wf: not found, skipped"; continue; fi
+            if gh api -X PUT "repos/$REPO/actions/workflows/$wf/enable" > /dev/null 2>&1; then
+              echo "$wf: was $state, enable call accepted"; ok=$((ok + 1))
+            else
+              echo "::warning::$wf: was $state and the enable call was refused"; failed=$((failed + 1))
+            fi
+          done
+          echo "enabled or refreshed: $ok, refused: $failed"
+          [ "$failed" -eq 0 ]

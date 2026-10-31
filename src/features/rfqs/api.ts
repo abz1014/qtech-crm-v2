@@ -2,6 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
 import type { EvidenceFeedRow } from '@/features/rfqs/lib/ranking/reasons'
+import type { PlannedPrice } from '@/features/rfqs/lib/replySave'
 import type { AskOutcome, CategoryEvidenceRow, CategoryOption, PriceWinsRow, SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
@@ -368,6 +369,13 @@ export interface QuoteLineRow {
   inStock: boolean | null
   fxRatePkr: number | null
   fxRateOn: string | null
+  /** Weight of ONE unit in weightUnit (0111), else null. Admin and sales only: an engineer's read never asks for it. */
+  weight?: number | null
+  weightUnit?: 'kg' | 'g' | 'lb'
+  /** Country of origin the supplier gave, else null. */
+  origin?: string | null
+  /** The note on the line (supplier_quote_lines.notes), else null. */
+  notes?: string | null
 }
 
 export interface InquiryRow {
@@ -407,7 +415,7 @@ export interface InquiryRow {
 }
 
 /** Quote line columns with prices (admin and sales) and without (an engineer never fetches a price: owner decision 2026-10-22). */
-const QUOTE_LINE_COLS = 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on'
+const QUOTE_LINE_COLS = 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on, origin, weight, weight_unit, notes'
 const QUOTE_LINE_COLS_NO_PRICES = 'id, inquiry_id, rfq_item_id, currency, lead_time, in_stock'
 
 /**
@@ -464,7 +472,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
   }
   for (const l of unwrap(legs)) if (l.currency && !lastCurrency.has(l.supplier_id)) lastCurrency.set(l.supplier_id, l.currency.trim())
   const linesBy = new Map<string, QuoteLineRow[]>()
-  type DbLine = { id: string; inquiry_id: string; rfq_item_id: string; unit_price?: number; currency: string; lead_time: string | null; in_stock: boolean | null; fx_rate_pkr?: number | null; fx_rate_on?: string | null }
+  type DbLine = { id: string; inquiry_id: string; rfq_item_id: string; unit_price?: number; currency: string; lead_time: string | null; in_stock: boolean | null; fx_rate_pkr?: number | null; fx_rate_on?: string | null; origin?: string | null; weight?: number | null; weight_unit?: string; notes?: string | null }
   for (const l of unwrap(lines) as unknown as DbLine[]) {
     const row: QuoteLineRow = {
       id: l.id,
@@ -476,6 +484,10 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       inStock: l.in_stock,
       fxRatePkr: l.fx_rate_pkr === null || l.fx_rate_pkr === undefined ? null : Number(l.fx_rate_pkr),
       fxRateOn: l.fx_rate_on ?? null,
+      weight: l.weight === null || l.weight === undefined ? null : Number(l.weight),
+      weightUnit: l.weight_unit === 'g' || l.weight_unit === 'lb' ? l.weight_unit : 'kg',
+      origin: l.origin ?? null,
+      notes: l.notes ?? null,
     }
     linesBy.set(l.inquiry_id, [...(linesBy.get(l.inquiry_id) ?? []), row])
   }
@@ -546,7 +558,7 @@ export interface SaveReplyInput {
   leadTime: string | null
   inStock: boolean | null
   /** Items with a price now. Existing lines for these items are updated in place. */
-  prices: Array<{ itemId: string; unitPrice: number }>
+  prices: PlannedPrice[]
   /** Items whose line goes: the price was cleared, or the currency changed (the line is then re-entered at today's rate). */
   removeItemIds: string[]
 }
@@ -559,18 +571,24 @@ export async function saveReply(input: SaveReplyInput): Promise<number> {
     if (error) throw error
   }
   if (input.prices.length === 0) return 0
-  const { error } = await db.from('supplier_quote_lines').upsert(
-    input.prices.map(p => ({
-      inquiry_id: input.inquiryId,
-      rfq_item_id: p.itemId,
-      unit_price: p.unitPrice,
-      currency: input.currency,
-      lead_time: input.leadTime,
-      in_stock: input.inStock,
-    })),
-    { onConflict: 'inquiry_id,rfq_item_id' },
-  )
-  if (error) throw error
+  const rows = input.prices.map(p => ({
+    inquiry_id: input.inquiryId,
+    rfq_item_id: p.itemId,
+    unit_price: p.unitPrice,
+    currency: input.currency,
+    lead_time: input.leadTime,
+    in_stock: input.inStock,
+    // Weight and origin are written only when the form held them (a missing key leaves the saved value alone).
+    ...(p.weight !== undefined ? { weight: p.weight, weight_unit: p.weightUnit ?? 'kg' } : {}),
+    ...(p.origin !== undefined ? { origin: p.origin } : {}),
+  }))
+  // One bulk upsert needs every row to carry the same keys, so rows with and without weight and origin go in separate calls.
+  const groups = new Map<string, typeof rows>()
+  for (const r of rows) groups.set(Object.keys(r).sort().join(','), [...(groups.get(Object.keys(r).sort().join(',')) ?? []), r])
+  for (const group of groups.values()) {
+    const { error } = await db.from('supplier_quote_lines').upsert(group, { onConflict: 'inquiry_id,rfq_item_id' })
+    if (error) throw error
+  }
   return input.prices.length
 }
 
@@ -825,12 +843,11 @@ export async function setAttachmentHasPrices(id: string, hasPrices: boolean): Pr
   if (error) throw error
 }
 
-/** The row first, then the object: a failed object removal leaves an orphan (swept later), never a row pointing at nothing. */
+/** Deletes the record only. The file stays in storage for 30 days (migration 0120's trigger lists it for the nightly purge), so a mistaken delete can be undone from a backup or by the admin. */
 export async function deleteAttachment(att: Pick<AttachmentRow, 'id' | 'path'>): Promise<void> {
   const db = requireSupabase()
   const { error } = await db.from('attachments').delete().eq('id', att.id)
   if (error) throw error
-  await db.storage.from(FILE_BUCKET).remove([att.path])
 }
 
 /** Short-lived links for showing and opening files (the bucket is private). Keyed by path. */
@@ -974,6 +991,8 @@ export async function restoreQuoteLine(line: QuoteLineRow): Promise<void> {
       in_stock: line.inStock,
       fx_rate_pkr: line.fxRatePkr,
       fx_rate_on: line.fxRateOn,
+      ...(line.weight !== undefined ? { weight: line.weight, weight_unit: line.weightUnit ?? 'kg' } : {}),
+      ...(line.origin !== undefined ? { origin: line.origin } : {}),
     },
     { onConflict: 'inquiry_id,rfq_item_id' },
   )
@@ -1117,28 +1136,8 @@ export interface StoredFile {
   path: string
 }
 
-/** delete_rfq: the rows are gone when this resolves; the files it names are the caller's to remove from storage. */
+/** delete_rfq: the rows are gone when this resolves. The files it names stay in storage for 30 days (migration 0120 lists them for the nightly purge); nothing removes them here. */
 export async function deleteRfq(rfqId: string): Promise<StoredFile[]> {
   const rows = unwrap(await requireSupabase().rpc('delete_rfq', { p_rfq_id: rfqId })) ?? []
   return rows.map(r => ({ bucket: r.storage_bucket, path: r.storage_path }))
-}
-
-/**
- * Removes stored files, one call per bucket. A file that will not go must not undo a delete that already happened, so this never
- * throws: it returns the files it could not remove.
- */
-export async function removeStoredFiles(files: readonly StoredFile[]): Promise<StoredFile[]> {
-  const byBucket = new Map<string, string[]>()
-  for (const f of files) byBucket.set(f.bucket, [...(byBucket.get(f.bucket) ?? []), f.path])
-  const failed: StoredFile[] = []
-  for (const [bucket, paths] of byBucket) {
-    try {
-      const { error } = await requireSupabase().storage.from(bucket).remove(paths)
-      if (error) throw error
-    } catch (e) {
-      console.error(`Could not remove ${paths.length} file(s) from ${bucket} after deleting an RFQ`, e)
-      failed.push(...paths.map(path => ({ bucket, path })))
-    }
-  }
-  return failed
 }

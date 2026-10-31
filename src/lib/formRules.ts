@@ -19,7 +19,7 @@ export const EARLIEST_DATE = '2000-01-01'
  */
 export function amountSchema(missing: string) {
   return z
-    .number({ invalid_type_error: missing, required_error: missing })
+    .number({ error: missing })
     .positive('The amount must be above zero')
     .min(0.01, 'The smallest amount is 0.01 (one paisa)')
     .max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit')

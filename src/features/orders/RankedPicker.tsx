@@ -3,48 +3,32 @@ import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
-import { longReason, priceTexts, shortReason, type RankedQuote } from '@/features/orders/lib/ranking'
+import { priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
 import { rovingKeyDown, rovingTabIndex } from '@/ui/roving'
 
 /*
- * The ranked supplier picker (A8; g2-ranking-split.html ".spl-sel" and ".spl-pop"). One button shows the chosen supplier with its rank and
- * the reason it sits there; it opens the item's ranked quotes, each with the reason in plain words and the price in the quote's currency
- * and in PKR. A supplier already used by another part of the same item is listed but cannot be picked again (the database refuses the same
+ * The supplier picker (A8; g2-ranking-split.html ".spl-sel" and ".spl-pop"). One button shows the chosen supplier and its price; it opens the
+ * item's quotes by supplier name, each with the price in the quote's currency and in PKR. NO RANK, MARK OR REASON: the CRM never suggests a
+ * supplier (owner decision 2026-10-29). A supplier already used by another part of the same item is listed but cannot be picked again (the database refuses the same
  * quote line twice). Used by the convert dialog (O08); the Split line dialog (O09) lists the same rows with RankedOptionRow.
  *
  * `extras` are the words the convert dialog also allows on a line ("Not sourced yet", "Service, no supplier"). Selling price and spread
  * show only when the rows carry them (admin and sales; the database sends NULL to an engineer).
  */
 
-export function RankBadge({ rank, className }: { rank: number | null | undefined; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'num grid size-6 shrink-0 place-items-center rounded border text-xs font-medium leading-none',
-        rank === 1 ? 'border-ink-bg bg-ink-bg text-ink-fg' : rank ? 'border-line-strong bg-surface text-fg-2' : 'border-dashed border-line-input text-fg-muted',
-        className,
-      )}
-    >
-      {rank ?? '–'}
-    </span>
-  )
-}
-
 export interface PickerExtra {
   value: string
   label: string
 }
 
-/** One ranked quote as a row: rank, supplier and reason on the left, price on the right. */
-export function RankedOptionRow({ q, among, className }: { q: RankedQuote; among: readonly RankedQuote[]; className?: string }) {
+/** One quote as a row: the supplier on the left (and "In stock" when it said so), the price on the right. No rank, mark or reason. */
+export function RankedOptionRow({ q, className }: { q: RankedQuote; among?: readonly RankedQuote[]; className?: string }) {
   const p = priceTexts(q)
   return (
-    <span className={cn('grid grid-cols-[24px_minmax(0,1fr)_auto] items-start gap-2', className)}>
-      <RankBadge rank={q.rank} />
+    <span className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2', className)}>
       <span className="grid min-w-0">
         <b className="text-sm font-medium leading-[18px]">{q.supplierName}</b>
-        <span className="text-xs text-fg-muted">{longReason(q, among)}</span>
+        {q.inStock ? <span className="text-xs text-fg-muted">In stock</span> : null}
       </span>
       <span className="num text-right text-xs">
         {p.price}
@@ -55,6 +39,7 @@ export function RankedOptionRow({ q, among, className }: { q: RankedQuote; among
 }
 
 export function RankedPicker({
+  id,
   label,
   value,
   quotes,
@@ -62,8 +47,10 @@ export function RankedPicker({
   usedLineIds,
   usedNote,
   onChange,
-  header = 'Ranked quotes for this item, with the reason',
+  header = 'Quotes for this item, by supplier',
 }: {
+  /** The trigger's id, so a message can take the person to it. */
+  id?: string
   label: string
   value: string
   quotes: readonly RankedQuote[]
@@ -87,14 +74,14 @@ export function RankedPicker({
       <PopoverTrigger asChild>
         <button
           type="button"
+          id={id}
           aria-haspopup="listbox"
-          className="grid min-h-[36px] w-full grid-cols-[24px_minmax(0,1fr)_16px] items-center gap-2 rounded border border-line-input bg-surface px-2 py-1 text-left hover:border-fg-muted"
+          className="grid min-h-[36px] w-full grid-cols-[minmax(0,1fr)_16px] items-center gap-2 rounded border border-line-input bg-surface px-2 py-1 text-left hover:border-fg-muted"
         >
-          <RankBadge rank={chosen?.rank ?? null} />
           <span className="grid min-w-0 leading-[17px]">
             <span className="sr-only">{label}: </span>
             <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{chosen ? chosen.supplierName : (extra?.label ?? 'Choose a supplier')}</b>
-            {chosen ? <span className="text-pretty text-xs text-fg-muted">{shortReason(chosen, quotes)}</span> : null}
+            {chosen ? <span className="num text-pretty text-xs text-fg-muted">{priceTexts(chosen).price}</span> : null}
           </span>
           <Icon icon={ChevronDown} size="sm" className="text-fg-muted" />
         </button>
@@ -129,12 +116,11 @@ export function RankedPicker({
               tabIndex={rovingTabIndex(quotes.length + i, sel)}
               onClick={() => pick(e.value)}
               className={cn(
-                'grid w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded p-2 text-left text-sm hover:bg-sunken',
+                'grid w-full items-center gap-2 rounded p-2 text-left text-sm hover:bg-sunken',
                 e.value === value && 'bg-selected',
                 i === 0 && quotes.length > 0 && 'mt-1 rounded-t-none border-t border-line',
               )}
             >
-              <RankBadge rank={null} />
               <span>{e.label}</span>
             </button>
           ))}

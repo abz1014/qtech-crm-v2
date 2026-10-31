@@ -246,11 +246,11 @@ select is((select count(*)::int from (
 -- ------------------------------------------------------------------ the source table
 select is((select count(*)::int from public.history_sources where parent_table = 'rfqs'), 5, 'history_sources: five children under rfqs');
 select is((select count(*)::int from public.history_sources where parent_table = 'orders'), 8, 'history_sources: eight children under orders');
-select is((select count(*)::int from public.history_sources where parent_table = 'companies'), 2, 'history_sources: two children under companies');
+select is((select count(*)::int from public.history_sources where parent_table = 'companies'), 4, 'history_sources: four children under companies (0126: refunds and applied credit)');
 select is((select roles from public.history_sources where child_table = 'payments_in'), '{admin}'::text[], 'payments_in: admin only');
 select is((select roles from public.history_sources where child_table = 'invoices' and parent_table = 'orders'), '{admin,sales}'::text[], 'invoices: admin and sales');
 select is((select roles from public.history_sources where child_table = 'attachments' and parent_table = 'expenses'), '{admin}'::text[], 'expense receipts: admin only');
-select is(pg_temp.scalar_as('select count(*)::text from public.history_sources', 'engineer')::int, 17, 'every staff role reads history_sources');
+select is(pg_temp.scalar_as('select count(*)::text from public.history_sources', 'engineer')::int, 19, 'every staff role reads history_sources');
 select is(pg_temp.scalar_as('select count(*)::text from public.history_sources', 'deactivated'), '0', 'a deactivated person reads none of it');
 select is(pg_temp.scalar_as($q$insert into public.history_sources (child_table, parent_table, parent_col, roles) values ('x', 'y', 'z', '{admin}') returning 1$q$, 'admin'), 'E:42501',
   'nobody writes history_sources through the API');

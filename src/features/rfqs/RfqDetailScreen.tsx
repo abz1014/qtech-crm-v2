@@ -21,7 +21,6 @@ import { useQuotations } from '@/features/quotations/hooks'
 import type { QuotationRow } from '@/features/quotations/api'
 import { useOrdersForRfq } from '@/features/orders/forRfq'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
-import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
@@ -239,8 +238,6 @@ function Loaded({
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
 
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
-  // A8 (R25): the ranking of every quote (the order, the reasons). Asked for once there is a price; the page works without it.
-  const ranking = useRankedQuotes(rfq.id, hasPrices)
   const chaseSuppliers = inquiryList.filter(i => canChaseInquiry(i, itemList)).length
   const chaseCustomer = rfq.state?.waiting ?? 0
   const loadError = items.isError || inquiries.isError
@@ -364,7 +361,6 @@ function Loaded({
               fxRows={fx.data ?? []}
               memory={memory.data}
               suggestions={suggestions}
-              ranking={ranking.byLine}
               onAddItem={() => setAdding(true)}
               onCopyEnquiry={(s, item) => void askFrom([s], [item])}
             />

@@ -1,42 +1,101 @@
--- 0118_customer_credit (owner request 2026-10-30): the customer's credit balance, refunding it, and applying it to another order.
+-- 0127_customer_credit (owner request 2026-10-30): the customer's credit balance, refunding it, and applying it to another order.
 --
 -- Credit balance of a customer (company) = what the orders hold above what they are worth, less what was given back, less what was
 -- put against another order:
---     balance = SUM(v_order_money.overpaid_by) - SUM(customer_refunds.amount) - SUM(credit_applications.amount)
+--     balance = SUM(v_order_money.overpaid_by) - refunds and applied credit whose source order is not known
+-- A refund (customer_refunds.order_id) and an applied credit (credit_applications.from_order_id) can name the order whose overpayment
+-- they come from; that order's overpaid_by drops by the amount, so it stops showing as overpaid. record_refund and apply_credit
+-- fill the source themselves when they are not told: the oldest order that holds enough. When no single order holds enough the
+-- source stays empty and only the customer's balance (not any one order) takes the amount off.
 -- A credit note needs no term of its own: it lowers the order's gross (the invoice gross is net of credit notes, 0112), so a credit
 -- note on an invoice that was already paid shows up as overpaid_by, and one on an unpaid invoice only lowers the receivable.
--- Counting credit notes again would count the same money twice.
 --
 --   v_company_credit   one row per customer that has any of the three: overpaid, refunded, applied, balance (admin only).
---   record_refund()    the one door for a refund (admin). A refund is refused when it is more than the customer's balance
---                      (HINT refund_exceeds_credit), and answers P0001 HINT duplicate_refund (the earlier date in DETAIL) when the same
---                      customer already has a refund of the same amount on the same day, or with the same reference, unless
---                      p_confirm_duplicate is true (as record_payment's duplicate_payment, 0114).
+--   record_refund()    the one door for a refund (admin). Refused above the customer's balance (HINT refund_exceeds_credit) or above
+--                      the named order's credit (HINT refund_exceeds_order); P0001 HINT duplicate_refund (the earlier date in DETAIL)
+--                      when the same customer already has a refund of the same amount on the same day, or with the same reference,
+--                      unless p_confirm_duplicate is true (as record_payment's duplicate_payment, 0114).
 --   apply_credit()     the one door for applying credit to an order of the same customer (admin): refused above the balance
---                      (HINT credit_exceeds_balance) and above what that order still owes (HINT credit_exceeds_order). It is an
---                      allocation record: no payment row, no cash.
---   Settled            an order is settled by cash + WHT (0116) + the credit applied to it. order_receivables, v_order_money,
---                      aging_as_of (by applied_on), job_stage and the two month-end functions count it. void_invoice refuses
---                      when the applied credit already covers the invoice, delete_order refuses an order with refunds or applied credit.
+--                      (HINT credit_exceeds_balance), above what that order still owes (HINT credit_exceeds_order) and above the source
+--                      order's credit (HINT credit_exceeds_source). An allocation record: no payment row, no cash.
+--   Settled            an order is settled by cash + WHT (0116) + the credit applied to it. It joins the 0123 allocation as UNTIED money:
+--                      it fills the order's oldest unpaid invoices first, after money tied to an invoice. order_receivables,
+--                      v_order_money, aging_as_of (by applied_on), job_stage and the two month-end functions count it. void_invoice
+--                      refuses when applied credit already covers the invoice; delete_order refuses an order with refunds or credit.
+--   The credit guard   a payment deleted, voided or corrected, an invoice or its amounts changed, an order's lines changed or an order
+--                      cancelled, or an applied credit removed, may not leave refunds plus applied credit above the credit available:
+--                      per customer and per source order. The change is refused (P0001, HINT credit_overdrawn).
+--   customer_statement (0125) gets the refund rows (debit) and a memo row for applied credit.
 --
--- The customer pool is not split by order: applying credit to order B leaves order A's overpaid_by as it was (A is still overpaid); the
--- balance takes the applied amount off. Expand-only except for the longer bodies of the functions named above and v_order_money.
+-- Expand-only except for the longer bodies of the functions named above and v_order_money.
+
+-- ================================================================ the credit of each order and of a customer
+-- Role-free (definer, not granted to any client): the guard and the two doors need the figures whoever is typing. The same formula as
+-- v_order_money (gross by the 0112 basis, D-MR3, settled = cash + WHT + credit applied to it), with the known outflow taken off.
+create function public.order_credit_rows(p_company uuid)
+returns table (order_id uuid, created_at timestamptz, gross numeric, settled numeric, outflow numeric, available numeric, overdrawn boolean)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select o.id, o.created_at, g.g, s.settled, ou.outflow,
+         greatest(s.settled - g.g - ou.outflow, 0),
+         (ou.outflow > 0 and s.settled - g.g - ou.outflow < 0)
+  from public.orders o
+  cross join lateral (
+    select count(*) as n,
+           coalesce(sum(v.net_amount + v.gst_amount), 0) - (select coalesce(sum(c.net_amount + c.gst_amount), 0) from public.credit_notes c where c.order_id = o.id) as gross
+    from public.invoices v where v.order_id = o.id and v.voided_at is null
+  ) iv
+  cross join lateral (
+    select case when iv.n > 0 then iv.gross
+                when o.cancelled_on is not null then 0::numeric
+                else coalesce((select t.gross from public.v_order_items_total t where t.order_id = o.id), 0) end as g
+  ) g
+  cross join lateral (
+    select coalesce((select sum(p.amount + p.wht_amount) from public.payments_in p where p.order_id = o.id and p.voided_at is null), 0)
+         + coalesce((select sum(a.amount) from public.credit_applications a where a.to_order_id = o.id), 0) as settled
+  ) s
+  cross join lateral (
+    select coalesce((select sum(r.amount) from public.customer_refunds r where r.order_id = o.id), 0)
+         + coalesce((select sum(a.amount) from public.credit_applications a where a.from_order_id = o.id), 0) as outflow
+  ) ou
+  where o.company_id = p_company
+$$;
+
+revoke all on function public.order_credit_rows(uuid) from public, anon, authenticated;
+
+-- The customer's credit balance: the credit the orders still hold, less refunds and applied credit with no source order.
+create function public.company_credit_balance(p_company uuid)
+returns numeric
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((select sum(r.available) from public.order_credit_rows(p_company) r), 0)
+       - coalesce((select sum(f.amount) from public.customer_refunds f where f.company_id = p_company and f.order_id is null), 0)
+       - coalesce((select sum(a.amount) from public.credit_applications a where a.company_id = p_company and a.from_order_id is null), 0)
+$$;
+
+revoke all on function public.company_credit_balance(uuid) from public, anon, authenticated;
 
 -- ================================================================ the balance
 create view public.v_company_credit with (security_invoker = true) as
 with over as (
-  select m.company_id, sum(m.overpaid_by) as overpaid
+  select m.company_id, sum(m.overpaid_by) as held
   from public.v_order_money m
   where m.overpaid_by > 0 and m.company_id is not null
   group by m.company_id
 ),
 ref as (
-  select r.company_id, sum(r.amount) as refunded
+  select r.company_id, sum(r.amount) as refunded, sum(r.amount) filter (where r.order_id is null) as loose
   from public.customer_refunds r
   group by r.company_id
 ),
 app as (
-  select a.company_id, sum(a.amount) as applied
+  select a.company_id, sum(a.amount) as applied, sum(a.amount) filter (where a.from_order_id is null) as loose
   from public.credit_applications a
   group by a.company_id
 ),
@@ -49,10 +108,10 @@ cos as (
 )
 select
   c.company_id,
-  coalesce(o.overpaid, 0)                                                  as overpaid,
-  coalesce(r.refunded, 0)                                                  as refunded,
-  coalesce(a.applied, 0)                                                   as applied,
-  coalesce(o.overpaid, 0) - coalesce(r.refunded, 0) - coalesce(a.applied, 0) as balance
+  coalesce(o.held, 0) - coalesce(r.loose, 0) - coalesce(a.loose, 0) + coalesce(r.refunded, 0) + coalesce(a.applied, 0) as overpaid,
+  coalesce(r.refunded, 0)                                                                                          as refunded,
+  coalesce(a.applied, 0)                                                                                           as applied,
+  coalesce(o.held, 0) - coalesce(r.loose, 0) - coalesce(a.loose, 0)                                                as balance
 from cos c
 left join over o on o.company_id = c.company_id
 left join ref r on r.company_id = c.company_id
@@ -79,6 +138,8 @@ as $$
 declare
   v_balance numeric;
   v_dup     date;
+  v_src     uuid := p_order_id;
+  v_have    numeric;
 begin
   if public.current_user_role() is distinct from 'admin' then
     raise exception 'Only an admin records a refund.' using errcode = '42501', hint = 'admin_only';
@@ -90,11 +151,22 @@ begin
     raise exception 'This company is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('customer_credit:' || p_company_id::text, 0));
-  select coalesce(sum(v.balance), 0) into v_balance from public.v_company_credit v where v.company_id = p_company_id;
+  v_balance := public.company_credit_balance(p_company_id);
   if p_amount > v_balance then
     raise exception 'This customer holds Rs % of credit, so a refund of Rs % is more than they are owed. Record the overpayment or a credit note first.',
       to_char(greatest(v_balance, 0), 'FM999,999,999,990.00'), to_char(p_amount, 'FM999,999,999,990.00')
       using errcode = 'P0001', hint = 'refund_exceeds_credit', detail = greatest(v_balance, 0)::text;
+  end if;
+  if v_src is not null then
+    select r.available into v_have from public.order_credit_rows(p_company_id) r where r.order_id = v_src;
+    if v_have is not null and p_amount > v_have then
+      raise exception 'That order holds only Rs % of credit, so Rs % cannot be paid back from it. Leave the order empty to take it from the whole credit.',
+        to_char(v_have, 'FM999,999,999,990.00'), to_char(p_amount, 'FM999,999,999,990.00')
+        using errcode = 'P0001', hint = 'refund_exceeds_order', detail = v_have::text;
+    end if;
+  else
+    -- the oldest order that holds enough; none: the amount comes off the customer's balance only
+    select r.order_id into v_src from public.order_credit_rows(p_company_id) r where r.available >= p_amount order by r.created_at, r.order_id limit 1;
   end if;
   if not coalesce(p_confirm_duplicate, false) then
     select r.refunded_on into v_dup
@@ -111,7 +183,7 @@ begin
     end if;
   end if;
   insert into public.customer_refunds (id, company_id, order_id, refunded_on, amount, paid_via, reference, reason)
-  values (p_id, p_company_id, p_order_id, coalesce(p_refunded_on, public.today_pkt()), p_amount,
+  values (p_id, p_company_id, v_src, coalesce(p_refunded_on, public.today_pkt()), p_amount,
           coalesce(p_paid_via, 'bank'), nullif(btrim(p_reference), ''), nullif(btrim(p_reason), ''));
 end;
 $$;
@@ -121,7 +193,8 @@ grant execute on function public.record_refund(uuid, uuid, date, numeric, uuid, 
 
 -- ================================================================ apply_credit
 create function public.apply_credit(
-  p_id uuid, p_to_order_id uuid, p_amount numeric, p_applied_on date default null, p_note text default null)
+  p_id uuid, p_to_order_id uuid, p_amount numeric, p_applied_on date default null, p_note text default null,
+  p_from_order_id uuid default null)
 returns void
 language plpgsql
 security definer
@@ -131,6 +204,8 @@ declare
   v_company uuid;
   v_balance numeric;
   v_owing   numeric;
+  v_src     uuid := p_from_order_id;
+  v_have    numeric;
 begin
   if public.current_user_role() is distinct from 'admin' then
     raise exception 'Only an admin applies credit.' using errcode = '42501', hint = 'admin_only';
@@ -143,7 +218,7 @@ begin
     raise exception 'This order is no longer there. Reload the page.' using errcode = 'P0002', hint = 'not_found';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('customer_credit:' || v_company::text, 0));
-  select coalesce(sum(v.balance), 0) into v_balance from public.v_company_credit v where v.company_id = v_company;
+  v_balance := public.company_credit_balance(v_company);
   if p_amount > v_balance then
     raise exception 'This customer holds Rs % of credit, so Rs % cannot be applied.',
       to_char(greatest(v_balance, 0), 'FM999,999,999,990.00'), to_char(p_amount, 'FM999,999,999,990.00')
@@ -155,27 +230,106 @@ begin
       to_char(v_owing, 'FM999,999,999,990.00'), to_char(p_amount, 'FM999,999,999,990.00')
       using errcode = 'P0001', hint = 'credit_exceeds_order', detail = v_owing::text;
   end if;
-  insert into public.credit_applications (id, company_id, to_order_id, applied_on, amount, note)
-  values (p_id, v_company, p_to_order_id, coalesce(p_applied_on, public.today_pkt()), p_amount, nullif(btrim(p_note), ''));
+  if v_src is not null then
+    select r.available into v_have from public.order_credit_rows(v_company) r where r.order_id = v_src;
+    if v_have is not null and p_amount > v_have then
+      raise exception 'The source order holds only Rs % of credit, so Rs % cannot be taken from it.',
+        to_char(v_have, 'FM999,999,999,990.00'), to_char(p_amount, 'FM999,999,999,990.00')
+        using errcode = 'P0001', hint = 'credit_exceeds_source', detail = v_have::text;
+    end if;
+  else
+    select r.order_id into v_src from public.order_credit_rows(v_company) r
+    where r.available >= p_amount and r.order_id <> p_to_order_id order by r.created_at, r.order_id limit 1;
+  end if;
+  insert into public.credit_applications (id, company_id, to_order_id, from_order_id, applied_on, amount, note)
+  values (p_id, v_company, p_to_order_id, v_src, coalesce(p_applied_on, public.today_pkt()), p_amount, nullif(btrim(p_note), ''));
 end;
 $$;
 
-revoke all on function public.apply_credit(uuid, uuid, numeric, date, text) from public, anon, authenticated;
-grant execute on function public.apply_credit(uuid, uuid, numeric, date, text) to authenticated, qtech_engineer;   -- 0081 mirror; refused inside for anyone but an admin
+revoke all on function public.apply_credit(uuid, uuid, numeric, date, text, uuid) from public, anon, authenticated;
+grant execute on function public.apply_credit(uuid, uuid, numeric, date, text, uuid) to authenticated, qtech_engineer;   -- 0081 mirror; refused inside for anyone but an admin
+
+-- ================================================================ the credit guard
+-- After any change that could take the credit away from refunds and applied credit already given, the books are checked again for the
+-- customer; a customer with no refund and no applied credit costs two index probes.
+create function public.credit_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_order   uuid;
+  v_company uuid;
+  v_ids     uuid[] := '{}';
+begin
+  if tg_table_name = 'payments_in' then
+    if tg_op = 'UPDATE' then
+      if (new.amount, new.wht_amount, new.voided_at, new.order_id) is not distinct from (old.amount, old.wht_amount, old.voided_at, old.order_id) then
+        return null;
+      end if;
+    end if;
+    v_ids := array[old.order_id];
+  elsif tg_table_name = 'invoices' then
+    if tg_op = 'UPDATE' then
+      if (new.net_amount, new.gst_amount, new.voided_at, new.order_id) is not distinct from (old.net_amount, old.gst_amount, old.voided_at, old.order_id) then
+        return null;
+      end if;
+    end if;
+    v_ids := array[old.order_id];
+    if tg_op = 'UPDATE' then
+      if new.order_id is distinct from old.order_id then v_ids := v_ids || new.order_id; end if;
+    end if;
+  elsif tg_table_name = 'order_items' then
+    v_ids := array[case when tg_op = 'DELETE' then old.order_id else new.order_id end];
+  elsif tg_table_name = 'orders' then
+    if new.cancelled_on is not distinct from old.cancelled_on then return null; end if;
+    v_ids := array[new.id];
+  elsif tg_table_name = 'credit_applications' then
+    v_ids := array[old.to_order_id];
+  end if;
+  foreach v_order in array v_ids loop
+    continue when v_order is null;
+    select o.company_id into v_company from public.orders o where o.id = v_order;
+    continue when v_company is null;
+    if (exists (select 1 from public.customer_refunds f where f.company_id = v_company)
+        or exists (select 1 from public.credit_applications a where a.company_id = v_company))
+       and (public.company_credit_balance(v_company) < 0
+            or exists (select 1 from public.order_credit_rows(v_company) r where r.overdrawn)) then
+      raise exception 'This would leave more refunded or applied credit than the customer''s orders hold. Take back the refund or the applied credit first, then make this change.'
+        using errcode = 'P0001', hint = 'credit_overdrawn';
+    end if;
+  end loop;
+  return null;
+end;
+$$;
+
+revoke all on function public.credit_guard() from public, anon, authenticated;
+
+create trigger payments_in_credit_guard after update or delete on public.payments_in
+  for each row execute function public.credit_guard();
+create trigger invoices_credit_guard after update or delete on public.invoices
+  for each row execute function public.credit_guard();
+create trigger order_items_credit_guard after insert or update or delete on public.order_items
+  for each row execute function public.credit_guard();
+create trigger orders_credit_guard after update of cancelled_on on public.orders
+  for each row execute function public.credit_guard();
+create trigger credit_applications_credit_guard after delete on public.credit_applications
+  for each row execute function public.credit_guard();
 
 -- ================================================================ void_invoice and delete_order know the credit
 do $do$
 declare
   def     text;
   patched text;
-  a1      text := 'select coalesce(sum(p.amount), 0) into v_paid from public.payments_in p where p.order_id = v.order_id and p.voided_at is null;';
+  a1      text := 'select coalesce(sum(p.amount + p.wht_amount), 0) into v_paid from public.payments_in p where p.order_id = v.order_id and p.voided_at is null;';
   a2      text := 'if exists (select 1 from public.payments_in p where p.order_id = p_order_id) then';
 begin
   def := pg_catalog.pg_get_functiondef('public.void_invoice(uuid, text)'::regprocedure);
   if strpos(def, a1) = 0 then
     raise exception '0127: void_invoice was not in the expected shape';
   end if;
-  patched := replace(def, a1, 'select coalesce(sum(p.amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = v.order_id)
+  -- applied credit is untied money: it joins the pool that fills the oldest invoices first (0123)
+  patched := replace(def, a1, 'select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = v.order_id)
       into v_paid from public.payments_in p where p.order_id = v.order_id and p.voided_at is null;');
   execute patched;
 
@@ -184,14 +338,15 @@ begin
     raise exception '0127: delete_order was not in the expected shape';
   end if;
   patched := replace(def, a2, 'if exists (select 1 from public.payments_in p where p.order_id = p_order_id)
-     or exists (select 1 from public.credit_applications a where a.to_order_id = p_order_id)
+     or exists (select 1 from public.credit_applications a where a.to_order_id = p_order_id or a.from_order_id = p_order_id)
      or exists (select 1 from public.customer_refunds f where f.order_id = p_order_id) then');
   execute patched;
 end
 $do$;
 
--- ================================================================ settled = cash + WHT + credit applied
--- ---------------------------------------------------------------- public.order_receivables
+-- ================================================================ settled = cash + WHT + credit applied (on the 0123 definitions)
+
+-- ---------------------------------------------------------------- order_receivables (0096, per-invoice due)
 create or replace function public.order_receivables(p_order_id uuid default null)
 returns table (
   order_id          uuid,
@@ -234,7 +389,7 @@ begin
     b.g,
     s.settled,
     case when rv.reviewed then 0::numeric else greatest(b.g - s.settled, 0) end,
-    greatest(s.settled - b.g, 0),
+    greatest(s.settled - b.g - ou.outflow, 0),
     d.due_on,
     (d.due_on is not null and d.due_on < public.today_pkt() and not ok.settled_ok),
     case
@@ -243,8 +398,8 @@ begin
       when s.settled > 0 then 'part'
       else 'unpaid'
     end,
-    iv.last_reminded_on,
-    iv.reminder_count,
+    case when al.unpaid_n > 0 then al.drv_reminded else iv.last_reminded_on end,
+    case when al.unpaid_n > 0 then coalesce(al.drv_count, 0)::smallint else iv.reminder_count end,
     case when 'value_basis_unknown' = any (o.legacy_flags) then 'basis_unknown'
          when o.legacy_flags && array['dates_estimated', 'undated'] then 'estimated_dates'
          else 'ok' end
@@ -254,7 +409,6 @@ begin
     select count(*) as invoice_count,
            count(*) filter (where v.legacy_review = 'settled') as reviewed_invoices,
            coalesce(sum(v.net_amount + v.gst_amount), 0) - (select coalesce(sum(c.net_amount + c.gst_amount), 0) from public.credit_notes c where c.order_id = o.id) as invoice_gross,
-           min(coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date)) as first_invoice_date,
            max(v.last_reminded_on) as last_reminded_on,
            coalesce(max(v.reminder_count), 0)::smallint as reminder_count
     from public.invoices v
@@ -268,6 +422,11 @@ begin
     from public.payments_in p where p.order_id = o.id and p.voided_at is null
   ) s
   cross join lateral (
+    -- 0127: what was paid back or put against another order out of this order's overpayment (known sources only)
+    select coalesce((select sum(r.amount) from public.customer_refunds r where r.order_id = o.id), 0)
+         + coalesce((select sum(a.amount) from public.credit_applications a where a.from_order_id = o.id), 0) as outflow
+  ) ou
+  cross join lateral (
     -- 0096: the owner reviewed it as settled (the order, or every invoice on it)
     select (coalesce(o.legacy_review = 'settled', false) or (iv.invoice_count > 0 and iv.reviewed_invoices = iv.invoice_count)) as reviewed
   ) rv
@@ -278,7 +437,47 @@ begin
     select p.default_payment_terms_days as days from public.company_profile p where p.id = 1
   ) cp
   cross join lateral (
-    select (iv.first_invoice_date + coalesce(o.payment_terms_days, cp.days)::int) as due_on
+    -- 0123: each invoice with its own due date (its date + terms); payments tied to an invoice go to it first, the rest oldest first
+    select min(a.due_on) filter (where a.unpaid) as due_unpaid,
+           min(a.due_on) as due_any,
+           count(*) filter (where a.unpaid) as unpaid_n,
+           (array_agg(a.last_reminded_on order by a.inv_date, a.number, a.id) filter (where a.unpaid))[1] as drv_reminded,
+           (array_agg(a.reminder_count order by a.inv_date, a.number, a.id) filter (where a.unpaid))[1] as drv_count
+    from (
+      select y.*,
+             (not y.reviewed
+              and y.r_open - least(y.r_open, greatest(y.pool - coalesce(sum(y.r_open) over (order by y.inv_date, y.number, y.id
+                                                                          rows between unbounded preceding and 1 preceding), 0), 0)) > 1) as unpaid
+      from (
+        select v.id, v.number, v.last_reminded_on, v.reminder_count,
+               coalesce(v.legacy_review = 'settled', false) as reviewed,
+               coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) as inv_date,
+               coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) + coalesce(o.payment_terms_days, cp.days)::int as due_on,
+               ig.g - least(ig.g, tp.tied) as r_open,
+               un.untied + coalesce(sum(greatest(tp.tied - ig.g, 0)) over (), 0) as pool
+        from public.invoices v
+        cross join lateral (
+          -- what the invoice is worth now: its amounts less its credit notes (a void invoice is left out below)
+          select greatest(v.net_amount + v.gst_amount
+                          - coalesce((select sum(c.net_amount + c.gst_amount) from public.credit_notes c where c.invoice_id = v.id), 0), 0) as g
+        ) ig
+        cross join lateral (
+          select coalesce(sum(p.amount + p.wht_amount), 0) as tied from public.payments_in p where p.invoice_id = v.id and p.voided_at is null
+        ) tp
+        cross join lateral (
+          select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as untied   -- 0127: applied credit is untied money
+          from public.payments_in p
+          where p.order_id = o.id and p.voided_at is null
+            and (p.invoice_id is null
+                 or not exists (select 1 from public.invoices i2
+                                where i2.id = p.invoice_id and i2.order_id = o.id and i2.voided_at is null and not i2.settled_before_cutover))
+        ) un
+        where v.order_id = o.id and v.voided_at is null and not v.settled_before_cutover
+      ) y
+    ) a
+  ) al
+  cross join lateral (
+    select coalesce(al.due_unpaid, al.due_any) as due_on
   ) d
   where (p_order_id is null or o.id = p_order_id)
     and (o.cancelled_on is null or iv.invoice_count > 0)
@@ -286,7 +485,7 @@ begin
 end;
 $$;
 
--- ---------------------------------------------------------------- public.v_order_money
+-- ---------------------------------------------------------------- v_order_money (0096, per-invoice due)
 create or replace view public.v_order_money with (security_invoker = true) as
 select
   o.id as order_id,
@@ -299,7 +498,7 @@ select
   s.settled,
   (rv.reviewed or (gm.g > 0 and s.settled >= gm.g - 1)) as settled_ok,
   case when rv.reviewed then 0::numeric else greatest(gm.g - s.settled, 0) end as receivable,
-  greatest(s.settled - gm.g, 0) as overpaid_by,
+  greatest(s.settled - gm.g - ou.outflow, 0) as overpaid_by,
   d.due_on,
   case
     when rv.reviewed then 'settled'
@@ -340,19 +539,55 @@ cross join lateral (
   from public.payments_in p where p.order_id = o.id and p.voided_at is null
 ) s
 cross join lateral (
+  -- 0127: what was paid back or put against another order out of this order's overpayment (known sources only)
+  select coalesce((select sum(r.amount) from public.customer_refunds r where r.order_id = o.id), 0)
+       + coalesce((select sum(a.amount) from public.credit_applications a where a.from_order_id = o.id), 0) as outflow
+) ou
+cross join lateral (
   select coalesce(sum(x.amount_pkr - x.input_tax_pkr), 0) as actual_cost from public.expenses x where x.order_id = o.id
 ) e
 cross join lateral (
   select p.default_payment_terms_days as days from public.company_profile p where p.id = 1
 ) cp
 cross join lateral (
-  select (min(coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date)) + coalesce(o.payment_terms_days, cp.days)::int) as due_on
-  from public.invoices v
-  where v.order_id = o.id and v.voided_at is null
+  -- 0123: the due date of the OLDEST UNPAID invoice (its date + terms); else the earliest invoice due date
+  select coalesce(min(a.due_on) filter (where a.unpaid), min(a.due_on)) as due_on
+  from (
+    select y.*,
+           (not y.reviewed
+            and y.r_open - least(y.r_open, greatest(y.pool - coalesce(sum(y.r_open) over (order by y.inv_date, y.number, y.id
+                                                                        rows between unbounded preceding and 1 preceding), 0), 0)) > 1) as unpaid
+    from (
+      select v.id, v.number,
+             coalesce(v.legacy_review = 'settled', false) as reviewed,
+             coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) as inv_date,
+             coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) + coalesce(o.payment_terms_days, cp.days)::int as due_on,
+             ig.g - least(ig.g, tp.tied) as r_open,
+             un.untied + coalesce(sum(greatest(tp.tied - ig.g, 0)) over (), 0) as pool
+      from public.invoices v
+      cross join lateral (
+        -- what the invoice is worth now: its amounts less its credit notes (a void invoice is left out below)
+        select greatest(v.net_amount + v.gst_amount
+                        - coalesce((select sum(c.net_amount + c.gst_amount) from public.credit_notes c where c.invoice_id = v.id), 0), 0) as g
+      ) ig
+      cross join lateral (
+        select coalesce(sum(p.amount + p.wht_amount), 0) as tied from public.payments_in p where p.invoice_id = v.id and p.voided_at is null
+      ) tp
+      cross join lateral (
+        select coalesce(sum(p.amount + p.wht_amount), 0) + (select coalesce(sum(a.amount), 0) from public.credit_applications a where a.to_order_id = o.id) as untied   -- 0127: applied credit is untied money
+        from public.payments_in p
+        where p.order_id = o.id and p.voided_at is null
+          and (p.invoice_id is null
+               or not exists (select 1 from public.invoices i2
+                              where i2.id = p.invoice_id and i2.order_id = o.id and i2.voided_at is null and not i2.settled_before_cutover))
+      ) un
+      where v.order_id = o.id and v.voided_at is null and not v.settled_before_cutover
+    ) y
+  ) a
 ) d
 where (select public.current_user_role()) = 'admin';
 
--- ---------------------------------------------------------------- public.aging_as_of
+-- ---------------------------------------------------------------- aging_as_of (0096, tied payments first)
 create or replace function public.aging_as_of(p_date date)
 returns table (
   kind            text,
@@ -389,7 +624,7 @@ as $$
       and (select public.current_user_role()) = 'admin'
   ),
   paid as (
-    -- 0127: cash + WHT by the day received, and the credit applied to the order by the day it was applied
+    -- 0127: cash + WHT by the day received, and the credit applied to the order by the day it was applied (untied money)
     select x.ordid, sum(x.amt) as paid
     from (
       select p.order_id as ordid, p.amount + p.wht_amount as amt
@@ -405,16 +640,31 @@ as $$
     ) x
     group by x.ordid
   ),
+  tied as (
+    -- 0123: money the customer said was for one invoice
+    select p.invoice_id, sum(p.amount + p.wht_amount) as tied
+    from public.payments_in p
+    where p.invoice_id is not null
+      and p.received_on <= p_date
+      and p.voided_at is null
+      and (select public.current_user_role()) = 'admin'
+    group by p.invoice_id
+  ),
   fifo as (
     select i.*,
            coalesce(pd.paid, 0) as paid,
-           coalesce(sum(i.gross) over (partition by i.ordid order by i.invoice_date, i.number, i.id
-                                       rows between unbounded preceding and 1 preceding), 0) as before_gross
+           least(i.gross, coalesce(t.tied, 0)) as tied_applied,
+           -- the money left to place oldest first: all received, less what went to the invoice it was tied to
+           coalesce(pd.paid, 0) - coalesce(sum(least(i.gross, coalesce(t.tied, 0))) over (partition by i.ordid), 0) as pool,
+           coalesce(sum(i.gross - least(i.gross, coalesce(t.tied, 0))) over (partition by i.ordid order by i.invoice_date, i.number, i.id
+                                                                             rows between unbounded preceding and 1 preceding), 0) as before_open
     from inv i
     left join paid pd on pd.ordid = i.ordid
+    left join tied t on t.invoice_id = i.id
   ),
   fa as (
-    select f.*, least(f.gross, greatest(f.paid - f.before_gross, 0)) as applied_amt,
+    select f.*,
+           f.tied_applied + least(f.gross - f.tied_applied, greatest(f.pool - f.before_open, 0)) as applied_amt,
            -- the Rs 1 allowance of order_receivables: an order paid to within Rs 1 of what it is invoiced is settled
            (f.ordid is not null
             and sum(f.gross) over (partition by f.ordid) > 0
@@ -878,3 +1128,83 @@ as $$
     and not exists (select 1 from frozen)
 $$;
 
+-- ================================================================ customer_statement (0125): the refund rows and the applied-credit memo rows
+create or replace function public.customer_statement(p_company uuid, p_to date default null)
+returns table (
+  line_on       date,
+  kind          text,      -- 'invoice' | 'payment' | 'credit_note' | 'refund' | 'credit_applied'
+  ref           text,      -- the invoice or credit note number, or the payment reference
+  order_number  bigint,
+  note          text,
+  debit         numeric,   -- what the customer owes more (invoice, refund paid out)
+  credit        numeric,   -- what the customer owes less (payment, credit note)
+  seq           integer    -- the order inside one day: invoices, credit notes, payments, refunds, then applied credit
+)
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  v_to date := coalesce(p_to, public.today_pkt());
+begin
+  if public.current_user_role() is distinct from 'admin' then
+    return;
+  end if;
+
+  return query
+  select coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date)::date,
+         'invoice'::text, v.number::text, o.number::bigint, null::text,
+         (v.net_amount + v.gst_amount)::numeric, 0::numeric, 1
+  from public.invoices v
+  left join public.orders o on o.id = v.order_id
+  where coalesce(v.company_id, o.company_id) = p_company
+    and not v.settled_before_cutover
+    and v.voided_at is null
+    and (v.net_amount + v.gst_amount) <> 0
+    and coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) <= v_to;
+
+  return query
+  select p.received_on::date, 'payment'::text, p.reference::text, o.number::bigint,
+         case when p.wht_amount > 0 then 'includes withholding tax Rs ' || to_char(p.wht_amount, 'FM999,999,999,990.00') end,
+         0::numeric, (p.amount + p.wht_amount)::numeric, 3
+  from public.payments_in p
+  join public.orders o on o.id = p.order_id
+  where o.company_id = p_company
+    and p.voided_at is null
+    and p.received_on <= v_to;
+
+  return query
+  select c.issued_on::date, 'credit_note'::text, c.number::text, o.number::bigint, c.reason::text,
+         0::numeric, (c.net_amount + c.gst_amount)::numeric, 2
+  from public.credit_notes c
+  left join public.orders o on o.id = c.order_id
+  where coalesce(c.company_id, o.company_id) = p_company
+    and c.issued_on <= v_to;
+
+  -- 0127: money paid back to the customer is a DEBIT (it raises what they owe, or lowers the credit they hold), seq 4.
+  return query
+  select f.refunded_on::date, 'refund'::text, coalesce(f.reference, 'Refund')::text, o.number::bigint,
+         nullif(concat_ws(' · ', f.reason, case when f.paid_via = 'cash' then 'paid in cash' end), '')::text,
+         f.amount::numeric, 0::numeric, 4
+  from public.customer_refunds f
+  left join public.orders o on o.id = f.order_id
+  where f.company_id = p_company
+    and f.refunded_on <= v_to;
+
+  -- 0127: credit applied to another order of the customer moves value between their own orders, so it changes no balance: a memo
+  -- row (debit 0, credit 0) on the target order, seq 5, with the amount in its note.
+  return query
+  select a.applied_on::date, 'credit_applied'::text, ('Applied to ORD-' || lpad(t.number::text, 4, '0'))::text, t.number::bigint,
+         ('Rs ' || to_char(a.amount, 'FM999,999,999,990.00') || ' of their credit put against this order, no cash moved'
+          || coalesce(' · ' || a.note, ''))::text,
+         0::numeric, 0::numeric, 5
+  from public.credit_applications a
+  join public.orders t on t.id = a.to_order_id
+  where a.company_id = p_company
+    and a.applied_on <= v_to;
+end;
+$$;
+
+revoke all on function public.customer_statement(uuid, date) from public, anon;
+grant execute on function public.customer_statement(uuid, date) to authenticated, qtech_engineer;   -- 0081 mirror; returns no row for anyone but an admin

@@ -1,14 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { businessToday } from '@/lib/dates'
 import { MoneyHome } from '@/features/money/home/MoneyHome'
 import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
-afterEach(() => installFakeDb(() => ({})).uninstall())
+// Mid-month: on the last day of a month the page reads that month's frozen snapshot instead of payables_as_of, which these fakes do not serve.
+beforeEach(() => vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-15T08:00:00Z') }))
+afterEach(() => {
+  vi.useRealTimers()
+  installFakeDb(() => ({})).uninstall()
+})
 
 function mount() {
   const month = businessToday().slice(0, 7)

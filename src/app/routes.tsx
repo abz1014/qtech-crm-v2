@@ -35,6 +35,8 @@ const OldOrders = lazy(routeChunks.orders)
 
 /** The weekly owner review (redesign phase 3): /todo/review, admin only. */
 const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
+const BackupsPage = lazy(() => import('@/features/settings/BackupsPage').then(m => ({ default: m.BackupsPage })))
+const ExportPage = lazy(() => import('@/features/settings/ExportPage').then(m => ({ default: m.ExportPage })))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const TaxDeadlinesPage = lazy(() => import('@/features/settings/TaxDeadlinesPage').then(m => ({ default: m.TaxDeadlinesPage })))
 const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
@@ -179,6 +181,26 @@ function AppRouteTable() {
                 <AdminOnly area="Team">
                   <Suspense fallback={null}>
                     <TeamPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="backups"
+              element={
+                <AdminOnly area="Backups and usage">
+                  <Suspense fallback={null}>
+                    <BackupsPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="export"
+              element={
+                <AdminOnly area="Export data">
+                  <Suspense fallback={null}>
+                    <ExportPage />
                   </Suspense>
                 </AdminOnly>
               }
