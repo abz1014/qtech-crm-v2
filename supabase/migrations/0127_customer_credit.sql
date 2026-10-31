@@ -255,6 +255,7 @@ grant execute on function public.apply_credit(uuid, uuid, numeric, date, text, u
 create function public.credit_guard()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare

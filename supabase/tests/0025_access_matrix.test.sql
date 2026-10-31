@@ -134,6 +134,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'credit_applications', '',           'SUD',  '',     ''),     -- 0126: credit put against another order, admin only; made by apply_credit
   ('table', 'credit_notes',        '',           'SI',   'S',    ''),     -- 0112: admin issues (create_credit_note), admin and sales read, nobody edits or deletes one
   ('function', 'create_credit_note', '',         'X',    '',     ''),     -- 0112: admin only (42501 for everyone else)
+  ('function', 'order_credit_rows', '',          '',     '',     ''),     -- 0127: the role-free credit of each order, for the guard and the two doors; granted to nobody
+  ('function', 'company_credit_balance', '',      '',     '',     ''),     -- 0127: the same for a customer
   ('function', 'record_refund',    '',           'X',    '',     ''),     -- 0127: admin only
   ('function', 'apply_credit',     '',           'X',    '',     ''),     -- 0127: admin only
   ('function', 'void_invoice',     '',           'X',    '',     ''),     -- 0112: admin only
@@ -642,6 +644,8 @@ insert into probes values
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
   ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
+  ('order_credit_rows', '', 'X', 'select 1 from public.order_credit_rows(@01) limit 1'),   -- 0127: no client may call it
+  ('company_credit_balance', '', 'X', 'select 1 where public.company_credit_balance(@01) is not null'),   -- 0127
   ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0127
   ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0127
   ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
