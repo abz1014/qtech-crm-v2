@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext } from '@playwright/test'
+import { openStage, stagesOf } from '../../support/job'
 import { db, num, USER } from '../support/db'
 import { invoice, karachiDay, order, payment, ref } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
@@ -38,6 +39,7 @@ test('line totals with GST per line, and a line made exempt: the page and the da
 
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/orders/${seed.order.id}`)
+  await openStage(page, 'Order')
   const table = page.getByRole('table', { name: ORDERS.items.table })
   // Since the UX audit the table shows each line's total before GST; the bar under it gives GST and the total with GST.
   const footer = table.getByRole('row').filter({ hasText: ORDERS.items.footer(3) })
@@ -66,6 +68,7 @@ test('a line offers only the GST rates the owner allows: 18% or exempt', async (
   const seed = await order({ lines: [{ description: 'Ball valve 2 inch', qty: 1, price: 15000 }], owner: 'sales' })
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/orders/${seed.order.id}`)
+  await openStage(page, 'Order')
   await page.getByRole('button', { name: ORDERS.items.edit }).click()
   const select = page.getByLabel(ORDERS.items.gstRate(1))
   await expect(select).toBeVisible()
@@ -88,6 +91,7 @@ test('a service-only job: plan commissioning, the engineer marks it done, then t
 
   await test.step('the salesperson plans it for the engineer', async () => {
     const page = await open(sales, `/orders/${seed.order.id}`)
+    await openStage(page, 'Delivery')
     const section = page.getByRole('region', { name: ORDERS.commissioning.region })
     await section.getByRole('button', { name: ORDERS.commissioning.edit, exact: true }).click()
     const d = page.getByRole('dialog')
@@ -106,7 +110,7 @@ test('a service-only job: plan commissioning, the engineer marks it done, then t
   await test.step('the engineer marks it done in one tap', async () => {
     const eng = await signedIn(browser, info, 'engineer')
     const page = await open(eng, `/orders/${seed.order.id}`)
-    await page.getByRole('button', { name: ORDERS.commissioning.markDone }).click()
+    await page.getByRole('region', { name: 'On site' }).getByRole('button', { name: 'Installed today' }).click()
     await expect.poll(async () => (await db.one<{ commissioning_done_on: string | null }>(`orders?id=eq.${seed.order.id}&select=commissioning_done_on`)).commissioning_done_on).toBe(karachiDay(0))
     expect((await state()).commissioning_state).toBe('done')
     await eng.close()
@@ -115,7 +119,8 @@ test('a service-only job: plan commissioning, the engineer marks it done, then t
   await test.step('done and not invoiced: Today says so; the invoice clears it', async () => {
     expect(await todayLists(sales, 'delivered_not_invoiced', orderRef), 'a finished service job is due its invoice').toBe(1)
     const page = await open(sales, `/orders/${seed.order.id}`)
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: ORDERS.invoice.create }).click()
+    await openStage(page, 'Invoice')
+    await stagesOf(page).getByRole('button', { name: ORDERS.invoice.create }).click()
     const d = page.getByRole('dialog', { name: ORDERS.invoice.dialog })
     await expect(d.getByText(amount(159300.5), { exact: true })).toBeVisible()
     await d.getByRole('button', { name: ORDERS.invoice.create }).click()

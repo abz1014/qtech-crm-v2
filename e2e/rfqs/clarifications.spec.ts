@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openEnquiryPanels } from '../support/job'
 import { axeViolations } from '../support/axe'
 import { API_URL, ANON_KEY, createCompany, createRfq, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
@@ -96,6 +97,7 @@ test.describe('adding questions (FE-2: open, 1 paste + 1 tap)', () => {
   test('a pasted message splits into separate questions, each can be tagged to the supplier who asked', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
     await expect(panel(page).getByText(/No questions yet/)).toBeVisible()
 
     let pastes = 0
@@ -135,6 +137,7 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     const a = await addClar(s.rfq.id, 'Line size and flange rating on the process line')
     const b = await addClar(s.rfq.id, 'Fluid temperature range')
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
 
     await resetClipboard(page)
     await panel(page).getByRole('button', { name: 'Copy questions for customer' }).click()
@@ -169,6 +172,7 @@ test.describe('answers', () => {
     const s = await seed()
     const q = await addClar(s.rfq.id, 'What flange size does the LR250 mount on?', { raised_by_inquiry_id: s.abc.inquiryId, first_asked_at: new Date().toISOString(), last_asked_at: new Date().toISOString(), ask_count: 1 })
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
 
     let taps = 0
     let typed = 0
@@ -205,6 +209,7 @@ test.describe('answers', () => {
     const q2 = await addClar(s.rfq.id, 'What flange size on the LR250?', { raised_by_inquiry_id: s.lpc.inquiryId, ...asked })
     const q3 = await addClar(s.rfq.id, 'Cable length for the ABC unit?', { raised_by_inquiry_id: s.abc.inquiryId, ...asked })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
     await expect(panel(page).getByRole('button', { name: /Copy answers for supplier/ })).toHaveCount(0)
 
     await panel(page).getByRole('button', { name: `Type answer: ${q1.question}` }).click()
@@ -246,6 +251,7 @@ test.describe('answers', () => {
     const s = await seed()
     const q = await addClar(s.rfq.id, 'Is Ex needed?')
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
     await panel(page).getByRole('button', { name: `Type answer: ${q.question}` }).click()
     await panel(page).getByRole('textbox', { name: `Answer to: ${q.question}` }).fill('Yes, zone 2.')
     await panel(page).getByRole('button', { name: 'Save answer' }).click()
@@ -259,6 +265,7 @@ test.describe('answers', () => {
     const q = await addClar(s.rfq.id, 'Which supplier dropped out?')
     await addClar(s.rfq.id, 'Still relevant question')
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
     await panel(page).getByRole('button', { name: `Withdraw: ${q.question}` }).click()
     await expect(toast(page, 'Question withdrawn')).toBeVisible()
     await expect.poll(async () => (await clarsOf(s.rfq.id)).find(r => r.id === q.id)?.withdrawn_at ?? null).not.toBeNull()
@@ -275,6 +282,7 @@ test.describe('files (R10)', () => {
   test('PNG, HEIC and PDF are accepted and stored at {rfq_id}/{uuid}.{ext}; the viewer opens an image, a PDF opens in a tab; delete removes the object', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
     // No file yet: the side column's Files is one "Add file" row (grade-A 6 fix 2).
     await expect(page.getByRole('group', { name: 'Add files' }).getByRole('button', { name: 'Add file' })).toBeVisible()
     await expect(page.getByText('Drop files here')).toHaveCount(0)
@@ -328,6 +336,7 @@ test.describe('files (R10)', () => {
   test('a 6 MB file is refused with a plain message and nothing is stored', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
     await fileInput(page).setInputFiles({ name: 'big-datasheet.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(6 * 1024 * 1024, 1) })
     await expect(page.getByRole('list', { name: 'Files that were not added' })).toContainText('6 MB. The limit is 5 MB.')
     await expect(page.getByRole('alert').filter({ hasText: 'A file was not added' })).toBeVisible()
@@ -365,6 +374,7 @@ for (const width of [1440, 375]) {
 
     await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openEnquiryPanels(page)
     await expect(panel(page).getByText('Asked ×2')).toBeVisible()
     await expect(page.getByRole('list', { name: 'Files on this RFQ' }).getByRole('listitem')).toHaveCount(3)
     await expect(page.locator('img[src*="/storage/v1/object/sign/"]').first()).toBeVisible()

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openStage, stagesOf } from '../../support/job'
 import { db, num, USER } from '../support/db'
 import { karachiDay, order, quotedRfq, quote, rfq, setProfile, supplier, uniqueName } from '../support/fixtures'
 import { open, openMarkWon, signedIn } from '../support/session'
@@ -19,7 +20,7 @@ import { chooseAllSuppliers } from '../../support/supplierChoice'
 /** The seed users' password on the LOCAL CI stack only (supabase/seed.sql); the same value e2e/support/stack.ts signs in with. */
 const FIXTURE_PASSWORD = 'fixture-only-password'
 
-const actions = (page: Page) => page.locator('[data-slot="order-actions"]')
+const actions = (page: Page) => stagesOf(page)
 
 /** The stored Supabase session in this page's localStorage, edited in place. Returns the access token before the edit. */
 async function editStoredSession(page: Page, edit: { expired?: boolean; badRefresh?: boolean }): Promise<string> {
@@ -49,9 +50,9 @@ test.describe('a save that cannot reach the server', () => {
     const seed = await order({ lines: [{ description: 'Vortex flow meter DN100', qty: 1, price: 61234.45 }], owner: 'sales' })
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, `/orders/${seed.order.id}`)
-    // no invoice yet: Record payment (an advance) is in the order's More menu, not offered up front (UX audit P2)
-    await actions(page).getByRole('button', { name: R.order.actions.more }).click()
-    await page.getByRole('menuitem', { name: R.order.actions.recordPayment }).click()
+    // Record payment (an advance, before any invoice) is on the Invoice stage of the job page
+    await openStage(page, 'Invoice')
+    await actions(page).getByRole('button', { name: R.order.actions.recordPayment }).first().click()
     const d = page.getByRole('dialog', { name: R.order.paymentDialog })
     const amountBox = d.getByRole('textbox', { name: R.order.amount })
     await expect(amountBox).toHaveValue(amount(72256.45))
@@ -85,6 +86,7 @@ test.describe('a save that cannot reach the server', () => {
       }
       await route.continue()
     })
+    await openStage(page, 'Invoice')
     await actions(page).getByRole('button', { name: R.order.actions.createInvoice }).click()
     const d = page.getByRole('dialog', { name: R.order.invoiceDialog })
     await expect(d.getByText(amount(40935.1), { exact: true })).toBeVisible()
@@ -126,9 +128,11 @@ test.describe('the session', () => {
     const before = await editStoredSession(page, { expired: true })
     await page.reload()
     await page.locator('#main').waitFor()
-    await expect(page).toHaveURL(new RegExp(`/orders/${seed.order.id}$`))
+    // the old order address opens the order's job page; the person stays on it
+    await expect(page).toHaveURL(/\/jobs\/O-\d+$/)
     await expect.poll(() => storedToken(page)).not.toBe(before)
     // 3 x 8,765.43 = 26,296.29 net; GST 4,733.33 -> 4,733; gross 31,029.29
+    await openStage(page, 'Invoice')
     await actions(page).getByRole('button', { name: R.order.actions.createInvoice }).click()
     const d = page.getByRole('dialog', { name: R.order.invoiceDialog })
     await expect(d.getByText(amount(31029.29), { exact: true })).toBeVisible()
@@ -147,7 +151,8 @@ test.describe('the session', () => {
     await page.getByLabel(R.signIn.email).fill('sales@test.invalid')
     await page.getByLabel(R.signIn.password, { exact: true }).fill(FIXTURE_PASSWORD)
     await page.getByRole('button', { name: R.signIn.button }).click()
-    await expect(page).toHaveURL(new RegExp(`${path}$`))
+    // signing in returns to the address that was open: the old order address, which opens the order's job page
+    await expect(page).toHaveURL(/\/(orders\/[0-9a-f-]{36}|jobs\/O-\d+)$/)
     await page.locator('#main').waitFor()
     // Nothing was half-saved on the way: the order is as it was.
     expect(await db.count(`invoices?order_id=eq.${seed.order.id}&select=id`)).toBe(0)
@@ -214,6 +219,7 @@ test.describe('two people on the same record', () => {
     const pa = await open(a, `/orders/${seed.order.id}`)
     const pb = await open(b, `/orders/${seed.order.id}`)
     for (const p of [pa, pb]) {
+      await openStage(p, 'Invoice')
       await actions(p).getByRole('button', { name: R.order.actions.createInvoice }).click()
       await expect(p.getByRole('dialog', { name: R.order.invoiceDialog }).getByText(amount(61360.4), { exact: true })).toBeVisible()
     }
@@ -284,6 +290,7 @@ test.describe('Undo restores the record exactly', () => {
     const page = await open(sales, `/orders/${seed.order.id}`)
     const legA = page.getByTestId('leg-A')
 
+    await openStage(page, 'Supplier order')
     await legA.getByRole('button', { name: R.order.moreFor(sup.name) }).click()
     await page.getByRole('menuitem', { name: R.order.markPlacedNoPo }).click()
     await expect.poll(async () => (await dates()).placed_on).toBe(karachiDay(0))
@@ -295,6 +302,7 @@ test.describe('Undo restores the record exactly', () => {
     // Placed again (an earlier placed date, so Delivered is offered), then Delivered and its Undo.
     await db.patch(`supplier_orders?id=eq.${leg}`, { placed_on: karachiDay(-9), expected_on: karachiDay(-1) })
     await page.reload()
+    await openStage(page, 'Delivery')
     await legA.getByRole('button', { name: R.order.deliveredToday(sup.name) }).click()
     await expect.poll(async () => (await dates()).delivered_on).toBe(karachiDay(0))
     expect((await dates()).received_on).toBe(karachiDay(0))

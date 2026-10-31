@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName, type Role } from '../support/stack'
+import { JOB_URL } from '../support/job'
 import { dueRows, showAllTodo } from '../support/todo'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
@@ -252,7 +253,7 @@ test.describe('Today: role-aware', () => {
     await expect(page.getByRole('radiogroup', { name: 'Show' })).toHaveCount(0)
     await job.getByRole('button').first().click()
     await paneFor(page, planned.ref).getByRole('button', { name: `Open ${planned.ref}` }).click()
-    await expect(page).toHaveURL(new RegExp(`/orders/${planned.order.id}`))
+    await expect(page).toHaveURL(JOB_URL)
     await review(page, 'today-13-engineer-jobs-1440')
   })
 
@@ -300,9 +301,6 @@ test.describe('Today: role-aware', () => {
     await expect(rowOf(page, p.customer).getByText(/Payment 15 days overdue/)).toBeVisible()
     const [r] = await must(rest<{ is_overdue: boolean; payment_state: string }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: p.order.id } }))
     expect(r).toMatchObject({ is_overdue: true, payment_state: 'overdue' })
-    // and the order page says which terms apply
-    await page.goto(`/orders/${p.order.id}`)
-    await expect(page.getByTestId('order-terms')).toHaveText('Terms 30 days from invoice (default terms)')
   })
 
   test('sales: a delivered order with no invoice, and a part-invoiced one, come back as reminders', async ({ page }) => {

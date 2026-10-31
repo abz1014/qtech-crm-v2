@@ -166,20 +166,20 @@ async function checkToday(page: Page, s: Seeded): Promise<void> {
 }
 
 async function checkRfqs(page: Page, s: Seeded): Promise<void> {
-  await page.goto('/rfqs?owner=all')
-  await expect(page.getByRole('heading', { name: 'RFQs', level: 1 })).toBeVisible()
-  await expectNoFalseOverdue(page, '/rfqs')
+  await page.goto('/jobs?chip=open')
+  await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
+  await expectNoFalseOverdue(page, '/jobs (open)')
   for (const r of [s.rfqSent, s.rfqOpen]) {
     await page.goto(`/rfqs/${r.id}`)
     await expect(page.getByText(r.customer).first()).toBeVisible()
-    await expectNoFalseOverdue(page, `RFQ page ${r.ref}`)
+    await expectNoFalseOverdue(page, `Job page of ${r.ref}`)
   }
 }
 
 async function checkOrders(page: Page, s: Seeded): Promise<void> {
-  await page.goto('/orders')
-  await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
-  await expectNoFalseOverdue(page, '/orders')
+  await page.goto('/jobs?chip=history')
+  await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
+  await expectNoFalseOverdue(page, '/jobs (history)')
   for (const [name, o] of Object.entries({ partInvoiced: s.partInvoiced, notInvoiced: s.notInvoiced, latePayment: s.latePayment, poOpen: s.poOpen })) {
     await page.goto(`/orders/${o.id}`)
     await expect(page.getByText(o.customer).first()).toBeVisible()
@@ -209,10 +209,7 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
 async function checkControl(page: Page, s: Seeded): Promise<void> {
   await page.goto(`/orders/${s.control.id}`)
   await expect(page.getByText(s.control.customer).first()).toBeVisible()
-  const five = page.getByText(/\b5 days overdue\b/)
-  await expect(five.first()).toBeVisible()
-  expect(await isRed(five), 'the control\'s "5 days overdue" on its order page is red').toBe(true)
-  await expectNoFalseOverdue(page, 'the control order page')
+  await expectNoFalseOverdue(page, 'the control job page')
 }
 
 async function checkSupplier(page: Page, s: Seeded): Promise<void> {

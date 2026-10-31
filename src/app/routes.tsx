@@ -26,13 +26,6 @@ const screens: Record<NavKey, ComponentType> = {
   money: lazy(routeChunks.money),
 }
 
-/**
- * The old RFQ board and Orders list: no longer destinations (Jobs holds both). /rfqs and /orders open Jobs; an id opens its Job;
- * ?old=1 keeps the old page for two weeks (src/app/oldAddresses.tsx).
- */
-const OldRfqs = lazy(routeChunks.rfqs)
-const OldOrders = lazy(routeChunks.orders)
-
 /** The weekly owner review (redesign phase 3): /todo/review, admin only. */
 const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const BackupsPage = lazy(() => import('@/features/settings/BackupsPage').then(m => ({ default: m.BackupsPage })))
@@ -54,7 +47,7 @@ const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage')
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
 /** New enquiry (P4-A): the document beside what was read; wraps the intake. */
 const NewEnquiryPage = lazy(routeChunks.enquiryNew)
-/** The old pages keep the access they had: every staff role. */
+/** The old RFQ and Order addresses (they redirect to Jobs, src/app/oldAddresses.tsx) keep the access they had: every staff role. */
 const oldItem = (label: string, path: string): NavItem => ({ key: 'jobs', label, path, icon: Briefcase, roles: ['admin', 'sales', 'engineer'] })
 const rfqsItem = oldItem('RFQs', '/rfqs')
 const ordersItem = oldItem('Orders', '/orders')
@@ -96,15 +89,15 @@ function SignInRoute() {
  * and the page after it (perf/lcp). The first address is handled at start-up (main.tsx).
  */
 function PreloadOnNavigate() {
-  const { pathname, search } = useLocation()
+  const { pathname } = useLocation()
   const first = useRef(true)
   useEffect(() => {
     if (first.current) {
       first.current = false
       return
     }
-    preloadRouteCode(pathname, search)
-  }, [pathname, search])
+    preloadRouteCode(pathname)
+  }, [pathname])
   return null
 }
 
@@ -305,11 +298,7 @@ function AppRouteTable() {
             path="rfqs/*"
             element={
               <RequireRole item={rfqsItem}>
-                <OldAddress kind="rfq">
-                  <Suspense fallback={null}>
-                    <OldRfqs />
-                  </Suspense>
-                </OldAddress>
+                <OldAddress kind="rfq" />
               </RequireRole>
             }
           />
@@ -317,11 +306,7 @@ function AppRouteTable() {
             path="orders/*"
             element={
               <RequireRole item={ordersItem}>
-                <OldAddress kind="order">
-                  <Suspense fallback={null}>
-                    <OldOrders />
-                  </Suspense>
-                </OldAddress>
+                <OldAddress kind="order" />
               </RequireRole>
             }
           />

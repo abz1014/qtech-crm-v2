@@ -23,13 +23,12 @@ auth: # weight=81
   - 'e2e/auth/**'
 companies: # weight=93
   - 'e2e/companies/**'
-rfq-board: # weight=69
-  - 'e2e/rfqs/board.spec.ts'
 rfq-intake: # weight=60
   - 'e2e/rfqs/intake.spec.ts'
 rfq-detail: # weight=119
   - 'e2e/rfqs/detail.spec.ts'
   - 'e2e/rfqs/clarifications.spec.ts'
+  - 'e2e/rfqs/delete.spec.ts'
 rfq-quotation: # weight=55 (installs poppler)
   - 'e2e/rfqs/quotation.spec.ts'
 rfq-memory: # weight=45
@@ -66,7 +65,7 @@ pwa: # weight=21 (no database reset)
   - 'vite.config.ts'
   - 'index.html'
   - 'public/**'
-perf: # weight=317 (Lighthouse: accessibility 7 screens x 2, performance 7 phone screens; installs lighthouse@12.8.2)
+perf: # weight=317 (Lighthouse: accessibility 7 screens x 2, performance 6 phone screens; installs lighthouse@12.8.2)
   - 'e2e/perf/**'
 journeys: # weight=124 (installs poppler; also runs on every change under src/** through `shared`)
   - 'e2e/journeys/**'

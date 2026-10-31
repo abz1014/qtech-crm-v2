@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { openStage, stagesOf } from '../support/job'
 import { axeViolations } from '../support/axe'
 
 /*
@@ -88,7 +89,8 @@ test.describe('invoices and the GST register (M01)', () => {
     await seedInvoice(null, { company_id: order.company.id, number: 'INV-7000' }).catch(() => undefined)
     const expected = await nextNumber()
     await openAs(page, 'admin', `/orders/${order.id}`)
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Create invoice' }).click() // tap 1
+    await openStage(page, 'Invoice')
+    await stagesOf(page).getByRole('button', { name: 'Create invoice' }).click() // tap 1
     const dialog = page.getByRole('dialog', { name: 'Create invoice' })
     await expect(dialog.getByRole('textbox', { name: 'Invoice number' })).toHaveValue(expected)
     await expect(dialog.getByText(/Next after /)).toBeVisible()
@@ -256,7 +258,8 @@ test.describe('payments in and receivables (M02)', () => {
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000 })
     await must(rest('admin', 'payments_in', { method: 'POST', body: { order_id: order.id, amount: 50000, received_on: karachiDay(-10) }, prefer: 'return=minimal' }))
     await openAs(page, 'admin', `/orders/${order.id}`)
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Record payment' }).click() // tap 1
+    await openStage(page, 'Invoice')
+    await stagesOf(page).getByRole('button', { name: 'Record payment' }).first().click() // tap 1
     const dialog = page.getByRole('dialog', { name: 'Record payment' })
     await expect(dialog.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('68,000')
     await expect(dialog.getByText(`Balance due on ORD-${String(order.number).padStart(4, '0')}`)).toBeVisible()

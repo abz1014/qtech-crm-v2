@@ -1,4 +1,3 @@
-import { rfqRef } from '../support/stack'
 import { UI, announcedBy, expect, liveText, markLiveRegions, open, openChase, seedChase, test } from './support'
 
 /*
@@ -44,15 +43,6 @@ test.describe('toasts', () => {
 })
 
 test.describe('filter result counts', () => {
-  test('RFQ board: typing in the filter announces "Showing n of m"', async ({ page, world }) => {
-    await open(page, '/rfqs')
-    await expect(page.getByText(UI.showing).first()).toBeVisible()
-    await markLiveRegions(page)
-    await page.getByRole('textbox', { name: UI.filterRfqs }).fill(rfqRef(world.rfq.number))
-    await expect(page.getByText(/Showing 1 of \d+/).first()).toBeVisible()
-    expect(await announcedBy(page, UI.showing)).toBe('waiting')
-  })
-
   test('Companies: typing in the search announces "Showing n of m"', async ({ page, world }) => {
     await open(page, '/companies')
     await expect(page.getByText(UI.showing).first()).toBeVisible()

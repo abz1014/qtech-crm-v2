@@ -117,8 +117,8 @@ export function recipesForPath(recipes: readonly Recipe[], pathname: string, rol
 /** The app's areas, in tab order: a recipe is listed under the area of its first `screens:` entry. */
 const AREAS: ReadonlyArray<readonly [prefix: string, area: string]> = [
   ['/todo', 'To do'],
+  ['/jobs', 'Jobs'],
   ['/rfqs', 'RFQs'],
-  ['/orders', 'Orders'],
   ['/companies', 'Companies'],
   ['/money', 'Money'],
   ['/settings', 'Team and settings'],

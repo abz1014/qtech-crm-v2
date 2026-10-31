@@ -74,32 +74,9 @@ test.describe('a brand-new CRM, as the admin', () => {
     await review(page, 'live-polish-receivables-1920')
   })
 
-  test('Orders: the tab row has no scroller when its tabs fit, and the empty list is a first-use line', async ({ page }) => {
-    for (const [width, height] of [[1920, 1080], [1366, 768]] as const) {
-      await page.setViewportSize({ width, height })
-      await open(page, '/orders')
-      const tabs = page.getByRole('tablist', { name: 'Order lists' })
-      await expect(tabs).toBeVisible()
-      const m = await tabs.evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth, sh: el.scrollHeight, ch: el.clientHeight, oy: getComputedStyle(el).overflowY }))
-      expect(m.sw, `tabs overflow sideways at ${width}`).toBeLessThanOrEqual(m.cw)
-      expect(m.sh, `tabs overflow downwards at ${width} (the stray up/down scroller)`).toBeLessThanOrEqual(m.ch)
-      expect(m.oy, 'the tab row never scrolls up and down').toBe('hidden')
-    }
-    await expect(page.getByText('No orders yet')).toBeVisible()
-    await expect(page.getByText(/Every order is done or cancelled/)).toHaveCount(0)
-    await review(page, 'live-polish-orders-1366')
-  })
-
-  test('RFQs: with none open, one line true for a new CRM too, never "every quotation is out or closed"', async ({ page }) => {
-    await page.setViewportSize({ width: 1920, height: 1080 })
-    await open(page, '/rfqs')
-    await expect(page.getByText('No open RFQs')).toBeVisible()
-    await expect(page.getByText(/Every quotation is out or closed/)).toHaveCount(0)
-  })
-
   test('amounts and counts: tabular figures in the sans, never a slashed zero', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 })
-    for (const path of ['/todo', '/orders', '/money/receivables']) {
+    for (const path of ['/todo', '/jobs', '/money/receivables']) {
       await open(page, path)
       const styles = await page.evaluate(() =>
         Array.from(document.querySelectorAll('.num')).map(el => {
@@ -107,8 +84,8 @@ test.describe('a brand-new CRM, as the admin', () => {
           return { family: s.fontFamily, numeric: s.fontVariantNumeric, features: s.fontFeatureSettings }
         }),
       )
-      // An empty Orders list draws no number at all since its tabs lost their totals (round-2 counts rule); the others still do.
-      if (path !== '/orders') expect(styles.length, `numbers on ${path}`).toBeGreaterThan(0)
+      // An empty Jobs list draws no number at all; the others still do.
+      if (path !== '/jobs') expect(styles.length, `numbers on ${path}`).toBeGreaterThan(0)
       for (const s of styles) {
         expect(s.numeric, `font-variant-numeric on ${path}`).toContain('tabular-nums')
         expect(s.numeric, `font-variant-numeric on ${path}`).not.toContain('slashed-zero')

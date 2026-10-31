@@ -14,7 +14,7 @@ import './index.css'
 // First, before anything is drawn: the person's text size (Normal or Smaller) on <html>, so there is no jump.
 applyStoredTextSize()
 // The page this address opens, and its first data, start downloading now, alongside the session lookup, not after it (perf/lcp).
-startAfterContent(preloadRoute(window.location.pathname, storedSessionUserId(), window.location.search))
+startAfterContent(preloadRoute(window.location.pathname, storedSessionUserId()))
 initInstallCapture()
 // The worker's install downloads the whole app shell (about 2 MB). It registers once the page has loaded and its content is drawn,
 // so on a slow connection it does not compete with the page's own code and data (perf/lcp, src/lib/afterContent.ts).

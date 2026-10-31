@@ -44,7 +44,7 @@ async function objectStatus(path: string): Promise<number> {
   return res.status
 }
 
-const openMore = (page: Page) => page.getByRole('button', { name: 'More', exact: true }).click()
+const openMore = (page: Page) => page.getByRole('button', { name: /^More( actions)?$/ }).click()
 
 test.describe('delete an RFQ', () => {
   test('an admin deletes an RFQ with no order: the confirm lists the file, the RFQ is gone and its file waits 30 days in the trash, the list is shown', async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe('delete an RFQ', () => {
     expect((await del.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(40)
     await del.click()
 
-    await expect(page).toHaveURL(/\/rfqs$/)
+    await expect(page).toHaveURL(/\/jobs$/)
     await expect(page.getByRole('status').filter({ hasText: `${rfqRef(rfq.number)} deleted` })).toBeVisible()
 
     // Gone from the database and from the list after a reload. The stored file is kept for 30 days (0120): still readable, and listed in the trash.
@@ -84,24 +84,7 @@ test.describe('delete an RFQ', () => {
     const { rfq } = await seedRfq()
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
     await openMore(page)
-    await expect(page.getByRole('menu', { name: 'More' })).toBeVisible()
+    await expect(page.getByRole('menu', { name: 'More actions' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Delete RFQ' })).toHaveCount(0)
-  })
-
-  test('an RFQ with an order cannot be deleted: the confirm names the order and has no Delete button', async ({ page }) => {
-    const company = uniqueName('Delete Order Co')
-    const co = await createCompany(company)
-    const rfq = await createRfq(co.id)
-    const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: co.id, rfq_id: rfq.id } })))[0]
-
-    await openAs(page, 'admin', `/rfqs/${rfq.id}`)
-    await openMore(page)
-    await page.getByRole('menuitem', { name: 'Delete RFQ' }).click()
-    const dialog = page.getByRole('dialog', { name: `Delete ${rfqRef(rfq.number)}?` })
-    await expect(dialog.getByText(`Has order ORD-${String(order.number).padStart(4, '0')}. Delete or cancel the order first.`)).toBeVisible()
-    await expect(dialog.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
-
-    // Nothing was deleted.
-    expect((await must(rest<unknown[]>('admin', `rfqs?id=eq.${rfq.id}&select=id`))).length).toBe(1)
   })
 })

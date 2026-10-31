@@ -27,16 +27,7 @@ export interface Visit {
   /** The screen ids this visit captures, in order (a flow has several). */
   screens: readonly string[]
   run: (page: Page, fx: Fixture, capture: Capture) => Promise<void>
-  /**
-   * The old RFQ and Orders pages, kept until 2026-11-09 so a before and after can be compared (the e2e sign-in turns them on: e2e/support/stack.ts).
-   * They are captured and shown but not scored: they are being removed. The Jobs screens are the ones held to the targets.
-   */
-  legacy?: boolean
 }
-
-/** `?old=1` keeps the old RFQ and Orders pages, `?old=0` opens the Jobs page for the same address (src/app/oldAddresses.tsx). */
-const withOld = (path: string, old: '0' | '1'): string => `${path}${path.includes('?') ? '&' : '?'}old=${old}`
-const LEGACY = /^(rfqs-open|rfqs-closed|rfq-not-sent|rfq-waiting|rfq-prices-in|rfq-quoted|rfq-won|rfq-compare|orders|order-.+)$/
 
 const ALL = ['admin', 'sales', 'engineer'] as const
 const MONEY = ['admin', 'sales'] as const
@@ -58,16 +49,13 @@ export async function open(page: Page, path: string): Promise<void> {
 }
 
 function screen(id: string, title: string, roles: readonly Role[], path: (fx: Fixture) => string, opts?: CaptureOptions): Visit {
-  const legacy = LEGACY.test(id)
-  const mode = legacy ? '1' : id.startsWith('job') ? '0' : null
   return {
     id,
     title,
     roles,
     screens: [id],
-    legacy,
     run: async (page, fx, capture) => {
-      await open(page, mode ? withOld(path(fx), mode) : path(fx))
+      await open(page, path(fx))
       await capture(id, opts)
     },
   }
@@ -219,7 +207,7 @@ const issueQuotation: Visit = {
     const dialog = page.locator(DIALOG).first()
     try {
       await bounded(60_000, 'open Issue quotation', async () => {
-        await open(page, withOld(`/rfqs/${fx.rfq.pricesIn}`, '0'))
+        await open(page, `/rfqs/${fx.rfq.pricesIn}`)
         await closeDialogs(page)
         const pressed = await tryPress(page, [/^issue quotation$/i, /^(make|write|send) (a )?quotation$/i, /issue quotation/i], 'Issue quotation')
         const shown =
@@ -229,7 +217,7 @@ const issueQuotation: Visit = {
             () => false,
           ))
         if (!shown) {
-          await open(page, withOld(`/rfqs/${fx.rfq.pricesIn}?issue=1`, '0'))
+          await open(page, `/rfqs/${fx.rfq.pricesIn}?issue=1`)
           await dialog.waitFor({ timeout: 10_000 })
         }
         await settle(page)
@@ -262,7 +250,7 @@ const markWon: Visit = {
     const dialog = page.locator(DIALOG).first()
     try {
       await bounded(60_000, 'open Mark won', async () => {
-        await open(page, withOld(`/rfqs/${fx.rfq.quoted}?won=1`, '0'))
+        await open(page, `/rfqs/${fx.rfq.quoted}?won=1`)
         await dialog.waitFor({ timeout: 15_000 })
         await settle(page)
       })
@@ -284,7 +272,7 @@ const addToJobPasted: Visit = {
   roles: MONEY,
   screens: ['add-to-job-pasted'],
   run: async (page, fx, capture) => {
-    await open(page, withOld(`/rfqs/${fx.rfq.waiting}`, '0'))
+    await open(page, `/rfqs/${fx.rfq.waiting}`)
     const box = page.getByRole('textbox', { name: 'Paste here' })
     await box.scrollIntoViewIfNeeded()
     await box.fill('Dear sir, thank you for your enquiry. Our best price is USD 412 per unit, delivery 3 weeks ex works, offer valid 14 days. Regards')
@@ -298,8 +286,8 @@ const addToJobPasted: Visit = {
 }
 
 export const VISITS: readonly Visit[] = [
-  // The Jobs screens (redesign phases 4 to 7). The rfq-* and order-* captures below open the same Job pages through the old addresses and are
-  // kept until 2026-11-09, so a before and after can be compared; after that date they can go.
+  // The Jobs screens (redesign phases 4 to 7). The Job pages are opened through the old /rfqs/<id> and /orders/<id> addresses, which also
+  // keeps the redirect under the audit. (The old RFQ and Order pages themselves were removed on 2026-10-30.)
   screen('jobs-list', 'Jobs list, open', ALL, () => '/jobs'),
   screen('jobs-history', 'Jobs list, history', ALL, () => '/jobs?chip=history'),
   screen('job-not-sent', 'Job page: enquiry, not sent to suppliers', ALL, fx => `/rfqs/${fx.rfq.notSent}`),
@@ -316,25 +304,9 @@ export const VISITS: readonly Visit[] = [
   screen('weekly-review', 'To do: weekly review', ADMIN, () => '/todo/review'),
   screen('capture-pick-job', 'Photo or note: which job (the share target with nothing shared)', ALL, () => '/capture'),
   screen('engineer-i-paid', 'I paid: my expense claims', ['sales', 'engineer'], () => '/my-expenses'),
-  screen('rfqs-open', 'RFQ list, open', ALL, () => '/rfqs'),
-  screen('rfqs-closed', 'RFQ list, closed', ALL, () => '/rfqs?tab=closed'),
-  screen('rfq-not-sent', 'RFQ page: not sent to suppliers', ALL, fx => `/rfqs/${fx.rfq.notSent}`),
-  screen('rfq-waiting', 'RFQ page: waiting for prices', ALL, fx => `/rfqs/${fx.rfq.waiting}`),
-  screen('rfq-prices-in', 'RFQ page: prices in', ALL, fx => `/rfqs/${fx.rfq.pricesIn}`),
-  screen('rfq-quoted', 'RFQ page: quotation sent', ALL, fx => `/rfqs/${fx.rfq.quoted}`),
-  {
-    id: 'rfq-won',
-    legacy: true,
-    title: 'RFQ page: won, made into an order',
-    roles: ALL,
-    screens: ['rfq-won'],
-    run: async (page, fx, capture) => {
-      // seed.json from before the won RFQ was seeded has no id for it: delete it (and reset the database) to seed again.
-      if (!fx.rfq.won) throw new Error('the seed has no won RFQ (an older seed.json); reseed to capture it')
-      await open(page, withOld(`/rfqs/${fx.rfq.won}`, '1'))
-      await capture('rfq-won')
-    },
-  },
+  screen('job-order-not-placed', 'Job page: order, supplier order not placed', ALL, fx => `/orders/${fx.order.notPlaced}`),
+  screen('job-invoiced', 'Job page: order, invoiced, not paid', ALL, fx => `/orders/${fx.order.invoiced}`),
+  screen('job-compare', 'Job page: supplier comparison (4 suppliers, 3 currencies)', ALL, fx => `/rfqs/${fx.rfq.compare}`, { scrollTo: '[data-compared]' }),
   {
     // The Comparative Statement of the compare job (4 suppliers, 3 currencies), with the "did not reply" rows on. Admin and sales only.
     id: 'job-statement',
@@ -348,14 +320,6 @@ export const VISITS: readonly Visit[] = [
       await capture('job-statement')
     },
   },
-  screen('rfq-compare', 'Supplier comparison (4 suppliers, 3 currencies)', ALL, fx => `/rfqs/${fx.rfq.compare}`, { scrollTo: '[data-compared]' }),
-  screen('orders', 'Orders list', ALL, () => '/orders'),
-  screen('order-not-placed', 'Order page: supplier order not placed', ALL, fx => `/orders/${fx.order.notPlaced}`),
-  screen('order-po-issued', 'Order page: PO issued', ALL, fx => `/orders/${fx.order.poIssued}`),
-  screen('order-delivered', 'Order page: delivered, not invoiced', ALL, fx => `/orders/${fx.order.delivered}`),
-  screen('order-invoiced', 'Order page: invoiced, not paid', ALL, fx => `/orders/${fx.order.invoiced}`),
-  screen('order-paid', 'Order page: paid', ALL, fx => `/orders/${fx.order.paid}`),
-  screen('order-multi-supplier', 'Order page: 3 supplier orders, commissioning', ALL, fx => `/orders/${fx.order.multiLeg}`),
   screen('companies', 'Companies list', ALL, () => '/companies'),
   screen('company-customer', 'Company page: customer', ALL, fx => `/companies/${fx.company.customer}`),
   screen('company-supplier', 'Company page: supplier', ALL, fx => `/companies/${fx.company.supplier}`),

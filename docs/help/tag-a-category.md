@@ -3,7 +3,7 @@ id: tag-a-category
 title: Set an item's category, or tag a supplier for one
 roles: sales, admin
 keywords: category, product, tag, supplier, deals in, item, chip, guessed, product category
-screens: /rfqs, /companies
+screens: /jobs, /companies
 related: why-this-supplier
 ---
 1. On an RFQ, tap the category chip under an item. A dashed chip is only a guess: tap it and choose the category to save it.

@@ -7,7 +7,7 @@ import { openAs } from '../support/stack'
  * Since the bigger default text (DECISIONS 2026-10-19) the main screens are checked on a phone (375) and at 1280, 1366 and 1440, as admin
  * (the widest bar: every destination and every count); the top bar alone is also checked at 1024 (a 1366 laptop at 125%) and 1920.
  */
-const SCREENS = ['/todo', '/rfqs', '/orders', '/companies', '/money/receivables', '/money/gst-register', '/money/month-end', '/money/reports']
+const SCREENS = ['/todo', '/jobs', '/companies', '/money/receivables', '/money/gst-register', '/money/month-end', '/money/reports']
 
 const measure = () => {
   // The shell's bars only: a page may draw its own <header> inside #main.

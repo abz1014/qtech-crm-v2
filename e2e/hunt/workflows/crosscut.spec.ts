@@ -5,6 +5,7 @@ import { expect, test, type Browser, type BrowserContext, type Locator, type Pag
 import { db, SERVICE_KEY, USER } from '../../verify/support/db'
 import { company, karachiDay, order, post, postMany, quote, ref, rfq, supplier } from '../../verify/support/fixtures'
 import { blankCtx, ctxAs, layout, note, probe, probe as huntProbe, settle, shot, tag, visit, watch, type Viewport } from './support'
+import { openStage } from '../../support/job'
 import type { Role } from '../../support/stack'
 
 /*
@@ -1198,14 +1199,6 @@ async function editCompany(page: Page, change: (d: Locator) => Promise<void>): P
   await expect(d).toBeHidden({ timeout: 10_000 })
 }
 
-test('HW-24: an unknown filter value in the address (/orders?goods=bogus) crashes the Orders page', async ({ browser }, info) => {
-  const { page } = await pin(browser, info, 'admin')
-  await land(page, '/orders?owner=all')
-  await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
-  await land(page, '/orders?owner=all&goods=bogus')
-  await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible({ timeout: 10_000 })
-})
-
 test("HW-25: a stale second tab's Edit company save silently wipes the Notes saved from the first tab", async ({ browser }, info) => {
   const co = await company(`Hunt HW25 ${T}`, { city: 'Lahore' })
   const notes = `Notes from tab A ${T}`
@@ -1239,18 +1232,19 @@ test('HW-26: the C shortcut (Paste or photo) still fires with single-key shortcu
 
 test('HW-27: with the Help side panel open, / and N do nothing on the page', async ({ browser }, info) => {
   const { page } = await pin(browser, info, 'admin')
-  await land(page, '/rfqs?help=')
+  await land(page, '/jobs?help=')
   await expect(page.getByRole('dialog', { name: 'Help' })).toBeVisible()
-  await page.getByRole('heading', { name: 'RFQs', level: 1 }).click()
+  await page.getByRole('heading', { name: 'Jobs', level: 1 }).click()
   await blur(page)
   await page.keyboard.press('/')
-  await expect(page.getByRole('textbox', { name: 'Search RFQs' })).toBeFocused()
+  await expect(page.getByRole('textbox', { name: 'Search jobs' })).toBeFocused()
 })
 
 test('HW-28: Ctrl+K opens the palette on top of an open dialog', async ({ browser }, info) => {
   const r = await rfq({ customer: await company(`Hunt HW28 ${T}`), items: [{ description: `Hunt hw28 gauge ${T}`, qty: 1 }] })
   const { page } = await pin(browser, info, 'admin')
   await land(page, `/rfqs/${r.rfq.id}`)
+  await openStage(page, 'Quotation')
   await page.getByRole('button', { name: 'Add item' }).first().click()
   const d = page.getByRole('dialog', { name: 'Add an item' })
   await d.getByLabel('Description').fill(`Half typed ${T}`)
@@ -1268,63 +1262,6 @@ test("HW-29: palette: '%' and '_' list unrelated results, a name with a backslas
   const a = await paletteAsk(page, dialog, '%')
   const unrelated = a.options.filter(o => !o.includes('%') && !/^Add “/.test(o))
   expect(unrelated).toEqual([])
-})
-
-test('HW-30: list sort (RFQ board, Orders) is lost on Back and on refresh', async ({ browser }, info) => {
-  await rfq({ customer: await company(`Hunt HW30 ${T}`), items: [{ description: `Hunt hw30 gauge ${T}`, qty: 1 }], owner: 'admin' })
-  const { page } = await pin(browser, info, 'admin')
-  await land(page, '/rfqs?owner=all')
-  const due = () => page.getByRole('columnheader', { name: /Due/ }).first()
-  await due().getByRole('button').click()
-  await expect(due()).toHaveAttribute('aria-sort', 'ascending')
-  await page.reload()
-  await page.locator('#main').waitFor()
-  await settle(page)
-  await expect(due()).toBeVisible()
-  await expect(due()).toHaveAttribute('aria-sort', 'ascending')
-})
-
-test("HW-31: the RFQ board's 'need you' is the person's own (Today's RFQ items), the same with Mine and All", async ({ browser }, info) => {
-  // One RFQ of the salesperson's (so Mine has a list) and one owned by the admin that needs suppliers: in All, not in Mine.
-  await rfq({ customer: await company(`Hunt HW31 mine ${T}`), items: [{ description: `Hunt hw31 own gauge ${T}`, qty: 1 }], owner: 'sales' })
-  await rfq({ customer: await company(`Hunt HW31 ${T}`), items: [{ description: `Hunt hw31 gauge ${T}`, qty: 1 }], owner: 'admin' })
-  const { page } = await pin(browser, info, 'sales')
-  const lede = async () => (await mainText(page)).split('New RFQ')[0]
-  const need = (t: string) => Number(/(\d+) need you/.exec(t)?.[1] ?? 0)
-  const showing = (t: string) => Number(/Showing (\d+) of/.exec(t)?.[1] ?? NaN)
-  await land(page, '/rfqs?owner=mine')
-  const mine = await lede()
-  const mineShown = showing(await mainText(page))
-  await land(page, '/rfqs?owner=all')
-  const all = await lede()
-  const allShown = showing(await mainText(page))
-  expect(mineShown).toBeLessThan(allShown)
-  // Redesign phase 0: one definition of "needs you" (features/todo/needsYou.ts). The board's number is the RFQ items on this
-  // person's own Today (their own RFQ that needs suppliers today), whichever owner filter the list shows, and no "overdue" count.
-  expect(need(all)).toBeGreaterThan(0)
-  expect(need(mine)).toBe(need(all))
-  expect(all).not.toMatch(/overdue/)
-})
-
-test("HW-32: the Orders page's 'need you' is the order rows on the person's Today (one definition, redesign phase 0)", async ({ browser }, info) => {
-  const { page } = await pin(browser, info, 'sales')
-  // An order of the salesperson's whose goods are 6 days late: a goods row on their Today, due now.
-  const sup = await supplier(`Hunt HW32 supplier ${T}`, 'Germany')
-  const o = await order({ suppliers: [{ supplier: sup }], lines: [{ description: `Hunt hw32 gauge ${T}`, qty: 1, price: 100000, leg: 0 }], owner: 'sales', orderedOn: karachiDay(-20) })
-  await db.patch(`supplier_orders?id=eq.${o.legs[0].id}`, { placed_on: karachiDay(-15), expected_on: karachiDay(-6) })
-  const ORDER_RULES = ['goods_late', 'place_po', 'plan_commissioning', 'to_source', 'job_commissioning', 'job_on_site']
-  await expect(async () => {
-    await land(page, '/todo')
-    const rows = await page
-      .locator('section[data-block="late"], section[data-block="today"]')
-      .locator('li[data-rule]')
-      .evaluateAll((ls, rules) => ls.filter(l => rules.includes(l.getAttribute('data-rule') ?? '')).length, ORDER_RULES)
-      .catch(() => 0)
-    await land(page, '/orders')
-    const n = Number(/(\d+) need you/.exec(await mainText(page))?.[1] ?? 0)
-    expect(n, `the Orders page's "${n} need you" vs ${rows} order rows due now on Today`).toBe(rows)
-    expect((await todayNumbers(page)).nav.Orders ?? 0).toBe(0) // no Orders badge any more
-  }).toPass({ timeout: 60_000 })
 })
 
 test("HW-33: near-duplicate company names are accepted ('A  B' with doubled spaces, a trailing full stop)", async ({ browser }, info) => {
@@ -1366,23 +1303,6 @@ test('HW-35: refresh drops the New company dialog (?new=1)', async ({ browser },
   await page.locator('#main').waitFor()
   await settle(page)
   await expect(d).toBeVisible()
-})
-
-test('HW-36: the RFQ board table header scrolls away (not sticky) in a long list', async ({ browser }, info) => {
-  const L = tag(6)
-  const co = await post<{ id: string }>('companies', { name: `Hunt HW36 ${L} Sticky` })
-  await postMany('rfqs', Array.from({ length: 40 }, (_, i) => ({ company_id: co.id, owner_id: USER.admin, due_on: karachiDay(i % 10), customer_ref: `HW36-${L}-${i}` })))
-  const { page } = await pin(browser, info, 'admin')
-  await land(page, `/rfqs?owner=all&q=${L}`)
-  await expect(page.getByText(/Showing 40 of/)).toBeVisible()
-  const geo = await page.evaluate(() => {
-    const main = document.getElementById('main') as HTMLElement
-    main.scrollTop = 1200
-    const th = document.querySelector('#main table thead th') as HTMLElement
-    return { scrolled: main.scrollTop, mainTop: main.getBoundingClientRect().top, thTop: th.getBoundingClientRect().top }
-  })
-  expect(geo.scrolled).toBeGreaterThan(1000)
-  expect(geo.thTop).toBeGreaterThanOrEqual(geo.mainTop - 2)
 })
 
 test('HW-37: the palette offers to add a 300-character text as a new company', async ({ browser }, info) => {

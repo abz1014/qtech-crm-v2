@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openStage } from '../support/job'
 import { API_URL, openAs } from '../support/stack'
 import { api, FIXTURE_PASSWORD, STAFF_EMAIL } from './lib'
 import { IDS, seedWorld, type World } from './fixtures'
@@ -125,6 +126,7 @@ test.describe('a double tap makes one record', () => {
   test('Record payment (admin): one payment', async ({ page }) => {
     const before = (await rows(`payments_in?order_id=eq.${world.order.id}&select=id`)).length
     await openAs(page, 'admin', `/orders/${world.order.id}`)
+    await openStage(page, 'Invoice')
     await page.getByRole('button', { name: 'Record payment' }).first().click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await d.getByLabel('Amount received, PKR').fill('1234')
@@ -152,6 +154,7 @@ test.describe('a double tap makes one record', () => {
   test('BUG-RV-07: Add line on an order (sales): a double tap makes one line', async ({ page }) => {
     const description = `${world.tag} double tap line`
     await openAs(page, 'sales', `/orders/${world.order.id}`)
+    await openStage(page, 'Order')
     const toggle = page.getByRole('button', { name: 'Edit GST and lines' })
     if (await toggle.count()) await toggle.click() // post-merge: line editing sits behind this toggle
     await page.getByRole('button', { name: 'Add line' }).first().click()
@@ -167,6 +170,7 @@ test.describe('a double tap makes one record', () => {
   test('Add item on an RFQ (engineer): one item', async ({ page }) => {
     const description = `${world.tag} double tap item`
     await openAs(page, 'engineer', `/rfqs/${world.rfq.id}`)
+    await openStage(page, 'Quotation')
     await page.getByRole('button', { name: 'Add item' }).first().click()
     const d = page.getByRole('dialog', { name: 'Add an item' })
     await d.getByLabel('Description').fill(description)
@@ -182,6 +186,7 @@ test('Undo of a leg stamp puts the leg back exactly as it was', async ({ page })
   const pick = 'id,placed_on,expected_on,received_on,reference,currency,supplier_id,order_id,chase_count,last_chased_on,last_chased_by'
   const before = (await rows<Record<string, unknown>>(`supplier_orders?id=eq.${world.leg}&select=${pick}`))[0]
   await openAs(page, 'engineer', `/orders/${world.order.id}`)
+  await openStage(page, 'Supplier order')
   await page.getByRole('button', { name: /^I placed this order, / }).first().click()
   await expect.poll(async () => (await rows<{ placed_on: string | null }>(`supplier_orders?id=eq.${world.leg}&select=placed_on`))[0].placed_on).not.toBeNull()
   await page.getByRole('region', { name: 'Notifications' }).getByRole('button', { name: /^Undo/ }).first().click()
@@ -196,6 +201,7 @@ test('Undo of a supplier chase restores the count and the date; the earlier chas
   const pick = 'chase_count,last_chased_on,last_chased_by,sent_on'
   const before = (await rows<Record<string, unknown>>(`supplier_inquiries?id=eq.${inquiry}&select=${pick}`))[0]
   await openAs(page, 'admin', `/rfqs/${world.rfq.id}`)
+  await openStage(page, 'Quotation')
   const chase = page.getByRole('button', { name: /^Chase/ }).first()
   test.skip((await chase.count()) === 0, 'no chase button in this state')
   await chase.click()

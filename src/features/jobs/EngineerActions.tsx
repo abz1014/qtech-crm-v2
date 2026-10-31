@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Camera, CloudOff, FileText, HardHat, Truck } from 'lucide-react'
+import { Camera, CloudOff, HardHat, Truck } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
@@ -84,6 +84,11 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   return (
     <section aria-label="On site" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-4 md:px-5" data-engineer-actions>
       <h2 className="text-lg font-semibold">On site</h2>
+      {order?.site || order?.contact ? (
+        <p className="text-base text-fg-2" data-testid="job-site">
+          {[order.site?.name, order.site?.address, order.contact ? [order.contact.name, order.contact.phone].filter(Boolean).join(', ') : null].filter(Boolean).join(' · ')}
+        </p>
+      ) : null}
       {offline ? (
         <p role="status" className="flex items-center gap-2 rounded border border-dashed border-line-strong px-3 py-3 text-base text-fg-2" data-offline>
           <CloudOff aria-hidden="true" className="size-5 shrink-0" />
@@ -109,12 +114,6 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
       {order || facts.job.orderId ? (
         <div className="flex flex-wrap items-center gap-2">
           {order && order.needsCommissioning && !order.doneOn && !cancelled ? <VisitButton order={order} /> : null}
-          {facts.job.orderId ? (
-            <Link to={`/orders/${facts.job.orderId}`} className="inline-flex min-h-touch items-center gap-2 rounded px-3 text-base font-semibold text-primary hover:underline">
-              <FileText aria-hidden="true" className="size-5" />
-              Open the order
-            </Link>
-          ) : null}
         </div>
       ) : null}
       {adding && sharedItem.state.status !== 'loading' ? (

@@ -10,7 +10,7 @@ import { importedStyleInputs } from '@/features/today/importedFixture'
 
 /*
  * P5-F: the old RFQ and Order addresses open Jobs (an id opens its Job through v_jobs, a list opens the Jobs list with the matching
- * chip); ?old=1 keeps the old page. And Money's red dot: only while a real invoice is late.
+ * chip), with or without the retired ?old=1. And Money's red dot: only while a real invoice is late.
  */
 function Where() {
   const l = useLocation()
@@ -25,8 +25,8 @@ function mount(path: string, respond: (c: FakeCall) => { data?: unknown } = () =
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/rfqs/*" element={<><OldAddress kind="rfq"><p>OLD RFQ PAGE</p></OldAddress><Where /></>} />
-        <Route path="/orders/*" element={<><OldAddress kind="order"><p>OLD ORDER PAGE</p></OldAddress><Where /></>} />
+        <Route path="/rfqs/*" element={<><OldAddress kind="rfq" /><Where /></>} />
+        <Route path="/orders/*" element={<><OldAddress kind="order" /><Where /></>} />
         <Route path="/jobs/*" element={<Where />} />
       </Routes>
     </MemoryRouter>,
@@ -35,17 +35,17 @@ function mount(path: string, respond: (c: FakeCall) => { data?: unknown } = () =
 
 describe('old addresses open Jobs', () => {
   it('/rfqs/<id> opens the Job that holds the RFQ, query kept', async () => {
-    mount('/rfqs/abc?x=1', c => (c.target === 'v_jobs' ? { data: [{ job_key: '139' }] } : { data: [] }))
+    mount('/rfqs/11111111-1111-4111-8111-111111111111?x=1', c => (c.target === 'v_jobs' ? { data: [{ job_key: '139' }] } : { data: [] }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139?x=1'))
-    expect(fake?.calls.find(c => c.target === 'v_jobs')?.ops.some(([n, a]) => n === 'eq' && a[0] === 'rfq_id' && a[1] === 'abc')).toBe(true)
+    expect(fake?.calls.find(c => c.target === 'v_jobs')?.ops.some(([n, a]) => n === 'eq' && a[0] === 'rfq_id' && a[1] === '11111111-1111-4111-8111-111111111111')).toBe(true)
   })
 
   it('/orders/<id> opens its Job; a cancelled order finds the Job through its RFQ', async () => {
-    mount('/orders/o1', c => (c.target === 'v_jobs' ? { data: [{ job_key: 'O-45' }] } : { data: [] }))
+    mount('/orders/22222222-2222-4222-8222-222222222222', c => (c.target === 'v_jobs' ? { data: [{ job_key: 'O-45' }] } : { data: [] }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/O-45'))
     fake?.uninstall()
     let n = 0
-    const r = mount('/orders/o2', c => {
+    const r = mount('/orders/33333333-3333-4333-8333-333333333333', c => {
       if (c.target === 'v_jobs') return { data: n++ === 0 ? [] : [{ job_key: '139' }] }
       if (c.target === 'orders') return { data: [{ rfq_id: 'r9' }] }
       return { data: [] }
@@ -55,7 +55,7 @@ describe('old addresses open Jobs', () => {
 
   it('a failed lookup (offline, a server error) says so and offers Try again, not "not found"', async () => {
     let fail = true
-    mount('/rfqs/offline-1', c => {
+    mount('/rfqs/44444444-4444-4444-8444-444444444444', c => {
       if (c.target === 'v_jobs') return fail ? { error: { message: 'Failed to fetch' } } : { data: [{ job_key: '139' }] }
       return { data: [] }
     })
@@ -67,8 +67,14 @@ describe('old addresses open Jobs', () => {
   })
 
   it('an id with no Job is page not found, not a blank page', async () => {
-    mount('/rfqs/nope')
+    mount('/rfqs/00000000-0000-4000-8000-000000000000')
     expect(await screen.findByText(/not found/i)).toBeInTheDocument()
+  })
+
+  it('an id that is not even an id (a mistyped link) is page not found, not "check your connection"', async () => {
+    mount('/rfqs/not-a-uuid', c => (c.target === 'v_jobs' ? { error: { message: 'invalid input syntax for type uuid' } } : { data: [] }))
+    expect(await screen.findByText(/not found/i)).toBeInTheDocument()
+    expect(screen.queryByText(/check your connection/i)).toBeNull()
   })
 
   it('the lists open the Jobs list with the matching chip', async () => {
@@ -90,22 +96,29 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?q=RST+1158&chip=history'))
   })
 
-  it('?old=1 keeps the old page, and remembers it on this device', () => {
+  it('the retired ?old=1 and ?old=0 switches are dropped: an old link with one still lands on the Job or the Jobs list', async () => {
+    mount('/rfqs/11111111-1111-4111-8111-111111111111?old=1&x=1', c => (c.target === 'v_jobs' ? { data: [{ job_key: '139' }] } : { data: [] }))
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139?x=1'))
+    fake?.uninstall()
+    mount('/orders/22222222-2222-4222-8222-222222222222?old=0', c => (c.target === 'v_jobs' ? { data: [{ job_key: 'O-45' }] } : { data: [] }))
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs/O-45'))
+    fake?.uninstall()
     mount('/rfqs?old=1')
-    expect(screen.getByText('OLD RFQ PAGE')).toBeInTheDocument()
-    expect(screen.getByTestId('where').textContent).toBe('/rfqs?old=1')
-    expect(window.localStorage.getItem('qtech.old-pages')).toBe('1')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs'))
+    fake?.uninstall()
+    mount('/orders?old=1&show=closed')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history'))
   })
 
-  it('once remembered, the old pages own links work without the flag; ?old=0 goes back to Jobs', async () => {
+  it('a device that remembered the old pages (the retired localStorage flag) still opens Jobs', async () => {
     window.localStorage.setItem('qtech.old-pages', '1')
-    const r = mount('/orders/o1')
-    expect(r.getByText('OLD ORDER PAGE')).toBeInTheDocument()
-    r.unmount()
-    fake?.uninstall()
-    mount('/orders?old=0')
-    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs'))
-    expect(window.localStorage.getItem('qtech.old-pages')).toBeNull()
+    mount('/orders/22222222-2222-4222-8222-222222222222', c => (c.target === 'v_jobs' ? { data: [{ job_key: 'O-45' }] } : { data: [] }))
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/O-45'))
+  })
+
+  it('an address deeper than an id is page not found', async () => {
+    mount('/orders/o1/extra')
+    expect(await screen.findByText(/not found/i)).toBeInTheDocument()
   })
 })
 

@@ -186,8 +186,7 @@ export const INFO = [
 ]
 
 const fmt = (def, v) => (v === null || v === undefined ? '-' : def.format ? def.format(v) : String(Math.round(v * 10) / 10))
-// A legacy capture (the old RFQ and Orders pages kept to 2026-11-09, `legacy: true`) is drawn and listed but not scored.
-const measured = c => c.status === 'ok' && c.metrics && !c.legacy
+const measured = c => c.status === 'ok' && c.metrics
 
 /** Merges result parts ({meta, captures}); a later part (by finishedAt) replaces an earlier capture of the same role, screen and viewport. */
 export function mergeParts(parts) {

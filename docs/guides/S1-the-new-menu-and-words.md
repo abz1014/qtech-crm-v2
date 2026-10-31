@@ -22,7 +22,7 @@ Beside them: **[+ New]** (start something) and **[Search or jump to]** (press Ct
 They are **[Jobs]** now. One customer request is one job: the enquiry, the quotation, the order, the supplier orders, the delivery, the invoice and the payment are all on its page. A job is called "Job 139" (the old RFQ number) or "Job O-45" (an order that never had an enquiry).
 
 - Old links and bookmarks still work: an RFQ or order address opens its job.
-- The old RFQ and Order pages stay for two weeks, until 9 November, at the address with `?old=1` on the end. After that they are removed.
+- The old RFQ and Order pages are gone (removed 30 October). An old link or bookmark to one still works: it opens the job.
 - Searching "RFQ", "order" or an old number still finds the job.
 
 ## The numbers

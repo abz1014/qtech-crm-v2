@@ -1,6 +1,7 @@
 import { test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { markWonButton, openStage, orderCreated } from '../support/job'
 import { expect, get, legLoc, setProfile, shot, tapper } from './fixtures'
 import { chooseAllSuppliers, chooseSupplier } from '../support/supplierChoice'
 
@@ -105,7 +106,7 @@ async function seedSplitOrder(): Promise<Seed & { order: { id: string; number: n
   return { ...s, order: await orderFor(s.rfq.id) }
 }
 
-const markWon = (page: Page) => page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })
+const markWon = (page: Page) => markWonButton(page)
 const partQty = (page: Page, part: number, line = 1) => dialog(page).getByLabel(`Quantity, part ${part}, line ${line}`)
 
 test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
@@ -113,7 +114,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     const s = await seed()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await t.tap(markWon(page))
+    await t.tap(await markWon(page))
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Mark won' })).toBeVisible()
 
@@ -134,7 +135,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await chooseSupplier(page, d, 'Supplier for line 2', new RegExp(s.s1.name), t.tap)
 
     await t.tap(d.getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     expect(t.count).toBe(1 + 2 + 2 + 1) // Mark won, two taps a line to choose, Create order
 
     const order = await orderFor(s.rfq.id)
@@ -151,7 +152,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     const s = await seed()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await t.tap(markWon(page))
+    await t.tap(await markWon(page))
     const d = dialog(page)
 
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name), t.tap)
@@ -170,7 +171,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await shot(page, 'a8-convert-split-1440')
 
     await t.tap(d.getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     // Mark won, line 1's supplier (2), Split this item (1), part 2's supplier (2), line 2's supplier (2), the quantity typed (1), Create order
     expect(t.count).toBe(1 + 2 + 1 + 2 + 2 + 1 + 1)
 
@@ -186,7 +187,8 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     // same total as the unsplit order: 4 x 134,000 + 2 x 612,000
     expect(lines.reduce((sum, l) => sum + Number(l.qty) * Number(l.unit_price_net), 0)).toBe(4 * 134000 + 2 * 612000)
 
-    // the order page groups the two parts under the one item
+    // the order stage groups the two parts under the one item
+    await openStage(page, 'Order')
     await expect(page.getByText('split across 2 suppliers').first()).toBeVisible()
   })
 
@@ -194,7 +196,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     const s = await seed()
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await t.tap(markWon(page))
+    await t.tap(await markWon(page))
     const d = dialog(page)
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name), t.tap)
     await t.tap(d.getByRole('button', { name: 'Split this item, line 1' }))
@@ -208,7 +210,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await chooseSupplier(page, d, 'Supplier for line 2', undefined, t.tap)
     expect(t.count).toBe(1 + 2 + 1 + 1 + 1 + 1 + 2) // Mark won, line 1's supplier, Split this item, picker, choose, quantity, line 2's supplier
     await t.tap(d.getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
 
     const order = await orderFor(s.rfq.id)
     const lines = await orderLines(order.id)
@@ -221,7 +223,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
   test('parts that do not add up only warn: the warning is plain, nothing is blocked, and the order is made as typed', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await markWon(page).click()
+    await (await markWon(page)).click()
     const d = dialog(page)
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name))
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
@@ -234,7 +236,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
     await expect(d.getByRole('button', { name: 'Create order' })).toBeEnabled()
     await shot(page, 'a8-convert-split-warning-1440')
     await d.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     const lines = await orderLines((await orderFor(s.rfq.id)).id)
     expect(lines.slice(0, 2).map(l => Number(l.qty))).toEqual([3, 2])
   })
@@ -242,7 +244,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
   test('removing a part takes the item back to one supplier; the same supplier cannot be split against itself (22023 from the database)', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await markWon(page).click()
+    await (await markWon(page)).click()
     const d = dialog(page)
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name))
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
@@ -272,14 +274,14 @@ test.describe('lifecycle audit fixes: commissioning toggle and default expected 
   test('Needs commissioning starts off for plain goods and one tap turns it on; the order keeps it', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await markWon(page).click()
+    await (await markWon(page)).click()
     const d = dialog(page)
     const box = d.getByRole('checkbox', { name: 'Needs commissioning' })
     await expect(box).not.toBeChecked()
     await box.click()
     await chooseAllSuppliers(page, d)
     await d.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     const order = await orderFor(s.rfq.id)
     expect((await get<{ needs_commissioning: boolean }>(`orders?id=eq.${order.id}&select=needs_commissioning`))[0].needs_commissioning).toBe(true)
   })
@@ -288,6 +290,7 @@ test.describe('lifecycle audit fixes: commissioning toggle and default expected 
     const s = await seedSplitOrder()
     const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: s.order.id, supplier_id: s.s3.id, currency: 'PKR' } })))[0]
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     const legs = await get<{ id: string }>(`supplier_orders?order_id=eq.${s.order.id}&select=id&order=created_at`)
     const letter = String.fromCharCode(65 + legs.findIndex(l => l.id === leg.id))
     const card = legLoc(page, letter)
@@ -317,6 +320,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     const s = await seedSplitOrder()
     const t = tapper()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Order')
     const items = page.getByRole('region', { name: 'Items' })
     await expect(items.getByText('split across 2 suppliers')).toBeVisible()
     await expect(items.getByText('Part 1 of 2')).toBeVisible()
@@ -345,6 +349,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     const t = tapper()
     const before = await orderLines(s.order.id)
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Order')
     // move 1 of part 1 (3 pieces, s1) to the third-ranked supplier; the row actions are behind "Edit GST and lines"
     await t.tap(page.getByRole('button', { name: 'Edit GST and lines' }))
     await t.tap(page.getByRole('button', { name: 'Split line 1a' }))
@@ -368,12 +373,14 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     // the item is now split across 3 suppliers
     await expect(page.getByText('split across 3 suppliers')).toBeVisible()
     // the supplier that was not on the order before has a new supplier order, labelled as coming from the split
+    await openStage(page, 'Supplier order')
     await expect(page.getByText('New, from the split').first()).toBeVisible()
   })
 
   test('a refused split says why and changes nothing (a quantity of the whole line)', async ({ page }) => {
     const s = await seedSplitOrder()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Order')
     await page.getByRole('button', { name: 'Edit GST and lines' }).click()
     await page.getByRole('button', { name: 'Split line 1a' }).click()
     const d = dialog(page)
@@ -389,6 +396,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     const legS1 = legs.find(l => l.supplier_id === s.s1.id)!
     await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: legS1.id } }))
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
     await expect(page.getByTestId('leg-A-changed')).toHaveCount(0)
 
@@ -396,6 +404,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     const part1 = (await orderLines(s.order.id))[0]
     await must(rest('sales', 'rpc/split_order_item', { method: 'POST', body: { p_item_id: part1.id, p_qty: 1, p_supplier_id: s.s3.id, p_currency: 'USD', p_supplier_unit_price: 450 } }))
     await page.reload()
+    await openStage(page, 'Supplier order')
     // the order's panels draw after the page (lazy chunks, perf2), so give the indicator longer than the default 5 s
     await legLoc(page, 'A').waitFor({ timeout: 20_000 })
     const changed = page.getByTestId('leg-A-changed')
@@ -415,7 +424,8 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
   test('there is no Received step on a supplier order: Mark placed, then Delivered today', async ({ page }) => {
     const s = await seedSplitOrder()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
-    await expect(page.getByRole('button', { name: /Received/ })).toHaveCount(0)
+    await openStage(page, 'Supplier order')
+    await expect(legLoc(page, 'A').getByRole('button', { name: /Received/ })).toHaveCount(0)
     await expect(legLoc(page, 'A').getByRole('button', { name: /^Issue PO/ })).toBeVisible()
     await legLoc(page, 'A').getByRole('button', { name: /^More for/ }).click()
     await expect(page.getByRole('menuitem', { name: 'Mark placed, no PO' })).toBeVisible()
@@ -427,6 +437,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     const urls: string[] = []
     page.on('request', r => urls.push(decodeURIComponent(r.url())))
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
+    await openStage(page, 'Order')
     const items = page.getByRole('region', { name: 'Items' })
     await expect(items.getByText('split across 2 suppliers')).toBeVisible()
     await expect(page.getByRole('button', { name: /Split line|Edit price|Revise PO/ })).toHaveCount(0)
@@ -450,7 +461,7 @@ for (const width of [1440, 375]) {
     const s = await seed()
     await page.setViewportSize({ width, height: width > 800 ? 1000 : 812 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await markWon(page).click()
+    await (await markWon(page)).click()
     const d = dialog(page)
     await chooseSupplier(page, d, 'Supplier for line 1', new RegExp(s.s1.name))
     await d.getByRole('button', { name: 'Split this item, line 1' }).click()
@@ -462,11 +473,14 @@ for (const width of [1440, 375]) {
     await shot(page, `a8-convert-picker-${width}`)
     await page.keyboard.press('Escape')
     await d.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
+    await openStage(page, 'Order')
     await expect(page.getByText('split across 2 suppliers').first()).toBeVisible()
+    await openStage(page, 'Supplier order')
     await expect(legLoc(page, 'A')).toBeVisible()
     expect(await axeViolations(page)).toEqual([])
     await shot(page, `a8-order-split-${width}`)
+    await openStage(page, 'Order')
 
     // the Split line dialog; on a phone the row action is in the card, so open it from the first part either way
     await page.getByRole('button', { name: 'Edit GST and lines' }).click()

@@ -1,6 +1,7 @@
 import { test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { JOB_URL } from '../support/job'
 import { expect, get, shot, tapper } from './fixtures'
 
 /*
@@ -58,8 +59,7 @@ const ordersOf = (companyId: string) => get<{ id: string; number: number; rfq_id
 test.describe('O02: repeat a past order', () => {
   test('find it by company, then 1 tap to copy it; typing the PO is the only other interaction; a double submit makes one order', async ({ page }) => {
     const s = await seedSource()
-    await openAs(page, 'sales', '/orders?owner=all')
-    await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
+    await openAs(page, 'sales', '/jobs?new=1') // + New, Order without enquiry: the dialog opens by itself
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Repeat a past order' })).toBeVisible()
     await expect(d).toContainText('The customer ordered again, or ordered without an RFQ')
@@ -82,7 +82,7 @@ test.describe('O02: repeat a past order', () => {
     const t = tapper()
     await t.typed(d.getByLabel('Customer PO number'), `NEW-${s.tag}`)
     await t.doubleTap(d.getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await expect(page).toHaveURL(JOB_URL)
     expect(t.count).toBeLessThanOrEqual(3)
 
     const all = await ordersOf(s.company.id)
@@ -112,8 +112,7 @@ test.describe('O02: repeat a past order', () => {
 
   test('found by site, by item text, by order number and by customer PO', async ({ page }) => {
     const s = await seedSource()
-    await openAs(page, 'admin', '/orders?owner=all')
-    await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
+    await openAs(page, 'admin', '/jobs?new=1') // + New, Order without enquiry: the dialog opens by itself
     const d = dialog(page)
     const input = d.getByLabel('Find a past order')
     const hit = d.getByRole('button', { name: new RegExp(`${s.company.name}.*ORD-${String(s.order.number).padStart(4, '0')}`) })
@@ -139,7 +138,7 @@ test.describe('O02: repeat a past order', () => {
     await expect(dialog(page).getByTestId('chosen-order')).toContainText(s.company.name)
     await expect(dialog(page).getByRole('button', { name: 'Choose another' })).toHaveCount(0)
     await dialog(page).getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await expect(page).toHaveURL(JOB_URL)
     expect(await ordersOf(s.company.id)).toHaveLength(2)
   })
 
@@ -154,8 +153,7 @@ test.describe('O02: repeat a past order', () => {
     test(`axe (WCAG 2.2 AA) and review screenshots at ${width}: the Repeat a past order dialog`, async ({ page }) => {
       const s = await seedSource()
       await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
-      await openAs(page, 'sales', '/orders?owner=all')
-      await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
+      await openAs(page, 'sales', '/jobs?new=1') // + New, Order without enquiry: the dialog opens by itself
       await dialog(page).getByLabel('Find a past order').fill(s.company.name)
       await expect(dialog(page).getByRole('button', { name: new RegExp(s.company.name) })).toBeVisible()
       expect(await dialogViolations(page)).toEqual([])

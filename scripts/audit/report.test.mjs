@@ -103,14 +103,14 @@ describe('screen audit report', () => {
         meta: { ref: 'main', sha: 'abc1234def', finishedAt: '2026-10-20T02:00:00Z', viewports: ['1366x768'] },
         captures: [
           cap('admin', 'today', '1366x768'),
-          cap('admin', 'rfq-quoted', '1366x768', { chips: { total: 9, aboveFold: 9, header: 6, headerMethod: 'band under h1', headerLabels: ['Open', 'Due soon'] } }),
+          cap('admin', 'job-quoted', '1366x768', { chips: { total: 9, aboveFold: 9, header: 6, headerMethod: 'band under h1', headerLabels: ['Open', 'Due soon'] } }),
           { role: 'admin', screen: 'money-pnl', visit: 'money-pnl', title: 'P&L', viewport: '1366x768', status: 'error', error: 'timeout', ms: 0, shots: {} },
         ],
       },
     ]
     const r = buildResults(parts)
     expect(r.summary.byTarget.headerChips).toMatchObject({ applicable: 2, passed: 1 })
-    expect(r.summary.worst.headerChips[0]).toMatchObject({ screen: 'rfq-quoted', value: 6 })
+    expect(r.summary.worst.headerChips[0]).toMatchObject({ screen: 'job-quoted', value: 6 })
     const md = renderMarkdown(r)
     expect(md).toContain('# Screen audit: main at `abc1234`')
     expect(md).toContain('| Status chips in the page header | at most 2 | 50% (1/2) |')

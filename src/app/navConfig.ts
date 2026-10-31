@@ -7,8 +7,8 @@ export type Role = 'admin' | 'sales' | 'engineer'
 export type NavKey = 'today' | 'jobs' | 'companies' | 'money'
 
 /**
- * The keys a "need you" number can be filed under. The top bar draws only To do's; the old RFQ board and Orders list (still reachable at
- * ?old=1 until the removal date in docs/DECISIONS.md) read the RFQ and order shares of the same one list.
+ * The keys a "need you" number can be filed under. The top bar draws only To do's; the RFQ and order shares of the same one list stay as keys
+ * (the old RFQ board and Orders list that read them were removed on 2026-10-30).
  */
 export type CountKey = NavKey | 'rfqs' | 'orders'
 
