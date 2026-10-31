@@ -303,6 +303,7 @@ insert into money_fns values
   ('payables_as_of', 'paid_pkr', 'hidden'), ('payables_as_of', 'owed_pkr', 'hidden'),
   ('held_advances', 'held', 'hidden'),   -- 0080: advances held on cancelled orders, admin only
   ('customer_statement', 'debit', 'hidden'), ('customer_statement', 'credit', 'hidden'),   -- 0125: a customer's statement of account, admin only
+  ('order_credit_rows', 'gross', 'hidden'), ('order_credit_rows', 'settled', 'hidden'), ('order_credit_rows', 'outflow', 'hidden'), ('order_credit_rows', 'available', 'hidden'),   -- 0127: granted to nobody
   ('cash_in_hand', 'base_pkr', 'hidden'), ('cash_in_hand', 'topups_pkr', 'hidden'), ('cash_in_hand', 'cash_out_pkr', 'hidden'),   -- 0087
   ('cash_in_hand', 'expected_pkr', 'hidden'), ('cash_in_hand', 'last_difference_pkr', 'hidden'), ('cash_in_hand', 'cash_out_count', 'info'),
   ('order_receivables', 'gross_target', 'hidden'), ('order_receivables', 'settled', 'hidden'), ('order_receivables', 'balance', 'hidden'),

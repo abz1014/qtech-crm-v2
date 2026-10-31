@@ -71,7 +71,7 @@ select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public
 select alike(pg_temp.try_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 400)::text$q$), '%holds Rs 320.00 of credit%', 'with the balance in the sentence');
 select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @02, public.today_pkt(), 1)::text$q$), 'E:P0001:refund_exceeds_credit', 'a customer with no credit is refused too');
 select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 10, @20)::text$q$), 'E:P0001:order_company', 'an order of another customer is refused');
-select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 100, @14, 'bank', 'RF-1', 'goodwill')::text$q$, true), 'ok:', 'a refund of 100 is recorded');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@50, @01, public.today_pkt(), 100, null, 'bank', 'RF-1', 'goodwill')::text$q$, true), 'ok:', 'a refund of 100 is recorded');
 select is((select balance from public.v_company_credit where company_id = pg_temp.u('01')), 220.00::numeric, 'the balance is 220');
 select is((select overpaid_by from public.order_receivables(pg_temp.u('10'))), 220.00::numeric, 'the refund came out of order 10''s overpayment (the oldest order that held enough): it is overpaid by 220 now, not 320');
 select is((select overpaid_by from public.v_order_money where order_id = pg_temp.u('10')), 220.00::numeric, 'order money says the same');
