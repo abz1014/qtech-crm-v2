@@ -166,9 +166,12 @@ create policy credit_applications_delete on public.credit_applications for delet
   using ((select public.current_user_role()) = 'admin');
 
 -- Record history (0090): both tables are children of the company, shown to the admin under the company's history.
+-- (the table has no id, so its audit trigger cannot name the row: it is off for these two inserts, as it was not yet attached in 0090)
+alter table public.history_sources disable trigger history_sources_audit;
 insert into public.history_sources (child_table, parent_table, parent_col, label_col, roles) values
   ('customer_refunds',   'companies', 'company_id', 'reference', '{admin}'),
   ('credit_applications', 'companies', 'company_id', 'note',      '{admin}');
+alter table public.history_sources enable trigger history_sources_audit;
 
 -- ================================================================ the month lock
 do $do$
