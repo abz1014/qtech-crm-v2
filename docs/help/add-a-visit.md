@@ -3,7 +3,7 @@ id: add-a-visit
 title: Add another visit, or print a service report
 roles: engineer, sales, admin
 keywords: visit, second visit, survey, installation, service, report, signature, engineer, site
-screens: /orders
+screens: /jobs
 related: set-visit-time, commissioning-done
 ---
 1. Open the order and look under [Commissioning] at Visits.

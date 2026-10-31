@@ -3,7 +3,7 @@ id: delivery-challan
 title: Make a delivery challan
 roles: engineer, sales, admin
 keywords: challan, delivery, dispatch, goods, received, signature, DC, part delivery
-screens: /orders
+screens: /jobs
 related: add-a-visit
 ---
 1. Open the order and find Delivery challans.
