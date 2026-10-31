@@ -154,7 +154,7 @@ function orders() {
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
   }
 }
-export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos' | 'files'
+export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'visits' | 'challans' | 'money' | 'pos' | 'files'
 
 /** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
 function settings() {

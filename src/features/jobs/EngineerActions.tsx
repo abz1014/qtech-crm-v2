@@ -20,6 +20,7 @@ import { invalidateAfter } from '@/features/invalidation'
 import { useMarkDone } from '@/features/orders/commissioningActions'
 import { useLegActions } from '@/features/orders/useLegActions'
 import { VisitButton } from '@/features/orders/VisitDialog'
+import { VisitsSection } from '@/features/orders/visits/VisitsSection'
 import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
 import { useUploadAttachment } from '@/features/rfqs/hooks'
 import type { JobFacts } from '@/features/jobs/api'
@@ -116,6 +117,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
           {order && order.needsCommissioning && !order.doneOn && !cancelled ? <VisitButton order={order} /> : null}
         </div>
       ) : null}
+      {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit /> : null}
       {adding && sharedItem.state.status !== 'loading' ? (
         <PhotoOrNote
           facts={facts}

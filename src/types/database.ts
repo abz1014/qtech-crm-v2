@@ -1185,6 +1185,62 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"order_visits": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"done_on": string | null,"engineer_id": string | null,"id": string,"notes": string | null,"order_id": string,"updated_at": string,"visit_on": string | null,"visit_type": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id": string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"done_on"?: string | null,"engineer_id"?: string | null,"id"?: string,"notes"?: string | null,"order_id"?: string,"updated_at"?: string,"visit_on"?: string | null,"visit_type"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_visits_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_visits_engineer_id_fkey"
+      columns: ["engineer_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    }
+                  ]
                 },"orders": {
                   Row: {
                     "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"commissioning_time": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string,"visit_type": string | null
@@ -2815,6 +2871,9 @@ isOneToOne: false
                            },
 "supplier_median_delivery_days":
 { Args: { "p_supplier_id": string }; Returns: number
+                           },
+"sync_order_visit_summary":
+{ Args: { "p_order_id": string }; Returns: undefined
                            },
 "today_inquiry_facts":
 { Args: Record<PropertyKey, never>; Returns: {

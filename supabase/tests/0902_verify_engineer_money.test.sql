@@ -234,6 +234,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('order_items', 'unit_price_net', 'm3', null), ('order_items', 'supplier_unit_price', 'supplier', null), ('order_items', 'gst_rate', 'info', null),
   ('order_items', 'legacy_source', 'hidden', null),
   ('orders', 'legacy_source', 'hidden', null),
+  ('delivery_challans', 'lines', 'info', null),   -- 0131: description, unit and quantity of what was delivered; never a price
   ('payments_in', 'amount', 'hidden', null), ('payments_in', 'legacy_source', 'hidden', null),
   ('payments_in', 'wht_amount', 'hidden', null),   -- 0116: withholding tax deducted by the customer
   ('purchase_orders', 'total', 'supplier', null), ('purchase_orders', 'lines', 'supplier', null),

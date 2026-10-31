@@ -243,6 +243,15 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This invoice is not linked to an order\.$/ },
   { match: /^This invoice has no customer of its own, so it cannot be taken off its order\.$/ },
 
+  // Visits and delivery challans (0130, 0131): the server's sentences already say what to do
+  { match: /^A visit cannot be moved to another order\.$/ },
+  { match: /^Only an admin or sales can change who a visit is for\.$/ },
+  { match: /^Sign in to issue a challan\.$/ },
+  { match: /^That order could not be found\.$/ },
+  { match: /^The challan lines must be a list\.$/ },
+  { match: /^A challan cannot list more than the order has\.$/ },
+  { match: /^Add at least one line to the challan\.$/ },
+
   // Not found
   { match: /^(RFQ|inquiry|order|order line|supplier order) (.+?) not found$/, message: () => RELOAD },
   { match: /^(brand|company) not found$/, message: () => RELOAD },

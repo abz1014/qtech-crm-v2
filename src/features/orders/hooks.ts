@@ -63,10 +63,15 @@ export function useConvertRfq(rfqId: string) {
   })
 }
 
-export function useUpdateOrder(orderId: string) {
+/**
+ * `expectedUpdatedAt` is the order's updated_at as the screen loaded it (OrderHeader.updatedAt): the write is conditional on it and
+ * refuses with ORDER_CHANGED when somebody else saved first. A conflict refetches nothing, so the open dialog keeps what was typed and
+ * a retry conflicts again until the page is reloaded. Leave it out for an undo or a write on a row this screen just made.
+ */
+export function useUpdateOrder(orderId: string, expectedUpdatedAt?: string | null) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (patch: Parameters<typeof api.updateOrder>[1]) => api.updateOrder(orderId, patch),
+    mutationFn: (patch: Parameters<typeof api.updateOrder>[1]) => api.updateOrder(orderId, patch, expectedUpdatedAt),
     onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
   })
 }

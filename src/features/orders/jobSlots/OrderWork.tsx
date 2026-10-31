@@ -45,7 +45,7 @@ function BasisQuestion({ order, items, money, admin }: { order: OrderHeader; ite
 
 function CustomerPo({ order }: { order: OrderHeader }) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const entry = useEntryAccess({ createdBy: order.createdBy ?? null, ownerId: order.owner?.id ?? null })
   const cancelled = order.cancelledOn !== null
   return (
@@ -63,6 +63,7 @@ function CustomerPo({ order }: { order: OrderHeader }) {
             await update.mutateAsync({ customer_po_number: v })
           } catch (err) {
             toast({ title: 'Could not save the PO number', body: mapPgError(err, { entity: 'PO number' }).message, tone: 'danger' })
+            return false // the editor stays open with what was typed
           }
         }}
       />
