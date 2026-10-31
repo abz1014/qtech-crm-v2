@@ -35,7 +35,7 @@ export function ExportPage() {
               <b className="block font-medium">{k.label}</b>
               <span className="text-sm text-fg-muted">{k.about}</span>
             </span>
-            <Button icon={Download} busy={busy === k.id} busyLabel="Making the file" disabled={busy !== null} aria-label={`Export ${k.label}`} onClick={() => void go(k)}>
+            <Button icon={Download} busy={busy === k.id} busyLabel="Making the file" disabled={busy !== null} aria-label={`Download CSV, ${k.label}`} onClick={() => void go(k)}>
               Download CSV
             </Button>
           </li>

@@ -142,7 +142,7 @@ test('only an admin can export; the file has the rows', async ({ page }) => {
   await openAs(page, 'admin', '/settings/export')
   await expect(page.getByTestId('export-page')).toBeVisible()
   const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export Customers and suppliers' }).click()
+  await page.getByRole('button', { name: 'Download CSV, Customers and suppliers' }).click()
   const d = await download
   expect(d.suggestedFilename()).toMatch(/^qtech-companies-\d{4}-\d{2}-\d{2}\.csv$/)
   expect(company.id).toBeTruthy()
