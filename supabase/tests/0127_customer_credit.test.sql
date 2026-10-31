@@ -101,7 +101,7 @@ select is(pg_temp.code_('admin', $q$select public.void_payment(@40, 'typed twice
 select is(pg_temp.code_('admin', $q$select public.delete_payment(@40)::text$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is deleting it');
 select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 2, 'STATEMENT: the two refunds are rows');
 select is((select sum(debit) from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 200.00::numeric, 'as debits (they raise what the customer owes)');
-select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'credit_applied' and debit = 0 and credit = 0 and order_number = 11), 1,
+select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'credit_applied' and debit = 0 and credit = 0 and order_number = (select number from public.orders where id = pg_temp.u('11'))), 1,
   'STATEMENT: the applied credit is one memo row on the target order, no debit and no credit');
 select is((select sum(debit) - sum(credit) from public.customer_statement(pg_temp.u('01'))),
           (select coalesce(sum(r.balance), 0) from public.order_receivables() r where r.company_id = pg_temp.u('01')
