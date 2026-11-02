@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { openStage } from '../support/job'
 
 /*
  * Several visits per order (migration 0130) and the service report of a visit. End to end against the local CI stack:
@@ -45,6 +46,7 @@ const summaryOf = async (orderId: string) =>
 test('admin plans a survey and then an installation; the order follows the next open visit and is done when both are', async ({ page }) => {
   const s = await seedOrder()
   await openAs(page, 'admin', `/orders/${s.order.id}`)
+  await openStage(page, 'Delivery')
   const section = page.getByRole('region', { name: 'Commissioning' })
   await expect(section.getByText('No visits yet.')).toBeVisible()
 
@@ -89,6 +91,7 @@ test('a visit downloads as a service report PDF', async ({ page }) => {
   await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: s.order.id, position: 0, description: 'Fixture actuator', qty: 3, unit: 'pcs', unit_price_net: 1500 }, prefer: 'return=minimal' }))
   await must(rest('admin', 'order_visits', { method: 'POST', body: { order_id: s.order.id, visit_type: 'service', visit_on: karachiDay(0), engineer_id: ENGINEER, notes: 'Replaced the actuator.\nChecked the loop.' }, prefer: 'return=minimal' }))
   await openAs(page, 'admin', `/orders/${s.order.id}`)
+  await openStage(page, 'Delivery')
   const item = page.getByRole('region', { name: 'Commissioning' }).getByRole('list', { name: 'Visits on this order' }).getByRole('listitem')
   const [download] = await Promise.all([page.waitForEvent('download'), item.getByRole('button', { name: 'Service report' }).click()])
   expect(download.suggestedFilename()).toMatch(/^Service-report-ORD-\d{4}-service-\d{4}-\d{2}-\d{2}\.pdf$/)
@@ -104,6 +107,7 @@ test('a visit date set on the order itself, as before, shows as a visit and is n
   expect(rows).toHaveLength(1)
   expect(rows[0]).toMatchObject({ visit_type: 'installation', visit_on: karachiDay(3), done_on: null })
   await openAs(page, 'admin', `/orders/${s.order.id}`)
+  await openStage(page, 'Delivery')
   const section = page.getByRole('region', { name: 'Commissioning' })
   const visits = section.getByRole('list', { name: 'Visits on this order' }).getByRole('listitem')
   await expect(visits).toHaveCount(1)
@@ -125,7 +129,7 @@ test('an engineer changes only their own visits, and cannot add or delete one', 
     }),
   )
   await openAs(page, 'engineer', `/orders/${s.order.id}`)
-  const section = page.getByRole('region', { name: 'Commissioning' })
+  const section = page.locator('#main') // the engineer's job page has no stages: the visits sit under Your job
   await expect(section.getByRole('list', { name: 'Visits on this order' }).getByRole('listitem')).toHaveCount(2)
   await expect(section.getByRole('button', { name: 'Mark visit done' })).toHaveCount(1)
   await expect(section.getByRole('button', { name: 'Add visit' })).toHaveCount(0)

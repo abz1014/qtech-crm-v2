@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { openStage } from '../support/job'
 
 /*
  * Delivery challans (migration 0131). End to end against the local CI stack:
@@ -43,6 +44,7 @@ const challansOf = (orderId: string) => must(rest<Challan[]>('admin', `delivery_
 test('admin issues a part-delivery challan: its own number, a PDF, only the lines picked, no price', async ({ page }) => {
   const s = await seedOrder()
   await openAs(page, 'admin', `/orders/${s.order.id}`)
+  await openStage(page, 'Delivery')
   const panel = page.getByRole('region', { name: 'Delivery challans' })
   await expect(panel.getByText(/None issued yet/)).toBeVisible()
   await panel.getByRole('button', { name: 'New challan' }).click()
