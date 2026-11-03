@@ -10,7 +10,7 @@ import { jobsSearchForOldList, withoutOldSwitch, type OldKind } from '@/app/oldA
  * request is one Job. The old pages themselves were removed on 2026-10-30 (owner decision, ahead of the planned 2026-11-09), but
  * bookmarks and links in old messages keep working:
  *   /rfqs/<id>, /orders/<id>   open the Job that holds that RFQ or order (v_jobs gives the key), the query string kept
- *   /rfqs, /orders             open the Jobs list with the matching filter (Mine, Open or History)
+ *   /rfqs, /orders             open the Jobs list with the matching filter (Mine, Open or History); /orders also picks the Orders stage
  * The retired ?old=1 / ?old=0 switch is simply dropped from the address it came on, so an old link with it lands on Jobs too.
  * /rfqs/new is not here: New enquiry keeps its own address.
  */
@@ -52,7 +52,7 @@ export function OldAddress({ kind }: { kind: OldKind }) {
   const { pathname, search } = useLocation()
   const rest = pathname.split('/').filter(Boolean).slice(1)
   if (rest.length === 0) {
-    return <Navigate to={{ pathname: '/jobs', search: jobsSearchForOldList(search) }} replace />
+    return <Navigate to={{ pathname: '/jobs', search: jobsSearchForOldList(search, kind) }} replace />
   }
   if (rest.length === 1) return <ToJob kind={kind} id={rest[0]} search={search} />
   return <NotFoundPage />
