@@ -118,10 +118,11 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     expect(row).toMatchObject({ category_id: 'ca7e0000-0000-4000-8000-000000000007', input_tax_pkr: 180 })
   })
 
-  test('for-month: a salary paid on the 5th is for last month; the list says so and the report counts it there', async ({ page }) => {
+  test('for-month: a salary paid on the 1st is for last month; the list says so and the report counts it there', async ({ page }) => {
     const month = today().slice(0, 7)
     const last = prevMonth(month)
-    const paidOn = `${month}-05`
+    // the 1st: on or before the 10th (so it is for last month) and never in the future, whatever day of the month the run is on
+    const paidOn = `${month}-01`
     const amt = 150000 + base()
     await openAs(page, 'admin', '/money/expenses')
     const qa = page.getByTestId('quick-add')

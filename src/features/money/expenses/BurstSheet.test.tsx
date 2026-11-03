@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { BurstSheet } from '@/features/money/expenses/BurstSheet'
+import { forMonthOf } from '@/features/money/expenses/model'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
@@ -366,7 +367,8 @@ describe('burst entry sheet (M11)', () => {
     expect(db.calls.indexOf(tplCall)).toBeLessThan(db.calls.indexOf(saves(db)[0]))
     const row = (opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[])[0]
     expect(row.recurring_id).toBe(tpl.id)
-    expect(row.period).toBe(String(row.paid_on).slice(0, 7))
+    // a bill paid by the 10th is for LAST month (forMonth.ts), so the period follows the same rule as the app, not the paid-on month
+    expect(row.period).toBe(forMonthOf(String(row.paid_on), 'c-snacks'))
     expect(tpl.start_month).toBe(row.period)
     expect(tpl.day_of_month).toBe(Math.min(Number(String(row.paid_on).slice(8, 10)), 28))
   })
