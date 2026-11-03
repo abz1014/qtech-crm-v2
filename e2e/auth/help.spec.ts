@@ -46,7 +46,7 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await expect(page).toHaveURL(/\/jobs$/)
   await expect(page.getByText(/^(No open jobs|None of your jobs are open)$/)).toBeVisible()
   await page.goto('/orders')
-  await expect(page).toHaveURL(/\/jobs$/)
+  await expect(page).toHaveURL(/\/jobs\?stage=orders$/)
 
   // Help from the account menu; Back closes it.
   await page.goto('/todo')

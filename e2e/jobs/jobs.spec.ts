@@ -119,14 +119,18 @@ test.describe('Jobs list: stage filters and Customer PO (2026-11-03)', () => {
   const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`Job ${key}\\b`) })
   const headersOf = async (page: Page) => (await page.getByRole('columnheader').allTextContents()).map(h => h.trim()).filter(Boolean)
 
-  test('the Customer PO column is there for admin and sales (7 headers) and not for an engineer (6)', async ({ page }) => {
+  test('the Customer PO column is there for admin and sales (7 headers) and not for an engineer (6)', async ({ browser }) => {
     const f = await seed()
+    // one signed-in browser per person: openAs signs in from the login page, which a signed-in page leaves at once
     for (const role of ['admin', 'sales'] as const) {
+      const page = await (await browser.newContext()).newPage()
       await openAs(page, role, `/jobs?chip=open&q=${encodeURIComponent(f.company.name)}`)
       expect(await headersOf(page)).toEqual(['Job', 'Customer', 'Customer PO', 'Items', 'Where it stands', 'Next step', 'Owner'])
       await expect(row(page, String(f.rfq.number)).first()).toContainText(f.po)
       await expect(row(page, `O-${f.direct.number}`).first()).toContainText('—')
+      await page.context().close()
     }
+    const page = await (await browser.newContext()).newPage()
     await openAs(page, 'engineer', `/jobs?chip=open&q=${encodeURIComponent(f.company.name)}`)
     expect(await headersOf(page)).toEqual(['Job', 'Customer', 'Items', 'Where it stands', 'Next step', 'Owner'])
     await expect(row(page, String(f.rfq.number)).first()).toBeVisible()
@@ -179,7 +183,7 @@ test.describe('Jobs list: stage filters and Customer PO (2026-11-03)', () => {
   test('an engineer is offered four stages, never sees a PO or the invoice words, and ?stage=invoice shows All', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'engineer', '/jobs?chip=open&stage=invoice')
-    await expect(page.getByRole('radio')).toHaveText(['All', 'Orders', 'Waiting for supplier', 'To deliver'])
+    await expect(page.getByTestId('stage-filter').getByRole('radio')).toHaveText(['All', 'Orders', 'Waiting for supplier', 'To deliver'])
     await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeChecked()
     await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
     const text = await page.locator('#main').innerText()
@@ -205,8 +209,8 @@ test.describe('Jobs list: stage filters and Customer PO (2026-11-03)', () => {
     await page.goto(`/jobs?chip=open&stage=orders&q=${encodeURIComponent(f.company.name)}`)
     await expect(page.getByText(`PO ${f.po}`).first()).toBeVisible()
     await page.goto('/jobs?chip=open&stage=orders')
-    await expect(page.getByLabel('Show jobs at stage', { exact: true })).toBeVisible()
-    await page.getByLabel('Show jobs at stage', { exact: true }).selectOption('invoice')
+    await expect(page.getByRole('combobox', { name: 'Show jobs at stage' })).toBeVisible()
+    await page.getByRole('combobox', { name: 'Show jobs at stage' }).selectOption('invoice')
     await expect(page).toHaveURL(/stage=invoice/)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow, 'no sideways scroll at 375').toBeLessThanOrEqual(0)
