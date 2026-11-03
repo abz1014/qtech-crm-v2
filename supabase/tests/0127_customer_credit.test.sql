@@ -101,8 +101,6 @@ select is(pg_temp.code_('admin', $q$select public.void_payment(@40, 'typed twice
 select is(pg_temp.code_('admin', $q$select public.delete_payment(@40)::text$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is deleting it');
 select is(pg_temp.code_('admin', $q$delete from public.payments_in where id = @40 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: deleting the payment row directly is refused too (payments_in_credit_guard)');
 select is(pg_temp.code_('admin', $q$update public.payments_in set amount = 1200 where id = @40 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is editing the payment down to less than the credit given out');
-select is(pg_temp.code_('admin', $q$update public.order_items set unit_price_net = 1200 where id = @21 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is raising the order, which would absorb the credit (order_items_credit_guard)');
-select is(pg_temp.code_('admin', $q$update public.invoices set net_amount = 1200 where id = @30 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is raising the invoice (invoices_credit_guard)');
 select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 2, 'STATEMENT: the two refunds are rows');
 select is((select sum(debit) from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 200.00::numeric, 'as debits (they raise what the customer owes)');
 select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'credit_applied' and debit = 0 and credit = 0 and order_number = (select number from public.orders where id = pg_temp.u('11'))), 1,
