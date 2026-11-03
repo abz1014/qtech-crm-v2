@@ -9,7 +9,7 @@ export function JobKeyFacts({ facts }: { facts: KeyFact[] }) {
       {facts.map(f => (
         <div key={f.key} className="flex gap-2 sm:grid sm:gap-1" data-fact={f.key}>
           <dt className="text-fg-muted">{f.label}</dt>
-          <dd className={cn('min-w-0 font-medium [overflow-wrap:anywhere]', f.key === 'po' && 'num')}>{f.value === null ? <Skeleton className="h-5 w-24" /> : f.value}</dd>
+          <dd className={cn('min-w-0 font-medium [overflow-wrap:anywhere]', f.key === 'po' && 'num')}>{f.value === null ? <Skeleton className="h-5 w-16" /> : f.value}</dd>
         </div>
       ))}
     </dl>
