@@ -298,6 +298,8 @@ export const VISITS: readonly Visit[] = [
   screen('job-delivered', 'Job page: order, delivered, not invoiced', ALL, fx => `/orders/${fx.order.delivered}`),
   screen('job-paid', 'Job page: order, paid', ALL, fx => `/orders/${fx.order.paid}`),
   screen('job-commissioning', 'Job page: 3 supplier orders, commissioning', ALL, fx => `/orders/${fx.order.multiLeg}`),
+  // The header's key facts (Customer PO for admin and sales only, Supplier, Delivery), at every viewport the audit runs.
+  screen('job-key-facts', 'Job page: header key facts (PO, supplier, delivery)', ALL, fx => `/orders/${fx.order.multiLeg}`, { scrollTo: '[aria-label="Key facts"]' }),
   screen('enquiry-new', 'New enquiry', MONEY, () => '/enquiries/new'),
   screen('review-imported', 'Money: Review imported', ADMIN, () => '/money/review-imported'),
   screen('today', 'Today, with items', ALL, () => '/todo'),

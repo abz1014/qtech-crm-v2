@@ -12,3 +12,5 @@ related: find-a-job
 4. Tap a stop, or a row under the ruler, to open that stage and see what is in it.
 
 Tip: Engineers see Invoice and Payment as "Handled by the office". A job that started as an order shows no Enquiry or Quotation.
+
+Under the job's name, three lines are always shown once there is an order: the customer's PO (admin and sales only), the supplier, and where the goods are (ordered, how many are delivered).

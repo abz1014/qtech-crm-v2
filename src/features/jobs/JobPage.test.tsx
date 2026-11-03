@@ -111,6 +111,36 @@ describe('Job page', () => {
     expect(container.textContent).not.toMatch(/Invoic/i)
   })
 
+  it('the header shows Customer PO, Supplier and Delivery for admin and sales; the stage still opens as before', async () => {
+    for (const role of ['admin', 'sales'] as const) {
+      const { container } = mount(job({}), role)
+      const dl = await screen.findByLabelText('Key facts')
+      expect(within(dl).getByText('Customer PO')).toBeInTheDocument()
+      expect(within(dl).getByText('PO-77')).toBeInTheDocument()
+      expect(within(dl).getByText('Supplier')).toBeInTheDocument()
+      expect(within(dl).getByText('Not chosen yet')).toBeInTheDocument()
+      expect(within(dl).getByText('Delivery')).toBeInTheDocument()
+      expect(within(dl).getByText('Not ordered from the supplier yet')).toBeInTheDocument()
+      expect(stagesOf(container).getByRole('button', { name: /Supplier order/ })).toHaveAttribute('aria-expanded', 'true')
+      cleanup()
+    }
+  })
+
+  it('an engineer sees Supplier and Delivery but never the Customer PO, in the page text or its markup', async () => {
+    const { container } = mount(job({}), 'engineer')
+    const dl = await screen.findByLabelText('Key facts')
+    expect(within(dl).getByText('Supplier')).toBeInTheDocument()
+    expect(within(dl).getByText('Delivery')).toBeInTheDocument()
+    expect(container.innerHTML).not.toContain('PO-77')
+    expect(container.textContent).not.toMatch(/Customer PO/)
+  })
+
+  it('an enquiry with no order has no key facts', async () => {
+    mount(job({ stage: 'quotation', orderId: null }), 'admin')
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByLabelText('Key facts')).toBeNull()
+  })
+
   it('clicking a stop opens its stage', async () => {
     const user = userEvent.setup()
     const { container } = mount(job({}), 'admin')

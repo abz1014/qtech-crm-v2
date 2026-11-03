@@ -26,6 +26,9 @@ import { jobNext } from '@/features/jobs/lib/nextStep'
 import { currentStopIndex, stageModel } from '@/features/jobs/lib/stages'
 import { jobLabel } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
+import { JobKeyFacts } from '@/features/jobs/JobKeyFacts'
+import { jobKeyFacts } from '@/features/jobs/lib/keyFacts'
+import { businessToday } from '@/lib/dates'
 import { WonDialogHost } from '@/features/jobs/WonDialogHost'
 
 /*
@@ -169,6 +172,11 @@ function JobView({ facts }: { facts: JobFacts }) {
     job.items || null,
   ]
 
+  const items = data.orderItems.data
+  const keyFacts = job.orderId
+    ? jobKeyFacts({ order: data.order.data, legs: data.legs.data, money: ctx.money, cancelled: Boolean(data.order.data?.cancelledOn), servicesOnly: Boolean(items && items.length > 0 && items.every(i => i.isService)), today: businessToday() })
+    : null
+
   return (
     <Shell bar>
       {role === 'engineer' || !button ? <NoPrimary /> : null}
@@ -179,6 +187,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         breadcrumb={[{ label: 'Jobs', to: '/jobs' }, { label: jobLabel(job.key), mono: true }]}
         meta={meta}
       >
+        {keyFacts ? <JobKeyFacts facts={keyFacts} /> : null}
         {reassign.ask && (job.rfqId ?? job.orderId) ? (
           <p className="mt-2">
             <Button size="sm" variant="quiet" onClick={reassign.ask}>
