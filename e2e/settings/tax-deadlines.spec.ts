@@ -37,7 +37,10 @@ async function seedUndepositedInvoice() {
   )
 }
 
-const gstRow = (page: Page) => page.locator('li[data-rule="gst_fbr"]')
+/* One row per unpaid month. Early in the month (and when other specs left an older month undeposited) the list can hold two GST rows,
+ * so every check below names last month's row, the one this file seeds. */
+const lastMonthName = () => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long' }).format(new Date(`${lastMonthDay().monthStart}T00:00:00Z`))
+const gstRow = (page: Page) => page.locator('li[data-rule="gst_fbr"]').filter({ hasText: `GST to FBR: ${lastMonthName()},` })
 
 test.beforeAll(async () => {
   await putDays(15, 18)
