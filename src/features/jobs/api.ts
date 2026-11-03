@@ -132,6 +132,18 @@ export async function listJobs(): Promise<JobRow[]> {
   return views.map(v => shape(v, names)).filter((j): j is JobRow => j !== null)
 }
 
+/**
+ * The customer's own PO number for each order that has one (orders.customer_po_number), by order id. Read apart from the job rows
+ * so v_jobs and JobRow stay as they are; the Jobs list asks only for admin and sales (an engineer's list never makes this request).
+ */
+export async function listCustomerPos(): Promise<Map<string, string>> {
+  const db = requireSupabase()
+  const rows = await fetchAll((from, to) => db.from('orders').select('id, customer_po_number').not('customer_po_number', 'is', null).order('id').range(from, to))
+  const out = new Map<string, string>()
+  for (const r of rows) if (r.customer_po_number && r.customer_po_number.trim() !== '') out.set(r.id, r.customer_po_number)
+  return out
+}
+
 /** One job by its key; null when there is none (a mistyped address). */
 export async function getJob(key: string): Promise<JobRow | null> {
   const db = requireSupabase()

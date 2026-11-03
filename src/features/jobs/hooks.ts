@@ -15,6 +15,11 @@ export function useJob(key: string | undefined) {
   return useQuery({ ...jobQuery(key ?? ''), enabled: Boolean(key) })
 }
 
+/** The customers' PO numbers by order id: admin and sales only, so an engineer's list never asks (enabled is false for them). */
+export function useCustomerPos(enabled: boolean) {
+  return useQuery({ queryKey: qk.jobs.customerPos, queryFn: () => api.listCustomerPos(), enabled })
+}
+
 /** The typed words' jobs: the very function the command palette calls (api.findJobs). */
 export function useJobSearch(text: string) {
   const t = text.trim()

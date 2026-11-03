@@ -332,6 +332,8 @@ function jobs() {
     all,
     /** Every job with its customer and owner names (an engineer's has no money in it, and v_jobs has none for anyone). */
     list: (role: string) => [...all, 'list', role] as const,
+    /** The customer's PO number for each order (admin and sales only). */
+    customerPos: [...all, 'customer-po'] as const,
     /** The jobs a search finds: the same function the command palette calls. */
     search: (text: string) => [...all, 'search', text.trim().toLowerCase()] as const,
     /** One job by its key ('139', 'O-45'). */

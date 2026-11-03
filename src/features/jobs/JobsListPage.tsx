@@ -11,11 +11,12 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
 import { TableFilter } from '@/ui/TableFilter'
 import { EmptyState } from '@/ui/EmptyState'
-import { useJobSearch, useJobsList } from '@/features/jobs/hooks'
+import { useCustomerPos, useJobSearch, useJobsList } from '@/features/jobs/hooks'
 import type { JobRow } from '@/features/jobs/api'
 import { StageMini } from '@/features/jobs/StageBar'
+import { StageFilter } from '@/features/jobs/StageFilter'
 import { jobNext } from '@/features/jobs/lib/nextStep'
-import { byRecent, chipCounts, defaultChip, inChip, isChip, jobLabel, type Chip, type Who } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, jobLabel, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
 import { stageModel } from '@/features/jobs/lib/stages'
 import { lazyShown } from '@/lib/lazyDialog'
 
@@ -25,7 +26,8 @@ const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog'
 /*
  * Jobs (redesign phase 5, P5-B). One row per customer request from enquiry to payment ("Job 139"; "Job O-45" for an order with no
  * enquiry). Three chips: Mine, Open and History; History is exactly the rows the database marks is_history (closed, settled or lost
- * work), never red, never a task. Columns: Job, Customer, Items, Where it stands, Next step, Owner. A phone gets cards.
+ * work), never red, never a task. Columns: Job, Customer, Customer PO (admin and sales only), Items, Where it stands, Next step, Owner. A phone gets cards.
+ * Under the chips a stage filter (All, Orders, Waiting for supplier, To deliver, To invoice, To be paid; an engineer has the first four), in ?stage=.
  *
  * One search: the box here and the command palette (Ctrl K) call the same function (features/jobs/api.ts findJobs), so "Job 139",
  * an RFQ-, ORD-, QT- or PO- number, an invoice number, a customer reference or the customer's name land on the same jobs. A search
@@ -33,6 +35,9 @@ const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog'
  * as the office does. The route is reachable by address only until the navigation switch (P5-F).
  */
 const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'History' }
+
+/** What a stage filter finds, said after "No open jobs": "No open jobs to invoice". */
+const STAGE_EMPTY: Record<Stage, string> = { orders: 'with an order', supplier: 'waiting for a supplier', deliver: 'to deliver', invoice: 'to invoice', payment: 'to be paid' }
 
 function NextText({ job, role }: { job: JobRow; role: Who['role'] }) {
   const n = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role: role === '' ? 'sales' : role, imported: job.imported })
@@ -69,13 +74,14 @@ function CustomerCell({ job }: { job: JobRow }) {
   )
 }
 
-function JobCard({ job, role }: { job: JobRow; role: Who['role'] }) {
+function JobCard({ job, role, po }: { job: JobRow; role: Who['role']; po?: string }) {
   return (
     <span className="grid gap-1">
       <span className="flex items-baseline justify-between gap-3">
         <span className="min-w-0 font-medium">{job.companyName}</span>
         <span className="num shrink-0 text-base text-fg-muted">{jobLabel(job.key)}</span>
       </span>
+      {po ? <span className="num min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">{`PO ${po}`}</span> : null}
       {job.items ? <span className="min-w-0 text-base text-fg-2 [overflow-wrap:anywhere]">{job.items}</span> : null}
       <StageMini job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }} />
       <span className="text-base">
@@ -122,15 +128,39 @@ export default function JobsListPage() {
     setParams(next, { replace: true })
   }
 
+  // The customer's PO number: money roles only. An engineer's list never asks for it (the hook is off), so no request carries it.
+  const pos = useCustomerPos(money)
+  const poOf = (j: JobRow) => (j.orderId ? pos.data?.get(j.orderId) : undefined)
+
   const all = useMemo(() => jobs.data ?? [], [jobs.data])
   const counts = useMemo(() => chipCounts(all, who), [all, who])
   const searching = text.trim() !== ''
   const found = useJobSearch(text)
-  const rows = useMemo(() => (searching ? (found.data ?? []) : all.filter(j => inChip(j, chip, who)).sort(byRecent)), [searching, found.data, all, chip, who])
+  // A search ignores the chip and the stage; otherwise the stage (when one is picked and offered) narrows the chip's jobs.
+  const stage = searching ? null : normalizeStage(params.get('stage'), role, chip)
+  const rows = useMemo(
+    () => (searching ? (found.data ?? []) : all.filter(j => inChip(j, chip, who) && (stage === null || inStage(j, stage))).sort(byRecent)),
+    [searching, found.data, all, chip, who, stage],
+  )
 
   const columns: Column<JobRow>[] = [
     { id: 'job', header: 'Job', value: j => j.key, sortable: true, cell: j => <JobCell job={j} /> },
     { id: 'customer', header: 'Customer', value: j => j.companyName, sortable: true, cell: j => <CustomerCell job={j} /> },
+    ...(money
+      ? [
+          {
+            id: 'po',
+            header: 'Customer PO',
+            value: (j: JobRow) => poOf(j) ?? '',
+            sortable: true,
+            hideBelowMd: true,
+            cell: (j: JobRow) => {
+              const po = poOf(j)
+              return po ? <span className="num whitespace-normal [overflow-wrap:anywhere]">{po}</span> : <span className="text-fg-muted">—</span>
+            },
+          } satisfies Column<JobRow>,
+        ]
+      : []),
     {
       id: 'items',
       header: 'Items',
@@ -160,7 +190,7 @@ export default function JobsListPage() {
 
   const empty = searching ? (
     <NoResults query={text} scope="every job (open and history)" fields="job number, customer, item, RFQ, order, quotation, PO and invoice number" onClear={() => change({ q: null })} />
-  ) : chip === 'mine' && counts.open > 0 ? (
+  ) : chip === 'mine' && stage === null && counts.open > 0 ? (
     <EmptyState
       mood="goal"
       title={role === 'engineer' ? 'No jobs are assigned to you' : 'None of your jobs are open'}
@@ -171,6 +201,13 @@ export default function JobsListPage() {
       }
     >
       {role === 'engineer' ? 'Jobs you are put on appear here.' : 'Jobs you own appear here.'}
+    </EmptyState>
+  ) : stage !== null ? (
+    <EmptyState
+      title={chip === 'history' ? 'No orders in history' : `No ${chip === 'mine' ? 'jobs of yours' : 'open jobs'} ${STAGE_EMPTY[stage]}`}
+      actions={<Button onClick={() => change({ stage: null })}>{chip === 'history' ? 'Show all history' : chip === 'mine' ? 'Show all my jobs' : 'Show all open jobs'}</Button>}
+    >
+      {`Nothing is at "${STAGE_LABEL[stage]}" right now.`}
     </EmptyState>
   ) : chip === 'history' ? (
     <EmptyState title="Nothing in history yet">A job moves here once it is paid and installed, lost, or cancelled with no money open.</EmptyState>
@@ -202,17 +239,17 @@ export default function JobsListPage() {
         getRowId={j => j.key}
         twoLine
         defaultSort={null}
-        mobileRow={j => <JobCard job={j} role={role} />}
+        mobileRow={j => <JobCard job={j} role={role} po={money ? poOf(j) : undefined} />}
         onRowOpen={j => navigate(`/jobs/${encodeURIComponent(j.key)}`)}
         loading={loading}
         error={error ? { title: "Couldn't load the jobs", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void error.refetch() } : null}
-        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}`) : undefined}
+        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${stage ? ` · ${STAGE_LABEL[stage]}` : ''}`) : undefined}
         toolbar={
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
             <SegmentedControl
               aria-label="Which jobs"
               value={searching ? '' : chip}
-              onValueChange={v => change({ chip: v === defaultChip(role) ? null : v })}
+              onValueChange={v => change({ chip: v === defaultChip(role) ? null : v, stage: normalizeStage(params.get('stage'), role, v as Chip) })}
               options={(['mine', 'open', 'history'] as const).map(c => ({ value: c, label: LABEL[c] }))}
             />
             <TableFilter
@@ -222,6 +259,11 @@ export default function JobsListPage() {
               onChange={v => change({ q: v })}
               className="min-w-0 max-sm:basis-full sm:max-w-[360px] sm:flex-1"
             />
+            {searching ? null : (
+              <div className="min-w-0 basis-full">
+                <StageFilter value={stage} stages={stagesFor(role, chip)} onChange={s => change({ stage: s })} />
+              </div>
+            )}
           </div>
         }
         empty={empty}

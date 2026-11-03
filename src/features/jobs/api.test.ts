@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { installFakeDb, opArgs } from '@/test/fakeSupabase'
-import { findJobs, getJobFactsFromOld, jobKeyOf, quotationNumberOf } from '@/features/jobs/api'
+import { findJobs, listCustomerPos, getJobFactsFromOld, jobKeyOf, quotationNumberOf } from '@/features/jobs/api'
 
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
@@ -103,5 +103,17 @@ describe('facts from an old address (one round)', () => {
     expect(db.calls.map(c => c.target).sort()).toEqual(['orders', 'rfqs', 'v_jobs'])
     installFakeDb(c => (c.target === 'v_jobs' ? { data: row('O-45', { kind: 'direct', rfq_id: null, order_id: 'o2' }) } : { data: { rfq: null } }))
     expect(await getJobFactsFromOld('order', 'o2')).toBeNull()
+  })
+})
+
+describe('listCustomerPos: the customer PO column', () => {
+  it('asks orders for the numbers that are set and maps them by order id', async () => {
+    const { calls } = installFakeDb(c => (c.target === 'orders' ? { data: [{ id: 'o1', customer_po_number: 'PO-77' }, { id: 'o2', customer_po_number: '  ' }, { id: 'o3', customer_po_number: null }] } : { data: [] }))
+    const pos = await listCustomerPos()
+    expect([...pos.entries()]).toEqual([['o1', 'PO-77']])
+    const read = calls.find(c => c.target === 'orders')!
+    expect(opArgs(read, 'select')?.[0]).toBe('id, customer_po_number')
+    expect(opArgs(read, 'not')).toEqual(['customer_po_number', 'is', null])
+    expect(opArgs(read, 'order')?.[0]).toBe('id')
   })
 })
