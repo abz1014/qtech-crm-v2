@@ -2707,7 +2707,7 @@ isOneToOne: false
             }[]
                            },
 "customer_statement":
-{ Args: { "p_company": string,"p_to"?: string }; Returns: {
+{ Args: { "p_company": string,"p_order"?: string,"p_to"?: string }; Returns: {
               "credit": number,"debit": number,"kind": string,"line_on": string,"note": string,"order_number": number,"ref": string,"seq": number
             }[]
                            },

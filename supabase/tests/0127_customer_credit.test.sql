@@ -192,6 +192,49 @@ select is(pg_temp.code_('engineer', 'select count(*)::text from public.customer_
 select lives_ok($$select public.close_months_through('2019-03-01')$$, 'March 2019 closes');
 select is(pg_temp.code_('admin', $q$select public.apply_credit(@63, @13, 5, '2019-03-10')::text$q$), 'E:P0001:', 'credit cannot be applied into a closed month');
 
+-- ================================================================== the four credit guards, each on its own fixture (customer 03)
+-- A (70): not invoiced, one line of 100, paid 300, 150 refunded from it.   B (75): a line of 2000 + 18%, invoiced 1000 + 180, paid 1500, 200 refunded.
+-- C (7a): not invoiced, a line of 100, paid 300, CANCELLED, then 300 refunded (a cancelled order's basis is 0).
+-- D (7b): a line of 100, 100 of credit applied from E (7c), then paid 140 and 140 refunded from it.
+insert into public.companies (id, name) values (pg_temp.u('03'), '0127 Guard customer');
+insert into public.orders (id, company_id, owner_id, created_by) values
+  (pg_temp.u('70'), pg_temp.u('03'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('75'), pg_temp.u('03'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('7a'), pg_temp.u('03'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('7b'), pg_temp.u('03'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('7c'), pg_temp.u('03'), 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001');
+insert into public.order_items (id, order_id, position, description, unit_price_net, gst_rate, created_by) values
+  (pg_temp.u('71'), pg_temp.u('70'), 0, 'Guard line A', 100, 0, 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('76'), pg_temp.u('75'), 0, 'Guard line B', 2000, 18, 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('77'), pg_temp.u('7a'), 0, 'Guard line C', 100, 0, 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('78'), pg_temp.u('7b'), 0, 'Guard line D', 100, 0, 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('79'), pg_temp.u('7c'), 0, 'Guard line E', 100, 0, 'a0000000-0000-4000-8000-000000000001');
+insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst_amount, created_by) values
+  (pg_temp.u('80'), pg_temp.u('75'), 'T118-G1', public.today_pkt(), 1000, 180, 'a0000000-0000-4000-8000-000000000001');
+insert into public.payments_in (id, order_id, received_on, amount) values
+  (pg_temp.u('72'), pg_temp.u('70'), public.today_pkt(), 300),
+  (pg_temp.u('81'), pg_temp.u('75'), public.today_pkt(), 1500),
+  (pg_temp.u('82'), pg_temp.u('7a'), public.today_pkt(), 300),
+  (pg_temp.u('83'), pg_temp.u('7c'), public.today_pkt(), 400);
+update public.orders set cancelled_on = public.today_pkt(), cancel_reason = 'customer_cancelled' where id = pg_temp.u('7a');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@73, @03, public.today_pkt(), 150, @70)::text$q$, true), 'ok:', 'guard fixture: 150 refunded from A (credit 200)');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@85, @03, public.today_pkt(), 200, @75)::text$q$, true), 'ok:', 'guard fixture: 200 refunded from B (credit 320)');
+select is(pg_temp.code_('admin', $q$select public.record_refund(@86, @03, public.today_pkt(), 300, @7a)::text$q$, true), 'ok:', 'guard fixture: 300 refunded from the cancelled order C');
+select is(pg_temp.code_('admin', $q$select public.apply_credit(@88, @7b, 100, null, null, @7c)::text$q$, true), 'ok:', 'guard fixture: 100 of E''s credit applied to D');
+insert into public.payments_in (id, order_id, received_on, amount) values (pg_temp.u('84'), pg_temp.u('7b'), public.today_pkt(), 140);
+select is(pg_temp.code_('admin', $q$select public.record_refund(@87, @03, public.today_pkt(), 140, @7b)::text$q$, true), 'ok:', 'guard fixture: 140 refunded from D (paid 140 on top of the applied 100)');
+
+select is(pg_temp.code_('admin', $q$update public.order_items set unit_price_net = 500 where id = @71 returning 1$q$), 'E:P0001:credit_overdrawn',
+  'GUARD order_items (edit): raising the line of A to 500 would absorb the credit that 150 was refunded from');
+select is(pg_temp.code_('admin', $q$insert into public.order_items (id, order_id, position, description, unit_price_net, gst_rate, created_by) values (@89, @70, 1, 'Another line', 500, 0, 'a0000000-0000-4000-8000-000000000001') returning 1$q$), 'E:P0001:credit_overdrawn',
+  'GUARD order_items (insert): so is adding a line of 500 to A');
+select is(pg_temp.code_('admin', $q$update public.invoices set net_amount = 1200, gst_amount = 216 where id = @80 returning 1$q$), 'E:P0001:credit_overdrawn',
+  'GUARD invoices: raising B''s invoice from 1180 to 1416 (the lines allow it) would leave 200 refunded above its 84 of credit');
+select is(pg_temp.code_('admin', $q$update public.orders set cancelled_on = null, cancel_reason = null where id = @7a returning 1$q$), 'E:P0001:credit_overdrawn',
+  'GUARD orders: taking the cancel off C gives it a basis of 100 again, which its 300 refund cannot be paid from');
+select is(pg_temp.code_('admin', $q$delete from public.credit_applications where id = @88 returning 1$q$), 'E:P0001:credit_overdrawn',
+  'GUARD credit_applications: taking the applied 100 back off D would leave its 140 refund above what D holds');
+
 -- merge_companies carries refunds and applied credit to the kept customer
 select lives_ok($$select public.merge_companies('11800000-0000-4000-8000-000000000002', '11800000-0000-4000-8000-000000000001')$$, 'merging customer 01 into 02 works');
 select is((select count(*)::int from public.customer_refunds where company_id = pg_temp.u('02')), 3, 'the refunds moved with it');
