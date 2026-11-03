@@ -290,6 +290,8 @@ export const VISITS: readonly Visit[] = [
   // keeps the redirect under the audit. (The old RFQ and Order pages themselves were removed on 2026-10-30.)
   screen('jobs-list', 'Jobs list, open', ALL, () => '/jobs'),
   screen('jobs-history', 'Jobs list, history', ALL, () => '/jobs?chip=history'),
+  screen('jobs-orders', 'Jobs list, open orders (stage filter)', ALL, () => '/jobs?chip=open&stage=orders'),
+  screen('jobs-to-invoice', 'Jobs list, open jobs to invoice (stage filter)', MONEY, () => '/jobs?chip=open&stage=invoice'),
   screen('job-not-sent', 'Job page: enquiry, not sent to suppliers', ALL, fx => `/rfqs/${fx.rfq.notSent}`),
   screen('job-waiting', 'Job page: enquiry, waiting for prices', ALL, fx => `/rfqs/${fx.rfq.waiting}`),
   screen('job-prices-in', 'Job page: enquiry, prices in', ALL, fx => `/rfqs/${fx.rfq.pricesIn}`),

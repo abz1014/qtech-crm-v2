@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
 import { OldAddress } from '@/app/oldAddresses'
-import { chipForOldList } from '@/app/oldAddressesModel'
+import { chipForOldList, jobsSearchForOldList } from '@/app/oldAddressesModel'
 import { navCountsFrom } from '@/app/shell/useNavCounts'
 import { buildToday } from '@/features/today/rules'
 import { importedStyleInputs } from '@/features/today/importedFixture'
@@ -82,10 +82,23 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs'))
     fake?.uninstall()
     mount('/orders?show=closed')
-    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history'))
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history&stage=orders'))
     expect(chipForOldList('?owner=mine')).toBe('mine')
     expect(chipForOldList('?tab=closed')).toBe('history')
     expect(chipForOldList('')).toBeNull()
+  })
+
+  it('/orders opens the Jobs list on the Orders stage; /rfqs does not pick a stage; the new-order address stays a dialog address', async () => {
+    mount('/orders')
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs?stage=orders'))
+    fake?.uninstall()
+    mount('/orders?owner=mine')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=mine&stage=orders'))
+    fake?.uninstall()
+    mount('/rfqs?stage=invoice')
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs'))
+    expect(jobsSearchForOldList('?show=closed', 'order')).toBe('?chip=history&stage=orders')
+    expect(jobsSearchForOldList('?new=1', 'order')).toBe('?new=1')
   })
 
   it('the list redirect keeps the other parameters: new=1 (Order without enquiry) and the search text', async () => {
@@ -107,7 +120,7 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs'))
     fake?.uninstall()
     mount('/orders?old=1&show=closed')
-    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history'))
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history&stage=orders'))
   })
 
   it('a device that remembered the old pages (the retired localStorage flag) still opens Jobs', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JobRow } from '@/features/jobs/api'
-import { byRecent, chipCounts, defaultChip, inChip } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isStageFilter, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
 
 const job = (over: Partial<JobRow>): JobRow => ({
   key: '1', kind: 'enquiry', rfqId: 'r', orderId: null, companyId: 'c', companyName: 'Customer', siteName: null, ownerId: 'u1', ownerName: 'A', items: 'x',
@@ -25,5 +25,87 @@ describe('Jobs list chips', () => {
   })
   it('sorts the newest activity first', () => {
     expect([job({ key: '1', lastActivityOn: '2026-01-01' }), job({ key: '2', lastActivityOn: '2026-02-01' })].sort(byRecent).map(j => j.key)).toEqual(['2', '1'])
+  })
+})
+
+describe('Jobs list stage filters', () => {
+  const at = (stage: string, stageDetail: string | null = null, over: Partial<JobRow> = {}) => job({ stage, stageDetail, orderId: 'o1', ...over })
+  const filtersOf = (j: JobRow): StageFilter[] => STAGE_FILTERS.filter(s => inStage(j, s))
+
+  it('puts every stage word in the filters the StageBar stop says', () => {
+    expect(filtersOf(at('ordered', 'to source'))).toEqual(['orders', 'supplier'])
+    expect(filtersOf(at('ordered'))).toEqual(['orders', 'supplier'])
+    expect(filtersOf(at('supplier_ordered', 'waiting for supplier'))).toEqual(['orders', 'supplier'])
+    expect(filtersOf(at('delivered', 'not invoiced yet'))).toEqual(['orders', 'invoice'])
+    expect(filtersOf(at('invoiced', 'not paid yet'))).toEqual(['orders', 'payment'])
+    expect(filtersOf(at('paid'))).toEqual(['orders'])
+  })
+
+  it('keeps a late supplier order under Waiting for supplier', () => {
+    expect(inStage(at('supplier_ordered', 'supplier late'), 'supplier')).toBe(true)
+    expect(inStage(at('supplier_ordered', 'supplier late, advance received'), 'supplier')).toBe(true)
+  })
+
+  it('moves a supplier order to To deliver once goods arrived or part arrived', () => {
+    for (const d of ['arrived, not delivered', '2 of 3 delivered', 'supplier late, 1 of 2 delivered', 'arrived, not delivered, advance received']) {
+      const j = at('supplier_ordered', d)
+      expect(inStage(j, 'deliver')).toBe(true)
+      expect(inStage(j, 'supplier')).toBe(false)
+      expect(inStage(j, 'orders')).toBe(true)
+    }
+  })
+
+  it('puts an invoice sent before the goods are delivered under To deliver or Waiting, never under To invoice', () => {
+    expect(filtersOf(at('supplier_ordered', 'invoiced, waiting for supplier'))).toEqual(['orders', 'supplier'])
+    expect(filtersOf(at('supplier_ordered', 'invoiced, arrived, not delivered'))).toEqual(['orders', 'deliver'])
+  })
+
+  it('treats a paid job with installation still to plan as finished (Orders only)', () => {
+    expect(filtersOf(at('paid', 'installation to plan'))).toEqual(['orders'])
+  })
+
+  it('puts a delivered job with parallel details under To invoice only', () => {
+    expect(filtersOf(at('delivered', 'partly invoiced, advance received'))).toEqual(['orders', 'invoice'])
+  })
+
+  it('puts an order job in Orders plus at most one other filter', () => {
+    const words = ['ordered', 'supplier_ordered', 'delivered', 'invoiced', 'paid']
+    for (const w of words) expect(filtersOf(at(w)).length).toBeLessThanOrEqual(2)
+  })
+
+  it('leaves lost, cancelled and enquiry-only jobs in no filter', () => {
+    expect(filtersOf(at('cancelled', 'order cancelled'))).toEqual([])
+    expect(filtersOf(at('lost', 'price too high', { orderId: null }))).toEqual([])
+    expect(filtersOf(at('lost', 'price too high'))).toEqual([])
+    for (const w of ['enquiry', 'asking_suppliers', 'prices_in', 'quoted']) expect(filtersOf(job({ stage: w, orderId: null }))).toEqual([])
+  })
+
+  it('does not put an order-less job in Orders, whatever its stage word', () => {
+    expect(inStage(job({ stage: 'ordered', orderId: null }), 'orders')).toBe(false)
+    expect(inStage(job({ stage: null, orderId: 'o1' }), 'orders')).toBe(false)
+  })
+
+  it('offers admin and sales six choices with All, engineers four', () => {
+    expect(stagesFor('admin', 'open')).toEqual(['orders', 'supplier', 'deliver', 'invoice', 'payment'])
+    expect(stagesFor('sales', 'mine')).toEqual(['orders', 'supplier', 'deliver', 'invoice', 'payment'])
+    expect(stagesFor('engineer', 'mine')).toEqual(['orders', 'supplier', 'deliver'])
+    expect(STAGE_FILTERS.map(s => STAGE_LABEL[s])).toEqual(['Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
+  })
+
+  it('offers only Orders under History, for every role', () => {
+    for (const r of ['admin', 'sales', 'engineer'] as const) expect(stagesFor(r, 'history')).toEqual(['orders'])
+  })
+
+  it('turns anything not offered into All', () => {
+    expect(normalizeStage('invoice', 'engineer', 'open')).toBeNull()
+    expect(normalizeStage('payment', 'engineer', 'mine')).toBeNull()
+    expect(normalizeStage('deliver', 'admin', 'history')).toBeNull()
+    expect(normalizeStage('nonsense', 'admin', 'open')).toBeNull()
+    expect(normalizeStage('', 'admin', 'open')).toBeNull()
+    expect(normalizeStage(null, 'admin', 'open')).toBeNull()
+    expect(normalizeStage('invoice', 'admin', 'open')).toBe('invoice')
+    expect(normalizeStage('orders', 'engineer', 'history')).toBe('orders')
+    expect(isStageFilter('supplier')).toBe(true)
+    expect(isStageFilter('all')).toBe(false)
   })
 })

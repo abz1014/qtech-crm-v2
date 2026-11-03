@@ -14,13 +14,16 @@ export function chipForOldList(search: string): 'mine' | 'history' | null {
 
 /**
  * The Jobs list query string for an old list address: the chip it asks for, and every other parameter kept (new=1 opens the new-order
- * dialog, q is the search text). The old list's own filters (show, tab, owner) and the ?old switch are consumed here.
+ * dialog, q is the search text). The old list's own filters (show, tab, owner) and the ?old switch are consumed here. The old Orders list
+ * also asks for the Orders stage (/orders opens /jobs?stage=orders; /orders?show=closed opens /jobs?chip=history&stage=orders).
  */
-export function jobsSearchForOldList(search: string): string {
+export function jobsSearchForOldList(search: string, kind?: OldKind): string {
   const chip = chipForOldList(search)
   const next = new URLSearchParams(search)
-  for (const k of ['show', 'tab', 'owner', 'old', 'chip']) next.delete(k)
+  for (const k of ['show', 'tab', 'owner', 'old', 'chip', 'stage']) next.delete(k)
   if (chip) next.set('chip', chip)
+  // The old Orders list was the jobs with an order: the Orders stage filter. Not for the new-order dialog's address (/orders?new=1), which is not a list view.
+  if (kind === 'order' && next.get('new') !== '1') next.set('stage', 'orders')
   const out = next.toString()
   return out ? `?${out}` : ''
 }

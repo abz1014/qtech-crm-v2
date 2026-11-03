@@ -1,4 +1,5 @@
 import type { JobRow } from '@/features/jobs/api'
+import { currentStopIndex } from '@/features/jobs/lib/stages'
 
 /*
  * The Jobs list's view: three chips (Mine, Open, History) and a sort by what is due first. History is closed, settled or lost
@@ -40,3 +41,44 @@ export function byRecent(a: JobRow, b: JobRow): number {
 
 /** "Job 139", "Job O-45". */
 export const jobLabel = (key: string) => `Job ${key}`
+
+/*
+ * The stage filter (2026-11-03): where a job stands on the StageBar ruler, so a filter and the bar always agree. The stop comes from
+ * currentStopIndex (0 to 6, 7 = paid, null = lost or cancelled).
+ *   orders    the customer has ordered: a live order exists and the job is at or past "ordered" (an order job is also in one more filter)
+ *   supplier  Waiting for supplier: stop 3 (an item to source, a supplier order to place, or placed and not here yet)
+ *   deliver   To deliver: stop 4 (goods arrived or part delivered, not all delivered)
+ *   invoice   To invoice: stop 5
+ *   payment   To be paid: stop 6, which is the stage "invoiced" only (what customers owe stays in Money, Who owes us)
+ * Lost, cancelled and enquiry-only jobs are in no filter. Nothing here is money, so an engineer may filter too, on the first four.
+ */
+export const STAGE_FILTERS = ['orders', 'supplier', 'deliver', 'invoice', 'payment'] as const
+export type StageFilter = (typeof STAGE_FILTERS)[number]
+export const isStageFilter = (v: string | null): v is StageFilter => v !== null && (STAGE_FILTERS as readonly string[]).includes(v)
+
+export const STAGE_LABEL: Record<StageFilter, string> = {
+  orders: 'Orders',
+  supplier: 'Waiting for supplier',
+  deliver: 'To deliver',
+  invoice: 'To invoice',
+  payment: 'To be paid',
+}
+
+const ORDER_STAGES = ['ordered', 'supplier_ordered', 'delivered', 'invoiced', 'paid']
+const STOP_OF: Record<Exclude<StageFilter, 'orders'>, number> = { supplier: 3, deliver: 4, invoice: 5, payment: 6 }
+
+/** The options this person is offered after "All": an engineer has no invoice or payment words; History holds finished work, so only Orders. */
+export function stagesFor(role: Who['role'], chip: Chip): StageFilter[] {
+  if (chip === 'history') return ['orders']
+  return role === 'admin' || role === 'sales' ? [...STAGE_FILTERS] : ['orders', 'supplier', 'deliver']
+}
+
+/** The stage a ?stage= value stands for: anything unknown, or not offered to this person or chip, is All (null). */
+export function normalizeStage(param: string | null, role: Who['role'], chip: Chip): StageFilter | null {
+  return isStageFilter(param) && stagesFor(role, chip).includes(param) ? param : null
+}
+
+export function inStage(j: JobRow, s: StageFilter): boolean {
+  if (s === 'orders') return j.orderId !== null && j.stage !== null && ORDER_STAGES.includes(j.stage)
+  return currentStopIndex(j.stage, j.stageDetail) === STOP_OF[s]
+}

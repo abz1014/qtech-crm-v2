@@ -9,4 +9,4 @@ screens: /jobs
 2. Tap the job to open it.
 3. Press Ctrl K from any screen and type the same words: the Jobs group shows the same jobs.
 
-Tip: A search looks in every list, so a finished job is found too. The Mine, Open and History buttons only choose what the list shows when the search box is empty.
+Tip: A search looks in every list, so a finished job is found too. The Mine, Open and History buttons only choose what the list shows when the search box is empty. Under them, Show jobs at stage narrows the list to jobs waiting at one step, such as To invoice (the office) or Waiting for supplier.
