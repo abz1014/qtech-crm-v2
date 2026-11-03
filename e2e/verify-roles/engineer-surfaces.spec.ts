@@ -96,9 +96,15 @@ test('engineer: the palette finds the job and the customer, and shows no invoice
 
 test('engineer: Jobs list and Job page show no amount, no money word, and not the priced file', async ({ page }) => {
   const w = watch(page)
+  const poRequests: string[] = []
+  page.on('request', r => {
+    if (r.url().includes('/rest/v1/') && r.url().includes('customer_po_number')) poRequests.push(`${r.method()} ${r.url()}`)
+  })
   await openAs(page, 'engineer', `/jobs?q=${encodeURIComponent(world.tag)}`)
   await expect(page.getByRole('row', { name: new RegExp(`Job ${world.rfq.number}\\b`) }).first()).toBeVisible()
+  await page.waitForLoadState('networkidle').catch(() => undefined)
   expect(moneyIn(await page.locator('#main').innerText()), 'Jobs list').toEqual([])
+  expect(poRequests, 'the Jobs list asks for no customer PO number (the Customer PO column is for admin and sales)').toEqual([])
 
   await page.goto(`/jobs/${world.rfq.number}`)
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${world.rfq.number}`)

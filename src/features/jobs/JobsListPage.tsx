@@ -156,7 +156,7 @@ export default function JobsListPage() {
             hideBelowMd: true,
             cell: (j: JobRow) => {
               const po = poOf(j)
-              return po ? <span className="num whitespace-normal [overflow-wrap:anywhere]">{po}</span> : <span className="text-fg-muted">—</span>
+              return po ? <span className="num whitespace-normal [overflow-wrap:anywhere]">{po}</span> : <span className="text-fg-muted">â€”</span>
             },
           } satisfies Column<JobRow>,
         ]
@@ -243,7 +243,7 @@ export default function JobsListPage() {
         onRowOpen={j => navigate(`/jobs/${encodeURIComponent(j.key)}`)}
         loading={loading}
         error={error ? { title: "Couldn't load the jobs", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void error.refetch() } : null}
-        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${stage ? ` · ${STAGE_LABEL[stage]}` : ''}`) : undefined}
+        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${stage ? ` Â· ${STAGE_LABEL[stage]}` : ''}`) : undefined}
         toolbar={
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
             <SegmentedControl

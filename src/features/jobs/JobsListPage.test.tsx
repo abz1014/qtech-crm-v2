@@ -140,7 +140,7 @@ describe('Jobs list', () => {
         const headers = screen.getAllByRole('columnheader').map(h => h.textContent?.trim()).filter(Boolean)
         expect(headers.slice(0, 3)).toEqual(['Job', 'Customer', 'Customer PO'])
         expect(screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))).not.toHaveTextContent('FIB-PO')
-        expect(screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))).toHaveTextContent('—')
+        expect(screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))).toHaveTextContent('â€”')
         unmount()
       }
     })
@@ -181,7 +181,7 @@ describe('Jobs list', () => {
       await user.click(screen.getByRole('radio', { name: 'Waiting for supplier' }))
       await waitFor(() => expect(screen.queryAllByRole('row', { name: /Job 140/ })).toHaveLength(0))
       expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0)
-      expect(screen.getByText(/Showing 2 open jobs · Waiting for supplier/)).toBeInTheDocument()
+      expect(screen.getByText(/Showing 2 open jobs Â· Waiting for supplier/)).toBeInTheDocument()
       await user.click(screen.getByRole('radio', { name: 'To invoice' }))
       expect(await screen.findByText('No open jobs to invoice')).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: 'Show all open jobs' }))

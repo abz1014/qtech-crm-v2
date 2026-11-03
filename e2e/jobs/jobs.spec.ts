@@ -40,7 +40,7 @@ async function seed(): Promise<Fixture> {
 }
 
 test.describe('Jobs list (P5-B)', () => {
-  test('lists a job per customer request, with the six columns and one green button; Job O-n for an order with no enquiry', async ({ page }) => {
+  test('lists a job per customer request, with the seven columns and one green button; Job O-n for an order with no enquiry', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'admin', `/jobs?q=${encodeURIComponent(f.company.name)}`)
     await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
@@ -49,7 +49,7 @@ test.describe('Jobs list (P5-B)', () => {
     // the enquiry and its order are ONE job, not two
     await expect(page.getByRole('row', { name: new RegExp(`Job O-${f.order.number}\\b`) })).toHaveCount(0)
     const headers = (await page.getByRole('columnheader').allTextContents()).map(h => h.trim()).filter(Boolean)
-    expect(headers).toEqual(['Job', 'Customer', 'Items', 'Where it stands', 'Next step', 'Owner'])
+    expect(headers).toEqual(['Job', 'Customer', 'Customer PO', 'Items', 'Where it stands', 'Next step', 'Owner'])
     await expect(page.locator('button.bg-primary')).toHaveCount(1)
     await review(page, 'jobs-list-1440')
     expect(await axeViolations(page)).toEqual([])
@@ -105,6 +105,113 @@ test.describe('Jobs list (P5-B)', () => {
       expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)
       if (width === 375) await review(page, 'jobs-list-375')
     }
+  })
+})
+
+test.describe('Jobs list: stage filters and Customer PO (2026-11-03)', () => {
+  /** A direct order for services only (nothing to source or deliver): its job waits at Invoice. */
+  async function seedService(f: Fixture, tag: string) {
+    const po = `CPO-${tag}-SVC`
+    const [svc] = await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: f.company.id, customer_po_number: po, payment_terms_days: 30, ordered_on: karachiDay(-1) } }))
+    await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: svc.id, position: 0, description: `Commissioning ${tag}`, qty: 1, unit: 'job', unit_price_net: 9000, gst_rate: 18, is_service: true }, prefer: 'return=minimal' }))
+    return { svc, po }
+  }
+  const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`Job ${key}\\b`) })
+  const headersOf = async (page: Page) => (await page.getByRole('columnheader').allTextContents()).map(h => h.trim()).filter(Boolean)
+
+  test('the Customer PO column is there for admin and sales (7 headers) and not for an engineer (6)', async ({ page }) => {
+    const f = await seed()
+    for (const role of ['admin', 'sales'] as const) {
+      await openAs(page, role, `/jobs?chip=open&q=${encodeURIComponent(f.company.name)}`)
+      expect(await headersOf(page)).toEqual(['Job', 'Customer', 'Customer PO', 'Items', 'Where it stands', 'Next step', 'Owner'])
+      await expect(row(page, String(f.rfq.number)).first()).toContainText(f.po)
+      await expect(row(page, `O-${f.direct.number}`).first()).toContainText('—')
+    }
+    await openAs(page, 'engineer', `/jobs?chip=open&q=${encodeURIComponent(f.company.name)}`)
+    expect(await headersOf(page)).toEqual(['Job', 'Customer', 'Items', 'Where it stands', 'Next step', 'Owner'])
+    await expect(row(page, String(f.rfq.number)).first()).toBeVisible()
+    expect(await page.locator('#main').innerText()).not.toContain(f.po)
+  })
+
+  test('Waiting for supplier holds a direct goods order with no supplier leg; To invoice holds a service-only order; they combine with the chips', async ({ page }) => {
+    const f = await seed()
+    const { svc } = await seedService(f, f.ref)
+    await openAs(page, 'admin', '/jobs?chip=open&stage=supplier')
+    await expect(page.getByRole('radio', { name: 'Waiting for supplier' })).toBeChecked()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+    await expect(row(page, `O-${svc.number}`)).toHaveCount(0)
+    await expect(page.getByText(/Showing \d+ open jobs? · Waiting for supplier/)).toBeVisible()
+
+    await page.getByRole('radio', { name: 'To invoice' }).click()
+    await expect(page).toHaveURL(/stage=invoice/)
+    await expect(row(page, `O-${svc.number}`).first()).toBeVisible()
+    await expect(row(page, `O-${f.direct.number}`)).toHaveCount(0)
+    await expect(page.getByText(/Showing \d+ open jobs? · To invoice/)).toBeVisible()
+
+    await page.getByRole('radio', { name: 'Orders' }).click()
+    await expect(row(page, `O-${svc.number}`).first()).toBeVisible()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+
+    // History offers only All and Orders, and an Open-only stage is dropped on the way
+    await page.getByRole('radio', { name: 'To invoice' }).click()
+    await page.getByRole('radio', { name: 'History' }).click()
+    await expect(page.getByRole('radio', { name: 'To invoice' })).toHaveCount(0)
+    await expect(page.getByRole('radio', { name: 'Orders' })).toBeVisible()
+    await expect(page).not.toHaveURL(/stage=invoice/)
+
+    // All takes the parameter off the address
+    await page.goto('/jobs?chip=open&stage=deliver')
+    await page.getByRole('radio', { name: 'All', exact: true }).click()
+    await expect(page).not.toHaveURL(/stage=/)
+  })
+
+  test('the stage survives Back from a Job page', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'admin', '/jobs?chip=open&stage=supplier')
+    await row(page, `O-${f.direct.number}`).first().click()
+    await expect(page).toHaveURL(new RegExp(`/jobs/O-${f.direct.number}$`))
+    await page.goBack()
+    await expect(page).toHaveURL(/stage=supplier/)
+    await expect(page.getByRole('radio', { name: 'Waiting for supplier' })).toBeChecked()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+  })
+
+  test('an engineer is offered four stages, never sees a PO or the invoice words, and ?stage=invoice shows All', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'engineer', '/jobs?chip=open&stage=invoice')
+    await expect(page.getByRole('radio')).toHaveText(['All', 'Orders', 'Waiting for supplier', 'To deliver'])
+    await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeChecked()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+    const text = await page.locator('#main').innerText()
+    expect(text).not.toMatch(/To invoice|To be paid|Customer PO/)
+    expect(text).not.toContain(f.po)
+  })
+
+  test('the old /orders address opens the Jobs list on the Orders stage', async ({ page }) => {
+    await openAs(page, 'admin', '/orders')
+    await expect(page).toHaveURL(/\/jobs\?stage=orders$/)
+    await expect(page.getByRole('radio', { name: 'Orders' })).toBeChecked()
+    await page.goto('/orders?show=closed')
+    await expect(page).toHaveURL(/\/jobs\?chip=history&stage=orders$/)
+  })
+
+  test('a phone shows the PO line on the card and a select for the stage; axe is clean at 1440 and 375', async ({ page }) => {
+    const f = await seed()
+    await openAs(page, 'admin', '/jobs?chip=open&stage=orders')
+    await expect(row(page, String(f.rfq.number)).first()).toBeVisible()
+    await review(page, 'jobs-stage-orders-1440')
+    expect(await axeViolations(page)).toEqual([])
+    await page.setViewportSize({ width: 375, height: 800 })
+    await page.goto(`/jobs?chip=open&stage=orders&q=${encodeURIComponent(f.company.name)}`)
+    await expect(page.getByText(`PO ${f.po}`).first()).toBeVisible()
+    await page.goto('/jobs?chip=open&stage=orders')
+    await expect(page.getByLabel('Show jobs at stage', { exact: true })).toBeVisible()
+    await page.getByLabel('Show jobs at stage', { exact: true }).selectOption('invoice')
+    await expect(page).toHaveURL(/stage=invoice/)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow, 'no sideways scroll at 375').toBeLessThanOrEqual(0)
+    await review(page, 'jobs-stage-invoice-375')
+    expect(await axeViolations(page)).toEqual([])
   })
 })
 
