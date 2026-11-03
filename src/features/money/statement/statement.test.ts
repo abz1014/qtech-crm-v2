@@ -49,3 +49,23 @@ describe('customer statement (process audit 7)', () => {
     expect(financialYearStart('2026-07-01')).toBe('2026-07-01')
   })
 })
+
+describe('single-order statement (0127): applied credit', () => {
+  it('keeps the applied credit when it carries an amount and drops the 0/0 memo row of a customer statement', () => {
+    const l = toLines([
+      raw('2026-07-01', 'invoice', 500, 0, 'INV-1', 1),
+      raw('2026-07-02', 'credit_applied', 0, 120, 'Applied to ORD-0007', 5), // on the order it went to: a credit
+      raw('2026-07-02', 'credit_applied', 0, 0, 'Applied to ORD-0007', 5), // the customer statement's memo row: left out
+    ])
+    expect(l.map(x => x.kind)).toEqual(['invoice', 'credit_applied'])
+    expect(fixed(buildStatement(l, '2026-07-01', '2026-07-31').closing)).toBe('380.00')
+  })
+  it('a debit on the order the credit came from', () => {
+    const l = toLines([
+      raw('2026-07-01', 'payment', 0, 1500, 'bank', 3),
+      raw('2026-07-02', 'credit_applied', 120, 0, 'Applied to ORD-0008', 5),
+    ])
+    expect(fixed(buildStatement(l, '2026-07-01', '2026-07-31').closing)).toBe('-1380.00')
+  })
+})
+

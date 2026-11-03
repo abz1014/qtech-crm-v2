@@ -39,7 +39,7 @@ test.describe('customer refunds and credit', () => {
     await expect(panel.getByTestId('credit-balance')).toContainText('32,000')
 
     // Refund 10,000 (short form: amount and date, nothing else typed)
-    await panel.getByRole('button', { name: 'Refund' }).click()
+    await panel.getByRole('button', { name: 'Refund', exact: true }).click()
     const refund = page.getByRole('dialog').last()
     await expect(refund.getByLabel(/Amount refunded/)).toHaveValue('32,000')
     await refund.getByLabel(/Amount refunded/).fill('10000')
@@ -60,7 +60,7 @@ test.describe('customer refunds and credit', () => {
     expect(Number(aAfterRefund[0].overpaid_by)).toBe(22000)
 
     // the same refund again is a duplicate until confirmed
-    await panel.getByRole('button', { name: 'Refund' }).click()
+    await panel.getByRole('button', { name: 'Refund', exact: true }).click()
     const again = page.getByRole('dialog').last()
     await again.getByLabel(/Amount refunded/).fill('10000')
     await again.getByRole('button', { name: 'Save refund' }).click()
@@ -90,7 +90,7 @@ test.describe('customer refunds and credit', () => {
     expect(Number(aAfterApply[0].overpaid_by)).toBe(0)
     const credit = await must(rest<{ balance: number; refunded: number; applied: number }[]>('admin', `v_company_credit?company_id=eq.${company.id}&select=*`))
     expect(credit[0]).toMatchObject({ balance: 0, refunded: 10000, applied: 22000 })
-    await expect(panel.getByRole('button', { name: 'Refund' })).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'Refund', exact: true })).toHaveCount(0)
 
     // nobody but the admin sees or writes any of it
     expect(await must(rest<unknown[]>('sales', `customer_refunds?company_id=eq.${company.id}&select=id`))).toHaveLength(0)

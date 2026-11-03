@@ -99,6 +99,10 @@ select is((select from_order_id from public.credit_applications where id = pg_te
 select is(pg_temp.code_('admin', $q$select public.apply_credit(@64, @11, 1, null, null, @13)::text$q$), 'E:P0001:credit_exceeds_balance', 'nothing is left to apply from anywhere');
 select is(pg_temp.code_('admin', $q$select public.void_payment(@40, 'typed twice')::text$q$), 'E:P0001:credit_overdrawn', 'GUARD: voiding the payment that funded the refunds and applied credit is refused');
 select is(pg_temp.code_('admin', $q$select public.delete_payment(@40)::text$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is deleting it');
+select is(pg_temp.code_('admin', $q$delete from public.payments_in where id = @40 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: deleting the payment row directly is refused too (payments_in_credit_guard)');
+select is(pg_temp.code_('admin', $q$update public.payments_in set amount = 1200 where id = @40 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is editing the payment down to less than the credit given out');
+select is(pg_temp.code_('admin', $q$update public.order_items set unit_price_net = 1200 where id = @21 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is raising the order, which would absorb the credit (order_items_credit_guard)');
+select is(pg_temp.code_('admin', $q$update public.invoices set net_amount = 1200 where id = @30 returning 1$q$), 'E:P0001:credit_overdrawn', 'GUARD: so is raising the invoice (invoices_credit_guard)');
 select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 2, 'STATEMENT: the two refunds are rows');
 select is((select sum(debit) from public.customer_statement(pg_temp.u('01')) where kind = 'refund'), 200.00::numeric, 'as debits (they raise what the customer owes)');
 select is((select count(*)::int from public.customer_statement(pg_temp.u('01')) where kind = 'credit_applied' and debit = 0 and credit = 0 and order_number = (select number from public.orders where id = pg_temp.u('11'))), 1,
@@ -107,6 +111,20 @@ select is((select sum(debit) - sum(credit) from public.customer_statement(pg_tem
           (select coalesce(sum(r.balance), 0) from public.order_receivables() r where r.company_id = pg_temp.u('01')
              and exists (select 1 from public.invoices v where v.order_id = r.order_id and v.voided_at is null)) - (select balance from public.v_company_credit where company_id = pg_temp.u('01')),
   'STATEMENT: the closing balance is what the orders owe less the credit held');
+select is((select credit from public.customer_statement(pg_temp.u('01'), null, pg_temp.u('11')) where kind = 'credit_applied'), 120.00::numeric,
+  'SINGLE-ORDER STATEMENT: the credit applied to order 11 is a credit row of 120 on that order''s own statement');
+select is((select count(*)::int from public.customer_statement(pg_temp.u('01'), null, pg_temp.u('11')) where kind = 'credit_applied' and debit <> 0), 0, 'and not a debit there');
+select is((select sum(debit) - sum(credit) from public.customer_statement(pg_temp.u('01'), null, pg_temp.u('11'))),
+          (select balance - overpaid_by from public.order_receivables(pg_temp.u('11'))),
+  'SINGLE-ORDER STATEMENT: order 11 closes at what it owes (500 less the 120 applied)');
+select is((select debit from public.customer_statement(pg_temp.u('01'), null, pg_temp.u('10')) where kind = 'credit_applied'), 120.00::numeric,
+  'SINGLE-ORDER STATEMENT: on the source order 10 the same 120 is a debit row (its overpayment is lower by that much)');
+select is((select sum(debit) - sum(credit) from public.customer_statement(pg_temp.u('01'), null, pg_temp.u('10'))),
+          (select balance - overpaid_by from public.order_receivables(pg_temp.u('10'))),
+  'SINGLE-ORDER STATEMENT: order 10 closes at minus its overpayment, the same figure as overpaid_by');
+select is((select count(*)::int from public.customer_statement(pg_temp.u('01'), null, pg_temp.u('10')) where kind = 'refund'), 2, 'SINGLE-ORDER STATEMENT: the two refunds paid back from order 10 are rows on it');
+select is((select count(*)::int from public.customer_statement(pg_temp.u('01'), null, pg_temp.u('11')) where kind not in ('invoice', 'payment', 'credit_note', 'refund', 'credit_applied') or order_number is distinct from (select number from public.orders where id = pg_temp.u('11'))), 0,
+  'SINGLE-ORDER STATEMENT: only rows of that one order');
 select is(public.company_credit_balance(pg_temp.u('01')), (select balance from public.v_company_credit where company_id = pg_temp.u('01')), 'the role-free balance equals the view');
 select is((select count(*)::int from public.order_credit_rows(pg_temp.u('01')) r join public.v_order_money m on m.order_id = r.order_id
            where r.available is distinct from m.overpaid_by), 0, 'and the role-free per order credit equals overpaid_by on every order');

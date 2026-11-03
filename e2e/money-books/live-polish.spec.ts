@@ -25,6 +25,11 @@ async function emptyCompany(page: Page) {
     if (req.method() !== 'GET' && req.method() !== 'HEAD' && !url.includes('/rpc/')) return route.continue()
     // The team head-count: just the admin.
     if (url.includes('/rest/v1/users?') && url.includes('deactivated_at')) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '0-0/1' }, body: '[]' })
+    // On the 1st to the 10th of a month Today carries a "Close <last month>" chore unless that month is already closed. A brand-new
+    // CRM is measured with nothing on Today whatever the day, so last month reads as closed.
+    if (url.includes('/rest/v1/closed_months') && (req.headers()['accept'] ?? '').includes('vnd.pgrst.object')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ month: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)).toISOString().slice(0, 10) }) })
+    }
     if ((req.headers()['accept'] ?? '').includes('vnd.pgrst.object')) return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' })
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '*/0' }, body: '[]' })
   })

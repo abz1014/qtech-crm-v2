@@ -9,7 +9,7 @@ import { paisaToFixed, toPaisa, type Amount } from '@/lib/money'
  * DEBIT (money paid back raises what they owe); both arrive here as lines with their own kind, so nothing in this file changes when
  * they merge.
  */
-export type StatementKind = 'invoice' | 'payment' | 'credit_note' | 'refund'
+export type StatementKind = 'invoice' | 'payment' | 'credit_note' | 'refund' | 'credit_applied'
 
 export interface StatementLine {
   on: string
@@ -50,9 +50,14 @@ export interface RawStatementLine {
 
 const KINDS: readonly string[] = ['invoice', 'payment', 'credit_note', 'refund']
 
+/*
+ * Applied credit (0127) is a memo row on a customer's statement (debit 0, credit 0: value moved between their own orders) and is left
+ * out there. On a single-order statement it carries the amount (a credit on the order it went to, a debit on the order it came from)
+ * and is kept.
+ */
 export function toLines(rows: readonly RawStatementLine[]): StatementLine[] {
   return rows
-    .filter(r => KINDS.includes(r.kind))
+    .filter(r => KINDS.includes(r.kind) || (r.kind === 'credit_applied' && (toPaisa(r.debit ?? 0) !== 0n || toPaisa(r.credit ?? 0) !== 0n)))
     .map(r => ({
       on: r.line_on,
       kind: r.kind as StatementKind,
@@ -90,6 +95,7 @@ export const KIND_LABEL: Record<StatementKind, string> = {
   payment: 'Payment received',
   credit_note: 'Credit note',
   refund: 'Refund paid',
+  credit_applied: 'Credit applied',
 }
 
 /** "Rs 1,234.00" style amount for a statement cell, always with paisa so columns line up. */

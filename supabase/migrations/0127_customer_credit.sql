@@ -1130,7 +1130,12 @@ as $$
 $$;
 
 -- ================================================================ customer_statement (0125): the refund rows and the applied-credit memo rows
-create or replace function public.customer_statement(p_company uuid, p_to date default null)
+-- p_order (new, optional) turns it into the statement of ONE order of that customer: only that order's invoices, payments, credit notes
+-- and refunds, and the applied credit as money on the order's own balance (a credit row on the order it was applied to, a debit row on the
+-- order it came from), so the closing balance of a single-order statement is that order's receivable, or minus its overpayment.
+-- The (uuid, date) version is dropped first so a call with two arguments never meets two candidates.
+drop function if exists public.customer_statement(uuid, date);
+create function public.customer_statement(p_company uuid, p_to date default null, p_order uuid default null)
 returns table (
   line_on       date,
   kind          text,      -- 'invoice' | 'payment' | 'credit_note' | 'refund' | 'credit_applied'
@@ -1160,6 +1165,7 @@ begin
   from public.invoices v
   left join public.orders o on o.id = v.order_id
   where coalesce(v.company_id, o.company_id) = p_company
+    and (p_order is null or v.order_id = p_order)
     and not v.settled_before_cutover
     and v.voided_at is null
     and (v.net_amount + v.gst_amount) <> 0
@@ -1172,6 +1178,7 @@ begin
   from public.payments_in p
   join public.orders o on o.id = p.order_id
   where o.company_id = p_company
+    and (p_order is null or o.id = p_order)
     and p.voided_at is null
     and p.received_on <= v_to;
 
@@ -1181,6 +1188,7 @@ begin
   from public.credit_notes c
   left join public.orders o on o.id = c.order_id
   where coalesce(c.company_id, o.company_id) = p_company
+    and (p_order is null or c.order_id = p_order)
     and c.issued_on <= v_to;
 
   -- 0127: money paid back to the customer is a DEBIT (it raises what they owe, or lowers the credit they hold), seq 4.
@@ -1191,21 +1199,50 @@ begin
   from public.customer_refunds f
   left join public.orders o on o.id = f.order_id
   where f.company_id = p_company
+    and (p_order is null or f.order_id = p_order)
     and f.refunded_on <= v_to;
 
-  -- 0127: credit applied to another order of the customer moves value between their own orders, so it changes no balance: a memo
-  -- row (debit 0, credit 0) on the target order, seq 5, with the amount in its note.
+  -- 0127: credit applied to another order of the customer moves value between their own orders, so on the customer's statement it changes
+  -- no balance: a memo row (debit 0, credit 0) on the target order, seq 5, with the amount in its note.
+  if p_order is null then
+    return query
+    select a.applied_on::date, 'credit_applied'::text, ('Applied to ORD-' || lpad(t.number::text, 4, '0'))::text, t.number::bigint,
+           ('Rs ' || to_char(a.amount, 'FM999,999,999,990.00') || ' of their credit put against this order, no cash moved'
+            || coalesce(' · ' || a.note, ''))::text,
+           0::numeric, 0::numeric, 5
+    from public.credit_applications a
+    join public.orders t on t.id = a.to_order_id
+    where a.company_id = p_company
+      and a.applied_on <= v_to;
+    return;
+  end if;
+
+  -- One order: the credit put against it is a CREDIT (it settles part of what the order owes), and the credit that left it is a DEBIT
+  -- (the overpayment it held is lower by that much). No cash moved either way.
   return query
   select a.applied_on::date, 'credit_applied'::text, ('Applied to ORD-' || lpad(t.number::text, 4, '0'))::text, t.number::bigint,
-         ('Rs ' || to_char(a.amount, 'FM999,999,999,990.00') || ' of their credit put against this order, no cash moved'
+         ('Rs ' || to_char(a.amount, 'FM999,999,999,990.00') || ' of the customer''s credit put against this order, no cash moved'
           || coalesce(' · ' || a.note, ''))::text,
-         0::numeric, 0::numeric, 5
+         0::numeric, a.amount::numeric, 5
   from public.credit_applications a
   join public.orders t on t.id = a.to_order_id
   where a.company_id = p_company
+    and a.to_order_id = p_order
+    and a.applied_on <= v_to;
+
+  return query
+  select a.applied_on::date, 'credit_applied'::text, ('Applied to ORD-' || lpad(t.number::text, 4, '0'))::text, s.number::bigint,
+         ('Rs ' || to_char(a.amount, 'FM999,999,999,990.00') || ' of this order''s overpayment put against ORD-' || lpad(t.number::text, 4, '0') || ', no cash moved'
+          || coalesce(' · ' || a.note, ''))::text,
+         a.amount::numeric, 0::numeric, 5
+  from public.credit_applications a
+  join public.orders t on t.id = a.to_order_id
+  join public.orders s on s.id = a.from_order_id
+  where a.company_id = p_company
+    and a.from_order_id = p_order
     and a.applied_on <= v_to;
 end;
 $$;
 
-revoke all on function public.customer_statement(uuid, date) from public, anon;
-grant execute on function public.customer_statement(uuid, date) to authenticated, qtech_engineer;   -- 0081 mirror; returns no row for anyone but an admin
+revoke all on function public.customer_statement(uuid, date, uuid) from public, anon;
+grant execute on function public.customer_statement(uuid, date, uuid) to authenticated, qtech_engineer;   -- 0081 mirror; returns no row for anyone but an admin

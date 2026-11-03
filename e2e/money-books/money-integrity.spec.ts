@@ -74,6 +74,7 @@ test.describe('void and credit notes (C1)', () => {
   })
 
   test('credit note: issued from the invoice, in the register as a negative line, with a PDF', async ({ page }) => {
+    test.slow() // the first PDF of a cold browser loads the renderer; the first attempt hit the 30 s test timeout (it passed on the retry)
     const order = await seedOrder()
     const inv = await makeInvoice(order, { psid: `PSID-${unique()}` })
     await openAs(page, 'admin', `/money/gst-register?invoice=${inv.id}`)
