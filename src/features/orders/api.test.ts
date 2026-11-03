@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
-import { convertRfqToOrder, existingOrderOf, getOrderHeader, listLegPos, listOrderItems, searchOrders } from '@/features/orders/api'
+import { convertRfqToOrder, existingOrderOf, getOrderHeader, listLegPos, listOrderItems, ORDER_CHANGED, searchOrders, updateOrder } from '@/features/orders/api'
 
 let uninstall: (() => void) | undefined
 afterEach(() => uninstall?.())
@@ -99,5 +99,37 @@ describe('orders api: the PO chip carries the year of the first issue', () => {
     expect(po.issuedOn).toBe('2027-01-05')
     // the PDF prints poRef(number, first issue): the chip must say the same PO-26-0017
     expect(po.firstIssuedOn).toBe('2026-12-28')
+  })
+})
+
+describe('orders api: updateOrder is conditional on updated_at (optimistic locking)', () => {
+  it('writes only if the row still has the updated_at the screen loaded', async () => {
+    const db = installFakeDb(() => ({ data: [{ id: 'o1' }] }))
+    uninstall = db.uninstall
+    await updateOrder('o1', { notes: 'x' }, '2026-10-30T10:00:00.123456+00:00')
+    const write = db.calls.find(c => c.verb === 'update') as FakeCall
+    expect(write.ops).toContainEqual(['eq', ['id', 'o1']])
+    expect(write.ops).toContainEqual(['eq', ['updated_at', '2026-10-30T10:00:00.123456+00:00']])
+  })
+
+  it('when someone else saved first nothing matches and a plain message says so', async () => {
+    const db = installFakeDb(() => ({ data: [] }))
+    uninstall = db.uninstall
+    await expect(updateOrder('o1', { notes: 'x' }, 'T1')).rejects.toMatchObject({ message: ORDER_CHANGED, code: 'order_changed' })
+    expect(ORDER_CHANGED).toBe('Someone else changed this order. Reload to see their changes.')
+  })
+
+  it('without a version (an undo) the write is unconditional', async () => {
+    const db = installFakeDb(() => ({ data: null }))
+    uninstall = db.uninstall
+    await updateOrder('o1', { notes: 'x' })
+    const write = db.calls.find(c => c.verb === 'update') as FakeCall
+    expect(write.ops.some(([n, a]) => n === 'eq' && a[0] === 'updated_at')).toBe(false)
+  })
+
+  it('a database error is thrown as it is', async () => {
+    const db = installFakeDb(() => ({ error: { message: 'boom' } }))
+    uninstall = db.uninstall
+    await expect(updateOrder('o1', { notes: 'x' }, 'T1')).rejects.toMatchObject({ message: 'boom' })
   })
 })

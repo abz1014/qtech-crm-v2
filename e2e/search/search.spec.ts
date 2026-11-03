@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { API_URL, createCompany, createRfq, login, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { JOB_URL } from '../support/job'
 
 /*
  * R12 end to end, against the local CI stack: the command palette searches companies, contacts (name, phone, e-mail), RFQ
@@ -80,7 +81,7 @@ test.describe('palette search (R12)', () => {
     const byRef = page.getByRole('option', { name: new RegExp(`Ref ${f.rfq.ref}`) })
     await expect(byRef).toBeVisible()
     await byRef.click()
-    await expect(page).toHaveURL(new RegExp(`/rfqs/${f.rfq.id}$`))
+    await expect(page).toHaveURL(JOB_URL)
   })
 
   test('recents stay on the idle view', async ({ page }) => {
@@ -220,7 +221,7 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
     const po = page.getByRole('option', { name: new RegExp('PO-[0-9]{2}-' + f.supplierPo) })
     await expect(po).toBeVisible()
     await po.click()
-    await expect(page).toHaveURL(new RegExp(`/orders/${f.order.id}$`))
+    await expect(page).toHaveURL(JOB_URL)
 
     await openPalette(page)
     await page.getByRole('combobox').fill(f.invoice.slice(0, 8))

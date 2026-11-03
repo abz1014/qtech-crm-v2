@@ -55,61 +55,22 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^Needs suppliers/, /^Chase /, /PKR/, /^Late payment/] },
   { path: '/no-access', admin: 'no', sales: 'no', engineer: 'no', note: 'the bare no-access page' },
   { path: '/nope', admin: 'no', sales: 'no', engineer: 'no' },
-  // ------------------------------------------------------------------ RFQs
-  { path: '/rfqs', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/Value \(PKR/] },
-  { path: '/rfqs?tab=closed', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'old board address; post-merge maps to ?show=closed' },
-  { path: '/rfqs?show=prices', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'post-merge board filter' },
+  // ------------------------------------------------------------------ RFQs and Orders: the old pages are gone (2026-10-30); every address redirects to Jobs
+  // (the Job pages' own buttons are under /jobs/{job} below). New RFQ keeps its address.
+  { path: '/rfqs', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/, note: 'redirects to the Jobs list' },
+  { path: '/rfqs?tab=closed', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/, note: 'old board address: the Jobs list, History' },
+  { path: '/rfqs?show=prices', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/ },
+  { path: '/rfqs?old=1', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/, note: 'the retired switch is dropped' },
   { path: '/rfqs/new', admin: 'ok', sales: 'ok', engineer: 'ok' },
-  {
-    path: '/rfqs/{rfq}',
-    admin: 'ok',
-    sales: 'ok',
-    engineer: 'ok',
-    openers: [
-      { name: /^Add item$/, roles: ALL },
-      { name: /^(Float to another supplier|Ask more suppliers)$/, roles: ALL, optional: true },
-      { name: /^Issue quotation$/, roles: AS, optional: true },
-    ],
-    // Owner decision 2026-10-22: pricing actions and price columns are admin and sales only.
-    engineerAbsent: [
-      /^Issue quotation$/, /^Revise quotation$/, /^Mark won$/, /^Open PDF$/, /^Share$/, /^Gross, PKR$/, /^Price, PKR today/,
-      /^Add reply/, /^Enter reply/, /^Edit reply/, /^Paste reply/, /^Copy price$/, /^How are prices shown\?$/,
-    ],
-  },
+  { path: '/rfqs/{rfq}', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs\/\d+$/, note: 'redirects to the Job that holds the RFQ' },
   { path: '/rfqs/{rfq}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation dialog (admin and sales; an engineer gets the page without it)' },
   { path: '/rfqs/{rfq}?won=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Mark won dialog (admin and sales; an engineer gets the page without it)' },
+  { path: '/rfqs/{rfq}?old=1', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs\/\d+$/, note: 'the retired switch is dropped' },
   { path: '/rfqs/{rfq}/extra', admin: 'no', sales: 'no', engineer: 'no' },
-  // ------------------------------------------------------------------ Orders
-  {
-    path: '/orders',
-    admin: 'ok',
-    sales: 'ok',
-    engineer: 'ok',
-    openers: [{ name: /^(New order|Repeat a past order)$/, roles: AS }],
-    engineerAbsent: [/^Gross \(PKR\)/, /^Value \(PKR\)/, /^Invoicing state$/, /^Payment state$/],
-  },
-  { path: '/orders?tab=done', admin: 'ok', sales: 'ok', engineer: 'ok' },
-  { path: '/orders?invoicing=open&payment=unpaid', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'money filters are ignored for an engineer' },
-  {
-    path: '/orders/{order}',
-    admin: 'ok',
-    sales: 'ok',
-    engineer: 'ok',
-    openers: [
-      { name: /^Record payment$/, roles: A },
-      { name: /^Create invoice$/, roles: AS, optional: true },
-      { name: /^Add line$/, roles: AS, optional: true }, // post-merge: behind the "Edit GST and lines" toggle
-      { name: /^(Add leg|Add supplier)$/, roles: AS },
-      { name: /^Edit notes$/, roles: AS },
-      { name: /^Issue PO/, roles: AS },
-      { name: /^More( actions)?$/, roles: AS, open: false },
-    ],
-    engineerAbsent: [
-      /^Add expense/, /^Split line/, /^Edit price/, /^Resolve price basis$/, /^Is GST included/, /^View PO/, /^Re-issue PO/,
-      /^Edit GST and lines$/, /Exempt the whole order from GST/, /^Unit net/, /^Line gross/, /^Supplier unit price/,
-      /^Unit price \(PKR\)/, /^Total \(PKR\)/,
-    ],
-  },
+  { path: '/orders', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/, note: 'redirects to the Jobs list' },
+  { path: '/orders?tab=done', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/ },
+  { path: '/orders?invoicing=open&payment=unpaid', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/, note: 'the old money filters are dropped' },
+  { path: '/orders/{order}', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs\/(\d+|O-\d+)$/, note: 'redirects to the Job that holds the order' },
   { path: '/orders/{legacyOrder}', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'an imported order (legacy_source set by the import)' },
   { path: '/orders/{order}/extra', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ Jobs (redesign phase 5; reachable by address until the nav switch)

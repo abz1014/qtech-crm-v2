@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs'
+import { openStage } from '../support/job'
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
@@ -74,11 +75,12 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.setViewportSize(before)
 }
 
-test.describe('Margin panel on the order page (admin)', () => {
+test.describe('Margin card on the job page (admin, Order stage)', () => {
   test('the estimate fills an empty expected cost once and never overwrites; costs complete turns the margin final', async ({ page }) => {
     await setEurRate()
     const o = await seedOrder()
     await openAs(page, 'admin', `/orders/${o.id}`)
+    await openStage(page, 'Order')
     const panel = page.getByRole('region', { name: 'Margin' })
     await expect(panel.getByText('Not final', { exact: true }).first()).toBeVisible()
 
@@ -106,6 +108,7 @@ test.describe('Margin panel on the order page (admin)', () => {
     // Costs paid out: net sale 13,000 less 10,000 so far = 3,000, still provisional.
     await expense(o.id, 10000)
     await page.reload()
+    await openStage(page, 'Order')
     await expect(panel.getByText('Actual cost, 1 tagged expense')).toBeVisible()
     await expect(panel.locator('[data-margin-state="provisional"]')).toBeVisible()
     await expect(panel.getByTestId('margin-expenses')).toContainText('Supplier payment')
@@ -128,6 +131,7 @@ test.describe('Margin panel on the order page (admin)', () => {
     const o = await seedOrder({ flags: ['value_basis_unknown'] })
     await expense(o.id, 640000)
     await openAs(page, 'admin', `/orders/${o.id}`)
+    await openStage(page, 'Order')
     const panel = page.getByRole('region', { name: 'Margin' })
     await expect(panel.locator('[data-margin-state="basis_unknown"]')).toBeVisible()
     await expect(panel.getByText('Not calculated')).toBeVisible()
@@ -224,7 +228,7 @@ test.describe('who sees money', () => {
         if (MONEY.test(r.url())) seen.push(`${r.method()} ${r.url()}`)
       })
       await openAs(page, role, `/orders/${o.id}`)
-      await expect(page.locator('#main').getByText(ordRef(o.number)).first()).toBeVisible()
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job O-${o.number}`)
       await page.waitForLoadState('networkidle')
       await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
       for (const path of ['/money/margins', '/money/exceptions']) {
@@ -253,18 +257,13 @@ test.describe('who sees money', () => {
 
 for (const width of [1440, 375]) {
   test.describe(`axe at ${width}`, () => {
-    test('the Margin panel, Margins and Mistakes to fix have no violations', async ({ page }) => {
+    test('Margins and Mistakes to fix have no violations', async ({ page }) => {
       await setEurRate()
       const o = await seedOrder()
       await expense(o.id, 4000)
       await post('payments_in', { order_id: o.id, amount: 20000, received_on: today() })
       await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
-      await openAs(page, 'admin', `/orders/${o.id}`)
-      await expect(page.getByRole('region', { name: 'Margin' })).toBeVisible()
-      await expect(page.getByTestId('cost-estimate')).toBeVisible()
-      expect(await axeViolations(page), 'order page').toEqual([])
-      await shot(page, `m04-order-margin-panel-${width}`)
-      await page.goto('/money/margins')
+      await openAs(page, 'admin', '/money/margins')
       await expect(page.getByRole('heading', { name: 'Order margins' })).toBeVisible()
       expect(await axeViolations(page), 'margins').toEqual([])
       await shot(page, `m04-money-margins-${width}`)

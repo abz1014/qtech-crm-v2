@@ -18,11 +18,6 @@ export const orderItemsQuery = (id: string, money: boolean) => ({ queryKey: qk.o
 export const orderLegsQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'legs'), queryFn: () => api.fetchOrderLegs(id) })
 export const orderEngineersQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'engineers'), queryFn: () => api.listOrderEngineers(id) })
 export const orderMoneyQuery = (id: string, role: 'admin' | 'sales') => ({ queryKey: qk.orders.part(id, 'money'), queryFn: () => api.getOrderMoney(id, role) })
-export const ordersListQuery = (role: 'admin' | 'sales' | 'engineer' | null) => ({
-  queryKey: qk.orders.board(role ?? ''),
-  queryFn: () => api.listOrders(role as 'admin' | 'sales' | 'engineer'),
-})
-
 export function useOrderHeader(id: string | undefined, money: boolean) {
   return useQuery({ ...orderHeaderQuery(id ?? '', money), enabled: Boolean(id) })
 }
@@ -68,10 +63,15 @@ export function useConvertRfq(rfqId: string) {
   })
 }
 
-export function useUpdateOrder(orderId: string) {
+/**
+ * `expectedUpdatedAt` is the order's updated_at as the screen loaded it (OrderHeader.updatedAt): the write is conditional on it and
+ * refuses with ORDER_CHANGED when somebody else saved first. A conflict refetches nothing, so the open dialog keeps what was typed and
+ * a retry conflicts again until the page is reloaded. Leave it out for an undo or a write on a row this screen just made.
+ */
+export function useUpdateOrder(orderId: string, expectedUpdatedAt?: string | null) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (patch: Parameters<typeof api.updateOrder>[1]) => api.updateOrder(orderId, patch),
+    mutationFn: (patch: Parameters<typeof api.updateOrder>[1]) => api.updateOrder(orderId, patch, expectedUpdatedAt),
     onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
   })
 }
@@ -207,11 +207,6 @@ export function useResolveBasis(orderId: string) {
 
 export function useSupplierChoices(enabled: boolean) {
   return useQuery({ queryKey: qk.orders.supplierChoices(), queryFn: api.listSupplierChoices, enabled, staleTime: 60_000 })
-}
-
-/** O04: the orders list. `role` is in the key because the request itself differs by role. */
-export function useOrdersList(role: 'admin' | 'sales' | 'engineer' | null) {
-  return useQuery({ ...ordersListQuery(role), enabled: role !== null })
 }
 
 /** O02: past orders matching what is typed (nothing typed: the most recent). Read only while the dialog is open. */

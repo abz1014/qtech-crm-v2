@@ -237,13 +237,13 @@ describe('label matching', () => {
 })
 
 describe('a screen is what its module draws', () => {
-  it('the To do screen does not draw the Orders list, and every screen draws the shell', () => {
+  it('the To do screen does not draw the Jobs list, and every screen draws the shell', () => {
     const today = screenFiles('/todo')
     const rel = (f: string) => path.relative(path.join(repo, 'src'), f).split(path.sep).join('/')
     const names = [...today].map(rel)
     expect(names).toContain('features/today/TodayScreen.tsx')
     expect(names).toContain('app/shell/TopBar.tsx')
-    expect(names).not.toContain('features/orders/OrdersListPage.tsx')
+    expect(names).not.toContain('features/jobs/JobsListPage.tsx')
   })
   it('a route no screen owns is an error, not a silent pass', () => {
     expect(() => screenFiles('/nowhere')).toThrow(/no screen owns the route/)

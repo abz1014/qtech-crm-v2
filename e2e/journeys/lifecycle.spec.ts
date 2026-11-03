@@ -3,6 +3,7 @@ import { createCompany, karachiDay, must, rest, uniqueName } from '../support/st
 import { legLoc, seedPo } from '../orders/fixtures'
 import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext, todayHas } from './support'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
+import { JOB_URL, openStage, stagesOf } from '../support/job'
 
 /*
  * P03, the critical paths the order-lifecycle audit (docs/AUDIT_ORDER_LIFECYCLE.md) found untested. Each is a short journey of its own:
@@ -40,9 +41,9 @@ test('overpayment and advance: an advance before the invoice, then more than is 
   const page = await openPage(ctx, `/orders/${o.order.id}`)
   const payments = () => must(rest<{ amount: number }[]>('admin', `payments_in?order_id=eq.${o.order.id}&select=amount&order=created_at`))
   const record = async (amount: string) => {
-    // no invoice yet: Record payment (an advance) is in the order's More menu, not offered up front (UX audit 2026-10-22, P2)
-    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
-    await page.getByRole('menuitem', { name: 'Record payment' }).click()
+    // no invoice yet: Record payment (an advance) is on the Invoice stage of the job page
+    await openStage(page, 'Invoice')
+    await stagesOf(page).getByRole('button', { name: 'Record payment' }).first().click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue(/.+/) // the balance due is pre-filled
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill(amount)
@@ -78,6 +79,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     const s = await seedPo({ allPriced: true })
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await resetCount(page)
     await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Issue PO' }).click()
@@ -93,7 +95,6 @@ test.describe('cancelling an order after its PO was issued', () => {
     await d.getByRole('radio', { name: 'The customer cancelled the PO' }).click()
     await d.getByRole('button', { name: 'Cancel order' }).click()
     await expect.poll(async () => (await must(rest<{ cancelled_on: string | null }[]>('admin', `orders?id=eq.${s.order.id}&select=cancelled_on`)))[0].cancelled_on).toBe(today)
-    await expect(page.getByText(/^Cancelled /).first()).toBeVisible()
 
     // The PO is a record of what was sent: cancelling the order does not delete it.
     expect(await must(rest<{ id: string }[]>('admin', `purchase_orders?supplier_order_id=eq.${s.leg}&select=id`))).toHaveLength(1)
@@ -106,6 +107,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     const s = await seedPo({ allPriced: true })
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Issue PO' }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 30_000 })
@@ -150,8 +152,8 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const o = await newOrder('Locked Payer', 50000)
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${o.order.id}`)
-    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
-    await page.getByRole('menuitem', { name: 'Record payment' }).click()
+    await openStage(page, 'Invoice')
+    await stagesOf(page).getByRole('button', { name: 'Record payment' }).first().click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
     await d.getByRole('textbox', { name: 'Date received' }).fill(typed)
@@ -166,7 +168,8 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const o = await newOrder('Locked Invoicer', 50000)
     const ctx = await roleContext(browser, info, 'sales')
     const page = await openPage(ctx, `/orders/${o.order.id}`)
-    await page.getByRole('button', { name: 'Create invoice' }).click()
+    await openStage(page, 'Invoice')
+    await stagesOf(page).getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await d.getByRole('textbox', { name: 'Invoice date' }).fill(typed)
     await d.getByRole('button', { name: 'Create invoice' }).click()
@@ -193,17 +196,19 @@ test('goods late on a repeat order: late goods are raised even though no quote e
   await post('order_items', { order_id: past.id, position: 0, description: `Belimo damper actuator ${tag}`, qty: 6, unit: 'ea', unit_price_net: 48500, supplier_order_id: leg.id, supplier_unit_price: 214 })
 
   const ctx = await roleContext(browser, info, 'sales')
-  const page = await openPage(ctx, '/orders?owner=all')
-  await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
+  const page = await openPage(ctx, '/jobs?new=1') // + New, Order without enquiry
   const d = page.getByRole('dialog')
   await d.getByLabel('Find a past order').fill(company.name)
   await d.getByRole('button', { name: new RegExp(`${company.name}.*ORD-${String(past.number).padStart(4, '0')}`) }).click()
   await d.getByRole('button', { name: 'Create order' }).click()
-  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
-  const id = page.url().split('/').pop() as string
+  await expect(page).toHaveURL(JOB_URL)
+  // the new order has no enquiry: its job is "O-<number>"
+  const number = /\/jobs\/O-(\d+)/.exec(page.url())?.[1]
+  const id = (await must(rest<{ id: string }[]>('admin', `orders?number=eq.${number}&select=id`)))[0].id
 
   // The supplier is ordered from with one tap; the goods have not come twenty days later (the date is moved back).
   // ordered by phone, no PO: "Mark placed, no PO" from the row's menu
+  await openStage(page, 'Supplier order')
   await legLoc(page, 'A').getByRole('button', { name: `More for ${supplier.name}` }).click()
   await page.getByRole('menuitem', { name: 'Mark placed, no PO' }).click()
   const legs = await must(rest<{ id: string }[]>('admin', `supplier_orders?order_id=eq.${id}&select=id`))

@@ -5,7 +5,6 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
 import { useWonDialog } from '@/features/orders/useWonDialog'
-import { Link } from 'react-router-dom'
 import { Check, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
@@ -112,7 +111,6 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
       ) : (
         <Note>No items yet.</Note>
       )}
-      {rfqLink(job.rfqId, 'Open the enquiry page')}
     </div>
   )
 
@@ -138,7 +136,6 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
           rows={quotes.map(q => [<span key="n" className="num font-medium">{`${quotationRef(q.number, q.issuedOn)}${q.revision ? ` R${q.revision}` : ''}`}</span>, day(q.issuedOn), day(q.validUntil)])}
         />
       ) : null}
-      {rfqLink(job.rfqId, 'Open the enquiry page')}
     </div>
   )
 
@@ -160,7 +157,6 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         {ctx.money && order?.paymentTermsDays != null ? `Payment terms ${order.paymentTermsDays} days. ` : ''}
       </p>
       {/* the order lines, Edit GST and lines and Remove line are the slot below (orders/jobSlots/OrderWork) */}
-      {ctx.money ? orderLink(job.orderId, 'Open the order page') : null}
     </div>
   )
 
@@ -169,7 +165,6 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   ) : legs.length ? (
     <div className="grid gap-2">
       {/* the supplier orders and their buttons are the slot below (orders/jobSlots/SupplierOrderWork) */}
-      {ctx.money ? orderLink(job.orderId, 'Open the order page') : null}
     </div>
   ) : (
     <Note>No supplier order yet. Choose a supplier for each line below.</Note>
@@ -239,25 +234,6 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   ]
 
   return STOPS.map((stop, index) => ({ stop, shown: model.stops[index].shown, index, state: state(index), summary: summaries[index], body: bodies[index] }))
-}
-
-function rfqLink(rfqId: string | null, label: string) {
-  return rfqId ? (
-    <p>
-      <Link to={`/rfqs/${rfqId}`} className="inline-flex min-h-touch items-center rounded text-base font-medium text-primary underline-offset-4 hover:underline">
-        {label}
-      </Link>
-    </p>
-  ) : null
-}
-function orderLink(orderId: string | null, label: string) {
-  return orderId ? (
-    <p>
-      <Link to={`/orders/${orderId}`} className="inline-flex min-h-touch items-center rounded text-base font-medium text-primary underline-offset-4 hover:underline">
-        {label}
-      </Link>
-    </p>
-  ) : null
 }
 
 const TAG: Record<StopState, string | null> = { done: 'Done', current: 'Now', future: null, none: null, stopped: null }

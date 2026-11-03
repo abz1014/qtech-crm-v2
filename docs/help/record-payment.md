@@ -3,7 +3,7 @@ id: record-payment
 title: Record a payment received
 roles: admin
 keywords: payment, received, paid, money in, bank, cash, balance, receivable
-screens: /money, /orders, /jobs
+screens: /money, /jobs
 related: payment-reminder
 ---
 1. Tap [Money]. It opens on [To collect].

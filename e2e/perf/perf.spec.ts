@@ -14,7 +14,7 @@ import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../su
  *  2. Content-Security-Policy: this suite runs with E2E_CSP=1 (the preview server sends vercel.json's real policy, Supabase origin swapped
  *     for the local stack). No `securitypolicyviolation` may fire while the screens load. PDFs, the share target and storage images are
  *     covered by the quotation, orders, capture and pwa suites, which run under the same policy.
- *  3. Request shape: on To do and the RFQ page no data request is made twice, and the request waves are reported.
+ *  3. Request shape: on To do and the Job page of an enquiry no data request is made twice, and the request waves are reported.
  */
 const PORT = 9333
 /** The suite's server and Supabase proxy use a throwaway self-signed certificate (scripts/ci/e2e-run.sh); Lighthouse's tab must accept it too. */
@@ -26,17 +26,17 @@ const summary = (md: string) => {
 }
 
 interface Seed {
-  rfqId: string
-  orderId: string
-  /** The RFQ's job key (v_jobs.job_key): the Job page's address. */
+  /** The enquiry's job key (v_jobs.job_key, the RFQ number): the Job page's address. */
   jobKey: string
+  /** The order with no enquiry: its job key is "O-<number>". */
+  orderJobKey: string
 }
 
 async function seed(): Promise<Seed> {
   const customer = await createCompany(uniqueName('Perf Customer'))
   const [rfq] = await must(rest<{ id: string; number: number }[]>('admin', 'rfqs', { method: 'POST', body: { company_id: customer.id, due_on: karachiDay(7), customer_ref: 'PERF-1' } }))
   await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Flow meter DN50', qty: 2 }, prefer: 'return=minimal' }))
-  const [order] = await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id, payment_terms_days: 30, ordered_on: karachiDay(-3) } }))
+  const [order] = await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id, payment_terms_days: 30, ordered_on: karachiDay(-3) } }))
   await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Pressure transmitter', qty: 3, unit_price_net: 100000, gst_rate: 18 }, prefer: 'return=minimal' }))
   await must(
     rest('admin', 'invoices', {
@@ -45,16 +45,14 @@ async function seed(): Promise<Seed> {
       prefer: 'return=minimal',
     }),
   )
-  return { rfqId: rfq.id, orderId: order.id, jobKey: String(rfq.number) }
+  return { jobKey: String(rfq.number), orderJobKey: `O-${order.number}` }
 }
 
 const screens = (s: Seed): Array<[string, string]> => [
   ['To do', '/todo'],
-  ['RFQ board', '/rfqs'],
-  ['RFQ detail', `/rfqs/${s.rfqId}`],
-  ['Order detail', `/orders/${s.orderId}`],
   ['Jobs', '/jobs'],
-  ['Job page', `/jobs/${s.jobKey}`],
+  ['Job page: enquiry', `/jobs/${s.jobKey}`],
+  ['Job page: order', `/jobs/${s.orderJobKey}`],
   ['Money: GST register', '/money/gst-register'],
   ['Money: Month-end', '/money/month-end/bank'],
   ['Settings', '/settings'],
@@ -156,12 +154,9 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
     const lighthouse = ((await import(/* @vite-ignore */ pkg)) as { default: (url: string, flags: Record<string, unknown>) => Promise<PerfRun> }).default
     const targets: Array<[string, string]> = [
       ['To do', '/todo'],
-      ['RFQ list', '/rfqs'],
-      ['RFQ page', `/rfqs/${s.rfqId}`],
-      ['Orders list', '/orders'],
-      ['Order page', `/orders/${s.orderId}`],
       ['Jobs list', '/jobs'],
-      ['Job page', `/jobs/${s.jobKey}`],
+      ['Job page: enquiry', `/jobs/${s.jobKey}`],
+      ['Job page: order', `/jobs/${s.orderJobKey}`],
       ['To collect', '/money/receivables'],
       ['Companies', '/companies'],
     ]
@@ -200,7 +195,7 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
       // The whole report per screen (open it in https://googlechrome.github.io/lighthouse/viewer/): the request chain and the
       // LCP element and its phases say what to fix.
       mkdirSync('test-results/lighthouse', { recursive: true })
-      writeFileSync(`test-results/lighthouse/${name.replaceAll(' ', '-').toLowerCase()}.json`, JSON.stringify(run?.lhr ?? null))
+      writeFileSync(`test-results/lighthouse/${name.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}.json`, JSON.stringify(run?.lhr ?? null))
       const a = run?.lhr.audits ?? {}
       const lcp = a['largest-contentful-paint']?.numericValue
       const fcp = a['first-contentful-paint']?.numericValue
@@ -255,7 +250,7 @@ function waves(log: Array<{ start: number; end: number }>): number {
   return n
 }
 
-test('the production CSP is never violated, and To do and the RFQ page make no repeated data request', async ({ page, baseURL }) => {
+test('the production CSP is never violated, and To do and the Job page make no repeated data request', async ({ page, baseURL }) => {
   test.setTimeout(300_000)
   expect(process.env.E2E_CSP, 'run this suite with E2E_CSP=1 so the preview server sends the production policy').toBeTruthy()
   const s = await seed()
@@ -289,7 +284,7 @@ test('the production CSP is never violated, and To do and the RFQ page make no r
     for (const r of log) if (r.key.startsWith('GET') && !isSessionCheck(r.key)) seen.set(r.key, (seen.get(r.key) ?? 0) + 1)
     const dup = [...seen].filter(([, n]) => n > 1).map(([k, n]) => `${k} x${n}`)
     lines.push(`| ${name} | ${log.length} | ${waves(log)} | ${dup.length} |`)
-    if (name === 'To do' || name === 'RFQ detail') repeated.push(...dup.map(d => `${name}: ${d}`))
+    if (name === 'To do' || name === 'Job page: enquiry') repeated.push(...dup.map(d => `${name}: ${d}`))
     page.removeAllListeners('request')
     page.removeAllListeners('requestfinished')
   }

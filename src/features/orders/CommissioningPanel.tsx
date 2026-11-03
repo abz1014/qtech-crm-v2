@@ -16,6 +16,7 @@ import type { OrderHeader, PersonRow } from '@/features/orders/api'
 import { useAddEngineer, useEngineerCandidates, useRemoveEngineer, useUpdateOrder } from '@/features/orders/hooks'
 import { useMarkDone } from '@/features/orders/commissioningActions'
 import { VisitFields } from '@/features/orders/VisitDialog'
+import { VisitsSection } from '@/features/orders/visits/VisitsSection'
 import { DEFAULT_VISIT_TYPE, visitPatch, visitTypeLabel, type VisitValue } from '@/features/orders/lib/visit'
 
 /*
@@ -98,6 +99,8 @@ export function CommissioningPanel({
           <p className="text-sm text-fg-muted">Supply only, no commissioning.</p>
         )}
 
+        {order.needsCommissioning ? <VisitsSection order={order} engineers={engineers} isEngineer={isEngineer} canEdit={canEdit} /> : null}
+
         <div className="grid gap-5 border-t pt-4 md:grid-cols-2">
           <div className="grid content-start gap-1">
             <span className="flex items-center gap-2 text-xs text-fg-muted">
@@ -140,7 +143,7 @@ export function CommissioningPanel({
 /** Needs it, the planned date and the engineers. Engineers are added and removed at once; the rest saves with the button. */
 export function CommissioningEditDialog({ order, engineers, onClose }: { order: OrderHeader; engineers: readonly PersonRow[]; onClose: () => void }) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const add = useAddEngineer(order.id)
   const remove = useRemoveEngineer(order.id)
   const candidates = useEngineerCandidates(true)
@@ -224,7 +227,7 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
 
 function NotesDialog({ order, onClose }: { order: OrderHeader; onClose: () => void }) {
   const { toast } = useToast()
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const [text, setText] = useState(order.notes ?? '')
   const save = async () => {
     try {

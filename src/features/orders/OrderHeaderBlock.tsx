@@ -169,7 +169,7 @@ export function OrderHeaderBlock({
   const money = role === 'admin' || role === 'sales'
   const profileQ = useCompanyProfile()
   const termsText = termsLabel(order.paymentTermsDays, profileQ.data?.default_payment_terms_days)
-  const update = useUpdateOrder(order.id)
+  const update = useUpdateOrder(order.id, order.updatedAt)
   const entry = useEntryAccess({ createdBy: order.createdBy ?? null, ownerId: order.owner?.id ?? null })
   const [resolving, setResolving] = useState(false)
   const s = order.state
@@ -216,6 +216,7 @@ export function OrderHeaderBlock({
             await update.mutateAsync({ customer_po_number: v })
           } catch (err) {
             toast({ title: 'Could not save the PO number', body: mapPgError(err, { entity: 'PO number' }).message, tone: 'danger' })
+            return false // the editor stays open with what was typed
           }
         }}
       />

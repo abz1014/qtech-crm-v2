@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Skeleton } from '@/ui/Skeleton'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
@@ -14,7 +15,7 @@ import { useOrderWork } from '@/features/orders/jobSlots/useOrderWork'
 export default function InvoiceWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
   if (!w.orderId || !job.money) return null
-  if (w.failed) return <p className="text-base text-fg-muted">The invoice details did not load. Open the order page to try again.</p>
+  if (w.failed) return <p className="text-base text-fg-muted">The invoice details did not load. Reload the page to try again.</p>
   if (!w.ready || !w.order) return <Skeleton className="h-16 w-full" />
   const order = w.order
   const invoiced = order.state?.invoiced ?? 0
@@ -40,6 +41,17 @@ export default function InvoiceWork({ job }: JobSlotProps) {
         {job.role === 'admin' && order.cancelledOn === null ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}
         {owing ? <CopyReminderButton order={order} money={m} /> : null}
       </div>
+      {invoiced > 0 && job.role === 'admin' ? (
+        <p className="text-base">
+          <Link
+            to={`/money/gst-register?q=${encodeURIComponent(`ORD-${String(order.number).padStart(4, '0')}`)}`}
+            data-slot="invoice-register-link"
+            className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open in Invoices to void one or issue a credit note
+          </Link>
+        </p>
+      ) : null}
     </div>
   )
 }

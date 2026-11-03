@@ -19,7 +19,7 @@ import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
  * (z-10, as the row menu does): without it, on a phone the header's ::after covered it and a Tab stop was hidden under it (2.4.11).
  */
 const chip =
-  "relative z-10 -my-px inline-flex items-center rounded border px-2 text-base leading-5 after:absolute after:inset-x-0 after:-inset-y-[11px] after:content-['']"
+  "relative z-10 -my-px inline-flex items-center rounded border px-2 text-base leading-6 after:absolute after:inset-x-0 after:-inset-y-[11px] after:content-['']"
 
 export function CategoryChip({ rfqId, item }: { rfqId: string; item: Pick<RfqItemRow, 'id' | 'description' | 'familyId' | 'familyName'> }) {
   const session = useSession()

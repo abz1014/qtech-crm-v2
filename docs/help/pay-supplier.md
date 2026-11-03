@@ -3,7 +3,7 @@ id: pay-supplier
 title: Record paying a supplier
 roles: admin
 keywords: supplier, pay, paid, cost, expense, order cost, payable, we owe, usd, eur, currency, bank charges, tt, wire
-screens: /orders, /money/expenses, /jobs
+screens: /jobs, /money/expenses
 related: add-expenses, month-reports
 ---
 1. Open the order. Under [Supplier orders], open the supplier's menu and tap [Pay <supplier>].

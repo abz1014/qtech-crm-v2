@@ -3,7 +3,7 @@ id: repeat-order
 title: Repeat a past order
 roles: sales, admin
 keywords: repeat, reorder, again, copy order, new order, without rfq
-screens: /orders, /jobs
+screens: /jobs
 ---
 1. Tap [New], then [Order without enquiry]. [Repeat a past order] opens.
 2. Under [Find a past order], search by company, site, item or order number.

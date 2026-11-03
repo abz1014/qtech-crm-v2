@@ -147,8 +147,8 @@ export const SHELL_ENTRY = 'app/shell/AppShell.tsx'
 export const SCREEN_ENTRIES: Record<string, readonly string[]> = {
   /** To do, and the weekly review page that routes.tsx puts under /todo/review. */
   todo: ['features/today/TodayScreen.tsx', 'features/today/ReviewPage.tsx'],
-  rfqs: ['features/rfqs/board/RfqsScreen.tsx', 'features/rfqs/IntakeScreen.tsx'],
-  orders: ['features/orders/OrdersScreen.tsx'],
+  /** New RFQ only: the old RFQ and Order pages are gone, their addresses redirect to Jobs (src/app/oldAddresses.tsx). */
+  rfqs: ['features/rfqs/IntakeScreen.tsx'],
   /** Redesign phase 5 (src/app/routes.tsx, jobs/*). */
   jobs: ['features/jobs/JobsScreen.tsx'],
   companies: ['features/companies/CompaniesScreen.tsx'],

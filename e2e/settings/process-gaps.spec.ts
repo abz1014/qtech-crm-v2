@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { openStage } from '../support/job'
 
 /*
  * Process audit round 1 (migrations 0121 to 0125), end to end against the local CI stack. Synthetic data only.
@@ -93,6 +94,7 @@ test('a supplier order of a cancelled order is owed until it is cancelled with t
   const owed = async () => (await must(rest<{ supplier_order_id: string }[]>('admin', 'rpc/payables_as_of', { method: 'POST', body: { p_date: karachiDay() } }))).some(r => r.supplier_order_id === l.id)
   expect(await owed()).toBe(true)
   await openAs(page, 'admin', `/orders/${o.id}`)
+  await openStage(page, 'Supplier order')
   await expect(page.getByRole('button', { name: /^Pay / }).first()).toBeVisible() // a payment can be recorded on a cancelled order
   await page.getByRole('button', { name: 'Cancelled with supplier' }).click()
   await expect.poll(owed).toBe(false)

@@ -3,7 +3,7 @@ id: why-this-supplier
 title: Why a supplier is suggested
 roles: sales, admin
 keywords: supplier, suggested, category, deals in, carries, ticked, reason, ranking, order
-screens: /rfqs
+screens: /jobs
 related: ask-suppliers
 ---
 1. Open the RFQ and tap [Ask more suppliers] (or [Ask suppliers] when nobody is asked yet).

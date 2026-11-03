@@ -25,7 +25,6 @@ async function seed() {
 }
 
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Main' }).first()
-const ledeNeed = async (page: Page): Promise<number> => Number(/(\d+) need you/.exec(await page.locator('#main').innerText())?.[1] ?? 0)
 
 async function todayReading(page: Page) {
   await page.goto('/todo')
@@ -56,14 +55,6 @@ test('no two counters disagree: Today badge = header = rows due now; the board a
     const t = await todayReading(page)
     expect(t.header, 'Today header vs the top-bar badge').toBe(t.badge)
     expect(t.rows, 'rows in Late + Today vs the header').toBe(t.header)
-    // In-app navigation, as a person moves: the pages read the shell's numbers (a reload would draw the lede before they load)
-    await page.goto('/rfqs') // the old RFQ board (kept on this device by openAs): it still says the RFQ share of the one count
-    await expect(page.getByRole('heading', { name: 'RFQs', level: 1 })).toBeVisible()
-    await expect(page.getByText(t.rfqRows ? new RegExp(`^\\d+ open · ${t.rfqRows} need you$`) : /^\d+ open$/), 'the RFQ board\'s "need you" vs the RFQ rows due now on Today').toBeVisible({ timeout: 5_000 })
-    expect(await ledeNeed(page)).toBe(t.rfqRows)
-    await page.goto('/orders')
-    await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
-    await expect(page.getByText(new RegExp(`^${t.orderRows} need you · \\d+ active$`)), 'the Orders page\'s "need you" vs the order rows due now on Today').toBeVisible({ timeout: 5_000 })
   }).toPass({ timeout: 90_000 })
 
   // One badge only: Jobs, Money and Companies carry no number

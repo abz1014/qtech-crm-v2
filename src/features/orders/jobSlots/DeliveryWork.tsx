@@ -1,5 +1,6 @@
 import { Skeleton } from '@/ui/Skeleton'
 import type { JobSlotProps } from '@/features/jobs/slots'
+import { ChallansPanel } from '@/features/orders/challans/ChallansPanel'
 import { CommissioningPanel } from '@/features/orders/CommissioningPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import { useOrderWork } from '@/features/orders/jobSlots/useOrderWork'
@@ -14,7 +15,7 @@ export default function DeliveryWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
   // An engineer's Delivered today and Installed today are on the site card of their job page (EngineerActions): not a second one here.
   if (!w.orderId || job.role === 'engineer') return null
-  if (w.failed) return <p className="text-base text-fg-muted">The delivery details did not load. Open the order page to try again.</p>
+  if (w.failed) return <p className="text-base text-fg-muted">The delivery details did not load. Reload the page to try again.</p>
   if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-[10rem] w-full" />
   return (
     <div className="grid gap-3" data-delivery-work>
@@ -22,6 +23,7 @@ export default function DeliveryWork({ job }: JobSlotProps) {
         <LegsPanel order={w.order} legs={w.legs.data} items={w.items.data} pos={w.pos.data ?? []} money={job.money} isAdmin={job.role === 'admin'} canEdit={w.canEdit} part="delivery" />
       ) : null}
       <CommissioningPanel order={w.order} engineers={w.engineers.data ?? []} isEngineer={false} canEdit={w.canEdit} />
+      <ChallansPanel order={w.order} items={w.items.data} />
     </div>
   )
 }

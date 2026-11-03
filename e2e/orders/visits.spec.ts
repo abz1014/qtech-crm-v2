@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { openStage } from '../support/job'
 import { showAllTodo } from '../support/todo'
 
 /*
@@ -35,6 +36,7 @@ let surveyOrder: Awaited<ReturnType<typeof seedOrder>>
 test('admin plans a visit with a type; there is no time of day', async ({ page }) => {
   surveyOrder = await seedOrder()
   await openAs(page, 'admin', `/orders/${surveyOrder.order.id}`)
+  await openStage(page, 'Delivery')
   const section = page.getByRole('region', { name: 'Commissioning' })
   await section.getByRole('button', { name: 'Edit', exact: true }).click()
   const dialog = page.getByRole('dialog')
@@ -55,6 +57,7 @@ test('admin plans a visit with a type; there is no time of day', async ({ page }
 test('a visit planned without choosing a type is an installation', async ({ page }) => {
   const s = await seedOrder()
   await openAs(page, 'admin', `/orders/${s.order.id}`)
+  await openStage(page, 'Delivery')
   const section = page.getByRole('region', { name: 'Commissioning' })
   await section.getByRole('button', { name: 'Edit', exact: true }).click()
   const dialog = page.getByRole('dialog')
@@ -74,7 +77,7 @@ test('the database files an installation when a date is set with no type', async
 
 test('the engineer sees the type on the job and on To do, can change it, and sees no GST', async ({ page }) => {
   await openAs(page, 'engineer', `/orders/${surveyOrder.order.id}`)
-  await expect(page.getByTestId('job-visit')).toContainText('Survey planned')
+  await expect(page.getByRole('region', { name: 'On site' })).toBeVisible()
   await expect(page.locator('#main')).not.toContainText(/GST/)
 
   await page.goto('/todo')
@@ -90,7 +93,6 @@ test('the engineer sees the type on the job and on To do, can change it, and see
   await dialog.getByRole('combobox', { name: /Visit type/ }).selectOption('service')
   await dialog.getByRole('button', { name: 'Save' }).click()
   await expect.poll(async () => (await visitOf(surveyOrder.order.id)).visit_type).toBe('service')
-  await expect(page.getByTestId('job-visit')).toContainText('Service planned')
 
   await page.goto('/settings/tax-deadlines')
   await expect(page.locator('#main')).toContainText('Tax deadlines is for')

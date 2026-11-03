@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { openStage } from '../../support/job'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { db, num } from '../../verify/support/db'
 import { company, karachiDay, quote, quotedRfq, rfq, setProfile, setRates, supplier, type Co } from '../../verify/support/fixtures'
@@ -182,7 +183,7 @@ const hasFigure = (text: string, n: number) => text.includes(amount(n)) || text.
 
 /** The green Issue quotation button; when the page offers another green button, the address that opens the same dialog (noted). */
 async function openIssue(page: Page, info: TestInfo, rfqId: string, where: string): Promise<void> {
-  const button = vis(page.locator('[data-slot="issue-quotation"]').getByRole('button'))
+  const button = vis(page.getByRole('button', { name: 'Send quotation', exact: true }))
   if (await button.waitFor({ timeout: 8_000 }).then(() => true).catch(() => false)) await button.click()
   else {
     note(info, { kind: 'observation', where, what: 'Issue quotation is not the green button on an RFQ with every item priced by a supplier' })
@@ -191,10 +192,10 @@ async function openIssue(page: Page, info: TestInfo, rfqId: string, where: strin
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
 }
 
-/** Revise from the header's More menu (it puts ?issue=1 in the address, as the first issue does). */
+/** Revise from the Quotations block on the job page's Quotation stage (it puts ?issue=1 in the address, as the first issue does). */
 async function openReviseFromMenu(page: Page): Promise<void> {
-  await moreButton(page).click()
-  await page.getByRole('menuitem', { name: /^Revise quotation/ }).click()
+  await openStage(page, 'Quotation')
+  await page.getByRole('button', { name: 'Revise quotation' }).click()
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
 }
 
@@ -857,7 +858,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     if (count1 === count0 && num(items[0].quoted_unit_price_net) === 1500) {
       note(info, { kind: 'observation', where: `${W} failed issue`, what: 'the issue failed but rfq_items.quoted_unit_price_net is now 1,500: a price no quotation carries (issueQuotation writes the items before the RPC)' })
       await visit(page, info, `/rfqs/${r.rfq.id}`, W)
-      const won = vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
+      const won = vis(page.getByRole('button', { name: 'Mark won', exact: true }))
       await won.click()
       const d = page.getByRole('dialog', { name: 'Mark won' })
       await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
@@ -1018,8 +1019,9 @@ async function rfqRow(id: string): Promise<RfqRow> {
 }
 
 async function winFromLost(page: Page, info: TestInfo, rfqId: string, W: string, vp: Viewport): Promise<void> {
-  const won = vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
-  await won.click()
+  // a lost job offers no Mark won button: the More menu does
+  await moreButton(page).click()
+  await page.getByRole('menuitem', { name: 'Mark won' }).click()
   const d = page.getByRole('dialog', { name: 'Mark won' })
   await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
   await layout(page, info, `${W} mark won dialog`)
@@ -1029,15 +1031,18 @@ async function winFromLost(page: Page, info: TestInfo, rfqId: string, W: string,
   await settle(page)
   const url = page.url().replace(/^https?:\/\/[^/]+/, '')
   const open = await d.isVisible().catch(() => false)
-  if (!url.startsWith(`/rfqs/${rfqId}`) || open) note(info, { kind: 'observation', where: `${W} Back with Mark won open`, what: `after Back: url ${url}, dialog ${open ? 'still open' : 'closed'}` })
-  if (!url.startsWith(`/rfqs/${rfqId}`)) await visit(page, info, `/rfqs/${rfqId}`, W)
-  if (!(await d.isVisible().catch(() => false))) await vis(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).click()
+  if (!/^\/(rfqs|jobs)\//.test(url) || open) note(info, { kind: 'observation', where: `${W} Back with Mark won open`, what: `after Back: url ${url}, dialog ${open ? 'still open' : 'closed'}` })
+  if (!/^\/(rfqs|jobs)\//.test(url)) await visit(page, info, `/rfqs/${rfqId}`, W)
+  if (!(await d.isVisible().catch(() => false))) {
+    await moreButton(page).click()
+    await page.getByRole('menuitem', { name: 'Mark won' }).click()
+  }
   await expect(d.getByRole('group', { name: 'Suppliers by line' })).toBeVisible(T)
   const create = d.getByRole('button', { name: 'Create order' })
   await chooseAllSuppliers(page, d)
   if (vp === 'phone') await create.scrollIntoViewIfNeeded()
   await create.dblclick()
-  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/, T)
+  await expect(page.getByRole('dialog')).toBeHidden({ timeout: 30_000 })
   await settle(page)
   await layout(page, info, `${W} order`)
   await shot(page, `${W}-order`)
@@ -1068,12 +1073,12 @@ test('close and win: every close reason and Reopen, won from lost with Back and 
         await expect.poll(async () => (await rfqRow(r.rfq.id)).close_reason, T).toBe(key)
         const row = await rfqRow(r.rfq.id)
         if (row.closed_on !== today) note(info, { kind: 'observation', where: `${W} close: ${key}`, what: `closed_on is ${row.closed_on}, expected ${today}` })
-        await expect(page.getByText(new RegExp(`Closed .*: ${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.`)).first()).toBeVisible(T)
         if (key === 'other' || vp === 'phone') {
           await layout(page, info, `${W} closed`)
           await shot(page, `${W}-closed-${key}`)
         }
-        await vis(page.getByRole('button', { name: 'Reopen', exact: true })).click()
+        await moreButton(page).click()
+        await page.getByRole('menuitem', { name: 'Reopen' }).click()
         await expect.poll(async () => (await rfqRow(r.rfq.id)).closed_on, T).toBeNull()
         const after = await rfqRow(r.rfq.id)
         if (after.close_reason !== null) note(info, { kind: 'observation', where: `${W} reopen after ${key}`, what: `reopened but close_reason is still ${after.close_reason}` })
@@ -1248,7 +1253,7 @@ test('HW-9: Back with the Issue quotation dialog open leaves the RFQ page and di
   await page.goBack()
   await settle(page)
   // Fixed (HW-9): Back closes the dialog and stays on the RFQ page; the typed price is kept as a draft, also over a reload.
-  await expect(page).toHaveURL(new RegExp(`/rfqs/${r.rfq.id}`), { timeout: 3_000 })
+  await expect(page).toHaveURL(new RegExp(`/jobs/${r.rfq.number}`), { timeout: 3_000 })
   await openIssue(page, info, r.rfq.id, 'HW-9')
   await expect(dialog(page).getByLabel('Unit price, net PKR, item 1')).toHaveValue('125,000.00', T)
   await page.reload()

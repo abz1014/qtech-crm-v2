@@ -3,7 +3,7 @@ id: delete-order
 title: Delete an order made by mistake
 roles: admin
 keywords: delete order, remove order, mistake, wrong order, remove line, cancel instead
-screens: /orders, /jobs
+screens: /jobs
 related: something-wrong
 ---
 1. Open the order and tap [More], then [Delete order]. Only an admin sees it.

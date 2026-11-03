@@ -3,7 +3,7 @@ id: today-jobs
 title: See my jobs
 roles: engineer
 keywords: jobs, site, visit, commissioning, schedule, today, assigned, my work
-screens: /todo, /orders, /jobs
+screens: /todo, /jobs
 related: goods-delivered, commissioning-done
 ---
 1. Tap [To do]. It lists your jobs: orders you are an engineer on, and the goods on your own orders.

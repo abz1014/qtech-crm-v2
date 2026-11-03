@@ -23,7 +23,7 @@ app being audited. GitHub only dispatches a workflow whose file is also on the d
 branch". The audit code (`e2e/audit/`, `scripts/audit/`) is copied onto the audited checkout, so a ref made before the audit
 existed can be audited too. Optional inputs: `roles` (default `admin sales engineer`), `viewports` (default
 `1366x768 1920x1080 375x812 320x640`) and `screens` (a regular expression over visit or screen ids, for a quick partial run, e.g.
-`-f screens='^(today|rfq-quoted)$'`).
+`-f screens='^(today|job-quoted)$'`).
 
 **Locally**, with a fresh local stack (Docker):
 
@@ -56,12 +56,10 @@ and viewport).
 
 ## What is visited
 
-The Jobs screens (2026-10-26): the Jobs list (open and history), a Job page in each stage (`job-not-sent`, `job-waiting`, `job-prices-in`, `job-quoted`, `job-po-issued`, `job-delivered`, `job-paid`, `job-commissioning`; the engineer's Job page is the same screens run as an engineer), New enquiry (`enquiry-new`) and Money > Review imported (`review-imported`). The older `rfq-*` and `order-*` captures open the same Job pages through the old addresses and stay until 2026-11-09, then they can go.
+The Jobs screens (2026-10-26): the Jobs list (open and history), a Job page in each stage (`job-not-sent`, `job-waiting`, `job-prices-in`, `job-quoted`, `job-po-issued`, `job-delivered`, `job-paid`, `job-commissioning`, plus `job-order-not-placed`, `job-invoiced` and the supplier comparison `job-compare`; the engineer's Job page is the same screens run as an engineer), New enquiry (`enquiry-new`) and Money > Review imported (`review-imported`). The Job pages are opened through the old `/rfqs/<id>` and `/orders/<id>` addresses (which keeps the redirect under the audit). The old `rfq-*` and `order-*` captures of the removed RFQ and Order pages are gone (2026-10-30).
 
 `e2e/audit/screens.ts` is the one list (routes and button names change as the UX work lands; adjust it there). Per role, as far as
-the role can reach: Today (with items); RFQ list open and closed; an RFQ in each stage (not sent to suppliers, waiting for prices,
-prices in, quotation sent, won and made into an order: `rfq-won`); the supplier comparison (4 suppliers in 3 currencies, scrolled to the ranked prices); Orders list; an order
-not placed, with a PO issued, delivered, invoiced, paid, and one with 3 supplier orders and commissioning; Companies, a customer and a
+the role can reach: Today (with items); the Jobs list and a Job page in each stage (see above, including the supplier comparison: 4 suppliers in 3 currencies, scrolled to the ranked prices); Companies, a customer and a
 supplier; every Money view (GST register, receivables, expenses, the month-end checklist, bank tick, the six month-end reports,
 margins, exceptions); Reports; every Settings page including Team; the Job page's Add to this job card with a supplier's reply
 pasted in (`add-to-job-pasted`, admin and sales; the empty card is on every Job page capture; nothing is saved and the box is emptied afterwards); the weekly

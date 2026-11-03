@@ -1,5 +1,4 @@
 import type { Page } from '@playwright/test'
-import { rfqRef } from '../support/stack'
 import { BUGS, SCREENS, UI, asRole, knownBug, expect, focusProblems, focusSweep, focusedThing, open, openChase, seedChase, test } from './support'
 
 /*
@@ -77,11 +76,11 @@ test.describe('focus after an action (2.4.3)', () => {
     expect(await focusedThing(page)).not.toBe('<body>')
   })
 
-  test('opening an RFQ from the board with Enter puts focus on the new page, not <body>', async ({ page, world }) => {
-    await open(page, '/rfqs')
-    await page.getByRole('row').filter({ hasText: rfqRef(world.rfq.number) }).focus()
+  test('opening a job from the Jobs list with Enter puts focus on the new page, not <body>', async ({ page, world }) => {
+    await open(page, `/jobs?q=${world.rfq.number}`)
+    await page.getByRole('row').filter({ hasText: `Job ${world.rfq.number}` }).first().focus()
     await page.keyboard.press('Enter')
-    await page.waitForURL(new RegExp(`/rfqs/${world.rfq.id}$`))
+    await page.waitForURL(new RegExp(`/jobs/${world.rfq.number}$`))
     await page.locator('#main h1').first().waitFor({ state: 'attached' })
     await page.waitForLoadState('networkidle')
     expect(await focusedThing(page)).not.toBe('<body>')

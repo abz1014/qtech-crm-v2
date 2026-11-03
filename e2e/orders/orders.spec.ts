@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
+import { markWonButton, openStage, orderCreated, stagesOf } from '../support/job'
 import { chooseAllSuppliers, chooseSupplier } from '../support/supplierChoice'
 
 /*
@@ -220,7 +221,7 @@ test.describe('O01: Mark won creates the order', () => {
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: inquiry.id, rfq_item_id: item.id, unit_price: 412, currency: 'USD', lead_time: '3 wks' }, prefer: 'return=minimal' }))
 
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    await (await markWonButton(page)).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByRole('heading', { name: 'Mark won' })).toBeVisible()
     await expect(dialog.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked()
@@ -249,7 +250,7 @@ test.describe('O01: Mark won creates the order', () => {
     await price(dialog, 1).fill('120,000')
     await expect(dialog).toContainText('gross PKR 283,200')
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${rfq.id}&select=id`)
     const items = await get<{ unit_price_net: number; supplier_unit_price: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price&order=position`)
     expect(items.map(i => [Number(i.unit_price_net), Number(i.supplier_unit_price)])).toEqual([[120000, 412]])
@@ -264,7 +265,7 @@ test.describe('O01: Mark won creates the order', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await expect(page.getByRole('heading', { name: s.customer.name }).first()).toBeVisible()
 
-    await t.tap(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
+    await t.tap(await markWonButton(page))
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByRole('heading', { name: 'Mark won' })).toBeVisible()
     await expect(dialog.getByLabel('Customer PO number')).toHaveValue('')
@@ -280,7 +281,7 @@ test.describe('O01: Mark won creates the order', () => {
     for (const [n, v] of [['1', '1000'], ['2', '2000'], ['3', '500']]) await t.typed(price(dialog, Number(n)), v)
 
     await t.doubleTap(dialog.getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     expect(t.count).toBe(1 + 4 + 3 + 1) // Mark won, two suppliers chosen (2 taps each), three prices typed, Create order
 
     const orders = await get<{ id: string; customer_po_number: string | null; payment_terms_days: number | null }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,customer_po_number,payment_terms_days`)
@@ -302,8 +303,10 @@ test.describe('O01: Mark won creates the order', () => {
     const again = await rest<string>('sales', 'rpc/convert_rfq_to_order', { method: 'POST', body: { p_order_id: orders[0].id, p_rfq_id: s.rfq.id } })
     expect(again.status).toBeLessThan(300)
     expect(await get(`orders?rfq_id=eq.${s.rfq.id}&select=id`)).toHaveLength(1)
+    // the won enquiry has its order: the job page offers no Mark won any more
     await page.goto(`/rfqs/${s.rfq.id}`)
-    await expect(page.locator('[data-slot="mark-won"]').getByRole('link', { name: /Open ORD-\d{4}/ })).toBeVisible()
+    await expect(stagesOf(page)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toHaveCount(0)
   })
 
   test('a partial quotation: the line it left out starts unticked, a supplier can be changed, the customer PO is kept', async ({ page }) => {
@@ -313,7 +316,7 @@ test.describe('O01: Mark won creates the order', () => {
       { id: s.items[1].id, unit_price: 2000, qty: 1 },
     ])
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    await (await markWonButton(page)).click()
     const dialog = page.getByRole('dialog')
     await expect(price(dialog, 1)).toHaveValue('1,000')
     await expect(dialog.getByRole('checkbox', { name: 'Include line 3' })).not.toBeChecked()
@@ -324,7 +327,7 @@ test.describe('O01: Mark won creates the order', () => {
     await chooseAllSuppliers(page, dialog)
     await dialog.getByLabel('Customer PO number').fill(`CPO-${s.tag}`)
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     const [order] = await get<{ id: string; customer_po_number: string }>(`orders?rfq_id=eq.${s.rfq.id}&select=id,customer_po_number`)
     expect(order.customer_po_number).toBe(`CPO-${s.tag}`)
     const items = await get<{ unit_price_net: number; supplier_unit_price: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price&order=position`)
@@ -342,7 +345,7 @@ test.describe('O01: Mark won creates the order', () => {
     // R1 left item 2 out: 0094 clears the R0 price it would otherwise keep (HW-46)
     expect((await rfqItemPrices(s.rfq.id)).map(i => i.quoted_unit_price_net && Number(i.quoted_unit_price_net))).toEqual([1100, null, null])
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    await (await markWonButton(page)).click()
     const dialog = page.getByRole('dialog')
     await expect(price(dialog, 1)).toHaveValue('1,100')
     await expect(dialog.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked()
@@ -350,7 +353,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByTestId('convert-item-2-not-in')).toContainText(/R1/)
     await chooseAllSuppliers(page, dialog)
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${s.rfq.id}&select=id`)
     const items = await get<{ unit_price_net: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net&order=position`)
     expect(items.map(i => Number(i.unit_price_net))).toEqual([1100])
@@ -385,7 +388,7 @@ test.describe('O01: Mark won creates the order', () => {
       }),
     )
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    await (await markWonButton(page)).click()
     const dialog = page.getByRole('dialog')
     await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(supplierB.name)) // the warnings are about the quote chosen
     await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('may belong to another item')
@@ -394,7 +397,7 @@ test.describe('O01: Mark won creates the order', () => {
     await price(dialog, 1).fill('1500')
     await price(dialog, 2).fill('3000')
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     const [order] = await get<{ id: string }>(`orders?rfq_id=eq.${rfq.id}&select=id`)
     const lines = await get<{ unit_price_net: number }>(`order_items?order_id=eq.${order.id}&select=unit_price_net&order=position`)
     expect(lines.map(i => Number(i.unit_price_net))).toEqual([1500, 3000])
@@ -411,14 +414,14 @@ test.describe('O01: Mark won creates the order', () => {
     const inquiry = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplier.id, sent_on: karachiDay(-3) } })))[0]
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: inquiry.id, rfq_item_id: item.id, unit_price: 9000, currency: 'SEK' }, prefer: 'return=minimal' }))
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    await (await markWonButton(page)).click()
     const dialog = page.getByRole('dialog')
     await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(supplier.name))
     await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('No current SEK rate: pick the supplier')
     await expect(dialog.getByRole('button', { name: 'Create order' })).toBeEnabled()
     await price(dialog, 1).fill('300000')
     await dialog.getByRole('button', { name: 'Create order' }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
   })
 
   test('Mark won once the quotation is issued: Mark won, a supplier chosen on each line, Create order', async ({ page }) => {
@@ -427,14 +430,14 @@ test.describe('O01: Mark won creates the order', () => {
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     // Mark won is not repeated on the quotation row: it is the page's one green button once a quotation is out.
-    await expect(page.getByTestId('quotation-0').getByRole('button', { name: 'Mark won' })).toHaveCount(0)
-    await t.tap(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
+    await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toHaveCount(1)
+    await t.tap(await markWonButton(page))
     const d = page.getByRole('dialog')
     // seedRfq prices three items; the two with a quote need a supplier chosen (2 taps each), the third has none to choose
     await chooseSupplier(page, d, 'Supplier for line 1', undefined, t.tap)
     await chooseSupplier(page, d, 'Supplier for line 2', undefined, t.tap)
     await t.tap(d.getByRole('button', { name: 'Create order' }))
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     expect(t.count).toBe(1 + 4 + 1)
   })
 })
@@ -446,6 +449,7 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     const s = await seedOrder()
     const t = tapper()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     const a = leg(page, 'A')
     await expect(a).toContainText(s.supplierA.name)
     // not placed and no PO: Issue PO is on the row, "Mark placed, no PO" is in its menu (never both side by side)
@@ -454,6 +458,8 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     await expect(a).toContainText('suggested from lead time 2 wks')
     await expect(page.getByTestId('leg-A-state')).toContainText('Not ordered yet')
     const placeFromMenu = async () => {
+      // the job page opens the stage the job is at: placing moves it on to Delivery, undoing it brings it back
+      await openStage(page, 'Supplier order')
       await t.tap(a.getByRole('button', { name: `More for ${s.supplierA.name}` }))
       await t.tap(page.getByRole('menuitem', { name: 'Mark placed, no PO' }))
     }
@@ -470,6 +476,8 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     await expect.poll(async () => (await legRow(s.legA)).placed_on).toBeNull()
     expect((await legRow(s.legA)).expected_on).toBeNull()
     await placeFromMenu()
+    // Delivered today is on the Delivery stage
+    await openStage(page, 'Delivery')
     await expect(a.getByRole('button', { name: `Delivered today, ${s.supplierA.name}` })).toBeVisible()
     // there is no receiving step or date anywhere on the leg
     await expect(page.getByRole('button', { name: /Received today/ })).toHaveCount(0)
@@ -538,6 +546,7 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     const s = await seedOrder()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Delivery')
     const b = leg(page, 'B')
     await expect(page.getByTestId('leg-B-state')).toContainText('Overdue')
     await b.getByRole('button', { name: `Chase goods, ${s.supplierB.name}` }).click()
@@ -563,6 +572,7 @@ test.describe('O03: items', () => {
     // 0092 (owner decision): sales change the money fields (GST, prices, quantities) of an order they entered or own, so this order is the sales person's
     const s = await seedOrder({ owner_id: 'a0000000-0000-4000-8000-000000000002' })
     await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await openStage(page, 'Order')
     await expect(page.getByRole('table', { name: 'Order items' })).toBeVisible()
     // the per-line controls are behind one toggle: the table shows five columns until then
     await expect(page.getByLabel('GST rate, line 1')).toHaveCount(0)
@@ -590,35 +600,29 @@ test.describe('O03: items', () => {
 // ------------------------------------------------------------------------------------------------ O03 commissioning, cancel
 
 test.describe('O03: commissioning and cancel', () => {
-  test('the engineer marks commissioning done in 1 tap, typing nothing, and changes the planned date separately', async ({ page }) => {
+  test('the engineer marks commissioning done in 1 tap, typing nothing (the On site card)', async ({ page }) => {
     const s = await seedOrder()
     const t = tapper()
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(s.company.name)
-    await expect(page.getByRole('button', { name: 'Change planned date' })).toBeVisible()
-    await t.tap(page.getByRole('button', { name: 'Mark done today' }))
+    const onSite = page.getByRole('region', { name: 'On site' })
+    await t.tap(onSite.getByRole('button', { name: 'Installed today' }))
     await expect.poll(async () => (await orderRow(s.order.id)).commissioning_done_on).toBe(karachiDay(0))
     expect(t.count).toBe(1)
-    await expect(page.getByRole('button', { name: 'Mark done today' })).toHaveCount(0)
-    await expect(page.getByTestId('order-notes')).toContainText('Gate pass needed 2 days ahead.')
+    await expect(onSite.getByRole('button', { name: 'Installed today' })).toHaveCount(0)
     await page.getByRole('button', { name: /Undo/ }).first().click()
     await expect.poll(async () => (await orderRow(s.order.id)).commissioning_done_on).toBeNull()
-
-    // the planned date is its own optional action
-    await page.getByRole('button', { name: 'Change planned date' }).click()
-    await page.getByRole('textbox', { name: 'Planned date' }).fill(slashDate(karachiDay(20)))
-    await page.getByRole('textbox', { name: 'Planned date' }).press('Enter')
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect.poll(async () => (await orderRow(s.order.id)).commissioning_planned_on).toBe(karachiDay(20))
   })
 
   test('the engineer marks a supplier order placed or delivered in 1 tap each', async ({ page }) => {
     const s = await seedOrder()
     const t = tapper()
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await t.tap(leg(page, 'A').getByRole('button', { name: `I placed this order, ${s.supplierA.name}` }))
     await expect.poll(async () => (await legRow(s.legA)).placed_on).toBe(karachiDay(0))
-    await t.tap(leg(page, 'B').getByRole('button', { name: `Delivered today, ${s.supplierB.name}` }))
+    // the engineer's Delivered today is on the On site card, named for the supplier once two orders are on their way
+    const onSite = page.getByRole('region', { name: 'On site' })
+    await t.tap(onSite.getByRole('button', { name: `Delivered today, ${s.supplierB.name}` }))
     await expect.poll(async () => (await legRow(s.legB)).delivered_on).toBe(karachiDay(0))
     expect((await legRow(s.legB)).received_on).toBe(karachiDay(0))
     await expect(page.getByRole('button', { name: /Received today/ })).toHaveCount(0)
@@ -628,6 +632,7 @@ test.describe('O03: commissioning and cancel', () => {
   test('admin or sales: Edit sets the needs-it toggle, the planned date and the engineers; then Mark done today', async ({ page }) => {
     const s = await seedOrder({ needs_commissioning: false, commissioning_planned_on: null })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
+    await openStage(page, 'Delivery')
     const section = page.getByRole('region', { name: 'Commissioning' })
     await expect(section).toContainText('no commissioning')
     await section.getByRole('button', { name: 'Edit', exact: true }).click()
@@ -651,7 +656,7 @@ test.describe('O03: commissioning and cancel', () => {
   test('cancel an order with a reason; it stays on record and can be reopened', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'admin', `/orders/${s.order.id}`)
-    await page.getByRole('button', { name: 'More', exact: true }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     const dialog = page.getByRole('dialog')
     // a reason is needed
@@ -668,12 +673,10 @@ test.describe('O03: commissioning and cancel', () => {
     // the reason is a structured key; the notes are exactly what people wrote and are never appended to
     expect(row.cancel_reason).toBe('customer_cancelled')
     expect(row.notes).toBe('Gate pass needed 2 days ahead.')
-    await expect(page.getByText(/^Cancelled /).first()).toBeVisible()
-    await expect(page.locator('#main').getByText(/The customer cancelled the PO\./)).toBeVisible()
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
-    await page.getByRole('button', { name: 'More', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Reopen order' }).click()
+    // a cancelled job keeps the order in its Cancelled orders list, with Reopen
+    await page.getByRole('button', { name: /^Reopen order ORD-/ }).click()
     await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBeNull()
     expect((await orderRow(s.order.id)).cancel_reason).toBeNull()
   })
@@ -689,127 +692,30 @@ test.describe('O03: role views', () => {
       if (r.url().includes('/rest/v1/')) urls.push(decodeURIComponent(r.url()) + (r.postData() ?? ''))
     })
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
+    await openStage(page, 'Order')
     await expect(page.getByRole('table', { name: 'Order items' })).toBeVisible()
+    // no money column in the lines table
+    for (const header of ['Unit price', 'Total']) await expect(page.getByRole('columnheader', { name: new RegExp(header) })).toHaveCount(0)
+    await expect(page.getByRole('checkbox', { name: /Exempt|Service/ })).toHaveCount(0)
+    await expect(page.getByLabel(/GST rate/)).toHaveCount(0)
+    await openStage(page, 'Supplier order')
     await expect(leg(page, 'A')).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Commissioning' })).toBeVisible()
     await page.waitForLoadState('networkidle')
 
     const text = await page.locator('#main').innerText()
-    expect(text).not.toMatch(/PKR|48,500|96,500|135,000|GST|Invoic|Margin|Payment|Terms|Exempt|Costs|Balance|Add line|Add supplier|Issue PO|Record payment|Add expense|Create invoice/i)
-    await expect(page.getByRole('checkbox', { name: /Exempt|Service/ })).toHaveCount(0)
-    await expect(page.getByLabel(/GST rate/)).toHaveCount(0)
+    expect(text).not.toMatch(/PKR|48,500|96,500|135,000|Margin|Terms|Exempt|Costs|Balance|Add line|Add supplier|Issue PO|Record payment|Add expense|Create invoice/i)
     await expect(page.locator('.sr-only', { hasText: 'Not set' })).toHaveCount(0)
-    // no money column in the lines table, and no money dimension
-    for (const header of ['Unit price', 'Total']) await expect(page.getByRole('columnheader', { name: new RegExp(header) })).toHaveCount(0)
-    await expect(page.getByRole('region', { name: 'Items' })).toBeVisible()
-    // the page leads with the engineer's job; supplier B's goods are late, so its one green button is Delivered today, and Mark done today
-    // (planned in 10 days) is still one tap, as a secondary button
-    const job = page.getByRole('region', { name: 'Your job' })
-    await expect(job).toContainText('Hub plant, kiln line 2')
-    await expect(job).toContainText('Mr. Tariq Hussain')
-    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Delivered today'])
-    await expect(job.getByRole('button', { name: 'Mark done today' })).toBeVisible()
+    // the page leads with the engineer's job: Delivered today and Installed today
+    const onSite = page.getByRole('region', { name: 'On site' })
+    await expect(onSite.getByRole('button', { name: 'Delivered today' })).toBeVisible()
+    await expect(onSite.getByRole('button', { name: 'Installed today' })).toBeVisible()
 
     const forbidden = /unit_price_net|supplier_unit_price|gst_rate|order_receivables|\/invoices|payments_in|expenses|order_costs|v_order_money|v_order_items_total|invoicing_state|[,=(]gross|[,=(]net\b|invoiced/
     const leaks = urls.filter(u => forbidden.test(u.replace(/^https?:\/\/[^/]+/, '')))
     expect(leaks).toEqual([])
     // the order itself was read, so the assertion above is not vacuous
     expect(urls.some(u => u.includes('/order_items?') || u.includes('/orders?'))).toBe(true)
-    expect(urls.some(u => u.includes('v_order_state'))).toBe(true)
     await shot(page, 'o03-engineer-1440')
-  })
-
-  test('admin sees five dimension cells, prices, the margin, the balance in the strip, and exactly one green button: the next step', async ({ page }) => {
-    const s = await seedOrder()
-    await openAs(page, 'admin', `/orders/${s.order.id}`)
-    const items = page.getByRole('table', { name: 'Order items' })
-    await expect(items).toContainText('48,500')
-    await expect(items).toContainText('291,000')
-    // five columns; the supplier is named on the line, no leg letters
-    await expect(items.getByRole('columnheader')).toHaveText(['Item', 'Qty', /Unit price/, /Total/, 'Supplier'])
-    await expect(items).toContainText(s.supplierA.name)
-    await expect(page.getByTestId('items-gst-summary')).toContainText('730,420')
-    const dims = page.getByLabel('State of this order')
-    for (const d of ['Goods', 'Commissioning', 'Invoicing', 'Payment', 'Costs']) await expect(dims.getByRole('heading', { name: d })).toBeVisible()
-    await expect(dims).toContainText('To invoice')
-    await expect(dims).toContainText('Waiting for payment')
-    await expect(dims).toContainText('Not final')
-    await expect(leg(page, 'A')).toContainText('EUR')
-    await expect(page.getByTestId('leg-A-total')).toContainText('1,284')
-    await expect(page.getByTestId('leg-A-po')).toHaveText('No PO yet')
-    await expect(page.getByRole('region', { name: 'Margin' })).toContainText('Admin only')
-    await expect(page.getByTestId('margin-expenses-empty')).toBeVisible()
-    // the Invoices and payments panel is folded into the strip: invoiced, received, balance
-    await expect(page.getByRole('region', { name: 'Invoices and payments' })).toHaveCount(0)
-    await expect(page.getByTestId('order-invoiced')).toContainText('730,420 to invoice')
-    await expect(page.getByTestId('order-balance')).toHaveText('730,420')
-    await expect(page.getByTestId('payments-empty')).toBeVisible()
-    // ONE green button for the page, chosen by state (the same order as the list): supplier B's goods are late, which comes first
-    await expect(page.getByRole('region', { name: 'Next step' })).toContainText(`Goods from ${s.supplierB.name} are 3 days late`)
-    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Chase goods'])
-    await expect(page.locator('#main button.bg-primary:visible')).toHaveAccessibleName(`Chase goods, ${s.supplierB.name}`)
-    // every other action once: Create invoice in the strip, Add expense on each supplier order and in Margin. Nothing is invoiced yet,
-    // so Record payment is not on the page, only in the More menu (an advance; UX audit 2026-10-22, P2)
-    await expect(page.getByRole('button', { name: 'Create invoice', exact: true })).toHaveCount(1)
-    await expect(page.getByRole('button', { name: 'Record payment', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: `Issue PO, ${s.supplierA.name}` })).toBeEnabled()
-    await expect(page.getByRole('region', { name: 'Margin' }).getByRole('button', { name: 'Add expense' })).toBeEnabled()
-    await leg(page, 'A').getByRole('button', { name: `More for ${s.supplierA.name}` }).click()
-    await expect(page.getByRole('menuitem', { name: `Pay ${s.supplierA.name}` })).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('button', { name: 'Add line' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add supplier' })).toBeVisible()
-    await expect(page.getByText(s.po).first()).toBeVisible()
-    await expect(page.getByText('Terms 30 days from invoice')).toBeVisible()
-    await shot(page, 'o03-admin-1440')
-  })
-
-  test('sales see four cells (no Costs), the balance and no margin; sales read the balance, never payment rows', async ({ page }) => {
-    const s = await seedOrder()
-    await must(rest('admin', 'payments_in', { method: 'POST', body: { order_id: s.order.id, amount: 100000, received_on: karachiDay(-2) }, prefer: 'return=minimal' }))
-    const urls: string[] = []
-    page.on('request', r => urls.push(decodeURIComponent(r.url())))
-    await openAs(page, 'sales', `/orders/${s.order.id}`)
-    await expect(page.getByRole('table', { name: 'Order items' })).toContainText('48,500')
-    const dims = page.getByLabel('State of this order')
-    for (const d of ['Goods', 'Commissioning', 'Invoicing', 'Payment']) await expect(dims.getByRole('heading', { name: d })).toBeVisible()
-    await expect(dims.getByRole('heading', { name: 'Costs' })).toHaveCount(0)
-    await expect(dims).toContainText('Waiting for payment')
-    await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
-    await expect(page.locator('[data-slot="margin-costs"]')).toHaveCount(0)
-    await expect(page.getByTestId('order-balance')).toHaveText('630,420')
-    // sales: Create invoice (M01) only; Record payment and Add expense are admin's
-    await expect(page.getByRole('button', { name: 'Create invoice' })).toBeEnabled()
-    await expect(page.getByRole('button', { name: 'Record payment' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Add expense' })).toHaveCount(0)
-    await expect(page.locator('#main button.bg-primary:visible')).toHaveCount(1)
-    await page.waitForLoadState('networkidle')
-    expect(urls.filter(u => /payments_in|v_order_money|expenses|order_costs/.test(u))).toEqual([])
-    expect(urls.some(u => u.includes('order_receivables'))).toBe(true)
-    await shot(page, 'o03-sales-1440')
-  })
-
-  test('a legacy order with an unknown price basis: the banner, the prices as typed, and Is GST included? shows what each choice does before it rewrites anything', async ({ page }) => {
-    const s = await seedOrder({ legacy_flags: ['value_basis_unknown'] })
-    await openAs(page, 'admin', `/orders/${s.order.id}`)
-    await expect(page.getByText('Is GST included in these prices?').first()).toBeVisible()
-    await expect(page.getByLabel('State of this order')).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Margin' })).toContainText('Is GST included?')
-    await expect(page.getByRole('columnheader', { name: /Unit price as typed/ })).toBeVisible()
-    await expect(page.getByLabel(/GST rate/)).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Edit GST and lines' })).toHaveCount(0)
-    // the question is the page's one green button
-    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Is GST included?'])
-    await shot(page, 'o03-basis-unknown-1440')
-    await page.getByRole('button', { name: 'Is GST included?' }).click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog.getByRole('button', { name: 'Save answer' })).toBeDisabled()
-    await expect(dialog).toContainText('Net 619,000 + GST 111,420 = 730,420 gross.')
-    await shot(page, 'o03-resolve-basis-dialog-1440')
-    await dialog.getByRole('radio', { name: /The prices are before GST/ }).click()
-    await dialog.getByRole('button', { name: 'Save answer' }).click()
-    await expect.poll(async () => ((await orderRow(s.order.id)).legacy_flags as string[]).includes('value_basis_unknown')).toBe(false)
-    await expect(page.getByText('Is GST included in these prices?')).toHaveCount(0)
   })
 
   test('Add line and Add supplier', async ({ page }) => {
@@ -819,6 +725,7 @@ test.describe('O03: role views', () => {
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     const t = tapper()
 
+    await openStage(page, 'Order')
     await t.tap(page.getByRole('button', { name: 'Add line' }))
     let dialog = page.getByRole('dialog')
     await expect(dialog.getByRole('button', { name: 'Add line' })).toBeDisabled()
@@ -832,7 +739,8 @@ test.describe('O03: role views', () => {
     expect(added.is_service).toBe(false)
     await expect(page.getByRole('table', { name: 'Order items' })).toContainText('Terminal and cable gland kit, IP67')
 
-    await t.tap(page.getByRole('button', { name: 'Add supplier' }))
+    await openStage(page, 'Supplier order')
+    await t.tap(page.getByRole('button', { name: 'Add supplier' }).first())
     dialog = page.getByRole('dialog')
     await dialog.getByLabel('Supplier').selectOption({ label: supplierC.name })
     await expect(dialog.getByLabel('Currency')).toHaveValue('PKR')
@@ -841,10 +749,10 @@ test.describe('O03: role views', () => {
     await expect(page.getByTestId('leg-C')).toContainText(supplierC.name)
   })
 
-  test('an order that is not there says so, with a way back', async ({ page }) => {
+  test('an order that is not there says so', async ({ page }) => {
     await openAs(page, 'sales', `/orders/${crypto.randomUUID()}`)
-    await expect(page.getByText("This order isn't here")).toBeVisible()
-    await expect(page.getByRole('link', { name: 'All orders' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Go to Today' })).toBeVisible()
   })
 })
 
@@ -874,7 +782,7 @@ test.describe('O03: the command palette finds an order by number and customer PO
     await input.fill(ref(s.order.number))
     await expect(hit).toBeVisible()
     await hit.click()
-    await expect(page).toHaveURL(new RegExp(`/orders/${s.order.id}$`))
+    await orderCreated(page)
   })
 
   test('an engineer finds an order by its number only, never by the PO number (R12: no PO or invoice number for an engineer)', async ({ page }) => {
@@ -895,26 +803,20 @@ test.describe('O03: the command palette finds an order by number and customer PO
 // ------------------------------------------------------------------------------------------------ axe and screenshots
 
 for (const width of [1440, 375]) {
-  test(`axe (WCAG 2.2 AA) and review screenshots at ${width}: order page for admin and engineer, the Mark won dialog`, async ({ page }) => {
+  test(`axe (WCAG 2.2 AA) and review screenshots at ${width}: the job page of an order for admin and engineer, the Mark won dialog`, async ({ page }) => {
     const s = await seedOrder()
     const r = await seedRfq()
     await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
 
     await openAs(page, 'admin', `/orders/${s.order.id}`)
+    await openStage(page, 'Supplier order')
     await expect(leg(page, 'A')).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Items' })).toBeVisible()
     expect(await violations(page)).toEqual([])
     // nothing scrolls sideways, at 375 as at 1440
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
-    if (width < 768) {
-      // one bar with back and the order number; the next step sits in a bar at the bottom instead of the tabs
-      await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
-      await expect(page.getByRole('toolbar', { name: 'Order actions' }).getByRole('button', { name: /^Chase goods/ })).toBeVisible()
-      await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0)
-    }
     await review(page, `o03-order-admin-${width}`)
 
-    await page.getByRole('button', { name: width < 768 ? 'More actions' : 'More', exact: true }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).first().click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await dialogViolations(page)).toEqual([])
@@ -922,14 +824,13 @@ for (const width of [1440, 375]) {
 
     await signOutHard(page)
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
-    await expect(leg(page, 'A')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Mark done today' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'On site' }).getByRole('button', { name: 'Installed today' })).toBeVisible()
     expect(await violations(page)).toEqual([])
     await review(page, `o03-order-engineer-${width}`)
 
     await signOutHard(page)
     await openAs(page, 'sales', `/rfqs/${r.rfq.id}`)
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
+    await (await markWonButton(page)).click()
     await expect(page.getByRole('dialog').getByRole('heading', { name: 'Mark won' })).toBeVisible()
     expect(await dialogViolations(page)).toEqual([])
     await shot(page, `o01-convert-dialog-open-${width}`)

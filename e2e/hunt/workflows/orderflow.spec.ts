@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { rest } from '../../support/stack'
+import { openStage, stagesOf } from '../../support/job'
 import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../../support/pdf'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 import { db, num, USER } from '../../verify/support/db'
@@ -52,9 +53,10 @@ const addDays = (iso: string, n: number) => {
   return d.toISOString().slice(0, 10)
 }
 
-const actions = (p: Page) => p.locator('[data-slot="order-actions"]')
+/** The job page's stage sections (the old order page's action bar is gone): open the stage first. */
+const actions = (p: Page) => stagesOf(p)
 const legRow = (p: Page, supplierName: string) => p.getByRole('listitem', { name: `Supplier order, ${supplierName}` })
-const payPanel = (p: Page) => p.locator('[data-slot="invoices-payments"]')
+const payPanel = (p: Page) => p.getByTestId('order-payment-lines')
 const toNum = (s: string | null | undefined): number => {
   const t = (s ?? '').replace(/−/g, '-').replace(/[^0-9.-]/g, '')
   return t ? Number(t) : NaN
@@ -245,6 +247,7 @@ const undoIn = (l: Locator) => l.getByRole('button', { name: /^Undo/ }).first()
 
 /** Opens the payment row menu of the payment of `amt` and picks Void or Correct. */
 async function paymentMenu(p: Page, amt: number, item: RegExp): Promise<void> {
+  await openStage(p, 'Payment')
   await payPanel(p).getByRole('button', { name: `Change payment of PKR ${amount(amt)}` }).first().click({ timeout: T })
   await p.getByRole('menuitem', { name: item }).click({ timeout: T })
 }
@@ -1257,6 +1260,7 @@ function patches(page: Page, table: string): { count: () => number } {
 
 /** Opens Print invoice on the order page; returns the dialog's Download (or Share) button once it is drawn. */
 async function invoicePdfDownload(page: Page): Promise<Locator> {
+  await openStage(page, 'Invoice')
   await page.getByRole('button', { name: 'Print invoice' }).first().click()
   const dl = page.getByRole('dialog', { name: 'Sales tax invoice' }).getByRole('button', { name: /^(Download|Share)$/ })
   await expect(dl).toBeVisible({ timeout: 15_000 })
@@ -1279,6 +1283,7 @@ test('HW-11 (fixed): a part invoice of exactly the 18% line of a mixed order get
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await ctx.newPage()
   await page.goto(`/orders/${seed.order.id}`)
+  await openStage(page, 'Invoice')
   await actions(page).getByRole('button', { name: 'Create invoice', exact: true }).first().click()
   const d = page.getByRole('dialog', { name: 'Create invoice' })
   await d.getByRole('button', { name: /Edit the amounts/ }).click()
@@ -1335,6 +1340,7 @@ test('HW-13 (fixed): Create invoice refuses a net amount above what is left to i
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await ctx.newPage()
   await page.goto(`/orders/${seed.order.id}`)
+  await openStage(page, 'Invoice')
   await actions(page).getByRole('button', { name: 'Create invoice', exact: true }).first().click()
   const d = page.getByRole('dialog', { name: 'Create invoice' })
   await d.getByRole('button', { name: /Edit the amounts/ }).click()
@@ -1366,6 +1372,7 @@ test('HW-14 (fixed): the lines of a fully invoiced and settled order are locked,
   const ctx = await ctxAs(browser, info, 'sales', 'desktop')
   const page = await ctx.newPage()
   await page.goto(`/orders/${id}`)
+  await openStage(page, 'Order')
   await expect(page.getByRole('table', { name: 'Order items' })).toBeVisible({ timeout: 15_000 })
   try {
     await page.getByRole('button', { name: 'Edit GST and lines' }).click({ timeout: 5000 })
@@ -1388,6 +1395,7 @@ test('HW-15: a double click on Delivered today sends two writes (two success toa
   const ctx = await ctxAs(browser, info, 'sales', 'desktop')
   const page = await ctx.newPage()
   await page.goto(`/orders/${seed.order.id}`)
+  await openStage(page, 'Delivery')
   const button = legRow(page, sup.name).getByRole('button', { name: `Delivered today, ${sup.name}` })
   await expect(button).toBeVisible({ timeout: 15_000 })
   const writes = patches(page, 'supplier_orders')
@@ -1398,7 +1406,7 @@ test('HW-15: a double click on Delivered today sends two writes (two success toa
   await ctx.close()
 })
 
-test('HW-15: a double tap on Mark done today (engineer, phone) sends two writes', async ({ browser }, info) => {
+test('HW-15: a double tap on Installed today (engineer, phone) sends two writes', async ({ browser }, info) => {
   const seed = await order({ lines: [{ description: 'Commissioning visit, one day', qty: 1, price: 25000, service: true }], owner: 'sales', needsCommissioning: true })
   const id = seed.order.id
   await db.patch(`orders?id=eq.${id}`, { commissioning_planned_on: today })
@@ -1406,7 +1414,7 @@ test('HW-15: a double tap on Mark done today (engineer, phone) sends two writes'
   const ctx = await ctxAs(browser, info, 'engineer', 'phone')
   const page = await ctx.newPage()
   await page.goto(`/orders/${id}`)
-  const button = page.getByRole('button', { name: 'Mark done today' }).first()
+  const button = page.getByRole('region', { name: 'On site' }).getByRole('button', { name: 'Installed today' })
   await expect(button).toBeVisible({ timeout: 15_000 })
   const writes = patches(page, 'orders')
   await button.dblclick()

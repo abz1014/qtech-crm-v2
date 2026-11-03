@@ -3,6 +3,7 @@ import type { TeamMember } from '@/features/settings/api'
 import {
   filterTeam,
   firstName,
+  hasLoneAdmin,
   isOnlyActiveAdmin,
   passwordGroups,
   roleLabel,
@@ -69,5 +70,17 @@ describe('one-time password helpers', () => {
         'Please keep the password private.',
       ].join('\n'),
     )
+  })
+})
+
+describe('hasLoneAdmin', () => {
+  const m = (id: string, role: TeamMember['role'], gone = false): TeamMember => ({ id, name: id, email: null, role, job_title: null, phone: null, deactivated_at: gone ? '2026-01-01T00:00:00Z' : null, created_at: '2026-01-01T00:00:00Z' })
+  it('is true with exactly one active admin, however many other people there are', () => {
+    expect(hasLoneAdmin([m('a', 'admin'), m('b', 'sales'), m('c', 'engineer')])).toBe(true)
+    expect(hasLoneAdmin([m('a', 'admin'), m('b', 'admin', true)])).toBe(true)
+  })
+  it('is false with two active admins, and with none loaded yet', () => {
+    expect(hasLoneAdmin([m('a', 'admin'), m('b', 'admin')])).toBe(false)
+    expect(hasLoneAdmin([])).toBe(false)
   })
 })

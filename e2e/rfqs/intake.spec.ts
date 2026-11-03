@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
+import { openStage } from '../support/job'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 import { SCENES } from '../docread/scenes'
@@ -464,8 +465,9 @@ test.describe('save only, and no supplier ticked', () => {
     expect((await inquiriesOf(rfq.id)).map(i => i.sent_on)).toEqual([null])
 
     await page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` }).click()
-    await page.locator('[data-slot="ask-suppliers"]:visible').click()
-    const dialog = page.getByRole('dialog', { name: 'Ask suppliers' })
+    // on the job page the shortlist is the card on the Quotation stage (nobody has been asked yet)
+    await openStage(page, 'Quotation')
+    const dialog = page.locator('[data-slot="suppliers-to-ask"]')
     const first = dialog.getByRole('checkbox').first()
     await expect(first).toHaveAccessibleName(s.supplied.name)
     await expect(first).toBeChecked()

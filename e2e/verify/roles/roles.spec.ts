@@ -1,3 +1,4 @@
+import { openStage } from '../../support/job'
 import { expect, test, type Page } from '@playwright/test'
 import type { Role } from '../../support/stack'
 import { as, db, num, rpcAs, USER } from '../support/db'
@@ -153,8 +154,9 @@ test('order page by role: sales see no payment action or margin; the engineer se
 
   const sales = await signedIn(browser, info, 'sales')
   const sp = await open(sales, `/orders/${o.order.id}`)
+  await openStage(sp, 'Order')
   await expect(sp.getByRole('region', { name: ROLES.order.items })).toContainText(amount(296296.29))
-  await expect(sp.getByTestId(ROLES.order.invoicedTestId)).toBeVisible()
+  await openStage(sp, 'Invoice')
   await expect(sp.getByRole('button', { name: ROLES.order.recordPayment })).toHaveCount(0)
   await expect(sp.getByRole('region', { name: ROLES.order.marginPanel, exact: true })).toHaveCount(0)
   await sales.close()
@@ -164,6 +166,7 @@ test('order page by role: sales see no payment action or margin; the engineer se
   const log = restLog(ep)
   await ep.goto(`/orders/${o.order.id}`)
   await ep.locator('#main').waitFor()
+  await openStage(ep, 'Order')
   await expect(ep.getByRole('region', { name: ROLES.order.items })).toContainText('Roles check gas detector')
   await ep.waitForLoadState('networkidle')
   const text = await ep.locator('#main').innerText()
@@ -195,6 +198,7 @@ test('an engineer walking every screen asks for no money and never sees a price 
   // The RFQ page (owner decision 2026-10-22: engineers see no prices): who quoted is there, no price, no rank, no spread.
   await page.goto(`/rfqs/${won.rfq.id}`)
   await page.locator('#main').waitFor()
+  await openStage(page, 'Quotation')
   await page.waitForLoadState('networkidle')
   const item = page.getByRole('article', { name: 'Item 1' })
   await expect(item).toContainText('Verify Lahore Stockist')

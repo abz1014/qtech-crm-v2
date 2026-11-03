@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openStage, stagesOf } from '../../support/job'
 import { db, num, USER } from '../support/db'
 import { invoice, karachiDay, nextInvoiceNumber, order, payment, post, type OrderSeed } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
@@ -25,7 +26,7 @@ const NET = 25746.89
 const GST = 2835
 const GROSS = 28581.89
 
-const orderPage = (page: Page) => page.locator('[data-slot="order-actions"]')
+const orderPage = (page: Page) => stagesOf(page)
 const invoicesOf = (orderId: string) =>
   db.rows<{ id: string; number: string; invoice_date: string; net_amount: number; gst_amount: number; created_by: string }>(`invoices?order_id=eq.${orderId}&select=id,number,invoice_date,net_amount,gst_amount,created_by&order=created_at`)
 const stateOf = async (orderId: string) => (await db.view<{ invoicing_state: string; invoiced: number; net: number; gst: number; gross: number }>(`v_order_state?order_id=eq.${orderId}&select=invoicing_state,invoiced,net,gst,gross`))[0]
@@ -47,6 +48,7 @@ test.describe('invoices from an order', () => {
 
     const expected = await nextInvoiceNumber()
     await test.step('the dialog opens with the next number and the amounts of every line', async () => {
+      await openStage(page, 'Invoice')
       await orderPage(page).getByRole('button', { name: MONEY.order.createInvoice }).click()
       const d = page.getByRole('dialog', { name: MONEY.invoice.dialog })
       await expect(d.getByRole('textbox', { name: MONEY.invoice.number })).toHaveValue(expected)
@@ -91,6 +93,7 @@ test.describe('invoices from an order', () => {
 
     // Part: net 10,000 typed. GST = round(2,835 x 10,000 / 25,746.89) = round(1,101.10) = 1,101; gross 11,101.
     await test.step('the salesperson invoices net 10,000 of it', async () => {
+      await openStage(page, 'Invoice')
       await orderPage(page).getByRole('button', { name: MONEY.order.createInvoice }).click()
       const d = page.getByRole('dialog', { name: MONEY.invoice.dialog })
       await d.getByRole('button', { name: MONEY.invoice.editAmounts }).click()
@@ -110,6 +113,7 @@ test.describe('invoices from an order', () => {
     // The rest: net 25,746.89 - 10,000 = 15,746.89; GST 2,835 - 1,101 = 1,734; gross 17,480.89.
     await test.step('the next invoice opens with exactly what is left, and saving it makes the order fully invoiced', async () => {
       await page.reload()
+      await openStage(page, 'Invoice')
       await orderPage(page).getByRole('button', { name: MONEY.order.createInvoice }).click()
       const d = page.getByRole('dialog', { name: MONEY.invoice.dialog })
       await expect(d.getByText(MONEY.invoice.whatIsLeft)).toBeVisible()
@@ -131,7 +135,7 @@ test.describe('invoices from an order', () => {
 
     await test.step('once fully invoiced, the order offers no third Create invoice', async () => {
       await page.reload()
-      await expect(page.getByTestId(MONEY.invoice.invoicedTestId)).toContainText(amount(GROSS))
+      await openStage(page, 'Invoice')
       await expect(orderPage(page).getByRole('button', { name: MONEY.order.createInvoice })).toHaveCount(0)
       expect(await invoicesOf(seed.order.id)).toHaveLength(2)
     })
@@ -142,6 +146,7 @@ test.describe('invoices from an order', () => {
     const seed = await order({ lines: [{ description: 'Liquiphant FTL31 level switch', qty: 4, price: 23456.78 }] })
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, `/orders/${seed.order.id}`)
+    await openStage(page, 'Invoice')
     await orderPage(page).getByRole('button', { name: MONEY.order.createInvoice }).click()
     const d = page.getByRole('dialog', { name: MONEY.invoice.dialog })
     // 4 x 23,456.78 = 93,827.12 net; GST 18% = 16,888.88 -> 16,889; gross 110,716.12
@@ -178,6 +183,7 @@ test.describe('payments in', () => {
 
     await test.step('part payment of 40,000', async () => {
       await expect(page.getByTestId('order-balance')).toHaveText(amount(99499.45))
+      await openStage(page, 'Invoice')
       await orderPage(page).getByRole('button', { name: MONEY.order.recordPayment }).click()
       await expect(amountBox).toHaveValue(amount(99499.45))
       await amountBox.fill('40000')
@@ -190,6 +196,7 @@ test.describe('payments in', () => {
     })
 
     await test.step('the rest: the amount opens at the balance and the note names the earlier payment', async () => {
+      await openStage(page, 'Invoice')
       await orderPage(page).getByRole('button', { name: MONEY.order.recordPayment }).click()
       await expect(amountBox).toHaveValue(amount(59499.45))
       await expect(dialog.getByTestId('payment-note')).toContainText(MONEY.payment.settlesAfter(amount(59499.45), amount(99499.45), amount(40000)))
@@ -201,10 +208,9 @@ test.describe('payments in', () => {
     })
 
     await test.step('more than is owed: the dialog says so, the payment is kept, and Exceptions reports it', async () => {
-      // nothing is owed, so Record payment is no longer offered up front: it is in the order's More menu (UX audit P2)
-      await expect(orderPage(page).getByRole('button', { name: MONEY.order.recordPayment })).toHaveCount(0)
-      await orderPage(page).getByRole('button', { name: MONEY.order.more }).click()
-      await page.getByRole('menuitem', { name: MONEY.order.recordPayment }).click()
+      // nothing is owed, but Record payment stays on the Invoice stage (an over-payment is allowed and reported)
+      await openStage(page, 'Invoice')
+      await orderPage(page).getByRole('button', { name: MONEY.order.recordPayment }).first().click()
       await expect(amountBox).toHaveValue('') // nothing is due
       await amountBox.fill('5000.55')
       await expect(dialog.getByTestId('payment-note')).toHaveText(MONEY.payment.over(amount(5000.55)))
@@ -230,6 +236,7 @@ test.describe('payments in', () => {
     const seed = await seedInvoiced()
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, `/orders/${seed.order.id}`)
+    await openStage(page, 'Invoice')
     await orderPage(page).getByRole('button', { name: MONEY.order.recordPayment }).click()
     const dialog = page.getByRole('dialog', { name: MONEY.payment.dialog })
     await expect(dialog.getByRole('textbox', { name: MONEY.payment.amount })).toHaveValue(amount(99499.45))
@@ -287,6 +294,7 @@ test.describe('payments in', () => {
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, `/orders/${seed.order.id}`)
     await expect(page.getByTestId('order-balance')).toHaveText(amount(53750.5))
+    await openStage(page, 'Invoice')
     await orderPage(page).getByRole('button', { name: MONEY.order.createInvoice }).click()
     const d = page.getByRole('dialog', { name: MONEY.invoice.dialog })
     await expect(d.getByText(amount(73750.5), { exact: true })).toBeVisible()

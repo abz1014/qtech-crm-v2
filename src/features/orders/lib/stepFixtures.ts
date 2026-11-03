@@ -1,36 +1,5 @@
-// Test fixtures for the order step tests (nextStep, primaryAction, orderSteps): one list row and one order page, in plain defaults.
-import type { OrderHeader, OrderItemRow, OrderLegRow, OrderListRow, OrderMoney } from '@/features/orders/api'
-
-export const listRow = (over: Partial<OrderListRow>): OrderListRow => ({
-  id: 'o',
-  number: 38,
-  customerPo: null,
-  orderedOn: '2026-11-01',
-  ownerId: 'u',
-  ownerName: 'Ayesha',
-  companyId: 'c',
-  companyName: 'Punjab Cement Ltd',
-  siteName: null,
-  imported: false,
-  lifecycle: 'active',
-  goods: 'on_order',
-  commissioning: 'n_a',
-  dataTrust: 'ok',
-  invoicing: 'not_invoiced',
-  gross: 1000,
-  payment: 'unpaid',
-  balance: 1000,
-  engineerIds: [],
-  plannedOn: null,
-  dueOn: null,
-  costsState: null,
-  what: 'Belimo actuator ×6',
-  moreLines: false,
-  itemsText: 'belimo actuator',
-  legs: [],
-  poNumbers: [],
-  ...over,
-})
+// Test fixtures for the order step tests (primaryAction, orderSteps): one order page, in plain defaults.
+import type { OrderHeader, OrderItemRow, OrderLegRow, OrderMoney } from '@/features/orders/api'
 
 export const header = (over: Partial<OrderHeader> = {}, state: Partial<NonNullable<OrderHeader['state']>> = {}): OrderHeader => ({
   id: 'o',

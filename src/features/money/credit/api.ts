@@ -16,6 +16,8 @@ export interface CompanyCredit {
   applications: CreditApplication[]
   /** order id to "ORD-0038", for the history lines. */
   orderRefs: Record<string, string>
+  /** order id to the key of the Job page it belongs to; an order with no live job is missing (the old /orders address still opens it). */
+  jobKeys: Record<string, string>
 }
 
 const num = (v: number | string | null | undefined): number => Number(v ?? 0)
@@ -33,6 +35,7 @@ export async function getCompanyCredit(companyId: string): Promise<CompanyCredit
   const appRows = unwrap(apps) ?? []
   const orderIds = [...new Set([...refundRows.map(r => r.order_id), ...appRows.map(a => a.to_order_id)].filter((x): x is string => !!x))]
   const labels = await lookupLabels({ orders: orderIds })
+  const jobRows = orderIds.length ? (unwrap(await db.from('v_jobs').select('job_key, order_id').in('order_id', orderIds)) ?? []) : []
   return {
     summary: v
       ? { overpaid: num(v.overpaid), refunded: num(v.refunded), applied: num(v.applied), balance: num(v.balance) }
@@ -48,6 +51,7 @@ export async function getCompanyCredit(companyId: string): Promise<CompanyCredit
     })),
     applications: appRows.map(a => ({ id: a.id, appliedOn: a.applied_on, amount: num(a.amount), note: a.note, toOrderId: a.to_order_id })),
     orderRefs: Object.fromEntries(Object.entries(labels.orders).map(([id, o]) => [id, orderRef(Number(o.number))])),
+    jobKeys: Object.fromEntries(jobRows.filter((j): j is { job_key: string; order_id: string } => !!j.job_key && !!j.order_id).map(j => [j.order_id, j.job_key])),
   }
 }
 

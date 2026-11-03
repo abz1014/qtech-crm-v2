@@ -1,6 +1,7 @@
 import { NoPrimary } from '@/ui/NoPrimary'
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useIssueDialog } from '@/features/quotations/useIssueDialog'
 import { CloudOff } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
@@ -100,7 +101,6 @@ export default function JobPage() {
 function JobView({ facts }: { facts: JobFacts }) {
   const session = useSession()
   const role = (session.status === 'signed-in' ? session.user.role : 'engineer') as 'admin' | 'sales' | 'engineer'
-  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const phone = useMediaQuery('(max-width: 767px)')
   const { job } = facts
@@ -114,9 +114,16 @@ function JobView({ facts }: { facts: JobFacts }) {
   const current = currentStopIndex(job.stage, job.stageDetail)
   const first = current === null ? null : Math.min(current, 6)
   const [open, setOpen] = useState<number | null>(first)
-  useEffect(() => setOpen(first), [first, job.key])
+  const [, openIssue] = useIssueDialog()
   // A link that carries ?issue=1 (the RFQ page's own address for the Issue quotation dialog) lands on the stage that holds it.
   const wantsIssue = params.get('issue') === '1'
+  // Issuing the quotation moves the job on (to Order), which folds the Quotation stage; the Issue dialog lives in that stage, so folding it
+  // would take the dialog away at the moment it offers Share and Download. While the dialog is open the stage stays.
+  const dialogOpen = useRef(wantsIssue)
+  dialogOpen.current = wantsIssue
+  useEffect(() => {
+    if (!dialogOpen.current) setOpen(first)
+  }, [first, job.key])
   useEffect(() => {
     if (wantsIssue) setOpen(1)
   }, [wantsIssue])
@@ -130,13 +137,11 @@ function JobView({ facts }: { facts: JobFacts }) {
 
   // The enquiry-side steps are done on this page (P5-D1): the button opens the Quotation stage, or the same dialog the RFQ page opens
   // (?issue=1, ?won=1). The order-side steps are done here too (P5-D2): the button opens the stage that holds the action (choose a
-  // supplier, place, deliver, invoice, collect), in place. Only a step with no stage of its own still opens the order page.
+  // supplier, place, deliver, invoice, collect), in place.
   const onRfq = Boolean(next.button && next.on === 'rfq' && job.rfqId)
   const inPlace = next.button && next.on === 'order' && job.orderId && next.stop !== undefined ? next.stop : null
-  const orderTarget = next.button && next.on === 'order' && job.orderId && inPlace === null ? `/orders/${job.orderId}` : null
   const act = () => {
     if (inPlace !== null) return select(inPlace)
-    if (orderTarget) return navigate(orderTarget)
     if (!onRfq) return
     const p = new URLSearchParams(params)
     if (next.query === 'won=1') {
@@ -144,15 +149,13 @@ function JobView({ facts }: { facts: JobFacts }) {
       setParams(p, { replace: true })
       return
     }
-    if (next.query === 'issue=1') {
-      p.set('issue', '1')
-      setParams(p, { replace: true })
-    }
+    // the same opener as the Quotations block: on a computer it adds a history entry, so Back closes the dialog and stays on the page (HW-9)
+    if (next.query === 'issue=1') openIssue(true)
     select(1)
   }
   // An engineer's one green button is on the site card (EngineerActions: Delivered today, Installed today, Add photo or note), so the
   // band's "Open the order" is not a second one; the card has the link.
-  const button = role !== 'engineer' && (onRfq || orderTarget || inPlace !== null) ? (
+  const button = role !== 'engineer' && (onRfq || inPlace !== null) ? (
     <Button variant="primary" size={phone ? 'touch' : 'lg'} onClick={act}>
       {next.button}
     </Button>
@@ -229,7 +232,7 @@ function JobView({ facts }: { facts: JobFacts }) {
           {role === 'admin' ? <MoneyPanel data={data} hasOrder={Boolean(job.orderId)} /> : null}
           <JobSlot name="side" context={ctx} />
           <NotesFilesPanel facts={facts} data={data} ctx={ctx} />
-          <CancelledOrders data={data} />
+          <CancelledOrders data={data} money={role !== 'engineer'} />
         </aside>
       </div>
     </Shell>

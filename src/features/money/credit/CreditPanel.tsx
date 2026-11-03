@@ -23,7 +23,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
   const [refund, setRefund] = useState(false)
   const [apply, setApply] = useState(false)
   if (!isAdmin || !q.data) return null
-  const { summary, refunds, applications, orderRefs } = q.data
+  const { summary, refunds, applications, orderRefs, jobKeys } = q.data
   if (!showCredit(summary, refunds.length, applications.length)) return null
   const events = creditEvents(refunds, applications)
   const give = summary.balance > 0
@@ -66,7 +66,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
         {events.length > 0 ? (
           <ul className="border-t" aria-label="Refunds and applied credit">
             {events.map(e => (
-              <CreditLine key={e.key} companyId={companyId} event={e} orderRef={e.orderId ? (orderRefs[e.orderId] ?? null) : null} />
+              <CreditLine key={e.key} companyId={companyId} event={e} orderRef={e.orderId ? (orderRefs[e.orderId] ?? null) : null} jobKey={e.orderId ? (jobKeys[e.orderId] ?? null) : null} />
             ))}
           </ul>
         ) : null}
@@ -77,7 +77,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
   )
 }
 
-function CreditLine({ companyId, event, orderRef }: { companyId: string; event: CreditEvent; orderRef: string | null }) {
+function CreditLine({ companyId, event, orderRef, jobKey }: { companyId: string; event: CreditEvent; orderRef: string | null; jobKey: string | null }) {
   const remove = useRemoveCreditEntry(companyId)
   const [asking, setAsking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,7 +90,7 @@ function CreditLine({ companyId, event, orderRef }: { companyId: string; event: 
           {orderRef && event.orderId ? (
             <>
               {' '}
-              <Link to={`/orders/${event.orderId}`} className="num underline decoration-1 underline-offset-2 hover:text-fg">
+              <Link to={jobKey ? `/jobs/${encodeURIComponent(jobKey)}` : `/orders/${event.orderId}`} className="num underline decoration-1 underline-offset-2 hover:text-fg">
                 {orderRef}
               </Link>
             </>

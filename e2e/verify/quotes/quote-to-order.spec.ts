@@ -1,3 +1,4 @@
+import { JOB_URL, markWonButton, orderCreated } from '../../support/job'
 import { expect, test, type Page } from '@playwright/test'
 import { db, num } from '../support/db'
 import { company, karachiDay, letters, order, quote, ref, rfq, setProfile, supplier } from '../support/fixtures'
@@ -35,7 +36,7 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
   const page = await open(sales, `/rfqs/${r.rfq.id}`)
 
   await test.step('the dialog totals', async () => {
-    await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: QUOTES.issue.open }).click()
+    await page.getByRole('button', { name: QUOTES.issue.open, exact: true }).click()
     await expect(page.getByRole('list', { name: QUOTES.issue.itemsList })).toBeVisible()
     await dialog(page).getByLabel(QUOTES.issue.price(1)).fill('12345.67')
     await dialog(page).getByLabel(QUOTES.issue.price(2)).fill('7500.40')
@@ -80,11 +81,11 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
   })
 
   await test.step('Mark won: the order lines are the quoted lines, and the order totals are the quotation totals', async () => {
-    await page.locator('[data-slot="mark-won"]').getByRole('button', { name: QUOTES.won.markWon }).click()
+    await (await markWonButton(page)).click()
     await expect(dialog(page).getByRole('heading', { name: QUOTES.won.heading })).toBeVisible()
     await chooseAllSuppliers(page, dialog(page))
     await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
-    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    await orderCreated(page)
     const o = await db.one<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
     const lines = await db.rows<{ qty: number; unit_price_net: number; gst_rate: number }>(`order_items?order_id=eq.${o.id}&select=qty,unit_price_net,gst_rate&order=position`)
     expect(lines.map(l => [num(l.qty), num(l.unit_price_net), num(l.gst_rate)])).toEqual([
@@ -111,7 +112,7 @@ test('every close reason on the Bid and close menu is stored as itself, and the 
     const r = await rfq({ customer, items: [{ description: `Lost item ${key}`, qty: 1 }] })
     await page.goto(`/rfqs/${r.rfq.id}`)
     await page.locator('#main').waitFor()
-    await page.getByRole('button', { name: QUOTES.close.menu, exact: true }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: new RegExp(`^${label}`) }).click()
     await expect(page.getByRole('status').filter({ hasText: QUOTES.close.closedToast }).first()).toBeVisible()
     await expect.poll(() => db.one(`rfqs?id=eq.${r.rfq.id}&select=close_reason,closed_on`), { message: `closing with "${label}"` }).toEqual({ close_reason: key, closed_on: karachiDay(0) })
@@ -128,10 +129,12 @@ test('a lost RFQ can still be won: Mark won reopens it and makes the order, and 
   await db.patch(`rfqs?id=eq.${r.rfq.id}`, { closed_on: karachiDay(-6), close_reason: 'price' })
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/rfqs/${r.rfq.id}`)
-  await page.locator('[data-slot="mark-won"]').getByRole('button', { name: QUOTES.won.markWon }).click()
+  // a lost job offers no Mark won button: the More menu does
+  await page.getByRole('button', { name: /^More( actions)?$/ }).click()
+  await page.getByRole('menuitem', { name: QUOTES.won.markWon }).click()
   await chooseAllSuppliers(page, dialog(page))
   await dialog(page).getByRole('button', { name: QUOTES.won.createOrder }).click()
-  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+  await orderCreated(page)
   expect(await db.one(`rfqs?id=eq.${r.rfq.id}&select=closed_on,close_reason`)).toEqual({ closed_on: null, close_reason: null })
   const [o] = await db.rows<{ id: string }>(`orders?rfq_id=eq.${r.rfq.id}&select=id`)
   // 2 x 15,250.75 = 30,501.50 net; GST 5,490.27 -> 5,490; gross 35,991.50
@@ -159,14 +162,13 @@ test('a repeat order copies quantities, prices, GST rates and the service flag e
   expect(await totals(src.order.id)).toEqual([43209.87, 6000, 49209.87])
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, QUOTES.repeat.ordersPath)
-  await page.getByRole('button', { name: QUOTES.repeat.newOrder }).first().click()
   const d = dialog(page)
   await expect(d.getByRole('heading', { name: QUOTES.repeat.heading })).toBeVisible()
   await d.getByLabel(QUOTES.repeat.find).fill(src.customer.name)
   await d.getByRole('button', { name: new RegExp(`${src.customer.name}.*${ref.order(src.order.number)}`) }).click()
   await d.getByLabel(QUOTES.repeat.customerPo).fill(`REP-${tag.toUpperCase()}`)
   await d.getByRole('button', { name: QUOTES.repeat.create }).click()
-  await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+  await expect(page).toHaveURL(JOB_URL)
   const copy = await db.one<{ id: string }>(`orders?customer_po_number=eq.REP-${tag.toUpperCase()}&select=id`)
   const lines = await db.rows<{ qty: number; unit_price_net: number; gst_rate: number; is_service: boolean }>(`order_items?order_id=eq.${copy.id}&select=qty,unit_price_net,gst_rate,is_service&order=position`)
   expect(lines.map(l => [num(l.qty), num(l.unit_price_net), num(l.gst_rate), l.is_service])).toEqual([

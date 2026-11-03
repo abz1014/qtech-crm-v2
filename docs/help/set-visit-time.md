@@ -3,7 +3,7 @@ id: set-visit-time
 title: Set the visit type
 roles: engineer, sales, admin
 keywords: visit, type, installation, survey, service, site, commissioning, date
-screens: /orders
+screens: /jobs
 related: change-planned-date
 ---
 1. Open the order. Engineers tap [Visit type]. Admin and sales tap [Edit] under Commissioning.

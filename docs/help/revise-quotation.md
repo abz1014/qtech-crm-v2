@@ -3,7 +3,7 @@ id: revise-quotation
 title: Change a quotation already sent
 roles: sales, admin
 keywords: revise, revision, change, quotation, quote, price change, r2
-screens: /rfqs, /jobs
+screens: /jobs
 related: issue-quotation
 ---
 1. Open the RFQ. Once a quotation is out, the button reads [Revise quotation]. Tap it.

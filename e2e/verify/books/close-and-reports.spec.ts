@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { openStage } from '../../support/job'
 import { as, db, num, rpcAs, USER } from '../support/db'
 import { company, karachiDay, monthBefore, monthOf, order, post, setRates } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
@@ -204,6 +205,7 @@ test('the margin of an order: net sale less costs net of input tax, provisional 
 
   const admin = await signedIn(browser, info, 'admin')
   const page = await open(admin, `/orders/${seed.order.id}`)
+  await openStage(page, 'Order')
   const panel = page.getByRole('region', { name: BOOKS.margin.panel })
   await expect(panel).toContainText(amount(79691.03))
   await expect(panel).toContainText(amount(137036.7))
@@ -219,6 +221,7 @@ test('the margin of an order: net sale less costs net of input tax, provisional 
 
   // Reopen costs: provisional again, and the stamp is cleared.
   await page.goto(`/orders/${seed.order.id}`)
+  await openStage(page, 'Order')
   await panel.getByRole('button', { name: BOOKS.margin.reopenCosts }).click()
   await expect(panel.getByText(BOOKS.margin.provisionalNoExpected)).toBeVisible()
   expect((await db.one<{ costs_complete_at: string | null }>(`order_costs?order_id=eq.${seed.order.id}&select=costs_complete_at`)).costs_complete_at).toBeNull()
