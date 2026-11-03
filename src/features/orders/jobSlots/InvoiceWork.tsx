@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Skeleton } from '@/ui/Skeleton'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
@@ -40,6 +41,17 @@ export default function InvoiceWork({ job }: JobSlotProps) {
         {job.role === 'admin' && order.cancelledOn === null ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}
         {owing ? <CopyReminderButton order={order} money={m} /> : null}
       </div>
+      {invoiced > 0 && job.role === 'admin' ? (
+        <p className="text-base">
+          <Link
+            to={`/money/gst-register?q=${encodeURIComponent(`ORD-${String(order.number).padStart(4, '0')}`)}`}
+            data-slot="invoice-register-link"
+            className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open in Invoices to void one or issue a credit note
+          </Link>
+        </p>
+      ) : null}
     </div>
   )
 }
