@@ -232,6 +232,23 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This claim is not waiting to be paid back\./ },
   { match: /^That invoice is not on this order\./ },
   { match: /^That invoice is void, so a payment cannot be tied to it\./ },
+  // 0126 to 0128: customer refunds, credit balance and applied credit, the WHT certificate file, clearing a filing. Already plain; the HINTs
+  // (refund_exceeds_credit, duplicate_refund, credit_exceeds_balance, credit_exceeds_order, order_company, admin_only_unfile) pass on as `hint`.
+  { match: /^Only an admin (records a refund|applies credit)\.$/, message: () => ADMIN_ONLY },
+  { match: /^Enter the amount (refunded|to apply)\.$/ },
+  { match: /^That order belongs to another customer\.$/ },
+  { match: /^This refund is ticked against the (.+?) bank statement\. /, action: BANK },
+  { match: /^A refund is kept as it was recorded\. / },
+  { match: /^An applied credit is kept as it was recorded\. / },
+  { match: /^This customer holds Rs (.+?) of credit, / },
+  { match: /^Looks like a refund already recorded on / },
+  { match: /^That order only owes Rs / },
+  { match: /^That order holds only Rs / },
+  { match: /^The source order holds only Rs / },
+  { match: /^Credit cannot be applied from an order to itself\.$/ },
+  { match: /^This would leave more refunded or applied credit than / },
+  { match: /^Only an admin can clear a PSID or a tax deposit date once it is recorded\.$/, message: () => ADMIN_ONLY },
+  { match: /^012[678]: /, internal: true },
   // 0096 (money truth): linking imported invoices to their orders, and the owner's review of imported records. Already plain.
   { match: /^Only an admin can link or review imported records\.$/, message: () => ADMIN_ONLY },
   { match: /^Imported record not found$/, message: () => RELOAD },

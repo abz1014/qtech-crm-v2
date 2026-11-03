@@ -74,8 +74,12 @@ test.describe('void and credit notes (C1)', () => {
   })
 
   test('credit note: issued from the invoice, in the register as a negative line, with a PDF', async ({ page }) => {
+    test.slow() // the first PDF of a cold browser loads the renderer; the first attempt hit the 30 s test timeout (it passed on the retry)
     const order = await seedOrder()
     const inv = await makeInvoice(order, { psid: `PSID-${unique()}` })
+    // the PDF needs the seller's name on the letterhead (Settings, Company). Written BEFORE the page loads: the app reads the company
+    // details once, and a read made before this write left the Print button with a profile that had no name (the flaky first attempt)
+    await must(rest('admin', 'company_profile?id=eq.1', { method: 'PATCH', body: { legal_name: 'Q-Tech Test (Pvt) Ltd', address: 'Karachi' }, prefer: 'return=minimal' }))
     await openAs(page, 'admin', `/money/gst-register?invoice=${inv.id}`)
     await page.getByRole('button', { name: 'Create credit note' }).click()
     const dialog = page.getByRole('dialog').last()
@@ -99,8 +103,8 @@ test.describe('void and credit notes (C1)', () => {
 
     // its PDF
     await page.getByRole('row', { name: new RegExp(inv.number) }).first().click()
-    // the PDF needs the seller's name on the letterhead (Settings, Company)
-    await must(rest('admin', 'company_profile?id=eq.1', { method: 'PATCH', body: { legal_name: 'Q-Tech Test (Pvt) Ltd', address: 'Karachi' }, prefer: 'return=minimal' }))
+    // Print says "company details still loading" and makes nothing if the page has not read them yet (the flaky first attempt)
+    await page.waitForLoadState('networkidle')
     // no pop-up in the test browser: the app then downloads the file instead (CreditNotePdfButton)
     await page.evaluate(() => {
       window.open = () => null

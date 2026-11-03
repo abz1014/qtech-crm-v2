@@ -5,7 +5,7 @@ import type { TableRow } from '@/features/dbTypes'
 import { companyNames } from '@/features/money/expenses/api'
 import { legLabelOf, lookupLabels } from '@/features/money/lookupLabels'
 import { monthEnd, monthStart, type CategoryGroup } from '@/features/money/expenses/model'
-import type { RawBank, RawDeposit, RawExpense, RawPayment } from '@/features/money/bank/model'
+import type { RawBank, RawDeposit, RawExpense, RawPayment, RawRefund } from '@/features/money/bank/model'
 
 /*
  * Bank tick (M12): every database call for this area. Admin only, enforced by Row Level Security; the hooks pass
@@ -23,7 +23,7 @@ export async function loadBank(month: string): Promise<RawBank> {
   const start = monthStart(month)
   const end = monthEnd(month)
 
-  const [payments, expenses, invoices] = await Promise.all([
+  const [payments, expenses, invoices, refunds] = await Promise.all([
     fetchAll<TableRow<'payments_in'>>((from, to) =>
       db
         .from('payments_in')
@@ -52,11 +52,20 @@ export async function loadBank(month: string): Promise<RawBank> {
         .order('tax_deposited_on', { ascending: false })
         .range(from, to),
     ),
+    fetchAll<TableRow<'customer_refunds'>>((from, to) =>
+      db
+        .from('customer_refunds')
+        .select('*')
+        .eq('paid_via', 'bank')
+        .or(`bank_month.eq.${start},and(bank_month.is.null,refunded_on.lte.${end})`)
+        .order('refunded_on', { ascending: false })
+        .range(from, to),
+    ),
   ])
 
   const orderIds = [
     ...new Set(
-      [...payments.map(p => p.order_id), ...expenses.map(e => e.order_id), ...invoices.map(i => i.order_id)].filter(
+      [...payments.map(p => p.order_id), ...expenses.map(e => e.order_id), ...invoices.map(i => i.order_id), ...refunds.map(r => r.order_id)].filter(
         (x): x is string => !!x,
       ),
     ),
@@ -69,7 +78,7 @@ export async function loadBank(month: string): Promise<RawBank> {
   ])
   const companyIds = [
     ...new Set(
-      [...expenses.map(e => e.payee_id), ...invoices.map(i => i.company_id), ...orderIds.map(id => orders[id]?.companyId)].filter(
+      [...expenses.map(e => e.payee_id), ...invoices.map(i => i.company_id), ...refunds.map(r => r.company_id), ...orderIds.map(id => orders[id]?.companyId)].filter(
         (x): x is string => !!x,
       ),
     ),
@@ -109,10 +118,20 @@ export async function loadBank(month: string): Promise<RawBank> {
     amount: fixed(i.tax_deposit_amount ?? i.gst_amount),
     bankMonth: i.tax_bank_month,
   }))
+  const rawRefunds: RawRefund[] = refunds.map(r => ({
+    id: r.id,
+    refundedOn: r.refunded_on,
+    amount: fixed(r.amount),
+    reference: r.reference,
+    orderRef: r.order_id ? (orders[r.order_id]?.ref ?? null) : null,
+    company: names[r.company_id] ?? null,
+    bankMonth: r.bank_month,
+  }))
   return {
     payments: rawPayments,
     expenses: rawExpenses,
     deposits: rawDeposits,
+    refunds: rawRefunds,
   }
 }
 
@@ -139,7 +158,7 @@ export async function legLabels(legIds: string[]): Promise<Record<string, string
   return Object.fromEntries(Object.entries(legs).map(([id, l]) => [id, legLabelOf(Number(l.position))]))
 }
 
-export type TickKind = 'payment' | 'expense' | 'fbr'
+export type TickKind = 'payment' | 'expense' | 'fbr' | 'refund'
 
 /** Tick (month "2026-10") or untick (null) one or more rows. One request, whatever the number of rows. */
 export async function setBankMonth(kind: TickKind, ids: readonly string[], month: string | null): Promise<void> {
@@ -151,6 +170,8 @@ export async function setBankMonth(kind: TickKind, ids: readonly string[], month
       ? await db.from('payments_in').update({ bank_month: value }).in('id', ids2)
       : kind === 'expense'
         ? await db.from('expenses').update({ bank_month: value }).in('id', ids2)
-        : await db.from('invoices').update({ tax_bank_month: value }).in('id', ids2)
+        : kind === 'refund'
+          ? await db.from('customer_refunds').update({ bank_month: value }).in('id', ids2)
+          : await db.from('invoices').update({ tax_bank_month: value }).in('id', ids2)
   if (res.error) throw res.error
 }

@@ -26,6 +26,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
 import { StatementButton } from '@/features/money/statement/StatementDialog'
 import { BuyerTaxFields } from '@/features/money/invoices/pdf/BuyerTaxFields'
+import { CreditPanel } from '@/features/money/credit/CreditPanel'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useSession } from '@/app/session'
@@ -317,6 +318,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
         </Panel>
       ) : null}
       {isAdmin && money.isError ? <Banner tone="warning" title="Couldn't load the money figures">Reload the page to try again.</Banner> : null}
+      <CreditPanel companyId={company.id} companyName={company.name} isAdmin={isAdmin} />
       {detailsPanel}
       {notesPanel}
     </>

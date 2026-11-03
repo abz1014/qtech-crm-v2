@@ -126,6 +126,7 @@ describe('in vs out shows the oracle figures and explains the gap exactly', () =
           gst: rs(gst),
           costsAhead: rs(paidOrder - matched),
           drawingsAndTax: rs(notCost),
+          refunds: '0.00',
           other: '0.00',
         })
         // money out by category adds up to money out, and each category's details to the category

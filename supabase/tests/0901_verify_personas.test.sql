@@ -155,6 +155,10 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
 -- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
 update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
+insert into public.orders (id, company_id, owner_id) values (pg_temp.f('f5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0127: an order that still owes
+insert into public.order_items (id, order_id, position, description, unit_price_net) values (pg_temp.f('f6'), pg_temp.f('f5'), 0, 'Owing line', 100);
+insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0126
+insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0127
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
@@ -237,6 +241,8 @@ insert into spec values
   ('delivery_challans', '', 'id = @f5', 'notes', $q$insert into public.delivery_challans (id, order_id, number, lines) values (@f6, @21, 'DC-9999', '[{"description":"x","qty":1}]')$q$),   -- 0131
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
+  ('customer_refunds', '', 'id = @f1', 'bank_month', $q$insert into public.customer_refunds (id, company_id, amount) values (@f3, @01, 5)$q$),   -- 0126
+  ('credit_applications', '', 'id = @f2', 'company_id', $q$insert into public.credit_applications (id, company_id, to_order_id, amount) values (@f4, @01, @f5, 5)$q$),   -- 0127
   ('credit_notes', '', 'id = @d3', 'reason', $q$insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (@d4, 'CN-P', @26, 10, 2, 'probe')$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
@@ -296,7 +302,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
-                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted',
+                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted','v_company_credit',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
@@ -451,6 +457,8 @@ insert into probes values
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
   ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
+  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0127
+  ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0127
   ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
   ('record_payment', '', 'X', $q$select 1 from (select public.record_payment(gen_random_uuid(), @20, public.today_pkt(), 7, null, 'bank', true) r) x$q$),   -- 0114
   ('next_credit_note_number', '', 'X', 'select 1 where public.next_credit_note_number() is not null'),   -- 0112
@@ -564,9 +572,9 @@ from (values ('anon'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['admin_health', 'attachment_is_priced', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
-                'order_receivables', 'receipt_locked', 'record_history_rows', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed fourteen (0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
+          array['admin_health', 'apply_credit', 'attachment_is_priced', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
+                'order_receivables', 'receipt_locked', 'record_history_rows', 'record_refund', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed sixteen (0127: record_refund and apply_credit, admin only; 0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

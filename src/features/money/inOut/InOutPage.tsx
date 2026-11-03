@@ -183,7 +183,7 @@ function Head({ prev }: { prev: string }) {
 function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   const prev = periodLabel(shiftPeriod(v.period, -1))
   const r = v.reconcile
-  const empty = v.cash.payments === 0 && v.cash.expenses === 0 && v.profit.invoices === 0
+  const empty = v.cash.payments === 0 && v.cash.expenses === 0 && v.cash.refundCount === 0 && v.profit.invoices === 0
   const frozen =
     v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Closed: figures frozen when the month was closed' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
   return (
@@ -199,6 +199,9 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             <Head prev={prev} />
             <Row testId="cash-in" label="Money in" sub={`${plural(v.cash.payments, 'customer payment')} received, GST included`} now={v.cash.in} before={v.prevCash.in} />
             <Row testId="cash-out" label="Money out" sub={`${plural(v.cash.expenses, 'expense')} and supplier payments, input tax included`} now={v.cash.out} before={v.prevCash.out} />
+            {toPaisa(v.cash.refunds) !== 0n || toPaisa(v.prevCash.refunds) !== 0n ? (
+              <Row testId="cash-refunds" label="Refunds to customers" sub={`${plural(v.cash.refundCount, 'refund')} paid back`} now={v.cash.refunds} before={v.prevCash.refunds} />
+            ) : null}
             <Row testId="cash-net" label="Cash in minus cash out" now={v.cash.net} before={v.prevCash.net} strong />
           </div>
         </Panel>
@@ -240,6 +243,11 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             <span className="num font-medium text-fg">{signed(r.drawingsAndTax)}</span> owner drawings, loan repayments and input tax: cash out that is not
             a cost
           </li>
+          {toPaisa(r.refunds) !== 0n ? (
+            <li>
+              <span className="num font-medium text-fg">{signed(r.refunds)}</span> refunds paid back to customers: cash out that is not a cost
+            </li>
+          ) : null}
           {toPaisa(r.other) !== 0n ? (
             <li>
               <span className="num font-medium text-fg">{signed(r.other)}</span> other: a closed month&apos;s frozen cash figure differs from the books

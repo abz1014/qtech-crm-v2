@@ -43,6 +43,7 @@ export type CompanyPart =
   | 'category-evidence'
   | 'history'
   | 'money'
+  | 'credit'
 
 function brands() {
   const all = root('brands')

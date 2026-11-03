@@ -122,6 +122,8 @@ const NOUN: Record<string, string> = {
   quotations: 'quotation',
   invoices: 'invoice',
   payments_in: 'payment',
+  customer_refunds: 'refund',
+  credit_applications: 'applied credit',
   expenses: 'expense',
   contacts: 'contact',
   company_sites: 'site',
