@@ -304,8 +304,8 @@ select ok((select count(*) = 1 and bool_and(remaining = 680.00 and age_days = 19
 
 -- ================================================================== F-PAYABLES: payables_as_of
 select is((select count(*)::int from public.payables_as_of('2026-09-30')
-           where order_id in ('a1000000-0000-4000-8000-000000000021', 'a1000000-0000-4000-8000-000000000022')), 7,
-  'F-PAYABLES: seven legs (unplaced, placed-later and cancelled-order legs are excluded)');
+           where order_id in ('a1000000-0000-4000-8000-000000000021', 'a1000000-0000-4000-8000-000000000022')), 8,
+  'F-PAYABLES: eight legs (unplaced and placed-later legs are excluded; 0121: a leg of a cancelled order is still listed until the supplier cancels it)');
 select ok((select committed = 1000.00 and currency = 'USD' and fx_rate = 280 and committed_pkr = 280000.00
                   and paid_pkr = 100000.00 and owed_pkr = 180000.00 and state = 'owing' and flag is null
            from public.payables_as_of('2026-09-30') where supplier_order_id = 'a2000000-0000-4000-8000-000000000001'),
@@ -314,15 +314,15 @@ select ok((select committed_pkr = 290000.00 and paid_pkr = 150000.00 and owed_pk
            from public.payables_as_of('2026-10-31') where supplier_order_id = 'a2000000-0000-4000-8000-000000000001'),
   'F-PAYABLES L1 as of 2026-10-31: rate 290, paid 150000.00, owed 140000.00');
 select ok((select committed = 12500.00 and fx_rate = 1 and committed_pkr = 12500.00 and paid_pkr = 12300.00
-                  and owed_pkr = 200.00 and state = 'settled' and flag is null
+                  and owed_pkr = 200.00 and state = 'owing' and flag is null
            from public.payables_as_of('2026-09-30') where supplier_order_id = 'a2000000-0000-4000-8000-000000000002'),
-  'F-PAYABLES L2: no PO, items 2 x 5000 + 1 x 2500 = 12500.00 PKR, paid 12300.00, owed 200.00 is within 3%: settled');
+  'F-PAYABLES L2: no PO, items 2 x 5000 + 1 x 2500 = 12500.00 PKR, paid 12300.00, owed 200.00 (0121: a PKR leg is settled only within Rs 1): owing');
 select ok((select owed_pkr = 0.00 and state = 'settled' and flag = 'overpaid'
            from public.payables_as_of('2026-09-30') where supplier_order_id = 'a2000000-0000-4000-8000-000000000003'),
   'F-PAYABLES L3: paid 10500.00 of 10000.00: owed clamped to 0.00 and flagged overpaid');
-select ok((select owed_pkr = 300.00 and state = 'settled'
+select ok((select owed_pkr = 300.00 and state = 'owing'
            from public.payables_as_of('2026-09-30') where supplier_order_id = 'a2000000-0000-4000-8000-000000000008'),
-  'F-PAYABLES L8: owed exactly 3% of committed (300.00 of 10000.00) is settled');
+  'F-PAYABLES L8: owed exactly 3% of committed (300.00 of 10000.00) on a PKR leg is owing (0121)');
 select ok((select owed_pkr = 301.00 and state = 'owing'
            from public.payables_as_of('2026-09-30') where supplier_order_id = 'a2000000-0000-4000-8000-000000000009'),
   'F-PAYABLES L9: owed 301.00 of 10000.00 is over 3%: owing');
@@ -334,8 +334,8 @@ select ok((select state = 'unpriced' and committed is null and owed_pkr is null
   'F-PAYABLES L7: a leg with nothing priced is unpriced');
 select is((select count(*)::int from public.payables_as_of('2026-09-30')
            where supplier_order_id in ('a2000000-0000-4000-8000-000000000004', 'a2000000-0000-4000-8000-000000000005',
-                                       'a2000000-0000-4000-8000-000000000010')), 0,
-  'F-PAYABLES: the unplaced leg, the leg placed after the date and the leg on a cancelled order are excluded');
+                                       'a2000000-0000-4000-8000-000000000010')), 1,
+  'F-PAYABLES: the unplaced leg and the leg placed after the date are excluded; the leg on a cancelled order is still listed (0121)');
 select is((select count(*)::int from public.payables_as_of('2026-10-31')
            where supplier_order_id = 'a2000000-0000-4000-8000-000000000005'), 1,
   'F-PAYABLES: the leg placed on 2026-10-03 appears once the as-of date reaches it');

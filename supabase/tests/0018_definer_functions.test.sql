@@ -73,9 +73,9 @@ select ok((select gross_target = 1180 and settled = 500 and balance = 680 and ov
                   and due_on = public.today_pkt() - 10 and is_overdue and payment_state = 'overdue'
            from public.order_receivables('a1000000-0000-4000-8000-000000000001')),
   'invoiced order: gross from the invoices, balance, due date = first invoice + terms, overdue');
-select ok((select last_reminded_on = public.today_pkt() - 2 and reminder_count = 2
+select ok((select last_reminded_on = public.today_pkt() - 5 and reminder_count = 2
            from public.order_receivables('a1000000-0000-4000-8000-000000000001')),
-  'reminders: latest date across the invoices and the highest count');
+  'reminders (0123): the reminder state of the OLDEST UNPAID invoice (R-1A: reminded 5 days ago, twice), not the latest across the order');
 select ok((select gross_target = 1180 and settled = 0 and balance = 1180 and due_on is null and not is_overdue
                   and payment_state = 'unpaid' and last_reminded_on is null and reminder_count = 0
            from public.order_receivables('a1000000-0000-4000-8000-000000000002')),

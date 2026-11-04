@@ -144,8 +144,21 @@ insert into public.order_items (id, order_id, position, description, unit_price_
   (pg_temp.f('25'), pg_temp.f('20'), 0, 'Fixture order item', 100, pg_temp.f('23'), 10);
 insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('20'), 5);
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
+insert into public.orders (id, company_id, owner_id) values   -- 0112 and 0116: an order with no payment (the void probe) and one that holds a payment with WHT
+  (pg_temp.f('d5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'), (pg_temp.f('d7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');
+insert into public.payments_in (id, order_id, amount, wht_amount, wht_certificate_no) values (pg_temp.f('d6'), pg_temp.f('d7'), 5, 3, null);
+insert into public.order_visits (id, order_id, engineer_id) values (pg_temp.f('f2'), pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');   -- 0130
+insert into public.delivery_challans (id, order_id, number, lines) values (pg_temp.f('f5'), pg_temp.f('20'), 'DC-0001', '[{"description":"Fixture order item","qty":1}]');   -- 0131
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
-  (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
+  (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18),
+  (pg_temp.f('d2'), pg_temp.f('d5'), 'INV-M3', 100, 18);
+-- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
+update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
+insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
+insert into public.orders (id, company_id, owner_id) values (pg_temp.f('f5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0127: an order that still owes
+insert into public.order_items (id, order_id, position, description, unit_price_net) values (pg_temp.f('f6'), pg_temp.f('f5'), 0, 'Owing line', 100);
+insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0126
+insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0127
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
 insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
@@ -224,8 +237,13 @@ insert into spec values
   ('orders', '', 'id = @21', 'notes', $q$insert into public.orders (id, company_id, owner_id) values (@a9, @01, 'a0000000-0000-4000-8000-000000000002')$q$),
   ('order_items', '', 'id = @25', 'description', $q$insert into public.order_items (id, order_id, description, unit_price_net) values (@aa, @20, 'probe', 1)$q$),
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
+  ('order_visits', '', 'id = @f2', 'notes', $q$insert into public.order_visits (id, order_id, visit_on) values (@f4, @21, current_date)$q$),   -- 0130
+  ('delivery_challans', '', 'id = @f5', 'notes', $q$insert into public.delivery_challans (id, order_id, number, lines) values (@f6, @21, 'DC-9999', '[{"description":"x","qty":1}]')$q$),   -- 0131
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
+  ('customer_refunds', '', 'id = @f1', 'bank_month', $q$insert into public.customer_refunds (id, company_id, amount) values (@f3, @01, 5)$q$),   -- 0126
+  ('credit_applications', '', 'id = @f2', 'company_id', $q$insert into public.credit_applications (id, company_id, to_order_id, amount) values (@f4, @01, @f5, 5)$q$),   -- 0127
+  ('credit_notes', '', 'id = @d3', 'reason', $q$insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (@d4, 'CN-P', @26, 10, 2, 'probe')$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
   ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000010')$q$),
@@ -284,7 +302,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
-                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
+                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted','v_company_credit',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
@@ -333,6 +351,8 @@ insert into probes values
   ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),
   ('search_all', 'supplier_po', 'X', $q$select 1 from public.search_all('PO-7002', 5) where kind = 'po'$q$),
   ('next_invoice_number', '', 'X', 'select * from public.next_invoice_number()'),
+  ('next_challan_number', '', 'X', 'select 1 where public.next_challan_number() is not null'),   -- 0131
+  ('create_delivery_challan', '', 'X', 'select public.create_delivery_challan(@20)'),   -- 0131
   ('stamp_payment_reminder', '', 'X', 'select 1 from (select public.stamp_payment_reminder(array[@26]) r) x where r > 0'),
   ('stamp_tcs_sent', '', 'X', 'select 1 from (select public.stamp_tcs_sent(array[@26]) r) x where r > 0'),
   ('stamp_fbr_psid', '', 'X', $q$select 1 from (select public.stamp_fbr_psid(array[@26], 'P1') r) x where r > 0$q$),
@@ -354,11 +374,17 @@ insert into probes values
   ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
+  ('customer_statement', '', 'X', 'select 1 from public.customer_statement(@01) limit 1'),   -- 0125
   ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080
   ('link_imported_invoices', '', 'X', 'select 1 where (select count(*) from public.link_imported_invoices()) >= 0'),   -- 0096: refused for everyone but an admin
   ('link_imported_invoice', '', 'X', 'select public.link_imported_invoice(@e8, @e7)'),   -- 0096: the unlinked imported invoice onto the imported order (same customer)
   ('unlink_imported_invoice', '', 'X', 'select public.unlink_imported_invoice(@e9)'),   -- 0096
   ('set_legacy_review', '', 'X', $q$select public.set_legacy_review('order', @e7, 'live')$q$),   -- 0096
+  ('set_supplier_order_cancelled', '', 'X', 'select public.set_supplier_order_cancelled(@23, false)'),   -- 0121: refused for everyone but an admin
+  ('reassign_owner_check', '', 'X', $q$select public.reassign_owner_check('a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('reassign_owner', '', 'X', $q$select public.reassign_owner('rfq', gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('open_work_of', '', 'X', $q$select 1 from public.open_work_of('a0000000-0000-4000-8000-000000000001') limit 1$q$),   -- 0122
+  ('reassign_open_work', '', 'X', $q$select 1 from public.reassign_open_work(gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
@@ -423,15 +449,25 @@ insert into probes values
   ('record_history_rows', '', 'X', $q$select 1 from (select set_config('qtech.history_for', 'rfqs:' || @15::text, true)) m where public.record_history_rows('rfqs', @15) is not null$q$),   -- 0090: with the mark record_history sets
   -- 0087
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
+  ('owe_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004')$q$),   -- 0124
+  ('pay_back_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004'), public.pay_back_expense_claim(@e0, 'bank')$q$),   -- 0124: owed, then paid back
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$),
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
+  ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
+  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0127
+  ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0127
+  ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
+  ('record_payment', '', 'X', $q$select 1 from (select public.record_payment(gen_random_uuid(), @20, public.today_pkt(), 7, null, 'bank', true) r) x$q$),   -- 0114
+  ('next_credit_note_number', '', 'X', 'select 1 where public.next_credit_note_number() is not null'),   -- 0112
   ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
   ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
   ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
-  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x'),   -- 0092
+  ('admin_health', '', 'X', 'select 1 from public.admin_health()'),   -- 0120
+  ('confirm_backup_decrypt_test', '', 'X', 'select 1 from (select public.confirm_backup_decrypt_test() r) x');   -- 0120
 
 -- 0074 receivables: money, so an engineer is refused too (they run order_receivables()).
 select is(pg_temp.actual(f, '', 'engineer'), '', format('engineer gets nothing from %s', f))
@@ -536,9 +572,9 @@ from (values ('anon'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['attachment_is_priced', 'close_month', 'close_months_through', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
-                'order_receivables', 'receipt_locked', 'record_history_rows', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed twelve (0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
+          array['admin_health', 'apply_credit', 'attachment_is_priced', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
+                'order_receivables', 'receipt_locked', 'record_history_rows', 'record_refund', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed sixteen (0127: record_refund and apply_credit, admin only; 0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

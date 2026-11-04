@@ -85,7 +85,7 @@ select is(pg_temp.as_('engineer', $q$update public.expense_claims set amount_pkr
 select is(pg_temp.as_('engineer', $q$select public.approve_expense_claim('87000000-0000-4000-8000-0000000000c1', 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')::text$q$),
   'E:42501', 'an engineer cannot approve');
 select is(pg_temp.as_('sales', 'select count(*) from public.expense_claims'), '0', 'sales see no claim');
-select is(pg_temp.as_('sales', $q$insert into public.expense_claims (amount_pkr) values (5)$q$), 'E:42501', 'sales cannot make a claim');
+select is(pg_temp.as_('sales', $q$insert into public.expense_claims (amount_pkr) values (5) returning 1$q$), '1', 'sales may make a claim too (0124); they read their own only and the admin decides');
 select is(pg_temp.as_('admin', $q$insert into public.expense_claims (amount_pkr) values (5)$q$), 'E:42501',
   'the admin records an expense directly, not a claim');
 select is(pg_temp.as_('engineer', 'select count(*) from public.expenses'), '0', 'the engineer still reads no expense');

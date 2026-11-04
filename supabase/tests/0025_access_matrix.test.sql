@@ -130,6 +130,17 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'order_engineers',     '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_engineers"
   ('table', 'order_costs',         '',           'SIUD', '',     ''),     -- s10 "order_costs"
   ('table', 'invoices',            '',           'SIUD', 'SIU',  ''),     -- s10 "invoices (changed, A2)"
+  ('table', 'customer_refunds',    '',           'SUD',  '',     ''),     -- 0126: cash out, admin only; made by record_refund, only the bank tick is edited
+  ('table', 'credit_applications', '',           'SUD',  '',     ''),     -- 0126: credit put against another order, admin only; made by apply_credit
+  ('table', 'credit_notes',        '',           'SI',   'S',    ''),     -- 0112: admin issues (create_credit_note), admin and sales read, nobody edits or deletes one
+  ('function', 'create_credit_note', '',         'X',    '',     ''),     -- 0112: admin only (42501 for everyone else)
+  ('function', 'order_credit_rows', '',          '',     '',     ''),     -- 0127: the role-free credit of each order, for the guard and the two doors; granted to nobody
+  ('function', 'company_credit_balance', '',      '',     '',     ''),     -- 0127: the same for a customer
+  ('function', 'record_refund',    '',           'X',    '',     ''),     -- 0127: admin only
+  ('function', 'apply_credit',     '',           'X',    '',     ''),     -- 0127: admin only
+  ('function', 'void_invoice',     '',           'X',    '',     ''),     -- 0112: admin only
+  ('function', 'record_payment',   '',           'X',    '',     ''),     -- 0114: admin only
+  ('function', 'next_credit_note_number', '',    'X',    'X',    ''),     -- 0112: the next CN number, admin and sales
   ('table', 'payments_in',         '',           'SIUD', '',     ''),     -- s10 "payments_in"
   ('table', 'expenses',            '',           'SIUD', '',     ''),     -- s10 "expenses"
   ('table', 'recurring_expenses',  '',           'SIUD', '',     ''),     -- s10 "recurring_expenses"
@@ -155,6 +166,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_order_state',       '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_invoice_state',     '',           'S',    'S',    ''),     -- s10 "v_invoice_state, v_gst_register"
   ('view',  'v_gst_register',      '',           'S',    'S',    ''),     -- s10 (same row)
+  ('view',  'v_company_credit',    '',           'S',    '',     ''),     -- 0127: what a customer holds unapplied, admin only
+  ('view',  'v_wht_deducted',      '',           'S',    '',     ''),     -- 0116: withholding tax the customers deducted, admin only
   ('view',  'v_order_money',       '',           'S',    '',     ''),     -- s10 "v_order_money, v_cash_month, v_payment_net, v_target_progress"
   ('view',  'v_cash_month',        '',           'S',    '',     ''),     -- s10 (same row)
   ('view',  'v_payment_net',       '',           'S',    '',     ''),     -- s10 (same row)
@@ -260,6 +273,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'month_is_closed',       '',      '',     '',     ''),     -- A6 A6.1: used by the lock triggers only, granted to nobody
   ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'customer_statement',    '',      'X',    '',     ''),     -- 0125: admin only (zero rows for the others)
   ('function', 'held_advances',         '',      'X',    '',     ''),     -- 0080 (owner decision 2026-10-22): admin only (zero rows for the others)
   ('function', 'month_end_status',      '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'month_end_check_details', '', 'X',    '',     ''),     -- 0064: admin only (zero rows for the others)
@@ -280,10 +294,17 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
   ('table', 'supplier_inquiries', 'sent_confirmed', 'SU', 'SU', 'SU'),   -- 0097: "Did you send it? Yes, sent": every active role stamps an inquiry it can see
   ('table', 'snoozes',           'until_change', 'SU', 'SU', 'SU'),      -- 0097: "Not ours to chase": each role flips it on its own snoozes
+  ('table', 'delivery_challans', '',          'SID',  'SI',   'SI'),      -- 0131: a challan is issued by any active role and never edited; only an admin deletes one
+  ('function', 'create_delivery_challan', '',  'X',    'X',    'X'),       -- 0131: issues a challan (its own DC- number); lines and quantities only
+  ('function', 'next_challan_number', '',      'X',    'X',    'X'),       -- 0131: the next number in the DC- series
+  ('function', 'order_visit_summary', '',      '',     '',     ''),        -- 0130: internal (the trigger that keeps the order's visit summary); no client persona
+  ('function', 'sync_order_visit_summary', '', '',     '',     ''),        -- 0130: internal; no client persona
+  ('table', 'order_visits',      '',          'SIUD', 'SIUD', 'SU'),      -- 0130: one visit of an order; an engineer edits (never adds or deletes) a visit assigned to them (fixture @f2)
+  ('table', 'order_visits',      'other',     'SUD',  'SUD',  'S'),       -- 0130: a visit with no engineer on an order that is not theirs (fixture @f3): an engineer only reads it
   ('table', 'orders',            'visit',       'SU', 'SU', 'SU'),       -- 0101: visit time and type; an engineer on an order assigned to them (fixture @20)
   ('table', 'orders',            'visit_other', 'SU', 'SU', 'S'),        -- 0101: an engineer is refused on an order that is not theirs (fixture @21)
   ('function', 'receipt_locked', '', 'X', 'X', ''),                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
-  ('table', 'expense_claims',    'own',   'SUD',  '',     'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; sales nothing
+  ('table', 'expense_claims',    'own',   'SUD',  'I',    'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; 0124: sales may add their own claim (the fixture claim is the engineer's, so sales read none)thing
   ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
   ('table', 'cash_topups',       '',      'SIUD', '',     ''),            -- 0087: cash drawn from the bank, admin only
   ('table', 'cash_counts',       '',      'SID',  '',     ''),            -- 0087: cash counts, admin only, never edited (delete and count again)
@@ -294,7 +315,14 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'link_imported_invoice',   '', 'X', '',     ''),           -- 0096: admin only
   ('function', 'unlink_imported_invoice', '', 'X', '',     ''),           -- 0096: admin only
   ('function', 'set_legacy_review',       '', 'X', '',     ''),           -- 0096: admin only
+  ('function', 'set_supplier_order_cancelled', '', 'X', '', ''),   -- 0121: admin only
+  ('function', 'reassign_owner_check', '', 'X', '', ''),   -- 0122: admin only
+  ('function', 'reassign_owner', '', 'X', '', ''),   -- 0122: admin only
+  ('function', 'open_work_of', '', 'X', '', ''),   -- 0122: admin only
+  ('function', 'reassign_open_work', '', 'X', '', ''),   -- 0122: admin only
   ('function', 'approve_expense_claim', '', 'X',  '',     ''),            -- 0087: admin only (42501 for everyone else)
+  ('function', 'owe_expense_claim', '', 'X', '', ''),   -- 0124: admin only (42501 for everyone else)
+  ('function', 'pay_back_expense_claim', '', 'X', '', ''),   -- 0124: admin only
   ('function', 'cash_in_hand',   '',      'X',    '',     ''),            -- 0087: admin only (no row for the others)
   ('function', 'claim_object_ok', '',     'X',    '',     'X'),           -- 0087: storage helper; true for the admin and for the engineer on their own pending claim
   ('function', 'delete_rfq',            '',    'X',    '',     ''),     -- 0092 (owner decision): permanent delete, admin only (42501 inside for everyone else)
@@ -304,6 +332,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'delete_quotation_revision', '', 'X',  '',     ''),     -- 0092: admin only
   ('function', 'delete_po_revision',    '',    'X',    '',     ''),     -- 0092: admin only
   ('function', 'delete_company',        '',    'X',    '',     ''),     -- 0092: admin only
+  ('function', 'admin_health',          '',    'X',    '',     ''),     -- 0120: admin only (42501 for everyone else)
+  ('function', 'confirm_backup_decrypt_test', '', 'X', '',     ''),     -- 0120: admin only
   ('bucket', 'claim-receipts',   'own',   'SID',  '',     'SID'),         -- 0087: receipt photos under <claim id>/: the admin, and the engineer on their own pending claim
   ('bucket', 'claim-receipts',   'other', 'SID',  '',     '');            -- 0087: another person's claim photos are closed to an engineer
 
@@ -349,8 +379,24 @@ insert into public.order_items (id, order_id, position, description, unit_price_
   (pg_temp.f('25'), pg_temp.f('20'), 0, 'Fixture order item', 100, pg_temp.f('23'), 10);
 insert into public.order_costs (order_id, expected_cost_pkr) values (pg_temp.f('20'), 5);
 insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003');
+insert into public.orders (id, company_id, owner_id) values   -- 0112 and 0116: an order with no payment (the void probe) and one that holds a payment with WHT
+  (pg_temp.f('d5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'), (pg_temp.f('d7'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');
+insert into public.payments_in (id, order_id, amount, wht_amount, wht_certificate_no) values (pg_temp.f('d6'), pg_temp.f('d7'), 5, 3, null);
+insert into public.delivery_challans (id, order_id, number, lines) values   -- 0131
+  (pg_temp.f('f5'), pg_temp.f('20'), 'DC-0001', '[{"description":"Fixture order item","qty":1}]');
+insert into public.order_visits (id, order_id, engineer_id) values   -- 0130: @f2 is the engineer's (order @20), @f3 has no engineer on an order that is not theirs (@21)
+  (pg_temp.f('f2'), pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003'),
+  (pg_temp.f('f3'), pg_temp.f('21'), null);
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
-  (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
+  (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18),
+  (pg_temp.f('d2'), pg_temp.f('d5'), 'INV-M3', 100, 18);
+-- 0112: a numbered invoice is voided, never deleted: the one the delete probes use is an unnumbered (legacy) row
+update public.invoices set number = null, legacy_flags = array['undated'] where id = pg_temp.f('27');
+insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (pg_temp.f('d3'), 'CN-M1', pg_temp.f('26'), 10, 2, 'fixture');
+insert into public.orders (id, company_id, owner_id) values (pg_temp.f('f5'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0127: an order that still owes
+insert into public.order_items (id, order_id, position, description, unit_price_net) values (pg_temp.f('f6'), pg_temp.f('f5'), 0, 'Owing line', 100);
+insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('f1'), pg_temp.f('01'), 5);   -- 0126
+insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0127
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.payments_in (id, order_id, amount, voided_at, voided_by, void_reason) values   -- 0073: voided just now by the admin
   (pg_temp.f('c0'), pg_temp.f('20'), 50, now(), 'a0000000-0000-4000-8000-000000000001', 'fixture');
@@ -439,8 +485,14 @@ insert into spec values
   ('orders', '', 'id = @21', 'notes', $q$insert into public.orders (id, company_id, owner_id) values (@a9, @01, 'a0000000-0000-4000-8000-000000000002')$q$),
   ('order_items', '', 'id = @25', 'description', $q$insert into public.order_items (id, order_id, description, unit_price_net) values (@aa, @20, 'probe', 1)$q$),
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
+  ('delivery_challans', '', 'id = @f5', 'notes', $q$insert into public.delivery_challans (id, order_id, number, lines) values (@f6, @21, 'DC-9999', '[{"description":"x","qty":1}]')$q$),   -- 0131
+  ('order_visits', '', 'id = @f2', 'notes', $q$insert into public.order_visits (id, order_id, visit_on) values (@f4, @21, current_date)$q$),   -- 0130
+  ('order_visits', 'other', 'id = @f3', 'notes', null),   -- 0130
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
+  ('customer_refunds', '', 'id = @f1', 'bank_month', $q$insert into public.customer_refunds (id, company_id, amount) values (@f3, @01, 5)$q$),   -- 0126
+  ('credit_applications', '', 'id = @f2', 'company_id', $q$insert into public.credit_applications (id, company_id, to_order_id, amount) values (@f4, @01, @f5, 5)$q$),   -- 0127
+  ('credit_notes', '', 'id = @d3', 'reason', $q$insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values (@d4, 'CN-P', @26, 10, 2, 'probe')$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
   ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000005')$q$),
@@ -501,7 +553,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
-                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
+                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted','v_company_credit',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
@@ -557,6 +609,10 @@ insert into probes values
   ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),
   ('search_all', 'supplier_po', 'X', $q$select 1 from public.search_all('PO-7002', 5) where kind = 'po'$q$),
   ('next_invoice_number', '', 'X', 'select * from public.next_invoice_number()'),
+  ('next_challan_number', '', 'X', 'select 1 where public.next_challan_number() is not null'),   -- 0131
+  ('create_delivery_challan', '', 'X', 'select public.create_delivery_challan(@20)'),   -- 0131: every goods line of the fixture order, rolled back
+  ('order_visit_summary', '', 'X', 'select * from public.order_visit_summary(@20)'),   -- 0130
+  ('sync_order_visit_summary', '', 'X', 'select public.sync_order_visit_summary(@20)'),   -- 0130
   ('stamp_payment_reminder', '', 'X', 'select 1 from (select public.stamp_payment_reminder(array[@26]) r) x where r > 0'),
   ('stamp_tcs_sent', '', 'X', 'select 1 from (select public.stamp_tcs_sent(array[@26]) r) x where r > 0'),
   ('stamp_fbr_psid', '', 'X', $q$select 1 from (select public.stamp_fbr_psid(array[@26], 'P1') r) x where r > 0$q$),
@@ -579,11 +635,17 @@ insert into probes values
   ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
+  ('customer_statement', '', 'X', 'select 1 from public.customer_statement(@01) limit 1'),   -- 0125: the fixture customer has an invoice
   ('held_advances', '', 'X', 'select 1 from public.held_advances() limit 1'),   -- 0080: the cancelled order @2e holds 40
   ('link_imported_invoices', '', 'X', 'select 1 where (select count(*) from public.link_imported_invoices()) >= 0'),   -- 0096: refused for everyone but an admin
   ('link_imported_invoice', '', 'X', 'select public.link_imported_invoice(@e8, @e7)'),   -- 0096: the unlinked imported invoice onto the imported order (same customer)
   ('unlink_imported_invoice', '', 'X', 'select public.unlink_imported_invoice(@e9)'),   -- 0096
   ('set_legacy_review', '', 'X', $q$select public.set_legacy_review('order', @e7, 'live')$q$),   -- 0096
+  ('set_supplier_order_cancelled', '', 'X', 'select public.set_supplier_order_cancelled(@23, false)'),   -- 0121: refused for everyone but an admin
+  ('reassign_owner_check', '', 'X', $q$select public.reassign_owner_check('a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('reassign_owner', '', 'X', $q$select public.reassign_owner('rfq', gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
+  ('open_work_of', '', 'X', $q$select 1 from public.open_work_of('a0000000-0000-4000-8000-000000000001') limit 1$q$),   -- 0122
+  ('reassign_open_work', '', 'X', $q$select 1 from public.reassign_open_work(gen_random_uuid(), 'a0000000-0000-4000-8000-000000000001')$q$),   -- 0122
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
@@ -593,15 +655,27 @@ insert into probes values
   ('correct_payment', '', 'X', $q$select public.correct_payment(@28, 100, public.today_pkt(), 'bank', null, 'probe')$q$),   -- 0073
   ('restore_payment', '', 'X', $q$select public.restore_payment(@c0)$q$),   -- 0073: @c0 was voided by the admin in this transaction
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),   -- 0087
+  ('owe_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004')$q$),   -- 0124
+  ('pay_back_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004'), public.pay_back_expense_claim(@e0, 'bank')$q$),   -- 0124: owed, then paid back
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),   -- 0087: one row for the admin, none for the others
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', true)$q$),   -- 0087
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
+  ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
+  ('order_credit_rows', '', 'X', 'select 1 from public.order_credit_rows(@01) limit 1'),   -- 0127: no client may call it
+  ('company_credit_balance', '', 'X', 'select 1 where public.company_credit_balance(@01) is not null'),   -- 0127
+  ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0127
+  ('apply_credit', '', 'X', $q$select 1 from (select public.apply_credit(gen_random_uuid(), @f5, 1) r) x$q$),   -- 0127
+  ('void_invoice', '', 'X', $q$select 1 from (select public.void_invoice(@d2, 'probe') r) x$q$),   -- 0112
+  ('record_payment', '', 'X', $q$select 1 from (select public.record_payment(gen_random_uuid(), @20, public.today_pkt(), 7, null, 'bank', true) r) x$q$),   -- 0114
+  ('next_credit_note_number', '', 'X', 'select 1 where public.next_credit_note_number() is not null'),   -- 0112
   ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
   ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
   ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
-  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x'),   -- 0092
+  ('admin_health', '', 'X', 'select 1 from public.admin_health()'),   -- 0120: one row for the admin, 42501 for the others
+  ('confirm_backup_decrypt_test', '', 'X', 'select 1 from (select public.confirm_backup_decrypt_test() r) x');   -- 0120
 
 -- ------------------------------------------------------------------ probes: storage buckets
 -- Storage refuses a direct SQL DELETE on storage.objects for every role (its protect_delete guard fires before row
@@ -663,7 +737,7 @@ insert into probes values
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
   'coverage: the matrix lists every table in schema public (39)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 41, 'coverage: 41 tables');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 46, 'coverage: 46 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

@@ -65,28 +65,45 @@ select ok((select gross_target = 472.00 and settled = 300.00 and receivable = 17
 --   O3 terms 0, invoiced 10 Jan 2025, paid 500: due 10 Jan, overdue, balance 680
 --   O4 not invoiced, paid 2,000: settled, overpaid 820, balance 0, no due date
 --   O5 cancelled, never invoiced: no receivable (D-MR3)          O6 cancelled after an invoice: keeps its 1,180 (D-MR3)
---   O7 terms 20, invoiced 9 Feb 2024 and 1 Mar 2024: due 29 Feb 2024 (leap day; the EARLIEST invoice + terms)
+--   O7 terms 20, invoiced 9 Feb 2024 and 1 Mar 2024, the first paid in full: due 21 Mar 2024 (0123: the OLDEST UNPAID invoice + terms)
+--   O8 the same two invoices, nothing paid: due 29 Feb 2024 (leap day; the oldest unpaid is the first)
+--   O9 the same two invoices, 590 received TIED to the second: the first is still the oldest unpaid, due 29 Feb 2024
+--   O10 the same two invoices, 590 received for neither: placed oldest first, so the second is the oldest unpaid: due 21 Mar 2024
 insert into public.orders (id, company_id, owner_id, payment_terms_days, cancelled_on) values
   ('a1000000-0000-4000-8000-000000000902', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000002', null, null),
   ('a1000000-0000-4000-8000-000000000903', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', 0, null),
   ('a1000000-0000-4000-8000-000000000904', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', null, null),
   ('a1000000-0000-4000-8000-000000000905', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', null, '2025-02-01'),
   ('a1000000-0000-4000-8000-000000000906', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', null, '2025-02-01'),
-  ('a1000000-0000-4000-8000-000000000907', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', 20, null);
+  ('a1000000-0000-4000-8000-000000000907', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', 20, null),
+  ('a1000000-0000-4000-8000-000000000908', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', 20, null),
+  ('a1000000-0000-4000-8000-000000000909', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', 20, null),
+  ('a1000000-0000-4000-8000-000000000910', 'c0000000-0000-4000-8000-000000000902', 'a0000000-0000-4000-8000-000000000001', 20, null);
 insert into public.order_items (order_id, description, qty, unit_price_net, gst_rate)
 select o, 'standard line', 1, 1000, 18
 from unnest(array['a1000000-0000-4000-8000-000000000902', 'a1000000-0000-4000-8000-000000000903', 'a1000000-0000-4000-8000-000000000904',
-                  'a1000000-0000-4000-8000-000000000905', 'a1000000-0000-4000-8000-000000000906', 'a1000000-0000-4000-8000-000000000907']::uuid[]) o;
+                  'a1000000-0000-4000-8000-000000000905', 'a1000000-0000-4000-8000-000000000906', 'a1000000-0000-4000-8000-000000000907',
+                  'a1000000-0000-4000-8000-000000000908', 'a1000000-0000-4000-8000-000000000909', 'a1000000-0000-4000-8000-000000000910']::uuid[]) o;
 insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst_amount) values
   ('e1000000-0000-4000-8000-000000000902', 'a1000000-0000-4000-8000-000000000902', 'ORC-0902', '2025-01-10', 1000, 180),
   ('e1000000-0000-4000-8000-000000000903', 'a1000000-0000-4000-8000-000000000903', 'ORC-0903', '2025-01-10', 1000, 180),
   ('e1000000-0000-4000-8000-000000000906', 'a1000000-0000-4000-8000-000000000906', 'ORC-0906', '2025-01-10', 1000, 180),
   ('e1000000-0000-4000-8000-000000000907', 'a1000000-0000-4000-8000-000000000907', 'ORC-0907A', '2024-02-09', 500, 90),
-  ('e1000000-0000-4000-8000-000000000908', 'a1000000-0000-4000-8000-000000000907', 'ORC-0907B', '2024-03-01', 500, 90);
+  ('e1000000-0000-4000-8000-000000000908', 'a1000000-0000-4000-8000-000000000907', 'ORC-0907B', '2024-03-01', 500, 90),
+  ('e1000000-0000-4000-8000-000000000909', 'a1000000-0000-4000-8000-000000000908', 'ORC-0908A', '2024-02-09', 500, 90),
+  ('e1000000-0000-4000-8000-000000000910', 'a1000000-0000-4000-8000-000000000908', 'ORC-0908B', '2024-03-01', 500, 90),
+  ('e1000000-0000-4000-8000-000000000911', 'a1000000-0000-4000-8000-000000000909', 'ORC-0909A', '2024-02-09', 500, 90),
+  ('e1000000-0000-4000-8000-000000000912', 'a1000000-0000-4000-8000-000000000909', 'ORC-0909B', '2024-03-01', 500, 90),
+  ('e1000000-0000-4000-8000-000000000913', 'a1000000-0000-4000-8000-000000000910', 'ORC-0910A', '2024-02-09', 500, 90),
+  ('e1000000-0000-4000-8000-000000000914', 'a1000000-0000-4000-8000-000000000910', 'ORC-0910B', '2024-03-01', 500, 90);
 insert into public.payments_in (id, order_id, received_on, amount) values
   ('a4000000-0000-4000-8000-000000000902', 'a1000000-0000-4000-8000-000000000902', '2025-02-01', 1179.00),
   ('a4000000-0000-4000-8000-000000000903', 'a1000000-0000-4000-8000-000000000903', '2025-02-01', 500.00),
-  ('a4000000-0000-4000-8000-000000000904', 'a1000000-0000-4000-8000-000000000904', '2025-02-01', 2000.00);
+  ('a4000000-0000-4000-8000-000000000904', 'a1000000-0000-4000-8000-000000000904', '2025-02-01', 2000.00),
+  ('a4000000-0000-4000-8000-000000000907', 'a1000000-0000-4000-8000-000000000907', '2024-02-20', 590.00),
+  ('a4000000-0000-4000-8000-000000000910', 'a1000000-0000-4000-8000-000000000910', '2024-02-20', 590.00);
+insert into public.payments_in (id, order_id, received_on, amount, invoice_id) values
+  ('a4000000-0000-4000-8000-000000000909', 'a1000000-0000-4000-8000-000000000909', '2024-02-20', 590.00, 'e1000000-0000-4000-8000-000000000912');
 
 set local role authenticated;
 select ok((select gross_target = 1180 and settled = 1179 and balance = 1.00 and overpaid_by = 0 and payment_state = 'settled'
@@ -103,8 +120,20 @@ select is((select count(*)::int from public.order_receivables('a1000000-0000-400
   'O5 (D-MR3): a cancelled order that was never invoiced owes nothing and is not listed');
 select is((select balance from public.order_receivables('a1000000-0000-4000-8000-000000000906')), 1180.00::numeric,
   'O6 (D-MR3): a cancelled order that was invoiced keeps its real balance');
-select is((select due_on from public.order_receivables('a1000000-0000-4000-8000-000000000907')), '2024-02-29'::date,
-  'O7: due = EARLIEST invoice date + terms (9 Feb 2024 + 20 = 29 Feb 2024, a leap day)');
+select is((select due_on from public.order_receivables('a1000000-0000-4000-8000-000000000907')), '2024-03-21'::date,
+  'O7 (0123): the first invoice is paid, so the order follows the OLDEST UNPAID invoice: 1 Mar 2024 + 20 = 21 Mar 2024');
+select is((select due_on from public.order_receivables('a1000000-0000-4000-8000-000000000908')), '2024-02-29'::date,
+  'O8: nothing paid: the oldest unpaid is the first invoice, 9 Feb 2024 + 20 = 29 Feb 2024 (a leap day)');
+select is((select due_on from public.order_receivables('a1000000-0000-4000-8000-000000000909')), '2024-02-29'::date,
+  'O9 (0123): a payment tied to the second invoice leaves the first the oldest unpaid');
+select is((select due_on from public.order_receivables('a1000000-0000-4000-8000-000000000910')), '2024-03-21'::date,
+  'O10 (0123): an untied payment is placed oldest first, so the second invoice is the oldest unpaid');
+select is((select count(*)::int from public.aging_as_of('2024-04-30') where order_id = 'a1000000-0000-4000-8000-000000000909' and invoice_id = 'e1000000-0000-4000-8000-000000000911' and remaining = 590), 1,
+  'aging (0123): the tied payment settled the second invoice; the first still ages in full');
+select is((select count(*)::int from public.aging_as_of('2024-04-30') where order_id = 'a1000000-0000-4000-8000-000000000909' and invoice_id = 'e1000000-0000-4000-8000-000000000912'), 0,
+  'aging (0123): the invoice a payment was tied to is not aged');
+select is((select count(*)::int from public.aging_as_of('2024-04-30') where order_id = 'a1000000-0000-4000-8000-000000000910' and invoice_id = 'e1000000-0000-4000-8000-000000000913'), 0,
+  'aging (0123): an untied payment settles the oldest invoice first');
 
 -- The same figures through v_order_money (admin: order page, orders list, company page) for every order receivables lists.
 select is((select count(*)::int
