@@ -100,7 +100,7 @@ test('no-access personas call no function with a result, and write nothing', asy
       const r = await api(p, `/rest/v1/${t}`, { method: 'POST', body })
       expect.soft(r.status, `${p} inserts into ${t}`).toBeGreaterThanOrEqual(400)
     }
-    const patch = await api(p, `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { notes: 'intruder' }, prefer: 'return=representation' })
+    const patch = await api(p, `/rest/v1/orders?id=eq.${world.order.id}&select=id,notes`, { method: 'PATCH', body: { notes: 'intruder' }, prefer: 'return=representation' })
     expect.soft(patch.status >= 400 || (Array.isArray(patch.body) && patch.body.length === 0), `${p} updates an order: ${patch.status} ${patch.text.slice(0, 80)}`).toBe(true)
   }
 })
@@ -369,7 +369,7 @@ test('legacy-only columns through the API: settled_before_cutover is refused', a
 })
 
 test('BUG-RV-02: app users cannot set legacy_source through the API', async () => {
-  const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { legacy_source: { forged: true } }, prefer: 'return=representation' })
+  const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,legacy_source`, { method: 'PATCH', body: { legacy_source: { forged: true } }, prefer: 'return=representation' })
   const landed = r.status < 300 && Array.isArray(r.body) && (r.body as { legacy_source: unknown }[])[0]?.legacy_source !== null
   expect(landed, `engineer PATCH orders.legacy_source: ${r.status}`).toBe(false)
 })

@@ -42,7 +42,7 @@ test('an engineer cannot change the owner or the legacy flags of an order, throu
   const before = await api('admin', `/rest/v1/orders?id=eq.${world.order.id}&select=owner_id,legacy_flags,created_by`)
   const was = (before.body as Array<{ owner_id: string; legacy_flags: string[]; created_by: string | null }>)[0]
   for (const patch of [{ owner_id: IDS.engineer }, { legacy_flags: ['owner_unknown'] }, { created_by: IDS.engineer }]) {
-    const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: patch, prefer: 'return=representation' })
+    const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,owner_id,legacy_flags,created_by`, { method: 'PATCH', body: patch, prefer: 'return=representation' })
     // PostgREST answers a PATCH with the row even when a trigger kept the old value, so the proof is the stored value below
     test.info().annotations.push({ type: `engineer PATCH ${Object.keys(patch)[0]}`, description: `${r.status}` })
   }
