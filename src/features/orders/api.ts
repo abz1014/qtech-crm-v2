@@ -1,7 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { poRef } from '@/lib/refs'
 import { PlainError } from '@/lib/errors/plainError'
-import type { TableUpdate, ViewRow } from '@/features/dbTypes'
+import type { TableRow, TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
 import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
 import type { RankedQuote } from '@/features/orders/lib/ranking'
@@ -59,6 +59,33 @@ export interface OrderHeader {
   } | null
 }
 
+/**
+ * The order's own columns for the header, named one by one: never `*`. An engineer's database role has no SELECT on
+ * orders.customer_po_number (0133), so `*` would be refused to them and the customer PO would reach the browser of anyone allowed it.
+ * The PO is added for admin and sales only.
+ */
+const ORDER_HEADER_COLS =
+  'id, number, company_id, rfq_id, created_by, ordered_on, payment_terms_days, needs_commissioning, commissioning_planned_on, visit_type, commissioning_done_on, updated_at, cancelled_on, cancel_reason, legacy_source, notes, site_id, contact_id, owner_id'
+const ORDER_HEADER_EMBEDS = 'company:companies!orders_company_id_fkey(name), site:company_sites!orders_site_id_fkey(name, address), contact:contacts!orders_contact_id_fkey(name, phone), owner:users!orders_owner_id_fkey(id, name)'
+
+type Embedded<T> = T | T[] | null
+type OrderHeaderRow = Pick<
+  TableRow<'orders'>,
+  | 'id' | 'number' | 'company_id' | 'rfq_id' | 'created_by' | 'ordered_on' | 'payment_terms_days' | 'needs_commissioning'
+  | 'commissioning_planned_on' | 'visit_type' | 'commissioning_done_on' | 'updated_at' | 'cancelled_on' | 'cancel_reason'
+  | 'legacy_source' | 'notes' | 'site_id' | 'contact_id' | 'owner_id'
+> & {
+  /** Present only when it was asked for (admin and sales); an engineer's row has no such key. */
+  customer_po_number?: string | null
+  company: Embedded<{ name: string }>
+  site: Embedded<{ name: string; address: string | null }>
+  contact: Embedded<{ name: string; phone: string | null }>
+  owner: Embedded<{ id: string; name: string }>
+}
+
+/** The select string for the order header: no `*`, and the customer PO number only when `money` is true (admin and sales). */
+export const orderHeaderSelect = (money: boolean): string => `${ORDER_HEADER_COLS}${money ? ', customer_po_number' : ''}, ${ORDER_HEADER_EMBEDS}`
+
 const STATE_NO_MONEY = 'order_id, lifecycle, goods_state, commissioning_state, data_trust'
 const STATE_WITH_MONEY = 'order_id, lifecycle, goods_state, commissioning_state, invoicing_state, data_trust, net, gst, gross, invoiced'
 
@@ -71,9 +98,9 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
   const [orderRes, stateRes] = await Promise.all([
     db
       .from('orders')
-      .select('*, company:companies!orders_company_id_fkey(name), site:company_sites!orders_site_id_fkey(name, address), contact:contacts!orders_contact_id_fkey(name, phone), owner:users!orders_owner_id_fkey(id, name)')
+      .select(orderHeaderSelect(money))
       .eq('id', id)
-      .maybeSingle(),
+      .maybeSingle() as unknown as PromiseLike<{ data: OrderHeaderRow | null; error: { code?: string; message: string } | null }>,
     db
       .from('v_order_state')
       .select(money ? STATE_WITH_MONEY : STATE_NO_MONEY)
@@ -94,7 +121,7 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
     companyId: o.company_id,
     companyName: company?.name ?? 'Unknown company',
     rfqId: o.rfq_id,
-    customerPo: o.customer_po_number,
+    customerPo: money ? (o.customer_po_number ?? null) : null,
     createdBy: o.created_by ?? null,
     orderedOn: o.ordered_on,
     paymentTermsDays: o.payment_terms_days,
@@ -808,7 +835,8 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
           .from('orders')
           // every line (description, quantity, its supplier order; never a price) and the supplier orders with their dates and supplier
           .select(
-            'id, number, customer_po_number, ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position, supplier_order_id, is_service), supplier_orders(id, placed_on, expected_on, delivered_on, companies(name))',
+            // the customer PO number only for admin and sales: an engineer's role may not read the column (0133)
+            `id, number, ${money ? 'customer_po_number, ' : ''}ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position, supplier_order_id, is_service), supplier_orders(id, placed_on, expected_on, delivered_on, companies(name))`,
           )
           // Only the supplier orders a Next step can name: not yet delivered, or never marked placed. One that is placed and
           // delivered never changes the step (orderSteps reads open = placed and not delivered, and to-place = not placed), so it
@@ -867,7 +895,7 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
     return {
       id: o.id,
       number: o.number,
-      customerPo: o.customer_po_number,
+      customerPo: money ? (o.customer_po_number ?? null) : null,
       orderedOn: o.ordered_on,
       ownerId: o.owner_id ?? null,
       ownerName: o.owner_id ? (names.get(o.owner_id) ?? null) : null,

@@ -281,8 +281,8 @@ select is(pg_temp.code_('sales', $q$update public.orders set customer_po_number 
   'sales change the customer PO of the order they own');
 select is(pg_temp.code_('engineer', $q$update public.orders set notes = 'on site' where id = @21 returning 1$q$), 'ok:1',
   'an engineer writes notes on any order');
-select is(pg_temp.code_('engineer', $q$update public.orders set customer_po_number = 'PO-Y' where id = @21 returning 1$q$), 'E:42501:not_yours',
-  'but not its customer PO');
+select is(pg_temp.code_('engineer', $q$update public.orders set customer_po_number = 'PO-Y' where id = @21 returning 1$q$), 'E:42501:',
+  'but not its customer PO (0133: the column itself is closed to the engineer role, so the refusal is the plain 42501 and no longer the not_yours hint)');
 select is(pg_temp.code_('sales', 'update public.order_items set unit_price_net = 1 where id = @23 returning 1'), 'E:42501:not_yours',
   'sales cannot change the price of a line on the admin''s order');
 select is(pg_temp.code_('sales', 'update public.order_items set qty = 4 where id = @23 returning 1'), 'E:42501:not_yours', 'nor its quantity');

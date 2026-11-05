@@ -262,7 +262,7 @@ export function OrderHeaderBlock({
         }
         meta={[
           order.site && !isEngineer ? order.site.name : null,
-          customerPo,
+          isEngineer ? null : customerPo,
           ordered,
           order.owner ? `Owner ${order.owner.name}` : null,
           money ? <span data-testid="order-terms">{termsText}</span> : null,

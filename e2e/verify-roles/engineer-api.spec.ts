@@ -73,6 +73,27 @@ test('the history an engineer can fetch names no priced file and has no price-li
   }
 })
 
+test('the customer PO number is refused to an engineer by the database, and still read by admin and sales (0133)', async () => {
+  const col = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=customer_po_number`)
+  expect(col.status, 'engineer orders?select=customer_po_number').toBe(403)
+  expect(col.text).not.toContain(`${world.tag}-PO`)
+  const all = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=*`)
+  expect(all.status, 'engineer orders?select=*').toBe(403)
+  expect(all.text).not.toContain(`${world.tag}-PO`)
+  const embedded = await api('engineer', `/rest/v1/order_items?order_id=eq.${world.order.id}&select=id,orders(customer_po_number)`)
+  expect(embedded.text, 'nor through an embed').not.toContain(`${world.tag}-PO`)
+  const filtered = await api('engineer', `/rest/v1/orders?customer_po_number=eq.${world.tag}-PO&select=id`)
+  expect(filtered.status, 'nor can the engineer probe it with a filter').toBe(403)
+  const own = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,number,company_id`)
+  expect(own.status, 'the engineer still reads the order itself').toBe(200)
+  expect((own.body as unknown[]).length).toBe(1)
+  for (const p of ['admin', 'sales'] as const) {
+    const r = await api(p, `/rest/v1/orders?id=eq.${world.order.id}&select=customer_po_number`)
+    expect(r.status, `${p} still reads the PO`).toBe(200)
+    expect((r.body as Array<{ customer_po_number: string }>)[0]?.customer_po_number).toBe(`${world.tag}-PO`)
+  }
+})
+
 test('search_all finds an engineer no invoice number and no customer PO; the admin finds both', async () => {
   const find = async (who: 'engineer' | 'admin', q: string) => (await api(who, '/rest/v1/rpc/search_all', { method: 'POST', body: { q, lim: 25 } })).body as Array<{ kind: string; label: string }>
   for (const q of [`INV-${world.tag}`, `${world.tag}-PO`]) {

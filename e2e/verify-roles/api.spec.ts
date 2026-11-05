@@ -128,6 +128,7 @@ const PRICE_COLUMNS: Record<string, string[]> = {
   order_items: ['unit_price_net', 'supplier_unit_price'],
   purchase_orders: ['total', 'lines'],
   fx_rates: ['rate_pkr'],
+  orders: ['customer_po_number'], // 0133: the customer's PO number is for admin and sales only
 }
 
 test('engineer: no money of any kind in any table or view, column by column (prices included, 0081)', async () => {
@@ -205,7 +206,7 @@ test('engineer and sales: embedded selects reach no money table', async () => {
       const hidden = JSON.stringify(r.body).match(/"(invoices|payments_in|order_costs|expenses)":\s*(\[\s*\{|\{)/g) ?? []
       const allowed = p === 'sales' ? hidden.filter(h => h.startsWith('"invoices"')) : []
       expect.soft(hidden.filter(h => !allowed.includes(h)), `${p} ${path}: embedded money rows`).toEqual([])
-      expect.soft(moneyIn(path.split('?')[0], r.body).filter(l => l.rule === 'hidden' && !(p === 'sales' && /invoices/.test(l.where))), `${p} ${path}: hidden money values`).toEqual([])
+      expect.soft(moneyIn(path.split('?')[0], r.body).filter(l => l.rule === 'hidden' && !(p === 'sales' && (/invoices/.test(l.where) || l.field === 'customer_po_number'))), `${p} ${path}: hidden money values`).toEqual([])
     }
   }
   const admin = await api('admin', `/rest/v1/${embeds[0]}`)
@@ -315,11 +316,11 @@ test('0100/0103: a customer PO uploaded by SALES through the app is closed to an
 })
 
 test('0101 (phase 7): an engineer sets the visit type on their own site only, and the engineer view of an order still holds no money', async () => {
-  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { visit_type: 'installation' }, prefer: 'return=representation' })
+  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,visit_type`, { method: 'PATCH', body: { visit_type: 'installation' }, prefer: 'return=representation' })
   expect(mine.status, 'the assigned engineer sets the type').toBeLessThan(300)
   const back = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,visit_type`)
   expect(back.body).toEqual([{ id: world.order.id, visit_type: 'installation' }])
-  const theirs = await api('engineer', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
+  const theirs = await api('engineer', `/rest/v1/orders?id=eq.${world.legacyOrder.id}&select=id,visit_type`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
   expect(theirs.status, 'an engineer not assigned to the site is refused').toBeGreaterThanOrEqual(400)
   expect(JSON.stringify(theirs.body)).toContain('not_assigned')
   const sales = await api('sales', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
