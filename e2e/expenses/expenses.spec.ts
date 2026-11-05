@@ -637,6 +637,66 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByTestId(`recurring-${name}`).getByRole('button', { name: `Record ${name}` })).toBeVisible()
   })
 
+  test('To do: Record all records a due bill at the amount shown, and never twice in a month (0138)', async ({ page }) => {
+    const label = `Electricity ${unique()}`
+    const [tpl] = await must(
+      rest<{ id: string }[]>('admin', 'recurring_expenses', { method: 'POST', body: { label, category_id: UTILITIES, amount: 9500, day_of_month: 1 } }),
+    )
+    await openAs(page, 'admin', '/todo')
+    await page.getByRole('button', { name: /^Record all: Expenses/ }).first().click()
+    const pane = page.getByTestId('recurring-reminder')
+    await expect(pane.getByTestId(`reminder-${label}`)).toBeVisible()
+    // this month's bill is different: change the amount before recording
+    await pane.getByRole('textbox', { name: `Amount for ${label}, PKR` }).fill('9,750')
+    await page.keyboard.press('Tab')
+    await review(page, 'recurring-reminder-1440')
+    await pane.getByRole('button', { name: /^Record all \(Rs / }).click()
+    await expect(pane.getByTestId(`reminder-${label}`)).toHaveCount(0)
+    const rows = await must(rest<ExpenseRow[]>('admin', `expenses?recurring_id=eq.${tpl.id}&select=*`))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount_pkr: 9750, category_id: UTILITIES, period: forMonthOf(`${today().slice(0, 7)}-01`), description: label })
+    // a second press, a second tab, or the database itself: (recurring_id, period) is unique, so the month holds one
+    const again = await rest('admin', 'expenses', { method: 'POST', body: { amount_pkr: 9750, category_id: UTILITIES, paid_via: 'bank', recurring_id: tpl.id, period: rows[0].period } })
+    expect(again.status).toBe(409)
+    await page.reload()
+    await expect(page.getByTestId(`reminder-${label}`)).toHaveCount(0)
+    expect(await must(rest<ExpenseRow[]>('admin', `expenses?recurring_id=eq.${tpl.id}&select=id`))).toHaveLength(1)
+  })
+
+  test('Book it for me: the daily job books a fixed bill once, flagged Auto, and skips a template with the switch off (0138)', async ({ page }) => {
+    const on = `Rent auto ${unique()}`
+    const off = `Rent manual ${unique()}`
+    const [tOn, tOff] = await must(
+      rest<{ id: string; auto_book: boolean }[]>('admin', 'recurring_expenses', {
+        method: 'POST',
+        body: [
+          { label: on, category_id: RENT, amount: 64000, day_of_month: 2, auto_book: true },
+          { label: off, category_id: RENT, amount: 64000, day_of_month: 2, auto_book: false },
+        ],
+      }),
+    )
+    expect(tOff.auto_book).toBe(false) // off unless chosen
+    // a far-off day, so no month of the live data is touched; run twice: the second run books nothing
+    const first = await must(rest<number>('admin', 'rpc/book_recurring_month', { method: 'POST', body: { p_today: '2031-03-02' } }))
+    expect(first).toBeGreaterThanOrEqual(1)
+    const second = await must(rest<number>('admin', 'rpc/book_recurring_month', { method: 'POST', body: { p_today: '2031-03-02' } }))
+    expect(second).toBe(0)
+    const rows = await must(rest<(ExpenseRow & { auto_booked: boolean })[]>('admin', `expenses?recurring_id=eq.${tOn.id}&select=*`))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount_pkr: 64000, paid_on: '2031-03-02', period: '2031-03', auto_booked: true, description: on })
+    expect(await must(rest<ExpenseRow[]>('admin', `expenses?recurring_id=eq.${tOff.id}&select=id`))).toHaveLength(0)
+    // sales and engineers cannot run it
+    for (const role of ['sales', 'engineer'] as const) {
+      const res = await rest(role, 'rpc/book_recurring_month', { method: 'POST', body: { p_today: '2031-03-02' } })
+      expect(res.status).toBeGreaterThanOrEqual(400)
+    }
+    // the dialog has the switch, off for a bill that was added without it
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByTestId(`recurring-${off}`).getByRole('button', { name: `Edit ${off}` }).click()
+    await expect(page.getByRole('checkbox', { name: 'Book it for me' })).not.toBeChecked()
+    await expect(page.getByText(/Use it only for fixed amounts/)).toBeVisible()
+  })
+
   test('sales and engineer get no access, and the database refuses them too', async ({ browser }) => {
     for (const role of ['sales', 'engineer'] as const) {
       const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()

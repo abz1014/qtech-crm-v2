@@ -30,6 +30,7 @@ const schema = z.object({
   dayOfMonth: z.number().int().min(1, 'Use a day from 1 to 28').max(28, 'Use a day from 1 to 28').nullable(),
   startMonth: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/, 'Pick the month it starts, written like 2026-11.'),
   active: z.boolean(),
+  autoBook: z.boolean(),
   paidVia: z.enum(['bank', 'cash']),
 })
 type Values = z.input<typeof schema>
@@ -54,6 +55,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
       dayOfMonth: template?.dayOfMonth ?? null,
       startMonth: template?.startMonth ?? '',
       active: template?.active ?? true,
+      autoBook: template?.autoBook ?? false,
       paidVia: template?.paidVia ?? (template ? paidViaFor(template.categoryId, categories) : 'bank'),
     } satisfies Partial<Values>,
     onSubmit: (v, { requestId }) =>
@@ -66,6 +68,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
         dayOfMonth: v.dayOfMonth,
         startMonth: v.startMonth || null,
         active: v.active,
+        autoBook: v.autoBook,
         notes: template?.notes ?? null,
         paidVia: v.paidVia as PaidVia,
       }),
@@ -127,6 +130,14 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
           </div>
           <FormField<Values, 'active'> name="active" label={<span className="sr-only">Active</span>}>
             {f => <Checkbox label="Active (due each month)" checked={f.value} onCheckedChange={c => f.onChange(c === true)} />}
+          </FormField>
+          <FormField<Values, 'autoBook'> name="autoBook" label={<span className="sr-only">Book it for me</span>}>
+            {f => (
+              <div className="grid gap-1">
+                <Checkbox label="Book it for me" checked={f.value} onCheckedChange={c => f.onChange(c === true)} />
+                <p className="pl-6 text-base text-fg-2">Use it only for fixed amounts. It is booked on its day each month.</p>
+              </div>
+            )}
           </FormField>
         </Form>
       </DialogContent>

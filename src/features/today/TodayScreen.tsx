@@ -24,7 +24,7 @@ import { TeamView } from '@/features/today/TeamView'
 import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
-import { ACTION_LABEL, BLOCK_TITLE, WAITING_TITLE, blockOf, buildTodo, moreText, opensMessage, secondAction, type TodoBlock } from '@/features/today/todoModel'
+import { ACTION_LABEL, BLOCK_TITLE, WAITING_TITLE, blockOf, buildTodo, moreText, opensPane, secondAction, type TodoBlock } from '@/features/today/todoModel'
 import type { Role, RuleKey, TodayItem } from '@/features/today/types'
 import { NoPrimary } from '@/ui/NoPrimary'
 
@@ -185,7 +185,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   }
   /** The row's own button: a prepared message opens beside the list (under the row on a phone), anything else goes to its page. */
   const act = (i: TodayItem) => {
-    if (opensMessage(i.rule)) {
+    if (opensPane(i.rule)) {
       if (wide) setSelected(i.key)
       else setExpanded(i.key)
     } else navigate(i.href)

@@ -319,7 +319,7 @@ function buildColumns(
         const d = describe(r, categories, listing)
         return (
           <div className="grid min-w-0 gap-px">
-            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{d.name}</span>
+            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{d.name}{r.autoBooked ? <AutoTag /> : null}</span>
             {d.detail ? <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{d.detail}</span> : null}
           </div>
         )
@@ -404,7 +404,7 @@ function ExpenseCard({
   const d = describe(row, categories, listing)
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-[2px] py-1">
-      <span className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{d.name}</span>
+      <span className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{d.name}{row.autoBooked ? <AutoTag /> : null}</span>
       <Money value={row.amount} prefix={false} className="justify-self-end text-right text-base font-medium" />
       {locked ? (
         <Button variant="quiet" size="touch" icon={History} className="row-span-2 min-w-[44px]" aria-label={`History of ${d.name} of ${row.amount}`} onClick={() => onHistory(row)} />
@@ -433,4 +433,9 @@ function ExpenseCard({
       </span>
     </div>
   )
+}
+
+/** 0138: booked by the daily job (Book it for me) and not yet looked at; opening the row and saving it, or ticking it on the bank statement, clears it. */
+function AutoTag() {
+  return (<span className="ml-2 inline-flex items-center rounded-round border bg-sunken px-2 text-base font-normal text-fg-2" title="Booked automatically. Open it and save to confirm.">Auto</span>)
 }

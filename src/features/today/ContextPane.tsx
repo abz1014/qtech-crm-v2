@@ -42,6 +42,7 @@ import type { TodayData } from '@/features/today/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft, type Draft } from '@/features/today/chaseDraft'
 import { chaseMemo, clockText, excerptOf, forgetChase, rememberChase } from '@/features/today/chaseMemory'
 import { performChase, useLegDraft, usePaymentDraft, useRefreshAfterChase, type ChaseSpec } from '@/features/today/hooks'
+import { RecurringReminder } from '@/features/today/RecurringReminder'
 import { SnoozeMenu } from '@/features/today/SnoozeMenu'
 import type { TodayItem } from '@/features/today/types'
 import { agoText, distanceText } from '@/features/today/text'
@@ -451,6 +452,8 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
         </div>
+      ) : item.rule === 'recurring_due' && user?.role === 'admin' ? (
+        <RecurringReminder item={item} bills={data.recurring} today={today} compact={compact} />
       ) : (
         <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4">
           <p className="mr-auto text-sm text-fg-2">{howTo(item)}</p>
@@ -641,7 +644,7 @@ function howTo(item: TodayItem): string {
     case 'weekly_review':
       return 'Quotations nobody decided, enquiries nobody asked suppliers about, goods and payments far past their date. Decide each one: still live, chase, or close as lost.'
     case 'recurring_due':
-      return 'These recurring expenses have no entry for this month yet. Open Expenses and record each one; it is one tap.'
+      return 'These recurring expenses have no entry for this month yet. Record them all in one tap, changing an amount first if this month’s bill is different.'
     default:
       return 'Open the record.'
   }

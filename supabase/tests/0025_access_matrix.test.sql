@@ -326,6 +326,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'approve_expense_claim', '', 'X',  '',     ''),            -- 0087: admin only (42501 for everyone else)
   ('function', 'owe_expense_claim', '', 'X', '', ''),   -- 0124: admin only (42501 for everyone else)
   ('function', 'pay_back_expense_claim', '', 'X', '', ''),   -- 0124: admin only
+  ('function', 'book_recurring_month',  '',    'X',    '',     ''),     -- 0138: books the auto_book templates (pg_cron daily 03:00 Karachi; an admin may call it, 42501 inside for everyone else)
   ('function', 'cash_in_hand',   '',      'X',    '',     ''),            -- 0087: admin only (no row for the others)
   ('function', 'claim_object_ok', '',     'X',    '',     'X'),           -- 0087: storage helper; true for the admin and for the engineer on their own pending claim
   ('function', 'delete_rfq',            '',    'X',    '',     ''),     -- 0092 (owner decision): permanent delete, admin only (42501 inside for everyone else)
@@ -667,6 +668,7 @@ insert into probes values
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),   -- 0087
   ('owe_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004')$q$),   -- 0124
   ('pay_back_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004'), public.pay_back_expense_claim(@e0, 'bank')$q$),   -- 0124: owed, then paid back
+  ('book_recurring_month', '', 'X', $q$select 1 where public.book_recurring_month(date '2020-01-01') >= 0$q$),   -- 0138: admin only (42501 inside for everyone else); rolled back
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),   -- 0087: one row for the admin, none for the others
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', true)$q$),   -- 0087
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back

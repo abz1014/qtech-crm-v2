@@ -130,6 +130,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
   },
   expenses: {
     amount_pkr: m('Amount'),
+    auto_booked: b('Booked automatically, not yet checked'),
     bank_month: ticked,
     category_id: r('Category'),
     description: t('Detail'),
@@ -222,6 +223,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
   recurring_expenses: {
     active: b('Active'),
     amount: m('Amount'),
+    auto_book: b('Book it for me'),
     category_id: r('Category'),
     day_of_month: t('Day of month'),
     label: t('Name'),

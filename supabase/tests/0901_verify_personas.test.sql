@@ -455,6 +455,7 @@ insert into probes values
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
   ('owe_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004')$q$),   -- 0124
   ('pay_back_expense_claim', '', 'X', $q$select public.owe_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004'), public.pay_back_expense_claim(@e0, 'bank')$q$),   -- 0124: owed, then paid back
+  ('book_recurring_month', '', 'X', $q$select 1 where public.book_recurring_month(date '2020-01-01') >= 0$q$),   -- 0138: admin only (42501 inside for everyone else); rolled back
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$),
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
@@ -578,9 +579,9 @@ from (values ('anon'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['admin_health', 'apply_credit', 'attachment_is_priced', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
+          array['admin_health', 'apply_credit', 'attachment_is_priced', 'book_recurring_month', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
                 'order_receivables', 'receipt_locked', 'record_history_rows', 'record_refund', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed sixteen (0127: record_refund and apply_credit, admin only; 0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed seventeen (0138: book_recurring_month, admin only inside, and pg_cron runs it; 0127: record_refund and apply_credit, admin only; 0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')

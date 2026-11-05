@@ -43,7 +43,7 @@ export const ACTION_LABEL: Record<RuleKey, string> = {
   costs_incomplete: 'Add costs',
   fbr_attention: 'Check invoices',
   tcs_not_sent: 'Mark posted',
-  recurring_due: 'Add expenses',
+  recurring_due: 'Record all',
   job_commissioning: 'Open job',
   job_on_site: 'Set date',
   weekly_review: 'Start review',
@@ -57,6 +57,9 @@ export const ACTION_LABEL: Record<RuleKey, string> = {
 /** Rules whose button opens the prepared message (the context pane holds Copy, Open in WhatsApp and Mark chased). */
 const MESSAGE_RULES: ReadonlySet<RuleKey> = new Set<RuleKey>(['chase_customer', 'chase_supplier', 'goods_late', 'payment_overdue'])
 export const opensMessage = (rule: RuleKey): boolean => MESSAGE_RULES.has(rule)
+
+/** 0138: the recurring-bills row opens its pane too: the amounts to check and the one Record all button. */
+export const opensPane = (rule: RuleKey): boolean => MESSAGE_RULES.has(rule) || rule === 'recurring_due'
 
 /** A second button on a row, for the one person who may use it: Record payment is admin only (0010). */
 export function secondAction(item: Pick<TodayItem, 'rule' | 'orderId'>, role: string): { label: string; href: string } | null {

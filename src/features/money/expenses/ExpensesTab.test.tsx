@@ -21,7 +21,7 @@ const CATEGORIES = [cat('c-water', 'Water', OFFICE, 'overhead'), cat('c-sup', 'S
 const exp = (id: string, paid_on: string, amount_pkr: number, category_id: string, description: string | null) => ({
   id, paid_on, amount_pkr, category_id, description, input_tax_pkr: 0, paid_via: 'cash', order_id: null, supplier_order_id: null, payee_id: null, recurring_id: null, bank_month: null,
 })
-const ROWS = [exp('e1', '2026-09-03', 500, 'c-water', 'Office water'), exp('e2', '2026-09-11', 380000, 'c-sup', null), exp('e3', '2026-09-17', 1150, 'c-water', 'Office water')]
+const ROWS = [exp('e1', '2026-09-03', 500, 'c-water', 'Office water'), exp('e2', '2026-09-11', 380000, 'c-sup', null), { ...exp('e3', '2026-09-17', 1150, 'c-water', 'Office water'), auto_booked: true }]
 
 function setup(closed: string[] = [], onDelete: () => { data?: unknown; error?: unknown } = () => ({ data: [{ id: 'x' }] })) {
   const db = installFakeDb((c: FakeCall) => {
@@ -62,6 +62,12 @@ describe('Expenses list (0086)', () => {
     // Office running (sort 10) comes before Order costs (sort 50), whatever the dates
     const text = table.textContent ?? ''
     expect(text.indexOf('Office running')).toBeLessThan(text.indexOf('Order costs'))
+  })
+
+  it('an expense booked by the daily job (Book it for me) carries a small Auto tag; the others do not', async () => {
+    setup()
+    await screen.findByTestId('expenses-month-total')
+    expect(screen.getAllByText('Auto')).toHaveLength(1)
   })
 
   it('delete asks once, then runs at once; the toast comes after the server confirms', async () => {
