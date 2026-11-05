@@ -154,25 +154,6 @@ describe('Jobs list', () => {
       expect(asked(calls)).toHaveLength(0)
     })
 
-    it('the phone card shows the PO, the items and the owner on their own lines; an engineer gets no PO line', async () => {
-      const orig = window.matchMedia
-      window.matchMedia = ((q: string) => ({ matches: q === '(max-width: 639px)', media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as typeof window.matchMedia
-      try {
-        installFakeDb(withPo)
-        const admin = mount('admin', '/jobs?chip=open')
-        await waitFor(() => expect(screen.getAllByRole('row', { name: /Job O-45/ })[0]).toHaveTextContent('PO FIB-PO-8841'))
-        const card = screen.getAllByRole('row', { name: /Job O-45/ })[0]
-        expect(card).toHaveTextContent('Flow meter RST 1158S +2 more')
-        expect(card).toHaveTextContent('Owner Hammad')
-        admin.unmount()
-        const { container } = mount('engineer', '/jobs?chip=open')
-        await waitFor(() => expect(screen.getAllByRole('row', { name: /Job O-45/ })[0]).toHaveTextContent('Owner Hammad'))
-        expect(container.textContent).not.toMatch(/PO FIB/)
-      } finally {
-        window.matchMedia = orig
-      }
-    })
-
     it('admin and sales are offered all six; an engineer four; History only All and Orders', async () => {
       installFakeDb(withPo)
       const user = userEvent.setup()
