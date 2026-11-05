@@ -12,6 +12,7 @@ import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useQuotations } from '@/features/quotations/hooks'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useDeleteRfqFlow } from '@/features/rfqs/deleteFlow'
+import { useDeleteJobFlow } from '@/features/jobs/deleteJob/useDeleteJobFlow'
 import { useRfqHeader, useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, type CloseReason } from '@/features/rfqs/lib/closeDefaults'
 import { quotationSent } from '@/features/rfqs/lib/nextAction'
@@ -21,10 +22,10 @@ import { useEditRfqFlow } from '@/features/rfqs/useEditRfqFlow'
 export default function RfqMoreInner({ job }: JobSlotProps) {
   const header = useRfqHeader(job.job.rfqId ?? undefined)
   if (!header.data) return null
-  return <Menu rfq={header.data} money={job.money} />
+  return <Menu rfq={header.data} money={job.money} job={job.job} />
 }
 
-function Menu({ rfq, money }: { rfq: RfqHeader; money: boolean }) {
+function Menu({ rfq, money, job }: { rfq: RfqHeader; money: boolean; job: JobSlotProps['job']['job'] }) {
   const { toast } = useToast()
   const bid = useSetBidSent(rfq.id)
   const closeRfq = useSetRfqClosed(rfq.id)
@@ -33,6 +34,9 @@ function Menu({ rfq, money }: { rfq: RfqHeader; money: boolean }) {
   const [, setWon] = useWonDialog()
   const prices = useSeesPrices() && money
   const orders = useOrdersForRfq(rfq.id)
+  // An enquiry whose orders are all cancelled still has orders: Delete RFQ would be refused, Delete job takes them with it.
+  const hasOrders = (orders.data ?? []).length > 0
+  const delJob = useDeleteJobFlow(hasOrders ? { key: job.key, rfqId: rfq.id, orderId: job.orderId, companyId: job.companyId, companyName: job.companyName } : null)
   const quotations = useQuotations(prices ? rfq.id : undefined)
   const ref = rfqRef(rfq.number)
   const s = rfq.state
@@ -142,17 +146,18 @@ function Menu({ rfq, money }: { rfq: RfqHeader; money: boolean }) {
             )}
           </>
         ) : null}
-        {del.ask ? (
+        {(hasOrders ? delJob.ask : del.ask) ? (
           <>
             <MenuSeparator />
-            <MenuItem icon={Trash2} danger onClick={del.ask}>
-              Delete RFQ
+            <MenuItem icon={Trash2} danger onClick={hasOrders ? delJob.ask : del.ask}>
+              {hasOrders ? 'Delete job' : 'Delete RFQ'}
             </MenuItem>
           </>
         ) : null}
       </MoreMenu>
       {edit.node}
       {del.node}
+      {delJob.node}
     </>
   )
 }

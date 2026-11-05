@@ -2843,6 +2843,11 @@ isOneToOne: false
               "storage_bucket": string,"storage_path": string
             }[]
                            },
+"delete_job":
+{ Args: { "p_order_id"?: string,"p_rfq_id"?: string }; Returns: {
+              "storage_bucket": string,"storage_path": string
+            }[]
+                           },
 "delete_order":
 { Args: { "p_order_id": string }; Returns: {
               "storage_bucket": string,"storage_path": string
@@ -2900,6 +2905,11 @@ isOneToOne: false
                            },
 "item_text_norm":
 { Args: { "t": string }; Returns: string
+                           },
+"job_delete_blockers":
+{ Args: { "p_order_id"?: string,"p_rfq_id"?: string }; Returns: {
+              "can_clear": boolean,"kind": string,"order_id": string,"order_number": number,"ref_id": string,"ref_label": string,"ref_on": string,"step": number,"why": string
+            }[]
                            },
 "job_stage":
 { Args: { "p_order_id": string,"p_rfq_id": string }; Returns: {
