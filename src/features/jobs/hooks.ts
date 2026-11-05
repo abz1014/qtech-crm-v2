@@ -43,3 +43,9 @@ export const jobInvoicesQuery = (key: string, orderId: string) => ({ queryKey: [
 export function useJobInvoices(key: string | undefined, orderId: string | null | undefined, enabled: boolean) {
   return useQuery({ ...jobInvoicesQuery(key ?? '', orderId ?? ''), enabled: enabled && Boolean(key && orderId) })
 }
+
+export const importedNotesQuery = (ids: string[]) => ({ queryKey: qk.jobs.importedNotes(ids.join('|')), queryFn: () => api.listImportedNotes(ids) })
+/** The imported note of a job: admin and sales only, so an engineer's page never asks (enabled is false for them). */
+export function useImportedNotes(ids: string[], enabled: boolean) {
+  return useQuery({ ...importedNotesQuery(ids), enabled: enabled && ids.length > 0, staleTime: 5 * 60_000 })
+}

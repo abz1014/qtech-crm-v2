@@ -185,8 +185,8 @@ select is((select coalesce(array_agg(t.tablename::text order by t.tablename), '{
              and not exists (select 1 from pg_trigger g join pg_proc p on p.oid = g.tgfoid
                              where g.tgrelid = format('public.%I', t.tablename)::regclass and p.proname = 'audit_row_change'
                                and not g.tgisinternal)),
-          array['audit_log', 'fx_fetch_log', 'month_snapshots', 'users'],
-  'audit: every table has the audit trigger except the log itself, the FX job journal, the snapshots (written at close, which is audited) and users (written by admin-users, which audits)');
+          array['audit_log', 'fx_fetch_log', 'imported_notes', 'month_snapshots', 'users'],
+  'audit: every table has the audit trigger except the log itself, the FX job journal, imported_notes (0135: the old system free text, kept out of the log on purpose), the snapshots (written at close, which is audited) and users (written by admin-users, which audits)');
 select is((select count(*)::int from pg_trigger g join pg_proc p on p.oid = g.tgfoid
            where p.proname = 'audit_row_change' and not g.tgisinternal
              and not (g.tgtype & 1 = 1 and g.tgtype & 2 = 0 and g.tgtype & 4 = 4 and g.tgtype & 8 = 8 and g.tgtype & 16 = 16)), 0,

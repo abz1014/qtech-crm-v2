@@ -299,6 +299,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'next_challan_number', '',      'X',    'X',    'X'),       -- 0131: the next number in the DC- series
   ('function', 'order_visit_summary', '',      '',     '',     ''),        -- 0130: internal (the trigger that keeps the order's visit summary); no client persona
   ('function', 'sync_order_visit_summary', '', '',     '',     ''),        -- 0130: internal; no client persona
+  ('table', 'imported_notes',    '',          'S',    'S',    ''),        -- 0135: the old system's free text behind an imported row; admin and sales read it, nobody writes it through the API, an engineer has no grant at all
   ('table', 'order_visits',      '',          'SIUD', 'SIUD', 'SU'),      -- 0130: one visit of an order; an engineer edits (never adds or deletes) a visit assigned to them (fixture @f2)
   ('table', 'order_visits',      'other',     'SUD',  'SUD',  'S'),       -- 0130: a visit with no engineer on an order that is not theirs (fixture @f3): an engineer only reads it
   ('table', 'orders',            'visit',       'SU', 'SU', 'SU'),       -- 0101: visit time and type; an engineer on an order assigned to them (fixture @20)
@@ -386,6 +387,8 @@ insert into public.orders (id, company_id, owner_id) values   -- 0112 and 0116: 
 insert into public.payments_in (id, order_id, amount, wht_amount, wht_certificate_no) values (pg_temp.f('d6'), pg_temp.f('d7'), 5, 3, null);
 insert into public.delivery_challans (id, order_id, number, lines) values   -- 0131
   (pg_temp.f('f5'), pg_temp.f('20'), 'DC-0001', '[{"description":"Fixture order item","qty":1}]');
+insert into public.imported_notes (table_name, row_id, parent_id, note) values   -- 0135
+  ('orders', pg_temp.f('f7'), pg_temp.f('f7'), 'fixture imported note');
 insert into public.order_visits (id, order_id, engineer_id) values   -- 0130: @f2 is the engineer's (order @20), @f3 has no engineer on an order that is not theirs (@21)
   (pg_temp.f('f2'), pg_temp.f('20'), 'a0000000-0000-4000-8000-000000000003'),
   (pg_temp.f('f3'), pg_temp.f('21'), null);
@@ -488,6 +491,7 @@ insert into spec values
   ('order_items', '', 'id = @25', 'description', $q$insert into public.order_items (id, order_id, description, unit_price_net) values (@aa, @20, 'probe', 1)$q$),
   ('supplier_orders', '', 'id = @24', 'reference', $q$insert into public.supplier_orders (id, order_id, supplier_id) values (@ab, @20, @03)$q$),
   ('delivery_challans', '', 'id = @f5', 'notes', $q$insert into public.delivery_challans (id, order_id, number, lines) values (@f6, @21, 'DC-9999', '[{"description":"x","qty":1}]')$q$),   -- 0131
+  ('imported_notes', '', 'row_id = @f7', 'note', $q$insert into public.imported_notes (table_name, row_id, parent_id, note) values ('orders', @f8, @f8, 'probe')$q$),   -- 0135
   ('order_visits', '', 'id = @f2', 'notes', $q$insert into public.order_visits (id, order_id, visit_on) values (@f4, @21, current_date)$q$),   -- 0130
   ('order_visits', 'other', 'id = @f3', 'notes', null),   -- 0130
   ('order_engineers', '', 'order_id = @20', 'user_id', $q$insert into public.order_engineers (order_id, user_id) values (@21, 'a0000000-0000-4000-8000-000000000003')$q$),
@@ -741,7 +745,7 @@ insert into probes values
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
   'coverage: the matrix lists every table in schema public (39)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 46, 'coverage: 46 tables');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 47, 'coverage: 47 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

@@ -14,3 +14,5 @@ related: find-a-job
 Tip: Engineers see Invoice and Payment as "Handled by the office". A job that started as an order shows no Enquiry or Quotation.
 
 Under the job's name, three lines are always shown once there is an order: the customer's PO (admin and sales only), the supplier, and where the goods are (ordered, how many are delivered).
+
+Jobs that came from the old system may have an "Imported note" panel in the right column (admin and sales only). It is closed; tap Show to read the old notes and the item lines as they were imported. They can name suppliers and prices, so engineers never see them, and an imported job's item text shows only the first item and "+N more".
