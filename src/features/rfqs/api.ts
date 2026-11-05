@@ -647,6 +647,8 @@ export interface AttachmentRow {
   createdAt: string
   /** 0100: the file shows a price (a customer PO, a supplier quote, an enquiry with prices). An engineer reads no such file. */
   hasPrices: boolean
+  /** 0134: the customer's PO document, attached to an order. Always has prices; the toggle is not offered. */
+  isCustomerPo: boolean
 }
 
 export interface ClarificationRow {
@@ -699,7 +701,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
 export async function listOrderAttachments(orderId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
-    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices').eq('order_id', orderId).eq('bucket', FILE_BUCKET).order('created_at'),
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices, is_customer_po').eq('order_id', orderId).eq('bucket', FILE_BUCKET).order('created_at'),
   )
   return rows.map(r => ({
     id: r.id,
@@ -710,13 +712,14 @@ export async function listOrderAttachments(orderId: string): Promise<AttachmentR
     clarificationId: r.clarification_id,
     createdAt: r.created_at,
     hasPrices: r.has_prices,
+    isCustomerPo: r.is_customer_po,
   }))
 }
 
 export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
-    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices').eq('rfq_id', rfqId).eq('bucket', FILE_BUCKET).order('created_at'),
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices, is_customer_po').eq('rfq_id', rfqId).eq('bucket', FILE_BUCKET).order('created_at'),
   )
   return rows.map(r => ({
     id: r.id,
@@ -727,6 +730,7 @@ export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
     clarificationId: r.clarification_id,
     createdAt: r.created_at,
     hasPrices: r.has_prices,
+    isCustomerPo: r.is_customer_po,
   }))
 }
 
@@ -809,7 +813,7 @@ export async function setInquiryRelayed(inquiryId: string, at: string | null): P
  * Upload one file to rfq-files at {rfq_id}/{uuid}.{ext} and record it. The object goes first; if the row cannot be
  * written the object is removed again, so nothing is left behind.
  */
-export async function uploadAttachment(input: { rfqId?: string; orderId?: string; clarificationId: string | null; file: File; path: string; hasPrices: boolean }): Promise<AttachmentRow> {
+export async function uploadAttachment(input: { rfqId?: string; orderId?: string; clarificationId: string | null; file: File; path: string; hasPrices: boolean; isCustomerPo?: boolean }): Promise<AttachmentRow> {
   const db = requireSupabase()
   const up = await db.storage.from(FILE_BUCKET).upload(input.path, input.file, { contentType: input.file.type, upsert: false })
   if (up.error) throw up.error
@@ -826,15 +830,17 @@ export async function uploadAttachment(input: { rfqId?: string; orderId?: string
       clarification_id: input.clarificationId,
       // Without this the column default applies and a customer PO stays readable by an engineer (migration 0100).
       has_prices: input.hasPrices,
+      // 0134: the customer's PO document. The database refuses it without has_prices and without an order.
+      is_customer_po: input.isCustomerPo ?? false,
     })
-    .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices')
+    .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at, has_prices, is_customer_po')
     .single()
   if (res.error) {
     await db.storage.from(FILE_BUCKET).remove([input.path])
     throw res.error
   }
   const r = res.data
-  return { id: r.id, path: r.path, fileName: r.file_name, mimeType: r.mime_type, sizeBytes: r.size_bytes, clarificationId: r.clarification_id, createdAt: r.created_at, hasPrices: r.has_prices }
+  return { id: r.id, path: r.path, fileName: r.file_name, mimeType: r.mime_type, sizeBytes: r.size_bytes, clarificationId: r.clarification_id, createdAt: r.created_at, hasPrices: r.has_prices, isCustomerPo: r.is_customer_po }
 }
 
 /** Admin: tag a file as carrying prices (hidden from engineers) or not. Migration 0100's policy refuses an engineer here. */

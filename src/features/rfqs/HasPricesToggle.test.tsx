@@ -34,6 +34,21 @@ describe('Has prices: hide from engineers', () => {
     expect(screen.getByRole('checkbox', { name: 'Has prices: hide from engineers' })).toBeChecked()
   })
 
+  it('a customer PO file has no switch, not even for the admin (0134: it always has prices)', () => {
+    installFakeDb(() => ({ data: [] }))
+    const client = new QueryClient()
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'X', role: 'admin' } }}>
+          <ToastProvider>
+            <HasPricesToggle att={{ ...att, isCustomerPo: true }} orderId="o1" />
+          </ToastProvider>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
   it('turning it off writes has_prices = false on that file', async () => {
     const { calls } = installFakeDb(() => ({ data: [] }))
     const user = userEvent.setup()

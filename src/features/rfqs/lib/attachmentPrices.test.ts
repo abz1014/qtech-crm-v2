@@ -13,6 +13,13 @@ describe('has_prices on a new file', () => {
     expect(attachmentHasPrices({ role: 'engineer', orderId: 'o', mime: 'application/pdf' })).toBe(false)
     expect(attachmentHasPrices({ role: 'engineer', mime: 'image/jpeg' })).toBe(false)
   })
+  it('the customer PO document has prices whatever its type, a photographed one included (0134)', () => {
+    for (const role of ['admin', 'sales']) {
+      expect(attachmentHasPrices({ role, orderId: 'o', mime: 'image/jpeg', isCustomerPo: true })).toBe(true)
+      expect(attachmentHasPrices({ role, orderId: 'o', mime: 'application/pdf', isCustomerPo: true })).toBe(true)
+    }
+    expect(attachmentHasPrices({ role: 'engineer', orderId: 'o', mime: 'image/jpeg', isCustomerPo: true })).toBe(false)
+  })
   it('a site photo on an order, and a photo that answers a question, do not', () => {
     expect(attachmentHasPrices({ role: 'sales', orderId: 'o', mime: 'image/jpeg' })).toBe(false)
     expect(attachmentHasPrices({ role: 'admin', clarificationId: 'c', mime: 'image/png' })).toBe(false)

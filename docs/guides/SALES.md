@@ -51,6 +51,7 @@ Press ? on a computer to see the keyboard shortcuts.
  - Each item shows its best-ranked supplier. Change it only if needed.
  - Enter "Customer PO number" and "Payment terms in days".
  - Tap "Create order". The order opens.
+ - The customer sent the PO itself (a PDF or a photo)? Open the Order stage, tap "Attach PO file" and choose it. Engineers never see it.
 
 8. INVOICE
  - Open the order. In Invoicing tap "Create invoice" (or Money, "Invoices & GST", "Create invoice").

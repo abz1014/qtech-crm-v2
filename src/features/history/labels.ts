@@ -272,6 +272,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     expense_id: hide,
     file_name: t('File'),
     has_prices: hide,
+    is_customer_po: hide,
     invoice_id: hide,
     mime_type: hide,
     order_id: hide,

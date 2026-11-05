@@ -182,6 +182,7 @@ export function NotesFilesPanel({ facts, data, ctx }: { facts: JobFacts; data: J
                     <span className="min-w-0 [overflow-wrap:anywhere]">{e.text}</span>
                   </span>
                 )}
+                {e.file.isCustomerPo ? <span className="w-fit rounded border border-line-strong px-2 text-base font-semibold text-fg-2">Customer PO</span> : null}
                 <HasPricesToggle att={e.file} rfqId={e.from === 'rfq' ? (facts.job.rfqId ?? undefined) : undefined} orderId={e.from === 'order' ? (facts.job.orderId ?? undefined) : undefined} />
                 </span>
               ) : (
