@@ -20,11 +20,11 @@ select is((select count(*)::int from pg_trigger t where t.tgrelid = 'public.expe
 insert into public.companies (id, name) values ('01380000-0000-4000-8000-0000000000c0', '0138 lock Co');
 insert into public.rfqs (id, company_id, owner_id) values
   ('01380000-0000-4000-8000-0000000000a1', '01380000-0000-4000-8000-0000000000c0', 'a0000000-0000-4000-8000-000000000002');
-insert into public.expenses (id, amount_pkr, category_id, paid_on, rfq_id, auto_booked) values
-  ('01380000-0000-4000-8000-0000000000e1', 100, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-10', '01380000-0000-4000-8000-0000000000a1', false),
-  ('01380000-0000-4000-8000-0000000000e2', 200, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-15', null, true),
-  ('01380000-0000-4000-8000-0000000000e3', 300, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-18', null, false),
-  ('01380000-0000-4000-8000-0000000000e4', 400, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-20', null, true);
+insert into public.expenses (id, amount_pkr, category_id, paid_on, rfq_id, auto_booked, paid_via) values
+  ('01380000-0000-4000-8000-0000000000e1', 100, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-10', '01380000-0000-4000-8000-0000000000a1', false, 'bank'),
+  ('01380000-0000-4000-8000-0000000000e2', 200, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-15', null, true, 'bank'),
+  ('01380000-0000-4000-8000-0000000000e3', 300, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-18', null, false, 'bank'),
+  ('01380000-0000-4000-8000-0000000000e4', 400, 'ca7e0000-0000-4000-8000-000000000005', '2014-03-20', null, true, 'bank');
 insert into public.closed_months (month, closed_by) values ('2014-03-01', 'a0000000-0000-4000-8000-000000000001');
 
 -- 1. the enquiry's cost moves to its order when the enquiry is won, in the closed month

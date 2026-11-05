@@ -263,7 +263,7 @@ select is(pg_temp.try_('admin', $q$select order_id::text from public.job_delete_
 select is(pg_temp.code_('engineer', 'select count(*)::text from public.job_delete_blockers(@90, null)'), 'E:42501:admin_only', 'an engineer is still refused');
 
 -- clear the step the guide gives, check again, delete
-select is(pg_temp.code_('admin', 'delete from public.expenses where id = ''' || pg_temp.u('94') || '''', true), 'ok:1', 'the cost is removed (the step the guide asks for)');
+select is(pg_temp.code_('admin', 'delete from public.expenses where id = @94 returning id', true), 'ok:1', 'the cost is removed (the step the guide asks for)');
 select is(pg_temp.try_('admin', 'select count(*)::text from public.job_delete_blockers(@90, null)'), 'ok:0', 'check again: nothing is left to clear');
 select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_job(@90, null)', true), 'ok:0', 'the enquiry is deleted');
 delete from public.expense_claims where id = pg_temp.u('96');   -- the admin decides the claim on the Expenses screen

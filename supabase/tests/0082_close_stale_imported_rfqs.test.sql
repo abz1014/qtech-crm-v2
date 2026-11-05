@@ -100,8 +100,12 @@ select is((select array_agg(n order by n) from generate_series(1, 13) n
   'stay open: 30, 59, 60 days; not imported; recent v2 reply; recent imported reply; edited in v2; recent due date');
 select is((select outcome from public.v_rfq_state where rfq_id = pg_temp.r(6)), 'won', 'the won one is untouched');
 select is((select closed_on from public.rfqs where id = pg_temp.r(6)), null::date, 'the won one gets no closed date');
-select ok((select closed_on = pg_temp.d(400) and close_reason = 'price' and close_note = 'old loss' from public.rfqs where id = pg_temp.r(11)),
-  'the already-lost one keeps its date, reason and note');
+select ok((select closed_on = pg_temp.d(400) and close_reason = 'price' from public.rfqs where id = pg_temp.r(11)),
+  'the already-lost one keeps its date and reason');
+-- 0135: the old loss note of an imported RFQ is private to admin and sales, so it lives in imported_notes, not in close_note
+select ok((select close_note is null from public.rfqs where id = pg_temp.r(11))
+          and exists (select 1 from public.imported_notes n where n.table_name = 'rfqs' and n.row_id = pg_temp.r(11) and n.note like '%old loss'),
+  'and its note was moved to the imported note (0135), not lost');
 
 select is((select count(*) filter (where outcome = 'open')::int from public.v_rfq_state
            where company_id = 'c8300000-0000-4000-8000-000000000001'), 8, 'after: 8 open (was 11)');
