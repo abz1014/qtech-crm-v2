@@ -220,7 +220,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.type(String(cost))
     for (let i = 0; i < 5; i++) await page.keyboard.press('Tab') // category, date, paid via, detail, then the Job cell
     await expect(page.getByRole('combobox', { name: 'Job, row 1' })).toBeFocused()
-    await page.keyboard.type(String(rfq.number))
+    await page.keyboard.type(rfqRef(rfq.number)) // the full ref: a bare number also finds the order with that number
     await expect(page.getByRole('option', { name: new RegExp(`RFQ-0*${rfq.number}(?![0-9])`) }).first()).toBeVisible()
     await page.keyboard.press('Tab') // takes the enquiry
     await expect(page.getByRole('combobox', { name: 'Job, row 1' })).toHaveValue(rfqRef(rfq.number))
@@ -264,7 +264,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.getByLabel('What for').fill(note)
     await page.getByRole('button', { name: 'Send for approval' }).click()
     await expect(page.getByText(note)).toBeVisible()
-    await expect(page.getByText(/Survey visit/).first()).toBeVisible()
+    await expect(page.getByRole('listitem').filter({ hasText: note })).toContainText('Survey visit')
     const [claim] = await must(rest<{ id: string; order_id: string | null; visit_id: string | null }[]>('engineer', `expense_claims?note=eq.${encodeURIComponent(note)}&select=*`))
     expect(claim).toMatchObject({ order_id: order.id, visit_id: visit.id })
     await must(rest('admin', 'rpc/approve_expense_claim', { method: 'POST', body: { p_claim: claim.id, p_category: FUEL, p_paid_how: 'cash_back' } }))
