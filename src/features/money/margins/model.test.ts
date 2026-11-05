@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { marginNote, marginPct, marginTotals, noCostsYet, sortMargins, type MarginRow } from '@/features/money/margins/model'
+import { cashTotals, marginNote, marginPct, marginTotals, noCostsYet, sortCash, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
 const row = (n: number, over: Partial<MarginRow> = {}): MarginRow => ({
   orderId: `o${n}`,
@@ -12,6 +12,9 @@ const row = (n: number, over: Partial<MarginRow> = {}): MarginRow => ({
   actualCost: 600,
   margin: 400,
   state: 'final',
+  received: 1200,
+  paidOut: 650,
+  cashProfit: 550,
   ...over,
 })
 
@@ -88,5 +91,27 @@ describe('Costs not entered yet (P2-C, plan D6)', () => {
   it('never for a final margin (a settled imported order has its costs marked complete) or an unknown basis', () => {
     expect(noCostsYet({ state: 'final', actualCost: 0 })).toBe(false)
     expect(noCostsYet({ state: 'basis_unknown', actualCost: 0 })).toBe(false)
+  })
+})
+
+describe('cashTotals (the cash view adds up every order, final or not)', () => {
+  it('adds received, paid out and cash profit of all orders', () => {
+    const t = cashTotals([
+      row(1),
+      row(2, { state: 'provisional', received: 300, paidOut: 500, cashProfit: -200 }),
+      row(3, { state: 'basis_unknown', received: 0, paidOut: 40, cashProfit: -40 }),
+    ])
+    expect(t).toEqual({ orders: 3, received: 1500, paidOut: 1190, cashProfit: 310 })
+  })
+
+  it('is zero for no orders', () => {
+    expect(cashTotals([])).toEqual({ orders: 0, received: 0, paidOut: 0, cashProfit: 0 })
+  })
+})
+
+describe('sortCash', () => {
+  it('puts an order that cost more than it brought in first, then newest first', () => {
+    const list = sortCash([row(1, { orderedOn: '2026-11-05' }), row(2, { orderedOn: '2026-10-01', cashProfit: -5 }), row(3, { orderedOn: '2026-11-06' })])
+    expect(list.map(r => r.orderNumber)).toEqual([2, 3, 1])
   })
 })

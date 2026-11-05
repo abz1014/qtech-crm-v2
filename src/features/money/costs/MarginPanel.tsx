@@ -19,7 +19,8 @@ import type { OrderHeader, OrderMoney } from '@/features/orders/api'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { useCategories } from '@/features/money/expenses/hooks'
 import { lazyDialog } from '@/lib/lazyDialog'
-import { useFillExpectedCost, useOrderCosts, useSetCostsComplete, useSetExpectedCost } from '@/features/money/costs/hooks'
+import { CashBlock } from '@/features/money/costs/CashBlock'
+import { useFillExpectedCost, useOrderCash, useOrderCosts, useSetCostsComplete, useSetExpectedCost } from '@/features/money/costs/hooks'
 import { estimateExpectedCost } from '@/features/money/lib/costEstimate'
 
 // Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
@@ -81,6 +82,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
   const { toast } = useToast()
   const m = money
   const costs = useOrderCosts(order.id, true)
+  const cash = useOrderCash(order.id, true)
   const categories = useCategories()
   const fx = useFxLatest()
   const setExpected = useSetExpectedCost(order.id)
@@ -243,6 +245,8 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
             </div>
             <Row label={`Actual cost${costs.data ? `, ${costs.data.expenses.length} tagged ${costs.data.expenses.length === 1 ? 'expense' : 'expenses'}` : ''}`}>{formatAmount(actual)}</Row>
           </div>
+
+          <CashBlock cash={cash.data} loading={cash.isPending} error={cash.isError} />
 
           <div className="grid gap-1 border-t pt-4" data-testid="margin-expenses">
             {costs.isPending ? (

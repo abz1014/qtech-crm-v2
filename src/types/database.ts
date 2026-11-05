@@ -93,6 +93,12 @@ isOneToOne: false
       foreignKeyName: "attachments_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "attachments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     },{
@@ -539,6 +545,12 @@ isOneToOne: false
       foreignKeyName: "credit_applications_from_order_id_fkey"
       columns: ["from_order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "credit_applications_from_order_id_fkey"
+      columns: ["from_order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     },{
@@ -564,6 +576,12 @@ isOneToOne: false
       columns: ["to_order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "credit_applications_to_order_id_fkey"
+      columns: ["to_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "credit_applications_to_order_id_fkey"
@@ -655,6 +673,12 @@ isOneToOne: false
       foreignKeyName: "credit_notes_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "credit_notes_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     }
@@ -729,6 +753,12 @@ isOneToOne: false
       foreignKeyName: "customer_refunds_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "customer_refunds_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     }
@@ -774,6 +804,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "delivery_challans_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "delivery_challans_order_id_fkey"
@@ -879,6 +915,12 @@ isOneToOne: false
       foreignKeyName: "expense_claims_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expense_claims_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     },{
@@ -974,6 +1016,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expenses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "expenses_order_id_fkey"
@@ -1253,6 +1301,12 @@ isOneToOne: false
       foreignKeyName: "invoices_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     },{
@@ -1335,6 +1389,12 @@ isOneToOne: true
       foreignKeyName: "order_costs_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: true
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_costs_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     }
@@ -1374,6 +1434,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_engineers_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "order_engineers_order_id_fkey"
@@ -1447,6 +1513,12 @@ isOneToOne: false
       foreignKeyName: "order_items_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     },{
@@ -1510,6 +1582,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_visits_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "order_visits_order_id_fkey"
@@ -1596,6 +1674,12 @@ isOneToOne: false
       columns: ["repeat_of_order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "orders_repeat_of_order_id_fkey"
+      columns: ["repeat_of_order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "orders_repeat_of_order_id_fkey"
@@ -1700,6 +1784,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "payments_in_order_id_fkey"
@@ -2081,6 +2171,12 @@ isOneToOne: false
       foreignKeyName: "supplier_orders_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "supplier_orders_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     },{
@@ -2354,6 +2450,12 @@ isOneToOne: false
       foreignKeyName: "invoices_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
+      referencedRelation: "v_order_profit"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
     }
@@ -2494,6 +2596,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"v_order_profit": {
+                  Row: {
+                    "actual_cost": number | null,"basis": string | null,"cash_profit": number | null,"company_id": string | null,"costs_state": string | null,"expected_cost": number | null,"margin": number | null,"margin_state": string | null,"net_sale": number | null,"order_id": string | null,"order_number": number | null,"paid_out": number | null,"payment_state": string | null,"received": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    }
+                  ]
                 },"v_order_state": {
                   Row: {
                     "commissioning_state": string | null,"company_id": string | null,"data_trust": string | null,"goods_state": string | null,"gross": number | null,"gst": number | null,"invoiced": number | null,"invoicing_state": string | null,"is_done": boolean | null,"lifecycle": string | null,"net": number | null,"number": number | null,"order_id": string | null,"owner_id": string | null,"rfq_id": string | null,"site_id": string | null
@@ -2585,6 +2719,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "payments_in_order_id_fkey"
@@ -2785,6 +2925,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_profit"
       referencedColumns: ["order_id"]
     },{
       foreignKeyName: "payments_in_order_id_fkey"

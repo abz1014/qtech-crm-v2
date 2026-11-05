@@ -18,6 +18,7 @@ const ChecklistPage = lazy(() => import('@/features/money/monthEnd/ChecklistPage
 const BankTickPage = lazy(() => import('@/features/money/bank/BankTickPage').then(m => ({ default: m.BankTickPage })))
 const ExceptionsPage = lazy(() => import('@/features/money/exceptions/ExceptionsPage').then(m => ({ default: m.ExceptionsPage })))
 const MarginsPage = lazy(() => import('@/features/money/margins/MarginsPage').then(m => ({ default: m.MarginsPage })))
+const ProfitPage = lazy(() => import('@/features/money/profit/ProfitPage').then(m => ({ default: m.ProfitPage })))
 const InOutPage = lazy(() => import('@/features/money/inOut/InOutPage').then(m => ({ default: m.InOutPage })))
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then(m => ({ default: m.ReportsPage })))
 const PnlPage = lazy(() => import('@/features/money/monthEnd/ReportPages').then(m => ({ default: m.PnlPage })))
@@ -35,6 +36,7 @@ const EnquiriesReportPage = lazy(() => import('@/features/reports/ReportsPage').
  *   gst-register     Invoices: admin and sales (sales get the simpler list)
  *   expenses         admin only
  *   month-end        the checklist, admin only; from it: month-end/bank (Bank check), margins, exceptions (Mistakes to fix)
+ *   profit           Profitability (0137), admin only: average monthly income, the monthly chart and the profit table
  *   reports          the one Reports view: admin and sales (each sees the reports their role may read); reports/<key> opens one
  * The old addresses keep working: /money/month-end/{pnl,categories,aging,owe,gst,team} open the same report under Reports, with
  * the month kept. Sales see the no-access page on admin views; engineers never reach Money at all (RequireRole).
@@ -58,6 +60,7 @@ export default function MoneyScreen() {
         <Route key={key} path={`month-end/${key}`} element={<OldReportAddress report={key} />} />
       ))}
       <Route path="margins" element={adminOnly(<MarginsPage />, 'Margins')} />
+      <Route path="profit" element={adminOnly(<ProfitPage />, 'Profitability')} />
       <Route path="exceptions" element={adminOnly(<ExceptionsPage />, 'Mistakes to fix')} />
       <Route path="reports" element={<ReportsPage />} />
       <Route path="reports/:report" element={<ReportRoute isAdmin={isAdmin} />} />

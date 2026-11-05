@@ -47,3 +47,8 @@ export function useSetCostsCompleteMany() {
     },
   })
 }
+
+/** Cash so far on one order (admin only, `enabled`). Read fresh: a payment or an expense moves it. */
+export function useOrderCash(orderId: string | undefined, enabled: boolean) {
+  return useQuery({ queryKey: [...qk.money.orderCosts(orderId ?? ''), 'cash'], queryFn: () => api.getOrderCash(orderId as string), enabled: Boolean(orderId) && enabled, staleTime: 0 })
+}

@@ -282,7 +282,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // One receipt covers a whole PSID group (audit T1): every invoice of the group is stamped, so all invoice reads go stale.
   'invoice.receipt': () => [qk.money.invoices.all, qk.today.all],
   // A payment moves balances (receivables, the order page's panel, its payment chip) and Today's overdue items.
-  'payment.record': v => [qk.money.receivables.all, qk.money.bank.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
+  'payment.record': v => [qk.money.receivables.all, qk.money.bank.all, qk.money.receivables.payments(v.orderId), qk.money.orderCosts(v.orderId), qk.orders.all, qk.today.all],   // orderCosts: the Margin panel's cash block (0137)
   'payment.remind': () => [qk.money.receivables.all, qk.money.invoices.all, qk.today.all],
   'payment.void': paymentChange,
   'payment.correct': paymentChange,

@@ -288,6 +288,8 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_order_money', 'net_sale', 'hidden', null), ('v_order_money', 'expected_cost', 'hidden', null), ('v_order_money', 'actual_cost', 'hidden', null),
   ('v_order_money', 'margin', 'hidden', null), ('v_order_money', 'gross_target', 'hidden', null), ('v_order_money', 'settled', 'hidden', null),
   ('v_order_money', 'overpaid_by', 'hidden', null),
+  ('v_order_profit', 'net_sale', 'hidden', null), ('v_order_profit', 'actual_cost', 'hidden', null), ('v_order_profit', 'expected_cost', 'hidden', null), ('v_order_profit', 'margin', 'hidden', null),   -- 0137
+  ('v_order_profit', 'received', 'hidden', null), ('v_order_profit', 'paid_out', 'hidden', null), ('v_order_profit', 'cash_profit', 'hidden', null),
   ('v_order_state', 'net', 'm3', null), ('v_order_state', 'gst', 'm3', null), ('v_order_state', 'gross', 'm3', null),
   ('v_payment_net', 'amount', 'hidden', null), ('v_payment_net', 'net_portion', 'hidden', null), ('v_payment_net', 'gst_portion', 'hidden', null),
   ('v_report_clarification_turnaround', 'total_days', 'info', null),

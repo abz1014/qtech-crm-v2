@@ -123,3 +123,18 @@ export async function setCostsComplete(orderId: string, complete: boolean, userI
     .upsert({ order_id: orderId, costs_complete_at: complete ? new Date().toISOString() : null, costs_complete_by: complete ? userId : null }, { onConflict: 'order_id' })
   if (error) throw error
 }
+
+/** What came in and went out on one order (v_order_profit, 0137). GST is inside both figures. */
+export interface OrderCash {
+  received: number
+  paidOut: number
+  /** received - paidOut; the GST owed to FBR is not taken off. */
+  left: number
+}
+
+export async function getOrderCash(orderId: string): Promise<OrderCash | null> {
+  const { data, error } = await requireSupabase().from('v_order_profit').select('received, paid_out, cash_profit').eq('order_id', orderId).maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return { received: Number(data.received ?? 0), paidOut: Number(data.paid_out ?? 0), left: Number(data.cash_profit ?? 0) }
+}
