@@ -149,7 +149,7 @@ select is((select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}'
            where p.pronamespace = 'public'::regnamespace and p.prosrc ilike '%customer_po_number%'
              and not p.prosecdef and has_function_privilege('qtech_engineer', p.oid, 'execute')
              and p.proname <> 'search_all'
-             and p.prosrc !~ 'current_user_role())?s*(<>|!=|is distinct from)s*''admin'''),   -- merge_companies compares POs, after its admin-only check
+             and p.prosrc !~ 'current_user_role\(\)\s*(<>|!=|is distinct from)\s*''admin'''),   -- merge_companies compares POs, after its admin-only check
           '{}'::text[], 'no SECURITY INVOKER function the engineer can run names the PO column, except search_all and admin-only ones');
 select ok((select p.prosrc like '%qtech_private.order_po%' and p.prosrc not like '%o.customer_po_number%' from pg_proc p where p.oid = 'public.search_all(text, integer)'::regprocedure),
   'search_all reads the PO through qtech_private.order_po');
