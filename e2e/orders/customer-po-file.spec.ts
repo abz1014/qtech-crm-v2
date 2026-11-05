@@ -13,10 +13,12 @@ const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Roo
 // a 1x1 PNG
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
 
+const SALES = 'a0000000-0000-4000-8000-000000000002'
+
 async function seed() {
   const customer = await createCompany(uniqueName('Po File Customer'))
   const [order] = await must(
-    rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id, customer_po_number: `PF-${unique()}`, payment_terms_days: 30, ordered_on: karachiDay(-2) } }),
+    rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id, owner_id: SALES, customer_po_number: `PF-${unique()}`, payment_terms_days: 30, ordered_on: karachiDay(-2) } }),
   )
   await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Flow meter DN50', qty: 1, unit_price_net: 100000, gst_rate: 18 }, prefer: 'return=minimal' }))
   await must(rest('admin', 'order_engineers', { method: 'POST', body: { order_id: order.id, user_id: ENGINEER }, prefer: 'return=minimal' }))
@@ -27,7 +29,8 @@ test.describe('Customer PO file', () => {
   test('sales attaches a PDF and a photo, sees them and downloads one; an engineer never gets them', async ({ page, browser }) => {
     const o = await seed()
     const pdfName = `customer-po-${unique()}.pdf`
-    const pngName = `customer-po-photo-${unique()}.png`
+    const pngBase = `customer-po-photo-${unique()}`
+    const pngName = `${pngBase}.png`
 
     await openAs(page, 'sales', `/orders/${o.id}`)
     await expect(page).toHaveURL(JOB_URL)
@@ -40,7 +43,8 @@ test.describe('Customer PO file', () => {
     ])
     const list = stage.getByRole('list', { name: 'Customer PO files' })
     await expect(list.getByText(pdfName)).toBeVisible({ timeout: 30_000 })
-    await expect(list.getByText(pngName)).toBeVisible()
+    // a picture may be re-encoded as .jpg in the browser, so match its base name
+    await expect(list.getByText(pngBase)).toBeVisible()
     await expect(list.getByText('PO file:')).toHaveCount(2)
 
     // download through the signed link
@@ -75,7 +79,7 @@ test.describe('Customer PO file', () => {
     await expect(eng.locator('[data-stages]')).toBeVisible()
     await eng.waitForLoadState('networkidle')
     const html = await eng.content()
-    for (const name of [pdfName, pngName]) {
+    for (const name of [pdfName, pngBase]) {
       expect(html).not.toContain(name)
       expect(bodies.join('\n')).not.toContain(name)
     }
