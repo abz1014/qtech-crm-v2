@@ -54,4 +54,11 @@ describe('an imported job', () => {
     // a finished or already quiet step is left as it is
     expect(jobNext({ stage: 'paid', stageDetail: null, role: 'admin', imported: true }).text).toBe('Done')
   })
+
+  it('drops the "Imported · " prefix, and keeps the grey tone, when the row already wears an Imported tag', () => {
+    const tagged = jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'sales', imported: true }, { imported: 'tag' })
+    expect(tagged.text).toBe('The goods are late: chase the supplier')
+    expect(tagged.tone).toBe('inert')
+    expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'sales' }, { imported: 'tag' }).tone).toBe('late')
+  })
 })

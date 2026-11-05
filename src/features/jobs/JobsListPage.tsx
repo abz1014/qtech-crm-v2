@@ -13,10 +13,10 @@ import { TableFilter } from '@/ui/TableFilter'
 import { EmptyState } from '@/ui/EmptyState'
 import { useCustomerPos, useJobSearch, useJobsList } from '@/features/jobs/hooks'
 import type { JobRow } from '@/features/jobs/api'
-import { StageMini } from '@/features/jobs/StageBar'
+import { StageLine, StageMini } from '@/features/jobs/StageBar'
 import { StageFilter } from '@/features/jobs/StageFilter'
 import { jobNext } from '@/features/jobs/lib/nextStep'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, jobLabel, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, itemsSummary, jobLabel, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
 import { stageModel } from '@/features/jobs/lib/stages'
 import { lazyShown } from '@/lib/lazyDialog'
 
@@ -39,8 +39,9 @@ const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'Hist
 /** What a stage filter finds, said after "No open jobs": "No open jobs to invoice". */
 const STAGE_EMPTY: Record<Stage, string> = { orders: 'with an order', supplier: 'waiting for a supplier', deliver: 'to deliver', invoice: 'to invoice', payment: 'to be paid' }
 
-function NextText({ job, role }: { job: JobRow; role: Who['role'] }) {
-  const n = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role: role === '' ? 'sales' : role, imported: job.imported })
+function NextText({ job, role, card }: { job: JobRow; role: Who['role']; card?: boolean }) {
+  // On a card an imported job wears an "Imported" tag, so its step does not repeat the word.
+  const n = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role: role === '' ? 'sales' : role, imported: job.imported }, { imported: card ? 'tag' : 'prefix' })
   return n.text ? (
     <StatusText tone={n.tone} className="whitespace-normal">
       {n.text}
@@ -74,18 +75,25 @@ function CustomerCell({ job }: { job: JobRow }) {
   )
 }
 
+/** A phone card, five short rows: customer and job number; PO (money roles) and the Imported tag; the items in one line; where it stands; the one next step. */
 function JobCard({ job, role, po }: { job: JobRow; role: Who['role']; po?: string }) {
+  const items = itemsSummary(job.items)
   return (
-    <span className="grid gap-1">
-      <span className="flex items-baseline justify-between gap-3">
-        <span className="min-w-0 font-medium">{job.companyName}</span>
+    <span className="grid gap-2">
+      <span className="flex items-start justify-between gap-3">
+        <span className="line-clamp-2 min-w-0 font-semibold [overflow-wrap:anywhere]">{job.companyName}</span>
         <span className="num shrink-0 text-base text-fg-muted">{jobLabel(job.key)}</span>
       </span>
-      {po ? <span className="num min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">{`PO ${po}`}</span> : null}
-      {job.items ? <span className="min-w-0 text-base text-fg-2 [overflow-wrap:anywhere]">{job.items}</span> : null}
-      <StageMini job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }} />
+      {po || job.imported ? (
+        <span className="flex items-baseline justify-between gap-3">
+          {po ? <span className="num min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">{`PO ${po}`}</span> : <span />}
+          {job.imported ? <span className="shrink-0 rounded border border-line px-2 text-base text-fg-muted">Imported</span> : null}
+        </span>
+      ) : null}
+      <span className="line-clamp-1 min-w-0 text-base text-fg-2 [overflow-wrap:anywhere]">{items || <span className="text-fg-muted">No items yet</span>}</span>
+      <StageLine job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }} />
       <span className="text-base">
-        <NextText job={job} role={role} />
+        <NextText job={job} role={role} card />
       </span>
     </span>
   )
@@ -166,10 +174,10 @@ export default function JobsListPage() {
       header: 'Items',
       value: j => j.items,
       hideBelowMd: true,
-      // Two lines at most (a long item list would make the row, and with it every row of a windowed list, very tall); the whole list is the title.
+      // One line (a long item list would make the row, and with it every row of a windowed list, very tall); the whole list is the title.
       cell: j => (
-        <span className="line-clamp-2 min-w-[160px] max-w-[320px] whitespace-normal text-fg-2 [overflow-wrap:anywhere]" title={j.items || undefined}>
-          {j.items || <span className="text-fg-muted">No items yet</span>}
+        <span className="line-clamp-1 min-w-[160px] max-w-[320px] whitespace-normal text-fg-2 [overflow-wrap:anywhere]" title={j.items || undefined}>
+          {itemsSummary(j.items) || <span className="text-fg-muted">No items yet</span>}
         </span>
       ),
     },

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { karachiDay, must, rest } from '../support/stack'
+import { db } from '../verify/support/db'
 
 /*
  * Realistic data for the screen audit (docs/audit/SCREEN_AUDIT.md). One small trading company's working month: ten customers,
@@ -903,6 +904,20 @@ async function seedAll(): Promise<Fixture> {
     },
     B,
   )
+
+  // An order from the old CRM, for the phone card's Imported tag (jobs-list-phone-imported). The marker is written as the service role, the import's own role.
+  const imported = await makeOrder(
+    {
+      company: c.krs.id,
+      owner: SALES,
+      ordered: -75,
+      po: 'KRS-PO-7710',
+      legs: [{ supplier: s.dubai.id, currency: 'USD' }],
+      lines: [{ d: 'Importex sample pressure gauge 0-10 bar', qty: 4, price: 18500, leg: 0, brand: 'Siemens' }],
+    },
+    B,
+  )
+  await db.patch(`orders?id=eq.${imported.id}`, { legacy_source: { imported: true, table: 'orders' } })
 
   // Expenses over this month and the last: overheads, cash spends and order costs.
   const CAT = (n: number) => `ca7e0000-0000-4000-8000-${String(n).padStart(12, '0')}`

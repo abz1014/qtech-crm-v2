@@ -30,10 +30,15 @@ export interface NextInput {
 
 const has = (d: string | null, word: string) => (d ?? '').includes(word)
 
-export function jobNext(input: NextInput): JobNext {
+export interface NextOptions {
+  /** How an imported job says so: with an "Imported · " prefix (the default, for the table) or not at all, where the row already carries an "Imported" tag. */
+  imported?: 'prefix' | 'tag'
+}
+
+export function jobNext(input: NextInput, options: NextOptions = {}): JobNext {
   const n = stepFor(input)
   if (!input.imported || !n.text || n.tone === 'done' || n.tone === 'inert') return n
-  return { ...n, tone: 'inert', text: `Imported · ${n.text}` }
+  return { ...n, tone: 'inert', text: options.imported === 'tag' ? n.text : `Imported · ${n.text}` }
 }
 
 function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
