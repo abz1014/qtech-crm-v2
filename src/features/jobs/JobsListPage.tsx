@@ -83,6 +83,7 @@ function JobCard({ job, role, po }: { job: JobRow; role: Who['role']; po?: strin
       </span>
       {po ? <span className="num min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">{`PO ${po}`}</span> : null}
       {job.items ? <span className="min-w-0 text-base text-fg-2 [overflow-wrap:anywhere]">{job.items}</span> : null}
+      <span className="min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">{job.ownerName ? `Owner ${job.ownerName}` : 'No owner'}</span>
       <StageMini job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }} />
       <span className="text-base">
         <NextText job={job} role={role} />
