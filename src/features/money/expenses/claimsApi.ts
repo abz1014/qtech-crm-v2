@@ -1,5 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
-import { orderRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { lookupLabels } from '@/features/money/lookupLabels'
 import { uploadReceipt } from '@/features/money/expenses/api'
 
@@ -32,6 +32,10 @@ export interface Claim {
   orderId: string | null
   /** "ORD-0042" when the claim names a job. */
   orderLabel: string | null
+  /** 0136: the enquiry it was spent on ("RFQ-0139"), and the visit ("Survey, 5 Nov"). */
+  rfqLabel?: string | null
+  visitId?: string | null
+  visitLabel?: string | null
   status: ClaimStatus
   paidHow: PaidHow | null
   rejectReason: string | null
@@ -46,22 +50,37 @@ type ClaimRow = {
   amount_pkr: number
   note: string | null
   order_id: string | null
+  rfq_id: string | null
+  visit_id: string | null
   status: string
   paid_how: string | null
   reject_reason: string | null
   decided_at: string | null
 }
 
-const COLS = 'id, created_at, created_by, spent_on, amount_pkr, note, order_id, status, paid_how, reject_reason, decided_at'
+type VisitRow = { visit_type: string; visit_on: string | null }
+const VISIT_TYPE_LABEL: Record<string, string> = { installation: 'Installation', survey: 'Survey', service: 'Service' }
+/** "Survey visit, 2026-11-05": which visit a claim was spent on. */
+export const visitLabel = (v: VisitRow): string => `${VISIT_TYPE_LABEL[v.visit_type] ?? 'Visit'} visit${v.visit_on ? `, ${v.visit_on}` : ''}`
+
+const COLS = 'id, created_at, created_by, spent_on, amount_pkr, note, order_id, rfq_id, visit_id, status, paid_how, reject_reason, decided_at'
 
 async function toClaims(rows: readonly ClaimRow[]): Promise<Claim[]> {
   const db = requireSupabase()
   const people = [...new Set(rows.map(r => r.created_by).filter((x): x is string => !!x))]
   const orders = [...new Set(rows.map(r => r.order_id).filter((x): x is string => !!x))]
-  const [names, labels] = await Promise.all([
+  const rfqIds = [...new Set(rows.map(r => r.rfq_id).filter((x): x is string => !!x))]
+  const visitIds = [...new Set(rows.map(r => r.visit_id).filter((x): x is string => !!x))]
+  const [names, labels, rfqs, visits] = await Promise.all([
     people.length ? db.from('users').select('id, name').in('id', people).then(r => unwrap(r) ?? []) : Promise.resolve([] as { id: string; name: string }[]),
     orders.length ? lookupLabels({ orders }) : Promise.resolve(null),
+    rfqIds.length ? db.from('rfqs').select('id, number').in('id', rfqIds).then(r => unwrap(r) ?? []) : Promise.resolve([] as { id: string; number: number }[]),
+    visitIds.length
+      ? db.from('order_visits').select('id, visit_type, visit_on').in('id', visitIds).then(r => unwrap(r) ?? [])
+      : Promise.resolve([] as { id: string; visit_type: string; visit_on: string | null }[]),
   ])
+  const rfqNo = new Map(rfqs.map(r => [r.id, r.number]))
+  const visitOf = new Map(visits.map(v => [v.id, v]))
   const nameOf = new Map(names.map(n => [n.id, n.name]))
   return rows.map(r => ({
     id: r.id,
@@ -73,6 +92,9 @@ async function toClaims(rows: readonly ClaimRow[]): Promise<Claim[]> {
     note: r.note,
     orderId: r.order_id,
     orderLabel: r.order_id && labels?.orders[r.order_id] ? orderRef(Number(labels.orders[r.order_id].number)) : null,
+    rfqLabel: r.rfq_id && rfqNo.has(r.rfq_id) ? rfqRef(Number(rfqNo.get(r.rfq_id))) : null,
+    visitId: r.visit_id,
+    visitLabel: r.visit_id && visitOf.has(r.visit_id) ? visitLabel(visitOf.get(r.visit_id) as VisitRow) : null,
     status: r.status as ClaimStatus,
     paidHow: (r.paid_how as PaidHow | null) ?? null,
     rejectReason: r.reject_reason,
@@ -100,6 +122,34 @@ export interface NewClaim {
   spentOn: string
   note: string | null
   orderId: string | null
+  /** 0136: the visit the money was spent on (the database fills the order from it). */
+  visitId?: string | null
+}
+
+/** A visit the person can name on a claim: their own, newest first. No price anywhere. */
+export interface VisitOption {
+  id: string
+  orderId: string
+  /** "ORD-0042 · Lahore Beverages · Survey visit, 2026-11-05". */
+  label: string
+  visitOn: string | null
+}
+
+/** The person's own visits (assigned to them), newest first; the last 20. Engineers read order_visits (staff read all). */
+export async function listMyVisitOptions(userId: string): Promise<VisitOption[]> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('order_visits').select('id, order_id, visit_type, visit_on').eq('engineer_id', userId).order('visit_on', { ascending: false, nullsFirst: false }).limit(20)) ?? []
+  if (rows.length === 0) return []
+  const labels = await lookupLabels({ orders: [...new Set(rows.map(r => r.order_id))] })
+  return rows.map(r => {
+    const o = labels.orders[r.order_id]
+    return {
+      id: r.id,
+      orderId: r.order_id,
+      label: [o ? orderRef(Number(o.number)) : null, o?.company_name, visitLabel(r)].filter(Boolean).join(' · '),
+      visitOn: r.visit_on,
+    }
+  })
 }
 
 /** Adds a claim under its client id; a retry of the same id adds nothing (the duplicate is ignored). */
@@ -107,7 +157,7 @@ export async function createClaim(c: NewClaim): Promise<void> {
   const db = requireSupabase()
   const { error } = await db
     .from('expense_claims')
-    .upsert([{ id: c.id, amount_pkr: c.amount, spent_on: c.spentOn, note: c.note, order_id: c.orderId }], { onConflict: 'id', ignoreDuplicates: true })
+    .upsert([{ id: c.id, amount_pkr: c.amount, spent_on: c.spentOn, note: c.note, order_id: c.orderId, visit_id: c.visitId ?? null }], { onConflict: 'id', ignoreDuplicates: true })
   if (error) throw error
 }
 

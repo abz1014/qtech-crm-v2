@@ -32,7 +32,7 @@ import {
   useLastCategoryForOrder,
   useLegOptions,
   useMostUsedCategory,
-  useOrderOptions,
+  useJobOptions,
   useReceipts,
   useRecentDetails,
   useRecordedBills,
@@ -52,6 +52,7 @@ import {
   cleanDetail,
   detailSuggestions,
   forMonthOf,
+  jobColumns,
   paidViaFor,
   recentCategories,
   showsInputTax,
@@ -77,6 +78,10 @@ export interface ExpenseContext {
   orderId?: string
   /** "ORD-0038". Looked up from the order id when left out. */
   orderLabel?: string
+  /** 0136: the cost is for an enquiry (RFQ) that has no order yet. */
+  rfqId?: string
+  /** "RFQ-0139". */
+  rfqLabel?: string
   legId?: string
   /** "leg A". */
   legLabel?: string
@@ -105,7 +110,7 @@ interface AddExpenseDialogProps {
 export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved, onHistory }: AddExpenseDialogProps) {
   const [busy, setBusy] = useState(false)
   const fromLeg = !!context?.legId
-  const orderLabel = context?.orderLabel
+  const orderLabel = context?.orderLabel ?? context?.rfqLabel
   // the supplier names the supplier order ("ORD-0038 · Alpenmark Controls"); the old "leg A" label is not shown (plain words, 2026-10-19)
   const sub = expense ? 'Edit expense' : [orderLabel, context?.legId ? context?.payeeName : null].filter(Boolean).join(' · ') || 'Money › Expenses'
   return (
@@ -139,6 +144,7 @@ const schema = z
     note: z.string(),
     inputTax: z.number().min(0, 'Input tax cannot be below zero').max(MAX_AMOUNT, 'That input tax is too large').nullable(),
     orderId: z.string().nullable(),
+    rfqId: z.string().nullable(),
     legId: z.string().nullable(),
     payeeId: z.string().nullable(),
     /** Set from the chosen category: an "Other" (0091) must say what it was for, so Detail is required (a field error, not a server one). */
@@ -224,6 +230,7 @@ function ExpenseFormReady({
       note: expense?.note ?? '',
       inputTax: expense?.inputTax ? expense.inputTax : null,
       orderId: expense?.orderId ?? context?.orderId ?? null,
+      rfqId: expense?.rfqId ?? context?.rfqId ?? null,
       legId: expense?.legId ?? context?.legId ?? null,
       payeeId: expense?.payeeId ?? context?.payeeId ?? null,
       titleRequired: !!categories.find(c => c.id === pre.categoryId)?.isMisc,
@@ -241,6 +248,7 @@ function ExpenseFormReady({
         // 0087: any category can carry input tax once "Has a GST invoice" is ticked (it was Supplier payment, Freight and Clearing only)
         input_tax_pkr: showsInputTax(v.categoryId) || gstTick ? (v.inputTax ?? 0) : 0,
         order_id: v.orderId,
+        rfq_id: v.rfqId,
         supplier_order_id: v.legId,
         payee_id: v.payeeId,
         // 0087 for-month: a monthly bill says which month it is for; an expense that is not one keeps its own month
@@ -293,7 +301,7 @@ function ExpenseFormReady({
   // closes (saved, cancelled, discarded). Restored as changes, so closing still asks "Discard what you typed?".
   // Amount first: the person types it and presses Enter (A6.5: one expense in the default category). After a restore the
   // focus waits a tick, so the amount field shows the kept number (a focused number field does not take outside changes).
-  const draftKey = expense ? null : expenseDraftKey(context?.orderId, context?.legId)
+  const draftKey = expense ? null : expenseDraftKey(context?.orderId ?? context?.rfqId, context?.legId)
   // Focus follows the render that carries the restored values (a timer could win the race on a loaded machine, leaving the focused
   // field empty and deaf to the restored amount).
   const [focusAfterRestore, setFocusAfterRestore] = useState(false)
@@ -330,7 +338,8 @@ function ExpenseFormReady({
   const amount = form.watch('amount')
   const paidVia = form.watch('paidVia')
   const orderId = form.watch('orderId')
-  const orders = useOrderOptions(showTag && !context?.orderId && !expense?.orderId)
+  const rfqId = form.watch('rfqId')
+  const jobs = useJobOptions(showTag && !context?.orderId && !context?.rfqId && !expense?.orderId && !expense?.rfqId)
   const legs = useLegOptions(orderId)
   const receipts = useReceipts(expense?.id)
   const deleteReceipt = useDeleteReceipt(expense?.id ?? '')
@@ -393,7 +402,7 @@ function ExpenseFormReady({
 
   return (
     <>
-      <Form sf={sf} labels={{ amount: 'Amount', categoryId: 'Category', paidOn: 'Date paid', paidVia: 'Paid via', note: 'Note', inputTax: 'Input tax', orderId: 'Order', legId: 'Order', payeeId: 'Paid to' }} className="grid gap-4">
+      <Form sf={sf} labels={{ amount: 'Amount', categoryId: 'Category', paidOn: 'Date paid', paidVia: 'Paid via', note: 'Note', inputTax: 'Input tax', orderId: 'Job', rfqId: 'Job', legId: 'Order', payeeId: 'Paid to' }} className="grid gap-4">
         {/* Enter in the amount saves: the form has several fields, so it needs a default button of its own for implicit submission. */}
         <button type="submit" hidden tabIndex={-1} />
         <div className="grid gap-4 md:grid-cols-2">
@@ -466,17 +475,19 @@ function ExpenseFormReady({
           </FormField>
         ) : null}
 
-        {showTag && !context?.orderId ? (
+        {showTag && !context?.orderId && !context?.rfqId ? (
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField<Values, 'orderId'> name="orderId" label="Order" requirement="optional">
+            <FormField<Values, 'orderId'> name="orderId" label="Job" requirement="optional">
               {f => (
                 <Combobox
-                  options={(orders.data ?? []).map(o => ({ value: o.id, label: o.ref, meta: o.company }))}
-                  value={f.value}
-                  loading={orders.isPending}
-                  placeholder="ORD-0038"
+                  options={(jobs.data ?? []).map(o => ({ value: o.id, label: o.ref, meta: [o.company, o.rfqRef, o.note].filter(Boolean).join(' · ') }))}
+                  value={f.value ?? rfqId}
+                  loading={jobs.isPending}
+                  placeholder="Job number"
                   onChange={v => {
-                    f.onChange(v)
+                    const cols = jobColumns((jobs.data ?? []).find(o => o.id === v) ?? null)
+                    f.onChange(cols.orderId)
+                    form.setValue('rfqId', cols.rfqId)
                     form.setValue('legId', null)
                     form.setValue('payeeId', null)
                   }}
@@ -549,9 +560,9 @@ function ExpenseFormReady({
               , optional.
             </span>
           ) : null}
-          {!showTag && !context?.orderId && !expense?.orderId ? (
+          {!showTag && !context?.orderId && !context?.rfqId && !expense?.orderId && !expense?.rfqId ? (
             <span>
-              <LinkButton onClick={() => setShowTag(true)}>Tag to an order</LinkButton>, optional.
+              <LinkButton onClick={() => setShowTag(true)}>Tag to a job</LinkButton>, optional.
             </span>
           ) : null}
           {!showPaidVia ? (

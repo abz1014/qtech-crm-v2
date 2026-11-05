@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Camera, Check, CircleAlert, Trash2, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
@@ -13,7 +13,7 @@ import { PageHeader } from '@/ui/PageHeader'
 import { StatusText } from '@/ui/StatusText'
 import { useToast } from '@/ui/useToast'
 import { NumberInput } from '@/ui/form/NumberInput'
-import { useCreateClaim, useMyClaims, useOrderOptions, useWithdrawClaim } from '@/features/money/expenses/hooks'
+import { useCreateClaim, useMyClaims, useMyVisitOptions, useOrderOptions, useWithdrawClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, type Claim } from '@/features/money/expenses/claimsApi'
 import { pkr } from '@/features/money/expenses/model'
 import { AMOUNT_ABOVE_ZERO, claimAmountProblem } from '@/features/money/expenses/quick'
@@ -37,6 +37,8 @@ function MyClaims() {
   const toast = useToast()
   const claims = useMyClaims()
   const orders = useOrderOptions()
+  const session = useSession()
+  const visits = useMyVisitOptions(session.status === 'signed-in' ? session.user.id : undefined)
   const create = useCreateClaim()
   const withdraw = useWithdrawClaim()
   const [id, setId] = useState(() => crypto.randomUUID())
@@ -44,9 +46,20 @@ function MyClaims() {
   const [note, setNote] = useState('')
   const [spentOn, setSpentOn] = useState(today)
   const [orderId, setOrderId] = useState('')
+  const [visitId, setVisitId] = useState('')
+  const visitTouched = useRef(false)
   const [photo, setPhoto] = useState<AddedFile | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  // 0136 "Which visit?": the person's visit today when they have one, else none. Choosing anything themselves is never overridden.
+  useEffect(() => {
+    if (visitTouched.current || visitId) return
+    const todays = (visits.data ?? []).filter(v => v.visitOn === today)
+    if (todays.length === 1) {
+      setVisitId(todays[0].id)
+      setOrderId(todays[0].orderId)
+    }
+  }, [visits.data, today, visitId])
   const pending = useMemo(() => (claims.data ?? []).filter(c => c.status === 'pending'), [claims.data])
 
   const submit = () => {
@@ -57,7 +70,7 @@ function MyClaims() {
     }
     setError(null)
     create.mutate(
-      { id, amount, spentOn, note: note.trim() || null, orderId: orderId || null, photo: photo && !photo.error ? photo.file : null },
+      { id, amount, spentOn, note: note.trim() || null, orderId: orderId || null, visitId: visitId || null, photo: photo && !photo.error ? photo.file : null },
       {
         onSuccess: photoOk => {
           toast.toast({
@@ -69,6 +82,8 @@ function MyClaims() {
           setAmount(null)
           setNote('')
           setOrderId('')
+          setVisitId('')
+          visitTouched.current = false
           setPhoto(null)
         },
         onError: e => setError(`${mapPgError(e, { entity: 'expense' }).message} Nothing was sent.`),
@@ -106,7 +121,16 @@ function MyClaims() {
             <span className="font-medium">
               Job <span className="font-regular text-fg-muted">optional</span>
             </span>
-            <select value={orderId} onChange={e => setOrderId(e.target.value)} className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base">
+            <select
+              value={orderId}
+              onChange={e => {
+                visitTouched.current = true
+                setOrderId(e.target.value)
+                // a visit belongs to one order: another job leaves no visit named
+                const v = (visits.data ?? []).find(x => x.id === visitId)
+                if (v && v.orderId !== e.target.value) setVisitId('')
+              }}
+              className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base">
               <option value="">No job</option>
               {(orders.data ?? []).map(o => (
                 <option key={o.id} value={o.id}>
@@ -116,6 +140,30 @@ function MyClaims() {
             </select>
           </label>
         </div>
+        {(visits.data ?? []).length > 0 ? (
+          <label className="grid min-w-0 gap-2">
+            <span className="font-medium">
+              Which visit? <span className="font-regular text-fg-muted">optional</span>
+            </span>
+            <select
+              value={visitId}
+              onChange={e => {
+                visitTouched.current = true
+                setVisitId(e.target.value)
+                const v = (visits.data ?? []).find(x => x.id === e.target.value)
+                if (v) setOrderId(v.orderId)
+              }}
+              className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base"
+            >
+              <option value="">No visit</option>
+              {(visits.data ?? []).map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           {photo && !photo.error ? (
             <Button size="touch" icon={X} onClick={() => setPhoto(null)} className="text-base">
@@ -200,6 +248,7 @@ function ClaimLine({ claim, onWithdraw, busy }: { claim: Claim; onWithdraw: () =
         <b className="num font-semibold">{pkr(claim.amount)}</b>
         {claim.note ? <span> · {claim.note}</span> : null}
         {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
+        {claim.visitLabel ? <span className="text-fg-2"> · {claim.visitLabel}</span> : null}
       </span>
       <span className="justify-self-end">{state}</span>
       <span className="num text-xs text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>

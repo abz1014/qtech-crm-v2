@@ -2,7 +2,7 @@
 id: approve-claims
 title: Approve what an engineer paid
 roles: admin
-keywords: engineer, claim, i paid, reimburse, pay back, petrol, approve, reject, receipt, petty cash, to approve
+keywords: visit, enquiry, engineer, claim, i paid, reimburse, pay back, petrol, approve, reject, receipt, petty cash, to approve
 screens: /money/expenses
 related: add-expenses, cash-in-hand, i-paid
 ---
@@ -12,4 +12,4 @@ related: add-expenses, cash-in-hand, i-paid
 4. Tap [Approve]. It becomes an expense and counts from then on.
 5. Not right? Tap [Not approved…], say why, then [Not approved].
 
-Tip: A claim waiting here is in no total or report. The engineer sees whether it was approved.
+Tip: A claim shows its job and the visit the engineer named. The expense keeps both, so an enquiry's cost joins its order when it is won. A claim waiting here is in no total or report. The engineer sees whether it was approved.

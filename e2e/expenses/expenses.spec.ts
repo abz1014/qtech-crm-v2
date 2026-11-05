@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, login, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 
 /*
@@ -186,11 +186,11 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.press('Tab') // paid via
     await page.keyboard.press('Tab') // detail
     await page.keyboard.press('Tab') // order
-    await expect(page.getByRole('combobox', { name: 'Order, row 1' })).toBeFocused()
+    await expect(page.getByRole('combobox', { name: 'Job, row 1' })).toBeFocused()
     await page.keyboard.type(String(order.number))
     await expect(page.getByRole('option', { name: new RegExp(`ORD-0*${order.number}(?![0-9])`) }).first()).toBeVisible()
     await page.keyboard.press('Tab') // takes the first match and moves on
-    await expect(page.getByRole('combobox', { name: 'Order, row 1' })).toHaveValue(new RegExp(`^ORD-0*${order.number}$`))
+    await expect(page.getByRole('combobox', { name: 'Job, row 1' })).toHaveValue(new RegExp(`^ORD-0*${order.number}$`))
     await page.keyboard.press('Shift+Tab') // back into the order cell, which now holds a tag
     await page.keyboard.press('Enter') // an Enter in a filled row adds the next one
     await expect(page.getByRole('textbox', { name: 'Amount, row 2' })).toBeFocused()
@@ -205,6 +205,74 @@ test.describe('expenses (M03, M11)', () => {
     expect(leg.id).toBeTruthy()
     const [u] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${untagged}&select=*`))
     expect(u).toMatchObject({ order_id: null, supplier_order_id: null })
+  })
+
+  test("0136: a cost typed on an enquiry is counted in the order's margin once the enquiry is won; a lost enquiry keeps it as its own line", async ({ page }) => {
+    const customer = await createCompany(uniqueName('Enquiry Cost Customer'))
+    const rfq = await createRfq(customer.id)
+    await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: `Survey item ${unique()}`, qty: 1, quoted_unit_price_net: 1000 }, prefer: 'return=minimal' }))
+    const lost = await createRfq(customer.id)
+    const cost = base() + 41
+    const lostCost = base() + 42
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+    await page.keyboard.type(String(cost))
+    for (let i = 0; i < 5; i++) await page.keyboard.press('Tab') // category, date, paid via, detail, then the Job cell
+    await expect(page.getByRole('combobox', { name: 'Job, row 1' })).toBeFocused()
+    await page.keyboard.type(rfqRef(rfq.number)) // the full ref: a bare number also finds the order with that number
+    await expect(page.getByRole('option', { name: new RegExp(`RFQ-0*${rfq.number}(?![0-9])`) }).first()).toBeVisible()
+    await page.keyboard.press('Tab') // takes the enquiry
+    await expect(page.getByRole('combobox', { name: 'Job, row 1' })).toHaveValue(rfqRef(rfq.number))
+    await page.keyboard.press('Control+Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const [e] = await must(rest<(ExpenseRow & { rfq_id: string | null })[]>('admin', `expenses?amount_pkr=eq.${cost}&select=*`))
+    expect(e).toMatchObject({ rfq_id: rfq.id, order_id: null })
+
+    // a second enquiry, lost, with a cost
+    await must(rest('admin', 'expenses', { method: 'POST', body: { paid_on: today(), paid_via: 'cash', amount_pkr: lostCost, category_id: SNACKS, rfq_id: lost.id }, prefer: 'return=minimal' }))
+    await must(rest('admin', `rfqs?id=eq.${lost.id}`, { method: 'PATCH', body: { closed_on: today(), close_reason: 'price' }, prefer: 'return=minimal' }))
+    const enquiryCosts = (id: string) => must(rest<{ state: string; spent_net: number }[]>('admin', `v_enquiry_costs?rfq_id=eq.${id}&select=state,spent_net`))
+    expect(await enquiryCosts(rfq.id)).toEqual([{ state: 'open', spent_net: cost }])
+    expect(await enquiryCosts(lost.id)).toEqual([{ state: 'lost', spent_net: lostCost }])
+    expect((await rest<unknown[]>('sales', `v_enquiry_costs?rfq_id=eq.${rfq.id}&select=state`)).body).toEqual([])
+    expect((await rest<unknown[]>('engineer', `v_enquiry_costs?rfq_id=eq.${rfq.id}&select=state`)).body).toEqual([])
+
+    // the enquiry is won: the cost is now the order's
+    const orderId = crypto.randomUUID()
+    await must(rest('admin', 'rpc/convert_rfq_to_order', { method: 'POST', body: { p_order_id: orderId, p_rfq_id: rfq.id } }))
+    const [after] = await must(rest<ExpenseRow[]>('admin', `expenses?id=eq.${e.id}&select=*`))
+    expect(after.order_id).toBe(orderId)
+    const [money] = await must(rest<{ actual_cost: number; net_sale: number; margin: number }[]>('admin', `v_order_money?order_id=eq.${orderId}&select=actual_cost,net_sale,margin`))
+    expect(Number(money.actual_cost)).toBe(cost)
+    expect(Number(money.margin)).toBe(Number(money.net_sale) - cost)
+    expect(await enquiryCosts(rfq.id)).toEqual([{ state: 'ordered', spent_net: cost }])
+    // the lost enquiry's cost stays on the enquiry
+    expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${lostCost}&select=*`)))[0].order_id).toBeNull()
+  })
+
+  test("0136: an engineer's claim names the visit of today, the approved expense keeps the visit, and the engineer sees no price", async ({ page }) => {
+    const customer = await createCompany(uniqueName('Visit Claim Customer'))
+    const [order] = await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } }))
+    const [visit] = await must(rest<{ id: string }[]>('admin', 'order_visits', { method: 'POST', body: { order_id: order.id, visit_type: 'survey', visit_on: today(), engineer_id: 'a0000000-0000-4000-8000-000000000003' } }))
+    const amt = 1500 + Math.floor(Math.random() * 900)
+    const note = `Site taxi ${amt}`
+    await openAs(page, 'engineer', '/my-expenses')
+    const which = page.getByRole('combobox', { name: /Which visit/ })
+    await expect(which).toHaveValue(visit.id) // today's visit is already chosen
+    await page.getByRole('textbox', { name: 'How much, PKR' }).fill(String(amt))
+    await page.getByLabel('What for').fill(note)
+    await page.getByRole('button', { name: 'Send for approval' }).click()
+    await expect(page.getByText(note)).toBeVisible()
+    await expect(page.getByRole('listitem').filter({ hasText: note })).toContainText('Survey visit')
+    const [claim] = await must(rest<{ id: string; order_id: string | null; visit_id: string | null }[]>('engineer', `expense_claims?note=eq.${encodeURIComponent(note)}&select=*`))
+    expect(claim).toMatchObject({ order_id: order.id, visit_id: visit.id })
+    await must(rest('admin', 'rpc/approve_expense_claim', { method: 'POST', body: { p_claim: claim.id, p_category: FUEL, p_paid_how: 'cash_back' } }))
+    const [e] = await must(rest<(ExpenseRow & { visit_id: string | null })[]>('admin', `expenses?description=ilike.${encodeURIComponent(`${note}*`)}&select=*`))
+    expect(e).toMatchObject({ amount_pkr: amt, order_id: order.id, visit_id: visit.id })
+    // the engineer sees their claim, never the expense or the order's cost
+    expect((await rest<unknown[]>('engineer', `expenses?id=eq.${e.id}&select=id`)).body).toEqual([])
+    expect((await rest<unknown[]>('engineer', `v_enquiry_costs?select=rfq_id`)).body).toEqual([])
   })
 
   test('the date typed is the date saved, with no waiting between the last key and Ctrl+Enter', async ({ page }) => {

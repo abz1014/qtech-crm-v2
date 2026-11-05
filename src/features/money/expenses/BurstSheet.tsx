@@ -28,7 +28,7 @@ import {
   useInlineCategoryCreate,
   useInsertExpenses,
   useMostUsedCategory,
-  useOrderOptions,
+  useJobOptions,
   useRecentDetails,
   useRecordedBills,
   useRecurring,
@@ -50,6 +50,7 @@ import {
   effectivePaidVia,
   invalidRows,
   isFilled,
+  jobColumns,
   markClosedRows,
   newBurstRow,
   recentCategories,
@@ -60,7 +61,7 @@ import {
   type Category,
   type DetailUse,
   type ExpenseGroup,
-  type OrderTagOption,
+  type JobTagOption,
   type PaidVia,
 } from '@/features/money/expenses/model'
 
@@ -73,8 +74,8 @@ import {
  *
  * The first row's category is the most used in the last 30 days, the date is today, paid via is the category's own.
  * A closed month refuses the whole save; the sentence appears on the rows dated in it and every row keeps what it holds.
- * The Order cell (audit X1) is optional: a supplier payment typed here with no order is never counted against that order's margin,
- * so it is one Tab away after the note. Empty is fine; a number or a customer name narrows the list and Tab takes the first match.
+ * The Job cell (audit X1, 0136) is optional: a supplier payment typed here with no job is never counted against that order's margin,
+ * so it is one Tab away after the note. Empty is fine; a job number (order or enquiry) or a customer name narrows the list and Tab takes the first match.
  * Below 1024 px the grid becomes a list of cards with a 44 px camera button (the photo is compressed before upload).
  *
  * Owner request 2026-10-20 (every little expense, fast): a category that does not exist yet is created from the category box
@@ -91,7 +92,7 @@ const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
 const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-2 px-6'
 
-const NO_ORDERS: readonly OrderTagOption[] = []
+const NO_JOBS: readonly JobTagOption[] = []
 const NO_GROUPS: readonly ExpenseGroup[] = []
 const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 })
 
@@ -121,8 +122,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const insert = useInsertExpenses()
   const templatesQ = useRecurring()
   const recordedQ = useRecordedBills(today)
-  const orderQ = useOrderOptions(true)
-  const orders: readonly OrderTagOption[] = orderQ.data ?? NO_ORDERS
+  const jobQ = useJobOptions(true)
+  const jobs: readonly JobTagOption[] = jobQ.data ?? NO_JOBS
   const uploadReceipt = useUploadReceipt()
   const groupsQ = useGroups()
   const groups = groupsQ.data ?? NO_GROUPS
@@ -230,7 +231,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
         noCategory.length > 0
           ? `No category matches "${noCategory[0].categoryText}". Pick one from the list, then save.`
           : noOrder.length > 0
-            ? `No order matches "${noOrder[0].orderText}". Pick one from the list or clear the Order cell, then save.`
+            ? `No job matches "${noOrder[0].orderText}". Pick one from the list or clear the Job cell, then save.`
             : unsavable.length === 1
             ? 'One row has no valid date. Fix it, then save.'
             : `${unsavable.length} rows have no valid date. Fix them, then save.`,
@@ -386,7 +387,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     row={r}
                     index={i + 1}
                     categories={categories}
-                    orders={orders}
+                    jobs={jobs}
                     today={today}
                     onPatch={p => patch(r.id, p)}
                     onKey={e => rowKey(e, r)}
@@ -416,7 +417,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                   <span>Date</span>
                   <span>Paid via</span>
                   <span>Detail</span>
-                  <span>Order</span>
+                  <span>Job</span>
                   <span>Receipt photo</span>
                   <span>Repeats</span>
                   <span />
@@ -427,7 +428,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     row={r}
                     index={i + 1}
                     categories={categories}
-                    orders={orders}
+                    jobs={jobs}
                     today={today}
                     onPatch={p => patch(r.id, p)}
                     onKey={e => rowKey(e, r)}
@@ -503,7 +504,7 @@ interface RowProps {
   row: BurstRow
   index: number
   categories: readonly Category[]
-  orders: readonly OrderTagOption[]
+  jobs: readonly JobTagOption[]
   today: string
   onPatch: (p: Partial<BurstRow>) => void
   onKey: (e: React.KeyboardEvent) => void
@@ -535,7 +536,7 @@ function DetailOptions({ id, details, categoryId }: { id: string; details: reado
 
 const defaultEdge = 'bg-surface text-fg-2'
 
-function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, details, groups, recent }: RowProps) {
+function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, details, groups, recent }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
@@ -602,10 +603,10 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       </div>
       <OrderTagPicker
-        orders={orders}
-        value={row.orderId}
-        aria-label={`Order, row ${index}`}
-        onChange={id => onPatch({ orderId: id, orderText: undefined })}
+        jobs={jobs}
+        value={row.orderId ?? row.rfqId}
+        aria-label={`Job, row ${index}`}
+        onChange={job => onPatch({ ...jobColumns(job), orderText: undefined })}
         onUnmatched={text => onPatch({ orderText: text ?? undefined })}
       />
       <div>
@@ -808,7 +809,7 @@ function PhotoThumb({ file, className }: { file: File; className?: string }) {
 
 // ====================================================================== phone card
 
-function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRemove, onCreate, details, groups, recent }: RowProps) {
+function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemove, onCreate, details, groups, recent }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const categoryRef = useRef<HTMLInputElement | null>(null)
@@ -954,14 +955,14 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
       {row.noteError ? <p className="text-base text-tone-danger-fg">{row.noteError}</p> : null}
       <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Order, optional</span>
+        <span aria-hidden="true" className="text-base font-medium text-fg-2">Job, optional</span>
         <OrderTagPicker
-          orders={orders}
-          value={row.orderId}
+          jobs={jobs}
+          value={row.orderId ?? row.rfqId}
           size="phone"
-          placeholder="Type an order number"
-          aria-label={`Order, expense ${index}`}
-          onChange={id => onPatch({ orderId: id, orderText: undefined })}
+          placeholder="Type a job number"
+          aria-label={`Job, expense ${index}`}
+          onChange={job => onPatch({ ...jobColumns(job), orderText: undefined })}
           onUnmatched={text => onPatch({ orderText: text ?? undefined })}
         />
       </div>

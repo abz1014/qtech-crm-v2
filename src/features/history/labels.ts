@@ -143,7 +143,9 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     period: hide,
     recurring_id: hide,
     reference: t('Reference'),
+    rfq_id: hide,
     supplier_order_id: hide,
+    visit_id: hide,
   },
   quotations: {
     contact_id: r('Contact'),

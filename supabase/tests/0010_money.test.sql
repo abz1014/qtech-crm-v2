@@ -31,7 +31,7 @@ select columns_are('public', 'payments_in',
 select columns_are('public', 'expenses',
   array['id', 'created_at', 'created_by', 'paid_on', 'amount_pkr', 'category_id', 'description', 'order_id',
         'supplier_order_id', 'payee_id', 'reference', 'recurring_id', 'period', 'legacy_flags', 'legacy_source',
-        'paid_via', 'input_tax_pkr', 'bank_month', 'fx_currency', 'fx_amount'],
+        'paid_via', 'input_tax_pkr', 'bank_month', 'fx_currency', 'fx_amount', 'rfq_id', 'visit_id'],   -- 0136: the enquiry and the visit a cost was spent on
   'expenses has the section 2.18 columns (A6: category_id, paid_via, input_tax_pkr, bank_month)');
 select columns_are('public', 'recurring_expenses',
   array['id', 'created_at', 'created_by', 'label', 'category_id', 'amount', 'day_of_month', 'active', 'start_month',
