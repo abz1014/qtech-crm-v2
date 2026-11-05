@@ -423,3 +423,23 @@ export async function listJobInvoices(orderId: string): Promise<JobInvoice[]> {
   const rows = unwrap(await requireSupabase().from('invoices').select('id, number, invoice_date, net_amount, gst_amount').eq('order_id', orderId).order('invoice_date'))
   return rows.map(r => ({ id: r.id, number: r.number, invoiceDate: r.invoice_date, gross: Number(r.net_amount) + Number(r.gst_amount) }))
 }
+
+// ---------------------------------------------------------------- the imported note (migration 0135)
+
+export interface ImportedNoteRow {
+  /** Which kind of row the text came from: the order or enquiry itself (its notes), or one of their lines (its description as imported). */
+  kind: 'orders' | 'rfqs' | 'order_items' | 'rfq_items'
+  rowId: string
+  note: string
+}
+
+/**
+ * The old system's free text behind an imported enquiry and its order: their notes, and the item lines' text as it was imported
+ * (the item lines now carry a cleaned text). Admin and sales only: public.imported_notes holds prices and supplier names, and the
+ * database refuses an engineer (42501), so an engineer's page never asks.
+ */
+export async function listImportedNotes(parentIds: string[]): Promise<ImportedNoteRow[]> {
+  if (parentIds.length === 0) return []
+  const rows = unwrap(await requireSupabase().from('imported_notes').select('table_name, row_id, note').in('parent_id', parentIds).order('stored_at').order('row_id'))
+  return rows.flatMap(r => (r.table_name === 'orders' || r.table_name === 'rfqs' || r.table_name === 'order_items' || r.table_name === 'rfq_items' ? [{ kind: r.table_name, rowId: r.row_id, note: r.note }] : []))
+}

@@ -1,4 +1,5 @@
 import { parseLegacyDate } from '../lib/dates'
+import { cleanItemText } from '../lib/cleanItemText'
 import { legacyId } from '../lib/ids'
 import { clean, money, num, str } from '../lib/text'
 import type { Row } from '../lib/text'
@@ -68,8 +69,9 @@ export function itemDescription(r: Row): string {
         s => !/^PO\s*#/i.test(s) && !/^(unit|batch)\s+[a-z0-9]+$/i.test(s) && !/^(received|delivered|net margin|final remaining|remaining|payment)/i.test(s),
       ) ?? null
   }
-  const base = (text ?? type ?? 'Legacy order').slice(0, 200)
-  return unit ? `${base} — ${unit}` : base
+  // 0135: no prices and no supplier names in an item's text (an engineer reads it); the database cleans the same way
+  const base = cleanItemText(text ?? type ?? 'Legacy order').slice(0, 200)
+  return cleanItemText(unit ? `${base} — ${unit}` : base)
 }
 
 export function transformOrders(

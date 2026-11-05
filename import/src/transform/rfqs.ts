@@ -1,4 +1,5 @@
 import { daysBetween, dueTextFromNotes, parseLegacyDate } from '../lib/dates'
+import { cleanItemText } from '../lib/cleanItemText'
 import { legacyId } from '../lib/ids'
 import { clean, normName, num, str } from '../lib/text'
 import type { Row } from '../lib/text'
@@ -209,7 +210,7 @@ export function transformRfqs(ctx: Ctx, book: CompanyBook): RfqOutput {
       ...(stamp(li) ? { created_at: stamp(li) } : {}),
       rfq_id: rfqId,
       position: pos,
-      description: str(li, 'specification') ?? str(li, 'product_type') ?? 'Item (no description)',
+      description: cleanItemText(str(li, 'specification') ?? str(li, 'product_type') ?? 'Item (no description)'),   // 0135: no prices or supplier names
       brand_id: null,
       family_id: book.family(str(li, 'product_type')),
       qty: q !== null && q > 0 ? q : 1,

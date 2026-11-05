@@ -21,6 +21,7 @@ import type { JobData } from '@/features/jobs/useJobData'
 import { HasPricesToggle } from '@/features/rfqs/HasPricesToggle'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
 import { latestQuotation } from '@/features/jobs/lib/latestQuotation'
+import { ImportedNote } from '@/features/jobs/ImportedNote'
 
 /*
  * The job page's right column: Contact (Call, WhatsApp), Money for this job (admin only), Notes and files (one timeline, newest
@@ -161,6 +162,7 @@ export function NotesFilesPanel({ facts, data, ctx }: { facts: JobFacts; data: J
     ...files.map(f => ({ at: f.createdAt.slice(0, 10), kind: 'file' as const, text: f.fileName, file: f, from: (rfqFiles.includes(f) ? 'rfq' : 'order') as 'rfq' | 'order' })),
   ].sort((a, b) => b.at.localeCompare(a.at))
   return (
+    <>
     <Panel title="Notes and files" action={<JobSlot name="files" context={ctx} />}>
       {entries.length === 0 ? (
         <p className="text-base text-fg-muted">No notes or files yet.</p>
@@ -192,6 +194,9 @@ export function NotesFilesPanel({ facts, data, ctx }: { facts: JobFacts; data: J
         </ul>
       )}
     </Panel>
+    {/* 0135: the old system's free text, closed until opened, admin and sales only (an engineer's page draws and asks nothing) */}
+    <ImportedNote rfqId={facts.job.rfqId} orderId={facts.job.orderId} role={ctx.role} />
+    </>
   )
 }
 

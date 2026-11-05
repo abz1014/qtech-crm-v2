@@ -11,11 +11,11 @@ select is((select data_type from information_schema.columns
 
 -- Every business table carries the trigger. users (written only by the admin-users function)
 -- and audit_log itself are exceptions, as is fx_fetch_log (the nightly FX job's own journal, 0038), and month_snapshots (0058: written only by
--- the close trigger; the close and reopen themselves are audited on closed_months); a table added later without a trigger fails here.
+-- the close trigger; the close and reopen themselves are audited on closed_months), and imported_notes (0135: the old system's free text; an audit row would copy it back into audit_log); a table added later without a trigger fails here.
 select is((select coalesce(array_agg(c.relname::text order by c.relname), '{}')
            from pg_class c
            where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p')
-             and c.relname not in ('users', 'audit_log', 'fx_fetch_log', 'month_snapshots')
+             and c.relname not in ('users', 'audit_log', 'fx_fetch_log', 'month_snapshots', 'imported_notes')
              and not exists (select 1 from pg_trigger t
                              where t.tgrelid = c.oid and not t.tgisinternal
                                and t.tgfoid = 'public.audit_row_change()'::regprocedure)),

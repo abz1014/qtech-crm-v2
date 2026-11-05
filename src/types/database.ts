@@ -1089,6 +1089,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"imported_notes": {
+                  Row: {
+                    "note": string,"parent_id": string,"row_id": string,"stored_at": string,"table_name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "note": string,"parent_id": string,"row_id": string,"stored_at"?: string,"table_name": string
+                  }
+                  Update: {
+                    "note"?: string,"parent_id"?: string,"row_id"?: string,"stored_at"?: string,"table_name"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"inquiry_item_declines": {
                   Row: {
                     "created_at": string,"created_by": string | null,"inquiry_id": string,"reason": string,"rfq_item_id": string

@@ -120,7 +120,7 @@ select is((select coalesce(array_agg(x order by x), '{}') from (
                and has_table_privilege('authenticated', c.oid, p.priv)
                and not has_table_privilege('qtech_engineer', c.oid, p.priv)
                and not (p.priv in ('SELECT', 'INSERT', 'UPDATE') and c.relname in (select obj from price))
-               and not (p.priv = 'SELECT' and c.relname = 'v_fx_latest')) u),
+               and not (p.priv = 'SELECT' and c.relname in ('v_fx_latest', 'imported_notes'))) u),   -- 0135: imported_notes (the old system's free text) is deliberately not granted to qtech_engineer
           '{}'::text[], 'coverage: qtech_engineer holds every table privilege authenticated holds (prices excepted)');
 select is((select coalesce(array_agg(format('%s.%s', c.relname, a.attname) order by c.relname, a.attname), '{}')
            from pg_class c join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped

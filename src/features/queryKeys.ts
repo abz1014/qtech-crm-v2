@@ -335,6 +335,8 @@ function jobs() {
     list: (role: string) => [...all, 'list', role] as const,
     /** The customer's PO number for each order (admin and sales only). */
     customerPos: [...all, 'customer-po'] as const,
+    /** The old system's free text behind an imported job (admin and sales only), by the enquiry and order ids. */
+    importedNotes: (signature: string) => [...all, 'imported-notes', signature] as const,
     /** The jobs a search finds: the same function the command palette calls. */
     search: (text: string) => [...all, 'search', text.trim().toLowerCase()] as const,
     /** One job by its key ('139', 'O-45'). */
