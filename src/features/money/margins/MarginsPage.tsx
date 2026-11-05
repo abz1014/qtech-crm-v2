@@ -18,7 +18,7 @@ import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { useSetCostsCompleteMany } from '@/features/money/costs/hooks'
 import { useOrderMargins } from '@/features/money/hooks'
-import { isPaidProvisional, marginPct, marginTotals, noCostsYet, sortMargins, type MarginRow } from '@/features/money/margins/model'
+import { cashTotals, isPaidProvisional, marginPct, marginTotals, noCostsYet, sortCash, sortMargins, type CashTotals, type MarginMode, type MarginRow } from '@/features/money/margins/model'
 
 /*
  * Money > Lock a month > Margins (g2-money board "Admin: order margins"; M04). Whole-life margin per order, from v_order_money. Admin
@@ -32,6 +32,9 @@ import { isPaidProvisional, marginPct, marginTotals, noCostsYet, sortMargins, ty
 const COLS = 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_90px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
 
 type View = 'all' | 'not-final' | 'final'
+
+// The cash view (0137): customer and order, cash profit, received, paid out. All of it includes GST.
+const CASH_COLS = 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
 
 /** Whole rupees, for the phone's one-line figures. */
 const whole = (n: number) => Math.round(n).toLocaleString('en-US')
@@ -128,11 +131,15 @@ export function MarginsPage() {
   const [params] = useSearchParams()
   const fromReports = params.get('from') === 'reports'
   // Today's "Costs not marked complete" item opens this list on Not final (the orders it counts are paid and not final).
+  // Invoiced (net of GST, the margin) or Cash (what moved, GST included); ?basis=cash opens the cash view.
+  const [mode, setMode] = useState<MarginMode>(() => (params.get('basis') === 'cash' ? 'cash' : 'invoiced'))
   const [view, setView] = useState<View>(() => (params.get('filter') === 'paid-provisional' ? 'not-final' : 'all'))
   const all = useMemo(() => sortMargins(q.data ?? []), [q.data])
   const totals = useMemo(() => marginTotals(all), [all])
   const paid = useMemo(() => all.filter(isPaidProvisional), [all])
   const notFinal = totals.provisional + totals.basisUnknown
+  const cashRows = useMemo(() => sortCash(q.data ?? []), [q.data])
+  const cash = useMemo(() => cashTotals(cashRows), [cashRows])
   const rows = useMemo(() => (view === 'all' ? all : view === 'final' ? all.filter(r => r.state === 'final') : all.filter(r => r.state !== 'final')), [all, view])
   const [confirming, setConfirming] = useState(false)
   return (
@@ -163,15 +170,26 @@ export function MarginsPage() {
           </h3>
           <span className="flex-1" />
           <SegmentedControl
-            aria-label="Show"
-            value={view}
-            onValueChange={v => setView(v as View)}
+            aria-label="Income measure"
+            value={mode}
+            onValueChange={v => setMode(v as MarginMode)}
             options={[
-              { value: 'all', label: 'All' },
-              { value: 'not-final', label: 'Not final', needs: notFinal },
-              { value: 'final', label: `Final (${totals.orders})` },
+              { value: 'invoiced', label: 'Invoiced' },
+              { value: 'cash', label: 'Cash' },
             ]}
           />
+          {mode === 'invoiced' ? (
+            <SegmentedControl
+              aria-label="Show"
+              value={view}
+              onValueChange={v => setView(v as View)}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'not-final', label: 'Not final', needs: notFinal },
+                { value: 'final', label: `Final (${totals.orders})` },
+              ]}
+            />
+          ) : null}
         </header>
         {q.isPending ? (
           <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading order margins">
@@ -195,6 +213,8 @@ export function MarginsPage() {
           </div>
         ) : all.length === 0 ? (
           <EmptyState title="No order to show yet">An order appears here as soon as it is made, with its margin once costs are paid.</EmptyState>
+        ) : mode === 'cash' ? (
+          <CashBody rows={cashRows} totals={cash} />
         ) : (
           <div>
             <div className={`hidden border-b bg-sunken px-5 py-2 text-sm text-fg-2 md:grid md:gap-4 ${COLS}`} aria-hidden="true">
@@ -238,6 +258,61 @@ export function MarginsPage() {
       </section>
       {confirming ? <CompleteManyDialog rows={paid} onClose={() => setConfirming(false)} /> : null}
     </MoneyFrame>
+  )
+}
+
+/** The cash view of the same orders: what was received, what was paid out, what is left. GST is inside the received figure and inside what is paid out. */
+function CashBody({ rows, totals }: { rows: readonly MarginRow[]; totals: CashTotals }) {
+  return (
+    <div data-testid="margins-cash">
+      <p className="border-b px-4 py-3 text-base text-fg-2">
+        Cash so far: received less paid out. It includes GST, so it is more than the invoiced margin. Nothing is taken off for the GST you owe FBR.
+      </p>
+      <div className={`hidden border-b bg-sunken px-4 py-2 text-base text-fg-2 md:grid md:gap-4 ${CASH_COLS}`} aria-hidden="true">
+        <span>Customer and order</span>
+        <span className="text-right">Cash profit</span>
+        <span className="text-right">Received</span>
+        <span className="text-right">Paid out</span>
+      </div>
+      <ul>
+        {rows.map(r => (
+          <li key={r.orderId} className={`grid gap-1 border-t px-4 py-3 first:border-t-0 md:gap-4 ${CASH_COLS}`} data-testid="cash-row">
+            <div className="grid content-start gap-px">
+              <span className="min-w-0 break-words text-base font-medium">{r.companyName}</span>
+              <Link to={`/orders/${r.orderId}`} className="num w-fit rounded text-base text-fg-2 hover:underline" aria-label={`Open ${orderRef(r.orderNumber)}`}>
+                {orderRef(r.orderNumber)}
+              </Link>
+            </div>
+            <div className={cn('flex items-baseline justify-between gap-2 md:justify-end', r.cashProfit < 0 && 'text-tone-danger-fg')}>
+              <span className="text-base text-fg-2 md:hidden">Cash profit</span>
+              <Money value={r.cashProfit} prefix={false} strong />
+            </div>
+            <div className="flex items-baseline justify-between gap-2 md:justify-end">
+              <span className="text-base text-fg-2 md:hidden">Received</span>
+              <Money value={r.received} prefix={false} />
+            </div>
+            <div className="flex items-baseline justify-between gap-2 md:justify-end">
+              <span className="text-base text-fg-2 md:hidden">Paid out</span>
+              <Money value={r.paidOut} prefix={false} />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className={`grid gap-1 border-t bg-sunken px-4 py-3 text-base font-medium md:gap-4 ${CASH_COLS}`} data-testid="cash-totals">
+        <span>
+          Total of <span className="num">{totals.orders}</span> {totals.orders === 1 ? 'order' : 'orders'}
+        </span>
+        <span className="num text-right">
+          <Money value={totals.cashProfit} prefix={false} size="lg" />
+        </span>
+        <span className="num text-right">
+          <Money value={totals.received} prefix={false} />
+        </span>
+        <span className="num text-right">
+          <Money value={totals.paidOut} prefix={false} />
+        </span>
+      </div>
+    </div>
   )
 }
 

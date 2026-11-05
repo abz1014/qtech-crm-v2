@@ -2436,6 +2436,14 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"v_order_profit": {
+                  Row: {
+                    "actual_cost": number | null,"basis": string | null,"cash_profit": number | null,"company_id": string | null,"costs_state": string | null,"expected_cost": number | null,"margin": number | null,"margin_state": string | null,"net_sale": number | null,"order_id": string | null,"order_number": number | null,"paid_out": number | null,"payment_state": string | null,"received": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_order_state": {
                   Row: {
                     "commissioning_state": string | null,"company_id": string | null,"data_trust": string | null,"goods_state": string | null,"gross": number | null,"gst": number | null,"invoiced": number | null,"invoicing_state": string | null,"is_done": boolean | null,"lifecycle": string | null,"net": number | null,"number": number | null,"order_id": string | null,"owner_id": string | null,"rfq_id": string | null,"site_id": string | null

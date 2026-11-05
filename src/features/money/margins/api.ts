@@ -3,13 +3,13 @@ import { lookupLabels } from '@/features/money/lookupLabels'
 import type { MarginRow, MarginState } from '@/features/money/margins/model'
 
 /*
- * Order margins (M04): every order's row from v_order_money (admin only: the view returns nothing to anyone else), with the
+ * Order margins (M04): every order's row from v_order_profit (v_order_money's figures plus the cash view; admin only: the view returns nothing to anyone else), with the
  * customer's name and the order date. Cancelled orders are left out: they have no sale. One read per table, joined here.
  */
 export async function listOrderMargins(): Promise<MarginRow[]> {
   const db = requireSupabase()
   const [money, orders] = await Promise.all([
-    fetchAll((from, to) => db.from('v_order_money').select('order_id, order_number, company_id, basis, net_sale, actual_cost, expected_cost, margin, margin_state, payment_state').range(from, to)),
+    fetchAll((from, to) => db.from('v_order_profit').select('order_id, order_number, company_id, basis, net_sale, actual_cost, expected_cost, margin, margin_state, payment_state, received, paid_out, cash_profit').range(from, to)),
     fetchAll((from, to) => db.from('orders').select('id, ordered_on, cancelled_on').range(from, to)),
   ])
   const live = new Map(orders.filter(o => !o.cancelled_on).map(o => [o.id, o.ordered_on]))
@@ -32,6 +32,9 @@ export async function listOrderMargins(): Promise<MarginRow[]> {
         margin: m.margin == null ? null : Number(m.margin),
         state,
         paymentState: m.payment_state ?? undefined,
+        received: Number(m.received ?? 0),
+        paidOut: Number(m.paid_out ?? 0),
+        cashProfit: Number(m.cash_profit ?? 0),
       }
     })
 }

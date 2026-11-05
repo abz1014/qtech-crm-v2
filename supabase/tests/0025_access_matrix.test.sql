@@ -168,6 +168,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_gst_register',      '',           'S',    'S',    ''),     -- s10 (same row)
   ('view',  'v_company_credit',    '',           'S',    '',     ''),     -- 0127: what a customer holds unapplied, admin only
   ('view',  'v_wht_deducted',      '',           'S',    '',     ''),     -- 0116: withholding tax the customers deducted, admin only
+  ('view',  'v_order_profit',      '',           'S',    '',     ''),     -- 0137: per order, invoiced margin and cash profit, admin only
   ('view',  'v_order_money',       '',           'S',    '',     ''),     -- s10 "v_order_money, v_cash_month, v_payment_net, v_target_progress"
   ('view',  'v_cash_month',        '',           'S',    '',     ''),     -- s10 (same row)
   ('view',  'v_payment_net',       '',           'S',    '',     ''),     -- s10 (same row)
@@ -553,7 +554,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
-                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted','v_company_credit',
+                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted','v_company_credit','v_order_profit',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)

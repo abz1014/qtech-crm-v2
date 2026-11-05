@@ -434,6 +434,9 @@ describe('margins (money/margins/model and v_order_money rules) against the orac
           actualCost: n(m.actualCost),
           margin: m.margin === null ? null : n(m.margin),
           state: m.marginState,
+          received: 0,
+          paidOut: 0,
+          cashProfit: 0,
         }))
         const t = marginTotals(rows)
         const fin = om.filter(m => m.marginState === 'final')

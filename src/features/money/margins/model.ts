@@ -22,7 +22,16 @@ export interface MarginRow {
   state: MarginState
   /** v_order_money.payment_state (unpaid, part, settled, overdue); lets the list show "paid, costs provisional". */
   paymentState?: string
+  /** Cash view (0137): money received for the order, GST included, less refunds and credit moved out. */
+  received: number
+  /** Every expense tagged to the order, gross (input tax included). */
+  paidOut: number
+  /** received - paidOut. The GST owed to FBR is not taken off. */
+  cashProfit: number
 }
+
+/** The two ways to read an order's result: the invoiced margin (net of GST) or the cash that moved (includes GST). */
+export type MarginMode = 'invoiced' | 'cash'
 
 /**
  * No cost has been entered and the costs are not marked complete (P2-C, plan D6): the margin would be the whole sale, so the screens say
@@ -92,4 +101,28 @@ export function marginNote(t: MarginTotals): string {
     parts.push('.')
   }
   return parts.join(' ').replace(' ,', ',').replace(' .', '.')
+}
+
+export interface CashTotals {
+  orders: number
+  received: number
+  paidOut: number
+  cashProfit: number
+}
+
+/** Cash view: every order is added up (cash has no provisional state, it is what moved). Whole paisa are added as numbers: the sums are shown in whole rupees. */
+export function cashTotals(rows: readonly MarginRow[]): CashTotals {
+  const t: CashTotals = { orders: 0, received: 0, paidOut: 0, cashProfit: 0 }
+  for (const r of rows) {
+    t.orders += 1
+    t.received += r.received
+    t.paidOut += r.paidOut
+    t.cashProfit += r.cashProfit
+  }
+  return t
+}
+
+/** Cash view order: orders that cost more than they brought in first, then newest first (by order date, then number). */
+export function sortCash(rows: readonly MarginRow[]): MarginRow[] {
+  return [...rows].sort((a, b) => Number(b.cashProfit < 0) - Number(a.cashProfit < 0) || (b.orderedOn ?? '').localeCompare(a.orderedOn ?? '') || b.orderNumber - a.orderNumber)
 }
