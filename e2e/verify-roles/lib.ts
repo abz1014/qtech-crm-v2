@@ -190,6 +190,7 @@ export const MONEY: Record<string, Record<string, Rule>> = {
   recurring_expenses: { amount: H },
   order_costs: { expected_cost_pkr: H },
   month_snapshots: { pnl: H, adjust: H, status: H, categories: H, team: H, payments: H, via: H, aging: H, payables: H, gst: H, details: H },
+  orders: { customer_po_number: H }, // 0133: refused to the engineer's database role; admin and sales read it
   order_items: { unit_price_net: 'm3', supplier_unit_price: 'supplier', gst_rate: 'info' },
   rfq_items: { quoted_unit_price_net: 'm3', gst_rate: 'info' },
   quotations: { net_total: 'm3', gst_total: 'm3', lines: 'm3' },

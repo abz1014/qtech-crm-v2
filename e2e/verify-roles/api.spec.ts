@@ -128,6 +128,7 @@ const PRICE_COLUMNS: Record<string, string[]> = {
   order_items: ['unit_price_net', 'supplier_unit_price'],
   purchase_orders: ['total', 'lines'],
   fx_rates: ['rate_pkr'],
+  orders: ['customer_po_number'], // 0133: the customer's PO number is for admin and sales only
 }
 
 test('engineer: no money of any kind in any table or view, column by column (prices included, 0081)', async () => {
@@ -205,7 +206,7 @@ test('engineer and sales: embedded selects reach no money table', async () => {
       const hidden = JSON.stringify(r.body).match(/"(invoices|payments_in|order_costs|expenses)":\s*(\[\s*\{|\{)/g) ?? []
       const allowed = p === 'sales' ? hidden.filter(h => h.startsWith('"invoices"')) : []
       expect.soft(hidden.filter(h => !allowed.includes(h)), `${p} ${path}: embedded money rows`).toEqual([])
-      expect.soft(moneyIn(path.split('?')[0], r.body).filter(l => l.rule === 'hidden' && !(p === 'sales' && /invoices/.test(l.where))), `${p} ${path}: hidden money values`).toEqual([])
+      expect.soft(moneyIn(path.split('?')[0], r.body).filter(l => l.rule === 'hidden' && !(p === 'sales' && (/invoices/.test(l.where) || l.field === 'customer_po_number'))), `${p} ${path}: hidden money values`).toEqual([])
     }
   }
   const admin = await api('admin', `/rest/v1/${embeds[0]}`)

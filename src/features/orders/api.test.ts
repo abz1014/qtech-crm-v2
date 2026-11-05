@@ -32,6 +32,23 @@ describe('orders api: an engineer is never sent a price', () => {
   })
 })
 
+describe('orders api: an engineer is never sent the customer PO number (0133)', () => {
+  it('names the order columns one by one: no star, and the PO column only for admin and sales', async () => {
+    const db = installFakeDb(call => (call.target === 'orders' ? { data: { id: 'o1', number: 38, company_id: 'c1', customer_po_number: 'PO-77', needs_commissioning: false } } : { data: null }))
+    uninstall = db.uninstall
+    const eng = await getOrderHeader('o1', false)
+    const adm = await getOrderHeader('o1', true)
+    const [engineer, money] = selects(db.calls, 'orders')
+    expect(engineer).not.toContain('*')
+    expect(engineer).not.toMatch(/customer_po_number/)
+    expect(money).not.toContain('*')
+    expect(money).toMatch(/customer_po_number/)
+    // even if a row somehow carried it, the engineer's header does not pass it on
+    expect(eng?.customerPo).toBeNull()
+    expect(adm?.customerPo).toBe('PO-77')
+  })
+})
+
 describe('orders api: the header in one round', () => {
   it('reads the customer, site, contact and owner embedded in the order, not in a second round (perf/lcp)', async () => {
     const order = { id: 'o1', number: 38, company_id: 'c1', site_id: 's1', contact_id: null, owner_id: 'u1', legacy_source: null, needs_commissioning: false }
