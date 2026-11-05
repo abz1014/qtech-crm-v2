@@ -10,6 +10,7 @@ import { useToast } from '@/ui/useToast'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { TapText } from '@/features/orders/TapEdit'
+import { CustomerPoFiles } from '@/features/orders/CustomerPoFiles'
 import { useUpdateOrder } from '@/features/orders/hooks'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
 import { useOrderWork } from '@/features/orders/jobSlots/useOrderWork'
@@ -49,7 +50,8 @@ function CustomerPo({ order }: { order: OrderHeader }) {
   const entry = useEntryAccess({ createdBy: order.createdBy ?? null, ownerId: order.owner?.id ?? null })
   const cancelled = order.cancelledOn !== null
   return (
-    <p className="text-base text-fg-2" data-slot="customer-po">
+    <div>
+      <p className="text-base text-fg-2" data-slot="customer-po">
       Customer PO{' '}
       <TapText
         value={order.customerPo}
@@ -72,7 +74,9 @@ function CustomerPo({ order }: { order: OrderHeader }) {
           {`${entry.note}.`}
         </span>
       ) : null}
-    </p>
+      </p>
+      <CustomerPoFiles orderId={order.id} canAdd={!cancelled && entry.can} />
+    </div>
   )
 }
 

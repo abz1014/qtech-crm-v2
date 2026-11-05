@@ -17,7 +17,8 @@ export const JOB_SLOTS: Record<JobSlotName, readonly SlotComponent[]> = {
   'next-step': [OrderMore, RfqMore],
   // P4-B: Add to this job (paste, photo or file; a guess of what it is, one tap to confirm).
   side: [lazy(() => import('@/features/jobs/AddToJob'))],
-  files: [],
+  // 0134: Add file (admin and sales; the component draws nothing for an engineer).
+  files: [lazy(() => import('@/features/jobs/AddFileSlot'))],
   'stage:enquiry': [],
   'stage:quotation': [],
   'stage:order': [lazy(() => import('@/features/orders/jobSlots/OrderWork'))],

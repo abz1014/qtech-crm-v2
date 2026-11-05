@@ -11,11 +11,12 @@ import { useSetAttachmentHasPrices } from '@/features/rfqs/hooks'
  * the customer's PO, a supplier's quote and enquiry files true; a site photo or an engineer's file false); this corrects a mistake
  * either way. Admin only: sales tag at upload, and an engineer can never tag.
  */
-export function HasPricesToggle({ att, rfqId, orderId }: { att: Pick<AttachmentRow, 'id' | 'fileName' | 'hasPrices'>; rfqId?: string; orderId?: string }) {
+export function HasPricesToggle({ att, rfqId, orderId }: { att: Pick<AttachmentRow, 'id' | 'fileName' | 'hasPrices'> & { isCustomerPo?: boolean }; rfqId?: string; orderId?: string }) {
   const session = useSession()
   const set = useSetAttachmentHasPrices(rfqId, orderId)
   const { toast } = useToast()
-  if (session.status !== 'signed-in' || session.user.role !== 'admin') return null
+  // The customer's PO document always has prices (0134 check): nothing to switch.
+  if (att.isCustomerPo || session.status !== 'signed-in' || session.user.role !== 'admin') return null
   const change = async (hasPrices: boolean) => {
     try {
       await set.mutateAsync({ id: att.id, hasPrices })

@@ -23,6 +23,19 @@ describe('uploadAttachment writes has_prices', () => {
     expect(inserted(fake)).toMatchObject({ has_prices: true, rfq_id: 'r-1' })
   })
 
+  it('the customer PO document is inserted with is_customer_po and has_prices true, a photo of it too (0134)', async () => {
+    const fake = setup()
+    const photo = new File([new Uint8Array([1, 2, 3])], 'po.jpg', { type: 'image/jpeg' })
+    await uploadAttachment({ orderId: 'o-1', clarificationId: null, file: photo, path: 'o-1/y.jpg', hasPrices: true, isCustomerPo: true })
+    expect(inserted(fake)).toMatchObject({ order_id: 'o-1', has_prices: true, is_customer_po: true })
+  })
+
+  it('an ordinary file is inserted with is_customer_po false', async () => {
+    const fake = setup()
+    await uploadAttachment({ orderId: 'o-1', clarificationId: null, file: FILE, path: 'o-1/z.pdf', hasPrices: true })
+    expect(inserted(fake)).toHaveProperty('is_customer_po', false)
+  })
+
   it('a site photo is inserted with has_prices false, written explicitly', async () => {
     const fake = setup()
     await uploadAttachment({ orderId: 'o-1', clarificationId: null, file: FILE, path: 'o-1/x.pdf', hasPrices: false })
