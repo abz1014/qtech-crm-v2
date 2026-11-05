@@ -97,6 +97,20 @@ describe('the delete job flow', () => {
     expect(fake.calls.some(c => c.target === 'rpc:delete_job')).toBe(false)
   })
 
+  it('a cost on the enquiry itself is a step with a link to Expenses, and Delete waits until it is gone', async () => {
+    const cost: BlockerRow = { step: 5, kind: 'expense', order_id: null, order_number: null, ref_id: 'e-1', ref_label: 'Travel to site, Rs 40.00 (on the enquiry)', ref_on: '2026-11-02', can_clear: true, why: 'Remove the cost (Money, Expenses), or keep the job.' }
+    const { fake } = setup({ blockers: [[cost], []] })
+    await userEvent.click(screen.getByRole('button', { name: 'Delete job' }))
+    expect(await screen.findByRole('heading', { name: 'To do first' })).toBeInTheDocument()
+    expect(screen.getByText(/Remove the expense:/)).toBeInTheDocument()
+    expect(screen.getByText(/Travel to site, Rs 40.00 \(on the enquiry\)/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open Expenses' })).toHaveAttribute('href', '/money/expenses')
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+    expect(fake.calls.some(c => c.target === 'rpc:delete_job')).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: 'Check again' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument())
+  })
+
   it('Check again reads the books again and turns into the confirm when nothing is left', async () => {
     setup({ blockers: [[payment], []] })
     await userEvent.click(screen.getByRole('button', { name: 'Delete job' }))

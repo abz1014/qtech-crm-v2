@@ -235,5 +235,39 @@ insert into public.rfqs (id, company_id, owner_id, created_by) values
 select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_job(@80, null)', true), 'ok:0', 'an enquiry with no order is deleted');
 select is((select count(*)::int from public.rfqs where id = pg_temp.u('80')), 0, 'and it is gone');
 
+-- ================================================================== costs and claims on the enquiry (0136 added rfqs_costs_guard)
+-- 90 enquiry with a cost on it, no order; 91 enquiry with a pending claim; 92 enquiry won as order 93, with a cost that moved to the order
+insert into public.rfqs (id, company_id, owner_id, created_by) values
+  (pg_temp.u('90'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('91'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001'),
+  (pg_temp.u('92'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001');
+insert into public.expenses (id, amount_pkr, category_id, description, rfq_id) values
+  (pg_temp.u('94'), 40, 'ca7e0000-0000-4000-8000-000000000010', '0132 travel to site', pg_temp.u('90')),
+  (pg_temp.u('95'), 60, 'ca7e0000-0000-4000-8000-000000000010', '0132 survey fee', pg_temp.u('92'));
+insert into public.expense_claims (id, created_by, amount_pkr, note, rfq_id) values
+  (pg_temp.u('96'), 'a0000000-0000-4000-8000-000000000003', 25, 'rickshaw', pg_temp.u('91'));
+insert into public.orders (id, company_id, owner_id, created_by, rfq_id) values
+  (pg_temp.u('93'), pg_temp.u('01'), 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', pg_temp.u('92'));
+
+select is(pg_temp.try_('admin', $q$select string_agg(kind || ':' || can_clear || ':' || coalesce(order_id::text, '-'), ',' order by step) from public.job_delete_blockers(@90, null)$q$),
+  'ok:expense:true:-', 'a cost on an enquiry with no order is a clearable expense step');
+select is(pg_temp.try_('admin', $q$select ref_label from public.job_delete_blockers(@90, null)$q$), 'ok:0132 travel to site, Rs 40.00 (on the enquiry)', 'and it names the cost');
+select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_job(@90, null)'), 'E:P0001:has_blockers',
+  'delete_job: refused with a guide step, not the bare rfq_has_costs');
+select is(pg_temp.try_('admin', $q$select string_agg(kind || ':' || can_clear, ',' order by step) from public.job_delete_blockers(@91, null)$q$),
+  'ok:expense:true', 'a pending claim on the enquiry is an expense step too');
+select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_job(@91, null)'), 'E:P0001:has_blockers', 'delete_job: refused with a pending claim');
+select is(pg_temp.try_('admin', $q$select count(*)::text from public.job_delete_blockers(@92, @93)$q$), 'ok:1',
+  'a cost that moved to the order is listed once (with the order), not twice');
+select is(pg_temp.try_('admin', $q$select order_id::text from public.job_delete_blockers(@92, @93)$q$), 'ok:' || pg_temp.u('93')::text, 'and it sits on the order');
+select is(pg_temp.code_('engineer', 'select count(*)::text from public.job_delete_blockers(@90, null)'), 'E:42501:admin_only', 'an engineer is still refused');
+
+-- clear the step the guide gives, check again, delete
+select is(pg_temp.code_('admin', 'delete from public.expenses where id = ''' || pg_temp.u('94') || '''', true), 'ok:1', 'the cost is removed (the step the guide asks for)');
+select is(pg_temp.try_('admin', 'select count(*)::text from public.job_delete_blockers(@90, null)'), 'ok:0', 'check again: nothing is left to clear');
+select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_job(@90, null)', true), 'ok:0', 'the enquiry is deleted');
+delete from public.expense_claims where id = pg_temp.u('96');   -- the admin decides the claim on the Expenses screen
+select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_job(@91, null)', true), 'ok:0', 'then its enquiry is deleted');
+
 select * from finish();
 rollback;

@@ -177,6 +177,17 @@ describe('the delete RFQ flow', () => {
     expect(keys.some(k => k?.includes('today'))).toBe(true)
   })
 
+  it('an RFQ with costs recorded on it (rfq_has_costs) says so plainly in the dialog and nothing goes', async () => {
+    const { removed } = setup({
+      rpc: () => ({ error: { code: 'P0001', message: 'This RFQ has costs recorded on it. Delete or move the costs first.', hint: 'rfq_has_costs' } as never }),
+    })
+    await openConfirm()
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('This RFQ has costs recorded on it. Delete or move the costs first.')
+    expect(screen.queryByText('RFQ list page')).toBeNull()
+    expect(removed).toEqual([])
+  })
+
   it('another server error is shown in the dialog and nothing is navigated or removed', async () => {
     const { removed } = setup({ rpc: () => ({ error: { code: '42501', message: 'Only an admin can delete this. Nothing was deleted.', hint: 'admin_only' } as never }) })
     await openConfirm()

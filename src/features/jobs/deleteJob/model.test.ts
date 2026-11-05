@@ -63,6 +63,9 @@ describe('blockerLink', () => {
     expect(blockerLink(b({ order_id: 'o-9' }), job)).toEqual({ to: '/orders/o-9', label: 'Open the order' })
     expect(blockerLink(b({ kind: 'expense', step: 5 }), job)?.to).toBe('/orders/o-1')
   })
+  it('sends a cost on the enquiry itself (no order yet) to the Expenses page', () => {
+    expect(blockerLink(b({ kind: 'expense', step: 5, order_id: null, order_number: null }), job)).toEqual({ to: '/money/expenses', label: 'Open Expenses' })
+  })
   it('has no link for a record the books keep', () => {
     expect(blockerLink(b({ can_clear: false }), job)).toBeNull()
   })

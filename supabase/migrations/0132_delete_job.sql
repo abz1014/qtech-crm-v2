@@ -6,7 +6,8 @@
 --                        2 refund             money paid back to the customer against the job's orders
 --                        3 payment            a payment against the job's orders (a voided or corrected one is kept as history)
 --                        4 invoice            an invoice (a numbered one is kept for the books: the job is cancelled instead)
---                        5 expense            an expense recorded against the job's orders or their supplier orders
+--                        5 expense            an expense recorded against the job's orders or their supplier orders, or a cost or pending
+--                                             claim on the enquiry itself (0136: rfq_id)
 --                        6 purchase_order     an issued purchase order of the job's supplier orders
 --                        7 other_order_lines  lines of ANOTHER order that were taken from this enquiry's items
 --                      can_clear says whether the person can remove it from the screens; why says what to do, in a plain sentence.
@@ -87,6 +88,23 @@ begin
          'Remove the expense, or keep the job.'
   from public.expenses e
   join jo o on o.id = coalesce(e.order_id, (select s.order_id from public.supplier_orders s where s.id = e.supplier_order_id))
+  union all
+  -- 5. a cost recorded on the enquiry itself and not yet moved to an order (expenses.rfq_id, 0136), and an engineer's pending "I paid"
+  -- on the enquiry (expense_claims.rfq_id). rfqs_costs_guard (0136) would refuse the enquiry's deletion with a bare error otherwise.
+  -- A cost that already has an order is listed above, with the order. No order: order_id is null and the guide links to Money, Expenses.
+  select 5, 'expense', null::uuid, null::bigint, e.id,
+         coalesce(nullif(btrim(e.description), ''), 'Expense') || ', Rs ' || to_char(e.amount_pkr, 'FM999,999,999,990.00') || ' (on the enquiry)',
+         e.paid_on, true,
+         'Remove the cost (Money, Expenses), or keep the job.'
+  from public.expenses e
+  where p_rfq_id is not null and e.rfq_id = p_rfq_id and e.order_id is null
+  union all
+  select 5, 'expense', null::uuid, null::bigint, c.id,
+         'Claim' || coalesce(': ' || nullif(btrim(c.note), ''), '') || ', Rs ' || to_char(c.amount_pkr, 'FM999,999,999,990.00') || ' (waiting for a decision)',
+         c.spent_on, true,
+         'Approve or reject the claim (Money, Expenses), and remove the cost if you approve it, or keep the job.'
+  from public.expense_claims c
+  where p_rfq_id is not null and c.rfq_id = p_rfq_id and c.status = 'pending'
   union all
   -- 6. an issued purchase order (only the latest revision of each can be deleted, so the later ones go first)
   select 6, 'purchase_order', o.id, o.number::bigint, po.id,

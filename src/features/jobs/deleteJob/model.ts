@@ -12,7 +12,7 @@ export type BlockerKind = 'credit_applied' | 'refund' | 'payment' | 'invoice' | 
 export interface Blocker {
   step: number
   kind: BlockerKind
-  /** The order it sits on (null never happens today, kept for a future kind that belongs to the enquiry). */
+  /** The order it sits on; null for a cost or claim on the enquiry itself (an expense step with no order yet). */
   orderId: string | null
   orderNumber: number | null
   refId: string | null
@@ -129,6 +129,8 @@ export function blockerLink(b: Blocker, job: JobRef): BlockerLink | null {
   const stage = STAGE_OF[b.kind]
   if (stage && b.orderId && b.orderId === job.orderId) return { to: `/jobs/${encodeURIComponent(job.key)}?stage=${stage}`, label: 'Open this stage' }
   if (b.orderId) return { to: `/orders/${b.orderId}`, label: 'Open the order' }
+  // a cost or claim on the enquiry itself (0136) has no order: the Expenses page is where it is removed or decided
+  if (b.kind === 'expense') return { to: '/money/expenses', label: 'Open Expenses' }
   return null
 }
 
