@@ -28,6 +28,12 @@ Sign in from the home-screen icon. Bottom bar: Today, RFQs, Orders, Companies.
  - Delivered on another day? Tap the date and change it.
  - Goods late? Today shows it. Tap "Chase goods" to get the message.
 
+4b. DELIVERY CHALLAN (paper for the customer to sign)
+ - Open the job. Under "On site", the card "Delivery challans" lists the ones already issued. Tap Download to open or print one.
+ - Tap "New challan". Every goods line starts ticked at its full quantity. Untick a line or lower a quantity for a part delivery.
+ - Check the "Deliver to" address, then tap "Issue and download". It gets the next DC- number and the PDF opens.
+ - The paper has goods and quantities only. No prices, ever.
+
 5. COMMISSIONING DONE
  - Open the order. In "Commissioning" check "Planned on".
  - When finished tap "Mark done today". One tap.
