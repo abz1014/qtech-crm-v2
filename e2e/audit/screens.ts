@@ -262,8 +262,8 @@ const markWon: Visit = {
 }
 
 /**
- * The Delete job guide (migration 0132): admin opens More, Delete job on a paid order. Its payment is a step to clear first and its
- * numbered invoice is one the books keep, so both sections and Cancel the job instead are measured. Nothing is deleted.
+ * The Delete job guide (migration 0132): admin opens More, Delete job on the invoiced order (its next-step button puts More on a phone
+ * too). Its numbered invoice is one the books keep, so "These stay for the books" and Cancel the job instead are measured. Nothing is deleted.
  */
 const deleteJobGuide: Visit = {
   id: 'delete-job-guide',
@@ -274,12 +274,12 @@ const deleteJobGuide: Visit = {
     const dialog = page.locator(DIALOG).first()
     try {
       await bounded(60_000, 'open Delete job', async () => {
-        await open(page, `/orders/${fx.order.paid}`)
+        await open(page, `/orders/${fx.order.invoiced}`)
         await closeDialogs(page)
         await page.getByRole('button', { name: /^More( actions)?$/ }).click()
         await page.getByRole('menuitem', { name: 'Delete job' }).click()
         await dialog.waitFor({ timeout: 15_000 })
-        await dialog.getByRole('heading', { name: 'To do first' }).waitFor({ timeout: 15_000 })
+        await dialog.getByRole('heading', { name: /^(To do first|These stay for the books)$/ }).first().waitFor({ timeout: 15_000 })
         await settle(page)
       })
       await capture('delete-job-guide', { root: DIALOG })

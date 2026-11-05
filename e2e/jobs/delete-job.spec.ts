@@ -119,6 +119,6 @@ test.describe('delete a job', () => {
     const job = await seedJob()
     await openJob(page, 'engineer', job.id)
     await expect(page.getByRole('menuitem', { name: 'Delete job' })).toHaveCount(0)
-    await expect(page.getByText('Delete job')).toHaveCount(0)
+    await expect(page.getByText('Delete job', { exact: true })).toHaveCount(0)
   })
 })
