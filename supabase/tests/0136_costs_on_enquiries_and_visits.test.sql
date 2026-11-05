@@ -177,11 +177,11 @@ select is(pg_temp.do_as('engineer', $q$insert into public.expense_claims (id, sp
   'ok', 'and a second one, left pending');
 select is(pg_temp.as_('engineer', 'select count(*) from public.expense_claims'), '3', 'the engineer reads their own claims');
 
-select isnt(pg_temp.as_('admin', $q$select public.approve_expense_claim('13600000-0000-4000-8000-0000000000f1', 'ca7e0000-0000-4000-8000-000000000005', 'bank')::text$q$), 'E:P0001', 'the admin approves the visit claim');
+select is(pg_temp.do_as('admin', $q$select public.approve_expense_claim('13600000-0000-4000-8000-0000000000f1', 'ca7e0000-0000-4000-8000-000000000005', 'bank')$q$), 'ok', 'the admin approves the visit claim');
 select is((select coalesce(e.visit_id::text, '-') || '|' || coalesce(e.order_id::text, '-') || '|' || coalesce(e.rfq_id::text, '-')
            from public.expense_claims c join public.expenses e on e.id = c.expense_id where c.id = '13600000-0000-4000-8000-0000000000f1'),
   '13600000-0000-4000-8000-0000000000d1|13600000-0000-4000-8000-0000000000b8|-', 'the approved expense has the claim''s visit and order');
-select isnt(pg_temp.as_('admin', $q$select public.approve_expense_claim('13600000-0000-4000-8000-0000000000f2', 'ca7e0000-0000-4000-8000-000000000005', 'bank')::text$q$), 'E:P0001', 'the admin approves the enquiry claim');
+select is(pg_temp.do_as('admin', $q$select public.approve_expense_claim('13600000-0000-4000-8000-0000000000f2', 'ca7e0000-0000-4000-8000-000000000005', 'bank')$q$), 'ok', 'the admin approves the enquiry claim');
 select is((select coalesce(e.rfq_id::text, '-') || '|' || coalesce(e.order_id::text, '-')
            from public.expense_claims c join public.expenses e on e.id = c.expense_id where c.id = '13600000-0000-4000-8000-0000000000f2'),
   '13600000-0000-4000-8000-0000000000a4|-', 'the approved expense has the claim''s enquiry and no order yet');

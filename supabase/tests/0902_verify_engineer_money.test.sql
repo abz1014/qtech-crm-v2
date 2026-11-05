@@ -133,6 +133,8 @@ insert into public.credit_applications (id, company_id, to_order_id, amount) val
 insert into public.credit_notes (id, number, invoice_id, net_amount, gst_amount, reason) values   -- 0112
   (pg_temp.f('d9'), 'CN-M1', pg_temp.f('26'), 50, 9, 'fixture');
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
+insert into public.rfqs (id, company_id, owner_id) values (pg_temp.f('f8'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0136: an enquiry that has a cost, so v_enquiry_costs holds money
+insert into public.expenses (id, amount_pkr, category_id, rfq_id) values (pg_temp.f('f9'), 5, 'ca7e0000-0000-4000-8000-000000000005', pg_temp.f('f8'));
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
@@ -242,6 +244,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('customer_refunds', 'amount', 'hidden', null), ('credit_applications', 'amount', 'hidden', null),   -- 0126, 0127
   ('v_company_credit', 'overpaid', 'hidden', null), ('v_company_credit', 'refunded', 'hidden', null),
   ('v_company_credit', 'applied', 'hidden', null), ('v_company_credit', 'balance', 'hidden', null),   -- 0127
+  ('v_enquiry_costs', 'spent_net', 'hidden', null), ('v_enquiry_costs', 'cost_count', 'info', null),   -- 0136: what was spent on each enquiry, admin only; cost_count is a count of entries
   ('v_cash_month', 'refunds_out', 'hidden', null), ('v_month_cash_flow', 'refunds_out', 'hidden', null),
   ('v_month_cash_flow', 'refunds_count', 'info', null),   -- 0126
   ('purchase_orders', 'total', 'supplier', null), ('purchase_orders', 'lines', 'supplier', null),
