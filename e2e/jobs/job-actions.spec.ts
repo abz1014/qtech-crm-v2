@@ -132,3 +132,37 @@ test('a cancelled job (no next step) has More on a phone for the admin, with Del
   await expect(page.getByRole('menuitem', { name: 'Reopen order' })).toBeVisible()
   await expect(page.getByRole('menuitem', { name: 'Delete job' })).toBeVisible()
 })
+
+/** A fully invoiced, fully paid order with no supplier legs and no commissioning: the job is "paid" and has no next step. */
+async function seedPaidOrder() {
+  const order = await seedOrder()
+  const inv = await makeInvoice(order.id)
+  await must(rest('admin', 'payments_in', { method: 'POST', body: { order_id: order.id, invoice_id: inv.id, amount: 118000, received_on: karachiDay(0) }, prefer: 'return=minimal' }))
+  return order
+}
+
+for (const role of ['admin', 'sales'] as const) {
+  test(`a PAID job (no next step) has More on a phone for ${role}, with Cancel order in it`, async ({ page }) => {
+    const order = await seedPaidOrder()
+    await page.setViewportSize({ width: 375, height: 800 })
+    await openAs(page, role, `/orders/${order.id}`)
+    await expect(page).toHaveURL(JOB_URL)
+    const bar = page.getByRole('toolbar', { name: 'Job actions' })
+    await expect(bar.getByRole('button', { name: 'More' })).toBeVisible()
+    await expect(bar.getByRole('button', { name: 'More' })).toBeEnabled()
+    // a paid job has no next-step button of its own: More is the only button in the bar
+    await expect(bar.getByRole('button')).toHaveCount(1)
+    await bar.getByRole('button', { name: 'More' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Cancel order' })).toBeVisible()
+  })
+}
+
+test('a PAID order job on a phone has no More menu for an engineer', async ({ page }) => {
+  const order = await seedPaidOrder()
+  await page.setViewportSize({ width: 375, height: 800 })
+  await openAs(page, 'engineer', `/orders/${order.id}`)
+  await expect(page).toHaveURL(JOB_URL)
+  await page.getByRole('heading', { level: 1 }).waitFor()
+  await expect(page.getByRole('button', { name: 'More' })).toHaveCount(0)
+  await expect(page.getByRole('toolbar', { name: 'Job actions' })).toHaveCount(0)
+})
