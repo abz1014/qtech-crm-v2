@@ -25,6 +25,8 @@ import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { useDeleteOrderFlow } from '@/features/orders/deleteFlow'
+import { useDeleteJobFlow } from '@/features/jobs/deleteJob/useDeleteJobFlow'
+import type { DeleteJobTarget } from '@/features/jobs/deleteJob/DeleteJobDialog'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
@@ -260,7 +262,7 @@ export function OrderHeaderBlock({
         }
         meta={[
           order.site && !isEngineer ? order.site.name : null,
-          customerPo,
+          isEngineer ? null : customerPo,
           ordered,
           order.owner ? `Owner ${order.owner.name}` : null,
           money ? <span data-testid="order-terms">{termsText}</span> : null,
@@ -398,7 +400,7 @@ export function OrderHeaderBlock({
  * The order's "More" menu (the shared MoreMenu): Cancel order (with a reason, and Undo) or Reopen order. A "More" text button beside
  * the title from tablet up, and an icon in the phone's one bar (useMobileBar) below 768. Engineers have none.
  */
-export function OrderMoreMenu({ order, touch = false, recordPayment = false, afterDelete }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean; /** Where a deleted order lands (the job page: the jobs list). */ afterDelete?: string }) {
+export function OrderMoreMenu({ order, touch = false, recordPayment = false, afterDelete, deleteJob }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean; /** Where a deleted order lands (the job page: the jobs list). */ afterDelete?: string; /** The job page: Delete job (the guide first) takes the place of Delete order. */ deleteJob?: DeleteJobTarget }) {
   const { toast } = useToast()
   const cancel = useCancelOrder(order.id)
   const once = useInFlight() // HW-15: one cancel / reopen per press, however many clicks
@@ -408,6 +410,7 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false, aft
   const ref = orderRef(order.number)
   const today = businessToday()
   const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName }, afterDelete)
+  const delJob = useDeleteJobFlow(deleteJob ?? null, order.cancelledOn === null ? () => setCancelling(true) : undefined)
   const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
   const reassign = useReassignOwnerItem({ kind: 'order', id: order.id, label: `${ref} · ${order.companyName}`, ownerId: order.owner?.id ?? null, ownerName: order.owner?.name ?? null })
 
@@ -453,16 +456,17 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false, aft
               Cancel order
             </MenuItem>
           )}
-          {del.ask ? (
+          {(deleteJob ? delJob.ask : del.ask) ? (
             <>
               <MenuSeparator />
-              <MenuItem icon={Trash2} danger onClick={del.ask}>
-                Delete order
+              <MenuItem icon={Trash2} danger onClick={deleteJob ? delJob.ask : del.ask}>
+                {deleteJob ? 'Delete job' : 'Delete order'}
               </MenuItem>
             </>
           ) : null}
       </MoreMenu>
       {del.node}
+      {delJob.node}
       {history.node}
       {reassign.node}
       {recordPayment ? <RecordPaymentDialog open={paying} onOpenChange={setPaying} orderId={order.id} /> : null}

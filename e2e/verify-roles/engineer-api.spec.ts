@@ -42,7 +42,7 @@ test('an engineer cannot change the owner or the legacy flags of an order, throu
   const before = await api('admin', `/rest/v1/orders?id=eq.${world.order.id}&select=owner_id,legacy_flags,created_by`)
   const was = (before.body as Array<{ owner_id: string; legacy_flags: string[]; created_by: string | null }>)[0]
   for (const patch of [{ owner_id: IDS.engineer }, { legacy_flags: ['owner_unknown'] }, { created_by: IDS.engineer }]) {
-    const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: patch, prefer: 'return=representation' })
+    const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,owner_id,legacy_flags,created_by`, { method: 'PATCH', body: patch, prefer: 'return=representation' })
     // PostgREST answers a PATCH with the row even when a trigger kept the old value, so the proof is the stored value below
     test.info().annotations.push({ type: `engineer PATCH ${Object.keys(patch)[0]}`, description: `${r.status}` })
   }
@@ -70,6 +70,27 @@ test('the history an engineer can fetch names no priced file and has no price-li
     // the office still sees the file in the same history (a positive control: the test could fail)
     const admin = await api('admin', '/rest/v1/rpc/record_history', { method: 'POST', body: { p_table: table, p_id: id, p_limit: 200 } })
     test.info().annotations.push({ type: `${table} history control`, description: admin.text.includes(priced) ? 'the admin sees the priced file in the same history' : 'the admin history does not list the file either (nothing to hide)' })
+  }
+})
+
+test('the customer PO number is refused to an engineer by the database, and still read by admin and sales (0133)', async () => {
+  const col = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=customer_po_number`)
+  expect(col.status, 'engineer orders?select=customer_po_number').toBe(403)
+  expect(col.text).not.toContain(`${world.tag}-PO`)
+  const all = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=*`)
+  expect(all.status, 'engineer orders?select=*').toBe(403)
+  expect(all.text).not.toContain(`${world.tag}-PO`)
+  const embedded = await api('engineer', `/rest/v1/order_items?order_id=eq.${world.order.id}&select=id,orders(customer_po_number)`)
+  expect(embedded.text, 'nor through an embed').not.toContain(`${world.tag}-PO`)
+  const filtered = await api('engineer', `/rest/v1/orders?customer_po_number=eq.${world.tag}-PO&select=id`)
+  expect(filtered.status, 'nor can the engineer probe it with a filter').toBe(403)
+  const own = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,number,company_id`)
+  expect(own.status, 'the engineer still reads the order itself').toBe(200)
+  expect((own.body as unknown[]).length).toBe(1)
+  for (const p of ['admin', 'sales'] as const) {
+    const r = await api(p, `/rest/v1/orders?id=eq.${world.order.id}&select=customer_po_number`)
+    expect(r.status, `${p} still reads the PO`).toBe(200)
+    expect((r.body as Array<{ customer_po_number: string }>)[0]?.customer_po_number).toBe(`${world.tag}-PO`)
   }
 })
 

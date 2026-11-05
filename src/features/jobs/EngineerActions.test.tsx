@@ -27,7 +27,7 @@ const leg = (over: Record<string, unknown> = {}) => ({
   last_chased_on: null, chase_count: 0, inquiry_id: null, created_at: '2026-10-01T00:00:00Z', ...over,
 })
 
-function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[]; state?: unknown; url?: string } = {}) {
+function mount(opts: { items?: unknown[]; needsCommissioning?: boolean; legs?: ReturnType<typeof leg>[]; state?: unknown; url?: string } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
   client.setQueryData(qk.jobs.part(J.key, 'facts'), FACTS)
   client.setQueryData(qk.rfqs.part('r1', 'items'), [])
@@ -38,7 +38,7 @@ function mount(opts: { needsCommissioning?: boolean; legs?: ReturnType<typeof le
     needsCommissioning: opts.needsCommissioning ?? true, plannedOn: null, visitType: null, doneOn: null, cancelledOn: null, cancelReason: null, imported: false,
     notes: null, site: null, contact: null, owner: null, state: null,
   })
-  client.setQueryData(qk.orders.part('o1', 'items'), [])
+  client.setQueryData(qk.orders.part('o1', 'items'), opts.items ?? [])
   client.setQueryData(qk.orders.part('o1', 'legs'), { legs: opts.legs ?? [leg()], names: new Map([['s1', 'Orient Analytical']]), quoteLines: [] })
   client.setQueryData(qk.orders.part('o1', 'engineers'), [])
   client.setQueryData(qk.orders.part('o1', 'files'), [])
@@ -83,6 +83,25 @@ describe("the engineer's Job page", () => {
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
     expect(within(card).getByRole('button', { name: 'Delivered today' })).toHaveClass('bg-primary')
     expect(container.textContent).not.toMatch(/PKR|Invoic|Price|Gross/)
+  })
+
+  it('shows the order delivery challans (list, download, New challan) with no price', async () => {
+    const db = installFakeDb((c: FakeCall) => {
+      if (c.target === 'delivery_challans' && c.verb === 'select') return { data: [{ id: 'c1', order_id: 'o1', number: 'DC-0007', issued_on: '2026-10-28', deliver_to: null, notes: null, lines: [{ description: 'Flowmeter', qty: 2 }] }] }
+      return { data: [] }
+    })
+    try {
+      const items = [{ id: 'i1', number: 1, description: 'Flowmeter', brandName: null, model: null, qty: 2, unit: 'pcs', isService: false, legId: null, rfqItemId: null }]
+      const { container } = mount({ items })
+      const panel = await screen.findByRole('region', { name: 'Delivery challans' })
+      expect(await within(panel).findByText('DC-0007')).toBeInTheDocument()
+      expect(within(panel).getByRole('button', { name: 'Download challan DC-0007' })).toBeInTheDocument()
+      await userEvent.setup().click(within(panel).getByRole('button', { name: 'New challan' }))
+      expect(await screen.findByRole('dialog', { name: 'New delivery challan' })).toBeInTheDocument()
+      expect(container.textContent).not.toMatch(/PKR|Price|Gross/)
+    } finally {
+      db.uninstall()
+    }
   })
 
   it('the green button moves on: Installed today once the goods are delivered, then Add photo or note', async () => {

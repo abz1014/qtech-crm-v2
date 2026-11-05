@@ -262,6 +262,34 @@ const markWon: Visit = {
 }
 
 /**
+ * The Delete job guide (migration 0132): admin opens More, Delete job on the invoiced order (its next-step button puts More on a phone
+ * too). Its numbered invoice is one the books keep, so "These stay for the books" and Cancel the job instead are measured. Nothing is deleted.
+ */
+const deleteJobGuide: Visit = {
+  id: 'delete-job-guide',
+  title: 'Delete job: the guide of what to clear first',
+  roles: ADMIN,
+  screens: ['delete-job-guide'],
+  run: async (page, fx, capture) => {
+    const dialog = page.locator(DIALOG).first()
+    try {
+      await bounded(60_000, 'open Delete job', async () => {
+        await open(page, `/orders/${fx.order.invoiced}`)
+        await closeDialogs(page)
+        await page.getByRole('button', { name: /^More( actions)?$/ }).click()
+        await page.getByRole('menuitem', { name: 'Delete job' }).click()
+        await dialog.waitFor({ timeout: 15_000 })
+        await dialog.getByRole('heading', { name: /^(To do first|These stay for the books)$/ }).first().waitFor({ timeout: 15_000 })
+        await settle(page)
+      })
+      await capture('delete-job-guide', { root: DIALOG })
+    } finally {
+      await bounded(20_000, 'close Delete job', () => closeDialogs(page)).catch(() => undefined)
+    }
+  },
+}
+
+/**
  * "Add to this job" (the Job page's side card; it replaced the Paste or photo sheet) with a supplier's reply pasted in: the card
  * guesses what it is and shows its choices. Nothing is saved; the box is emptied afterwards. The card is for admin and sales (an
  * engineer's Job page has none: owner decision). The empty card is part of every Job page capture.
@@ -299,6 +327,8 @@ export const VISITS: readonly Visit[] = [
   screen('job-po-issued', 'Job page: order, PO issued', ALL, fx => `/orders/${fx.order.poIssued}`),
   screen('job-delivered', 'Job page: order, delivered, not invoiced', ALL, fx => `/orders/${fx.order.delivered}`),
   screen('job-paid', 'Job page: order, paid', ALL, fx => `/orders/${fx.order.paid}`),
+  // The delivery challans of an order, for the engineer too (migration 0131; the engineer's On site card carries the panel): scrolled to it.
+  screen('job-challans', 'Job page: delivery challans (every role, no price)', ALL, fx => `/orders/${fx.order.delivered}`, { scrollTo: '[data-testid="challans"]' }),
   screen('job-commissioning', 'Job page: 3 supplier orders, commissioning', ALL, fx => `/orders/${fx.order.multiLeg}`),
   // The header's key facts (Customer PO for admin and sales only, Supplier, Delivery), at every viewport the audit runs.
   screen('job-key-facts', 'Job page: header key facts (PO, supplier, delivery)', ALL, fx => `/orders/${fx.order.multiLeg}`, { scrollTo: '[aria-label="Key facts"]' }),
@@ -359,6 +389,7 @@ export const VISITS: readonly Visit[] = [
   addToJobPasted,
   issueQuotation,
   markWon,
+  deleteJobGuide,
   // Last: it creates an RFQ, which would otherwise show on the lists above.
   newRfq,
 ]

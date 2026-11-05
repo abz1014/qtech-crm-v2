@@ -97,8 +97,15 @@ test('engineer: the palette finds the job and the customer, and shows no invoice
 test('engineer: Jobs list and Job page show no amount, no money word, and not the priced file', async ({ page }) => {
   const w = watch(page)
   const poRequests: string[] = []
+  const poInAnswers: string[] = []
   page.on('request', r => {
     if (r.url().includes('/rest/v1/') && r.url().includes('customer_po_number')) poRequests.push(`${r.method()} ${r.url()}`)
+  })
+  // 0133: the customer PO number is not in any answer the database sends this engineer's browser, on either page
+  page.on('response', async res => {
+    if (!res.url().includes('/rest/v1/')) return
+    const body = await res.text().catch(() => '')
+    if (body.includes(`${world.tag}-PO`)) poInAnswers.push(`${res.status()} ${new URL(res.url()).pathname}`)
   })
   await openAs(page, 'engineer', `/jobs?q=${encodeURIComponent(world.tag)}`)
   await expect(page.getByRole('row', { name: new RegExp(`Job ${world.rfq.number}\\b`) }).first()).toBeVisible()
@@ -116,6 +123,8 @@ test('engineer: Jobs list and Job page show no amount, no money word, and not th
   await expect(page.getByRole('region', { name: 'Money for this job' })).toHaveCount(0)
   expect(w.requests, 'no request for a money table, view or function').toEqual([])
   expect([...new Set(w.leaks)], 'no money key with a value in any answer').toEqual([])
+  expect(poRequests, 'the Job page asks for no customer PO number either').toEqual([])
+  expect(poInAnswers, 'no answer from the database carried the customer PO number').toEqual([])
 })
 
 test('admin sees the same file on the Job page, with the toggle', async ({ page }) => {

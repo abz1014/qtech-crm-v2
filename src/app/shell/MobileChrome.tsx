@@ -2,10 +2,11 @@ import { Fragment, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate, type Location, type NavigateFunction } from 'react-router-dom'
 import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
-import { ChevronLeft, Search, X } from 'lucide-react'
+import { ChevronLeft, CircleHelp, Search, X } from 'lucide-react'
 import { useMobileBarConfig, type MobileBarConfig } from '@/app/shell/MobileBarContext'
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { NewMenu } from '@/app/shell/NewMenu'
+import { useHelp } from '@/features/help/useHelp'
 import { Button } from '@/ui/Button'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
@@ -41,6 +42,7 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
   const navigate = useNavigate()
   const location = useLocation()
   const config = useMobileBarConfig()
+  const { openHelp } = useHelp()
   const actions = config?.actions ?? config?.action
   if (config && (config.back ?? config.close)) {
     const isBack = Boolean(config.back)
@@ -61,6 +63,7 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
       {/* Not a heading: every screen draws its own h1, and two h1s on a phone is wrong. */}
       <p className="min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base">{config?.title ?? title}</p>
       {actions ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
+      <Button variant="quiet" size="touch" icon={CircleHelp} aria-label="Help" onClick={() => openHelp()} />
       <NewMenu role={user.role} iconOnly size="touch" />
       <AccountMenu user={user} touch />
     </header>

@@ -177,8 +177,11 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
   { match: /^Only an admin can (see|do) this\.$/, message: () => ADMIN_ONLY },   // 0120: admin_health, confirm_backup_decrypt_test
-  { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
+  { match: /^This (RFQ|order|invoice|quotation|purchase order|company|job) is no longer there\. Reload the page\.$/ },
   { match: /^This RFQ has an order\. / },
+  // 0132: delete_job (HINT job, has_blockers); the screen reads the steps from job_delete_blockers
+  { match: /^Say which job to (check|delete)\.$/, internal: true },
+  { match: /^This job still has things that must be cleared first, so nothing was deleted\.$/ },
   { match: /^This order has an invoice\. / },
   { match: /^This order has a payment recorded against it, a voided one included, / },
   { match: /^This order has an expense recorded against it\. / },

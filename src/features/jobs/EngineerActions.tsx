@@ -19,6 +19,7 @@ import { SHARED_GONE, useSharedItem, type SharedIn } from '@/features/jobs/share
 import { invalidateAfter } from '@/features/invalidation'
 import { useMarkDone } from '@/features/orders/commissioningActions'
 import { useLegActions } from '@/features/orders/useLegActions'
+import { ChallansPanel } from '@/features/orders/challans/ChallansPanel'
 import { VisitButton } from '@/features/orders/VisitDialog'
 import { VisitsSection } from '@/features/orders/visits/VisitsSection'
 import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
@@ -31,6 +32,7 @@ import type { JobData } from '@/features/jobs/useJobData'
  *   Delivered today       the goods reached the site (the supplier order's own stamp, one tap, Undo in the toast)
  *   Installed today       commissioning is done (one tap, Undo)
  *   Add photo or note     a photo from the camera (an attachment with has_prices = false) or a line of text on the order
+ * Under them the order's delivery challans (view, download and print, issue a new one): goods and quantities, no price on the paper or in the lines.
  * One of them is the page's green button (the first that applies); the rest are plain. With no signal nothing is sent: the buttons are
  * off and a plain line says so, and what was typed stays in the box (there is no offline queue). Every control is 52 px tall.
  */
@@ -118,6 +120,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
         </div>
       ) : null}
       {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit /> : null}
+      {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
       {adding && sharedItem.state.status !== 'loading' ? (
         <PhotoOrNote
           facts={facts}

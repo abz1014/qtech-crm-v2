@@ -456,6 +456,8 @@ insert into probes values
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$),
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
+  ('delete_job', '', 'X', 'select 1 where (select count(*) from public.delete_job(@16)) >= 0'),   -- 0132: admin only; rolled back
+  ('job_delete_blockers', '', 'X', 'select 1 where (select count(*) from public.job_delete_blockers(@16)) >= 0'),   -- 0132
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
   ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
   ('record_refund', '', 'X', $q$select 1 from (select public.record_refund(gen_random_uuid(), @01, public.today_pkt(), 1, null, 'bank', null, null, true) r) x$q$),   -- 0127

@@ -23,7 +23,8 @@ import { StageSections } from '@/features/jobs/StageSections'
 import { CancelledOrders, ContactPanel, MoneyPanel, NotesFilesPanel } from '@/features/jobs/JobSide'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
 import { jobNext } from '@/features/jobs/lib/nextStep'
-import { currentStopIndex, stageModel } from '@/features/jobs/lib/stages'
+import { currentStopIndex, stageModel, STOPS } from '@/features/jobs/lib/stages'
+import { stageIndexOf } from '@/features/jobs/deleteJob/model'
 import { jobLabel } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
 import { JobKeyFacts } from '@/features/jobs/JobKeyFacts'
@@ -130,6 +131,14 @@ function JobView({ facts }: { facts: JobFacts }) {
   useEffect(() => {
     if (wantsIssue) setOpen(1)
   }, [wantsIssue])
+  // ?stage=payment (a stop's name, lower case, dashes) opens that stop: the delete-job guide links to where each step is cleared.
+  const stageParam = params.get('stage')
+  useEffect(() => {
+    const i = stageIndexOf(stageParam, STOPS)
+    if (i === null) return
+    setOpen(i)
+    requestAnimationFrame(() => document.getElementById(`stage-${i}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+  }, [stageParam, job.key])
   const toggle = (i: number) => setOpen(o => (o === i ? null : i))
   const select = (i: number) => {
     setOpen(i)

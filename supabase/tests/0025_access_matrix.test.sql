@@ -328,6 +328,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'claim_object_ok', '',     'X',    '',     'X'),           -- 0087: storage helper; true for the admin and for the engineer on their own pending claim
   ('function', 'delete_rfq',            '',    'X',    '',     ''),     -- 0092 (owner decision): permanent delete, admin only (42501 inside for everyone else)
   ('function', 'delete_order',          '',    'X',    '',     ''),     -- 0092: admin only
+  ('function', 'delete_job',            '',    'X',    '',     ''),     -- 0132: deletes a job (its orders, then the enquiry) when nothing blocks it; admin only
+  ('function', 'job_delete_blockers',   '',    'X',    '',     ''),     -- 0132: what stops a job being deleted; admin only
   ('function', 'delete_invoice',        '',    'X',    '',     ''),     -- 0092: admin only
   ('function', 'delete_payment',        '',    'X',    '',     ''),     -- 0092: admin only
   ('function', 'delete_quotation_revision', '', 'X',  '',     ''),     -- 0092: admin only
@@ -663,6 +665,8 @@ insert into probes values
   ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', true)$q$),   -- 0087
   ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
   ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
+  ('delete_job', '', 'X', 'select 1 where (select count(*) from public.delete_job(@16)) >= 0'),   -- 0132: admin only; rolled back
+  ('job_delete_blockers', '', 'X', 'select 1 where (select count(*) from public.job_delete_blockers(@16)) >= 0'),   -- 0132
   ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
   ('create_credit_note', '', 'X', $q$select 1 from public.create_credit_note(@d2, 10, 'probe')$q$),   -- 0112
   ('order_credit_rows', '', 'X', 'select 1 from public.order_credit_rows(@01) limit 1'),   -- 0127: no client may call it
