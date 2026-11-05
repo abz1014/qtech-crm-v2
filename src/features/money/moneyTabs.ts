@@ -30,6 +30,7 @@ export const MORE_MONEY_PAGES: readonly { label: string; to: string }[] = [
   { label: 'Bank check', to: '/money/month-end/bank' },
   { label: 'Review imported', to: '/money/review-imported' },
   { label: 'GST to FBR', to: '/money/accounts/gst' },
+  { label: 'Profitability', to: '/money/profit' },
 ]
 
 /** The page title for a Money view: its tab's name. */

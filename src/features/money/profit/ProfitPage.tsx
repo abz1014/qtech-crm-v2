@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatPaisa, paisaToFixed } from '@/lib/money'
+import { rfqRef } from '@/lib/refs'
+import { formatShortDate } from '@/lib/formatDay'
 import { BarChart } from '@/ui/BarChart'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -11,20 +13,23 @@ import { NoPrimary } from '@/ui/NoPrimary'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
 import { Panel, ReportError, ReportLoading } from '@/features/money/monthEnd/ReportParts'
-import { useProfitPage } from '@/features/money/profit/hooks'
+import { useLostEnquiryCosts, useProfitPage } from '@/features/money/profit/hooks'
+import type { LostEnquiryCost } from '@/features/money/profit/api'
 import { averageOf, bestMonth, buildPoints, completeMonths, rupeesOf, shortMonth, spanLabel, sumOf, type ProfitPoint, type RangeMonths } from '@/features/money/profit/model'
 
 /*
  * Money > Profitability (owner decision 2026-11-05; admin only, as the Reports). Income is what we INVOICED, GST left out; the cash
  * received beside it includes GST and says so. The average is over the last 12 complete months, this month left out. The chart shows
  * 12 or 24 months of both; the table under it is the monthly profit on invoices (v_month_profit) with cash received (v_month_cash_flow).
- * A section "Spent on enquiries we did not win" is added here once v_enquiry_costs exists (costs on enquiries, not yet merged).
+ * Under the table, "Spent on enquiries we did not win" lists what was spent on enquiries closed without an order (v_enquiry_costs, state
+ * lost; 0136), net of input tax. It is a list for the owner to see; the profit figures above are not changed by it.
  */
 const rupees = (p: bigint) => formatPaisa(p, 'never')
 const pkr = (p: bigint) => `PKR ${rupees(p)}`
 
 export function ProfitPage() {
   const q = useProfitPage(true)
+  const lost = useLostEnquiryCosts(true)
   const today = businessToday()
   const [range, setRange] = useState<RangeMonths>(12)
   const view = useMemo(() => {
@@ -52,7 +57,10 @@ export function ProfitPage() {
       ) : q.isPending || !view ? (
         <ReportLoading label="Loading profitability" />
       ) : (
-        <Body last12={view.last12} shown={view.shown} range={range} onRange={setRange} />
+        <>
+          <Body last12={view.last12} shown={view.shown} range={range} onRange={setRange} />
+          <LostEnquiries rows={lost.data} isError={lost.isError} onRetry={() => void lost.refetch()} />
+        </>
       )}
     </MoneyFrame>
   )
@@ -158,5 +166,51 @@ function ProfitTable({ rows, label }: { rows: ProfitPoint[]; label: string }) {
         </span>
       )}
     />
+  )
+}
+
+/** Money spent on enquiries that ended without an order. Its own panel, so a failed read never hides the profit figures. */
+function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | undefined; isError: boolean; onRetry: () => void }) {
+  const title = 'Spent on enquiries we did not win'
+  if (isError) return <ReportError title={`${title} did not load`} onRetry={onRetry} />
+  if (!rows) return <ReportLoading label={`Loading: ${title}`} />
+  const columns: Column<LostEnquiryCost>[] = [
+    {
+      id: 'rfq',
+      header: 'Enquiry',
+      value: r => r.rfqNumber,
+      cell: r => (
+        <Link to={`/rfqs/${r.rfqId}`} className="font-medium text-primary-text hover:underline">
+          {rfqRef(r.rfqNumber)}
+        </Link>
+      ),
+    },
+    { id: 'company', header: 'Customer', value: r => r.company },
+    { id: 'spent', header: 'Spent (PKR)', kind: 'money', value: r => paisaToFixed(r.spent), total: true },
+    { id: 'count', header: 'Costs', value: r => r.costCount, hideBelowMd: true },
+    { id: 'last', header: 'Last paid', value: r => r.lastPaidOn ?? '', cell: r => (r.lastPaidOn ? formatShortDate(r.lastPaidOn, undefined, true) : ''), hideBelowMd: true },
+  ]
+  return (
+    <Panel title={title} meta={<InfoTip label="About enquiries we did not win">Costs paid on an enquiry that was closed without an order, net of input tax. The profit figures above are not changed by this list.</InfoTip>}>
+      {rows.length === 0 ? (
+        <EmptyState title="Nothing spent on a lost enquiry">No cost is recorded against an enquiry that was closed without an order.</EmptyState>
+      ) : (
+        <DataTable
+          label={title}
+          columns={columns}
+          rows={rows}
+          getRowId={r => r.rfqId}
+          footerLabel={`Total of ${rows.length} ${rows.length === 1 ? 'enquiry' : 'enquiries'}`}
+          mobileRow={r => (
+            <span className="grid gap-1">
+              <span className="font-medium">
+                {rfqRef(r.rfqNumber)} · {r.company}
+              </span>
+              <span className="num text-base text-fg-2">Spent {formatPaisa(r.spent)}</span>
+            </span>
+          )}
+        />
+      )}
+    </Panel>
   )
 }

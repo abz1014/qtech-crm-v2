@@ -11,9 +11,10 @@ const PAGES = [
   ['Bank check', /\/money\/month-end\/bank$/],
   ['Review imported', /\/money\/review-imported$/],
   ['GST to FBR', /\/money\/accounts\/gst$/],
+  ['Profitability', /\/money\/profit$/],
 ] as const
 
-test('admin reaches each of the five money pages from a Money tab in one click', async ({ page }) => {
+test('admin reaches each of the six money pages from a Money tab in one click', async ({ page }) => {
   await openAs(page, 'admin', '/money/receivables')
   const row = page.getByRole('group', { name: 'More money pages' })
   await expect(row).toBeVisible()

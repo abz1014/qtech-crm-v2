@@ -133,6 +133,29 @@ test.describe('Money > Profitability (admin)', () => {
   })
 })
 
+test.describe('Money > Profitability: enquiries we did not win', () => {
+  test('a cost on an enquiry closed without an order is listed, an enquiry that was won is not', async ({ page }) => {
+    const lostCo = uniqueName('Lost Enquiry Customer')
+    const wonCo = uniqueName('Won Enquiry Customer')
+    const lostCompany = await createCompany(lostCo)
+    const wonCompany = await createCompany(wonCo)
+    const lost = await post<{ id: string; number: number }>('rfqs', { company_id: lostCompany.id, closed_on: today(), close_reason: 'price' })
+    const won = await post<{ id: string; number: number }>('rfqs', { company_id: wonCompany.id })
+    await post('expenses', { rfq_id: lost.id, amount_pkr: 750, category_id: SUPPLIER_PAYMENT, paid_on: today(), description: 'site visit for a lost enquiry' })
+    await post('expenses', { rfq_id: won.id, amount_pkr: 300, category_id: SUPPLIER_PAYMENT, paid_on: today(), description: 'cost on an enquiry that became an order' })
+    await post('orders', { company_id: wonCompany.id, rfq_id: won.id })
+
+    await goto(page, '/money/profit')
+    const section = page.getByRole('table', { name: 'Spent on enquiries we did not win' })
+    await expect(section).toBeVisible()
+    const row = section.getByRole('row').filter({ hasText: lostCo })
+    await expect(row).toContainText(`RFQ-${String(lost.number).padStart(4, '0')}`)
+    await expect(row).toContainText('750')
+    await expect(section).not.toContainText(wonCo)
+    await expect(page.getByTestId('profit-average')).toBeVisible()
+  })
+})
+
 test.describe('who sees profitability', () => {
   test('sales and engineers get no page and no row', async ({ browser }) => {
     const o = await seedPaidOrder()

@@ -375,6 +375,7 @@ export const VISITS: readonly Visit[] = [
   screen('money-exceptions', 'Money: exceptions (mistakes to fix)', ADMIN, () => '/money/exceptions'),
   // round 3: the two Money screens the audit could not grade from a capture
   screen('money-in-out', 'Money: money in and out (In vs out)', ADMIN, () => '/money/reports/in-out'),
+  screen('money-profit', 'Money: profitability (average income, chart, lost-enquiry costs)', ADMIN, () => '/money/profit'),
   screen('reports', 'Reports', MONEY, () => '/reports'),
   screen('settings', 'Settings home', ['sales', 'engineer'], () => '/settings'),
   screen('settings-team', 'Settings: team', ADMIN, () => '/settings/team'),

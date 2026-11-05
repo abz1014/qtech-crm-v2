@@ -91,7 +91,7 @@ describe('Money tabs and landing', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('To collect')
   })
 
-  it('admin gets a "More money pages" row of five links; sales get none', async () => {
+  it('admin gets a "More money pages" row of six links; sales get none', async () => {
     at('/money/receivables')
     const more = await screen.findByRole('group', { name: 'More money pages' })
     const links = within(more).getAllByRole('link')
@@ -101,6 +101,7 @@ describe('Money tabs and landing', () => {
       ['Bank check', '/money/month-end/bank'],
       ['Review imported', '/money/review-imported'],
       ['GST to FBR', '/money/accounts/gst'],
+      ['Profitability', '/money/profit'],
     ])
     cleanup()
     at('/money/receivables', 'sales')

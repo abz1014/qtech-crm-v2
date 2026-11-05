@@ -8,6 +8,11 @@ import * as api from '@/features/money/profit/api'
  */
 const live = { staleTime: 0 } as const
 
+/** Costs on enquiries that were closed without an order (v_enquiry_costs). Its own read: the profit figures never wait for it. */
+export function useLostEnquiryCosts(enabled = true) {
+  return useQuery({ queryKey: [...qk.money.monthEnd.cashFlow(), 'lost-enquiries'], queryFn: api.loadLostEnquiryCosts, enabled, ...live })
+}
+
 export function useProfitPage(enabled = true) {
   const flows = useQuery({ queryKey: qk.money.monthEnd.cashFlow(), queryFn: api.loadCashFlow, enabled, ...live })
   const profit = useQuery({ queryKey: [...qk.money.monthEnd.cashFlow(), 'profit'], queryFn: api.loadProfit, enabled, ...live })
