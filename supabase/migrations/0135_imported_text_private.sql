@@ -205,7 +205,7 @@ end;
 $$;
 
 -- DEFINER: whoever deletes the row (an admin deleting an order) may not touch imported_notes.
-create function qtech_private.drop_imported_note()
+create function legacy_archive.drop_imported_note()
 returns trigger
 language plpgsql
 security definer
@@ -220,7 +220,7 @@ end;
 $$;
 
 revoke all on function qtech_private.keep_imported_text() from public, anon, authenticated;
-revoke all on function qtech_private.drop_imported_note() from public, anon, authenticated;
+revoke all on function legacy_archive.drop_imported_note() from public, anon, authenticated;
 revoke all on function qtech_private.scrub_audit_json(jsonb, text) from public, anon, authenticated;
 revoke all on function qtech_private.imported_ids() from public, anon, authenticated;
 
@@ -231,7 +231,7 @@ begin
   foreach t in array array['orders', 'rfqs', 'order_items', 'rfq_items']
   loop
     execute format('create trigger keep_imported_text before insert or update on public.%I for each row execute function qtech_private.keep_imported_text()', t);
-    execute format('create trigger %I after delete on public.%I for each row execute function qtech_private.drop_imported_note()', t || '_drop_imported_note', t);
+    execute format('create trigger %I after delete on public.%I for each row execute function legacy_archive.drop_imported_note()', t || '_drop_imported_note', t);
   end loop;
 end
 $do$;
