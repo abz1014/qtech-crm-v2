@@ -76,7 +76,7 @@ test.describe('delete a job', () => {
     await expect(guide.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
     // text is never below 16px
-    const small = await guide.locator('[data-slot="delete-guide"]').evaluate(el => [...el.querySelectorAll('p, li, span, h3, a')].filter(n => n.textContent?.trim() && parseFloat(getComputedStyle(n).fontSize) < 16).length)
+    const small = await guide.locator('[data-slot="delete-guide"]').evaluate(el => Array.from(el.querySelectorAll('p, li, span, h3, a')).filter(n => n.textContent?.trim() && parseFloat(getComputedStyle(n).fontSize) < 16).length)
     expect(small).toBe(0)
 
     // the payment is cleared outside the dialog (the step the guide asked for), then the guide is read again

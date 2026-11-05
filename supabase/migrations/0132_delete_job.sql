@@ -82,7 +82,7 @@ begin
   union all
   -- 5. an expense against the order, or against one of its supplier orders
   select 5, 'expense', o.id, o.number::bigint, e.id,
-         coalesce(nullif(btrim(e.description), ''), e.category) || ', Rs ' || to_char(e.amount_pkr, 'FM999,999,999,990.00'),
+         coalesce(nullif(btrim(e.description), ''), 'Expense') || ', Rs ' || to_char(e.amount_pkr, 'FM999,999,999,990.00'),
          e.paid_on, true,
          'Remove the expense, or keep the job.'
   from public.expenses e
@@ -90,7 +90,7 @@ begin
   union all
   -- 6. an issued purchase order (only the latest revision of each can be deleted, so the later ones go first)
   select 6, 'purchase_order', o.id, o.number::bigint, po.id,
-         'PO-' || to_char(po.issued_on, 'YY') || '-' || lpad(po.number::text, 4, '0') || ' revision ' || po.revision::text,
+         'PO-' || to_char(po.issued_on, 'YY') || '-' || repeat('0', greatest(4 - length(po.number::text), 0)) || po.number::text || ' revision ' || po.revision::text,
          po.issued_on, true,
          case when exists (select 1 from public.purchase_orders n where n.supplier_order_id = po.supplier_order_id and n.revision > po.revision)
               then 'Delete the later revision of this purchase order first.'
@@ -101,7 +101,7 @@ begin
   union all
   -- 7. lines of another order that were taken from this enquiry's items
   select 7, 'other_order_lines', x.id, x.number::bigint, x.id,
-         x.n::text || case when x.n = 1 then ' line' else ' lines' end || ' of ORD-' || lpad(x.number::text, 4, '0') || ' come from this enquiry',
+         x.n::text || case when x.n = 1 then ' line' else ' lines' end || ' of ORD-' || repeat('0', greatest(4 - length(x.number::text), 0)) || x.number::text || ' come from this enquiry',
          null::date, true,
          'Remove those lines from that order, or delete that order first.'
   from (
