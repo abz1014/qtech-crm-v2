@@ -47,9 +47,9 @@ test.describe('shell width', () => {
     }
   })
 
-  test('the top bar fits at 1024 and 1920 with every label in words', async ({ page }) => {
+  test('the top bar fits at 768, 1024 and 1920 with every label in words, and Help and Settings are in it', async ({ page }) => {
     await openAs(page, 'admin', '/todo')
-    for (const width of [1024, 1920]) {
+    for (const width of [768, 1024, 1920]) {
       await page.setViewportSize({ width, height: 800 })
       await page.goto('/todo')
       await page.locator('#main').waitFor()
@@ -61,6 +61,12 @@ test.describe('shell width', () => {
       for (const name of ['To do', 'Jobs', 'Money', 'Companies']) {
         const box = await nav.getByRole('link', { name: new RegExp(`^${name}`) }).locator('[data-nav-label]').boundingBox()
         expect(box?.width ?? 0, `${name} shown in words at ${width}`).toBeGreaterThan(2)
+      }
+      // Help and Settings sit in the bar at every width (they were behind the avatar only), fully inside the window
+      for (const id of ['topbar-help', 'topbar-settings']) {
+        const box = await page.getByTestId(id).boundingBox()
+        expect(box?.width ?? 0, `${id} is drawn at ${width}`).toBeGreaterThan(20)
+        expect((box?.x ?? 0) + (box?.width ?? 0), `${id} is inside the window at ${width}`).toBeLessThanOrEqual(width)
       }
     }
   })

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
@@ -12,6 +12,11 @@ import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { installFakeDb } from '@/test/fakeSupabase'
 
 const user = { id: 'u1', name: 'Farhan Mirza', role: 'admin' }
+
+function Where() {
+  const l = useLocation()
+  return <output data-testid="where">{`${l.pathname}${l.search}`}</output>
+}
 
 describe('phone tabs: the top bar counts as badges', () => {
   it('a count shows on the icon and is read with the label; no badge for zero or no count', () => {
@@ -37,6 +42,56 @@ describe('phone tabs: the top bar counts as badges', () => {
       </MemoryRouter>,
     )
     expect(screen.getByRole('navigation', { name: 'Main' }).style.gridTemplateColumns).toMatch(/minmax\(min-content, 1fr\)/)
+  })
+})
+
+describe('top bar at 768 to 1023 and the Help and Settings buttons (navigation review)', () => {
+  it('every destination keeps its word and its count from md up: no label is screen-reader-only, no count or dot is hidden below lg', () => {
+    render(
+      <MemoryRouter initialEntries={['/todo']}>
+        <TopBar user={user} counts={{ today: 3, jobs: 2 }} dots={{ money: true }} />
+      </MemoryRouter>,
+    )
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    for (const name of ['To do', 'Jobs', 'Money', 'Companies']) {
+      const label = within(nav).getByRole('link', { name: new RegExp('^' + name) }).querySelector('[data-nav-label]') as HTMLElement
+      expect(label.textContent).toBe(name)
+      expect(label.className).not.toMatch(/sr-only/)
+    }
+    const counts = [...nav.querySelectorAll('[data-needs-count], [data-late-dot]')]
+    expect(counts).toHaveLength(3)
+    for (const c of counts) expect(c.className).not.toMatch(/max-lg:hidden/)
+  })
+
+  it('Help and Settings are in the bar for every role, Settings goes to /settings and Help opens the Help panel', async () => {
+    for (const role of ['admin', 'sales', 'engineer']) {
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/todo']}>
+          <TopBar user={{ ...user, role }} />
+          <Routes>
+            <Route path="*" element={<Where />} />
+          </Routes>
+        </MemoryRouter>,
+      )
+      expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Help' }))
+      expect(screen.getByTestId('where')).toHaveTextContent('help=')
+      unmount()
+    }
+  })
+
+  it('the phone bar has a Help button beside Search, and the account menu is still there', async () => {
+    render(
+      <MemoryRouter initialEntries={['/todo']}>
+        <MobileBar user={user} title="To do" />
+        <Routes>
+          <Route path="*" element={<Where />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Help' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('help=')
+    expect(screen.getByRole('button', { name: /Account menu/ })).toBeInTheDocument()
   })
 })
 
