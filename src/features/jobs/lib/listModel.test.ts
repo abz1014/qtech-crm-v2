@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JobRow } from '@/features/jobs/api'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isStageFilter, itemsSummary, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isStageFilter, itemsSummary, mergeMore, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
 
 const job = (over: Partial<JobRow>): JobRow => ({
   key: '1', kind: 'enquiry', rfqId: 'r', orderId: null, companyId: 'c', companyName: 'Customer', siteName: null, ownerId: 'u1', ownerName: 'A', items: 'x',
@@ -116,10 +116,23 @@ describe('itemsSummary', () => {
     expect(itemsSummary('Flow meter +1 more')).toBe('2 items · Flow meter')
     expect(itemsSummary('  Flow   meter  +12 more ')).toBe('13 items · Flow meter')
   })
+  it('adds up two counts: an imported line that already ends in "+N more", then the count of lines', () => {
+    expect(itemsSummary('IC TLC0838C 20PIN SMD ×6 +1 more +1 more')).toBe('3 items · IC TLC0838C 20PIN SMD ×6')
+    expect(itemsSummary('Flow meter +2 more +3 more')).toBe('6 items · Flow meter')
+  })
   it('leaves a single item, an empty line and an old free-text note as they are (the caller clamps to one line)', () => {
     expect(itemsSummary('Pressure transmitter')).toBe('Pressure transmitter')
     expect(itemsSummary('')).toBe('')
     expect(itemsSummary(null)).toBe('')
     expect(itemsSummary('Old note: 2 pumps, 1 valve\nsee PO; delivered in two lots')).toBe('Old note: 2 pumps, 1 valve see PO; delivered in two lots')
+  })
+})
+
+describe('mergeMore', () => {
+  it('says "+N more" once, with the counts added', () => {
+    expect(mergeMore('Flow meter +1 more +2 more')).toBe('Flow meter +3 more')
+    expect(mergeMore('Flow meter +1 more')).toBe('Flow meter +1 more')
+    expect(mergeMore('Flow meter')).toBe('Flow meter')
+    expect(mergeMore(null)).toBe('')
   })
 })

@@ -45,6 +45,12 @@ describe('findJobs: the one search behind the Jobs box and the palette', () => {
     expect(String(opArgs(view, 'or')?.[0])).toContain('job_key.eq.139')
   })
 
+  it('says the item count once when an imported line already ends in "+N more"', async () => {
+    installFakeDb(c => (c.target === 'v_jobs' ? { data: [row('139', { items_summary: 'IC TLC0838C 20PIN SMD ×6 +1 more +2 more' })] } : { data: [] }))
+    const jobs = await findJobs('Job 139')
+    expect(jobs[0].items).toBe('IC TLC0838C 20PIN SMD ×6 +3 more')
+  })
+
   it('an RFQ, order, item, PO or invoice hit finds its job through the ids search_all returned', async () => {
     const hits = [
       { kind: 'rfq' as const, id: 'r1', label: 'RFQ-0139', meta: null, companyId: null, orderId: null, role: null, score: 3 },

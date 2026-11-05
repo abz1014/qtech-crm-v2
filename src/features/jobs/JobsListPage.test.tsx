@@ -80,6 +80,14 @@ describe('Jobs list', () => {
     expect(clamped.map(e => e.getAttribute('title'))).toEqual(expect.arrayContaining(['Ibrahim Fibres Limited', longItems]))
   })
 
+  it('an imported line that already ends in "+1 more", plus two more lines, shows one count on the card and in the table', async () => {
+    installFakeDb((c: FakeCall) => (c.target === 'v_jobs' ? { data: [view('139', { items_summary: 'IC TLC0838C 20PIN SMD ×6 +1 more +2 more' })] } : fake(c)))
+    const { container } = mount('admin')
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    expect(container).toHaveTextContent('4 items · IC TLC0838C 20PIN SMD ×6')
+    expect(container.textContent).not.toMatch(/\+\d+ more/)
+  })
+
   it('History shows only the rows the database marks is_history', async () => {
     installFakeDb(fake)
     const user = userEvent.setup()

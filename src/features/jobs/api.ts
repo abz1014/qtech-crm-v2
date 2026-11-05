@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { ViewRow } from '@/features/dbTypes'
 import { searchAll, type SearchHit } from '@/features/search/api'
+import { mergeMore } from '@/features/jobs/lib/listModel'
 
 /*
  * Jobs (redesign phase 5, migration 0099): the ONLY file of this area that names v_jobs and the tables beside it.
@@ -63,7 +64,7 @@ function shape(v: JobView, n: Names): JobRow | null {
     siteName: v.site_id ? (n.sites.get(v.site_id) ?? null) : null,
     ownerId: v.owner_id,
     ownerName: v.owner_id ? (n.users.get(v.owner_id) ?? null) : null,
-    items: v.items_summary ?? '',
+    items: mergeMore(v.items_summary),
     stage: v.stage,
     stageDetail: v.stage_detail,
     isHistory: v.is_history === true,
@@ -373,7 +374,7 @@ function factsOf(v: JobView | null, h: HeadJoin | null, direct: boolean, number:
     siteName: site?.name ?? null,
     ownerId: v.owner_id,
     ownerName: owner?.name ?? null,
-    items: v.items_summary ?? '',
+    items: mergeMore(v.items_summary),
     stage: v.stage,
     stageDetail: v.stage_detail,
     isHistory: v.is_history === true,

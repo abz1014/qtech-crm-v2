@@ -89,7 +89,24 @@ export function inStage(j: JobRow, s: StageFilter): boolean {
  */
 export function itemsSummary(items: string | null | undefined): string {
   const s = (items ?? '').replace(/\s+/g, ' ').trim()
-  const m = /^(.*?)\s*\+\s*(\d+)\s+more$/i.exec(s)
+  const m = /^(.*?)\s*((?:\+\s*\d+\s+more\s*)+)$/i.exec(s)
   if (!m || !m[1]) return s
-  return `${Number(m[2]) + 1} items · ${m[1]}`
+  return `${1 + moreCount(m[2]!)} items · ${m[1]}`
+}
+
+/** The N of every "+N more" in a run of them (see mergeMore). */
+function moreCount(run: string): number {
+  return [...run.matchAll(/\+\s*(\d+)\s+more/gi)].reduce((n, x) => n + Number(x[1]), 0)
+}
+
+/**
+ * v_jobs.items_summary is "first line +N more" for the lines of the order or RFQ, and an imported line may already end in its own
+ * "+N more" (migration 0135 keeps the first item of an old supplier breakdown). That made "Flow meter +1 more +2 more". This says it once,
+ * with both counts added: "Flow meter +3 more". Text without a trailing count is returned as it is.
+ */
+export function mergeMore(items: string | null | undefined): string {
+  const s = items ?? ''
+  const m = /^(.*?)\s*((?:\+\s*\d+\s+more\s*){2,})$/i.exec(s)
+  if (!m || !m[1]) return s
+  return `${m[1]} +${moreCount(m[2]!)} more`
 }
