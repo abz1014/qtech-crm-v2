@@ -23,6 +23,7 @@ import { StageSections } from '@/features/jobs/StageSections'
 import { CancelledOrders, ContactPanel, MoneyPanel, NotesFilesPanel } from '@/features/jobs/JobSide'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
 import { jobNext } from '@/features/jobs/lib/nextStep'
+import { jobHasMore } from '@/features/jobs/lib/hasMore'
 import { currentStopIndex, stageModel, STOPS } from '@/features/jobs/lib/stages'
 import { stageIndexOf } from '@/features/jobs/deleteJob/model'
 import { jobLabel } from '@/features/jobs/lib/listModel'
@@ -231,7 +232,7 @@ function JobView({ facts }: { facts: JobFacts }) {
           )
         }
       />
-      {phone && button ? (
+      {phone && (button || jobHasMore(ctx)) ? (
         <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} />
       ) : null}
 

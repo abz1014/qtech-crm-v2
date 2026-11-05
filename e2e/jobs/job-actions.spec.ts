@@ -107,3 +107,28 @@ test('reassign the owner from the Job page header', async ({ page }) => {
   await d.getByRole('button', { name: 'Change owner' }).click()
   await expect.poll(async () => (await must(rest<{ owner_id: string }[]>('admin', `orders?id=eq.${order.id}&select=owner_id`)))[0].owner_id).toBe(admin.id)
 })
+
+test('the More menu is there within about 300 ms of the job title, and opens once ready', async ({ page }) => {
+  const order = await seedOrder()
+  await openAs(page, 'admin', `/orders/${order.id}`)
+  await expect(page).toHaveURL(JOB_URL)
+  await page.getByRole('heading', { level: 1 }).waitFor()
+  await expect(page.getByRole('button', { name: 'More' })).toBeVisible({ timeout: 300 })
+  // it may be busy for a moment, then it opens
+  await expect(page.getByRole('button', { name: 'More' })).toBeEnabled()
+  await page.getByRole('button', { name: 'More' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Cancel order' })).toBeVisible()
+})
+
+test('a cancelled job (no next step) has More on a phone for the admin, with Delete job and Reopen order in it', async ({ page }) => {
+  const order = await seedOrder({ cancelled_on: karachiDay(0), cancel_reason: 'duplicate_or_mistake' })
+  await page.setViewportSize({ width: 375, height: 800 })
+  await openAs(page, 'admin', `/orders/${order.id}`)
+  await expect(page).toHaveURL(JOB_URL)
+  const more = page.getByRole('toolbar', { name: 'Job actions' }).getByRole('button', { name: 'More' })
+  await expect(more).toBeVisible()
+  await expect(more).toBeEnabled()
+  await more.click()
+  await expect(page.getByRole('menuitem', { name: 'Reopen order' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Delete job' })).toBeVisible()
+})

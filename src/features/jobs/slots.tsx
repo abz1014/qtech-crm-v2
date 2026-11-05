@@ -46,7 +46,8 @@ export function JobSlot({ name, context, slots = JOB_SLOTS }: { name: JobSlotNam
   const parts = slots[name]
   // The first page's slots download once its content is drawn (perf/lcp): their code and reads are not part of the first paint.
   const drawn = useContentDrawn()
-  if (parts.length === 0 || !drawn) return null
+  // 'next-step' (the More button) is drawn at once: it is a small button, and its menu waits for the content itself.
+  if (parts.length === 0 || (!drawn && name !== 'next-step')) return null
   return (
     <>
       {parts.map((Part, i) => (

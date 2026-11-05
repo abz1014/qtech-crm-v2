@@ -46,6 +46,9 @@ export const prefetchJob: Prefetch = async ({ client, user, id, pathname }) => {
     orderId && role !== 'engineer' ? client.prefetchQuery(orderMoneyQuery(orderId, role)) : null,
     orderId && role !== 'engineer' ? client.prefetchQuery(jobInvoicesQuery(key, orderId)) : null,
     orderId ? client.prefetchQuery({ queryKey: qk.orders.part(orderId, 'files'), queryFn: () => listOrderAttachments(orderId) }) : null,
+    // The More menu's code, so its button is live the moment the content is drawn (OrderMore and RfqMore load the same modules).
+    orderId && money ? import('@/features/orders/jobSlots/OrderMoreInner').catch(() => null) : null,
+    rfqId && !orderId ? import('@/features/rfqs/jobSlots/RfqMoreInner').catch(() => null) : null,
     rfqId && facts.job.cancelledOrders > 0 ? client.prefetchQuery(cancelledOrdersQuery(key, rfqId)) : null,
   ]))
 }

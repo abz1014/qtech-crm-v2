@@ -1,29 +1,25 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { lazyWithReload } from '@/lib/importWithReload'
+import { useContentDrawn } from '@/lib/useContentDrawn'
+import { MoreTrigger } from '@/features/jobs/MoreTrigger'
 import type { JobSlotProps } from '@/features/jobs/slots'
 
-// The RFQ menu and its dialogs are downloaded once the page has drawn, never with the page's first paint.
+// The RFQ menu and its dialogs are downloaded once the first page has drawn; prefetch.ts starts it too.
 const RfqMoreInner = lazyWithReload(() => import('@/features/rfqs/jobSlots/RfqMoreInner'))
 
 /*
  * "More" beside the next-step button of the job page, on a job that has an enquiry (the old RFQ page menu, removed 2026-10-30):
  * Edit RFQ details (everyone), and for admin and sales Mark quotation sent, Close because, Reopen, Mark won (a lost RFQ can still
- * be won) and, admin only, Delete RFQ. Nothing is downloaded or drawn until the browser is idle (perf: the job page LCP).
+ * be won) and, admin only, Delete RFQ. The button is drawn at once (disabled and busy); on the first page its menu waits only for the
+ * page's content to be drawn (perf: the job page LCP), never for idle time.
  */
 export default function RfqMore({ job }: JobSlotProps) {
-  const [idle, setIdle] = useState(false)
-  useEffect(() => {
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (h: number) => void }
-    if (w.requestIdleCallback) {
-      const h = w.requestIdleCallback(() => setIdle(true), { timeout: 2000 })
-      return () => w.cancelIdleCallback?.(h)
-    }
-    const t = window.setTimeout(() => setIdle(true), 500)
-    return () => window.clearTimeout(t)
-  }, [])
-  if (!idle || !job.job.rfqId || job.job.orderId) return null
+  const drawn = useContentDrawn()
+  if (!job.job.rfqId || job.job.orderId) return null
+  const trigger = <MoreTrigger />
+  if (!drawn) return trigger
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={trigger}>
       <RfqMoreInner job={job} />
     </Suspense>
   )

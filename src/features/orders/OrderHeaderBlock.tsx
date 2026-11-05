@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Icon } from '@/ui/Icon'
-import { useReassignOwnerItem } from '@/features/owners/useReassignOwner'
-import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, CopyPlus, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Trash2, Truck, Wrench, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarDays, CircleCheck, ClipboardCheck, CopyPlus, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
@@ -12,8 +11,6 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { DetailHeader } from '@/ui/DetailHeader'
 import { InfoTip } from '@/ui/InfoTip'
-import { MenuItem, MenuSeparator } from '@/ui/Popover'
-import { MoreMenu } from '@/ui/MoreMenu'
 import { Skeleton } from '@/ui/Skeleton'
 import { NextStepBox } from '@/ui/NextStepBox'
 import { StatusBadge } from '@/ui/StatusBadge'
@@ -23,14 +20,9 @@ import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
-import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
-import { useDeleteOrderFlow } from '@/features/orders/deleteFlow'
-import { useDeleteJobFlow } from '@/features/jobs/deleteJob/useDeleteJobFlow'
-import type { DeleteJobTarget } from '@/features/jobs/deleteJob/DeleteJobDialog'
+import { useUpdateOrder } from '@/features/orders/hooks'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
 import { LastChanged } from '@/features/history/LastChanged'
-import { useHistoryPanel } from '@/features/history/useHistoryPanel'
-import { useInFlight } from '@/lib/useInFlight'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
@@ -42,19 +34,17 @@ import { orderFacts, pageStep, recordPaymentPlace, type PrimaryAction } from '@/
 import type { OrderStep } from '@/features/orders/lib/orderSteps'
 import { useLegActions } from '@/features/orders/useLegActions'
 import { cancelReasonLabel } from '@/features/orders/lib/cancel'
-import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
+import { lazyShown } from '@/lib/lazyDialog'
 import { VisitButton } from '@/features/orders/VisitDialog'
+import { OrderMoreMenu } from '@/features/orders/OrderMoreMenu'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
-const CancelDialog = lazyShown(() => import('@/features/orders/CancelDialog').then(m => m.CancelDialog))
 const ResolveBasisDialog = lazyShown(() => import('@/features/orders/ResolveBasisDialog').then(m => m.ResolveBasisDialog))
 const CommissioningEditDialog = lazyShown(() => import('@/features/orders/CommissioningPanel').then(m => m.CommissioningEditDialog))
 const IssuePoDialog = lazyShown(() => import('@/features/purchaseOrders/IssuePoDialog').then(m => m.IssuePoDialog))
 const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDialog').then(m => m.GoodsChaseDialog))
 const AddLegDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLegDialog))
 const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog').then(m => m.NewOrderDialog))
-// Record payment from the More menu: its form library (react-hook-form) is not on the order page's first download.
-const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
  * The top of the order page (O03; g2-order-detail.html), reworked by the UX audit of 2026-10-19 (screens.md 8): who it is for, then ONE
@@ -393,115 +383,6 @@ export function OrderHeaderBlock({
 
       {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
     </div>
-  )
-}
-
-/**
- * The order's "More" menu (the shared MoreMenu): Cancel order (with a reason, and Undo) or Reopen order. A "More" text button beside
- * the title from tablet up, and an icon in the phone's one bar (useMobileBar) below 768. Engineers have none.
- */
-export function OrderMoreMenu({ order, touch = false, recordPayment = false, afterDelete, deleteJob }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean; /** Where a deleted order lands (the job page: the jobs list). */ afterDelete?: string; /** The job page: Delete job (the guide first) takes the place of Delete order. */ deleteJob?: DeleteJobTarget }) {
-  const { toast } = useToast()
-  const cancel = useCancelOrder(order.id)
-  const once = useInFlight() // HW-15: one cancel / reopen per press, however many clicks
-  const [cancelling, setCancelling] = useState(false)
-  const [paying, setPaying] = useState(false)
-  const cancelled = order.cancelledOn !== null
-  const ref = orderRef(order.number)
-  const today = businessToday()
-  const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName }, afterDelete)
-  const delJob = useDeleteJobFlow(deleteJob ?? null, order.cancelledOn === null ? () => setCancelling(true) : undefined)
-  const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
-  const reassign = useReassignOwnerItem({ kind: 'order', id: order.id, label: `${ref} · ${order.companyName}`, ownerId: order.owner?.id ?? null, ownerName: order.owner?.name ?? null })
-
-  const reopen = () =>
-    once(async () => {
-      if (order.cancelledOn === null) return
-      const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
-      try {
-        // the reason goes with the date: the database refuses a reason on an active order
-        await cancel.mutateAsync({ cancelled_on: null, cancel_reason: null })
-        toast({
-          title: 'Order reopened',
-          body: ref,
-          undo: {
-            onUndo: async () => {
-              await cancel.mutateAsync(before)
-            },
-            settledTitle: 'Order reopened',
-            undoneTitle: 'Cancelled again',
-          },
-        })
-      } catch (err) {
-        toast({ title: 'Could not reopen', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-      }
-    })
-
-  return (
-    <>
-      <MoreMenu touch={touch} label="More actions">
-          {history.item}
-          {reassign.item}
-          {recordPayment ? (
-            <MenuItem icon={Banknote} onClick={() => setPaying(true)}>
-              Record payment
-            </MenuItem>
-          ) : null}
-          {cancelled ? (
-            <MenuItem icon={RotateCcw} onClick={() => void reopen()}>
-              Reopen order
-            </MenuItem>
-          ) : (
-            <MenuItem icon={Ban} danger onClick={() => setCancelling(true)}>
-              Cancel order
-            </MenuItem>
-          )}
-          {(deleteJob ? delJob.ask : del.ask) ? (
-            <>
-              <MenuSeparator />
-              <MenuItem icon={Trash2} danger onClick={deleteJob ? delJob.ask : del.ask}>
-                {deleteJob ? 'Delete job' : 'Delete order'}
-              </MenuItem>
-            </>
-          ) : null}
-      </MoreMenu>
-      {del.node}
-      {delJob.node}
-      {history.node}
-      {reassign.node}
-      {recordPayment ? <RecordPaymentDialog open={paying} onOpenChange={setPaying} orderId={order.id} /> : null}
-      {cancelling ? (
-        <CancelDialog
-          order={order}
-          busy={cancel.isPending}
-          onClose={() => setCancelling(false)}
-          onConfirm={reason =>
-            once(async () => {
-              // idempotent: an order already cancelled (a second press that slipped through) is not written again
-              if (order.cancelledOn !== null) return setCancelling(false)
-              const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
-              try {
-                await cancel.mutateAsync({ cancelled_on: today, cancel_reason: reason })
-                setCancelling(false)
-                toast({
-                  title: 'Order cancelled',
-                  body: ref,
-                  undo: {
-                    onUndo: async () => {
-                      await cancel.mutateAsync(before)
-                    },
-                    settledTitle: 'Order cancelled',
-                    undoneTitle: 'Order is active again',
-                  },
-                })
-              } catch (err) {
-                toast({ title: 'Could not cancel the order', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-              }
-            })
-          }
-        />
-      ) : null}
-    </>
   )
 }
 

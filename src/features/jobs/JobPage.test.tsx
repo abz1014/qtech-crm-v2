@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { ToastProvider } from '@/ui/Toast'
 import { qk } from '@/features/queryKeys'
 import type { JobFacts, JobRow } from '@/features/jobs/api'
 import JobsScreen from '@/features/jobs/JobsScreen'
+import OrderMore from '@/features/orders/jobSlots/OrderMore'
 
 /*
  * The Job page (P5-C), drawn from a seeded query cache: the ruler, the next-step band with its one green button, the stages as an
@@ -59,6 +60,12 @@ function mount(j: JobRow, role: 'admin' | 'sales' | 'engineer') {
     </QueryClientProvider>,
   )
 }
+
+// The More menus' code is loaded up front: the job page asks for it as soon as it draws, and a chunk that resolves after a test has
+// ended logs into a closed worker (an unhandled teardown error on a slow machine).
+beforeAll(async () => {
+  await Promise.all([import('@/features/orders/jobSlots/OrderMoreInner'), import('@/features/rfqs/jobSlots/RfqMoreInner')])
+})
 
 const stagesOf = (c: HTMLElement) => within(c.querySelector('[data-stages]') as HTMLElement)
 
@@ -228,5 +235,61 @@ describe('Job page: the enquiry-side actions stay on the page (P5-D1)', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('button', { name: 'Send quotation' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Mark won' })).toBeNull()
+  })
+})
+
+describe('Job page: the More menu', () => {
+  const phoneOn = () => {
+    const real = window.matchMedia
+    window.matchMedia = ((q: string) => ({ matches: q.includes('max-width: 767px'), media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as typeof window.matchMedia
+    return () => { window.matchMedia = real }
+  }
+
+  it('the trigger is drawn at once, disabled and busy, while the menu or its order is still loading', async () => {
+    const j = job({})
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
+    seed(client, j, true)
+    // the order's header is on its way and has not arrived
+    client.removeQueries({ queryKey: qk.orders.part('o1', 'header') })
+    void client.prefetchQuery({ queryKey: qk.orders.part('o1', 'header'), queryFn: () => new Promise(() => {}) })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Faizan', role: 'admin' } }}>
+          <ToastProvider><MemoryRouter>
+            <OrderMore job={{ job: j, role: 'admin', money: true }} />
+          </MemoryRouter></ToastProvider>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    // synchronously, with nothing awaited
+    const more = screen.getByRole('button', { name: 'More' })
+    expect(more).toHaveAttribute('aria-haspopup', 'menu')
+    expect(more).toBeDisabled()
+    expect(more).toHaveAttribute('aria-busy', 'true')
+    // it stays that way until the header is there; then the real menu takes its place
+    await new Promise(r => setTimeout(r, 50))
+    expect(screen.getByRole('button', { name: 'More' })).toBeDisabled()
+    act(() => {
+      client.setQueryData(qk.orders.part('o1', 'header'), { id: 'o1', number: 1, companyId: 'c1', companyName: 'x', rfqId: 'r1', customerPo: null, orderedOn: '2026-09-02', paymentTermsDays: 30, needsCommissioning: false, plannedOn: null, doneOn: null, cancelledOn: null, cancelReason: null, imported: false, notes: null, site: null, contact: null, owner: null, state: null })
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'More' })).toBeEnabled())
+  })
+
+  it('on a phone a cancelled job with no next-step button still has More (admin), and an engineer has none', async () => {
+    const off = phoneOn()
+    try {
+      const { unmount } = mount(job({ stage: 'cancelled', stageDetail: null }), 'admin')
+      await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
+      const bar = screen.getByRole('toolbar', { name: 'Job actions' })
+      expect(within(bar).getByRole('button', { name: 'More' })).toBeInTheDocument()
+      await waitFor(() => expect(within(bar).getByRole('button', { name: 'More' })).toBeEnabled())
+      unmount()
+      cleanup()
+      mount(job({ stage: 'cancelled', stageDetail: null }), 'engineer')
+      await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
+      expect(screen.queryByRole('toolbar', { name: 'Job actions' })).toBeNull()
+    } finally {
+      off()
+    }
   })
 })
