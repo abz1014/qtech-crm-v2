@@ -624,7 +624,7 @@ test.describe('expenses (M03, M11)', () => {
     }
     // the dialog has the switch, off for a bill that was added without it
     await openAs(page, 'admin', '/money/expenses')
-    await page.getByTestId(`recurring-${off}`).getByRole('button', { name: off }).click()
+    await page.getByTestId(`recurring-${off}`).getByRole('button', { name: `Edit ${off}` }).click()
     await expect(page.getByRole('checkbox', { name: 'Book it for me' })).not.toBeChecked()
     await expect(page.getByText(/Use it only for fixed amounts/)).toBeVisible()
   })
