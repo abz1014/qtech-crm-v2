@@ -22,7 +22,8 @@ import {
   invalidRows,
   listTotals,
   markClosedRows,
-  matchOrders,
+  matchJobs,
+  jobColumns,
   monthEnd,
   monthLabel,
   mostUsedCategory,
@@ -34,7 +35,7 @@ import {
   type BurstRow,
   type Category,
   type ListedExpense,
-  type OrderTagOption,
+  type JobTagOption,
   type RecurringTemplate,
 } from '@/features/money/expenses/model'
 
@@ -183,19 +184,41 @@ describe('list filters and totals', () => {
   })
 })
 
-describe('order tag type-ahead (audit X1)', () => {
-  const O = (n: number, company: string): OrderTagOption => ({ id: `o${n}`, ref: `ORD-${String(n).padStart(4, '0')}`, company })
-  const ORDERS = [O(142, 'Karachi Glass'), O(42, 'Lahore Beverages'), O(7, 'Margalla Foods'), O(8, 'Indus Beverages')]
+describe('job tag type-ahead (audit X1, 0136)', () => {
+  const O = (n: number, company: string, rfq?: number): JobTagOption => ({
+    id: `o${n}`,
+    kind: 'order',
+    ref: `ORD-${String(n).padStart(4, '0')}`,
+    company,
+    ...(rfq ? { rfqRef: `RFQ-${String(rfq).padStart(4, '0')}` } : {}),
+  })
+  const R = (n: number, company: string, note = 'Enquiry'): JobTagOption => ({ id: `r${n}`, kind: 'rfq', ref: `RFQ-${String(n).padStart(4, '0')}`, company, note })
+  const JOBS = [O(142, 'Karachi Glass'), O(42, 'Lahore Beverages', 139), O(7, 'Margalla Foods'), O(8, 'Indus Beverages'), R(139, 'Other Co'), R(205, 'Lahore Beverages', 'Lost enquiry')]
 
-  it('a bare number finds that order first, then orders that contain the digits', () => {
-    expect(matchOrders(ORDERS, '42').map(o => o.id)).toEqual(['o42', 'o142'])
-    expect(matchOrders(ORDERS, 'ORD-0042').map(o => o.id)).toEqual(['o42'])
+  it('a bare number finds the job with that number first, then jobs that contain the digits', () => {
+    expect(matchJobs(JOBS, '42').map(o => o.id)).toEqual(['o42', 'o142'])
+    expect(matchJobs(JOBS, 'ORD-0042').map(o => o.id)).toEqual(['o42'])
   })
-  it('a customer name word finds its orders, newest first as listed', () => {
-    expect(matchOrders(ORDERS, 'bev').map(o => o.id)).toEqual(['o42', 'o8'])
+  it('an enquiry number finds the enquiry, and the order that came from it', () => {
+    expect(matchJobs(JOBS, '139').map(o => o.id)).toEqual(['o42', 'r139'])
+    expect(matchJobs(JOBS, 'RFQ-0205').map(o => o.id)).toEqual(['r205'])
   })
-  it('nothing typed lists nothing to reject, and no match is an empty list', () => {
-    expect(matchOrders(ORDERS, 'zzz')).toEqual([])
+  it('a customer name word finds its jobs, orders and enquiries, as listed', () => {
+    expect(matchJobs(JOBS, 'bev').map(o => o.id)).toEqual(['o42', 'o8', 'r205'])
+  })
+  it('no match is an empty list', () => {
+    expect(matchJobs(JOBS, 'zzz')).toEqual([])
+  })
+  it('a chosen job fills one column: an order sets the order, an enquiry sets the RFQ, none clears both', () => {
+    expect(jobColumns(JOBS[1])).toEqual({ orderId: 'o42', rfqId: null })
+    expect(jobColumns(JOBS[4])).toEqual({ orderId: null, rfqId: 'r139' })
+    expect(jobColumns(null)).toEqual({ orderId: null, rfqId: null })
+  })
+  it('a burst row tagged to an enquiry saves rfq_id, and one tagged to an order saves order_id only', () => {
+    const base = { ...newBurstRow(null, { categoryId: 'c1', today: '2026-11-05' }, 'x'), amount: 100 }
+    expect(burstInserts([{ ...base, rfqId: 'r139' }], [])[0]).toMatchObject({ rfq_id: 'r139' })
+    expect(burstInserts([{ ...base, orderId: 'o42', rfqId: 'r139' }], [])[0]).not.toHaveProperty('rfq_id')
+    expect(burstInserts([{ ...base, orderId: 'o42' }], [])[0]).toMatchObject({ order_id: 'o42' })
   })
 })
 

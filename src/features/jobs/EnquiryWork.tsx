@@ -1,9 +1,11 @@
 import { Suspense, useMemo, useState, type ReactNode } from 'react'
-import { ChevronRight, X } from 'lucide-react'
-import { useSeesPrices } from '@/app/session'
+import { ChevronRight, Plus, X } from 'lucide-react'
+import { useSeesPrices, useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { useChannelPreference } from '@/lib/useChannelPreference'
 import { lazyWithReload } from '@/lib/importWithReload'
+import { lazyDialog } from '@/lib/lazyDialog'
+import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
 import { MessageActions } from '@/ui/MessageActions'
 import { Skeleton } from '@/ui/Skeleton'
@@ -34,6 +36,7 @@ const SuppliersToAskCard = lazyWithReload(() => import('@/features/rfqs/Supplier
 const FloatDialog = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.FloatDialog })))
 const ClarificationsPanel = lazyWithReload(() => import('@/features/rfqs/ClarificationsPanel').then(m => ({ default: m.ClarificationsPanel })))
 const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
+const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/ExpenseDialog').then(m => m.AddExpenseDialog))
 const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
 
 /** A compact section: one line (the title and how many) that opens its panel, open from the start only when there is something in it. */
@@ -126,6 +129,9 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   const [adding, setAdding] = useState(false)
   const [floating, setFloating] = useState(false)
+  const [costing, setCosting] = useState(false)
+  const session = useSession()
+  const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const today = businessToday()
   const { ask, busy: asking } = useAskSuppliers(rfq, inquiryList)
   const [lastAsk, clearLastAsk] = useLastAsk(rfq.id)
@@ -156,7 +162,8 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
   const quotations = useQuotations(prices ? rfq.id : undefined)
   const orders = useOrdersForRfq(rfq.id)
   const quotationCount = quotations.data?.length ?? 0
-  const open = (rfq.state?.outcome ?? 'open') === 'open' && !(orders.data ?? []).some(o => !o.cancelledOn)
+  const hasOrder = (orders.data ?? []).some(o => !o.cancelledOn)
+  const open = (rfq.state?.outcome ?? 'open') === 'open' && !hasOrder
   const sent = quotationSent({ bidState: rfq.state?.bid_state, quotationCount })
   const chaseMode: ChaseMode = !open || sent ? 'none' : hasPrices ? 'button' : 'card'
   const askFrom = async (ticked: readonly { supplierId: string; name: string }[], list: RfqItemRow[]) => ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
@@ -164,6 +171,13 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
 
   return (
     <div className="grid gap-4" data-enquiry-work data-chaseable={chaseable}>
+      {isAdmin && !hasOrder ? (
+        <div className="flex justify-end" data-slot="enquiry-cost">
+          <Button size="sm" variant="quiet" icon={Plus} onClick={() => setCosting(true)}>
+            Add cost
+          </Button>
+        </div>
+      ) : null}
       {lastAsk ? <SendToEachCard ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
       <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
         {nobodyAsked ? (
@@ -188,6 +202,7 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
       </Suspense>
       <EnquiryExtras rfq={rfq} inquiries={inquiryList} />
+      {isAdmin ? <AddExpenseDialog open={costing} onOpenChange={setCosting} context={{ rfqId: rfq.id, rfqLabel: rfqRef(rfq.number) }} /> : null}
       {adding ? (
         <Suspense fallback={null}>
           <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} />

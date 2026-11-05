@@ -180,6 +180,10 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This order has an invoice\. / },
   { match: /^This order has a payment recorded against it, a voided one included, / },
   { match: /^This order has an expense recorded against it\. / },
+  // 0136: a cost tied to an enquiry or a visit (HINT visit_order_mismatch, rfq_order_mismatch, rfq_has_costs)
+  { match: /^That visit belongs to a different order\.$/ },
+  { match: /^That order was made from a different enquiry\.$/ },
+  { match: /^This RFQ has costs recorded on it\. / },
   { match: /^This order has an issued purchase order\. / },
   { match: /^This invoice has its tax deposit ticked against the (.+?) bank statement\. /, action: BANK },
   { match: /^This payment is part of a correction, so it is kept as history\./ },

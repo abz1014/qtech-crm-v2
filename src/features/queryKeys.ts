@@ -228,6 +228,8 @@ function money() {
       range: (from: string, to: string) => [...expenses, 'range', from, to] as const,
       /** 0087: engineers' "I paid" claims: 'pending' (the admin's To approve) or 'mine' (an engineer's own), and one claim's photos. */
       claims: (scope: 'pending' | 'mine' | 'owed') => [...expenses, 'claims', scope] as const,
+      /** 0136: the visits assigned to one person, to name one on a claim. */
+      myVisits: (userId: string) => [...expenses, 'my-visits', userId] as const,
       claimPhotos: (claimId: string) => [...expenses, 'claims', 'photos', claimId] as const,
       /** 0087: the office cash box (cash in hand), which every cash expense moves. */
       cash: () => [...expenses, 'cash-in-hand'] as const,
@@ -267,6 +269,7 @@ function money() {
       cashOutDetail: (from: string, to: string) => [...all, 'month-end', 'cash-out-detail', from, to] as const,
     },
     orderOptions: () => [...all, 'order-options'] as const,
+    jobOptions: () => [...all, 'job-options'] as const,
     legOptions: (orderId: string) => [...all, 'leg-options', orderId] as const,
     /** M01: the GST register (every invoice, all months), one invoice with its steps, the order amounts a new invoice starts from. */
     invoices: {

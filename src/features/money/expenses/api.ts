@@ -1,6 +1,6 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { businessDaysFromNow } from '@/lib/dates'
-import { orderRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { PlainError } from '@/lib/errors/plainError'
 import type { TableRow } from '@/features/dbTypes'
 import { lookupLabels, type Labels } from '@/features/money/lookupLabels'
@@ -11,6 +11,7 @@ import {
   type DetailUse,
   type ExpenseGroup,
   type ExpenseInsert,
+  type JobTagOption,
   type ListedExpense,
   type PaidVia,
   type RecurringTemplate,
@@ -95,6 +96,7 @@ const toListed = (r: TableRow<'expenses'>): ListedExpense => ({
   paidVia: r.paid_via as PaidVia,
   note: r.description,
   orderId: r.order_id,
+  rfqId: r.rfq_id,
   legId: r.supplier_order_id,
   payeeId: r.payee_id,
   recurringId: r.recurring_id,
@@ -174,6 +176,8 @@ export async function insertExpenses(rows: readonly (ExpenseInsert & Partial<Tag
 
 export interface TagColumns {
   order_id: string | null
+  /** 0136 */
+  rfq_id: string | null
   supplier_order_id: string | null
   payee_id: string | null
   reference: string | null
@@ -189,6 +193,8 @@ export interface ExpensePatch {
   description: string | null
   input_tax_pkr: number
   order_id: string | null
+  /** 0136: the enquiry; the database fills order_id from it once the enquiry has an order. */
+  rfq_id: string | null
   supplier_order_id: string | null
   payee_id: string | null
 }
@@ -271,6 +277,39 @@ export async function listOrderOptions(): Promise<OrderOption[]> {
   const rows = unwrap(await db.from('orders').select('id, number, company_id').order('number', { ascending: false }).limit(300)) ?? []
   const names = await companyNames([...new Set(rows.map(r => r.company_id))])
   return rows.map(r => ({ id: r.id, ref: orderRef(r.number), company: names[r.company_id] ?? '' }))
+}
+
+/**
+ * 0136: the jobs a cost can be tied to: recent orders, and enquiries that have no live order yet (an order made from an enquiry is listed
+ * once, as the order, with the enquiry's number so either number finds it). The newest 300 of each are enough for a picker that is typed into.
+ */
+export async function listJobOptions(): Promise<JobTagOption[]> {
+  const db = requireSupabase()
+  const orders = unwrap(await db.from('orders').select('id, number, company_id, rfq_id, cancelled_on').order('number', { ascending: false }).limit(300)) ?? []
+  const rfqs = unwrap(await db.from('rfqs').select('id, number, company_id, closed_on').order('number', { ascending: false }).limit(300)) ?? []
+  const known = new Set(rfqs.map(r => r.id))
+  const missing = [...new Set(orders.map(o => o.rfq_id).filter((x): x is string => !!x && !known.has(x)))]
+  const older = missing.length ? (unwrap(await db.from('rfqs').select('id, number, company_id, closed_on').in('id', missing)) ?? []) : []
+  const rfqNumber = new Map([...rfqs, ...older].map(r => [r.id, r.number] as const))
+  const ordered = new Set(orders.filter(o => !o.cancelled_on && o.rfq_id).map(o => o.rfq_id as string))
+  const names = await companyNames([...new Set([...orders.map(o => o.company_id), ...rfqs.map(r => r.company_id)])])
+  const orderJobs = orders.map(o => ({
+    id: o.id,
+    kind: 'order' as const,
+    ref: orderRef(o.number),
+    company: names[o.company_id] ?? '',
+    ...(o.rfq_id && rfqNumber.has(o.rfq_id) ? { rfqRef: rfqRef(rfqNumber.get(o.rfq_id) as number) } : {}),
+  }))
+  const enquiryJobs = rfqs
+    .filter(r => !ordered.has(r.id))
+    .map(r => ({
+      id: r.id,
+      kind: 'rfq' as const,
+      ref: rfqRef(r.number),
+      company: names[r.company_id] ?? '',
+      note: r.closed_on ? 'Lost enquiry' : 'Enquiry',
+    }))
+  return [...orderJobs, ...enquiryJobs]
 }
 
 /**

@@ -245,7 +245,9 @@ export interface BurstRow {
   inputTax: number | null
   /** Optional tag (audit X1): the order this spend belongs to. Never carried from the row above. */
   orderId: string | null
-  /** Text left in the order box that matches no order: the row is unfinished until it is replaced or cleared. */
+  /** 0136: or the enquiry (RFQ) it belongs to. One job box fills one of the two. */
+  rfqId?: string | null
+  /** Text left in the job box that matches no job: the row is unfinished until it is replaced or cleared. */
   orderText?: string
   /** "Every month": saving also makes a recurring template, and links this expense to it for its month. */
   repeat?: boolean
@@ -309,6 +311,8 @@ export interface ExpenseInsert {
   input_tax_pkr: number
   /** Present only when the row was tagged to an order. */
   order_id?: string | null
+  /** 0136: present only when the row was tagged to an enquiry. */
+  rfq_id?: string | null
   /** Present only for an "Every month" row: its template and the month it pays. */
   recurring_id?: string
   /** The month it is for: an "Every month" row's, or a monthly bill's (0087 for-month). */
@@ -325,6 +329,7 @@ export function burstInserts(rows: readonly BurstRow[], categories: readonly Cat
     description: cleanDetail(r.note),
     input_tax_pkr: showsInputTax(r.categoryId) ? (r.inputTax ?? 0) : 0,
     ...(r.orderId ? { order_id: r.orderId } : {}),
+    ...(r.rfqId && !r.orderId ? { rfq_id: r.rfqId } : {}),
     // 0087: a bill paid by the 10th is for last month, the month its template is then due for (billPeriod)
     ...(r.repeat && r.templateId ? { recurring_id: r.templateId, period: forMonthOf(r.date, r.categoryId) } : {}),
   }))
@@ -366,35 +371,53 @@ export function markClosedRows(rows: readonly BurstRow[], message: string): Burs
 
 export const clearRowErrors = (rows: readonly BurstRow[]): BurstRow[] => rows.map(r => (r.error ? { ...r, error: undefined } : r))
 
-// ------------------------------------------------------------------ the order tag (audit X1)
+// ------------------------------------------------------------------ the job tag (audit X1; 0136: an enquiry too)
 
-export interface OrderTagOption {
+/**
+ * A job a cost can be tied to: an order, or an enquiry (RFQ) that has no live order yet. An order made from an RFQ is listed once, as the
+ * order, and carries the enquiry's number too (rfqRef), so "139" finds it whichever number the person has in mind.
+ */
+export interface JobTagOption {
   id: string
-  /** "ORD-0042". */
+  kind: 'order' | 'rfq'
+  /** "ORD-0042" or "RFQ-0139". */
   ref: string
   company: string
+  /** An order's enquiry, "RFQ-0139". */
+  rfqRef?: string
+  /** For an enquiry: "Enquiry" or "Lost enquiry". */
+  note?: string
 }
 
-/** Lower is better; -1 means no match. "42" finds ORD-0042 first, then any ORD number containing 42, then a customer name. */
-function rankOrder(o: OrderTagOption, q: string): number {
+const digitsOf = (ref: string): number => Number(ref.replace(/\D/g, ''))
+
+/** Lower is better; -1 means no match. "139" finds the job with that number (order or enquiry) first, then refs containing it, then a customer name. */
+function rankJob(o: JobTagOption, q: string): number {
   if (!q) return 0
   const ref = o.ref.toLowerCase()
-  if (ref === q) return 0
-  if (/^\d+$/.test(q) && Number(ref.replace(/\D/g, '')) === Number(q)) return 0
-  if (ref.includes(q)) return 1
+  const rfqRef = o.rfqRef?.toLowerCase()
+  if (ref === q || rfqRef === q) return 0
+  if (/^\d+$/.test(q) && (digitsOf(o.ref) === Number(q) || (o.rfqRef && digitsOf(o.rfqRef) === Number(q)))) return 0
+  if (ref.includes(q) || rfqRef?.includes(q)) return 1
   if (o.company.toLowerCase().split(/[\s&]+/).some(w => w.startsWith(q))) return 2
   if (o.company.toLowerCase().includes(q)) return 3
   return -1
 }
 
-export function matchOrders(orders: readonly OrderTagOption[], text: string): OrderTagOption[] {
+export function matchJobs(jobs: readonly JobTagOption[], text: string): JobTagOption[] {
   const q = text.trim().toLowerCase()
-  return orders
-    .map((o, i) => ({ o, i, r: rankOrder(o, q) }))
+  return jobs
+    .map((o, i) => ({ o, i, r: rankJob(o, q) }))
     .filter(x => x.r >= 0)
     .sort((a, b) => a.r - b.r || a.i - b.i)
     .map(x => x.o)
 }
+
+/** The two columns a chosen job fills: an order sets order_id, an enquiry sets rfq_id; never both from the picker. */
+export const jobColumns = (job: Pick<JobTagOption, 'id' | 'kind'> | null): { orderId: string | null; rfqId: string | null } => ({
+  orderId: job?.kind === 'order' ? job.id : null,
+  rfqId: job?.kind === 'rfq' ? job.id : null,
+})
 
 // ------------------------------------------------------------------ recurring templates
 
@@ -434,6 +457,8 @@ export interface ListedExpense {
   paidVia: PaidVia
   note: string | null
   orderId: string | null
+  /** 0136: the enquiry it was spent on. */
+  rfqId?: string | null
   legId: string | null
   payeeId: string | null
   recurringId: string | null

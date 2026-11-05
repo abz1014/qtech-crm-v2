@@ -7,7 +7,7 @@ screens: /my-expenses
 related: site-question
 ---
 1. Tap your initials at the top, then [I paid].
-2. Type [How much, PKR] and, if you like, [What for] and the [Job].
+2. Type [How much, PKR] and, if you like, [What for], the [Job] and [Which visit?]. Today's visit is already chosen.
 3. Tap [Photo of the receipt] and take the photo.
 4. Tap [Send for approval].
 

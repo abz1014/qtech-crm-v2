@@ -3,19 +3,21 @@ import * as RadixPopover from '@radix-ui/react-popover'
 import { cn } from '@/lib/utils'
 import { Kbd } from '@/ui/Kbd'
 import { controlClass } from '@/ui/form/fieldContext'
-import { matchOrders, type OrderTagOption } from '@/features/money/expenses/model'
+import { matchJobs, type JobTagOption } from '@/features/money/expenses/model'
 
 /*
- * OrderTagPicker (audit X1; the burst sheet's optional "Order" cell). Type an order number ("42", "ORD-0042") or a customer's
- * name; the first match is already highlighted, Enter or Tab accepts it and Tab carries on to the next cell. Leaving the cell
- * empty is fine and Tab simply moves on: the tag is optional. Emptying the box removes the tag. Text that matches no order is
- * never dropped quietly: the box keeps showing it and the caller is told, as with the category cell.
+ * The Job picker (audit X1; the burst sheet's optional "Job" cell; 0136 adds enquiries). Type a job number ("139", "ORD-0042",
+ * "RFQ-0139") or a customer's name; an order and the enquiry it came from both answer to their number. The first match is already
+ * highlighted, Enter or Tab accepts it and Tab carries on to the next cell. Leaving the cell empty is fine and Tab simply moves on:
+ * the tag is optional. Emptying the box removes the tag. Text that matches no job is never dropped quietly: the box keeps showing
+ * it and the caller is told, as with the category cell.
  */
 interface OrderTagPickerProps {
-  orders: readonly OrderTagOption[]
+  jobs: readonly JobTagOption[]
+  /** The chosen job's id (an order's or an enquiry's). */
   value: string | null | undefined
-  onChange: (orderId: string | null) => void
-  /** Called with the typed text when the field is left holding text that matches no order, and with null once resolved. */
+  onChange: (job: JobTagOption | null) => void
+  /** Called with the typed text when the field is left holding text that matches no job, and with null once resolved. */
   onUnmatched?: (text: string | null) => void
   size?: 'cell' | 'phone'
   placeholder?: string
@@ -26,7 +28,7 @@ interface OrderTagPickerProps {
 const SHOWN = 8
 
 export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(function OrderTagPicker(
-  { orders, value, onChange, onUnmatched, size = 'cell', placeholder = 'optional', className, ...rest },
+  { jobs, value, onChange, onUnmatched, size = 'cell', placeholder = 'optional', className, ...rest },
   ref,
 ) {
   const listId = useId()
@@ -35,17 +37,17 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
-  const selected = orders.find(o => o.id === value)
+  const selected = jobs.find(o => o.id === value)
   const typed = (query ?? '').trim()
-  const matches = useMemo(() => matchOrders(orders, typed).slice(0, SHOWN), [orders, typed])
+  const matches = useMemo(() => matchJobs(jobs, typed).slice(0, SHOWN), [jobs, typed])
   const activeIndex = Math.min(active, Math.max(matches.length - 1, 0))
 
   const close = () => {
     setOpen(false)
     setQuery(null)
   }
-  const pick = (o: OrderTagOption) => {
-    onChange(o.id)
+  const pick = (o: JobTagOption) => {
+    onChange(o)
     onUnmatched?.(null)
     close()
   }
@@ -80,7 +82,7 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
         break
       case 'Enter':
         if (open && typed && matches.length > 0) {
-          e.preventDefault() // accepts the order; the row does not read this Enter as "add a row"
+          e.preventDefault() // accepts the job; the row does not read this Enter as "add a row"
           pick(matches[activeIndex])
         }
         break
@@ -148,7 +150,7 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
           className="z-[70] w-[max(var(--radix-popover-trigger-width),280px)] focus:outline-none"
         >
           <div className="animate-rise-4 rounded bg-surface p-1 shadow-pop">
-            <ul id={listId} role="listbox" aria-label="Orders" onMouseDown={e => e.preventDefault()} className="max-h-[272px] overflow-y-auto">
+            <ul id={listId} role="listbox" aria-label="Jobs" onMouseDown={e => e.preventDefault()} className="max-h-[272px] overflow-y-auto">
               {matches.map((o, i) => (
                 <li
                   key={o.id}
@@ -164,16 +166,18 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
                   )}
                 >
                   <span className="num font-medium">{o.ref}</span>
-                  <span className="truncate text-xs text-fg-muted">{o.company}</span>
+                  <span className="truncate text-sm text-fg-muted">
+                    {[o.company, o.rfqRef, o.note].filter(Boolean).join(' · ')}
+                  </span>
                 </li>
               ))}
               {matches.length === 0 ? (
                 <li role="presentation" className="flex h-[34px] items-center px-2 text-sm text-fg-muted">
-                  No order matches “{typed}”
+                  No job matches “{typed}”
                 </li>
               ) : null}
             </ul>
-            <footer className="mt-[2px] flex items-center gap-4 border-t px-2 pb-[2px] pt-[6px] text-xs text-fg-muted">
+            <footer className="mt-[2px] flex items-center gap-4 border-t px-2 pb-[2px] pt-[6px] text-sm text-fg-muted">
               <span className="inline-flex items-center gap-1">
                 <Kbd size="inline">Tab</Kbd>accept
               </span>

@@ -113,6 +113,11 @@ export function useOrderOptions(enabled = true) {
   return useQuery({ queryKey: qk.money.orderOptions(), queryFn: api.listOrderOptions, enabled, staleTime: 60_000 })
 }
 
+/** 0136: orders and open or lost enquiries a cost can be tied to (the Job picker). */
+export function useJobOptions(enabled = true) {
+  return useQuery({ queryKey: qk.money.jobOptions(), queryFn: api.listJobOptions, enabled, staleTime: 60_000 })
+}
+
 export function useLegOptions(orderId: string | null | undefined) {
   return useQuery({
     queryKey: qk.money.legOptions(orderId ?? ''),
@@ -219,6 +224,11 @@ export function usePendingClaims(enabled = true) {
 
 export function useMyClaims(enabled = true) {
   return useQuery({ queryKey: qk.money.expenses.claims('mine'), queryFn: claims.listMyClaims, enabled })
+}
+
+/** 0136: the person's own visits, to name one on a claim. */
+export function useMyVisitOptions(userId: string | undefined) {
+  return useQuery({ queryKey: qk.money.expenses.myVisits(userId ?? ''), queryFn: () => claims.listMyVisitOptions(userId as string), enabled: Boolean(userId), staleTime: 60_000 })
 }
 
 export function useClaimPhotos(claimId: string | null | undefined) {

@@ -161,6 +161,8 @@ insert into public.customer_refunds (id, company_id, amount) values (pg_temp.f('
 insert into public.credit_applications (id, company_id, to_order_id, amount) values (pg_temp.f('f2'), pg_temp.f('01'), pg_temp.f('f5'), 5);   -- 0127
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
+insert into public.rfqs (id, company_id, owner_id) values (pg_temp.f('f8'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');   -- 0136: an enquiry that has a cost, so v_enquiry_costs has a row to probe
+insert into public.expenses (id, amount_pkr, category_id, rfq_id) values (pg_temp.f('f9'), 5, 'ca7e0000-0000-4000-8000-000000000005', pg_temp.f('f8'));
 insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id, has_prices) values   -- untagged: 0103 defaults to true
@@ -303,7 +305,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_category_evidence','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_month_cash_flow','v_month_cash_out_detail','v_month_profit','v_wht_deducted','v_company_credit',
-                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs']) v;   -- A6, P01
+                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers','v_jobs','v_enquiry_costs']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
 -- Each call is valid for an authorised caller and rolled back. A call counts as allowed when it returns rows (or a

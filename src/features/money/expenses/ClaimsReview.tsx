@@ -78,6 +78,8 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
           <b className="font-semibold">{claim.byName}</b> paid <b className="num font-semibold">{pkr(claim.amount)}</b>
           {claim.note ? <span> for {claim.note}</span> : null}
           {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
+          {claim.rfqLabel && !claim.orderLabel ? <span className="text-fg-2"> · {claim.rfqLabel}</span> : null}
+          {claim.visitLabel ? <span className="text-fg-2"> · {claim.visitLabel}</span> : null}
         </span>
         <span className="num text-xs text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>
       </div>
