@@ -8,6 +8,7 @@ import { ToastProvider } from '@/ui/Toast'
 import { qk } from '@/features/queryKeys'
 import type { JobFacts, JobRow } from '@/features/jobs/api'
 import JobsScreen from '@/features/jobs/JobsScreen'
+import OrderMore from '@/features/orders/jobSlots/OrderMore'
 
 /*
  * The Job page (P5-C), drawn from a seeded query cache: the ruler, the next-step band with its one green button, the stages as an
@@ -238,10 +239,20 @@ describe('Job page: the More menu', () => {
     return () => { window.matchMedia = real }
   }
 
-  it('the trigger is drawn at once, disabled and busy, before the menu has loaded', async () => {
-    mount(job({}), 'admin')
-    await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
-    // synchronously, with no wait for the lazy chunk
+  it('the trigger is drawn at once, disabled and busy, before the menu chunk has loaded', async () => {
+    const j = job({})
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
+    seed(client, j, true)
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Faizan', role: 'admin' } }}>
+          <ToastProvider><MemoryRouter>
+            <OrderMore job={{ job: j, role: 'admin', money: true }} />
+          </MemoryRouter></ToastProvider>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    // synchronously: the lazy chunk cannot have resolved yet
     const more = screen.getByRole('button', { name: 'More' })
     expect(more).toHaveAttribute('aria-haspopup', 'menu')
     expect(more).toBeDisabled()
