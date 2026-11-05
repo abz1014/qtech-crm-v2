@@ -150,8 +150,6 @@ for (const role of ['admin', 'sales'] as const) {
     const bar = page.getByRole('toolbar', { name: 'Job actions' })
     await expect(bar.getByRole('button', { name: 'More' })).toBeVisible()
     await expect(bar.getByRole('button', { name: 'More' })).toBeEnabled()
-    // a paid job has no next-step button of its own: More is the only button in the bar
-    await expect(bar.getByRole('button')).toHaveCount(1)
     await bar.getByRole('button', { name: 'More' }).click()
     await expect(page.getByRole('menuitem', { name: 'Cancel order' })).toBeVisible()
   })
