@@ -25,6 +25,7 @@ import {
  * exist once), paid the way the template says (0086), else as its category usually is. "Record all N" records every due one.
  * 0087 for-month: a template paid on day 1 to 10 (salaries on the 5th) pays LAST month's bill, so in October it is due "for
  * September" and Lock a month's "monthly bills recorded" check for September agrees with this screen.
+ * 0138: a template with "Book it for me" on says "books itself" (the daily job records it on its day; the To do reminder still lists it if it has not).
  * With none set up the panel is one line (grader: the explanation lives in the (i)). Record is a secondary button: the
  * screen's one green button is Add expenses.
  */
@@ -145,6 +146,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
                   {catName(t.categoryId)}
                   {t.dayOfMonth ? ` · day ${t.dayOfMonth}` : ''} · {viaOf(t) === 'cash' ? 'cash' : 'bank'}
                   {t.active ? ` · for ${monthKeyLabel(periodOf(t))}` : ' · paused'}
+                  {t.autoBook ? ' · books itself' : ''}
                 </span>
               </button>
               <span className="flex items-center gap-2 sm:gap-3">

@@ -20,6 +20,7 @@ import { DEFAULT_GST_DEADLINES, gstDatesFor } from '@/features/settings/gstDeadl
 import { BACKUP_STALE_DAYS, DECRYPT_TEST_EVERY_DAYS, FREE_DB_BYTES, FREE_STORAGE_BYTES, USAGE_WARN_AT, fullestUsage, percentText } from '@/features/settings/health'
 import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { isStale, STALE_AFTER_DAYS, toneFor } from './needsYou'
+import { isBillDue } from '@/features/money/expenses/reminder'
 import { buildReview, isMonday, reviewCount } from './weeklyReview'
 import {
   SNOOZE_RULE,
@@ -859,8 +860,7 @@ export function ruleTcsNotSent(ctx: TodayInputs): Entry[] {
 export function ruleRecurringDue(ctx: TodayInputs): Entry[] {
   if (ctx.user.role !== 'admin') return []
   const period = ctx.today.slice(0, 7)
-  const day = parseDay(ctx.today)?.d ?? 0
-  const due = (ctx.recurring ?? []).filter(t => t.active && !t.recorded && (!t.startMonth || t.startMonth <= (t.period ?? period)) && (t.dayOfMonth ?? 1) <= day)
+  const due = (ctx.recurring ?? []).filter(t => isBillDue(t, ctx.today))
   if (due.length === 0) return []
   // A template with no day of the month has no date to be late against: it is listed for the month, never "overdue".
   const days = due.flatMap(t => (t.dayOfMonth ? [t.dayOfMonth] : []))

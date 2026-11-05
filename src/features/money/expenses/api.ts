@@ -100,6 +100,7 @@ const toListed = (r: TableRow<'expenses'>): ListedExpense => ({
   recurringId: r.recurring_id,
   bankMonth: r.bank_month,
   period: r.period,
+  autoBooked: r.auto_booked,
 })
 
 export interface ExpenseListing {
@@ -333,6 +334,7 @@ const toTemplate = (r: TableRow<'recurring_expenses'>): RecurringTemplate => ({
   startMonth: r.start_month,
   notes: r.notes,
   paidVia: (r.paid_via as PaidVia | null) ?? null,
+  autoBook: r.auto_book,
 })
 
 export async function listRecurring(): Promise<RecurringTemplate[]> {
@@ -401,6 +403,8 @@ export interface RecurringInput {
   notes: string | null
   /** How it is usually paid; null follows the category. */
   paidVia?: PaidVia | null
+  /** 0138: the "Book it for me" switch; left alone when not given. */
+  autoBook?: boolean
 }
 
 export async function saveRecurring(input: RecurringInput): Promise<void> {
@@ -414,6 +418,7 @@ export async function saveRecurring(input: RecurringInput): Promise<void> {
     start_month: input.startMonth,
     notes: input.notes,
     ...(input.paidVia !== undefined ? { paid_via: input.paidVia } : {}),
+    ...(input.autoBook !== undefined ? { auto_book: input.autoBook } : {}),
   }
   const res = input.id
     ? await db.from('recurring_expenses').update(row).eq('id', input.id)

@@ -905,14 +905,14 @@ isOneToOne: false
                   ]
                 },"expenses": {
                   Row: {
-                    "amount_pkr": number,"bank_month": string | null,"category_id": string,"created_at": string,"created_by": string | null,"description": string | null,"fx_amount": number | null,"fx_currency": string | null,"id": string,"input_tax_pkr": number,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"paid_via": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"supplier_order_id": string | null
+                    "amount_pkr": number,"auto_booked": boolean,"bank_month": string | null,"category_id": string,"created_at": string,"created_by": string | null,"description": string | null,"fx_amount": number | null,"fx_currency": string | null,"id": string,"input_tax_pkr": number,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"paid_via": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"supplier_order_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_pkr": number,"bank_month"?: string | null,"category_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via": string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
+                    "amount_pkr": number,"auto_booked"?: boolean,"bank_month"?: string | null,"category_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via": string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
                   }
                   Update: {
-                    "amount_pkr"?: number,"bank_month"?: string | null,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via"?: string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
+                    "amount_pkr"?: number,"auto_booked"?: boolean,"bank_month"?: string | null,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via"?: string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1743,14 +1743,14 @@ isOneToOne: false
                   ]
                 },"recurring_expenses": {
                   Row: {
-                    "active": boolean,"amount": number,"category_id": string,"created_at": string,"created_by": string | null,"day_of_month": number | null,"id": string,"label": string,"notes": string | null,"paid_via": string | null,"start_month": string | null
+                    "active": boolean,"amount": number,"auto_book": boolean,"category_id": string,"created_at": string,"created_by": string | null,"day_of_month": number | null,"id": string,"label": string,"notes": string | null,"paid_via": string | null,"start_month": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"amount": number,"category_id": string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label": string,"notes"?: string | null,"paid_via"?: string | null,"start_month"?: string | null
+                    "active"?: boolean,"amount": number,"auto_book"?: boolean,"category_id": string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label": string,"notes"?: string | null,"paid_via"?: string | null,"start_month"?: string | null
                   }
                   Update: {
-                    "active"?: boolean,"amount"?: number,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label"?: string,"notes"?: string | null,"paid_via"?: string | null,"start_month"?: string | null
+                    "active"?: boolean,"amount"?: number,"auto_book"?: boolean,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label"?: string,"notes"?: string | null,"paid_via"?: string | null,"start_month"?: string | null
                   }
                   Relationships: [
                     {
@@ -2760,6 +2760,9 @@ isOneToOne: false
                            },
 "attachment_is_priced":
 { Args: { "p_bucket": string,"p_name": string }; Returns: boolean
+                           },
+"book_recurring_month":
+{ Args: { "p_today"?: string }; Returns: number
                            },
 "brand_tokens":
 { Args: Record<PropertyKey, never>; Returns: (string)[]

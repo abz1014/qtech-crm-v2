@@ -307,6 +307,12 @@ export interface RecurringFact {
   period?: string
   /** An expense with (recurring_id, period) already exists for `period`. */
   recorded: boolean
+  /** 0138: what the To do reminder records (the person may change the amount first). Absent in older fixtures. */
+  categoryId?: string
+  amount?: number
+  paidVia?: 'bank' | 'cash' | null
+  /** 0138: "Book it for me" is on, so the database books it on its day. */
+  autoBook?: boolean
 }
 
 export interface SnoozeFact {

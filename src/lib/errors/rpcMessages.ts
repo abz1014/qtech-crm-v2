@@ -155,6 +155,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^(Only the Other category of a group has one-off titles to promote\.|Choose which title to turn into a category\.|Give the new category a name\.)$/ },
   { match: /^".+?" is (the Other category of a group\. Choose a different name|a category of another kind, so these expenses cannot move there)/ },
   { match: /^".+?" is archived\. Bring it back first, or choose a different name\.$/ },
+  // 0138: booking the monthly bills by itself
+  { match: /^Only an admin can book the monthly bills\.$/, message: () => ADMIN_ONLY },
   // 0087: engineers' "I paid" claims (already written for people)
   { match: /^Only an admin approves an expense claim\.$/, message: () => ADMIN_ONLY },
   { match: /^Choose how it was paid: cash given back, from petty cash, or by bank\.$/ },
@@ -219,6 +221,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Looks like a payment already recorded on / },
   { match: /^Rs (.+?) for 1 (.+?) is more than 20 percent away from the latest rate / },
   { match: /^0115: /, internal: true },
+  { match: /^0138: /, internal: true },
   // 0121 (supplier debt on a cancelled order) and 0122 (reassign owner): already plain.
   { match: /^Only an admin cancels a supplier order with the supplier\./ },
   { match: /^That supplier order was not found\./ },

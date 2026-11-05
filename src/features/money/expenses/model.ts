@@ -409,6 +409,8 @@ export interface RecurringTemplate {
   notes: string | null
   /** How it is usually paid (0086); null follows the category's own default. */
   paidVia: PaidVia | null
+  /** 0138: "Book it for me": the database books it on its day each month (fixed amounts only). Off unless set. */
+  autoBook?: boolean
 }
 
 /** Due this month: active, started, and not yet recorded for the period (recurring_id, period is unique). */
@@ -440,6 +442,8 @@ export interface ListedExpense {
   bankMonth: string | null
   /** The month a monthly bill is for ("2026-09", 0087 for-month); null: the month it was paid in. */
   period: string | null
+  /** 0138: booked by the daily job and not yet confirmed (any change an admin makes confirms it). */
+  autoBooked?: boolean
 }
 
 export interface ExpenseFilters {

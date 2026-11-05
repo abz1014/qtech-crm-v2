@@ -565,13 +565,13 @@ async function loadRecurringFacts(today: string): Promise<RecurringFact[]> {
   const db = requireSupabase()
   const periods = billPeriods(today)
   const [templates, recorded] = await Promise.all([
-    db.from('recurring_expenses').select('id, label, day_of_month, active, start_month, category_id').eq('active', true).order('label'),
+    db.from('recurring_expenses').select('id, label, day_of_month, active, start_month, category_id, amount, paid_via, auto_book').eq('active', true).order('label'),
     db.from('expenses').select('recurring_id, period').in('period', periods).not('recurring_id', 'is', null),
   ])
   const done = new Set((unwrap(recorded) ?? []).map(r => `${r.recurring_id as string}|${r.period as string}`))
   return (unwrap(templates) ?? []).map(t => {
     const period = billPeriod({ dayOfMonth: t.day_of_month, categoryId: t.category_id }, today)
-    return { id: t.id, label: t.label, dayOfMonth: t.day_of_month, active: t.active, startMonth: t.start_month, period, recorded: done.has(`${t.id}|${period}`) }
+    return { id: t.id, label: t.label, dayOfMonth: t.day_of_month, active: t.active, startMonth: t.start_month, period, recorded: done.has(`${t.id}|${period}`), categoryId: t.category_id, amount: Number(t.amount), paidVia: (t.paid_via as 'bank' | 'cash' | null) ?? null, autoBook: t.auto_book }
   })
 }
 

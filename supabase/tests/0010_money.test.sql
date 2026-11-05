@@ -31,12 +31,12 @@ select columns_are('public', 'payments_in',
 select columns_are('public', 'expenses',
   array['id', 'created_at', 'created_by', 'paid_on', 'amount_pkr', 'category_id', 'description', 'order_id',
         'supplier_order_id', 'payee_id', 'reference', 'recurring_id', 'period', 'legacy_flags', 'legacy_source',
-        'paid_via', 'input_tax_pkr', 'bank_month', 'fx_currency', 'fx_amount'],
+        'paid_via', 'input_tax_pkr', 'bank_month', 'fx_currency', 'fx_amount', 'auto_booked'],   -- 0138: booked by the daily job, not yet confirmed
   'expenses has the section 2.18 columns (A6: category_id, paid_via, input_tax_pkr, bank_month)');
 select columns_are('public', 'recurring_expenses',
   array['id', 'created_at', 'created_by', 'label', 'category_id', 'amount', 'day_of_month', 'active', 'start_month',
-        'notes', 'paid_via'],
-  'recurring_expenses has the section 2.19 columns (0086: paid_via)');
+        'notes', 'paid_via', 'auto_book'],
+  'recurring_expenses has the section 2.19 columns (0086: paid_via; 0138: auto_book)');
 select ok((select bool_and(relrowsecurity) from pg_class
            where oid in ('public.invoices'::regclass, 'public.payments_in'::regclass, 'public.expenses'::regclass,
                          'public.recurring_expenses'::regclass)),
