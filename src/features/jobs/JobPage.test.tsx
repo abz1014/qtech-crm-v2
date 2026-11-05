@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -239,10 +239,13 @@ describe('Job page: the More menu', () => {
     return () => { window.matchMedia = real }
   }
 
-  it('the trigger is drawn at once, disabled and busy, before the menu chunk has loaded', async () => {
+  it('the trigger is drawn at once, disabled and busy, while the menu or its order is still loading', async () => {
     const j = job({})
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
     seed(client, j, true)
+    // the order's header is on its way and has not arrived
+    client.removeQueries({ queryKey: qk.orders.part('o1', 'header') })
+    void client.prefetchQuery({ queryKey: qk.orders.part('o1', 'header'), queryFn: () => new Promise(() => {}) })
     render(
       <QueryClientProvider client={client}>
         <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Faizan', role: 'admin' } }}>
@@ -252,12 +255,17 @@ describe('Job page: the More menu', () => {
         </SessionProvider>
       </QueryClientProvider>,
     )
-    // synchronously: the lazy chunk cannot have resolved yet
+    // synchronously, with nothing awaited
     const more = screen.getByRole('button', { name: 'More' })
     expect(more).toHaveAttribute('aria-haspopup', 'menu')
     expect(more).toBeDisabled()
     expect(more).toHaveAttribute('aria-busy', 'true')
-    // then the real menu takes its place
+    // it stays that way until the header is there; then the real menu takes its place
+    await new Promise(r => setTimeout(r, 50))
+    expect(screen.getByRole('button', { name: 'More' })).toBeDisabled()
+    act(() => {
+      client.setQueryData(qk.orders.part('o1', 'header'), { id: 'o1', number: 1, companyId: 'c1', companyName: 'x', rfqId: 'r1', customerPo: null, orderedOn: '2026-09-02', paymentTermsDays: 30, needsCommissioning: false, plannedOn: null, doneOn: null, cancelledOn: null, cancelReason: null, imported: false, notes: null, site: null, contact: null, owner: null, state: null })
+    })
     await waitFor(() => expect(screen.getByRole('button', { name: 'More' })).toBeEnabled())
   })
 
