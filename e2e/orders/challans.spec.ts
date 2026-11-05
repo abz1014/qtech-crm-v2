@@ -87,7 +87,7 @@ test('an engineer sees the challans on the job page, issues one and downloads it
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('list', { name: 'Lines on the challan' }).getByRole('listitem')).toHaveCount(2)
   const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Issue and download' }).click()])
-  expect(download.suggestedFilename()).toMatch(/^Delivery-challan-DC-d{4}.pdf$/)
+  expect(download.suggestedFilename()).toMatch(/^Delivery-challan-DC-\d{4}\.pdf$/)
   await expect.poll(async () => (await challansOf(s.order.id)).length).toBe(1)
   const [c] = await challansOf(s.order.id)
   await expect(panel.getByRole('listitem')).toContainText(c.number)
