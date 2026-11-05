@@ -44,7 +44,8 @@ export default function AddFileSlot({ job }: JobSlotProps) {
     }
   }
   return (
-    <>
+    // A labelled group: one control of the panel, not a page-level action (the screen audit counts a button group apart).
+    <div role="group" aria-label="Add a file to this job" className="inline-flex">
       <input
         ref={input}
         type="file"
@@ -63,6 +64,6 @@ export default function AddFileSlot({ job }: JobSlotProps) {
       <Button size="touch" variant="quiet" icon={Paperclip} className="text-base" busy={sending} busyLabel="Adding" onClick={() => input.current?.click()}>
         Add file
       </Button>
-    </>
+    </div>
   )
 }
