@@ -316,11 +316,11 @@ test('0100/0103: a customer PO uploaded by SALES through the app is closed to an
 })
 
 test('0101 (phase 7): an engineer sets the visit type on their own site only, and the engineer view of an order still holds no money', async () => {
-  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { visit_type: 'installation' }, prefer: 'return=representation' })
+  const mine = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,visit_type`, { method: 'PATCH', body: { visit_type: 'installation' }, prefer: 'return=representation' })
   expect(mine.status, 'the assigned engineer sets the type').toBeLessThan(300)
   const back = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}&select=id,visit_type`)
   expect(back.body).toEqual([{ id: world.order.id, visit_type: 'installation' }])
-  const theirs = await api('engineer', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
+  const theirs = await api('engineer', `/rest/v1/orders?id=eq.${world.legacyOrder.id}&select=id,visit_type`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
   expect(theirs.status, 'an engineer not assigned to the site is refused').toBeGreaterThanOrEqual(400)
   expect(JSON.stringify(theirs.body)).toContain('not_assigned')
   const sales = await api('sales', `/rest/v1/orders?id=eq.${world.legacyOrder.id}`, { method: 'PATCH', body: { visit_type: 'survey' }, prefer: 'return=representation' })
