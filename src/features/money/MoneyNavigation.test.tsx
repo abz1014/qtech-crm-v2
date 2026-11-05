@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
@@ -89,6 +89,23 @@ describe('Money tabs and landing', () => {
     expect(screen.getAllByRole('navigation')).toHaveLength(1)
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/money/reports')
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('To collect')
+  })
+
+  it('admin gets a "More money pages" row of five links; sales get none', async () => {
+    at('/money/receivables')
+    const more = await screen.findByRole('group', { name: 'More money pages' })
+    const links = within(more).getAllByRole('link')
+    expect(links.map(a => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['Margins', '/money/margins'],
+      ['Mistakes to fix', '/money/exceptions'],
+      ['Bank check', '/money/month-end/bank'],
+      ['Review imported', '/money/review-imported'],
+      ['GST to FBR', '/money/accounts/gst'],
+    ])
+    cleanup()
+    at('/money/receivables', 'sales')
+    await screen.findByRole('navigation', { name: 'Money views' })
+    expect(screen.queryByRole('group', { name: 'More money pages' })).toBeNull()
   })
 
   it('sales see the same names (no "Order balances"), two tabs, and Reports', async () => {

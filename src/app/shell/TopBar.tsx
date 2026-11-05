@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { CircleHelp, Search, Settings } from 'lucide-react'
 import { navItemsForRole, type CountKey, type NavItem, type NavKey } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { NewMenu } from '@/app/shell/NewMenu'
 import { BrandImage } from '@/ui/BrandImage'
+import { useHelp } from '@/features/help/useHelp'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { LateDot } from '@/ui/LateDot'
@@ -32,12 +33,20 @@ interface TopBarProps {
  *   2xl, 1536 up  icon + label + count, wordmark, 280 search with the key hint, the action (outlined), role.
  *   xl, 1280-1535 label + count, wordmark, 220 search; no icons, key hints or role.
  *   lg, 1024-1279 label + count, logo mark, a short "Search" box, the action labelled.
- *   md, 768-1023  icons, the active label only, logo mark, search and the action as icon buttons.
+ *   md, 768-1023  label + count (no icons: four words and their counts fit), logo mark, search and the action as icon buttons.
+ * Help and Settings are two small buttons beside the account at every width (the word from 2xl, an icon with its name below that), so
+ * they are not found only behind the avatar. The avatar menu keeps them too.
  * Below 768 the phone bar and the bottom tabs take over (MobileChrome).
  */
+/** Help and Settings in the bar: an icon button below 2xl, icon and word from 2xl up. */
+const utilityLink = cn(
+  'inline-flex h-control min-w-control items-center justify-center gap-2 rounded px-2 text-sm font-medium text-fg-2 transition-colors duration-fast ease-out hover:text-fg 2xl:px-3',
+)
+
 export function TopBar({ user, counts, dots, onSearch, items: given }: TopBarProps) {
   const items = given ?? navItemsForRole(user.role)
   const hint = searchKeyHint()
+  const { openHelp } = useHelp()
   return (
     <header data-surface="navy" className="hidden h-topbar min-w-0 items-center gap-4 bg-chrome px-4 text-fg md:flex xl:gap-5 2xl:gap-6 2xl:px-5">
       {/* The wordmark sits on its own white plate (BRAND 6: never on a coloured background); the mark is a green square and needs none. */}
@@ -65,12 +74,12 @@ export function TopBar({ user, counts, dots, onSearch, items: given }: TopBarPro
           >
             {({ isActive }) => (
               <>
-                <Icon icon={item.icon} className="lg:max-2xl:hidden" />
-                <span data-nav-label="" className={cn(!isActive && 'max-lg:sr-only')}>
+                <Icon icon={item.icon} className="max-2xl:hidden" />
+                <span data-nav-label="">
                   {item.label}
                 </span>
-                <NeedsCount n={counts?.[item.key]} className="max-lg:hidden" />
-                {dots?.[item.key] ? <LateDot className="max-lg:hidden" /> : null}
+                <NeedsCount n={counts?.[item.key]} />
+                {dots?.[item.key] ? <LateDot /> : null}
                 {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 bottom-0 h-1 rounded-t bg-brand-green xl:inset-x-3" /> : null}
               </>
             )}
@@ -109,7 +118,15 @@ export function TopBar({ user, counts, dots, onSearch, items: given }: TopBarPro
 
       <NewMenu role={user.role} className="shrink-0 max-lg:w-control max-lg:px-0" labelClass="max-lg:sr-only" />
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-1 lg:gap-2">
+        <button type="button" onClick={() => openHelp()} title="Help" className={utilityLink} data-testid="topbar-help">
+          <Icon icon={CircleHelp} />
+          <span className="max-2xl:sr-only">Help</span>
+        </button>
+        <NavLink to="/settings" title="Settings" className={utilityLink} data-testid="topbar-settings">
+          <Icon icon={Settings} />
+          <span className="max-2xl:sr-only">Settings</span>
+        </NavLink>
         <span className="text-xs font-medium text-fg-muted max-2xl:hidden">{ROLE_LABEL[user.role] ?? user.role}</span>
         <AccountMenu user={user} />
       </div>

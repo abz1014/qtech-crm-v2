@@ -76,6 +76,25 @@ test('admin issues a part-delivery challan: its own number, a PDF, only the line
   expect(Number(both[1].number.slice(3))).toBe(Number(both[0].number.slice(3)) + 1)
 })
 
+test('an engineer sees the challans on the job page, issues one and downloads it, and sees no price', async ({ page }) => {
+  const s = await seedOrder()
+  const [engineer] = await must(rest<{ id: string }[]>('admin', 'users?role=eq.engineer&deactivated_at=is.null&select=id&order=created_at&limit=1'))
+  await must(rest('admin', 'order_engineers', { method: 'POST', body: { order_id: s.order.id, user_id: engineer.id }, prefer: 'return=minimal' }))
+  await openAs(page, 'engineer', `/orders/${s.order.id}`)
+  const panel = page.getByRole('region', { name: 'Delivery challans' })
+  await expect(panel.getByText(/None issued yet/)).toBeVisible()
+  await panel.getByRole('button', { name: 'New challan' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('list', { name: 'Lines on the challan' }).getByRole('listitem')).toHaveCount(2)
+  const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Issue and download' }).click()])
+  expect(download.suggestedFilename()).toMatch(/^Delivery-challan-DC-\d{4}\.pdf$/)
+  await expect.poll(async () => (await challansOf(s.order.id)).length).toBe(1)
+  const [c] = await challansOf(s.order.id)
+  await expect(panel.getByRole('listitem')).toContainText(c.number)
+  await expect(page.getByRole('button', { name: `Download challan ${c.number}` })).toBeVisible()
+  expect(await page.locator('#main').innerText()).not.toMatch(/PKR|1,500|Customer PO/)
+})
+
 test('numbers are unique ignoring case, a quantity above the order is refused, and an engineer can issue one', async () => {
   const s = await seedOrder()
   const first = await must(rest<Challan>('admin', 'rpc/create_delivery_challan', { method: 'POST', body: { p_order_id: s.order.id } }))

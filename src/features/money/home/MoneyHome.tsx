@@ -30,6 +30,7 @@ export function MoneyHome() {
     <MoneyFrame
       active={null}
       title="Money"
+      morePages={false}
       actions={
         <Button variant="primary" icon={Plus} onClick={() => go('/money/expenses')} className="text-base">
           Add expense

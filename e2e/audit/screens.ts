@@ -327,6 +327,8 @@ export const VISITS: readonly Visit[] = [
   screen('job-po-issued', 'Job page: order, PO issued', ALL, fx => `/orders/${fx.order.poIssued}`),
   screen('job-delivered', 'Job page: order, delivered, not invoiced', ALL, fx => `/orders/${fx.order.delivered}`),
   screen('job-paid', 'Job page: order, paid', ALL, fx => `/orders/${fx.order.paid}`),
+  // The delivery challans of an order, for the engineer too (migration 0131; the engineer's On site card carries the panel): scrolled to it.
+  screen('job-challans', 'Job page: delivery challans (every role, no price)', ALL, fx => `/orders/${fx.order.delivered}`, { scrollTo: '[data-testid="challans"]' }),
   screen('job-commissioning', 'Job page: 3 supplier orders, commissioning', ALL, fx => `/orders/${fx.order.multiLeg}`),
   // The header's key facts (Customer PO for admin and sales only, Supplier, Delivery), at every viewport the audit runs.
   screen('job-key-facts', 'Job page: header key facts (PO, supplier, delivery)', ALL, fx => `/orders/${fx.order.multiLeg}`, { scrollTo: '[aria-label="Key facts"]' }),

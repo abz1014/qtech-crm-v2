@@ -20,5 +20,17 @@ export const MONEY_TABS: readonly MoneyTab[] = [
   { key: 'reports', label: 'Reports', to: '/money/reports' },
 ]
 
+/**
+ * Money pages that are not a tab (admin only), shown as a row of links under the tabs so they are not found only through Lock a month.
+ * Each opens on its own address; the page's own back link leads to Money.
+ */
+export const MORE_MONEY_PAGES: readonly { label: string; to: string }[] = [
+  { label: 'Margins', to: '/money/margins' },
+  { label: 'Mistakes to fix', to: '/money/exceptions' },
+  { label: 'Bank check', to: '/money/month-end/bank' },
+  { label: 'Review imported', to: '/money/review-imported' },
+  { label: 'GST to FBR', to: '/money/accounts/gst' },
+]
+
 /** The page title for a Money view: its tab's name. */
 export const moneyTabLabel = (key: string | null): string => MONEY_TABS.find(t => t.key === key)?.label ?? 'Money'
