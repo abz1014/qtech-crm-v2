@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
-import { MONEY_TABS, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
+import { MONEY_TABS, MORE_MONEY_PAGES, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PageHeader } from '@/ui/PageHeader'
 
@@ -23,12 +23,15 @@ export function MoneyFrame({
   active,
   actions,
   title,
+  morePages = true,
   children,
 }: {
   active: string | null
   actions?: ReactNode
   /** The h1; the active tab's name when absent. */
   title?: string
+  /** The "More money pages" row (admin only). Money home turns it off: its Accounts section already lists them. */
+  morePages?: boolean
   children: ReactNode
 }) {
   const session = useSession()
@@ -68,6 +71,16 @@ export function MoneyFrame({
             ))}
           </nav>
         )}
+        {isAdmin && morePages ? (
+          <div role="group" aria-label="More money pages" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="text-sm text-fg-muted">More money pages</span>
+            {MORE_MONEY_PAGES.map(p => (
+              <Link key={p.to} to={p.to} className="inline-flex min-h-control items-center text-sm font-medium text-fg-2 underline decoration-fg/40 underline-offset-4 hover:text-fg hover:decoration-fg">
+                {p.label}
+              </Link>
+            ))}
+          </div>
+        ) : null}
       </div>
       {children}
     </div>

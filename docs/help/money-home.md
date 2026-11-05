@@ -12,4 +12,4 @@ related: record-payment, pay-supplier, in-vs-out, cash-in-hand
 4. [We owe suppliers] is what is left to pay on supplier orders. Tap it, then use Pay on the order.
 5. "Cash, not profit" says how much of what came in is GST that belongs to FBR. The profit of last month is one tap away.
 
-Tip: [Add expense] is the one green button. Bank check, GST to FBR and Lock a month are under [Accounts], one level down.
+Tip: [Add expense] is the one green button. Bank check, GST to FBR and Lock a month are under [Accounts], one level down. On every other Money page, the row [More money pages] under the tabs links to Margins, Mistakes to fix, Bank check, Review imported and GST to FBR.
