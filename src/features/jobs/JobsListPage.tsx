@@ -81,7 +81,9 @@ function JobCard({ job, role, po }: { job: JobRow; role: Who['role']; po?: strin
   return (
     <span className="grid gap-2">
       <span className="flex items-start justify-between gap-3">
-        <span className="line-clamp-2 min-w-0 font-semibold [overflow-wrap:anywhere]">{job.companyName}</span>
+        <span className="line-clamp-2 min-w-0 font-semibold [overflow-wrap:anywhere]" title={job.companyName}>
+          {job.companyName}
+        </span>
         <span className="num shrink-0 text-base text-fg-muted">{jobLabel(job.key)}</span>
       </span>
       {po || job.imported ? (
@@ -90,7 +92,9 @@ function JobCard({ job, role, po }: { job: JobRow; role: Who['role']; po?: strin
           {job.imported ? <span className="shrink-0 rounded border border-line px-2 text-base text-fg-muted">Imported</span> : null}
         </span>
       ) : null}
-      <span className="line-clamp-1 min-w-0 text-base text-fg-2 [overflow-wrap:anywhere]">{items || <span className="text-fg-muted">No items yet</span>}</span>
+      <span className="line-clamp-1 min-w-0 text-base text-fg-2 [overflow-wrap:anywhere]" title={job.items || undefined}>
+        {items || <span className="text-fg-muted">No items yet</span>}
+      </span>
       <StageLine job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }} />
       <span className="text-base">
         <NextText job={job} role={role} card />
