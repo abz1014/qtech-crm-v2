@@ -51,9 +51,9 @@ select set_config('request.jwt.claims', '', true);
 select is(public.book_recurring_month('2013-05-05'), 2, 'on 5 May two templates are booked (T1 salaries, T4 rent)');
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
-select results_eq($$select paid_on::text, period, amount_pkr::text, auto_booked::text, description from public.expenses where recurring_id = '01380000-0000-4000-8000-0000000000a1'$$,
+select results_eq($$select paid_on::text, period::text, amount_pkr::text, auto_booked::text, description from public.expenses where recurring_id = '01380000-0000-4000-8000-0000000000a1'$$,
   $$values ('2013-05-05', '2013-04', '90000.00', 'true', '0138 T1 salaries')$$, 'T1 is booked on its day, for April, flagged auto_booked');
-select results_eq($$select paid_on::text, period, auto_booked::text from public.expenses where recurring_id = '01380000-0000-4000-8000-0000000000a4'$$,
+select results_eq($$select paid_on::text, period::text, auto_booked::text from public.expenses where recurring_id = '01380000-0000-4000-8000-0000000000a4'$$,
   $$values ('2013-05-05', '2013-05', 'true')$$, 'rent is for the month it is paid in');
 select is((select count(*)::int from public.expenses where recurring_id = '01380000-0000-4000-8000-0000000000a2'), 0, 'a template with auto_book off is untouched');
 select is((select count(*)::int from public.expenses where recurring_id in ('01380000-0000-4000-8000-0000000000a3', '01380000-0000-4000-8000-0000000000a6', '01380000-0000-4000-8000-0000000000a7')), 0,
@@ -95,8 +95,8 @@ select is((select auto_booked from public.expenses where recurring_id = '0138000
 -- cash in hand ignores an unconfirmed auto-booked cash row until it is confirmed (2037, later than any other fixture)
 insert into public.cash_counts (counted_pkr, expected_pkr, counted_on) values (1000, 1, '2037-01-01');
 insert into public.recurring_expenses (id, label, category_id, amount, day_of_month, auto_book, paid_via) values
-  ('01380000-0000-4000-8000-0000000000b1', '0138 cash bill', 'ca7e0000-0000-4000-8000-000000000020', 300, 5, true, 'cash');
-select is(public.book_recurring_month('2037-02-05'), 1, 'the cash bill is booked');
+  ('01380000-0000-4000-8000-0000000000b1', '0138 cash bill', 'ca7e0000-0000-4000-8000-000000000020', 300, 27, true, 'cash');
+select is(public.book_recurring_month('2037-02-27'), 1, 'the cash bill is booked');
 select is((select expected_pkr from public.cash_in_hand()), 1000::numeric, 'cash in hand does not count the unconfirmed auto-booked cash row');
 update public.expenses set description = '0138 cash bill (checked)' where recurring_id = '01380000-0000-4000-8000-0000000000b1';
 select is((select expected_pkr from public.cash_in_hand()), 700::numeric, 'once an admin has changed the row it counts as cash out');
