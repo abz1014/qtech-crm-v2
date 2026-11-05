@@ -9,12 +9,24 @@
  *
  *  - breakdown text (it names "Supplier breakdown", "ITEM#" or a bullet): each bullet loses its "ITEM#n:" and everything from " — " or
  *    "@" on; a bullet that still names Rs, PKR or /unit is dropped; the first item is kept and " +N more" says how many others there were
- *  - plain text: a part after " — " that names a price is dropped, "@ ..." is cut; text with no marker at all is returned as it is
+ *  - plain text: a part after " — " that names a price is dropped, "@ price" is cut ("4-20mA @ 24V" stays whole); text with no marker at all is returned as it is
  *  - nothing left: "Imported item", never the price
  */
-const PRICE = String.raw`(\b(?:rs|pkr)\.?\s*[0-9]|[0-9]\s*(?:rs|pkr)\b(?!-)|\/unit)`
-const PRICE_RE = new RegExp(PRICE, 'i')
-const ANY_MARKER_RE = new RegExp(String.raw`(supplier\s+breakdown|item\s*#|•|@|` + PRICE + ')', 'i')
+// A price: "Rs 2,505", "Rs: 2505", "Rs.2505", "2505 PKR", "2505/-", "$ 40", "40 USD" (also EUR, GBP, AED), "40 rupees", "2 lakh", "/unit".
+// Not "Cars", and not the serial ports RS485, RS 485, RS-485, RS232, RS422 (a bare 485, 232, 422, 423, 449 or 530 after Rs is a port).
+const PORTS = '485|232|422|423|449|530'
+const PRICE = [
+  String.raw`\b(?:rs|pkr)\.?\s*:?\s*(?!(?:${PORTS})(?:[^0-9,./]|$))[0-9]`,
+  String.raw`[0-9][0-9,.]*\s*(?:rs|pkr)\b(?!-|\s*(?:${PORTS})\b)`,
+  String.raw`[0-9][0-9,.]*\s*(?:usd|eur|gbp|aed|rupees?|lakhs?|lacs?)\b`,
+  String.raw`\b(?:usd|eur|gbp|aed|rupees?)\s*:?\s*[0-9]`,
+  String.raw`[$£€]\s*[0-9]`,
+  String.raw`[0-9][0-9,.]*\s*\/-`,
+  String.raw`\/unit`,
+].join('|')
+const PRICE_RE = new RegExp('(?:' + PRICE + ')', 'i')
+const AT_PRICE_RE = new RegExp(String.raw`\s*@\s*(?=` + PRICE + String.raw`)[\s\S]*$`, 'i')
+const ANY_MARKER_RE = new RegExp(String.raw`(?:supplier\s+breakdown|item\s*#|•|` + PRICE + ')', 'i')
 const BREAKDOWN_RE = /(supplier\s+breakdown|item\s*#|•)/i
 
 export function cleanItemText(p: string): string
@@ -29,7 +41,8 @@ export function cleanItemText(p: string | null): string | null {
   for (const raw of parts) {
     let piece = raw.replace(/item\s*#\s*\d+\s*:?\s*/gi, '')
     if (breakdown) piece = piece.replace(/\s—\s[\s\S]*$/, '')
-    piece = piece.replace(/@[\s\S]*$/, '').replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '')
+    // "@" starts a supplier's price in a breakdown; in plain text only when a price follows it ("4-20mA @ 24V" stays whole)
+    piece = (breakdown ? piece.replace(/@[\s\S]*$/, '') : piece.replace(AT_PRICE_RE, '')).replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '')
     if (piece === '' || PRICE_RE.test(piece)) continue
     kept.push(piece)
   }

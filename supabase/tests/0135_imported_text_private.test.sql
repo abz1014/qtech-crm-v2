@@ -10,6 +10,7 @@ select * from no_plan();
 --   (d) admin and sales read the original; a person's own note on an imported order stays where they typed it
 --   (e) the one-time data step (move_imported_text) on rows written WITHOUT the trigger: text moved, audit_log cleaned, idempotent
 --   (f) deleting the row drops the stored text
+--   (g) the loss note (rfqs.close_note) of an imported RFQ moves too; supplier_quote_lines.notes is closed to the engineer
 
 create function pg_temp.f(h text) returns uuid language sql immutable as
   $$ select ('f7000000-0000-4000-8000-0000000000' || h)::uuid $$;
@@ -70,6 +71,27 @@ select is(qtech_private.clean_item_text('Pump 5HP @ Rs 300/unit'), 'Pump 5HP', '
 select is(qtech_private.clean_item_text('Valve — Rs 5000/unit'), 'Valve', '(a) plain text: the part that names a price is dropped');
 select is(qtech_private.clean_item_text('Cable 2500 PKR'), 'Imported item', '(a) nothing left once the price is dropped: a neutral placeholder, never the price');
 select is(qtech_private.clean_item_text(null), null, '(a) null stays null');
+-- serial ports are not prices, with or without a space or hyphen
+select is(qtech_private.clean_item_text('Flow meter RS485 output'), 'Flow meter RS485 output', '(a) RS485 is not a price');
+select is(qtech_private.clean_item_text('Flow meter RS 485 output'), 'Flow meter RS 485 output', '(a) RS 485 is not a price');
+select is(qtech_private.clean_item_text('Flow meter RS-485 output'), 'Flow meter RS-485 output', '(a) RS-485 is not a price');
+select is(qtech_private.clean_item_text('Gateway RS232 and RS422 ports'), 'Gateway RS232 and RS422 ports', '(a) RS232 and RS422 are not prices');
+select is(qtech_private.clean_item_text('Gateway, 2 RS 485 ports'), 'Gateway, 2 RS 485 ports', '(a) "2 RS 485 ports" is not a price');
+select is(qtech_private.clean_item_text('Gateway 2 RS485 ports'), 'Gateway 2 RS485 ports', '(a) "2 RS485 ports" is not a price');
+-- an "@" is cut only inside the breakdown shape or when a price follows it
+select is(qtech_private.clean_item_text('Transmitter 4-20mA @ 24V'), 'Transmitter 4-20mA @ 24V', '(a) "4-20mA @ 24V" stays whole');
+select is(qtech_private.clean_item_text('Sensor 0-10V @ 24V DC — Unit C'), 'Sensor 0-10V @ 24V DC — Unit C', '(a) an "@" with no price after it stays in plain text');
+select is(qtech_private.clean_item_text('Supplier breakdown: • ITEM#1: Alpha gauge @ 24V — Some Supplier @ Rs 5/unit'), 'Alpha gauge', '(a) in a breakdown the "@" still cuts');
+-- more ways to write a price
+select is(qtech_private.clean_item_text('Cable — ' || price), 'Cable', '(a) "' || price || '" is a price (dash form)')
+  from unnest(array['Rs: 2505', 'Rs.2505', 'Rs 2,505', '2505/-', '$ 40', '$40', '£30', '€30', 'USD 40', '40 USD', '40 EUR', 'GBP 30', '90 AED', '500 rupees', 'rupees 500', '2 lakh', '2 lac', '3 lacs']) price;
+select is(qtech_private.clean_item_text('Cable @ ' || price), 'Cable', '(a) "' || price || '" is a price (@ form)')
+  from unnest(array['Rs: 2505', '2505/-', '$ 40', '40 USD', 'EUR 30', '90 AED', '500 rupees', '2 lakh']) price;
+select is(qtech_private.clean_item_text('Cable 40 USD'), 'Imported item', '(a) a dollar price alone leaves the placeholder');
+select is(qtech_private.scrub_audit_json('{"close_note":"Lost to Borealis Traders at Rs 8,000","notes":"x","number":3}'::jsonb, 'rfqs'), '{"number":3}'::jsonb,
+  '(a) audit image of an RFQ: notes and the loss note removed');
+select is(qtech_private.scrub_audit_json('{"close_note":"Closed automatically: imported, no activity for 60+ days","notes":"x"}'::jsonb, 'rfqs'),
+  '{"close_note":"Closed automatically: imported, no activity for 60+ days"}'::jsonb, '(a) 0082''s own sentence stays in the image');
 select is(qtech_private.clean_item_text(qtech_private.clean_item_text(
   'Supplier breakdown: • ITEM#30: IC TLC0838C 20PIN SMD ×6 — Acme Components Ltd @ Rs 2,505/unit • ITEM#31: Relay 12V DPDT ×2 — Borealis Traders @ Rs 410/unit')),
   'IC TLC0838C 20PIN SMD ×6 +1 more', '(a) idempotent');
@@ -222,6 +244,59 @@ select is((select (j ->> 'orders')::int + (j ->> 'rfqs')::int + (j ->> 'order_it
 delete from public.orders where id = pg_temp.f('32');
 select is((select count(*)::int from public.imported_notes where row_id in (pg_temp.f('32'), pg_temp.f('33'))), 0, '(f) deleting an order drops its stored text and its lines''');
 select is((select count(*)::int from public.imported_notes where row_id = pg_temp.f('20')), 1, '(f) other orders keep theirs');
+
+-- ------------------------------------------------------------------ (g) loss notes (rfqs.close_note) and old quote notes (supplier_quote_lines.notes)
+insert into public.rfqs (id, company_id, owner_id, legacy_source, notes, close_note, closed_on, close_reason) values
+  (pg_temp.f('40'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"imported": true}', 'Quoted via Acme Components Ltd @ Rs 9/unit',
+   'Lost to Borealis Traders at Rs 8,000', '2020-01-10', 'price'),
+  (pg_temp.f('41'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"imported": true}', null,
+   'Lost to Borealis Traders at Rs 7,000', '2020-01-10', 'price'),
+  (pg_temp.f('42'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"imported": true}', null,
+   'Closed automatically: imported, no activity for 60+ days (owner decision 2026-10-22)', '2020-01-10', 'other'),
+  (pg_temp.f('43'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, null,
+   'Customer chose another vendor', '2020-01-10', 'competitor');
+select is((select close_note from public.rfqs where id = pg_temp.f('40')), null, '(g) the imported RFQ keeps no loss note');
+select is((select note from public.imported_notes where table_name = 'rfqs' and row_id = pg_temp.f('40')),
+  E'Quoted via Acme Components Ltd @ Rs 9/unit\n---\nClosing note: Lost to Borealis Traders at Rs 8,000', '(g) the loss note joins the stored note');
+select is((select note from public.imported_notes where table_name = 'rfqs' and row_id = pg_temp.f('41')),
+  'Closing note: Lost to Borealis Traders at Rs 7,000', '(g) an RFQ with only a loss note stores it');
+select is((select close_note from public.rfqs where id = pg_temp.f('41')), null, '(g) and its close_note is empty');
+select is((select close_note from public.rfqs where id = pg_temp.f('42')), 'Closed automatically: imported, no activity for 60+ days (owner decision 2026-10-22)',
+  '(g) 0082''s sentence is left on the RFQ');
+select is((select count(*)::int from public.imported_notes where row_id = pg_temp.f('42')), 0, '(g) and nothing is stored for it');
+select is((select close_note from public.rfqs where id = pg_temp.f('43')), 'Customer chose another vendor', '(g) a note typed on a non-imported RFQ is untouched');
+select is((select count(*)::int from public.imported_notes where row_id = pg_temp.f('43')), 0, '(g) nothing stored for a non-imported RFQ');
+select is(pg_temp.scalar_as(format($q$select coalesce(close_note, '<null>') from public.rfqs where id = %L$q$, pg_temp.f('40')), 'engineer'), '<null>', '(g) engineer: close_note is empty on the imported RFQ');
+select is(pg_temp.scalar_as(format($q$select count(*) from public.imported_notes where row_id = %L and note like '%%Borealis Traders at Rs 8,000'$q$, pg_temp.f('40')), 'admin'), '1', '(g) admin reads the original loss note');
+select is(pg_temp.scalar_as(format($q$select count(*) from public.imported_notes where row_id = %L and note like '%%Borealis Traders at Rs 8,000'$q$, pg_temp.f('40')), 'sales'), '1', '(g) sales reads the original loss note');
+-- a person closing the imported RFQ later keeps what they typed
+select is(pg_temp.scalar_as(format($q$update public.rfqs set close_note = 'Typed by a person' where id = %L returning close_note$q$, pg_temp.f('40')), 'sales'), 'Typed by a person',
+  '(g) a loss note a person types on an imported RFQ stays on it');
+
+-- rows written without the trigger (the old import) are moved by the one-time step, history included
+alter table public.rfqs disable trigger keep_imported_text;
+insert into public.rfqs (id, company_id, owner_id, legacy_source, close_note, closed_on, close_reason)
+  values (pg_temp.f('44'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '{"imported": true}', 'Lost to Borealis Traders at Rs 6,000', '2020-01-10', 'price');
+alter table public.rfqs enable trigger keep_imported_text;
+select ok(exists (select 1 from public.audit_log where record_id = pg_temp.f('44')::text and pg_temp.leak_json(new_value::text)), '(g) precondition: the history holds the raw loss note');
+select qtech_private.move_imported_text();
+select is((select close_note from public.rfqs where id = pg_temp.f('44')), null, '(g) the step empties close_note');
+select is((select note from public.imported_notes where table_name = 'rfqs' and row_id = pg_temp.f('44')), 'Closing note: Lost to Borealis Traders at Rs 6,000', '(g) and keeps it whole');
+select ok(not exists (select 1 from public.audit_log where record_id = pg_temp.f('44')::text and (pg_temp.leak_json(old_value::text) or pg_temp.leak_json(new_value::text))),
+  '(g) the loss note is gone from the history');
+select ok(not pg_temp.leak_json(pg_temp.scalar_as(format($q$select public.record_history('rfqs', %L)::text$q$, pg_temp.f('44')), 'engineer')),
+  '(g) engineer: record_history of the RFQ shows no loss note');
+select is(pg_temp.scalar_as(format($q$select close_note from public.rfqs where id = %L$q$, pg_temp.f('43')), 'engineer'), 'Customer chose another vendor', '(g) a typed note on another RFQ is still visible');
+
+-- the old quote notes: closed to the engineer by column
+select ok(not has_column_privilege('qtech_engineer', 'public.supplier_quote_lines', 'notes', 'select'), '(g) qtech_engineer cannot select supplier_quote_lines.notes');
+select ok(not has_column_privilege('qtech_engineer', 'public.supplier_quote_lines', 'notes', 'insert'), '(g) nor insert it');
+select ok(not has_column_privilege('qtech_engineer', 'public.supplier_quote_lines', 'notes', 'update'), '(g) nor update it');
+select ok(has_column_privilege('qtech_engineer', 'public.supplier_quote_lines', 'lead_time', 'select'), '(g) the engineer still reads the other columns');
+select is(pg_temp.scalar_as('select count(notes) from public.supplier_quote_lines', 'engineer'), 'E:42501', '(g) engineer: selecting the column is refused (42501)');
+select isnt(pg_temp.scalar_as('select count(*) from public.supplier_quote_lines', 'engineer'), 'E:42501', '(g) engineer: the table can still be read without it');
+select isnt(pg_temp.scalar_as('select count(notes) from public.supplier_quote_lines', 'admin'), 'E:42501', '(g) admin still reads the column');
+select isnt(pg_temp.scalar_as('select count(notes) from public.supplier_quote_lines', 'sales'), 'E:42501', '(g) sales still reads the column');
 
 select * from finish();
 rollback;

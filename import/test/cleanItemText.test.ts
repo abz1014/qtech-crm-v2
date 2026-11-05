@@ -29,6 +29,22 @@ describe('cleanItemText (twin of qtech_private.clean_item_text, migration 0135)'
     expect(cleanItemText('Pump 5HP @ Rs 300/unit')).toBe('Pump 5HP')
     expect(cleanItemText('Valve — Rs 5000/unit')).toBe('Valve')
   })
+  it('does not take a serial port for a price, with or without a space or hyphen', () => {
+    for (const t of ['Flow meter RS485 output', 'Flow meter RS 485 output', 'Flow meter RS-485 output', 'Gateway RS232 and RS422 ports', 'Gateway, 2 RS 485 ports', 'Gateway 2 RS485 ports']) {
+      expect(cleanItemText(t)).toBe(t)
+    }
+  })
+  it('does not cut an "@" that is not followed by a price', () => {
+    expect(cleanItemText('Transmitter 4-20mA @ 24V')).toBe('Transmitter 4-20mA @ 24V')
+    expect(cleanItemText('Sensor 0-10V @ 24V DC — Unit C')).toBe('Sensor 0-10V @ 24V DC — Unit C')
+  })
+  it('recognises more ways to write a price', () => {
+    for (const price of ['Rs: 2505', 'Rs.2505', 'Rs 2,505', '2505/-', '$ 40', '$40', '£30', '€30', 'USD 40', '40 USD', '40 EUR', 'GBP 30', '90 AED', '500 rupees', 'rupees 500', '2 lakh', '2 lac', '3 lacs']) {
+      expect(cleanItemText(`Cable — ${price}`), price).toBe('Cable')
+      expect(cleanItemText(`Cable @ ${price}`), price).toBe('Cable')
+    }
+    expect(cleanItemText('Cable 40 USD')).toBe('Imported item')
+  })
   it('never returns the price: a neutral placeholder when nothing is left', () => {
     expect(cleanItemText('Cable 2500 PKR')).toBe('Imported item')
   })

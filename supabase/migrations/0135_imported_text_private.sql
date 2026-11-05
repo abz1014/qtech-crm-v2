@@ -28,6 +28,15 @@
 --      audit_archive.audit_log_months, where rfqs may have been archived), and raises a notice with the counts.
 --   Month lock (0027) sits on payments, expenses and invoices, not on these tables; the 0065/0078/0092/0096 guards let postgres through.
 --
+-- Also (added before this migration was applied anywhere):
+--   e. rfqs.close_note: the import writes the old loss notes there (loss_notes), and every role reads the column. On an imported RFQ the
+--      trigger appends it to that RFQ's imported_notes entry as "Closing note: ..." and nulls it; move_imported_text does the same for rows
+--      already there and scrubs close_note from the RFQ audit images (audit_log, audit_archive). 0082's "Closed automatically: ..." sentence
+--      holds no old text and stays. A close note typed by a person on any RFQ (not through the import) is never touched.
+--   f. supplier_quote_lines.notes (the old quote notes): select, insert and update revoked from qtech_engineer, as 0111 did for weight.
+--   g. clean_item_text: RS485 / RS 485 / RS-485 / RS232 / RS422 are serial ports, not prices; "@" is cut only inside a breakdown or when a
+--      price follows it ("4-20mA @ 24V" stays whole); also a price: "Rs: 2505", "2505/-", "$", "USD/EUR/GBP/AED", "rupees", "lakh/lac".
+--
 -- ROLLBACK (text is never destroyed): drop the eight triggers (keep_imported_text and <table>_drop_imported_note on the four tables), then
 --   update public.orders o set notes = n.note from public.imported_notes n where n.table_name = 'orders' and n.row_id = o.id;
 --   (same for rfqs.notes; and for order_items / rfq_items: set description = n.note) with the four tables' audit triggers switched off if the
@@ -60,6 +69,12 @@ grant select, insert, update, delete on table public.imported_notes to service_r
 create policy imported_notes_select_staff on public.imported_notes for select to authenticated, qtech_engineer
   using ((select public.current_user_role()) in ('admin', 'sales'));
 
+-- ================================================================ a2. old quote notes (supplier_quote_lines.notes)
+-- The import wrote the old system's quote notes there (supplier names, prices in words). 0081 closes the price columns to qtech_engineer
+-- only; 0111's pattern closes this one too: no select, insert or update. The screens never ask for it as an engineer
+-- (QUOTE_LINE_COLS_NO_PRICES). admin and sales read it as before.
+revoke select (notes), insert (notes), update (notes) on public.supplier_quote_lines from qtech_engineer;
+
 -- ================================================================ b. the cleaner
 -- Breakdown text (it names "Supplier breakdown", "ITEM#" or a bullet) is split into pieces at bullets and line ends; each piece loses its
 -- "ITEM#n:" and everything from " - " (em dash) or "@" on; a piece that still names Rs, PKR or /unit is dropped. Plain text is split at
@@ -77,13 +92,18 @@ declare
   kept      text[] := '{}';
   breakdown boolean;
   n         integer;
-  -- a price: "Rs 2,505", "Rs.2505", "2505 PKR", "/unit". Not "RS-485" or "Cars".
-  v_price   constant text := '(\m(rs|pkr)\.?\s*[0-9]|[0-9]\s*(rs|pkr)\M(?!-)|/unit)';
+  -- a price: "Rs 2,505", "Rs: 2505", "Rs.2505", "2505 PKR", "2505/-", "$ 40", "40 USD" (also EUR, GBP, AED), "40 rupees", "2 lakh", "/unit".
+  -- Not "Cars", and not the serial ports RS485, RS 485, RS-485, RS232, RS422 (a bare 485, 232, 422, 423, 449 or 530 after Rs is a port).
+  v_price   constant text := '(\m(rs|pkr)\.?\s*:?\s*(?!(?:485|232|422|423|449|530)(?:[^0-9,./]|$))[0-9]'
+    || '|[0-9][0-9,.]*\s*(?:rs|pkr)\M(?!-|\s*(?:485|232|422|423|449|530)\M)'
+    || '|[0-9][0-9,.]*\s*(?:usd|eur|gbp|aed|rupees?|lakhs?|lacs?)\M'
+    || '|\m(?:usd|eur|gbp|aed|rupees?)\s*:?\s*[0-9]'
+    || '|[$£€]\s*[0-9]|[0-9][0-9,.]*\s*/-|/unit)';
 begin
   if p is null then
     return null;
   end if;
-  if p !~* ('(supplier\s+breakdown|item\s*#|•|@|' || substr(v_price, 2)) then
+  if p !~* ('(supplier\s+breakdown|item\s*#|•|' || substr(v_price, 2)) then
     return p;
   end if;
   breakdown := p ~* '(supplier\s+breakdown|item\s*#|•)';
@@ -98,7 +118,12 @@ begin
     if breakdown then
       piece := regexp_replace(piece, '\s—\s.*$', '');
     end if;
-    piece := regexp_replace(piece, '@.*$', '');
+    -- "@" starts a supplier's price in a breakdown; in plain text only when a price follows it ("4-20mA @ 24V" stays whole)
+    if breakdown then
+      piece := regexp_replace(piece, '@.*$', '');
+    else
+      piece := regexp_replace(piece, '\s*@\s*(?=' || v_price || ').*$', '', 'i');
+    end if;
     piece := btrim(piece, E' 	
 ');
     if piece = '' or piece ~* v_price then
@@ -134,8 +159,15 @@ begin
   if r is null or jsonb_typeof(r) <> 'object' then
     return r;
   end if;
-  if p_table in ('orders', 'rfqs') then
+  if p_table = 'orders' then
     return r - 'notes';
+  end if;
+  if p_table = 'rfqs' then
+    -- the loss note leaves the history too; 0082's "Closed automatically" sentence is not old text and stays
+    if r ? 'close_note' and coalesce(r ->> 'close_note', '') ~* '^closed automatically' then
+      return r - 'notes';
+    end if;
+    return r - 'notes' - 'close_note';
   end if;
   if r ? 'description' and jsonb_typeof(r -> 'description') = 'string' then
     d := qtech_private.clean_item_text(r ->> 'description');
@@ -174,11 +206,27 @@ as $$
 declare
   v_clean  text;
   v_parent uuid;
+  v_close  text;
 begin
   if new.legacy_source is null or current_user in ('authenticated', 'qtech_engineer') then
     return new;
   end if;
-  if tg_table_name in ('orders', 'rfqs') then
+  if tg_table_name = 'rfqs' then
+    -- the old system's loss notes land in close_note (import: loss_notes); they join the RFQ's stored note as "Closing note: ...".
+    -- 0082's own sentence ("Closed automatically: ...") holds no old text and stays where it is.
+    if new.close_note is not null and new.close_note !~* '^closed automatically' then
+      v_close := 'Closing note: ' || new.close_note;
+      new.close_note := null;
+    end if;
+    if new.notes is not null or v_close is not null then
+      insert into public.imported_notes (table_name, row_id, parent_id, note)
+      values (tg_table_name, new.id, new.id, concat_ws(E'\n---\n', new.notes, v_close))
+      on conflict (table_name, row_id) do update
+        set note = case when new.notes is not null then excluded.note else concat_ws(E'\n---\n', imported_notes.note, v_close) end,
+            stored_at = now();
+      new.notes := null;
+    end if;
+  elsif tg_table_name = 'orders' then
     if new.notes is not null then
       insert into public.imported_notes (table_name, row_id, parent_id, note)
       values (tg_table_name, new.id, new.id, new.notes)
@@ -266,7 +314,8 @@ begin
   -- the keep_imported_text trigger does the move
   update public.orders set notes = notes where legacy_source is not null and notes is not null;
   get diagnostics n_orders = row_count;
-  update public.rfqs set notes = notes where legacy_source is not null and notes is not null;
+  update public.rfqs set notes = notes
+  where legacy_source is not null and (notes is not null or (close_note is not null and close_note !~* '^closed automatically'));
   get diagnostics n_rfqs = row_count;
   update public.order_items set description = description
   where legacy_source is not null and qtech_private.clean_item_text(description) is distinct from description;
