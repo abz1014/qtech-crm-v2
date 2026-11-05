@@ -1,30 +1,25 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { lazyWithReload } from '@/lib/importWithReload'
+import { useContentDrawn } from '@/lib/useContentDrawn'
+import { MoreTrigger } from '@/features/jobs/MoreTrigger'
 import type { JobSlotProps } from '@/features/jobs/slots'
 
-// The order's menu (OrderHeaderBlock and its dialogs) is downloaded once the page has drawn, never with the page's first paint.
+// The order's menu (its own small module, with its dialogs lazy) is downloaded once the first page has drawn; prefetch.ts starts it too.
 const OrderMoreInner = lazyWithReload(() => import('@/features/orders/jobSlots/OrderMoreInner'))
 
 /*
  * "More" beside the next-step button of the job page (P5-D2): the order's own menu: History, Cancel or Reopen order, and Delete
  * order (admin; it lists what blocks it first). A deleted order lands on the jobs list. Admin and sales only, as on the order
- * page: an engineer has no menu. Nothing is downloaded or drawn until the browser is idle (perf: the job page's LCP), and nothing
- * at all for a job with no order yet.
+ * page: an engineer has no menu, and nothing at all for a job with no order yet. The button itself is drawn at once (disabled and
+ * busy); on the first page its menu waits only for the page's content to be drawn (perf: the job page's LCP), never for idle time.
  */
 export default function OrderMore({ job }: JobSlotProps) {
-  const [idle, setIdle] = useState(false)
-  useEffect(() => {
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (h: number) => void }
-    if (w.requestIdleCallback) {
-      const h = w.requestIdleCallback(() => setIdle(true), { timeout: 2000 })
-      return () => w.cancelIdleCallback?.(h)
-    }
-    const t = window.setTimeout(() => setIdle(true), 500)
-    return () => window.clearTimeout(t)
-  }, [])
-  if (!idle || !job.job.orderId || !job.money) return null
+  const drawn = useContentDrawn()
+  if (!job.job.orderId || !job.money) return null
+  const trigger = <MoreTrigger />
+  if (!drawn) return trigger
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={trigger}>
       <OrderMoreInner job={job} />
     </Suspense>
   )

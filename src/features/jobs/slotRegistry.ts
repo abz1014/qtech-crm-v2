@@ -1,5 +1,7 @@
 import type { ComponentType, LazyExoticComponent } from 'react'
 import { lazyWithReload as lazy } from '@/lib/importWithReload'
+import OrderMore from '@/features/orders/jobSlots/OrderMore'
+import RfqMore from '@/features/rfqs/jobSlots/RfqMore'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import type { StopName } from '@/features/jobs/lib/stages'
 
@@ -7,11 +9,12 @@ import type { StopName } from '@/features/jobs/lib/stages'
 export type StageSlotName = 'stage:enquiry' | 'stage:quotation' | 'stage:order' | 'stage:supplier-order' | 'stage:delivery' | 'stage:invoice' | 'stage:payment'
 export type JobSlotName = 'next-step' | 'side' | 'files' | StageSlotName
 
-export type SlotComponent = LazyExoticComponent<ComponentType<JobSlotProps>>
+export type SlotComponent = LazyExoticComponent<ComponentType<JobSlotProps>> | ComponentType<JobSlotProps>
 
 /** One line per plugged-in component. Empty until a lane adds its own. */
 export const JOB_SLOTS: Record<JobSlotName, readonly SlotComponent[]> = {
-  'next-step': [lazy(() => import('@/features/orders/jobSlots/OrderMore')), lazy(() => import('@/features/rfqs/jobSlots/RfqMore'))],
+  // More: both are tiny and not lazy, so the button is drawn with the band; each loads its menu itself.
+  'next-step': [OrderMore, RfqMore],
   // P4-B: Add to this job (paste, photo or file; a guess of what it is, one tap to confirm).
   side: [lazy(() => import('@/features/jobs/AddToJob'))],
   files: [],

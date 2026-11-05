@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -228,5 +228,42 @@ describe('Job page: the enquiry-side actions stay on the page (P5-D1)', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('button', { name: 'Send quotation' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Mark won' })).toBeNull()
+  })
+})
+
+describe('Job page: the More menu', () => {
+  const phoneOn = () => {
+    const real = window.matchMedia
+    window.matchMedia = ((q: string) => ({ matches: q.includes('max-width: 767px'), media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as typeof window.matchMedia
+    return () => { window.matchMedia = real }
+  }
+
+  it('the trigger is drawn at once, disabled and busy, before the menu has loaded', async () => {
+    mount(job({}), 'admin')
+    await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
+    // synchronously, with no wait for the lazy chunk
+    const more = screen.getByRole('button', { name: 'More' })
+    expect(more).toHaveAttribute('aria-haspopup', 'menu')
+    expect(more).toBeDisabled()
+    expect(more).toHaveAttribute('aria-busy', 'true')
+    // then the real menu takes its place
+    await waitFor(() => expect(screen.getByRole('button', { name: 'More' })).toBeEnabled())
+  })
+
+  it('on a phone a cancelled job with no next-step button still has More (admin), and an engineer has none', async () => {
+    const off = phoneOn()
+    try {
+      const { unmount } = mount(job({ stage: 'cancelled', stageDetail: null }), 'admin')
+      await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
+      const bar = screen.getByRole('toolbar', { name: 'Job actions' })
+      expect(within(bar).getByRole('button', { name: 'More' })).toBeInTheDocument()
+      unmount()
+      cleanup()
+      mount(job({ stage: 'cancelled', stageDetail: null }), 'engineer')
+      await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
+      expect(screen.queryByRole('toolbar', { name: 'Job actions' })).toBeNull()
+    } finally {
+      off()
+    }
   })
 })

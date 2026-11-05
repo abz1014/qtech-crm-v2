@@ -7,6 +7,7 @@ import { MoreMenu } from '@/ui/MoreMenu'
 import { MenuItem, MenuSeparator } from '@/ui/Popover'
 import { useToast } from '@/ui/useToast'
 import type { JobSlotProps } from '@/features/jobs/slots'
+import { MoreTrigger } from '@/features/jobs/MoreTrigger'
 import { useOrdersForRfq } from '@/features/orders/forRfq'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useQuotations } from '@/features/quotations/hooks'
@@ -21,6 +22,7 @@ import { useEditRfqFlow } from '@/features/rfqs/useEditRfqFlow'
 /** The RFQ More menu on the job page (see RfqMore, which decides when it is downloaded). */
 export default function RfqMoreInner({ job }: JobSlotProps) {
   const header = useRfqHeader(job.job.rfqId ?? undefined)
+  if (header.isPending) return <MoreTrigger />
   if (!header.data) return null
   return <Menu rfq={header.data} money={job.money} job={job.job} />
 }
