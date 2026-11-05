@@ -603,7 +603,7 @@ test.describe('expenses (M03, M11)', () => {
         method: 'POST',
         body: [
           { label: on, category_id: RENT, amount: 64000, day_of_month: 2, auto_book: true },
-          { label: off, category_id: RENT, amount: 64000, day_of_month: 2 },
+          { label: off, category_id: RENT, amount: 64000, day_of_month: 2, auto_book: false },
         ],
       }),
     )
