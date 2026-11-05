@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JobRow } from '@/features/jobs/api'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isStageFilter, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isStageFilter, itemsSummary, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
 
 const job = (over: Partial<JobRow>): JobRow => ({
   key: '1', kind: 'enquiry', rfqId: 'r', orderId: null, companyId: 'c', companyName: 'Customer', siteName: null, ownerId: 'u1', ownerName: 'A', items: 'x',
@@ -107,5 +107,19 @@ describe('Jobs list stage filters', () => {
     expect(normalizeStage('orders', 'engineer', 'history')).toBe('orders')
     expect(isStageFilter('supplier')).toBe(true)
     expect(isStageFilter('all')).toBe(false)
+  })
+})
+
+describe('itemsSummary', () => {
+  it('turns "X +N more" into a count and the first item', () => {
+    expect(itemsSummary('Flow meter RST 1158S +2 more')).toBe('3 items · Flow meter RST 1158S')
+    expect(itemsSummary('Flow meter +1 more')).toBe('2 items · Flow meter')
+    expect(itemsSummary('  Flow   meter  +12 more ')).toBe('13 items · Flow meter')
+  })
+  it('leaves a single item, an empty line and an old free-text note as they are (the caller clamps to one line)', () => {
+    expect(itemsSummary('Pressure transmitter')).toBe('Pressure transmitter')
+    expect(itemsSummary('')).toBe('')
+    expect(itemsSummary(null)).toBe('')
+    expect(itemsSummary('Old note: 2 pumps, 1 valve\nsee PO; delivered in two lots')).toBe('Old note: 2 pumps, 1 valve see PO; delivered in two lots')
   })
 })

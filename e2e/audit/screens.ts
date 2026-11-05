@@ -317,6 +317,7 @@ export const VISITS: readonly Visit[] = [
   // The Jobs screens (redesign phases 4 to 7). The Job pages are opened through the old /rfqs/<id> and /orders/<id> addresses, which also
   // keeps the redirect under the audit. (The old RFQ and Order pages themselves were removed on 2026-10-30.)
   screen('jobs-list', 'Jobs list, open', ALL, () => '/jobs'),
+  screen('jobs-list-phone-imported', 'Jobs list: an imported job (Imported tag, no prefix), phone card', ALL, () => '/jobs?q=Importex'),
   screen('jobs-history', 'Jobs list, history', ALL, () => '/jobs?chip=history'),
   screen('jobs-orders', 'Jobs list, open orders (stage filter)', ALL, () => '/jobs?chip=open&stage=orders'),
   screen('jobs-to-invoice', 'Jobs list, open jobs to invoice (stage filter)', MONEY, () => '/jobs?chip=open&stage=invoice'),

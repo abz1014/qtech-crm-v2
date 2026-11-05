@@ -108,3 +108,18 @@ export function StageMini({ job }: { job: JobStanding }) {
     </span>
   )
 }
+
+/** A job card's stage, in two lines of one idea: "Stage 5 of 7 · Delivery" and a thin bar under it. The words carry the meaning; the bar is decoration. */
+export function StageLine({ job }: { job: JobStanding }) {
+  const m = stageModel(job)
+  return (
+    <span className="grid gap-1" data-stage-line>
+      <span className="text-base text-fg-2">{m.phoneLabel}</span>
+      <span className="flex gap-[3px]" aria-hidden="true">
+        {m.stops.map(s => (
+          <span key={s.name} className={cn('h-[6px] flex-1 rounded-round', SEG[s.state])} />
+        ))}
+      </span>
+    </span>
+  )
+}

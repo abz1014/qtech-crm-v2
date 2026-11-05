@@ -47,7 +47,15 @@ function mount(role: 'admin' | 'sales' | 'engineer', path = '/jobs') {
     </QueryClientProvider>,
   )
 }
-afterEach(() => installFakeDb(() => ({})).uninstall())
+const desktopMedia = window.matchMedia
+/** Below 640px the Jobs list draws cards instead of table rows. */
+function phone() {
+  window.matchMedia = ((q: string) => ({ matches: q.includes('max-width: 639px'), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false, onchange: null })) as typeof window.matchMedia
+}
+afterEach(() => {
+  window.matchMedia = desktopMedia
+  installFakeDb(() => ({})).uninstall()
+})
 
 describe('Jobs list', () => {
   it('the admin opens on Open: every job that is not history, with the seven columns and one green button', async () => {
@@ -63,12 +71,12 @@ describe('Jobs list', () => {
     expect(container).toHaveTextContent('Repeat of Job 139')
   })
 
-  it('the customer and items cells show two lines at most, with the whole text in the title', async () => {
+  it('the customer cell shows two lines and the items cell one, with the whole text in the title', async () => {
     const longItems = 'Sample flow meter FM-100 DN50, sample pressure transmitter PT-20, sample level switch LS-3, sample junction box JB-9, sample cable gland M20'
     installFakeDb((c: FakeCall) => (c.target === 'v_jobs' ? { data: [view('139', { items_summary: longItems })] } : fake(c)))
     const { container } = mount('admin')
     await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
-    const clamped = [...container.querySelectorAll('table .line-clamp-2')] as HTMLElement[]
+    const clamped = [...container.querySelectorAll('table .line-clamp-2, table .line-clamp-1')] as HTMLElement[]
     expect(clamped.map(e => e.getAttribute('title'))).toEqual(expect.arrayContaining(['Ibrahim Fibres Limited', longItems]))
   })
 
@@ -93,6 +101,37 @@ describe('Jobs list', () => {
     // a live job with the same kind of step keeps its tone
     const live = screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))
     expect(live?.querySelector('[data-tone="late"]')).not.toBeNull()
+  })
+
+  it('a phone card has one status line: the stage in words, one next step, no dots and no repeated Imported', async () => {
+    phone()
+    installFakeDb(fake)
+    mount('admin')
+    await waitFor(() => expect(document.querySelectorAll('[data-card]').length).toBe(3))
+    const cards = [...document.querySelectorAll('[data-card]')] as HTMLElement[]
+    const live = cards.find(c => /Job 139/.test(c.textContent ?? ''))!
+    expect(live.querySelector('[data-stage-line]')).toHaveTextContent('Stage 4 of 7 · Supplier order')
+    expect(live.querySelectorAll('[data-stage-mini]')).toHaveLength(0)
+    expect(live).toHaveTextContent('3 items · Flow meter RST 1158S')
+    expect(live).toHaveTextContent('The goods are late: chase the supplier')
+    expect(live).not.toHaveTextContent('Imported')
+    const imported = cards.find(c => /Job O-45/.test(c.textContent ?? ''))!
+    expect(imported).toHaveTextContent('Imported')
+    expect(imported).toHaveTextContent('Choose a supplier for the items')
+    expect(imported.textContent).not.toContain('Imported · ')
+    expect(imported.querySelectorAll('[data-tone]')).toHaveLength(1)
+  })
+
+  it('a phone card shows the customer PO to the office and never to an engineer', async () => {
+    phone()
+    installFakeDb(c => (c.target === 'orders' ? { data: [{ id: 'oO-45', customer_po_number: 'PO-77' }] } : fake(c)))
+    const admin = mount('admin')
+    await waitFor(() => expect(admin.container.textContent).toContain('PO PO-77'))
+    admin.unmount()
+    const eng = mount('engineer')
+    await waitFor(() => expect(eng.container.querySelectorAll('[data-card]').length).toBeGreaterThan(0))
+    expect(eng.container.textContent).not.toContain('PO-77')
+    expect(eng.container.textContent).not.toMatch(/PO PO/)
   })
 
   it('an engineer opens on Mine, sees no button to start an enquiry and no amount', async () => {

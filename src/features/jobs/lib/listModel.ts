@@ -82,3 +82,14 @@ export function inStage(j: JobRow, s: StageFilter): boolean {
   if (s === 'orders') return j.orderId !== null && j.stage !== null && ORDER_STAGES.includes(j.stage)
   return currentStopIndex(j.stage, j.stageDetail) === STOP_OF[s]
 }
+
+/**
+ * The items line of a job card, in one short line: "Flow meter +2 more" is "3 items · Flow meter"; anything else is said as it is
+ * (a clamp to one line is the caller's). Empty text stays empty.
+ */
+export function itemsSummary(items: string | null | undefined): string {
+  const s = (items ?? '').replace(/\s+/g, ' ').trim()
+  const m = /^(.*?)\s*\+\s*(\d+)\s+more$/i.exec(s)
+  if (!m || !m[1]) return s
+  return `${Number(m[2]) + 1} items · ${m[1]}`
+}

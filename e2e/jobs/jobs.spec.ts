@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { db } from '../verify/support/db'
 
 /*
  * Jobs (redesign phase 5), against the local CI stack: the list at /jobs, and the ONE search the Jobs box shares with the command
@@ -105,6 +106,36 @@ test.describe('Jobs list (P5-B)', () => {
       expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)
       if (width === 375) await review(page, 'jobs-list-375')
     }
+  })
+})
+
+test.describe('Jobs list card (2026-11)', () => {
+  test('a 375 px card is five short rows: one status line, the PO for the office only, an Imported tag instead of a prefix', async ({ page, browser }) => {
+    const f = await seed()
+    await db.patch(`orders?id=eq.${f.direct.id}`, { legacy_source: { imported: true, table: 'orders' } })
+    await page.setViewportSize({ width: 375, height: 800 })
+    await openAs(page, 'admin', `/jobs?q=${encodeURIComponent(f.company.name)}`)
+    const live = page.locator('tr[data-card]').filter({ hasText: `Job ${f.rfq.number}` })
+    await expect(live).toHaveCount(1)
+    await expect(live).toContainText(`PO ${f.po}`)
+    await expect(live.locator('[data-stage-line]')).toContainText(/Stage \d of 7 · /)
+    await expect(live.locator('[data-stage-mini]')).toHaveCount(0)
+    await expect(live).not.toContainText('Imported')
+    const old = page.locator('tr[data-card]').filter({ hasText: `Job O-${f.direct.number}` })
+    await expect(old).toHaveCount(1)
+    await expect(old.getByText('Imported', { exact: true })).toBeVisible()
+    await expect(old).not.toContainText('Imported ·')
+    // the items line is one line, whatever the text
+    const itemsHeight = await live.locator('.line-clamp-1').first().evaluate(el => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight))
+    expect(itemsHeight).toBeLessThanOrEqual(1.05)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow, 'no sideways scroll at 375').toBeLessThanOrEqual(0)
+    await review(page, 'jobs-card-375')
+    // an engineer never sees the PO
+    const eng = await (await browser.newContext({ viewport: { width: 375, height: 800 } })).newPage()
+    await openAs(eng, 'engineer', '/jobs?chip=open')
+    await expect(eng.locator('tr[data-card]').first()).toBeVisible()
+    expect(await eng.locator('#main').innerText()).not.toMatch(/\bPO [A-Z0-9]/)
   })
 })
 
