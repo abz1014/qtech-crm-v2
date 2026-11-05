@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { ToastProvider } from '@/ui/Toast'
 import { qk } from '@/features/queryKeys'
@@ -60,6 +60,12 @@ function mount(j: JobRow, role: 'admin' | 'sales' | 'engineer') {
     </QueryClientProvider>,
   )
 }
+
+// The More menus' code is loaded up front: the job page asks for it as soon as it draws, and a chunk that resolves after a test has
+// ended logs into a closed worker (an unhandled teardown error on a slow machine).
+beforeAll(async () => {
+  await Promise.all([import('@/features/orders/jobSlots/OrderMoreInner'), import('@/features/rfqs/jobSlots/RfqMoreInner')])
+})
 
 const stagesOf = (c: HTMLElement) => within(c.querySelector('[data-stages]') as HTMLElement)
 
@@ -276,6 +282,7 @@ describe('Job page: the More menu', () => {
       await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
       const bar = screen.getByRole('toolbar', { name: 'Job actions' })
       expect(within(bar).getByRole('button', { name: 'More' })).toBeInTheDocument()
+      await waitFor(() => expect(within(bar).getByRole('button', { name: 'More' })).toBeEnabled())
       unmount()
       cleanup()
       mount(job({ stage: 'cancelled', stageDetail: null }), 'engineer')
