@@ -263,7 +263,7 @@ const markWon: Visit = {
 
 /**
  * The Delete job guide (migration 0132): admin opens More, Delete job on the invoiced order (its next-step button puts More on a phone
- * too). Its numbered invoice is one the books keep, so "These stay for the books" and Cancel the job instead are measured. Nothing is deleted.
+ * too). Its numbered invoice is one the books keep, so "These stay for the books" and Mark the job cancelled are measured. Nothing is deleted.
  */
 const deleteJobGuide: Visit = {
   id: 'delete-job-guide',

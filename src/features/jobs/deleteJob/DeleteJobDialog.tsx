@@ -16,7 +16,7 @@ import { blockerLine, blockerLink, guideIntro, guideOf, KEEP_TITLE, STEP_TITLE, 
  * what stops the delete:
  *   nothing    the shared confirm (ConfirmDelete): what goes with the job, "This can't be undone", Delete.
  *   something  a guide instead of Delete: "To do first" (numbered, each with a link to where it is cleared) and "These stay for the
- *              books" (a numbered invoice, a voided payment: never deleted, so the way out is Cancel the job). Check again reads the
+ *              books" (a numbered invoice, a voided payment: never deleted, so the way out is Mark the job cancelled). Check again reads the
  *              database again; when nothing is left the dialog becomes the confirm.
  * Downloaded when an admin opens it, not with the job page (perf: LCP).
  */
@@ -89,14 +89,14 @@ function Guide({
   onCancelInstead?: () => void
 }) {
   const g = guideOf(list)
-  const intro = guideIntro(g, Boolean(onCancelInstead))
+  const intro = guideIntro(g)
   return (
     <Dialog open onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         size="md"
         tone="danger"
         icon={ListChecks}
-        title="This job cannot be deleted yet"
+        title={g.mustCancel ? 'This job cannot be deleted' : 'This job cannot be deleted yet'}
         context={`${label} · ${job.companyName}`}
         footer={
           <>
@@ -110,7 +110,7 @@ function Guide({
             ) : null}
             {onCancelInstead ? (
               <Button variant={g.mustCancel ? 'primary' : 'secondary'} onClick={onCancelInstead}>
-                Cancel the job instead
+                Mark the job cancelled
               </Button>
             ) : null}
           </>
@@ -139,7 +139,8 @@ function Guide({
                 {g.keep.map(b => (
                   <li key={`${b.kind}-${b.refId}`}>
                     <span className="font-medium">{KEEP_TITLE[b.kind]}:</span> {blockerLine(b)}
-                    <span className="block text-fg-muted">{b.why}</span>
+                    {/* a numbered invoice: the heading already says it stays for the books */}
+                    {b.kind === 'invoice' || !b.why ? null : <span className="block text-fg-muted">{b.why}</span>}
                   </li>
                 ))}
               </ol>

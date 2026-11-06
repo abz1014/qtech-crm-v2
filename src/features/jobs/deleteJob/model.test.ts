@@ -39,12 +39,18 @@ describe('guideOf', () => {
 
 describe('guideIntro', () => {
   it('says to do the steps when everything can be cleared', () => {
-    expect(guideIntro(guideOf(toBlockers([row({})])), true)).toBe('This job cannot be deleted yet. Do these steps in order, then press Check again.')
+    expect(guideIntro(guideOf(toBlockers([row({})])))).toBe('This job cannot be deleted yet. Do these steps in order, then press Check again.')
   })
-  it('says to cancel when something is kept, and only offers it when there is a way to cancel', () => {
+  it('says a kept record stops the delete, in one sentence; the way out is the button, not a second sentence', () => {
     const g = guideOf(toBlockers([row({ kind: 'invoice', can_clear: false })]))
-    expect(guideIntro(g, true)).toContain('Cancel the job instead.')
-    expect(guideIntro(g, false)).not.toContain('Cancel the job instead.')
+    expect(guideIntro(g)).toBe('Some records of this job stay for the books, so it cannot be deleted.')
+    expect(guideIntro(g)).not.toMatch(/instead/i)
+  })
+  it('strips the closing "Cancel the job instead." from a reason, and leaves the rest alone', () => {
+    const kept = toBlockers([row({ kind: 'invoice', can_clear: false, why: 'A numbered invoice is kept for the books. Cancel the job instead.' })])[0]
+    expect(kept.why).toBe('A numbered invoice is kept for the books.')
+    const step = toBlockers([row({ why: 'Delete the payment, then check again.' })])[0]
+    expect(step.why).toBe('Delete the payment, then check again.')
   })
 })
 

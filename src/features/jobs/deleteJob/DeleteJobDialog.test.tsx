@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -120,19 +120,44 @@ describe('the delete job flow', () => {
     expect(screen.queryByRole('heading', { name: 'To do first' })).toBeNull()
   })
 
-  it('Cancel the job instead hands over to the cancel flow', async () => {
+  it('a job with a kept record: title without "yet", one-sentence intro, no repeated reason on the invoice, button says Mark the job cancelled', async () => {
+    setup({ blockers: [[invoice]], onCancel: vi.fn() })
+    await userEvent.click(screen.getByRole('button', { name: 'Delete job' }))
+    const dialog = await screen.findByRole('dialog', { name: 'This job cannot be deleted' })
+    expect(within(dialog).getByText('Some records of this job stay for the books, so it cannot be deleted.')).toBeInTheDocument()
+    expect(within(dialog).getByText(/Invoice INV-0042/)).toBeInTheDocument()
+    expect(dialog.textContent).not.toMatch(/Cancel the job instead/)
+    expect(dialog.textContent).not.toMatch(/kept for the books\./)
+    expect(within(dialog).getByRole('button', { name: 'Mark the job cancelled' })).toBeInTheDocument()
+  })
+
+  it('a kept payment shows its reason without the closing "Cancel the job instead."', async () => {
+    const voided: BlockerRow = { ...payment, can_clear: false, why: 'A voided payment is kept as history and cannot be deleted. Cancel the job instead.' }
+    setup({ blockers: [[voided]], onCancel: vi.fn() })
+    await userEvent.click(screen.getByRole('button', { name: 'Delete job' }))
+    expect(await screen.findByText('A voided payment is kept as history and cannot be deleted.')).toBeInTheDocument()
+    expect(screen.queryByText(/Cancel the job instead/)).toBeNull()
+  })
+
+  it('a job with only steps to do keeps "yet" in the title', async () => {
+    setup({ blockers: [[payment]] })
+    await userEvent.click(screen.getByRole('button', { name: 'Delete job' }))
+    expect(await screen.findByRole('dialog', { name: 'This job cannot be deleted yet' })).toBeInTheDocument()
+  })
+
+  it('Mark the job cancelled hands over to the cancel flow', async () => {
     const onCancel = vi.fn()
     setup({ blockers: [[invoice]], onCancel })
     await userEvent.click(screen.getByRole('button', { name: 'Delete job' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel the job instead' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Mark the job cancelled' }))
     expect(onCancel).toHaveBeenCalledOnce()
     expect(screen.queryByRole('heading', { name: 'These stay for the books' })).toBeNull()
   })
 
-  it('does not offer Cancel the job instead when there is nothing to cancel', async () => {
+  it('does not offer Mark the job cancelled when there is nothing to cancel', async () => {
     setup({ blockers: [[invoice]] })
     await userEvent.click(screen.getByRole('button', { name: 'Delete job' }))
     await screen.findByRole('heading', { name: 'These stay for the books' })
-    expect(screen.queryByRole('button', { name: 'Cancel the job instead' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Mark the job cancelled' })).toBeNull()
   })
 })
