@@ -104,6 +104,9 @@ describe('the phone bar New button shows its word', () => {
     )
     const btn = screen.getByRole('button', { name: 'New' })
     expect(btn).toHaveTextContent('New')
+    // below 360 px the word hides (the title "Companies" does not fit beside it at 320) and the name stays
+    expect(btn).toHaveAttribute('aria-label', 'New')
+    expect(btn.querySelector('span')?.className).toContain('max-[359px]:hidden')
     expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
   })
 

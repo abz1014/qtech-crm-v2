@@ -27,7 +27,7 @@ export function NewMenu(props: NewMenuProps) {
   if (newEntries(role).length === 0) return null
   const trigger = (more: { onClick?: () => void; onPointerEnter?: () => void; onFocus?: () => void }) => (
     // Outlined, never green: each screen has its own one primary button (audit X1).
-    <Button variant="secondary" size={size} icon={Plus} aria-label={iconOnly ? 'New' : undefined} className={cn(className)} aria-haspopup="menu" {...more}>
+    <Button variant="secondary" size={size} icon={Plus} aria-label="New" className={cn(className)} aria-haspopup="menu" {...more}>
       {iconOnly ? null : <span className={labelClass}>New</span>}
     </Button>
   )
