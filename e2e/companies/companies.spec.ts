@@ -246,8 +246,13 @@ test.describe('company page', () => {
     await review(page, 'company-supplier-1440')
     await page.keyboard.press('Escape')
 
-    // A supplier-only page's New RFQ (was "Float an RFQ here") is its next step: it opens intake with this supplier already
+    // An engineer is offered no New RFQ here (owner decision 2026-11-06; screen only, the database still allows it).
+    await expect(page.getByRole('button', { name: 'New RFQ' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Next step' })).toHaveCount(0)
+
+    // A supplier-only page's New RFQ (was "Float an RFQ here") is its next step for sales: it opens intake with this supplier already
     // chosen to ask for prices (?supplier=), never with the supplier as the customer.
+    await openAs(page, 'sales', `/companies/${supplier.id}`)
     await page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'New RFQ' }).click()
     await expect(page).toHaveURL(url => url.pathname === '/rfqs/new' && url.searchParams.get('supplier') === supplier.id)
   })
