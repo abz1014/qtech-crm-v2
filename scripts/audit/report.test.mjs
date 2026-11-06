@@ -1,5 +1,9 @@
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { buildResults, isPhone, mergeParts, renderMarkdown, score } from './report.lib.mjs'
+import { buildResults, gateFailures, isPhone, mergeParts, renderMarkdown, score } from './report.lib.mjs'
 
 /** A capture with sensible passing metrics; `over` patches the metrics. */
 function cap(role, screen, viewport, over = {}, extra = {}) {
@@ -159,5 +163,61 @@ describe('screen audit report', () => {
     const rows = md.split('\n').filter(l => l.startsWith('| 1366x768'))
     expect(rows).toHaveLength(3)
     for (const row of rows) expect(row.match(/(?<!\\)\|/g)).toHaveLength(20)
+  })
+
+  describe('layout gate', () => {
+    const clean = { docScroll: { count: 0, docOverPx: 0, scrolledPx: 0, shellGapPx: 0, samples: [] }, nestedScroll: { count: 0, samples: [] }, boxOverflow: { count: 0, samples: [] }, labelTouchesControl: { count: 0, samples: [] }, unevenWrap: { count: 0, samples: [] } }
+    const withLayout = (role, screen, vp, layout, over = {}) => cap(role, screen, vp, { layout: { ...clean, ...layout }, ...over })
+
+    it('passes a clean capture and an old one that has no layout numbers', () => {
+      const old = cap('admin', 'today', '1440x900')
+      expect(gateFailures([withLayout('admin', 'today', '1440x900', {}), old])).toEqual([])
+      expect(score(old).docScroll).toBeUndefined()
+    })
+
+    it('fails on a page scroll (bug B) and on text hanging out of a box (bug A), naming where', () => {
+      const a = withLayout('admin', 'money-expenses-add', '1440x900', { boxOverflow: { count: 1, samples: ['"Amount, PKR" hangs 8px below div (box 36px, content 44px)'] } })
+      const b = withLayout('admin', 'money-expenses', '1440x900', { docScroll: { count: 2, docOverPx: 24, scrolledPx: 24, shellGapPx: 0, samples: ['window scrolls 24px'] } })
+      const f = gateFailures([a, b])
+      expect(f.map(x => `${x.key} ${x.screen}`)).toEqual(['boxOverflow money-expenses-add', 'docScroll money-expenses'])
+      expect(f[0].detail).toContain('hangs 8px')
+      expect(f[1]).toMatchObject({ role: 'admin', viewport: '1440x900', value: 2 })
+    })
+
+    it('fails on a second scrollbar, text on a control and a sideways scroll; the uneven-wrap hint and the older targets never gate', () => {
+      const c = withLayout('admin', 'x', '1024x768', {
+        nestedScroll: { count: 1, samples: ['div "a" scrolls 40px inside the page'] },
+        labelTouchesControl: { count: 3, samples: ['"Date" over input'] },
+        unevenWrap: { count: 5, samples: [] },
+      }, { hScroll: { page: true, main: false, overflowPx: 12, offenders: ['div right=1100'] }, primary: { inMain: 3, inMainAboveFold: 3, disabledInMain: 0, inChrome: 0, labels: [] }, actions: { total: 40, aboveFold: 20, buttons: 30, links: 10, mainAboveFold: 12 } })
+      expect(gateFailures([c]).map(x => x.key).sort()).toEqual(['hScroll', 'labelTouchesControl', 'nestedScroll'])
+      expect(score(c).unevenWrap).toEqual({ value: 5, pass: false })
+      expect(score(c).mainActionsFold.pass).toBe(false) // advisory, and not in the gate
+    })
+
+    it('lists the findings in the report and the results', () => {
+      const r = buildResults([{ meta: { finishedAt: '2026-11-06T00:00:00Z', viewports: ['1440x900'] }, captures: [withLayout('admin', 'a', '1440x900', { docScroll: { count: 1, docOverPx: 9, scrolledPx: 0, shellGapPx: 0, samples: ['document is 9px taller than the window'] } })] }])
+      expect(r.gate.layout.failed).toBe(1)
+      const md = renderMarkdown(r)
+      expect(md).toContain('**FAILED: 1 finding(s).**')
+      expect(md).toContain('page scrolls: document is 9px taller than the window')
+    })
+
+    it('report.mjs --gate layout exits 1 on a failing run, 0 on a clean one, 1 with no layout data', () => {
+      const script = resolve('scripts/audit/report.mjs')
+      const run = (captures, extra = ['--gate', 'layout']) => {
+        const dir = mkdtempSync(join(tmpdir(), 'gate-'))
+        mkdirSync(join(dir, 'parts'))
+        writeFileSync(join(dir, 'parts', 'p.json'), JSON.stringify({ meta: { finishedAt: '2026-11-06T00:00:00Z', viewports: ['1440x900'] }, captures }))
+        return spawnSync(process.execPath, [script, dir, ...extra], { encoding: 'utf8' })
+      }
+      const bad = run([withLayout('admin', 'money-expenses', '1440x900', { docScroll: { count: 1, docOverPx: 9, scrolledPx: 0, shellGapPx: 0, samples: ['x'] } })])
+      expect(bad.status).toBe(1)
+      expect(bad.stderr).toContain('Layout gate FAILED')
+      expect(run([withLayout('admin', 'today', '1440x900', {})]).status).toBe(0)
+      expect(run([cap('admin', 'today', '1440x900')]).status).toBe(1)
+      // without --gate the report never fails on a finding
+      expect(run([withLayout('admin', 'money-expenses', '1440x900', { boxOverflow: { count: 2, samples: [] } })], []).status).toBe(0)
+    })
   })
 })

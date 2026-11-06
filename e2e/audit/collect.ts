@@ -84,6 +84,18 @@ export interface Metrics {
   contrastHi?: { checked: number; failing: number; samples: string[] }
   /** Phones only: visible text fields (input, textarea, select, editable box) whose text is under 16 px (iOS zooms on a tap). */
   inputs?: { checked: number; under16: number; samples: string[] } | null
+  /**
+   * Layout checks (docs/audit/SCREEN_AUDIT.md, "The layout gate"). docScroll is null where it does not apply (a dialog is open or
+   * measured). The gate (scripts/audit/report.mjs --gate layout) fails on docScroll, nestedScroll, boxOverflow, labelTouchesControl
+   * and hScroll; unevenWrap is advisory.
+   */
+  layout?: {
+    docScroll: { count: number; docOverPx: number; scrolledPx: number; shellGapPx: number; samples: string[] } | null
+    nestedScroll: { count: number; samples: string[] }
+    boxOverflow: { count: number; samples: string[] }
+    labelTouchesControl: { count: number; samples: string[] }
+    unevenWrap: { count: number; samples: string[] }
+  }
 }
 
 export interface CollectOptions {
@@ -778,6 +790,208 @@ export function collect(opts: CollectOptions): Metrics {
     }
   }
 
+  // ---------------------------------------------------------------- layout checks (the gate)
+  const layout: NonNullable<Metrics['layout']> = {
+    docScroll: null,
+    nestedScroll: { count: 0, samples: [] },
+    boxOverflow: { count: 0, samples: [] },
+    labelTouchesControl: { count: 0, samples: [] },
+    unevenWrap: { count: 0, samples: [] },
+  }
+  {
+    const shellMain = document.querySelector<HTMLElement>('#main')
+    const keepY = shellMain?.scrollTop ?? 0
+    // Every layout number is taken with the document at the top.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+    const POPOVER = '[role="menu"], [role="listbox"], [role="tooltip"], [data-radix-popper-content-wrapper]'
+    const pos = (el: Element) => style(el).position
+
+    // docScroll: the document must never scroll; the app scrolls <main> only.
+    if (!rootEl && dialogs.length === 0 && shellMain) {
+      const docOverPx = Math.max(0, Math.round(se.scrollHeight - window.innerHeight))
+      window.scrollTo({ top: 1e6, left: 0, behavior: 'instant' as ScrollBehavior })
+      const scrolledPx = Math.round(window.scrollY)
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+      const shell = shellMain.parentElement
+      const shellGapPx = shell ? Math.round(Math.abs(shell.getBoundingClientRect().bottom - window.innerHeight)) : 0
+      const samples: string[] = []
+      if (docOverPx > 1) samples.push(`document is ${docOverPx}px taller than the window`)
+      if (scrolledPx > 0) samples.push(`window scrolls ${scrolledPx}px`)
+      if (shellGapPx > 1) samples.push(`shell bottom is ${shellGapPx}px off the window bottom`)
+      // What sticks out past the bottom edge: the likely cause. Absolute boxes (a screen-reader-only radio, an icon) whose nearest positioned
+      // ancestor is the page, not <main>, are placed in window coordinates and stretch the document: hidden ones count too.
+      if (samples.length) {
+        let n = 0
+        for (const el of Array.from(document.querySelectorAll('body *'))) {
+          if (n >= 4) break
+          if (pos(el) !== 'absolute' || el.closest('svg') && el.tagName !== 'svg') continue
+          const r = rect(el)
+          if (r.bottom <= window.innerHeight + 1 || r.width <= 0 || paintClipOf(el).b <= window.innerHeight + 1) continue
+          let fixedAbove = false
+          for (let q = el.parentElement; q; q = q.parentElement) if (pos(q) === 'fixed') fixedAbove = true
+          if (fixedAbove) continue
+          n++
+          samples.push(`absolute past the bottom: ${describe(el)} bottom=${Math.round(r.bottom)}, positioned against ${(el as HTMLElement).offsetParent ? describe((el as HTMLElement).offsetParent as Element).split(' ')[0] : 'the page'}`)
+        }
+        for (const el of Array.from(document.body.children)) {
+          if (samples.length >= 8) break
+          const r = rect(el)
+          if (visible(el) && r.bottom > window.innerHeight + 1) samples.push(`body child past the bottom: ${describe(el)} bottom=${Math.round(r.bottom)}`)
+        }
+      }
+      layout.docScroll = { count: (docOverPx > 1 ? 1 : 0) + (scrolledPx > 0 ? 1 : 0) + (shellGapPx > 1 ? 1 : 0), docOverPx, scrolledPx, shellGapPx, samples }
+    }
+
+    // nestedScroll: a box that scrolls up and down on its own inside <main> or a dialog: the person meets two scrollbars.
+    // Left out: <main> itself, virtual lists, <pre>, text areas, selects, list boxes and popovers, [data-scroll-ok], Today's panes (they
+    // scroll on purpose) and a dialog's own body (the outermost scroller in a dialog taller than the window).
+    {
+      const isToday = location.pathname === '/todo' || location.pathname.startsWith('/todo/')
+      const scope: Element[] = rootEl ? [rootEl] : [...(main ? [main] : []), ...dialogs]
+      const seen = new Set<Element>()
+      for (const top of scope) {
+        const isDialog = top.matches('[role="dialog"], [role="alertdialog"]')
+        for (const el of Array.from(top.querySelectorAll('*'))) {
+          if (seen.has(el) || el === main || !(el instanceof HTMLElement) || SKIP.has(el.tagName)) continue
+          seen.add(el)
+          const s = style(el)
+          const scrollsY = (s.overflowY === 'auto' || s.overflowY === 'scroll') && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 1
+          // Sideways inside a dialog is never meant (on the page a table wrapper may scroll sideways: that is the phone "strips" target).
+          const scrollsX = isDialog && (s.overflowX === 'auto' || s.overflowX === 'scroll') && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1
+          if ((!scrollsY && !scrollsX) || !visible(el)) continue
+          if (el.matches('pre, textarea, select, [data-virtual], [data-scroll-ok]') || el.closest(`[data-virtual], [data-scroll-ok], pre, ${POPOVER}`)) continue
+          if (scrollsX) {
+            layout.nestedScroll.count++
+            if (layout.nestedScroll.samples.length < 8) layout.nestedScroll.samples.push(`${describe(el)} scrolls sideways ${el.scrollWidth - el.clientWidth}px inside a dialog`)
+            continue
+          }
+          if (isToday) continue
+          if (isDialog) {
+            let inner = false
+            for (let p = el.parentElement; p && p !== top; p = p.parentElement) {
+              const oy = style(p).overflowY
+              if (oy === 'auto' || oy === 'scroll') inner = true
+            }
+            if (!inner) continue
+          }
+          layout.nestedScroll.count++
+          if (layout.nestedScroll.samples.length < 8) layout.nestedScroll.samples.push(`${describe(el)} scrolls ${el.scrollHeight - el.clientHeight}px inside ${isDialog ? 'a dialog' : 'the page'}`)
+        }
+      }
+    }
+
+    // boxOverflow: a box that lets its content show (overflow visible) but is shorter than the content: text hangs out of its bottom.
+    {
+      const found: { el: Element; what: string }[] = []
+      const tr = document.createRange()
+      for (const el of Array.from(document.querySelectorAll('body *'))) {
+        if (!(el instanceof HTMLElement) || SKIP.has(el.tagName) || el.closest('svg') || covered(el)) continue
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') continue
+        const s = style(el)
+        if (s.overflowY !== 'visible' || s.overflowX !== 'visible' || s.display === 'contents' || s.display === 'inline') continue
+        const overY = el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 1
+        const overX = el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1
+        if ((!overY && !overX) || !visible(el)) continue
+        const r = rect(el)
+        const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+        let hit: string | null = null
+        for (let n = w.nextNode() as Text | null; n && !hit; n = w.nextNode() as Text | null) {
+          const t = (n.nodeValue ?? '').replace(/\s+/g, ' ').trim()
+          const pe = n.parentElement
+          if (!t || !pe || !visible(pe) || pe.closest('svg')) continue
+          // Only text that flows in this box: nothing positioned out of it, held by a closer box, or scrolling on its own.
+          let flows = true
+          for (let p: Element | null = pe; p && p !== el; p = p.parentElement) {
+            const ps = style(p)
+            if (ps.position === 'absolute' || ps.position === 'fixed' || ps.position === 'sticky' || ps.overflowY !== 'visible' || ps.overflowX !== 'visible') {
+              flows = false
+              break
+            }
+          }
+          if (!flows) continue
+          tr.selectNodeContents(n)
+          const qs = Array.from(tr.getClientRects()).filter(q => q.width >= 1)
+          const past = overY ? qs.reduce((m, q) => Math.max(m, q.bottom - r.bottom), -1e9) : -1e9
+          // Sideways: a word wider than its column (a heading running into the next one). Fields with a scrollbar and a nowrap strip are left out above.
+          const side = overX ? qs.reduce((m, q) => Math.max(m, q.right - r.right, r.left - q.left), -1e9) : -1e9
+          if (past > 2) hit = `"${short(t, 40)}" hangs ${Math.round(past)}px below ${describe(el).split(' ')[0]} (box ${Math.round(r.height)}px, content ${el.scrollHeight}px)`
+          else if (side > 1.5) hit = `"${short(t, 40)}" runs ${Math.round(side)}px sideways out of ${describe(el).split(' ')[0]} (box ${Math.round(r.width)}px wide, content ${el.scrollWidth}px)`
+        }
+        if (hit) found.push({ el, what: hit })
+      }
+      // The innermost box is the cause; ancestors that merely contain it are not listed again.
+      const inner = found.filter(f => !found.some(g => g !== f && f.el.contains(g.el)))
+      layout.boxOverflow.count = inner.length
+      for (const f of inner.slice(0, 8)) layout.boxOverflow.samples.push(f.what)
+    }
+
+    // labelTouchesControl: text drawn over, or touching the top of, an input, select or button that is not its own.
+    {
+      const controls = Array.from(document.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea, button')).filter(c => !covered(c) && visible(c) && rect(c).height >= 8 && rect(c).width >= 8)
+      const reported = new Set<string>()
+      for (const tb of textBoxes) {
+        const te = tb.el as HTMLElement
+        if (style(te).pointerEvents === 'none' || te.closest('[role="status"], [role="alert"], [data-sonner-toast], [aria-hidden="true"], button, input, select, textarea, [role="button"], [role="combobox"], [role="tab"], [role="option"], [role="menuitem"]')) continue
+        if (tb.layer && pos(tb.layer) === 'fixed') continue
+        for (const c of controls) {
+          const cr = rect(c)
+          if (Math.min(tb.b.r, cr.right) - Math.max(tb.b.l, cr.left) <= 1) continue
+          // text above or inside the control, never below it
+          if (!(tb.b.b > cr.top - 1 && tb.b.t < cr.bottom - 1)) continue
+          if (c.contains(te) || te.contains(c)) continue
+          const lab = te.closest('label')
+          if (lab && (lab.control === c || lab.contains(c))) continue
+          // an adornment drawn on purpose over the field (a unit inside the box): positioned, between the text and the common ancestor
+          let adorned = false
+          for (let p: Element | null = te; p && !p.contains(c); p = p.parentElement) {
+            const ps = pos(p)
+            if (ps === 'absolute' || ps === 'fixed') adorned = true
+          }
+          if (adorned || te.closest('[role="dialog"]') !== c.closest('[role="dialog"]')) continue
+          const key = `${tb.text}|${describe(c)}`
+          if (reported.has(key)) continue
+          reported.add(key)
+          layout.labelTouchesControl.count++
+          if (layout.labelTouchesControl.samples.length < 8) layout.labelTouchesControl.samples.push(`"${short(tb.text, 36)}" (bottom ${Math.round(tb.b.b)}) over ${describe(c)} (top ${Math.round(cr.top)})`)
+        }
+      }
+    }
+
+    // unevenWrap (advisory): a label of three words or fewer wraps onto two lines while its row-mates stay on one.
+    {
+      const lr = document.createRange()
+      const lineCount = (n: Text) => {
+        const tops: number[] = []
+        lr.selectNodeContents(n)
+        for (const q of Array.from(lr.getClientRects())) if (q.width >= 1 && !tops.some(t => Math.abs(t - q.top) < q.height * 0.6)) tops.push(q.top)
+        return tops.length
+      }
+      const ownText = (e: Element) => Array.from(e.childNodes).find(n => n.nodeType === Node.TEXT_NODE && (n.nodeValue ?? '').trim()) as Text | undefined
+      const reported = new Set<Element>()
+      for (const tb of textBoxes) {
+        const el = tb.el as HTMLElement
+        if (reported.has(el) || covered(el)) continue
+        if (tb.text.split(' ').filter(Boolean).length > 3) continue
+        const node = ownText(el)
+        if (!node || lineCount(node) < 2) continue
+        const parent = el.parentElement
+        if (!parent || !/flex|grid/.test(style(parent).display)) continue
+        const er = rect(el)
+        const mates = Array.from(parent.children).filter(sib => {
+          if (sib === el || !visible(sib)) return false
+          const sr = rect(sib)
+          const own = ownText(sib)
+          return Boolean(own) && sr.top < er.bottom && sr.bottom > er.top && lineCount(own as Text) === 1
+        })
+        if (!mates.length) continue
+        reported.add(el)
+        layout.unevenWrap.count++
+        if (layout.unevenWrap.samples.length < 8) layout.unevenWrap.samples.push(`"${short(tb.text, 30)}" wraps, beside ${mates.length} one-line`)
+      }
+    }
+    if (shellMain) shellMain.scrollTop = keepY
+  }
+
   const contentHeight = Math.round(Math.max(se.scrollHeight, main ? main.scrollHeight + (vh - main.clientHeight) : 0))
 
   return {
@@ -803,5 +1017,6 @@ export function collect(opts: CollectOptions): Metrics {
     strips,
     contrastHi,
     inputs,
+    layout,
   }
 }
