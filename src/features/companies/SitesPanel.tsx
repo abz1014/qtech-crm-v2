@@ -270,13 +270,15 @@ function SiteBlock({
 
 /*
  * A site's RFQs and orders as a short list, not a table: the item name wraps, so the State and "Repeat order" always fit at 1366
- * with the side column (a table cut "Repeat order" to "Re"). From md: reference · what · date · state · action; a phone stacks it.
+ * with the side column (a table cut "Repeat order" to "Re"). From 1280: reference · what · date · state · action; narrower stacks it.
  */
 const IGRID = 'md:grid md:grid-cols-[112px_minmax(0,1fr)_72px_minmax(0,168px)_auto] md:items-start md:gap-x-4'
 
 function ItemList({ label, items, today }: { label: string; items: Item[]; today: string }) {
-  // one layout in the DOM at a time, so every reference, item and button exists once
-  const wide = useMediaQuery('(min-width: 768px)')
+  // one layout in the DOM at a time, so every reference, item and button exists once.
+  // The five-column row needs ~590px besides the item text; below 1280 the side column (from 1024) or the menu leaves less than that,
+  // so a tablet gets the stacked row (reference and date, the item over its full width, then state and action).
+  const wide = useMediaQuery('(min-width: 1280px)')
   return (
     <div className="border-t">
       {wide ? (
@@ -328,7 +330,7 @@ function RefTag({ item }: { item: Item }) {
 function WhatText({ item }: { item: Item }) {
   if (!item.what) return <span className="text-fg-muted">No items yet</span>
   return (
-    <span title={item.what}>
+    <span title={item.what} className="[overflow-wrap:anywhere]">
       {item.what}
       {item.moreItems > 0 ? <span className="ml-1 text-fg-muted">{`+ ${item.moreItems} more`}</span> : null}
     </span>
