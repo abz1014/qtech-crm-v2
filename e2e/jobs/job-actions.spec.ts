@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { JOB_URL, openStage } from '../support/job'
 
 /*
@@ -8,7 +8,7 @@ import { JOB_URL, openStage } from '../support/job'
  *   - void an invoice: Invoice stage, "Open in Invoices", the invoice, Void invoice
  *   - credit note on a filed invoice: the same road, Create credit note
  *   - record a payment with withholding tax, tied to one of two invoices (RecordPaymentDialog, from the Invoice stage)
- *   - reassign the owner (the Job page header)
+ *   - reassign the owner (the Job page's More menu; a job with an enquiry moves the enquiry and its order together)
  * Synthetic data only. No test here depends on the day of the month: invoices are dated today.
  */
 test.describe.configure({ mode: 'serial' })
@@ -16,10 +16,10 @@ test.describe.configure({ mode: 'serial' })
 const unique = () => Math.random().toString(36).slice(2, 8)
 const LINK = 'Open in Invoices to void one or issue a credit note'
 
-async function seedOrder(extra: Record<string, unknown> = {}) {
+async function seedOrder(extra: Record<string, unknown> = {}, item: Record<string, unknown> = {}) {
   const company = await createCompany(uniqueName('Job Actions Customer'), { invoice_address: 'Plot 1, Korangi, Karachi', sales_tax_registered: false })
   const [order] = await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, payment_terms_days: 30, ...extra } }))
-  await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Flow meter DN50', qty: 1, unit_price_net: 100000, gst_rate: 18 }, prefer: 'return=minimal' }))
+  await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Flow meter DN50', qty: 1, unit_price_net: 100000, gst_rate: 18, ...item }, prefer: 'return=minimal' }))
   return { id: order.id, number: order.number, company }
 }
 
@@ -94,18 +94,42 @@ test('record a payment with withholding tax, tied to the second invoice, from th
   expect([Number(pay[0].amount), Number(pay[0].wht_amount)]).toEqual([60800, 10000])
 })
 
-test('reassign the owner from the Job page header', async ({ page }) => {
+test('reassign the owner from the Job page More menu (an order with no enquiry moves the order)', async ({ page }) => {
   const users = await must(rest<{ id: string; role: string; name: string }[]>('admin', 'users?select=id,role,name&deactivated_at=is.null'))
   const sales = users.find(u => u.role === 'sales' && u.name)!
   const admin = users.find(u => u.role === 'admin' && u.name)!
   const order = await seedOrder({ owner_id: sales.id })
   await openAs(page, 'admin', `/orders/${order.id}`)
   await expect(page).toHaveURL(JOB_URL)
-  await page.getByRole('button', { name: 'Reassign owner' }).click()
+  // it is not a button in the header any more: it lives in More, beside Cancel order
+  await expect(page.getByRole('button', { name: 'Reassign owner' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('menuitem', { name: 'Reassign owner' }).click()
   const d = page.getByRole('dialog', { name: 'Reassign owner' })
   await d.getByLabel('New owner').selectOption({ label: admin.name })
   await d.getByRole('button', { name: 'Change owner' }).click()
   await expect.poll(async () => (await must(rest<{ owner_id: string }[]>('admin', `orders?id=eq.${order.id}&select=owner_id`)))[0].owner_id).toBe(admin.id)
+})
+
+test('reassign the owner on a job that has an enquiry: the enquiry and its order both move', async ({ page }) => {
+  const users = await must(rest<{ id: string; role: string; name: string }[]>('admin', 'users?select=id,role,name&deactivated_at=is.null'))
+  const sales = users.find(u => u.role === 'sales' && u.name)!
+  const admin = users.find(u => u.role === 'admin' && u.name)!
+  const company = await createCompany(uniqueName('Job Actions Enquiry Customer'), { invoice_address: 'Plot 1, Korangi, Karachi', sales_tax_registered: false })
+  const rfq = await createRfq(company.id, { owner_id: sales.id })
+  const [order] = await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, rfq_id: rfq.id, payment_terms_days: 30, owner_id: sales.id } }))
+  await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Flow meter DN50', qty: 1, unit_price_net: 100000, gst_rate: 18 }, prefer: 'return=minimal' }))
+  await openAs(page, 'admin', `/orders/${order.id}`)
+  await expect(page).toHaveURL(JOB_URL)
+  await expect(page.getByRole('button', { name: 'Reassign owner' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('menuitem', { name: 'Reassign owner' }).click()
+  const d = page.getByRole('dialog', { name: 'Reassign owner' })
+  await d.getByLabel('New owner').selectOption({ label: admin.name })
+  await d.getByRole('button', { name: 'Change owner' }).click()
+  const ownerOf = async (table: string, id: string) => (await must(rest<{ owner_id: string }[]>('admin', `${table}?id=eq.${id}&select=owner_id`)))[0].owner_id
+  await expect.poll(() => ownerOf('rfqs', rfq.id)).toBe(admin.id)
+  await expect.poll(() => ownerOf('orders', order.id)).toBe(admin.id)
 })
 
 test('the More menu is there within about 300 ms of the job title, and opens once ready', async ({ page }) => {
@@ -133,11 +157,17 @@ test('a cancelled job (no next step) has More on a phone for the admin, with Del
   await expect(page.getByRole('menuitem', { name: 'Delete job' })).toBeVisible()
 })
 
-/** A fully invoiced, fully paid order with no supplier legs and no commissioning: the job is "paid" and has no next step. */
+/**
+ * A fully invoiced, fully paid order with no supplier legs and no commissioning: the job is "paid" and has no next step.
+ * The only line is a service (a goods line with no supplier would keep the stage at "ordered" with a real "Choose suppliers" button).
+ */
 async function seedPaidOrder() {
-  const order = await seedOrder()
+  const order = await seedOrder({}, { is_service: true, description: 'Site survey', unit: 'job' })
   const inv = await makeInvoice(order.id)
   await must(rest('admin', 'payments_in', { method: 'POST', body: { order_id: order.id, invoice_id: inv.id, amount: 118000, received_on: karachiDay(0) }, prefer: 'return=minimal' }))
+  // the seed must really be paid, or the tests below pass for the wrong reason
+  const job = await must(rest<{ stage: string }[]>('admin', `v_jobs?order_id=eq.${order.id}&select=stage`))
+  expect(job[0].stage).toBe('paid')
   return order
 }
 
@@ -150,6 +180,8 @@ for (const role of ['admin', 'sales'] as const) {
     const bar = page.getByRole('toolbar', { name: 'Job actions' })
     await expect(bar.getByRole('button', { name: 'More' })).toBeVisible()
     await expect(bar.getByRole('button', { name: 'More' })).toBeEnabled()
+    // a paid job has no next-step button of its own: More is the only button in the bar
+    await expect(bar.getByRole('button')).toHaveCount(1)
     await bar.getByRole('button', { name: 'More' }).click()
     await expect(page.getByRole('menuitem', { name: 'Cancel order' })).toBeVisible()
   })

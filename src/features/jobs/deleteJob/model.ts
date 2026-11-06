@@ -39,6 +39,12 @@ export interface BlockerRow {
 const KINDS: readonly BlockerKind[] = ['credit_applied', 'refund', 'payment', 'invoice', 'expense', 'purchase_order', 'other_order_lines']
 const isKind = (k: string): k is BlockerKind => (KINDS as readonly string[]).includes(k)
 
+/**
+ * The database's sentence for a kept record ends with "Cancel the job instead.", which the guide's button and intro already say.
+ * Cut here rather than migrate 0132: the wording is the screen's, the data is the database's.
+ */
+const plainWhy = (why: string) => why.replace(/\s*Cancel the job instead\.\s*$/, '').trim()
+
 export function toBlockers(rows: readonly BlockerRow[]): Blocker[] {
   return rows
     .filter(r => isKind(r.kind))
@@ -51,7 +57,7 @@ export function toBlockers(rows: readonly BlockerRow[]): Blocker[] {
       label: r.ref_label,
       on: r.ref_on,
       canClear: r.can_clear,
-      why: r.why,
+      why: plainWhy(r.why),
     }))
     .sort((a, b) => a.step - b.step)
 }
@@ -95,14 +101,10 @@ export function guideOf(blockers: readonly Blocker[]): Guide {
   return { todo, keep, clear: blockers.length === 0, mustCancel: keep.length > 0 }
 }
 
-/** The opening sentence of the guide. */
-export function guideIntro(g: Guide, canCancel: boolean): string {
+/** The opening sentence of the guide (the way out, Mark the job cancelled, is the button below it). */
+export function guideIntro(g: Guide): string {
   if (g.clear) return ''
-  if (g.mustCancel) {
-    return canCancel
-      ? 'Some records of this job stay for the books, so it cannot be deleted. Cancel the job instead.'
-      : 'Some records of this job stay for the books, so it cannot be deleted.'
-  }
+  if (g.mustCancel) return 'Some records of this job stay for the books, so it cannot be deleted.'
   return 'This job cannot be deleted yet. Do these steps in order, then press Check again.'
 }
 

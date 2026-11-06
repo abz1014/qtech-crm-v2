@@ -7,7 +7,7 @@ import { JOB_URL } from '../support/job'
  * Delete a job (migration 0132), end to end against the local CI stack, from the job page's More menu:
  *   - a clean job: the confirm says what goes, Delete removes it and lands on the Jobs list
  *   - a job with a payment: a guide ("To do first") instead of Delete; after the payment is cleared, Check again turns it into the confirm
- *   - a job with a numbered invoice: "These stay for the books" and Cancel the job instead (the existing cancel flow)
+ *   - a job with a numbered invoice: "These stay for the books" and Mark the job cancelled (the existing cancel flow)
  *   - sales and engineers are offered no Delete job
  * Synthetic data only.
  */
@@ -89,18 +89,20 @@ test.describe('delete a job', () => {
     expect(await orderRows(job.id)).toEqual([])
   })
 
-  test('a numbered invoice stays for the books: the guide says so and offers Cancel the job instead', async ({ page }) => {
+  test('a numbered invoice stays for the books: the guide says so and offers Mark the job cancelled', async ({ page }) => {
     const job = await seedJob()
     const invoice = await addInvoice(job.id)
     await openJob(page, 'admin', job.id)
     await openMore(page)
     await page.getByRole('menuitem', { name: 'Delete job' }).click()
 
-    const guide = page.getByRole('dialog', { name: 'This job cannot be deleted yet' })
+    const guide = page.getByRole('dialog', { name: 'This job cannot be deleted', exact: true })
     await expect(guide.getByRole('heading', { name: 'These stay for the books' })).toBeVisible()
     await expect(guide.getByText(new RegExp(`Invoice ${invoice.number}`))).toBeVisible()
     await expect(guide.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
-    await guide.getByRole('button', { name: 'Cancel the job instead' }).click()
+    await expect(guide.getByText('Some records of this job stay for the books, so it cannot be deleted.')).toBeVisible()
+    await expect(guide).not.toContainText('Cancel the job instead')
+    await guide.getByRole('button', { name: 'Mark the job cancelled' }).click()
 
     // the order's own cancel flow opens
     await expect(page.getByRole('dialog', { name: 'Cancel this order' })).toBeVisible()

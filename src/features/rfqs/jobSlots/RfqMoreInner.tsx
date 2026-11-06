@@ -1,4 +1,6 @@
 import { FileCheck2, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import { useReassignOwnerItem } from '@/features/owners/useReassignOwner'
+import { jobLabel } from '@/features/jobs/lib/listModel'
 import { useSeesPrices } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { mapPgError } from '@/lib/pgErrors'
@@ -40,6 +42,7 @@ function Menu({ rfq, money, job }: { rfq: RfqHeader; money: boolean; job: JobSlo
   const hasOrders = (orders.data ?? []).length > 0
   const delJob = useDeleteJobFlow(hasOrders ? { key: job.key, rfqId: rfq.id, orderId: job.orderId, companyId: job.companyId, companyName: job.companyName } : null)
   const quotations = useQuotations(prices ? rfq.id : undefined)
+  const reassign = useReassignOwnerItem({ kind: 'job', id: rfq.id, label: `${jobLabel(job.key)} · ${job.companyName}`, ownerId: job.ownerId, ownerName: job.ownerName })
   const ref = rfqRef(rfq.number)
   const s = rfq.state
   const sent = quotationSent({ bidState: s?.bid_state, quotationCount: quotations.data?.length ?? 0 })
@@ -113,6 +116,7 @@ function Menu({ rfq, money, job }: { rfq: RfqHeader; money: boolean; job: JobSlo
         <MenuItem icon={Pencil} onClick={edit.ask}>
           Edit RFQ details
         </MenuItem>
+        {reassign.item}
         {prices ? (
           <>
             {closed && !hasLiveOrder ? (
@@ -160,6 +164,7 @@ function Menu({ rfq, money, job }: { rfq: RfqHeader; money: boolean; job: JobSlo
       {edit.node}
       {del.node}
       {delJob.node}
+      {reassign.node}
     </>
   )
 }

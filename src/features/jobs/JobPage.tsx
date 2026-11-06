@@ -11,7 +11,6 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
 import { DetailHeader } from '@/ui/DetailHeader'
-import { useReassignOwnerItem } from '@/features/owners/useReassignOwner'
 import { EmptyState } from '@/ui/EmptyState'
 import { NextStepBox } from '@/ui/NextStepBox'
 import { Skeleton } from '@/ui/Skeleton'
@@ -174,7 +173,6 @@ function JobView({ facts }: { facts: JobFacts }) {
     </Button>
   ) : undefined
 
-  const reassign = useReassignOwnerItem({ kind: job.rfqId ? 'job' : 'order', id: (job.rfqId ?? job.orderId) as string, label: `${jobLabel(job.key)} · ${job.companyName}`, ownerId: job.ownerId, ownerName: job.ownerName })
   const meta = [
     job.ownerName ? `Owner ${job.ownerName}` : 'No owner yet',
     facts.customerRef ? `Their ref ${facts.customerRef}` : null,
@@ -198,14 +196,6 @@ function JobView({ facts }: { facts: JobFacts }) {
         meta={meta}
       >
         {keyFacts ? <JobKeyFacts facts={keyFacts} /> : null}
-        {reassign.ask && (job.rfqId ?? job.orderId) ? (
-          <p className="mt-2">
-            <Button size="sm" variant="quiet" onClick={reassign.ask}>
-              Reassign owner
-            </Button>
-          </p>
-        ) : null}
-        {reassign.node}
         {job.repeatOf ? (
           <p className="mt-2 text-base">
             <Link to={`/jobs/${encodeURIComponent(job.repeatOf)}`} className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline">
@@ -213,7 +203,6 @@ function JobView({ facts }: { facts: JobFacts }) {
             </Link>
           </p>
         ) : null}
-        {facts.orderNumber !== null ? <p className="mt-2 text-base text-fg-muted">{`Order ${String(facts.orderNumber).padStart(4, '0')}, with no enquiry before it.`}</p> : null}
       </DetailHeader>
 
       <div className="mt-4 rounded-panel border bg-surface px-4 py-4">
@@ -241,13 +230,19 @@ function JobView({ facts }: { facts: JobFacts }) {
           <EngineerActions facts={facts} data={data} />
         </Suspense>
       ) : null}
+      {/* An engineer's contact (name, Call, WhatsApp) sits right under On site; the side column does not repeat it. */}
+      {role === 'engineer' ? (
+        <div className="mt-4">
+          <ContactPanel facts={facts} />
+        </div>
+      ) : null}
       {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid min-w-0 gap-4">
-          <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} />
+          <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} phone={phone} />
         </div>
         <aside aria-label="About this job" className="grid min-w-0 gap-4">
-          <ContactPanel facts={facts} />
+          {role !== 'engineer' ? <ContactPanel facts={facts} /> : null}
           {role === 'admin' ? <MoneyPanel data={data} hasOrder={Boolean(job.orderId)} /> : null}
           <JobSlot name="side" context={ctx} />
           <NotesFilesPanel facts={facts} data={data} ctx={ctx} />

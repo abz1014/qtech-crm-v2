@@ -162,6 +162,6 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
     const after = await db.adminRpc<{ outstanding: number }[]>('receivables_summary')
     expect(num(after[0].outstanding), 'To collect after the job is paid').toBeCloseTo(num(before[0].outstanding), 2)
     await page.goto(`/jobs/${rfq.number}`)
-    await expect(phoneLabel(page)).toContainText('All 7 stops done')
+    await expect(phoneLabel(page)).toContainText('All 7 stages done')
   })
 })

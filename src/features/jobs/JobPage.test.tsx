@@ -45,9 +45,10 @@ function seed(client: QueryClient, j: JobRow, money: boolean) {
   }
 }
 
-function mount(j: JobRow, role: 'admin' | 'sales' | 'engineer') {
+function mount(j: JobRow, role: 'admin' | 'sales' | 'engineer', extra?: (c: QueryClient) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnMount: false } } })
   seed(client, j, role !== 'engineer')
+  extra?.(client)
   return render(
     <QueryClientProvider client={client}>
       <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Faizan', role } }}>
@@ -188,6 +189,116 @@ describe('Job page', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+  })
+})
+
+const phoneMedia = () => {
+  const real = window.matchMedia
+  window.matchMedia = ((q: string) => ({ matches: q.includes('max-width: 767px'), media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as typeof window.matchMedia
+  return () => { window.matchMedia = real }
+}
+const sectionIds = (c: HTMLElement) => [...c.querySelectorAll('[data-stages] > section')].map(e => e.id)
+
+describe('Job page: the stage list', () => {
+  it('on a phone the stage the job is at comes first, under the Next step band; on a computer the order is the ruler order', async () => {
+    const off = phoneMedia()
+    try {
+      const { container } = mount(job({}), 'admin')
+      await screen.findByRole('heading', { level: 1 })
+      expect(sectionIds(container)).toEqual(['stage-3', 'stage-0', 'stage-1', 'stage-2', 'stage-4', 'stage-5', 'stage-6'])
+      expect(stagesOf(container).getAllByRole('button')[0]).toHaveTextContent(/Supplier order/)
+    } finally {
+      off()
+    }
+    cleanup()
+    const { container } = mount(job({}), 'admin')
+    await screen.findByRole('heading', { level: 1 })
+    expect(sectionIds(container)).toEqual(['stage-0', 'stage-1', 'stage-2', 'stage-3', 'stage-4', 'stage-5', 'stage-6'])
+  })
+
+  it('a finished job has no current stage, so nothing moves on a phone', async () => {
+    const off = phoneMedia()
+    try {
+      const { container } = mount(job({ stage: 'paid', stageDetail: null }), 'admin')
+      await screen.findByRole('heading', { level: 1 })
+      expect(sectionIds(container)).toEqual(['stage-0', 'stage-1', 'stage-2', 'stage-3', 'stage-4', 'stage-5', 'stage-6'])
+    } finally {
+      off()
+    }
+  })
+
+  it('a job that began as an order shows one grey row instead of two cards, and keeps the stage-0 and stage-1 ids', async () => {
+    const { container } = mount(job({ key: 'O-45', kind: 'direct', rfqId: null, orderId: 'o45', stage: 'ordered', stageDetail: 'to source' }), 'sales')
+    await screen.findByRole('heading', { level: 1 })
+    const stages = stagesOf(container)
+    expect(stages.getAllByText('No enquiry or quotation: this job started as an order')).toHaveLength(1)
+    expect(stages.queryByRole('button', { name: /^Enquiry/ })).toBeNull()
+    expect(stages.queryByRole('button', { name: /^Quotation/ })).toBeNull()
+    expect(container.querySelector('#stage-0')).not.toBeNull()
+    expect(container.querySelector('#stage-1')).not.toBeNull()
+    expect(container.querySelectorAll('[data-stages] > section')).toHaveLength(6)
+    expect(container.textContent).not.toMatch(/with no enquiry before it/)
+  })
+
+  it('on a phone a direct job still leads with its current stage, then the grey row', async () => {
+    const off = phoneMedia()
+    try {
+      const { container } = mount(job({ key: 'O-45', kind: 'direct', rfqId: null, orderId: 'o45', stage: 'ordered', stageDetail: 'to source' }), 'sales')
+      await screen.findByRole('heading', { level: 1 })
+      expect(sectionIds(container)).toEqual(['stage-3', 'stage-0', 'stage-2', 'stage-4', 'stage-5', 'stage-6'])
+    } finally {
+      off()
+    }
+  })
+})
+
+describe('Job page: owner and contact', () => {
+  it('Reassign owner is not in the header; admin finds it in More, once, on an order job and on an enquiry-only job', async () => {
+    const user = userEvent.setup()
+    for (const j of [job({}), job({ stage: 'quoted', stageDetail: 'waiting for the customer', orderId: null })]) {
+      mount(j, 'admin', c => c.setQueryData(qk.rfqs.part('r1', 'header'), { id: 'r1', number: 139, customerRef: null, receivedOn: '2026-08-12', dueOn: null, isPriority: false, quotedOn: null, closedOn: null, closeReason: null, closeNote: null, notes: null, company: { id: 'c1', name: 'Harbour Textiles Limited', country: null, createdAt: null }, site: null, contactId: null, contact: null, owner: null, state: null }))
+      await screen.findByRole('heading', { level: 1 })
+      expect(screen.queryByRole('button', { name: 'Reassign owner' })).toBeNull()
+      const more = await screen.findByRole('button', { name: 'More' })
+      await waitFor(() => expect(more).toBeEnabled())
+      await user.click(more)
+      expect(await screen.findAllByRole('menuitem', { name: 'Reassign owner' })).toHaveLength(1)
+      cleanup()
+    }
+  })
+
+  it('sales is offered no Reassign owner', async () => {
+    const user = userEvent.setup()
+    mount(job({}), 'sales')
+    await screen.findByRole('heading', { level: 1 })
+    const more = await screen.findByRole('button', { name: 'More' })
+    await waitFor(() => expect(more).toBeEnabled())
+    await user.click(more)
+    await screen.findAllByRole('menuitem')
+    expect(screen.queryByRole('menuitem', { name: 'Reassign owner' })).toBeNull()
+  })
+
+  it('an engineer has the contact (name, Call, WhatsApp) once, right after On site, and not in the side column', async () => {
+    const { container } = mount(job({}), 'engineer')
+    const onSite = await screen.findByRole('region', { name: 'On site' })
+    const panels = screen.getAllByRole('region', { name: 'Contact' })
+    expect(panels).toHaveLength(1)
+    expect(onSite.compareDocumentPosition(panels[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(panels[0].nextElementSibling).toBeNull()
+    expect(container.querySelector('aside')?.contains(panels[0])).toBe(false)
+    expect(within(panels[0]).getByText('Tariq Mehmood')).toBeInTheDocument()
+    expect(within(panels[0]).getByRole('link', { name: /^Call Tariq Mehmood/ })).toBeInTheDocument()
+    expect(within(panels[0]).getByRole('link', { name: /^WhatsApp/ })).toBeInTheDocument()
+    // the On site card no longer repeats the person
+    expect(onSite).not.toHaveTextContent('Tariq Mehmood')
+  })
+
+  it('admin and sales keep the contact in the side column', async () => {
+    const { container } = mount(job({}), 'sales')
+    await screen.findByRole('heading', { level: 1 })
+    const panels = screen.getAllByRole('region', { name: 'Contact' })
+    expect(panels).toHaveLength(1)
+    expect(container.querySelector('aside')?.contains(panels[0])).toBe(true)
   })
 })
 

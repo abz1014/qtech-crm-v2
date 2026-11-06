@@ -87,9 +87,10 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   return (
     <section aria-label="On site" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-4 md:px-5" data-engineer-actions>
       <h2 className="text-lg font-semibold">On site</h2>
-      {order?.site || order?.contact ? (
+      {/* The contact card right under this one has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
+      {!facts.contact && order?.site ? (
         <p className="text-base text-fg-2" data-testid="job-site">
-          {[order.site?.name, order.site?.address, order.contact ? [order.contact.name, order.contact.phone].filter(Boolean).join(', ') : null].filter(Boolean).join(' · ')}
+          {[order.site.name, order.site.address].filter(Boolean).join(' · ')}
         </p>
       ) : null}
       {offline ? (
