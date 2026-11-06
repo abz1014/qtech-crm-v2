@@ -5,7 +5,10 @@ name: Screen audit
 # viewport; above-the-fold and full-page screenshots, DOM metrics and axe. One job per role (each with its own stack), then one
 # job merges the parts into audit-results.json and audit-report.md, uploaded as the `screen-audit` artifact.
 # The audit code (e2e/audit, scripts/audit) always comes from the commit this workflow runs from, so any ref can be audited,
-# including one made before the audit existed. Never on push or pull request. See docs/audit/SCREEN_AUDIT.md.
+# including one made before the audit existed. Never on push or pull request.
+# The last step of the report job is the layout gate (report.mjs --gate layout): the run is red when a page scrolls twice, text hangs out
+# of a box, text sits on a control or a page scrolls sideways. The `set` input "layout" is the quick gate run: admin only, five desktop
+# widths, the money screens and dialogs, no axe and no full-page shots (about 10 minutes). Older rubric targets stay advisory. See docs/audit/SCREEN_AUDIT.md.
 on:
   workflow_dispatch:
     inputs:
@@ -21,6 +24,14 @@ on:
         description: Viewports as WIDTHxHEIGHT (space separated)
         required: false
         default: 1440x900 375x812 320x640
+      set:
+        description: "standard: the audit above. layout: admin at 768 1024 1280 1440 1600 on the layout screens and dialogs (viewports, roles and screens inputs are ignored)"
+        required: false
+        type: choice
+        options:
+          - standard
+          - layout
+        default: standard
       screens:
         description: Only visits or screens whose id matches this regular expression (empty for all)
         required: false
@@ -42,7 +53,7 @@ jobs:
     steps:
       - id: roles
         env:
-          ROLES: ${{ inputs.roles }}
+          ROLES: ${{ inputs.set == 'layout' && 'admin' || inputs.roles }}
         run: |
           json=$(python3 -c 'import json, os; r = [x for x in os.environ["ROLES"].split() if x in ("admin", "sales", "engineer")]; print(json.dumps(r or ["admin", "sales", "engineer"]))')
           echo "roles: $json"
@@ -130,8 +141,11 @@ jobs:
       - name: Screen audit (${{ matrix.role }})
         env:
           AUDIT_ROLES: ${{ matrix.role }}
-          AUDIT_VIEWPORTS: ${{ inputs.viewports }}
-          AUDIT_SCREENS: ${{ inputs.screens }}
+          AUDIT_VIEWPORTS: ${{ inputs.set == 'layout' && '768x1024 1024x768 1280x800 1440x900 1600x900' || inputs.viewports }}
+          AUDIT_SCREENS: ${{ inputs.set == 'layout' && '' || inputs.screens }}
+          AUDIT_SET: ${{ inputs.set == 'layout' && 'layout' || '' }}
+          AUDIT_AXE: ${{ inputs.set == 'layout' && '0' || '1' }}
+          AUDIT_FULL: ${{ inputs.set == 'layout' && '0' || '1' }}
           AUDIT_REF: ${{ inputs.ref }}
           AUDIT_DIR: audit-out
           # The preview server sends the production Content-Security-Policy, as in the E2E suites.
@@ -203,3 +217,7 @@ jobs:
           name: screen-audit
           path: audit-out
           retention-days: 30
+
+      # Red when the layout gate finds anything (the findings are in the log, in the summary above and in audit-report.md).
+      - name: Layout gate
+        run: node scripts/audit/report.mjs audit-out --gate layout

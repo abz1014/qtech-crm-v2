@@ -4,7 +4,40 @@ A repeatable measurement of the **real built app** (not the mockups): every main
 viewports, on the local CI stack with realistic seeded data. It exists so the UX audit (`docs/audit/ux-2026-10-19/`, 5.3/10) can be
 re-scored from numbers after the UX branches land, and compared run against run.
 
-It measures; it never fails on a finding. It is not an E2E suite and never runs on push or pull request.
+The audit measures every target and only the **layout gate** fails the run (see "What 100% means" and "The layout gate" below); the
+older rubric targets stay advisory. A failed seed also fails the run. It is not an E2E suite and never runs on push or pull request.
+
+## What 100% means
+
+A pass rate in the report is the share of captures that meet one target, nothing more. "100% of layout checks pass" means: on the screens,
+dialogs, roles and widths that were visited, in the seeded data, the checks below found nothing. It does **not** mean the app has no layout
+bug. It does not cover: any screen or dialog that is not in `screens.ts`; a width that was not run (the standard run uses 1440, 375 and 320;
+the layout set adds 768, 1024, 1280 and 1600); a state the seed does not produce (a long name, a failed request, 40 rows); the sales and
+engineer roles in the layout set; a menu or popover that was not opened; or a bug only an eye sees (a colour, a crooked alignment, an
+awkward gap). Shots are taken with scrollbars drawn (as in Windows Chrome), so a second scrollbar shows in them. Review the 1024 and 1600
+shots by eye after a run that matters: the checks are a net, not a judge.
+
+## The layout gate
+
+`node scripts/audit/report.mjs <dir> --gate layout` exits 1 when any capture fails one of these (the workflow's last step; each is
+measured in `e2e/audit/collect.ts`, `metrics.layout`, after scrolling back to the top). Everything else is advisory.
+
+| Check | Fails when |
+|---|---|
+| `docScroll` | In the shell with no dialog open: the document is taller than the window (`scrollHeight > innerHeight + 1`); or `scrollTo(0, 1e6)` moves the window; or the shell's bottom is not the window's bottom. Absolute boxes past the bottom edge are listed as the likely cause |
+| `nestedScroll` | A box inside `<main>` or a dialog scrolls up and down on its own (overflow-y auto or scroll with real overflow). Left out: `<main>`, `[data-virtual]`, `pre`, `textarea`, `select`, list boxes, menus, tooltips, popovers, `[data-scroll-ok]`, the whole of Today (its panes scroll on purpose) and a dialog's own body (the outermost scroller). No app file carries `data-scroll-ok` yet: adding it is an app change, so the exclusions are by selector here |
+| `boxOverflow` | A box with overflow visible is shorter than its content (`scrollHeight > clientHeight + 1`) and ordinary text, not positioned, clipped or scrolled by a closer box, sits more than 2 px below its bottom edge. The innermost box is reported. This is the check for a label taller than its row (the Add expenses sheet's header: 44 px of text in a 36 px box) |
+| `labelTouchesControl` | Text that overlaps an input, select, textarea or button sideways, that is not its own (not inside it, not its `<label>`), and whose bottom reaches the control's top minus 1 px (or crosses it). Left out: `pointer-events: none` text, text inside any control, `aria-hidden`, alerts, toasts and fixed layers, text positioned over a field on purpose (an adornment) |
+| `hScroll` | The older sideways-scroll check (document or `<main>` wider than the window) |
+| `unevenWrap` | **Advisory, never gates.** A label of three words or fewer wraps onto two lines beside one-line siblings in a flex or grid row |
+
+**The layout set** is the quick run for the gate: `gh workflow run screen-audit.yml --ref <branch> -f ref=<sha> -f set=layout`.
+Admin only, at 768x1024, 1024x768, 1280x800, 1440x900 and 1600x900, with `AUDIT_AXE=0` and `AUDIT_FULL=0` (about 10 minutes). It visits
+expenses, month-end, an expenses report, the Jobs list, a Job page with an order (PO issued and delivered), a company page, Today and
+Settings > categories, and these dialogs: Add expenses (the sheet), Add expense (`?add=1`), Pay a supplier, Recurring template, Issue
+quotation, Mark won (the Convert dialog), Invoice detail, Chase goods and the expenses Filter sheet. The visits are `LAYOUT_IDS` and
+the `lg-` ones in `screens.ts`; the standard run does not open them. The standard run is unchanged (its viewports, roles and
+screens) and now ends with the same gate, so it is red when it finds a layout bug.
 
 ## Run it
 
@@ -22,7 +55,7 @@ app being audited. GitHub only dispatches a workflow whose file is also on the d
 `.github/workflows/screen-audit.yml` is on `main`, `gh workflow run` answers "workflow screen-audit.yml not found on the default
 branch". The audit code (`e2e/audit/`, `scripts/audit/`) is copied onto the audited checkout, so a ref made before the audit
 existed can be audited too. Optional inputs: `roles` (default `admin sales engineer`), `viewports` (default
-`1366x768 1920x1080 375x812 320x640`) and `screens` (a regular expression over visit or screen ids, for a quick partial run, e.g.
+`1366x768 1920x1080 375x812 320x640`; the workflow's own default is `1440x900 375x812 320x640`), `set` (`standard` or `layout`) and `screens` (a regular expression over visit or screen ids, for a quick partial run, e.g.
 `-f screens='^(today|job-quoted)$'`).
 
 **Locally**, with a fresh local stack (Docker):
@@ -35,7 +68,7 @@ AUDIT_ROLES=sales npx playwright test -c e2e/audit/playwright.audit.config.ts
 node scripts/audit/report.mjs
 ```
 
-Environment: `AUDIT_ROLES`, `AUDIT_VIEWPORTS`, `AUDIT_SCREENS`, `AUDIT_DIR` (default `test-results/screen-audit`, git-ignored; the workflow uses `audit-out`), `AUDIT_AXE=0` and `AUDIT_FULL=0`
+Environment: `AUDIT_SET` (`layout` for the layout set), `AUDIT_ROLES`, `AUDIT_VIEWPORTS`, `AUDIT_SCREENS`, `AUDIT_DIR` (default `test-results/screen-audit`, git-ignored; the workflow uses `audit-out`), `AUDIT_AXE=0` and `AUDIT_FULL=0`
 (skip axe or the full-page shots for a faster run).
 
 ## What comes out
@@ -102,6 +135,8 @@ All counts are of **visible** elements: a box larger than 1 px that `checkVisibi
 | Highlighted-row contrast | Text whose nearest opaque background is a highlight (`bg-selected`, `bg-sunken` or a tone tint, read from the app's classes): 4.5:1 for a control label or a heading, 7:1 for everything else; disabled controls exempt | 0 (rubric-10) |
 | Phone text fields | On viewports under 768 px: visible inputs, textareas, selects and editable boxes whose computed text is under 16 px | 0 (rubric-10) |
 | Info only | Buttons and links (fold and page), words (fold and page), chips on the page, most table columns, page length in screens | - |
+
+Browsers run with scrollbars drawn (`ignoreDefaultArgs: ['--hide-scrollbars']` in the audit config) so the shots and widths match Windows Chrome.
 
 Known limits: a tap area widened by a pseudo-element (the InfoTip's 44 px area on touch) is measured by its box, so it reads small;
 a page whose panes scroll on their own (Today's list and pane) shows only the first screen of each pane in the full-page shot; chips

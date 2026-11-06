@@ -3,9 +3,11 @@
  * Screen audit report (docs/audit/SCREEN_AUDIT.md). Reads <dir>/parts/*.json (written by e2e/audit/screens.audit.ts), writes
  * <dir>/audit-results.json, <dir>/audit-report.md and <dir>/audit-summary.md (targets and worst lists only).
  *
- *   node scripts/audit/report.mjs [dir=test-results/screen-audit] [--ref main] [--sha 0123abc]
+ *   node scripts/audit/report.mjs [dir=test-results/screen-audit] [--ref main] [--sha 0123abc] [--gate layout]
  *
- * --ref and --sha fill in what was audited when the parts do not say (a local run).
+ * --ref and --sha fill in what was audited when the parts do not say (a local run). --gate layout makes the exit status the layout
+ * gate's verdict (docs/audit/SCREEN_AUDIT.md): 1 when a capture has a page scroll, a second scrollbar, text hanging out of a box, text on a
+ * control or a sideways scroll, or when no capture carries the layout measurements; every other target stays advisory.
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -18,6 +20,11 @@ const flag = name => {
 }
 const ref = flag('ref')
 const sha = flag('sha')
+const gate = flag('gate')
+if (gate !== undefined && gate !== 'layout') {
+  console.error(`Unknown gate "${gate}" (known: layout)`)
+  process.exit(2)
+}
 const dir = args[0] ?? 'test-results/screen-audit'
 
 const partsDir = join(dir, 'parts')
@@ -47,3 +54,19 @@ for (const t of results.targets) {
   console.log(`  ${t.label.padEnd(44)} ${String(r.passed).padStart(4)} / ${String(r.applicable).padEnd(4)} meet "${t.target}"`)
 }
 console.log(`Wrote ${join(dir, 'audit-results.json')}, audit-report.md and audit-summary.md`)
+
+if (gate === 'layout') {
+  const failed = results.gate.layout.failures
+  const measuredCount = results.captures.filter(c => c.metrics?.layout).length
+  if (!measuredCount) {
+    console.error('Layout gate: no capture carries the layout measurements (was it measured with this audit code?)')
+    process.exit(1)
+  }
+  if (failed.length) {
+    console.error(`Layout gate FAILED: ${failed.length} finding(s) in ${measuredCount} measured captures`)
+    for (const f of failed.slice(0, 40)) console.error(`  ${f.key.padEnd(20)} ${f.role} ${f.screen} ${f.viewport} (${f.value}) ${f.detail}`)
+    if (failed.length > 40) console.error(`  ... and ${failed.length - 40} more, in audit-report.md`)
+    process.exit(1)
+  }
+  console.log(`Layout gate passed: ${measuredCount} measured captures`)
+}
