@@ -380,7 +380,11 @@ const LAYOUT_VISITS: readonly Visit[] = [
   layoutDialog('lg-invoice-detail', 'Layout: Invoice detail dialog', () => '/money/gst-register', async page => {
     await page.locator('#main tbody tr, #main [role="row"]').filter({ hasText: /d/ }).first().click()
   }),
-  layoutDialog('lg-goods-chase', 'Layout: Chase goods dialog', fx => `/orders/${fx.order.multiLeg}`, page => legAction(page, /^Chase goods/, /^Chase goods$/)),
+  layoutDialog('lg-goods-chase', 'Layout: Chase goods dialog', fx => `/orders/${fx.order.multiLeg}`, async page => {
+    // Chase goods sits in the Delivery section's supplier lines, which start folded.
+    await page.getByRole('button', { name: /^Delivery/ }).filter({ visible: true }).first().click().catch(() => undefined)
+    await legAction(page, /^Chase goods/, /^Chase goods$/)
+  }),
   layoutDialog(
     'lg-filter-sheet',
     'Layout: Filter sheet (expenses)',
