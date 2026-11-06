@@ -73,7 +73,7 @@ export function paymentsTable(rows: readonly Rec[], orders: ReadonlyMap<string, 
 
 export function expensesTable(rows: readonly Rec[], categories: ReadonlyMap<string, string>, payees: ReadonlyMap<string, string>, orders: ReadonlyMap<string, string>): ExportTable {
   return {
-    headers: ['Paid on', 'Category', 'Description', 'Paid to', 'Order', 'Amount (PKR)', 'Input tax (PKR)', 'Paid via', 'For month'],
+    headers: ['Paid on', 'Category', 'Description', 'Paid to', 'Order', 'Amount (PKR)', 'GST paid on purchases (PKR)', 'Paid via', 'For month'],
     rows: rows.map(r => [txt(r.paid_on), categories.get(txt(r.category_id)) ?? '', txt(r.description), payees.get(txt(r.payee_id)) ?? '', orders.get(txt(r.order_id)) ?? '', num(r.amount_pkr), num(r.input_tax_pkr), txt(r.paid_via), txt(r.period)]),
   }
 }
@@ -142,7 +142,7 @@ export const EXPORTS: readonly ExportKind[] = [
   {
     id: 'expenses',
     label: 'Expenses',
-    about: 'Every expense with its category, amount, input tax and how it was paid.',
+    about: 'Every expense with its category, amount, GST paid on purchases and how it was paid.',
     file: 'expenses',
     run: async () => {
       const [rows, categories, payees, orderRows] = await Promise.all([
