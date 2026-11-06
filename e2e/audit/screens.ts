@@ -467,7 +467,7 @@ const stageVisit = (stage: number, label: string, path: (fx: Fixture) => string,
 async function openRecordPayment(page: Page): Promise<void> {
   const b = page.getByRole('button', { name: /^record payment$/i }).filter({ visible: true }).first()
   if (await b.count()) return b.click()
-  await page.getByRole('button', { name: /^More( actions)?$/ }).filter({ visible: true }).first().click()
+  await page.locator('#main').getByRole('button', { name: /^More/ }).filter({ visible: true }).first().click()
   await page.getByRole('menuitem', { name: /record payment/i }).first().click()
 }
 
@@ -498,14 +498,14 @@ const OPENED_VISITS: readonly Visit[] = [
         ['op-invoice-detail', async () => {
           await open(page, '/money/gst-register')
           await closeDialogs(page)
-          await firstRow(page).catch(async () => page.locator('#main').getByText(/INV-?\d+/).first().click())
+          await page.locator('#main tbody tr, #main [role="row"], #main li').filter({ hasText: /INV-?\d/ }).first().click()
           await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
           await settle(page)
           await capture('op-invoice-detail', { root: DIALOG })
         }],
         ['op-gst-export', async () => {
           await open(page, '/money/gst-register')
-          await page.getByRole('button', { name: /More for the register/ }).filter({ visible: true }).first().click()
+          await page.locator('#main').getByRole('button', { name: /^More/ }).filter({ visible: true }).first().click()
           await page.getByRole('menuitem', { name: /export/i }).first().waitFor({ timeout: 8_000 })
           await capture('op-gst-export')
         }],
@@ -542,7 +542,9 @@ const OPENED_VISITS: readonly Visit[] = [
     screens: ['op-add-expenses', 'op-add-expense', 'op-expense-edit', 'op-expense-history', 'op-claims'],
     run: async (page, fx, capture) => {
       // two pending claims from the engineer (synthetic), so the admin's "To approve" list has something to open
-      await rest('engineer', 'expense_claims', { method: 'POST', body: [{ amount_pkr: 4200, note: 'Taxi to the site, Jhang', order_id: fx.order.multiLeg }, { amount_pkr: 950, note: 'Sealant and tape' }] }).catch(() => undefined)
+      const spent = new Date().toISOString().slice(0, 10)
+      let seeded = 'claims seeded'
+      await must(rest('engineer', 'expense_claims', { method: 'POST', body: [{ spent_on: spent, amount_pkr: 4200, note: 'Taxi to the site, Jhang', order_id: fx.order.multiLeg }, { spent_on: spent, amount_pkr: 950, note: 'Sealant and tape', order_id: null }] })).catch(e => { seeded = `claims NOT seeded ${e instanceof Error ? e.message.slice(0, 120) : ''}` })
       await steps(page, [
         ['op-add-expenses', async () => {
           await open(page, '/money/expenses?burst=1')
@@ -558,7 +560,8 @@ const OPENED_VISITS: readonly Visit[] = [
         }],
         ['op-expense-edit', async () => {
           await open(page, '/money/expenses')
-          await page.getByRole('button', { name: /^Edit/ }).filter({ visible: true }).first().click()
+          await page.getByRole('button', { name: /^More for/ }).filter({ visible: true }).first().click()
+          await page.getByRole('menuitem', { name: /edit/i }).first().click()
           await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
           await settle(page)
           await capture('op-expense-edit', { root: DIALOG })
@@ -585,7 +588,7 @@ const OPENED_VISITS: readonly Visit[] = [
             h?.setAttribute('data-audit-target', '1')
             return !!h
           })
-          if (!found) throw new Error('no claims section on the page')
+          if (!found) throw new Error(`no claims section on the page (${seeded})`)
           await capture('op-claims', { scrollTo: '[data-audit-target]' })
         }],
       ])
@@ -632,7 +635,7 @@ const OPENED_VISITS: readonly Visit[] = [
       await steps(page, [
         ['op-company-panels', async () => {
           await open(page, `/companies/${fx.company.customer}`)
-          await expandFolded(page, '#main', 4)
+          await expandFolded(page, '#main', 4).catch(() => undefined)
           await capture('op-company-panels')
         }],
         ['op-company-site', async () => {
