@@ -371,6 +371,8 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const q = useAgingReport(asOf)
   const v = q.view
   useCsv(setCsv, v, v ? () => downloadReport(agingCsv(v), csvFile('overdue-by-age', ctx.month)) : null)
+  // the "Imported, no order" column is all dashes unless an imported invoice has no order: then it is left out (9 columns at 1440 scrolled sideways)
+  const hasImported = v?.rows.some(r => r.importedUnlinked) ?? false
   const columns = useMemo<Column<AgingRow>[]>(
     () => [
       {
@@ -408,6 +410,8 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             ),
         }),
       ),
+      ...(hasImported
+        ? [
       {
         id: 'imported',
         header: 'Imported, no order',
@@ -422,9 +426,11 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           ) : (
             <span className="text-fg-muted">{'—'}</span>
           ),
-      },
+      } satisfies Column<AgingRow>,
+          ]
+        : []),
     ],
-    [asOf],
+    [asOf, hasImported],
   )
   if (q.isError) return <ReportError title="Overdue by age did not load" onRetry={q.refetch} />
   if (q.isPending || !v) return <ReportLoading label="Loading overdue by age" />

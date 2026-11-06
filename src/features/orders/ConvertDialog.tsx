@@ -603,12 +603,9 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
             onCheckedChange={v => setNeedsTouched(v === true)}
           />
 
-          <div className="grid max-w-[360px] gap-[6px]">
-            <label htmlFor="convert-po" className="text-sm font-medium">
-              Customer PO number <span className="font-regular text-xs text-fg-muted">optional, add it from the order later</span>
-            </label>
-            <TextField id="convert-po" value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" />
-          </div>
+          <Field label="Customer PO number" requirement="optional" help="Add it from the order later if it has not arrived.">
+            <TextField value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" />
+          </Field>
 
           <Field
             label="Payment terms"

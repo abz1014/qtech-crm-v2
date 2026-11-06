@@ -137,7 +137,7 @@ export function GstRegisterPage() {
           </span>
         ),
       },
-      { id: 'date', header: 'Date', kind: 'date', sortable: true, value: r => r.invoiceDate, cell: r => (r.invoiceDate ? formatDay(r.invoiceDate).replace(/^\w+ /, '') : '—') },
+      { id: 'date', header: 'Date', kind: 'date', sortable: true, hideBelowLg: true, value: r => r.invoiceDate, cell: r => (r.invoiceDate ? formatDay(r.invoiceDate).replace(/^\w+ /, '') : '—') },
       {
         id: 'customer',
         header: 'Customer',
@@ -145,8 +145,10 @@ export function GstRegisterPage() {
         value: r => r.companyName,
         cell: r => (
           <span className="grid gap-px">
-            <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName ?? 'No customer'}</span>
+            <span className="min-w-[12ch] [overflow-wrap:break-word] font-medium">{r.companyName ?? 'No customer'}</span>
             {r.orderNumber !== null ? <span className="num text-xs text-fg-2">{orderRef(r.orderNumber)}</span> : null}
+            {/* below 1024 the Date column is hidden to make room for Net and GST: the date sits under the name */}
+            {r.invoiceDate ? <span className="num text-xs text-fg-2 lg:hidden">{formatDay(r.invoiceDate).replace(/^\w+ /, '')}</span> : null}
           </span>
         ),
       },
