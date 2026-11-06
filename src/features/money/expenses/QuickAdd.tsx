@@ -397,7 +397,8 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
               onChange={v => v && setPaidOn(v)}
               onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
               placeholder="e.g. 27 oct, yesterday"
-              className="h-auto min-h-touch w-[13.5rem] text-base max-md:text-base"
+              wrapperClassName="w-[13.5rem] max-w-full"
+              className="h-auto min-h-touch text-base max-md:text-base"
             />
           </div>
           <div className="grid min-w-0 gap-2 lg:flex-1">

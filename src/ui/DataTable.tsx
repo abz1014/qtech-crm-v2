@@ -493,7 +493,8 @@ function TableView<T>(props: DataTableProps<T>) {
   const colCount = columns.length + (selection ? 1 : 0)
   const alignRight = (c: Column<T>) => (c.align ?? (c.kind === 'money' || c.kind === 'num' ? 'right' : 'left')) === 'right'
   const monoCell = (c: Column<T>) => c.kind === 'money' || c.kind === 'num' || c.kind === 'date'
-  const cellBase = 'h-row whitespace-nowrap border-b border-line px-[var(--cell-px)] py-[6px] first:pl-5 last:pr-5'
+  // A cell is one line, except text that asks to break anywhere ([overflow-wrap:anywhere]): that is meant to wrap, and nowrap would make it run out of the cell.
+  const cellBase = 'h-row whitespace-nowrap [&_[class*=overflow-wrap]]:whitespace-normal border-b border-line px-[var(--cell-px)] py-[6px] first:pl-5 last:pr-5'
   const hide = (c: Column<T>) => (c.hideClass ?? (c.hideBelowLg ? 'hidden lg:table-cell' : c.hideBelowMd ? 'hidden md:table-cell' : ''))
 
   const toolbarNode = typeof toolbar === 'function' ? toolbar({ selectedCount }) : toolbar

@@ -165,7 +165,7 @@ export default function JobsListPage() {
             header: 'Customer PO',
             value: (j: JobRow) => poOf(j) ?? '',
             sortable: true,
-            hideBelowMd: true,
+            hideClass: 'hidden xl:table-cell',
             cell: (j: JobRow) => {
               const po = poOf(j)
               return po ? <span className="num whitespace-normal [overflow-wrap:anywhere]">{po}</span> : <span className="text-fg-muted">—</span>
@@ -177,7 +177,8 @@ export default function JobsListPage() {
       id: 'items',
       header: 'Items',
       value: j => j.items,
-      hideBelowMd: true,
+      // Below 1280 (tablet, a laptop with the menu open) Items and Customer PO give their room to Where it stands and Next step; the job page has both.
+      hideClass: 'hidden xl:table-cell',
       // One line (a long item list would make the row, and with it every row of a windowed list, very tall); the whole list is the title.
       cell: j => (
         <span className="line-clamp-1 min-w-[160px] max-w-[320px] whitespace-normal text-fg-2 [overflow-wrap:anywhere]" title={j.items || undefined}>
@@ -192,8 +193,8 @@ export default function JobsListPage() {
       sortable: true,
       cell: j => <StageMini job={{ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind, office: role === 'engineer' }} />,
     },
-    { id: 'next', header: 'Next step', cell: j => <NextText job={j} role={role} /> },
-    { id: 'owner', header: 'Owner', value: j => j.ownerName ?? '', sortable: true, hideBelowMd: true, cell: j => j.ownerName ?? <span className="text-fg-muted">No owner</span> },
+    { id: 'next', header: 'Next step', cell: j => <span className="block min-w-[11rem] whitespace-normal"><NextText job={j} role={role} /></span> },
+    { id: 'owner', header: 'Owner', value: j => j.ownerName ?? '', sortable: true, hideClass: 'hidden lg:table-cell', cell: j => j.ownerName ?? <span className="text-fg-muted">No owner</span> },
   ]
 
   const loading = jobs.isPending || (searching && found.isPending)

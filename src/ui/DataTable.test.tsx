@@ -448,3 +448,18 @@ describe('DataTable: wide tables (HW-36, HW-52)', () => {
     expect(el.querySelector('[data-table-root]')!.className).not.toContain('overflow-hidden')
   })
 })
+
+describe('DataTable cell wrapping', () => {
+  it('lets text that asks to break anywhere wrap, while other cells stay on one line', () => {
+    const cols: Column<Inv>[] = [
+      { id: 'no', header: 'Invoice', value: r => r.no },
+      { id: 'customer', header: 'Customer', value: r => r.customer, cell: r => <span className="min-w-0 [overflow-wrap:anywhere]">{r.customer}</span> },
+    ]
+    mount(<DataTable label="x" columns={cols} rows={INVOICES} getRowId={r => r.id} />)
+    const cell = el.querySelector('tbody td')!
+    // the cell stays nowrap; the selector that frees the wrapping span lives on the cell
+    expect(cell.className).toContain('whitespace-nowrap')
+    expect(cell.className).toContain('[&_[class*=overflow-wrap]]:whitespace-normal')
+    expect(el.querySelector('tbody td span[class*=overflow-wrap]')).not.toBeNull()
+  })
+})

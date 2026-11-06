@@ -26,10 +26,12 @@ interface DateInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'ty
   value: string | null | undefined
   onChange: (value: string) => void
   defaultToday?: boolean
+  /** Classes for the box round the field and its calendar button. A width goes here, not on the input, so the button stays inside the field. */
+  wrapperClassName?: string
 }
 
 export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInput(
-  { value, onChange, defaultToday = true, className, onBlur, onFocus, onKeyDown, disabled, readOnly, ...rest },
+  { value, onChange, defaultToday = true, className, wrapperClassName, onBlur, onFocus, onKeyDown, disabled, readOnly, ...rest },
   ref,
 ) {
   const a11y = useControlProps(rest)
@@ -87,7 +89,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
   }
 
   return (
-    <div className="relative min-w-0">
+    <div className={cn('relative min-w-0', wrapperClassName)}>
       <input
         ref={ref}
         type="text"
