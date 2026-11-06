@@ -99,7 +99,7 @@ function Chip({ label, value, selected, onPick, testId, disabled }: { label: str
 }
 
 // Each line is its own grid, so the tracks are fixed to line up; sized for 16px text (a 7-figure price, "Exempt", a 4-digit qty).
-const GRID = 'md:grid-cols-[28px_minmax(0,1.6fr)_72px_140px_108px_minmax(0,1fr)_128px]'
+const GRID = 'lg:grid-cols-[28px_minmax(0,1.6fr)_72px_140px_108px_minmax(172px,1fr)_128px]'
 
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()
@@ -532,7 +532,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             </div>
 
             <div className="rounded border">
-              <div className={`hidden gap-3 border-b bg-sunken px-3 py-2 text-xs font-medium text-fg-muted md:grid ${GRID}`} aria-hidden="true">
+              <div className={`hidden gap-3 border-b bg-sunken px-3 py-2 text-xs font-medium text-fg-muted lg:grid ${GRID}`} aria-hidden="true">
                 <span />
                 <span>Item</span>
                 <span className="text-right">Qty</span>
@@ -553,7 +553,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   const n = idx + 1
                   const nothingToQuote = !on && price === null && !hasSupplierPrice(it.id) && sold === null && quoted === null
                   return (
-                    <li key={it.id} className={`grid grid-cols-[28px_minmax(0,1fr)] gap-3 px-3 py-3 md:items-start ${GRID} ${on ? '' : 'bg-sunken'}`} data-testid={`quote-line-${n}`}>
+                    <li key={it.id} className={`grid grid-cols-[28px_minmax(0,1fr)] gap-3 px-3 py-3 lg:items-start ${GRID} ${on ? '' : 'bg-sunken'}`} data-testid={`quote-line-${n}`}>
                       <div className="pt-[1px]">
                         <Checkbox
                           aria-label={`Include item ${n}`}
@@ -563,7 +563,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                       </div>
                       <div className={`grid min-w-0 content-start gap-1 ${on ? '' : 'text-fg-muted'}`}>
                         <p className={`break-words font-medium ${on ? 'text-fg' : ''}`}>{it.description}</p>
-                        <p className="num text-xs text-fg-muted md:hidden">
+                        <p className="num text-xs text-fg-muted lg:hidden">
                           {it.qty}
                           {it.unit ? ` ${it.unit}` : ''}
                         </p>
@@ -601,13 +601,13 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           </div>
                         ) : null}
                       </div>
-                      <p className="num hidden whitespace-nowrap text-right text-sm md:block">
+                      <p className="num hidden whitespace-nowrap text-right text-sm lg:block">
                         {it.qty}
                         {it.unit ? <span className="block text-xs text-fg-muted">{it.unit}</span> : null}
                       </p>
-                      <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 max-md:col-start-2 md:contents">
-                        <div className="grid gap-1 md:block">
-                          <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
+                      <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 max-lg:col-start-2 lg:contents">
+                        <div className="grid gap-1 lg:block">
+                          <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
                             Unit price, net PKR
                           </span>
                           <NumberInput
@@ -621,16 +621,16 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                             }}
                           />
                         </div>
-                        <div className="grid gap-1 md:block">
-                          <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
+                        <div className="grid gap-1 lg:block">
+                          <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
                             GST
                           </span>
                           <Select aria-label={`GST rate, item ${n}`} value={rateOf[it.id] ?? '18'} onChange={e => setRateOf(r => ({ ...r, [it.id]: e.target.value }))} options={GST_OPTIONS} />
                         </div>
                       </div>
-                      <div className="grid min-w-0 content-start gap-2 max-md:col-start-2">
+                      <div className="grid min-w-0 content-start gap-2 max-lg:col-start-2">
                         <div className="grid gap-1">
-                          <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
+                          <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
                             Lead time we quote
                           </span>
                           <TextField
@@ -641,12 +641,12 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           />
                         </div>
                       </div>
-                      <p className="num whitespace-nowrap text-right text-sm font-medium text-fg max-md:order-2 max-md:col-start-2 md:col-start-7 md:row-start-1 md:pt-2">
+                      <p className="num whitespace-nowrap text-right text-sm font-medium text-fg max-lg:order-2 max-lg:col-start-2 lg:col-start-7 lg:row-start-1 lg:pt-2">
                         <span className="sr-only">{`Line net, item ${n}: `}</span>
                         {on && a.priced ? `PKR ${formatPaisa(a.net, 'auto')}` : on ? 'No price yet' : 'Not included'}
                       </p>
                       {/* What suppliers said about lead time: its own full-width line under the row, not a sliver in the narrow column. */}
-                      <LeadHint item={it} inquiries={inquiries} className="max-md:col-start-2 md:col-[2/-1]" />
+                      <LeadHint item={it} inquiries={inquiries} className="max-lg:col-start-2 lg:col-[2/-1]" />
                     </li>
                   )
                 })}

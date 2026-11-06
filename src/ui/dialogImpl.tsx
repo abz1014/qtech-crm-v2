@@ -157,7 +157,7 @@ export function DialogContentImpl({
             data-dialog-body
             className={cn(
               // Reading text is 16 px (text-base, owner decision 2026-10-19); controls inside set their own size.
-              'grid min-h-0 content-start gap-4 overflow-y-auto px-5 pb-5 pt-4 text-base text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch]',
+              'grid min-h-0 grid-cols-[minmax(0,1fr)] content-start gap-4 overflow-y-auto px-5 pb-5 pt-4 text-base text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch]',
               busy && 'opacity-80',
             )}
           >
