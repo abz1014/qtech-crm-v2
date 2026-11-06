@@ -56,7 +56,7 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
     )
   }
   return (
-    <header data-mobile-bar="default" data-surface="navy" className="flex h-topbar items-center gap-1 bg-chrome pl-4 pr-2 text-fg md:hidden max-[399px]:pl-3">
+    <header data-mobile-bar="default" data-surface="navy" className="flex h-topbar items-center gap-1 bg-chrome pl-4 pr-2 text-fg md:hidden max-[399px]:gap-0 max-[399px]:pl-3 max-[399px]:pr-1">
       <NavLink to="/" aria-label="Q-Tech, home" className="mr-2 shrink-0 rounded max-[399px]:hidden">
         <BrandImage name="logo-mark" alt="" width={28} height={28} className="block size-[28px]" />
       </NavLink>

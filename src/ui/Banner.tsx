@@ -32,9 +32,9 @@ interface BannerProps {
 export function Banner({ tone = 'info', title, children, action, icon, className }: BannerProps) {
   const t = TONES[tone]
   return (
-    <div role={t.live} className={cn('flex items-start gap-3 rounded-row border px-4 py-3 text-sm', t.box, className)}>
+    <div role={t.live} className={cn('flex flex-wrap items-start gap-3 rounded-row border px-4 py-3 text-sm', t.box, className)}>
       <Icon icon={icon ?? t.icon} className={cn('mt-[2px]', t.glyph)} />
-      <div className="grid min-w-0 flex-1 gap-[2px] text-pretty">
+      <div className="grid min-w-[12rem] flex-1 gap-[2px] text-pretty">
         <p className="font-semibold">{title}</p>
         {children ? <p className="text-fg-2">{children}</p> : null}
       </div>

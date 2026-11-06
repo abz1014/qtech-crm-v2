@@ -37,7 +37,7 @@ import { useServiceReport } from '@/features/orders/visits/pdf/useServiceReport'
  * done. Admin and sales add, change and remove visits; an engineer changes the ones that are theirs and marks them done. Every role can
  * download the service report of a visit (it carries no price). Nothing here is required but the type, which starts as Installation.
  */
-export function VisitsSection({ order, engineers, isEngineer, canEdit }: { order: OrderHeader; engineers: readonly PersonRow[]; isEngineer: boolean; canEdit: boolean }) {
+export function VisitsSection({ order, engineers, isEngineer, canEdit, card = false }: { order: OrderHeader; engineers: readonly PersonRow[]; isEngineer: boolean; canEdit: boolean; card?: boolean }) {
   const session = useSession()
   const visits = useOrderVisits(order.id)
   const [editing, setEditing] = useState<VisitRow | 'new' | null>(null)
@@ -47,16 +47,23 @@ export function VisitsSection({ order, engineers, isEngineer, canEdit }: { order
   const rows = visits.data ?? []
   const today = businessToday()
 
+  // card: the engineer's job page draws it as its own panel, like Contact and Delivery challans; inside the commissioning panel it stays a plain section.
+  const Head = card ? 'h2' : 'h3'
   return (
-    <div className="grid gap-3 border-t pt-4" data-testid="visits">
-      <div className="flex flex-wrap items-center gap-3">
-        <h3 className="text-sm font-semibold">Visits</h3>
+    <section
+      aria-label={card ? 'Visits' : undefined}
+      className={card ? 'min-w-0 rounded-panel border bg-surface' : 'grid gap-3 border-t pt-4'}
+      data-testid="visits"
+    >
+      <div className={card ? 'flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-5' : 'flex flex-wrap items-center gap-3'}>
+        <Head className={card ? 'text-base font-semibold' : 'text-sm font-semibold'}>Visits</Head>
         {office && canEdit ? (
           <Button size="sm" variant="quiet" icon={Plus} className="ml-auto" onClick={() => setEditing('new')}>
             Add visit
           </Button>
         ) : null}
       </div>
+      <div className={card ? 'grid gap-3 px-4 py-4 md:px-5' : 'contents'}>
       {visits.isError ? <p className="text-sm text-fg-muted">The visits did not load. Reload the page to try again.</p> : null}
       {!visits.isError && !visits.isLoading && rows.length === 0 ? <p className="text-sm text-fg-muted">No visits yet.</p> : null}
       {rows.length > 0 ? (
@@ -67,7 +74,8 @@ export function VisitsSection({ order, engineers, isEngineer, canEdit }: { order
         </ul>
       ) : null}
       {editing ? <VisitEditDialog order={order} visit={editing === 'new' ? null : editing} engineers={engineers} office={office && !isEngineer} onClose={() => setEditing(null)} /> : null}
-    </div>
+      </div>
+    </section>
   )
 }
 
@@ -116,11 +124,11 @@ function VisitRowItem({ order, visit, state, mayEdit, onEdit }: { order: OrderHe
           </Button>
         ) : null}
         {mayEdit ? (
-          <Button size="sm" variant="quiet" icon={Pencil} onClick={onEdit}>
+          <Button size="sm" icon={Pencil} onClick={onEdit}>
             Edit visit
           </Button>
         ) : null}
-        <Button size="sm" variant="quiet" icon={FileDown} onClick={() => void report.download()} busy={report.pending} busyLabel="Preparing">
+        <Button size="sm" icon={FileDown} onClick={() => void report.download()} busy={report.pending} busyLabel="Preparing">
           Service report
         </Button>
       </div>

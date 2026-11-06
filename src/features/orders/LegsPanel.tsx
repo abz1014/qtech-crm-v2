@@ -238,7 +238,7 @@ function Leg({
     <span className="inline-flex flex-wrap items-baseline gap-x-1">
       <span className="text-fg-muted">{label}</span>
       <TapDate value={dates[field]} label={`${label} date, ${name}`} today={today} disabled={!canEdit} onSave={actions.saveDate(field, label)} />
-      {hint ? <span className="text-xs text-fg-muted">{hint}</span> : null}
+      {hint ? <span className="basis-full text-xs text-fg-muted">{hint}</span> : null}
     </span>
   )
   const expectedHint = leg.expectedOn
@@ -278,14 +278,16 @@ function Leg({
           className="flex min-h-[2.75rem] w-full flex-wrap items-center gap-x-2 gap-y-1 rounded text-left hover:bg-sunken"
         >
           <span className="min-w-0 break-words font-medium">{name}</span>
+          {/* One item: the dot sits only between "Delivered" and the amount, so a wrapped line never starts with it. */}
           <span data-testid={`leg-${letter}-state`} className="text-fg-2">
-            <span className="text-fg-muted">·</span> Delivered{leg.deliveredOn ? ` ${formatShortDate(leg.deliveredOn, today)}` : ''}
+            Delivered{leg.deliveredOn ? ` ${formatShortDate(leg.deliveredOn, today)}` : ''}
+            {money && total.priced > 0 ? (
+              <span className="num">
+                {' '}
+                <span className="text-fg-muted">·</span> {`${ccy ?? ''} ${formatAmount(total.total)}`.trim()}
+              </span>
+            ) : null}
           </span>
-          {money && total.priced > 0 ? (
-            <span className="num text-fg-2">
-              <span className="text-fg-muted">·</span> {`${ccy ?? ''} ${formatAmount(total.total)}`.trim()}
-            </span>
-          ) : null}
           <ChevronDown size={16} aria-hidden="true" className="ml-auto shrink-0 text-fg-muted" />
         </button>
       </li>
@@ -320,7 +322,7 @@ function Leg({
           ) : null}
         </div>
         {money && po?.id ? <LastChanged table="purchase_orders" id={po.id} className="text-base text-fg-2" /> : null}
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm" role="group" aria-label={`Dates, ${name}`}>
+        <div className="grid grid-cols-2 items-baseline gap-x-4 gap-y-2 text-sm sm:flex sm:flex-wrap sm:gap-y-1" role="group" aria-label={`Dates, ${name}`}>
           {date('Placed', 'placedOn')}
           {date('Expected', 'expectedOn', expectedHint)}
           {date('Delivered', 'deliveredOn')}
@@ -356,7 +358,7 @@ function Leg({
         ) : null}
       </div>
 
-      <div className="grid min-w-0 content-start justify-items-start gap-2 lg:justify-items-end">
+      <div className="flex min-w-0 flex-wrap content-start items-start justify-between gap-x-3 gap-y-2 lg:grid lg:justify-items-end">
         {money ? (
           <div className="grid gap-px lg:justify-items-end">
             <span className="num text-base font-medium" data-testid={`leg-${letter}-total`}>
@@ -368,7 +370,7 @@ function Leg({
           </div>
         ) : null}
         {canEdit ? (
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          <div className="ml-auto flex flex-wrap items-center gap-2 lg:justify-end">
             {stamp && !placeInMenu && (part === 'all' || (part === 'order' ? stamp.step === 'place' : stamp.step !== 'place')) ? (
               <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
                 {stampLabel}

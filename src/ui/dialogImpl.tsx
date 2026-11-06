@@ -141,7 +141,7 @@ export function DialogContentImpl({
             ) : null}
             <div className="grid min-w-0 flex-1 gap-[2px]">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <RadixDialog.Title className="text-xl font-heavy">{title}</RadixDialog.Title>
+                <RadixDialog.Title className="text-xl font-heavy max-[359px]:text-lg">{title}</RadixDialog.Title>
                 {titleChip}
               </div>
               {context ? (
