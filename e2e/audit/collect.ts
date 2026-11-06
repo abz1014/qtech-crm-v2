@@ -803,7 +803,7 @@ export function collect(opts: CollectOptions): Metrics {
     const keepY = shellMain?.scrollTop ?? 0
     // Every layout number is taken with the document at the top.
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
-    const POPOVER = '[role="menu"], [role="listbox"], [role="tooltip"], [data-radix-popper-content-wrapper], [role="dialog"]:not([aria-modal="true"])'
+    const POPOVER = '[role="menu"], [role="listbox"], [role="tooltip"], [data-radix-popper-content-wrapper]'
     const pos = (el: Element) => style(el).position
 
     // docScroll: the document must never scroll; the app scrolls <main> only.
