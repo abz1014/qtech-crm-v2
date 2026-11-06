@@ -143,7 +143,7 @@ function ItemCell({ r }: { r: QuoteRow }) {
     <span className="grid min-w-0 gap-1">
       <span className="line-clamp-2 break-words font-medium" title={r.item}>
         {r.item}
-        {r.qty ? <span className="num ml-1 font-regular text-fg-muted">{r.qty.startsWith('+') ? r.qty : `×${r.qty}`}</span> : null}
+        {r.qty ? <span className={cn('num ml-1 font-regular text-fg-muted', !r.qty.startsWith('+') && 'whitespace-nowrap')}>{r.qty.startsWith('+') ? r.qty : `×${r.qty.replace(' ', '\u00A0')}`}</span> : null}
       </span>
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
         <span className="num">{r.dateText}</span>

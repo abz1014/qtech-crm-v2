@@ -121,7 +121,7 @@ describe('old addresses keep working', () => {
   it('a month-end report address opens the same report under Reports, with the month kept', async () => {
     at(`/money/month-end/pnl?month=${MONTH}`)
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/pnl?month=${MONTH}`))
-    expect(await screen.findByRole('heading', { name: 'Profit and loss', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByTestId('report-name')).toHaveTextContent('Profit and loss')
     // a report lights the Reports tab (round 3, M3), and the select says which report this is
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByTestId('report-picker')).toHaveValue('pnl')
@@ -249,7 +249,7 @@ describe('Reports view (one report at a time)', () => {
   it('admin: opens Profit and loss for the month; the select offers every report; Export CSV is the one green button', async () => {
     at(`/money/reports?month=${MONTH}`)
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/pnl?month=${MONTH}`))
-    expect(await screen.findByRole('heading', { name: 'Profit and loss', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByTestId('report-name')).toHaveTextContent('Profit and loss')
     const picker = screen.getByTestId('report-picker')
     expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual([
       'Profit and loss',
@@ -268,7 +268,7 @@ describe('Reports view (one report at a time)', () => {
   it('sales: only the enquiry reports, and no money report is requested', async () => {
     const db = at('/money/reports', 'sales')
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/reports/enquiries'))
-    expect(await screen.findByRole('heading', { name: 'Enquiries and customers', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByTestId('report-name')).toHaveTextContent('Enquiries and customers')
     expect(screen.queryByTestId('report-picker')).toBeNull()
     const targets = db.calls.map(c => c.target)
     for (const t of ['v_month_pnl', 'v_payment_net', 'v_month_expense_category', 'expenses', 'expense_groups', 'expense_categories', 'rpc:aging_as_of', 'rpc:payables_as_of', 'v_gst_month', 'v_month_team', 'v_order_money', 'rpc:month_end_status'])
@@ -280,7 +280,7 @@ describe('Expenses report (2026-10-22)', () => {
   it('the old Expenses by category address opens the Expenses report for that month', async () => {
     at(`/money/reports/categories?month=${MONTH}`)
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/expenses?by=month&period=${MONTH}`))
-    expect(await screen.findByRole('heading', { name: 'Expenses', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByTestId('report-name')).toHaveTextContent('Expenses')
     expect(screen.getByTestId('report-picker')).toHaveValue('expenses')
   })
 

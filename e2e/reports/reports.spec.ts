@@ -72,10 +72,10 @@ for (const role of ['admin', 'sales'] as const) {
       await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Reports' })).toHaveCount(0)
       await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
       if (role === 'admin') {
-        await expect(page.getByRole('heading', { name: 'Profit and loss', level: 1 })).toBeVisible()
+        await expect(page.getByTestId('report-name')).toHaveText('Profit and loss')
         await page.getByTestId('report-picker').selectOption('enquiries')
       }
-      await expect(page.getByRole('heading', { name: 'Enquiries and customers', level: 1 })).toBeVisible()
+      await expect(page.getByTestId('report-name')).toHaveText('Enquiries and customers')
       await expect(page.getByRole('region', { name: 'At a glance' })).toContainText('Win rate')
       for (const q of QUESTIONS) await expect(page.getByText(q, { exact: true })).toBeVisible()
       await openAll(page)

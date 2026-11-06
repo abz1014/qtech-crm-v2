@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 import { Check, Download, Plus, Truck } from 'lucide-react'
 import { generateCSV, downloadCSV } from '@/lib/csvExport'
 import { businessToday } from '@/lib/dates'
@@ -253,7 +254,7 @@ export function GstRegisterPage() {
       <TableFilter label="Search invoices" hint="Finds an invoice by invoice number, customer or order number." value={search} onChange={setSearch} className="max-sm:col-span-2" />
       <span className="flex-1 max-sm:hidden" />
       {/* A phone gets the same three views as a select: a strip of three would run off a 320 px screen. */}
-      <label className="grid min-w-0 sm:hidden">
+      <label className={cn('grid min-w-0 sm:hidden', !isAdmin && 'col-span-2')}>
         <span className="sr-only">Show</span>
         <Select data-testid="register-view" value={view} onChange={e => setView(e.target.value as RegisterView)} options={viewOptions.map(o => ({ value: o.value, label: o.needs ? `${o.label} (${o.needs})` : o.label }))} />
       </label>
