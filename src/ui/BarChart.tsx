@@ -9,7 +9,7 @@ import { Button } from '@/ui/Button'
  * the same figures are always available as a real table behind the "Show as a table" button, so nothing is only in the picture.
  * Nothing is drawn in the SVG itself except bars and one dashed reference line: every word on screen (the labels at both ends,
  * the highest value, the legend) is ordinary page text at 16px or more, so it never shrinks with the picture on a phone.
- * Bars are told apart by shade and by the legend, not by colour alone.
+ * Bars are told apart by colour (dark, then brand green, 3:1 or more against the page) and by the legend.
  */
 export interface BarSeries {
   name: string
@@ -38,7 +38,7 @@ const W = 720
 const H = 220
 const GAP = 4
 
-const SHADES = ['fill-fg', 'fill-fg-muted'] as const
+const SHADES = ['fill-fg', 'fill-brand-green'] as const
 
 export function BarChart({ labels, series, summary, format, reference, tableCaption, tableOpen = false, className }: BarChartProps) {
   const [open, setOpen] = useState(tableOpen)
@@ -58,7 +58,7 @@ export function BarChart({ labels, series, summary, format, reference, tableCapt
         <ul className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legend">
           {series.map((s, i) => (
             <li key={s.name} className="inline-flex items-center gap-2">
-              <i aria-hidden="true" className={cn('inline-block size-4 rounded-[2px]', i === 0 ? 'bg-fg' : 'bg-fg-muted')} />
+              <i aria-hidden="true" className={cn('inline-block size-4 rounded-[2px]', i === 0 ? 'bg-fg' : 'bg-brand-green')} />
               {s.name}
             </li>
           ))}

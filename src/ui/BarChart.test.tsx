@@ -66,4 +66,16 @@ describe('BarChart', () => {
     rerender(<BarChart labels={months(3)} series={[{ name: 'A', values: [100, -50, 0] }]} summary="s" format={fmt} tableCaption="c" />)
     for (const r of Array.from(container.querySelectorAll('svg rect'))) expect(Number(r.getAttribute('height'))).toBeGreaterThanOrEqual(0)
   })
+
+  it('draws the second series in a different colour from the first, in the bars and in the legend', () => {
+    const { container } = render(
+      <BarChart labels={months(2)} series={[{ name: 'A', values: [1, 2] }, { name: 'B', values: [2, 3] }]} summary="s" format={fmt} tableCaption="c" />,
+    )
+    const rects = Array.from(container.querySelectorAll('svg rect'))
+    expect(rects[0].getAttribute('class')).toBe('fill-fg')
+    expect(rects[1].getAttribute('class')).toBe('fill-brand-green')
+    const swatches = within(screen.getByRole('list', { name: 'Legend' })).getAllByRole('listitem').map(li => li.querySelector('i')?.className ?? '')
+    expect(swatches[0]).toContain('bg-fg')
+    expect(swatches[1]).toContain('bg-brand-green')
+  })
 })
