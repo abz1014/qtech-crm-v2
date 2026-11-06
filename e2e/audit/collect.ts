@@ -933,12 +933,22 @@ export function collect(opts: CollectOptions): Metrics {
         const te = tb.el as HTMLElement
         if (style(te).pointerEvents === 'none' || te.closest('[role="status"], [role="alert"], [data-sonner-toast], [aria-hidden="true"], button, input, select, textarea, [role="button"], [role="combobox"], [role="tab"], [role="option"], [role="menuitem"]')) continue
         if (tb.layer && pos(tb.layer) === 'fixed') continue
+        // Painted off the screen sideways or above the page (a hidden panel parked at a negative offset): nothing is seen to touch.
+        if (tb.b.r <= 0 || tb.b.l >= window.innerWidth || tb.b.b <= 0) continue
         for (const c of controls) {
           const cr = rect(c)
-          if (Math.min(tb.b.r, cr.right) - Math.max(tb.b.l, cr.left) <= 1) continue
+          const hOver = Math.min(tb.b.r, cr.right) - Math.max(tb.b.l, cr.left)
+          if (hOver <= 1) continue
+          if (cr.right <= 0 || cr.left >= window.innerWidth || cr.bottom <= 0) continue
+          // A control on a fixed or sticky layer (bottom tabs, a sticky action bar, the top bar, a toast) is drawn over the page by design:
+          // text on another layer (scrolled under it) is not a collision. Text and control on the same layer still are.
+          if (layerOf(c) !== tb.layer) continue
           // text above or inside the control, never below it
           if (!(tb.b.b > cr.top - 1 && tb.b.t < cr.bottom - 1)) continue
           if (c.contains(te) || te.contains(c)) continue
+          // A small button that sits beside the text (the "i" next to a title) and only grazes its line box: not a label over a field.
+          const vOver = Math.min(tb.b.b, cr.bottom) - Math.max(tb.b.t, cr.top)
+          if (cr.width <= 48 && cr.height <= 48 && hOver <= 8 && vOver <= 8) continue
           const lab = te.closest('label')
           if (lab && (lab.control === c || lab.contains(c))) continue
           // an adornment drawn on purpose over the field (a unit inside the box): positioned, between the text and the common ancestor
