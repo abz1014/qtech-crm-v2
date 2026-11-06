@@ -245,6 +245,8 @@ export const BOOKS = {
     owe: (month: string) => `/money/month-end/owe?month=${month}`,
     /** "Close October": one month at a time (owner decision 2026-10-22); there is no "Close through". */
     closeButton: (monthName: string) => new RegExp(`^Close ${monthName}$`),
+    /** "Go to September 2026": a month locks only while it is on screen (owner decision 2026-11-06), so with an older month open the button moves there. */
+    goToButton: (label: string) => `Go to ${label}`,
     closeDialog: (label: string) => `Close ${label}?`,
     closedBar: (label: string) => `${label} is closed.`,
     reopenButton: (label: string) => `Reopen ${label}`,

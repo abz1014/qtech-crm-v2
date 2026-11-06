@@ -38,17 +38,11 @@ function setup(month: string, moneyMonths: string[]) {
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
 describe('Close month: one month at a time', () => {
-  it('with older months open, it names and closes only the oldest one', async () => {
+  it('with older months open, the dialog cannot open for the month on screen: nothing is shown and nothing is closed', async () => {
     const db = setup('2026-09', [...history, '2026-09'])
-    const dialog = await screen.findByRole('dialog', { name: 'Close January 2024?' })
-    expect(within(dialog).getByText(/This closes January 2024 only/)).toBeInTheDocument()
-    expect(dialog).not.toHaveTextContent(/through/i)
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Close January 2024' }))
-    await waitFor(() => expect(db.calls.some(c => c.verb === 'rpc' && c.target === 'rpc:close_month')).toBe(true))
-    const closes = db.calls.filter(c => c.target.startsWith('rpc:close_'))
-    expect(closes).toHaveLength(1)
-    expect(closes[0].target).toBe('rpc:close_month')
-    expect(opArgs(closes[0], 'args')).toEqual([{ p_month: '2024-01-01' }])
+    await new Promise(r => setTimeout(r, 50))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(db.calls.filter(c => c.target.startsWith('rpc:close_'))).toHaveLength(0)
   })
 
   it('with nothing older open, it closes the month on screen', async () => {
