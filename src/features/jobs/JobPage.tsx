@@ -225,16 +225,11 @@ function JobView({ facts }: { facts: JobFacts }) {
         <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} />
       ) : null}
 
+      {/* An engineer's contact (name, Call, WhatsApp) sits right under the On site buttons, above the visits and the delivery challans; the side column does not repeat it. */}
       {role === 'engineer' ? (
-        <Suspense fallback={null}>
-          <EngineerActions facts={facts} data={data} />
+        <Suspense fallback={<div className="mt-4"><ContactPanel facts={facts} /></div>}>
+          <EngineerActions facts={facts} data={data} contact={<ContactPanel facts={facts} />} />
         </Suspense>
-      ) : null}
-      {/* An engineer's contact (name, Call, WhatsApp) sits right under On site; the side column does not repeat it. */}
-      {role === 'engineer' ? (
-        <div className="mt-4">
-          <ContactPanel facts={facts} />
-        </div>
       ) : null}
       {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Camera, CloudOff, HardHat, Truck } from 'lucide-react'
@@ -58,7 +58,8 @@ function InstalledToday({ order, variant, offline }: { order: OrderHeader; varia
   )
 }
 
-export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobData }) {
+/** `contact` is the Contact panel: it sits right under the On site buttons, above the visits and the delivery challans, so Call and WhatsApp are on the first screen. */
+export function EngineerActions({ facts, data, contact }: { facts: JobFacts; data: JobData; contact?: ReactNode }) {
   const order = data.order.data ?? null
   const legs = data.legs.data ?? []
   const online = useOnline()
@@ -75,7 +76,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
     // once, on arrival
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  if (!facts.job.orderId && !facts.job.rfqId) return null
+  if (!facts.job.orderId && !facts.job.rfqId) return contact ? <div className="mt-4">{contact}</div> : null
 
   const cancelled = order?.cancelledOn != null
   const toDeliver = order && !cancelled ? legs.filter(l => l.placedOn && !l.deliveredOn) : []
@@ -85,58 +86,65 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   const photoVariant = hasDelivered || canInstall ? 'secondary' : 'primary'
 
   return (
-    <section aria-label="On site" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-4 md:px-5" data-engineer-actions>
-      <h2 className="text-lg font-semibold">On site</h2>
-      {/* The contact card right under this one has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
-      {!facts.contact && order?.site ? (
-        <p className="text-base text-fg-2" data-testid="job-site">
-          {[order.site.name, order.site.address].filter(Boolean).join(' · ')}
-        </p>
-      ) : null}
-      {offline ? (
-        <p role="status" className="flex items-center gap-2 rounded border border-dashed border-line-strong px-3 py-3 text-base text-fg-2" data-offline>
-          <CloudOff aria-hidden="true" className="size-5 shrink-0" />
-          {OFFLINE_TEXT}
-        </p>
-      ) : null}
-      <div className="grid gap-3 md:grid-cols-3">
-        {toDeliver.map((l, n) => (
-          <LegDelivered
-            key={l.id}
-            order={order as OrderHeader}
-            leg={l}
+    <>
+      <section aria-label="On site" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-4 md:px-5" data-engineer-actions>
+        <h2 className="text-lg font-semibold">On site</h2>
+        {/* The contact card right under this one has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
+        {!facts.contact && order?.site ? (
+          <p className="text-base text-fg-2" data-testid="job-site">
+            {[order.site.name, order.site.address].filter(Boolean).join(' · ')}
+          </p>
+        ) : null}
+        {offline ? (
+          <p role="status" className="flex items-center gap-2 rounded border border-dashed border-line-strong px-3 py-3 text-base text-fg-2" data-offline>
+            <CloudOff aria-hidden="true" className="size-5 shrink-0" />
+            {OFFLINE_TEXT}
+          </p>
+        ) : null}
+        <div className="grid gap-3 md:grid-cols-3">
+          {toDeliver.map((l, n) => (
+            <LegDelivered
+              key={l.id}
+              order={order as OrderHeader}
+              leg={l}
+              offline={offline}
+              variant={n === 0 ? 'primary' : 'secondary'}
+              label={toDeliver.length > 1 ? `Delivered today, ${l.supplierName}` : 'Delivered today'}
+            />
+          ))}
+          {canInstall ? <InstalledToday order={order as OrderHeader} variant={hasDelivered ? 'secondary' : 'primary'} offline={offline} /> : null}
+          <Button size="lg" variant={photoVariant} icon={Camera} className="w-full justify-center" onClick={() => setAdding(true)}>
+            Add photo or note
+          </Button>
+        </div>
+        {order || facts.job.orderId ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {order && order.needsCommissioning && !order.doneOn && !cancelled ? <VisitButton order={order} /> : null}
+          </div>
+        ) : null}
+        {adding && sharedItem.state.status !== 'loading' ? (
+          <PhotoOrNote
+            facts={facts}
+            order={order}
             offline={offline}
-            variant={n === 0 ? 'primary' : 'secondary'}
-            label={toDeliver.length > 1 ? `Delivered today, ${l.supplierName}` : 'Delivered today'}
+            shared={sharedItem.state.status === 'ready' ? sharedItem.state.shared : null}
+            sharedGone={sharedItem.state.status === 'gone'}
+            onSharedDone={sharedItem.clear}
+            onClose={() => {
+              if (sharedItem.state.status === 'gone') sharedItem.clear()
+              setAdding(false)
+            }}
           />
-        ))}
-        {canInstall ? <InstalledToday order={order as OrderHeader} variant={hasDelivered ? 'secondary' : 'primary'} offline={offline} /> : null}
-        <Button size="lg" variant={photoVariant} icon={Camera} className="w-full justify-center" onClick={() => setAdding(true)}>
-          Add photo or note
-        </Button>
-      </div>
-      {order || facts.job.orderId ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {order && order.needsCommissioning && !order.doneOn && !cancelled ? <VisitButton order={order} /> : null}
+        ) : null}
+      </section>
+      {contact ? <div className="mt-4">{contact}</div> : null}
+      {(order && order.needsCommissioning && !cancelled) || (order && data.orderItems.data) ? (
+        <div className="mt-4 grid gap-4">
+          {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit /> : null}
+          {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
         </div>
       ) : null}
-      {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit /> : null}
-      {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
-      {adding && sharedItem.state.status !== 'loading' ? (
-        <PhotoOrNote
-          facts={facts}
-          order={order}
-          offline={offline}
-          shared={sharedItem.state.status === 'ready' ? sharedItem.state.shared : null}
-          sharedGone={sharedItem.state.status === 'gone'}
-          onSharedDone={sharedItem.clear}
-          onClose={() => {
-            if (sharedItem.state.status === 'gone') sharedItem.clear()
-            setAdding(false)
-          }}
-        />
-      ) : null}
-    </section>
+    </>
   )
 }
 

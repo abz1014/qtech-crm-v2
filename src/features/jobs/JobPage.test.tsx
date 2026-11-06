@@ -293,6 +293,17 @@ describe('Job page: owner and contact', () => {
     expect(onSite).not.toHaveTextContent('Tariq Mehmood')
   })
 
+  it('an engineer reaches Call and WhatsApp before the delivery challans: On site, then Contact, then Delivery challans', async () => {
+    mount(job({}), 'engineer')
+    const onSite = await screen.findByRole('region', { name: 'On site' })
+    const contact = screen.getByRole('region', { name: 'Contact' })
+    const challans = await screen.findByRole('region', { name: 'Delivery challans' })
+    const follows = (a: HTMLElement, b: HTMLElement) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(follows(onSite, contact)).toBe(true)
+    expect(follows(contact, challans)).toBe(true)
+    expect(onSite.contains(challans)).toBe(false)
+  })
+
   it('admin and sales keep the contact in the side column', async () => {
     const { container } = mount(job({}), 'sales')
     await screen.findByRole('heading', { level: 1 })
