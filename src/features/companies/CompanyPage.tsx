@@ -44,6 +44,7 @@ import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import { useDeleteCompanyFlow } from '@/features/companies/deleteFlow'
 import { NextStepBox } from '@/ui/NextStepBox'
+import { NoPrimary } from '@/ui/NoPrimary'
 import { MenuItem } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
 import { StickyActionBar } from '@/ui/StickyActionBar'
@@ -63,6 +64,9 @@ import { useToast } from '@/ui/useToast'
  * New RFQ asking them for prices on a company that is also a customer, Merge for admin). The page's one green action
  * is New RFQ, in the shared NextStepBox under the title (a bar at the bottom on a phone): with this company as the
  * customer, or for a supplier-only company with it already chosen as a supplier to ask (/rfqs/new?supplier=).
+ *
+ * An engineer sees neither New RFQ (the Next step box, the phone bar, the More item) nor the remove-contact button (owner,
+ * 2026-11-06; screen only: the database still allows both). Adding and editing contacts stay.
  *
  * Access (DATA_MODEL section 10): everyone signed in reads and edits the company, its sites, contacts and
  * brands. The money panel and the merge action are admin only; they are not rendered for anyone else, and
@@ -155,6 +159,8 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const session = useSession()
   const { toast } = useToast()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
+  // Owner decision 2026-11-06: an engineer starts no RFQ and removes no contact from this page. Screen only; the database still allows both.
+  const isEngineer = session.status === 'signed-in' && session.user.role === 'engineer'
 
   const sites = useCompanySites(company.id)
   const contacts = useCompanyContacts(company.id)
@@ -238,7 +244,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
       <MenuItem icon={Link2} onClick={() => void copyLink()}>
         Copy link to this company
       </MenuItem>
-      {supplierSide && !supplierOnly ? (
+      {supplierSide && !supplierOnly && !isEngineer ? (
         <MenuItem icon={FilePlus2} onClick={askForPrices}>
           New RFQ asking them for prices
         </MenuItem>
@@ -267,6 +273,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
       sites={sites.data}
       loading={contacts.isPending}
       error={contacts.isError}
+      canRemove={!isEngineer}
       onAdd={() => setDialog('contact')}
       onEdit={c => {
         setEditContact(c)
@@ -378,13 +385,17 @@ function Loaded({ company }: { company: CompanyDetail }) {
             </p>
           ) : null}
           <LastChanged table="companies" id={company.id} className="mt-2 text-base text-fg-2" />
-          <NextStepBox
-            tone="quiet"
-            text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
-            action={phone ? undefined : primary}
-          />
+          {isEngineer ? (
+            <NoPrimary />
+          ) : (
+            <NextStepBox
+              tone="quiet"
+              text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
+              action={phone ? undefined : primary}
+            />
+          )}
         </DetailHeader>
-        {phone ? <StickyActionBar label="Company actions" primary={primary} /> : null}
+        {phone && !isEngineer ? <StickyActionBar label="Company actions" primary={primary} /> : null}
         {recordHistory.node}
 
         {wide ? (
@@ -442,6 +453,7 @@ function ContactsPanel({
   sites,
   loading,
   error,
+  canRemove,
   onAdd,
   onEdit,
 }: {
@@ -450,6 +462,8 @@ function ContactsPanel({
   sites: SiteRow[] | undefined
   loading: boolean
   error: boolean
+  /** False for an engineer: the page offers no way to delete a contact (screen only; the database still allows it). */
+  canRemove: boolean
   onAdd: () => void
   onEdit: (contact: ContactRow) => void
 }) {
@@ -513,17 +527,19 @@ function ContactsPanel({
                   <span className="min-w-0 break-words font-medium">{c.name}</span>
                   <span className="-my-1 flex shrink-0 items-center">
                     <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${c.name}`} onClick={() => onEdit(c)} />
-                    <Button
-                      variant="quiet"
-                      size="sm"
-                      icon={Trash2}
-                      aria-label={`Remove ${c.name}`}
-                      data-remove-contact={c.id}
-                      onClick={() => {
-                        setRemoveError(null)
-                        setRemoving(c)
-                      }}
-                    />
+                    {canRemove ? (
+                      <Button
+                        variant="quiet"
+                        size="sm"
+                        icon={Trash2}
+                        aria-label={`Remove ${c.name}`}
+                        data-remove-contact={c.id}
+                        onClick={() => {
+                          setRemoveError(null)
+                          setRemoving(c)
+                        }}
+                      />
+                    ) : null}
                   </span>
                 </div>
                 {c.job_title ? <span className="text-sm text-fg-muted">{c.job_title}</span> : null}

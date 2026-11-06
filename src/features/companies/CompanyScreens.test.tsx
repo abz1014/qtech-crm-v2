@@ -259,6 +259,60 @@ describe('customer page', () => {
     expect(screen.getByRole('link', { name: 'WhatsApp Naveed Akhtar' })).toHaveAttribute('href', 'https://wa.me/923015550142')
   })
 
+  describe('an engineer on the company page (owner decision 2026-11-06: screen only)', () => {
+    const bothDb = (c: FakeCall): FakeResult =>
+      c.target === 'v_company_roles' ? { data: { role: 'both', is_customer: true, is_supplier: true } } : customerDb(c)
+    const phoneScreen = (): (() => void) => {
+      const real = window.matchMedia
+      window.matchMedia = ((query: string) => ({ ...real(query), matches: query === '(max-width: 767px)' })) as typeof window.matchMedia
+      return () => {
+        window.matchMedia = real
+      }
+    }
+
+    it.each(['desktop', 'phone'] as const)('sees no New RFQ and no remove-contact button on %s, but still adds and edits contacts', async screenKind => {
+      const restore = screenKind === 'phone' ? phoneScreen() : () => {}
+      try {
+        installFakeDb(bothDb)
+        const user = userEvent.setup()
+        mount('/companies/c1', <CompanyPage />, 'engineer')
+        await screen.findByText('Naveed Akhtar')
+        expect(screen.queryByRole('button', { name: 'New RFQ' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('region', { name: 'Next step' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('region', { name: 'Company actions' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Remove Naveed Akhtar' })).not.toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Edit Naveed Akhtar' })).toBeInTheDocument()
+        expect(within(screen.getByRole('region', { name: 'Contacts' })).getByRole('button', { name: 'Add' })).toBeInTheDocument()
+        await user.click(screen.getAllByRole('button', { name: /^More( actions)?$/ })[0]!)
+        expect(await screen.findByRole('menuitem', { name: 'Edit company' })).toBeInTheDocument()
+        expect(screen.queryByRole('menuitem', { name: /New RFQ/ })).not.toBeInTheDocument()
+      } finally {
+        restore()
+      }
+    })
+
+    it('a supplier-only page offers an engineer no New RFQ either', async () => {
+      installFakeDb(supplierDb)
+      mount('/companies/s1', <CompanyPage />, 'engineer')
+      await waitFor(() => expect(screen.getByTestId('supplier-record-line')).toBeInTheDocument())
+      expect(screen.queryByRole('button', { name: 'New RFQ' })).not.toBeInTheDocument()
+    })
+
+    it('sales and admin still get New RFQ, its menu item and the remove-contact button', async () => {
+      for (const role of ['sales', 'admin'] as const) {
+        installFakeDb(bothDb)
+        const user = userEvent.setup()
+        const { unmount } = mount('/companies/c1', <CompanyPage />, role)
+        await screen.findByText('Naveed Akhtar')
+        expect(screen.getByRole('button', { name: 'New RFQ' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Remove Naveed Akhtar' })).toBeInTheDocument()
+        await user.click(screen.getAllByRole('button', { name: /^More( actions)?$/ })[0]!)
+        expect(await screen.findByRole('menuitem', { name: 'New RFQ asking them for prices' })).toBeInTheDocument()
+        unmount()
+      }
+    })
+  })
+
   it('the money panel carries no "Admin only" tag (only an admin sees it at all)', async () => {
     installFakeDb(c =>
       c.target === 'rpc:receivables_list'
