@@ -99,7 +99,7 @@ function Chip({ label, value, selected, onPick, testId, disabled }: { label: str
 }
 
 // Each line is its own grid, so the tracks are fixed to line up; sized for 16px text (a 7-figure price, "Exempt", a 4-digit qty).
-const GRID = 'lg:grid-cols-[28px_minmax(0,1.6fr)_72px_140px_108px_minmax(172px,1fr)_128px]'
+const GRID = 'lg:grid-cols-[28px_minmax(0,1.6fr)_88px_140px_108px_minmax(172px,1fr)_128px]'
 
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()
@@ -603,9 +603,9 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                       </div>
                       <p className="num hidden whitespace-nowrap text-right text-sm lg:block">
                         {it.qty}
-                        {it.unit ? <span className="block text-xs text-fg-muted">{it.unit}</span> : null}
+                        {it.unit ? <span className="text-fg-muted">{`\u00A0${it.unit}`}</span> : null}
                       </p>
-                      <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 max-lg:col-start-2 lg:contents">
+                      <div className="grid grid-cols-[minmax(0,1fr)_96px] items-end gap-2 max-lg:col-start-2 lg:contents">
                         <div className="grid gap-1 lg:block">
                           <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
                             Unit price, net PKR
@@ -717,9 +717,9 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             <Field label="Standard terms" requirement="optional" help="From the company profile. Change them in Settings, or edit them for this quotation only.">
               <TextArea rows={4} value={terms} onChange={e => setTerms(e.target.value)} />
             </Field>
-            <p className="flex items-center gap-2 text-xs text-fg-muted">
-              <TriangleAlert className="size-3" aria-hidden="true" />
-              An issued quotation cannot be edited. To change it, revise it: the new one keeps the same number.
+            <p className="flex items-start gap-2 text-sm text-fg-muted text-pretty">
+              <TriangleAlert className="mt-[2px] size-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0">An issued quotation cannot be edited. To change it, revise it: the new one keeps the same number.</span>
             </p>
           </>
         )}

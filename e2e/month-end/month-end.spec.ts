@@ -118,7 +118,7 @@ test.describe('month-end (M10)', () => {
     await startCounting(page)
     await page.getByTestId('month-reports-link').click()
     await expect(page).toHaveURL(new RegExp(`/money/reports/pnl\\?month=${STMT.key}`))
-    await expect(page.getByRole('heading', { name: 'Profit and loss', level: 1 })).toBeVisible()
+    await expect(page.getByTestId('report-name')).toHaveText('Profit and loss')
     expect(await mouse(page)).toBe(1)
   })
 
@@ -158,7 +158,7 @@ test.describe('month-end (M10)', () => {
   test('the old month-end report addresses open the same report under Reports, month kept', async ({ page }) => {
     await openAs(page, 'admin', `/money/month-end/aging?month=${STMT.key}`)
     await expect(page).toHaveURL(new RegExp(`/money/reports/aging\\?month=${STMT.key}`))
-    await expect(page.getByRole('heading', { name: 'Overdue by age', level: 1 })).toBeVisible()
+    await expect(page.getByTestId('report-name')).toHaveText('Overdue by age')
   })
 
   test('the P&L shows the payment with no net split apart, and its CSV carries Gross, GST and Net columns', async ({ page }) => {

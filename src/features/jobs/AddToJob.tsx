@@ -260,7 +260,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
           Paste here
           <textarea
             value={text}
-            rows={3}
+            rows={5}
             onChange={e => {
               setText(e.target.value)
               setKindChoice(null)

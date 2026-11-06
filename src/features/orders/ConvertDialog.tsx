@@ -303,7 +303,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
           <span className="text-xs text-fg-muted">{priceTexts(q).pkr}</span>
         </>
       ) : (
-        <span className="text-fg-muted">—</span>
+        // No supplier chosen yet: nothing to show (a lone dash under the select read as a missing value). Screen readers still hear it.
+        <span className="sr-only">No supplier chosen yet</span>
       )}
     </div>
   )
@@ -607,7 +608,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
             <label htmlFor="convert-po" className="text-sm font-medium">
               Customer PO number <span className="font-regular text-xs text-fg-muted">optional, add it from the order later</span>
             </label>
-            <TextField id="convert-po" value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" />
+            <TextField id="convert-po" value={po} onChange={e => setPo(e.target.value)} placeholder="e.g. 4500123456" autoComplete="off" />
           </div>
 
           <Field

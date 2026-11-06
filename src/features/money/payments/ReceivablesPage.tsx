@@ -211,22 +211,6 @@ export function ReceivablesPage() {
   return (
     <MoneyFrame
       active="receivables"
-      actions={
-        // Phone: the panel (and its green Copy and mark reminded) is a sheet, so the page's one green button opens it on the
-        // most overdue order. Desktop has the panel beside the table instead.
-        cards && mostOverdue?.state === 'overdue' ? (
-          <Button
-            variant="primary"
-            size="touch"
-            onClick={() => {
-              setPicked(mostOverdue.orderId)
-              setSheet(true)
-            }}
-          >
-            Send a reminder
-          </Button>
-        ) : undefined
-      }
     >
       {/* Phone: only Owed stays in view while the cards scroll (the five tiles took half the screen); the split sits under it and scrolls away. */}
       <p data-testid="owed-line" className="sticky top-0 z-10 -mx-4 flex flex-wrap items-baseline gap-x-3 border-b bg-canvas px-4 py-2 text-base sm:hidden">
@@ -245,6 +229,21 @@ export function ReceivablesPage() {
           </li>
         ))}
       </ul>
+      {/* Phone: the panel (and its green Copy and mark reminded) is a sheet, so the page's one green button opens it on the most overdue
+          order. It sits with the figures it acts on, under the split, not up beside the tabs. Desktop has the panel beside the table instead. */}
+      {cards && mostOverdue?.state === 'overdue' ? (
+        <Button
+          variant="primary"
+          size="touch"
+          className="w-full sm:w-auto sm:justify-self-start"
+          onClick={() => {
+            setPicked(mostOverdue.orderId)
+            setSheet(true)
+          }}
+        >
+          Send a reminder
+        </Button>
+      ) : null}
       <SumBar
         className="max-sm:hidden"
         label="Balance by status, includes GST"
@@ -273,14 +272,16 @@ export function ReceivablesPage() {
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <h2 className="text-base font-semibold">Balances</h2>
+                  {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. The tip stays with its line: a lone (i) on its own row pointed at nothing. */}
+                  <span className="inline-flex items-center gap-2">
                   <span className="text-base text-fg-2">Balance includes GST</span>
-                  {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. */}
                   <InfoTip label="About the balance and reminders">
                     The balance is what the customer still owes, gross (GST included), after payments recorded. A reminder is due when an
                     order is overdue and has not been reminded in the last 7 days; copying the reminder records it, and the order moves to
                     Waiting on Today.{' '}
                     {isAdmin ? 'Pick an order to see its reminder and Record payment.' : 'Payments are recorded by an admin.'}
                   </InfoTip>
+                  </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <TableFilter label="Search balances" hint="Finds a balance by customer, order number or invoice number." value={search} onChange={setSearch} />
@@ -322,8 +323,17 @@ export function ReceivablesPage() {
                   <Money value={r.balance} prefix={false} strong />
                 </div>
                 <span className="num text-sm text-fg-2">
-                  {orderRef(r.orderNumber)}
-                  {isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ''}
+                  {/* Each number is one word: "INV-0103" never breaks at its hyphen. */}
+                  <span className="whitespace-nowrap">{orderRef(r.orderNumber)}</span>
+                  {isInvoiced(r) ? ' · ' : ''}
+                  {isInvoiced(r)
+                    ? r.invoiceNumbers.map((n, i) => (
+                        <span key={n}>
+                          {i > 0 ? ', ' : ''}
+                          <span className="whitespace-nowrap">{n}</span>
+                        </span>
+                      ))
+                    : null}
                 </span>
                 {/* One action per card: tap it for the reminder, Record payment and Open order (a sheet). */}
                 <NextStep r={r} today={today} onInvoice={setInvoicing} />

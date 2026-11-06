@@ -19,7 +19,8 @@ export function EngineerFab({ className }: { className?: string }) {
         onClick={() => navigate('/capture')}
         className="flex h-[56px] items-center gap-2 px-4 text-base font-semibold transition-colors duration-fast hover:bg-chrome-field active:bg-chrome-field max-[359px]:px-2"
       >
-        <Icon icon={Camera} size="lg" />
+        {/* Below 360 px the name alone says it: the camera would crowd To do and Jobs and squeeze "I paid" (UX review 2026-11-07). */}
+        <Icon icon={Camera} size="lg" className="max-[359px]:hidden" />
         Photo or note
       </button>
       <button
@@ -29,7 +30,7 @@ export function EngineerFab({ className }: { className?: string }) {
         className="flex h-[56px] min-w-touch items-center justify-center gap-2 border-l border-chrome-edge px-3 text-base font-semibold transition-colors duration-fast hover:bg-chrome-field active:bg-chrome-field max-[359px]:flex-col max-[359px]:gap-0 max-[359px]:px-2"
       >
         <Icon icon={HandCoins} size="lg" />
-        <span className="max-[359px]:text-sm">I paid</span>
+        <span className="whitespace-nowrap">I paid</span>
       </button>
     </div>
   )

@@ -56,7 +56,7 @@ test.describe('expenses report (2026-10-22)', () => {
     const total = await spentBetween('2023-04-01', '2023-04-30')
     expect(total).toBeGreaterThanOrEqual(21150.5)
     await openAs(page, 'admin', '/money/reports/expenses?by=month&period=2023-04')
-    await expect(page.getByRole('heading', { name: 'Expenses', level: 1 })).toBeVisible()
+    await expect(page.getByTestId('report-name')).toHaveText('Expenses')
     await expect(page.getByTestId('expense-report-total')).toContainText(whole(total))
     await expect(page.getByRole('table', { name: /^Where the money went/ }).getByRole('row').filter({ hasText: /^Total/ })).toContainText(whole(total))
 

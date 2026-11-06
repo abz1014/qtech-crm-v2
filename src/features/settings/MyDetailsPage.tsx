@@ -14,13 +14,9 @@ import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { ShortcutsPanel, TextSizePanel } from '@/ui/TextSizeControl'
 import { useToast } from '@/ui/useToast'
-import { Field } from '@/ui/form/Field'
 import { Form, FormField } from '@/ui/form/Form'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
-
-/** A fact set by someone else: plain text at full contrast, no box (a greyed box reads as disabled, and it is not: it is just not yours to change). */
-const READ_ONLY = 'read-only:border-transparent read-only:bg-transparent read-only:px-0 read-only:text-fg read-only:hover:border-transparent'
 
 const schema = z.object({ phone: z.string().trim().max(PHONE_MAX, `Keep the phone number under ${PHONE_MAX} characters.`).pipe(phoneText) })
 
@@ -92,17 +88,15 @@ function DetailsForm({ details }: { details: MyDetails }) {
     <>
       <Form sf={sf} labels={{ phone: 'Phone' }} className="grid gap-4">
         <Section title="Your details" hint="Your name, email and job title are set by an admin.">
-          <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-            <Field label="Name">
-              <TextField readOnly value={details.name} className={READ_ONLY} />
-            </Field>
-            <Field label="Email">
-              <TextField readOnly value={details.email ?? ''} className={`num ${READ_ONLY}`} />
-            </Field>
-          </div>
-          <Field label="Job title" help="Set by an admin" className="sm:max-w-[320px]">
-            <TextField readOnly value={details.job_title ?? ''} placeholder="Not set" className={READ_ONLY} />
-          </Field>
+          {/* Label left, value right: the same shape as the Company profile (the section's hint says an admin sets these). */}
+          <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]" data-testid="your-facts">
+            <dt className="text-fg-muted">Name</dt>
+            <dd className="min-w-0 [overflow-wrap:anywhere]">{details.name}</dd>
+            <dt className="text-fg-muted">Email</dt>
+            <dd className="num min-w-0 [overflow-wrap:anywhere]">{details.email ?? '—'}</dd>
+            <dt className="text-fg-muted">Job title</dt>
+            <dd className={cn('min-w-0', !details.job_title && 'text-fg-muted')}>{details.job_title || 'Not set'}</dd>
+          </dl>
           <FormField name="phone" label="Phone" requirement="optional" className="sm:max-w-[320px]">
             {f => <TextField {...f} type="tel" className="num" placeholder="0300 1234567" autoComplete="tel" />}
           </FormField>
@@ -116,11 +110,11 @@ function DetailsForm({ details }: { details: MyDetails }) {
           {dirty ? '1 unsaved change: Phone' : 'Nothing to save yet'}
         </p>
         <div className="ml-auto flex gap-2">
-          <Button disabled={!dirty || sf.pending} onClick={() => sf.form.reset({ phone: details.phone ?? '' })}>
+          <Button disabled={!dirty || sf.pending} className="disabled:bg-sunken disabled:text-fg-disabled" onClick={() => sf.form.reset({ phone: details.phone ?? '' })}>
             Discard
           </Button>
           {/* nothing changed: Save is disabled, so it is plain that there is nothing to save */}
-          <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Saving" disabled={!dirty}>
+          <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Saving" disabled={!dirty} className="disabled:bg-sunken disabled:text-fg-disabled">
             {sf.failed ? 'Try again' : 'Save changes'}
           </Button>
         </div>
