@@ -291,7 +291,7 @@ function TargetCell({ member, q, target, progress, today, editing, onEdit, onClo
     <div
       role="cell"
       data-cell={`${member.id}:${quarter}`}
-      className={cn('grid content-start gap-1 md:px-3 md:py-3', current && 'md:bg-selected/40', 'max-md:grid-cols-[4.5rem_minmax(0,1fr)] max-md:items-start')}
+      className={cn('grid content-start gap-1 max-md:pb-2 md:px-3 md:py-3', current && 'md:bg-selected/40', 'max-md:grid-cols-[4.5rem_minmax(0,1fr)] max-md:items-start')}
     >
       <span className="pt-3 text-sm font-medium text-fg-muted md:hidden" aria-hidden="true">
         {quarterLabel(year, quarter)}
@@ -305,7 +305,7 @@ function TargetCell({ member, q, target, progress, today, editing, onEdit, onClo
             onClick={onEdit}
             className={cn(
               'flex h-control min-w-0 items-center justify-end rounded border px-3 text-sm max-md:h-touch',
-              target ? 'border-transparent hover:border-line-input hover:bg-sunken' : 'border-dashed border-line-input text-fg-muted hover:bg-sunken',
+              target ? 'border-line-input hover:bg-sunken' : 'border-dashed border-line-input text-fg-muted hover:bg-sunken',
             )}
           >
             {/* The name is the visible text with the person and quarter in front, so what is read out contains what is shown. */}
@@ -333,7 +333,15 @@ function Progress({ p, target, year, quarter }: { p: ReturnType<typeof cellProgr
   return (
     <div className="grid gap-1 px-1">
       <p className={cn('text-right text-sm', p.ahead === 0 ? 'text-fg-2' : behind ? 'text-tone-warning-fg' : 'text-tone-success-fg')}>
-        <span className="num">{progressLine(p, amount)}</span>
+        {/* Two lines, not one line that wraps at its dot: "Achieved ... of ..." and then the pace, each kept whole. */}
+        {progressLine(p, amount)
+          .split(' · ')
+          .map((part, i) => (
+            <span key={part} className="num block">
+              {i > 0 ? <span className="sr-only"> · </span> : null}
+              {part}
+            </span>
+          ))}
       </p>
       <ProgressBar
         done={p.achieved}

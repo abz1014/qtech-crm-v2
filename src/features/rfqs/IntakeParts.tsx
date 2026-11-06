@@ -224,7 +224,7 @@ export function Hint({ tone = 'warning', children, className }: { tone?: 'warnin
   )
 }
 
-/** One line of the text as drawn: "*bold*" markers stay visible and muted, and a blank "Spec:" is a highlighted blank. */
+/** One line of the text as drawn: "*bold*" markers are not drawn, the words are bold, and a blank "Spec:" is a highlighted blank. */
 function PreviewLine({ line }: { line: string }) {
   const blank = /^(\s*Spec:\s)left blank$/.exec(line)
   if (blank) {
@@ -246,11 +246,7 @@ function PreviewLine({ line }: { line: string }) {
         part === `*${RFQ_REF_PLACEHOLDER}*` ? (
           <PendingRef key={i} />
         ) : /^\*[^*\n]+\*$/.test(part) ? (
-          <span key={i}>
-            <span className="text-fg-muted">*</span>
-            <b className="font-semibold">{part.slice(1, -1)}</b>
-            <span className="text-fg-muted">*</span>
-          </span>
+          <b key={i} className="font-semibold">{part.slice(1, -1)}</b>
         ) : (
           <WithPendingRef key={i} text={part} />
         ),

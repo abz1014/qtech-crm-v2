@@ -466,7 +466,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           footerLabel={`${plural(v.rows.length, 'invoice')} open`}
           className={v.advances.length ? 'rounded-b-none' : undefined}
           toolbar={
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex w-full flex-wrap items-center gap-3">
               <span className="flex min-w-0 items-center gap-3">
                 <h2 className="text-base font-semibold">What customers owe, by how late</h2>
                 <InfoTip label="About overdue by age">
@@ -540,11 +540,11 @@ function OwedCell({ r }: { r: PayableRow }) {
   if (r.owedPkr !== null)
     return (
       <span title={rateTitle(r)}>
-        <Money value={r.owedPkr} prefix={false} paisa="never" strong />
+        <Money value={r.owedPkr} prefix={false} paisa="always" strong />
       </span>
     )
   if (r.state === 'no_rate' && r.committed !== null)
-    return toPaisa(r.paidPkr) === 0n ? <span className="num font-medium">{inCurrency(r.currency, r.committed)}</span> : <span className="text-fg-2">Needs a rate</span>
+    return toPaisa(r.paidPkr) === 0n ? <span className="num font-medium">{inCurrency(r.currency, r.committed, 'always')}</span> : <span className="text-fg-2">Needs a rate</span>
   return <span className="text-fg-muted">{'—'}</span>
 }
 
@@ -639,10 +639,10 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         label="What we owe"
         items={[
           missing.length
-            ? { label: 'Owed', figure: owedFigure.join(' · ') || '0', sub: plural(owedOrders, 'supplier order') }
+            ? { label: 'Owed', figure: owedFigure.length ? owedFigure : '0', sub: plural(owedOrders, 'supplier order') }
             : { label: 'Owed', amount: v.owed, sub: <>{plural(v.owedCount, 'supplier order')}, at the rate on {day}</> },
           missing.length
-            ? { label: 'Total ordered', figure: orderedFigure.join(' · '), sub: plural(v.rows.length, 'supplier order') }
+            ? { label: 'Total ordered', figure: orderedFigure, sub: plural(v.rows.length, 'supplier order') }
             : { label: 'Total ordered', amount: v.committed, sub: plural(v.committedLegs, 'supplier order') },
           { label: 'Paid so far', amount: v.paid, sub: <>{plural(v.paidLegs, 'supplier order')} with a payment</> },
         ]}
@@ -655,7 +655,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         twoLine
         footerLabel={plural(v.rows.length, 'supplier order')}
         toolbar={
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3">
             <span className="flex min-w-0 items-center gap-3">
               <h2 className="text-base font-semibold">What we owe suppliers</h2>
               <InfoTip label="About what we owe">

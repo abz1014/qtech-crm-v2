@@ -2,6 +2,7 @@ import { pastedText } from '@/lib/docread/htmlTable'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, Copy, Plus, Save, TriangleAlert } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -913,7 +914,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
         }
 
   return (
-    <div className="mx-auto w-full max-w-table px-4 pb-[10rem] pt-6 md:px-8">
+    <div className={cn('mx-auto w-full max-w-table px-4 pt-6 md:px-8', enquiry ? 'max-lg:pb-0 lg:pb-[10rem]' : 'pb-[10rem]')}>
       {/* minmax(0,1fr) tracks: a long item name or supplier never widens the page past a phone screen (it truncates or wraps). */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
@@ -20,7 +20,7 @@ export interface SumBarItem {
   /** The figure is a count, not money. */
   count?: number
   /** The figure is text that is neither money nor a plain count ("57%", "3.5 days"). Reports use it. */
-  figure?: string
+  figure?: string | string[]
   /** One line of context: "6 payments received". */
   sub?: ReactNode
   provisional?: boolean
@@ -28,6 +28,20 @@ export interface SumBarItem {
   tone?: 'danger' | 'muted'
   /** Headline rounding. Default 'never' (whole rupees, as in the approved mockup); the exact paisa stays in the rows and the equation line. */
   paisa?: PaisaMode
+}
+
+/** A list of amounts ("PKR 958,000 · AED 62,780"): the line may break between amounts, never inside one. */
+function FigureList({ parts }: { parts: string[] }) {
+  return (
+    <>
+      {parts.map((p, i) => (
+        <Fragment key={`${i}-${p}`}>
+          {i > 0 ? ' · ' : null}
+          <span className="whitespace-nowrap">{p}</span>
+        </Fragment>
+      ))}
+    </>
+  )
 }
 
 export function SumBar({ items, label, className }: { items: SumBarItem[]; label: string; className?: string }) {
@@ -43,7 +57,7 @@ export function SumBar({ items, label, className }: { items: SumBarItem[]; label
         <div key={item.label} className={cn('grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4 max-sm:px-4', item.tone === 'danger' && 'text-tone-danger-fg', item.tone === 'muted' && 'bg-sunken text-fg-2')}>
           <span className="text-sm font-medium text-fg-2">{item.label}</span>
           {item.count !== undefined || item.figure !== undefined ? (
-            <span className="num text-xl font-medium tracking-snug max-sm:text-lg">{item.figure ?? item.count}</span>
+            <span className="num text-xl font-medium tracking-snug max-sm:text-lg">{Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)}</span>
           ) : (
             <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} className="max-sm:[&>span]:text-lg" />
           )}

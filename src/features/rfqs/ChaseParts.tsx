@@ -12,23 +12,19 @@ import { useUserNames } from '@/features/rfqs/hooks'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 
 /*
- * The pieces every chase surface shares (g2-chase-texts, g2-today-b2): the message with its *bold* markers drawn faint,
+ * The pieces every chase surface shares (g2-chase-texts, g2-today-b2): the message with its *bold* markers shown as bold words (the text sent still carries the asterisks),
  * the recipient row, the email Subject row with "Copy subject", the "Untick to leave one out" list, the editable
  * "Kindly confirm by" date and the hourglass banner that says where the item goes and when it returns.
  */
 
-/** Text between asterisks is bold when pasted into WhatsApp: here the asterisks are drawn faint and the words bold. */
+/** Text between asterisks is bold when pasted into WhatsApp: here the words are bold and the asterisks are not drawn (the message sent keeps them). */
 export function FormattedMessage({ text, className, testId, chaseText = false }: { text: string; className?: string; testId?: string; chaseText?: boolean }) {
   const parts = text.split(/(\*[^*\n]+\*)/g)
   return (
     <pre data-testid={testId} data-chase-text={chaseText ? '' : undefined} className={cn('whitespace-pre-wrap break-words font-sans text-base text-fg', className)}>
       {parts.map((p, i) =>
         /^\*[^*\n]+\*$/.test(p) ? (
-          <span key={i}>
-            <span className="text-fg-muted">*</span>
-            <b className="font-semibold">{p.slice(1, -1)}</b>
-            <span className="text-fg-muted">*</span>
-          </span>
+          <b key={i} className="font-semibold">{p.slice(1, -1)}</b>
         ) : (
           <span key={i}>{p}</span>
         ),

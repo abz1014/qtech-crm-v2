@@ -168,7 +168,7 @@ export default function JobsListPage() {
             hideClass: 'hidden xl:table-cell',
             cell: (j: JobRow) => {
               const po = poOf(j)
-              return po ? <span className="num whitespace-normal [overflow-wrap:anywhere]">{po}</span> : <span className="text-fg-muted">—</span>
+              return po ? <span className="num whitespace-nowrap">{po}</span> : <span className="text-fg-muted">—</span>
             },
           } satisfies Column<JobRow>,
         ]
