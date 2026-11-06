@@ -927,16 +927,43 @@ export function collect(opts: CollectOptions): Metrics {
 
     // labelTouchesControl: text drawn over, or touching the top of, an input, select or button that is not its own.
     {
+      // The scroll area an element moves with: its nearest scrolling ancestor (a fixed element is its own). The shell is not fixed:
+      // <main> scrolls between the top bar, the bottom tabs and the Engineer button, which stay put. Content of <main> that sits
+      // below the fold is never drawn on those bars, so text and a control that do not scroll together are not compared.
+      // Both inside the same scroll area (or both outside any) are compared in full, below the fold included.
+      const scrollAreaOf = (el: Element): Element | null => {
+        for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+          const s = style(p)
+          if (s.position === 'fixed') return p
+          if (s.overflowY === 'auto' || s.overflowY === 'scroll') return p
+        }
+        return null
+      }
+      // The (i) button is 44px on a touch screen around a 24px footprint (negative margin), so its padding overlaps the heading by
+      // design. Compare the footprint the eye sees.
+      const seenBox = (c: HTMLElement): Box => {
+        const r = rect(c)
+        if (c.hasAttribute('data-infotip') && r.width > 24 && r.height > 24) {
+          const cx = (r.left + r.right) / 2
+          const cy = (r.top + r.bottom) / 2
+          return { l: cx - 12, r: cx + 12, t: cy - 12, b: cy + 12 }
+        }
+        return boxOf(r)
+      }
       const controls = Array.from(document.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea, button')).filter(c => !covered(c) && visible(c) && rect(c).height >= 8 && rect(c).width >= 8)
       const reported = new Set<string>()
-      for (const tb of textBoxes) {
-        const te = tb.el as HTMLElement
+      for (const tb0 of textBoxes) {
+        const te = tb0.el as HTMLElement
+        const tb = tb0
+        const teArea = scrollAreaOf(te)
         if (style(te).pointerEvents === 'none' || te.closest('[role="status"], [role="alert"], [data-sonner-toast], [aria-hidden="true"], button, input, select, textarea, [role="button"], [role="combobox"], [role="tab"], [role="option"], [role="menuitem"]')) continue
         if (tb.layer && pos(tb.layer) === 'fixed') continue
         // Painted off the screen sideways or above the page (a hidden panel parked at a negative offset): nothing is seen to touch.
         if (tb.b.r <= 0 || tb.b.l >= window.innerWidth || tb.b.b <= 0) continue
         for (const c of controls) {
-          const cr = rect(c)
+          if (scrollAreaOf(c) !== teArea) continue
+          const cb = seenBox(c)
+          const cr = { left: cb.l, right: cb.r, top: cb.t, bottom: cb.b, width: cb.r - cb.l, height: cb.b - cb.t }
           const hOver = Math.min(tb.b.r, cr.right) - Math.max(tb.b.l, cr.left)
           if (hOver <= 1) continue
           if (cr.right <= 0 || cr.left >= window.innerWidth || cr.bottom <= 0) continue

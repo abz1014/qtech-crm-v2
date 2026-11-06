@@ -323,6 +323,7 @@ export const LAYOUT_IDS: ReadonlySet<string> = new Set([
   'money-expenses',
   'money-month-end',
   'money-expense-report',
+  'money-gst-register',
   'jobs-list',
   'job-po-issued',
   'job-delivered',
