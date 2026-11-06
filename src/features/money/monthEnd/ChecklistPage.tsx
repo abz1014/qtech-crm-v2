@@ -287,7 +287,7 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
   // month to reopen before them, so nobody meets the database's refusal.
   const latest = ctx.closed.reduce<string | null>((m, c) => (m === null || c.key > m ? c.key : m), null)
   return (
-    <Panel title="Closed months" meta={through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null} className="max-w-[720px]">
+    <Panel title="Closed months" meta={through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null}>
       {/* Closed months only (an open month here contradicted the title); the month on screen says Open or Closed above. */}
       <ul aria-label="Closed months">
         {shown.map(c => (

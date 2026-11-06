@@ -638,7 +638,7 @@ function howTo(item: TodayItem): string {
     case 'usage_high':
       return 'The free plan is filling up. Open Settings, Backups and usage, to see the database and the files. Old files can be deleted; a full plan stops saving.'
     case 'decrypt_test':
-      return "Once a month, download last night's backup from GitHub and open it with your private key (steps in docs/SUPABASE.md). Then press the button in Settings, Backups and usage."
+      return "Once a month, download last night's backup from GitHub and open it with your private key. Then press the button in Settings, Backups and usage."
     case 'claims_to_approve':
       return 'An engineer paid for something and asked to be paid back. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':

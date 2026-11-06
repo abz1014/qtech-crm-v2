@@ -173,7 +173,7 @@ function DecryptSection({ h }: { h: HealthRow }) {
     <Section
       testId="decrypt-check"
       title="Monthly key check"
-      hint="A backup nobody can open is not a backup. Once a month, download last night's backup from GitHub and open it with your private key, then press the button. The steps are in docs/SUPABASE.md, Test-decrypt last night's backup."
+      hint="A backup nobody can open is not a backup. Once a month, download last night's backup from GitHub and open it with your private key, then press the button."
     >
       <p className={due ? 'text-base font-medium text-tone-danger-fg' : 'text-base'} data-testid="decrypt-last">
         {h.lastDecryptTestAt ? `Last checked ${formatDay(base)}.` : `Never checked. Watching since ${formatDay(base)}.`}

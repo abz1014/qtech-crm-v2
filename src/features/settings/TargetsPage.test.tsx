@@ -95,7 +95,7 @@ describe('Targets (M06)', () => {
 
     const c = document.querySelector('[data-cell="ayesha:4"]') as HTMLElement
     // one line and a bar, not three lines
-    expect(within(c).getByText(/Achieved/)).toHaveTextContent('Achieved 1,200,000 of 5,000,000 · 300,000 behind pace')
+    expect(within(c).getByText(/Achieved/).closest('p')).toHaveTextContent('Achieved 1,200,000 of 5,000,000 · 300,000 behind pace')
     expect(within(c).getByRole('img', { name: 'Achieved 1200000 of 5000000; on pace is 1500000' })).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/\d\s?%/)
   })
