@@ -216,7 +216,7 @@ test.describe('company page', () => {
     await expect(l.getByText('Karachi calibration kit')).toHaveCount(0)
   })
 
-  test('a supplier says its counts once under the name, with one Enquiries list and no score', async ({ page }) => {
+  test('a supplier says its counts once under the name, with one Enquiries list and no score', async ({ page, browser }) => {
     const supplier = await createCompany(uniqueName('Alpenmark Test'), { country: 'Austria' })
     const customer = await createCompany(uniqueName('Enquiring Customer'))
     const rfq = await createRfq(customer.id)
@@ -246,10 +246,18 @@ test.describe('company page', () => {
     await review(page, 'company-supplier-1440')
     await page.keyboard.press('Escape')
 
-    // A supplier-only page's New RFQ (was "Float an RFQ here") is its next step: it opens intake with this supplier already
+    // An engineer is offered no New RFQ here (owner decision 2026-11-06; screen only, the database still allows it).
+    await expect(page.getByRole('button', { name: 'New RFQ' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Next step' })).toHaveCount(0)
+
+    // A supplier-only page's New RFQ (was "Float an RFQ here") is its next step for sales: it opens intake with this supplier already
     // chosen to ask for prices (?supplier=), never with the supplier as the customer.
-    await page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'New RFQ' }).click()
-    await expect(page).toHaveURL(url => url.pathname === '/rfqs/new' && url.searchParams.get('supplier') === supplier.id)
+    const sales = await browser.newContext()
+    const salesPage = await sales.newPage()
+    await openAs(salesPage, 'sales', `/companies/${supplier.id}`)
+    await salesPage.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'New RFQ' }).click()
+    await expect(salesPage).toHaveURL(url => url.pathname === '/rfqs/new' && url.searchParams.get('supplier') === supplier.id)
+    await sales.close()
   })
 
   test('brands are carried by picking one or typing a new one', async ({ page }) => {

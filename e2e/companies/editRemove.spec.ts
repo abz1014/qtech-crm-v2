@@ -62,7 +62,7 @@ test.describe('edit', () => {
 test.describe('remove', () => {
   test('a contact: Cancel keeps them, Remove deletes them', async ({ page }) => {
     const { company, contact } = await customerWithSite('Remove Contact Co')
-    await openAs(page, 'engineer', `/companies/${company.id}`)
+    await openAs(page, 'sales', `/companies/${company.id}`)
     const panel = page.getByRole('region', { name: 'Contacts' })
     await panel.getByRole('button', { name: 'Remove Naveed Akhtar' }).click()
     const ask = panel.getByRole('group', { name: 'Remove Naveed Akhtar?' })
@@ -75,6 +75,25 @@ test.describe('remove', () => {
     await panel.getByRole('group', { name: 'Remove Naveed Akhtar?' }).getByRole('button', { name: 'Remove', exact: true }).click()
     await expect(panel.getByText('Naveed Akhtar')).toHaveCount(0)
     expect(await must(rest<unknown[]>('admin', `contacts?id=eq.${contact.id}`))).toHaveLength(0)
+  })
+
+  // Owner decision 2026-11-06: screen only. The database (RLS 0006) still lets an engineer delete a contact; the page does not offer it.
+  test('an engineer sees no remove-contact button and no New RFQ, desktop or phone, but still adds and edits contacts', async ({ browser }) => {
+    const { company } = await customerWithSite('Engineer Hidden Co')
+    for (const size of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+      const context = await browser.newContext({ viewport: size })
+      const page = await context.newPage()
+      await openAs(page, 'engineer', `/companies/${company.id}`)
+      const panel = page.getByRole('region', { name: 'Contacts' })
+      await expect(panel.getByRole('button', { name: 'Edit Naveed Akhtar' })).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Add' })).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Remove Naveed Akhtar' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'New RFQ' })).toHaveCount(0)
+      await page.getByRole('button', { name: /^More( actions)?$/ }).click()
+      await expect(page.getByRole('menuitem', { name: 'Copy link to this company' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: /New RFQ/ })).toHaveCount(0)
+      await context.close()
+    }
   })
 
   test('a contact named on an RFQ is not removed, and the page says why', async ({ page }) => {
