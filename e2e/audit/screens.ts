@@ -465,7 +465,7 @@ const stageVisit = (stage: number, label: string, path: (fx: Fixture) => string,
 })
 
 async function openRecordPayment(page: Page): Promise<void> {
-  const b = page.getByRole('button', { name: /^record payment$/i }).filter({ visible: true }).first()
+  const b = page.getByRole('button', { name: /record payment/i }).filter({ visible: true }).first()
   if (await b.count()) return b.click()
   await page.locator('#main').getByRole('button', { name: /^More/ }).filter({ visible: true }).first().click()
   await page.getByRole('menuitem', { name: /record payment/i }).first().click()
@@ -510,7 +510,7 @@ const OPENED_VISITS: readonly Visit[] = [
           await capture('op-gst-export')
         }],
         ['op-record-payment', async () => {
-          await open(page, `/orders/${fx.order.invoiced}`)
+          await openStage(page, `/orders/${fx.order.invoiced}`, 5)
           await openRecordPayment(page)
           await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
           await settle(page)
