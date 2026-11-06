@@ -287,7 +287,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
             )}
           </p>
         ) : (
-          <fieldset className="grid gap-4 md:grid-cols-2" data-testid="invoice-edit">
+          <fieldset className="grid min-w-0 gap-4 md:grid-cols-2" data-testid="invoice-edit">
             <legend className="mb-2 text-base font-semibold">Invoice</legend>
             <FormField<Values, 'number'> name="number" label="Invoice number">
               {f => <TextField {...f} autoComplete="off" className="num" />}
@@ -313,7 +313,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
             {sf.form.formState.errors.ack ? <p role="alert" className="text-tone-danger-fg">{sf.form.formState.errors.ack.message}</p> : null}
           </div>
         ) : null}
-        <fieldset className="grid gap-4 md:grid-cols-2">
+        <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
           <legend className="mb-2 text-sm font-semibold">Courier (TCS)</legend>
           {date('copyReceivedOn', 'Copy received')}
           {date('tcsSentOn', 'Invoice posted')}
@@ -322,7 +322,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
           </FormField>
           {date('clientReceivedOn', 'Client received')}
         </fieldset>
-        <fieldset className="grid gap-4 md:grid-cols-2">
+        <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
           <legend className="mb-2 text-sm font-semibold">FBR</legend>
           <FormField<Values, 'psid'> name="psid" label="PSID" requirement="optional" help={!isAdmin && invoice.psid?.trim() ? 'Change it if it was typed wrong. Only an admin can clear it.' : undefined}>
             {f => <TextField {...f} autoComplete="off" spellCheck={false} className="num" />}
@@ -386,7 +386,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         )}
       </section>
 
-      <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
+      <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
         {isAdmin && invoice.number === null && !monthClosed ? (
           <Button variant="secondary" size="lg" icon={Trash2} className="min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg" onClick={deleteFlow.ask} disabled={sf.pending}>
             Delete invoice

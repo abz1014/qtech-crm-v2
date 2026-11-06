@@ -206,3 +206,18 @@ describe('Invoice: void and credit note (0112)', () => {
     expect(await screen.findByText(/Someone else changed this invoice while you had it open/)).toBeInTheDocument()
   })
 })
+
+/*
+ * jsdom has no layout, so this pins the two classes the sideways scroll came from (the layout audit measures the real thing):
+ * the footer row of buttons wraps instead of setting the width of the whole body, and the body's one column may shrink.
+ */
+describe('Invoice: no sideways scroll', () => {
+  it('lets the footer buttons wrap and the dialog body column shrink', async () => {
+    setup()
+    const save = await screen.findByRole('button', { name: 'Save' })
+    expect(save.parentElement?.className).toMatch(/\bflex-wrap\b/)
+    const body = document.querySelector('[data-dialog-body]')
+    expect(body?.className).toContain('grid-cols-[minmax(0,1fr)]')
+    document.querySelectorAll('fieldset').forEach(f => expect(f.className).toContain('min-w-0'))
+  })
+})
