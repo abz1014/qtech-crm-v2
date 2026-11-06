@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChartColumn, ChevronRight, CircleCheck, Lock } from 'lucide-react'
+import { ArrowRight, ChartColumn, ChevronRight, CircleCheck, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { computeReconciliationExceptions } from '@/lib/reconciliation'
 import { Button } from '@/ui/Button'
@@ -21,7 +21,7 @@ import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFr
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 import { ReportError, Panel } from '@/features/money/monthEnd/ReportParts'
 import { closeWindowDay, formatClosedAt, formatClosedDay } from '@/features/money/monthEnd/format'
-import { closeButtonLabel, closedThrough, closeTarget, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
+import { closeButtonLabel, closedThrough, closeNeedsMove, closeTarget, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
 
 /*
  * Money › Lock a month (M10; admin only). Owner decision 2026-10-19: the phone layout everywhere. The month and its Close button
@@ -131,6 +131,8 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const day = closeWindowDay(ctx.month, ctx.today)
   const name = monthName(ctx.month)
   const target = closeTarget(ctx.month, state)
+  // A month is locked only while it is on screen: when an older month comes first, the button takes you there and locks nothing.
+  const move = closeNeedsMove(ctx.month, state)
   const phone = useMediaQuery('(max-width: 767px)')
   // The sticky bar replaces the bottom tabs on a phone (StickyActionBar's contract); the bar's back arrow leads out.
   useMobileBar({ title: 'Lock a month', back: 'history', fallback: '/money/receivables', hideTabs: true })
@@ -142,7 +144,13 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
         Reports for {name}
       </Button>
     ) : (
-      <Button size={size} variant="primary" icon={Lock} disabled={state?.kind === 'not-ended'} onClick={() => setOpen(true)}>
+      <Button
+        size={size}
+        variant="primary"
+        icon={move ? ArrowRight : Lock}
+        disabled={state?.kind === 'not-ended'}
+        onClick={() => (move ? ctx.setMonth(target) : setOpen(true))}
+      >
         {state ? closeButtonLabel(ctx.month, state) : `Close ${name}`}
       </Button>
     )
@@ -150,7 +158,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
     <InfoTip label="About closing a month">
       {state?.kind === 'not-ended' ? <>{name} can be closed once it has ended. </> : null}
       Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. You can reopen
-      it any time; both are written to the audit log. Months close one at a time, oldest first: the button always names the one month it closes.
+      it any time; both are written to the audit log. Months close one at a time, oldest first, and only while they are on screen.
     </InfoTip>
   )
   return (
@@ -174,7 +182,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
         {state?.kind === 'open' && target !== ctx.month ? (
           // One month at a time (owner decision 2026-10-22): an older open month is closed first, and the button names it.
           <span className="text-sm text-fg-2" data-testid="close-order">
-            {monthKeyLabel(target)} is still open. Months close one at a time, oldest first, so close {monthKeyLabel(target)} before {name}.
+            {monthKeyLabel(target)} is still open and has to be closed before {name}. The green button takes you there.
           </span>
         ) : null}
         {closed && ctx.closedEntry ? (
@@ -192,7 +200,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
           {closed ? <span className="text-sm text-fg-muted">Reopen it from the list below.</span> : tip}
         </div>
       )}
-      {closed ? null : <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} />}
+      {closed || move ? null : <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} />}
     </section>
   )
 }

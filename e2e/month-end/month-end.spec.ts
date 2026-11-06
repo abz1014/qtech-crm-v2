@@ -268,21 +268,32 @@ test.describe('month-end (M10)', () => {
     const oldest = monthLabel(before[0])
     await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
 
-    // Owner decision 2026-10-22: one tap never closes more than one month. The button names the oldest open month and closes only it.
+    // Owner decisions 2026-10-22 and 2026-11-06: one tap never closes more than one month, and a month is locked only while it is on
+    // screen. With an older month open the green button says "Go to <Month> <Year>", moves the page there and locks nothing.
     await expect(page.getByRole('button', { name: /^Close through/ })).toHaveCount(0)
-    const first = page.getByRole('button', { name: `Close ${oldest}`, exact: true })
+    await expect(page.getByRole('button', { name: `Close ${STMT.name}`, exact: true })).toHaveCount(0)
+    await expect(page.getByTestId('close-order')).toContainText(`${oldest} is still open and has to be closed before ${STMT.name}.`)
+    const goTo = page.getByRole('button', { name: `Go to ${oldest}`, exact: true })
+    await expect(goTo).toBeEnabled()
+    await goTo.click()
+    await expect(page).toHaveURL(new RegExp(`month=${before[0].slice(0, 7)}`))
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    expect(await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))).toHaveLength(shut.size)
+    // Now the oldest month is on screen: the normal Close button and its confirmation.
+    const oldestName = oldest.split(' ')[0]
+    const first = page.getByRole('button', { name: `Close ${oldestName}`, exact: true })
     await expect(first).toBeEnabled()
     await first.click()
     const firstDialog = page.getByRole('dialog', { name: `Close ${oldest}?` })
     await expect(firstDialog).toContainText(`This closes ${oldest} only.`)
-    await firstDialog.getByRole('button', { name: `Close ${oldest}`, exact: true }).click()
+    await firstDialog.getByRole('button', { name: `Close ${oldestName}`, exact: true }).click()
     await expect(firstDialog).toBeHidden()
     const afterFirst = (await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))).map(c => c.month)
     expect(afterFirst.filter(m => !shut.has(m))).toEqual([before[0]])
 
     // The other older months one by one (the RPC), then last month on the page: the button (1) and the confirmation (2).
     for (const m of before.slice(1)) await must(rest('admin', 'rpc/close_month', { method: 'POST', body: { p_month: m }, prefer: 'return=minimal' }))
-    await page.reload()
+    await page.goto(`/money/month-end?month=${STMT.key}`)
     const closeBtn = page.getByRole('button', { name: `Close ${STMT.name}`, exact: true })
     await expect(closeBtn).toBeEnabled()
     await startCounting(page)
