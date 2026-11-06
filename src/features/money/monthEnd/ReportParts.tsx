@@ -37,7 +37,7 @@ export function ExportCsvButton({ onClick, disabled }: { onClick: () => void; di
 /** "By payment date": the clock a report counts on, so two reports are never read as one (money-07 clock tag). */
 export function ClockTag({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-6 items-center gap-[6px] rounded bg-selected px-2 text-xs text-fg-2">
+    <span className="inline-flex min-h-6 items-center gap-[6px] rounded bg-selected px-2 py-px text-xs text-fg-2">
       <Icon icon={CalendarDays} size="chip" />
       {children}
     </span>

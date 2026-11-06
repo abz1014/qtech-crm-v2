@@ -277,6 +277,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
             onBlur={leave}
             className={cn(
               controlClass,
+              'text-ellipsis',
               size === 'cell' && 'h-[36px]',
               size === 'phone' && 'h-[44px] text-base',
               prefilled && !typing && 'text-fg-2',
