@@ -271,6 +271,24 @@ describe('Company profile screen', () => {
     expect(h.selected[0]).toMatch(/ntn.*bank_iban/)
   })
 
+  it('"Add them" focuses the first missing field and scrolls it to the middle; one missing field says "Add it"', async () => {
+    const user = userEvent.setup()
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    h.row = EMPTY
+    const first = mount('admin')
+    await user.click(await screen.findByRole('button', { name: 'Add them' }))
+    const legal = screen.getByLabelText(/Legal name/)
+    expect(legal).toHaveFocus()
+    expect(scroll).toHaveBeenCalledWith({ block: 'center' })
+    expect(scroll.mock.contexts).toContain(legal)
+    first.unmount()
+    h.row = { ...FULL, ntn: null, strn: '1234567-8' }
+    mount('admin')
+    await user.click(await screen.findByRole('button', { name: 'Add it' }))
+    expect(screen.getByLabelText(/NTN/)).toHaveFocus()
+    scroll.mockRestore()
+  })
+
   it('non-admins are told to ask an admin when the profile is incomplete', async () => {
     h.row = EMPTY
     mount('sales')

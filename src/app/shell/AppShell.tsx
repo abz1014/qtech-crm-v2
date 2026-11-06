@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { navItemForPath, type CountKey } from '@/app/navConfig'
 import { useSession, type SessionUser } from '@/app/session'
+import { cn } from '@/lib/utils'
 import { ToastProvider } from '@/ui/Toast'
 import { useSearchPaletteSource } from '@/features/search/paletteSource'
 import { PaletteHost } from '@/app/palette/PaletteHost'
@@ -11,6 +12,7 @@ import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
 import { EngineerFab } from '@/app/shell/EngineerFab'
+import { hidesEngineerFab } from '@/app/shell/hidesEngineerFab'
 import { TopBar } from '@/app/shell/TopBar'
 import type { NavCounts } from '@/app/shell/useNavCounts'
 import { usePageSettled } from '@/app/usePageSettled'
@@ -101,6 +103,9 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
   const title = phoneTitle(pathname) ?? active?.label ?? (inSettings ? 'Settings' : 'Q-Tech CRM')
 
+  // The engineer's pill overlaps <main> by 12 px: shown only where it covers nothing, and then <main> gets 12 px of room under its last row.
+  const showFab = user.role === 'engineer' && !hidesEngineerFab(pathname)
+
   useRouteFocus(pathname, active?.label ?? (inSettings ? 'Settings' : null))
 
   return (
@@ -113,14 +118,14 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       </a>
       <TopBar user={user} counts={badges} dots={dots} onSearch={palette.open} />
       <MobileBar user={user} title={title} onSearch={palette.open} />
-      <main id="main" tabIndex={-1} className="min-h-0 overflow-y-auto focus:outline-none">
+      <main id="main" tabIndex={-1} className={cn('min-h-0 overflow-y-auto focus:outline-none', showFab && 'max-md:pb-3')}>
         <ErrorBoundary key={pathname} variant="inline">
           <NavCountsContext.Provider value={nav.ready ? counts : null}>
             <Outlet />
           </NavCountsContext.Provider>
         </ErrorBoundary>
       </main>
-      <BottomTabs role={user.role} counts={badges} dots={dots} fab={user.role === 'engineer' ? <EngineerFab /> : undefined} />
+      <BottomTabs role={user.role} counts={badges} dots={dots} fab={showFab ? <EngineerFab /> : undefined} />
       {settled ? (
         <Suspense fallback={null}>
           <HelpHost />

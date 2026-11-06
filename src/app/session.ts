@@ -13,6 +13,8 @@ export interface SessionUser {
   name: string
   /** admin, sales or engineer. Kept a string: an unknown role lands on /no-access. */
   role: string
+  /** When the sign-in account was created (Auth's created_at). Absent for a dev session or one remembered offline. */
+  createdAt?: string
 }
 
 export type SessionState =

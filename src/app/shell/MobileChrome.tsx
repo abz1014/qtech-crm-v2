@@ -64,7 +64,7 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
       <p className="min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base">{config?.title ?? title}</p>
       {actions ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
       <Button variant="quiet" size="touch" icon={CircleHelp} aria-label="Help" onClick={() => openHelp()} />
-      <NewMenu role={user.role} iconOnly size="touch" />
+      <NewMenu role={user.role} size="touch" className="px-2" />
       <AccountMenu user={user} touch />
     </header>
   )

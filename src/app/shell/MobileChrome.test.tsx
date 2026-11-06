@@ -95,6 +95,28 @@ describe('top bar at 768 to 1023 and the Help and Settings buttons (navigation r
   })
 })
 
+describe('the phone bar New button shows its word', () => {
+  it('admin: the button reads "New" (visible text, same accessible name) beside Search and Help', () => {
+    render(
+      <MemoryRouter initialEntries={['/todo']}>
+        <MobileBar user={user} title="Companies" />
+      </MemoryRouter>,
+    )
+    const btn = screen.getByRole('button', { name: 'New' })
+    expect(btn).toHaveTextContent('New')
+    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
+  })
+
+  it('an engineer has no New button on the phone bar', () => {
+    render(
+      <MemoryRouter initialEntries={['/todo']}>
+        <MobileBar user={{ ...user, role: 'engineer' }} title="To do" />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('button', { name: 'New' })).toBeNull()
+  })
+})
+
 describe('Paste or photo (retired by New enquiry and Add to this job, P4)', () => {
   it('neither the top bar nor the phone bar has a Paste or photo button any more', () => {
     render(

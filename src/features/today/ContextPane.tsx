@@ -628,7 +628,7 @@ function howTo(item: TodayItem): string {
     case 'tcs_not_sent':
       return 'These invoices have no courier (TCS) date three working days after the invoice. Open Invoices, tick them and press "Invoice posted today" once.'
     case 'job_commissioning':
-      return 'You are an engineer on this order. Open it to see the site contact and the notes, then "Mark done today" when the commissioning is finished, or change the planned date.'
+      return 'You are an engineer on this order. Open it to see the site contact and the notes, then "Installed today" when the commissioning is finished, or change the planned date.'
     case 'job_on_site':
       return 'The goods have reached the site and the commissioning has no date yet. Open the order and set the planned date.'
     case 'gst_fbr':

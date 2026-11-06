@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Camera, FilePlus2, Search, Share2 } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -8,7 +8,9 @@ import { NoPrimary } from '@/ui/NoPrimary'
 import { useToast } from '@/ui/useToast'
 import { getCapture, listCaptures, safely, takeBackFromSignIn, type CaptureItem } from '@/lib/capture/store'
 import { countsText } from '@/features/capture/model'
-import { useJobSearch } from '@/features/jobs/hooks'
+import { useJobSearch, useJobsList } from '@/features/jobs/hooks'
+import { byRecent, inChip, itemsSummary, type Who } from '@/features/jobs/lib/listModel'
+import type { JobRow } from '@/features/jobs/api'
 
 /**
  * /capture is where the Android share target lands (the service worker stores the shared item for 7 days and redirects here with
@@ -111,7 +113,7 @@ export default function CaptureRoute() {
 }
 
 /** Search for the job and tap it. Shared by Add to job… (a kept share) and Photo or note (nothing shared). */
-function JobPicker({ onPick }: { onPick: (key: string) => void }) {
+function JobPicker({ onPick, showMine = false }: { onPick: (key: string) => void; showMine?: boolean }) {
   const [find, setFind] = useState('')
   const jobs = useJobSearch(find)
   return (
@@ -119,36 +121,67 @@ function JobPicker({ onPick }: { onPick: (key: string) => void }) {
       <label className="grid gap-1 text-base font-medium">
         Find the job
         <input
-          autoFocus
+          // Photo or note (showMine) lists the person's jobs under the box: the keyboard must not open over them.
+          autoFocus={!showMine}
           value={find}
           onChange={e => setFind(e.target.value)}
           placeholder="Customer, job number or item"
           className="min-h-touch rounded border border-line-input bg-surface px-3 text-base font-regular"
         />
       </label>
-      {find.trim() === '' ? null : jobs.isPending ? (
+      {find.trim() === '' ? showMine ? <MyActiveJobs onPick={onPick} /> : null : jobs.isPending ? (
         <p className="text-base text-fg-2">Looking…</p>
       ) : (jobs.data ?? []).length === 0 ? (
         <p className="text-base text-fg-2">No job found. Try the customer’s name or the job number.</p>
       ) : (
         <ul className="grid gap-2" aria-label="Jobs found">
           {(jobs.data ?? []).slice(0, 8).map(j => (
-            <li key={j.key}>
-              <button
-                type="button"
-                onClick={() => onPick(j.key)}
-                className="grid min-h-touch w-full gap-px rounded border border-line-strong bg-surface px-3 py-2 text-left hover:bg-sunken"
-              >
-                <span className="text-base font-semibold">
-                  Job {j.key} · {j.companyName}
-                </span>
-                <span className="text-base text-fg-2 [overflow-wrap:anywhere]">{j.items}</span>
-              </button>
-            </li>
+            <JobChoice key={j.key} job={j} onPick={onPick} />
           ))}
         </ul>
       )}
     </section>
+  )
+}
+
+function JobChoice({ job: j, onPick }: { job: Pick<JobRow, 'key' | 'companyName' | 'items'>; onPick: (key: string) => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onPick(j.key)}
+        className="grid min-h-touch w-full gap-px rounded border border-line-strong bg-surface px-3 py-2 text-left hover:bg-sunken"
+      >
+        <span className="text-base font-semibold">
+          Job {j.key} · {j.companyName}
+        </span>
+        <span className="text-base text-fg-2 [overflow-wrap:anywhere]">{j.items}</span>
+      </button>
+    </li>
+  )
+}
+
+/**
+ * The engineer's active jobs (the Jobs list's "Mine" chip, never History), under the search box, so the usual pick is one tap.
+ * The same list data and filter as the Jobs list; a row carries the job number, the customer and the items, no price and no customer PO.
+ */
+function MyActiveJobs({ onPick }: { onPick: (key: string) => void }) {
+  const session = useSession()
+  const user = session.status === 'signed-in' ? session.user : null
+  const list = useJobsList(user?.role ?? null)
+  const who = useMemo<Who>(() => ({ userId: user?.id ?? null, role: (user?.role ?? '') as Who['role'] }), [user?.id, user?.role])
+  const mine = useMemo(() => (list.data ?? []).filter(j => inChip(j, 'mine', who)).sort(byRecent), [list.data, who])
+  if (list.isPending) return <p className="text-base text-fg-2">Looking…</p>
+  if (list.isError || mine.length === 0) return null // the search box above still finds any job
+  return (
+    <div className="grid gap-2">
+      <h2 className="text-base font-semibold">Your jobs</h2>
+      <ul className="grid gap-2" aria-label="Your jobs">
+        {mine.map(j => (
+          <JobChoice key={j.key} job={{ key: j.key, companyName: j.companyName, items: itemsSummary(j.items) }} onPick={onPick} />
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -173,7 +206,7 @@ function JobFirst() {
         </h1>
         <p className="text-base text-fg-2">Which job is it for? Then take the photo or write the note.</p>
       </header>
-      <JobPicker onPick={key => navigate(`/jobs/${encodeURIComponent(key)}`, { replace: true, state: { photoOrNote: true } })} />
+      <JobPicker showMine onPick={key => navigate(`/jobs/${encodeURIComponent(key)}`, { replace: true, state: { photoOrNote: true } })} />
       {kept.length > 0 ? (
         <section aria-label="Shared earlier" className="grid gap-2">
           <h2 className="text-base font-semibold">Shared earlier, not added yet</h2>

@@ -22,7 +22,7 @@ const SLOW_SESSION_MS = 5_000
 /** The account lookup is retried quietly this many times (1 s, 2 s, 4 s apart) before it counts as failed. */
 const LOOKUP_RETRIES = 3
 
-async function resolveUser(userId: string): Promise<Resolved> {
+async function resolveUser(userId: string, createdAt?: string): Promise<Resolved> {
   const supabase = getSupabase()
   if (!supabase) throw new Error('Supabase is not configured')
   // Both calls go through RLS. A deactivated person gets null from current_user_role() and no users row.
@@ -35,7 +35,7 @@ async function resolveUser(userId: string): Promise<Resolved> {
   if (role.error) throw role.error
   if (row.error) throw row.error
   if (!role.data || !row.data) return { user: null }
-  return { user: { id: row.data.id, name: row.data.name, role: role.data } }
+  return { user: { id: row.data.id, name: row.data.name, role: role.data, ...(createdAt ? { createdAt } : {}) } }
 }
 
 /**
@@ -129,9 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase])
 
   const userId = authSession?.user.id
+  const createdAt = authSession?.user.created_at
   const query = useQuery({
     queryKey: [...KEY, userId],
-    queryFn: () => resolveUser(userId as string),
+    queryFn: () => resolveUser(userId as string, createdAt),
     enabled: Boolean(userId),
     staleTime: 0,
     retry: (count, err) => count < LOOKUP_RETRIES && !isAuthRefusal(err),
