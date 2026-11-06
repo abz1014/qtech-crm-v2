@@ -855,9 +855,16 @@ export function collect(opts: CollectOptions): Metrics {
           if (seen.has(el) || el === main || !(el instanceof HTMLElement) || SKIP.has(el.tagName)) continue
           seen.add(el)
           const s = style(el)
-          if (s.overflowY !== 'auto' && s.overflowY !== 'scroll') continue
-          if (el.clientHeight <= 0 || el.scrollHeight <= el.clientHeight + 1 || !visible(el)) continue
+          const scrollsY = (s.overflowY === 'auto' || s.overflowY === 'scroll') && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 1
+          // Sideways inside a dialog is never meant (on the page a table wrapper may scroll sideways: that is the phone "strips" target).
+          const scrollsX = isDialog && (s.overflowX === 'auto' || s.overflowX === 'scroll') && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1
+          if ((!scrollsY && !scrollsX) || !visible(el)) continue
           if (el.matches('pre, textarea, select, [data-virtual], [data-scroll-ok]') || el.closest(`[data-virtual], [data-scroll-ok], pre, ${POPOVER}`)) continue
+          if (scrollsX) {
+            layout.nestedScroll.count++
+            if (layout.nestedScroll.samples.length < 8) layout.nestedScroll.samples.push(`${describe(el)} scrolls sideways ${el.scrollWidth - el.clientWidth}px inside a dialog`)
+            continue
+          }
           if (isToday) continue
           if (isDialog) {
             let inner = false
