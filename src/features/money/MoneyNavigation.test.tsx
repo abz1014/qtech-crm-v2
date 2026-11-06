@@ -127,11 +127,37 @@ describe('old addresses keep working', () => {
     expect(screen.getByTestId('report-picker')).toHaveValue('pnl')
   })
 
-  it('Margins and Exceptions still open, inside Lock a month, with their plain names', async () => {
+  it('Margins and Exceptions still open with their plain names, and light no tab (they are not Lock a month)', async () => {
     at('/money/exceptions')
     expect(await screen.findByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^Lock a month/ })).toHaveAttribute('aria-current', 'page')
+    const nav = screen.getByRole('navigation', { name: 'Money views' })
+    expect(within(nav).queryByRole('link', { current: 'page' })).toBeNull()
+    expect(within(nav).getByRole('link', { name: /^Lock a month/ })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('link', { name: 'Back to Lock a month' })).toHaveAttribute('href', '/money/month-end')
+    // the More money pages row marks where you are
+    const more = screen.getByRole('group', { name: 'More money pages' })
+    expect(within(more).getByRole('link', { name: 'Mistakes to fix' })).toHaveAttribute('aria-current', 'page')
+    expect(within(more).getByRole('link', { name: 'Margins' })).not.toHaveAttribute('aria-current')
+  })
+
+  it.each([
+    ['/money/month-end/bank', 'Bank check', 2],
+    ['/money/margins', 'Order margins', 2],
+    ['/money/profit', 'Profitability', 2],
+  ])('%s lights no tab, says its name once, and is marked in the More money pages row', async (path, heading, level) => {
+    at(path)
+    expect(await screen.findByRole('heading', { name: heading, level })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: heading })).toHaveLength(1)
+    const nav = screen.getByRole('navigation', { name: 'Money views' })
+    expect(within(nav).queryByRole('link', { current: 'page' })).toBeNull()
+    const more = screen.getByRole('group', { name: 'More money pages' })
+    expect(within(more).getAllByRole('link', { current: 'page' })).toHaveLength(1)
+  })
+
+  it('Margins opened from Reports keeps Reports lit', async () => {
+    at('/money/margins?from=reports')
+    await screen.findByRole('heading', { name: 'Order margins', level: 2 })
+    expect(within(screen.getByRole('navigation', { name: 'Money views' })).getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('sales get the no-access page on a money report', async () => {

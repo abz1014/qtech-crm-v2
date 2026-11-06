@@ -387,13 +387,13 @@ export function buildExpenseReport({ period, entries, categories, groups, flows 
 export function expenseReportCsv(v: ExpenseReportView): { headers: string[]; rows: unknown[][] } {
   const n = (a: Amount) => Number(paisaToFixed(P(a)))
   const rows: unknown[][] = [
-    ['Total', v.label, 'Spent (gross, input tax included)', '', v.total.count, n(v.total.amount), n(v.prev.amount), '', ''],
+    ['Total', v.label, 'Spent (gross, GST paid on purchases included)', '', v.total.count, n(v.total.amount), n(v.prev.amount), '', ''],
     ['Total', v.label, 'Paid in cash', '', v.total.cashCount, n(v.total.cash), n(v.prev.cash), '', ''],
     ['Total', v.label, 'Paid by bank', '', v.total.bankCount, n(v.total.bank), n(v.prev.bank), '', ''],
-    ['Profit and loss', v.label, 'Running costs (overheads), net of input tax', '', '', n(v.kinds.running), '', '', ''],
-    ['Profit and loss', v.label, 'Order costs, net of input tax', '', '', n(v.kinds.order), '', '', ''],
+    ['Profit and loss', v.label, 'Running costs (overheads), net of GST paid on purchases', '', '', n(v.kinds.running), '', '', ''],
+    ['Profit and loss', v.label, 'Order costs, net of GST paid on purchases', '', '', n(v.kinds.order), '', '', ''],
     ['Profit and loss', v.label, 'Not a cost (drawings, loan repayments)', '', '', n(v.kinds.notCost), '', '', ''],
-    ['Profit and loss', v.label, 'Input tax (claimed back)', '', '', n(v.kinds.inputTax), '', '', ''],
+    ['Profit and loss', v.label, 'GST paid on purchases (claimed back)', '', '', n(v.kinds.inputTax), '', '', ''],
   ]
   // 0087: the bridge from "for the period" to "paid in the period" (In vs out and Profit and loss count by the day paid)
   rows.push(
@@ -420,7 +420,7 @@ export function expenseReportCsv(v: ExpenseReportView): { headers: string[]; row
 /** The CSV of one category's entries (the drill-down), oldest first. */
 export function entriesCsv(name: string, entries: readonly ReportEntry[]): { headers: string[]; rows: unknown[][] } {
   return {
-    headers: ['Paid on', 'Category', 'Detail', 'Payee or order', 'Paid via', 'Amount (PKR)', 'Input tax (PKR)'],
+    headers: ['Paid on', 'Category', 'Detail', 'Payee or order', 'Paid via', 'Amount (PKR)', 'GST paid on purchases (PKR)'],
     rows: [...entries]
       .sort((a, b) => (a.paidOn < b.paidOn ? -1 : a.paidOn > b.paidOn ? 1 : 0))
       .map(e => [e.paidOn, name, e.detail ?? '', e.who ?? '', e.paidVia === 'cash' ? 'Cash' : 'Bank', Number(e.amount), Number(e.inputTax)]),

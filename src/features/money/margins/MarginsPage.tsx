@@ -143,7 +143,7 @@ export function MarginsPage() {
   const rows = useMemo(() => (view === 'all' ? all : view === 'final' ? all.filter(r => r.state === 'final') : all.filter(r => r.state !== 'final')), [all, view])
   const [confirming, setConfirming] = useState(false)
   return (
-    <MoneyFrame active={fromReports ? 'reports' : 'month-end'}>
+    <MoneyFrame active={fromReports ? 'reports' : null}>
       <NoPrimary />
       <MoneySubHeader
         back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Lock a month' }}

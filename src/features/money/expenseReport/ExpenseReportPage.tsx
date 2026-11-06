@@ -244,7 +244,7 @@ function Summary({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => v
         <Kind label="Running costs" sub="Overheads in Profit and loss" amount={v.kinds.running} testId="kind-running" />
         <Kind label="Order costs" sub="Supplier, freight, customs" amount={v.kinds.order} testId="kind-order" />
         <Kind label="Not a cost" sub="Owner drawings, loan repayments" amount={v.kinds.notCost} testId="kind-notcost" />
-        <Kind label="Input tax" sub="Claimed back, so not a cost" amount={v.kinds.inputTax} testId="kind-tax" />
+        <Kind label="GST paid on purchases" sub="Claimed back, so not a cost" amount={v.kinds.inputTax} testId="kind-tax" />
       </dl>
     </section>
   )

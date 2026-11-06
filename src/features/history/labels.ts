@@ -136,7 +136,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     description: t('Detail'),
     fx_amount: t('Foreign amount'),
     fx_currency: t('Currency'),
-    input_tax_pkr: m('Input tax'),
+    input_tax_pkr: m('GST paid on purchases'),
     order_id: hide,
     paid_on: d('Date paid'),
     paid_via: paidVia(),

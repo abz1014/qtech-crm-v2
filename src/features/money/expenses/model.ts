@@ -127,7 +127,7 @@ export const CLEARING_ID = 'ca7e0000-0000-4000-8000-000000000013'
 export const INPUT_TAX_CATEGORIES: readonly string[] = [SUPPLIER_PAYMENT_ID, FREIGHT_ID, CLEARING_ID]
 export const showsInputTax = (categoryId: string | null | undefined): boolean => !!categoryId && INPUT_TAX_CATEGORIES.includes(categoryId)
 
-export const GROUP_LABEL: Record<CategoryGroup, string> = { overhead: 'Overhead', order_cost: 'Order cost', non_pnl: 'Not in P&L' }
+export const GROUP_LABEL: Record<CategoryGroup, string> = { overhead: 'Overhead', order_cost: 'Order cost', non_pnl: 'Not a cost' }
 export const PAID_VIA_LABEL: Record<PaidVia, string> = { bank: 'Bank', cash: 'Cash' }
 
 /** "Office running · cash": the trailing text of a category in the type-ahead (its group, else its kind, and how it is usually paid). */

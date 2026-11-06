@@ -43,7 +43,7 @@ export function ExpenseReportDocument({ v, logoSrc, printedOn }: { v: ExpenseRep
         </View>
         <Text style={s.h1}>Expenses, {v.label}</Text>
         <Text style={s.sub}>
-          All amounts in PKR, as paid (input tax included). {v.frozenMonths > 0 ? 'Closed months: figures frozen at close.' : ''}
+          All amounts in PKR, as paid (GST paid on purchases included). {v.frozenMonths > 0 ? 'Closed months: figures frozen at close.' : ''}
         </Text>
         <View style={s.tiles}>
           <View style={s.tile}>
@@ -64,7 +64,7 @@ export function ExpenseReportDocument({ v, logoSrc, printedOn }: { v: ExpenseRep
             <Text style={s.tileLabel}>In profit and loss</Text>
             <Text style={{ marginTop: 2 }}>Running costs {r(v.kinds.running)}</Text>
             <Text>Order costs {r(v.kinds.order)}</Text>
-            <Text>Not a cost {r(v.kinds.notCost)} · input tax {r(v.kinds.inputTax)}</Text>
+            <Text>Not a cost {r(v.kinds.notCost)} · GST paid on purchases {r(v.kinds.inputTax)}</Text>
           </View>
         </View>
 

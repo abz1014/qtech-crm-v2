@@ -80,7 +80,7 @@ export function ExceptionsPage() {
   }
 
   return (
-    <MoneyFrame active="month-end">
+    <MoneyFrame active={null}>
       <MoneySubHeader
         back={{ to: '/money/month-end', label: 'Lock a month' }}
         title="Mistakes to fix"

@@ -140,6 +140,23 @@ export function receivableTotals(rows: readonly ReceivableRow[], today: string):
   }
 }
 
+/** The phone's split of Owed: the desktop tiles' lines, plus "Imported, to review" when above 0 (imported balances are counted apart, so without it the lines would not add up to Owed). */
+export interface PhoneSplitLine {
+  label: string
+  amount: number
+  count: number
+  tone?: 'danger'
+}
+export function phoneSplit(t: Pick<ReceivableTotals, 'overdue' | 'overdueCount' | 'notYetDue' | 'notYetDueCount' | 'notInvoiced' | 'notInvoicedCount' | 'imported' | 'importedCount'>): PhoneSplitLine[] {
+  const lines: PhoneSplitLine[] = [
+    { label: 'Overdue', amount: t.overdue, count: t.overdueCount, tone: t.overdue > 0 ? 'danger' : undefined },
+    { label: 'Not yet due', amount: t.notYetDue, count: t.notYetDueCount },
+    { label: 'Not invoiced yet', amount: t.notInvoiced, count: t.notInvoicedCount },
+  ]
+  if (t.imported > 0) lines.push({ label: 'Imported, to review', amount: t.imported, count: t.importedCount })
+  return lines
+}
+
 /** "both due a reminder", "1 due a reminder", "none due a reminder". */
 export function reminderPhrase(overdueCount: number, dueCount: number): string {
   if (overdueCount === 0) return 'Nothing overdue'

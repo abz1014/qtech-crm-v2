@@ -196,7 +196,7 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
   await expect(five.first()).toBeVisible()
   expect(await isRed(five), 'the control\'s "5 days overdue" on To collect is red').toBe(true)
   // The imported order is a grey tile, not a debt; the control is in the Overdue total.
-  await expect(page.getByText('Imported, to review').first()).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Balance by status, includes GST' }).getByText('Imported, to review')).toBeVisible()
   const tile = page.getByRole('region', { name: 'Balance by status, includes GST' }).locator('div').filter({ has: page.getByText('Overdue', { exact: true }) }).last()
   const amounts = ((await tile.innerText()).match(/\d[\d,]*/g) ?? []).map(t => Number(t.replace(/,/g, '')))
   expect(Math.max(0, ...amounts), 'the Overdue total includes the control').toBeGreaterThanOrEqual(CONTROL_GROSS)

@@ -375,16 +375,16 @@ test.describe('expenses (M03, M11)', () => {
   test('input tax is collapsed and optional on Freight and Clearing; any other category takes it through "Has a GST invoice" (0087)', async ({ page }) => {
     const amt = 590000 + base() + 8
     await openAs(page, 'admin', '/money/expenses?add=1')
-    await expect(page.getByText('Input tax, optional')).toHaveCount(0)
+    await expect(page.getByText('GST paid on purchases, optional')).toHaveCount(0)
     const category = page.getByRole('combobox', { name: 'Category' })
     await category.click()
     await page.keyboard.type('frei')
     await page.keyboard.press('Tab')
     await expect(category).toHaveValue('Freight')
-    await page.getByRole('button', { name: /Input tax, optional/ }).click()
-    await page.getByRole('textbox', { name: 'Input tax, PKR' }).fill('90,000')
+    await page.getByRole('button', { name: /GST paid on purchases, optional/ }).click()
+    await page.getByRole('textbox', { name: 'GST paid on purchases, PKR' }).fill('90,000')
     await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amt))
-    await expect(page.getByText('Cost in margin and P&L')).toBeVisible()
+    await expect(page.getByText('Cost in margin and profit')).toBeVisible()
     await review(page, 'm03-input-tax-1440')
     await page.getByRole('button', { name: 'Save expense' }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
@@ -395,9 +395,9 @@ test.describe('expenses (M03, M11)', () => {
     await page.getByRole('combobox', { name: 'Category' }).click()
     await page.keyboard.type('rent')
     await page.keyboard.press('Tab')
-    await expect(page.getByText('Input tax, optional')).toHaveCount(0)
+    await expect(page.getByText('GST paid on purchases, optional')).toHaveCount(0)
     await page.getByRole('checkbox', { name: 'More: has a GST invoice' }).click()
-    await expect(page.getByRole('textbox', { name: 'Input tax, PKR' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'GST paid on purchases, PKR' })).toBeVisible()
   })
 
   test('Supplier payment is offered nowhere but Pay: not in the dialog, not in the burst sheet (one door, 0087)', async ({ page }) => {

@@ -471,7 +471,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           {hasGst ? (
             <div className="flex flex-wrap items-center gap-3 rounded-row border bg-canvas px-4 py-3 text-base">
               <label htmlFor={`${uid}-tax`} className="font-medium">
-                GST on this bill (input tax), PKR
+                GST on this bill, PKR
               </label>
               <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num h-[2.75rem] w-[10rem] text-base" />
               <span className="text-fg-2">Counts toward GST paid on purchases, so less GST to pay FBR.</span>

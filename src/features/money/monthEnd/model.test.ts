@@ -210,7 +210,7 @@ describe('profit and loss', () => {
   })
   it('the CSV has Gross, GST and net columns, and shows the unresolved row apart', () => {
     const csv = pnlCsv(pnl)
-    expect(csv.headers).toEqual(['Section', 'Line', 'Count', 'Gross', 'GST or input tax', 'Net'])
+    expect(csv.headers).toEqual(['Section', 'Line', 'Count', 'Gross', 'GST, or GST paid on purchases', 'Net'])
     const unresolved = csv.rows.find(r => String(r[1]).startsWith('Payments not yet split'))
     expect(unresolved).toEqual(['Money in', 'Payments not yet split (excluded from net)', 1, 120000, '', ''])
     const split = csv.rows.find(r => String(r[1]).startsWith('Payments received, split'))
@@ -224,7 +224,7 @@ describe('profit and loss', () => {
 describe('expenses by category', () => {
   const v = buildCategories(LINES, { cashCount: 37, cashAmount: '121750.00', bankCount: 17, bankAmount: '0.00' })
   it('groups overheads, order costs and not in P&L in that order, categories in Settings order', () => {
-    expect(v.groups.map(g => g.title)).toEqual(['Overheads', 'Order costs', 'Not in P&L'])
+    expect(v.groups.map(g => g.title)).toEqual(['Overheads', 'Order costs', 'Not a cost'])
     expect(v.groups[0].lines.map(l => l.category)).toEqual(['Salaries', 'Rent', 'Fuel & travel'])
   })
   it('totals gross, net and input tax over every group', () => {
@@ -384,12 +384,12 @@ describe('GST and FBR', () => {
   })
   it('output GST and input tax are never netted: both stay as their own columns', () => {
     const v = buildGst('2026-10', all, true)
-    expect(gstCsv(v).headers.at(-1)).toBe('Input tax paid')
+    expect(gstCsv(v).headers.at(-1)).toBe('GST paid on purchases')
     expect(gstCsv(v).rows[0].slice(2, 4)).toEqual([3702500, 666450])
   })
   it('without input tax (anyone but the admin) the column and the figures are gone from the CSV', () => {
     const v = buildGst('2026-10', all.map(r => ({ ...r, inputTax: null })), false)
-    expect(gstCsv(v).headers).not.toContain('Input tax paid')
+    expect(gstCsv(v).headers).not.toContain('GST paid on purchases')
     expect(gstCsv(v).rows[0]).toHaveLength(8)
     expect(v.total.inputTax).toBeNull()
   })

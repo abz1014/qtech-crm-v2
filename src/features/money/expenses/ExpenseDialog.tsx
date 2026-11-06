@@ -142,7 +142,7 @@ const schema = z
     paidOn: z.string().min(1, 'Choose a date').superRefine(inDateRange(() => businessDateRange())),
     paidVia: z.enum(['bank', 'cash']),
     note: z.string(),
-    inputTax: z.number().min(0, 'Input tax cannot be below zero').max(MAX_AMOUNT, 'That input tax is too large').nullable(),
+    inputTax: z.number().min(0, 'GST paid on purchases cannot be below zero').max(MAX_AMOUNT, 'That GST paid on purchases is too large').nullable(),
     orderId: z.string().nullable(),
     rfqId: z.string().nullable(),
     legId: z.string().nullable(),
@@ -150,8 +150,8 @@ const schema = z
     /** Set from the chosen category: an "Other" (0091) must say what it was for, so Detail is required (a field error, not a server one). */
     titleRequired: z.boolean(),
   })
-  // Only against a usable amount: a negative amount is the amount's problem, not the input tax's (hunt HE-18).
-  .refine(v => !v.inputTax || !(v.amount > 0) || v.inputTax <= v.amount, { path: ['inputTax'], message: 'Input tax cannot be more than what was paid' })
+  // Only against a usable amount: a negative amount is the amount's problem, not the GST paid on purchases' (hunt HE-18).
+  .refine(v => !v.inputTax || !(v.amount > 0) || v.inputTax <= v.amount, { path: ['inputTax'], message: 'GST paid on purchases cannot be more than what was paid' })
   .refine(v => !v.titleRequired || v.note.trim() !== '', { path: ['note'], message: MISC_TITLE_ERROR })
 
 type Values = z.input<typeof schema>
@@ -402,7 +402,7 @@ function ExpenseFormReady({
 
   return (
     <>
-      <Form sf={sf} labels={{ amount: 'Amount', categoryId: 'Category', paidOn: 'Date paid', paidVia: 'Paid via', note: 'Note', inputTax: 'Input tax', orderId: 'Job', rfqId: 'Job', legId: 'Order', payeeId: 'Paid to' }} className="grid gap-4">
+      <Form sf={sf} labels={{ amount: 'Amount', categoryId: 'Category', paidOn: 'Date paid', paidVia: 'Paid via', note: 'Note', inputTax: 'GST paid on purchases', orderId: 'Job', rfqId: 'Job', legId: 'Order', payeeId: 'Paid to' }} className="grid gap-4">
         {/* Enter in the amount saves: the form has several fields, so it needs a default button of its own for implicit submission. */}
         <button type="submit" hidden tabIndex={-1} />
         <div className="grid gap-4 md:grid-cols-2">
@@ -514,7 +514,7 @@ function ExpenseFormReady({
         ) : null}
 
         {showsInputTax(categoryId) || gstTick ? (
-          <FormField<Values, 'inputTax'> name="inputTax" label={<span className="sr-only">Input tax</span>}>
+          <FormField<Values, 'inputTax'> name="inputTax" label={<span className="sr-only">GST paid on purchases</span>}>
             {f => <InputTax amount={typeof amount === 'number' ? amount : null} value={f.value ?? null} onChange={f.onChange} defaultOpen={!!expense?.inputTax || gstTick} />}
           </FormField>
         ) : (

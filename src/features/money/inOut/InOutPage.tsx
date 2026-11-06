@@ -25,6 +25,7 @@ import {
   type Period,
   type PeriodKind,
   type TrendRow,
+  whyTheyDiffer,
 } from '@/features/money/inOut/model'
 
 /*
@@ -183,6 +184,8 @@ function Head({ prev }: { prev: string }) {
 function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   const prev = periodLabel(shiftPeriod(v.period, -1))
   const r = v.reconcile
+  // Lines at 0 are left out; with none left the section says so in one sentence.
+  const whyLines = whyTheyDiffer(r)
   const empty = v.cash.payments === 0 && v.cash.expenses === 0 && v.cash.refundCount === 0 && v.profit.invoices === 0
   const frozen =
     v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Closed: figures frozen when the month was closed' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
@@ -198,7 +201,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
           <div role="table" aria-label="Cash in and out">
             <Head prev={prev} />
             <Row testId="cash-in" label="Money in" sub={`${plural(v.cash.payments, 'customer payment')} received, GST included`} now={v.cash.in} before={v.prevCash.in} />
-            <Row testId="cash-out" label="Money out" sub={`${plural(v.cash.expenses, 'expense')} and supplier payments, input tax included`} now={v.cash.out} before={v.prevCash.out} />
+            <Row testId="cash-out" label="Money out" sub={`${plural(v.cash.expenses, 'expense')} and supplier payments, GST paid on purchases included`} now={v.cash.out} before={v.prevCash.out} />
             {toPaisa(v.cash.refunds) !== 0n || toPaisa(v.prevCash.refunds) !== 0n ? (
               <Row testId="cash-refunds" label="Refunds to customers" sub={`${plural(v.cash.refundCount, 'refund')} paid back`} now={v.cash.refunds} before={v.prevCash.refunds} />
             ) : null}
@@ -210,7 +213,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             <Head prev={prev} />
             <Row label="Sales" sub={`${plural(v.profit.invoices, 'invoice')}, GST taken out`} now={v.profit.sales} before={v.prevProfit.sales} />
             <Row label="Order costs" sub="Supplier, freight and clearing, counted with the order's sales" now={v.profit.orderCosts} before={v.prevProfit.orderCosts} />
-            <Row label="Overheads" sub="When paid, input tax taken out" now={v.profit.overheads} before={v.prevProfit.overheads} />
+            <Row label="Overheads" sub="When paid, GST paid on purchases taken out" now={v.profit.overheads} before={v.prevProfit.overheads} />
             <Row testId="profit" label="Profit on invoices" now={v.profit.profit} before={v.prevProfit.profit} strong />
           </div>
         </Panel>
@@ -224,36 +227,24 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             owe suppliers report.
           </InfoTip>
         </h2>
-        <p className="num text-base">
-          Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
-        </p>
-        <ul className="grid gap-1 text-base text-fg-2">
-          <li>
-            <span className="num font-medium text-fg">{signed(r.owedMore)}</span> customers owe us more (invoiced, not yet paid), or less when they paid
-            off earlier invoices
-          </li>
-          <li>
-            <span className="num font-medium text-fg">{signed(change(0, r.gst))}</span> GST inside those invoices: collected for FBR, not ours
-          </li>
-          <li>
-            <span className="num font-medium text-fg">{signed(r.costsAhead)}</span> supplier costs paid before their sale was invoiced (held for it), or
-            less when earlier payments are matched now
-          </li>
-          <li>
-            <span className="num font-medium text-fg">{signed(r.drawingsAndTax)}</span> owner drawings, loan repayments and input tax: cash out that is not
-            a cost
-          </li>
-          {toPaisa(r.refunds) !== 0n ? (
-            <li>
-              <span className="num font-medium text-fg">{signed(r.refunds)}</span> refunds paid back to customers: cash out that is not a cost
-            </li>
-          ) : null}
-          {toPaisa(r.other) !== 0n ? (
-            <li>
-              <span className="num font-medium text-fg">{signed(r.other)}</span> other: a closed month&apos;s frozen cash figure differs from the books
-            </li>
-          ) : null}
-        </ul>
+        {whyLines.length === 0 ? (
+          <p className="text-base text-fg-2" data-testid="in-out-why-none">
+            Nothing separates them: profit on invoices and cash in minus cash out agree for {v.label}.
+          </p>
+        ) : (
+          <>
+            <p className="num text-base">
+              Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
+            </p>
+            <ul className="grid gap-1 text-base text-fg-2">
+              {whyLines.map(l => (
+                <li key={l.key}>
+                  <span className="num font-medium text-fg">{signed(l.amount)}</span> {l.text}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </section>
 
       <CategoryPanel v={v} prev={prev} />

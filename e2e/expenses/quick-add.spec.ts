@@ -111,7 +111,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill(String(amt))
     await pickCategory(qa, 'Repairs & maintenance')
     await qa.getByRole('checkbox', { name: 'Has a GST invoice' }).click()
-    await qa.getByRole('textbox', { name: 'GST on this bill (input tax), PKR' }).fill('180')
+    await qa.getByRole('textbox', { name: 'GST on this bill, PKR' }).fill('180')
     await qa.getByRole('button', { name: 'Save this expense' }).click()
     await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
     const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amt}&select=*`))

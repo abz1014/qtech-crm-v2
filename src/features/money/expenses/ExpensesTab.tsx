@@ -169,9 +169,9 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
                   </span>
                   <InfoTip label="About this total">
-                    What was paid in {monthKeyLabel(month)}, by the day paid, input tax included (what left the bank or the cash box). A monthly bill
+                    What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or the cash box). A monthly bill
                     paid this month for last month is in this total; the Expenses report counts it in the month it is for.
-                    {totals.inputTax > 0 ? ` Input tax ${pkr(totals.inputTax)} of it is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
+                    {totals.inputTax > 0 ? ` GST paid on purchases, ${pkr(totals.inputTax)} of it, is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
                   </InfoTip>
                 </span>
               ) : null}
@@ -330,7 +330,7 @@ function buildColumns(
   if (act.showTax)
     cols.push({
       id: 'tax',
-      header: 'Input tax (PKR)',
+      header: 'GST paid on purchases (PKR)',
       kind: 'money',
       width: 132,
       hideBelowMd: true,

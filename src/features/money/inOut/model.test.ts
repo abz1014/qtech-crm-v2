@@ -12,6 +12,7 @@ import {
   type DetailRow,
   type FlowRow,
   type ProfitRow,
+  whyTheyDiffer,
 } from '@/features/money/inOut/model'
 
 /* The figures are the 0079 pgTAP fixture's (supabase/tests/0079_in_vs_out.test.sql), so screen, file and database agree. */
@@ -176,3 +177,16 @@ describe('refunds paid back to customers (0126)', () => {
   })
 })
 
+describe('Why profit and cash differ: lines at 0 are left out', () => {
+  const zero = { gap: '0.00', owedMore: '0.00', gst: '0.00', costsAhead: '0.00', drawingsAndTax: '0.00', refunds: '0.00', other: '0.00' }
+  it('lists only the lines that are not 0, GST as a minus', () => {
+    const lines = whyTheyDiffer({ ...zero, gap: '5.00', owedMore: '7.00', gst: '2.00' })
+    expect(lines.map(l => [l.key, l.amount])).toEqual([['owed', '7.00'], ['gst', '-2.00']])
+  })
+  it('lists nothing when every line is 0, so the page says so in one sentence', () => {
+    expect(whyTheyDiffer(zero)).toEqual([])
+  })
+  it('names the GST paid on purchases, not input tax', () => {
+    expect(whyTheyDiffer({ ...zero, drawingsAndTax: '600.00' })[0].text).toContain('GST paid on purchases')
+  })
+})

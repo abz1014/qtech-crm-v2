@@ -216,8 +216,8 @@ function PayFormReady({
       <Checkbox label={<span className="text-base">More: has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} />
       {hasGst ? (
         <label className="grid gap-2">
-          <span className="font-medium">GST on this bill (input tax), PKR</span>
-          <NumberInput value={tax} onChange={setTax} min={0} inputMode="decimal" className="num h-[2.75rem] text-base" aria-label="GST on this bill (input tax), PKR" />
+          <span className="font-medium">GST on this bill, PKR</span>
+          <NumberInput value={tax} onChange={setTax} min={0} inputMode="decimal" className="num h-[2.75rem] text-base" aria-label="GST on this bill, PKR" />
         </label>
       ) : null}
       {error ? (

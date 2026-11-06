@@ -8,14 +8,14 @@ export interface MoneyTab {
 /**
  * The Money tabs (owner decision 2026-10-19: Money is two levels deep, never three; round 3: Reports is the fifth tab, so a
  * report page lights a tab). One name for admin and sales. "To collect" is first and is where Money opens for everyone.
- * Margins, Mistakes to fix and Bank check are reached from the Lock a month checklist and keep Lock a month lit.
+ * Margins, Mistakes to fix, Bank check and Profitability are reached from the Lock a month checklist or the More money pages row and light no tab (owner decision 2026-11: they are not the Lock a month tab); Margins opened from Reports keeps Reports lit.
  * The routes are internal identifiers and keep their old names (/money/receivables is "To collect").
  */
 export const MONEY_TABS: readonly MoneyTab[] = [
   { key: 'receivables', label: 'To collect', to: '/money/receivables' },
   { key: 'gst-register', label: 'Invoices', to: '/money/gst-register' },
   { key: 'expenses', label: 'Expenses', to: '/money/expenses', adminOnly: true },
-  // Lock a month opens on its checklist; the tab stays lit on everything reached from it (bank, margins, mistakes to fix).
+  // Lock a month opens on its checklist and is lit on that checklist only.
   { key: 'month-end', label: 'Lock a month', to: '/money/month-end', adminOnly: true },
   { key: 'reports', label: 'Reports', to: '/money/reports' },
 ]

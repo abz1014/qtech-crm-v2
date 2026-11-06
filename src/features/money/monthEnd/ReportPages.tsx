@@ -252,13 +252,13 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
                 />
               ) : null}
               <Line tone="total" label="Received, after GST" amount={v.netIn} />
-              <Line tone="group" label="Money out, counted in the P&L" />
+              <Line tone="group" label="Money out, counted in profit" />
               <Line
                 label="Order costs"
                 basis={
                   <>
                     <Num>{v.orderCosts.count}</Num> {v.orderCosts.count === 1 ? 'expense' : 'expenses'}
-                    {toPaisa(v.orderCosts.inputTax) > 0n ? <>, net of <Num>{rupees(v.orderCosts.inputTax)}</Num> input tax</> : null}
+                    {toPaisa(v.orderCosts.inputTax) > 0n ? <>, net of <Num>{rupees(v.orderCosts.inputTax)}</Num> GST paid on purchases</> : null}
                   </>
                 }
                 amount={negate(v.orderCosts.net)}
@@ -273,13 +273,13 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
 
           {/* Shown only when something was drawn or repaid: an empty panel every month was noise. */}
           {drawings ? (
-          <section aria-label="Not in P&L" className="overflow-hidden rounded-panel border border-dashed border-line-input bg-canvas">
+          <section aria-label="Not a cost" className="overflow-hidden rounded-panel border border-dashed border-line-input bg-canvas">
             <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
               <h3 className="text-base font-semibold">Drawings and loan repayment</h3>
               <InfoTip label="About drawings">Owner drawings and loan repayment are money out, but not a cost of doing business, so they are not in the profit.</InfoTip>
             </header>
             {v.notInPnl.lines.length === 0 ? null : (
-              <div role="table" aria-label="Not in P&L">
+              <div role="table" aria-label="Not a cost">
                 {v.notInPnl.lines.map(l => (
                   <Line key={l.categoryId} label={l.category} basis={<><Num>{l.count}</Num> {l.count === 1 ? 'expense' : 'expenses'}, {l.paidVia}</>} amount={negate(l.net)} />
                 ))}
@@ -337,7 +337,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             <dl className="text-table">
               {[
                 [`All expenses paid, ${plural(v.cash.allPaidCount, 'expense')}`, v.cash.allPaid],
-                ['of which input tax', v.cash.inputTax],
+                ['of which GST paid on purchases', v.cash.inputTax],
                 [`paid in cash, ${v.cash.cashCount}`, v.cash.cashAmount],
                 [`paid by bank, ${v.cash.bankCount}`, v.cash.bankAmount],
               ].map(([k, amt]) => (
@@ -751,7 +751,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       },
       { id: 'depositedAmount', header: 'Deposited, PKR', kind: 'money', value: r => r.depositedAmount, ...whole<GstMonthRow>(r => r.depositedAmount) },
       { id: 'todeposit', header: 'To deposit, PKR', kind: 'money', value: r => r.toDeposit, ...whole<GstMonthRow>(r => r.toDeposit) },
-      { id: 'tax', header: 'Input tax paid', kind: 'money', value: r => r.inputTax, ...whole<GstMonthRow>(r => r.inputTax) },
+      { id: 'tax', header: 'GST paid on purchases', kind: 'money', value: r => r.inputTax, ...whole<GstMonthRow>(r => r.inputTax) },
     ],
     [ctx.month],
   )
@@ -766,7 +766,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         label="GST and FBR"
         items={[
           { label: `${name} invoices`, count: sel?.invoiceCount ?? 0, sub: <>Net PKR <Num>{rupees(sel?.net ?? 0)}</Num></> },
-          { label: 'Output GST', amount: sel?.gst ?? '0',  sub: <>On the <Num>{sel?.invoiceCount ?? 0}</Num> {name} invoices</> },
+          { label: 'GST charged', amount: sel?.gst ?? '0',  sub: <>On the <Num>{sel?.invoiceCount ?? 0}</Num> {name} invoices</> },
           { label: 'Deposited', amount: sel?.depositedAmount ?? '0',  sub: <><Num>{sel?.depositedCount ?? 0}</Num> of <Num>{sel?.invoiceCount ?? 0}</Num> invoices, in <Num>{sel?.psidSets ?? 0}</Num> PSID {sel?.psidSets === 1 ? 'set' : 'sets'}</> },
           { label: 'Still to deposit', amount: sel?.toDeposit ?? '0',  sub: <><Num>{(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0)}</Num> {(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0) === 1 ? 'invoice' : 'invoices'}</> },
         ]}
@@ -785,7 +785,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <ClockTag>By invoice date</ClockTag>
               <InfoTip label="About GST and FBR">
                 FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
-                Sales see Invoices only, never input tax or this report.
+                Sales see Invoices only, never GST paid on purchases or this report.
               </InfoTip>
             </span>
           </div>
@@ -806,10 +806,10 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       />
       {v.showInputTax ? (
         <Panel
-          title="Output GST and input tax, side by side"
+          title="GST charged and GST paid on purchases, side by side"
           meta={
-            <InfoTip label="About input tax">
-              Never netted on this page; filing stays with the tax agent. Input tax is the part of a Supplier payment, Clearing or Freight
+            <InfoTip label="About GST paid on purchases">
+              Never netted on this page; filing stays with the tax agent. GST paid on purchases is the part of a Supplier payment, Clearing or Freight
               amount that Q-Tech can claim; the profit and loss and the margins use the amount without it.
             </InfoTip>
           }
@@ -817,13 +817,13 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           <div className="grid gap-4 px-5 py-4">
             <div className="grid divide-y rounded-panel border md:grid-cols-2 md:divide-x md:divide-y-0">
               <div className="grid gap-1 px-4 py-3">
-                <span className="text-xs text-fg-2">Output GST, {name} invoices</span>
+                <span className="text-xs text-fg-2">GST charged, {name} invoices</span>
                 <span className="num text-base">
                   {pkr(sel?.gst ?? 0)} · {plural(sel?.invoiceCount ?? 0, 'invoice')}
                 </span>
               </div>
               <div className="grid gap-1 px-4 py-3">
-                <span className="text-xs text-fg-2">Input tax paid in {name}, for the tax agent</span>
+                <span className="text-xs text-fg-2">GST paid on purchases in {name}, for the tax agent</span>
                 <span className="num text-base">{pkr(sel?.inputTax ?? 0)}</span>
               </div>
             </div>

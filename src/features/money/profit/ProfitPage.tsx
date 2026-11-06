@@ -22,7 +22,7 @@ import { averageOf, bestMonth, buildPoints, completeMonths, rupeesOf, shortMonth
  * received beside it includes GST and says so. The average is over the last 12 complete months, this month left out. The chart shows
  * 12 or 24 months of both; the table under it is the monthly profit on invoices (v_month_profit) with cash received (v_month_cash_flow).
  * Under the table, "Spent on enquiries we did not win" lists what was spent on enquiries closed without an order (v_enquiry_costs, state
- * lost; 0136), net of input tax. It is a list for the owner to see; the profit figures above are not changed by it.
+ * lost; 0136), net of GST paid on purchases. It is a list for the owner to see; the profit figures above are not changed by it.
  */
 const rupees = (p: bigint) => formatPaisa(p, 'never')
 const pkr = (p: bigint) => `PKR ${rupees(p)}`
@@ -40,7 +40,7 @@ export function ProfitPage() {
   }, [q.profit, q.flows, today, range])
 
   return (
-    <MoneyFrame active="reports" title="Profitability">
+    <MoneyFrame active={null}>
       <NoPrimary />
       <MoneySubHeader
         back={{ to: '/money', label: 'Money' }}
@@ -191,7 +191,7 @@ function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | u
     { id: 'last', header: 'Last paid', value: r => r.lastPaidOn ?? '', cell: r => (r.lastPaidOn ? formatShortDate(r.lastPaidOn, undefined, true) : ''), hideBelowMd: true },
   ]
   return (
-    <Panel title={title} meta={<InfoTip label="About enquiries we did not win">Costs paid on an enquiry that was closed without an order, net of input tax. The profit figures above are not changed by this list.</InfoTip>}>
+    <Panel title={title} meta={<InfoTip label="About enquiries we did not win">Costs paid on an enquiry that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
       {rows.length === 0 ? (
         <EmptyState title="Nothing spent on a lost enquiry">No cost is recorded against an enquiry that was closed without an order.</EmptyState>
       ) : (
