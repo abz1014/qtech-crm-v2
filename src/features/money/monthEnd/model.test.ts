@@ -16,6 +16,7 @@ import {
   closeButtonLabel,
   closeState,
   closedThrough,
+  closeNeedsMove,
   closeTarget,
   defaultMonthEndMonth,
   gstCsv,
@@ -117,17 +118,19 @@ describe('closing', () => {
     expect(s).toEqual({ kind: 'open', target: '2026-10', earlier: [] })
     expect(closeButtonLabel('2026-10', s)).toBe('Close October')
     expect(closeTarget('2026-10', s)).toBe('2026-10')
+    expect(closeNeedsMove('2026-10', s)).toBe(false)
   })
-  it('an earlier open month with money in it is closed first, on its own, and the button names it (one month at a time)', () => {
+  it('an earlier open month with money in it is closed first, on its own; the button says Go to that month and locks nothing (one month at a time, only while on screen)', () => {
     const s = closeState('2026-10', '2026-11-06', new Set(['2026-08']), ['2026-08', '2026-09', '2026-10'])
     expect(s).toEqual({ kind: 'open', target: '2026-09', earlier: ['2026-09'] })
-    expect(closeButtonLabel('2026-10', s)).toBe('Close September 2026')
+    expect(closeButtonLabel('2026-10', s)).toBe('Go to September 2026')
+    expect(closeNeedsMove('2026-10', s)).toBe(true)
   })
   it('with two years of imported history open, the button closes only the oldest month, never all of them', () => {
     const history = Array.from({ length: 24 }, (_, i) => `${2024 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`)
     const s = closeState('2026-09', '2026-10-22', new Set(), [...history, '2026-09'])
     expect(s).toMatchObject({ kind: 'open', target: '2024-01' })
-    expect(closeButtonLabel('2026-09', s)).toBe('Close January 2024')
+    expect(closeButtonLabel('2026-09', s)).toBe('Go to January 2024')
     expect(closeButtonLabel('2026-09', s)).not.toMatch(/through/i)
   })
   it('an earlier open month with no money in it does not matter', () => {

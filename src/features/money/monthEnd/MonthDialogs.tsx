@@ -9,8 +9,8 @@ import { TextArea } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
 import { monthKeyLabel } from '@/features/money/expenses/model'
-import { useCloseMonth, useMonthEndDetails, useMonthEndStatus, useReopenMonth } from '@/features/money/monthEnd/hooks'
-import { buildChecklist, checksWithItems, closeButtonLabel, closeTarget, monthName, type CheckCard, type ClosedMonth } from '@/features/money/monthEnd/model'
+import { useCloseMonth, useReopenMonth } from '@/features/money/monthEnd/hooks'
+import { checksWithItems, closeNeedsMove, monthName, type CheckCard, type ClosedMonth } from '@/features/money/monthEnd/model'
 import { formatClosedAt, longDay } from '@/features/money/monthEnd/format'
 import type { MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 
@@ -18,8 +18,9 @@ import type { MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
  * Close and reopen, each one confirmation (g2-month-end "Close confirmation" and "Reopen confirmation").
  * Close October: the button (1), then "Close October" here (2). Nothing is typed. Reopen: the list's button (1), this one (2); a reason is optional.
  * Owner decision 2026-10-22 (redesign, decision 5): months lock ONE AT A TIME, oldest first. The dialog closes exactly one month,
- * the oldest open one that is due (`closeTarget`), and names it; when that is not the month on screen it says so and lists that
- * month's own checks. There is no "close through".
+ * the month on screen, and only when no older open month comes first. Owner decision 2026-11-06: a month is locked only while it is
+ * on screen; when another month would be locked, the page's button says "Go to <Month> <Year>" and moves there instead (no dialog).
+ * There is no "close through".
  * A refusal from the database is shown in the dialog and nothing is changed.
  */
 function closeFailure(err: unknown, month: string): string {
@@ -38,17 +39,16 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
   const close = useCloseMonth()
   const [error, setError] = useState<string | null>(null)
   const state = ctx.state
-  // The ONE month this closes: the oldest open month that is due (the month on screen when nothing older is open).
-  const target = closeTarget(ctx.month, state)
-  const older = target !== ctx.month
-  // An older month's own checks, read only while the dialog is open for it.
-  const olderStatus = useMonthEndStatus(target, open && older)
-  const olderDetails = useMonthEndDetails(target, open && older)
-  const cards: CheckCard[] | null = older ? (olderStatus.data ? buildChecklist(olderStatus.data, target, olderDetails.data) : null) : ctx.cards
+  // The ONE month this closes: the month on screen. The page opens this dialog only when nothing older is open (otherwise its
+  // button moves the page to the older month), and a dialog for any other month stays shut.
+  const target = ctx.month
+  const blocked = closeNeedsMove(ctx.month, state)
+  const cards: CheckCard[] = ctx.cards
   const label = monthKeyLabel(target)
-  const button = state ? closeButtonLabel(ctx.month, state) : `Close ${monthName(target)}`
+  const button = `Close ${monthName(target)}`
 
   const confirm = () => {
+    if (blocked) return
     setError(null)
     close.mutate(
       { month: target },
@@ -57,7 +57,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
           onOpenChange(false)
           toast.toast({
             title: `${label} closed`,
-            body: older ? `Only ${label} was closed. Close the next month the same way.` : 'Payments, expenses and invoices dated in it are frozen.',
+            body: 'Payments, expenses and invoices dated in it are frozen.',
             tone: 'success',
           })
         },
@@ -68,7 +68,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
 
   return (
     <Dialog
-      open={open}
+      open={open && !blocked}
       onOpenChange={o => {
         if (!o) setError(null)
         onOpenChange(o)
@@ -78,13 +78,9 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
       <DialogContent
         title={`Close ${label}?`}
         context={
-          cards ? (
-            <>
-              {longDay(ctx.today)} · <span className="num">{checksWithItems(cards)}</span> of <span className="num">{cards.length}</span> checks have items
-            </>
-          ) : (
-            longDay(ctx.today)
-          )
+          <>
+            {longDay(ctx.today)} · <span className="num">{checksWithItems(cards)}</span> of <span className="num">{cards.length}</span> checks have items
+          </>
         }
         size="md"
         lead={`This closes ${label} only. Months close one at a time, oldest first.`}
@@ -99,32 +95,18 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
           </>
         }
       >
-        {older ? (
-          <Banner tone="warning" title={`${label} is the oldest open month`}>
-            It has to be closed before {monthKeyLabel(ctx.month)}. Only {label} is closed now; {monthKeyLabel(ctx.month)}
-            {state?.kind === 'open' && state.earlier.length > 1 ? ` and ${state.earlier.length - 1} other open ${state.earlier.length === 2 ? 'month stay' : 'months stay'}` : ' stays'} open.
-          </Banner>
-        ) : null}
-        {cards ? (
-          <ul aria-label="Warnings" className="grid overflow-hidden rounded-panel border bg-surface">
-            {cards.map(c => (
-              <li key={c.key} className="flex items-center gap-3 border-t px-4 py-[10px] first:border-t-0">
-                <Icon icon={c.clear ? CircleCheck : TriangleAlert} size="md" className={c.clear ? 'text-tone-success-fg' : 'text-tone-warning-fg'} />
-                <span className={c.clear ? 'text-fg-muted' : 'text-fg'}>
-                  {c.label}
-                  {c.clear ? null : <span className="text-xs text-fg-muted"> · {c.unit}</span>}
-                </span>
-                <span className="num ml-auto text-sm">{c.clear ? <span className="font-regular text-fg-muted">None</span> : c.n}</span>
-              </li>
-            ))}
-          </ul>
-        ) : olderStatus.isError ? (
-          <p className="text-sm text-fg-2">The checks for {label} did not load. They are warnings only; you can still close it.</p>
-        ) : (
-          <p role="status" className="text-sm text-fg-muted">
-            Loading the checks for {label}…
-          </p>
-        )}
+        <ul aria-label="Warnings" className="grid overflow-hidden rounded-panel border bg-surface">
+          {cards.map(c => (
+            <li key={c.key} className="flex items-center gap-3 border-t px-4 py-[10px] first:border-t-0">
+              <Icon icon={c.clear ? CircleCheck : TriangleAlert} size="md" className={c.clear ? 'text-tone-success-fg' : 'text-tone-warning-fg'} />
+              <span className={c.clear ? 'text-fg-muted' : 'text-fg'}>
+                {c.label}
+                {c.clear ? null : <span className="text-xs text-fg-muted"> · {c.unit}</span>}
+              </span>
+              <span className="num ml-auto text-sm">{c.clear ? <span className="font-regular text-fg-muted">None</span> : c.n}</span>
+            </li>
+          ))}
+        </ul>
         <div className="flex items-start gap-3 rounded-row bg-sunken px-4 py-3 text-sm">
           <Icon icon={Info} className="mt-[2px] text-fg-muted" />
           <p>

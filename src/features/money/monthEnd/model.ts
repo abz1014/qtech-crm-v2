@@ -322,13 +322,15 @@ export function closeState(month: string, today: string, closed: ReadonlySet<str
 /** The one month the close button would close: the target when open, else the month on screen. */
 export const closeTarget = (month: string, state: CloseState | null): string => (state?.kind === 'open' ? state.target : month)
 
+/** Whether the month the button would lock is not the month on screen (an older open month comes first). */
+export const closeNeedsMove = (month: string, state: CloseState | null): boolean => closeTarget(month, state) !== month
+
 /**
- * The close button names the one month it closes: "Close October" for the month on screen, "Close March 2024" (with the year)
- * when an older month must be closed first.
+ * A month can only be locked while it is on screen (owner decision 2026-11-06). The green button says "Close October" for the
+ * month shown; when the month it would lock is another one, it says "Go to September 2026" and only moves the page there.
  */
 export function closeButtonLabel(month: string, state: CloseState): string {
-  const target = closeTarget(month, state)
-  return target === month ? `Close ${monthName(month)}` : `Close ${monthKeyLabel(target)}`
+  return closeNeedsMove(month, state) ? `Go to ${monthKeyLabel(closeTarget(month, state))}` : `Close ${monthName(month)}`
 }
 
 /** "Closed through September" for the closed list header: the latest closed month. */
