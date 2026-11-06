@@ -335,7 +335,7 @@ export const LAYOUT_IDS: ReadonlySet<string> = new Set([
 ])
 
 /** A dialog visit of the layout set: `openIt` opens it from a settled page, the capture measures inside `root`, then it is closed. */
-function layoutDialog(id: string, title: string, start: (fx: Fixture) => string, openIt: (page: Page, fx: Fixture) => Promise<void>, root = DIALOG): Visit {
+function layoutDialog(id: string, title: string, start: (fx: Fixture) => string, openIt: (page: Page, fx: Fixture) => Promise<void>, root = DIALOG, openedByAddress = false): Visit {
   return {
     id,
     title,
@@ -346,7 +346,8 @@ function layoutDialog(id: string, title: string, start: (fx: Fixture) => string,
       try {
         await bounded(60_000, `open ${title}`, async () => {
           await open(page, start(fx))
-          await closeDialogs(page)
+          // A dialog its address opens must not be closed before it is measured.
+          if (!openedByAddress) await closeDialogs(page)
           await openIt(page, fx)
           await page.locator(root).first().waitFor({ timeout: 15_000 })
           await settle(page)
@@ -371,7 +372,7 @@ async function legAction(page: Page, direct: RegExp, item: RegExp): Promise<void
 }
 
 const LAYOUT_VISITS: readonly Visit[] = [
-  layoutDialog('lg-add-expense', 'Layout: Add expense dialog (?add=1)', () => '/money/expenses?add=1', async () => undefined),
+  layoutDialog('lg-add-expense', 'Layout: Add expense dialog (?add=1)', () => '/money/expenses?add=1', async () => undefined, DIALOG, true),
   layoutDialog('lg-pay', 'Layout: Pay supplier dialog', fx => `/orders/${fx.order.multiLeg}`, (page) => legAction(page, /^Pay /, /^Pay /)),
   layoutDialog('lg-recurring', 'Layout: Recurring template dialog', () => '/money/expenses', async page => {
     await page.getByRole('button', { name: /^Add recurring$/ }).filter({ visible: true }).first().click()
@@ -379,7 +380,7 @@ const LAYOUT_VISITS: readonly Visit[] = [
   layoutDialog('lg-invoice-detail', 'Layout: Invoice detail dialog', () => '/money/gst-register', async page => {
     await page.locator('#main tbody tr, #main [role="row"]').filter({ hasText: /d/ }).first().click()
   }),
-  layoutDialog('lg-goods-chase', 'Layout: Chase goods dialog', fx => `/orders/${fx.order.poIssued}`, page => legAction(page, /^Chase goods/, /^Chase goods$/)),
+  layoutDialog('lg-goods-chase', 'Layout: Chase goods dialog', fx => `/orders/${fx.order.multiLeg}`, page => legAction(page, /^Chase goods/, /^Chase goods$/)),
   layoutDialog(
     'lg-filter-sheet',
     'Layout: Filter sheet (expenses)',

@@ -818,13 +818,20 @@ export function collect(opts: CollectOptions): Metrics {
       if (docOverPx > 1) samples.push(`document is ${docOverPx}px taller than the window`)
       if (scrolledPx > 0) samples.push(`window scrolls ${scrolledPx}px`)
       if (shellGapPx > 1) samples.push(`shell bottom is ${shellGapPx}px off the window bottom`)
-      // What sticks out past the bottom edge: the likely cause.
+      // What sticks out past the bottom edge: the likely cause. Absolute boxes (a screen-reader-only radio, an icon) whose nearest positioned
+      // ancestor is the page, not <main>, are placed in window coordinates and stretch the document: hidden ones count too.
       if (samples.length) {
+        let n = 0
         for (const el of Array.from(document.querySelectorAll('body *'))) {
-          if (samples.length >= 8) break
-          if (pos(el) !== 'absolute' || !visible(el)) continue
+          if (n >= 4) break
+          if (pos(el) !== 'absolute' || el.closest('svg') && el.tagName !== 'svg') continue
           const r = rect(el)
-          if (r.bottom > window.innerHeight + 1 && paintClipOf(el).b > window.innerHeight + 1) samples.push(`absolute past the bottom: ${describe(el)} bottom=${Math.round(r.bottom)}`)
+          if (r.bottom <= window.innerHeight + 1 || r.width <= 0 || paintClipOf(el).b <= window.innerHeight + 1) continue
+          let fixedAbove = false
+          for (let q = el.parentElement; q; q = q.parentElement) if (pos(q) === 'fixed') fixedAbove = true
+          if (fixedAbove) continue
+          n++
+          samples.push(`absolute past the bottom: ${describe(el)} bottom=${Math.round(r.bottom)}, positioned against ${(el as HTMLElement).offsetParent ? describe((el as HTMLElement).offsetParent as Element).split(' ')[0] : 'the page'}`)
         }
         for (const el of Array.from(document.body.children)) {
           if (samples.length >= 8) break
@@ -875,7 +882,9 @@ export function collect(opts: CollectOptions): Metrics {
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') continue
         const s = style(el)
         if (s.overflowY !== 'visible' || s.overflowX !== 'visible' || s.display === 'contents' || s.display === 'inline') continue
-        if (el.clientHeight <= 0 || el.scrollHeight <= el.clientHeight + 1 || !visible(el)) continue
+        const overY = el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 1
+        const overX = el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1
+        if ((!overY && !overX) || !visible(el)) continue
         const r = rect(el)
         const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
         let hit: string | null = null
@@ -894,8 +903,12 @@ export function collect(opts: CollectOptions): Metrics {
           }
           if (!flows) continue
           tr.selectNodeContents(n)
-          const past = Array.from(tr.getClientRects()).reduce((m, q) => (q.width >= 1 ? Math.max(m, q.bottom - r.bottom) : m), -1e9)
+          const qs = Array.from(tr.getClientRects()).filter(q => q.width >= 1)
+          const past = overY ? qs.reduce((m, q) => Math.max(m, q.bottom - r.bottom), -1e9) : -1e9
+          // Sideways: a word wider than its column (a heading running into the next one). Fields with a scrollbar and a nowrap strip are left out above.
+          const side = overX ? qs.reduce((m, q) => Math.max(m, q.right - r.right, r.left - q.left), -1e9) : -1e9
           if (past > 2) hit = `"${short(t, 40)}" hangs ${Math.round(past)}px below ${describe(el).split(' ')[0]} (box ${Math.round(r.height)}px, content ${el.scrollHeight}px)`
+          else if (side > 1.5) hit = `"${short(t, 40)}" runs ${Math.round(side)}px sideways out of ${describe(el).split(' ')[0]} (box ${Math.round(r.width)}px wide, content ${el.scrollWidth}px)`
         }
         if (hit) found.push({ el, what: hit })
       }
