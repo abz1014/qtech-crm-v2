@@ -99,7 +99,7 @@ function Chip({ label, value, selected, onPick, testId, disabled }: { label: str
 }
 
 // Each line is its own grid, so the tracks are fixed to line up; sized for 16px text (a 7-figure price, "Exempt", a 4-digit qty).
-const GRID = 'lg:grid-cols-[28px_minmax(0,1.6fr)_72px_140px_108px_minmax(0,1fr)_128px]'
+const GRID = 'lg:grid-cols-[28px_minmax(0,1.6fr)_72px_140px_108px_minmax(172px,1fr)_128px]'
 
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()

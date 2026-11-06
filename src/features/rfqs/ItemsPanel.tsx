@@ -57,17 +57,17 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
 // Every row is its own grid, so the tracks are fixed to line up; sized for 16px text ("≈ PKR 1,234,567", "Not in stock").
-const COLS = 'md:grid-cols-[minmax(0,1fr)_184px_minmax(0,136px)_128px_72px]'
-const HEAD = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted md:grid ${COLS}`
+const COLS = 'lg:grid-cols-[minmax(0,1fr)_184px_minmax(0,136px)_128px_72px]'
+const HEAD = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted lg:grid ${COLS}`
 /**
  * Phone (UX audit C3): two lines per supplier. The name (and its mark) across the row with the two buttons at its end; then
- * price · lead time · stock on one wrapping line. On desktop the second line's wrapper dissolves (md:contents) into the columns.
+ * price · lead time · stock on one wrapping line. On desktop the second line's wrapper dissolves (lg:contents) into the columns.
  */
-const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 md:gap-x-4 ${COLS}`
+const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 lg:gap-x-4 ${COLS}`
 /** An engineer's row: the supplier, then lead time · stock (no price, no buttons). */
-const COLS_NO_PRICES = 'md:grid-cols-[minmax(0,1fr)_minmax(0,136px)_128px]'
-const HEAD_NO_PRICES = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted md:grid ${COLS_NO_PRICES}`
-const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t px-5 py-3 md:gap-x-4 ${COLS_NO_PRICES}`
+const COLS_NO_PRICES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,136px)_128px]'
+const HEAD_NO_PRICES = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted lg:grid ${COLS_NO_PRICES}`
+const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t px-5 py-3 lg:gap-x-4 ${COLS_NO_PRICES}`
 
 interface Entry {
   line: QuoteLineRow
@@ -78,8 +78,8 @@ interface Entry {
 function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
   if (line.currency === 'PKR' || c.pkrPaisa !== null) {
     return (
-      <span className="inline-grid justify-items-start gap-x-2 md:grid md:justify-items-end">
-        <span className="flex flex-wrap items-center gap-x-2 md:justify-end">
+      <span className="inline-grid justify-items-start gap-x-2 lg:grid lg:justify-items-end">
+        <span className="flex flex-wrap items-center gap-x-2 lg:justify-end">
           <span className="num whitespace-nowrap text-base font-medium">
             {/* A real space, not a margin: a screen reader reads "≈ PKR 33,600", not "PKR33,600". */}
             <span className="font-sans text-sm font-regular text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
@@ -95,8 +95,8 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
     )
   }
   return (
-    <span className="inline-grid justify-items-start md:grid md:justify-items-end">
-      <span className="flex flex-wrap items-center gap-x-2 md:justify-end">
+    <span className="inline-grid justify-items-start lg:grid lg:justify-items-end">
+      <span className="flex flex-wrap items-center gap-x-2 lg:justify-end">
         <span className="num whitespace-nowrap text-base font-medium">
           <span className="font-sans text-sm font-regular text-fg-muted">{line.currency}</span>{' '}
           {formatAmount(line.unitPrice, 'always')}
@@ -473,25 +473,25 @@ export function ItemsPanel({
                                     <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
                                   </span>
                                   {/* Phone: price · lead time · stock on the second line (an engineer: lead time · stock). Desktop: the wrapper dissolves into the columns. */}
-                                  <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 md:contents">
+                                  <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 lg:contents">
                                     {prices ? (
                                       <>
-                                        <span className="md:text-right">
+                                        <span className="lg:text-right">
                                           <PriceCell line={line} c={c} />
                                         </span>
-                                        <span aria-hidden="true" className={cn('text-fg-muted md:hidden', !line.leadTime && 'hidden')}>
+                                        <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', !line.leadTime && 'hidden')}>
                                           ·
                                         </span>
                                       </>
                                     ) : null}
-                                    <span className={cn('min-w-0 text-fg-2', !line.leadTime && 'max-md:hidden')}>
+                                    <span className={cn('min-w-0 text-fg-2', !line.leadTime && 'max-lg:hidden')}>
                                       <span className="sr-only">Lead time: </span>
                                       {line.leadTime ?? <span className="text-fg-muted">—</span>}
                                     </span>
-                                    <span aria-hidden="true" className={cn('text-fg-muted md:hidden', (line.inStock === null || (!prices && !line.leadTime)) && 'hidden')}>
+                                    <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', (line.inStock === null || (!prices && !line.leadTime)) && 'hidden')}>
                                       ·
                                     </span>
-                                    <span className={cn('flex items-center gap-2 text-fg-2', line.inStock === null && 'max-md:hidden')}>
+                                    <span className={cn('flex items-center gap-2 text-fg-2', line.inStock === null && 'max-lg:hidden')}>
                                       {line.inStock === null ? (
                                         <span className="text-fg-muted">
                                           <span className="sr-only">Stock: </span>—
@@ -505,7 +505,7 @@ export function ItemsPanel({
                                     </span>
                                   </span>
                                   {prices ? (
-                                    <span className="flex justify-end max-md:col-start-2 max-md:row-start-1 max-md:self-start">
+                                    <span className="flex justify-end max-lg:col-start-2 max-lg:row-start-1 max-lg:self-start">
                                       <Button
                                         variant="quiet"
                                         size="sm"
@@ -521,7 +521,7 @@ export function ItemsPanel({
                                     </span>
                                   ) : null}
                                   {open && prices ? (
-                                    <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
+                                    <div id={detailId} className="col-span-full grid gap-2 pb-1 lg:col-start-2">
                                       <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
                                       {chip ? <LastPriceChipView chip={chip} /> : null}
                                     </div>
