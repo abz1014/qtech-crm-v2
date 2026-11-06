@@ -76,7 +76,7 @@ import {
  * A closed month refuses the whole save; the sentence appears on the rows dated in it and every row keeps what it holds.
  * The Job cell (audit X1, 0136) is optional: a supplier payment typed here with no job is never counted against that order's margin,
  * so it is one Tab away after the note. Empty is fine; a job number (order or enquiry) or a customer name narrows the list and Tab takes the first match.
- * Below 1024 px the grid becomes a list of cards with a 44 px camera button (the photo is compressed before upload).
+ * Below 1280 px (the grid needs about 900 px for its columns) the grid becomes a list of cards with a 44 px camera button (the photo is compressed before upload).
  *
  * Owner request 2026-10-20 (every little expense, fast): a category that does not exist yet is created from the category box
  * ("Create "Office water"", cash or bank); the Detail cell (was Note) suggests what was typed before ("LEA-1234"); on a phone
@@ -117,7 +117,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const categories = useMemo(() => cats.data?.filter(c => c.id !== SUPPLIER_PAYMENT_ID), [cats.data])
   const ready = !!categories && !used.isPending
   const today = businessToday()
-  const compact = useMediaQuery('(max-width: 1023px)')
+  const compact = useMediaQuery('(max-width: 1279px)')
   const toast = useToast()
   const insert = useInsertExpenses()
   const templatesQ = useRecurring()
@@ -410,7 +410,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               <div role="group" aria-label="Expense rows">
-                <div className={cn(GRID, 'h-[36px] items-end pb-[6px] text-xs font-medium text-fg-muted')} aria-hidden="true">
+                <div className={cn(GRID, 'min-h-[36px] items-end whitespace-nowrap pb-[6px] text-xs font-medium text-fg-muted')} aria-hidden="true">
                   <span />
                   <span className="text-right">Amount, PKR</span>
                   <span>Category</span>
@@ -418,7 +418,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                   <span>Paid via</span>
                   <span>Detail</span>
                   <span>Job</span>
-                  <span>Receipt photo</span>
+                  <span>Receipt</span>
                   <span>Repeats</span>
                   <span />
                 </div>

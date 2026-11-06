@@ -118,7 +118,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       </a>
       <TopBar user={user} counts={badges} dots={dots} onSearch={palette.open} />
       <MobileBar user={user} title={title} onSearch={palette.open} />
-      <main id="main" tabIndex={-1} className={cn('min-h-0 overflow-y-auto focus:outline-none', showFab && 'max-md:pb-3')}>
+      <main id="main" tabIndex={-1} className={cn('relative min-h-0 overflow-y-auto focus:outline-none', showFab && 'max-md:pb-3')}>
         <ErrorBoundary key={pathname} variant="inline">
           <NavCountsContext.Provider value={nav.ready ? counts : null}>
             <Outlet />

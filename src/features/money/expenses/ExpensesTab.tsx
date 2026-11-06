@@ -155,7 +155,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               <h2 id="expenses-h" className="sr-only">
                 Expenses
               </h2>
-              <div className="inline-flex items-center gap-1" role="group" aria-label="Month">
+              <div className="inline-flex items-center gap-2" role="group" aria-label="Month">
                 <Button variant="quiet" size="sm" icon={ChevronLeft} aria-label="Previous month" onClick={() => setMonth(m => shiftMonth(m, -1))} />
                 <span className="num min-w-[84px] text-center text-base font-semibold" aria-live="polite" title={monthKeyLabel(month)}>
                   {monthKeyShort(month)}
