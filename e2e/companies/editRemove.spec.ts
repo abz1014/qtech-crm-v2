@@ -78,10 +78,11 @@ test.describe('remove', () => {
   })
 
   // Owner decision 2026-11-06: screen only. The database (RLS 0006) still lets an engineer delete a contact; the page does not offer it.
-  test('an engineer sees no remove-contact button and no New RFQ, desktop or phone, but still adds and edits contacts', async ({ page }) => {
+  test('an engineer sees no remove-contact button and no New RFQ, desktop or phone, but still adds and edits contacts', async ({ browser }) => {
     const { company } = await customerWithSite('Engineer Hidden Co')
     for (const size of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
-      await page.setViewportSize(size)
+      const context = await browser.newContext({ viewport: size })
+      const page = await context.newPage()
       await openAs(page, 'engineer', `/companies/${company.id}`)
       const panel = page.getByRole('region', { name: 'Contacts' })
       await expect(panel.getByRole('button', { name: 'Edit Naveed Akhtar' })).toBeVisible()
@@ -91,7 +92,7 @@ test.describe('remove', () => {
       await page.getByRole('button', { name: /^More( actions)?$/ }).click()
       await expect(page.getByRole('menuitem', { name: 'Copy link to this company' })).toBeVisible()
       await expect(page.getByRole('menuitem', { name: /New RFQ/ })).toHaveCount(0)
-      await page.keyboard.press('Escape')
+      await context.close()
     }
   })
 
