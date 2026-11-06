@@ -79,7 +79,7 @@ export function BankTickPage() {
       0
 
   return (
-    <MoneyFrame active="month-end">
+    <MoneyFrame active={null}>
       <MoneySubHeader
         back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
         title="Bank check"

@@ -40,7 +40,7 @@ export function ProfitPage() {
   }, [q.profit, q.flows, today, range])
 
   return (
-    <MoneyFrame active="reports" title="Profitability">
+    <MoneyFrame active={null}>
       <NoPrimary />
       <MoneySubHeader
         back={{ to: '/money', label: 'Money' }}

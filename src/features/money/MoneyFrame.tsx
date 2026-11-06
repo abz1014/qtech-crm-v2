@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
@@ -36,6 +36,7 @@ export function MoneyFrame({
 }) {
   const session = useSession()
   const [params] = useSearchParams()
+  const { pathname } = useLocation()
   const month = isMonthKey(params.get('month')) ? params.get('month') : null // a month view's month follows to Reports
   const role = session.status === 'signed-in' ? session.user.role : ''
   const isAdmin = role === 'admin'
@@ -74,11 +75,23 @@ export function MoneyFrame({
         {isAdmin && morePages ? (
           <div role="group" aria-label="More money pages" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
             <span className="text-sm text-fg-muted">More money pages</span>
-            {MORE_MONEY_PAGES.map(p => (
-              <Link key={p.to} to={p.to} className="inline-flex min-h-control items-center text-sm font-medium text-fg-2 underline decoration-fg/40 underline-offset-4 hover:text-fg hover:decoration-fg">
-                {p.label}
-              </Link>
-            ))}
+            {MORE_MONEY_PAGES.map(p => {
+              // The page you are on is marked for assistive technology and drawn bold, dark and without the underline.
+              const here = pathname === p.to || pathname.startsWith(`${p.to}/`)
+              return (
+                <Link
+                  key={p.to}
+                  to={p.to}
+                  aria-current={here ? 'page' : undefined}
+                  className={cn(
+                    'inline-flex min-h-control items-center text-sm',
+                    here ? 'font-semibold text-fg no-underline' : 'font-medium text-fg-2 underline decoration-fg/40 underline-offset-4 hover:text-fg hover:decoration-fg',
+                  )}
+                >
+                  {p.label}
+                </Link>
+              )
+            })}
           </div>
         ) : null}
       </div>
@@ -94,7 +107,7 @@ const FrameBar = memo(function FrameBar({ title }: { title: string }) {
   return null
 })
 
-/** One Money tab. A plain Link: the lit tab follows `active` (Lock a month stays lit on the pages reached from it), not the address. */
+/** One Money tab. A plain Link: the lit tab follows `active`, not the address (a page that is not a tab passes null). */
 function TabLink({ tab, to, on, phone, span }: { tab: MoneyTab; to: string; on: boolean; phone?: boolean; span?: number }) {
   return (
     <Link

@@ -96,7 +96,7 @@ test.describe('Money > Profitability (admin)', () => {
     const cash = flows.filter(r => inRange(r.month)).reduce((a, r) => a + Number(r.money_in), 0)
 
     await goto(page, '/money/profit')
-    await expect(page.getByRole('heading', { name: 'Profitability', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Profitability', level: 2 })).toBeVisible()
     const avg = page.getByTestId('profit-average')
     await expect(avg).toContainText('Average monthly income')
     await expect(avg).toContainText('GST left out')
