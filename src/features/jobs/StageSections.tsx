@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { isContentDrawn, whenContentDrawn } from '@/lib/afterContent'
 import { lazyWithReload } from '@/lib/importWithReload'
@@ -238,12 +238,33 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
 
 const TAG: Record<StopState, string | null> = { done: 'Done', current: 'Now', future: null, none: null, stopped: null }
 
-export function StageSections({ facts, data, model, ctx, open, onToggle }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void }) {
+export const NO_ENQUIRY_ROW = 'No enquiry or quotation: this job started as an order'
+
+/**
+ * On a phone the stage the job is at comes first, directly under the Next step band; the rest keep their order. A finished job has no
+ * current stage, so nothing moves. The ids (stage-N) stay with their sections, so ?stage= links and the ruler still find them.
+ */
+export function StageSections({ facts, data, model, ctx, open, onToggle, phone = false }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void; phone?: boolean }) {
   const [, setWon] = useWonDialog()
-  const sections = buildSections(facts, data, model, ctx, () => setWon(true))
+  const built = buildSections(facts, data, model, ctx, () => setWon(true))
+  // A job that began as an order has no enquiry and no quotation: one grey row says so, instead of two cards that each say it.
+  const merged = facts.job.kind === 'direct'
+  const sections = merged ? built.slice(2) : built
+  const ordered = phone ? [...sections.filter(s => s.state === 'current'), ...sections.filter(s => s.state !== 'current')] : sections
+  const row = (
+    <section key="no-enquiry" id="stage-0" data-stage="Enquiry" className="rounded-panel border bg-sunken">
+      <p className="min-h-touch px-4 py-3 text-base text-fg-muted">
+        <span id="stage-1" data-stage="Quotation" />
+        {NO_ENQUIRY_ROW}
+      </p>
+    </section>
+  )
+  // the grey row comes first, except on a phone where the current stage leads
+  const rowAt = phone && ordered[0]?.state === 'current' ? 1 : 0
   return (
     <div className="grid gap-2" data-stages>
-      {sections.map(s => {
+      {merged && rowAt === 0 ? row : null}
+      {ordered.map((s, n) => {
         const none = s.state === 'none'
         const isOpen = open === s.index && !none
         const head = (
@@ -265,7 +286,8 @@ export function StageSections({ facts, data, model, ctx, open, onToggle }: { fac
           </>
         )
         return (
-          <section key={s.stop} id={`stage-${s.index}`} data-stage={s.stop} className={cn('rounded-panel border bg-surface', (s.state === 'future' || none) && 'bg-sunken')}>
+          <Fragment key={s.stop}>
+          <section id={`stage-${s.index}`} data-stage={s.stop} className={cn('rounded-panel border bg-surface', (s.state === 'future' || none) && 'bg-sunken')}>
             <h2 className="text-base">
               {none ? (
                 <div className="flex min-h-touch flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 max-sm:[&>span:nth-of-type(2)]:basis-[calc(100%-2rem)]">{head}</div>
@@ -289,6 +311,8 @@ export function StageSections({ facts, data, model, ctx, open, onToggle }: { fac
               </div>
             ) : null}
           </section>
+          {merged && rowAt === 1 && n === 0 ? row : null}
+          </Fragment>
         )
       })}
     </div>

@@ -147,6 +147,6 @@ export function stageModel(job: JobStanding): StageModel {
   })
   const label =
     ending ?? (cur === 7 ? 'Paid' : cur === null ? 'Not started' : [shownName(STOPS[cur]), detail ? parts(detail).join(', ') : null].filter(Boolean).join(' · '))
-  const phoneLabel = ending ?? (cur === 7 ? 'All 7 stops done' : cur === null ? 'Not started' : `Stage ${cur + 1} of 7 · ${shownName(STOPS[cur])}`)
+  const phoneLabel = ending ?? (cur === 7 ? 'All 7 stages done' : cur === null ? 'Not started' : `Stage ${cur + 1} of 7 · ${shownName(STOPS[cur])}`)
   return { stops, detail, current: cur === null ? null : cur === 7 ? 7 : cur + 1, phoneLabel, label, ending, finished: cur === 7 || lostOrCancelled }
 }

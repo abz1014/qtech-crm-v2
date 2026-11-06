@@ -25,7 +25,7 @@ const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/R
  * The order's "More" menu (the shared MoreMenu): Cancel order (with a reason, and Undo) or Reopen order. A "More" text button beside
  * the title from tablet up, and an icon in the phone's one bar (useMobileBar) below 768. Engineers have none.
  */
-export function OrderMoreMenu({ order, touch = false, recordPayment = false, afterDelete, deleteJob }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean; /** Where a deleted order lands (the job page: the jobs list). */ afterDelete?: string; /** The job page: Delete job (the guide first) takes the place of Delete order. */ deleteJob?: DeleteJobTarget }) {
+export function OrderMoreMenu({ order, touch = false, recordPayment = false, afterDelete, deleteJob, scope }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean; /** Where a deleted order lands (the job page: the jobs list). */ afterDelete?: string; /** The job page: Delete job (the guide first) takes the place of Delete order. */ deleteJob?: DeleteJobTarget; /** The job page, on a job that has an enquiry: Reassign owner moves the enquiry and its orders (kind `job`), as the page header's button did. Without it the order alone moves. */ scope?: { rfqId: string; label: string; ownerId: string | null; ownerName: string | null } }) {
   const { toast } = useToast()
   const cancel = useCancelOrder(order.id)
   const once = useInFlight() // HW-15: one cancel / reopen per press, however many clicks
@@ -37,7 +37,11 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false, aft
   const del = useDeleteOrderFlow({ id: order.id, number: order.number, companyName: order.companyName }, afterDelete)
   const delJob = useDeleteJobFlow(deleteJob ?? null, order.cancelledOn === null ? () => setCancelling(true) : undefined)
   const history = useHistoryPanel({ table: 'orders', id: order.id, context: `${ref} · ${order.companyName}`, imported: order.imported })
-  const reassign = useReassignOwnerItem({ kind: 'order', id: order.id, label: `${ref} · ${order.companyName}`, ownerId: order.owner?.id ?? null, ownerName: order.owner?.name ?? null })
+  const reassign = useReassignOwnerItem(
+    scope
+      ? { kind: 'job', id: scope.rfqId, label: scope.label, ownerId: scope.ownerId, ownerName: scope.ownerName }
+      : { kind: 'order', id: order.id, label: `${ref} · ${order.companyName}`, ownerId: order.owner?.id ?? null, ownerName: order.owner?.name ?? null },
+  )
 
   const reopen = () =>
     once(async () => {
