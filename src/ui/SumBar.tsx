@@ -80,7 +80,7 @@ export function AfterDrawings({ result, notInPnl, afterDrawings, className }: Af
       className={cn('grid gap-2 rounded-row border border-dashed border-line-strong bg-sunken px-5 py-3 text-sm', className)}
     >
       <div className="flex items-baseline justify-between gap-4">
-        <dt className="text-fg-muted">Not in P&amp;L: drawings and loan repayments</dt>
+        <dt className="text-fg-muted">Not a cost: drawings and loan repayments</dt>
         <dd>
           <Money value={paisaToFixed(-abs(toPaisa(notInPnl)))} className="text-fg-2" />
         </dd>
