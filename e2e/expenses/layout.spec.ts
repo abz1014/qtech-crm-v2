@@ -59,7 +59,7 @@ test.describe('expenses layout (2026-11-06)', () => {
       const header = page.locator('[role="group"][aria-label="Expense rows"] > div[aria-hidden="true"]').first()
       const h = await header.evaluate(el => {
         const rect = el.getBoundingClientRect()
-        const cells = [...el.children].filter(c => c.textContent?.trim()).map(c => {
+        const cells = Array.from(el.children).filter(c => c.textContent?.trim()).map(c => {
           const r = c.getBoundingClientRect()
           return { text: c.textContent, bottom: r.bottom, clipped: c.scrollWidth > c.clientWidth + 1 }
         })
