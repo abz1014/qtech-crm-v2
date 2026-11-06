@@ -135,9 +135,9 @@ test('Add expense: amounts, input tax and dates (admin)', async ({ browser }, in
       await d.getByLabel('Date paid').press('Tab')
     }
     if (tax !== null) {
-      const t = d.getByLabel(/input tax/i).first()
-      if (!(await t.isVisible().catch(() => false))) await d.getByRole('button', { name: /input tax/i }).first().click().catch(() => undefined)
-      await d.getByLabel(/input tax/i).first().fill(tax).catch(e => note({ kind: 'form-note', path: 'add expense', detail: `no input tax field: ${String(e).slice(0, 80)}` }))
+      const t = d.getByLabel(/GST paid on purchases/i).first()
+      if (!(await t.isVisible().catch(() => false))) await d.getByRole('button', { name: /GST paid on purchases/i }).first().click().catch(() => undefined)
+      await d.getByLabel(/GST paid on purchases/i).first().fill(tax).catch(e => note({ kind: 'form-note', path: 'add expense', detail: `no input tax field: ${String(e).slice(0, 80)}` }))
     }
     await d.getByLabel('Detail').fill(`Hunt expense ${amount} ${date ?? ''} کاغذ 📎`).catch(() => undefined)
     await d.getByRole('button', { name: /Save expense|Try again/ }).click().catch(() => undefined)

@@ -195,7 +195,7 @@ export const STATUS = {
   'expense-group': {
     overhead: hid('Overhead', 'neutral'),
     'order-cost': hid('Order cost', 'neutral'),
-    'not-in-pnl': hid('Not in P&L', 'neutral'),
+    'not-in-pnl': hid('Not a cost', 'neutral'),
   },
   excluded: {
     'basis-unknown': def('Is GST included?', 'warning', { dashed: true, icon: CircleDashed }),

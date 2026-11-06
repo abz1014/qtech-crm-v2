@@ -282,7 +282,7 @@ export function GstRegisterPage() {
             ? [
                 { label: 'Invoices', count: totals.count, sub: all.length ? `${rangeLabel(shown.length ? shown : all)}, by invoice date` : 'By invoice date' },
                 { label: 'Net', amount: totals.net, sub: 'Before GST' },
-                { label: 'GST', amount: totals.gst, sub: 'Output tax on the invoices' },
+                { label: 'GST', amount: totals.gst, sub: 'GST charged on the invoices' },
                 { label: 'Gross', amount: totals.gross, sub: 'Net + GST' },
               ]
             : [

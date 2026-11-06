@@ -201,6 +201,18 @@ export function reconcile(cash: CashTotals, profit: ProfitTotals): Reconcile {
   }
 }
 
+/** The lines of "Why profit and cash differ", amounts as shown (signed by the page). A line at 0 is left out; no lines at all means nothing separates the two. */
+export function whyTheyDiffer(r: Reconcile): { key: string; amount: string; text: string }[] {
+  return [
+    { key: 'owed', amount: r.owedMore, text: 'customers owe us more (invoiced, not yet paid), or less when they paid off earlier invoices' },
+    { key: 'gst', amount: change(0, r.gst), text: 'GST inside those invoices: collected for FBR, not ours' },
+    { key: 'ahead', amount: r.costsAhead, text: 'supplier costs paid before their sale was invoiced (held for it), or less when earlier payments are matched now' },
+    { key: 'drawings', amount: r.drawingsAndTax, text: 'owner drawings, loan repayments and GST paid on purchases: cash out that is not a cost' },
+    { key: 'refunds', amount: r.refunds, text: 'refunds paid back to customers: cash out that is not a cost' },
+    { key: 'other', amount: r.other, text: "other: a closed month's frozen cash figure differs from the books" },
+  ].filter(l => toPaisa(l.amount) !== 0n)
+}
+
 export interface DetailOut {
   detail: string | null
   amount: string
@@ -323,7 +335,7 @@ export function inOutCsv(v: InOutView): { headers: string[]; rows: unknown[][] }
   const prevLabel = periodLabel(shiftPeriod(v.period, -1))
   const rows: unknown[][] = [
     ['Cash', v.label, 'Money in (payments received, GST included)', '', v.cash.payments, n(v.cash.in), n(v.prevCash.in)],
-    ['Cash', v.label, 'Money out (expenses and supplier payments, input tax included)', '', v.cash.expenses, n(v.cash.out), n(v.prevCash.out)],
+    ['Cash', v.label, 'Money out (expenses and supplier payments, GST paid on purchases included)', '', v.cash.expenses, n(v.cash.out), n(v.prevCash.out)],
     ...(toPaisa(v.cash.refunds) !== 0n || toPaisa(v.prevCash.refunds) !== 0n
       ? [['Cash', v.label, 'Refunds paid back to customers', '', v.cash.refundCount, n(v.cash.refunds), n(v.prevCash.refunds)]]
       : []),
@@ -336,7 +348,7 @@ export function inOutCsv(v: InOutView): { headers: string[]; rows: unknown[][] }
     ['Why they differ', v.label, 'Customers owe us more (+) or paid off earlier invoices (-)', '', '', n(v.reconcile.owedMore), ''],
     ['Why they differ', v.label, 'less GST in the invoices (for FBR)', '', '', -n(v.reconcile.gst), ''],
     ['Why they differ', v.label, 'Supplier costs paid ahead of their sale (+) or matched now (-)', '', '', n(v.reconcile.costsAhead), ''],
-    ['Why they differ', v.label, 'Drawings, loan repayments and input tax (cash out, not cost)', '', '', n(v.reconcile.drawingsAndTax), ''],
+    ['Why they differ', v.label, 'Drawings, loan repayments and GST paid on purchases (cash out, not cost)', '', '', n(v.reconcile.drawingsAndTax), ''],
     ...(toPaisa(v.reconcile.refunds) !== 0n ? [['Why they differ', v.label, 'Refunds paid back to customers (cash out, not cost)', '', '', n(v.reconcile.refunds), '']] : []),
     ['Why they differ', v.label, 'Other', '', '', n(v.reconcile.other), ''],
   ]

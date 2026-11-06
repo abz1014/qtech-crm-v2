@@ -424,7 +424,7 @@ export const ZERO_PNL: RawPnl = {
 
 const GROUP_ORDER = ['overhead', 'order_cost', 'non_pnl'] as const
 export type CategoryGroupKey = (typeof GROUP_ORDER)[number]
-export const GROUP_TITLE: Record<CategoryGroupKey, string> = { overhead: 'Overheads', order_cost: 'Order costs', non_pnl: 'Not in P&L' }
+export const GROUP_TITLE: Record<CategoryGroupKey, string> = { overhead: 'Overheads', order_cost: 'Order costs', non_pnl: 'Not a cost' }
 
 export function groupTotal(lines: readonly CategoryLine[], grp: CategoryGroupKey): GroupTotal {
   const mine = lines.filter(l => l.grp === grp)
@@ -523,12 +523,12 @@ export function pnlCsv(v: PnlView): { headers: string[]; rows: unknown[][] } {
     ['Money out', 'Overheads', v.overheads.count, csvNum(v.overheads.gross), csvNum(v.overheads.inputTax), csvNum(negate(v.overheads.net))],
     ...(toPaisa(v.adjustResult) !== 0n ? [['Adjustment', 'Changes to closed months, counted this month', '', '', '', csvNum(v.adjustResult)]] : []),
     ['Result', `Result for ${monthKeyLabel(v.month)}`, '', '', '', csvNum(v.result)],
-    ...v.notInPnl.lines.map(l => ['Not in P&L', l.category, l.count, csvNum(l.gross), csvNum(l.inputTax), csvNum(negate(l.net))]),
-    ...(toPaisa(v.adjustNonPnl) !== 0n ? [['Not in P&L', 'Changes to closed months, counted this month', '', '', '', csvNum(negate(v.adjustNonPnl))]] : []),
-    ['Not in P&L', 'Not in P&L, total', v.notInPnl.total.count, csvNum(v.notInPnl.total.gross), csvNum(v.notInPnl.total.inputTax), csvNum(negate(v.notInPnl.total.net))],
-    ['After drawings', 'Result less Not in P&L', '', '', '', csvNum(v.afterDrawings)],
+    ...v.notInPnl.lines.map(l => ['Not a cost', l.category, l.count, csvNum(l.gross), csvNum(l.inputTax), csvNum(negate(l.net))]),
+    ...(toPaisa(v.adjustNonPnl) !== 0n ? [['Not a cost', 'Changes to closed months, counted this month', '', '', '', csvNum(negate(v.adjustNonPnl))]] : []),
+    ['Not a cost', 'Not a cost, total', v.notInPnl.total.count, csvNum(v.notInPnl.total.gross), csvNum(v.notInPnl.total.inputTax), csvNum(negate(v.notInPnl.total.net))],
+    ['After drawings', 'Result less Not a cost', '', '', '', csvNum(v.afterDrawings)],
   ]
-  return { headers: ['Section', 'Line', 'Count', 'Gross', 'GST or input tax', 'Net'], rows }
+  return { headers: ['Section', 'Line', 'Count', 'Gross', 'GST, or GST paid on purchases', 'Net'], rows }
 }
 
 // ------------------------------------------------------------------------------------------------ expenses by category
@@ -561,7 +561,7 @@ export function categoriesCsv(v: CategoryView, month: string, via: ViaFilter): {
     if (lines.length === 0) continue
     for (const l of lines) rows.push([monthKeyLabel(month), g.title, l.category, l.paidVia === 'bank' ? 'Bank' : 'Cash', l.count, csvNum(l.gross), csvNum(l.inputTax), csvNum(l.net)])
   }
-  return { headers: ['Month', 'Group', 'Category', 'Paid via', 'Count', 'Gross paid', 'Input tax', 'Net cost'], rows }
+  return { headers: ['Month', 'Group', 'Category', 'Paid via', 'Count', 'Gross paid', 'GST paid on purchases', 'Net cost'], rows }
 }
 
 // ------------------------------------------------------------------------------------------------ aging
@@ -829,7 +829,7 @@ export function buildGst(month: string, all: readonly GstMonthRow[], showInputTa
 
 export function gstCsv(v: GstView): { headers: string[]; rows: unknown[][] } {
   const headers = ['Invoice month', 'Invoices', 'Net', 'GST', 'PSID sets', 'Deposited (invoices)', 'Deposited, PKR', 'To deposit, PKR']
-  if (v.showInputTax) headers.push('Input tax paid')
+  if (v.showInputTax) headers.push('GST paid on purchases')
   return {
     headers,
     rows: v.rows.map(r => {

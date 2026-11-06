@@ -56,7 +56,7 @@ describe('Expenses list (0086)', () => {
     const table = screen.getByRole('table', { name: 'Expenses' })
     expect(within(table).getByText('Office running')).toBeInTheDocument()
     expect(within(table).getByText('Order costs')).toBeInTheDocument()
-    expect(within(table).queryByText('Input tax (PKR)')).not.toBeInTheDocument()
+    expect(within(table).queryByText('GST paid on purchases (PKR)')).not.toBeInTheDocument()
     // the list ties to the Expenses report for the month shown
     expect(screen.getByRole('link', { name: 'Report for Sep 2026' })).toHaveAttribute('href', '/money/reports/expenses?by=month&period=2026-09')
     // Office running (sort 10) comes before Order costs (sort 50), whatever the dates

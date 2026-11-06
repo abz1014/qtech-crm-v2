@@ -7,7 +7,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 
 /*
  * Input tax (A6, owner decision 2026-10-14): collapsed and optional, shown on Supplier payment, Freight and Clearing only.
- * "Input tax, optional" opens one field; the lines under it say what is paid (the bank debit), the input tax, and the cost
+ * "GST paid on purchases, optional" opens one field; the lines under it say what is paid (the bank debit), the input tax, and the cost
  * that margin and the P&L use. Left collapsed it is zero, which is the normal case.
  */
 interface InputTaxProps {
@@ -20,7 +20,7 @@ interface InputTaxProps {
   className?: string
 }
 
-export function InputTax({ amount, value, onChange, defaultOpen = false, label = 'Input tax', className }: InputTaxProps) {
+export function InputTax({ amount, value, onChange, defaultOpen = false, label = 'GST paid on purchases', className }: InputTaxProps) {
   const id = useId()
   const [open, setOpen] = useState(defaultOpen || (value ?? 0) > 0)
   if (!open) {
@@ -31,7 +31,7 @@ export function InputTax({ amount, value, onChange, defaultOpen = false, label =
         className={`inline-flex w-fit items-center gap-[6px] rounded text-xs font-medium text-primary ${className ?? ''}`}
       >
         <Icon icon={Plus} size="chip" />
-        Input tax, optional
+        GST paid on purchases, optional
       </button>
     )
   }
@@ -51,13 +51,13 @@ export function InputTax({ amount, value, onChange, defaultOpen = false, label =
           Paid, the bank debit <Money value={paid} prefix={false} className="text-fg" />
         </span>
         <span>
-          Input tax <Money value={tax} prefix={false} className="text-fg" />
-          <InfoTip label="About input tax">GST on a bill that we can claim back. Leave 0 if unsure.</InfoTip>
+          GST paid on purchases <Money value={tax} prefix={false} className="text-fg" />
+          <InfoTip label="About GST paid on purchases">GST on a bill that we can claim back. Leave 0 if unsure.</InfoTip>
         </span>
         <span>
-          <b className="font-medium">Cost in margin and P&amp;L</b> <Money value={Math.max(paid - tax, 0)} prefix={false} className="text-fg" />
+          <b className="font-medium">Cost in margin and profit</b> <Money value={Math.max(paid - tax, 0)} prefix={false} className="text-fg" />
         </span>
-        {tooHigh ? <span className="font-medium text-tone-danger-fg">Input tax cannot be more than what was paid.</span> : null}
+        {tooHigh ? <span className="font-medium text-tone-danger-fg">GST paid on purchases cannot be more than what was paid.</span> : null}
       </div>
     </div>
   )

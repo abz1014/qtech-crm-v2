@@ -166,20 +166,20 @@ test.describe('month-end (M10)', () => {
     await expect(page.getByText('less payments not yet split')).toBeVisible()
     await expect(page.getByText('GST, not ours')).toBeVisible()
     const csv = await exportCsv(page)
-    expect(csv.text.split('\n')[0]).toBe('"Section","Line","Count","Gross","GST or input tax","Net"')
+    expect(csv.text.split('\n')[0]).toBe('"Section","Line","Count","Gross","GST, or GST paid on purchases","Net"')
     expect(csv.text).toContain('Payments not yet split (excluded from net)')
     expect(csv.text).toContain(`Result for ${STMT.label}`)
     await review(page, 'm10-pnl-1440')
   })
 
-  test('the GST/FBR report lists output GST and input tax side by side, admin only', async ({ page }) => {
+  test('the GST/FBR report lists GST charged and GST paid on purchases side by side, admin only', async ({ page }) => {
     const { order } = await newOrder('Gst Payer')
     await addInvoice(order.id)
     await addExpense({ category_id: SUPPLIER, amount_pkr: 11800, input_tax_pkr: 1800 })
     await openAs(page, 'admin', `/money/reports/gst?month=${STMT.key}`)
-    await expect(page.getByText('Output GST and input tax, side by side')).toBeVisible()
+    await expect(page.getByText('GST charged and GST paid on purchases, side by side')).toBeVisible()
     const csv = await exportCsv(page)
-    expect(csv.text.split('\n')[0]).toContain('"Input tax paid"')
+    expect(csv.text.split('\n')[0]).toContain('"GST paid on purchases"')
     await review(page, 'm10-gst-fbr-1440')
   })
 

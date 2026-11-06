@@ -25,7 +25,7 @@ export interface Category {
 export const GROUP_LABEL: Record<CategoryGroup, string> = {
   overhead: 'Overheads',
   order_cost: 'Order costs',
-  non_pnl: 'Not in P&L',
+  non_pnl: 'Not a cost',
 }
 export const PAID_VIA_LABEL: Record<PaidVia, string> = { bank: 'Bank', cash: 'Cash' }
 

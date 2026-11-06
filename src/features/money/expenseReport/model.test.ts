@@ -163,7 +163,7 @@ describe('helpers and CSV', () => {
   it('the CSV carries the same figures', () => {
     const csv = expenseReportCsv(month('2026-09'))
     expect(csv.headers[0]).toBe('Section')
-    expect(csv.rows[0]).toEqual(['Total', 'September 2026', 'Spent (gross, input tax included)', '', 6, 163850, 88950, '', ''])
+    expect(csv.rows[0]).toEqual(['Total', 'September 2026', 'Spent (gross, GST paid on purchases included)', '', 6, 163850, 88950, '', ''])
     expect(csv.rows.filter(r => r[0] === 'Category').reduce((s, r) => s + (r[5] as number), 0)).toBe(163850)
     expect(csv.rows.some(r => r[0] === 'Detail' && r[3] === 'LEA-1234' && r[5] === 9000)).toBe(true)
   })

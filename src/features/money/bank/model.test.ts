@@ -101,8 +101,8 @@ describe('which lines a statement month shows', () => {
     const by = Object.fromEntries(open.map(l => [l.key, l]))
     expect(by['1']).toMatchObject({ title: 'Salaries, support staff', sub: ['Overhead'] })
     expect(by['2']).toMatchObject({ title: 'Supplier payment, Dubai Instrumentation FZE', sub: ['ORD-0031', 'leg A'] })
-    expect(by['3'].sub).toEqual(['ORD-0042', 'leg A', 'input tax 90,000'])
-    expect(by['4']).toMatchObject({ title: 'Owner drawings', sub: ['Not in P&L'] })
+    expect(by['3'].sub).toEqual(['ORD-0042', 'leg A', 'GST paid on purchases 90,000'])
+    expect(by['4']).toMatchObject({ title: 'Owner drawings', sub: ['Not a cost'] })
     // newest first
     expect(open.map(l => l.key)).toEqual(['1', '2', '3', '4'])
   })

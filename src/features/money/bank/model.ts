@@ -149,7 +149,7 @@ function paymentLine(p: RawPayment, month: string): BankLine {
 function expenseLine(e: RawExpense, month: string): BankLine {
   const ticked = e.bankMonth === monthStart(month)
   const older = !ticked && e.paidOn < monthStart(month)
-  const tax = toPaisa(e.inputTax) > 0n ? `input tax ${Number(e.inputTax).toLocaleString('en-US')}` : null
+  const tax = toPaisa(e.inputTax) > 0n ? `GST paid on purchases ${Number(e.inputTax).toLocaleString('en-US')}` : null
   const sub = older ? [olderNote(e.paidOn)] : e.orderRef ? present([e.orderRef, e.leg, tax]) : present([GROUP_LABEL[e.grp], tax])
   return {
     key: e.id,
