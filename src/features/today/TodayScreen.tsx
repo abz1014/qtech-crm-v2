@@ -100,10 +100,10 @@ let moreOpenThisSession = false
 export default function TodayScreen() {
   const session = useSession()
   if (session.status !== 'signed-in') return null
-  return <TodayBody user={{ id: session.user.id, role: session.user.role as Role }} name={session.user.name} />
+  return <TodayBody user={{ id: session.user.id, role: session.user.role as Role }} name={session.user.name} since={session.user.createdAt} />
 }
 
-function TodayBody({ user, name }: { user: { id: string; role: Role }; name: string }) {
+function TodayBody({ user, name, since }: { user: { id: string; role: Role }; name: string; since?: string }) {
   const today = useBusinessToday()
   const navigate = useNavigate()
   const { view, data, query } = useTodayView(user, today)
@@ -219,7 +219,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
           ) : null}
         </p>
         {switcher}
-        <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />
+        <HowItWorksCard userId={user.id} role={user.role} since={since} className="mt-2" />
       </header>
 
       {query.isPending ? (

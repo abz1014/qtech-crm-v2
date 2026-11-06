@@ -100,7 +100,7 @@ function MissingBanner({ profile, onAdd }: { profile: Pick<CompanyProfile, Docum
       action={
         onAdd ? (
           <Button size="sm" onClick={() => onAdd(m.fields[0])}>
-            Add them
+            {m.fields.length === 1 ? 'Add it' : 'Add them'}
           </Button>
         ) : undefined
       }
@@ -186,7 +186,11 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
 
   return (
     <>
-      <MissingBanner profile={watched} onAdd={first => sf.form.setFocus(first)} />
+      <MissingBanner profile={watched} onAdd={first => {
+          sf.form.setFocus(first)
+          // setFocus focuses without scrolling to the middle: on a phone the field can sit under the bars or the keyboard.
+          document.querySelector(`[name="${first}"]`)?.scrollIntoView({ block: 'center' })
+        }} />
       <Form sf={sf} labels={LABELS} className="grid gap-4">
         <Section title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
           <NeededField name="legal_name" label="Legal name" message="Add the legal name before issuing a PDF.">

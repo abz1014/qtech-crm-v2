@@ -26,8 +26,8 @@ function install(opts: { rfqs?: unknown[]; fail?: boolean } = {}) {
   })
 }
 
-function renderAs(role: 'admin' | 'sales' | 'engineer') {
-  const session: SessionState = { status: 'signed-in', user: { id: 'me', name: 'Ayesha Rana', role } }
+function renderAs(role: 'admin' | 'sales' | 'engineer', createdAt?: string) {
+  const session: SessionState = { status: 'signed-in', user: { id: 'me', name: 'Ayesha Rana', role, ...(createdAt ? { createdAt } : {}) } }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
@@ -46,6 +46,16 @@ let fake: ReturnType<typeof install> | null = null
 afterEach(() => fake?.uninstall())
 
 describe('Today screen', () => {
+  it('"New here?" is wired with the account created date: gone after 14 days, shown before (the expiry was dead code)', async () => {
+    fake = install()
+    const old = renderAs('sales', new Date(Date.now() - 40 * 86_400_000).toISOString())
+    expect(await screen.findByText('Needs suppliers')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /New here\? How Q-Tech CRM works/ })).toBeNull()
+    old.unmount()
+    renderAs('sales', new Date(Date.now() - 2 * 86_400_000).toISOString())
+    expect(await screen.findByRole('button', { name: /New here\? How Q-Tech CRM works/ })).toBeInTheDocument()
+  })
+
   it('lists an item with its title and reference', async () => {
     fake = install()
     renderAs('sales')

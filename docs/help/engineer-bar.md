@@ -10,4 +10,6 @@ related: photo-or-note, i-paid
 2. Tap [Photo or note], pick the job, then add the photo or the note on its page.
 3. Paid for something yourself? Tap [I paid] next to it, type the amount, take a photo of the receipt and save. The office approves it.
 
+The big button hides on screens that have their own Save button, such as [I paid] and your details, so it never covers it.
+
 Tip: You never see prices. The same photo and note buttons are on the [On site] card of each job.

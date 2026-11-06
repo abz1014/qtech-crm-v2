@@ -25,6 +25,15 @@ describe('the + New menu, by role', () => {
   it('sales: New enquiry and Order without enquiry, no Payment received and no Expense', () => {
     expect(newEntries('sales').map(e => e.label)).toEqual(['New enquiry', 'Order without enquiry'])
   })
+  it('the button shows the word New by default, and iconOnly keeps the name "New" with no visible word', () => {
+    const { unmount } = mount('admin')
+    expect(screen.getByRole('button', { name: 'New' })).toHaveTextContent('New')
+    unmount()
+    render(<MemoryRouter><NewMenu role="admin" iconOnly /></MemoryRouter>)
+    const b = screen.getByRole('button', { name: 'New' })
+    expect(b).toHaveAttribute('aria-label', 'New')
+    expect(b.textContent).toBe('')
+  })
   it('engineer: nothing, and no button is drawn', () => {
     expect(newEntries('engineer')).toEqual([])
     mount('engineer')

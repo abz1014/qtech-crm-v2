@@ -64,7 +64,8 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
       <p className="min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base">{config?.title ?? title}</p>
       {actions ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
       <Button variant="quiet" size="touch" icon={CircleHelp} aria-label="Help" onClick={() => openHelp()} />
-      <NewMenu role={user.role} iconOnly size="touch" />
+      {/* The word shows from 360 px up; at 320 the title ("Companies") would break mid-word, so below 360 it is the plus alone (name kept). */}
+      <NewMenu role={user.role} size="touch" className="px-2 max-[359px]:w-touch max-[359px]:px-0" labelClass="max-[359px]:hidden" />
       <AccountMenu user={user} touch />
     </header>
   )

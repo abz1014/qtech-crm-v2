@@ -25,7 +25,7 @@ export function NewMenuImpl({ role, className, labelClass, iconOnly = false, siz
     <Popover defaultOpen={defaultOpen}>
       <PopoverTrigger asChild>
         {/* Outlined, never green: each screen has its own one primary button (audit X1). */}
-        <Button variant="secondary" size={size} icon={Plus} aria-label={iconOnly ? 'New' : undefined} className={cn(className)}>
+        <Button variant="secondary" size={size} icon={Plus} aria-label="New" className={cn(className)}>
           {iconOnly ? null : <span className={labelClass}>New</span>}
         </Button>
       </PopoverTrigger>
