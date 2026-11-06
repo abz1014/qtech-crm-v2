@@ -65,6 +65,7 @@ export const TARGETS = [
     pass: v => v === 0,
     worse: 'higher',
     format: v => (v === 0 ? 'no' : `${v}px`),
+    gate: true,
   },
   {
     key: 'axe',
@@ -167,6 +168,89 @@ export const TARGETS = [
     worse: 'higher',
   },
 ]
+
+// The layout gate (report.mjs --gate layout, docs/audit/SCREEN_AUDIT.md): the targets with gate: true (these four and hScroll) fail the
+// run. Every other target is advisory. A capture made before a check existed has no value for it and is left out of that row.
+TARGETS.push(
+  {
+    key: 'docScroll',
+    label: 'The page itself scrolls (window)',
+    target: 'never',
+    source: 'layout gate: the app scrolls <main> only; no second scrollbar, nothing cut off below the window',
+    value: c => c.metrics.layout?.docScroll?.count ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+    gate: true,
+  },
+  {
+    key: 'nestedScroll',
+    label: 'Boxes that scroll up and down inside the page or a dialog',
+    target: '0',
+    source: 'layout gate: a second vertical scrollbar inside <main> or a dialog (Today, virtual lists, popovers and a dialog body excepted)',
+    value: c => c.metrics.layout?.nestedScroll?.count ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+    gate: true,
+  },
+  {
+    key: 'boxOverflow',
+    label: 'Text hanging out of the bottom of a box',
+    target: '0',
+    source: 'layout gate: an overflow-visible box shorter than its content, with ordinary text below its bottom edge (a label taller than its row)',
+    value: c => c.metrics.layout?.boxOverflow?.count ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+    gate: true,
+  },
+  {
+    key: 'labelTouchesControl',
+    label: 'Text touching an input, select or button that is not its own',
+    target: '0',
+    source: 'layout gate: text sideways over a control whose top it reaches (within 1 px) or crosses',
+    value: c => c.metrics.layout?.labelTouchesControl?.count ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+    gate: true,
+  },
+  {
+    key: 'unevenWrap',
+    label: 'Short labels wrapping beside one-line neighbours (advisory)',
+    target: '0 (never fails the gate)',
+    source: 'layout gate, advisory: a label of three words or fewer on two lines next to one-line siblings',
+    value: c => c.metrics.layout?.unevenWrap?.count ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+  },
+)
+
+function gateDetail(c, key) {
+  const m = c.metrics
+  const samples = key === 'hScroll' ? m.hScroll.offenders : (m.layout?.[key]?.samples ?? [])
+  return samples.slice(0, 3).join(' | ')
+}
+
+/** The captures that fail a gate target, one row per capture and check: the layout gate's verdict. */
+export function gateFailures(captures) {
+  const rows = []
+  for (const c of captures) {
+    const sc = score(c)
+    for (const t of TARGETS) {
+      if (!t.gate) continue
+      const r = sc[t.key]
+      if (r && !r.pass) rows.push({ role: c.role, screen: c.screen, viewport: c.viewport, key: t.key, value: r.value, detail: gateDetail(c, t.key) })
+    }
+  }
+  return rows
+}
+
+/** Markdown for the gate's verdict. */
+export function renderGate(failures) {
+  if (!failures.length) return ['## Layout gate', '', 'Passed: no page scroll, second scrollbar, hanging text, text on a control or sideways scroll.', '']
+  const out = ['## Layout gate', '', `**FAILED: ${failures.length} finding(s).**`, '', '| Check | Role | Screen | Viewport | Value | Where |', '|---|---|---|---|---|---|']
+  for (const f of failures) out.push(`| ${f.key} | ${f.role} | \`${f.screen}\` | ${f.viewport} | ${f.value} | ${String(f.detail).replace(/\|/g, '\\|')} |`)
+  out.push('')
+  return out
+}
 
 /** Measured and reported, no target. */
 export const INFO = [
@@ -327,6 +411,12 @@ function details(group) {
     if (isPhone(c.viewport) && m.strips?.count) bits.push(`scrolls sideways inside: ${m.strips.samples.slice(0, 3).join('; ')}`)
     if (m.contrastHi?.failing) bits.push(`low contrast on highlight: ${m.contrastHi.samples.slice(0, 3).join(', ')}`)
     if (m.inputs?.under16) bits.push(`inputs under 16 px: ${m.inputs.samples.slice(0, 3).join(', ')}`)
+    const lay = m.layout
+    if (lay?.docScroll?.count) bits.push(`page scrolls: ${lay.docScroll.samples.slice(0, 4).join('; ')}`)
+    if (lay?.nestedScroll?.count) bits.push(`second scrollbar: ${lay.nestedScroll.samples.slice(0, 3).join('; ')}`)
+    if (lay?.boxOverflow?.count) bits.push(`text hangs out of its box: ${lay.boxOverflow.samples.slice(0, 3).join('; ')}`)
+    if (lay?.labelTouchesControl?.count) bits.push(`text on a control: ${lay.labelTouchesControl.samples.slice(0, 3).join('; ')}`)
+    if (lay?.unevenWrap?.count) bits.push(`info: uneven wrap: ${lay.unevenWrap.samples.slice(0, 2).join('; ')}`)
     if (bits.length) lines.push(`- ${c.viewport}: ${bits.map(cell).join(' | ')}`)
   }
   return lines
@@ -357,6 +447,7 @@ export function renderMarkdown(results) {
   }
   out.push('')
 
+  out.push(...renderGate(gateFailures(captures)))
   out.push('## Worst 5 screens per metric', '', 'Each screen once, at its worst role and viewport.', '')
   for (const d of [...TARGETS, ...INFO]) {
     const rows = summary.worst[d.key]
@@ -413,7 +504,9 @@ export function renderSummary(results) {
 export function buildResults(parts) {
   const merged = mergeParts(parts)
   const summary = summarise(merged)
+  const failures = gateFailures(merged.captures)
   return {
+    gate: { layout: { failed: failures.length, failures } },
     meta: { ...merged.meta, generatedAt: new Date().toISOString() },
     targets: TARGETS.map(({ key, label, target, source }) => ({ key, label, target, source })),
     summary,

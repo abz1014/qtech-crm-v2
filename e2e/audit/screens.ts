@@ -24,6 +24,8 @@ export interface Visit {
   id: string
   title: string
   roles: readonly Role[]
+  /** 'layout': only in the layout set (AUDIT_SET=layout), never in the standard audit. */
+  set?: 'layout'
   /** The screen ids this visit captures, in order (a flow has several). */
   screens: readonly string[]
   run: (page: Page, fx: Fixture, capture: Capture) => Promise<void>
@@ -313,6 +315,87 @@ const addToJobPasted: Visit = {
   },
 }
 
+/**
+ * The layout set (AUDIT_SET=layout, the workflow's `set` input): the screens and dialogs the layout gate is run on at five desktop
+ * widths (docs/audit/SCREEN_AUDIT.md). Existing visits by id, plus the dialogs below that the standard audit does not open.
+ */
+export const LAYOUT_IDS: ReadonlySet<string> = new Set([
+  'money-expenses',
+  'money-month-end',
+  'money-expense-report',
+  'jobs-list',
+  'job-po-issued',
+  'job-delivered',
+  'company-customer',
+  'today',
+  'settings-categories',
+  'money-expenses-add',
+  'issue-quotation',
+  'mark-won',
+])
+
+/** A dialog visit of the layout set: `openIt` opens it from a settled page, the capture measures inside `root`, then it is closed. */
+function layoutDialog(id: string, title: string, start: (fx: Fixture) => string, openIt: (page: Page, fx: Fixture) => Promise<void>, root = DIALOG, openedByAddress = false): Visit {
+  return {
+    id,
+    title,
+    roles: ADMIN,
+    set: 'layout',
+    screens: [id],
+    run: async (page, fx, capture) => {
+      try {
+        await bounded(60_000, `open ${title}`, async () => {
+          await open(page, start(fx))
+          // A dialog its address opens must not be closed before it is measured.
+          if (!openedByAddress) await closeDialogs(page)
+          await openIt(page, fx)
+          await page.locator(root).first().waitFor({ timeout: 15_000 })
+          await settle(page)
+        })
+        await capture(id, { root })
+      } finally {
+        await bounded(20_000, `close ${title}`, () => closeDialogs(page)).catch(() => undefined)
+      }
+    },
+  }
+}
+
+/** Opens the row menu of the first supplier line on an order, then `item` in it (or the button itself when it is on the row). */
+async function legAction(page: Page, direct: RegExp, item: RegExp): Promise<void> {
+  const button = page.getByRole('button', { name: direct }).filter({ visible: true }).first()
+  if (await button.isVisible().catch(() => false)) {
+    await button.click()
+    return
+  }
+  await page.getByRole('button', { name: /^More for / }).filter({ visible: true }).first().click()
+  await page.getByRole('menuitem', { name: item }).filter({ visible: true }).first().click()
+}
+
+const LAYOUT_VISITS: readonly Visit[] = [
+  layoutDialog('lg-add-expense', 'Layout: Add expense dialog (?add=1)', () => '/money/expenses?add=1', async () => undefined, DIALOG, true),
+  layoutDialog('lg-pay', 'Layout: Pay supplier dialog', fx => `/orders/${fx.order.multiLeg}`, (page) => legAction(page, /^Pay /, /^Pay /)),
+  layoutDialog('lg-recurring', 'Layout: Recurring template dialog', () => '/money/expenses', async page => {
+    await page.getByRole('button', { name: /^Add recurring$/ }).filter({ visible: true }).first().click()
+  }),
+  layoutDialog('lg-invoice-detail', 'Layout: Invoice detail dialog', () => '/money/gst-register', async page => {
+    await page.locator('#main tbody tr, #main [role="row"]').filter({ hasText: /d/ }).first().click()
+  }),
+  layoutDialog('lg-goods-chase', 'Layout: Chase goods dialog', fx => `/orders/${fx.order.multiLeg}`, async page => {
+    // Chase goods sits in the Delivery section's supplier lines, which start folded.
+    await page.getByRole('button', { name: /^Delivery/ }).filter({ visible: true }).first().click().catch(() => undefined)
+    await legAction(page, /^Chase goods/, /^Chase goods$/)
+  }),
+  layoutDialog(
+    'lg-filter-sheet',
+    'Layout: Filter sheet (expenses)',
+    () => '/money/expenses',
+    async page => {
+      await page.getByRole('button', { name: /^Filters/ }).filter({ visible: true }).first().click()
+    },
+    '[role="dialog"][aria-label="Filter expenses"]',
+  ),
+]
+
 export const VISITS: readonly Visit[] = [
   // The Jobs screens (redesign phases 4 to 7). The Job pages are opened through the old /rfqs/<id> and /orders/<id> addresses, which also
   // keeps the redirect under the audit. (The old RFQ and Order pages themselves were removed on 2026-10-30.)
@@ -392,6 +475,7 @@ export const VISITS: readonly Visit[] = [
   issueQuotation,
   markWon,
   deleteJobGuide,
+  ...LAYOUT_VISITS,
   // Last: it creates an RFQ, which would otherwise show on the lists above.
   newRfq,
 ]

@@ -35,7 +35,8 @@ export default defineConfig({
     colorScheme: 'light',
     reducedMotion: 'reduce',
   },
-  projects: [{ name: 'audit', use: { ...devices['Desktop Chrome'] } }],
+  // Scrollbars are drawn, as in Windows Chrome: the default headless launch hides them, which hides a second scrollbar and the width it takes.
+  projects: [{ name: 'audit', use: { ...devices['Desktop Chrome'], launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] } } }],
   webServer: {
     command: `npx vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,
     cwd: root,

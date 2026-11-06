@@ -5,7 +5,7 @@ import { openAs, type Role } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { collect, type Metrics } from './collect'
 import { seedAudit, type Fixture } from './seed'
-import { VISITS, bounded, type CaptureOptions, type Visit } from './screens'
+import { LAYOUT_IDS, VISITS, bounded, type CaptureOptions, type Visit } from './screens'
 
 /*
  * The screen audit (docs/audit/SCREEN_AUDIT.md): every main screen and key state, for each role, at each viewport, measured in
@@ -16,11 +16,11 @@ import { VISITS, bounded, type CaptureOptions, type Visit } from './screens'
  *   audit-out/shots/<role>/<screen>/<viewport>-fold.png
  *   audit-out/shots/<role>/<screen>/<viewport>-full.jpg
  *
- * It measures; it never fails on a finding. A screen that cannot be reached or driven is recorded with status "error" (and an
+ * It measures; it never fails on a finding (the layout gate is report.mjs --gate layout, run by the workflow). A screen that cannot be reached or driven is recorded with status "error" (and an
  * <viewport>-error.png) and the run goes on. Only a failed seed fails the run.
  *
  * Environment: AUDIT_ROLES ("admin sales engineer"), AUDIT_VIEWPORTS ("1366x768 1920x1080 375x812 320x640"), AUDIT_SCREENS (a
- * regex over visit and screen ids), AUDIT_AXE=0 and AUDIT_FULL=0 to skip axe or the full-page shots, AUDIT_REF and AUDIT_SHA (what
+ * regex over visit and screen ids), AUDIT_SET=layout (the layout set), AUDIT_AXE=0 and AUDIT_FULL=0 to skip axe or the full-page shots, AUDIT_REF and AUDIT_SHA (what
  * is being audited, written into the results).
  */
 
@@ -34,6 +34,8 @@ const VIEWPORTS = (process.env.AUDIT_VIEWPORTS || '1366x768 1920x1080 375x812 32
     return { name, width, height }
   })
 type Viewport = (typeof VIEWPORTS)[number]
+// AUDIT_SET=layout: only the layout set (screens.ts LAYOUT_IDS and the lg- dialogs). Otherwise the standard audit, without the lg- ones.
+const LAYOUT_SET = process.env.AUDIT_SET === 'layout'
 const ONLY = process.env.AUDIT_SCREENS ? new RegExp(process.env.AUDIT_SCREENS) : null
 const AXE = process.env.AUDIT_AXE !== '0'
 const FULL = process.env.AUDIT_FULL !== '0'
@@ -229,7 +231,7 @@ test.afterAll(async () => {
 
 for (const role of ROLES) {
   test.describe(role, () => {
-    const visits = VISITS.filter(v => v.roles.includes(role) && (!ONLY || ONLY.test(v.id) || v.screens.some(s => ONLY.test(s))))
+    const visits = VISITS.filter(v => v.roles.includes(role) && (LAYOUT_SET ? v.set === 'layout' || LAYOUT_IDS.has(v.id) : v.set !== 'layout') && (!ONLY || ONLY.test(v.id) || v.screens.some(s => ONLY.test(s))))
     for (const visit of visits) {
       test(`${role} ${visit.id}`, async ({ browser }, info) => {
         test.setTimeout(VIEWPORTS.length * visit.screens.length * 120_000 + 60_000)
