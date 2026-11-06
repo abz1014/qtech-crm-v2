@@ -140,7 +140,7 @@ export function EngineerActions({ facts, data, contact }: { facts: JobFacts; dat
       {contact ? <div className="mt-4">{contact}</div> : null}
       {(order && order.needsCommissioning && !cancelled) || (order && data.orderItems.data) ? (
         <div className="mt-4 grid gap-4">
-          {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit /> : null}
+          {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit card /> : null}
           {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
         </div>
       ) : null}

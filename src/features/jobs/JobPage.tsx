@@ -222,7 +222,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         }
       />
       {phone && (button || jobHasMore(ctx)) ? (
-        <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} />
+        <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} className={button ? undefined : 'left-auto rounded-tl-panel'} />
       ) : null}
 
       {/* An engineer's contact (name, Call, WhatsApp) sits right under the On site buttons, above the visits and the delivery challans; the side column does not repeat it. */}

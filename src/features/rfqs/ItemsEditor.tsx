@@ -368,9 +368,9 @@ export function ItemRows({
           </ol>
         </>
       ) : null}
-      <div className="flex items-center gap-3 border-t bg-sunken px-4 py-3 text-xs text-fg-muted">
+      <div className="flex flex-wrap items-center gap-3 border-t bg-sunken px-4 py-3 text-xs text-fg-muted">
         <Icon icon={Scissors} size="sm" />
-        <span className="min-w-0 text-pretty">{note}</span>
+        <span className="min-w-[10rem] flex-1 text-pretty">{note}</span>
         <Button variant="quiet" size="sm" icon={Plus} className="ml-auto shrink-0" onClick={onAdd}>
           Add item
         </Button>

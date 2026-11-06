@@ -234,7 +234,7 @@ function Bullet() {
 
 function Dot({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-start">
+    <span className="inline-flex items-center">
       <Bullet />
       {children}
     </span>
@@ -384,7 +384,7 @@ export function ItemsPanel({
                       )}
                     </h3>
                     <p className="mt-1 overflow-x-clip text-sm text-fg-muted">
-                     <span className="-ml-4 flex flex-wrap items-start gap-y-1">
+                     <span className="-ml-4 flex flex-wrap items-center gap-y-1">
                       {q ? <span className="num pl-4">{q}</span> : null}
                       {item.brandName ? <Dot>{item.brandName}</Dot> : null}
                       <Dot>
