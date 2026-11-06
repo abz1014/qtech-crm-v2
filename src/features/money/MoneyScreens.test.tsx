@@ -297,6 +297,22 @@ describe('To collect (M02)', () => {
     expect(within(filter).getByRole('radio', { name: /Open/ })).toHaveTextContent(/^Open$/)
   })
 
+  it('on a phone only Owed is sticky, and the split under it (with Imported, to review) adds up to Owed', async () => {
+    db()
+    mount(<ReceivablesPage />)
+    await screen.findAllByText('Punjab Cement Ltd')
+    const owed = screen.getByTestId('owed-line')
+    expect(owed.className).toContain('sticky')
+    expect(owed).toHaveTextContent(/^Owed PKR/)
+    expect(owed).not.toHaveTextContent('Overdue')
+    const split = screen.getByTestId('owed-split')
+    expect(split.className).not.toContain('sticky')
+    const items = within(split).getAllByRole('listitem')
+    expect(items.map(li => li.textContent)).toEqual([expect.stringMatching(/^Overdue/), expect.stringMatching(/^Not yet due/), expect.stringMatching(/^Not invoiced yet/), expect.stringMatching(/^Imported, to review/)])
+    const num = (t: string | null) => Number((t ?? '').match(/PKR ([\d,]+)/)![1].replace(/,/g, ''))
+    expect(items.reduce((sum, li) => sum + num(li.textContent), 0)).toBe(num(owed.textContent))
+  })
+
   it('has ONE Next step column (no Payment chip, no Last reminder), and Search balances narrows the list (R2-06)', async () => {
     const user = userEvent.setup()
     db()

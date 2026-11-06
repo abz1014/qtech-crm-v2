@@ -9,6 +9,7 @@ import { orderRef } from '@/lib/refs'
 import { agoDays, inDays } from '@/lib/timeWords'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { useSession } from '@/app/session'
+import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -34,6 +35,7 @@ import {
   receivableNextStep,
   receivableSearchText,
   receivableTotals,
+  phoneSplit,
   reminderPhrase,
   sortReceivables,
   type ReceivableFilter,
@@ -67,6 +69,7 @@ const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/R
 const GROSS_SETTLED = 'hidden md:table-cell min-[1360px]:hidden min-[1536px]:table-cell'
 const SEARCH_FIELDS = 'customer, order number and invoice number'
 const FILTER_WORD: Record<ReceivableFilter, string> = { open: 'Open', overdue: 'Overdue', settled: 'Paid' }
+const phoneMoney = (n: number) => Math.round(n).toLocaleString('en-US')
 const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '').replace(/ \d{4}$/, '')
 
 function NextStep({ r, today, onInvoice }: { r: ReceivableRow; today: string; onInvoice: (orderId: string) => void }) {
@@ -225,17 +228,23 @@ export function ReceivablesPage() {
         ) : undefined
       }
     >
-      {/* Phone: the key fact stays in view while the cards scroll (the four tiles took half the screen). */}
+      {/* Phone: only Owed stays in view while the cards scroll (the five tiles took half the screen); the split sits under it and scrolls away. */}
       <p data-testid="owed-line" className="sticky top-0 z-10 -mx-4 flex flex-wrap items-baseline gap-x-3 border-b bg-canvas px-4 py-2 text-base sm:hidden">
         <span>
-          Owed <b className="num font-semibold">PKR {Math.round(totals.outstanding).toLocaleString('en-US')}</b>
+          Owed <b className="num font-semibold">PKR {phoneMoney(totals.outstanding)}</b>
         </span>
-        {totals.overdueCount > 0 ? (
-          <span className="text-tone-danger-fg">
-            Overdue <b className="num font-semibold">PKR {Math.round(totals.overdue).toLocaleString('en-US')}</b> · <span className="num">{totals.overdueCount}</span>
-          </span>
-        ) : null}
       </p>
+      {/* The same split as the desktop tiles. Imported balances are counted apart, so the fourth line appears when there are any, and the lines add up to Owed. */}
+      <ul data-testid="owed-split" aria-label="Owed, by status" className="grid gap-1 text-base sm:hidden">
+        {phoneSplit(totals).map(l => (
+          <li key={l.label} className={cn('flex items-baseline justify-between gap-3', l.tone === 'danger' && 'text-tone-danger-fg')}>
+            <span>
+              {l.label} <span className="num text-fg-2">· {l.count}</span>
+            </span>
+            <b className="num font-semibold">PKR {phoneMoney(l.amount)}</b>
+          </li>
+        ))}
+      </ul>
       <SumBar
         className="max-sm:hidden"
         label="Balance by status, includes GST"

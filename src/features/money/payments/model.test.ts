@@ -6,6 +6,7 @@ import {
   paymentNote,
   receivableNextStep,
   receivableSearchText,
+  phoneSplit,
   receivableTotals,
   reminderDue,
   reminderPhrase,
@@ -167,5 +168,26 @@ describe('receivables, imported orders (owner decision 1b)', () => {
   it('names the next step of an imported, not-invoiced order', () => {
     expect(receivableNextStep(rows[3], TODAY).label).toBe('Imported, to review')
     expect(receivableNextStep(rows[2], TODAY).label).toBe('Not invoiced yet')
+  })
+})
+
+describe('the phone split of Owed', () => {
+  const rows = [
+    row({ orderId: 'a', balance: 1000, gross: 1000, state: 'overdue', dueOn: '2026-11-01' }),
+    row({ orderId: 'b', balance: 2000, gross: 2000, state: 'unpaid', dueOn: '2026-12-20' }),
+    row({ orderId: 'c', balance: 300, gross: 300, invoiceNumbers: [], dueOn: null }),
+    row({ orderId: 'd', balance: 4000, gross: 4000, invoiceNumbers: [], dueOn: null, imported: true }),
+  ]
+  it('adds up to Owed, with Imported, to review as a fourth line', () => {
+    const t = receivableTotals(rows, TODAY)
+    const lines = phoneSplit(t)
+    expect(lines.map(l => l.label)).toEqual(['Overdue', 'Not yet due', 'Not invoiced yet', 'Imported, to review'])
+    expect(lines.reduce((s, l) => s + l.amount, 0)).toBe(t.outstanding)
+  })
+  it('leaves the Imported line out at 0, and the three lines still add up to Owed', () => {
+    const t = receivableTotals(rows.slice(0, 3), TODAY)
+    const lines = phoneSplit(t)
+    expect(lines.map(l => l.label)).toEqual(['Overdue', 'Not yet due', 'Not invoiced yet'])
+    expect(lines.reduce((s, l) => s + l.amount, 0)).toBe(t.outstanding)
   })
 })
