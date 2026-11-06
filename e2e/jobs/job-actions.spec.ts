@@ -16,10 +16,10 @@ test.describe.configure({ mode: 'serial' })
 const unique = () => Math.random().toString(36).slice(2, 8)
 const LINK = 'Open in Invoices to void one or issue a credit note'
 
-async function seedOrder(extra: Record<string, unknown> = {}) {
+async function seedOrder(extra: Record<string, unknown> = {}, item: Record<string, unknown> = {}) {
   const company = await createCompany(uniqueName('Job Actions Customer'), { invoice_address: 'Plot 1, Korangi, Karachi', sales_tax_registered: false })
   const [order] = await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, payment_terms_days: 30, ...extra } }))
-  await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Flow meter DN50', qty: 1, unit_price_net: 100000, gst_rate: 18 }, prefer: 'return=minimal' }))
+  await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: 'Flow meter DN50', qty: 1, unit_price_net: 100000, gst_rate: 18, ...item }, prefer: 'return=minimal' }))
   return { id: order.id, number: order.number, company }
 }
 
@@ -133,11 +133,17 @@ test('a cancelled job (no next step) has More on a phone for the admin, with Del
   await expect(page.getByRole('menuitem', { name: 'Delete job' })).toBeVisible()
 })
 
-/** A fully invoiced, fully paid order with no supplier legs and no commissioning: the job is "paid" and has no next step. */
+/**
+ * A fully invoiced, fully paid order with no supplier legs and no commissioning: the job is "paid" and has no next step.
+ * The only line is a service (a goods line with no supplier would keep the stage at "ordered" with a real "Choose suppliers" button).
+ */
 async function seedPaidOrder() {
-  const order = await seedOrder()
+  const order = await seedOrder({}, { is_service: true, description: 'Site survey', unit: 'job' })
   const inv = await makeInvoice(order.id)
   await must(rest('admin', 'payments_in', { method: 'POST', body: { order_id: order.id, invoice_id: inv.id, amount: 118000, received_on: karachiDay(0) }, prefer: 'return=minimal' }))
+  // the seed must really be paid, or the tests below pass for the wrong reason
+  const job = await must(rest<{ stage: string }[]>('admin', `v_jobs?order_id=eq.${order.id}&select=stage`))
+  expect(job[0].stage).toBe('paid')
   return order
 }
 
@@ -150,6 +156,8 @@ for (const role of ['admin', 'sales'] as const) {
     const bar = page.getByRole('toolbar', { name: 'Job actions' })
     await expect(bar.getByRole('button', { name: 'More' })).toBeVisible()
     await expect(bar.getByRole('button', { name: 'More' })).toBeEnabled()
+    // a paid job has no next-step button of its own: More is the only button in the bar
+    await expect(bar.getByRole('button')).toHaveCount(1)
     await bar.getByRole('button', { name: 'More' }).click()
     await expect(page.getByRole('menuitem', { name: 'Cancel order' })).toBeVisible()
   })
