@@ -79,7 +79,7 @@ test.describe('expenses layout (2026-11-06)', () => {
     await page.setViewportSize({ width: 1024, height: 800 })
     await openAs(page, 'admin', '/money/expenses')
     await page.getByRole('button', { name: 'Add expenses' }).click()
-    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Amount, expense 1' })).toBeVisible()
     await expect(page.locator('[role="group"][aria-label="Expense rows"] > div[aria-hidden="true"]')).toHaveCount(0)
     await review(page, 'layout-sheet-1024')
   })
