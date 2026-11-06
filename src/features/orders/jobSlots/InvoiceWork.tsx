@@ -30,13 +30,10 @@ export default function InvoiceWork({ job }: JobSlotProps) {
           <p className="text-base text-fg-2" data-slot="invoice-waits">
             {onOrder === 1 ? '1 supplier order is still on order.' : `${onOrder} supplier orders are still on order.`} Create the invoice once the goods are delivered.
           </p>
-        ) : (
-          <p>
-            <CreateInvoiceButton orderId={order.id} />
-          </p>
-        )
+        ) : null
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
+        {order.cancelledOn === null && !fully && onOrder === 0 ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
         {invoiced > 0 ? <InvoicePdfButton orderId={order.id} size="sm" /> : null}
         {job.role === 'admin' && order.cancelledOn === null ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}
         {owing ? <CopyReminderButton order={order} money={m} /> : null}

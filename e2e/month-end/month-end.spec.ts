@@ -118,7 +118,7 @@ test.describe('month-end (M10)', () => {
     await startCounting(page)
     await page.getByTestId('month-reports-link').click()
     await expect(page).toHaveURL(new RegExp(`/money/reports/pnl\\?month=${STMT.key}`))
-    await expect(page.getByRole('heading', { name: 'Profit and loss', level: 1 })).toBeVisible()
+    await expect(page.getByTestId('report-name')).toHaveText('Profit and loss')
     expect(await mouse(page)).toBe(1)
   })
 
@@ -144,7 +144,9 @@ test.describe('month-end (M10)', () => {
       await page.getByTestId('report-picker').selectOption(r.key)
       await expect(page).toHaveURL(new RegExp(`/money/reports/${r.key}\\?month=${STMT.key}`))
       await expect(page.getByText(r.shows).first()).toBeVisible()
-      await expect(page.getByRole('heading', { name: r.title, level: 1 })).toBeVisible()
+      // the page's h1 is the tab's name; the report's own name is the line under it (ReportsFrame lede)
+      await expect(page.getByRole('heading', { name: 'Reports', level: 1 })).toBeVisible()
+      await expect(page.getByTestId('report-name')).toHaveText(r.title)
       await expect(page.getByRole('button', { name: 'Export CSV' })).toBeEnabled()
       await page.waitForLoadState('networkidle')
       await startCounting(page)
@@ -158,7 +160,7 @@ test.describe('month-end (M10)', () => {
   test('the old month-end report addresses open the same report under Reports, month kept', async ({ page }) => {
     await openAs(page, 'admin', `/money/month-end/aging?month=${STMT.key}`)
     await expect(page).toHaveURL(new RegExp(`/money/reports/aging\\?month=${STMT.key}`))
-    await expect(page.getByRole('heading', { name: 'Overdue by age', level: 1 })).toBeVisible()
+    await expect(page.getByTestId('report-name')).toHaveText('Overdue by age')
   })
 
   test('the P&L shows the payment with no net split apart, and its CSV carries Gross, GST and Net columns', async ({ page }) => {

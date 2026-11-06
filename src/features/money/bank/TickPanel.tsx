@@ -37,7 +37,7 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
     <section aria-label={heading} data-testid={`bank-${dir}`} className="min-w-0 rounded-panel border bg-surface">
       <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b py-2 pl-5 pr-4">
         <h2 className="text-base font-semibold">{heading}</h2>
-        <span className="inline-flex h-[22px] items-center gap-[6px] rounded bg-selected px-2 text-xs font-medium text-fg-2">
+        <span className="inline-flex min-h-[22px] items-center gap-[6px] rounded bg-selected px-2 py-[2px] text-xs font-medium text-fg-2">
           <Icon icon={dir === 'in' ? ArrowDownLeft : ArrowUpRight} size="sm" />
           {tag}
         </span>
@@ -106,7 +106,7 @@ function GroupHead({ label, count, first }: { label: string; count: number; firs
   return (
     <div
       className={cn(
-        'flex h-8 items-center justify-between gap-3 border-b bg-canvas px-5 text-xs font-medium text-fg-muted',
+        'flex min-h-8 items-center justify-between gap-3 border-b bg-canvas px-5 py-1 text-xs font-medium text-fg-muted',
         !first && 'border-t',
       )}
     >

@@ -57,7 +57,7 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
 // Every row is its own grid, so the tracks are fixed to line up; sized for 16px text ("≈ PKR 1,234,567", "Not in stock").
-const COLS = 'lg:grid-cols-[minmax(0,1fr)_184px_minmax(0,136px)_128px_72px]'
+const COLS = 'lg:grid-cols-[minmax(0,1fr)_168px_minmax(0,112px)_112px_72px]'
 const HEAD = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted lg:grid ${COLS}`
 /**
  * Phone (UX audit C3): two lines per supplier. The name (and its mark) across the row with the two buttons at its end; then
@@ -65,7 +65,7 @@ const HEAD = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted lg:grid $
  */
 const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 lg:gap-x-4 ${COLS}`
 /** An engineer's row: the supplier, then lead time · stock (no price, no buttons). */
-const COLS_NO_PRICES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,136px)_128px]'
+const COLS_NO_PRICES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,112px)_112px]'
 const HEAD_NO_PRICES = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted lg:grid ${COLS_NO_PRICES}`
 const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t px-5 py-3 lg:gap-x-4 ${COLS_NO_PRICES}`
 
@@ -234,7 +234,7 @@ function Bullet() {
 
 function Dot({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-start">
+    <span className="inline-flex items-center">
       <Bullet />
       {children}
     </span>
@@ -337,7 +337,8 @@ export function ItemsPanel({
       {items.length === 0 ? (
         <p className="px-5 py-6 text-fg-muted">This RFQ has no items yet. Add the first one to start asking for prices.</p>
       ) : (
-        <div className="divide-y">
+        // Rounded at the bottom and clipped: a grey "Waiting on" band at the end of the last item ran into the card's rounded corners.
+        <div className="divide-y overflow-hidden rounded-b-panel">
           {items.map(item => {
             const entries: Entry[] = []
             const lines = inquiries.flatMap(i => i.lines.filter(l => l.itemId === item.id).map(l => ({ l, i })))
@@ -384,7 +385,7 @@ export function ItemsPanel({
                       )}
                     </h3>
                     <p className="mt-1 overflow-x-clip text-sm text-fg-muted">
-                     <span className="-ml-4 flex flex-wrap items-start gap-y-1">
+                     <span className="-ml-4 flex flex-wrap items-center gap-y-1">
                       {q ? <span className="num pl-4">{q}</span> : null}
                       {item.brandName ? <Dot>{item.brandName}</Dot> : null}
                       <Dot>

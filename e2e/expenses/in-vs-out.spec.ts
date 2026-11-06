@@ -76,7 +76,7 @@ test.describe('in vs out (owner request 2026-10-20)', () => {
     await openAs(page, 'admin', '/money/reports')
     // Reports shows one report at a time: pick Money in and out in the Report select (it opens on this month).
     await page.getByTestId('report-picker').selectOption('in-out')
-    await expect(page.getByRole('heading', { name: 'Money in and out', exact: true, level: 1 })).toBeVisible()
+    await expect(page.getByTestId('report-name')).toHaveText('Money in and out')
     // it opens on the current month when no month is in the address
     await expect(page.getByRole('table', { name: 'Profit on invoices' })).toBeVisible()
     await expect(page.getByTestId('cash-out')).toContainText(whole(Number(monthOut)))

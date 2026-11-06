@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Camera, Check, CircleAlert, Trash2, X } from 'lucide-react'
 import { useSession } from '@/app/session'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
@@ -33,6 +34,8 @@ export function MyClaimsPage() {
 }
 
 function MyClaims() {
+  // The phone bar names the page (its h1 is for screen readers there); without it the bar said "Q-Tech CRM".
+  useMobileBar({ title: 'I paid' })
   const today = businessToday()
   const toast = useToast()
   const claims = useMyClaims()

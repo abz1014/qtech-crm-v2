@@ -42,7 +42,8 @@ import { ctxAs, layout, note, OUT, probe, settle, shot, tag, visit, watch } from
 // ------------------------------------------------------------------------------------------------ helpers
 
 const T = 12_000
-const today = karachiDay(0)
+// A live read, never a constant frozen at load: a run that starts before Karachi midnight and clicks after it must compare with the new day.
+const today = () => karachiDay(0)
 const slashDate = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 /** The invoice PDF's day ("5 Oct 2026"). */
@@ -383,7 +384,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     const items = await db.rows<{ position: number; supplier_unit_price: number | null }>(`order_items?order_id=eq.${id}&select=position,supplier_unit_price&order=position`)
     want(info, 'A Issue PO EUR', same(num(items[1]?.supplier_unit_price), 17.255), `typed price not written back to the order line exactly (got ${items[1]?.supplier_unit_price})`)
     const placed = await legDates(legE)
-    want(info, 'A Issue PO EUR', placed.placed_on === today, `the EUR leg is not placed today after issuing (placed_on ${placed.placed_on})`)
+    want(info, 'A Issue PO EUR', placed.placed_on === today(), `the EUR leg is not placed today after issuing (placed_on ${placed.placed_on})`)
     const withPdf = await until(() => posOf(legE), r => !!r[r.length - 1]?.pdf_path, 15_000)
     const path = withPdf[withPdf.length - 1]?.pdf_path
     if (!want(info, 'A PO PDF EUR', !!path, 'the issued PO has no stored PDF')) return
@@ -452,7 +453,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     const clip = flat(await readClipboardWhen(page, s => s.length > 20))
     want(info, 'A chase', clip.includes(draft.slice(0, 60)) || draft.includes(clip.slice(0, 60)), 'the clipboard text is not the draft shown', { draft: draft.slice(0, 200), clip: clip.slice(0, 200) })
     const stamped = await until(() => legDates(legE), r => r.chase_count === 1)
-    want(info, 'A chase', stamped.chase_count === 1 && stamped.last_chased_on === today, `chase stamp ${JSON.stringify(stamped)}`)
+    want(info, 'A chase', stamped.chase_count === 1 && stamped.last_chased_on === today(), `chase stamp ${JSON.stringify(stamped)}`)
     await undoIn(toast(page, /marked chased/)).click({ timeout: 8000 })
     const undone = await until(() => legDates(legE), r => r.chase_count === 0)
     want(info, 'A chase Undo', undone.chase_count === 0 && undone.last_chased_on === null, `Undo of the chase left ${JSON.stringify(undone)}`)
@@ -473,8 +474,8 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     await settle(page)
     const before = await legDates(legE)
     await legRow(page, supE.name).getByRole('button', { name: `Delivered today, ${supE.name}` }).dblclick({ timeout: T })
-    const d1 = await until(() => legDates(legE), r => r.delivered_on === today)
-    want(info, 'A delivered', d1.delivered_on === today && d1.received_on === today, `after Delivered today: ${JSON.stringify(d1)}`)
+    const d1 = await until(() => legDates(legE), r => r.delivered_on === today())
+    want(info, 'A delivered', d1.delivered_on === today() && d1.received_on === today(), `after Delivered today: ${JSON.stringify(d1)}`)
     await page.waitForTimeout(800)
     const toasts = await toast(page, /Marked delivered/).count()
     want(info, 'A delivered', toasts <= 1, `a double click on Delivered today showed ${toasts} "Marked delivered" toasts (two writes?)`)
@@ -499,7 +500,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     const fold = legRow(page, supE.name).locator(':scope > button[aria-expanded="false"]')
     if (await fold.isVisible().catch(() => false)) await fold.click()
     if ((await legDates(legE)).delivered_on === null) await legRow(page, supE.name).getByRole('button', { name: `Delivered today, ${supE.name}` }).click({ timeout: T })
-    await until(() => legDates(legE), r => r.delivered_on === today)
+    await until(() => legDates(legE), r => r.delivered_on === today())
     const s = await until(() => stateOf(id), v => v.goods_state !== 'on_order')
     want(info, 'A part delivery', /part/.test(s.goods_state), `goods_state with one of two suppliers delivered is "${s.goods_state}"`)
     await page.reload()
@@ -572,15 +573,15 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
     await bar.getByRole('button', { name: 'Plan commissioning' }).click({ timeout: T })
     const d = sp.getByRole('dialog')
     const planned = d.getByRole('textbox', { name: 'Planned on' })
-    await planned.fill(slashDate(today))
+    await planned.fill(slashDate(today()))
     await planned.press('Enter')
     await d.getByRole('combobox', { name: 'Assign an engineer' }).selectOption({ label: 'Test Engineer' })
     await until(() => db.count(`order_engineers?order_id=eq.${id}&user_id=eq.${USER.engineer}&select=user_id`), n => n === 1)
     await layout(sp, info, 'B sales phone commissioning dialog')
     await shot(sp, 'B-sales-phone-plan-dialog')
     await d.getByRole('button', { name: 'Save' }).click()
-    const o = await until(orderRow, r => r.commissioning_planned_on === today)
-    want(info, 'B plan', o.commissioning_planned_on === today, `planned_on after Save is ${o.commissioning_planned_on}`)
+    const o = await until(orderRow, r => r.commissioning_planned_on === today())
+    want(info, 'B plan', o.commissioning_planned_on === today(), `planned_on after Save is ${o.commissioning_planned_on}`)
     want(info, 'B plan', (await db.count(`order_engineers?order_id=eq.${id}&select=user_id`)) === 1, 'the engineer is not assigned exactly once')
   })
 
@@ -620,8 +621,8 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
     const moved = await until(orderRow, r => r.commissioning_planned_on === karachiDay(1))
     want(info, 'B planned date', moved.commissioning_planned_on === karachiDay(1), `planned date after the engineer's change is ${moved.commissioning_planned_on}`)
     await undoIn(toast(ep, /Planned date changed/)).click({ timeout: 8000 })
-    const back = await until(orderRow, r => r.commissioning_planned_on === today)
-    want(info, 'B planned date Undo', back.commissioning_planned_on === today, `Undo of the planned date left ${back.commissioning_planned_on}`)
+    const back = await until(orderRow, r => r.commissioning_planned_on === today())
+    want(info, 'B planned date Undo', back.commissioning_planned_on === today(), `Undo of the planned date left ${back.commissioning_planned_on}`)
   })
 
   await probe(info, ep, 'B engineer Mark done today: double tap, Undo, then done', async () => {
@@ -631,8 +632,8 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
     const box = await btn.boundingBox()
     want(info, 'B mark done', !!box && box.height >= 44, `"Mark done today" is ${box ? Math.round(box.height) : 0} px tall on the phone (touch target)`)
     await btn.dblclick({ timeout: T })
-    const done = await until(orderRow, r => r.commissioning_done_on === today)
-    want(info, 'B mark done', done.commissioning_done_on === today, `done_on after Mark done is ${done.commissioning_done_on}`)
+    const done = await until(orderRow, r => r.commissioning_done_on === today())
+    want(info, 'B mark done', done.commissioning_done_on === today(), `done_on after Mark done is ${done.commissioning_done_on}`)
     await ep.waitForTimeout(800)
     const n = await toast(ep, /Commissioning marked done/).count()
     want(info, 'B mark done', n <= 1, `a double tap on Mark done today showed ${n} toasts`)
@@ -643,7 +644,7 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
     await ep.reload()
     await settle(ep)
     await ep.getByRole('button', { name: 'Mark done today' }).first().click({ timeout: T })
-    await until(orderRow, r => r.commissioning_done_on === today)
+    await until(orderRow, r => r.commissioning_done_on === today())
     want(info, 'B mark done', (await stateOf(id)).commissioning_state === 'done', 'commissioning_state is not done after Mark done')
   })
 
@@ -739,8 +740,8 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
       `PKR ${amount(5000.5, { always: true })}`,
       'Sales tax at 18%',
       inWords(M.gross, ['rupee', 'rupees', 'paisa', 'paise']),
-      pdfDay(today),
-      pdfDay(addDays(today, 30)),
+      pdfDay(today()),
+      pdfDay(addDays(today(), 30)),
       ref.order(seed.order.number),
     ]
     obs(info, 'C invoice PDF', 'pdftotext -layout of the invoice (for review)', text.slice(0, 2500))
@@ -962,7 +963,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     const clip = flat(await readClipboardWhen(ap, s => s.length > 20))
     want(info, 'D reminder', clip.includes(amount(inv1Gross)), 'the copied reminder lacks the balance', clip.slice(0, 300))
     const stamped = await until(() => rec(id), v => !!v && v.reminders === 1)
-    want(info, 'D reminder', !!stamped && stamped.reminders === 1 && stamped.remindedOn === today, `after Copy and mark reminded ${JSON.stringify(stamped)}`)
+    want(info, 'D reminder', !!stamped && stamped.reminders === 1 && stamped.remindedOn === today(), `after Copy and mark reminded ${JSON.stringify(stamped)}`)
     const e = await todayItems(salesCtx, info, 'payment_overdue', oref)
     want(info, 'D reminder Today', e.waiting === 1, `after the reminder sales Today payment_overdue is not Waiting: ${JSON.stringify(e)}`)
     await panel.getByRole('button', { name: 'Undo' }).click({ timeout: 8000 }).catch(async () => undoIn(toast(ap, /remind/i)).click({ timeout: 3000 }))
@@ -1019,7 +1020,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     const tagOf = (d: string) => d.split(' ').slice(-1)[0]
     want(info, 'D PDF', pdfHas(text, second.number) && pdfHas(text, tagOf(L[1].description)) && !pdfHas(text, tagOf(L[0].description)), 'the second invoice PDF does not list exactly line 2', text.slice(0, 1500))
     want(info, 'D PDF', pdfHas(text, `PKR ${amount(M.per[1].gst, { always: true })}`), `the second invoice PDF lacks its GST ${amount(M.per[1].gst, { always: true })}`)
-    const pdfDue = pdfDay(addDays(today, 30))
+    const pdfDue = pdfDay(addDays(today(), 30))
     if (r?.dueOn && pdfHas(text, pdfDue) && !pdfHas(text, pdfDay(r.dueOn)))
       obs(info, 'D PDF due date', `the second invoice's PDF says "Payment due ${pdfDue}" (its own date + 30) but the order is due ${r.dueOn} (first invoice + 30) in order_receivables, Today and To collect`)
     else if (r?.dueOn) want(info, 'D PDF due date', pdfHas(text, pdfDay(r.dueOn)), `the PDF's Payment due is neither ${pdfDue} nor the DB's ${r.dueOn}`)
@@ -1142,7 +1143,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     await d.getByRole('button', { name: 'Cancel order', exact: true }).dblclick()
     await d.waitFor({ state: 'hidden', timeout: T })
     const c = await until(orderRow, r => r.cancelled_on !== null)
-    want(info, 'E cancel', c.cancelled_on === today && c.cancel_reason === 'customer_cancelled', `after Cancel order ${JSON.stringify(c)}`)
+    want(info, 'E cancel', c.cancelled_on === today() && c.cancel_reason === 'customer_cancelled', `after Cancel order ${JSON.stringify(c)}`)
     await ap.waitForTimeout(600)
     const n = await toast(ap, /Order cancelled/).count()
     want(info, 'E cancel', n <= 1, `a double click on Cancel order showed ${n} toasts`)
@@ -1155,7 +1156,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
   })
 
   await probe(info, ap, 'E cancelled: Today has no work items for it; reopen and the Undo of reopen', async () => {
-    await db.patch(`orders?id=eq.${id}`, { cancelled_on: today, cancel_reason: 'customer_cancelled' })
+    await db.patch(`orders?id=eq.${id}`, { cancelled_on: today(), cancel_reason: 'customer_cancelled' })
     const salesCtx = await ctxAs(browser, info, 'sales', 'desktop')
     for (const rule of ['place_po', 'goods_late', 'delivered_not_invoiced', 'plan_commissioning']) {
       const e = await todayItems(salesCtx, info, rule, oref)
@@ -1172,7 +1173,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     want(info, 'E reopen', (await stateOf(id)).lifecycle === 'active', 'the order is not active after Reopen order')
     await undoIn(toast(ap, /Order reopened/)).click({ timeout: 8000 })
     const again = await until(orderRow, r => r.cancelled_on !== null)
-    want(info, 'E reopen Undo', again.cancelled_on === today && again.cancel_reason === 'customer_cancelled', `Undo of Reopen restored ${JSON.stringify(again)} (reason lost?)`)
+    want(info, 'E reopen Undo', again.cancelled_on === today() && again.cancel_reason === 'customer_cancelled', `Undo of Reopen restored ${JSON.stringify(again)} (reason lost?)`)
     await db.patch(`orders?id=eq.${id}`, { cancelled_on: null, cancel_reason: null })
   })
 
@@ -1400,7 +1401,7 @@ test('HW-15: a double click on Delivered today sends two writes (two success toa
   await expect(button).toBeVisible({ timeout: 15_000 })
   const writes = patches(page, 'supplier_orders')
   await button.dblclick()
-  await expect.poll(async () => (await legDates(leg)).delivered_on, { timeout: 10_000 }).toBe(today)
+  await expect.poll(async () => (await legDates(leg)).delivered_on, { timeout: 10_000 }).toBe(today())
   await page.waitForTimeout(2000)
   expect(writes.count()).toBe(1)
   await ctx.close()
@@ -1409,7 +1410,7 @@ test('HW-15: a double click on Delivered today sends two writes (two success toa
 test('HW-15: a double tap on Installed today (engineer, phone) sends two writes', async ({ browser }, info) => {
   const seed = await order({ lines: [{ description: 'Commissioning visit, one day', qty: 1, price: 25000, service: true }], owner: 'sales', needsCommissioning: true })
   const id = seed.order.id
-  await db.patch(`orders?id=eq.${id}`, { commissioning_planned_on: today })
+  await db.patch(`orders?id=eq.${id}`, { commissioning_planned_on: today() })
   await post('order_engineers', { order_id: id, user_id: USER.engineer })
   const ctx = await ctxAs(browser, info, 'engineer', 'phone')
   const page = await ctx.newPage()
@@ -1418,7 +1419,7 @@ test('HW-15: a double tap on Installed today (engineer, phone) sends two writes'
   await expect(button).toBeVisible({ timeout: 15_000 })
   const writes = patches(page, 'orders')
   await button.dblclick()
-  await expect.poll(async () => (await db.one<{ commissioning_done_on: string | null }>(`orders?id=eq.${id}&select=commissioning_done_on`)).commissioning_done_on, { timeout: 10_000 }).toBe(today)
+  await expect.poll(async () => (await db.one<{ commissioning_done_on: string | null }>(`orders?id=eq.${id}&select=commissioning_done_on`)).commissioning_done_on, { timeout: 10_000 }).toBe(today())
   await page.waitForTimeout(2000)
   expect(writes.count()).toBe(1)
   await ctx.close()
@@ -1436,7 +1437,7 @@ test('HW-15: a double click on Cancel order sends two writes', async ({ browser 
   await d.getByRole('radio', { name: 'The customer cancelled the PO' }).click()
   const writes = patches(page, 'orders')
   await d.getByRole('button', { name: 'Cancel order', exact: true }).dblclick()
-  await expect.poll(async () => (await db.one<{ cancelled_on: string | null }>(`orders?id=eq.${id}&select=cancelled_on`)).cancelled_on, { timeout: 10_000 }).toBe(today)
+  await expect.poll(async () => (await db.one<{ cancelled_on: string | null }>(`orders?id=eq.${id}&select=cancelled_on`)).cancelled_on, { timeout: 10_000 }).toBe(today())
   await page.waitForTimeout(2000)
   expect(writes.count()).toBe(1)
   await ctx.close()

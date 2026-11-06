@@ -53,7 +53,8 @@ import {
  * that opens the chase card; on a wider screen the card shows and the chase stays 1 tap (FE-2).
  */
 
-export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquiries: InquiryRow[] }) {
+/** `underHeading`: a fold on the Job page already says "Questions for the customer", so the panel keeps the words for screen readers only. */
+export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { rfq: RfqHeader; inquiries: InquiryRow[]; underHeading?: boolean }) {
   const clars = useClarifications(rfq.id)
   const atts = useRfqAttachments(rfq.id)
   const urls = useFileUrls(rfq.id, (atts.data ?? []).map(a => a.path))
@@ -168,7 +169,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   return (
     <div data-slot="clarifications">
       <Panel
-        title="Questions for the customer"
+        title={underHeading ? <span className="sr-only">Questions for the customer</span> : "Questions for the customer"}
         info={
           <InfoTip label="About questions">
             A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers. Ones raised by suppliers, or your own, are

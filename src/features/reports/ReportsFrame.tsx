@@ -10,7 +10,7 @@ import { reportOptionsFor, reportTitle, type ReportKey } from '@/features/money/
 /*
  * Money > Reports (round 3, areas audit: "Reports shows one report at a time"). Reports is the fifth Money tab; inside it ONE
  * report is shown, picked from a select ("Report: Profit and loss"), with its period control beside it and Export CSV as the
- * page's one green button. Changing the report keeps the month (?month=2026-09). The h1 and the phone bar name the report.
+ * page's one green button. Changing the report keeps the month (?month=2026-09). The h1 is the tab's name ("Reports", like the other Money tabs) with the report's name as the line under it; the phone bar names the report.
  *
  *   <ReportsFrame report="owe" period={<MonthPager … />} csv={view ? () => downloadReport(…) : null}>…</ReportsFrame>
  */
@@ -39,7 +39,8 @@ export function ReportsFrame({
   return (
     <MoneyFrame
       active="reports"
-      title={reportTitle(report)}
+      barTitle={reportTitle(report)}
+      lede={<span className="max-md:hidden" data-testid="report-name">{reportTitle(report)}</span>}
       actions={
         csv === undefined ? undefined : (
           <Button variant="primary" icon={Download} onClick={() => csv?.()} disabled={!csv}>

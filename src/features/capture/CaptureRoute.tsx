@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Camera, FilePlus2, Search, Share2 } from 'lucide-react'
 import { useSession } from '@/app/session'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { NoPrimary } from '@/ui/NoPrimary'
@@ -187,6 +188,7 @@ function MyActiveJobs({ onPick }: { onPick: (key: string) => void }) {
 
 /** /capture with nothing shared (the engineer's Photo or note button): choose the job; its page opens the photo-or-note box. */
 function JobFirst() {
+  useMobileBar({ title: 'Photo or note' })
   const navigate = useNavigate()
   const [kept, setKept] = useState<CaptureItem[]>([])
   useEffect(() => {
@@ -201,7 +203,7 @@ function JobFirst() {
       <NoPrimary />
       <header className="grid gap-1">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <Icon icon={Camera} className="text-fg-muted" />
+          <Icon icon={Camera} size="lg" className="text-fg-muted" />
           Photo or note
         </h1>
         <p className="text-base text-fg-2">Which job is it for? Then take the photo or write the note.</p>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -53,12 +53,12 @@ afterEach(() => setSupabaseForTests(null))
 describe('Your details screen', () => {
   it('shows name, email and job title read only, with the phone editable', async () => {
     mount()
-    expect(await screen.findByLabelText('Name')).toHaveValue('Ayesha Rana')
-    expect(screen.getByLabelText('Name')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Email')).toHaveValue('ayesha@qtech.example')
-    expect(screen.getByLabelText('Email')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Job title')).toHaveValue('Sales engineer')
-    expect(screen.getByText('Set by an admin')).toBeInTheDocument()
+    // label left, value right (a definition list, like the Company profile), not three greyed boxes
+    const facts = await screen.findByTestId('your-facts')
+    expect(within(facts).getByText('Name').nextElementSibling).toHaveTextContent('Ayesha Rana')
+    expect(within(facts).getByText('Email').nextElementSibling).toHaveTextContent('ayesha@qtech.example')
+    expect(within(facts).getByText('Job title').nextElementSibling).toHaveTextContent('Sales engineer')
+    expect(screen.getByText(/set by an admin/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Phone/)).not.toHaveAttribute('readonly')
     expect(screen.getByLabelText(/Phone/)).toHaveClass('num')
     expect(screen.getByText('Nothing to save yet')).toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('Your details screen', () => {
 
   it('has no accessibility violations', async () => {
     mount()
-    await screen.findByLabelText('Name')
+    await screen.findByTestId('your-facts')
     expect(await axeViolations(screen.getByTestId('page'))).toEqual([])
   })
 })

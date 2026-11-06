@@ -23,6 +23,8 @@ export function MoneyFrame({
   active,
   actions,
   title,
+  barTitle,
+  lede,
   morePages = true,
   children,
 }: {
@@ -30,6 +32,10 @@ export function MoneyFrame({
   actions?: ReactNode
   /** The h1; the active tab's name when absent. */
   title?: string
+  /** The phone bar's title when it is not the h1 (a report: the h1 is the tab, "Reports"; the bar names the report). */
+  barTitle?: string
+  /** The line under the h1 when it is not "All amounts in PKR". A view with no line made the tabs sit higher than on its sister tabs. */
+  lede?: ReactNode
   /** The "More money pages" row (admin only). Money home turns it off: its Accounts section already lists them. */
   morePages?: boolean
   children: ReactNode
@@ -51,12 +57,12 @@ export function MoneyFrame({
     // instead of stretching the column, and every card with it, past the right edge of a phone.
     <div className="mx-auto grid w-full min-w-0 max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
       {/* The phone bar's title. Rendered before the page, so a sub-page's own bar (MoneySubHeader) wins. */}
-      <FrameBar title={heading} />
+      <FrameBar title={barTitle ?? heading} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4">
         {/* The list-page head (spec 5.2): the view's name and the page's one green action (`actions`). */}
         <PageHeader
           title={heading}
-          lede={active === 'reports' ? undefined : <span className="max-md:hidden">All amounts in PKR</span>}
+          lede={lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
           primary={actions}
         />
         {phone ? (

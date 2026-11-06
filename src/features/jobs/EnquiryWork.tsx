@@ -67,7 +67,7 @@ function EnquiryExtras({ rfq, inquiries }: { rfq: RfqHeader; inquiries: InquiryR
   return (
     <div className="grid gap-2">
       <Fold title="Questions for the customer" count={clars.data?.length ?? 0}>
-        <ClarificationsPanel rfq={rfq} inquiries={inquiries} />
+        <ClarificationsPanel rfq={rfq} inquiries={inquiries} underHeading />
       </Fold>
       <Fold title="Files" count={files.data?.length ?? 0}>
         <AttachmentsPanel rfqId={rfq.id} compact slimWhenEmpty />

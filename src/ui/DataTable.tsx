@@ -736,6 +736,14 @@ function TableView<T>(props: DataTableProps<T>) {
       Showing <span className="num">{dataRows.length}</span> of <span className="num">{total ?? dataRows.length}</span> {noun}
     </>
   ) : undefined)
+  const hintsNode = hints ? (
+    <span className="flex flex-wrap items-center justify-end gap-3 max-sm:hidden invisible group-focus-within/dt:visible" aria-hidden="true">
+      <span className="inline-flex items-center gap-[6px]"><Kbd>{'↑'}</Kbd><Kbd>{'↓'}</Kbd> move</span>
+      {onRowOpen ? <span className="inline-flex items-center gap-[6px]"><Kbd>{'↵'}</Kbd> open</span> : null}
+      {selection ? <span className="inline-flex items-center gap-[6px]"><Kbd>Space</Kbd> select</span> : null}
+      {hasFilter ? <span className="inline-flex items-center gap-[6px]"><Kbd>/</Kbd> search</span> : null}
+    </span>
+  ) : null
   // WCAG 4.1.3: a filter changes the count silently. One polite node, on the page from the start, says each new count
   // (not the first one: the page itself is being read then). Polite announcements of quick typing coalesce in screen readers.
   const countText = loading || error ? '' : `Showing ${dataRows.length} of ${total ?? dataRows.length} ${noun ?? 'rows'}`
@@ -751,7 +759,7 @@ function TableView<T>(props: DataTableProps<T>) {
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
-      className={cn('group/dt min-w-0 overflow-clip rounded-panel border bg-surface', className)}
+      className={cn('group/dt relative min-w-0 overflow-clip rounded-panel border bg-surface', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
@@ -873,20 +881,18 @@ function TableView<T>(props: DataTableProps<T>) {
         </table>
       </div>
 
-      {shown || hints || loading ? (
-        // The band's height never depends on focus. With no summary it is only the key legend (not drawn on a phone); a band that
-        // appeared while focus was in the table moved the page by its height when focus left, and a click on a control beside the
-        // table (Copy and mark reminded) lost its mouseup to that jump.
-        <div className={cn('min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted', !shown && !loading ? 'max-sm:hidden sm:flex' : 'flex')}>
+      {shown || loading ? (
+        // The band's height never depends on focus. A band that appeared while focus was in the table moved the page by its height
+        // when focus left, and a click on a control beside the table (Copy and mark reminded) lost its mouseup to that jump.
+        <div className="flex min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted">
           {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
-          {hints ? (
-            <span className="flex flex-wrap items-center justify-end gap-3 max-sm:hidden invisible group-focus-within/dt:visible" aria-hidden="true">
-              <span className="inline-flex items-center gap-[6px]"><Kbd>{'↑'}</Kbd><Kbd>{'↓'}</Kbd> move</span>
-              {onRowOpen ? <span className="inline-flex items-center gap-[6px]"><Kbd>{'↵'}</Kbd> open</span> : null}
-              {selection ? <span className="inline-flex items-center gap-[6px]"><Kbd>Space</Kbd> select</span> : null}
-              {hasFilter ? <span className="inline-flex items-center gap-[6px]"><Kbd>/</Kbd> search</span> : null}
-            </span>
-          ) : null}
+          {hintsNode}
+        </div>
+      ) : hints ? (
+        // No summary to show: the legend takes no room of its own (a band that held only an invisible legend was a blank strip under
+        // the card). It floats over the card's bottom-right corner while focus is inside the table, and never takes a click.
+        <div className="pointer-events-none absolute bottom-2 right-4 z-[2] rounded border bg-surface px-3 py-1 text-xs text-fg-muted shadow-sm max-sm:hidden invisible group-focus-within/dt:visible">
+          {hintsNode}
         </div>
       ) : null}
     </div>
