@@ -539,6 +539,41 @@
   .hairline-under {
     box-shadow: inset 0 calc(-1 * var(--hairline)) 0 var(--border);
   }
+  /* Type roles (clarity redesign step 0): four jobs, four classes. They read the size tokens above, so Smaller and Larger text
+     (data-text) move them with everything else. The wide face is for headings only: page and section. */
+  .type-page {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    line-height: var(--lh-xl);
+    font-weight: var(--weight-heavy);
+    letter-spacing: var(--tracking-snug);
+  }
+  @media (min-width: 1280px) {
+    .type-page {
+      font-size: var(--text-2xl);
+      line-height: var(--lh-2xl);
+      letter-spacing: var(--tracking-tight);
+    }
+  }
+  .type-section {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    line-height: var(--lh-lg);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-snug);
+  }
+  .type-row {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--lh-base);
+    font-weight: var(--weight-semibold);
+  }
+  .type-body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--lh-base);
+    font-weight: var(--weight-regular);
+  }
   /* Archivo has no rupee glyph (U+20A8): render it through the fallback stack. */
   .cur {
     font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;

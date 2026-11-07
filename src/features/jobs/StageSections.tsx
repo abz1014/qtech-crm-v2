@@ -271,7 +271,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, phone =
           <>
             <Icon icon={ChevronRight} className={cn('shrink-0 text-fg-muted transition-transform', isOpen && 'rotate-90')} />
             <span className={cn('w-[8.5rem] shrink-0 text-left text-base font-semibold', (s.state === 'future' || none || s.state === 'stopped') && 'font-medium text-fg-muted')}>{s.shown}</span>
-            <span className="min-w-0 flex-1 text-left text-base text-fg-2 [overflow-wrap:anywhere]">{s.summary}</span>
+            <span className="min-w-0 flex-1 text-left font-sans text-base font-normal text-fg-2 [overflow-wrap:anywhere]">{s.summary}</span>
             {TAG[s.state] ? (
               <span
                 className={cn(
@@ -288,7 +288,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, phone =
         return (
           <Fragment key={s.stop}>
           <section id={`stage-${s.index}`} data-stage={s.stop} className={cn('rounded-panel border bg-surface', (s.state === 'future' || none) && 'bg-sunken')}>
-            <h2 className="text-base">
+            <h2 className="type-row">
               {none ? (
                 <div className="flex min-h-touch flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 max-sm:[&>span:nth-of-type(2)]:basis-[calc(100%-2rem)]">{head}</div>
               ) : (

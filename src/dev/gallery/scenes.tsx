@@ -33,7 +33,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
 import { Tooltip } from '@/ui/Tooltip'
 import { TooltipVariants } from '@/dev/gallery/primitives'
-import { InfoTipExamples } from '@/dev/gallery/uxPrimitives'
+import { FoldRowExamples, InfoTipExamples } from '@/dev/gallery/uxPrimitives'
 import { ShellScene } from '@/dev/gallery/shell'
 
 /*
@@ -585,6 +585,26 @@ const NODES: Record<SceneName, () => ReactNode> = {
   'infotip-open': () => (
     <div className="w-[760px] max-w-full rounded-panel border bg-surface p-6 pb-[160px]">
       <InfoTipExamples />
+    </div>
+  ),
+  'foldrow-closed': () => (
+    <div className="w-[375px] max-w-full rounded-panel border bg-surface px-4 py-2">
+      <FoldRowExamples />
+    </div>
+  ),
+  'foldrow-open': () => (
+    <div className="w-[375px] max-w-full rounded-panel border bg-surface px-4 py-2">
+      <FoldRowExamples openFirst />
+    </div>
+  ),
+  'foldrow-long': () => (
+    <div className="w-[375px] max-w-full rounded-panel border bg-surface px-4 py-2">
+      <FoldRowExamples ref25 />
+    </div>
+  ),
+  'foldrow-large': () => (
+    <div data-text="large" className="w-[375px] max-w-full rounded-panel border bg-surface px-4 py-2">
+      <FoldRowExamples ref25 />
     </div>
   ),
   'shell': () => <ShellScene />,

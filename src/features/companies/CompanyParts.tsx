@@ -32,7 +32,7 @@ export function Panel({
 }) {
   const headingId = useId()
   const heading = (
-    <h2 id={headingId} className="text-base font-semibold">
+    <h2 id={headingId} className="type-section">
       {title}
     </h2>
   )

@@ -33,7 +33,7 @@ export function DetailPanel({
       <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b px-5 py-4">
         <div className="min-w-0 flex-1 basis-[12rem]">
           <div className="flex items-center gap-1">
-            <h2 id={id} className="text-base font-semibold">
+            <h2 id={id} className="type-section">
               {title}
             </h2>
             {tip}

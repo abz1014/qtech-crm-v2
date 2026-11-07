@@ -58,6 +58,21 @@ Rules:
 - Titles use `text-wrap: balance`, paragraphs `text-wrap: pretty`.
 - Muted text is `--fg-muted` (8.76:1 on white, 7.79 on the field, 7.23 on selected), never a lighter grey, and only for captions, hints and placeholders. It never sits on the yellow Today block: rows on a block are white tiles and carry their own text. Body copy and data in primitives use `--fg` or `--fg-2`.
 
+### Type roles
+
+Four classes in `src/index.css` (`@layer utilities`) name the four jobs text does. They read the size tokens above, so Smaller and Larger text (`data-text`) move them with everything else. The wide face stays on headings only; a row title, a button or a detail line inside a heading is set in the normal face.
+
+| Class | Size | Face and weight | Use |
+|---|---|---|---|
+| `type-page` | 22 px; 32 px from the `xl` breakpoint (1280 px) | Archivo Wide, 750 | The page title (h1) |
+| `type-section` | 18 px (`--text-lg`) | Archivo Wide, 600 | A panel or section title (h2) |
+| `type-row` | 16 px | Archivo, 600 | A row title, including a heading that wraps a whole button |
+| `type-body` | 16 px | Archivo, 400 | Body and detail text |
+
+The 14 px stamp (`text-stamp`) is unchanged. A heading that wraps a button (the job stage rows) takes `type-row`, and the detail line inside it takes `font-sans font-normal`, so the wide face never leaks into the line.
+
+`FoldRow` (`src/ui/FoldRow.tsx`) is the shared closed-row primitive: a hairline, no box, 44 to 52 px tall, one line at 375 px with the summary truncated. It takes a state (icon plus a word only a screen reader hears), a title, a required summary, `open`, `onToggle` and `controlsId`. Its accessible name reads title, then state, then summary. Gallery group: FoldRow.
+
 ### Tabular figures
 
 Set with `font-variant-numeric: tabular-nums` (class `.num`), in the sans (`--font-sans`, Archivo's own `tnum` figures with a plain zero), so columns of rupees line up. Never turn on `slashed-zero` or the `zero` feature (a slashed zero read as a struck-out digit, owner 2026-10-20). `--font-mono` is the system monospace, for pasted raw text only. Use `.num` for:

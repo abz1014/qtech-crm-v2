@@ -1,12 +1,14 @@
 // Gallery entries for the UX audit 2026-10-19 building blocks: InfoTip (footnotes become (i) tips) and the phone one-bar
 // (useMobileBar with back, title, actions and hideTabs). useChannelPreference has no look of its own.
-import { CircleX, Copy, Ellipsis } from 'lucide-react'
+import { useState } from 'react'
+import { Check, CircleX, Clock, Copy, Ellipsis } from 'lucide-react'
 import { Section } from '@/dev/gallery/layout'
 import type { SessionUser } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { MobileBar } from '@/app/shell/MobileChrome'
 import { Button } from '@/ui/Button'
+import { FoldRow } from '@/ui/FoldRow'
 import { InfoTip } from '@/ui/InfoTip'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 
@@ -99,5 +101,46 @@ export function PhoneBarSection() {
         </MobileBarProvider>
       </div>
     </Section>
+  )
+}
+
+/** FoldRow scenes: three rows on a white panel, the way a detail page stacks them. `ref25` is a 25-character customer reference. */
+export function FoldRowExamples({ openFirst = false, ref25 = false }: { openFirst?: boolean; ref25?: boolean }) {
+  const [open, setOpen] = useState<string | null>(openFirst ? 'quotation' : null)
+  const toggle = (k: string) => setOpen(o => (o === k ? null : k))
+  const long = 'PO-20481/KHI-0092-A-REV2'.padEnd(25, '0')
+  return (
+    <div className="w-full">
+      <FoldRow
+        state={{ icon: Check, word: 'Done' }}
+        title="Quotation"
+        summary={ref25 ? long : '3 items'}
+        open={open === 'quotation'}
+        onToggle={() => toggle('quotation')}
+        controlsId="fold-quotation"
+      >
+        <p className="type-body text-fg-2">Sent to Indus Textile Mills on Tue 1 Dec.</p>
+      </FoldRow>
+      <FoldRow
+        state={{ icon: Clock, word: 'Waiting' }}
+        title="Customer order"
+        summary="Not received"
+        open={open === 'order'}
+        onToggle={() => toggle('order')}
+        controlsId="fold-order"
+      >
+        <p className="type-body text-fg-2">Nothing yet.</p>
+      </FoldRow>
+      <FoldRow
+        state={{ icon: Clock, word: 'Waiting' }}
+        title="Invoice"
+        summary="PKR 182,400"
+        open={open === 'invoice'}
+        onToggle={() => toggle('invoice')}
+        controlsId="fold-invoice"
+      >
+        <p className="type-body text-fg-2">Not sent.</p>
+      </FoldRow>
+    </div>
   )
 }
