@@ -446,12 +446,11 @@ async function firstRow(page: Page): Promise<void> {
 
 const STAGE_IDS = ['enquiry', 'quotation', 'order', 'supplier-order', 'delivery', 'invoice', 'payment'] as const
 const STAGE_NAMES = ['Enquiry', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
-/** The folded control of one job step, found by the step's name at the start of its accessible name (it survives a change of the row markup). */
+/** The folded control of one job step, found by the step's name at the start of its text, among the buttons that fold (a stage bar link of the same name is not one) (it survives a change of the row markup). */
 const stageHead = (page: Page, i: number) =>
   page
-    .locator('[data-stages], #main')
-    .first()
-    .getByRole('button', { name: new RegExp('^ *' + escape(STAGE_NAMES[i]) + '(?![a-z])', 'i') })
+    .locator('#main button[aria-expanded]')
+    .filter({ hasText: new RegExp('^ *' + escape(STAGE_NAMES[i]) + '(?![a-z])', 'i') })
     .filter({ visible: true })
     .first()
 async function openStage(page: Page, path: string, i: number): Promise<void> {
