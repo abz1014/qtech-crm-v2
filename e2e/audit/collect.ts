@@ -99,8 +99,8 @@ export interface Metrics {
   /**
    * Clarity (docs/audit/SCREEN_AUDIT.md, "The clarity ratchet"). firstWorkY: top of the first visible [data-work] element in the page at
    * scroll 0 (null when there is none). boxDepth: the deepest chain of nested boxes (a box is a visible element in the page with a border
-   * on 3 or more sides, a radius above 0 and 2000 px2 or more; controls, chips and inputs are not boxes). boxesAtFold: boxes that cross
-   * the fold line. stepRowMax: height of the tallest job step row (null when the page has none).
+   * on 3 or more sides, a radius above 0 and 2000 px2 or more; controls, chips and inputs are not boxes). boxesAtFold: boxes in the first screen (top above the fold, bottom below 0)
+   * stepRowMax: height of the tallest job step row (null when the page has none).
    */
   clarity: { firstWorkY: number | null; boxDepth: number; boxesAtFold: number; stepRowMax: number | null }
 }
@@ -1067,7 +1067,7 @@ export function collect(opts: CollectOptions): Metrics {
       }
       depthOf.set(el, up + 1)
       clarity.boxDepth = Math.max(clarity.boxDepth, up + 1)
-      if (r.top < vh && r.bottom > vh) clarity.boxesAtFold++
+      if (r.top < vh && r.bottom > 0) clarity.boxesAtFold++
     }
     const rows = Array.from(main.querySelectorAll<HTMLElement>('[data-stages] [data-fold-row] > button'))
     const stepRows = (rows.length ? rows : Array.from(main.querySelectorAll<HTMLElement>('[data-stage] h2 button'))).filter(visible)

@@ -72,9 +72,9 @@ describe.skipIf(!browser)('clarity metrics', () => {
     const c = await clarity(`<div style="${BOX};padding:4px"><div style="${BOX.replace('80px', '60px')}"><div style="${BOX.replace('80px', '30px')}"></div></div></div><button style="${BOX}">Go</button><div style="border:1px solid #888;border-radius:6px;width:20px;height:20px"></div>`)
     expect(c.boxDepth).toBe(3)
   })
-  it('counts the boxes that cross the fold', async () => {
-    const c = await clarity(`<div style="height:520px"></div><div style="${BOX.replace('80px', '120px')}"></div><div style="height:400px"></div>`)
-    expect(c.boxesAtFold).toBe(1)
+  it('counts the boxes seen in the first screen (above and across the fold, not below it)', async () => {
+    const c = await clarity(`<div style="${BOX}"></div><div style="height:380px"></div><div style="${BOX.replace('80px', '120px')}"></div><div style="height:100px"></div><div style="${BOX}"></div>`)
+    expect(c.boxesAtFold).toBe(2)
   })
   it('measures the tallest step row, and ignores a page without steps', async () => {
     const c = await clarity(`<div data-stages><div data-fold-row><button style="height:48px">Quote</button></div><div data-fold-row><button style="height:60px">Order</button></div></div>`)

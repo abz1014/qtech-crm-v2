@@ -248,9 +248,9 @@ TARGETS.push(
   },
   {
     key: 'boxesAtFold',
-    label: 'Boxes that cross the fold',
+    label: 'Boxes seen in the first screen',
     target: 'at most 4',
-    source: 'clarity: few outlines cut by the bottom of the first screen',
+    source: 'clarity: few outlines in the first screen',
     value: c => c.metrics.clarity?.boxesAtFold ?? null,
     pass: v => v <= 4,
     worse: 'higher',

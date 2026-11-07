@@ -21,7 +21,7 @@ shots by eye after a run that matters: the checks are a net, not a judge.
 
 Each capture also carries `clarity`: `firstWorkY` (top of the first `[data-work]` element at scroll 0), `boxDepth` (deepest chain of nested
 boxes: a visible element in the page with a border on 3 or more sides, a radius above 0 and 2000 px2 or more; controls, chips and inputs are
-not boxes), `boxesAtFold` (boxes that cross the fold line) and `stepRowMax` (tallest `[data-stages] [data-fold-row] > button`, else
+not boxes), `boxesAtFold` (boxes seen in the first screen: top above the fold line, bottom below 0) and `stepRowMax` (tallest `[data-stages] [data-fold-row] > button`, else
 `[data-stage] h2 button`). `contentHeight` and `actions.aboveFold` are reported with nothing left out. Advisory targets: `firstWorkY` 264,
 `boxDepth` 2, `boxesAtFold` 4, `stepRowMax` 52, `aboveFold` 12, phone job pages 1300 px closed and 2500 px with one step opened.
 
