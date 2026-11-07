@@ -746,7 +746,9 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
         ? 'Check the split, then find suppliers.'
         : 'Paste what the customer sent. Nothing is saved until you copy the message or save.'
       : step === 'suppliers'
-        ? 'Ticked: the suppliers who supplied these items before. Tick or untick any.'
+        ? suggestions.preTickedIds.length > 0
+          ? 'Ticked: suppliers who supplied these items before. Tick or untick any.'
+          : 'Nobody has supplied these before. Tick who to ask.'
         : step === 'enquiry'
           ? 'Check the message, then copy it once.'
           : step === 'saved'
@@ -1136,11 +1138,10 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                     </h2>
                     <InfoTip label="How is this list ordered?">
                       Suppliers who deal in the item's category come first, then those who carry its brand. Inside a group: how often we have ordered, how often they
-                      answered in this category, then overall, then price wins, then the most recent contact. A supplier that said no offer on 2 of its last 3 asks goes last.
-                      Up to three are ticked: those who usually answer, or that you tagged for the category.
+                      answered in this category, then overall, then the most recent contact. A supplier that said no offer on 2 of its last 3 asks goes last.
+                      Only suppliers who supplied these items before start ticked.
                     </InfoTip>
                   </span>
-                  <p className="text-sm text-fg-muted">Ticked: the three most likely to answer. The rest is your call.</p>
                 </div>
                 <SupplierPicker
                   groups={suggestions.groups}
@@ -1153,6 +1154,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                   excludeIds={new Set([...(company ? [company.id] : []), ...suggestions.suppliers.map(s => s.supplierId)])}
                   loading={suppliersLoading}
                   error={suppliersError}
+                  partial={extras.partial}
                   onRetry={() => {
                     void candidates.refetch()
                     void memory.refetch()

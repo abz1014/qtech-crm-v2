@@ -181,7 +181,7 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
       {lastAsk ? <SendToEachCard ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
       <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
         {nobodyAsked ? (
-          <SuppliersToAskCard suggestions={askList} items={itemList} busy={asking} onAsk={ticked => void askFrom(ticked, itemList)} />
+          <SuppliersToAskCard suggestions={askList} items={itemList} busy={asking} coverage={coverage} partial={extras.partial} onAsk={ticked => void askFrom(ticked, itemList)} />
         ) : (
           <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} rates={rates} chase={chaseMode} onFloat={() => setFloating(true)} />
         )}
