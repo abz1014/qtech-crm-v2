@@ -290,6 +290,20 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.locator('button.bg-primary')).toHaveCount(1)
   })
 
+  for (const role of ['sales', 'engineer'] as const) {
+    test(`the real default for ${role}: every step is closed, the current one only marked`, async ({ page }) => {
+      const f = await seed()
+      // the test-side helper that opens the current step for other specs stands down here
+      await page.addInitScript(() => {
+        ;(window as unknown as { __keepStepsClosed?: boolean }).__keepStepsClosed = true
+      })
+      await openAs(page, role, `/jobs/${f.rfq.number}`)
+      await expect(page.locator('[data-stages] > [data-fold-row]')).toHaveCount(7)
+      for (const b of await page.locator('[data-stages]').getByRole('button').all()) await expect(b).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.locator('[data-stages]').getByRole('button', { name: / Now/ })).toHaveCount(1)
+    })
+  }
+
   test('an engineer opens the job with no Money panel and no price', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'engineer', `/jobs/${f.rfq.number}`)
