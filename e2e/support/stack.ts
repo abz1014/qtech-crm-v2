@@ -65,7 +65,7 @@ export const OPEN_CURRENT_STEP = (): void => {
     const list = document.querySelector('[data-stages]')
     if (!list || done.has(list) || w.__keepStepsClosed) return
     done.add(list)
-    const head = [...list.querySelectorAll('[data-fold-row] > button')].find(b => b.querySelector('.sr-only')?.textContent === 'Now') as HTMLButtonElement | undefined
+    const head = Array.from(list.querySelectorAll('[data-fold-row] > button')).find(b => b.querySelector('.sr-only')?.textContent === 'Now') as HTMLButtonElement | undefined
     if (head && head.getAttribute('aria-expanded') === 'false') head.click()
   }
   new MutationObserver(tick).observe(document, { childList: true, subtree: true })
