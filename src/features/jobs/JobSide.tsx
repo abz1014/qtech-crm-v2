@@ -34,7 +34,8 @@ const linkBtn =
   'inline-flex min-h-touch items-center gap-2 rounded border border-line-strong bg-surface px-3 text-base font-semibold text-fg hover:bg-sunken'
 
 /** Contact is never folded: the person, and Call and WhatsApp, are the reason a phone opens this page on site. */
-export function ContactRow({ facts }: { facts: JobFacts }) {
+/** `showWhere`: the person's title and the site address under the name (an engineer needs the address; the office has it elsewhere). */
+export function ContactRow({ facts, showWhere = false }: { facts: JobFacts; showWhere?: boolean }) {
   const c = facts.contact
   if (!c) {
     return (
@@ -54,7 +55,7 @@ export function ContactRow({ facts }: { facts: JobFacts }) {
         <h2 className="type-row">Contact</h2>
         <p className="type-body min-w-0 flex-1 text-right text-fg-2 [overflow-wrap:anywhere]">{c.name}</p>
       </div>
-      {where ? <p className="type-body pb-2 pl-8 text-fg-2 [overflow-wrap:anywhere]">{where}</p> : null}
+      {where && showWhere ? <p className="type-body pb-2 pl-8 text-fg-2 [overflow-wrap:anywhere]">{where}</p> : null}
       <div data-row-actions="" className="flex flex-wrap gap-2 pb-2 pl-8">
         {c.phone ? (
           <a className={linkBtn} href={`tel:${c.phone.replace(/[^\d+]/g, '')}`} aria-label={`Call ${c.name}, ${c.phone}`}>

@@ -132,10 +132,11 @@ export function StageLine({ job }: { job: JobStanding }) {
  */
 export function StageBlock({ job, text, late = false, action }: { job: JobStanding; text: string; late?: boolean; action?: ReactNode }) {
   const m = stageModel(job)
-  const lead = m.current === 7 ? 'All 7 stages done' : m.current === null ? 'Not started' : `Stage ${m.current} of 7`
-  const said = text && text !== 'Done' ? text : m.current !== null && m.current < 7 ? m.stops[m.current - 1].shown : ''
+  // Payment as the current stop is stage 7 of 7; only a finished (paid) job is "All 7 stages done".
+  const lead = m.finished && m.current === 7 ? 'All 7 stages done' : m.current === null ? 'Not started' : `Stage ${m.current} of 7`
+  const said = text && text !== 'Done' ? text : m.current !== null && !m.finished ? m.stops[m.current - 1].shown : ''
   return (
-    <section aria-label="Next step" data-stage-block className="mt-4 rounded-panel border bg-surface px-4 py-4">
+    <section aria-label="Next step" data-stage-block className="mt-3 rounded-panel border bg-surface px-4 py-3 md:mt-4 md:py-4">
       <div className="flex items-center justify-between gap-6">
         <div className="min-w-0 flex-1" data-stage-bar>
           <div className="flex gap-1" aria-hidden="true">
@@ -148,7 +149,7 @@ export function StageBlock({ job, text, late = false, action }: { job: JobStandi
               {m.ending}
             </p>
           ) : (
-            <p className={cn('type-row mt-3', late && 'text-tone-danger-fg')} data-stage-phone>
+            <p className={cn('type-row mt-2', late && 'text-tone-danger-fg')} data-stage-phone>
               {said ? `${lead} · ${said}` : lead}
             </p>
           )}

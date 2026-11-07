@@ -77,7 +77,7 @@ describe('Job page', () => {
     // one block: the seven-part bar and "Stage 4 of 7 · <the next step>"; no second ruler, no second Next step band
     expect(container.querySelectorAll('[data-stage-block]')).toHaveLength(1)
     expect(screen.queryByRole('list', { name: 'Stages of this job' })).toBeNull()
-    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · The goods are late: chase the supplier')
+    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · Chase the supplier')
     expect(screen.getAllByRole('region', { name: 'Next step' })).toHaveLength(1)
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
     // the steps are one hairline list, in their natural order, all closed; the one the job is at is marked by its state word, not opened
@@ -202,7 +202,7 @@ describe('Job page', () => {
     const { container } = mount(job({ key: 'O-45', kind: 'direct', rfqId: null, orderId: 'o45', stage: 'ordered', stageDetail: 'to source', repeatOf: '139' }), 'sales')
     await screen.findByRole('heading', { level: 1 })
     expect(screen.getByRole('link', { name: 'Repeat of Job 139' })).toHaveAttribute('href', '/jobs/139')
-    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · Choose a supplier for the items')
+    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · Choose suppliers')
   })
 
   it('a lost job ends with its reason and has no button', async () => {

@@ -183,6 +183,8 @@ function JobView({ facts }: { facts: JobFacts }) {
     </p>
   )
 
+  // "Stage 7 of 7 · Chase the payment": the action says it in two or three words; a step that only waits says its sentence.
+  const said = role !== 'engineer' && next.button && !/^(See|Open) /.test(next.button) ? next.button : next.text
   const items = data.orderItems.data
   const keyFacts = job.orderId
     ? jobKeyFacts({ order: data.order.data, legs: data.legs.data, money: ctx.money, cancelled: Boolean(data.order.data?.cancelledOn), servicesOnly: Boolean(items && items.length > 0 && items.every(i => i.isService)), today: businessToday() })
@@ -203,7 +205,7 @@ function JobView({ facts }: { facts: JobFacts }) {
 
       <StageBlock
         job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }}
-        text={next.text}
+        text={said}
         late={next.tone === 'late'}
         action={
           phone ? undefined : (
@@ -228,11 +230,11 @@ function JobView({ facts }: { facts: JobFacts }) {
       {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div
         data-work
-        className="mt-4 grid min-w-0 items-start rounded-panel border bg-surface px-4 lg:mt-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0"
+        className="mt-3 grid min-w-0 items-start rounded-panel border bg-surface px-4 lg:mt-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0"
       >
         <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} />
         <aside aria-label="About this job" className="min-w-0 lg:rounded-panel lg:border lg:bg-surface lg:px-4 [&>:last-child]:border-b-0">
-          <ContactRow facts={facts} />
+          <ContactRow facts={facts} showWhere={role === 'engineer'} />
           {role === 'admin' ? <MoneyRow data={data} hasOrder={Boolean(job.orderId)} /> : null}
           <CancelledOrders data={data} money={role !== 'engineer'} />
           {role === 'engineer' ? (

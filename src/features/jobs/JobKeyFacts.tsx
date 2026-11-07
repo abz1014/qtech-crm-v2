@@ -8,11 +8,11 @@ import type { KeyFact } from '@/features/jobs/lib/keyFacts'
  */
 export function JobKeyFacts({ facts }: { facts: KeyFact[] }) {
   return (
-    <dl aria-label="Key facts" className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-base">
+    <dl aria-label="Key facts" className="mt-2 text-base">
       {facts.map(f => (
-        <div key={f.key} className="flex min-w-0 items-baseline gap-2" data-fact={f.key}>
-          <dt className="shrink-0 text-fg-muted">{f.label}</dt>
-          <dd className={cn('min-w-0 font-medium [overflow-wrap:anywhere]', f.key === 'po' && 'num')}>{f.value === null ? <Skeleton className="h-5 w-16" /> : f.value}</dd>
+        <div key={f.key} className="mr-4 inline" data-fact={f.key}>
+          <dt className="inline text-fg-muted">{f.label} </dt>
+          <dd className={cn('inline font-medium [overflow-wrap:anywhere]', f.key === 'po' && 'num')}>{f.value === null ? <Skeleton className="h-5 w-16" /> : f.value}</dd>
         </div>
       ))}
     </dl>
