@@ -8,10 +8,15 @@
  * --ref and --sha fill in what was audited when the parts do not say (a local run). --gate layout makes the exit status the layout
  * gate's verdict (docs/audit/SCREEN_AUDIT.md): 1 when a capture has a page scroll, a second scrollbar, text hanging out of a box, text on a
  * control or a sideways scroll, or when no capture carries the layout measurements; every other target stays advisory.
+ *
+ * --gate clarity compares each capture with its budget in scripts/audit/clarity-budgets.json (firstWorkY, boxDepth, boxesAtFold, stepRowMax,
+ * contentHeight, aboveFold) and fails only on a value worse than its budget (heights and Y +8 px, counts +0). A capture with no budget is
+ * listed, not failed. Words are never gated. --write-budgets writes the budgets from these captures (merged into the file's other keys).
  */
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { buildResults, renderMarkdown, renderSummary } from './report.lib.mjs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { buildResults, ratchetBudgets, ratchetFailures, ratchetUnbudgeted, renderMarkdown, renderSummary } from './report.lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = name => {
@@ -21,8 +26,11 @@ const flag = name => {
 const ref = flag('ref')
 const sha = flag('sha')
 const gate = flag('gate')
-if (gate !== undefined && gate !== 'layout') {
-  console.error(`Unknown gate "${gate}" (known: layout)`)
+const writeBudgets = args.includes('--write-budgets')
+if (writeBudgets) args.splice(args.indexOf('--write-budgets'), 1)
+const BUDGETS = join(dirname(fileURLToPath(import.meta.url)), 'clarity-budgets.json')
+if (gate !== undefined && gate !== 'layout' && gate !== 'clarity') {
+  console.error(`Unknown gate "${gate}" (known: layout, clarity)`)
   process.exit(2)
 }
 const dir = args[0] ?? 'test-results/screen-audit'
@@ -69,4 +77,35 @@ if (gate === 'layout') {
     process.exit(1)
   }
   console.log(`Layout gate passed: ${measuredCount} measured captures`)
+}
+
+if (writeBudgets) {
+  const fresh = ratchetBudgets(results.captures)
+  const old = existsSync(BUDGETS) ? JSON.parse(readFileSync(BUDGETS, 'utf8')) : {}
+  const merged = Object.fromEntries(Object.entries({ ...old, ...fresh }).sort(([a], [b]) => a.localeCompare(b)))
+  writeFileSync(BUDGETS, JSON.stringify(merged, null, 1) + String.fromCharCode(10))
+  console.log(`Wrote ${BUDGETS}: ${Object.keys(fresh).length} budget(s) from these captures, ${Object.keys(merged).length} in the file`)
+}
+
+if (gate === 'clarity') {
+  if (!existsSync(BUDGETS)) {
+    console.error(`Clarity gate: ${BUDGETS} is missing (write it with --write-budgets)`)
+    process.exit(1)
+  }
+  const budgets = JSON.parse(readFileSync(BUDGETS, 'utf8'))
+  const measuredCount = results.captures.filter(c => c.metrics?.clarity).length
+  if (!measuredCount) {
+    console.error('Clarity gate: no capture carries the clarity measurements (was it measured with this audit code?)')
+    process.exit(1)
+  }
+  const failed = ratchetFailures(results.captures, budgets)
+  const unbudgeted = ratchetUnbudgeted(results.captures, budgets)
+  if (unbudgeted.length) console.log(`Clarity gate: ${unbudgeted.length} capture(s) have no budget yet (reported, not failed): ${unbudgeted.slice(0, 12).join(', ')}${unbudgeted.length > 12 ? ', ...' : ''}`)
+  if (failed.length) {
+    console.error(`Clarity gate FAILED: ${failed.length} value(s) worse than their budget, in ${measuredCount} measured captures`)
+    for (const f of failed.slice(0, 60)) console.error(`  ${f.role}/${f.screen}/${f.viewport} ${f.metric}: ${f.value} > budget ${f.budget} (+${f.tolerance})`)
+    if (failed.length > 60) console.error(`  ... and ${failed.length - 60} more`)
+    process.exit(1)
+  }
+  console.log(`Clarity gate passed: ${measuredCount} measured captures, ${measuredCount - unbudgeted.length} against a budget`)
 }

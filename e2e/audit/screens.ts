@@ -418,7 +418,8 @@ async function steps(page: Page, list: readonly (readonly [string, () => Promise
 async function expandFolded(page: Page, scope: string, max: number): Promise<number> {
   let n = 0
   for (; n < max; n++) {
-    const b = page.locator(`${scope} button[aria-expanded="false"]`).filter({ visible: true }).first()
+    // Not the (i) tips ([data-infotip]) or menu buttons (aria-haspopup): they open a tip, not the rows or panels the scene names.
+    const b = page.locator(`${scope} button[aria-expanded="false"]:not([data-infotip] *, [data-infotip], [aria-haspopup])`).filter({ visible: true }).first()
     if (!(await b.count())) break
     await b.click()
     await page.waitForTimeout(300)
@@ -438,16 +439,30 @@ async function firstRow(page: Page): Promise<void> {
 }
 
 const STAGE_IDS = ['enquiry', 'quotation', 'order', 'supplier-order', 'delivery', 'invoice', 'payment'] as const
+const STAGE_NAMES = ['Enquiry', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
+/** The folded control of one job step, found by the step's name at the start of its accessible name (it survives a change of the row markup). */
+const stageHead = (page: Page, i: number) =>
+  page
+    .locator('[data-stages], #main')
+    .first()
+    .getByRole('button', { name: new RegExp('^ *' + escape(STAGE_NAMES[i]) + '(?![a-z])', 'i') })
+    .filter({ visible: true })
+    .first()
 async function openStage(page: Page, path: string, i: number): Promise<void> {
   await open(page, path)
   await closeDialogs(page)
-  const head = page.locator(`#stage-${i} button[aria-expanded]`).first()
+  const head = stageHead(page, i)
   await head.waitFor({ timeout: 10_000 })
   if ((await head.getAttribute('aria-expanded')) !== 'true') {
     await head.click()
     await settle(page)
   }
-  await page.locator(`#stage-body-${i}`).waitFor({ timeout: 10_000 })
+  await page.waitForFunction(el => el?.getAttribute('aria-expanded') === 'true', await head.elementHandle(), { timeout: 10_000 })
+  // Mark the step so the capture can scroll it to the top of the view.
+  await head.evaluate(b => {
+    document.querySelectorAll('[data-audit-step]').forEach(e => e.removeAttribute('data-audit-step'))
+    ;(b.closest('section, [data-fold-row]') ?? b).setAttribute('data-audit-step', '1')
+  })
   await page.waitForTimeout(1_200)
   await settle(page)
 }
@@ -460,7 +475,7 @@ const stageVisit = (stage: number, label: string, path: (fx: Fixture) => string,
   screens: [`op-step-${STAGE_IDS[stage]}${label}`],
   run: async (page, fx, capture) => {
     await openStage(page, path(fx), stage)
-    await capture(`op-step-${STAGE_IDS[stage]}${label}`, { scrollTo: `#stage-${stage}` })
+    await capture(`op-step-${STAGE_IDS[stage]}${label}`, { scrollTo: '[data-audit-step]' })
   },
 })
 
@@ -604,8 +619,8 @@ const OPENED_VISITS: readonly Visit[] = [
       await steps(page, [
         ['op-supplier-prices', async () => {
           await openStage(page, `/rfqs/${fx.rfq.compare}`, 1)
-          await expandFolded(page, '#stage-body-1', 6)
-          await capture('op-supplier-prices', { scrollTo: '#stage-1' })
+          await expandFolded(page, '[data-audit-step]', 6)
+          await capture('op-supplier-prices', { scrollTo: '[data-audit-step]' })
         }],
         ['op-quotation-dialog', async () => {
           await open(page, `/rfqs/${fx.rfq.pricesIn}?issue=1`)
@@ -660,6 +675,30 @@ const OPENED_VISITS: readonly Visit[] = [
   },
 ]
 
+/** The same screen with "Larger text" on (data-text="large", kept in localStorage like the account menu does). Phones only: wider viewports capture nothing. */
+function largeText(id: string, title: string, roles: readonly Role[], path: (fx: Fixture) => string): Visit {
+  return {
+    id,
+    title,
+    roles,
+    screens: [id],
+    run: async (page, fx, capture) => {
+      if ((page.viewportSize()?.width ?? 0) >= 768) return
+      await page.evaluate(() => window.localStorage.setItem('qtech.text-size', 'large'))
+      try {
+        await open(page, path(fx))
+        await page.waitForFunction(() => document.documentElement.dataset.text === 'large', undefined, { timeout: 5_000 })
+        await capture(id)
+      } finally {
+        await page.evaluate(() => {
+          window.localStorage.removeItem('qtech.text-size')
+          delete document.documentElement.dataset.text
+        })
+      }
+    },
+  }
+}
+
 export const VISITS: readonly Visit[] = [
   ...OPENED_VISITS,
   // The Jobs screens (redesign phases 4 to 7). The Job pages are opened through the old /rfqs/<id> and /orders/<id> addresses, which also
@@ -707,6 +746,9 @@ export const VISITS: readonly Visit[] = [
   screen('company-customer', 'Company page: customer', ALL, fx => `/companies/${fx.company.customer}`),
   screen('company-supplier', 'Company page: supplier', ALL, fx => `/companies/${fx.company.supplier}`),
   screen('money-gst-register', 'Money: GST register (invoices)', MONEY, () => '/money/gst-register'),
+  largeText('large-job-paid', 'Job page: order, paid, Larger text (phone)', ALL, fx => `/orders/${fx.order.paid}`),
+  largeText('large-job-invoiced', 'Job page: order, invoiced, Larger text (phone)', ALL, fx => `/orders/${fx.order.invoiced}`),
+  largeText('large-money-gst-register', 'Money: GST register, Larger text (phone)', MONEY, () => '/money/gst-register'),
   screen('money-receivables', 'Money: receivables (who owes us)', MONEY, () => '/money/receivables'),
   screen('money-expenses', 'Money: expenses', ADMIN, () => '/money/expenses'),
   screen('money-month-end', 'Money: month-end checklist', ADMIN, () => '/money/month-end'),
