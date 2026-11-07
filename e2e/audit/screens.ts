@@ -483,6 +483,8 @@ const stageVisit = (stage: number, label: string, path: (fx: Fixture) => string,
   set: 'opened',
   screens: [`op-step-${STAGE_IDS[stage]}${label}`],
   run: async (page, fx, capture) => {
+    // Phones only: the ratchet and the 2500 px target are phone numbers, and the desktop stage bar also names the steps (no reliable head to open there).
+    if ((page.viewportSize()?.width ?? 0) >= 768) return
     await openStage(page, path(fx), stage)
     await capture(`op-step-${STAGE_IDS[stage]}${label}`, { scrollTo: '[data-audit-step]' })
   },

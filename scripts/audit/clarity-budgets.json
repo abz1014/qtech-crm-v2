@@ -1215,13 +1215,6 @@
   "contentHeight": 2527,
   "aboveFold": 23
  },
- "admin/op-step-delivery/1440x900": {
-  "boxDepth": 3,
-  "boxesAtFold": 11,
-  "stepRowMax": 44,
-  "contentHeight": 2108,
-  "aboveFold": 31
- },
  "admin/op-step-delivery/320x640": {
   "boxDepth": 3,
   "boxesAtFold": 4,
@@ -1249,13 +1242,6 @@
   "stepRowMax": 124,
   "contentHeight": 2375,
   "aboveFold": 8
- },
- "admin/op-step-invoice/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 8,
-  "stepRowMax": 44,
-  "contentHeight": 1546,
-  "aboveFold": 22
  },
  "admin/op-step-invoice/320x640": {
   "boxDepth": 1,
@@ -1285,13 +1271,6 @@
   "contentHeight": 4518,
   "aboveFold": 8
  },
- "admin/op-step-payment/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 8,
-  "stepRowMax": 44,
-  "contentHeight": 1546,
-  "aboveFold": 18
- },
  "admin/op-step-payment/320x640": {
   "boxDepth": 1,
   "boxesAtFold": 4,
@@ -1305,13 +1284,6 @@
   "stepRowMax": 124,
   "contentHeight": 2352,
   "aboveFold": 8
- },
- "admin/op-step-quotation-prices-in/1440x900": {
-  "boxDepth": 2,
-  "boxesAtFold": 8,
-  "stepRowMax": 44,
-  "contentHeight": 2828,
-  "aboveFold": 26
  },
  "admin/op-step-quotation-prices-in/320x640": {
   "boxDepth": 2,
@@ -1327,13 +1299,6 @@
   "contentHeight": 3980,
   "aboveFold": 12
  },
- "admin/op-step-quotation/1440x900": {
-  "boxDepth": 2,
-  "boxesAtFold": 7,
-  "stepRowMax": 44,
-  "contentHeight": 2985,
-  "aboveFold": 24
- },
  "admin/op-step-quotation/320x640": {
   "boxDepth": 2,
   "boxesAtFold": 2,
@@ -1347,13 +1312,6 @@
   "stepRowMax": 124,
   "contentHeight": 4028,
   "aboveFold": 12
- },
- "admin/op-step-supplier-order/1440x900": {
-  "boxDepth": 3,
-  "boxesAtFold": 13,
-  "stepRowMax": 44,
-  "contentHeight": 1630,
-  "aboveFold": 33
  },
  "admin/op-step-supplier-order/320x640": {
   "boxDepth": 3,
