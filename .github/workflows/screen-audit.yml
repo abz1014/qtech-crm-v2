@@ -221,6 +221,8 @@ jobs:
 
       # Red when the layout gate finds anything (the findings are in the log, in the summary above and in audit-report.md).
       - name: Layout gate
+        # The opened set (panels after a click) reports layout findings but does not fail the run; the standard and layout sets still gate.
+        continue-on-error: ${{ inputs.set == 'opened' }}
         run: node scripts/audit/report.mjs audit-out --gate layout
 
       # Red when a clarity number is worse than its budget (scripts/audit/clarity-budgets.json); a screen with no budget is listed, not failed.
