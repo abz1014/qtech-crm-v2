@@ -303,6 +303,12 @@ const addToJobPasted: Visit = {
   screens: ['add-to-job-pasted'],
   run: async (page, fx, capture) => {
     await open(page, `/rfqs/${fx.rfq.waiting}`)
+    // Since L1 the card is a closed fold row ("Add to this job"): open it first, only when it is closed (before L1 it is always open).
+    const fold = page.getByTestId('add-to-job').getByRole('button', { name: /^Add to this job/ }).first()
+    if ((await fold.count()) && (await fold.getAttribute('aria-expanded')) === 'false') {
+      await fold.click()
+      await settle(page)
+    }
     const box = page.getByRole('textbox', { name: 'Paste here' })
     await box.scrollIntoViewIfNeeded()
     await box.fill('Dear sir, thank you for your enquiry. Our best price is USD 412 per unit, delivery 3 weeks ex works, offer valid 14 days. Regards')
