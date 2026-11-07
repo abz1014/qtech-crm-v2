@@ -81,7 +81,9 @@ function InvoiceStep({ r, className }: { r: GstRow; className?: string }) {
 function useTabsHeight(on: boolean) {
   useLayoutEffect(() => {
     if (!on) return
-    const nav = document.querySelector('nav[aria-label="Main"]')
+    // the phone's bottom tabs: the "Main" nav that is drawn (the top bar's is hidden below 768, so it measures 0)
+    const navs = Array.from(document.querySelectorAll('nav[aria-label="Main"]'))
+    const nav = navs.find(n => n.getBoundingClientRect().height > 0) ?? navs[navs.length - 1] ?? null
     const set = () => document.documentElement.style.setProperty('--tabs-h', `${nav ? Math.round(nav.getBoundingClientRect().height) : 0}px`)
     set()
     const ro = nav && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null

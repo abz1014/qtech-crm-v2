@@ -84,13 +84,13 @@ describe('Invoices on a phone: admin', () => {
     const card = (await screen.findByText('INV-0108')).closest('tr') as HTMLElement
     expect(within(card).queryByRole('button', { name: 'Open invoice' })).toBeNull()
     await user.click(card)
-    expect(card).toHaveAttribute('aria-expanded', 'true')
+    expect(card).toHaveAttribute('data-expanded', 'true')
     expect(within(card).getByText('Net')).toBeInTheDocument()
     expect(within(card).getByText('GST')).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: 'Open invoice' })).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: 'PDF' })).toBeInTheDocument()
     await user.click(card)
-    expect(card).toHaveAttribute('aria-expanded', 'false')
+    expect(card).toHaveAttribute('data-expanded', 'false')
   })
 
   it('the Money switcher is one row that opens a sheet of the five tabs and six pages, the current one ticked, and Escape closes it', async () => {
@@ -122,6 +122,6 @@ describe('Invoices on a phone: sales', () => {
     expect(screen.queryByTestId('money-switcher')).toBeNull()
     expect(within(screen.getByRole('navigation', { name: 'Money views' })).getAllByRole('link').map(a => a.textContent)).toEqual(['To collect', 'Invoices', 'Reports'])
     const card = screen.getByText('INV-0108').closest('tr') as HTMLElement
-    expect(card).not.toHaveAttribute('aria-expanded')
+    expect(card).not.toHaveAttribute('data-expanded')
   })
 })

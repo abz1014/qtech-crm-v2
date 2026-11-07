@@ -610,7 +610,8 @@ function TableView<T>(props: DataTableProps<T>) {
           data-di={di}
           data-card=""
           aria-selected={selection || activeRowId !== undefined ? ticked || active : undefined}
-          aria-expanded={expandable ? isOpen : undefined}
+          // not aria-expanded: axe allows it on treegrid rows only, and a card row is a plain table row
+          data-expanded={expandable ? isOpen : undefined}
           tabIndex={di === safeFocus ? 0 : -1}
           onFocus={e => e.target === e.currentTarget && setFocusDi(di)}
           onKeyDown={e => {

@@ -40,13 +40,14 @@ export function MoneyPagesSwitcher({
         aria-haspopup="dialog"
         data-testid="money-switcher"
         onClick={() => setOpen(true)}
-        className="flex h-12 w-full min-w-0 items-center justify-between gap-3 rounded border border-line bg-surface px-4 text-base"
+        className="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded border border-line bg-surface px-4 text-base"
       >
         <span className="type-row inline-flex min-w-0 items-center gap-2">
-          <span className="truncate">{current}</span>
+          <span>{current}</span>
           <Icon icon={ChevronDown} size="sm" />
         </span>
-        <span className="type-body shrink-0 text-fg-2">All Money pages</span>
+        {/* on the narrowest phones the page name takes the room and this stays for screen readers */}
+        <span className="type-body shrink-0 text-fg-2 max-[359px]:sr-only">All Money pages</span>
       </button>
       {open ? (
         <Dialog open onOpenChange={o => !o && close()}>
