@@ -1,1 +1,3372 @@
-{}
+{
+ "admin/add-to-job-pasted/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 3126,
+  "aboveFold": 32
+ },
+ "admin/add-to-job-pasted/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 6524,
+  "aboveFold": 7
+ },
+ "admin/add-to-job-pasted/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 5724,
+  "aboveFold": 10
+ },
+ "admin/capture-pick-job/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 14
+ },
+ "admin/capture-pick-job/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 911,
+  "aboveFold": 11
+ },
+ "admin/capture-pick-job/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 815,
+  "aboveFold": 12
+ },
+ "admin/companies/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 1435,
+  "aboveFold": 27
+ },
+ "admin/companies/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2812,
+  "aboveFold": 12
+ },
+ "admin/companies/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2756,
+  "aboveFold": 13
+ },
+ "admin/company-customer/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1358,
+  "aboveFold": 33
+ },
+ "admin/company-customer/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2891,
+  "aboveFold": 11
+ },
+ "admin/company-customer/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2655,
+  "aboveFold": 15
+ },
+ "admin/company-supplier/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1896,
+  "aboveFold": 24
+ },
+ "admin/company-supplier/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3662,
+  "aboveFold": 10
+ },
+ "admin/company-supplier/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 3341,
+  "aboveFold": 10
+ },
+ "admin/delete-job-guide/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 29
+ },
+ "admin/delete-job-guide/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 8
+ },
+ "admin/delete-job-guide/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 8
+ },
+ "admin/enquiry-new/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1280,
+  "aboveFold": 16
+ },
+ "admin/enquiry-new/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 0,
+  "contentHeight": 2041,
+  "aboveFold": 9
+ },
+ "admin/enquiry-new/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1949,
+  "aboveFold": 9
+ },
+ "admin/issue-quotation/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 36
+ },
+ "admin/issue-quotation/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1830,
+  "aboveFold": 11
+ },
+ "admin/issue-quotation/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1560,
+  "aboveFold": 14
+ },
+ "admin/job-challans/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1502,
+  "aboveFold": 25
+ },
+ "admin/job-challans/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2444,
+  "aboveFold": 5
+ },
+ "admin/job-challans/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2310,
+  "aboveFold": 7
+ },
+ "admin/job-commissioning/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1630,
+  "aboveFold": 30
+ },
+ "admin/job-commissioning/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 1,
+  "stepRowMax": 124,
+  "contentHeight": 3721,
+  "aboveFold": 4
+ },
+ "admin/job-commissioning/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3172,
+  "aboveFold": 7
+ },
+ "admin/job-compare/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 44,
+  "contentHeight": 2985,
+  "aboveFold": 22
+ },
+ "admin/job-compare/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 4386,
+  "aboveFold": 9
+ },
+ "admin/job-compare/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 4028,
+  "aboveFold": 11
+ },
+ "admin/job-delivered/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1502,
+  "aboveFold": 25
+ },
+ "admin/job-delivered/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2444,
+  "aboveFold": 5
+ },
+ "admin/job-delivered/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2310,
+  "aboveFold": 7
+ },
+ "admin/job-invoiced/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 9,
+  "stepRowMax": 44,
+  "contentHeight": 1546,
+  "aboveFold": 26
+ },
+ "admin/job-invoiced/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2508,
+  "aboveFold": 5
+ },
+ "admin/job-invoiced/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2352,
+  "aboveFold": 5
+ },
+ "admin/job-key-facts/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 9,
+  "stepRowMax": 44,
+  "contentHeight": 1630,
+  "aboveFold": 28
+ },
+ "admin/job-key-facts/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3777,
+  "aboveFold": 5
+ },
+ "admin/job-key-facts/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3228,
+  "aboveFold": 8
+ },
+ "admin/job-not-sent/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1425,
+  "aboveFold": 27
+ },
+ "admin/job-not-sent/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2596,
+  "aboveFold": 5
+ },
+ "admin/job-not-sent/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2414,
+  "aboveFold": 5
+ },
+ "admin/job-order-not-placed/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1546,
+  "aboveFold": 31
+ },
+ "admin/job-order-not-placed/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 3039,
+  "aboveFold": 5
+ },
+ "admin/job-order-not-placed/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2738,
+  "aboveFold": 7
+ },
+ "admin/job-paid/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 11,
+  "stepRowMax": 44,
+  "contentHeight": 1436,
+  "aboveFold": 23
+ },
+ "admin/job-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2356,
+  "aboveFold": 4
+ },
+ "admin/job-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 2248,
+  "aboveFold": 6
+ },
+ "admin/job-po-issued/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1546,
+  "aboveFold": 30
+ },
+ "admin/job-po-issued/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2967,
+  "aboveFold": 5
+ },
+ "admin/job-po-issued/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2594,
+  "aboveFold": 7
+ },
+ "admin/job-prices-in/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "stepRowMax": 44,
+  "contentHeight": 2828,
+  "aboveFold": 27
+ },
+ "admin/job-prices-in/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 4324,
+  "aboveFold": 6
+ },
+ "admin/job-prices-in/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3980,
+  "aboveFold": 8
+ },
+ "admin/job-quoted/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 11,
+  "stepRowMax": 44,
+  "contentHeight": 1425,
+  "aboveFold": 30
+ },
+ "admin/job-quoted/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2337,
+  "aboveFold": 5
+ },
+ "admin/job-quoted/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2229,
+  "aboveFold": 7
+ },
+ "admin/job-statement/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1284,
+  "aboveFold": 25
+ },
+ "admin/job-statement/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2862,
+  "aboveFold": 2
+ },
+ "admin/job-statement/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2734,
+  "aboveFold": 2
+ },
+ "admin/job-waiting/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 3126,
+  "aboveFold": 28
+ },
+ "admin/job-waiting/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 6066,
+  "aboveFold": 6
+ },
+ "admin/job-waiting/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 5338,
+  "aboveFold": 6
+ },
+ "admin/jobs-history/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1189,
+  "aboveFold": 17
+ },
+ "admin/jobs-history/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2460,
+  "aboveFold": 9
+ },
+ "admin/jobs-history/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2400,
+  "aboveFold": 9
+ },
+ "admin/jobs-list-phone-imported/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 18
+ },
+ "admin/jobs-list-phone-imported/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 673,
+  "aboveFold": 10
+ },
+ "admin/jobs-list-phone-imported/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 812,
+  "aboveFold": 10
+ },
+ "admin/jobs-list/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2185,
+  "aboveFold": 17
+ },
+ "admin/jobs-list/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 4626,
+  "aboveFold": 9
+ },
+ "admin/jobs-list/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 4518,
+  "aboveFold": 9
+ },
+ "admin/jobs-orders/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1232,
+  "aboveFold": 17
+ },
+ "admin/jobs-orders/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2611,
+  "aboveFold": 9
+ },
+ "admin/jobs-orders/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2503,
+  "aboveFold": 9
+ },
+ "admin/jobs-to-invoice/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 17
+ },
+ "admin/jobs-to-invoice/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 731,
+  "aboveFold": 9
+ },
+ "admin/jobs-to-invoice/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 812,
+  "aboveFold": 9
+ },
+ "admin/large-job-invoiced/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 137,
+  "contentHeight": 2838,
+  "aboveFold": 5
+ },
+ "admin/large-job-invoiced/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 137,
+  "contentHeight": 2584,
+  "aboveFold": 5
+ },
+ "admin/large-job-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 137,
+  "contentHeight": 2678,
+  "aboveFold": 3
+ },
+ "admin/large-job-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 137,
+  "contentHeight": 2447,
+  "aboveFold": 5
+ },
+ "admin/large-money-gst-register/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2006,
+  "aboveFold": 20
+ },
+ "admin/large-money-gst-register/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1980,
+  "aboveFold": 20
+ },
+ "admin/mark-won/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 900,
+  "aboveFold": 36
+ },
+ "admin/mark-won/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 804,
+  "aboveFold": 10
+ },
+ "admin/mark-won/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 4,
+  "contentHeight": 812,
+  "aboveFold": 12
+ },
+ "admin/money-aging/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 996,
+  "aboveFold": 35
+ },
+ "admin/money-aging/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1547,
+  "aboveFold": 22
+ },
+ "admin/money-aging/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1407,
+  "aboveFold": 22
+ },
+ "admin/money-bank/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "contentHeight": 1578,
+  "aboveFold": 26
+ },
+ "admin/money-bank/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 3991,
+  "aboveFold": 20
+ },
+ "admin/money-bank/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2873,
+  "aboveFold": 20
+ },
+ "admin/money-exceptions/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 26
+ },
+ "admin/money-exceptions/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 962,
+  "aboveFold": 18
+ },
+ "admin/money-exceptions/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 820,
+  "aboveFold": 20
+ },
+ "admin/money-expense-report-quarter/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2466,
+  "aboveFold": 34
+ },
+ "admin/money-expense-report-quarter/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 4741,
+  "aboveFold": 20
+ },
+ "admin/money-expense-report-quarter/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 4055,
+  "aboveFold": 22
+ },
+ "admin/money-expense-report/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2302,
+  "aboveFold": 36
+ },
+ "admin/money-expense-report/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 4053,
+  "aboveFold": 20
+ },
+ "admin/money-expense-report/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3675,
+  "aboveFold": 22
+ },
+ "admin/money-expenses-add/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1631,
+  "aboveFold": 41
+ },
+ "admin/money-expenses-add/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3267,
+  "aboveFold": 23
+ },
+ "admin/money-expenses-add/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2875,
+  "aboveFold": 30
+ },
+ "admin/money-expenses/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1631,
+  "aboveFold": 36
+ },
+ "admin/money-expenses/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3267,
+  "aboveFold": 20
+ },
+ "admin/money-expenses/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2875,
+  "aboveFold": 26
+ },
+ "admin/money-gst-fbr/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 987,
+  "aboveFold": 35
+ },
+ "admin/money-gst-fbr/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 1671,
+  "aboveFold": 22
+ },
+ "admin/money-gst-fbr/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 1481,
+  "aboveFold": 22
+ },
+ "admin/money-gst-register/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1043,
+  "aboveFold": 34
+ },
+ "admin/money-gst-register/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1913,
+  "aboveFold": 20
+ },
+ "admin/money-gst-register/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1747,
+  "aboveFold": 21
+ },
+ "admin/money-in-out/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 2311,
+  "aboveFold": 27
+ },
+ "admin/money-in-out/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3820,
+  "aboveFold": 20
+ },
+ "admin/money-in-out/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3392,
+  "aboveFold": 23
+ },
+ "admin/money-margins/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1749,
+  "aboveFold": 29
+ },
+ "admin/money-margins/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2813,
+  "aboveFold": 17
+ },
+ "admin/money-margins/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2279,
+  "aboveFold": 19
+ },
+ "admin/money-month-end/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "contentHeight": 1056,
+  "aboveFold": 30
+ },
+ "admin/money-month-end/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1844,
+  "aboveFold": 17
+ },
+ "admin/money-month-end/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1604,
+  "aboveFold": 18
+ },
+ "admin/money-owe/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1549,
+  "aboveFold": 34
+ },
+ "admin/money-owe/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2919,
+  "aboveFold": 22
+ },
+ "admin/money-owe/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2527,
+  "aboveFold": 23
+ },
+ "admin/money-pnl/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "contentHeight": 1027,
+  "aboveFold": 25
+ },
+ "admin/money-pnl/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2059,
+  "aboveFold": 22
+ },
+ "admin/money-pnl/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 1922,
+  "aboveFold": 23
+ },
+ "admin/money-profit/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2234,
+  "aboveFold": 24
+ },
+ "admin/money-profit/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3075,
+  "aboveFold": 17
+ },
+ "admin/money-profit/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2905,
+  "aboveFold": 17
+ },
+ "admin/money-receivables/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1325,
+  "aboveFold": 36
+ },
+ "admin/money-receivables/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 0,
+  "contentHeight": 2374,
+  "aboveFold": 19
+ },
+ "admin/money-receivables/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2242,
+  "aboveFold": 21
+ },
+ "admin/money-team/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 900,
+  "aboveFold": 29
+ },
+ "admin/money-team/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1468,
+  "aboveFold": 22
+ },
+ "admin/money-team/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1302,
+  "aboveFold": 22
+ },
+ "admin/op-add-expense/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 44
+ },
+ "admin/op-add-expense/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 25
+ },
+ "admin/op-add-expense/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 28
+ },
+ "admin/op-add-expenses/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 41
+ },
+ "admin/op-add-expenses/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 640,
+  "aboveFold": 23
+ },
+ "admin/op-add-expenses/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 812,
+  "aboveFold": 24
+ },
+ "admin/op-claims/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2061,
+  "aboveFold": 29
+ },
+ "admin/op-claims/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 6261,
+  "aboveFold": 11
+ },
+ "admin/op-claims/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 4703,
+  "aboveFold": 12
+ },
+ "admin/op-company-contact/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 36
+ },
+ "admin/op-company-contact/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 14
+ },
+ "admin/op-company-contact/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 18
+ },
+ "admin/op-company-panels/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1358,
+  "aboveFold": 33
+ },
+ "admin/op-company-panels/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2891,
+  "aboveFold": 11
+ },
+ "admin/op-company-panels/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2655,
+  "aboveFold": 15
+ },
+ "admin/op-company-site/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 36
+ },
+ "admin/op-company-site/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 14
+ },
+ "admin/op-company-site/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 18
+ },
+ "admin/op-convert-dialog/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 900,
+  "aboveFold": 36
+ },
+ "admin/op-convert-dialog/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 804,
+  "aboveFold": 10
+ },
+ "admin/op-convert-dialog/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 4,
+  "contentHeight": 812,
+  "aboveFold": 12
+ },
+ "admin/op-expense-edit/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 45
+ },
+ "admin/op-expense-edit/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 24
+ },
+ "admin/op-expense-edit/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 27
+ },
+ "admin/op-expense-history/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 37
+ },
+ "admin/op-expense-history/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 21
+ },
+ "admin/op-expense-history/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 21
+ },
+ "admin/op-gst-export/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1043,
+  "aboveFold": 34
+ },
+ "admin/op-gst-export/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1913,
+  "aboveFold": 20
+ },
+ "admin/op-gst-export/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1747,
+  "aboveFold": 21
+ },
+ "admin/op-invoice-detail/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 1047,
+  "aboveFold": 41
+ },
+ "admin/op-invoice-detail/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 1550,
+  "aboveFold": 22
+ },
+ "admin/op-invoice-detail/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 1554,
+  "aboveFold": 25
+ },
+ "admin/op-quotation-dialog/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 36
+ },
+ "admin/op-quotation-dialog/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1830,
+  "aboveFold": 11
+ },
+ "admin/op-quotation-dialog/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1560,
+  "aboveFold": 14
+ },
+ "admin/op-receivables-row/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 1325,
+  "aboveFold": 36
+ },
+ "admin/op-receivables-row/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 0,
+  "contentHeight": 2374,
+  "aboveFold": 22
+ },
+ "admin/op-receivables-row/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2242,
+  "aboveFold": 26
+ },
+ "admin/op-record-payment/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 32
+ },
+ "admin/op-record-payment/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 9
+ },
+ "admin/op-record-payment/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 13
+ },
+ "admin/op-report-aging/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 996,
+  "aboveFold": 35
+ },
+ "admin/op-report-aging/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1547,
+  "aboveFold": 22
+ },
+ "admin/op-report-aging/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1407,
+  "aboveFold": 22
+ },
+ "admin/op-report-categories/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2064,
+  "aboveFold": 36
+ },
+ "admin/op-report-categories/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3919,
+  "aboveFold": 20
+ },
+ "admin/op-report-categories/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3399,
+  "aboveFold": 22
+ },
+ "admin/op-report-expense/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2302,
+  "aboveFold": 36
+ },
+ "admin/op-report-expense/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 4053,
+  "aboveFold": 20
+ },
+ "admin/op-report-expense/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3675,
+  "aboveFold": 22
+ },
+ "admin/op-report-owe/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 4,
+  "contentHeight": 1549,
+  "aboveFold": 34
+ },
+ "admin/op-report-owe/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2919,
+  "aboveFold": 22
+ },
+ "admin/op-report-owe/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2527,
+  "aboveFold": 23
+ },
+ "admin/op-step-delivery/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 11,
+  "stepRowMax": 44,
+  "contentHeight": 2108,
+  "aboveFold": 31
+ },
+ "admin/op-step-delivery/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 4967,
+  "aboveFold": 9
+ },
+ "admin/op-step-delivery/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 4440,
+  "aboveFold": 11
+ },
+ "admin/op-step-enquiry/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2609,
+  "aboveFold": 5
+ },
+ "admin/op-step-enquiry/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 2375,
+  "aboveFold": 8
+ },
+ "admin/op-step-invoice/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1546,
+  "aboveFold": 22
+ },
+ "admin/op-step-invoice/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2725,
+  "aboveFold": 8
+ },
+ "admin/op-step-invoice/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2593,
+  "aboveFold": 10
+ },
+ "admin/op-step-order/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 5136,
+  "aboveFold": 8
+ },
+ "admin/op-step-order/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 4518,
+  "aboveFold": 8
+ },
+ "admin/op-step-payment/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1546,
+  "aboveFold": 18
+ },
+ "admin/op-step-payment/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2508,
+  "aboveFold": 6
+ },
+ "admin/op-step-payment/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 2352,
+  "aboveFold": 8
+ },
+ "admin/op-step-quotation-prices-in/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 2828,
+  "aboveFold": 26
+ },
+ "admin/op-step-quotation-prices-in/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 4324,
+  "aboveFold": 9
+ },
+ "admin/op-step-quotation-prices-in/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3980,
+  "aboveFold": 12
+ },
+ "admin/op-step-quotation/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "stepRowMax": 44,
+  "contentHeight": 2985,
+  "aboveFold": 24
+ },
+ "admin/op-step-quotation/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 4386,
+  "aboveFold": 10
+ },
+ "admin/op-step-quotation/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 4028,
+  "aboveFold": 12
+ },
+ "admin/op-step-supplier-order/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 13,
+  "stepRowMax": 44,
+  "contentHeight": 1630,
+  "aboveFold": 33
+ },
+ "admin/op-step-supplier-order/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3777,
+  "aboveFold": 10
+ },
+ "admin/op-step-supplier-order/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3228,
+  "aboveFold": 13
+ },
+ "admin/op-supplier-prices/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "stepRowMax": 44,
+  "contentHeight": 3661,
+  "aboveFold": 24
+ },
+ "admin/op-supplier-prices/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 5470,
+  "aboveFold": 8
+ },
+ "admin/op-supplier-prices/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 4944,
+  "aboveFold": 10
+ },
+ "admin/reports/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "contentHeight": 1027,
+  "aboveFold": 25
+ },
+ "admin/reports/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2059,
+  "aboveFold": 22
+ },
+ "admin/reports/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 1922,
+  "aboveFold": 23
+ },
+ "admin/review-imported/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 960,
+  "aboveFold": 23
+ },
+ "admin/review-imported/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1323,
+  "aboveFold": 16
+ },
+ "admin/review-imported/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1153,
+  "aboveFold": 17
+ },
+ "admin/rfq-new-1-items/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "contentHeight": 1402,
+  "aboveFold": 14
+ },
+ "admin/rfq-new-1-items/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2185,
+  "aboveFold": 10
+ },
+ "admin/rfq-new-1-items/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 2033,
+  "aboveFold": 10
+ },
+ "admin/rfq-new-2-suppliers/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 10,
+  "contentHeight": 1374,
+  "aboveFold": 18
+ },
+ "admin/rfq-new-2-suppliers/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 2497,
+  "aboveFold": 9
+ },
+ "admin/rfq-new-2-suppliers/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 2097,
+  "aboveFold": 10
+ },
+ "admin/rfq-new-3-message/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 1166,
+  "aboveFold": 19
+ },
+ "admin/rfq-new-3-message/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 1902,
+  "aboveFold": 11
+ },
+ "admin/rfq-new-3-message/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 4,
+  "contentHeight": 1722,
+  "aboveFold": 14
+ },
+ "admin/rfq-new-4-sent/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 944,
+  "aboveFold": 21
+ },
+ "admin/rfq-new-4-sent/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1625,
+  "aboveFold": 11
+ },
+ "admin/rfq-new-4-sent/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1529,
+  "aboveFold": 14
+ },
+ "admin/settings-backups/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1000,
+  "aboveFold": 23
+ },
+ "admin/settings-backups/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1435,
+  "aboveFold": 5
+ },
+ "admin/settings-backups/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1313,
+  "aboveFold": 5
+ },
+ "admin/settings-categories/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2724,
+  "aboveFold": 35
+ },
+ "admin/settings-categories/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2975,
+  "aboveFold": 13
+ },
+ "admin/settings-categories/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2895,
+  "aboveFold": 16
+ },
+ "admin/settings-company/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 2316,
+  "aboveFold": 23
+ },
+ "admin/settings-company/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2911,
+  "aboveFold": 6
+ },
+ "admin/settings-company/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2761,
+  "aboveFold": 6
+ },
+ "admin/settings-details/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1000,
+  "aboveFold": 24
+ },
+ "admin/settings-details/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1433,
+  "aboveFold": 5
+ },
+ "admin/settings-details/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1361,
+  "aboveFold": 7
+ },
+ "admin/settings-exchange-rates/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1190,
+  "aboveFold": 41
+ },
+ "admin/settings-exchange-rates/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1570,
+  "aboveFold": 12
+ },
+ "admin/settings-exchange-rates/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1486,
+  "aboveFold": 16
+ },
+ "admin/settings-export/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 28
+ },
+ "admin/settings-export/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1204,
+  "aboveFold": 8
+ },
+ "admin/settings-export/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1204,
+  "aboveFold": 9
+ },
+ "admin/settings-password/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 900,
+  "aboveFold": 23
+ },
+ "admin/settings-password/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 671,
+  "aboveFold": 6
+ },
+ "admin/settings-password/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 812,
+  "aboveFold": 6
+ },
+ "admin/settings-product-categories/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3336,
+  "aboveFold": 34
+ },
+ "admin/settings-product-categories/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3541,
+  "aboveFold": 11
+ },
+ "admin/settings-product-categories/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 3493,
+  "aboveFold": 14
+ },
+ "admin/settings-targets/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 31
+ },
+ "admin/settings-targets/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1206,
+  "aboveFold": 10
+ },
+ "admin/settings-targets/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1158,
+  "aboveFold": 12
+ },
+ "admin/settings-team/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 900,
+  "aboveFold": 34
+ },
+ "admin/settings-team/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 996,
+  "aboveFold": 7
+ },
+ "admin/settings-team/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 974,
+  "aboveFold": 7
+ },
+ "admin/today/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 900,
+  "aboveFold": 26
+ },
+ "admin/today/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2298,
+  "aboveFold": 16
+ },
+ "admin/today/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2082,
+  "aboveFold": 19
+ },
+ "admin/weekly-review/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 11
+ },
+ "admin/weekly-review/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 5
+ },
+ "admin/weekly-review/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 5
+ },
+ "engineer/capture-pick-job/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 13
+ },
+ "engineer/capture-pick-job/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1109,
+  "aboveFold": 8
+ },
+ "engineer/capture-pick-job/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1013,
+  "aboveFold": 10
+ },
+ "engineer/companies/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 1435,
+  "aboveFold": 24
+ },
+ "engineer/companies/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2824,
+  "aboveFold": 11
+ },
+ "engineer/companies/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2768,
+  "aboveFold": 12
+ },
+ "engineer/company-customer/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1059,
+  "aboveFold": 28
+ },
+ "engineer/company-customer/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2481,
+  "aboveFold": 9
+ },
+ "engineer/company-customer/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2245,
+  "aboveFold": 14
+ },
+ "engineer/company-supplier/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1694,
+  "aboveFold": 19
+ },
+ "engineer/company-supplier/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3198,
+  "aboveFold": 8
+ },
+ "engineer/company-supplier/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3037,
+  "aboveFold": 8
+ },
+ "engineer/engineer-i-paid/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 9
+ },
+ "engineer/engineer-i-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1051,
+  "aboveFold": 6
+ },
+ "engineer/engineer-i-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1027,
+  "aboveFold": 7
+ },
+ "engineer/job-challans/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 11,
+  "stepRowMax": 44,
+  "contentHeight": 1360,
+  "aboveFold": 14
+ },
+ "engineer/job-challans/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 100,
+  "contentHeight": 1848,
+  "aboveFold": 4
+ },
+ "engineer/job-challans/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 7,
+  "stepRowMax": 100,
+  "contentHeight": 1788,
+  "aboveFold": 6
+ },
+ "engineer/job-commissioning/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 44,
+  "contentHeight": 2109,
+  "aboveFold": 20
+ },
+ "engineer/job-commissioning/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 100,
+  "contentHeight": 3552,
+  "aboveFold": 2
+ },
+ "engineer/job-commissioning/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 100,
+  "contentHeight": 3069,
+  "aboveFold": 6
+ },
+ "engineer/job-compare/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 7,
+  "stepRowMax": 44,
+  "contentHeight": 2902,
+  "aboveFold": 22
+ },
+ "engineer/job-compare/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3456,
+  "aboveFold": 4
+ },
+ "engineer/job-compare/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3228,
+  "aboveFold": 6
+ },
+ "engineer/job-delivered/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 44,
+  "contentHeight": 1360,
+  "aboveFold": 16
+ },
+ "engineer/job-delivered/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 100,
+  "contentHeight": 1848,
+  "aboveFold": 3
+ },
+ "engineer/job-delivered/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 100,
+  "contentHeight": 1788,
+  "aboveFold": 4
+ },
+ "engineer/job-invoiced/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 44,
+  "contentHeight": 1464,
+  "aboveFold": 18
+ },
+ "engineer/job-invoiced/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 100,
+  "contentHeight": 1958,
+  "aboveFold": 3
+ },
+ "engineer/job-invoiced/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 100,
+  "contentHeight": 1898,
+  "aboveFold": 5
+ },
+ "engineer/job-key-facts/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 5,
+  "stepRowMax": 44,
+  "contentHeight": 2109,
+  "aboveFold": 18
+ },
+ "engineer/job-key-facts/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 100,
+  "contentHeight": 3552,
+  "aboveFold": 5
+ },
+ "engineer/job-key-facts/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 100,
+  "contentHeight": 3069,
+  "aboveFold": 5
+ },
+ "engineer/job-not-sent/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 44,
+  "contentHeight": 1518,
+  "aboveFold": 21
+ },
+ "engineer/job-not-sent/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2088,
+  "aboveFold": 4
+ },
+ "engineer/job-not-sent/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2014,
+  "aboveFold": 7
+ },
+ "engineer/job-order-not-placed/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 44,
+  "contentHeight": 1661,
+  "aboveFold": 18
+ },
+ "engineer/job-order-not-placed/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 100,
+  "contentHeight": 2534,
+  "aboveFold": 3
+ },
+ "engineer/job-order-not-placed/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 100,
+  "contentHeight": 2249,
+  "aboveFold": 5
+ },
+ "engineer/job-paid/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 44,
+  "contentHeight": 1360,
+  "aboveFold": 16
+ },
+ "engineer/job-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 100,
+  "contentHeight": 1878,
+  "aboveFold": 3
+ },
+ "engineer/job-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 100,
+  "contentHeight": 1794,
+  "aboveFold": 4
+ },
+ "engineer/job-po-issued/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 44,
+  "contentHeight": 1615,
+  "aboveFold": 19
+ },
+ "engineer/job-po-issued/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 100,
+  "contentHeight": 2502,
+  "aboveFold": 4
+ },
+ "engineer/job-po-issued/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 100,
+  "contentHeight": 2245,
+  "aboveFold": 4
+ },
+ "engineer/job-prices-in/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 2745,
+  "aboveFold": 20
+ },
+ "engineer/job-prices-in/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3428,
+  "aboveFold": 4
+ },
+ "engineer/job-prices-in/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 3214,
+  "aboveFold": 5
+ },
+ "engineer/job-quoted/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 7,
+  "stepRowMax": 44,
+  "contentHeight": 1341,
+  "aboveFold": 22
+ },
+ "engineer/job-quoted/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 1831,
+  "aboveFold": 4
+ },
+ "engineer/job-quoted/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 1807,
+  "aboveFold": 6
+ },
+ "engineer/job-waiting/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 6,
+  "stepRowMax": 44,
+  "contentHeight": 3358,
+  "aboveFold": 22
+ },
+ "engineer/job-waiting/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 5225,
+  "aboveFold": 4
+ },
+ "engineer/job-waiting/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 4627,
+  "aboveFold": 7
+ },
+ "engineer/jobs-history/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1159,
+  "aboveFold": 12
+ },
+ "engineer/jobs-history/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2384,
+  "aboveFold": 7
+ },
+ "engineer/jobs-history/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2360,
+  "aboveFold": 7
+ },
+ "engineer/jobs-list-phone-imported/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 13
+ },
+ "engineer/jobs-list-phone-imported/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 640,
+  "aboveFold": 8
+ },
+ "engineer/jobs-list-phone-imported/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 812,
+  "aboveFold": 8
+ },
+ "engineer/jobs-list/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 12
+ },
+ "engineer/jobs-list/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1454,
+  "aboveFold": 7
+ },
+ "engineer/jobs-list/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1430,
+  "aboveFold": 7
+ },
+ "engineer/jobs-orders/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1199,
+  "aboveFold": 12
+ },
+ "engineer/jobs-orders/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2335,
+  "aboveFold": 7
+ },
+ "engineer/jobs-orders/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2239,
+  "aboveFold": 7
+ },
+ "engineer/large-job-invoiced/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 110,
+  "contentHeight": 2172,
+  "aboveFold": 3
+ },
+ "engineer/large-job-invoiced/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 110,
+  "contentHeight": 2064,
+  "aboveFold": 5
+ },
+ "engineer/large-job-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 110,
+  "contentHeight": 2066,
+  "aboveFold": 3
+ },
+ "engineer/large-job-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 110,
+  "contentHeight": 1954,
+  "aboveFold": 4
+ },
+ "engineer/op-step-delivery/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "stepRowMax": 100,
+  "contentHeight": 2575,
+  "aboveFold": 4
+ },
+ "engineer/op-step-delivery/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "stepRowMax": 100,
+  "contentHeight": 2333,
+  "aboveFold": 5
+ },
+ "engineer/op-step-enquiry/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2103,
+  "aboveFold": 4
+ },
+ "engineer/op-step-enquiry/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 1977,
+  "aboveFold": 7
+ },
+ "engineer/op-step-order/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 100,
+  "contentHeight": 3290,
+  "aboveFold": 2
+ },
+ "engineer/op-step-order/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 100,
+  "contentHeight": 2928,
+  "aboveFold": 2
+ },
+ "engineer/op-step-payment/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 100,
+  "contentHeight": 1958,
+  "aboveFold": 5
+ },
+ "engineer/op-step-payment/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 100,
+  "contentHeight": 1898,
+  "aboveFold": 6
+ },
+ "engineer/op-step-quotation-prices-in/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3428,
+  "aboveFold": 7
+ },
+ "engineer/op-step-quotation-prices-in/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3214,
+  "aboveFold": 9
+ },
+ "engineer/op-step-quotation/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3456,
+  "aboveFold": 8
+ },
+ "engineer/op-step-quotation/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3228,
+  "aboveFold": 9
+ },
+ "engineer/op-step-supplier-order/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 100,
+  "contentHeight": 3552,
+  "aboveFold": 7
+ },
+ "engineer/op-step-supplier-order/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 5,
+  "stepRowMax": 100,
+  "contentHeight": 3069,
+  "aboveFold": 12
+ },
+ "engineer/rfq-new-1-items/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "contentHeight": 1402,
+  "aboveFold": 11
+ },
+ "engineer/rfq-new-1-items/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2185,
+  "aboveFold": 7
+ },
+ "engineer/rfq-new-1-items/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 2033,
+  "aboveFold": 7
+ },
+ "engineer/rfq-new-2-suppliers/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 10,
+  "contentHeight": 1374,
+  "aboveFold": 15
+ },
+ "engineer/rfq-new-2-suppliers/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 2557,
+  "aboveFold": 6
+ },
+ "engineer/rfq-new-2-suppliers/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 2135,
+  "aboveFold": 7
+ },
+ "engineer/rfq-new-3-message/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 1166,
+  "aboveFold": 16
+ },
+ "engineer/rfq-new-3-message/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 1902,
+  "aboveFold": 8
+ },
+ "engineer/rfq-new-3-message/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 4,
+  "contentHeight": 1722,
+  "aboveFold": 11
+ },
+ "engineer/rfq-new-4-sent/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 944,
+  "aboveFold": 18
+ },
+ "engineer/rfq-new-4-sent/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1625,
+  "aboveFold": 8
+ },
+ "engineer/rfq-new-4-sent/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1529,
+  "aboveFold": 11
+ },
+ "engineer/settings-company/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 900,
+  "aboveFold": 12
+ },
+ "engineer/settings-company/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1231,
+  "aboveFold": 6
+ },
+ "engineer/settings-company/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1183,
+  "aboveFold": 6
+ },
+ "engineer/settings-details/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1000,
+  "aboveFold": 13
+ },
+ "engineer/settings-details/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1433,
+  "aboveFold": 3
+ },
+ "engineer/settings-details/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1361,
+  "aboveFold": 5
+ },
+ "engineer/settings-password/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 900,
+  "aboveFold": 12
+ },
+ "engineer/settings-password/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 671,
+  "aboveFold": 4
+ },
+ "engineer/settings-password/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 812,
+  "aboveFold": 4
+ },
+ "engineer/settings/1440x900": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 900,
+  "aboveFold": 12
+ },
+ "engineer/settings/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 640,
+  "aboveFold": 11
+ },
+ "engineer/settings/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 11
+ },
+ "engineer/today/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 900,
+  "aboveFold": 16
+ },
+ "engineer/today/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 640,
+  "aboveFold": 12
+ },
+ "engineer/today/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 812,
+  "aboveFold": 12
+ },
+ "sales/add-to-job-pasted/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 3070,
+  "aboveFold": 31
+ },
+ "sales/add-to-job-pasted/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 6243,
+  "aboveFold": 7
+ },
+ "sales/add-to-job-pasted/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 5491,
+  "aboveFold": 10
+ },
+ "sales/capture-pick-job/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1555,
+  "aboveFold": 17
+ },
+ "sales/capture-pick-job/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2192,
+  "aboveFold": 11
+ },
+ "sales/capture-pick-job/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1928,
+  "aboveFold": 13
+ },
+ "sales/companies/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 1435,
+  "aboveFold": 27
+ },
+ "sales/companies/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2812,
+  "aboveFold": 12
+ },
+ "sales/companies/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 2756,
+  "aboveFold": 13
+ },
+ "sales/company-customer/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1153,
+  "aboveFold": 33
+ },
+ "sales/company-customer/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 2611,
+  "aboveFold": 11
+ },
+ "sales/company-customer/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 2375,
+  "aboveFold": 15
+ },
+ "sales/company-supplier/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1896,
+  "aboveFold": 24
+ },
+ "sales/company-supplier/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 3662,
+  "aboveFold": 10
+ },
+ "sales/company-supplier/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 3341,
+  "aboveFold": 10
+ },
+ "sales/engineer-i-paid/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 12
+ },
+ "sales/engineer-i-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1051,
+  "aboveFold": 9
+ },
+ "sales/engineer-i-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1027,
+  "aboveFold": 10
+ },
+ "sales/enquiry-new/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1280,
+  "aboveFold": 16
+ },
+ "sales/enquiry-new/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 0,
+  "contentHeight": 2041,
+  "aboveFold": 9
+ },
+ "sales/enquiry-new/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1949,
+  "aboveFold": 9
+ },
+ "sales/issue-quotation/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 38
+ },
+ "sales/issue-quotation/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1830,
+  "aboveFold": 10
+ },
+ "sales/issue-quotation/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1560,
+  "aboveFold": 14
+ },
+ "sales/job-challans/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1188,
+  "aboveFold": 24
+ },
+ "sales/job-challans/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2054,
+  "aboveFold": 5
+ },
+ "sales/job-challans/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 1944,
+  "aboveFold": 6
+ },
+ "sales/job-commissioning/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1398,
+  "aboveFold": 30
+ },
+ "sales/job-commissioning/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 1,
+  "stepRowMax": 124,
+  "contentHeight": 3383,
+  "aboveFold": 4
+ },
+ "sales/job-commissioning/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2858,
+  "aboveFold": 7
+ },
+ "sales/job-compare/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 44,
+  "contentHeight": 2929,
+  "aboveFold": 22
+ },
+ "sales/job-compare/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 4105,
+  "aboveFold": 9
+ },
+ "sales/job-compare/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 3795,
+  "aboveFold": 11
+ },
+ "sales/job-delivered/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1188,
+  "aboveFold": 24
+ },
+ "sales/job-delivered/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2054,
+  "aboveFold": 5
+ },
+ "sales/job-delivered/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 1944,
+  "aboveFold": 6
+ },
+ "sales/job-invoiced/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 9,
+  "stepRowMax": 44,
+  "contentHeight": 1292,
+  "aboveFold": 26
+ },
+ "sales/job-invoiced/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2170,
+  "aboveFold": 5
+ },
+ "sales/job-invoiced/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2062,
+  "aboveFold": 6
+ },
+ "sales/job-key-facts/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 9,
+  "stepRowMax": 44,
+  "contentHeight": 1430,
+  "aboveFold": 28
+ },
+ "sales/job-key-facts/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3439,
+  "aboveFold": 5
+ },
+ "sales/job-key-facts/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2914,
+  "aboveFold": 8
+ },
+ "sales/job-not-sent/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 7,
+  "stepRowMax": 44,
+  "contentHeight": 1252,
+  "aboveFold": 27
+ },
+ "sales/job-not-sent/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2375,
+  "aboveFold": 5
+ },
+ "sales/job-not-sent/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2241,
+  "aboveFold": 5
+ },
+ "sales/job-order-not-placed/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1292,
+  "aboveFold": 31
+ },
+ "sales/job-order-not-placed/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2737,
+  "aboveFold": 5
+ },
+ "sales/job-order-not-placed/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2484,
+  "aboveFold": 7
+ },
+ "sales/job-paid/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 10,
+  "stepRowMax": 44,
+  "contentHeight": 1182,
+  "aboveFold": 23
+ },
+ "sales/job-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2042,
+  "aboveFold": 4
+ },
+ "sales/job-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 1934,
+  "aboveFold": 6
+ },
+ "sales/job-po-issued/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 8,
+  "stepRowMax": 44,
+  "contentHeight": 1292,
+  "aboveFold": 30
+ },
+ "sales/job-po-issued/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2665,
+  "aboveFold": 5
+ },
+ "sales/job-po-issued/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2340,
+  "aboveFold": 7
+ },
+ "sales/job-prices-in/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 6,
+  "stepRowMax": 44,
+  "contentHeight": 2772,
+  "aboveFold": 29
+ },
+ "sales/job-prices-in/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 4043,
+  "aboveFold": 5
+ },
+ "sales/job-prices-in/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3747,
+  "aboveFold": 8
+ },
+ "sales/job-quoted/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 10,
+  "stepRowMax": 44,
+  "contentHeight": 1252,
+  "aboveFold": 30
+ },
+ "sales/job-quoted/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 124,
+  "contentHeight": 2140,
+  "aboveFold": 5
+ },
+ "sales/job-quoted/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2056,
+  "aboveFold": 7
+ },
+ "sales/job-statement/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1284,
+  "aboveFold": 25
+ },
+ "sales/job-statement/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2862,
+  "aboveFold": 2
+ },
+ "sales/job-statement/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2734,
+  "aboveFold": 2
+ },
+ "sales/job-waiting/1440x900": {
+  "boxDepth": 3,
+  "boxesAtFold": 7,
+  "stepRowMax": 44,
+  "contentHeight": 3070,
+  "aboveFold": 27
+ },
+ "sales/job-waiting/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 5785,
+  "aboveFold": 5
+ },
+ "sales/job-waiting/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 5105,
+  "aboveFold": 7
+ },
+ "sales/jobs-history/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1189,
+  "aboveFold": 17
+ },
+ "sales/jobs-history/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2460,
+  "aboveFold": 9
+ },
+ "sales/jobs-history/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2400,
+  "aboveFold": 9
+ },
+ "sales/jobs-list-phone-imported/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 18
+ },
+ "sales/jobs-list-phone-imported/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 673,
+  "aboveFold": 10
+ },
+ "sales/jobs-list-phone-imported/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 2,
+  "contentHeight": 812,
+  "aboveFold": 10
+ },
+ "sales/jobs-list/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1513,
+  "aboveFold": 17
+ },
+ "sales/jobs-list/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 3175,
+  "aboveFold": 9
+ },
+ "sales/jobs-list/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 3091,
+  "aboveFold": 9
+ },
+ "sales/jobs-orders/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1232,
+  "aboveFold": 17
+ },
+ "sales/jobs-orders/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2611,
+  "aboveFold": 9
+ },
+ "sales/jobs-orders/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2503,
+  "aboveFold": 9
+ },
+ "sales/jobs-to-invoice/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 17
+ },
+ "sales/jobs-to-invoice/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 731,
+  "aboveFold": 9
+ },
+ "sales/jobs-to-invoice/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 812,
+  "aboveFold": 9
+ },
+ "sales/large-job-invoiced/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "stepRowMax": 137,
+  "contentHeight": 2421,
+  "aboveFold": 5
+ },
+ "sales/large-job-invoiced/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 137,
+  "contentHeight": 2275,
+  "aboveFold": 5
+ },
+ "sales/large-job-paid/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 137,
+  "contentHeight": 2290,
+  "aboveFold": 3
+ },
+ "sales/large-job-paid/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 137,
+  "contentHeight": 2112,
+  "aboveFold": 5
+ },
+ "sales/large-money-gst-register/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1615,
+  "aboveFold": 13
+ },
+ "sales/large-money-gst-register/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1589,
+  "aboveFold": 13
+ },
+ "sales/mark-won/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 900,
+  "aboveFold": 36
+ },
+ "sales/mark-won/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 804,
+  "aboveFold": 10
+ },
+ "sales/mark-won/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 4,
+  "contentHeight": 812,
+  "aboveFold": 12
+ },
+ "sales/money-gst-register/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 983,
+  "aboveFold": 24
+ },
+ "sales/money-gst-register/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1534,
+  "aboveFold": 13
+ },
+ "sales/money-gst-register/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1416,
+  "aboveFold": 13
+ },
+ "sales/money-receivables/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1265,
+  "aboveFold": 30
+ },
+ "sales/money-receivables/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2126,
+  "aboveFold": 13
+ },
+ "sales/money-receivables/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2042,
+  "aboveFold": 13
+ },
+ "sales/op-step-delivery/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 4629,
+  "aboveFold": 9
+ },
+ "sales/op-step-delivery/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 5,
+  "stepRowMax": 124,
+  "contentHeight": 4102,
+  "aboveFold": 11
+ },
+ "sales/op-step-enquiry/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2388,
+  "aboveFold": 5
+ },
+ "sales/op-step-enquiry/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 2202,
+  "aboveFold": 8
+ },
+ "sales/op-step-invoice/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 2315,
+  "aboveFold": 8
+ },
+ "sales/op-step-invoice/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2179,
+  "aboveFold": 8
+ },
+ "sales/op-step-order/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3588,
+  "aboveFold": 6
+ },
+ "sales/op-step-order/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 3160,
+  "aboveFold": 6
+ },
+ "sales/op-step-payment/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "stepRowMax": 124,
+  "contentHeight": 2170,
+  "aboveFold": 7
+ },
+ "sales/op-step-payment/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 6,
+  "stepRowMax": 124,
+  "contentHeight": 2062,
+  "aboveFold": 8
+ },
+ "sales/op-step-quotation-prices-in/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 4043,
+  "aboveFold": 9
+ },
+ "sales/op-step-quotation-prices-in/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3747,
+  "aboveFold": 12
+ },
+ "sales/op-step-quotation/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 4105,
+  "aboveFold": 9
+ },
+ "sales/op-step-quotation/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3795,
+  "aboveFold": 12
+ },
+ "sales/op-step-supplier-order/320x640": {
+  "boxDepth": 3,
+  "boxesAtFold": 3,
+  "stepRowMax": 124,
+  "contentHeight": 3439,
+  "aboveFold": 10
+ },
+ "sales/op-step-supplier-order/375x812": {
+  "boxDepth": 3,
+  "boxesAtFold": 4,
+  "stepRowMax": 124,
+  "contentHeight": 2890,
+  "aboveFold": 13
+ },
+ "sales/reports/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 900,
+  "aboveFold": 13
+ },
+ "sales/reports/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 918,
+  "aboveFold": 11
+ },
+ "sales/reports/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 894,
+  "aboveFold": 11
+ },
+ "sales/rfq-new-1-items/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 7,
+  "contentHeight": 1402,
+  "aboveFold": 14
+ },
+ "sales/rfq-new-1-items/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 1,
+  "contentHeight": 2185,
+  "aboveFold": 10
+ },
+ "sales/rfq-new-1-items/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 2033,
+  "aboveFold": 10
+ },
+ "sales/rfq-new-2-suppliers/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 10,
+  "contentHeight": 1374,
+  "aboveFold": 18
+ },
+ "sales/rfq-new-2-suppliers/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 2497,
+  "aboveFold": 9
+ },
+ "sales/rfq-new-2-suppliers/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 2097,
+  "aboveFold": 10
+ },
+ "sales/rfq-new-3-message/1440x900": {
+  "boxDepth": 2,
+  "boxesAtFold": 5,
+  "contentHeight": 1166,
+  "aboveFold": 19
+ },
+ "sales/rfq-new-3-message/320x640": {
+  "boxDepth": 2,
+  "boxesAtFold": 3,
+  "contentHeight": 1902,
+  "aboveFold": 11
+ },
+ "sales/rfq-new-3-message/375x812": {
+  "boxDepth": 2,
+  "boxesAtFold": 4,
+  "contentHeight": 1722,
+  "aboveFold": 14
+ },
+ "sales/rfq-new-4-sent/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 944,
+  "aboveFold": 21
+ },
+ "sales/rfq-new-4-sent/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1625,
+  "aboveFold": 11
+ },
+ "sales/rfq-new-4-sent/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1529,
+  "aboveFold": 14
+ },
+ "sales/settings-company/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 5,
+  "contentHeight": 1218,
+  "aboveFold": 17
+ },
+ "sales/settings-company/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1859,
+  "aboveFold": 5
+ },
+ "sales/settings-company/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1811,
+  "aboveFold": 6
+ },
+ "sales/settings-details/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 4,
+  "contentHeight": 1000,
+  "aboveFold": 18
+ },
+ "sales/settings-details/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1433,
+  "aboveFold": 5
+ },
+ "sales/settings-details/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 1361,
+  "aboveFold": 7
+ },
+ "sales/settings-exchange-rates/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 1190,
+  "aboveFold": 35
+ },
+ "sales/settings-exchange-rates/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1570,
+  "aboveFold": 12
+ },
+ "sales/settings-exchange-rates/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 1486,
+  "aboveFold": 16
+ },
+ "sales/settings-password/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 900,
+  "aboveFold": 17
+ },
+ "sales/settings-password/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 671,
+  "aboveFold": 6
+ },
+ "sales/settings-password/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 2,
+  "contentHeight": 812,
+  "aboveFold": 6
+ },
+ "sales/settings/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 900,
+  "aboveFold": 22
+ },
+ "sales/settings/320x640": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 650,
+  "aboveFold": 14
+ },
+ "sales/settings/375x812": {
+  "boxDepth": 0,
+  "boxesAtFold": 0,
+  "contentHeight": 812,
+  "aboveFold": 14
+ },
+ "sales/today/1440x900": {
+  "boxDepth": 1,
+  "boxesAtFold": 3,
+  "contentHeight": 900,
+  "aboveFold": 30
+ },
+ "sales/today/320x640": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2250,
+  "aboveFold": 15
+ },
+ "sales/today/375x812": {
+  "boxDepth": 1,
+  "boxesAtFold": 1,
+  "contentHeight": 2058,
+  "aboveFold": 19
+ }
+}
