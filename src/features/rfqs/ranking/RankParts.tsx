@@ -80,3 +80,12 @@ export function ReasonBlock({ set, unrankedCurrency, supplier }: { set: ReasonSe
     </div>
   )
 }
+
+/** A read behind the supplier ranking failed: the list is still shown, so say that the order may be incomplete, quietly. */
+export function PartialNote() {
+  return (
+    <p className="m-0 text-base text-fg-muted" data-partial>
+      Some history did not load, so the order may be incomplete.
+    </p>
+  )
+}

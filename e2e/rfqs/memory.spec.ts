@@ -155,8 +155,8 @@ test.describe('R17 memory in intake', () => {
     const s = await seedMemory()
     await reachSuppliers(page, s, `Please quote:\n1) ${s.desc} - 1 no\nRegards`)
 
-    // C3: the one that supplied this item before is ticked and comes first; a supplier with no history at all is not ticked (the
-    // imported ones may be, on their reply rate: the top three that usually answer are ticked).
+    // The one that supplied this item before is ticked and comes first; a supplier with no history at all is not ticked (a reply rate
+    // or a tag never ticks anyone, imported suppliers included).
     await expect(page.getByRole('checkbox', { name: s.s1.name })).toBeChecked()
     await expect(page.getByRole('checkbox', { name: s.s2.name })).not.toBeChecked()
     const before = await order(page)

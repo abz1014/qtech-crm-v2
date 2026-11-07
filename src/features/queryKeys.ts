@@ -98,7 +98,7 @@ function intake() {
     suppliers: () => [...all, 'suppliers'] as const,
     /** The curated product categories (brands of kind family): the dictionary's names resolve to these. */
     categories: () => [...all, 'categories'] as const,
-    /** Per-category evidence, price wins and recent asks behind the supplier ranking (C3). */
+    /** Per-category evidence, hand-set tags and recent asks behind the supplier ranking (C3). */
     categoryEvidence: (signature: string) => [...all, 'category-evidence', signature] as const,
     memory: (signature: string) => [...all, 'memory', signature] as const,
     /** The up to three evidence orders of one supplier for one item (the memory card). */

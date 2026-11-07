@@ -319,10 +319,12 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
       {item.escalation === 'close_no_reply' && !justChased ? <CloseNoReply item={item} today={today} /> : null}
       {item.rule === 'decision_overdue' && item.escalation !== 'close_no_reply' && !justChased ? <CloseLost item={item} today={today} /> : null}
-      {item.escalation === 'float_elsewhere' && !justChased && supplierRule && items.data && inquiries.data ? (
+      {item.escalation === 'float_elsewhere' && !justChased && supplierRule && items.data && inquiries.data && header.data ? (
         <FloatElsewhere
           supplierName={item.party}
           items={items.data.filter(it => !inquiries.data?.find(i => i.id === item.inquiryId)?.lines.some(l => l.itemId === it.id))}
+          rfqId={item.rfqId as string}
+          customerId={header.data.company.id}
           askedIds={new Set(inquiries.data.map(i => i.supplierId))}
           today={today}
           busy={choose.busy}

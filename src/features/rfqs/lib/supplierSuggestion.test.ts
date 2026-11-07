@@ -7,7 +7,6 @@ import {
   suggestSuppliers,
   withCategories,
   type CategoryEvidenceRow,
-  type PriceWinsRow,
   type SupplierHistory,
   type SupplierItemMemoryRow,
   type SupplierRecord,
@@ -66,10 +65,17 @@ describe('group 1: deals in a category (manual tag, or quoted or ordered at leas
   })
 
   it('a manual tag alone qualifies, with nothing else to show', () => {
-    const s = run([sup('s1', 'A', { brand_ids: [CONTACTORS] })]).suppliers[0]
+    const s = run([sup('s1', 'A', { brand_ids: [CONTACTORS] })], { manualTags: [{ supplier_id: 's1', family_id: CONTACTORS }] }).suppliers[0]
     expect(s.group).toBe('deals_in')
     expect(s.manualTag).toBe(true)
     expect(s.reason).toBe('Deals in contactors: on your list for it.')
+  })
+
+  it('a tag that was learned (nobody set it) still forms the group, but is no manual tag and reads "no history yet"', () => {
+    const s = run([sup('s1', 'A', { brand_ids: [CONTACTORS] })]).suppliers[0]
+    expect(s.group).toBe('deals_in')
+    expect(s.manualTag).toBe(false)
+    expect(s.reason).toBe('Deals in contactors: no history yet.')
   })
 
   it('asked but never quoted (or only no-offer answers) does not qualify', () => {
@@ -136,12 +142,12 @@ describe('group 2: carries a brand; supplied before is a badge', () => {
   })
 })
 
-describe('order inside a group: ordered, category reply rate, overall reply rate, price wins, last contact', () => {
-  const two = (a: Partial<SupplierStatsRow>, b: Partial<SupplierStatsRow>, ea: Partial<CategoryEvidenceRow>, eb: Partial<CategoryEvidenceRow>, wins: PriceWinsRow[] = []) =>
+describe('order inside a group: ordered, category reply rate, overall reply rate, last contact', () => {
+  const two = (a: Partial<SupplierStatsRow>, b: Partial<SupplierStatsRow>, ea: Partial<CategoryEvidenceRow>, eb: Partial<CategoryEvidenceRow>, prices: { supplier_id: string; wins: number | null }[] = []) =>
     ids(
       run([sup('a', 'Alpha', a), sup('b', 'Bravo', b)], {
         categoryEvidence: [ev('a', CONTACTORS, { quoted: 1, asked: 2, replied: 1, ...ea }), ev('b', CONTACTORS, { quoted: 1, asked: 2, replied: 1, ...eb })],
-        priceWins: wins,
+        ...(prices.length ? ({ prices } as Partial<SupplierHistory>) : {}),
       }),
     )
 
@@ -157,10 +163,25 @@ describe('order inside a group: ordered, category reply rate, overall reply rate
     expect(two({ asked: 10, replied: 2 }, { asked: 10, replied: 8 }, {}, {})).toEqual(['b', 'a'])
   })
 
-  it('then price wins (admin and sales only: an engineer has none and nothing changes)', () => {
-    const w = (id: string, wins: number | null): PriceWinsRow => ({ supplier_id: id, family_id: CONTACTORS, wins, of_ranked: wins === null ? null : 5 })
-    expect(two({}, {}, {}, {}, [w('a', 1), w('b', 3)])).toEqual(['b', 'a'])
-    expect(two({}, {}, {}, {}, [w('a', null), w('b', null)])).toEqual(['a', 'b'])
+  it('price never changes the order', () => {
+    // The ranking reads no price figure at all: any such field in the history is ignored.
+    const w = (id: string, wins: number) => ({ supplier_id: id, wins })
+    expect(two({}, {}, {}, {}, [w('a', 1), w('b', 3)])).toEqual(['a', 'b'])
+    expect(two({}, {}, {}, {}, [w('a', 3), w('b', 1)])).toEqual(['a', 'b'])
+  })
+
+  it('a category rate of 0 of 20 sorts below a supplier with no category asks and 2 of 3 overall', () => {
+    const r = run([sup('zero', 'Alpha', { asked: 20, replied: 20 }), sup('none', 'Bravo', { asked: 3, replied: 2 })], {
+      categoryEvidence: [ev('zero', CONTACTORS, { quoted: 1, asked: 20, replied: 0 }), ev('none', CONTACTORS, { ordered: 0, quoted: 1 })],
+    })
+    expect(ids(r)).toEqual(['none', 'zero'])
+  })
+
+  it('no data at all counts as 50%: after a better rate, before a recorded 0%', () => {
+    const r = run([sup('good', 'Gamma', { asked: 4, replied: 4 }), sup('blank', 'Beta'), sup('zero', 'Alpha', { asked: 4, replied: 0 })], {
+      categoryEvidence: ['good', 'blank', 'zero'].map((x) => ev(x, CONTACTORS, { quoted: 1 })),
+    })
+    expect(ids(r)).toEqual(['good', 'blank', 'zero'])
   })
 
   it('then the most recent contact, a never-contacted supplier last, then name, then id', () => {
@@ -202,32 +223,48 @@ describe('no offer on 2 of the last 3 asks demotes a supplier', () => {
   })
 })
 
-describe('pre-ticking: the top 3 with a reply rate of 50% or more, or a manual tag', () => {
-  it('ticks three at most, the first three of the ranked list', () => {
-    const four = ['a', 'b', 'c', 'd'].map((x, n) => sup(x, `S${x}`, { last_contact: `2026-10-0${4 - n}` }))
-    const evidence = ['a', 'b', 'c', 'd'].map((x) => ev(x, CONTACTORS, { quoted: 4, asked: 4, replied: 4 }))
-    expect(run(four, { categoryEvidence: evidence }).preTickedIds).toEqual(['a', 'b', 'c'])
+describe('pre-ticking: only a supplier that supplied the item before, and is not demoted', () => {
+  it('a high reply rate alone ticks nobody', () => {
+    const r = run([sup('s1', 'A', { asked: 10, replied: 10 })], { categoryEvidence: [ev('s1', CONTACTORS, { quoted: 4, asked: 4, replied: 4 })] })
+    expect(r.suppliers[0].preTicked).toBe(false)
+    expect(r.preTickedIds).toEqual([])
   })
 
-  it('a reply rate below 50% earns no tick, a manual tag does', () => {
-    const r = run([sup('lo', 'Low'), sup('tag', 'Tagged', { brand_ids: [CONTACTORS] })], { categoryEvidence: [ev('lo', CONTACTORS, { quoted: 1, asked: 5, replied: 1 })] })
-    expect(r.suppliers.map((s) => [s.supplierId, s.preTicked])).toEqual([['lo', false], ['tag', true]])
+  it('a manual tag alone ticks nobody', () => {
+    const r = run([sup('s1', 'A', { brand_ids: [CONTACTORS] })], { manualTags: [{ supplier_id: 's1', family_id: CONTACTORS }] })
+    expect(r.suppliers[0]).toMatchObject({ manualTag: true, preTicked: false })
   })
 
-  it('a supplier whose category has no asks is judged on the overall rate', () => {
-    const r = run([sup('s1', 'A', { asked: 10, replied: 6 }), sup('s2', 'B', { asked: 10, replied: 2 })], { categoryEvidence: [ev('s1', CONTACTORS, { ordered: 1 }), ev('s2', CONTACTORS, { ordered: 1 })] })
-    expect(r.suppliers.map((s) => s.preTicked)).toEqual([true, false])
+  it('replies that are all "no offer" tick nobody', () => {
+    const r = run([sup('s1', 'A', { brand_ids: [CONTACTORS], asked: 3, replied: 3 })], {
+      categoryEvidence: [ev('s1', CONTACTORS, { asked: 3, replied: 3, quoted: 0, no_offer: 3 })],
+      manualTags: [{ supplier_id: 's1', family_id: CONTACTORS }],
+      recentAsks: { s1: ['no_offer', 'no_offer', 'no_offer'] },
+    })
+    expect(r.suppliers[0].preTicked).toBe(false)
+    expect(r.preTickedIds).toEqual([])
   })
 
-  it('a carries-brand supplier is ticked on its overall reply rate; one that supplied the item before always qualifies', () => {
+  it('supplied before is ticked, with no cap (4 of 4)', () => {
+    const four = ['a', 'b', 'c', 'd'].map((x) => sup(x, `S${x}`))
+    const r = run(four, { memory: { i2: four.map((f) => mem(f.id)) } })
+    expect(r.preTickedIds).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('supplied before but demoted is not ticked', () => {
+    const r = run([sup('s1', 'A')], { memory: { i2: [mem('s1')] }, recentAsks: { s1: ['no_offer', 'other', 'no_offer'] } })
+    expect(r.suppliers[0]).toMatchObject({ suppliedBefore: true, demoted: true, preTicked: false })
+  })
+
+  it('a carries-brand supplier is ticked only when it also supplied the item before', () => {
     const r = run([sup('s1', 'A', { brand_ids: [HACH], asked: 4, replied: 3 }), sup('s2', 'B', { brand_ids: [EH], asked: 4, replied: 0 }), sup('s3', 'C')], { memory: { i2: [mem('s3')] } })
     const tick = Object.fromEntries(r.suppliers.map((s) => [s.supplierId, s.preTicked]))
-    expect(tick).toEqual({ s1: true, s2: false, s3: true })
+    expect(tick).toEqual({ s1: false, s2: false, s3: true })
   })
 
   it('reports the items no ticked supplier covers, and the items nobody covers', () => {
-    const r = run([sup('s1', 'A')], { categoryEvidence: [ev('s1', CONTACTORS, { quoted: 2, asked: 2, replied: 2 })] })
-    expect(r.preTickedIds).toEqual(['s1'])
+    const r = run([sup('s1', 'A'), sup('s2', 'B')], { categoryEvidence: [ev('s1', CONTACTORS, { quoted: 2, asked: 2, replied: 2 })], memory: { i4: [mem('s2')] } })
+    expect(r.preTickedIds).toEqual(['s2'])
     expect(r.itemsWithoutTickedSupplier).toEqual(['i1', 'i2', 'i3'])
     expect(r.itemsWithoutAnySuggestion).toEqual(['i1', 'i2', 'i3'])
     expect(run([]).preTickedIds).toEqual([])
