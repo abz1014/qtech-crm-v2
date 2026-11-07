@@ -7,5 +7,5 @@ screens: /jobs
 related: paste-or-photo
 ---
 1. Do not change prices or customers yourself.
-2. Open the job. In [Add to this job], write what you saw under [Paste here] and tap [Add note]. Or tap [Take a photo].
+2. Open the job and its row [Add to this job], then write what you saw under [Paste here] and tap [Add note]. Or tap [Take a photo].
 3. Tell the owner what you saw. The note on the job shows them where.

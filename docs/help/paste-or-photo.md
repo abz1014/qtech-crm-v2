@@ -6,7 +6,7 @@ keywords: paste or photo, photo, picture, camera, capture, paste, attach, file, 
 screens: /jobs, /capture
 related: new-enquiry
 ---
-1. Open the job. In [Add to this job], paste the message under [Paste here], or tap [Take a photo] or [Choose a file].
+1. Open the job, then the row [Add to this job]. Paste the message under [Paste here], or tap [Take a photo] or [Choose a file].
 2. It says what it looks like: a supplier price, the customer's answer, a site photo or a note. Wrong guess? Tap the right one.
 3. A supplier's prices: tap [Accept N prices]. The prices go on that supplier's row.
 4. A photo or a note: tap [Add photo] or [Add note]. There are no other fields.

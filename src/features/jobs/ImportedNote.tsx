@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
-import { Icon } from '@/ui/Icon'
+import { FileText } from 'lucide-react'
+import { FoldRow } from '@/ui/FoldRow'
 import { useImportedNotes } from '@/features/jobs/hooks'
 import type { ImportedNoteRow } from '@/features/jobs/api'
 
@@ -31,31 +31,15 @@ export function ImportedNote({ rfqId, orderId, role }: { rfqId: string | null; o
   const rows = q.data ?? []
   if (!allowed || rows.length === 0) return null
   const of = (k: ImportedNoteRow['kind']) => rows.filter(r => r.kind === k)
-  const bodyId = 'imported-note-body'
   return (
-    <section aria-label="Imported note" className="rounded-panel border bg-surface">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={() => setOpen(o => !o)}
-        className="flex min-h-touch w-full items-center justify-between gap-2 px-4 py-3 text-left"
-      >
-        <span className="text-base font-semibold">Imported note</span>
-        <span className="inline-flex items-center gap-2 text-base text-fg-muted">
-          {open ? 'Hide' : 'Show'}
-          <Icon icon={open ? ChevronDown : ChevronRight} />
-        </span>
-      </button>
-      {open ? (
-        <div id={bodyId} className="grid gap-4 border-t px-4 py-3">
-          <p className="text-base text-fg-muted">Text from the old system. It may name suppliers and prices. Admin and sales only.</p>
-          <Block title="Enquiry notes" rows={of('rfqs')} />
-          <Block title="Order notes" rows={of('orders')} />
-          <Block title="Enquiry items, as imported" rows={of('rfq_items')} />
-          <Block title="Order items, as imported" rows={of('order_items')} />
-        </div>
-      ) : null}
-    </section>
+    <FoldRow state={{ icon: FileText, word: 'Text from the old system' }} title="Imported note" summary={`${rows.length} ${rows.length === 1 ? 'note' : 'notes'}`} open={open} onToggle={() => setOpen(o => !o)} controlsId="imported-note-body" bodyLabel="Imported note">
+      <div className="grid gap-4">
+        <p className="text-base text-fg-muted">Text from the old system. It may name suppliers and prices. Admin and sales only.</p>
+        <Block title="Enquiry notes" rows={of('rfqs')} />
+        <Block title="Order notes" rows={of('orders')} />
+        <Block title="Enquiry items, as imported" rows={of('rfq_items')} />
+        <Block title="Order items, as imported" rows={of('order_items')} />
+      </div>
+    </FoldRow>
   )
 }

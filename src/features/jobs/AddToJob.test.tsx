@@ -106,7 +106,7 @@ const inquiry = (id: string, name: string, country = 'Germany'): InquiryRow =>
     lines: [],
   }) as InquiryRow
 
-function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<ClarificationRow>[] = [], handoff?: unknown, respond?: (c: FakeCall) => { data?: unknown; error?: { message: string } }) {
+function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<ClarificationRow>[] = [], handoff?: unknown, respond?: (c: FakeCall) => { data?: unknown; error?: { message: string } }, open = true) {
   state.inquiries = role === 'engineer' ? [] : [inquiry('i-rhein', 'Rhein Automation GmbH'), inquiry('i-shanghai', 'Shanghai Flowtech Co.', 'China')]
   state.items = ITEMS
   state.clars = clars
@@ -128,6 +128,8 @@ function mount(role: 'sales' | 'engineer' = 'sales', clars: Partial<Clarificatio
       </SessionContext.Provider>
     </QueryClientProvider>,
   )
+  // The row is closed until pressed (a share that arrives opens it by itself): most tests start with it open.
+  if (open && !handoff) fireEvent.click(screen.getByRole('button', { name: /^Add to this job/ }))
   return { db, user: userEvent.setup(), unmount: view.unmount }
 }
 
@@ -169,6 +171,27 @@ describe('Add to this job: a supplier price', () => {
   })
 })
 
+describe('Add to this job: the row', () => {
+  it('is closed by default with the real number of options, and the box is not drawn', () => {
+    mount('sales', [], undefined, undefined, false)
+    const row = screen.getByRole('button', { name: /^Add to this job/ })
+    expect(row).toHaveAttribute('aria-expanded', 'false')
+    expect(row).toHaveTextContent('Add to this job')
+    expect(row).toHaveTextContent(String(allowedKinds({ money: true, hasRfq: true, suppliers: [{ id: 'i-rhein', name: 'Rhein' }, { id: 'i-shanghai', name: 'Shanghai' }], openQuestions: 0 }).length))
+    expect(screen.getByTestId('add-to-job')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Paste here' })).toBeNull()
+  })
+
+  it('a paste on the page while it is closed opens it and fills the box', async () => {
+    mount('sales', [], undefined, undefined, false)
+    const e = new Event('paste', { bubbles: true, cancelable: true }) as Event & { clipboardData?: unknown }
+    e.clipboardData = { files: [], getData: (t: string) => (t === 'text/plain' ? 'A note from the customer' : ''), types: ['text/plain'] }
+    document.dispatchEvent(e)
+    expect(await screen.findByRole('textbox', { name: 'Paste here' })).toHaveValue('A note from the customer')
+    expect(screen.getByRole('button', { name: /^Add to this job/ })).toHaveAttribute('aria-expanded', 'true')
+  })
+})
+
 describe('Add to this job: the customer answer and the engineer', () => {
   it('a message while a question waits is guessed as the answer and saved on the ticked question', async () => {
     const { db, user } = mount('sales', [{ id: 'q-1', question: 'What is the line size?', answeredAt: null, withdrawnAt: null }])
@@ -181,7 +204,7 @@ describe('Add to this job: the customer answer and the engineer', () => {
   })
 
   it('an engineer does not see the card at all', () => {
-    mount('engineer')
+    mount('engineer', [], undefined, undefined, false)
     expect(screen.queryByRole('textbox', { name: 'Paste here' })).toBeNull()
     expect(screen.queryByText(/Add to this job/i)).toBeNull()
   })

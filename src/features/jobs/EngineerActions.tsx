@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Camera, CloudOff, HardHat, Truck } from 'lucide-react'
+import { Camera, CloudOff, HardHat, Plus, Truck } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { useOnline } from '@/lib/connection'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { FoldRow } from '@/ui/FoldRow'
+import { StickyActionBar } from '@/ui/StickyActionBar'
 import { TextArea } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderLegRow } from '@/features/orders/api'
@@ -58,38 +61,50 @@ function InstalledToday({ order, variant, offline }: { order: OrderHeader; varia
   )
 }
 
-/** `contact` is the Contact panel: it sits right under the On site buttons, above the visits and the delivery challans, so Call and WhatsApp are on the first screen. */
-export function EngineerActions({ facts, data, contact }: { facts: JobFacts; data: JobData; contact?: ReactNode }) {
+/**
+ * The On site buttons. On a computer they are a card above the list; on a phone they are the sticky bar at the bottom (the screen's action,
+ * nothing else), so the list starts at the top of the screen. "Add photo or note" is not here: it is the one "Add to this job" row (EngineerAddRow).
+ * The visit button and the offline line stay in the card on a phone too, when there is one.
+ */
+export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobData }) {
   const order = data.order.data ?? null
   const legs = data.legs.data ?? []
   const online = useOnline()
   const offline = !online
-  // The engineer's Photo or note button (/capture) arrives with this state: open the box at once (read once, then cleared). A share sent
-  // to this job arrives as ?shared=<id> (the kept item's id): the box opens with it, and again after a reload, until it is saved or discarded.
-  const location = useLocation()
-  const navigate = useNavigate()
-  const arrived = location.state as { photoOrNote?: boolean } | null
-  const sharedItem = useSharedItem()
-  const [adding, setAdding] = useState(Boolean(arrived?.photoOrNote) || Boolean(sharedItem.id))
-  useEffect(() => {
-    if (arrived?.photoOrNote) navigate(location.pathname + location.search, { replace: true, state: null })
-    // once, on arrival
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  if (!facts.job.orderId && !facts.job.rfqId) return contact ? <div className="mt-4">{contact}</div> : null
+  const phone = useMediaQuery('(max-width: 767px)')
+  if (!facts.job.orderId && !facts.job.rfqId) return null
 
   const cancelled = order?.cancelledOn != null
   const toDeliver = order && !cancelled ? legs.filter(l => l.placedOn && !l.deliveredOn) : []
   const canInstall = Boolean(order && !cancelled && order.needsCommissioning && !order.doneOn)
   const hasDelivered = toDeliver.length > 0
-  // The one green button: the first thing there is to do on site; Add photo or note when there is nothing else.
-  const photoVariant = hasDelivered || canInstall ? 'secondary' : 'primary'
+  const hasButtons = hasDelivered || canInstall
+  const visit = Boolean(order && order.needsCommissioning && !order.doneOn && !cancelled)
+  const buttons = (
+    <>
+      {toDeliver.map((l, n) => (
+        <LegDelivered
+          key={l.id}
+          order={order as OrderHeader}
+          leg={l}
+          offline={offline}
+          variant={n === 0 ? 'primary' : 'secondary'}
+          label={toDeliver.length > 1 ? `Delivered today, ${l.supplierName}` : 'Delivered today'}
+        />
+      ))}
+      {canInstall ? <InstalledToday order={order as OrderHeader} variant={hasDelivered ? 'secondary' : 'primary'} offline={offline} /> : null}
+    </>
+  )
+  // a phone's card holds only what the bar does not: the visit button and the offline line
+  const cardOnPhone = visit || offline || (!facts.contact && Boolean(order?.site))
+  const card = phone ? cardOnPhone : hasButtons || cardOnPhone
+  if (!card && !(phone && hasButtons)) return null
 
   return (
     <>
-      <section aria-label="On site" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-4 md:px-5" data-engineer-actions>
-        <h2 className="text-lg font-semibold">On site</h2>
-        {/* The contact card right under this one has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
+      {card ? (
+      <section aria-label="On site" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-3" data-engineer-actions>
+        {/* The contact row in the list has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
         {!facts.contact && order?.site ? (
           <p className="text-base text-fg-2" data-testid="job-site">
             {[order.site.name, order.site.address].filter(Boolean).join(' · ')}
@@ -101,48 +116,88 @@ export function EngineerActions({ facts, data, contact }: { facts: JobFacts; dat
             {OFFLINE_TEXT}
           </p>
         ) : null}
-        <div className="grid gap-3 md:grid-cols-3">
-          {toDeliver.map((l, n) => (
-            <LegDelivered
-              key={l.id}
-              order={order as OrderHeader}
-              leg={l}
-              offline={offline}
-              variant={n === 0 ? 'primary' : 'secondary'}
-              label={toDeliver.length > 1 ? `Delivered today, ${l.supplierName}` : 'Delivered today'}
-            />
-          ))}
-          {canInstall ? <InstalledToday order={order as OrderHeader} variant={hasDelivered ? 'secondary' : 'primary'} offline={offline} /> : null}
-          <Button size="lg" variant={photoVariant} icon={Camera} className="w-full justify-center" onClick={() => setAdding(true)}>
+        {hasButtons && !phone ? <div className="grid gap-3 md:grid-cols-3">{buttons}</div> : null}
+        {visit ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <VisitButton order={order as OrderHeader} />
+          </div>
+        ) : null}
+      </section>
+      ) : null}
+      {hasButtons && phone ? <StickyActionBar label="Job actions" primary={<div className="grid w-full gap-2">{buttons}</div>} /> : null}
+    </>
+  )
+}
+
+/** The visits and the delivery challans: the engineer's papers, after the list. No price on the paper or in the lines. */
+export function EngineerPapers({ data }: { data: JobData }) {
+  const order = data.order.data ?? null
+  const cancelled = order?.cancelledOn != null
+  if (!((order && order.needsCommissioning && !cancelled) || (order && data.orderItems.data))) return null
+  return (
+    <div className="mt-6 grid gap-4">
+      {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit card /> : null}
+      {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
+    </div>
+  )
+}
+
+/**
+ * The engineer's "Add to this job" row: the one place "Add photo or note" lives, so it appears once on the page. Closed by default with the
+ * real number of things it can do (a photo, and a note when the job has an order). The Photo or note button (/capture) and a share
+ * arrive with state or ?shared=<id>: the dialog opens at once, and the row with it. A share sent to this job is kept until it is saved or discarded.
+ */
+export function EngineerAddRow({ facts, data }: { facts: JobFacts; data: JobData }) {
+  const order = data.order.data ?? null
+  const online = useOnline()
+  const offline = !online
+  const location = useLocation()
+  const navigate = useNavigate()
+  const arrived = location.state as { photoOrNote?: boolean } | null
+  const sharedItem = useSharedItem()
+  const [adding, setAdding] = useState(Boolean(arrived?.photoOrNote) || Boolean(sharedItem.id))
+  const [open, setOpen] = useState(adding)
+  useEffect(() => {
+    if (arrived?.photoOrNote) navigate(location.pathname + location.search, { replace: true, state: null })
+    // once, on arrival
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const options = facts.job.orderId && order ? 2 : 1
+  return (
+    <>
+      <FoldRow
+        state={{ icon: Plus, word: '' }}
+        title="Add to this job"
+        summary={`${options} ${options === 1 ? 'option' : 'options'}`}
+        open={open}
+        onToggle={() => setOpen(o => !o)}
+        controlsId="add-to-job-body"
+        bodyLabel="Add to this job"
+      >
+        <div className="grid gap-3">
+          {offline ? (
+            <p role="status" className="text-base text-fg-2" data-offline>
+              {OFFLINE_TEXT}
+            </p>
+          ) : null}
+          <Button size="lg" variant="secondary" icon={Camera} className="w-full justify-center" onClick={() => setAdding(true)}>
             Add photo or note
           </Button>
         </div>
-        {order || facts.job.orderId ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {order && order.needsCommissioning && !order.doneOn && !cancelled ? <VisitButton order={order} /> : null}
-          </div>
-        ) : null}
-        {adding && sharedItem.state.status !== 'loading' ? (
-          <PhotoOrNote
-            facts={facts}
-            order={order}
-            offline={offline}
-            shared={sharedItem.state.status === 'ready' ? sharedItem.state.shared : null}
-            sharedGone={sharedItem.state.status === 'gone'}
-            onSharedDone={sharedItem.clear}
-            onClose={() => {
-              if (sharedItem.state.status === 'gone') sharedItem.clear()
-              setAdding(false)
-            }}
-          />
-        ) : null}
-      </section>
-      {contact ? <div className="mt-4">{contact}</div> : null}
-      {(order && order.needsCommissioning && !cancelled) || (order && data.orderItems.data) ? (
-        <div className="mt-4 grid gap-4">
-          {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit card /> : null}
-          {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
-        </div>
+      </FoldRow>
+      {adding && sharedItem.state.status !== 'loading' ? (
+        <PhotoOrNote
+          facts={facts}
+          order={order}
+          offline={offline}
+          shared={sharedItem.state.status === 'ready' ? sharedItem.state.shared : null}
+          sharedGone={sharedItem.state.status === 'gone'}
+          onSharedDone={sharedItem.clear}
+          onClose={() => {
+            if (sharedItem.state.status === 'gone') sharedItem.clear()
+            setAdding(false)
+          }}
+        />
       ) : null}
     </>
   )
