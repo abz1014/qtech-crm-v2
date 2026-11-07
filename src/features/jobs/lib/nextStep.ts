@@ -45,10 +45,10 @@ function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
   const office = role === 'engineer'
   switch (stage) {
     case 'enquiry':
-      if (office) return { text: 'Office is asking the suppliers for prices', tone: 'inert', button: null, on: null }
+      if (office) return { text: 'Office is asking the suppliers', tone: 'inert', button: null, on: null }
       return { text: 'Ask the suppliers for prices', tone: 'now', button: 'Ask suppliers', on: 'rfq' }
     case 'asking_suppliers':
-      if (office) return { text: 'Office is waiting for supplier prices', tone: 'inert', button: null, on: null }
+      if (office) return { text: 'Office is waiting for the suppliers', tone: 'inert', button: null, on: null }
       return { text: 'Waiting for supplier prices', tone: 'waiting', button: 'Open the enquiry', on: 'rfq' }
     case 'prices_in':
       if (office) return { text: 'Office is preparing the quotation', tone: 'inert', button: null, on: null }

@@ -54,6 +54,9 @@ test('an engineer sees no note, no supplier and no price, in the page or in anyt
   await page.setViewportSize({ width: 375, height: 812 })
   await openAs(page, 'engineer', `/orders/${s.order.id}`)
   await expect(page).toHaveURL(JOB_URL)
+  // the item line is the first thing in the Enquiry step (the Order step of a job with no enquiry), closed until opened
+  const head = page.locator('[data-stages]').getByRole('button', { name: /^(Enquiry|Order)/ }).first()
+  if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click()
   await expect(page.getByText('IC TLC0838C 20PIN SMD ×6 +1 more').first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Imported note/ })).toHaveCount(0)
   await page.waitForLoadState('networkidle')

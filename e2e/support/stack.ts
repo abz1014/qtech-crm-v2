@@ -53,7 +53,26 @@ export async function radixReady(page: Page): Promise<void> {
   await page.waitForFunction(() => document.documentElement.dataset.radixReady === '1', undefined, { timeout: 15_000 }).catch(() => undefined)
 }
 
+/**
+ * The Job page starts with every step closed (clarity redesign); the step the job is at is only marked. Most specs were written for the
+ * old page, which opened that step, and then work inside it. This opens it for them, once per page load, the way a person would tap it.
+ * A spec that checks the closed state sets `window.__keepStepsClosed = true` with page.addInitScript before it opens the page.
+ */
+export const OPEN_CURRENT_STEP = (): void => {
+  const w = window as unknown as { __keepStepsClosed?: boolean }
+  const done = new WeakSet<Element>()
+  const tick = (): void => {
+    const list = document.querySelector('[data-stages]')
+    if (!list || done.has(list) || w.__keepStepsClosed) return
+    done.add(list)
+    const head = [...list.querySelectorAll('[data-fold-row] > button')].find(b => b.querySelector('.sr-only')?.textContent === 'Now') as HTMLButtonElement | undefined
+    if (head && head.getAttribute('aria-expanded') === 'false') head.click()
+  }
+  new MutationObserver(tick).observe(document, { childList: true, subtree: true })
+}
+
 export async function openAs(page: Page, role: Role, path: string): Promise<void> {
+  await page.addInitScript(OPEN_CURRENT_STEP)
   await page.goto('/login')
   await page.getByLabel('Email').fill(EMAIL[role])
   await page.getByLabel('Password', { exact: true }).fill(FIXTURE_PASSWORD)

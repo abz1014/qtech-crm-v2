@@ -171,7 +171,7 @@ async function checkRfqs(page: Page, s: Seeded): Promise<void> {
   await expectNoFalseOverdue(page, '/jobs (open)')
   for (const r of [s.rfqSent, s.rfqOpen]) {
     await page.goto(`/rfqs/${r.id}`)
-    await expect(page.getByText(r.customer).first()).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(r.customer)
     await expectNoFalseOverdue(page, `Job page of ${r.ref}`)
   }
 }

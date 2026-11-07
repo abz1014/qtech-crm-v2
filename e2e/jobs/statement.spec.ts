@@ -237,6 +237,7 @@ test('a pasted reply that gives a weight and a country of origin saves them with
   const rhein = await createCompany(`Rhein Automation ${Date.now().toString(36)}`, { country: 'Germany' })
   const inquiry = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: rhein.id, sent_on: karachiDay(-2) } })))[0]
   await openAs(page, 'sales', `/jobs/${rfq.number}`)
+  await page.getByRole('button', { name: /^Add to this job/ }).click()
   await expect(page.getByRole('region', { name: 'Add to this job' })).toBeVisible()
   const message = [`${rhein.name.split(' ').slice(0, 2).join(' ')}: dear Ayesha, our offer`, '1) Ultrasonic flowmeter RST 1158S EUR 3610 - 8 weeks, net wt 4.5 kg, made in Germany', '2) Clamp-on transducer pair DN50 EUR 980 - 8 weeks'].join('\n')
   await page.evaluate(t => {

@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Browser, BrowserContext, Page, TestInfo } from '@playwright/test'
-import { openAs, type Role } from '../../support/stack'
+import { OPEN_CURRENT_STEP, openAs, type Role } from '../../support/stack'
 
 /*
  * Exploratory bug hunt (hunt/edges, round 1): screens, inputs and edge cases. Runs on the CI-local Supabase stack only
@@ -59,6 +59,7 @@ export async function contextAs(browser: Browser, info: TestInfo, role: Role, v:
     permissions: ['clipboard-read', 'clipboard-write'],
     ...extra,
   })
+  await context.addInitScript(OPEN_CURRENT_STEP)
   // A control that never becomes clickable must not hold the whole exploration until the test timeout.
   context.setDefaultTimeout(10_000)
   context.setDefaultNavigationTimeout(30_000)
