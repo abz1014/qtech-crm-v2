@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Check, Download, Plus, Truck } from 'lucide-react'
 import { generateCSV, downloadCSV } from '@/lib/csvExport'
 import { businessToday } from '@/lib/dates'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef } from '@/lib/refs'
@@ -18,6 +19,7 @@ import { NoResults } from '@/ui/NoResults'
 import { MenuItem } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
+import { StickyActionBar } from '@/ui/StickyActionBar'
 import { Select } from '@/ui/form/Select'
 import { SumBar } from '@/ui/SumBar'
 import { TableFilter } from '@/ui/TableFilter'
@@ -63,13 +65,32 @@ import {
 type RegisterView = 'all' | 'attention' | 'tcs'
 
 /** The invoice's one Next step, with why under it when it is late or out of order. */
-function InvoiceStep({ r }: { r: GstRow }) {
+function InvoiceStep({ r, className }: { r: GstRow; className?: string }) {
   const s = invoiceNextStep(r)
   return (
-    <StatusText tone={s.tone} detail={s.detail}>
+    <StatusText tone={s.tone} detail={s.detail} className={className}>
       {s.label}
     </StatusText>
   )
+}
+
+/**
+ * The phone's sticky bar sits ABOVE the bottom tabs (they stay, so Jobs and To do are one tap away): the bar is lifted by the
+ * tabs' own height, kept in --tabs-h while the page is open. StickyActionBar is used as it is; only its `bottom` is overridden.
+ */
+function useTabsHeight(on: boolean) {
+  useLayoutEffect(() => {
+    if (!on) return
+    const nav = document.querySelector('nav[aria-label="Main"]')
+    const set = () => document.documentElement.style.setProperty('--tabs-h', `${nav ? Math.round(nav.getBoundingClientRect().height) : 0}px`)
+    set()
+    const ro = nav && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null
+    if (nav) ro?.observe(nav)
+    return () => {
+      ro?.disconnect()
+      document.documentElement.style.removeProperty('--tabs-h')
+    }
+  }, [on])
 }
 
 export function GstRegisterPage() {
@@ -89,6 +110,9 @@ export function GstRegisterPage() {
   const [busy, setBusy] = useState(false)
   const [opening, setOpening] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  // Below 768 "Create invoice" is in the sticky bar (the page's one green button); from 768 it stays in the page header.
+  const phone = useMediaQuery('(max-width: 767px)')
+  useTabsHeight(phone)
 
   const all = useMemo(() => register.data ?? [], [register.data])
   const attentionCount = useMemo(() => all.filter(needsAttention).length, [all])
@@ -273,13 +297,17 @@ export function GstRegisterPage() {
     <MoneyFrame
       active="gst-register"
       actions={
-        <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-          Create invoice
-        </Button>
+        phone ? undefined : (
+          <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+            Create invoice
+          </Button>
+        )
       }
     >
       <SumBar
         label="Totals for the invoices shown"
+        phone="lines"
+        caption={`PKR · ${all.length ? `${rangeLabel(shown.length ? shown : all)}, by invoice date` : 'By invoice date'}`}
         items={
           isAdmin
             ? [
@@ -303,6 +331,30 @@ export function GstRegisterPage() {
         getRowId={r => r.invoiceId}
         twoLine
         group={r => ({ key: rowMonth(r), label: `${rowMonth(r)} · ${monthCounts.get(rowMonth(r)) ?? 0} ${(monthCounts.get(rowMonth(r)) ?? 0) === 1 ? 'invoice' : 'invoices'}` })}
+        // Phone: the month carries its own Net, GST and Gross (sales: Gross only), summed in paisa from the month's rows.
+        mobileGroup={(month, rows) => {
+          const t = registerTotals(rows)
+          const n = monthCounts.get(month) ?? rows.length
+          const figures: Array<[string, number]> = isAdmin ? [['Net', t.net], ['GST', t.gst], ['Gross', t.gross]] : [['Gross', t.gross]]
+          return (
+            <div className="grid gap-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="type-section">{month}</span>
+                <span className="type-body text-fg-2">{`${n} ${n === 1 ? 'invoice' : 'invoices'}`}</span>
+              </div>
+              <dl className={cn('grid gap-3', isAdmin ? 'grid-cols-3' : 'grid-cols-1')}>
+                {figures.map(([name, v]) => (
+                  <div key={name} className="grid min-w-0 gap-px">
+                    <dt className="type-body text-fg-2">{name}</dt>
+                    <dd className="num type-row">
+                      <Money value={v} prefix={false} paisa="never" strong />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )
+        }}
         selection={{ selected: ticked, onChange: s => setTicked(s), rowLabel: r => r.number ?? 'invoice' }}
         onRowOpen={r => setOpening(isCreditNote(r) ? (r.againstInvoiceId ?? r.invoiceId) : r.invoiceId)}
         footerLabel={`All ${totals.count} ${totals.count === 1 ? 'invoice' : 'invoices'} shown`}
@@ -372,20 +424,68 @@ export function GstRegisterPage() {
             </EmptyState>
           )
         }
+        // Phone card (clarity lane L2): number and gross, then the customer, then the one next step. The admin's tap unfolds Net,
+        // GST, Open invoice and PDF; sales have no Net or GST, so their tap opens the invoice as before.
         mobileRow={r => (
-          <div className="grid gap-2">
+          <div className="grid gap-1">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="num font-medium">
+              <span className="num type-row">
                 {r.number ?? 'No number'}
                 {isCreditNote(r) ? ' (credit note)' : r.voided ? ' (void)' : ''}
               </span>
-              <Money value={r.gross} prefix={false} />
+              <span className="num type-row">
+                <Money value={r.gross} prefix={false} paisa="never" strong />
+              </span>
             </div>
-            <span className="min-w-0 [overflow-wrap:anywhere] text-sm">{r.companyName}</span>
-            <InvoiceStep r={r} />
+            <span className="type-body min-w-0 [overflow-wrap:anywhere]">{r.companyName}</span>
+            <InvoiceStep r={r} className="text-base [&_span]:text-base" />
           </div>
         )}
+        mobileExpand={
+          isAdmin
+            ? r => (
+                <div className="mt-3 grid gap-2 border-t border-dashed border-line pt-3">
+                  <dl className="grid gap-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="type-body">Net</dt>
+                      <dd className="num type-row">
+                        <Money value={r.net} prefix={false} paisa="never" strong />
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="type-body">GST</dt>
+                      <dd className="num type-row">
+                        <Money value={r.gst} prefix={false} paisa="never" strong />
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button size="touch" onClick={() => setOpening(isCreditNote(r) ? (r.againstInvoiceId ?? r.invoiceId) : r.invoiceId)}>
+                      Open invoice
+                    </Button>
+                    {isCreditNote(r) ? <CreditNotePdfButton creditNoteId={r.invoiceId} /> : r.voided ? null : <InvoicePdfButton invoiceId={r.invoiceId} size="touch" label="PDF" />}
+                  </div>
+                </div>
+              )
+            : undefined
+        }
       />
+
+      {phone ? (
+        <>
+          {/* keeps the last card clear of the bar */}
+          <div aria-hidden="true" className="h-16" />
+          <StickyActionBar
+            label="Invoice actions"
+            className="bottom-[var(--tabs-h,0px)]"
+            primary={
+              <Button variant="primary" size="touch" icon={Plus} onClick={() => setCreating(true)}>
+                Create invoice
+              </Button>
+            }
+          />
+        </>
+      ) : null}
 
       <CreateInvoiceDialog open={creating || linkedNew} onOpenChange={o => { if (!o) { setCreating(false); if (linkedNew) closeLinked() } }} orderId={creating ? undefined : linkedOrder} />
       {opening ?? linkedInvoice ? <InvoiceDetailDialog invoiceId={(opening ?? linkedInvoice) as string} onClose={closeInvoice} /> : null}
