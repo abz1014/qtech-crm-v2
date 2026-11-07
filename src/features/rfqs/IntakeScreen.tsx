@@ -8,7 +8,7 @@ import { formatDay } from '@/lib/formatDay'
 import { copyToClipboard } from '@/lib/clipboard'
 import { constraintOf, mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
-import { useSession } from '@/app/session'
+import { useSeesPrices, useSession } from '@/app/session'
 import { useBrands, useCompany, useCompanyContacts, useCompanySites } from '@/features/companies/hooks'
 import type { FloatInput, SavedRfq } from '@/features/rfqs/api'
 import { uploadAttachment } from '@/features/rfqs/api'
@@ -158,6 +158,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   const navigate = useNavigate()
   const nextJob = useNextJobNumber(enquiry)
   const session = useSession()
+  const seesHistory = useSeesPrices() // supply history is item memory, which carries prices: an engineer never loads it
   const uploaderRole = session.status === 'signed-in' ? session.user.role : 'engineer'
   const signedIn = session.status === 'signed-in'
   const user = signedIn ? session.user : null
@@ -748,7 +749,9 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
       : step === 'suppliers'
         ? suggestions.preTickedIds.length > 0
           ? 'Ticked: suppliers who supplied these items before. Tick or untick any.'
-          : 'Nobody has supplied these before. Tick who to ask.'
+          : seesHistory
+            ? 'Nobody has supplied these before. Tick who to ask.'
+            : 'Tick who to ask.'
         : step === 'enquiry'
           ? 'Check the message, then copy it once.'
           : step === 'saved'
