@@ -36,6 +36,8 @@ const VIEWPORTS = (process.env.AUDIT_VIEWPORTS || '1366x768 1920x1080 375x812 32
 type Viewport = (typeof VIEWPORTS)[number]
 // AUDIT_SET=layout: only the layout set (screens.ts LAYOUT_IDS and the lg- dialogs). Otherwise the standard audit, without the lg- ones.
 const LAYOUT_SET = process.env.AUDIT_SET === 'layout'
+// AUDIT_SET=opened: only the opened set (panels after a click); sales and engineer at phone widths only.
+const OPENED_SET = process.env.AUDIT_SET === 'opened'
 const ONLY = process.env.AUDIT_SCREENS ? new RegExp(process.env.AUDIT_SCREENS) : null
 const AXE = process.env.AUDIT_AXE !== '0'
 const FULL = process.env.AUDIT_FULL !== '0'
@@ -231,11 +233,12 @@ test.afterAll(async () => {
 
 for (const role of ROLES) {
   test.describe(role, () => {
-    const visits = VISITS.filter(v => v.roles.includes(role) && (LAYOUT_SET ? v.set === 'layout' || LAYOUT_IDS.has(v.id) : v.set !== 'layout') && (!ONLY || ONLY.test(v.id) || v.screens.some(s => ONLY.test(s))))
+    const visits = VISITS.filter(v => v.roles.includes(role) && (LAYOUT_SET ? v.set === 'layout' || LAYOUT_IDS.has(v.id) : OPENED_SET ? v.set === 'opened' : v.set == null) && (!ONLY || ONLY.test(v.id) || v.screens.some(s => ONLY.test(s))))
     for (const visit of visits) {
       test(`${role} ${visit.id}`, async ({ browser }, info) => {
         test.setTimeout(VIEWPORTS.length * visit.screens.length * 120_000 + 60_000)
         for (const vp of VIEWPORTS) {
+          if (OPENED_SET && role !== 'admin' && vp.width >= 768) continue
           const done = new Set<string>()
           let page: Page | undefined
           try {
