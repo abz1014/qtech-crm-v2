@@ -60,7 +60,8 @@ test.describe('Customer PO file', () => {
     expect(rows).toHaveLength(2)
     for (const r of rows) expect(r).toMatchObject({ is_customer_po: true, has_prices: true, order_id: o.id })
 
-    // the Notes and files panel tags them
+    // the Notes and files row (closed until opened) tags them
+    await page.getByRole('button', { name: /^Notes and files/ }).click()
     await expect(page.getByRole('region', { name: 'Notes and files' }).getByText('Customer PO', { exact: true }).first()).toBeVisible()
 
     // an engineer: not in the rows, not in any response, not on the screen

@@ -258,7 +258,10 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Level switch', qty: 1 }, prefer: 'return=minimal' }))
     await openAs(page, 'admin', `/jobs/${rfq.number}`)
     await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
-    await expect(page.getByRole('list', { name: 'Stages of this job' }).getByRole('listitem')).toHaveCount(7)
+    // the stage and the next step are one block, and the seven steps are one list of rows, every one closed
+    await expect(page.locator('[data-stage-block]')).toHaveCount(1)
+    await expect(page.locator('[data-stages] > [data-fold-row]')).toHaveCount(7)
+    for (const b of await page.locator('[data-stages]').getByRole('button').all()) await expect(b).toHaveAttribute('aria-expanded', 'false')
     await expect(page.locator('button.bg-primary')).toHaveCount(1)
     await page.getByRole('button', { name: 'Ask suppliers' }).click()
     await expect(page.locator('[data-stages]').getByRole('button', { name: /^Quotation/ })).toHaveAttribute('aria-expanded', 'true')
@@ -277,7 +280,9 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(stage.getByRole('button', { name: 'Add supplier' }).first()).toBeVisible()
     // the order lines (Order stage) and the invoice (nothing to create before the goods are delivered) are on this page, not the order page
     await page.locator('[data-stages]').getByRole('button', { name: /^Order/ }).click()
-    await expect(page.getByRole('region', { name: 'Order stage' }).getByText(f.po).first()).toBeVisible()
+    // the customer PO is shown once, in the key facts line under the stage block; the Order step does not repeat it
+    await expect(page.getByLabel('Key facts').getByText(f.po)).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Order stage' }).getByText(f.po)).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Create invoice' })).toHaveCount(0)
     await expect(page.locator('button.bg-primary')).toHaveCount(1)
   })
@@ -288,19 +293,30 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${f.rfq.number}`)
     await expect(page.getByRole('region', { name: 'Money for this job' })).toHaveCount(0)
     expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs\.?\s?\d/)
+    // never payment status, a price or the customer PO
+    const text = await page.locator('#main').innerText()
+    expect(text).not.toMatch(/\bpaid\b|collect|Customer PO|price/i)
+    expect(text).not.toContain(f.po)
+    expect(await page.locator('#main').innerHTML()).not.toContain(f.po)
+    await expect(page.locator('[data-stages]').getByRole('button', { name: /^Payment/ })).toContainText('With the office')
     await review(page, 'job-page-engineer-1440')
   })
 
-  test('phone: the engineer big buttons are one green, no price, 44 px or more, no sideways scroll at 375 and 320', async ({ page }) => {
+  test('phone: the engineer Add to this job row is one closed row, its button 44 px or more, no price, no sideways scroll at 375 and 320', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'engineer', '/today')
     for (const width of [375, 320]) {
       await page.setViewportSize({ width, height: 800 })
       await page.goto(`/jobs/${f.rfq.number}`)
-      const card = page.getByRole('region', { name: 'On site' })
-      await expect(card.getByRole('button', { name: 'Add photo or note' })).toBeVisible()
-      await expect(page.locator('#main button.bg-primary'), `one green button at ${width}`).toHaveCount(1)
-      for (const b of await card.getByRole('button').all()) {
+      // this job has nothing to deliver or install, so there is no On site card and no green button: the one row holds Add photo or note, once
+      const row = page.getByRole('button', { name: /^Add to this job/ })
+      await expect(row).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.getByRole('button', { name: 'Add photo or note' })).toHaveCount(0)
+      await row.click()
+      const add = page.getByRole('button', { name: 'Add photo or note' })
+      await expect(add).toHaveCount(1)
+      await expect(page.locator('#main button.bg-primary'), `no green button at ${width}`).toHaveCount(0)
+      for (const b of [row, add]) {
         const box = await b.boundingBox()
         expect(box?.height ?? 0, `${await b.innerText()} is tall enough at ${width}`).toBeGreaterThanOrEqual(44)
         expect(box?.width ?? 0).toBeGreaterThanOrEqual(44)
@@ -325,13 +341,16 @@ test.describe('Job page (P5-C, P5-D1)', () => {
   })
 })
 
-test.describe('Money for this job card', () => {
+test.describe('Money (PKR) row', () => {
   test('an enquiry-stage job (no order) leaves Loading and says there is no money yet', async ({ page }) => {
     const f = await seed()
     // seed's RFQ has an order: make a fresh enquiry with none
     const tag = Math.random().toString(36).slice(2, 8).toUpperCase()
     const rfq = await createRfq(f.company.id, { customer_ref: `ENQ-${tag}`, due_on: karachiDay(5) })
     await openAs(page, 'admin', `/jobs/${rfq.number}`)
+    const row = page.getByRole('button', { name: /^Money \(PKR\)/ })
+    await expect(row).toHaveAttribute('aria-expanded', 'false')
+    await row.click()
     const card = page.getByRole('region', { name: 'Money for this job' })
     await expect(card).toBeVisible()
     await expect(card).toContainText('No money yet')
@@ -342,6 +361,9 @@ test.describe('Money for this job card', () => {
   test('a job with an order shows the sale in the Money card, not Loading', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
+    // closed, the row already says what is still to collect
+    await expect(page.getByRole('button', { name: /^Money \(PKR\)/ })).toContainText('Still to collect')
+    await page.getByRole('button', { name: /^Money \(PKR\)/ }).click()
     const ordered = page.getByRole('region', { name: 'Money for this job' })
     await expect(ordered).toContainText('Sale (with GST)')
     await expect(ordered).not.toContainText('Loading')

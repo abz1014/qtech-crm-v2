@@ -63,7 +63,7 @@ function InstalledToday({ order, variant, offline }: { order: OrderHeader; varia
 
 /**
  * The On site buttons. On a computer they are a card above the list; on a phone they are the sticky bar at the bottom (the screen's action,
- * nothing else), so the list starts at the top of the screen. "Add photo or note" is not here: it is the one "Add to this job" row (EngineerAddRow).
+ * nothing else, still named On site), so the list starts at the top of the screen. "Add photo or note" is not here: it is the one "Add to this job" row (EngineerAddRow).
  * The visit button and the offline line stay in the card on a phone too, when there is one.
  */
 export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobData }) {
@@ -103,7 +103,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   return (
     <>
       {card ? (
-      <section aria-label="On site" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-3" data-engineer-actions>
+      <section aria-label={phone && hasButtons ? 'Site visit' : 'On site'} className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-3" data-engineer-actions>
         {/* The contact row in the list has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
         {!facts.contact && order?.site ? (
           <p className="text-base text-fg-2" data-testid="job-site">
@@ -124,7 +124,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
         ) : null}
       </section>
       ) : null}
-      {hasButtons && phone ? <StickyActionBar label="Job actions" primary={<div className="grid w-full gap-2">{buttons}</div>} /> : null}
+      {hasButtons && phone ? <StickyActionBar label="On site" role="region" primary={<div className="grid w-full gap-2">{buttons}</div>} /> : null}
     </>
   )
 }
