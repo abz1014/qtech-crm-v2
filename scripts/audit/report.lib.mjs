@@ -223,6 +223,127 @@ TARGETS.push(
   },
 )
 
+// Clarity targets (docs/audit/SCREEN_AUDIT.md, "The clarity ratchet"). All advisory: the clarity gate (report.mjs --gate clarity) does not
+// read these, it compares each capture with its own budget (clarity-budgets.json). Words are reported (INFO below), never gated.
+const isJobScreen = c => /^(large-)?job-/.test(c.screen)
+const isOpenedStep = c => /^op-(step-|supplier-prices)/.test(c.screen)
+TARGETS.push(
+  {
+    key: 'firstWorkY',
+    label: 'The first piece of work starts this far down (px)',
+    target: 'at most 264',
+    source: 'clarity: the work a person came for starts in the first screen, under a short header',
+    value: c => c.metrics.clarity?.firstWorkY ?? null,
+    pass: v => v <= 264,
+    worse: 'higher',
+  },
+  {
+    key: 'boxDepth',
+    label: 'Boxes inside boxes (deepest chain)',
+    target: 'at most 2',
+    source: 'clarity: a box inside a box inside a box is a maze; hairlines and space group instead',
+    value: c => c.metrics.clarity?.boxDepth ?? null,
+    pass: v => v <= 2,
+    worse: 'higher',
+  },
+  {
+    key: 'boxesAtFold',
+    label: 'Boxes seen in the first screen',
+    target: 'at most 4',
+    source: 'clarity: few outlines in the first screen',
+    value: c => c.metrics.clarity?.boxesAtFold ?? null,
+    pass: v => v <= 4,
+    worse: 'higher',
+  },
+  {
+    key: 'stepRowMax',
+    label: 'Tallest job step row (px)',
+    target: 'at most 52',
+    source: 'clarity: a closed job step is one line, 44 to 52 px',
+    value: c => c.metrics.clarity?.stepRowMax ?? null,
+    pass: v => v <= 52,
+    worse: 'higher',
+  },
+  {
+    key: 'aboveFold',
+    label: 'Buttons and links above the fold, nothing left out',
+    target: 'at most 12',
+    source: 'clarity: every button and link seen in the first screen, row actions and navigation too',
+    value: c => c.metrics.actions.aboveFold,
+    pass: v => v <= 12,
+    worse: 'higher',
+  },
+  {
+    key: 'jobHeightClosed',
+    label: 'Phone job page, steps closed: page height (px)',
+    target: 'at most 1300',
+    source: 'clarity: a job on a phone fits in about two screens until a step is opened',
+    value: c => (isPhone(c.viewport) && isJobScreen(c) ? c.metrics.contentHeight : null),
+    pass: v => v <= 1300,
+    worse: 'higher',
+  },
+  {
+    key: 'jobHeightOpened',
+    label: 'Phone job page, one step opened: page height (px)',
+    target: 'at most 2500',
+    source: 'clarity: an opened step adds at most about one more page',
+    value: c => (isPhone(c.viewport) && isOpenedStep(c) ? c.metrics.contentHeight : null),
+    pass: v => v <= 2500,
+    worse: 'higher',
+  },
+)
+
+// The clarity ratchet (report.mjs --gate clarity): every capture is compared with its own budget in scripts/audit/clarity-budgets.json,
+// keyed role/screen/viewport. Worse than the budget fails; equal or better passes; a capture with no budget is reported, never failed.
+// Heights and Y values get 8 px of room (a line wrapping differently), counts get none. Words are not here: they are reported only.
+export const RATCHET = [
+  { key: 'firstWorkY', tolerance: 8, value: c => c.metrics.clarity?.firstWorkY ?? null },
+  { key: 'boxDepth', tolerance: 0, value: c => c.metrics.clarity?.boxDepth ?? null },
+  { key: 'boxesAtFold', tolerance: 0, value: c => c.metrics.clarity?.boxesAtFold ?? null },
+  { key: 'stepRowMax', tolerance: 8, value: c => c.metrics.clarity?.stepRowMax ?? null },
+  { key: 'contentHeight', tolerance: 8, value: c => c.metrics.contentHeight ?? null },
+  { key: 'aboveFold', tolerance: 0, value: c => c.metrics.actions?.aboveFold ?? null },
+]
+
+export const budgetKey = c => `${c.role}/${c.screen}/${c.viewport}`
+
+/** The budgets of these captures: {"role/screen/viewport": {metric: value}}, keys sorted, null metrics left out. */
+export function ratchetBudgets(captures) {
+  const out = {}
+  for (const c of [...captures].sort((a, b) => budgetKey(a).localeCompare(budgetKey(b)))) {
+    if (!measured(c)) continue
+    const row = {}
+    for (const r of RATCHET) {
+      const v = r.value(c)
+      if (v !== null && v !== undefined) row[r.key] = v
+    }
+    if (Object.keys(row).length) out[budgetKey(c)] = row
+  }
+  return out
+}
+
+/** One row per capture and metric that is worse than its budget (value above budget + tolerance). No budget for a capture: no row. */
+export function ratchetFailures(captures, budgets) {
+  const rows = []
+  for (const c of captures) {
+    if (!measured(c)) continue
+    const budget = budgets?.[budgetKey(c)]
+    if (!budget) continue
+    for (const r of RATCHET) {
+      const v = r.value(c)
+      const b = budget[r.key]
+      if (v === null || v === undefined || b === null || b === undefined) continue
+      if (v > b + r.tolerance) rows.push({ role: c.role, screen: c.screen, viewport: c.viewport, metric: r.key, value: v, budget: b, tolerance: r.tolerance })
+    }
+  }
+  return rows
+}
+
+/** The measured captures that have no budget yet (reported, never failed). */
+export function ratchetUnbudgeted(captures, budgets) {
+  return captures.filter(c => measured(c) && !budgets?.[budgetKey(c)]).map(budgetKey)
+}
+
 function gateDetail(c, key) {
   const m = c.metrics
   const samples = key === 'hScroll' ? m.hScroll.offenders : (m.layout?.[key]?.samples ?? [])
