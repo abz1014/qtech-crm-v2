@@ -246,7 +246,7 @@ describe('Lock a month checklist', () => {
 })
 
 describe('Reports view (one report at a time)', () => {
-  it('admin: opens Profit and loss for the month; the select offers every report; Export CSV is the one green button', async () => {
+  it('admin: opens Profit and loss for the month; the select offers every report; Export CSV is a secondary button, not green', async () => {
     at(`/money/reports?month=${MONTH}`)
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/pnl?month=${MONTH}`))
     expect(await screen.findByTestId('report-name')).toHaveTextContent('Profit and loss')
@@ -261,7 +261,9 @@ describe('Reports view (one report at a time)', () => {
       'Sales by person',
       'Enquiries and customers',
     ])
-    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
+    // drawn by the report body once its figures are in, right under the summary, and never green
+    const csv = await screen.findByRole('button', { name: 'Export CSV' })
+    expect(csv.className).not.toMatch(/brand-green|bg-primary/)
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
   })
 

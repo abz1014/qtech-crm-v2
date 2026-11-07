@@ -9,6 +9,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { InfoTip } from '@/ui/InfoTip'
+import { ReportCsv } from '@/ui/ReportCsv'
 import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { ClockTag, Panel, ReportError, ReportLoading, TwoProfitsTip } from '@/features/money/monthEnd/ReportParts'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
@@ -191,6 +192,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
     v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Closed: figures frozen when the month was closed' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
   return (
     <>
+      <ReportCsv />
       {empty ? (
         <section className="rounded-panel border bg-surface">
           <EmptyState title={`Nothing in ${v.label} yet`}>No payment, expense or invoice is dated in it. The trend below still shows the periods before.</EmptyState>
