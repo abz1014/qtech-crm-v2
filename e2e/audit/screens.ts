@@ -463,7 +463,11 @@ async function openStage(page: Page, path: string, i: number): Promise<void> {
     await head.click()
     await settle(page)
   }
-  await page.waitForFunction(el => el?.getAttribute('aria-expanded') === 'true', await head.elementHandle(), { timeout: 10_000 })
+  // Polled through the locator: the row can be re-rendered after the click, which would leave a held element handle pointing at nothing.
+  for (let t = 0; (await head.getAttribute('aria-expanded')) !== 'true'; t++) {
+    if (t > 40) throw new Error(`step ${STAGE_NAMES[i]} did not open`)
+    await page.waitForTimeout(250)
+  }
   // Mark the step so the capture can scroll it to the top of the view.
   await head.evaluate(b => {
     document.querySelectorAll('[data-audit-step]').forEach(e => e.removeAttribute('data-audit-step'))
@@ -506,7 +510,7 @@ const OPENED_VISITS: readonly Visit[] = [
   stageVisit(2, '', fx => `/orders/${fx.order.multiLeg}`, ALL),
   stageVisit(3, '', fx => `/orders/${fx.order.multiLeg}`, ALL),
   stageVisit(4, '', fx => `/orders/${fx.order.multiLeg}`, ALL),
-  stageVisit(5, '', fx => `/orders/${fx.order.invoiced}`, ALL),
+  stageVisit(5, '', fx => `/orders/${fx.order.invoiced}`, MONEY),
   stageVisit(6, '', fx => `/orders/${fx.order.invoiced}`, ALL),
   {
     id: 'op-money',
@@ -648,10 +652,10 @@ const OPENED_VISITS: readonly Visit[] = [
   },
   {
     id: 'op-company',
-    title: 'Opened: company site, contact and supplier panels',
+    title: 'Opened: company panels, site and contact dialogs',
     roles: ADMIN,
     set: 'opened',
-    screens: ['op-company-panels', 'op-company-site', 'op-company-contact', 'op-company-supplier'],
+    screens: ['op-company-panels', 'op-company-site', 'op-company-contact'],
     run: async (page, fx, capture) => {
       await steps(page, [
         ['op-company-panels', async () => {
@@ -670,11 +674,6 @@ const OPENED_VISITS: readonly Visit[] = [
           await page.getByRole('button', { name: 'Add', exact: true }).filter({ visible: true }).first().click()
           await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
           await capture('op-company-contact', { root: DIALOG })
-        }],
-        ['op-company-supplier', async () => {
-          await open(page, `/companies/${fx.company.supplier}`)
-          await expandFolded(page, '#main', 4)
-          await capture('op-company-supplier')
         }],
       ])
     },
