@@ -78,7 +78,8 @@ export const OPEN_CURRENT_STEP = (): void => {
 }
 
 export async function openAs(page: Page, role: Role, path: string): Promise<void> {
-  await page.addInitScript(OPEN_CURRENT_STEP)
+  // The screen audit measures the page as it really opens (every step closed): it sets AUDIT_ROLES, and the helper stands down
+  if (process.env.AUDIT_ROLES === undefined) await page.addInitScript(OPEN_CURRENT_STEP)
   await page.goto('/login')
   await page.getByLabel('Email').fill(EMAIL[role])
   await page.getByLabel('Password', { exact: true }).fill(FIXTURE_PASSWORD)
