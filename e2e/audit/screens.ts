@@ -25,7 +25,7 @@ export interface Visit {
   title: string
   roles: readonly Role[]
   /** 'layout': only in the layout set (AUDIT_SET=layout), never in the standard audit. */
-  set?: 'layout'
+  set?: 'layout' | 'opened'
   /** The screen ids this visit captures, in order (a flow has several). */
   screens: readonly string[]
   run: (page: Page, fx: Fixture, capture: Capture) => Promise<void>
@@ -303,6 +303,12 @@ const addToJobPasted: Visit = {
   screens: ['add-to-job-pasted'],
   run: async (page, fx, capture) => {
     await open(page, `/rfqs/${fx.rfq.waiting}`)
+    // Since L1 the card is a closed fold row ("Add to this job"): open it first, only when it is closed (before L1 it is always open).
+    const fold = page.getByTestId('add-to-job').getByRole('button', { name: /^Add to this job/ }).first()
+    if ((await fold.count()) && (await fold.getAttribute('aria-expanded')) === 'false') {
+      await fold.click()
+      await settle(page)
+    }
     const box = page.getByRole('textbox', { name: 'Paste here' })
     await box.scrollIntoViewIfNeeded()
     await box.fill('Dear sir, thank you for your enquiry. Our best price is USD 412 per unit, delivery 3 weeks ex works, offer valid 14 days. Regards')
@@ -397,7 +403,310 @@ const LAYOUT_VISITS: readonly Visit[] = [
   ),
 ]
 
+// ---------------------------------------------------------------- the opened set (AUDIT_SET=opened): panels after a click
+/** Runs each step on its own: one that fails does not stop the others; the failures are reported together at the end. */
+async function steps(page: Page, list: readonly (readonly [string, () => Promise<void>])[]): Promise<void> {
+  const failed: string[] = []
+  for (const [id, run] of list) {
+    try {
+      await bounded(70_000, id, run)
+    } catch (e) {
+      failed.push(`${id}: ${(e instanceof Error ? e.message : String(e)).split('\n')[0].slice(0, 90)}`)
+    } finally {
+      await page.keyboard.press('Escape').catch(() => undefined)
+      await bounded(20_000, 'close', () => closeDialogs(page)).catch(() => undefined)
+    }
+  }
+  if (failed.length) throw new Error(failed.join(' | ').slice(0, 390))
+}
+
+/** Clicks up to `max` folded controls (aria-expanded=false) inside `scope`, one at a time. Throws when there is nothing to open. */
+async function expandFolded(page: Page, scope: string, max: number): Promise<number> {
+  let n = 0
+  for (; n < max; n++) {
+    // Not the (i) tips ([data-infotip]) or menu buttons (aria-haspopup): they open a tip, not the rows or panels the scene names.
+    const b = page.locator(`${scope} button[aria-expanded="false"]:not([data-infotip] *, [data-infotip], [aria-haspopup])`).filter({ visible: true }).first()
+    if (!(await b.count())) break
+    await b.click()
+    await page.waitForTimeout(300)
+  }
+  if (!n) throw new Error(`nothing folded in ${scope}`)
+  await settle(page)
+  return n
+}
+
+async function firstRow(page: Page): Promise<void> {
+  const row = page.locator('#main tbody tr, #main [role="row"]').filter({ hasText: /\d/ }).first()
+  if (await row.count()) {
+    await row.click()
+    return
+  }
+  throw new Error('no row')
+}
+
+const STAGE_IDS = ['enquiry', 'quotation', 'order', 'supplier-order', 'delivery', 'invoice', 'payment'] as const
+const STAGE_NAMES = ['Enquiry', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
+/** The folded control of one job step, found by the step's name at the start of its text, among the buttons that fold (a stage bar link of the same name is not one) (it survives a change of the row markup). */
+const stageHead = (page: Page, i: number) =>
+  page
+    .locator('#main button[aria-expanded]')
+    .filter({ hasText: new RegExp('^ *' + escape(STAGE_NAMES[i]) + '(?![a-z])', 'i') })
+    .filter({ visible: true })
+    .first()
+async function openStage(page: Page, path: string, i: number): Promise<void> {
+  await open(page, path)
+  await closeDialogs(page)
+  const head = stageHead(page, i)
+  await head.waitFor({ timeout: 10_000 })
+  if ((await head.getAttribute('aria-expanded')) !== 'true') {
+    await head.click()
+    await settle(page)
+  }
+  // Polled through the locator: the row can be re-rendered after the click, which would leave a held element handle pointing at nothing.
+  for (let t = 0; (await head.getAttribute('aria-expanded')) !== 'true'; t++) {
+    if (t > 40) throw new Error(`step ${STAGE_NAMES[i]} did not open`)
+    await page.waitForTimeout(250)
+  }
+  // Mark the step so the capture can scroll it to the top of the view.
+  await head.evaluate(b => {
+    document.querySelectorAll('[data-audit-step]').forEach(e => e.removeAttribute('data-audit-step'))
+    ;(b.closest('section, [data-fold-row]') ?? b).setAttribute('data-audit-step', '1')
+  })
+  await page.waitForTimeout(1_200)
+  await settle(page)
+}
+
+const stageVisit = (stage: number, label: string, path: (fx: Fixture) => string, roles: readonly Role[]): Visit => ({
+  id: `op-step-${STAGE_IDS[stage]}${label}`,
+  title: `Opened: job step card ${STAGE_IDS[stage]}${label}`,
+  roles,
+  set: 'opened',
+  screens: [`op-step-${STAGE_IDS[stage]}${label}`],
+  run: async (page, fx, capture) => {
+    // Phones only: the ratchet and the 2500 px target are phone numbers, and the desktop stage bar also names the steps (no reliable head to open there).
+    if ((page.viewportSize()?.width ?? 0) >= 768) return
+    await openStage(page, path(fx), stage)
+    await capture(`op-step-${STAGE_IDS[stage]}${label}`, { scrollTo: '[data-audit-step]' })
+  },
+})
+
+async function openRecordPayment(page: Page): Promise<void> {
+  const b = page.getByRole('button', { name: /record payment/i }).filter({ visible: true }).first()
+  if (await b.count()) return b.click()
+  await page.locator('#main').getByRole('button', { name: /^More/ }).filter({ visible: true }).first().click()
+  await page.getByRole('menuitem', { name: /record payment/i }).first().click()
+}
+
+const REPORTS: readonly (readonly [string, string])[] = [
+  ['op-report-expense', '/money/reports/expenses?by=month'],
+  ['op-report-aging', '/money/month-end/aging'],
+  ['op-report-owe', '/money/month-end/owe'],
+  ['op-report-categories', '/money/month-end/categories'],
+]
+
+const OPENED_VISITS: readonly Visit[] = [
+  stageVisit(0, '', fx => `/rfqs/${fx.rfq.compare}`, ALL),
+  stageVisit(1, '', fx => `/rfqs/${fx.rfq.compare}`, ALL),
+  stageVisit(1, '-prices-in', fx => `/rfqs/${fx.rfq.pricesIn}`, ALL),
+  stageVisit(2, '', fx => `/orders/${fx.order.multiLeg}`, ALL),
+  stageVisit(3, '', fx => `/orders/${fx.order.multiLeg}`, ALL),
+  stageVisit(4, '', fx => `/orders/${fx.order.multiLeg}`, ALL),
+  stageVisit(5, '', fx => `/orders/${fx.order.invoiced}`, MONEY),
+  stageVisit(6, '', fx => `/orders/${fx.order.invoiced}`, ALL),
+  {
+    id: 'op-money',
+    title: 'Opened: Money dialogs, GST register, receivables, reports',
+    roles: ADMIN,
+    set: 'opened',
+    screens: ['op-invoice-detail', 'op-gst-export', 'op-record-payment', 'op-receivables-row', ...REPORTS.map(r => r[0])],
+    run: async (page, fx, capture) => {
+      const list: (readonly [string, () => Promise<void>])[] = [
+        ['op-invoice-detail', async () => {
+          await open(page, '/money/gst-register')
+          await closeDialogs(page)
+          await page.locator('#main tbody tr, #main [role="row"], #main li').filter({ hasText: /INV-?\d/ }).first().click()
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await settle(page)
+          await capture('op-invoice-detail', { root: DIALOG })
+        }],
+        ['op-gst-export', async () => {
+          await open(page, '/money/gst-register')
+          await page.locator('#main').getByRole('button', { name: /^More/ }).filter({ visible: true }).first().click()
+          await page.getByRole('menuitem', { name: /export/i }).first().waitFor({ timeout: 8_000 })
+          await capture('op-gst-export')
+        }],
+        ['op-record-payment', async () => {
+          await openStage(page, `/orders/${fx.order.invoiced}`, 5)
+          await openRecordPayment(page)
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await settle(page)
+          await capture('op-record-payment', { root: DIALOG })
+        }],
+        ['op-receivables-row', async () => {
+          await open(page, '/money/receivables')
+          await firstRow(page)
+          await settle(page)
+          await capture('op-receivables-row')
+        }],
+      ]
+      for (const [id, path] of REPORTS) {
+        list.push([id, async () => {
+          await open(page, path)
+          await expandFolded(page, '#main', 2).catch(async () => firstRow(page))
+          await settle(page)
+          await capture(id)
+        }])
+      }
+      await steps(page, list)
+    },
+  },
+  {
+    id: 'op-expenses',
+    title: 'Opened: expenses (Add expenses sheet, add dialog, row details, History, claims)',
+    roles: ADMIN,
+    set: 'opened',
+    screens: ['op-add-expenses', 'op-add-expense', 'op-expense-edit', 'op-expense-history', 'op-claims'],
+    run: async (page, fx, capture) => {
+      // two pending claims from the engineer (synthetic), so the admin's "To approve" list has something to open
+      const spent = new Date().toISOString().slice(0, 10)
+      let seeded = 'claims seeded'
+      await must(rest('engineer', 'expense_claims', { method: 'POST', body: [{ spent_on: spent, amount_pkr: 4200, note: 'Taxi to the site, Jhang', order_id: fx.order.multiLeg }, { spent_on: spent, amount_pkr: 950, note: 'Sealant and tape', order_id: null }] })).catch(e => { seeded = `claims NOT seeded ${e instanceof Error ? e.message.slice(0, 120) : ''}` })
+      await steps(page, [
+        ['op-add-expenses', async () => {
+          await open(page, '/money/expenses?burst=1')
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await page.locator(DIALOG).getByRole('textbox').first().fill('4500').catch(() => undefined)
+          await settle(page)
+          await capture('op-add-expenses', { root: DIALOG })
+        }],
+        ['op-add-expense', async () => {
+          await open(page, '/money/expenses?add=1')
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await capture('op-add-expense', { root: DIALOG })
+        }],
+        ['op-expense-edit', async () => {
+          await open(page, '/money/expenses')
+          await page.getByRole('button', { name: /^More for/ }).filter({ visible: true }).first().click()
+          await page.getByRole('menuitem', { name: /edit/i }).first().click()
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await settle(page)
+          await capture('op-expense-edit', { root: DIALOG })
+        }],
+        ['op-expense-history', async () => {
+          await open(page, '/money/expenses')
+          const more = page.getByRole('button', { name: /^More for/ }).filter({ visible: true }).first()
+          if (await more.count()) {
+            await more.click()
+            await page.getByRole('menuitem', { name: /history/i }).first().click()
+          } else {
+            await page.getByRole('button', { name: /^Edit/ }).filter({ visible: true }).first().click()
+            await page.locator(DIALOG).getByRole('button', { name: /history/i }).first().click()
+          }
+          await page.locator(DIALOG).last().waitFor({ timeout: 15_000 })
+          await page.waitForTimeout(1_500)
+          await settle(page)
+          await capture('op-expense-history', { root: DIALOG })
+        }],
+        ['op-claims', async () => {
+          await open(page, '/money/expenses')
+          const found = await page.evaluate(() => {
+            const h = Array.from(document.querySelectorAll('#main h2, #main h3, #main summary, #main legend')).find(x => /approve|claim|i paid/i.test(x.textContent ?? ''))
+            h?.setAttribute('data-audit-target', '1')
+            return !!h
+          })
+          if (!found) throw new Error(`no claims section on the page (${seeded})`)
+          await capture('op-claims', { scrollTo: '[data-audit-target]' })
+        }],
+      ])
+    },
+  },
+  {
+    id: 'op-rfq',
+    title: 'Opened: supplier prices, quotation dialog, convert dialog',
+    roles: ADMIN,
+    set: 'opened',
+    screens: ['op-supplier-prices', 'op-quotation-dialog', 'op-convert-dialog'],
+    run: async (page, fx, capture) => {
+      await steps(page, [
+        ['op-supplier-prices', async () => {
+          await openStage(page, `/rfqs/${fx.rfq.compare}`, 1)
+          await expandFolded(page, '[data-audit-step]', 6)
+          await capture('op-supplier-prices', { scrollTo: '[data-audit-step]' })
+        }],
+        ['op-quotation-dialog', async () => {
+          await open(page, `/rfqs/${fx.rfq.pricesIn}?issue=1`)
+          const dialog = page.locator(DIALOG).first()
+          await dialog.waitFor({ timeout: 15_000 })
+          const prices = dialog.getByLabel(/^Unit price, net PKR, item/)
+          for (let i = 0, n = await prices.count(); i < n; i++) await prices.nth(i).fill(String(1000 + i * 250))
+          await settle(page)
+          await capture('op-quotation-dialog', { root: DIALOG })
+        }],
+        ['op-convert-dialog', async () => {
+          await open(page, `/rfqs/${fx.rfq.quoted}?won=1`)
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await settle(page)
+          await capture('op-convert-dialog', { root: DIALOG })
+        }],
+      ])
+    },
+  },
+  {
+    id: 'op-company',
+    title: 'Opened: company panels, site and contact dialogs',
+    roles: ADMIN,
+    set: 'opened',
+    screens: ['op-company-panels', 'op-company-site', 'op-company-contact'],
+    run: async (page, fx, capture) => {
+      await steps(page, [
+        ['op-company-panels', async () => {
+          await open(page, `/companies/${fx.company.customer}`)
+          await expandFolded(page, '#main', 4).catch(() => undefined)
+          await capture('op-company-panels')
+        }],
+        ['op-company-site', async () => {
+          await open(page, `/companies/${fx.company.customer}`)
+          await page.getByRole('button', { name: /^Add site$/ }).filter({ visible: true }).first().click()
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await capture('op-company-site', { root: DIALOG })
+        }],
+        ['op-company-contact', async () => {
+          await open(page, `/companies/${fx.company.customer}`)
+          await page.getByRole('button', { name: 'Add', exact: true }).filter({ visible: true }).first().click()
+          await page.locator(DIALOG).first().waitFor({ timeout: 15_000 })
+          await capture('op-company-contact', { root: DIALOG })
+        }],
+      ])
+    },
+  },
+]
+
+/** The same screen with "Larger text" on (data-text="large", kept in localStorage like the account menu does). Phones only: wider viewports capture nothing. */
+function largeText(id: string, title: string, roles: readonly Role[], path: (fx: Fixture) => string): Visit {
+  return {
+    id,
+    title,
+    roles,
+    screens: [id],
+    run: async (page, fx, capture) => {
+      if ((page.viewportSize()?.width ?? 0) >= 768) return
+      await page.evaluate(() => window.localStorage.setItem('qtech.text-size', 'large'))
+      try {
+        await open(page, path(fx))
+        await page.waitForFunction(() => document.documentElement.dataset.text === 'large', undefined, { timeout: 5_000 })
+        await capture(id)
+      } finally {
+        await page.evaluate(() => {
+          window.localStorage.removeItem('qtech.text-size')
+          delete document.documentElement.dataset.text
+        })
+      }
+    },
+  }
+}
+
 export const VISITS: readonly Visit[] = [
+  ...OPENED_VISITS,
   // The Jobs screens (redesign phases 4 to 7). The Job pages are opened through the old /rfqs/<id> and /orders/<id> addresses, which also
   // keeps the redirect under the audit. (The old RFQ and Order pages themselves were removed on 2026-10-30.)
   screen('jobs-list', 'Jobs list, open', ALL, () => '/jobs'),
@@ -443,6 +752,9 @@ export const VISITS: readonly Visit[] = [
   screen('company-customer', 'Company page: customer', ALL, fx => `/companies/${fx.company.customer}`),
   screen('company-supplier', 'Company page: supplier', ALL, fx => `/companies/${fx.company.supplier}`),
   screen('money-gst-register', 'Money: GST register (invoices)', MONEY, () => '/money/gst-register'),
+  largeText('large-job-paid', 'Job page: order, paid, Larger text (phone)', ALL, fx => `/orders/${fx.order.paid}`),
+  largeText('large-job-invoiced', 'Job page: order, invoiced, Larger text (phone)', ALL, fx => `/orders/${fx.order.invoiced}`),
+  largeText('large-money-gst-register', 'Money: GST register, Larger text (phone)', MONEY, () => '/money/gst-register'),
   screen('money-receivables', 'Money: receivables (who owes us)', MONEY, () => '/money/receivables'),
   screen('money-expenses', 'Money: expenses', ADMIN, () => '/money/expenses'),
   screen('money-month-end', 'Money: month-end checklist', ADMIN, () => '/money/month-end'),

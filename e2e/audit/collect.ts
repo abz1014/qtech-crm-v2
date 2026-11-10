@@ -96,6 +96,13 @@ export interface Metrics {
     labelTouchesControl: { count: number; samples: string[] }
     unevenWrap: { count: number; samples: string[] }
   }
+  /**
+   * Clarity (docs/audit/SCREEN_AUDIT.md, "The clarity ratchet"). firstWorkY: top of the first visible [data-work] element in the page at
+   * scroll 0 (null when there is none). boxDepth: the deepest chain of nested boxes (a box is a visible element in the page with a border
+   * on 3 or more sides, a radius above 0 and 2000 px2 or more; controls, chips and inputs are not boxes). boxesAtFold: boxes in the first screen (top above the fold, bottom below 0)
+   * stepRowMax: height of the tallest job step row (null when the page has none).
+   */
+  clarity: { firstWorkY: number | null; boxDepth: number; boxesAtFold: number; stepRowMax: number | null }
 }
 
 export interface CollectOptions {
@@ -327,7 +334,7 @@ export function collect(opts: CollectOptions): Metrics {
     // container, any table row or column header, any list item), and navigation and choice controls (a nav landmark, tab list, [data-nav-strip], a button group such as a month pager, a toggle or radio), and the
     // (i) tips that explain a heading ([data-infotip]).
     if (fold && main?.contains(el)) {
-      if (el.closest('[data-row-actions], tr, li, [role="row"], thead, nav, [role="tablist"], [role="group"], [role="radiogroup"], [data-nav-strip], [aria-pressed], [role="radio"], [data-infotip]')) actions.rowActionsAboveFold = (actions.rowActionsAboveFold ?? 0) + 1
+      if (el.closest('[data-row-actions], tr, li, [role="row"], thead, nav, [role="tablist"], [role="group"], [role="radiogroup"], [data-nav-strip], [data-fold-row], [aria-pressed], [role="radio"], [data-infotip]')) actions.rowActionsAboveFold = (actions.rowActionsAboveFold ?? 0) + 1
       else {
         actions.mainAboveFold = (actions.mainAboveFold ?? 0) + 1
         if ((actions.mainLabels?.length ?? 0) < 30) (actions.mainLabels ??= []).push(label(el))
@@ -1029,6 +1036,44 @@ export function collect(opts: CollectOptions): Metrics {
     if (shellMain) shellMain.scrollTop = keepY
   }
 
+  // ---------------------------------------------------------------- clarity
+  const clarity: Metrics['clarity'] = { firstWorkY: null, boxDepth: 0, boxesAtFold: 0, stepRowMax: null }
+  if (main) {
+    const scrolledY = (document.querySelector<HTMLElement>('#main')?.scrollTop ?? 0) + window.scrollY
+    const work = Array.from(main.querySelectorAll<HTMLElement>('[data-work]')).find(visible)
+    if (work) clarity.firstWorkY = Math.round(rect(work).top + scrolledY)
+    const isControl = (el: Element) =>
+      Boolean(el.closest('button, a, input, select, textarea, label, [role="button"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="combobox"], [role="option"], [role="menuitem"], [data-status], [data-infotip]'))
+    const drawn = (c: string) => !transparent(c)
+    const sideDrawn = (s: CSSStyleDeclaration, side: 'Top' | 'Right' | 'Bottom' | 'Left') =>
+      parseFloat(s.getPropertyValue(`border-${side.toLowerCase()}-width`)) > 0 &&
+      s.getPropertyValue(`border-${side.toLowerCase()}-style`) !== 'none' &&
+      drawn(s.getPropertyValue(`border-${side.toLowerCase()}-color`))
+    const depthOf = new Map<Element, number>()
+    for (const el of Array.from(main.querySelectorAll('*'))) {
+      if (!visible(el) || isControl(el)) continue
+      const r = rect(el)
+      if (r.width * r.height < 2000) continue
+      const s = style(el)
+      if (!(parseFloat(s.borderTopLeftRadius) > 0 || parseFloat(s.borderTopRightRadius) > 0 || parseFloat(s.borderBottomLeftRadius) > 0 || parseFloat(s.borderBottomRightRadius) > 0)) continue
+      if ((['Top', 'Right', 'Bottom', 'Left'] as const).filter(side => sideDrawn(s, side)).length < 3) continue
+      let up = 0
+      for (let p = el.parentElement; p && p !== main.parentElement; p = p.parentElement) {
+        const d = depthOf.get(p)
+        if (d) {
+          up = d
+          break
+        }
+      }
+      depthOf.set(el, up + 1)
+      clarity.boxDepth = Math.max(clarity.boxDepth, up + 1)
+      if (r.top < vh && r.bottom > 0) clarity.boxesAtFold++
+    }
+    const rows = Array.from(main.querySelectorAll<HTMLElement>('[data-stages] [data-fold-row] > button'))
+    const stepRows = (rows.length ? rows : Array.from(main.querySelectorAll<HTMLElement>('[data-stage] h2 button'))).filter(visible)
+    if (stepRows.length) clarity.stepRowMax = Math.round(Math.max(...stepRows.map(b => rect(b).height)))
+  }
+
   const contentHeight = Math.round(Math.max(se.scrollHeight, main ? main.scrollHeight + (vh - main.clientHeight) : 0))
 
   return {
@@ -1055,5 +1100,6 @@ export function collect(opts: CollectOptions): Metrics {
     contrastHi,
     inputs,
     layout,
+    clarity,
   }
 }
