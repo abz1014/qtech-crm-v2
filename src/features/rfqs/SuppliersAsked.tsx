@@ -400,8 +400,9 @@ function ChaseCard({
         <FloatElsewhere
           supplierName={inquiry.supplierName}
           items={outstandingAll}
-          // Everyone already asked, and the customer the RFQ is for (a company can be both): neither is someone else to ask.
-          askedIds={new Set([...inquiries.map(i => i.supplierId), rfq.company.id])}
+          rfqId={rfq.id}
+          customerId={rfq.company.id}
+          askedIds={new Set(inquiries.map(i => i.supplierId))}
           today={today}
           busy={choose.busy}
           onChoose={input => void choose.choose(input)}
