@@ -344,9 +344,9 @@ export function GstRegisterPage() {
                 <span className="type-section">{month}</span>
                 <span className="type-body text-fg-2">{`${n} ${n === 1 ? 'invoice' : 'invoices'}`}</span>
               </div>
-              <dl className={cn('grid gap-3', isAdmin ? 'grid-cols-3' : 'grid-cols-1')}>
+              <dl className="flex flex-wrap gap-x-4 gap-y-2">
                 {figures.map(([name, v]) => (
-                  <div key={name} className="grid min-w-0 gap-px">
+                  <div key={name} className="grid gap-px">
                     <dt className="type-body text-fg-2">{name}</dt>
                     <dd className="num type-row">
                       <Money value={v} prefix={false} paisa="never" strong />
