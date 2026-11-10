@@ -26,7 +26,7 @@ not boxes), `boxesAtFold` (boxes seen in the first screen: top above the fold li
 `boxDepth` 2, `boxesAtFold` 4, `stepRowMax` 52, `aboveFold` 12, phone job pages 1300 px closed and 2500 px with one step opened.
 
 `node scripts/audit/report.mjs <dir> --gate clarity` compares every capture with its budget in `scripts/audit/clarity-budgets.json` (keyed
-`role/screen/viewport`) and exits 1 only for a value worse than its budget: +8 px for heights and Y values, +0 for counts. A capture with no
+`role/screen/viewport`) and exits 1 only for a value worse than its budget: +8 px for Y values and step rows, +0 for counts. `contentHeight` is report-only: it moves with the day's dates and data, so a value above its budget is listed with its delta and never fails. A capture with no
 budget is listed, never failed. Words are reported, never gated. After a change that makes a screen clearer, run the audit and
 `node scripts/audit/report.mjs <dir> --write-budgets` (it merges into the file) to lower the budget; the file is part of the review.
 

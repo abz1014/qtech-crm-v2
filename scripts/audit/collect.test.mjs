@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { chromium } from '@playwright/test'
 import { collect } from '../../e2e/audit/collect'
-import { budgetKey, ratchetBudgets, ratchetFailures, ratchetUnbudgeted } from './report.lib.mjs'
+import { budgetKey, ratchetAdvisories, ratchetBudgets, ratchetFailures, ratchetUnbudgeted } from './report.lib.mjs'
 
 /*
  * labelTouchesControl in a real browser (e2e/audit/collect.ts runs inside a page, so jsdom has no layout to test it on).
@@ -113,12 +113,15 @@ describe('the clarity ratchet', () => {
     expect(f[0]).toMatchObject({ metric: 'boxDepth', value: 3, budget: 2, tolerance: 0 })
     expect(ratchetFailures([rc('job-paid', { actions: { aboveFold: 9 } })], budgets).map(r => r.metric)).toEqual(['aboveFold'])
   })
-  it('gives heights and Y values 8 px, no more', () => {
+  it('gives Y values 8 px and step rows 8 px, no more', () => {
     expect(ratchetFailures([withClarity({ firstWorkY: 208, stepRowMax: 56 })], budgets)).toEqual([])
     expect(ratchetFailures([rc('job-paid', { contentHeight: 1208 })], budgets)).toEqual([])
     const f = ratchetFailures([withClarity({ firstWorkY: 209, stepRowMax: 57 }), rc('job-paid', { contentHeight: 1209 })].slice(0, 1), budgets)
     expect(f.map(r => r.metric).sort()).toEqual(['firstWorkY', 'stepRowMax'])
-    expect(ratchetFailures([rc('job-paid', { contentHeight: 1209 })], budgets).map(r => r.metric)).toEqual(['contentHeight'])
+    // contentHeight moves with the day's data: report-only, never a failure
+    expect(ratchetFailures([rc('job-paid', { contentHeight: 1209 })], budgets)).toEqual([])
+    expect(ratchetAdvisories([rc('job-paid', { contentHeight: 1209 })], budgets)).toEqual([expect.objectContaining({ metric: 'contentHeight', value: 1209, budget: 1200, delta: 9 })])
+    expect(ratchetAdvisories([rc('job-paid', { contentHeight: 1208 })], budgets)).toEqual([])
   })
   it('reports a capture with no budget and never fails it', () => {
     const other = rc('job-unknown', { clarity: { firstWorkY: 999, boxDepth: 9, boxesAtFold: 9, stepRowMax: 999 } })
