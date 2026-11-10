@@ -69,6 +69,8 @@ export const OPEN_CURRENT_STEP = (): void => {
   const tick = (): void => {
     const list = document.querySelector('[data-stages]')
     if (!list || w.__keepStepsClosed) return
+    // opening a step can unmount the dialog that was raised from another one: wait until no dialog is open
+    if (document.querySelector('[role="dialog"]')) return
     const head = Array.from(list.querySelectorAll('[data-fold-row] > button')).find(b => b.querySelector('.sr-only')?.textContent === 'Now') as HTMLButtonElement | undefined
     if (!head || done.has(head)) return
     done.add(head)
