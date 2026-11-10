@@ -22,11 +22,11 @@ shots by eye after a run that matters: the checks are a net, not a judge.
 Each capture also carries `clarity`: `firstWorkY` (top of the first `[data-work]` element at scroll 0), `boxDepth` (deepest chain of nested
 boxes: a visible element in the page with a border on 3 or more sides, a radius above 0 and 2000 px2 or more; controls, chips and inputs are
 not boxes), `boxesAtFold` (boxes seen in the first screen: top above the fold line, bottom below 0) and `stepRowMax` (tallest `[data-stages] [data-fold-row] > button`, else
-`[data-stage] h2 button`). `contentHeight` and `actions.aboveFold` are reported with nothing left out. Advisory targets: `firstWorkY` 264,
+`[data-stage] h2 button`). `contentHeight` and `actions.aboveFold` are reported; `aboveFold` leaves out fold-row heads (`[data-fold-row]`) and per-row actions (`[data-row-actions]`), since a list of rows is not a set of competing actions. Advisory targets: `firstWorkY` 264,
 `boxDepth` 2, `boxesAtFold` 4, `stepRowMax` 52, `aboveFold` 12, phone job pages 1300 px closed and 2500 px with one step opened.
 
 `node scripts/audit/report.mjs <dir> --gate clarity` compares every capture with its budget in `scripts/audit/clarity-budgets.json` (keyed
-`role/screen/viewport`) and exits 1 only for a value worse than its budget: +8 px for heights and Y values, +0 for counts. A capture with no
+`role/screen/viewport`) and exits 1 only for a value worse than its budget: +8 px for Y values and step rows, +0 for counts. `contentHeight` is report-only: it moves with the day's dates and data, so a value above its budget is listed with its delta and never fails. A capture with no
 budget is listed, never failed. Words are reported, never gated. After a change that makes a screen clearer, run the audit and
 `node scripts/audit/report.mjs <dir> --write-budgets` (it merges into the file) to lower the budget; the file is part of the review.
 

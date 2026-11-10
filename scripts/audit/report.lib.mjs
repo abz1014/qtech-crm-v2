@@ -301,7 +301,8 @@ export const RATCHET = [
   { key: 'boxDepth', tolerance: 0, value: c => c.metrics.clarity?.boxDepth ?? null },
   { key: 'boxesAtFold', tolerance: 0, value: c => c.metrics.clarity?.boxesAtFold ?? null },
   { key: 'stepRowMax', tolerance: 8, value: c => c.metrics.clarity?.stepRowMax ?? null },
-  { key: 'contentHeight', tolerance: 8, value: c => c.metrics.contentHeight ?? null },
+  // contentHeight depends on the day's dates and data (the seed's overdue and this-month rows), so it is shown with its budget and delta and never gated.
+  { key: 'contentHeight', tolerance: 8, reportOnly: true, value: c => c.metrics.contentHeight ?? null },
   { key: 'aboveFold', tolerance: 0, value: c => c.metrics.actions?.aboveFold ?? null },
 ]
 
@@ -330,10 +331,29 @@ export function ratchetFailures(captures, budgets) {
     const budget = budgets?.[budgetKey(c)]
     if (!budget) continue
     for (const r of RATCHET) {
+      if (r.reportOnly) continue
       const v = r.value(c)
       const b = budget[r.key]
       if (v === null || v === undefined || b === null || b === undefined) continue
       if (v > b + r.tolerance) rows.push({ role: c.role, screen: c.screen, viewport: c.viewport, metric: r.key, value: v, budget: b, tolerance: r.tolerance })
+    }
+  }
+  return rows
+}
+
+/** Report-only metrics (contentHeight) that are worse than their budget: listed with the delta, never failed. */
+export function ratchetAdvisories(captures, budgets) {
+  const rows = []
+  for (const c of captures) {
+    if (!measured(c)) continue
+    const budget = budgets?.[budgetKey(c)]
+    if (!budget) continue
+    for (const r of RATCHET) {
+      if (!r.reportOnly) continue
+      const v = r.value(c)
+      const b = budget[r.key]
+      if (v === null || v === undefined || b === null || b === undefined) continue
+      if (v > b + r.tolerance) rows.push({ role: c.role, screen: c.screen, viewport: c.viewport, metric: r.key, value: v, budget: b, delta: v - b })
     }
   }
   return rows
