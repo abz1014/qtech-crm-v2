@@ -288,6 +288,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     // The dialog is opened from the header (1), then Issue and Share are the 2 taps of the FE-2 line.
     fe2('Issue quotation: Issue + Share, with the one tap that opens the dialog', c.mouse, 3)
     await d.getByRole('button', { name: 'Done' }).click()
+    // the job moves on to the Order step and the helper opens it: the Quotation step (the item cards) is opened again here
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await openStage(page, 'Quotation')
 
     // With a selling price in, the supplier prices still show no spread or margin: the CRM works out neither.
     await expect(page.getByRole('article', { name: 'Item 1' })).not.toContainText(/Spread|Our price/)
