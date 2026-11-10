@@ -10,13 +10,13 @@
  * control or a sideways scroll, or when no capture carries the layout measurements; every other target stays advisory.
  *
  * --gate clarity compares each capture with its budget in scripts/audit/clarity-budgets.json (firstWorkY, boxDepth, boxesAtFold, stepRowMax,
- * contentHeight, aboveFold) and fails only on a value worse than its budget (heights and Y +8 px, counts +0). A capture with no budget is
+ * contentHeight, aboveFold) and fails only on a value worse than its budget (Y +8 px, counts +0); contentHeight is report-only (it moves with the day's data): listed with its delta, never failed. A capture with no budget is
  * listed, not failed. Words are never gated. --write-budgets writes the budgets from these captures (merged into the file's other keys).
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildResults, ratchetBudgets, ratchetFailures, ratchetUnbudgeted, renderMarkdown, renderSummary } from './report.lib.mjs'
+import { buildResults, ratchetAdvisories, ratchetBudgets, ratchetFailures, ratchetUnbudgeted, renderMarkdown, renderSummary } from './report.lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = name => {
@@ -100,6 +100,12 @@ if (gate === 'clarity') {
   }
   const failed = ratchetFailures(results.captures, budgets)
   const unbudgeted = ratchetUnbudgeted(results.captures, budgets)
+  const advisories = ratchetAdvisories(results.captures, budgets)
+  if (advisories.length) {
+    console.log(`Clarity gate: ${advisories.length} contentHeight value(s) above their budget (report-only, not failed):`)
+    for (const a of advisories.slice(0, 60)) console.log(`  ${a.role}/${a.screen}/${a.viewport} ${a.metric}: ${a.value} vs budget ${a.budget} (${a.delta > 0 ? '+' : ''}${a.delta})`)
+    if (advisories.length > 60) console.log(`  ... and ${advisories.length - 60} more`)
+  }
   if (unbudgeted.length) console.log(`Clarity gate: ${unbudgeted.length} capture(s) have no budget yet (reported, not failed): ${unbudgeted.slice(0, 12).join(', ')}${unbudgeted.length > 12 ? ', ...' : ''}`)
   if (failed.length) {
     console.error(`Clarity gate FAILED: ${failed.length} value(s) worse than their budget, in ${measuredCount} measured captures`)

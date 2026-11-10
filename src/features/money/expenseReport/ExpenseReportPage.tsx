@@ -298,7 +298,7 @@ function Trend({ bars, kind, onPick }: { bars: TrendBar[]; kind: PeriodKind; onP
   return (
     <figure className="grid content-start gap-2" data-testid="expense-report-trend">
       <figcaption className="text-base text-fg-2">{title}</figcaption>
-      <div className="grid h-[148px] items-end gap-1 border-b border-line px-2" style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0,1fr))` }}>
+      <div className="grid h-[148px] items-end gap-px border-b border-line px-3" style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0,1fr))` }}>
         {bars.map(b => (
           <button
             key={b.period.key}
@@ -321,7 +321,7 @@ function Trend({ bars, kind, onPick }: { bars: TrendBar[]; kind: PeriodKind; onP
           </button>
         ))}
       </div>
-      <div className="grid gap-1 px-2" style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0,1fr))` }} aria-hidden="true">
+      <div className="grid gap-px px-3" style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0,1fr))` }} aria-hidden="true">
         {bars.map(b => (
           <span key={b.period.key} className={cn('num text-center text-xs', b.current ? 'font-semibold text-fg' : 'text-fg-muted')}>
             {b.label.replace(/ \d{4}$/, m => (kind === 'quarter' ? m : ''))}
