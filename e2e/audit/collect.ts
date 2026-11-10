@@ -329,7 +329,8 @@ export function collect(opts: CollectOptions): Metrics {
     if (role === 'button') actions.buttons++
     else actions.links++
     const fold = inFold(el)
-    if (fold) actions.aboveFold++
+    // actions.aboveFold leaves out fold-row heads ([data-fold-row]) and per-row actions ([data-row-actions]): a list of rows is not a set of competing actions.
+    if (fold && !el.closest('[data-fold-row], [data-row-actions]')) actions.aboveFold++
     // Not page-level actions, so left out of the 8-action target and counted apart: per-row actions of a list (a [data-row-actions]
     // container, any table row or column header, any list item), and navigation and choice controls (a nav landmark, tab list, [data-nav-strip], a button group such as a month pager, a toggle or radio), and the
     // (i) tips that explain a heading ([data-infotip]).
