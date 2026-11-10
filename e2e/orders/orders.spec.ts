@@ -676,6 +676,7 @@ test.describe('O03: commissioning and cancel', () => {
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
     // a cancelled job keeps the order in its Cancelled orders list, with Reopen
+    await page.getByRole('button', { name: /^Cancelled orders/ }).click()
     await page.getByRole('button', { name: /^Reopen order ORD-/ }).click()
     await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBeNull()
     expect((await orderRow(s.order.id)).cancel_reason).toBeNull()

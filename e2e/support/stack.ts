@@ -60,13 +60,16 @@ export async function radixReady(page: Page): Promise<void> {
  */
 export const OPEN_CURRENT_STEP = (): void => {
   const w = window as unknown as { __keepStepsClosed?: boolean }
+  // Each "Now" head is opened once, whenever it appears: the page may draw before its data arrives, and the step the job is at can move on
+  // after an action, so one pass per page load is not enough.
   const done = new WeakSet<Element>()
   const tick = (): void => {
     const list = document.querySelector('[data-stages]')
-    if (!list || done.has(list) || w.__keepStepsClosed) return
-    done.add(list)
+    if (!list || w.__keepStepsClosed) return
     const head = Array.from(list.querySelectorAll('[data-fold-row] > button')).find(b => b.querySelector('.sr-only')?.textContent === 'Now') as HTMLButtonElement | undefined
-    if (head && head.getAttribute('aria-expanded') === 'false') head.click()
+    if (!head || done.has(head)) return
+    done.add(head)
+    if (head.getAttribute('aria-expanded') === 'false') head.click()
   }
   new MutationObserver(tick).observe(document, { childList: true, subtree: true })
 }

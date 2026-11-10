@@ -44,24 +44,26 @@ export interface FoldRowProps {
   tone?: FoldRowTone
   /** The title in the muted ink (a step not reached yet). */
   muted?: boolean
+  /** The summary holds a figure that must never be cut (a money amount): when it does not fit beside the title, the whole summary moves under it. */
+  figure?: boolean
   /** A row that does not open: no button, no chevron (a step this job does not have). */
   disabled?: boolean
 }
 
-export function FoldRow({ state, title, summary, open, onToggle, controlsId, children, className, id, dataStage, bodyLabel, tone, muted = false, disabled = false }: FoldRowProps) {
+export function FoldRow({ state, title, summary, open, onToggle, controlsId, children, className, id, dataStage, bodyLabel, tone, muted = false, disabled = false, figure = false }: FoldRowProps) {
   const lead = <Icon icon={state.icon} className={cn('order-first', state.className ?? 'text-fg-muted')} />
   const words = (
     <>
       <span className={cn('shrink-0', muted && 'font-medium text-fg-muted')}>{title}</span>
       <span className="sr-only">{state.word}</span>
       {lead}
-      <span className={cn('type-body min-w-0 flex-1 text-right [overflow-wrap:anywhere]', tone ? TONE[tone] : 'text-fg-2')}>{summary}</span>
+      <span className={cn('type-body flex-1 text-right [overflow-wrap:anywhere]', figure ? 'min-w-[min-content]' : 'min-w-0', tone ? TONE[tone] : 'text-fg-2')}>{summary}</span>
     </>
   )
   return (
     <div id={id} className={cn('border-b', className)} data-fold-row="" data-stage={dataStage}>
       {disabled ? (
-        <div className="type-row flex min-h-touch w-full items-center gap-3 py-2 text-left">
+        <div className={cn('type-row flex min-h-touch w-full items-center gap-3 py-2 text-left', figure && 'flex-wrap gap-y-0')}>
           {words}
           <span className="size-4 shrink-0" aria-hidden="true" />
         </div>
@@ -71,7 +73,7 @@ export function FoldRow({ state, title, summary, open, onToggle, controlsId, chi
           aria-expanded={open}
           aria-controls={controlsId}
           onClick={onToggle}
-          className="type-row flex min-h-touch w-full items-center gap-3 py-2 text-left hover:bg-sunken"
+          className={cn('type-row flex min-h-touch w-full items-center gap-3 py-2 text-left hover:bg-sunken', figure && 'flex-wrap gap-y-0')}
         >
           {words}
           <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform', open && 'rotate-90')} />

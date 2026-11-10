@@ -182,7 +182,7 @@ async function checkOrders(page: Page, s: Seeded): Promise<void> {
   await expectNoFalseOverdue(page, '/jobs (history)')
   for (const [name, o] of Object.entries({ partInvoiced: s.partInvoiced, notInvoiced: s.notInvoiced, latePayment: s.latePayment, poOpen: s.poOpen })) {
     await page.goto(`/orders/${o.id}`)
-    await expect(page.getByText(o.customer).first()).toBeVisible()
+    await expect(page.getByText(o.customer).filter({ visible: true }).first()).toBeVisible()
     await expectNoFalseOverdue(page, `the imported order page (${name})`)
   }
 }

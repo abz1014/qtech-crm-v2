@@ -86,7 +86,7 @@ export function MoneyRow({ data, hasOrder }: { data: JobData; hasOrder: boolean 
   const [open, setOpen] = useState(false)
   const m = data.orderMoney.data
   const row = (summary: ReactNode, body: ReactNode) => (
-    <FoldRow state={MONEY_STATE} title="Money (PKR)" summary={summary} open={open} onToggle={() => setOpen(o => !o)} controlsId="job-money-body" bodyLabel="Money for this job">
+    <FoldRow state={MONEY_STATE} title="Money (PKR)" summary={summary} figure open={open} onToggle={() => setOpen(o => !o)} controlsId="job-money-body" bodyLabel="Money for this job">
       {body}
     </FoldRow>
   )
