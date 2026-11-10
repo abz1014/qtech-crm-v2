@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { type Browser, type BrowserContext, type Page, type Request, type TestInfo } from '@playwright/test'
-import { openAs, type Role } from '../../support/stack'
+import { OPEN_CURRENT_STEP, openAs, type Role } from '../../support/stack'
 
 /*
  * Exploratory bug hunt, round 1 (workflows). These specs drive the app like a person and RECORD what goes wrong instead of stopping
@@ -53,6 +53,7 @@ export async function ctxAs(browser: Browser, info: TestInfo, role: Role, vp: Vi
     storageState,
     ...extra,
   })
+  await ctx.addInitScript(OPEN_CURRENT_STEP)
   // A missing control fails its probe in 15 s instead of waiting for the test's 600 s limit.
   ctx.setDefaultTimeout(15_000)
   ctx.setDefaultNavigationTimeout(30_000)

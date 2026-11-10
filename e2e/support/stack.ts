@@ -59,7 +59,10 @@ export async function radixReady(page: Page): Promise<void> {
  * A spec that checks the closed state sets `window.__keepStepsClosed = true` with page.addInitScript before it opens the page.
  */
 export const OPEN_CURRENT_STEP = (): void => {
-  const w = window as unknown as { __keepStepsClosed?: boolean }
+  const w = window as unknown as { __keepStepsClosed?: boolean; __openCurrentStep?: boolean }
+  // installed more than once on a page (a context and a page both add it): only the first one works
+  if (w.__openCurrentStep) return
+  w.__openCurrentStep = true
   // Each "Now" head is opened once, whenever it appears: the page may draw before its data arrives, and the step the job is at can move on
   // after an action, so one pass per page load is not enough.
   const done = new WeakSet<Element>()

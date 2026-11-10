@@ -208,7 +208,7 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
 
 async function checkControl(page: Page, s: Seeded): Promise<void> {
   await page.goto(`/orders/${s.control.id}`)
-  await expect(page.getByText(s.control.customer).first()).toBeVisible()
+  await expect(page.getByText(s.control.customer).filter({ visible: true }).first()).toBeVisible()
   await expectNoFalseOverdue(page, 'the control job page')
 }
 
