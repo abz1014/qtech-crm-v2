@@ -101,10 +101,12 @@ describe('How this works card', () => {
     expect(screen.queryByRole('button', { name: /New here/ })).toBeNull()
   })
 
-  it('is not shown to someone added more than 14 days ago, or to a role with no steps', () => {
+  it('is not shown to someone added more than 7 days ago, or to a role with no steps', () => {
     mount({ since: '2026-09-01', now: new Date('2026-10-20T09:00:00Z') })
     expect(screen.queryByRole('region')).toBeNull()
-    mount({ since: '2026-10-15', now: new Date('2026-10-20T09:00:00Z') })
+    mount({ since: '2026-10-12', now: new Date('2026-10-20T09:00:00Z') }) // 8 days: out
+    expect(screen.queryByRole('region')).toBeNull()
+    mount({ since: '2026-10-13T09:00:00Z', now: new Date('2026-10-20T09:00:00Z') }) // exactly 7 days: still new
     expect(screen.getByRole('region', { name: REGION })).toBeInTheDocument()
     render(
       <MemoryRouter>

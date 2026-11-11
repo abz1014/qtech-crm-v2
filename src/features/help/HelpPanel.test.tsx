@@ -6,13 +6,12 @@ import { HelpPanel } from '@/features/help/HelpPanel'
 import { allRecipes } from '@/features/help/recipes'
 import { axeViolations } from '@/test/axe'
 
-function Harness({ role = 'sales', wide = true, start = null as string | null, pathname = '/rfqs', onClose = () => {}, onShowHowItWorks }: {
+function Harness({ role = 'sales', wide = true, start = null as string | null, pathname = '/rfqs', onClose = () => {} }: {
   role?: string
   wide?: boolean
   start?: string | null
   pathname?: string
   onClose?: () => void
-  onShowHowItWorks?: () => void
 }) {
   const [id, setId] = useState<string | null>(start)
   const [pageClicks, setPageClicks] = useState(0)
@@ -24,7 +23,7 @@ function Harness({ role = 'sales', wide = true, start = null as string | null, p
         </button>
         <p>Page clicks: {pageClicks}</p>
       </main>
-      <HelpPanel recipes={allRecipes()} role={role} pathname={pathname} recipeId={id} onShow={setId} onClose={onClose} wide={wide} onShowHowItWorks={onShowHowItWorks} />
+      <HelpPanel recipes={allRecipes()} role={role} pathname={pathname} recipeId={id} onShow={setId} onClose={onClose} wide={wide} />
     </>
   )
 }
@@ -105,12 +104,12 @@ describe('Help panel', () => {
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
-  it('an unknown recipe id shows the list with a note; "Show How this works again" is offered when asked for', async () => {
+  it('an unknown recipe id shows the list with a note; the How this works steps are listed inline with Show me', async () => {
     const user = userEvent.setup()
-    const again = vi.fn()
-    render(<Harness start="no-such-recipe" onShowHowItWorks={again} />)
+    render(<Harness start="no-such-recipe" />)
     expect(within(panel()).getByRole('status')).toHaveTextContent('not here any more')
-    await user.click(within(panel()).getByRole('button', { name: 'Show “How this works” again' }))
-    expect(again).toHaveBeenCalledTimes(1)
+    expect(within(panel()).getByRole('heading', { name: 'How this works' })).toBeInTheDocument()
+    await user.click(within(panel()).getAllByRole('button', { name: 'Show me' })[0])
+    expect(within(panel()).queryByRole('status')).toBeNull()
   })
 })

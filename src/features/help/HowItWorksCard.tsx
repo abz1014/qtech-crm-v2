@@ -14,7 +14,8 @@ import { useHelp } from '@/features/help/useHelp'
  * 3 to 5 steps, each with "Show me" (opens that recipe in Help), so the list does not move down: on a 1366 x 768 laptop
  * the open card pushed Today's jobs below the fold (audit T1). The × hides it without opening it.
  * "Got it" hides it for this person on this device (localStorage qtech.howItWorks.<id>); Help offers it again.
- * It also stays hidden once the person is no longer new: 14 days after `since` (users.created_at), when the caller has it.
+ * It also stays hidden once the person is no longer new: 7 days (the first week) after `since` (users.created_at), when the caller has it.
+ * After that Help is the only place it lives: HelpPanel lists the same steps inline.
  */
 export interface HowItWorksCardProps {
   userId: string
@@ -26,7 +27,7 @@ export interface HowItWorksCardProps {
   className?: string
 }
 
-export const NEW_FOR_DAYS = 14
+export const NEW_FOR_DAYS = 7
 
 export function HowItWorksCard({ userId, role, since, now, className }: HowItWorksCardProps) {
   const steps = howItWorksFor(role)

@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Banknote, CalendarCheck, Calculator, ClipboardCheck, ChevronDown, ChevronRight, DatabaseBackup, FileCheck, HandCoins, HardHat, Hourglass, KeyRound, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight, Users } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -25,7 +25,7 @@ import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
 import { ACTION_LABEL, BLOCK_TITLE, WAITING_TITLE, blockOf, buildTodo, moreText, opensPane, secondAction, type TodoBlock } from '@/features/today/todoModel'
-import type { Role, RuleKey, TodayItem } from '@/features/today/types'
+import type { Role, TodayItem } from '@/features/today/types'
 import { NoPrimary } from '@/ui/NoPrimary'
 
 /*
@@ -48,34 +48,6 @@ if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').m
  * on a phone), where Copy, Open in WhatsApp and Mark chased are; the others go to the page that does it. The snooze menu has
  * "Not ours to chase" (0097). Greys: Chased, waiting until <weekday>; Older than 30 days; Imported, to review. Never counted.
  */
-const ICON: Record<RuleKey, LucideIcon> = {
-  chase_customer: MessageCircleQuestion,
-  relay_answers: Reply,
-  not_floated: Share2,
-  chase_supplier: Send,
-  bid_due: FileCheck,
-  decision_overdue: Hourglass,
-  payment_overdue: Banknote,
-  goods_late: Truck,
-  place_po: ShoppingCart,
-  plan_commissioning: Wrench,
-  to_source: PackageSearch,
-  delivered_not_invoiced: ReceiptText,
-  close_month: CalendarCheck,
-  costs_incomplete: Calculator,
-  fbr_attention: Landmark,
-  tcs_not_sent: Package,
-  recurring_due: Repeat,
-  job_commissioning: HardHat,
-  job_on_site: PackageCheck,
-  weekly_review: ClipboardCheck,
-  gst_fbr: Landmark,
-  claims_to_approve: HandCoins,
-  backup_stale: DatabaseBackup,
-  usage_high: DatabaseBackup,
-  decrypt_test: KeyRound,
-}
-
 const NONE: TodayItem[] = []
 const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08)
 
@@ -96,6 +68,8 @@ let staleOpenThisSession = false
 let importedOpenThisSession = false
 /** Whether the person opened "N more this week", for this browser session only. */
 let moreOpenThisSession = false
+/** Whether the person opened or closed the Today and This week blocks (absent: not touched, the default decides), for this browser session only. */
+const blockToggledThisSession: Partial<Record<TodoBlock, boolean>> = {}
 
 export default function TodayScreen() {
   const session = useSession()
@@ -127,6 +101,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
   const [staleOpen, setStaleOpen] = useState(staleOpenThisSession)
   const [importedOpen, setImportedOpen] = useState(importedOpenThisSession)
   const [moreOpen, setMoreOpen] = useState(moreOpenThisSession)
+  const [blockToggled, setBlockToggled] = useState<Partial<Record<TodoBlock, boolean>>>({ ...blockToggledThisSession })
   const markCopied = (k: string) => {
     setCopied(s => new Set(s).add(k))
     // On desktop the first item is shown without being picked; pin it, so the pane stays on it ("Moved to Waiting")
@@ -155,7 +130,14 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
           : [],
     [model, view, today, user.role],
   )
-  const drawn = useMemo(() => [...blocks.flatMap(([, items]) => items), ...(moreOpen && model && user.role !== 'engineer' ? model.more : [])], [blocks, moreOpen, model, user.role])
+  // Late is always open. Today and This week are one closed row with their count until the person opens them (kept for the session);
+  // with no Late block the first block opens, so the screen never opens on closed rows only. An engineer's day lists stay open.
+  const blockOpen = (id: TodoBlock, n: number): boolean => user.role === 'engineer' || id === 'late' || (blockToggled[id] ?? (n === 0 && blocks[0]?.[0] !== 'late'))
+  const toggleBlock = (id: TodoBlock, open: boolean) => {
+    blockToggledThisSession[id] = !open
+    setBlockToggled(s => ({ ...s, [id]: !open }))
+  }
+  const drawn = useMemo(() => [...blocks.flatMap(([id, items], n) => (user.role === 'engineer' || id === 'late' || (blockToggled[id] ?? (n === 0 && blocks[0]?.[0] !== 'late')) ? items : [])), ...(moreOpen && model && user.role !== 'engineer' ? model.more : [])], [blocks, blockToggled, moreOpen, model, user.role])
   const all = useMemo(
     () => [...drawn, ...waiting, ...(importedOpen ? imported : []), ...(staleOpen ? stale : [])],
     [drawn, waiting, imported, importedOpen, stale, staleOpen],
@@ -249,17 +231,49 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
                   : 'Chases, quotations, goods and payments that need you will appear here.'}
             </EmptyState>
           ) : null}
-          {blocks.map(([id, items, title], n) => (
-            <section key={`${id}-${n}`} aria-label={title} data-block={id} className={cn('mx-2 mb-3 rounded-panel p-2 first-of-type:mt-1 md:mx-3 md:p-3', BLOCK[id])}>
-              <h2 className="flex items-baseline gap-2 px-1 pb-2 text-lg font-heavy">
-                {title} <span className="num">{items.length}</span>
-              </h2>
-              <ul className="grid gap-2">{items.map(i => row(i))}</ul>
-            </section>
-          ))}
+          {blocks.map(([id, items, title], n) => {
+            const open = blockOpen(id, n)
+            const foldable = user.role !== 'engineer' && id !== 'late'
+            if (!open) {
+              // Closed: one row with the name and the count, no list. Not a section[data-block] until it holds rows.
+              return (
+                <button
+                  key={`${id}-${n}`}
+                  type="button"
+                  aria-expanded={false}
+                  data-block-closed={id}
+                  data-work={n === 0 ? '' : undefined}
+                  onClick={() => toggleBlock(id, false)}
+                  className={cn('type-section mx-2 mb-3 flex min-h-touch items-center gap-2 rounded-panel px-4 py-2 text-left first:mt-1 md:mx-3', BLOCK[id])}
+                >
+                  <span>{title}</span>
+                  <span className="num">{items.length}</span>
+                  <Icon icon={ChevronRight} size="sm" className="ml-auto" />
+                </button>
+              )
+            }
+            return (
+              <section key={`${id}-${n}`} aria-label={title} data-block={id} data-work={n === 0 ? '' : undefined} className={cn('mx-2 mb-3 rounded-panel px-3 py-2 first-of-type:mt-1 md:mx-3', BLOCK[id])}>
+                <h2 className="type-section">
+                  {foldable ? (
+                    <button type="button" aria-expanded={true} onClick={() => toggleBlock(id, true)} className="flex min-h-touch w-full items-center gap-2 text-left">
+                      <span>{title}</span>
+                      <span className="num">{items.length}</span>
+                      <Icon icon={ChevronDown} size="sm" className="ml-auto" />
+                    </button>
+                  ) : (
+                    <span className="flex min-h-touch items-center gap-2">
+                      {title} <span className="num">{items.length}</span>
+                    </span>
+                  )}
+                </h2>
+                <ul className="grid">{items.map(i => row(i))}</ul>
+              </section>
+            )
+          })}
           {model.more.length > 0 && user.role !== 'engineer' ? (
             <Fold label={moreText(model)} open={moreOpen} hint={moreOpen ? '' : ' · show'} data-more-fold="" onToggle={() => { moreOpenThisSession = !moreOpen; setMoreOpen(!moreOpen) }}>
-              <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{model.more.map(i => row(i))}</ul>
+              <ul className="grid px-3 pb-2">{model.more.map(i => row(i))}</ul>
             </Fold>
           ) : null}
           {waiting.length > 0 ? (
@@ -282,7 +296,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
                 {waitingOpen ? <span className="ml-auto text-base font-regular text-fg-muted max-md:hidden">comes back when its date arrives</span> : null}
               </button>
               {/* Collapsed, it still shows the open row: an item just chased stays where the person is looking. */}
-              {shownWaiting.length > 0 ? <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{shownWaiting.map(i => row(i, { waiting: true, actions: false }))}</ul> : null}
+              {shownWaiting.length > 0 ? <ul className="grid px-3 pb-2">{shownWaiting.map(i => row(i, { waiting: true, actions: false }))}</ul> : null}
             </section>
           ) : null}
           {imported.length > 0 ? (
@@ -305,7 +319,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
               data-imported-fold=""
               onToggle={() => { importedOpenThisSession = !importedOpen; setImportedOpen(!importedOpen) }}
             >
-              <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{imported.map(i => row(i, { faded: true, actions: false }))}</ul>
+              <ul className="grid px-3 pb-2">{imported.map(i => row(i, { faded: true, actions: false }))}</ul>
             </Fold>
           ) : null}
           {stale.length > 0 ? (
@@ -318,7 +332,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
               data-stale-fold=""
               onToggle={() => { staleOpenThisSession = !staleOpen; setStaleOpen(!staleOpen) }}
             >
-              <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">{stale.map(i => row(i, { faded: true }))}</ul>
+              <ul className="grid px-3 pb-2">{stale.map(i => row(i, { faded: true }))}</ul>
             </Fold>
           ) : null}
         </>
@@ -416,67 +430,46 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
   const second = actions ? secondAction(item, role) : null
   const own = actions && !waiting // the row carries its own button and its own snooze
   return (
-    <li data-row-actions="" data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className={cn('relative rounded-row bg-surface text-fg', open && 'after:pointer-events-none after:absolute after:inset-0 after:rounded-row after:ring-2 after:ring-inset after:ring-fg')}>
+    <li data-row-actions="" data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className={cn('relative rounded-row border-t first:border-t-0', open && 'after:pointer-events-none after:absolute after:inset-0 after:rounded-row after:ring-2 after:ring-inset after:ring-fg', waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle')}>
+      {/* Line 1 the title, line 2 the reference and party; tap to read what to do about it. */}
       <button
         type="button"
         onClick={onPick}
         aria-expanded={wide ? undefined : open}
         aria-current={wide && open ? 'true' : undefined}
-        className={cn(
-          'grid w-full grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 rounded-row px-3 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken md:px-4',
-          // clear of the 44px snooze button (4px in from the edge) with a gap, down to a 320px phone
-          own && 'pr-16 md:pr-16',
-          // The open row's ink ring (direction C, 18:1 against the white tile) is drawn on the whole tile, button row included: see the <li>.
-          (waiting || faded) && 'bg-sunken',
-          waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle',
-        )}
+        className="grid w-full min-w-0 gap-px rounded-row px-2 pb-1 pt-2 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken"
       >
-        <span className={cn('grid size-8 place-items-center rounded bg-sunken', waiting || faded ? 'text-fg-muted' : 'text-fg-2')}>
-          <Icon icon={ICON[item.rule]} size="md" />
+        <span className={cn('type-row min-w-0 [overflow-wrap:anywhere]', (waiting || faded) && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
+        <span className="type-body min-w-0 [overflow-wrap:anywhere]">
+          <span className="num">{item.ref}</span> · {item.party}
         </span>
-        <span className="grid min-w-0 gap-px">
-          <span className={cn('min-w-0 text-base font-semibold [overflow-wrap:anywhere]', (waiting || faded) && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
-          <span className="min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">
-            <span className="num">{item.ref}</span> · {item.party}
+        {item.collision && names?.[item.collision.by] ? (
+          <span data-collision className="type-body flex items-center gap-1 text-tone-warning-fg">
+            <Icon icon={Users} size="chip" /> {chasedByText(names[item.collision.by], item.collision.at, Date.now())}
           </span>
-          {item.collision && names?.[item.collision.by] ? (
-            <span data-collision className="flex items-center gap-1 text-base text-tone-warning-fg">
-              <Icon icon={Users} size="chip" /> {chasedByText(names[item.collision.by], item.collision.at, Date.now())}
-            </span>
-          ) : null}
-          {item.waiting ? (
-            <span className="text-stamp text-fg-muted">{waitingLine(item.waiting.chasedOn, item.waiting.nextNudgeOn, today, item.rule === 'payment_overdue' ? 'reminded' : 'chased')}</span>
-          ) : null}
-          {/* When it is due, in words: its own line, so the title keeps the whole width of a narrow column. */}
-          <span className="flex min-w-0 items-center gap-2">
-            {waiting ? (
-              <span className="sr-only">Waiting</span>
-            ) : copied ? (
-              <span className="inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-[10px] text-base font-semibold text-tone-success-fg">Copied</span>
-            ) : (
-              <span className={cn('min-w-0 text-base font-semibold', tone)}>{item.badge.text}</span>
-            )}
-            {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('shrink-0 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
-          </span>
-        </span>
+        ) : null}
+        {item.waiting ? (
+          <span className="text-stamp text-fg-muted">{waitingLine(item.waiting.chasedOn, item.waiting.nextNudgeOn, today, item.rule === 'payment_overdue' ? 'reminded' : 'chased')}</span>
+        ) : null}
       </button>
-      {own ? (
-        <span className="absolute right-1 top-1 md:right-2 md:top-2">
-          <SnoozeMenu item={item} today={today} iconOnly />
-        </span>
-      ) : null}
-      {own ? (
-        <div className="flex flex-wrap items-center gap-2 px-3 pb-3 md:px-4" data-row-actions="">
-          <Button variant="secondary" onClick={onAct} aria-label={`${ACTION_LABEL[item.rule]}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
-            {ACTION_LABEL[item.rule]}
-          </Button>
-          {second ? (
-            <Button variant="secondary" onClick={() => onGo(second.href)} aria-label={`${second.label}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
-              {second.label}
+      {/* Line 3: when it is due, in words (it may wrap at 320), its one button, and snooze. */}
+      <div className="flex flex-wrap items-center gap-2 px-2 pb-2" data-row-actions="">
+        {waiting ? (
+          <span className="sr-only">Waiting</span>
+        ) : copied ? (
+          <span className="type-row inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-[10px] text-tone-success-fg">Copied</span>
+        ) : (
+          <span className={cn('type-row min-w-0 flex-1 basis-1/4', tone)}>{item.badge.text}</span>
+        )}
+        {own ? (
+          <>
+            <Button variant="secondary" onClick={onAct} aria-label={`${ACTION_LABEL[item.rule]}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
+              {ACTION_LABEL[item.rule]}
             </Button>
-          ) : null}
-        </div>
-      ) : null}
+            <SnoozeMenu item={item} today={today} iconOnly extra={second ? { label: second.label, ariaLabel: `${second.label}: ${item.ref} ${item.party}`, onSelect: () => onGo(second.href) } : undefined} />
+          </>
+        ) : null}
+      </div>
       {children}
     </li>
   )
