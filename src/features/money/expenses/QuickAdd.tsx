@@ -7,6 +7,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { PaidByToggle } from '@/features/money/expenses/PaidByToggle'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
@@ -59,6 +60,7 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'ima
 /** sheetOpen: the Add expenses sheet is open over this form; its Save expenses is then the one green button, so this Save is drawn quiet. */
 export function QuickAdd({ categories, sheetOpen = false }: { categories: readonly Category[]; sheetOpen?: boolean }) {
   const today = businessToday()
+  const phone = useMediaQuery('(max-width: 639px)')
   const toast = useToast()
   const uid = useId()
   const insert = useInsertExpenses()
@@ -241,9 +243,11 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
+          {phone ? (
           <InfoTip label="Paying a supplier?" className="ml-2">
             Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
           </InfoTip>
+          ) : null}
         </h2>
         <p className="type-body text-fg-2" aria-live="polite" data-testid="quick-total">
           {here.count > 0 ? (
@@ -400,6 +404,12 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           <span className="min-w-0 flex-1 truncate">{extrasLine.join(' · ')}</span>
           <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform', showExtras && 'rotate-90')} />
         </button>
+
+        {phone ? null : (
+          <p className="type-body text-fg-2">
+            Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
+          </p>
+        )}
 
         {showExtras ? (
           <div id={extrasId} className="grid gap-3" data-testid="quick-extras">

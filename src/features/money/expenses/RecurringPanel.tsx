@@ -104,8 +104,8 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
           also tick Every month on a row in Add expenses.
         </InfoTip>
         <span className="flex-1" />
-        <Button size="sm" variant="quiet" icon={Plus} onClick={() => setEditing('new')} aria-label="Add recurring" className="max-sm:[&>span]:sr-only">
-          Add recurring
+        <Button size="sm" variant="quiet" icon={Plus} onClick={() => setEditing('new')} aria-label="Add recurring">
+          {phone ? null : 'Add recurring'}
         </Button>
         {editing ? <RecurringDialog categories={categories} onClose={() => setEditing(null)} /> : null}
       </section>
