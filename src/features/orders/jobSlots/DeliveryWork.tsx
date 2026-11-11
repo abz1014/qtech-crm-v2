@@ -22,10 +22,11 @@ import type { OrderHeader, PersonRow } from '@/features/orders/api'
  */
 function commissioningSummary(order: OrderHeader, engineers: readonly PersonRow[], today: string): string {
   if (!order.needsCommissioning) return 'Supply only'
-  const type = visitTypeLabel(order.visitType) || 'Installation'
-  const when = order.doneOn ? `done ${formatShortDate(order.doneOn, today)}` : order.plannedOn ? `planned ${formatShortDate(order.plannedOn, today)}` : 'not planned'
-  const who = engineers.length ? ` · ${engineers.map(e => e.name).join(', ')}` : ''
-  return `${type} ${when}${who}`
+  const type = visitTypeLabel(order.visitType)
+  // Short enough for one line at 320 px: the date, the type only when it is not the usual installation, the first engineer and how many more.
+  const when = order.doneOn ? `Done ${formatShortDate(order.doneOn, today)}` : order.plannedOn ? `Planned ${formatShortDate(order.plannedOn, today)}` : 'Not planned'
+  const who = engineers.length ? ` · ${engineers[0].name.split(' ')[0]}${engineers.length > 1 ? ` +${engineers.length - 1}` : ''}` : ''
+  return `${type && type !== 'Installation' ? `${type} ` : ''}${when}${who}`
 }
 
 export default function DeliveryWork({ job }: JobSlotProps) {

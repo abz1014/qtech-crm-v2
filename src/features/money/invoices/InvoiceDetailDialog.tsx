@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/app/session'
-import { Ban, Camera, Check, ClipboardList, Ellipsis, ExternalLink, FilePlus2, History as HistoryIcon, Lock, Pencil, Printer, Trash2 } from 'lucide-react'
+import { Ban, Banknote, Camera, Check, ClipboardList, Ellipsis, ExternalLink, FilePlus2, History as HistoryIcon, Lock, Pencil, Printer, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, DEFAULT_ACCEPT } from '@/lib/fileIntake'
@@ -117,6 +117,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const registerQ = useGstRegister()
   const [historyOpen, setHistoryOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
+  const navigate = useNavigate()
   const [detailsOpen, setDetailsOpen] = useState(false)
   /** The GST return of a month may be in when an FBR payment or PSID is on it, or the 18th of the next month has gone by. */
   const gstDl = useGstDeadlines()
@@ -261,6 +262,17 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         <MenuItem icon={Printer} onClick={() => setPrinting(true)}>
           Print invoice
         </MenuItem>
+        {isAdmin && invoice.order_id ? (
+          <MenuItem
+            icon={Banknote}
+            onClick={() => {
+              onClose()
+              navigate(`/orders/${invoice.order_id}#payments`)
+            }}
+          >
+            Payments on the order
+          </MenuItem>
+        ) : null}
         {isAdmin && invoice.number !== null ? (
           <MenuItem icon={FilePlus2} onClick={creditNoteFlow.ask} disabled={sf.pending}>
             Create credit note
@@ -404,13 +416,6 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
     </>
   )
 
-  const paymentsLink =
-    isAdmin && invoice.order_id ? (
-      <Link to={`/orders/${invoice.order_id}#payments`} onClick={onClose} className="mr-auto type-body font-medium text-primary underline-offset-2 hover:underline">
-        Payments on the order
-      </Link>
-    ) : null
-
   // A filed invoice: a summary of what is on file, with Edit. Nothing is a field until Edit is tapped.
   if (summary) {
     const gross = net + gst
@@ -432,7 +437,6 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         {lockLine}
         {receiptsAndNotes}
         <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
-          {paymentsLink}
           {more}
           <Button variant="quiet" onClick={onClose} data-cancel>
             Close
@@ -527,7 +531,6 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
       {receiptsAndNotes}
 
       <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
-        {paymentsLink}
         {more}
         <Button variant="quiet" onClick={onClose} data-cancel>
           Close
