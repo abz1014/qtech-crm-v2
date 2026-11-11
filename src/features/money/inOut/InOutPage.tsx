@@ -88,7 +88,7 @@ export function InOutPage() {
       report="in-out"
       csv={v ? () => downloadReport(inOutCsv(v), `money-in-and-out-${period.key}.csv`) : null}
       period={
-        <span className="flex flex-wrap items-center gap-3">
+        <span className="flex flex-wrap items-center gap-3" data-row-actions="">
           <SegmentedControl
             aria-label="Month or quarter"
             options={[
@@ -199,7 +199,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
     v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Closed: figures frozen when the month was closed' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
   return (
     <>
-      <ReportCsv />
+      {narrow ? null : <ReportCsv />} {/* a phone draws it after the two summaries below */}
       {empty ? (
         <section className="rounded-panel border bg-surface">
           <EmptyState title={`Nothing in ${v.label} yet`}>No payment, expense or invoice is dated in it. The trend below still shows the periods before.</EmptyState>
@@ -214,9 +214,6 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             caption={
               <span>
                 PKR · {v.label}, on the day money moved{frozen ? ` · ${frozen}` : ''}
-                <InfoTip label="About cash in and out" className="ml-2">
-                  Money in is {plural(v.cash.payments, 'customer payment')} received, GST included. Money out is {plural(v.cash.expenses, 'expense')} and supplier payments, GST paid on purchases included.
-                </InfoTip>
               </span>
             }
             items={[
@@ -232,7 +229,6 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             caption={
               <span>
                 PKR · by invoice date
-                <TwoProfitsTip />
               </span>
             }
             items={[
@@ -242,6 +238,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               { label: 'Profit on invoices', amount: v.profit.profit },
             ]}
           />
+          <ReportCsv />
         </>
       ) : (
       <div className="grid items-start gap-6 lg:grid-cols-2">
@@ -359,6 +356,7 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
   return (
     <DataTable
       label={`Money out by category, ${v.label}`}
+      className="max-sm:rounded-none max-sm:border-0"
       columns={columns}
       rows={rows}
       getRowId={r => r.id}
@@ -424,6 +422,7 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
   return (
     <DataTable
       label={title}
+      className="max-sm:rounded-none max-sm:border-0"
       columns={columns}
       rows={v.trend}
       getRowId={t => t.period.key}

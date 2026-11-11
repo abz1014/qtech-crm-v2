@@ -238,7 +238,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
 
   return (
     <section aria-labelledby={`${uid}-h`} className="grid gap-3 border-b pb-3 md:gap-4 md:rounded md:border md:bg-surface md:p-5" data-testid="quick-add" data-work="">
-      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
           <InfoTip label="Paying a supplier?" className="ml-2">
@@ -254,7 +254,8 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           ) : null}
           {paidThisMonth !== null ? (
             <>
-              Paid in {monthKeyLabel(monthKey(today)).split(' ')[0]}: <span className="num font-medium text-fg">{pkr(paidThisMonth)}</span>, by the day paid
+              Paid in <span className="sm:hidden">{monthKeyShort(monthKey(today)).split(' ')[0]}</span><span className="max-sm:hidden">{monthKeyLabel(monthKey(today)).split(' ')[0]}</span>: <span className="num font-medium text-fg">{pkr(paidThisMonth)}</span>
+              <span className="max-sm:hidden">, by the day paid</span>
             </>
           ) : null}
         </p>
@@ -272,7 +273,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           <div className="grid content-start gap-2">
             {/* Words of their own (Amount (PKR), Paid on, Has a GST invoice): the Add expense dialog over this screen says
                 Amount, PKR and Date paid, and one name must find one field. */}
-            <label htmlFor={`${uid}-amount`} className="type-body font-medium">
+            <label htmlFor={`${uid}-amount`} className="type-body font-medium max-sm:sr-only">
               Amount (PKR)
             </label>
             <div className="flex items-start gap-2">
@@ -286,7 +287,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                   min={0.01}
                   inputMode="decimal"
                   enterKeyHint="done"
-                  placeholder="0"
+                  placeholder="Amount (PKR)"
                   onChange={v => {
                     setAmount(v)
                     setProblem(null)
@@ -302,7 +303,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           </div>
           <fieldset className="grid min-w-0 gap-2">
             <legend className="sr-only">What for, used most first</legend>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" data-row-actions="">
               {top.map(c => (
                 <button
                   key={c.id}
@@ -321,7 +322,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                 aria-label="More categories"
                 value={top.some(c => c.id === categoryId) ? '' : categoryId}
                 onChange={e => e.target.value && pick(e.target.value)}
-                className={cn('w-auto max-w-full px-4 pr-10 font-medium text-fg', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected read-only:border-fg read-only:bg-selected' : 'border-line-strong bg-surface read-only:border-line-strong')}
+                className={cn('w-auto max-w-full px-4 pr-10 font-medium text-fg max-sm:w-[8.5rem]', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected read-only:border-fg read-only:bg-selected' : 'border-line-strong bg-surface read-only:border-line-strong')}
               >
                 <option value="">More…</option>
                 {more.map(g => (
