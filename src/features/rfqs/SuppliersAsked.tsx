@@ -85,7 +85,6 @@ interface Props {
 }
 
 export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase = 'card', chaseIsMain = false, jump = false, onFloat }: Props) {
-  const replied = inquiries.filter(i => i.lines.length > 0).length
   const chaseable = chase === 'none' ? [] : inquiries.filter(i => canChaseInquiry(i, items))
   const [picked, setPicked] = useState<string | null>(null)
   const [channel, setChannel] = useChannelPreference()
@@ -115,7 +114,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   }, [phone, jump, firstAwaiting, rfq.id])
 
   return (
-    <DetailPanel title="Suppliers asked" pill={`${inquiries.length} asked · ${replied} replied`} dataSlot="suppliers-asked">
+    <DetailPanel title="Suppliers asked" dataSlot="suppliers-asked">
       <ul>
         {inquiries.map(i => {
           const awaiting = Boolean(i.sentOn) && !i.noOfferOn && i.lines.length === 0
@@ -130,7 +129,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           return (
             <li
               key={i.id}
-              className="grid scroll-mt-[5rem] gap-1 border-t px-5 py-3 first:border-t-0"
+              className="grid scroll-mt-[5rem] gap-1 border-t px-0 py-3 first:border-t-0"
               data-supplier-asked={i.supplierId}
               data-reply-row={i.supplierId}
               data-folded={folded ? '' : undefined}
@@ -194,7 +193,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           )
         })}
       </ul>
-      <div className="border-t px-5 py-3">
+      <div className="border-t px-0 py-3">
         <Button icon={Plus} onClick={onFloat}>
           Ask more suppliers
         </Button>
@@ -409,7 +408,7 @@ function ChaseCard({
           onChaseAgain={() => setDismissed(true)}
         />
       ) : null}
-      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-panel border bg-surface">
+      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] border-y">
         <RecipientRow channel={channel} lead={channel === 'email' ? 'Email to' : 'WhatsApp to'} contact={recipient} />
         {whole ? (
           <div id={wholeId} className="grid">

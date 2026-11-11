@@ -4,6 +4,9 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { lazyShown } from '@/lib/lazyDialog'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { FoldRow } from '@/ui/FoldRow'
+import { Money } from '@/ui/Money'
+import { isFinalMargin } from '@/lib/money'
 import { Skeleton } from '@/ui/Skeleton'
 import { mapPgError } from '@/lib/pgErrors'
 import { useToast } from '@/ui/useToast'
@@ -86,6 +89,8 @@ const ResolveBasisDialog = lazyShown(() => import('@/features/orders/ResolveBasi
 
 export default function OrderWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
+  const [costsOpen, setCostsOpen] = useState(false)
+  const mm = w.orderMoney.data
   if (!w.orderId) return null
   if (w.failed) return <p className="text-base text-fg-muted">The order did not load. Reload the page to try again.</p>
   if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-[10rem] w-full" />
@@ -96,10 +101,22 @@ export default function OrderWork({ job }: JobSlotProps) {
       {basisUnknown && job.money ? <BasisQuestion order={w.order} items={w.items.data} money={w.orderMoney.data} admin={admin} /> : null}
       {job.money ? <CustomerPo order={w.order} /> : null}
       <OrderItemsPanel order={w.order} items={w.items.data} legs={w.legs.data} money={job.money} canEdit={w.canEdit && job.money} basisUnknown={basisUnknown} pos={w.pos.data ?? []} />
+      {/* The margin is not drawn here: the Money row of the job page (JobSide) is the one place the job's money shows. What only this card can do
+          (the expected cost, Mark costs complete, Add expense, the estimate) is one closed row, so no action is lost and the step stays a list. */}
       {admin ? (
-        <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
-          <MarginPanel order={w.order} money={w.orderMoney.data} loading={w.orderMoney.isPending} error={w.orderMoney.isError} />
-        </Suspense>
+        <FoldRow
+          state={{ icon: Scale, word: '' }}
+          title="Costs and margin"
+          summary={mm && isFinalMargin(mm.marginState as never) && mm.margin !== null ? <>Margin <Money value={mm.margin} prefix={false} /></> : 'Margin not final'}
+          open={costsOpen}
+          onToggle={() => setCostsOpen(o => !o)}
+          controlsId="order-costs-body"
+          bodyLabel="Costs"
+        >
+          <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
+            <MarginPanel order={w.order} money={w.orderMoney.data} loading={w.orderMoney.isPending} error={w.orderMoney.isError} />
+          </Suspense>
+        </FoldRow>
       ) : null}
     </div>
   )

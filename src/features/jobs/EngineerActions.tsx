@@ -103,7 +103,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   return (
     <>
       {card ? (
-      <section aria-label={phone && hasButtons ? 'Site visit' : 'On site'} className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-3" data-engineer-actions>
+      <section aria-label={phone && hasButtons ? 'Site visit' : 'On site'} className="mt-4 grid gap-3 border-y py-3" data-engineer-actions>
         {/* The contact row in the list has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
         {!facts.contact && order?.site ? (
           <p className="text-base text-fg-2" data-testid="job-site">
@@ -111,7 +111,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
           </p>
         ) : null}
         {offline ? (
-          <p role="status" className="flex items-center gap-2 rounded border border-dashed border-line-strong px-3 py-3 text-base text-fg-2" data-offline>
+          <p role="status" className="flex items-center gap-2 py-2 text-base text-fg-2" data-offline>
             <CloudOff aria-hidden="true" className="size-5 shrink-0" />
             {OFFLINE_TEXT}
           </p>
