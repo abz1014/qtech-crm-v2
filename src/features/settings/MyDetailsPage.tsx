@@ -104,7 +104,7 @@ function DetailsForm({ details }: { details: MyDetails }) {
       </Form>
 
       {/* With unsaved changes the bar sticks above the phone's bottom tabs (the page scrolls inside <main>, which ends where the tabs start). */}
-      <div data-save-bar className={cn('flex flex-wrap items-center gap-3 border-t py-3', dirty && 'sticky bottom-0 z-10 bg-surface')}>
+      <div data-sticky-bar="" data-save-bar className={cn('flex flex-wrap items-center gap-3 border-t py-3', dirty && 'sticky bottom-0 z-10 bg-surface')}>
         {dirty ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
         <p role="status" className="text-base text-fg-muted">
           {dirty ? '1 unsaved change: Phone' : 'Nothing to save yet'}

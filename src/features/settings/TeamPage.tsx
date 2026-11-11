@@ -178,7 +178,7 @@ export function TeamPage() {
         </Banner>
       ) : null}
 
-      <div data-work="">
+      <div data-work="" className="min-w-0">
       <DataTable
         label="Team"
         columns={columns}

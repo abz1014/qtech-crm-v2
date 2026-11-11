@@ -98,7 +98,7 @@ export function ExchangeRatesPage() {
               flat
               actions={lastRun.data ? <span className="text-base text-fg-muted" data-fx-auto-run>{autoRunStamp(lastRun.data)}</span> : undefined}
             >
-              <div data-work=""><RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} /></div>
+              <div data-work="" className="min-w-0"><RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} /></div>
             </Panel>
             {warnings.map(w => (
               <Banner key={w} tone="warning" title={w.split('. ')[0] + '.'}>
