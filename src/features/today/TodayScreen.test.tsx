@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionContext, type SessionState } from '@/app/session'
 import { ToastProvider } from '@/ui/Toast'
@@ -170,6 +170,35 @@ describe('Today screen', () => {
     const open = await screen.findByRole('region', { name: 'Today' })
     expect(within(open).getAllByRole('listitem').filter(li => li.hasAttribute('data-rule'))).toHaveLength(1)
     expect(within(open).getByRole('button', { name: 'Today 1' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('an admin payment row shows one visible button; Record payment sits first in the More actions menu and goes where it always did', async () => {
+    const row = { order_id: 'o1', order_number: 31, company_id: 'c1', owner_id: 'me', balance: 1000, settled: 0, due_on: addDays(businessToday(), -12), is_overdue: true, last_reminded_on: null, reminder_count: 0, company_name: 'Karachi Glassworks', invoice_numbers: [] }
+    fake = installFakeDb((c: FakeCall): FakeResult => (c.target === 'rpc:receivables_list' ? { data: [row] } : { data: [] }))
+    const Probe = () => <p data-testid="loc">{useLocation().pathname + useLocation().search}</p>
+    const session: SessionState = { status: 'signed-in', user: { id: 'me', name: 'Ayesha Rana', role: 'admin' } }
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <SessionContext.Provider value={session}>
+          <MemoryRouter>
+            <ToastProvider>
+              <TodayScreen />
+              <Probe />
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionContext.Provider>
+      </QueryClientProvider>,
+    )
+    const late = await screen.findByRole('region', { name: 'Late' })
+    const li = within(late).getAllByRole('listitem').filter(l => l.hasAttribute('data-rule')).find(l => l.getAttribute('data-rule') === 'payment_overdue') as HTMLElement
+    expect(li).toBeTruthy()
+    expect(within(li).queryByRole('button', { name: /^Record payment/ })).toBeNull()
+    expect(within(li).getAllByRole('button').filter(b => b.getAttribute('aria-expanded') === null && b.getAttribute('aria-haspopup') === null)).toHaveLength(1)
+    fireEvent.click(within(li).getByRole('button', { name: 'More actions' }))
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).getAllByRole('menuitem')[0]).toHaveAccessibleName(/^Record payment/)
+    fireEvent.click(within(menu).getAllByRole('menuitem')[0])
+    await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/money/receivables?pay=1&order=o1'))
   })
 
   it('shows seven rows and folds the rest into "N more", every one still reachable', async () => {

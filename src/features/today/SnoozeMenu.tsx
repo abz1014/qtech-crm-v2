@@ -8,7 +8,7 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
-import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
+import { MenuGroup, MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { useToast } from '@/ui/useToast'
 import { addDays, nextMonday } from '@/features/rfqs/lib/dateText'
 import { useSnooze, useUnsnooze } from '@/features/today/hooks'
@@ -47,7 +47,7 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
       <Popover>
         <PopoverTrigger asChild>
           {iconOnly ? (
-            <Button variant="secondary" icon={AlarmClock} aria-label="Snooze" size="touch" className="text-fg [&_svg]:text-fg" />
+            <Button variant="secondary" icon={AlarmClock} aria-label={extra ? 'More actions' : 'Snooze'} size="touch" className="text-fg [&_svg]:text-fg" />
           ) : (
             <Button variant="quiet" icon={AlarmClock}>
               Snooze
@@ -55,7 +55,10 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
           )}
         </PopoverTrigger>
         <PopoverContent variant="menu" align="end" aria-label="Snooze until">
-          {extra ? (<MenuItem onClick={extra.onSelect} aria-label={extra.ariaLabel}>{extra.label}</MenuItem>) : null}
+          {extra ? (<>
+            <MenuItem onClick={extra.onSelect} aria-label={extra.ariaLabel}>{extra.label}</MenuItem>
+            <MenuSeparator />
+            <MenuGroup label="Snooze until">
           <MenuItem onClick={() => apply(tomorrow)} hint={short(tomorrow)}>
             Tomorrow morning
           </MenuItem>
@@ -68,6 +71,21 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
           <MenuItem icon={UserRoundX} onClick={() => apply(NOT_OURS_UNTIL, true)}>
             Not ours to chase
           </MenuItem>
+            </MenuGroup>
+          </>) : (<>
+          <MenuItem onClick={() => apply(tomorrow)} hint={short(tomorrow)}>
+            Tomorrow morning
+          </MenuItem>
+          <MenuItem onClick={() => apply(monday)} hint={formatDay(monday)}>
+            Monday
+          </MenuItem>
+          <MenuItem icon={CalendarDays} onClick={() => setPicking(true)} hint={<Icon icon={ChevronRight} size="sm" />}>
+            Pick a date
+          </MenuItem>
+          <MenuItem icon={UserRoundX} onClick={() => apply(NOT_OURS_UNTIL, true)}>
+            Not ours to chase
+          </MenuItem>
+          </>)}
         </PopoverContent>
       </Popover>
       {iconOnly ? null : <InfoTip label="About snooze">Hides this item until the day you pick, or until the job changes (Not ours to chase). Only for you.</InfoTip>}
