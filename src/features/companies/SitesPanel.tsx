@@ -137,6 +137,7 @@ export function SitesPanel({
 
   return (
     <Panel
+      flat
       title="Sites"
       actions={
         <Button variant="quiet" size="sm" icon={Plus} onClick={onAddSite}>

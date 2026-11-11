@@ -29,7 +29,7 @@ const GRID = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_148px_120px_28px] md
 const GRID_NO_FAMILY = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_220px_28px] md:items-center md:gap-3'
 
 const cell =
-  'h-control -mx-2 w-[calc(100%+1rem)] max-w-none min-w-0 rounded border border-line-input bg-surface px-2 text-sm text-fg max-md:text-base md:border-transparent md:bg-transparent ' +
+  'h-control -mx-2 w-[calc(100%+1rem)] max-w-none min-w-0 rounded border border-line-input bg-surface px-2 text-base text-fg md:border-transparent md:bg-transparent ' +
   'placeholder:text-fg-muted hover:border-line-input focus-visible:border-fg focus-visible:bg-surface'
 
 function QtyCell({ item, n, onChange }: { item: DraftItem; n: number; onChange: (patch: Partial<DraftItem>) => void }) {
@@ -170,13 +170,13 @@ export function PasteZone({
   return (
     <div
       className={cn(
-        'relative grid gap-2 rounded-panel border border-dashed border-line-input bg-surface p-4 text-center transition-colors duration-fast ease-out',
+        'relative grid gap-2 border-y border-dashed border-line-input py-4 text-center transition-colors duration-fast ease-out',
         'focus-within:border-fg-muted',
         filled ? 'justify-items-start text-left' : 'justify-items-center',
       )}
     >
       {filled ? null : <Icon icon={ClipboardPaste} size="lg" className="text-fg-muted" />}
-      <label htmlFor="intake-paste" className={cn('text-sm', filled ? 'font-medium' : 'text-fg-2')}>
+      <label htmlFor="intake-paste" className={cn('text-base', filled ? 'font-medium' : 'text-fg-2')}>
         {filled ? 'Paste another email or list' : 'Paste the customer’s email or item list'}
       </label>
       <textarea
@@ -215,11 +215,11 @@ export function PasteZone({
         </Button>
       ) : null}
       {hint ? (
-        <p role="status" className="text-sm text-fg-2">
+        <p role="status" className="text-base text-fg-2">
           {hint}
         </p>
       ) : null}
-      <p className="text-xs text-fg-muted">
+      <p className="text-base text-fg-muted">
         {touch ? null : (
           <>
             Press <kbd className="num rounded border border-line-strong bg-sunken px-1">Ctrl</kbd>{' '}
@@ -236,20 +236,20 @@ export function PastedPanel({ block }: { block: PastedBlock }) {
   const { result } = block
   const found = result.items.length
   return (
-    <div className="overflow-hidden rounded-panel border bg-surface">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b bg-sunken px-4 py-2 text-xs text-fg-muted">
+    <div className="border-t">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2 text-base text-fg-muted">
         <Icon icon={ClipboardPaste} size="sm" />
         <span>
           Pasted just now · <span className="num">{result.lineCount}</span> {result.lineCount === 1 ? 'line' : 'lines'}
         </span>
-        <span className="ml-auto inline-flex h-5 shrink-0 items-center gap-[5px] whitespace-nowrap rounded border border-tone-success-fg/25 bg-tone-success-bg px-2 text-xs font-medium text-tone-success-fg">
+        <span className="ml-auto inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap text-base font-medium text-tone-success-fg">
           <Icon icon={Check} size="chip" />
           {found === 0 ? 'No items found' : `${found} ${found === 1 ? 'item' : 'items'} found`}
         </span>
       </div>
-      <pre tabIndex={0} role="region" aria-label="What was pasted" className="m-0 max-h-[168px] overflow-auto whitespace-pre-wrap break-words py-2 font-mono text-xs leading-5 text-fg-2">
+      <pre tabIndex={0} role="region" aria-label="What was pasted" className="m-0 max-h-[168px] overflow-auto whitespace-pre-wrap break-words py-2 font-mono text-base leading-6 text-fg-2">
         {result.lines.map((l, i) => (
-          <span key={i} className={cn('block px-4', l.kind === 'skipped' && 'bg-tone-warning-bg')}>
+          <span key={i} className={cn('block', l.kind === 'skipped' && 'bg-tone-warning-bg')}>
             {l.marker ? <mark className="rounded bg-selected px-[2px] text-fg">{l.marker}</mark> : null}
             {l.marker ? ' ' : ''}
             {textAfterMarker(l)}
@@ -295,10 +295,10 @@ export function ItemRows({
   }, [focusKey])
 
   return (
-    <div className="overflow-hidden rounded-panel border bg-surface">
+    <div className="border-t">
       {items.length > 0 ? (
         <>
-          <div className={cn('hidden min-h-8 border-b bg-sunken px-4 text-xs font-medium text-fg-muted', grid)} aria-hidden="true">
+          <div className={cn('hidden min-h-8 border-b text-base font-medium text-fg-muted', grid)} aria-hidden="true">
             <span>#</span>
             <span>Qty</span>
             <span>Description</span>
@@ -313,12 +313,12 @@ export function ItemRows({
                 <li
                   key={it.key}
                   className={cn(
-                    'group grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b px-4 py-3 last:border-b-0 md:min-h-12 md:py-0',
+                    'group grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b py-3 last:border-b-0 md:min-h-12 md:py-0',
                     grid,
                     flagged.includes(it.key) && 'bg-tone-warning-bg',
                   )}
                 >
-                  <span className="num text-xs text-fg-muted">{n}</span>
+                  <span className="num text-base text-fg-muted">{n}</span>
                   <div className="min-w-0 pl-2 md:pl-0">
                     <QtyCell item={it} n={n} onChange={patch => onChange(it.key, patch)} />
                   </div>
@@ -368,7 +368,7 @@ export function ItemRows({
           </ol>
         </>
       ) : null}
-      <div className="flex flex-wrap items-center gap-3 border-t bg-sunken px-4 py-3 text-xs text-fg-muted">
+      <div className="flex flex-wrap items-center gap-3 border-t py-3 text-base text-fg-muted">
         <Icon icon={Scissors} size="sm" />
         <span className="min-w-[10rem] flex-1 text-pretty">{note}</span>
         <Button variant="quiet" size="sm" icon={Plus} className="ml-auto shrink-0" onClick={onAdd}>

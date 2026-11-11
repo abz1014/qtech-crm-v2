@@ -244,8 +244,10 @@ export default function JobsListPage() {
           ) : undefined
         }
       />
+      <div data-work>
       <DataTable
         label="Jobs"
+        className="rounded-none border-0 border-t bg-transparent"
         sortParam="sort"
         columns={columns}
         rows={rows}
@@ -281,6 +283,7 @@ export default function JobsListPage() {
         }
         empty={empty}
       />
+      </div>
       {creating ? <NewOrderDialog onClose={() => setCreating(false)} /> : null}
     </div>
   )
