@@ -307,7 +307,7 @@ test.describe('R26 float suggestions: ordered by track record, citing the eviden
     await expect(card.locator('li', { hasText: s.mike.name }).locator('[data-record]')).toContainText('Often late: on time 1 of 3')
     await expect(card.locator('li', { hasText: s.alpha.name }).locator('[data-evidence]')).toHaveCount(0)
 
-    // The pre-tick rule is unchanged: only "supplied this item before" is ticked, and nobody is.
+    // Only "supplied this item before" is ticked, and nobody is (the shortlist is asked only by choice).
     for (const n of [s.zulu.name, s.alpha.name, s.mike.name]) await expect(page.getByRole('checkbox', { name: n })).not.toBeChecked()
     await full(page, 'a8-rfq-float-evidence-1440', 1400)
   })
@@ -363,6 +363,62 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
     expect(await block.innerText()).not.toMatch(/receiv/i)
     await full(page, 'a8-intake-memory-evidence-1440', 1700)
     expect(await violations(page)).toEqual([])
+  })
+
+  // Owner decision (supplier suggestion fix): a supplier starts ticked ONLY if it supplied this item before and is not demoted. A reply rate,
+  // a tag a person set, and a "no offer" reply never tick anyone. Asks are 30 days old (older than the 7 days that count as asked).
+  test('only an exact past supply is ticked: a tagged supplier that always replied, and one that only said "no offer", are not', async ({ page, browser }) => {
+    const tag = letters()
+    const brand = await post<{ id: string; name: string }>('brands', { name: `Hachlike${tag}`, kind: 'brand' })
+    const desc = `${brand.name} ZQ${rnd(4)} portable meter`
+    const customer = await createCompany(uniqueName('Tick Customer'))
+    const carrying = async (prefix: string) => {
+      const c = await createCompany(uniqueName(prefix))
+      await must(rest('admin', 'company_brands', { method: 'POST', body: { company_id: c.id, brand_id: brand.id } })) // set by hand: created_by is the admin
+      return c
+    }
+    const supplied = await carrying('Tick Supplied Before')
+    const replied = await carrying('Tick Always Replied')
+    const noOffer = await carrying('Tick Only No Offer')
+    await history(supplied.id, desc, brand.id, [{ placedAgo: 60, expectedIn: 14, deliveredIn: 12 }])
+    // Three asks each, 30 days ago, on three past RFQs of the same customer.
+    for (let n = 0; n < 3; n++) {
+      const past = await createRfq(customer.id)
+      const item = await post<{ id: string }>('rfq_items', { rfq_id: past.id, position: 0, description: `Unrelated gasket G${letters()}${n}`, qty: 1 })
+      const a = await post<{ id: string }>('supplier_inquiries', { rfq_id: past.id, supplier_id: replied.id, sent_on: karachiDay(-30) })
+      await post('supplier_quote_lines', { inquiry_id: a.id, rfq_item_id: item.id, unit_price: 10, currency: 'USD' })
+      await post('supplier_inquiries', { rfq_id: past.id, supplier_id: noOffer.id, sent_on: karachiDay(-30), no_offer_on: karachiDay(-29) })
+    }
+
+    const reach = async (p: Page, role: 'sales' | 'engineer') => {
+      await openAs(p, role, '/rfqs/new')
+      await p.getByRole('combobox', { name: 'Company' }).fill(customer.name)
+      await p.getByRole('option', { name: new RegExp(customer.name) }).click()
+      await p.evaluate(t => {
+        const dt = new DataTransfer()
+        dt.setData('text/plain', t)
+        document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+      }, `Please quote:\n1) ${desc} - 1 no\nRegards`)
+      await p.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+      await expect(p.getByRole('checkbox', { name: replied.name })).toBeVisible()
+    }
+
+    await reach(page, 'sales')
+    // (a) an exact past supply is ticked; (b) a tag plus 3 replied asks is not; (c) 3 asks, all "no offer", is not.
+    await expect(page.getByRole('checkbox', { name: supplied.name })).toBeChecked()
+    await expect(page.getByRole('checkbox', { name: replied.name })).not.toBeChecked()
+    await expect(page.getByRole('checkbox', { name: noOffer.name })).not.toBeChecked()
+    await expect(page.getByText('Ticked: suppliers who supplied these items before. Tick or untick any.')).toBeVisible()
+    await expect(page.getByText('Nobody has supplied these before. Tick who to ask.')).toHaveCount(0)
+
+    // An engineer loads no item memory (it carries prices), so (a) is not known to be a past supplier: nothing is ticked and the page says so.
+    const ctx = await browser.newContext()
+    const eng = await ctx.newPage()
+    await reach(eng, 'engineer')
+    for (const s of [supplied, replied, noOffer]) await expect(eng.getByRole('checkbox', { name: s.name })).not.toBeChecked()
+    await expect(eng.getByText('Tick who to ask.', { exact: true })).toBeVisible()
+    await expect(eng.getByText('Nobody has supplied these before.')).toHaveCount(0)
+    await ctx.close()
   })
 })
 

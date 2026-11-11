@@ -18,6 +18,15 @@ describe('the Ask list on the RFQ page (review item 3)', () => {
     expect(list?.[0]).toMatchObject({ name: 'Orient', preTicked: true, reason: 'On the shortlist from New RFQ. Not asked yet.', coversItemIds: ['it-1', 'it-2'] })
   })
 
+  it('keeps the shortlist heading apart from a real "Supplied this item before" group', () => {
+    const real = { ...sug('s-real'), groupKey: 'supplied_before', groupLabel: 'Supplied this item before' } as SupplierSuggestion
+    const list = withShortlist([inq({ id: 'a', supplierId: 's-short', supplierName: 'Orient' })], items, [real])
+    expect(list?.map(s => [s.supplierId, s.groupKey, s.groupLabel])).toEqual([
+      ['s-short', 'shortlist', 'Shortlist'],
+      ['s-real', 'supplied_before', 'Supplied this item before'],
+    ])
+  })
+
   it('waits for the suggestions to load', () => {
     expect(withShortlist([inq({})], items, undefined)).toBeUndefined()
   })

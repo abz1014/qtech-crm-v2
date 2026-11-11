@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { ReasonParts } from '@/features/rfqs/ranking/RankParts'
+import { PartialNote, ReasonParts } from '@/features/rfqs/ranking/RankParts'
 import type { RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import type { SupplierSuggestion } from '@/features/rfqs/lib'
@@ -34,9 +34,11 @@ function PickList({
   isTicked,
   onTick,
   coverage,
+  partial,
 }: {
   suggestions: readonly SupplierSuggestion[]
   coverage?: string | null
+  partial?: boolean
   isTicked: (s: SupplierSuggestion) => boolean
   onTick: (id: string, on: boolean) => void
 }) {
@@ -45,6 +47,11 @@ function PickList({
       {coverage ? (
         <li className="border-b border-dashed px-5 py-3 text-base text-fg-2" data-coverage>
           {coverage}
+        </li>
+      ) : null}
+      {partial ? (
+        <li className="border-b border-dashed px-5 py-3">
+          <PartialNote />
         </li>
       ) : null}
       {suggestions.map((s, n) => {
@@ -108,7 +115,10 @@ export function SuppliersToAskCard({
   busy,
   onAsk,
   coverage,
+  partial,
 }: {
+  /** A read behind the order failed. */
+  partial?: boolean
   /** Undefined while they load. */
   suggestions: readonly SupplierSuggestion[] | undefined
   /** The coverage line: no supplier on file deals in a category of this RFQ. */
@@ -129,7 +139,7 @@ export function SuppliersToAskCard({
         <Empty coverage={coverage} />
       ) : (
         <>
-          <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} />
+          <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />
           <div className="border-t px-5 py-3">
             <Button icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0 || items.length === 0} onClick={() => onAsk(t.ticked)}>
               {t.ticked.length === 0 ? 'Tick a supplier to ask' : copyLabel(t.ticked.length)}
@@ -150,8 +160,10 @@ export function FloatDialog({
   onAsk,
   onClose,
   coverage,
+  partial,
 }: {
   title?: string
+  partial?: boolean
   coverage?: string | null
   suggestions: readonly SupplierSuggestion[] | undefined
   itemCount: number
@@ -183,7 +195,7 @@ export function FloatDialog({
           <Empty coverage={coverage} />
         ) : (
           <div className="-mx-5 -my-2">
-            <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} />
+            <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />
           </div>
         )}
       </DialogContent>
