@@ -96,7 +96,7 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
   const [open, setOpen] = useState(false)
   const n = s.coversItemIds.length
   return (
-    <li className={cn('relative grid gap-1 border-t py-3 first:border-t-0', ticked && 'bg-selected')} data-ticked={ticked || undefined}>
+    <li className={cn('relative grid gap-1 border-t py-3 first:border-t-0', ticked && 'bg-selected')} data-row-actions="" data-ticked={ticked || undefined}>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         <Checkbox id={id} checked={ticked} onCheckedChange={v => onToggle(s.supplierId, v === true)} aria-label={s.name} />
         <label htmlFor={id} className="type-row flex min-w-[9rem] flex-1 flex-wrap items-baseline gap-x-2 after:absolute after:inset-0 after:cursor-pointer">
@@ -269,7 +269,7 @@ export function SupplierPicker({
               const on = ticked.has(m.id)
               const id = `sup-${m.id}`
               return (
-                <li key={m.id} className={cn('relative flex items-center gap-3 border-t py-3 first:border-t-0', on && 'bg-selected')}>
+                <li key={m.id} data-row-actions="" className={cn('relative flex items-center gap-3 border-t py-3 first:border-t-0', on && 'bg-selected')}>
                   <Checkbox id={id} checked={on} onCheckedChange={v => onToggle(m.id, v === true)} aria-label={m.name} />
                   <label htmlFor={id} className="type-row after:absolute after:inset-0 after:cursor-pointer">
                     {m.name}

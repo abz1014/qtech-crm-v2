@@ -312,7 +312,7 @@ export function EnquiryCard({
   // The text is shown as drawn (blank specs highlighted); "Edit the text" swaps it for a text area.
   const [editing, setEditing] = useState(false)
   return (
-    <section aria-label="The message">
+    <section aria-label="The message" data-work>
       <header className="flex flex-wrap items-start gap-3 border-b py-4">
         <div className="min-w-[12rem] flex-1">
           <h2 className="type-row m-0">
@@ -327,7 +327,7 @@ export function EnquiryCard({
       <div className="type-body flex flex-wrap items-center gap-2 border-b py-3">
         <span className="text-fg-muted">Send to</span>
         {recipients.map(r => (
-          <span key={r.id} className="inline-flex items-center gap-1 text-base font-medium">
+          <span key={r.id} data-row-actions="" className="inline-flex items-center gap-1 text-base font-medium">
             {r.name}
             {locked ? null : (
               <Button variant="quiet" size="sm" icon={X} aria-label={`Do not send to ${r.name}`} onClick={() => onRemoveRecipient(r.id)} />
@@ -425,7 +425,7 @@ export function FloatedPanel({
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const next = messages ? asked.find(i => !opened.has(i.id)) : undefined
   return (
-    <section aria-label="Asked suppliers" className="grid gap-4">
+    <section aria-label="Asked suppliers" data-work className="grid gap-4">
       <p className="type-body m-0 flex items-center gap-2 text-tone-success-fg">
         <Icon icon={CircleCheck} />
         <span className="min-w-0">
@@ -459,7 +459,7 @@ export function FloatedPanel({
       {messages && asked.length > 0 ? (
         <ul aria-label="Send it to each supplier" className="m-0 grid list-none gap-3 p-0" data-slot="send-to-each">
           {asked.map(i => (
-            <li key={i.id} className="grid gap-2">
+            <li key={i.id} data-row-actions="" className="grid gap-2">
               <b className="type-row">{i.supplierName}</b>
               <MessageActions
                 size="sm"

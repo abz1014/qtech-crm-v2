@@ -924,12 +924,12 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
           <header className="grid gap-1">
-            <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted">
+            <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted max-md:sr-only">
               <Link to={enquiry ? '/jobs' : '/rfqs'} className="hover:text-fg">{enquiry ? 'Jobs' : 'RFQs'}</Link>
               <Icon icon={ChevronRight} size="sm" />
               <span aria-current="page">{enquiry ? 'New enquiry' : 'New RFQ'}</span>
             </nav>
-            <h1 className="type-page">{enquiry ? 'New enquiry' : 'New RFQ'}</h1>
+            <h1 className="type-page max-md:sr-only">{enquiry ? 'New enquiry' : 'New RFQ'}</h1>
             <p className="type-body max-w-prose text-fg-muted">{lede}</p>
             {step === 'build' && !offer && presetSupplier ? (
               <p className="type-body max-w-prose text-fg-2" data-preset-supplier>
@@ -959,7 +959,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
 
           {step === 'build' && !offer ? (
             <>
-              <section aria-labelledby="h-customer" className="grid gap-3">
+              <section aria-labelledby="h-customer" data-work className="grid gap-3">
                 <h2 id="h-customer" className="type-section flex flex-wrap items-center gap-2">
                   Customer
                   {enquiry && !company && sender ? <Tag dashed>Check this</Tag> : null}
@@ -1123,7 +1123,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
 
           {step === 'suppliers' ? (
             <>
-              <section aria-labelledby="h-items" className="grid gap-3">
+              <section aria-labelledby="h-items" data-work className="grid gap-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <h2 id="h-items" className="type-section">Items</h2>
                   <p className="type-body text-fg-muted">
@@ -1232,7 +1232,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
           ) : null}
 
           {step === 'saved' && saved ? (
-            <section aria-label="Saved" className="grid gap-4">
+            <section aria-label="Saved" data-work className="grid gap-4">
               <h2 className="type-section m-0"><span className="num">{rfqRef(saved.number)}</span> is saved</h2>
               <p className="type-body m-0 text-fg-2">
                 {ticked.length > 0
