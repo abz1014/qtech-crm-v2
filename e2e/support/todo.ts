@@ -8,7 +8,9 @@ import type { Locator, Page } from '@playwright/test'
 
 /** Today and This week are closed rows with their count until tapped (L6): opens each, so its rows are in the page. */
 export async function openClosedBlocks(page: Page): Promise<void> {
-  for (const closed of await page.locator('[data-block-closed]').all()) await closed.click()
+  // Each click removes that row from the match set (its block opens), so always take the first one still closed.
+  const closed = page.locator('[data-block-closed]')
+  for (let i = 0; i < 4 && (await closed.count()) > 0; i++) await closed.first().click()
 }
 
 /** Waits for the list to have loaded (the header's count is drawn only then), then opens the "N more" fold when there is one. */
