@@ -35,6 +35,7 @@ import { Tooltip } from '@/ui/Tooltip'
 import { TooltipVariants } from '@/dev/gallery/primitives'
 import { FoldRowExamples, InfoTipExamples } from '@/dev/gallery/uxPrimitives'
 import { ShellScene } from '@/dev/gallery/shell'
+import { SumBarStripScene } from '@/dev/gallery/sumbarStrip'
 
 /*
  * Overlay and interaction scenes for /dev/gallery (U09). Dialogs, the palette and toasts cannot sit
@@ -607,6 +608,7 @@ const NODES: Record<SceneName, () => ReactNode> = {
       <FoldRowExamples ref25 />
     </div>
   ),
+  'sumbar-strip': () => <SumBarStripScene />,
   'shell': () => <ShellScene />,
 }
 

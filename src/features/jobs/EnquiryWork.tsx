@@ -93,7 +93,7 @@ function SendToEachCard({ ask, inquiries, onClose }: { ask: AskResult; inquiries
     >
       <ul className="grid divide-y" data-slot="send-to-each">
         {asked.map(i => (
-          <li key={i.id} className="grid gap-2 px-5 py-3">
+          <li key={i.id} className="grid gap-2 py-3">
             <b className="text-sm font-medium">{i.supplierName}</b>
             <MessageActions
               size="sm"

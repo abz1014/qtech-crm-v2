@@ -23,32 +23,36 @@ export default function InvoiceWork({ job }: JobSlotProps) {
   const onOrder = w.goodsLegs.filter(l => l.deliveredOn === null).length
   const m = w.orderMoney.data
   const owing = invoiced > 0 && (m?.balance ?? 0) > 0
+  // One main button (the first that applies); the others sit in the same line, quiet. None of them is green: the job page has one green button, the next step.
+  const canCreate = order.cancelledOn === null && !fully && onOrder === 0
+  const canPrint = invoiced > 0
+  const canPay = job.role === 'admin' && order.cancelledOn === null
+  const main = canCreate ? 'create' : canPay ? 'pay' : canPrint ? 'print' : owing ? 'remind' : null
+  const look = (k: string) => (main === k ? 'secondary' : 'quiet') as 'secondary' | 'quiet'
   return (
     <div className="grid gap-2" data-invoice-work>
       {order.cancelledOn === null && !fully ? (
         onOrder > 0 ? (
-          <p className="text-base text-fg-2" data-slot="invoice-waits">
+          <p className="type-body text-fg-2" data-slot="invoice-waits">
             {onOrder === 1 ? '1 supplier order is still on order.' : `${onOrder} supplier orders are still on order.`} Create the invoice once the goods are delivered.
           </p>
         ) : null
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        {order.cancelledOn === null && !fully && onOrder === 0 ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
-        {invoiced > 0 ? <InvoicePdfButton orderId={order.id} size="sm" /> : null}
-        {job.role === 'admin' && order.cancelledOn === null ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}
-        {owing ? <CopyReminderButton order={order} money={m} /> : null}
-      </div>
-      {invoiced > 0 && job.role === 'admin' ? (
-        <p className="text-base">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {canCreate ? <CreateInvoiceButton orderId={order.id} size="sm" variant={look('create')} /> : null}
+        {canPrint ? <InvoicePdfButton orderId={order.id} size="sm" variant={look('print')} /> : null}
+        {canPay ? <RecordPaymentButton orderId={order.id} size="sm" variant={look('pay')} /> : null}
+        {owing ? <CopyReminderButton order={order} money={m} variant={look('remind')} /> : null}
+        {invoiced > 0 && job.role === 'admin' ? (
           <Link
             to={`/money/gst-register?q=${encodeURIComponent(`ORD-${String(order.number).padStart(4, '0')}`)}`}
             data-slot="invoice-register-link"
-            className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline"
+            className="inline-flex min-h-touch items-center rounded type-body font-medium text-primary underline-offset-4 hover:underline"
           >
             Open in Invoices to void one or issue a credit note
           </Link>
-        </p>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   )
 }

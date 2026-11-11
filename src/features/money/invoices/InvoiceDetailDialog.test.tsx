@@ -52,6 +52,16 @@ function setup(over: Record<string, unknown> = {}, closed: string[] = [], role =
 
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
+/** The dialog's footer has Save (or Edit), Close and More; Void, Create credit note, Delete and History are lines of More. */
+async function choose(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await screen.findByRole('button', { name: 'More' }))
+  await user.click(await screen.findByRole('menuitem', { name }))
+}
+async function moreItems(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: 'More' }))
+  return (await screen.findAllByRole('menuitem')).map(i => i.textContent)
+}
+
 describe('Invoice: edit', () => {
   it('a change in a month whose return may be filed warns, needs the tick, then sends only what changed', async () => {
     const { d, user } = setup()
@@ -75,15 +85,16 @@ describe('Invoice: edit', () => {
 
   it('a change that is not to the invoice itself (a note) needs no tick', async () => {
     const { user } = setup()
-    await user.type(await screen.findByLabelText(/Notes/), 'Customer asked for a copy')
+    await user.click(await screen.findByRole('button', { name: /Courier, FBR and notes/ }))
+    await user.type(await screen.findByLabelText('Notes'), 'Customer asked for a copy')
     expect(screen.queryByTestId('gst-filed-warning')).toBeNull()
   })
 
   it('a closed month shows the figures as text with the lock line, and no edit boxes or Delete', async () => {
-    setup({}, ['2025-01'])
+    const { user } = setup({}, ['2025-01'])
     expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('Month closed. Reopen the month first, in Lock a month, to change or delete.')
     expect(screen.queryByLabelText('Net amount, PKR')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Delete invoice' })).toBeNull()
+    expect(await moreItems(user)).not.toContain('Delete invoice')
   })
 })
 
@@ -102,7 +113,7 @@ describe('Invoice: a closed month for sales (M4)', () => {
 describe('Invoice: delete', () => {
   it('a bank-ticked invoice says which statement, links to it, and has no Delete', async () => {
     const { user } = setup({ tax_bank_month: '2025-01-01', number: null })
-    await user.click(await screen.findByRole('button', { name: 'Delete invoice' }))
+    await choose(user, 'Delete invoice')
     const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
     expect(within(dialog).getByText(/ticked against the January 2025 bank statement/)).toBeInTheDocument()
     expect(within(dialog).getByRole('link', { name: 'Open Bank check' })).toBeInTheDocument()
@@ -111,7 +122,7 @@ describe('Invoice: delete', () => {
 
   it('a refusal after the page loaded does not guess a statement month: it says a bank statement (M6)', async () => {
     const { user } = setup({ refuse: true, invoice_date: '2025-01-28', number: null })
-    await user.click(await screen.findByRole('button', { name: 'Delete invoice' }))
+    await choose(user, 'Delete invoice')
     const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
     await user.click(within(dialog).getByRole('checkbox', { name: 'I understand' }))
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
@@ -122,7 +133,7 @@ describe('Invoice: delete', () => {
 
   it('a return that may be filed needs the tick before Delete, then delete_invoice runs', async () => {
     const { d, user } = setup({ number: null })
-    await user.click(await screen.findByRole('button', { name: 'Delete invoice' }))
+    await choose(user, 'Delete invoice')
     const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
     const del = within(dialog).getByRole('button', { name: 'Delete' })
     expect(del).toBeDisabled()
@@ -138,15 +149,16 @@ describe('Invoice: delete', () => {
 
 describe('Invoice: void and credit note (0112)', () => {
   it('a numbered invoice offers Void and Create credit note, and no Delete', async () => {
-    setup()
-    expect(await screen.findByRole('button', { name: 'Void invoice' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Create credit note' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Delete invoice' })).toBeNull()
+    const { user } = setup()
+    const items = await moreItems(user)
+    expect(items).toContain('Void invoice')
+    expect(items).toContain('Create credit note')
+    expect(items).not.toContain('Delete invoice')
   })
 
   it('Void needs a reason, then void_invoice runs with it', async () => {
     const { d, user } = setup()
-    await user.click(await screen.findByRole('button', { name: 'Void invoice' }))
+    await choose(user, 'Void invoice')
     const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
     const go = within(dialog).getByRole('button', { name: 'Void invoice' })
     expect(go).toBeDisabled()
@@ -160,11 +172,23 @@ describe('Invoice: void and credit note (0112)', () => {
 
   it('a filed invoice cannot be voided: the dialog says so and points to a credit note, with no Void button', async () => {
     const { user } = setup({ psid: 'PSID-1' })
-    await user.click(await screen.findByRole('button', { name: 'Void invoice' }))
+    await choose(user, 'Void invoice')
     const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
     expect(within(dialog).getByTestId('void-blocked')).toHaveTextContent(/cannot be voided\. Issue a credit note instead/)
     expect(within(dialog).queryByRole('button', { name: 'Void invoice' })).toBeNull()
     expect(within(dialog).getByRole('button', { name: 'Create credit note' })).toBeInTheDocument()
+  })
+
+  it('a filed invoice opens as a summary with Edit, and at most three buttons in the footer; no Optional labels', async () => {
+    const { user } = setup({ psid: 'PSID-1' })
+    const summary = await screen.findByTestId('invoice-summary')
+    expect(summary).toHaveTextContent('PSID-1')
+    const footer = screen.getByRole('button', { name: 'Edit' }).parentElement as HTMLElement
+    expect(within(footer).getAllByRole('button')).toHaveLength(3)
+    expect(screen.queryByText('Optional')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.queryByTestId('invoice-summary')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 
   it('a filed invoice has its figures fixed, with the way to correct them', async () => {
@@ -175,7 +199,7 @@ describe('Invoice: void and credit note (0112)', () => {
 
   it('a refusal the page did not foresee is shown, with the Credit note button', async () => {
     const { user } = setup({ voidRefuse: true })
-    await user.click(await screen.findByRole('button', { name: 'Void invoice' }))
+    await choose(user, 'Void invoice')
     const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
     await user.type(within(dialog).getByLabelText('Reason for voiding'), 'x')
     await user.click(within(dialog).getByRole('button', { name: 'Void invoice' }))

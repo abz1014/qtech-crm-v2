@@ -104,9 +104,26 @@ export function LegsPanel({
   const poPdf = useOpenPoPdf(order.id)
   const today = businessToday()
   const imported = order.imported
+  // On the job page (the supplier order and delivery steps) the list is hairline rows with no box; the order page's own 'all' panel keeps its card.
+  const flat: boolean = part !== 'all'
 
   return (
-    <section aria-label={part === 'delivery' ? 'Deliveries' : 'Supplier orders'} className="min-w-0 rounded-panel border bg-surface">
+    <section aria-label={part === 'delivery' ? 'Deliveries' : 'Supplier orders'} className={cn('min-w-0', !flat && 'rounded-panel border bg-surface')}>
+      {flat ? (
+        // On the job page the step row already says what this is: no heading, no box. One line with the count and Add supplier (the order step only).
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b py-2">
+          <h2 className="sr-only">{part === 'delivery' ? 'Deliveries' : 'Supplier orders'}</h2>
+          <span className="type-body text-fg-2">{legs.length === 0 ? (imported ? 'None recorded for imported orders' : 'None yet') : legs.length === 1 ? '1 supplier' : `${legs.length} suppliers`}</span>
+          {/* data-slot="add-leg": adds a supplier by hand. */}
+          <span data-slot="add-leg" className="ml-auto contents">
+            {money && canEdit && part !== 'delivery' ? (
+              <Button icon={Plus} size="sm" className="ml-auto" onClick={() => setAdding(true)}>
+                Add supplier
+              </Button>
+            ) : null}
+          </span>
+        </div>
+      ) : (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">{part === 'delivery' ? 'Deliveries' : 'Supplier orders'}</h2>
         <InfoTip label="About supplier orders">One supplier's part of this order: their PO, when it was placed, received and delivered.</InfoTip>
@@ -120,12 +137,13 @@ export function LegsPanel({
           ) : null}
         </span>
       </div>
+      )}
       {legs.length === 0 ? (
-        <EmptyState title="No supplier orders yet">
+        flat ? null : <EmptyState title="No supplier orders yet">
           {imported ? 'Imported orders arrive without suppliers. Add a supplier only if you need to track a reorder.' : 'Lines with a supplier appear here, one per supplier. A service has none.'}
         </EmptyState>
       ) : (
-        <ul className="divide-y">
+        <ul className={flat ? undefined : 'divide-y'}>
           {legs.map((leg, i) => (
             <Leg
               key={leg.id}
@@ -143,6 +161,7 @@ export function LegsPanel({
               today={today}
               collapsible={legs.length > 1}
               part={part}
+              flat={flat}
               onChase={() => setChasing(leg)}
               onIssue={() => setIssuing(leg)}
               onViewPo={() => void poPdf.open(leg.id)}
@@ -177,6 +196,7 @@ function Leg({
   viewingPo,
   collapsible,
   part,
+  flat,
 }: {
   order: OrderHeader
   leg: OrderLegRow
@@ -200,6 +220,8 @@ function Leg({
   /** With two or more suppliers, one already delivered when the page opened folds to one line (UX audit P9). */
   collapsible: boolean
   part: LegsPart
+  /** Hairline row with no box (the job page). */
+  flat: boolean
 }) {
   const actions = useLegActions(order, leg)
   // Folded only if it was delivered when the page opened: stamping "Delivered today" keeps the row open, with its dates, for the Undo.
@@ -270,7 +292,7 @@ function Leg({
 
   if (folded) {
     return (
-      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="px-4 py-1 md:px-5">
+      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={flat ? 'border-b' : 'px-4 py-1 md:px-5'}>
         <button
           type="button"
           aria-expanded={false}
@@ -295,7 +317,7 @@ function Leg({
   }
 
   return (
-    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="grid gap-3 px-4 py-4 md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6">
+    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={cn('grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6', flat ? 'border-b py-3' : 'px-4 py-4 md:px-5')}>
       <div className="grid min-w-0 content-start gap-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="min-w-0 break-words font-medium">{name}</span>

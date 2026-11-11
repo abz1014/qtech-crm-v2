@@ -52,22 +52,22 @@ export function VisitsSection({ order, engineers, isEngineer, canEdit, card = fa
   return (
     <section
       aria-label={card ? 'Visits' : undefined}
-      className={card ? 'min-w-0 rounded-panel border bg-surface' : 'grid gap-3 border-t pt-4'}
+      className="min-w-0"
       data-testid="visits"
     >
-      <div className={card ? 'flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-5' : 'flex flex-wrap items-center gap-3'}>
-        <Head className={card ? 'text-base font-semibold' : 'text-sm font-semibold'}>Visits</Head>
+      <div className="flex flex-wrap items-center gap-3 border-b py-2">
+        <Head className={card ? 'type-section' : 'type-row'}>Visits</Head>
         {office && canEdit ? (
           <Button size="sm" variant="quiet" icon={Plus} className="ml-auto" onClick={() => setEditing('new')}>
             Add visit
           </Button>
         ) : null}
       </div>
-      <div className={card ? 'grid gap-3 px-4 py-4 md:px-5' : 'contents'}>
-      {visits.isError ? <p className="text-sm text-fg-muted">The visits did not load. Reload the page to try again.</p> : null}
-      {!visits.isError && !visits.isLoading && rows.length === 0 ? <p className="text-sm text-fg-muted">No visits yet.</p> : null}
+      <div className="contents">
+      {visits.isError ? <p className="border-b py-2 type-body text-fg-muted">The visits did not load. Reload the page to try again.</p> : null}
+      {!visits.isError && !visits.isLoading && rows.length === 0 ? <p className="border-b py-2 type-body text-fg-muted">No visits yet.</p> : null}
       {rows.length > 0 ? (
-        <ul className="grid gap-3" aria-label="Visits on this order">
+        <ul className="m-0 list-none p-0" aria-label="Visits on this order">
           {rows.map(v => (
             <VisitRowItem key={v.id} order={order} visit={v} state={visitState(v, today)} mayEdit={canEdit && canEditVisit(v, who, onOrder)} onEdit={() => setEditing(v)} />
           ))}
@@ -102,7 +102,7 @@ function VisitRowItem({ order, visit, state, mayEdit, onEdit }: { order: OrderHe
     }
   }
   return (
-    <li className="grid gap-2 rounded border bg-surface px-3 py-3" data-visit={visit.id}>
+    <li className="grid gap-2 border-b py-3" data-visit={visit.id}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-sm font-medium">{VISIT_TYPE_LABEL[visit.type]}</span>
         <span className={visit.on ? 'num text-sm' : 'text-sm text-fg-muted'}>{visit.on ? formatDay(visit.on) : 'No date yet'}</span>

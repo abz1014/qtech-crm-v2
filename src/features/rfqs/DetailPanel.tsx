@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /*
- * The panel on the RFQ page (g2-rfq-detail .panel): a header with the title, a muted line under it and the actions on the
+ * The panel of the Quotation step (clarity L4: no box, a hairline under its header; the rows inside are hairline rows): a header with the title, a muted line under it and the actions on the
  * right; or, for a rail card, the title with a small pill at the right. One header look for every panel on the page.
  */
 export function DetailPanel({
@@ -29,8 +29,8 @@ export function DetailPanel({
 }) {
   const id = useId()
   return (
-    <section aria-labelledby={id} data-slot={dataSlot} className={cn('min-w-0 rounded-panel border bg-surface', className)}>
-      <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b px-5 py-4">
+    <section aria-labelledby={id} data-slot={dataSlot} className={cn('min-w-0', className)}>
+      <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b py-2">
         <div className="min-w-0 flex-1 basis-[12rem]">
           <div className="flex items-center gap-1">
             <h2 id={id} className="type-section">
@@ -38,7 +38,7 @@ export function DetailPanel({
             </h2>
             {tip}
           </div>
-          {meta ? <p className="mt-[2px] text-sm text-fg-muted">{meta}</p> : null}
+          {meta ? <p className="mt-[2px] text-base text-fg-muted">{meta}</p> : null}
         </div>
         {pill ? <span className="text-sm text-fg-muted">{pill}</span> : null}
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

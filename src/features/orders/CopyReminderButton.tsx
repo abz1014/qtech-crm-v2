@@ -29,7 +29,7 @@ function usePaymentDraft(orderId: string) {
  * It only copies: marking the reminder sent stays on Today and Money ("Copy and mark reminded"). Admin and sales only (the invoices it
  * reads are refused to an engineer, who never sees this button).
  */
-export function CopyReminderButton({ order, money, className }: { order: OrderHeader; money: OrderMoney | null | undefined; className?: string }) {
+export function CopyReminderButton({ order, money, className, variant = 'primary' }: { order: OrderHeader; money: OrderMoney | null | undefined; className?: string; variant?: 'primary' | 'secondary' | 'quiet' }) {
   const { toast } = useToast()
   const session = useSession()
   const draft = usePaymentDraft(order.id)
@@ -60,7 +60,7 @@ export function CopyReminderButton({ order, money, className }: { order: OrderHe
     toast(ok ? { title: 'Reminder copied', body: `Paste it into ${d.contact?.name ? `${d.contact.name}'s` : "the customer's"} chat.`, tone: 'success' } : { title: 'Could not copy the reminder', body: 'Nothing was changed.', tone: 'danger' })
   }
   return (
-    <Button variant="primary" icon={Copy} className={className} onClick={() => void copy()}>
+    <Button variant={variant} icon={Copy} className={className} onClick={() => void copy()}>
       Copy reminder
     </Button>
   )

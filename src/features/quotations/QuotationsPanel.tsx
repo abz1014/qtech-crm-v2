@@ -115,17 +115,17 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
       }
     >
       {quotations.isPending ? (
-        <div className="p-5">
+        <div className="py-5">
           <Skeleton className="h-16 w-full" />
         </div>
       ) : quotations.isError ? (
-        <div className="p-5">
+        <div className="py-5">
           <Banner tone="danger" title="Couldn't load the quotations" action={<Button onClick={() => void quotations.refetch()}>Try again</Button>}>
             Nothing was changed.
           </Banner>
         </div>
       ) : rows.length === 0 ? (
-        <p className="px-5 py-5 text-fg-muted">
+        <p className="px-0 py-5 text-fg-muted">
           {prices
             ? 'Nothing issued yet. Issue quotation sets your price on each item, from a supplier price or one you type, and makes the PDF.'
             : 'Nothing issued yet. Sales issue the quotation.'}
@@ -133,14 +133,14 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
       ) : (
         <>
           {prices && lacksPdf && gaps.length > 0 ? (
-            <div className="px-5 pt-4">
+            <div className="px-0 pt-4">
               <Banner tone="warning" title={`A PDF needs the company's ${gaps.join(' and ')}`}>
                 Quotations are saved without one. Their PDFs are made when you open them after the profile is complete. <SettingsLink />
               </Banner>
             </div>
           ) : null}
           <div role="table" aria-label="Issued quotations" className="text-sm">
-            <div role="row" className={`hidden gap-4 px-5 py-2 text-sm text-fg-muted sm:grid ${GRID}`}>
+            <div role="row" className={`hidden gap-4 px-0 py-2 text-sm text-fg-muted sm:grid ${GRID}`}>
               <span role="columnheader">Quotation</span>
               <span role="columnheader">Issued</span>
               <span role="columnheader">Valid until</span>
@@ -168,7 +168,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                     role="row"
                     data-testid={`quotation-${q.revision}`}
                     aria-label={q.revision > 0 ? `${base}, revision ${q.revision}` : base}
-                    className={`grid items-center gap-x-4 gap-y-2 border-t px-5 py-3 ${GRID}`}
+                    className={`grid items-center gap-x-4 gap-y-2 border-t px-0 py-3 ${GRID}`}
                   >
                     <span role="cell" className="flex flex-wrap items-center gap-2">
                       <Tag>{base}</Tag>

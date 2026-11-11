@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CircleCheck, Lock, Pencil, X } from 'lucide-react'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
+import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -36,6 +37,7 @@ export function CommissioningPanel({
   isEngineer,
   canEdit,
   markDoneAbove = false,
+  inFold = false,
 }: {
   order: OrderHeader
   engineers: readonly PersonRow[]
@@ -43,100 +45,113 @@ export function CommissioningPanel({
   canEdit: boolean
   /** The header's primary button is already "Mark done today". */
   markDoneAbove?: boolean
+  /** Drawn inside a FoldRow that already carries the name "Commissioning" (the job page's Delivery step): no region of its own. */
+  inFold?: boolean
 }) {
   const markDone = useMarkDone(order)
   const [editing, setEditing] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
+  // One hairline row per fact: the name at the left, the value at the right (clarity redesign: no box, no box in a box).
+  const row = 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b py-2 type-body'
+  const dim = 'text-fg-muted'
+  const Wrap = inFold ? 'div' : 'section'
 
   return (
-    <section aria-label="Commissioning" className="min-w-0 rounded-panel border bg-surface">
-      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-5">
-        <h2 className="text-base font-semibold">Commissioning</h2>
-        {/* no state chip: the status strip above already says it (consistency spec 1.5) */}
-        {!isEngineer && canEdit ? (
-          <Button size="sm" variant="quiet" icon={Pencil} className="ml-auto" onClick={() => setEditing(true)}>
-            Edit
+    <Wrap aria-label={inFold ? undefined : 'Commissioning'} className="min-w-0">
+      {!inFold || (!isEngineer && canEdit) ? (
+        <div className="flex flex-wrap items-center gap-3 border-b py-2">
+          {inFold ? null : <h2 className="type-section">Commissioning</h2>}
+          {/* no state chip: the status strip above already says it (consistency spec 1.5) */}
+          {!isEngineer && canEdit ? (
+            <Button size="sm" variant="quiet" icon={Pencil} className="ml-auto" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {order.needsCommissioning ? (
+        <dl className="m-0">
+          <div className={row}>
+            <dt className="text-fg-2">Planned on</dt>
+            <dd className={cn('m-0', order.plannedOn ? 'num' : dim)}>{order.plannedOn ? formatDay(order.plannedOn) : 'Not planned'}</dd>
+          </div>
+          <div className={row}>
+            <dt className="text-fg-2">Visit type</dt>
+            <dd className={cn('m-0', !order.visitType && dim)} data-testid="visit-line">
+              {visitTypeLabel(order.visitType) || 'Not set'}
+            </dd>
+          </div>
+          <div className={row}>
+            <dt className="text-fg-2">Done on</dt>
+            <dd className={cn('m-0', order.doneOn ? 'num' : dim)}>{order.doneOn ? formatDay(order.doneOn) : 'Not yet'}</dd>
+          </div>
+          <div className={row}>
+            <dt className="text-fg-2">Engineers</dt>
+            <dd className="m-0 min-w-0 text-right [overflow-wrap:anywhere]">
+              {engineers.length === 0 ? (
+                <span className={dim}>None assigned</span>
+              ) : (
+                <ul className="m-0 grid list-none gap-1 p-0" aria-label="Engineers on this order">
+                  {engineers.map(e => (
+                    <li key={e.id} className="flex items-center justify-end gap-2">
+                      <Avatar name={e.name} />
+                      <span className="min-w-0">{e.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </dd>
+          </div>
+        </dl>
+      ) : (
+        <p className={cn('border-b py-2 type-body', dim)}>Supply only, no commissioning.</p>
+      )}
+      {order.needsCommissioning && !order.doneOn && canEdit && !isEngineer && !markDoneAbove ? (
+        <div className="border-b py-2">
+          <Button size="sm" icon={CircleCheck} onClick={markDone.run} busy={markDone.pending} busyLabel="Saving">
+            Mark done today
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      <div className="grid gap-5 px-4 py-4 md:px-5">
-        {order.needsCommissioning ? (
-          <div className="grid gap-5 md:grid-cols-4">
-            <div className="grid content-start gap-1">
-              <span className="text-xs text-fg-muted">Planned on</span>
-              <span className={order.plannedOn ? 'num text-sm' : 'text-sm text-fg-muted'}>{order.plannedOn ? formatDay(order.plannedOn) : 'Not planned'}</span>
-            </div>
-            <div className="grid content-start gap-1">
-              <span className="text-xs text-fg-muted">Visit type</span>
-              <span className={order.visitType ? 'text-sm' : 'text-sm text-fg-muted'} data-testid="visit-line">
-                {visitTypeLabel(order.visitType) || 'Not set'}
+      {order.needsCommissioning ? <VisitsSection order={order} engineers={engineers} isEngineer={isEngineer} canEdit={canEdit} /> : null}
+
+      <dl className="m-0">
+        <div className={row}>
+          <dt className="flex items-center gap-2 text-fg-2">
+            Order notes
+            {isEngineer ? (
+              <span className="inline-flex items-center gap-1">
+                <Icon icon={Lock} size="chip" /> {ENGINEER_NOTES_HINT}
               </span>
-            </div>
-            <div className="grid content-start gap-1">
-              <span className="text-xs text-fg-muted">Done on</span>
-              <span className={order.doneOn ? 'num text-sm' : 'text-sm text-fg-muted'}>{order.doneOn ? formatDay(order.doneOn) : 'Not yet'}</span>
-              {!order.doneOn && canEdit && !isEngineer && !markDoneAbove ? (
-                <Button size="sm" icon={CircleCheck} className="mt-1 justify-self-start" onClick={markDone.run} busy={markDone.pending} busyLabel="Saving">
-                  Mark done today
-                </Button>
-              ) : null}
-            </div>
-            <div className="grid content-start gap-2">
-              <span className="text-xs text-fg-muted">Engineers</span>
-              {engineers.length === 0 ? <span className="text-sm text-fg-muted">None assigned</span> : null}
-              <ul className="grid gap-2" aria-label="Engineers on this order">
-                {engineers.map(e => (
-                  <li key={e.id} className="flex items-center gap-2 text-sm">
-                    <Avatar name={e.name} />
-                    <span className="min-w-0 flex-1">{e.name}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-fg-muted">Supply only, no commissioning.</p>
-        )}
-
-        {order.needsCommissioning ? <VisitsSection order={order} engineers={engineers} isEngineer={isEngineer} canEdit={canEdit} /> : null}
-
-        <div className="grid gap-5 border-t pt-4 md:grid-cols-2">
-          <div className="grid content-start gap-1">
-            <span className="flex items-center gap-2 text-xs text-fg-muted">
-              Order notes
-              {isEngineer ? (
-                <span className="inline-flex items-center gap-1">
-                  <Icon icon={Lock} size="chip" /> {ENGINEER_NOTES_HINT}
-                </span>
-              ) : canEdit ? (
-                <Button size="sm" variant="quiet" icon={Pencil} onClick={() => setEditingNotes(true)}>
-                  Edit notes
-                </Button>
-              ) : null}
-            </span>
-            <p className="whitespace-pre-wrap text-sm" data-testid="order-notes">
-              {order.notes ? order.notes : <span className="text-fg-muted">None</span>}
-            </p>
-          </div>
-          <div className="grid content-start gap-1">
-            <span className="flex items-center gap-2 text-xs text-fg-muted">
-              Site contact
-            </span>
+            ) : canEdit ? (
+              <Button size="sm" variant="quiet" icon={Pencil} onClick={() => setEditingNotes(true)}>
+                Edit notes
+              </Button>
+            ) : null}
+          </dt>
+          <dd className="m-0 min-w-0 basis-full whitespace-pre-wrap [overflow-wrap:anywhere]" data-testid="order-notes">
+            {order.notes ? order.notes : <span className={dim}>None</span>}
+          </dd>
+        </div>
+        <div className={row}>
+          <dt className="text-fg-2">Site contact</dt>
+          <dd className="m-0 text-right">
             {order.contact ? (
-              <p className="text-sm">
+              <>
                 {order.contact.name}
                 {order.contact.phone ? <span className="num block text-primary">{order.contact.phone}</span> : null}
-              </p>
+              </>
             ) : (
-              <p className="text-sm text-fg-muted">None</p>
+              <span className={dim}>None</span>
             )}
-          </div>
+          </dd>
         </div>
-      </div>
+      </dl>
       {editing ? <CommissioningEditDialog order={order} engineers={engineers} onClose={() => setEditing(false)} /> : null}
       {editingNotes ? <NotesDialog order={order} onClose={() => setEditingNotes(false)} /> : null}
-    </section>
+    </Wrap>
   )
 }
 
