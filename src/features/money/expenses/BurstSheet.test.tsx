@@ -273,10 +273,11 @@ describe('burst entry sheet (M11)', () => {
   })
 
   describe('a new category from the category box (owner request 2026-10-20)', () => {
-    function setupCreate() {
+    function setupCreate(gate?: Promise<void>) {
       const cats = [...CATEGORIES]
-      const db = installFakeDb((c: FakeCall) => {
+      const db = installFakeDb(async (c: FakeCall) => {
         if (c.target === 'expense_categories' && c.verb === 'insert') {
+          if (gate) await gate
           const row = opArgs(c, 'insert')?.[0] as Record<string, unknown>
           cats.push({ id: 'c-water', name: String(row.name), grp: String(row.grp), group_id: String(row.group_id), default_paid_via: String(row.default_paid_via), sort: Number(row.sort), active: true, monthly_budget_pkr: null })
           return { data: [{ id: 'c-water' }] }
@@ -317,6 +318,27 @@ describe('burst entry sheet (M11)', () => {
       await user.keyboard('{Control>}{Enter}{/Control}')
       await waitFor(() => expect(saves(db)).toHaveLength(1))
       expect((opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[])[0]).toMatchObject({ amount_pkr: 500, category_id: 'c-water', paid_via: 'cash' })
+    })
+
+    it('while the category is being created Save waits ("Adding category…"), so the row is never filed under the old category', async () => {
+      const user = userEvent.setup()
+      let release: () => void = () => {}
+      const db = setupCreate(new Promise<void>(r => (release = r)))
+      const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(amount).toHaveFocus())
+      await user.keyboard('500{Tab}Office water')
+      await user.click(await screen.findByRole('option', { name: /paid in cash/ }))
+      const save = await screen.findByRole('button', { name: /Adding category/ })
+      expect(save).toBeDisabled()
+      expect(screen.getByRole('status')).toHaveTextContent('Adding category…')
+      fireEvent.keyDown(amount, { key: 'Enter', ctrlKey: true }) // Ctrl+Enter is refused too
+      expect(saves(db)).toHaveLength(0)
+      release()
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office water'))
+      await waitFor(() => expect(screen.getByRole('button', { name: /^Save/ })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: /^Save/ }))
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect((opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[])[0]).toMatchObject({ category_id: 'c-water' })
     })
 
     it('a name that only differs in case is the existing category, not a new one', async () => {
