@@ -24,14 +24,14 @@ import { Icon } from '@/ui/Icon'
  * delivery) is in the History card (the memory card), so a row is the name, the reason and one record line. The whole row is the tap target.
  */
 
-const pill = 'inline-flex min-h-chip shrink-0 items-center gap-[6px] whitespace-nowrap rounded border border-line-strong bg-surface px-[6px] text-xs text-fg-2'
+const pill = 'inline-flex shrink-0 items-center gap-[6px] whitespace-nowrap text-base text-fg-muted'
 
 export function ItemChips({ items }: { items: readonly DraftItem[] }) {
   return (
-    <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+    <ul className="m-0 grid list-none p-0">
       {items.map((it, i) => (
-        <li key={it.key} title={it.description} className="inline-grid min-h-[22px] max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded border border-line-strong bg-surface py-1 pl-3 pr-3 text-xs text-fg-2">
-          <span className="num grid size-5 shrink-0 place-items-center rounded-full bg-selected text-xs leading-none text-fg">{i + 1}</span>
+        <li key={it.key} title={it.description} className="type-body grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b py-2 text-fg-2 first:border-t">
+          <span className="num grid size-6 shrink-0 place-items-center rounded-full bg-selected text-base leading-none text-fg">{i + 1}</span>
           <span className="min-w-0 [overflow-wrap:anywhere]">{it.description}</span>
           <span className="num shrink-0 text-fg-muted">× {effectiveQty(it)}</span>
         </li>
@@ -96,14 +96,14 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
   const [open, setOpen] = useState(false)
   const n = s.coversItemIds.length
   return (
-    <li className={cn('relative grid gap-1 border-t px-5 py-3 first:border-t-0', ticked && 'bg-selected')} data-ticked={ticked || undefined}>
+    <li className={cn('relative grid gap-1 border-t py-3 first:border-t-0', ticked && 'bg-selected')} data-row-actions="" data-ticked={ticked || undefined}>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         <Checkbox id={id} checked={ticked} onCheckedChange={v => onToggle(s.supplierId, v === true)} aria-label={s.name} />
-        <label htmlFor={id} className="flex min-w-[9rem] flex-1 flex-wrap items-baseline gap-x-2 text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
+        <label htmlFor={id} className="type-row flex min-w-[9rem] flex-1 flex-wrap items-baseline gap-x-2 after:absolute after:inset-0 after:cursor-pointer">
           <span className="min-w-0">{s.name}</span>
-          {s.city ? <span className="text-xs font-regular text-fg-muted">{s.city}</span> : null}
+          {s.city ? <span className="text-base font-regular text-fg-muted">{s.city}</span> : null}
           {s.suppliedBefore ? (
-            <span className="inline-flex min-h-chip items-center rounded border border-tone-success-fg px-[6px] text-xs font-semibold text-tone-success-fg" data-badge="supplied-before">
+            <span className="inline-flex items-center text-base font-semibold text-tone-success-fg" data-badge="supplied-before">
               Supplied this item before
             </span>
           ) : null}
@@ -117,11 +117,11 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
           <span>{s.tierLabel}</span>
         </span>
       </div>
-      <p className="m-0 pl-[30px] text-sm text-fg-2">{s.reason}</p>
+      <p className="type-body m-0 pl-[30px] text-fg-2">{s.reason}</p>
       {/* The order behind the reason lives in Memory (its evidence block), so each supplier takes one line less (R2-10). Without a
           Memory card it stays on the row. */}
       {s.evidence && !memory ? (
-        <p className="m-0 flex items-start gap-[6px] pl-[30px] text-xs text-fg-2" data-evidence>
+        <p className="type-body m-0 flex items-start gap-[6px] pl-[30px] text-fg-2" data-evidence>
           <Icon icon={FileCheck} size="chip" className="mt-[2px] text-fg-muted" />
           <span className="text-pretty">
             <ReasonParts reason={s.evidence} />
@@ -129,7 +129,7 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
         </p>
       ) : null}
       <div className="flex min-w-0 items-center gap-3 pl-[30px]">
-        <p className={cn('m-0 min-w-0 flex-1 text-xs text-fg-muted',)}>
+        <p className={cn('type-body m-0 min-w-0 flex-1 text-fg-muted',)}>
           {s.record ? (
             <>
               <span className={cn('text-fg-2', s.record.tone === 'warn' && 'font-medium text-tone-warning-fg')} data-record>
@@ -147,7 +147,7 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
             aria-controls={open ? panelId : undefined}
             aria-label={`History, ${s.name}`}
             onClick={() => setOpen(o => !o)}
-            className="relative z-10 inline-flex h-6 shrink-0 items-center gap-1 rounded px-2 text-xs font-medium text-fg-2 hover:bg-selected"
+            className="relative z-10 inline-flex h-touch shrink-0 items-center gap-1 rounded px-2 text-base font-medium text-fg-2 hover:bg-selected md:h-8"
           >
             History
             <ChevronDown aria-hidden="true" size={14} strokeWidth={1.75} className={cn('transition-transform', open && 'rotate-180')} />
@@ -161,10 +161,10 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
 
 function Group({ g, ticked, onToggle, memory }: { g: SuggestionGroupResult; ticked: ReadonlySet<string>; onToggle: (id: string, on: boolean) => void; memory?: MemoryContext }) {
   return (
-    <section aria-label={g.label} className="overflow-hidden rounded-panel border bg-surface">
-      <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
-        <h3 className="m-0 text-sm font-semibold">{g.label}</h3>
-        <span className="ml-auto text-xs text-fg-muted">
+    <section aria-label={g.label}>
+      <header className="flex items-baseline gap-3 border-b py-3">
+        <h3 className="type-row m-0">{g.label}</h3>
+        <span className="type-body ml-auto text-fg-muted">
           <span className="num">{g.suppliers.length}</span> {g.suppliers.length === 1 ? 'supplier' : 'suppliers'}
         </span>
       </header>
@@ -232,7 +232,7 @@ export function SupplierPicker({
         </div>
       ) : error ? (
         <EmptyState
-          className="rounded border bg-surface"
+          className="border-t"
           mood="error"
           icon={Search}
           title="Suggestions did not load"
@@ -243,14 +243,14 @@ export function SupplierPicker({
           You can still add a supplier by name below, or save the RFQ and float it later.
         </EmptyState>
       ) : groups.length === 0 ? (
-        <EmptyState className="rounded border bg-surface" icon={Building2} title="No supplier on file for these items yet">
+        <EmptyState className="border-t" icon={Building2} title="No supplier on file for these items yet">
           {coverage ?? 'Nothing is suggested until a supplier has dealt in one of these categories, carried one of these brands or supplied something like it.'} Add one by name below, or
           save the RFQ and come back to it.
         </EmptyState>
       ) : (
         <>
           {coverage ? (
-            <p className="m-0 rounded border border-dashed border-line-strong bg-surface px-4 py-3 text-base text-fg-2" data-coverage>
+            <p className="type-body m-0 border-y border-dashed py-3 text-fg-2" data-coverage>
               {coverage}
             </p>
           ) : null}
@@ -260,21 +260,21 @@ export function SupplierPicker({
       )}
 
       {shownManual.length > 0 ? (
-        <section aria-label="Added by you" className="overflow-hidden rounded-panel border bg-surface">
-          <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
-            <h3 className="m-0 text-sm font-semibold">Added by you</h3>
+        <section aria-label="Added by you">
+          <header className="flex items-baseline gap-3 border-b py-3">
+            <h3 className="type-row m-0">Added by you</h3>
           </header>
           <ul className="m-0 grid list-none p-0">
             {shownManual.map(m => {
               const on = ticked.has(m.id)
               const id = `sup-${m.id}`
               return (
-                <li key={m.id} className={cn('relative flex items-center gap-3 border-t px-5 py-3 first:border-t-0', on && 'bg-selected')}>
+                <li key={m.id} data-row-actions="" className={cn('relative flex items-center gap-3 border-t py-3 first:border-t-0', on && 'bg-selected')}>
                   <Checkbox id={id} checked={on} onCheckedChange={v => onToggle(m.id, v === true)} aria-label={m.name} />
-                  <label htmlFor={id} className="text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
+                  <label htmlFor={id} className="type-row after:absolute after:inset-0 after:cursor-pointer">
                     {m.name}
                   </label>
-                  <span className="ml-auto text-xs text-fg-muted">Chosen by you</span>
+                  <span className="type-body ml-auto text-fg-muted">Chosen by you</span>
                 </li>
               )
             })}
@@ -283,7 +283,7 @@ export function SupplierPicker({
       ) : null}
 
       <div className="grid max-w-[420px] gap-[6px]">
-        <label htmlFor="add-supplier" className="text-sm font-medium">
+        <label htmlFor="add-supplier" className="type-row">
           Ask someone who is not listed
         </label>
         <Combobox
@@ -301,7 +301,7 @@ export function SupplierPicker({
           loading={matches.isFetching}
           placeholder="Search a company by name"
         />
-        <p className="text-xs text-fg-muted">Any company on file can be asked. Add new companies from the Companies screen.</p>
+        <p className="type-body text-fg-muted">Any company on file can be asked. Add new companies from the Companies screen.</p>
       </div>
     </div>
   )

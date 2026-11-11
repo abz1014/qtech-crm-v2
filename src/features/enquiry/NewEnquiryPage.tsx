@@ -60,7 +60,7 @@ export default function NewEnquiryPage() {
   return (
     <div className="grid w-full min-w-0 gap-4 px-0 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-2 lg:pl-8" data-testid="new-enquiry">
       <aside aria-label="The customer's document" className="grid min-w-0 content-start gap-3 px-4 pb-8 pt-6 max-lg:order-2 max-lg:pb-[10rem] lg:sticky lg:top-4 lg:px-0 lg:pr-4">
-        <h2 className="text-lg font-semibold tracking-snug">The customer&rsquo;s document</h2>
+        <h2 className="type-section">The customer&rsquo;s document</h2>
         {files.length > 0 ? (
           files.map(f => <Preview key={`${f.name}|${f.size}|${f.lastModified}`} file={f} />)
         ) : text ? null : (
@@ -69,7 +69,7 @@ export default function NewEnquiryPage() {
         {text ? (
           <section aria-label="Pasted text" className="grid gap-2">
             <h3 className="text-base font-medium text-fg-2">Pasted text</h3>
-            <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-row border bg-surface p-3 text-base [overflow-wrap:anywhere]" data-testid="source-text">
+            <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap border-y py-3 text-base [overflow-wrap:anywhere]" data-testid="source-text">
               {text}
             </pre>
           </section>
@@ -123,11 +123,11 @@ function Preview({ file }: { file: File }) {
       </figcaption>
       {pdf ? (
         pages === null ? (
-          <p className="rounded-row border bg-surface px-4 py-3 text-base text-fg-2">Drawing the first page…</p>
+          <p className="border-y py-3 text-base text-fg-2">Drawing the first page…</p>
         ) : pages === 'failed' ? (
-          <p className="rounded-row border bg-surface px-4 py-3 text-base text-fg-2">The preview could not be drawn. The items are read on the right.</p>
+          <p className="border-y py-3 text-base text-fg-2">The preview could not be drawn. The items are read on the right.</p>
         ) : (
-          <div className="grid max-h-[78vh] gap-2 overflow-auto rounded-row border bg-surface p-1">
+          <div className="grid max-h-[78vh] gap-2 overflow-auto border-y py-1">
             {pages.urls.map((u, i) => (
               <img key={u} src={u} alt={`${file.name}, page ${i + 1}`} className="w-full" />
             ))}
@@ -135,9 +135,9 @@ function Preview({ file }: { file: File }) {
           </div>
         )
       ) : url && image ? (
-        <img src={url} alt={`The photo ${file.name}`} className="max-h-[78vh] w-full rounded-row border bg-surface object-contain" />
+        <img src={url} alt={`The photo ${file.name}`} className="max-h-[78vh] w-full border-y object-contain" />
       ) : (
-        <p className="rounded-row border bg-surface px-4 py-3 text-base text-fg-2">A spreadsheet has no preview. It is read on this device; the items are on the right.</p>
+        <p className="border-y py-3 text-base text-fg-2">A spreadsheet has no preview. It is read on this device; the items are on the right.</p>
       )}
     </figure>
   )
@@ -161,7 +161,7 @@ function DropZone({ onFiles }: { onFiles: (f: File[]) => void }) {
         setOver(false)
         onFiles([...e.dataTransfer.files])
       }}
-      className={`grid justify-items-start gap-3 rounded-panel border-2 border-dashed px-5 py-8 text-base ${over ? 'border-brand-green bg-block-quiet' : 'border-line-strong bg-surface'}`}
+      className={`grid justify-items-start gap-3 border-y-2 border-dashed py-8 text-base ${over ? 'border-brand-green bg-block-quiet' : 'border-line-strong'}`}
     >
       <Icon icon={Upload} size="lg" className="text-fg-muted" />
       <p className="m-0 font-medium">Drop the customer&rsquo;s PDF, photo or spreadsheet here</p>

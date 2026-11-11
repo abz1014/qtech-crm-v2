@@ -301,7 +301,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   ) : null
   const detailsPanel = <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} />
   const notesPanel = company.notes ? (
-    <Panel title="Notes">
+    <Panel flat title="Notes">
       <p className="whitespace-pre-line px-5 py-4 text-base text-fg-2">{company.notes}</p>
     </Panel>
   ) : null
@@ -309,7 +309,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const sidePanels = (
     <>
       {isAdmin && money.data && money.data.orders > 0 ? (
-        <Panel title="Money with them">
+        <Panel flat title="Money with them">
           <div className="px-5 py-3">
             <KeyValue
               rows={[
@@ -341,9 +341,10 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   return (
     <Shell sticky>
-      <div className="grid gap-6">
+      <div className="grid gap-6 max-md:gap-4">
         <DetailHeader
           name={company.name}
+          phoneSrOnly
           breadcrumb={[{ label: 'Companies', to: '/companies' }, { label: company.name }]}
           more={moreMenu(false)}
           // the role is identity, not state: a Tag on its own row above the meta line (so no "·" follows it), never a chip in the h1
@@ -354,7 +355,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
             // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
             // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
             // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
-            <p className="mt-2 overflow-x-clip text-base text-fg-2" data-testid="supplier-record-line">
+            <p className="mt-1 overflow-x-clip text-base text-fg-2 md:mt-2" data-testid="supplier-record-line">
               <span className="-ml-5 flex flex-wrap items-center">
                 {recordUnits(supplierRecordLine).map((unit, i) => (
                   <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
@@ -388,18 +389,21 @@ function Loaded({ company }: { company: CompanyDetail }) {
           {isEngineer ? (
             <NoPrimary />
           ) : (
-            <NextStepBox
-              tone="quiet"
-              text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
-              action={phone ? undefined : primary}
-            />
+            // the phone's New RFQ is the bar at the bottom, so the sentence is not drawn above the fold there
+            <div className="max-md:hidden">
+              <NextStepBox
+                tone="quiet"
+                text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
+                action={phone ? undefined : primary}
+              />
+            </div>
           )}
         </DetailHeader>
         {phone && !isEngineer ? <StickyActionBar label="Company actions" primary={primary} /> : null}
         {recordHistory.node}
 
         {wide ? (
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div data-work className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div className="grid min-w-0 gap-6">
               {supplierPanel}
               {supplierOnly ? moreAbout : sitesPanel}
@@ -412,7 +416,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
           </div>
         ) : (
           // Below 1024 one column, in the order a phone needs it: who to call, what is open, the history, then the rest.
-          <div className="grid min-w-0 gap-6">
+          <div data-work className="grid min-w-0 gap-6">
             {contactsPanel}
             {openPanel}
             {supplierPanel}
@@ -490,6 +494,7 @@ function ContactsPanel({
   }
   return (
     <Panel
+      flat
       title="Contacts"
       actions={
         <Button variant="quiet" size="sm" icon={Plus} onClick={onAdd}>
@@ -512,7 +517,7 @@ function ContactsPanel({
         ) : (
           <ul className="grid">
             {contacts.map(c => (
-              <li key={c.id} className="grid gap-[2px] border-t py-3 text-sm first:border-t-0 first:pt-0 last:pb-0">
+              <li key={c.id} data-row-actions="" className="grid gap-[2px] border-t py-3 text-sm first:border-t-0 first:pt-0 last:pb-0">
                 {removing?.id === c.id ? (
                   <ConfirmRemove
                     title={`Remove ${c.name}?`}
@@ -589,13 +594,13 @@ function PhoneLinks({ name, phone }: { name: string; phone: string }) {
  */
 function MoreAbout({ children, defaultOpen = false }: { children: ReactNode; defaultOpen?: boolean }) {
   return (
-    <details className="group rounded-panel border bg-surface" open={defaultOpen || undefined}>
-      <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded px-5 py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
+    <details className="group border-t" open={defaultOpen || undefined}>
+      <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
         <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90" />
         More about this supplier
         <span className="text-sm font-regular text-fg-muted">Sites, brands, details</span>
       </summary>
-      <div className="grid gap-6 border-t p-4">{children}</div>
+      <div className="grid gap-6 border-t py-4">{children}</div>
     </details>
   )
 }
@@ -641,7 +646,7 @@ function DetailsPanel({ company, customerSince, brands }: { company: CompanyDeta
   const tax = company.isCustomer
   if (rows.length === 0 && !brands && !tax) return null
   return (
-    <Panel title="Details">
+    <Panel flat title="Details">
       <div className="grid gap-3 px-5 py-3">
         {rows.length > 0 ? <KeyValue rows={rows} /> : null}
         {tax ? <TaxDetails companyId={company.id} divided={rows.length > 0} /> : null}
