@@ -4,6 +4,7 @@ import { ChartColumn, ChevronLeft, ChevronRight, Ellipsis, History, Lock, Pencil
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -102,14 +103,17 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   )
 
   const isCurrent = month === monthKey(today)
+  const phone = useMediaQuery('(max-width: 639px)')
 
   return (
     <div className="grid gap-4">
-      <RecurringPanel categories={categories} today={today} />
+      <div className="max-sm:order-last">
+        <RecurringPanel categories={categories} today={today} />
+      </div>
 
-      <section aria-labelledby="expenses-h" className="grid gap-3">
+      <section aria-labelledby="expenses-h" className="grid gap-3" data-work="">
         {monthClosed ? (
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded border bg-sunken px-4 py-2 text-sm text-fg-2" data-testid="expenses-closed">
+          <p className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 border-b py-2 text-fg-2" data-testid="expenses-closed">
             <Icon icon={Lock} className="text-fg-muted" />
             <span>
               <b className="font-medium text-fg">{monthKeyLabel(month)} is closed.</b> {CLOSED_MONTH_LINE}
@@ -121,6 +125,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
         ) : null}
         <DataTable
           label="Expenses"
+          className="max-sm:rounded-none max-sm:border-0"
           columns={columns}
           rows={rows}
           getRowId={r => r.id}
@@ -157,13 +162,13 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               </h2>
               <div className="inline-flex items-center gap-2" role="group" aria-label="Month">
                 <Button variant="quiet" size="sm" icon={ChevronLeft} aria-label="Previous month" onClick={() => setMonth(m => shiftMonth(m, -1))} />
-                <span className="num min-w-[84px] text-center text-base font-semibold" aria-live="polite" title={monthKeyLabel(month)}>
+                <span className="num min-w-[84px] text-center text-base font-semibold max-sm:min-w-[72px]" aria-live="polite" title={monthKeyLabel(month)}>
                   {monthKeyShort(month)}
                 </span>
                 <Button variant="quiet" size="sm" icon={ChevronRight} aria-label="Next month" disabled={isCurrent} onClick={() => setMonth(m => shiftMonth(m, 1))} />
               </div>
               {list.isSuccess ? (
-                <span className="inline-flex items-center gap-1 text-base" data-testid="expenses-month-total" aria-live="polite">
+                <span className="inline-flex items-center gap-1 text-base max-sm:order-3 max-sm:basis-full" data-testid="expenses-month-total" aria-live="polite">
                   <b className="num font-semibold">{pkr(totals.total)}</b>
                   <span className="num text-sm text-fg-muted">
                     {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
@@ -175,18 +180,23 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                   </InfoTip>
                 </span>
               ) : null}
+              {phone ? null : (
               <Link
                 to={`/money/reports/expenses?by=month&period=${month}`}
-                className="inline-flex min-h-[40px] items-center gap-1 rounded text-sm font-medium text-primary underline-offset-2 hover:underline max-sm:basis-full"
+                aria-label={`Report for ${monthKeyShort(month)}`}
+                className="type-body inline-flex min-h-touch items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline"
               >
                 <Icon icon={ChartColumn} size="sm" />
                 Report for {monthKeyShort(month)}
               </Link>
-              <span className="flex-1" />
-              <TableFilter label="Search expenses" hint="Finds an expense by payee, detail, category or order number." value={q} onChange={setQ} />
+              )}
+              <span className="flex-1 max-sm:hidden" />
+              <div className="flex min-w-0 items-center gap-2 max-sm:order-4 max-sm:basis-full">
+              <TableFilter label="Search expenses" hint="Finds an expense by payee, detail, category or order number." value={q} onChange={setQ} className="max-sm:min-w-0 max-sm:flex-1" />
               <FilterSheet title="Filter expenses" on={filtersOn.length} shown={rows.length} noun={['expense', 'expenses']} onClear={() => setFilters(NO_FILTERS)}>
                 <FilterSelects categories={categories} groups={groups} filters={filters} onChange={setFilters} />
               </FilterSheet>
+              </div>
             </div>
           }
           empty={
@@ -200,7 +210,17 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           }
           mobileRow={r => <ExpenseCard row={r} categories={categories} listing={list.data} locked={monthClosed} onEdit={setEditing} onDelete={onDelete} onHistory={setHistory} />}
         />
-      </section>
+      {phone ? (
+              <Link
+                to={`/money/reports/expenses?by=month&period=${month}`}
+                aria-label={`Report for ${monthKeyShort(month)}`}
+                className="type-body inline-flex min-h-touch items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline"
+              >
+                <Icon icon={ChartColumn} size="sm" />
+                Report for {monthKeyShort(month)}
+              </Link>
+        ) : null}
+        </section>
 
       {editing ? (
         <AddExpenseDialog

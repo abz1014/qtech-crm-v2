@@ -63,12 +63,19 @@ export function ExpensesPage() {
         </Button>
       }
     >
-      {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
-      <OwedToStaff />
-      {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
-      <MiscPromoteBanners />
-      <CashInHandLine />
-      <ExpensesTab />
+      <div className="grid gap-4">
+        {/* To approve and Owed (one line each on a phone) come first while there are any; cash and the misc banners follow the list on a phone. */}
+        <div className="grid gap-0 empty:hidden">
+          {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
+          <OwedToStaff />
+        </div>
+        {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
+        <div className="grid gap-0 empty:hidden max-sm:order-last">
+          <CashInHandLine fold />
+          <MiscPromoteBanners />
+        </div>
+        <ExpensesTab />
+      </div>
       <BurstSheet
         open={burst}
         onOpenChange={o => {

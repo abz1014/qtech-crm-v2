@@ -1,12 +1,17 @@
-import { useEffect, useMemo, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Scale } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
-import { formatPaisa, toPaisa, type Amount } from '@/lib/money'
+import { formatPaisa, paisaToFixed, toPaisa, type Amount } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
+import { FoldRow } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
+import { Money } from '@/ui/Money'
+import { SumBar } from '@/ui/SumBar'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { Select } from '@/ui/form/Select'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { InfoTip } from '@/ui/InfoTip'
 import { ReportCsv } from '@/ui/ReportCsv'
@@ -76,6 +81,7 @@ function usePeriod() {
 }
 
 export function InOutPage() {
+  const phone = useMediaQuery('(max-width: 639px)')
   const { period, now, set, today } = usePeriod()
   const q = useInOutReport(period)
   const v = q.view
@@ -85,16 +91,30 @@ export function InOutPage() {
       csv={v ? () => downloadReport(inOutCsv(v), `money-in-and-out-${period.key}.csv`) : null}
       period={
         <span className="flex flex-wrap items-center gap-3">
-          <SegmentedControl
-            aria-label="Month or quarter"
-            options={[
-              { value: 'month', label: 'Month' },
-              { value: 'quarter', label: 'Quarter' },
-            ]}
-            value={period.kind}
-            onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
-            large
-          />
+          {phone ? (
+            // Phone: one picker instead of two buttons (the same choice, fewer controls on the first screen).
+            <Select
+              aria-label="Month or quarter"
+              value={period.kind}
+              onChange={e => set(periodOf(e.target.value as PeriodKind, e.target.value === period.kind ? period.key : today.slice(0, 7)))}
+              options={[
+                { value: 'month', label: 'Month' },
+                { value: 'quarter', label: 'Quarter' },
+              ]}
+              className="w-[8.5rem]"
+            />
+          ) : (
+            <SegmentedControl
+              aria-label="Month or quarter"
+              options={[
+                { value: 'month', label: 'Month' },
+                { value: 'quarter', label: 'Quarter' },
+              ]}
+              value={period.kind}
+              onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
+              large
+            />
+          )}
           <PeriodPager period={period} atNow={period.key >= now.key} go={by => set(shiftPeriod(period, by))} />
           <InfoTip label={`About ${IN_OUT_TITLE.toLowerCase()}`}>
             Cash in and out is the money trail: every payment received and every expense or supplier payment, on the day it moved, GST
@@ -188,66 +208,143 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   // Lines at 0 are left out; with none left the section says so in one sentence.
   const whyLines = whyTheyDiffer(r)
   const empty = v.cash.payments === 0 && v.cash.expenses === 0 && v.cash.refundCount === 0 && v.profit.invoices === 0
+  const narrow = useMediaQuery('(max-width: 639px)')
+  const [whyOpen, setWhyOpen] = useState(false)
+  const whyId = useId()
   const frozen =
     v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Closed: figures frozen when the month was closed' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
   return (
     <>
-      <ReportCsv />
+      {narrow ? null : <ReportCsv />} {/* a phone draws it after the two summaries below */}
       {empty ? (
         <section className="rounded-panel border bg-surface">
           <EmptyState title={`Nothing in ${v.label} yet`}>No payment, expense or invoice is dated in it. The trend below still shows the periods before.</EmptyState>
         </section>
       ) : null}
+      {narrow ? (
+        // Phone: a line per figure (SumBar lines), cash first and profit second; the period before is in the last-months table below.
+        <>
+          <SumBar
+            phone="lines"
+            label="Cash in and out"
+            caption={
+              <span>
+                PKR · {v.label}, on the day money moved{frozen ? ` · ${frozen}` : ''}
+              </span>
+            }
+            items={[
+              { label: 'Money in', amount: v.cash.in },
+              { label: 'Money out', amount: v.cash.out },
+              ...(toPaisa(v.cash.refunds) !== 0n ? [{ label: 'Refunds to customers', amount: v.cash.refunds }] : []),
+              { label: 'Cash in minus cash out', amount: v.cash.net },
+            ]}
+          />
+          <SumBar
+            phone="lines"
+            label="Profit on invoices"
+            caption={
+              <span>
+                PKR · by invoice date
+              </span>
+            }
+            items={[
+              { label: 'Sales', amount: v.profit.sales },
+              { label: 'Order costs', amount: v.profit.orderCosts },
+              { label: 'Overheads', amount: v.profit.overheads },
+              { label: 'Profit on invoices', amount: v.profit.profit },
+            ]}
+          />
+          <ReportCsv />
+        </>
+      ) : (
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <Panel title="Cash in and out" meta={<><ClockTag>On the day money moved</ClockTag>{frozen ? <span className="text-sm text-fg-muted" data-testid="in-out-frozen">{frozen}</span> : null}</>}>
-          <div role="table" aria-label="Cash in and out">
-            <Head prev={prev} />
-            <Row testId="cash-in" label="Money in" sub={`${plural(v.cash.payments, 'customer payment')} received, GST included`} now={v.cash.in} before={v.prevCash.in} />
-            <Row testId="cash-out" label="Money out" sub={`${plural(v.cash.expenses, 'expense')} and supplier payments, GST paid on purchases included`} now={v.cash.out} before={v.prevCash.out} />
-            {toPaisa(v.cash.refunds) !== 0n || toPaisa(v.prevCash.refunds) !== 0n ? (
-              <Row testId="cash-refunds" label="Refunds to customers" sub={`${plural(v.cash.refundCount, 'refund')} paid back`} now={v.cash.refunds} before={v.prevCash.refunds} />
-            ) : null}
-            <Row testId="cash-net" label="Cash in minus cash out" now={v.cash.net} before={v.prevCash.net} strong />
-          </div>
-        </Panel>
-        <Panel title="Profit on invoices" meta={<><ClockTag>By invoice date</ClockTag><TwoProfitsTip /></>}>
-          <div role="table" aria-label="Profit on invoices">
-            <Head prev={prev} />
-            <Row label="Sales" sub={`${plural(v.profit.invoices, 'invoice')}, GST taken out`} now={v.profit.sales} before={v.prevProfit.sales} />
-            <Row label="Order costs" sub="Supplier, freight and clearing, counted with the order's sales" now={v.profit.orderCosts} before={v.prevProfit.orderCosts} />
-            <Row label="Overheads" sub="When paid, GST paid on purchases taken out" now={v.profit.overheads} before={v.prevProfit.overheads} />
-            <Row testId="profit" label="Profit on invoices" now={v.profit.profit} before={v.prevProfit.profit} strong />
-          </div>
-        </Panel>
-      </div>
+          <Panel title="Cash in and out" meta={<><ClockTag>On the day money moved</ClockTag>{frozen ? <span className="text-sm text-fg-muted" data-testid="in-out-frozen">{frozen}</span> : null}</>}>
+            <div role="table" aria-label="Cash in and out">
+              <Head prev={prev} />
+              <Row testId="cash-in" label="Money in" sub={`${plural(v.cash.payments, 'customer payment')} received, GST included`} now={v.cash.in} before={v.prevCash.in} />
+              <Row testId="cash-out" label="Money out" sub={`${plural(v.cash.expenses, 'expense')} and supplier payments, GST paid on purchases included`} now={v.cash.out} before={v.prevCash.out} />
+              {toPaisa(v.cash.refunds) !== 0n || toPaisa(v.prevCash.refunds) !== 0n ? (
+                <Row testId="cash-refunds" label="Refunds to customers" sub={`${plural(v.cash.refundCount, 'refund')} paid back`} now={v.cash.refunds} before={v.prevCash.refunds} />
+              ) : null}
+              <Row testId="cash-net" label="Cash in minus cash out" now={v.cash.net} before={v.prevCash.net} strong />
+            </div>
+          </Panel>
+          <Panel title="Profit on invoices" meta={<><ClockTag>By invoice date</ClockTag><TwoProfitsTip /></>}>
+            <div role="table" aria-label="Profit on invoices">
+              <Head prev={prev} />
+              <Row label="Sales" sub={`${plural(v.profit.invoices, 'invoice')}, GST taken out`} now={v.profit.sales} before={v.prevProfit.sales} />
+              <Row label="Order costs" sub="Supplier, freight and clearing, counted with the order's sales" now={v.profit.orderCosts} before={v.prevProfit.orderCosts} />
+              <Row label="Overheads" sub="When paid, GST paid on purchases taken out" now={v.profit.overheads} before={v.prevProfit.overheads} />
+              <Row testId="profit" label="Profit on invoices" now={v.profit.profit} before={v.prevProfit.profit} strong />
+            </div>
+          </Panel>
+        </div>
+      )}
 
-      <section aria-labelledby="in-out-why" className="grid gap-2 rounded-panel border bg-surface px-5 py-4" data-testid="in-out-why">
-        <h2 id="in-out-why" className="flex flex-wrap items-center gap-2 text-base font-semibold">
-          Why profit and cash differ in {v.label}
-          <InfoTip label="About supplier bills">
-            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We
-            owe suppliers report.
-          </InfoTip>
-        </h2>
-        {whyLines.length === 0 ? (
-          <p className="text-base text-fg-2" data-testid="in-out-why-none">
-            Nothing separates them: profit on invoices and cash in minus cash out agree for {v.label}.
-          </p>
-        ) : (
-          <>
-            <p className="num text-base">
-              Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
+      {narrow ? (
+        <section aria-label={`Why profit and cash differ in ${v.label}`} data-testid="in-out-why">
+          <FoldRow
+            state={{ icon: Scale, word: whyLines.length === 0 ? 'Agree' : 'Differ' }}
+            title="Why profit and cash differ"
+            summary={whyLines.length === 0 ? 'They agree' : signed(r.gap)}
+            open={whyOpen}
+            onToggle={() => setWhyOpen(o => !o)}
+            controlsId={whyId}
+          >
+            <div className="grid gap-2">
+          {whyLines.length === 0 ? (
+            <p className="type-body text-fg-2" data-testid="in-out-why-none">
+              Nothing separates them: profit on invoices and cash in minus cash out agree for {v.label}.
             </p>
-            <ul className="grid gap-1 text-base text-fg-2">
-              {whyLines.map(l => (
-                <li key={l.key}>
-                  <span className="num font-medium text-fg">{signed(l.amount)}</span> {l.text}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+          ) : (
+            <>
+              <p className="num type-body">
+                Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
+              </p>
+              <ul className="type-body grid gap-1 text-fg-2">
+                {whyLines.map(l => (
+                  <li key={l.key}>
+                    <span className="num font-medium text-fg">{signed(l.amount)}</span> {l.text}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p className="type-body text-fg-2">
+            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We owe suppliers report.
+          </p>
+            </div>
+          </FoldRow>
+        </section>
+      ) : (
+      <section aria-labelledby="in-out-why" className="grid gap-2 rounded-panel border bg-surface px-5 py-4" data-testid="in-out-why">
+          <h2 id="in-out-why" className="flex flex-wrap items-center gap-2 text-base font-semibold">
+            Why profit and cash differ in {v.label}
+            <InfoTip label="About supplier bills">
+              Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We
+              owe suppliers report.
+            </InfoTip>
+          </h2>
+          {whyLines.length === 0 ? (
+            <p className="text-base text-fg-2" data-testid="in-out-why-none">
+              Nothing separates them: profit on invoices and cash in minus cash out agree for {v.label}.
+            </p>
+          ) : (
+            <>
+              <p className="num text-base">
+                Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
+              </p>
+              <ul className="grid gap-1 text-base text-fg-2">
+                {whyLines.map(l => (
+                  <li key={l.key}>
+                    <span className="num font-medium text-fg">{signed(l.amount)}</span> {l.text}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
 
       <CategoryPanel v={v} prev={prev} />
       <TrendPanel v={v} onPick={onPick} />
@@ -275,6 +372,7 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
   return (
     <DataTable
       label={`Money out by category, ${v.label}`}
+      className="max-sm:rounded-none max-sm:border-0"
       columns={columns}
       rows={rows}
       getRowId={r => r.id}
@@ -292,6 +390,22 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
         }
       }}
       groupStyle="big"
+      // Phone: the category carries its own total and what it was the period before, summed in paisa from its rows.
+      mobileGroup={(key, list) => {
+        const c = byId.get(key)
+        const total = list.reduce((sum, r) => sum + toPaisa(r.amount), 0n)
+        return (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0">
+              <span className="type-section">{c?.name ?? 'Other'}</span>
+              {c ? <span className="type-body block text-fg-2">{prev}: {rupees(c.prev)}</span> : null}
+            </span>
+            <span className="num type-row shrink-0">
+              <Money value={paisaToFixed(total)} prefix={false} paisa="never" strong />
+            </span>
+          </div>
+        )
+      }}
       // Phone: one line per detail (name, count, amount), so the table never scrolls sideways at 375.
       mobileRow={r => (
         <span className="flex min-w-0 items-baseline justify-between gap-3">
@@ -324,6 +438,7 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
   return (
     <DataTable
       label={title}
+      className="max-sm:rounded-none max-sm:border-0"
       columns={columns}
       rows={v.trend}
       getRowId={t => t.period.key}
