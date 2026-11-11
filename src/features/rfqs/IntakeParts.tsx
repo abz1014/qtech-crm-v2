@@ -59,7 +59,7 @@ export function StepBar({ summary, warning, primary, more }: { summary?: ReactNo
     return (
       <>
         {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
-        <div role="region" aria-label="Next step" data-sticky-bar className="flex items-center gap-2 rounded-row border bg-surface p-2">
+        <div role="region" aria-label="Next step" data-sticky-bar className="flex items-center gap-2 border-t bg-surface py-2">
           {primary ? (
             <Button
               variant="primary"
@@ -90,7 +90,7 @@ export function StepBar({ summary, warning, primary, more }: { summary?: ReactNo
     )
   }
   return (
-    <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-row border bg-surface px-4 py-3 shadow-pop">
+    <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t bg-surface py-3">
       {summary ? <p className="m-0 min-w-0 text-sm text-fg-2">{summary}</p> : null}
       {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
       <span className="flex-1" />
@@ -213,8 +213,8 @@ export function Hint({ tone = 'warning', children, className }: { tone?: 'warnin
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-row border px-4 py-3 text-sm text-fg-2',
-        tone === 'info' ? 'border-tone-info-fg/25 bg-tone-info-bg' : 'border-tone-warning-fg/25 bg-tone-warning-bg',
+        'type-body flex items-start gap-3 border-l-2 py-1 pl-3 text-fg-2',
+        tone === 'info' ? 'border-tone-info-fg' : 'border-tone-warning-fg',
         className,
       )}
     >
@@ -312,22 +312,22 @@ export function EnquiryCard({
   // The text is shown as drawn (blank specs highlighted); "Edit the text" swaps it for a text area.
   const [editing, setEditing] = useState(false)
   return (
-    <section aria-label="The message" className="overflow-hidden rounded-panel border bg-surface">
-      <header className="flex flex-wrap items-start gap-3 border-b px-5 py-4">
+    <section aria-label="The message" data-work>
+      <header className="flex flex-wrap items-start gap-3 border-b py-4">
         <div className="min-w-[12rem] flex-1">
-          <h2 className="m-0 text-base font-semibold">
+          <h2 className="type-row m-0">
             {variant === 'email' ? 'Email' : 'WhatsApp message'} to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
           </h2>
-          <p className="m-0 mt-1 text-sm text-fg-muted">
+          <p className="type-body m-0 mt-1 text-fg-muted">
             {count === 1 ? 'The message for this supplier.' : `One message for all ${count}. Each supplier skips what they cannot offer.`}
           </p>
         </div>
         <ChannelLink value={variant} onChange={v => onVariant(v as EnquiryVariant)} className="self-center" />
       </header>
-      <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3 text-sm">
+      <div className="type-body flex flex-wrap items-center gap-2 border-b py-3">
         <span className="text-fg-muted">Send to</span>
         {recipients.map(r => (
-          <span key={r.id} className="inline-flex min-h-[1.75rem] items-center gap-1 rounded border border-line-strong bg-surface pl-2 pr-1 text-xs">
+          <span key={r.id} data-row-actions="" className="inline-flex items-center gap-1 text-base font-medium">
             {r.name}
             {locked ? null : (
               <Button variant="quiet" size="sm" icon={X} aria-label={`Do not send to ${r.name}`} onClick={() => onRemoveRecipient(r.id)} />
@@ -338,9 +338,9 @@ export function EnquiryCard({
           {editing ? 'Done editing' : 'Edit the text'}
         </Button>
       </div>
-      <div className="grid gap-2 px-5 py-4">
+      <div className="grid gap-2 py-4">
         {subject ? (
-          <p className="m-0 text-sm">
+          <p className="type-body m-0">
             <span className="text-fg-muted">Subject </span>
             <WithPendingRef text={subject} />
           </p>
@@ -356,12 +356,12 @@ export function EnquiryCard({
               onChange={e => onBody(e.target.value)}
               rows={Math.min(Math.max(body.split('\n').length + 1, 10), 26)}
               spellCheck={false}
-              className="w-full resize-y rounded border border-line-input bg-surface px-3 py-3 text-sm leading-5 text-fg hover:border-fg-muted focus-visible:border-fg max-md:text-base max-md:leading-6"
+              className="w-full resize-y rounded border border-line-input bg-surface px-3 py-3 text-base leading-6 text-fg hover:border-fg-muted focus-visible:border-fg"
             />
           </>
         ) : (
           <div role="group" aria-label="Message text" data-enquiry-preview className="py-1">
-            <pre className="m-0 whitespace-pre-wrap break-words font-sans text-sm leading-[21px] text-fg">
+            <pre className="m-0 whitespace-pre-wrap break-words font-sans text-base leading-6 text-fg">
               {body.split('\n').map((line, i, all) => (
                 <span key={i}>
                   <PreviewLine line={line} />
@@ -373,9 +373,9 @@ export function EnquiryCard({
         )}
       </div>
       {actions || note ? (
-        <footer className="flex flex-wrap items-center gap-3 border-t bg-sunken px-5 py-3">
+        <footer className="flex flex-wrap items-center gap-3 border-t py-3">
           {actions}
-          {note ? <span className="ml-auto text-sm text-fg-muted">{note}</span> : null}
+          {note ? <span className="type-body ml-auto text-fg-muted">{note}</span> : null}
         </footer>
       ) : null}
     </section>
@@ -425,18 +425,18 @@ export function FloatedPanel({
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const next = messages ? asked.find(i => !opened.has(i.id)) : undefined
   return (
-    <section aria-label="Asked suppliers" className="grid gap-4 rounded-panel border bg-surface p-6">
-      <p className="m-0 flex items-center gap-2 text-sm text-tone-success-fg">
+    <section aria-label="Asked suppliers" data-work className="grid gap-4">
+      <p className="type-body m-0 flex items-center gap-2 text-tone-success-fg">
         <Icon icon={CircleCheck} />
         <span className="min-w-0">
           Asked <span className="num">{n}</span> {n === 1 ? 'supplier' : 'suppliers'} on {formatDay(floatedOn)}
         </span>
       </p>
-      <h2 className="m-0 text-xl font-semibold tracking-snug">
+      <h2 className="type-section m-0">
         <span className="num">{refText}</span> is waiting for prices
       </h2>
       {copied ? (
-        <p className="m-0 flex items-start gap-2 text-sm text-fg-2">
+        <p className="type-body m-0 flex items-start gap-2 text-fg-2">
           <Icon icon={Copy} className="mt-[2px] text-fg-muted" />
           <span>The message is on your clipboard. Paste it into {joinNames(names)}.</span>
         </p>
@@ -459,8 +459,8 @@ export function FloatedPanel({
       {messages && asked.length > 0 ? (
         <ul aria-label="Send it to each supplier" className="m-0 grid list-none gap-3 p-0" data-slot="send-to-each">
           {asked.map(i => (
-            <li key={i.id} className="grid gap-2">
-              <b className="text-sm font-medium">{i.supplierName}</b>
+            <li key={i.id} data-row-actions="" className="grid gap-2">
+              <b className="type-row">{i.supplierName}</b>
               <MessageActions
                 size="sm"
                 to={{ name: i.contactName ?? i.supplierName, phone: i.contactPhone, email: i.contactEmail }}
@@ -477,7 +477,7 @@ export function FloatedPanel({
         </ul>
       ) : null}
       {replyBy.date || dueOn ? (
-        <dl className="m-0 grid gap-2 text-sm">
+        <dl className="type-body m-0 grid gap-2">
           {replyBy.date ? (
             <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
               <dt className="num m-0">{formatDay(replyBy.date)}</dt>
@@ -492,7 +492,7 @@ export function FloatedPanel({
           ) : null}
         </dl>
       ) : null}
-      {dueOn ? null : <p className="m-0 text-sm text-fg-2">No quotation due date was given, so nothing is chased until you add one.</p>}
+      {dueOn ? null : <p className="type-body m-0 text-fg-2">No quotation due date was given, so nothing is chased until you add one.</p>}
       {unfloated.map(u => (
         <Hint key={u.key} tone="info">
           {u.text}

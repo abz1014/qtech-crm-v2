@@ -20,6 +20,7 @@ export function Panel({
   children,
   footer,
   className,
+  flat,
 }: {
   title: ReactNode
   /** An InfoTip (src/ui/InfoTip): the rule behind the panel, kept off the page. */
@@ -29,6 +30,8 @@ export function Panel({
   children?: ReactNode
   footer?: ReactNode
   className?: string
+  /** Clarity look: a hairline above the section instead of a box, and no rule under the heading. */
+  flat?: boolean
 }) {
   const headingId = useId()
   const heading = (
@@ -37,8 +40,8 @@ export function Panel({
     </h2>
   )
   return (
-    <section aria-labelledby={headingId} className={cn('min-w-0 rounded-panel border bg-surface', className)}>
-      <header className="flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 border-b py-2 pl-5 pr-4">
+    <section aria-labelledby={headingId} className={cn('min-w-0', flat ? 'border-t [&_.px-5]:px-0' : 'rounded-panel border bg-surface', className)}>
+      <header className={cn('flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 py-2', flat ? 'pl-0 pr-0' : 'border-b pl-5 pr-4')}>
         {info ? (
           <div className="-my-1 flex items-center gap-1">
             {heading}

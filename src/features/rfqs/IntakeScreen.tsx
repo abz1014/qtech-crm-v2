@@ -924,15 +924,15 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
           <header className="grid gap-1">
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-fg-muted">
+            <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted max-md:hidden">
               <Link to={enquiry ? '/jobs' : '/rfqs'} className="hover:text-fg">{enquiry ? 'Jobs' : 'RFQs'}</Link>
               <Icon icon={ChevronRight} size="sm" />
               <span aria-current="page">{enquiry ? 'New enquiry' : 'New RFQ'}</span>
             </nav>
-            <h1 className="text-2xl font-semibold tracking-tight">{enquiry ? 'New enquiry' : 'New RFQ'}</h1>
-            <p className="max-w-prose text-sm text-fg-muted">{lede}</p>
+            <h1 className="type-page max-md:sr-only">{enquiry ? 'New enquiry' : 'New RFQ'}</h1>
+            <p className="type-body max-w-prose text-fg-muted">{lede}</p>
             {step === 'build' && !offer && presetSupplier ? (
-              <p className="max-w-prose text-sm text-fg-2" data-preset-supplier>
+              <p className="type-body max-w-prose text-fg-2" data-preset-supplier>
                 <strong className="font-medium text-fg">{presetSupplier.name}</strong> is ticked as a supplier to ask.
               </p>
             ) : null}
@@ -959,8 +959,8 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
 
           {step === 'build' && !offer ? (
             <>
-              <section aria-labelledby="h-customer" className="grid gap-3">
-                <h2 id="h-customer" className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-snug">
+              <section aria-labelledby="h-customer" data-work className="grid gap-3">
+                <h2 id="h-customer" className="type-section flex flex-wrap items-center gap-2">
                   Customer
                   {enquiry && !company && sender ? <Tag dashed>Check this</Tag> : null}
                 </h2>
@@ -1035,8 +1035,8 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
               {/* Open before the company is chosen (owner test 2026-10-20): the PDF or paste is often what tells us the company. */}
               <section aria-labelledby="h-items" className="grid gap-3">
                 <div className="flex items-baseline justify-between gap-4">
-                  <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
-                  <p className="text-sm text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. We split it.'}</p>
+                  <h2 id="h-items" className="type-section">Items</h2>
+                  <p className="type-body text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. We split it.'}</p>
                 </div>
                 {heldDoc ? (
                   <Banner
@@ -1123,10 +1123,10 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
 
           {step === 'suppliers' ? (
             <>
-              <section aria-labelledby="h-items" className="grid gap-3">
+              <section aria-labelledby="h-items" data-work className="grid gap-3">
                 <div className="flex items-baseline justify-between gap-4">
-                  <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
-                  <p className="text-sm text-fg-muted">
+                  <h2 id="h-items" className="type-section">Items</h2>
+                  <p className="type-body text-fg-muted">
                     <span className="num">{real.length}</span> {real.length === 1 ? 'item' : 'items'}
                     {dueOn ? <> · quotation due <span className="num">{formatDay(dueOn)}</span></> : null}
                   </p>
@@ -1136,7 +1136,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
               <section aria-labelledby="h-sup" className="grid gap-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <span className="inline-flex items-center gap-1">
-                    <h2 id="h-sup" className="text-lg font-semibold tracking-snug">
+                    <h2 id="h-sup" className="type-section">
                       Suppliers
                     </h2>
                     <InfoTip label="How is this list ordered?">
@@ -1232,9 +1232,9 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
           ) : null}
 
           {step === 'saved' && saved ? (
-            <section aria-label="Saved" className="grid gap-4 rounded-panel border bg-surface p-6">
-              <h2 className="m-0 text-xl font-semibold tracking-snug"><span className="num">{rfqRef(saved.number)}</span> is saved</h2>
-              <p className="m-0 text-sm text-fg-2">
+            <section aria-label="Saved" data-work className="grid gap-4">
+              <h2 className="type-section m-0"><span className="num">{rfqRef(saved.number)}</span> is saved</h2>
+              <p className="type-body m-0 text-fg-2">
                 {ticked.length > 0
                   ? `${ticked.length} ${ticked.length === 1 ? 'supplier is' : 'suppliers are'} shortlisted (${joinNames(floatedNames)}). No supplier has been asked yet, so it shows as not asked.`
                   : 'No supplier is shortlisted yet. Open it to ask suppliers when you are ready.'}
@@ -1301,11 +1301,11 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
 function CustomerChip({ company, contacts, onChange }: { company: Company; contacts: string[]; onChange: () => void }) {
   const contactNote = contacts.length === 0 ? 'contact not added yet' : contacts.length === 1 ? contacts[0] : `${contacts.length} contacts`
   return (
-    <div className="flex min-h-12 flex-wrap items-center gap-3 rounded-row border bg-surface px-3 py-2">
+    <div className="flex min-h-12 flex-wrap items-center gap-3 border-y py-2">
       <Avatar name={company.name} className="!bg-selected !text-fg-2" />
       <div className="min-w-0">
-        <p className="m-0 min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{company.name}</p>
-        <p className="m-0 text-xs text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
+        <p className="type-row m-0 min-w-0 [overflow-wrap:anywhere]">{company.name}</p>
+        <p className="type-body m-0 text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
       </div>
       <span className="ml-auto" />
       {/* A plain "Customer" tag said nothing here (owner audit N3): only a new prospect is worth a mark. */}

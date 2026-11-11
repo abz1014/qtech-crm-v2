@@ -36,7 +36,7 @@ export function CategoriesDealtIn({ companyId }: { companyId: string }) {
   const busy = carry.isPending || unlink.isPending
 
   return (
-    <Panel title="Categories they deal in" meta={loading || failed ? undefined : rows.length === 0 ? 'None yet' : `${rows.length}`}>
+    <Panel flat title="Categories they deal in" meta={loading || failed ? undefined : rows.length === 0 ? 'None yet' : `${rows.length}`}>
       <div className="grid gap-3 p-4">
         {loading ? (
           <Skeleton className="h-10 w-full" />
