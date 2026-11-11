@@ -63,11 +63,11 @@ const HEAD = `hidden items-end gap-x-4 px-0 py-2 text-sm text-fg-muted lg:grid $
  * Phone (UX audit C3): two lines per supplier. The name (and its mark) across the row with the two buttons at its end; then
  * price · lead time · stock on one wrapping line. On desktop the second line's wrapper dissolves (lg:contents) into the columns.
  */
-const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 ${COLS}`
+const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 lg:py-2 ${COLS}`
 /** An engineer's row: the supplier, then lead time · stock (no price, no buttons). */
 const COLS_NO_PRICES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,112px)_112px]'
 const HEAD_NO_PRICES = `hidden items-end gap-x-4 px-0 py-2 text-sm text-fg-muted lg:grid ${COLS_NO_PRICES}`
-const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 ${COLS_NO_PRICES}`
+const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 lg:py-2 ${COLS_NO_PRICES}`
 
 interface Entry {
   line: QuoteLineRow
@@ -297,6 +297,8 @@ export function ItemsPanel({
   const nobodyAsked = inquiries.length === 0
   // Something under the header besides the waiting line: a price or a can't quote.
   const hasBody = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId) || Boolean(reasonForItem(itemId, i)))
+  // Desktop: the column names show once, over the first item that has prices (they were repeated over every item).
+  const headItemId = items.find(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id)))?.id
   const shownItem = openItem === undefined ? items.find(it => hasBody(it.id))?.id : openItem
   return (
     <DetailPanel
@@ -363,7 +365,7 @@ export function ItemsPanel({
             const bodyId = `item-body-${item.id}`
             return (
               <article key={item.id} aria-label={`Item ${item.number}`} className="min-w-0" data-folded={folded ? '' : undefined}>
-                <header className={cn('relative flex flex-wrap items-start gap-x-3 gap-y-2 px-0 pt-4', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
+                <header className={cn('relative flex flex-wrap items-start gap-x-3 gap-y-2 px-0 pt-4 lg:pt-3', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
                   <span className="num mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-sm">{item.number}</span>
                   <div className="min-w-0 flex-1 basis-[16rem]">
                     <h3 className="text-base font-medium text-pretty">
@@ -438,9 +440,9 @@ export function ItemsPanel({
                     {nobodyAsked ? (
                       <p className="px-0 pb-4 pt-3 text-fg-muted">No supplier has been asked about this item.</p>
                     ) : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
-                      <div className="mt-3">
+                      <div className="mt-3 lg:mt-1">
                         {entries.length > 0 && prices ? (
-                          <div className={HEAD} aria-hidden="true">
+                          item.id !== headItemId ? null : <div className={HEAD} aria-hidden="true">
                             <span>Supplier</span>
                             <span className="text-right">Price, PKR today</span>
                             <span>Lead time</span>
@@ -448,7 +450,7 @@ export function ItemsPanel({
                             <span />
                           </div>
                         ) : entries.length > 0 ? (
-                          <div className={HEAD_NO_PRICES} aria-hidden="true">
+                          item.id !== headItemId ? null : <div className={HEAD_NO_PRICES} aria-hidden="true">
                             <span>Supplier</span>
                             <span>Lead time</span>
                             <span>Stock</span>
