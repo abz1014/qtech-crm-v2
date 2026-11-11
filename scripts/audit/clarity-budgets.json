@@ -593,7 +593,7 @@
  },
  "admin/money-aging/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1547,
   "aboveFold": 22
  },
@@ -617,7 +617,7 @@
  },
  "admin/money-bank/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 2873,
   "aboveFold": 20
  },
@@ -647,7 +647,7 @@
  },
  "admin/money-expense-report-quarter/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 4741,
   "aboveFold": 20
  },
@@ -665,7 +665,7 @@
  },
  "admin/money-expense-report/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 4053,
   "aboveFold": 20
  },
@@ -725,7 +725,7 @@
  },
  "admin/money-gst-fbr/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1481,
   "aboveFold": 22
  },
@@ -755,7 +755,7 @@
  },
  "admin/money-in-out/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 3820,
   "aboveFold": 20
  },
@@ -791,13 +791,13 @@
  },
  "admin/money-month-end/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1844,
   "aboveFold": 17
  },
  "admin/money-month-end/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 1604,
   "aboveFold": 18
  },
@@ -809,7 +809,7 @@
  },
  "admin/money-owe/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 2919,
   "aboveFold": 22
  },
@@ -827,13 +827,13 @@
  },
  "admin/money-pnl/320x640": {
   "boxDepth": 2,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 2059,
   "aboveFold": 22
  },
  "admin/money-pnl/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 1922,
   "aboveFold": 23
  },
@@ -851,7 +851,7 @@
  },
  "admin/money-profit/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 2905,
   "aboveFold": 17
  },
@@ -863,7 +863,7 @@
  },
  "admin/money-receivables/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 0,
+  "boxesAtFold": 1,
   "contentHeight": 2374,
   "aboveFold": 19
  },
@@ -887,7 +887,7 @@
  },
  "admin/money-team/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1302,
   "aboveFold": 22
  },
@@ -1356,13 +1356,13 @@
  },
  "admin/reports/320x640": {
   "boxDepth": 2,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 2059,
   "aboveFold": 22
  },
  "admin/reports/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 1922,
   "aboveFold": 23
  },
@@ -1374,7 +1374,7 @@
  },
  "admin/review-imported/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 1323,
   "aboveFold": 16
  },

@@ -404,6 +404,42 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
   })
 
+  test('phone, admin: Net, GST and Gross are visible without a tap; the card unfolds to Open invoice; Create invoice is in the sticky bar', async ({ page }) => {
+    const order = await seedOrder(100000)
+    const inv = await seedInvoice(order, { net_amount: 100000, gst_amount: 18000 })
+    await page.setViewportSize({ width: 375, height: 812 })
+    await openAs(page, 'admin', '/money/gst-register')
+    const summary = page.getByRole('region', { name: 'Totals for the invoices shown' })
+    await expect(summary.getByRole('term')).toHaveText(['Invoices', 'Net', 'GST', 'Gross'])
+    await expect(summary).toContainText('by invoice date')
+    const card = page.locator('tr[data-card]').filter({ hasText: inv.number })
+    await expect(card).toBeVisible()
+    // the month header above the card carries the month's Net, GST and Gross
+    await expect(page.locator('tr[data-row-kind="group"]').first()).toContainText(/Net.*GST.*Gross/)
+    await card.click()
+    await expect(card.getByText('Net', { exact: true })).toBeVisible()
+    await card.getByRole('button', { name: 'Open invoice' }).click()
+    await expect(page.getByRole('dialog', { name: `Invoice ${inv.number}` })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.getByRole('toolbar', { name: 'Invoice actions' }).getByRole('button', { name: 'Create invoice' }).click()
+    await expect(page.getByRole('dialog', { name: 'Create invoice' })).toBeVisible()
+  })
+
+  test('phone, sales: Gross only (never Net or GST), no switcher, and a tap on the card opens the invoice', async ({ page }) => {
+    const order = await seedOrder(100000)
+    const inv = await seedInvoice(order, { net_amount: 100000, gst_amount: 18000 })
+    await page.setViewportSize({ width: 375, height: 812 })
+    await openAs(page, 'sales', '/money/gst-register')
+    const summary = page.getByRole('region', { name: 'Totals for the invoices shown' })
+    await expect(summary.getByRole('term')).toHaveText(['Invoices', 'Gross'])
+    await expect(page.getByTestId('money-switcher')).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link')).toHaveCount(3)
+    const card = page.locator('tr[data-card]').filter({ hasText: inv.number })
+    await expect(card.getByText('Net', { exact: true })).toHaveCount(0)
+    await card.click()
+    await expect(page.getByRole('dialog', { name: `Invoice ${inv.number}` })).toBeVisible()
+  })
+
   test('axe at 375: register and receivables as cards, and both dialogs as sheets', async ({ page }) => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000 })
@@ -416,8 +452,8 @@ test.describe('payments in and receivables (M02)', () => {
     await page.goto('/money/receivables')
     await page.waitForLoadState('networkidle')
     await expect(page.getByRole('heading', { name: 'Balances', level: 2 })).toBeVisible()
-    // round 3: one row of short tabs on a phone (Reports beside the page action): none is off-screen, nothing scrolls sideways
-    for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
+    // clarity L2: the admin's phone has one switcher row ("To collect v ... All Money pages") instead of the tabs; it is on screen and nothing scrolls sideways
+    await expect(page.getByTestId('money-switcher')).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await review(page, 'm02-receivables-375')
     expect(await axeViolations(page)).toEqual([])

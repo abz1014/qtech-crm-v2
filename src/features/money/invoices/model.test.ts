@@ -1,5 +1,6 @@
 import { gstReturnDueDay, gstReturnMayBeFiled, monthHasFbrRecord } from '@/features/money/invoices/model'
 import { describe, expect, it } from 'vitest'
+import { toPaisa } from '@/lib/money'
 import {
   attentionReason,
   cleanPsid,
@@ -92,6 +93,34 @@ describe('the register', () => {
     expect(rowMonth(row())).toBe('November 2026')
     expect(rowMonth(row({ invoiceDate: null }))).toBe('No date')
     expect(registerTotals([row(), row({ net: 100, gst: 18, gross: 118 })])).toEqual({ count: 2, net: 860100, gst: 154818, gross: 1014918 })
+  })
+
+  it('month subtotals are exactly the sum of their rows, in paisa, and the months add up to the page total', () => {
+    // 0.1 + 0.2 style figures: a float sum would drift, the paisa sum cannot
+    const rows = [
+      row({ invoiceId: 'a', invoiceDate: '2026-10-03', net: 1000.1, gst: 180.02, gross: 1180.12 }),
+      row({ invoiceId: 'b', invoiceDate: '2026-10-20', net: 2000.2, gst: 360.04, gross: 2360.24 }),
+      row({ invoiceId: 'c', invoiceDate: '2026-09-11', net: 0.1, gst: 0.02, gross: 0.12 }),
+      row({ invoiceId: 'd', invoiceDate: '2026-09-12', net: 0.2, gst: 0.04, gross: 0.24 }),
+    ]
+    const months = new Map<string, GstRow[]>()
+    for (const r of rows) months.set(rowMonth(r), [...(months.get(rowMonth(r)) ?? []), r])
+    const paisa = (n: number) => toPaisa(n)
+    let net = 0n
+    let gst = 0n
+    let gross = 0n
+    for (const list of months.values()) {
+      const t = registerTotals(list)
+      expect(paisa(t.net)).toBe(list.reduce((s, r) => s + paisa(r.net), 0n))
+      expect(paisa(t.gst)).toBe(list.reduce((s, r) => s + paisa(r.gst), 0n))
+      expect(paisa(t.gross)).toBe(list.reduce((s, r) => s + paisa(r.gross), 0n))
+      net += paisa(t.net)
+      gst += paisa(t.gst)
+      gross += paisa(t.gross)
+    }
+    const all = registerTotals(rows)
+    expect([paisa(all.net), paisa(all.gst), paisa(all.gross)]).toEqual([net, gst, gross])
+    expect(registerTotals(months.get('September 2026') ?? []).net).toBe(0.3)
   })
 
   it('searches the invoice number, the customer and the order number', () => {

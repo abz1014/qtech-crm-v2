@@ -13,6 +13,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import { monthKeyLabel } from '@/features/money/expenses/model'
+import { ReportCsv } from '@/ui/ReportCsv'
 import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
 import { type MonthReportKey } from '@/features/money/monthEnd/reportList'
@@ -214,6 +215,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           ...(drawings ? [{ label: 'After drawings', amount: v.afterDrawings, sub: <>Profit less {rupees(v.notInPnl.total.net)} drawn or repaid</> }] : []),
         ]}
       />
+      <ReportCsv />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div className="grid gap-6">
           <Panel
@@ -462,6 +464,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             : [],
         )}
       />
+      <ReportCsv />
       <div className="grid">
         <DataTable
           label="What customers owe, by how late"
@@ -653,6 +656,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           { label: 'Paid so far', amount: v.paid, sub: <>{plural(v.paidLegs, 'supplier order')} with a payment</> },
         ]}
       />
+      <ReportCsv />
       <DataTable
         label="What we owe suppliers"
         columns={columns}
@@ -777,6 +781,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           { label: 'Still to deposit', amount: sel?.toDeposit ?? '0',  sub: <><Num>{(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0)}</Num> {(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0) === 1 ? 'invoice' : 'invoices'}</> },
         ]}
       />
+      <ReportCsv />
       <DataTable
         label="GST and FBR, by invoice month"
         columns={v.showInputTax ? columns : columns.filter(c => c.id !== 'tax')}
@@ -911,6 +916,7 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           { label: `Days left in Q${v.quarter}`, count: v.daysLeft, sub: <>Until {formatShortDate(v.quarterEnd, ctx.today, true)}</> },
         ]}
       />
+      <ReportCsv />
       <DataTable
         label="Net cash credited to each person"
         columns={columns}
