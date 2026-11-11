@@ -90,7 +90,7 @@ import {
  */
 const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-2 px-6'
+const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-x-3 gap-y-2 px-6'
 
 const NO_JOBS: readonly JobTagOption[] = []
 const NO_GROUPS: readonly ExpenseGroup[] = []
@@ -788,7 +788,7 @@ function CellDate({
           'num h-[36px] w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
           'aria-[invalid=true]:border-tone-danger-fg aria-[invalid=true]:bg-tone-danger-bg',
           isDefault && defaultEdge,
-          isDefault && 'pr-[4.5rem]',
+          isDefault && 'pr-[3.25rem]',
         )}
       />
       {isDefault ? <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs leading-none text-fg-muted">today</span> : null}

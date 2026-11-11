@@ -107,9 +107,9 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
     <div className="grid gap-4">
       <RecurringPanel categories={categories} today={today} />
 
-      <section aria-labelledby="expenses-h" className="grid gap-3">
+      <section aria-labelledby="expenses-h" className="grid gap-3" data-work="">
         {monthClosed ? (
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded border bg-sunken px-4 py-2 text-sm text-fg-2" data-testid="expenses-closed">
+          <p className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 border-b py-2 text-fg-2" data-testid="expenses-closed">
             <Icon icon={Lock} className="text-fg-muted" />
             <span>
               <b className="font-medium text-fg">{monthKeyLabel(month)} is closed.</b> {CLOSED_MONTH_LINE}
