@@ -50,12 +50,12 @@ export function BackupsPage() {
   )
 }
 
-function Section({ title, hint, children, testId }: { title: string; hint?: string; children: React.ReactNode; testId: string }) {
+function Section({ title, hint, children, testId, work }: { title: string; hint?: string; children: React.ReactNode; testId: string; work?: boolean }) {
   return (
-    <section className="grid gap-4 rounded-panel border bg-surface p-5" data-testid={testId}>
+    <section className="grid gap-4 border-t pt-4" data-testid={testId} data-work={work ? '' : undefined}>
       <div className="grid gap-[2px]">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {hint ? <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{hint}</p> : null}
+        <h2 className="type-section">{title}</h2>
+        {hint ? <p className="max-w-[62ch] text-base text-fg-muted text-pretty">{hint}</p> : null}
       </div>
       {children}
     </section>
@@ -71,19 +71,20 @@ function BackupSection({ h }: { h: HealthRow }) {
   const stale = age > BACKUP_STALE_DAYS
   return (
     <Section
+      work
       testId="backup-status"
       title="Nightly backup"
       hint="Every night the whole database and every stored file is copied, encrypted with your public key, and kept for 30 days in GitHub. Only your private key can open it."
     >
       <dl className="grid gap-3 sm:grid-cols-2">
         <div className="grid gap-1">
-          <dt className="text-sm text-fg-muted">Last backup</dt>
+          <dt className="text-base text-fg-muted">Last backup</dt>
           <dd className={stale ? 'text-base font-medium text-tone-danger-fg' : 'text-base'} data-testid="backup-last">
             {h.lastBackupAt ? `${formatDay(since)}${age === 0 ? ' (today)' : ` (${age} ${age === 1 ? 'day' : 'days'} ago)`}` : `None recorded yet. Watching since ${formatDay(since)}.`}
           </dd>
         </div>
         <div className="grid gap-1">
-          <dt className="text-sm text-fg-muted">Size of the last backup</dt>
+          <dt className="text-base text-fg-muted">Size of the last backup</dt>
           <dd className="text-base">
             {h.lastBackupBytes === null
               ? 'Not known yet'
@@ -93,13 +94,13 @@ function BackupSection({ h }: { h: HealthRow }) {
           </dd>
         </div>
         <div className="grid gap-1">
-          <dt className="text-sm text-fg-muted">Weekly restore drill</dt>
+          <dt className="text-base text-fg-muted">Weekly restore drill</dt>
           <dd className="text-base" data-testid="backup-drill">
             {h.lastDrillAt ? `${h.lastDrillOk ? 'Passed' : 'FAILED'} on ${formatDay(dayOf(h.lastDrillAt))}` : 'Not run yet'}
           </dd>
         </div>
         <div className="grid gap-1">
-          <dt className="text-sm text-fg-muted">Files waiting in the 30-day trash</dt>
+          <dt className="text-base text-fg-muted">Files waiting in the 30-day trash</dt>
           <dd className="text-base" data-testid="backup-trash">
             {h.trashFiles === 0
               ? 'None'
@@ -108,7 +109,7 @@ function BackupSection({ h }: { h: HealthRow }) {
         </div>
       </dl>
       {stale ? (
-        <p role="alert" className="text-sm text-tone-danger-fg">
+        <p role="alert" className="text-base text-tone-danger-fg">
           The last backup is more than {BACKUP_STALE_DAYS} days old. Open GitHub, Actions, Backup, and look at the latest run.
         </p>
       ) : null}
@@ -122,8 +123,8 @@ function Meter({ label, used, limit, testId }: { label: string; used: number; li
   return (
     <div className="grid gap-1" data-testid={testId}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">{label}</span>
-        <span className={warn ? 'text-sm font-medium text-tone-danger-fg' : 'text-sm text-fg-muted'}>
+        <span className="text-base font-medium">{label}</span>
+        <span className={warn ? 'text-base font-medium text-tone-danger-fg' : 'text-base text-fg-muted'}>
           {formatBytes(used)} of {formatBytes(limit)} ({percentText(share)})
         </span>
       </div>
@@ -150,7 +151,7 @@ function UsageSection({ h }: { h: HealthRow }) {
     >
       <Meter label="Database" used={h.dbBytes} limit={FREE_DB_BYTES} testId="usage-db" />
       <Meter label="File storage" used={h.storageBytes} limit={FREE_STORAGE_BYTES} testId="usage-storage" />
-      <p className="text-sm text-fg-muted">{h.storageObjects} stored files.</p>
+      <p className="text-base text-fg-muted">{h.storageObjects} stored files.</p>
     </Section>
   )
 }

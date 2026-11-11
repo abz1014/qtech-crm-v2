@@ -97,7 +97,7 @@ export function TeamPage() {
               <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{m.name}</span>
               {m.id === me ? <Tag className="ml-1">You</Tag> : null}
             </span>
-            <span className="num min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
+            <span className="num min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
           </span>
         </span>
       ),
@@ -137,7 +137,7 @@ export function TeamPage() {
       width: 164,
       cell: m =>
         isActive(m) ? (
-          <RowMenu member={m} onPick={open} />
+          <span data-row-actions="" className="inline-flex"><RowMenu member={m} onPick={open} /></span>
         ) : (
           <Button size="sm" icon={UserCheck} onClick={() => open('reactivate', m)} aria-label={`Reactivate ${m.name}`}>
             Reactivate
@@ -169,7 +169,7 @@ export function TeamPage() {
           tone="warning"
           title={LONE_ADMIN_TITLE}
           action={
-            <Link to="?help=lone-admin-recovery" className="inline-flex min-h-touch items-center text-sm font-medium text-primary underline underline-offset-4">
+            <Link to="?help=lone-admin-recovery" className="inline-flex min-h-touch items-center text-base font-medium text-primary underline underline-offset-4">
               How to get back in
             </Link>
           }
@@ -178,6 +178,7 @@ export function TeamPage() {
         </Banner>
       ) : null}
 
+      <div data-work="">
       <DataTable
         label="Team"
         columns={columns}
@@ -226,8 +227,8 @@ export function TeamPage() {
           <span className={cn('flex items-center gap-3', dim(m))}>
             <Avatar name={m.name} size="xl" className={avatarTone(m)} />
             <span className="grid min-w-0 flex-1">
-              <span className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{m.name}</span>
-              <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">
+              <span className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{m.name}</span>
+              <span className="min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">
                 {roleLabel(m.role)}
                 {m.job_title ? ` · ${m.job_title}` : ''}
               </span>
@@ -250,7 +251,7 @@ export function TeamPage() {
                 { value: 'deactivated', label: 'Deactivated' },
               ]}
             />
-            <span className="ml-auto text-xs text-fg-muted max-sm:hidden">At least one active admin is always required.</span>
+            <span className="ml-auto text-base text-fg-muted max-sm:hidden">At least one active admin is always required.</span>
           </div>
         }
         summary={
@@ -260,7 +261,8 @@ export function TeamPage() {
           </>
         }
       />
-      <p className="px-1 text-xs text-fg-muted sm:hidden">At least one active admin is always required.</p>
+      </div>
+      <p className="px-1 text-base text-fg-muted sm:hidden">At least one active admin is always required.</p>
 
       {dialog?.kind === 'sheet' ? <RowActionSheet member={dialog.member} onClose={close} onPick={open} /> : null}
       {dialog?.kind === 'add' ? (

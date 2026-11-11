@@ -95,10 +95,10 @@ export function ExchangeRatesPage() {
             <Panel
               title="Latest rate per currency"
               meta="PKR for 1 unit"
-              className="overflow-clip"
-              actions={lastRun.data ? <span className="text-sm text-fg-muted" data-fx-auto-run>{autoRunStamp(lastRun.data)}</span> : undefined}
+              flat
+              actions={lastRun.data ? <span className="text-base text-fg-muted" data-fx-auto-run>{autoRunStamp(lastRun.data)}</span> : undefined}
             >
-              <RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} />
+              <div data-work=""><RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} /></div>
             </Panel>
             {warnings.map(w => (
               <Banner key={w} tone="warning" title={w.split('. ')[0] + '.'}>
@@ -147,7 +147,7 @@ function AgeCell({ r }: { r: RateRow }) {
   return (
     <span className="grid justify-items-start gap-px">
       <StatusBadge dimension="fx" value={r.staleness} />
-      <span className="text-sm text-fg-muted">{bandDetail(r.ageDays)}</span>
+      <span className="text-base text-fg-muted">{bandDetail(r.ageDays)}</span>
     </span>
   )
 }
@@ -161,7 +161,7 @@ function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: st
       cell: r => (
         <span className="grid">
           <span className="font-medium">{r.currency}</span>
-          <span className="text-sm text-fg-muted">{r.name}</span>
+          <span className="text-base text-fg-muted">{r.name}</span>
         </span>
       ),
     },
@@ -183,7 +183,7 @@ function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: st
           <span className="grid">
             <span className="num">{shortDay(r.asOf)}</span>
             {r.source ? (
-              <span className="inline-flex items-center gap-1 text-sm text-fg-muted">
+              <span className="inline-flex items-center gap-1 text-base text-fg-muted">
                 <Icon icon={r.source === 'manual' ? Pencil : RefreshCw} size="sm" />
                 {sourceText(r.source)}
               </span>
@@ -233,13 +233,13 @@ function HistoryDialog({ currency, onClose }: { currency: string | null; onClose
           {history.isPending ? (
             <Skeleton className="h-[6rem]" />
           ) : history.isError ? (
-            <p className="text-sm text-fg-muted">The history did not load. Try again in a moment.</p>
+            <p className="text-base text-fg-muted">The history did not load. Try again in a moment.</p>
           ) : history.data.length === 0 ? (
-            <p className="text-sm text-fg-muted">{`No ${currency} rate has been recorded yet.`}</p>
+            <p className="text-base text-fg-muted">{`No ${currency} rate has been recorded yet.`}</p>
           ) : (
             <ul>
               {history.data.map(h => (
-                <li key={`${h.asOf}-${h.source}`} className="flex items-center gap-4 border-t py-3 text-sm first:border-t-0">
+                <li key={`${h.asOf}-${h.source}`} className="flex items-center gap-4 border-t py-3 text-base first:border-t-0">
                   <span className="num w-[72px] shrink-0">{shortDay(h.asOf)}</span>
                   <span className="inline-flex items-center gap-1 text-fg-2">
                     <Icon icon={h.source === 'manual' ? Pencil : RefreshCw} size="sm" className="text-fg-muted" />
@@ -299,7 +299,7 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
 
   return (
     <div ref={panelRef} className="scroll-mt-[5rem]">
-      <Panel title="Add a rate by hand">
+      <Panel flat title="Add a rate by hand">
         <form
           className="grid gap-4 px-5 py-4"
           onSubmit={e => {

@@ -47,11 +47,11 @@ export function SettingsLayout() {
       {/* Team sets its own phone bar; every other page under Settings gets the back arrow to the list. */}
       {!atHome && current && current.to !== '/settings/team' ? <BackToSettings title={current.label} /> : null}
       <nav aria-label="Settings" className={cn('bg-surface px-4 py-3 md:border-r md:px-3 md:py-6', atHome ? 'max-md:border-b' : 'max-md:hidden')}>
-        <p className="mb-2 hidden px-3 text-sm font-semibold text-fg-muted md:block">Settings</p>
+        <p className="mb-2 hidden px-3 text-base font-semibold text-fg-muted md:block">Settings</p>
         {groups.map(g =>
           g.links.length ? (
             <div key={g.title} className="mb-3 grid gap-[2px]">
-              <p className="px-3 pb-1 pt-2 text-sm font-medium text-fg-muted">{g.title}</p>
+              <p className="px-3 pb-1 pt-2 text-base font-medium text-fg-muted">{g.title}</p>
               <ul className="grid min-w-0 gap-[2px]">
                 {g.links.map(l => (
                   <li key={l.to} className="min-w-0">
@@ -59,7 +59,7 @@ export function SettingsLayout() {
                       to={l.to}
                       className={({ isActive }) =>
                         cn(
-                          'relative flex h-control min-w-0 items-center gap-2 whitespace-nowrap rounded px-3 text-sm font-medium max-md:h-touch max-md:text-base',
+                          'relative flex h-control min-w-0 items-center gap-2 whitespace-nowrap rounded px-3 text-base font-medium max-md:h-touch max-md:text-base',
                           isActive ? 'bg-selected text-fg' : 'text-fg-2 hover:bg-sunken hover:text-fg',
                         )
                       }
@@ -72,7 +72,7 @@ export function SettingsLayout() {
                           <Icon icon={l.icon} className="shrink-0 text-fg-muted" />
                           <span className="min-w-0">{l.label}</span>
                           {!isAdmin && l.tagForOthers ? (
-                            <span className="ml-auto inline-flex h-6 shrink-0 items-center rounded bg-canvas px-2 text-sm font-medium text-fg-2">
+                            <span className="ml-auto inline-flex h-6 shrink-0 items-center rounded bg-canvas px-2 text-base font-medium text-fg-2">
                               {l.tagForOthers}
                             </span>
                           ) : null}

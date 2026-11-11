@@ -28,12 +28,12 @@ export function TextSizeControl({ className }: { className?: string }) {
 /** The Text size panel for Settings > Your details: a heading, one line on what it does, and the control. */
 export function TextSizePanel({ className }: { className?: string }) {
   return (
-    <section aria-labelledby="text-size-h" className={cn('grid gap-3 rounded-panel border bg-surface p-5', className)}>
+    <section aria-labelledby="text-size-h" className={cn('grid gap-3 border-t pt-4', className)}>
       <div className="grid gap-[2px]">
-        <h2 id="text-size-h" className="text-base font-semibold">
+        <h2 id="text-size-h" className="type-section">
           Text size
         </h2>
-        <p className="max-w-[62ch] text-sm text-fg-2 text-pretty">
+        <p className="max-w-[62ch] text-base text-fg-2 text-pretty">
           Normal is the easier-to-read size. Larger is bigger still (18 px). Smaller fits more on the screen. It changes this device only, straight away.
         </p>
       </div>
@@ -46,12 +46,12 @@ export function TextSizePanel({ className }: { className?: string }) {
 export function ShortcutsPanel({ className }: { className?: string }) {
   const [on, setOn] = useSingleKeyShortcuts()
   return (
-    <section aria-labelledby="shortcuts-h" className={cn('grid gap-3 rounded-panel border bg-surface p-5', className)}>
+    <section aria-labelledby="shortcuts-h" className={cn('grid gap-3 border-t pt-4', className)}>
       <div className="grid gap-[2px]">
-        <h2 id="shortcuts-h" className="text-base font-semibold">
+        <h2 id="shortcuts-h" className="type-section">
           Keyboard shortcuts
         </h2>
-        <p className="max-w-[62ch] text-sm text-fg-2 text-pretty">
+        <p className="max-w-[62ch] text-base text-fg-2 text-pretty">
           N starts an enquiry, E adds an expense (admin), O starts an order without an enquiry, G then T goes to To do, / jumps to a list&apos;s search and ? opens the keyboard
           shortcuts. Turn these off if you use voice control or press keys by accident. Ctrl+K and Ctrl+Z always work. This device only.
         </p>

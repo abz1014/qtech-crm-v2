@@ -28,12 +28,12 @@ export function ExportPage() {
   return (
     <div className="grid gap-4" data-testid="export-page">
       <PageHeader title="Export data" lede={<span className="text-base">Download your records as files you can open in Excel. Nothing is changed.</span>} />
-      <ul className="divide-y rounded-panel border bg-surface">
+      <ul className="divide-y border-y">
         {EXPORTS.map(k => (
-          <li key={k.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+          <li key={k.id} className="flex min-h-[48px] flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 pl-1" data-work={k === EXPORTS[0] ? '' : undefined}>
             <span className="min-w-0">
               <b className="block font-medium">{k.label}</b>
-              <span className="text-sm text-fg-muted">{k.about}</span>
+              <span className="text-base text-fg-muted">{k.about}</span>
             </span>
             <Button icon={Download} busy={busy === k.id} busyLabel="Making the file" disabled={busy !== null} aria-label={`Download CSV, ${k.label}`} onClick={() => void go(k)}>
               Download CSV
