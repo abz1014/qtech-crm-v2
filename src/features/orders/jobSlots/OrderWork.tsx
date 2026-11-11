@@ -5,6 +5,8 @@ import { lazyShown } from '@/lib/lazyDialog'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { FoldRow } from '@/ui/FoldRow'
+import { Money } from '@/ui/Money'
+import { isFinalMargin } from '@/lib/money'
 import { Skeleton } from '@/ui/Skeleton'
 import { mapPgError } from '@/lib/pgErrors'
 import { useToast } from '@/ui/useToast'
@@ -88,6 +90,7 @@ const ResolveBasisDialog = lazyShown(() => import('@/features/orders/ResolveBasi
 export default function OrderWork({ job }: JobSlotProps) {
   const w = useOrderWork(job)
   const [costsOpen, setCostsOpen] = useState(false)
+  const mm = w.orderMoney.data
   if (!w.orderId) return null
   if (w.failed) return <p className="text-base text-fg-muted">The order did not load. Reload the page to try again.</p>
   if (!w.ready || !w.order || !w.items.data || !w.legs.data) return <Skeleton className="h-[10rem] w-full" />
@@ -104,7 +107,7 @@ export default function OrderWork({ job }: JobSlotProps) {
         <FoldRow
           state={{ icon: Scale, word: '' }}
           title="Costs and margin"
-          summary="Expected cost, costs complete"
+          summary={mm && isFinalMargin(mm.marginState as never) && mm.margin !== null ? <>Margin <Money value={mm.margin} prefix={false} /></> : 'Margin not final'}
           open={costsOpen}
           onToggle={() => setCostsOpen(o => !o)}
           controlsId="order-costs-body"
