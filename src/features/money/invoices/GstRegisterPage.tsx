@@ -309,6 +309,7 @@ export function GstRegisterPage() {
       <SumBar
         label="Totals for the invoices shown"
         phone="lines"
+        desktop="strip"
         caption={`PKR · ${all.length ? `${rangeLabel(shown.length ? shown : all)}, by invoice date` : 'By invoice date'}`}
         items={
           isAdmin

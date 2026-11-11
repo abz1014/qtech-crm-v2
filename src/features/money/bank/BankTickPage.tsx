@@ -126,6 +126,7 @@ export function BankTickPage() {
           <SumBar
             className="max-sm:grid-cols-1"
             label="Running ticked totals"
+            desktop="strip"
             items={[
               {
                 label: 'Matched, money in',
