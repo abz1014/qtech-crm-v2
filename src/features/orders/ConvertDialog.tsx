@@ -409,7 +409,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
               Add the items to the RFQ first.
             </Banner>
           ) : (
-            <div className="overflow-hidden rounded-panel border" role="group" aria-label="Suppliers by line">
+            <div className="overflow-hidden rounded-panel border md:rounded-none md:border-x-0" role="group" aria-label="Suppliers by line">
               <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-snug text-fg-muted', GRID)}>
                 <span><span className="sr-only">Include</span></span>
                 <span>Item</span>
