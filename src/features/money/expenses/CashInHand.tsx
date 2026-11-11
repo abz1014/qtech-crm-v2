@@ -49,7 +49,7 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
           <span className="type-body min-w-0 flex-1">
             <b className="font-semibold">Cash in hand</b> is not set up
           </span>
-          <Button size="touch" variant="quiet" onClick={() => setCounting(true)} aria-label="Set opening cash" className="text-base">
+          <Button size="touch" variant="quiet" onClick={() => setCounting(true)} aria-label="Set up opening cash" className="text-base">
             Set up
           </Button>
           {actions}
