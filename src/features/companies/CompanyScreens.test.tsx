@@ -190,16 +190,12 @@ describe('supplier page', () => {
 
   it('one Enquiries list reads item, reply time, price (with PKR at the time) and outcome; deliveries keep their PO and result', async () => {
     installFakeDb(supplierDb)
-    const user = userEvent.setup()
     mount('/companies/s1', <CompanyPage />)
     const quotes = await screen.findByRole('region', { name: 'Enquiries' })
     const row = await within(quotes).findByText('Belimo NM24A-SR damper actuator')
     const li = row.closest('li') as HTMLElement
     expect(li).toHaveTextContent(/EUR\s*214\.00/)
     expect(li).toHaveTextContent(/≈ PKR\s*69,935/)
-    // the figures are always shown; the lead time and the reply time open on a tap (phone row)
-    expect(li).not.toHaveTextContent('Lead time')
-    await user.click(within(li).getByRole('button', { name: 'Details' }))
     expect(li).toHaveTextContent('Lead time: 2 to 3 weeks ex stock')
     await waitFor(() => expect(li).toHaveTextContent('Replied in 1 day'))
     expect(li).toHaveTextContent('Ordered here')

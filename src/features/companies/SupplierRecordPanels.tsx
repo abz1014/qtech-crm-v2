@@ -184,13 +184,13 @@ function ReplyLine({ reply }: { reply: ReplyFact | undefined }) {
 
 /**
  * A phone's enquiry row: a hairline row, not a card. The item, then reference · date · outcome once on one line, then the price
- * figures (always shown). Brand, lead time, notes and reply time open under "Details" on a tap.
+ * figures (always shown). Lead time and reply time are figures and stay visible; brand, notes and age open under "Details" on a tap.
  */
 function QuotePhoneRow({ r, reply, prices }: { r: QuoteRow; reply: ReplyFact | undefined; prices: boolean }) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
   const replied = reply && !reply.legacy && reply.days !== null ? reply : undefined
-  const hasMore = Boolean(r.brand || r.imported || r.leadTime || r.itemNote || r.ago || replied)
+  const hasMore = Boolean(r.brand || r.imported || r.itemNote || r.ago)
   return (
     <li className="grid gap-1 border-t py-3 first:border-t-0">
       <span className="type-row line-clamp-2 break-words" title={r.item}>
@@ -209,6 +209,14 @@ function QuotePhoneRow({ r, reply, prices }: { r: QuoteRow; reply: ReplyFact | u
           <PriceCell r={r} />
         </div>
       ) : null}
+      {/* figures stay visible: lead time and reply time are numbers, not detail */}
+      {r.leadTime || replied ? (
+        <div className="type-body flex flex-wrap items-baseline gap-x-2 text-fg-2">
+          {r.leadTime ? <span className="text-pretty">Lead time: {r.leadTime}</span> : null}
+          {r.leadTime && replied ? <span aria-hidden="true" className="text-fg-muted">·</span> : null}
+          <ReplyLine reply={reply} />
+        </div>
+      ) : null}
       {hasMore ? (
         <>
           <Button variant="quiet" size="sm" className="max-md:h-touch w-fit" aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setOpen(o => !o)}>
@@ -218,10 +226,8 @@ function QuotePhoneRow({ r, reply, prices }: { r: QuoteRow; reply: ReplyFact | u
             <div id={panelId} className="type-body grid gap-1 text-fg-2">
               {r.brand ? <span>{r.brand}</span> : null}
               {r.imported ? <span>Imported</span> : null}
-              {r.leadTime ? <span className="text-pretty">Lead time: {r.leadTime}</span> : null}
               {r.itemNote ? <span>{r.itemNote}</span> : null}
               {r.ago ? <span className="text-tone-warning-fg">{r.ago}</span> : null}
-              <ReplyLine reply={reply} />
             </div>
           ) : null}
         </>
