@@ -11,12 +11,13 @@
 //      2. carries_brand    "Carries <brand>": company_brands includes the brand of an item.
 //      3. supplied_before  only for a supplier that qualifies for neither 1 nor 2 but supplied the exact item before.
 //    "Supplied this item before" (tier 0 or 1 on a past leg, supplier_item_memory()) is a BADGE on any suggestion, not a group.
-//  - Order inside a group: ordered count, then the category's reply rate, then the overall reply rate, then price wins (admin and
-//    sales only: NULL for an engineer), then the most recent contact, then the delivery record (proven, unproven, often late: A8's
-//    band, kept only as a tie-break so two suppliers equal on every count above do not fall to the alphabet), then name, then id. A supplier that declared no offer on at
-//    least 2 of its last 3 asks is demoted: after every other supplier of its group, still listed.
-//  - Pre-ticked: the first 3 of the ranked list whose reply rate is 50% or more (the category's, else the overall rate), or that
-//    carry a manual tag, or that supplied this item before; never a demoted one.
+//  - Order inside a group: ordered count, then the category's reply rate (the overall rate where there is no category rate; missing data
+//    counts as 50%), then the overall reply rate by the same rule, then the most recent contact, then the delivery record (proven,
+//    unproven, often late: A8's band, kept only as a tie-break so two suppliers equal on every count above do not fall to the
+//    alphabet), then name, then id. A supplier that declared no offer on at least 2 of its last 3 asks is demoted: after every other
+//    supplier of its group, still listed. Price plays no part in the order.
+//  - Pre-ticked: ONLY a supplier that supplied the item before (tier 0 or 1) and is not demoted. There is no cap. A reply rate, a manual
+//    tag or a "no offer" reply never ticks anyone: the CRM does not choose a supplier on replies, it only ranks who to ask.
 //  - Every key is a count and is printed (the reason, the memory line); there is no score.
 
 import { monthYear, shortDay } from './dateText'
@@ -77,12 +78,10 @@ export interface CategoryEvidenceRow {
   last_asked_on?: string | null
 }
 
-/** One row of supplier_category_price_wins (0093): wins and of_ranked are NULL unless the caller is admin or sales. */
-export interface PriceWinsRow {
+/** A category tag a person set by hand: a company_brands row of kind family with created_by not null (a learned tag has none). */
+export interface ManualTagRow {
   supplier_id: string
   family_id: string
-  wins: number | null
-  of_ranked: number | null
 }
 
 /** How one ask ended, newest first per supplier: 'no_offer' (declared no offer, nothing quoted) or 'other'. */
@@ -94,8 +93,8 @@ export interface SupplierHistory {
   memory: Readonly<Record<string, readonly SupplierItemMemoryRow[] | undefined>>
   /** v_supplier_category_evidence for the categories of the items. Missing: the category groups rest on manual tags alone. */
   categoryEvidence?: readonly CategoryEvidenceRow[]
-  /** supplier_category_price_wins for the same categories (admin and sales; empty or NULL counts for an engineer). */
-  priceWins?: readonly PriceWinsRow[]
+  /** The category tags a person set by hand. Missing: no tag counts as manual (a learned tag still forms the "Deals in" group). */
+  manualTags?: readonly ManualTagRow[]
   /** Each supplier's most recent asks, newest first (three are read): the demotion rule. */
   recentAsks?: Readonly<Record<string, readonly AskOutcome[]>>
 }
@@ -128,7 +127,7 @@ export interface SupplierSuggestion {
   groupLabel: string
   /** Key of the group the supplier sits in ("deals_in:<familyId>", "carries_brand", "supplied_before"). */
   groupKey: string
-  /** Ticked when the screen opens: the top three with a reply rate of 50% or more, a manual tag, or an earlier supply. */
+  /** Ticked when the screen opens: only a supplier that supplied the item before and is not demoted. */
   preTicked: boolean
   /** Neutral label shown beside the name. */
   tierLabel: TierLabel
@@ -148,7 +147,7 @@ export interface SupplierSuggestion {
   stats: SupplierStatsRow | null
   /** The badge "Supplied this item before" (tier 0 or 1 on a past leg). */
   suppliedBefore: boolean
-  /** The supplier carries the category as a tag (company_brands): set by hand or learned from its quotes. */
+  /** A person set the category tag by hand (company_brands.created_by is not null). A tag learned from quotes does not count. */
   manualTag: boolean
   /** No offer on at least 2 of the last 3 asks: listed after the others of its group, never ticked. */
   demoted: boolean
@@ -179,11 +178,6 @@ export interface SuggestionResult {
   /** Categories of the items that no candidate supplier deals in (the coverage line). */
   uncovered: { categoryId: string; name: string; guessed: boolean }[]
 }
-
-/** How many suppliers are ticked at most. */
-export const PRE_TICK_MAX = 3
-/** The reply rate, as a percentage, that earns a tick. */
-export const PRE_TICK_MIN_RATE = 50
 
 // ------------------------------------------------------------------------------------------------ categories
 
@@ -300,11 +294,13 @@ const ratePct = (replied: number | null | undefined, asked: number | null | unde
 /** No offer on at least 2 of the last 3 asks. */
 export const isDemoted = (recent: readonly AskOutcome[] | undefined): boolean => (recent ?? []).slice(0, 3).filter((o) => o === 'no_offer').length >= 2
 
+/** The rate, as a percentage, given to a supplier with no asks: above a recorded 0%, below a better rate. */
+const NO_DATA_RATE = 50
+
 interface Keys {
   ordered: number
   catRate: number
   overallRate: number
-  wins: number
   /** A8's delivery band (1 proven, 2 unproven, 3 often late): a tie-break after the last contact. */
   band: 1 | 2 | 3
 }
@@ -315,8 +311,7 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
   const today = options.today ?? null
   const evidence = new Map<string, CategoryEvidenceRow>()
   for (const e of history.categoryEvidence ?? []) evidence.set(`${e.supplier_id}|${e.family_id}`, e)
-  const wins = new Map<string, PriceWinsRow>()
-  for (const w of history.priceWins ?? []) wins.set(`${w.supplier_id}|${w.family_id}`, w)
+  const manual = new Set((history.manualTags ?? []).map((m) => `${m.supplier_id}|${m.family_id}`))
 
   const categories = new Map<string, { name: string; guessed: boolean }>()
   for (const i of items) {
@@ -367,12 +362,12 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
       catId = best.id
       catName = categories.get(best.id)?.name ?? 'this category'
       catRow = best.e
-      manualTag = dealCats.some((d) => d.tag)
+      manualTag = dealCats.some((d) => manual.has(`${sup.id}|${d.id}`))
       groupKey = `deals_in:${best.id}`
       covers = items.filter((i) => i.familyId != null && dealCats.some((d) => d.id === i.familyId))
       tier = 'same family'
       const fact = dealsFact(catRow)
-      reason = `Deals in ${lower(catName)}: ${fact || (best.tag ? 'on your list for it' : 'no history yet')}`
+      reason = `Deals in ${lower(catName)}: ${fact || (manual.has(`${sup.id}|${best.id}`) ? 'on your list for it' : 'no history yet')}`
     } else if (brandHits.length > 0) {
       group = 'carries_brand'
       groupKey = 'carries_brand'
@@ -413,7 +408,6 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
       return row ? [{ item, row }] : []
     })
     const found = bestEvidence(coveredRows)
-    const w = catId ? wins.get(`${sup.id}|${catId}`) : undefined
     const suggestion: SupplierSuggestion = {
       supplierId: sup.id,
       name: sup.name,
@@ -440,9 +434,9 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
     keys.set(suggestion, {
       // Inside "Deals in <category>" only that category's orders count; a tag-only supplier's overall orders are another kind of figure.
       ordered: catRow ? catRow.ordered : group === 'deals_in' ? (found?.ev.count ?? 0) : (sup.stats?.orders_count ?? found?.ev.count ?? 0),
-      catRate: ratePct(catRow?.replied, catRow?.asked) ?? -1,
-      overallRate: ratePct(sup.stats?.replied, sup.stats?.asked) ?? -1,
-      wins: w?.wins ?? 0,
+      // The category's rate, else the overall rate; no data at all counts as 50%, so it sorts above a recorded 0% and below a better rate.
+      catRate: ratePct(catRow?.replied, catRow?.asked) ?? ratePct(sup.stats?.replied, sup.stats?.asked) ?? NO_DATA_RATE,
+      overallRate: ratePct(sup.stats?.replied, sup.stats?.asked) ?? NO_DATA_RATE,
       band: reliabilityBand({ deliveries: sup.stats?.deliveries ?? 0, onTime: (sup.stats?.deliveries ?? 0) - Math.min(sup.stats?.late ?? 0, sup.stats?.deliveries ?? 0) }),
     })
   }
@@ -459,7 +453,6 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
     if (ka.ordered !== kb.ordered) return kb.ordered - ka.ordered
     if (ka.catRate !== kb.catRate) return kb.catRate - ka.catRate
     if (ka.overallRate !== kb.overallRate) return kb.overallRate - ka.overallRate
-    if (ka.wins !== kb.wins) return kb.wins - ka.wins
     // Most recent contact first; a supplier never contacted sorts after every contacted one.
     if (a.lastContact !== b.lastContact) {
       if (a.lastContact === null) return 1
@@ -473,17 +466,8 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
     return a.supplierId < b.supplierId ? -1 : a.supplierId > b.supplierId ? 1 : 0
   })
 
-  // Pre-tick: the first three, in ranked order, with a reply rate of 50% or more, a manual tag or an earlier supply.
-  let ticks = 0
-  for (const s of out) {
-    if (ticks >= PRE_TICK_MAX) break
-    const k = keys.get(s) as Keys
-    const rate = k.catRate >= 0 ? k.catRate : k.overallRate
-    if (!s.demoted && (rate >= PRE_TICK_MIN_RATE || s.manualTag || s.suppliedBefore)) {
-      s.preTicked = true
-      ticks += 1
-    }
-  }
+  // Pre-tick: only a supplier that supplied the item before and is not demoted. No cap, and no reply rate or tag ever ticks one.
+  for (const s of out) s.preTicked = s.suppliedBefore && !s.demoted
 
   const groups: SuggestionGroupResult[] = []
   for (const s of out) {

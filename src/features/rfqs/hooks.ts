@@ -34,24 +34,30 @@ export function useCuratedCategories(enabled = true) {
 }
 
 /**
- * What the ranking needs beyond the item memory (C3): each supplier's evidence in the categories of the items, its price wins
- * there (admin and sales only: never asked for an engineer), and how its last asks ended. Counts only; it never blocks the page:
- * if it fails the list is ranked on the rest.
+ * What the ranking needs beyond the item memory (C3): each supplier's evidence in the categories of the items, the category tags a
+ * person set by hand, and how its last asks ended. Counts only; it never blocks the page: if a read fails the list is ranked on the
+ * rest and `partial` is true, so the screen can say the order may be incomplete. Price is no part of the ranking.
  */
 export function useSupplierCategoryData(familyIds: readonly string[], supplierIds: readonly string[], today: string, enabled: boolean) {
-  const prices = useSeesPrices()
   const fams = [...new Set(familyIds)].sort()
   const sups = [...supplierIds].sort()
-  const signature = JSON.stringify([fams, sups.length, sups[0] ?? '', sups[sups.length - 1] ?? '', prices, today])
+  const signature = JSON.stringify([fams, sups.length, sups[0] ?? '', sups[sups.length - 1] ?? '', today])
   return useQuery({
     queryKey: qk.intake.categoryEvidence(signature),
     queryFn: async () => {
-      const [evidence, priceWins, recentAsks] = await Promise.all([
+      // One failed read must not take the others with it: keep what loaded and flag the rest as missing.
+      const [evidence, manualTags, recentAsks] = await Promise.allSettled([
         api.getCategoryEvidence(fams, sups),
-        prices ? api.getCategoryPriceWins(fams) : Promise.resolve([]),
+        api.getManualTags(fams),
         api.getRecentAsks(sups, today),
       ])
-      return { evidence, priceWins, recentAsks }
+      const ok = <T,>(r: PromiseSettledResult<T>) => (r.status === 'fulfilled' ? r.value : undefined)
+      return {
+        evidence: ok(evidence),
+        manualTags: ok(manualTags),
+        recentAsks: ok(recentAsks),
+        partial: evidence.status === 'rejected' || manualTags.status === 'rejected' || recentAsks.status === 'rejected',
+      }
     },
     enabled: enabled && sups.length > 0,
     staleTime: 60_000,

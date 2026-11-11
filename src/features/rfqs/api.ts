@@ -3,7 +3,7 @@ import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
 import type { EvidenceFeedRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { PlannedPrice } from '@/features/rfqs/lib/replySave'
-import type { AskOutcome, CategoryEvidenceRow, CategoryOption, PriceWinsRow, SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
+import type { AskOutcome, CategoryEvidenceRow, CategoryOption, ManualTagRow, SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
  * RFQs: every database call for the intake screen (R05). This is the only file that names an RFQ table or
@@ -59,11 +59,15 @@ export async function getCategoryEvidence(familyIds: readonly string[], supplier
   return out
 }
 
-/** supplier_category_price_wins (0093). Admin and sales only: the caller never asks for an engineer, and the database returns NULL counts to one. */
-export async function getCategoryPriceWins(familyIds: readonly string[]): Promise<PriceWinsRow[]> {
+/**
+ * The category tags a person set by hand: company_brands rows for these categories with created_by not null. A tag the auto-learn
+ * trigger (0008) or the import wrote has no created_by and is not a "manual tag". Paged, as the category settings page does.
+ */
+export async function getManualTags(familyIds: readonly string[]): Promise<ManualTagRow[]> {
   if (familyIds.length === 0) return []
-  const rows = unwrap(await requireSupabase().rpc('supplier_category_price_wins', { p_family_ids: [...familyIds] })) ?? []
-  return rows.map(r => ({ supplier_id: r.supplier_id, family_id: r.family_id, wins: r.wins, of_ranked: r.of_ranked }))
+  const db = requireSupabase()
+  const rows = await fetchAll((from, to) => db.from('company_brands').select('company_id, brand_id').in('brand_id', [...familyIds]).not('created_by', 'is', null).range(from, to))
+  return rows.map(r => ({ supplier_id: r.company_id, family_id: r.brand_id }))
 }
 
 /**

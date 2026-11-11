@@ -4,8 +4,10 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import type { RfqItemRow } from '@/features/rfqs/api'
 import { useSupplierCandidates, useSupplierMemory } from '@/features/rfqs/hooks'
+import { useSuggestionExtras } from '@/features/rfqs/useSuggestionExtras'
+import { PartialNote } from '@/features/rfqs/ranking/RankParts'
 import { nextInLine, numbersText } from '@/features/rfqs/escalationLogic'
-import { suggestSuppliers } from '@/features/rfqs/lib/supplierSuggestion'
+import { suggestSuppliers, withCategories } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
  * The supplier escalation (g2-chase-texts "Chased twice, no reply from X"): float the items this supplier has not priced to
@@ -17,6 +19,8 @@ export type EscalationItem = RfqItemRow
 export function FloatElsewhere({
   supplierName,
   items,
+  rfqId,
+  customerId,
   askedIds,
   today,
   busy,
@@ -25,6 +29,11 @@ export function FloatElsewhere({
 }: {
   supplierName: string
   items: readonly EscalationItem[]
+  /** The RFQ itself: its own orders and asks are left out of the memory, as on the RFQ page. */
+  rfqId: string
+  /** The customer the RFQ is for (a company can be both a customer and a supplier): never someone else to ask. */
+  customerId: string
+  /** Everyone already asked on this RFQ. */
   askedIds: ReadonlySet<string>
   today: string
   busy?: boolean
@@ -33,17 +42,17 @@ export function FloatElsewhere({
   onChaseAgain: () => void
 }) {
   const candidates = useSupplierCandidates(true)
-  const list = useMemo(() => (candidates.data ?? []).filter(c => !askedIds.has(c.id)), [candidates.data, askedIds])
+  const list = useMemo(() => (candidates.data ?? []).filter(c => c.id !== customerId && !askedIds.has(c.id)), [candidates.data, customerId, askedIds])
   const query = useMemo(() => items.map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: i.familyId })), [items])
-  const memory = useSupplierMemory(query, list.map(c => c.id), candidates.isSuccess && items.length > 0)
+  const memory = useSupplierMemory(query, list.map(c => c.id), candidates.isSuccess && items.length > 0, rfqId)
+  const suggestionItems = useMemo(
+    () => items.map(i => ({ id: i.id, description: i.description, brandId: i.brandId, brandName: i.brandName, familyId: i.familyId, familyName: i.familyName })),
+    [items],
+  )
+  const extras = useSuggestionExtras(suggestionItems, list, today, candidates.isSuccess && items.length > 0, { withCategories })
   const result = useMemo(
-    () =>
-      suggestSuppliers(
-        items.map(i => ({ id: i.id, description: i.description, brandId: i.brandId, brandName: i.brandName, familyId: i.familyId, familyName: i.familyName })),
-        { suppliers: list, memory: memory.data ?? {} },
-        { today },
-      ),
-    [items, list, memory.data, today],
+    () => suggestSuppliers(extras.items, { suppliers: list, memory: memory.data ?? {}, ...extras.extra }, { today }),
+    [extras.items, extras.extra, list, memory.data, today],
   )
   const next = nextInLine(result.suppliers, askedIds)
   const numberOf = new Map(items.map(i => [i.id, i.number]))
@@ -82,6 +91,7 @@ export function FloatElsewhere({
           ))}
         </span>
       )}
+      {extras.partial ? <PartialNote /> : null}
     </Banner>
   )
 }

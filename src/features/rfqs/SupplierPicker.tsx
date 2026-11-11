@@ -13,7 +13,7 @@ import { Skeleton } from '@/ui/Skeleton'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { buildMemoryCard, type MemoryRow } from '@/lib/memory'
 import { MemoryCardView } from '@/features/rfqs/MemoryCard'
-import { ReasonParts } from '@/features/rfqs/ranking/RankParts'
+import { PartialNote, ReasonParts } from '@/features/rfqs/ranking/RankParts'
 import { evidenceBlock, evidenceFromFeed, evidenceOf } from '@/features/rfqs/lib/ranking/reasons'
 import { Icon } from '@/ui/Icon'
 
@@ -165,7 +165,7 @@ function Group({ g, ticked, onToggle, memory }: { g: SuggestionGroupResult; tick
       <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
         <h3 className="m-0 text-sm font-semibold">{g.label}</h3>
         <span className="ml-auto text-xs text-fg-muted">
-          <span className="num">{g.suppliers.length}</span> {g.suppliers.length === 1 ? 'supplier' : `suppliers · best record first`}
+          <span className="num">{g.suppliers.length}</span> {g.suppliers.length === 1 ? 'supplier' : 'suppliers'}
         </span>
       </header>
       <ul className="m-0 grid list-none p-0">
@@ -194,6 +194,7 @@ export function SupplierPicker({
   onRetry,
   memory,
   coverage,
+  partial,
 }: {
   groups: readonly SuggestionGroupResult[]
   ticked: ReadonlySet<string>
@@ -209,6 +210,8 @@ export function SupplierPicker({
   memory?: MemoryContext
   /** "No supplier on file deals in <category> yet." (coverageLine), or null. */
   coverage?: string | null
+  /** A read behind the order failed: say so, quietly. */
+  partial?: boolean
 }) {
   const [text, setText] = useState('')
   // Someone added by hand (or from a supplier's page) who is also suggested shows once, in the reason group, ticked there.
@@ -251,6 +254,7 @@ export function SupplierPicker({
               {coverage}
             </p>
           ) : null}
+          {partial ? <PartialNote /> : null}
           {groups.map(g => <Group key={g.key} g={g} ticked={ticked} onToggle={onToggle} memory={memory} />)}
         </>
       )}
