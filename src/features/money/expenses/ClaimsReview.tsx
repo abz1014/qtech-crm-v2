@@ -45,9 +45,9 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
       </section>
     )
   return (
-    <section aria-labelledby="claims-h" className="grid gap-0 rounded border border-tone-info-fg/30 bg-surface" data-testid="claims-review">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3">
-        <h2 id="claims-h" className="text-lg font-semibold">
+    <section aria-labelledby="claims-h" className="grid gap-0 rounded border border-tone-info-fg/30 bg-surface lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent" data-testid="claims-review">
+      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3 lg:px-0 lg:py-2">
+        <h2 id="claims-h" className="type-row lg:font-semibold">
           To approve
         </h2>
         <span className="text-base text-fg-2">
@@ -91,7 +91,7 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
   }
 
   return (
-    <li className="grid gap-3 px-4 py-4 text-base" data-testid={`claim-${claim.id}`}>
+    <li className="grid gap-3 px-4 py-4 text-base lg:px-0 lg:py-3" data-testid={`claim-${claim.id}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="min-w-0">
           <b className="font-semibold">{claim.byName}</b> paid <b className="num font-semibold">{pkr(claim.amount)}</b>

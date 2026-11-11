@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Rows3 } from 'lucide-react'
+import { businessToday } from '@/lib/dates'
 import { Button } from '@/ui/Button'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { BurstSheet } from '@/features/money/expenses/BurstSheet'
@@ -11,6 +12,7 @@ import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses
 import { ExpensesTab } from '@/features/money/expenses/ExpensesTab'
 import { MiscPromoteBanners } from '@/features/money/expenses/MiscPromote'
 import { PayDialog } from '@/features/money/expenses/PayDialog'
+import { RecurringPanel } from '@/features/money/expenses/RecurringPanel'
 import { QuickAdd } from '@/features/money/expenses/QuickAdd'
 import { useCategories, useGroups, useLegOptions, useOrderOptions } from '@/features/money/expenses/hooks'
 
@@ -32,6 +34,7 @@ export function ExpensesPage() {
   const legId = params.get('leg')
   const orders = useOrderOptions(linked && !!orderId)
   const legs = useLegOptions(linked ? orderId : null)
+  const today = businessToday()
   const cats = useCategories()
   const groups = useGroups()
 
@@ -63,18 +66,29 @@ export function ExpensesPage() {
         </Button>
       }
     >
-      <div className="grid gap-4">
-        {/* To approve and Owed (one line each on a phone) come first while there are any; cash and the misc banners follow the list on a phone. */}
-        <div className="grid gap-0 empty:hidden">
-          {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
-          <OwedToStaff />
+      {/* Desktop (lg): the list in the main column, the side panels in a narrow one. The wrappers are `contents` below lg, so a phone and a
+          tablet keep one column and the order classes: claims, Quick add, then (phone) the list, Recurring, cash / (tablet) cash, Recurring, the list. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-x-8">
+        <div className="contents lg:grid lg:min-w-0 lg:gap-4">
+          <div className="order-2">
+            {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
+          </div>
+          <div className="order-5 max-sm:order-3">
+            <ExpensesTab />
+          </div>
         </div>
-        {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
-        <div className="grid gap-0 empty:hidden max-sm:order-last">
-          <CashInHandLine fold />
-          <MiscPromoteBanners />
+        <div className="contents lg:grid lg:min-w-0 lg:gap-4">
+          {/* To approve and Owed (one line each on a phone) come first while there are any; cash and the misc banners follow the list on a phone. */}
+          <div className="order-1 grid gap-0 empty:hidden">
+            {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
+            <OwedToStaff />
+          </div>
+          <div className="order-3 grid gap-0 empty:hidden max-sm:order-5">
+            <CashInHandLine fold />
+            <MiscPromoteBanners />
+          </div>
+          <div className="order-4 empty:hidden">{cats.data ? <RecurringPanel categories={cats.data} today={today} /> : null}</div>
         </div>
-        <ExpensesTab />
       </div>
       <BurstSheet
         open={burst}

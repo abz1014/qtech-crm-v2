@@ -61,9 +61,9 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
       </section>
     )
   return (
-    <section aria-labelledby="owed-staff-h" className="grid gap-0 rounded border border-tone-warning-fg/30 bg-surface" data-testid="owed-to-staff">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3">
-        <h2 id="owed-staff-h" className="text-lg font-semibold">
+    <section aria-labelledby="owed-staff-h" className="grid gap-0 rounded border border-tone-warning-fg/30 bg-surface lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent" data-testid="owed-to-staff">
+      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3 lg:px-0 lg:py-2">
+        <h2 id="owed-staff-h" className="type-row lg:font-semibold">
           Owed to staff
         </h2>
         <span className="text-base text-fg-2">
@@ -72,7 +72,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
       </header>
       <ul className="divide-y" data-testid="owed-people">
         {people.map(p => (
-          <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-base">
+          <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-base lg:px-0 lg:py-2">
             <span>
               Owed to <b className="font-semibold">{p.name}</b>
               <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
@@ -99,7 +99,7 @@ function OwedRow({ claim }: { claim: Claim }) {
   const [error, setError] = useState<string | null>(null)
   const label = `${claim.byName}, ${pkr(claim.amount)}`
   return (
-    <li className="grid gap-2 px-4 py-3 text-base" data-testid={`owed-${claim.id}`}>
+    <li className="grid gap-2 px-4 py-3 text-base lg:px-0" data-testid={`owed-${claim.id}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="min-w-0">
           Approved, owed to <b className="font-semibold">{claim.byName}</b>: <b className="num font-semibold">{pkr(claim.amount)}</b>
