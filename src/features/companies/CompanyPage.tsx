@@ -354,7 +354,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
             // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
             // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
             // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
-            <p className="mt-2 overflow-x-clip text-base text-fg-2" data-work data-testid="supplier-record-line">
+            <p className="mt-2 overflow-x-clip text-base text-fg-2" data-testid="supplier-record-line">
               <span className="-ml-5 flex flex-wrap items-center">
                 {recordUnits(supplierRecordLine).map((unit, i) => (
                   <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
