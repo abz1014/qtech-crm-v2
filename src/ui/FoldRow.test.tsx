@@ -33,13 +33,14 @@ describe('FoldRow', () => {
     expect(document.getElementById('fold-q')?.textContent).toBe('Body text')
   })
 
-  it('closed, it is one 44 px line with a hairline: no box, no wrapping, summary truncated', () => {
+  it('closed, it is one 44 px line with a hairline: no box, and a long summary wraps instead of being clipped', () => {
     row(false, vi.fn(), 'PO-20481/KHI-0092-A-LONG')
     const btn = screen.getByRole('button')
     expect(btn.className).toContain('min-h-touch')
     expect(btn.className).toContain('py-2')
     expect(btn.className).not.toMatch(/flex-wrap|min-h-\[|\bh-\d/)
-    expect(btn.querySelector('.truncate')).toBeTruthy()
+    expect(btn.querySelector('.truncate')).toBeNull()
+    expect(btn.querySelector('[class*="overflow-wrap"]')).toBeTruthy()
     expect(btn.parentElement?.className).toContain('border-b')
     expect(btn.parentElement?.className).not.toMatch(/rounded|\bborder\b(?!-b)/)
   })

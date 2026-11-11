@@ -2,7 +2,7 @@ import { mkdirSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test'
-import { openAs, type Role } from '../support/stack'
+import { OPEN_CURRENT_STEP, openAs, type Role } from '../support/stack'
 import { openClosedBlocks } from '../support/todo'
 
 /*
@@ -66,6 +66,7 @@ export async function roleContext(browser: Browser, info: TestInfo, role: Role):
   const storageState = await stateFor(browser, info, role)
   const context = await browser.newContext({ ...contextOptions(info), storageState })
   await installCounters(context)
+  await context.addInitScript(OPEN_CURRENT_STEP)
   return context
 }
 

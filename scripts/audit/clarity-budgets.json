@@ -176,7 +176,7 @@
  },
  "admin/job-commissioning/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "stepRowMax": 124,
   "contentHeight": 3721,
   "aboveFold": 4
@@ -1785,17 +1785,17 @@
  },
  "engineer/job-commissioning/1440x900": {
   "boxDepth": 3,
-  "boxesAtFold": 3,
+  "boxesAtFold": 6,
   "stepRowMax": 44,
   "contentHeight": 2109,
   "aboveFold": 20
  },
  "engineer/job-commissioning/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "stepRowMax": 100,
   "contentHeight": 3552,
-  "aboveFold": 2
+  "aboveFold": 3
  },
  "engineer/job-commissioning/375x812": {
   "boxDepth": 3,
@@ -1869,21 +1869,21 @@
  },
  "engineer/job-key-facts/1440x900": {
   "boxDepth": 3,
-  "boxesAtFold": 5,
+  "boxesAtFold": 7,
   "stepRowMax": 44,
   "contentHeight": 2109,
   "aboveFold": 18
  },
  "engineer/job-key-facts/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "stepRowMax": 100,
   "contentHeight": 3552,
   "aboveFold": 5
  },
  "engineer/job-key-facts/375x812": {
   "boxDepth": 3,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "stepRowMax": 100,
   "contentHeight": 3069,
   "aboveFold": 5
@@ -1953,7 +1953,7 @@
  },
  "engineer/job-po-issued/1440x900": {
   "boxDepth": 3,
-  "boxesAtFold": 4,
+  "boxesAtFold": 5,
   "stepRowMax": 44,
   "contentHeight": 1615,
   "aboveFold": 19
@@ -2572,7 +2572,7 @@
  },
  "sales/job-commissioning/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "stepRowMax": 124,
   "contentHeight": 3383,
   "aboveFold": 4
