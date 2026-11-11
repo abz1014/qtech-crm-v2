@@ -8,6 +8,7 @@ import { db, num, USER } from '../../verify/support/db'
 import { company, invoice, karachiDay, order, payment, post, ref, setProfile, setRates, supplier, type Co, type LineSpec } from '../../verify/support/fixtures'
 import { MONEY_PATHS, restLog } from '../../verify/support/session'
 import { amount } from '../../verify/support/text'
+import { openClosedBlocks } from '../../support/todo'
 import { ctxAs, layout, note, OUT, probe, settle, shot, tag, visit, watch } from './support'
 
 /*
@@ -185,6 +186,7 @@ async function todayItems(ctx: BrowserContext, info: TestInfo, rule: string, tex
     // Waiting starts collapsed (R2-08): open it so its items are in the DOM too.
     const toggle = p.getByRole('region', { name: 'Waiting' }).getByRole('button', { expanded: false })
     if (await toggle.count()) await toggle.first().click().catch(() => undefined)
+    await openClosedBlocks(p)
     const li = p.locator(`li[data-rule="${rule}"]`).filter({ hasText: text })
     return { count: await li.count(), waiting: await p.locator(`li[data-rule="${rule}"][data-waiting]`).filter({ hasText: text }).count() }
   } finally {

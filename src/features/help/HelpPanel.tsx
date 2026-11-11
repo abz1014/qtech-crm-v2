@@ -6,7 +6,8 @@ import { Button } from '@/ui/Button'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Icon } from '@/ui/Icon'
 import { returnTarget } from '@/ui/menuTrigger'
-import { MarkdownBlocks } from '@/features/help/RecipeText'
+import { InlineMarkdown, MarkdownBlocks } from '@/features/help/RecipeText'
+import { howItWorksFor } from '@/features/help/howItWorks'
 import { findRecipe, groupByArea, recipesForPath, recipesForRole, searchRecipes, type Recipe } from '@/features/help/recipes'
 
 /*
@@ -29,13 +30,11 @@ export interface HelpPanelProps {
   onClose: () => void
   /** 1024px and up: the side panel. Otherwise the full-height sheet. */
   wide: boolean
-  /** Offered on the list when the person has hidden the How this works card. */
-  onShowHowItWorks?: () => void
 }
 
 const FOR_SCREEN = 3
 
-export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, wide, onShowHowItWorks }: HelpPanelProps) {
+export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, wide }: HelpPanelProps) {
   const [query, setQuery] = useState('')
   const [everyone, setEveryone] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -137,11 +136,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
                   <RecipeList key={g.area} title={g.area} recipes={g.recipes} onShow={show} />
                 ))}
                 {role === 'admin' ? null : <Checkbox label="Show other roles' help" checked={everyone} onCheckedChange={v => setEveryone(v === true)} />}
-                {onShowHowItWorks ? (
-                  <Button variant="quiet" size="sm" onClick={onShowHowItWorks} className="justify-self-start">
-                    Show “How this works” again
-                  </Button>
-                ) : null}
+                <HowItWorksList role={role} onShow={show} />
                 <p className="text-base text-fg-muted">Still stuck? Tell the owner what you were trying to do. They can add a step here.</p>
               </div>
             )}
@@ -149,6 +144,35 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>
+  )
+}
+
+/** "How this works" (owner decision 8): after the first week the To do card is gone and the steps live here, inline. */
+function HowItWorksList({ role, onShow }: { role: string; onShow: (id: string) => void }) {
+  const id = useId()
+  const steps = howItWorksFor(role)
+  if (steps.length === 0) return null
+  return (
+    <section aria-labelledby={id} className="grid content-start gap-1">
+      <h3 id={id} className="text-sm font-semibold text-fg-2">
+        How this works
+      </h3>
+      <ol className="grid">
+        {steps.map((s, i) => (
+          <li key={s.recipe} className="flex items-start gap-2 border-b py-2 text-base text-fg-2 last:border-b-0">
+            <span aria-hidden="true" className="mt-1 grid size-5 shrink-0 place-items-center rounded-round bg-selected text-sm font-semibold text-fg">
+              {i + 1}
+            </span>
+            <span id={`${id}-step-${i}`} className="min-w-0 flex-1 text-pretty">
+              <InlineMarkdown text={s.text} />
+            </span>
+            <Button variant="quiet" size="sm" aria-describedby={`${id}-step-${i}`} onClick={() => onShow(s.recipe)} className="shrink-0">
+              Show me
+            </Button>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
