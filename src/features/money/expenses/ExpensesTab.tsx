@@ -156,7 +156,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               : null
           }
           toolbar={
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2" data-row-actions="">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <h2 id="expenses-h" className="sr-only">
                 Expenses
               </h2>
@@ -180,14 +180,16 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                   </InfoTip>
                 </span>
               ) : null}
+              {phone ? null : (
               <Link
                 to={`/money/reports/expenses?by=month&period=${month}`}
                 aria-label={`Report for ${monthKeyShort(month)}`}
-                className="type-body inline-flex min-h-touch items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline max-sm:order-2"
+                className="type-body inline-flex min-h-touch items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline"
               >
                 <Icon icon={ChartColumn} size="sm" />
-                {phone ? 'Report' : `Report for ${monthKeyShort(month)}`}
+                Report for {monthKeyShort(month)}
               </Link>
+              )}
               <span className="flex-1 max-sm:hidden" />
               <div className="flex min-w-0 items-center gap-2 max-sm:order-4 max-sm:basis-full">
               <TableFilter label="Search expenses" hint="Finds an expense by payee, detail, category or order number." value={q} onChange={setQ} className="max-sm:min-w-0 max-sm:flex-1" />
@@ -208,7 +210,17 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           }
           mobileRow={r => <ExpenseCard row={r} categories={categories} listing={list.data} locked={monthClosed} onEdit={setEditing} onDelete={onDelete} onHistory={setHistory} />}
         />
-      </section>
+      {phone ? (
+              <Link
+                to={`/money/reports/expenses?by=month&period=${month}`}
+                aria-label={`Report for ${monthKeyShort(month)}`}
+                className="type-body inline-flex min-h-touch items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline"
+              >
+                <Icon icon={ChartColumn} size="sm" />
+                Report for {monthKeyShort(month)}
+              </Link>
+        ) : null}
+        </section>
 
       {editing ? (
         <AddExpenseDialog

@@ -11,6 +11,7 @@ import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { SumBar } from '@/ui/SumBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { Select } from '@/ui/form/Select'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { InfoTip } from '@/ui/InfoTip'
 import { ReportCsv } from '@/ui/ReportCsv'
@@ -80,6 +81,7 @@ function usePeriod() {
 }
 
 export function InOutPage() {
+  const phone = useMediaQuery('(max-width: 639px)')
   const { period, now, set, today } = usePeriod()
   const q = useInOutReport(period)
   const v = q.view
@@ -88,17 +90,31 @@ export function InOutPage() {
       report="in-out"
       csv={v ? () => downloadReport(inOutCsv(v), `money-in-and-out-${period.key}.csv`) : null}
       period={
-        <span className="flex flex-wrap items-center gap-3" data-row-actions="">
-          <SegmentedControl
-            aria-label="Month or quarter"
-            options={[
-              { value: 'month', label: 'Month' },
-              { value: 'quarter', label: 'Quarter' },
-            ]}
-            value={period.kind}
-            onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
-            large
-          />
+        <span className="flex flex-wrap items-center gap-3">
+          {phone ? (
+            // Phone: one picker instead of two buttons (the same choice, fewer controls on the first screen).
+            <Select
+              aria-label="Month or quarter"
+              value={period.kind}
+              onChange={e => set(periodOf(e.target.value as PeriodKind, e.target.value === period.kind ? period.key : today.slice(0, 7)))}
+              options={[
+                { value: 'month', label: 'Month' },
+                { value: 'quarter', label: 'Quarter' },
+              ]}
+              className="w-[8.5rem]"
+            />
+          ) : (
+            <SegmentedControl
+              aria-label="Month or quarter"
+              options={[
+                { value: 'month', label: 'Month' },
+                { value: 'quarter', label: 'Quarter' },
+              ]}
+              value={period.kind}
+              onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
+              large
+            />
+          )}
           <PeriodPager period={period} atNow={period.key >= now.key} go={by => set(shiftPeriod(period, by))} />
           <InfoTip label={`About ${IN_OUT_TITLE.toLowerCase()}`}>
             Cash in and out is the money trail: every payment received and every expense or supplier payment, on the day it moved, GST
