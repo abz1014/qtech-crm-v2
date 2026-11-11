@@ -28,6 +28,7 @@ export const SCENE_LIST = [
   { scene: 'foldrow-open', group: 'FoldRow', label: 'One row open' },
   { scene: 'foldrow-long', group: 'FoldRow', label: 'Long reference (25 characters)' },
   { scene: 'foldrow-large', group: 'FoldRow', label: 'Larger text' },
+  { scene: 'sumbar-strip', group: 'SumBar', label: 'Desktop strip: one row, hairlines, no box' },
   { scene: 'shell', group: 'Shell', label: 'Top bar, phone bar and phone tabs (5 tabs, with counts)' },
 ] as const
 
