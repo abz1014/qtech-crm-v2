@@ -3,6 +3,7 @@ import { openStage, stagesOf } from '../../support/job'
 import { db, num, USER } from '../support/db'
 import { invoice, karachiDay, order, payment, ref } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
+import { openClosedBlocks } from '../../support/todo'
 import { ORDERS, amount } from '../support/text'
 
 /*
@@ -16,6 +17,7 @@ async function todayLists(ctx: BrowserContext, rule: string, orderRef: string): 
   const page = await open(ctx, ORDERS.today.path)
   await expect(page.getByRole('heading', { level: 1, name: ORDERS.today.heading })).toBeVisible()
   await expect(page.getByText(ORDERS.today.loaded).first()).toBeVisible()
+  await openClosedBlocks(page)
   const n = await page.locator(`li[data-rule="${rule}"]`).filter({ hasText: orderRef }).count()
   await page.close()
   return n

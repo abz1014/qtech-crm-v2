@@ -2,6 +2,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test as base, expect, type Browser, type Page, type TestInfo } from '@playwright/test'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
+import { openClosedBlocks } from '../support/todo'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName, type Role } from '../support/stack'
 
 /*
@@ -181,6 +182,7 @@ export async function seedChase(): Promise<{ ref: string; rfqId: string }> {
 
 /** On Today (already open): selects the chase for `ref` and returns its pane and its 1-tap chase button. */
 export async function openChase(page: Page, ref: string) {
+  await openClosedBlocks(page)
   await page.locator('li[data-rule="chase_customer"]').filter({ hasText: ref }).getByRole('button').first().click()
   const pane = page.getByRole('region', { name: new RegExp(ref) })
   const button = pane.getByRole('button', { name: UI.chase })

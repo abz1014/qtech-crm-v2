@@ -1638,7 +1638,7 @@
  },
  "admin/today/1440x900": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 900,
   "aboveFold": 26
  },
@@ -1650,7 +1650,7 @@
  },
  "admin/today/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 2082,
   "aboveFold": 19
  },
