@@ -241,7 +241,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
-          <InfoTip label="Paying a supplier?" className="ml-2">
+          <InfoTip label="Paying a supplier?" className="ml-2 sm:hidden">
             Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
           </InfoTip>
         </h2>
@@ -400,6 +400,10 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           <span className="min-w-0 flex-1 truncate">{extrasLine.join(' · ')}</span>
           <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform', showExtras && 'rotate-90')} />
         </button>
+
+        <p className="type-body text-fg-2 max-sm:hidden">
+          Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
+        </p>
 
         {showExtras ? (
           <div id={extrasId} className="grid gap-3" data-testid="quick-extras">
