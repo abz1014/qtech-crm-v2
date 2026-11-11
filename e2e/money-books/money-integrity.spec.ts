@@ -172,6 +172,7 @@ test.describe('invoice rules in the database (H1, H2, H3)', () => {
     const order = await seedOrder()
     const inv = await makeInvoice(order)
     await openAs(page, 'admin', `/money/gst-register?invoice=${inv.id}`)
+    await page.getByRole('button', { name: /Courier, FBR and notes/ }).click()
     await expect(page.getByLabel('Notes')).toBeVisible()
     await must(rest('sales', `invoices?id=eq.${inv.id}`, { method: 'PATCH', body: { notes: 'sales note' } }))
     await page.getByLabel('Notes').fill('admin note')
