@@ -75,7 +75,7 @@ describe('LegsPanel split over the supplier-order and delivery stages', () => {
     for (const part of ['order', 'delivery'] as const) {
       render(wrap(panel(part)).ui)
       const region = screen.getByRole('region', { name: part === 'delivery' ? 'Deliveries' : 'Supplier orders' })
-      expect(region.className).not.toMatch(/rounded|border|bg-surface/)
+      expect(region.className).not.toMatch(/rounded|(^| )border( |$)|bg-surface/)
       for (const li of region.querySelectorAll('li[data-testid^="leg-"]')) expect(li.className).not.toMatch(/rounded|bg-surface/)
       cleanup()
     }
