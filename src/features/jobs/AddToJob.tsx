@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Camera, Check, Paperclip, X } from 'lucide-react'
+import { Camera, Check, Paperclip, Plus, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { pastedText } from '@/lib/docread/htmlTable'
 import { businessToday } from '@/lib/dates'
@@ -8,6 +8,7 @@ import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { FoldRow } from '@/ui/FoldRow'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { invalidateAfter } from '@/features/invalidation'
@@ -64,6 +65,8 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
   const [kindChoice, setKindChoice] = useState<AddKind | null>(null)
   const [supplierChoice, setSupplierChoice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Closed by default: the paste, drop and share listeners below stay mounted either way, and the row opens itself when something is handed to it.
+  const [open, setOpen] = useState(false)
   const good = useMemo(() => files.filter(f => !f.error), [files])
 
   const added = useMemo(() => ({ text, files: good.map(f => ({ name: f.file.name, type: f.file.type })) }), [text, good])
@@ -79,6 +82,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
     if (t) setText(prev => (prev.trim() ? `${prev.trimEnd()}\n${t}` : t))
     if (input.files?.length) void intakeFiles(input.files, { accept: RFQ_FILE_ACCEPT }).then(a => setFiles(prev => [...prev, ...a]))
     setKindChoice(null)
+    setOpen(true)
   }, [])
   // The kept share this content came from (IndexedDB): deleted only once a save has gone through, so a failed save, a reload or an update keeps it.
   const keptId = useRef<string | null>(null)
@@ -112,6 +116,10 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
     setHasKept(Boolean(h.captureId))
     take({ text: h.text, files: h.files })
   }, [sharedState, take])
+  // an expired kept share says so: the row opens to show it
+  useEffect(() => {
+    if (sharedState.status === 'gone') setOpen(true)
+  }, [sharedState.status])
   // a paste or a drop anywhere on the page
   useEffect(() => {
     const editable = (t: EventTarget | null) => {
@@ -234,12 +242,18 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
 
   // The card's confirm buttons are secondary: the Job page keeps its one green button (the next step), also while something is pasted.
   return (
-    <section aria-label="Add to this job" className="rounded-panel border bg-surface" data-testid="add-to-job">
-      <div className="border-b px-4 py-3">
-        <h2 className="text-base font-semibold">Add to this job</h2>
-        <p className="text-base text-fg-2">Paste a message, or add a photo or a file. We guess where it goes.</p>
-      </div>
-      <div className="grid gap-3 px-4 py-3">
+    <div data-testid="add-to-job">
+      <FoldRow
+        state={{ icon: Plus, word: '' }}
+        title="Add to this job"
+        summary={present ? 'Ready to add' : `${allowed.length} ${allowed.length === 1 ? 'option' : 'options'}`}
+        open={open}
+        onToggle={() => setOpen(o => !o)}
+        controlsId="add-to-job-body"
+        bodyLabel="Add to this job"
+      >
+        <p className="type-body pb-3 text-fg-2">Paste a message, or add a photo or a file. We guess where it goes.</p>
+      <div className="grid gap-3">
         {sharedState.status === 'gone' ? (
           <p role="status" className="flex flex-wrap items-center gap-2 rounded-row border bg-sunken px-3 py-2 text-base" data-testid="shared-gone">
             {SHARED_GONE}
@@ -360,7 +374,8 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
           </div>
         ) : null}
       </div>
-    </section>
+      </FoldRow>
+    </div>
   )
 }
 

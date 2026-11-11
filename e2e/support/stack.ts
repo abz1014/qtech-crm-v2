@@ -53,7 +53,35 @@ export async function radixReady(page: Page): Promise<void> {
   await page.waitForFunction(() => document.documentElement.dataset.radixReady === '1', undefined, { timeout: 15_000 }).catch(() => undefined)
 }
 
+/**
+ * The Job page starts with every step closed (clarity redesign); the step the job is at is only marked. Most specs were written for the
+ * old page, which opened that step, and then work inside it. This opens it for them, once per page load, the way a person would tap it.
+ * A spec that checks the closed state sets `window.__keepStepsClosed = true` with page.addInitScript before it opens the page.
+ */
+export const OPEN_CURRENT_STEP = (): void => {
+  const w = window as unknown as { __keepStepsClosed?: boolean; __openCurrentStep?: boolean }
+  // installed more than once on a page (a context and a page both add it): only the first one works
+  if (w.__openCurrentStep) return
+  w.__openCurrentStep = true
+  // Each "Now" head is opened once, whenever it appears: the page may draw before its data arrives, and the step the job is at can move on
+  // after an action, so one pass per page load is not enough.
+  const done = new WeakSet<Element>()
+  const tick = (): void => {
+    const list = document.querySelector('[data-stages]')
+    if (!list || w.__keepStepsClosed) return
+    // opening a step can unmount the dialog that was raised from another one: wait until no dialog is open
+    if (document.querySelector('[role="dialog"]')) return
+    const head = Array.from(list.querySelectorAll('[data-fold-row] > button')).find(b => b.querySelector('.sr-only')?.textContent === 'Now') as HTMLButtonElement | undefined
+    if (!head || done.has(head)) return
+    done.add(head)
+    if (head.getAttribute('aria-expanded') === 'false') head.click()
+  }
+  new MutationObserver(tick).observe(document, { childList: true, subtree: true })
+}
+
 export async function openAs(page: Page, role: Role, path: string): Promise<void> {
+  // The screen audit measures the page as it really opens (every step closed): it sets AUDIT_ROLES, and the helper stands down
+  if (process.env.AUDIT_ROLES === undefined) await page.addInitScript(OPEN_CURRENT_STEP)
   await page.goto('/login')
   await page.getByLabel('Email').fill(EMAIL[role])
   await page.getByLabel('Password', { exact: true }).fill(FIXTURE_PASSWORD)

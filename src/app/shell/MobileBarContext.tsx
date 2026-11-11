@@ -14,6 +14,8 @@ import { createContext, useContext, useLayoutEffect, type ReactNode } from 'reac
  */
 export interface MobileBarConfig {
   title?: string
+  /** A short code on the right of the title in the one-bar form ("Job 113"): the title is the customer, this says which record. */
+  subtitle?: string
   /**
    * Chevron-left. A route ('/rfqs'), or 'history': the screen the person came from (navigate(-1)), or `fallback` when
    * there is none in the app (opened from a link, a notification or a refresh).

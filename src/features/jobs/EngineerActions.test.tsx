@@ -57,6 +57,12 @@ function mount(opts: { items?: unknown[]; needsCommissioning?: boolean; legs?: R
   )
 }
 
+/** The engineer's Add to this job row is closed until pressed. */
+const openAdd = async () => {
+  const row = await screen.findByRole('button', { name: /^Add to this job/ })
+  if (row.getAttribute('aria-expanded') !== 'true') await userEvent.setup().click(row)
+}
+
 const kept = vi.hoisted(() => ({ deleted: [] as string[] }))
 vi.mock('@/lib/capture/store', async importOriginal => {
   const real = await importOriginal<typeof import('@/lib/capture/store')>()
@@ -76,10 +82,15 @@ afterEach(() => {
 })
 
 describe("the engineer's Job page", () => {
-  it('has the three big buttons, one green, and no price', async () => {
+  it('has the On site buttons, one green, Add photo or note once in the Add to this job row, and no price', async () => {
     const { container } = mount()
     const card = await screen.findByRole('region', { name: 'On site' })
-    for (const name of ['Delivered today', 'Installed today', 'Add photo or note']) expect(within(card).getByRole('button', { name })).toBeInTheDocument()
+    for (const name of ['Delivered today', 'Installed today']) expect(within(card).getByRole('button', { name })).toBeInTheDocument()
+    // Add photo or note is not in the card: it is the one Add to this job row, closed until opened, and it appears once on the page
+    expect(within(card).queryByRole('button', { name: 'Add photo or note' })).toBeNull()
+    expect(screen.queryAllByRole('button', { name: 'Add photo or note' })).toHaveLength(0)
+    await openAdd()
+    expect(screen.getAllByRole('button', { name: 'Add photo or note' })).toHaveLength(1)
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
     expect(within(card).getByRole('button', { name: 'Delivered today' })).toHaveClass('bg-primary')
     expect(container.textContent).not.toMatch(/PKR|Invoic|Price|Gross/)
@@ -109,13 +120,22 @@ describe("the engineer's Job page", () => {
     const card = await screen.findByRole('region', { name: 'On site' })
     expect(within(card).queryByRole('button', { name: 'Delivered today' })).toBeNull()
     expect(within(card).getByRole('button', { name: 'Installed today' })).toHaveClass('bg-primary')
-    expect(within(card).getByRole('button', { name: 'Add photo or note' })).not.toHaveClass('bg-primary')
+    await openAdd()
+    expect(screen.getByRole('button', { name: 'Add photo or note' })).not.toHaveClass('bg-primary')
   })
 
-  it('a supply-only job with nothing to deliver offers Add photo or note as its green button', async () => {
-    mount({ needsCommissioning: false, legs: [] })
-    const card = await screen.findByRole('region', { name: 'On site' })
-    expect(within(card).getByRole('button', { name: 'Add photo or note' })).toHaveClass('bg-primary')
+  it('a supply-only job with nothing to deliver has no On site card and no green button: Add photo or note is the one secondary row', async () => {
+    const { container } = mount({ needsCommissioning: false, legs: [] })
+    await openAdd()
+    expect(screen.queryByRole('region', { name: 'On site' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add photo or note' })).not.toHaveClass('bg-primary')
+    expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(0)
+    expect(container.querySelector('[data-no-primary]')).not.toBeNull()
+  })
+
+  it('the Add to this job row counts what it can really do: a photo and a note on a job with an order', async () => {
+    mount()
+    expect(await screen.findByRole('button', { name: /^Add to this job/ })).toHaveTextContent('2 options')
   })
 
   it('every button is the 52 px size (44 px at least on a phone)', async () => {
@@ -131,7 +151,8 @@ describe("the engineer's Job page", () => {
     expect(within(card).getByText(OFFLINE_TEXT)).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: 'Delivered today' })).toBeDisabled()
     expect(within(card).getByRole('button', { name: 'Installed today' })).toBeDisabled()
-    expect(within(card).getByRole('button', { name: 'Add photo or note' })).toBeEnabled()
+    await openAdd()
+    expect(screen.getByRole('button', { name: 'Add photo or note' })).toBeEnabled()
   })
 
   it('arriving from Photo or note opens the photo-or-note box at once', async () => {

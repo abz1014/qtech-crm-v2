@@ -36,6 +36,8 @@ export interface DetailHeaderProps {
   /** Under the header lines: the page's NextStepBox, then at most one facts strip. */
   children?: ReactNode
   className?: string
+  /** The name is read by a screen reader but not drawn below md: the phone bar carries it (the Job page). */
+  phoneSrOnly?: boolean
 }
 
 function count(node: ReactNode): number {
@@ -49,7 +51,7 @@ function count(node: ReactNode): number {
   )
 }
 
-export function DetailHeader({ name, nameHref, code, breadcrumb, more, chips, meta, children, className }: DetailHeaderProps) {
+export function DetailHeader({ name, nameHref, code, breadcrumb, more, chips, meta, children, className, phoneSrOnly = false }: DetailHeaderProps) {
   const items = (meta ?? []).filter(m => m !== null && m !== undefined && m !== false && m !== '')
   if (import.meta.env.DEV) {
     if (count(chips) > 2) throw new Error(`DetailHeader: at most 2 status chips (got ${count(chips)}).`)
@@ -58,7 +60,7 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, more, chips, me
   return (
     <header className={cn('grid grid-cols-[minmax(0,1fr)]', className)}>
       {breadcrumb?.length ? <Breadcrumb items={breadcrumb} className="mb-2 max-md:hidden" /> : null}
-      <div className="flex items-start justify-between gap-4">
+      <div className={cn('flex items-start justify-between gap-4', phoneSrOnly && 'max-md:sr-only')}>
         <h1 className="min-w-0 text-2xl font-heavy tracking-tight text-pretty max-md:text-xl">
           {nameHref ? (
             <Link to={nameHref} className="rounded underline-offset-4 hover:underline">

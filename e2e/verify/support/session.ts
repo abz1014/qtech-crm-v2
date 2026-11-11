@@ -3,7 +3,7 @@ import { markWonButton } from '../../support/job'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, type Browser, type BrowserContext, type Page, type Request, type TestInfo } from '@playwright/test'
-import { openAs, type Role } from '../../support/stack'
+import { OPEN_CURRENT_STEP, openAs, type Role } from '../../support/stack'
 
 /*
  * Signed-in browser contexts for the verify suites. Each role signs in ONCE per worker process through the real login form; the
@@ -46,7 +46,9 @@ async function stateFor(browser: Browser, info: TestInfo, role: Role): Promise<s
 /** A new browser context already signed in as `role`. Close it at the end of the test. */
 export async function signedIn(browser: Browser, info: TestInfo, role: Role): Promise<BrowserContext> {
   const storageState = await stateFor(browser, info, role)
-  return browser.newContext({ ...contextOptions(info), storageState })
+  const context = await browser.newContext({ ...contextOptions(info), storageState })
+  await context.addInitScript(OPEN_CURRENT_STEP)
+  return context
 }
 
 /** A new page in a signed-in context, at `path`, once the app shell is there. */

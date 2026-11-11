@@ -46,7 +46,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
   await openAs(page, 'admin', `/jobs/${rfq.number}`)
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
   // priced, not quoted: the ruler waits at Quotation
-  await expect(phoneLabel(page)).toContainText('Stage 2 of 7 · Quotation')
+  await expect(phoneLabel(page)).toContainText('Stage 2 of 7')
 
   // ---- Mark won, the selling price typed ---------------------------------------------------------------------------------------------
   await test.step('Mark won on the Order stage: the price is typed in the dialog', async () => {
@@ -63,7 +63,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
   const lines = await db.rows<{ qty: number; unit_price_net: number }>(`order_items?order_id=eq.${order.id}&select=qty,unit_price_net`)
   expect(lines.map(l => [num(l.qty), num(l.unit_price_net)]), 'the order line carries the typed price').toEqual([[3, PRICE]])
   await page.goto(`/jobs/${rfq.number}`)
-  await expect(phoneLabel(page)).toContainText('Stage 4 of 7 · Supplier order')
+  await expect(phoneLabel(page)).toContainText('Stage 4 of 7')
 
   // ---- the supplier order: issue the PO --------------------------------------------------------------------------------------------------
   await test.step('Issue PO on the Supplier order stage', async () => {
@@ -102,7 +102,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
   // ---- invoice and payment -----------------------------------------------------------------------------------------------------------------
   await test.step('Create invoice on the Invoice stage: net and GST come from the lines', async () => {
     await page.reload()
-    await expect(phoneLabel(page)).toContainText('Stage 6 of 7 · Invoice')
+    await expect(phoneLabel(page)).toContainText('Stage 6 of 7')
     await openStage(page, /^Invoice/)
     // the band's green "Create invoice" only opens this stage; the button that opens the dialog is the stage's own
     await stages(page).getByRole('button', { name: 'Create invoice' }).click()

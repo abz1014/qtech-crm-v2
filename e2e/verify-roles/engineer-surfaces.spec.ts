@@ -130,6 +130,8 @@ test('engineer: Jobs list and Job page show no amount, no money word, and not th
 test('admin sees the same file on the Job page, with the toggle', async ({ page }) => {
   await openAs(page, 'admin', `/jobs/${world.rfq.number}`)
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${world.rfq.number}`)
+  // the file is in the Notes and files row, closed until opened
+  await page.getByRole('button', { name: /^Notes and files/ }).click()
   await expect(page.getByText(po)).toBeVisible()
   await expect(page.getByRole('checkbox', { name: 'Has prices: hide from engineers' }).first()).toBeChecked()
 })

@@ -140,12 +140,17 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
   })
 
   // ---- 3. No "Add to this job" for an engineer -------------------------------------------------------------------------------------------
-  await test.step('the job page does not offer Add to this job to an engineer', async () => {
-    // Owner decision: engineers simply do not see the card (nor its paste and drop handling). The order's notes and files stay on the order page.
+  await test.step('an engineer gets the one Add photo or note row, not the paste card', async () => {
+    // Owner decision: the admin and sales card (paste, drop, share handling) is not mounted for an engineer. Their Add to this job row is closed and
+    // holds Add photo or note, once; no price, no paste box.
     await page.goto(`/jobs/O-${s.order.number}`)
     await page.locator('#main').waitFor()
-    await expect(page.getByRole('region', { name: 'Add to this job' })).toHaveCount(0)
+    await expect(page.getByTestId('add-to-job')).toHaveCount(0)
     await expect(page.getByRole('textbox', { name: 'Paste here' })).toHaveCount(0)
+    const row = page.getByRole('button', { name: /^Add to this job/ })
+    await expect(row).toHaveAttribute('aria-expanded', 'false')
+    await row.click()
+    await expect(page.getByRole('button', { name: 'Add photo or note' })).toHaveCount(1)
     await page.goto(`/orders/${s.order.id}`)
   })
 

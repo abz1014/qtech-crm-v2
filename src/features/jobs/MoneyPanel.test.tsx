@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { JobData } from '@/features/jobs/useJobData'
-import { MoneyPanel } from '@/features/jobs/JobSide'
+import { MoneyRow as MoneyPanel } from '@/features/jobs/JobSide'
 import { latestQuotation } from '@/features/jobs/lib/latestQuotation'
 
 /*
@@ -19,17 +19,23 @@ function data(orderMoney: Partial<{ data: unknown; isPending: boolean; isError: 
   } as unknown as JobData
 }
 
+/** The row is closed until pressed: the figures are in its body. */
+const show = () => userEvent.click(screen.getByRole('button', { name: /^Money \(PKR\)/ }))
+
 describe('Money for this job', () => {
-  it('enquiry with no order: leaves Loading at once, with plain words', () => {
+  it('enquiry with no order: leaves Loading at once, with plain words', async () => {
     // the disabled query's real state in TanStack Query v5: pending, never fetching
     render(<MoneyPanel data={data({ isPending: true })} hasOrder={false} />)
+    await show()
     expect(screen.queryByRole('status')).toBeNull()
     expect(screen.queryByText(/Loading/)).toBeNull()
     expect(screen.getByText('No money yet: no quotation has been sent.')).toBeInTheDocument()
   })
 
-  it('enquiry with a quotation sent: shows the quoted value with GST, and that nothing is owed yet', () => {
+  it('enquiry with a quotation sent: shows the quoted value with GST, and that nothing is owed yet', async () => {
     render(<MoneyPanel data={data({ isPending: true }, [q(), q({ revision: 1, netTotal: 200000, gstTotal: 36000 })])} hasOrder={false} />)
+    expect(screen.getByRole('button', { name: /^Money \(PKR\)/ })).toHaveTextContent('236,000')
+    await show()
     expect(screen.getByText('Quoted (with GST)')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Money for this job' })).toHaveTextContent('236,000')
     expect(screen.getByText(/Nothing is owed until the customer places an order/)).toBeInTheDocument()
@@ -43,22 +49,28 @@ describe('Money for this job', () => {
     expect(latestQuotation([q({ revision: 0 }), q({ revision: 3 })])?.revision).toBe(3)
   })
 
-  it('an order whose money is still loading shows the loading skeleton', () => {
+  it('an order whose money is still loading shows the loading skeleton', async () => {
     render(<MoneyPanel data={data({ isPending: true })} hasOrder />)
+    await show()
     expect(screen.getByRole('status', { name: 'Loading the money for this job' })).toBeInTheDocument()
   })
 
   it('an order whose money could not be read says so and offers Try again', async () => {
     const refetch = vi.fn()
     render(<MoneyPanel data={data({ isPending: false, isError: true, refetch })} hasOrder />)
+    await show()
     expect(screen.queryByRole('status')).toBeNull()
     expect(screen.getByText(/Could not load the money for this job/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
-  it('an ordered or paid job shows the sale, what is received and what is still to collect', () => {
+  it('an ordered or paid job shows the sale, what is received and what is still to collect', async () => {
     render(<MoneyPanel data={data({ data: money })} hasOrder />)
+    // closed, the row says what is still to collect
+    expect(screen.getByRole('button', { name: /^Money \(PKR\)/ })).toHaveTextContent('Still to collect 974,680')
+    expect(screen.getByTestId('order-balance')).toHaveTextContent('974,680')
+    await show()
     const card = screen.getByRole('region', { name: 'Money for this job' })
     expect(card).toHaveTextContent('Sale (with GST)')
     expect(card).toHaveTextContent('974,680')
@@ -66,9 +78,10 @@ describe('Money for this job', () => {
     expect(screen.queryByText(/Loading/)).toBeNull()
   })
 
-  it('a paid job (balance 0) shows the money, not an empty state', () => {
+  it('a paid job (balance 0) shows the money, not an empty state', async () => {
     render(<MoneyPanel data={data({ data: { ...money, settled: 1392400, balance: 0, paymentState: 'paid' } })} hasOrder />)
-    expect(screen.getByText('Still to collect')).toBeInTheDocument()
+    await show()
+    expect(screen.getByRole('region', { name: 'Money for this job' })).toHaveTextContent('Still to collect')
     expect(screen.queryByText(/No money yet/)).toBeNull()
   })
 })
