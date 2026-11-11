@@ -465,12 +465,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
             <Button variant="secondary" onClick={onAct} aria-label={`${ACTION_LABEL[item.rule]}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
               {ACTION_LABEL[item.rule]}
             </Button>
-            {second ? (
-              <Button variant="secondary" onClick={() => onGo(second.href)} aria-label={`${second.label}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
-                {second.label}
-              </Button>
-            ) : null}
-            <SnoozeMenu item={item} today={today} iconOnly />
+            <SnoozeMenu item={item} today={today} iconOnly extra={second ? { label: second.label, ariaLabel: `${second.label}: ${item.ref} ${item.party}`, onSelect: () => onGo(second.href) } : undefined} />
           </>
         ) : null}
       </div>

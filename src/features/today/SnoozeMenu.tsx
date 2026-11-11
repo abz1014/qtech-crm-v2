@@ -16,7 +16,7 @@ import { NOT_OURS_UNTIL } from '@/features/today/todoModel'
 import { SNOOZE_RULE, type TodayItem } from '@/features/today/types'
 
 /** Snooze: tomorrow, Monday or a date. One snooze per rule and subject; Undo puts back what was there. */
-export function SnoozeMenu({ item, today, iconOnly = false }: { item: TodayItem; today: string; iconOnly?: boolean }) {
+export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: TodayItem; today: string; iconOnly?: boolean; extra?: { label: string; ariaLabel?: string; onSelect: () => void } }) {
   const snooze = useSnooze()
   const unsnooze = useUnsnooze()
   const { toast } = useToast()
@@ -55,6 +55,7 @@ export function SnoozeMenu({ item, today, iconOnly = false }: { item: TodayItem;
           )}
         </PopoverTrigger>
         <PopoverContent variant="menu" align="end" aria-label="Snooze until">
+          {extra ? (<MenuItem onClick={extra.onSelect} aria-label={extra.ariaLabel}>{extra.label}</MenuItem>) : null}
           <MenuItem onClick={() => apply(tomorrow)} hint={short(tomorrow)}>
             Tomorrow morning
           </MenuItem>
