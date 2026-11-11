@@ -9,7 +9,7 @@ export function SumBarStripScene() {
         phone="lines"
         label="November cash summary"
         items={[
-          { label: 'Gross in', amount: '2841150' },
+          { label: 'Gross in', amount: '2841150', sub: '6 payments received, Nov 2026' },
           { label: 'GST portion', amount: '410514.40' },
           { label: 'Net in', amount: '2280635.60' },
           { label: 'Money out', amount: '1313300' },

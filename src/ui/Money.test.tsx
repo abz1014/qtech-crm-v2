@@ -149,13 +149,14 @@ describe('SumBar desktop strip', () => {
     window.matchMedia = ((q: string) => ({ matches: q.includes('min-width: 768px'), addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
     try {
       const el = (
-        <SumBar desktop="strip" label="x" items={[{ label: 'Net in', amount: '2280635.60' }, { label: 'Payments', count: 6 }]} />
+        <SumBar desktop="strip" label="x" items={[{ label: 'Net in', amount: '2280635.60', sub: 'Excludes 1 payment' }, { label: 'Payments', count: 6 }]} />
       )
       const { container, unmount } = render(el)
       expect(container.querySelector('[class*="rounded"]')).toBeNull()
       expect(container.textContent).toContain('Net in')
       expect(container.textContent).toContain('2,280,636')
       expect(container.textContent).toContain('Payments')
+      expect(container.textContent).toContain('Excludes 1 payment')
       expect(container.textContent).toContain('6')
       unmount()
     } finally {

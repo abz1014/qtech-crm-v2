@@ -66,15 +66,27 @@ export function SumBar({
    * (no box, no radius), so every figure shows and the block is one line tall (clarity lane D0). Phone behaviour is unchanged.
    */
   desktop?: 'strip'
-  /** With `phone="lines"`: the ONE line that says what the figures are ("PKR · Sep to Oct 2026, by invoice date"), shown once above them. The tiles keep their own `sub`. */
+  /** With `phone="lines"` or `desktop="strip"`: the ONE line that says what the figures are ("PKR · Sep to Oct 2026, by invoice date"), shown once above them. The tiles keep their own `sub`. */
   caption?: ReactNode
 }) {
   const narrow = useMediaQuery('(max-width: 639px)')
   const wide = useMediaQuery('(min-width: 768px)')
   if (desktop === 'strip' && wide) {
+    // The strip drops the tiles' small context lines, but they can carry the period or the basis: the shared caption, or else the context lines, show as one muted line under it.
+    const subs = items.flatMap(i => (i.sub ? [i.sub] : []))
+    const stripNote =
+      caption ??
+      (subs.length
+        ? subs.map((x, i) => (
+            <Fragment key={i}>
+              {i > 0 ? ' · ' : null}
+              {x}
+            </Fragment>
+          ))
+        : null)
     return (
-      <section aria-label={label} data-work="" className={cn('border-y py-2', className)}>
-        <dl className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+      <section aria-label={label} data-work="" className={cn('grid gap-2', className)}>
+        <dl className="flex flex-wrap items-baseline gap-x-8 gap-y-2 border-y py-2">
           {items.map(item => (
             <div key={item.label} className="flex items-baseline gap-2">
               <dt className={cn('type-body', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg-2')}>{item.label}</dt>
@@ -88,6 +100,7 @@ export function SumBar({
             </div>
           ))}
         </dl>
+        {stripNote ? <p className="type-body text-fg-muted">{stripNote}</p> : null}
       </section>
     )
   }
