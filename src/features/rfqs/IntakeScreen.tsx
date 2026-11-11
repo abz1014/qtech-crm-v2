@@ -924,7 +924,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
           <header className="grid gap-1">
-            <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted">
+            <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted max-md:hidden">
               <Link to={enquiry ? '/jobs' : '/rfqs'} className="hover:text-fg">{enquiry ? 'Jobs' : 'RFQs'}</Link>
               <Icon icon={ChevronRight} size="sm" />
               <span aria-current="page">{enquiry ? 'New enquiry' : 'New RFQ'}</span>
