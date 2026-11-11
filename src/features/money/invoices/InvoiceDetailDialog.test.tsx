@@ -86,7 +86,7 @@ describe('Invoice: edit', () => {
   it('a change that is not to the invoice itself (a note) needs no tick', async () => {
     const { user } = setup()
     await user.click(await screen.findByRole('button', { name: /Courier, FBR and notes/ }))
-    await user.type(await screen.findByLabelText(/Notes/), 'Customer asked for a copy')
+    await user.type(await screen.findByLabelText('Notes'), 'Customer asked for a copy')
     expect(screen.queryByTestId('gst-filed-warning')).toBeNull()
   })
 
