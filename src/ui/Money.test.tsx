@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { render } from '@testing-library/react'
 import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
 import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
 import { StatusBadge } from '@/ui/StatusBadge'
@@ -135,6 +136,31 @@ describe('a margin is never shown without the provisional mark when costs are in
 
   it('a negative margin says "below cost" in words as well as colour', () => {
     expect(text(<Margin value="-84500" state="final" />)).toContain('below cost')
+  })
+})
+
+describe('SumBar desktop strip', () => {
+  it('without the prop nothing changes; the strip needs a wide screen, so a static render keeps the tiles', () => {
+    const items = [{ label: 'Net in', amount: '2280635.60' }]
+    expect(html(<SumBar label="x" items={items} desktop="strip" />)).toBe(html(<SumBar label="x" items={items} />))
+  })
+  it('on a wide screen draws one row of label and figure pairs, hairlines only, every figure visible', () => {
+    const real = window.matchMedia
+    window.matchMedia = ((q: string) => ({ matches: q.includes('min-width: 768px'), addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    try {
+      const el = (
+        <SumBar desktop="strip" label="x" items={[{ label: 'Net in', amount: '2280635.60' }, { label: 'Payments', count: 6 }]} />
+      )
+      const { container, unmount } = render(el)
+      expect(container.querySelector('[class*="rounded"]')).toBeNull()
+      expect(container.textContent).toContain('Net in')
+      expect(container.textContent).toContain('2,280,636')
+      expect(container.textContent).toContain('Payments')
+      expect(container.textContent).toContain('6')
+      unmount()
+    } finally {
+      window.matchMedia = real
+    }
   })
 })
 

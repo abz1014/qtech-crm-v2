@@ -1,5 +1,6 @@
 import { useContext, useEffect } from 'react'
 import { Download } from 'lucide-react'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
 import { ReportCsvContext } from '@/ui/reportCsvContext'
 
@@ -9,9 +10,9 @@ import { ReportCsvContext } from '@/ui/reportCsvContext'
  * The frame draws it near the top only while no body has claimed the place (loading, error and empty states). Outside a frame, or
  * in a report with no CSV, it draws nothing.
  */
-export function CsvButton({ csv }: { csv: (() => void) | null }) {
+export function CsvButton({ csv, className }: { csv: (() => void) | null; className?: string }) {
   return (
-    <div className="justify-self-start">
+    <div className={className ?? 'justify-self-start'}>
       <Button variant="secondary" icon={Download} onClick={() => csv?.()} disabled={!csv}>
         Export CSV
       </Button>
@@ -26,6 +27,8 @@ export function ReportCsv() {
     claim?.(true)
     return () => claim?.(false)
   }, [claim])
-  if (!ctx || ctx.csv === undefined) return null
+  const wide = useMediaQuery('(min-width: 768px)')
+  // from 768 up the frame draws the button on the select's row (clarity lane D0); this slot is the phone place
+  if (!ctx || ctx.csv === undefined || wide) return null
   return <CsvButton csv={ctx.csv} />
 }

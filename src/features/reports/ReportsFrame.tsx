@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useSession } from '@/app/session'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { NoPrimary } from '@/ui/NoPrimary'
 import { Select } from '@/ui/form/Select'
 import { CsvButton } from '@/ui/ReportCsv'
@@ -37,6 +38,7 @@ export function ReportsFrame({
     const month = params.get('month')
     navigate({ pathname: `/money/reports/${key}`, search: month ? `?month=${month}` : '' })
   }
+  const wide = useMediaQuery('(min-width: 768px)')
   const [claimed, setClaimed] = useState(false)
   const ctx = useMemo(() => ({ csv, claim: setClaimed }), [csv])
   const named = options.length > 1 // the select names the report; with no select (sales, one report) the name is shown
@@ -64,9 +66,11 @@ export function ReportsFrame({
           </label>
         ) : null}
         {period}
+        {/* 768 and up: Export CSV on this row, right-aligned (it was its own 36px row). Below 768 the report body's slot draws it. */}
+        {csv !== undefined && wide ? <CsvButton csv={csv} className="ml-auto" /> : null}
       </div>
       {/* Export CSV: each report body draws <ReportCsv /> right under its summary (not green: a report has no next step). */}
-      {csv !== undefined && !claimed ? <CsvButton csv={csv} /> : null}
+      {csv !== undefined && !claimed && !wide ? <CsvButton csv={csv} /> : null}
       <ReportCsvContext.Provider value={ctx}>{children}</ReportCsvContext.Provider>
     </MoneyFrame>
   )
