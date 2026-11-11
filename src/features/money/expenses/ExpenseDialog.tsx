@@ -464,7 +464,7 @@ function ExpenseFormReady({
           <FormField<Values, 'note'> name="note" label={isOther ? MISC_TITLE_LABEL : 'Detail'} requirement={isOther ? 'required' : 'optional'}>
             {f => (
               <>
-                <TextField {...f} placeholder={isOther ? 'e.g. Courier from shop to office' : 'e.g. LESCO bill, office water, LEA-1234'} list="expense-detail-options" autoComplete="off" />
+                <TextField {...f} placeholder={isOther ? 'e.g. Courier from shop to office' : 'e.g. Office water'} list="expense-detail-options" autoComplete="off" />
                 <datalist id="expense-detail-options">
                   {detailOptions.map(d => (
                     <option key={d} value={d} />

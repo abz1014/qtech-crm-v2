@@ -32,6 +32,8 @@ for (const viewport of [
 
     test('Expenses with a recurring template, and the recurring dialog', async ({ page, world }) => {
       await open(page, '/money/expenses')
+      // a phone folds Recurring into one line (its figures are on the line); open it to see the template
+      if (viewport.width < 640) await page.getByRole('button', { name: /^Recurring/ }).click()
       await expect(page.getByText(world.recurring).first()).toBeVisible()
       expect(await axe(page)).toEqual([])
       await page.getByRole('button', { name: UI.addRecurring }).click()

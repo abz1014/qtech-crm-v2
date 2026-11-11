@@ -1,10 +1,12 @@
-import { useState } from 'react'
-import { Check } from 'lucide-react'
+import { useId, useState } from 'react'
+import { Check, HandCoins } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { FoldRow } from '@/ui/FoldRow'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useToast } from '@/ui/useToast'
 import { useOwedClaims, usePayBackClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, owedByPerson, type Claim, type PaidHow } from '@/features/money/expenses/claimsApi'
@@ -20,10 +22,44 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
   const session = useSession()
   const admin = session.status === 'signed-in' && session.user.role === 'admin'
   const q = useOwedClaims(admin)
+  const phone = useMediaQuery('(max-width: 639px)')
+  const [open, setOpen] = useState(false)
+  const id = useId()
   const claims = q.data ?? []
   if (!admin || q.isPending || q.isError || claims.length === 0) return null
   const people = owedByPerson(claims)
   const total = claims.reduce((s, c) => s + c.amount, 0)
+  // Phone, full form: one line with the figure and who; a tap opens the people and each claim's Mark paid back.
+  if (phone && !summary)
+    return (
+      <section aria-label="Owed to staff" data-testid="owed-to-staff">
+        <FoldRow
+          state={{ icon: HandCoins, word: 'Waiting for you' }}
+          title="Owed to staff"
+          summary={`${pkr(total)} to ${people.length === 1 ? people[0].name : `${people.length} people`}`}
+          open={open}
+          onToggle={() => setOpen(o => !o)}
+          controlsId={id}
+        >
+          <ul className="divide-y" data-testid="owed-people">
+            {people.map(p => (
+              <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 text-base">
+                <span>
+                  Owed to <b className="font-semibold">{p.name}</b>
+                  <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
+                </span>
+                <b className="num font-semibold">{pkr(p.total)}</b>
+              </li>
+            ))}
+          </ul>
+          <ul className="divide-y border-t">
+            {claims.map(c => (
+              <OwedRow key={c.id} claim={c} />
+            ))}
+          </ul>
+        </FoldRow>
+      </section>
+    )
   return (
     <section aria-labelledby="owed-staff-h" className="grid gap-0 rounded border border-tone-warning-fg/30 bg-surface" data-testid="owed-to-staff">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3">

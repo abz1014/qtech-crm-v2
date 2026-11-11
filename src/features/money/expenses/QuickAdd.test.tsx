@@ -48,4 +48,28 @@ describe('Quick add focus', () => {
       expect(screen.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveFocus()
     }
   })
+
+  it('closed, the extra values are ONE line (always visible); a tap opens Paid by, the date, detail, receipt and GST', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <QuickAdd categories={CATEGORIES} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    )
+    const user = userEvent.setup()
+    const line = screen.getByTestId('quick-extras-line')
+    expect(line).toHaveTextContent('Today · Cash · No receipt · No GST')
+    expect(line).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByLabelText('Paid on')).toBeNull()
+    await user.click(line)
+    expect(line).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByLabelText('Paid on')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Receipt' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Bank' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Has a GST invoice' }))
+    expect(line).toHaveTextContent('Today · Bank · No receipt · GST PKR 0')
+  })
 })

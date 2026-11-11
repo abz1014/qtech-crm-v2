@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
-import { Check, ImageIcon, X } from 'lucide-react'
+import { useId, useMemo, useState } from 'react'
+import { Check, HandCoins, ImageIcon, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { FoldRow } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useToast } from '@/ui/useToast'
 import { useApproveClaim, useClaimPhotos, useOweClaim, usePendingClaims, useRejectClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, signClaimPhoto, type Claim, type PaidHow } from '@/features/money/expenses/claimsApi'
@@ -19,8 +21,29 @@ import { pickableCategories } from '@/features/money/expenses/quick'
  */
 export function ClaimsReview({ categories, groups }: { categories: readonly Category[]; groups: readonly ExpenseGroup[] }) {
   const q = usePendingClaims()
+  const phone = useMediaQuery('(max-width: 639px)')
+  const [open, setOpen] = useState(false)
+  const id = useId()
   const claims = q.data ?? []
   if (q.isPending || q.isError || claims.length === 0) return null
+  const count = claims.length === 1 ? '1 claim' : `${claims.length} claims`
+  const total = pkr(claims.reduce((s, c) => s + c.amount, 0))
+  const list = (
+    <ul className="divide-y">
+      {claims.map(c => (
+        <ClaimRow key={c.id} claim={c} categories={categories} groups={groups} />
+      ))}
+    </ul>
+  )
+  // Phone: one line with the count and the figure; a tap opens the claims. The figures are on the line, never behind the tap.
+  if (phone)
+    return (
+      <section aria-label="To approve" data-testid="claims-review">
+        <FoldRow state={{ icon: HandCoins, word: 'Waiting for you' }} title="To approve" summary={`${count} · ${total}`} open={open} onToggle={() => setOpen(o => !o)} controlsId={id}>
+          {list}
+        </FoldRow>
+      </section>
+    )
   return (
     <section aria-labelledby="claims-h" className="grid gap-0 rounded border border-tone-info-fg/30 bg-surface" data-testid="claims-review">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3">
@@ -28,14 +51,10 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
           To approve
         </h2>
         <span className="text-base text-fg-2">
-          {claims.length === 1 ? '1 claim' : `${claims.length} claims`} from engineers · {pkr(claims.reduce((s, c) => s + c.amount, 0))} · not counted until approved
+          {count} from engineers · {total} · not counted until approved
         </span>
       </header>
-      <ul className="divide-y">
-        {claims.map(c => (
-          <ClaimRow key={c.id} claim={c} categories={categories} groups={groups} />
-        ))}
-      </ul>
+      {list}
     </section>
   )
 }

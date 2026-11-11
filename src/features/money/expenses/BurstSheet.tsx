@@ -90,7 +90,7 @@ import {
  */
 const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-2 px-6'
+const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-x-3 gap-y-2 px-6'
 
 const NO_JOBS: readonly JobTagOption[] = []
 const NO_GROUPS: readonly ExpenseGroup[] = []
@@ -206,11 +206,31 @@ function BurstContent({ onClose }: { onClose: () => void }) {
       return list.filter(r => r.id !== id)
     })
 
+  // A category being created for a row: Save waits (the box already shows the typed name, so an early Save filed the row under its old
+  // category, or was refused). The ref is read by save() in the same tick as the click; the state draws "Adding category…".
+  const [adding, setAdding] = useState<readonly string[]>([])
+  const addingRef = useRef(false)
+  const createFor = (rowId: string) => async (name: string, paidVia: PaidVia, groupId?: string | null) => {
+    addingRef.current = true
+    setAdding(a => [...a, rowId])
+    try {
+      return await createCategory(name, paidVia, groupId)
+    } finally {
+      setAdding(a => {
+        const i = a.indexOf(rowId)
+        const next = i < 0 ? a : [...a.slice(0, i), ...a.slice(i + 1)]
+        addingRef.current = next.length > 0
+        return next
+      })
+    }
+  }
+  const addingCategory = adding.length > 0
+
   const totals = burstTotals(rows)
   const badCount = rows.filter(r => r.error).length + invalidRows(rows).length
 
   const save = async () => {
-    if (lock.current || !categories) return
+    if (lock.current || !categories || addingRef.current) return
     const latest = rowsRef.current
     const settled = latest.map(r => {
       const typed = dateFlushers.current.get(r.id)?.()
@@ -393,7 +413,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     onKey={e => rowKey(e, r)}
                     onRemove={rows.length > 1 ? () => removeRow(r.id) : undefined}
                     count={rows.length}
-                    onCreate={createCategory}
+                    onCreate={createFor(r.id)}
+                    adding={adding.includes(r.id)}
                     details={details}
                     groups={groups}
                     recent={recent}
@@ -434,7 +455,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     onKey={e => rowKey(e, r)}
                     onRemove={rows.length > 1 ? () => removeRow(r.id) : undefined}
                     count={rows.length}
-                    onCreate={createCategory}
+                    onCreate={createFor(r.id)}
+                    adding={adding.includes(r.id)}
                     details={details}
                     dateFlushers={dateFlushers}
                     groups={groups}
@@ -462,8 +484,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
 
           {compact ? (
             <footer className="grid gap-2 border-t bg-surface px-4 pb-[max(var(--sp-4),env(safe-area-inset-bottom,0px))] pt-3">
-              <Button variant="primary" size="touch" icon={Check} busy={pending} busyLabel="Saving" onClick={() => void save()} className="w-full text-base">
-                <span className="num">{phoneLabel}</span>
+              <Button variant="primary" size="touch" icon={Check} busy={pending} busyLabel="Saving" disabled={addingCategory} onClick={() => void save()} className="w-full text-base">
+                <span className="num">{addingCategory ? 'Adding category…' : phoneLabel}</span>
               </Button>
             </footer>
           ) : (
@@ -483,8 +505,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                   Cancel
                 </Button>
               </RadixDialog.Close>
-              <Button variant="primary" icon={Check} busy={pending} busyLabel="Saving" onClick={() => void save()}>
-                {label}
+              <Button variant="primary" icon={Check} busy={pending} busyLabel="Saving" disabled={addingCategory} onClick={() => void save()}>
+                {addingCategory ? 'Adding category…' : label}
                 <span className="inline-flex items-center gap-[2px]" aria-hidden="true">
                   <Kbd size="inline" className="border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">Ctrl</Kbd>
                   <Kbd size="inline" className="border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">↵</Kbd>
@@ -520,6 +542,8 @@ interface RowProps {
   /** The expense groups (0086) and the recent categories, for the grouped category list. */
   groups: readonly ExpenseGroup[]
   recent: readonly Category[]
+  /** A category is being created for this row: its Save is waiting. */
+  adding?: boolean
 }
 
 /** The suggestions under a Detail field: a native list, so it works the same with a keyboard and on a phone. */
@@ -536,7 +560,7 @@ function DetailOptions({ id, details, categoryId }: { id: string; details: reado
 
 const defaultEdge = 'bg-surface text-fg-2'
 
-function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, details, groups, recent }: RowProps) {
+function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, adding, details, groups, recent }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
@@ -567,6 +591,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
         groups={groups}
         recent={recent}
       />
+      {adding ? <span className="sr-only" role="status">Adding category…</span> : null}
       <CellDate
         index={index}
         rowId={row.id}
@@ -788,7 +813,7 @@ function CellDate({
           'num h-[36px] w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
           'aria-[invalid=true]:border-tone-danger-fg aria-[invalid=true]:bg-tone-danger-bg',
           isDefault && defaultEdge,
-          isDefault && 'pr-[4.5rem]',
+          isDefault && 'pr-[3.25rem]',
         )}
       />
       {isDefault ? <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs leading-none text-fg-muted">today</span> : null}
@@ -809,7 +834,7 @@ function PhotoThumb({ file, className }: { file: File; className?: string }) {
 
 // ====================================================================== phone card
 
-function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemove, onCreate, details, groups, recent }: RowProps) {
+function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemove, onCreate, adding, details, groups, recent }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const categoryRef = useRef<HTMLInputElement | null>(null)
@@ -898,6 +923,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
           groups={groups}
           recent={recent}
         />
+        {adding ? <p role="status" className="type-body text-fg-2">Adding category…</p> : null}
       </div>
       <div className="grid grid-cols-1 items-end gap-3 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
         <div className="grid min-w-0 gap-1">

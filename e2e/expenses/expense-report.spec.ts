@@ -89,7 +89,8 @@ test.describe('expenses report (2026-10-22)', () => {
     await expect(page.getByRole('table', { name: /^Where the money went/ }).getByRole('row').filter({ hasText: fuel })).toContainText(whole(25000.5))
     await expect(page.getByTestId('expense-report-trend')).toBeVisible()
     await page.setViewportSize({ width: 375, height: 812 })
-    await expect(page.getByTestId('expense-report-total')).toBeVisible()
+    // a phone draws the summary as lines (a region named for the period), not the big figure
+    await expect(page.getByRole('region', { name: /^Spent in / })).toContainText(whole(total))
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await page.waitForLoadState('networkidle')
     await review(page, 'expense-report-quarter-375')

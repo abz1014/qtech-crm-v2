@@ -259,7 +259,13 @@ test.describe('expenses (M03, M11)', () => {
     const note = `Site taxi ${amt}`
     await openAs(page, 'engineer', '/my-expenses')
     const which = page.getByRole('combobox', { name: /Which visit/ })
-    await expect(which).toHaveValue(visit.id) // today's visit is already chosen
+    // The page chooses today's visit only when the engineer has exactly ONE visit today. This engineer is shared with other specs (visits-multi
+    // adds a visit for today too, and a loaded runner interleaves them), so the default can legitimately be "No visit". Wait for the options,
+    // and choose it by hand when the page did not (the app is right; the old line failed whenever another spec's visit landed first).
+    await expect(which.locator(`option[value="${visit.id}"]`)).toBeAttached()
+    await page.waitForLoadState('networkidle')
+    if ((await which.inputValue()) !== visit.id) await which.selectOption(visit.id)
+    await expect(which).toHaveValue(visit.id)
     await page.getByRole('textbox', { name: 'How much, PKR' }).fill(String(amt))
     await page.getByLabel('What for').fill(note)
     await page.getByRole('button', { name: 'Send for approval' }).click()
@@ -740,7 +746,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await openAs(page, 'admin', '/money/expenses')
     await expect(page.getByRole('button', { name: 'Add expenses' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Recurring' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Recurring' }).or(page.getByRole('button', { name: /^Recurring/ }))).toBeVisible()
     await page.waitForLoadState('networkidle')
     await review(page, 'm03-expenses-list-375')
     expect(await axeViolations(page)).toEqual([])
@@ -780,6 +786,10 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByText('Office running', { exact: true }).last()).toBeVisible() // "Goes under Office running"
     await review(page, 'm11-burst-create-375')
     await page.getByRole('option', { name: /^Create .*paid in cash$/ }).click() // tap 2
+    // The box already SHOWS the typed name while the category is still being created, so toHaveValue(name) is true at once. The picker
+    // keeps the Create option until the new category's id is on the row; Save before that files the row under the old favourite (or is
+    // refused: "No category matches"), and the sheet stays open. Wait for the option to go, the signal that the row now holds the id.
+    await expect(page.getByRole('option', { name: /^Create / })).toHaveCount(0, { timeout: 20_000 }) // two options (cash, bank): count, not toBeHidden
     await expect(page.getByRole('combobox', { name: 'Category, expense 1' })).toHaveValue(name)
     await page.getByRole('button', { name: /^Save 1 expense · PKR 500$/ }).click() // tap 3
     await expect(page.getByRole('dialog')).toBeHidden()
@@ -912,8 +922,10 @@ test.describe('expenses (M03, M11)', () => {
     test('the list locks a closed month: one line says so, no row can be edited or deleted', async ({ page }) => {
       await openAs(page, 'admin', '/money/expenses')
       await page.getByRole('button', { name: 'Previous month' }).click()
-      await expect(page.getByText('before the close')).toHaveCount(1)
-      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is closed.`)
+      // The closed-months query and last month's list are two requests; on a loaded runner either can take longer than 5 s. Wait on the
+      // line that needs both (closed AND this month), then count the rows: the old count came first and timed out while the list loaded.
+      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is closed.`, { timeout: 20_000 })
+      await expect(page.getByText('before the close')).toHaveCount(1, { timeout: 20_000 })
       await expect(page.getByRole('link', { name: 'Open Lock a month' })).toBeVisible()
       await expect(page.getByRole('button', { name: /^More for Rent of 11/ })).toHaveCount(0)
       await expect(page.getByText('Locked, the month is closed').first()).toBeAttached()

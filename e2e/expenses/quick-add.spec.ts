@@ -56,6 +56,13 @@ async function pickCategory(qa: Locator, name: string) {
   else await qa.getByRole('combobox', { name: 'More categories' }).selectOption({ label: name })
 }
 
+/** Quick add keeps Paid by, the date, detail, receipt and GST under ONE line; a tap opens them (the values are on the line). */
+async function openExtras(qa: Locator) {
+  const line = qa.getByTestId('quick-extras-line')
+  if ((await line.getAttribute('aria-expanded')) !== 'true') await line.click()
+  await expect(line).toHaveAttribute('aria-expanded', 'true')
+}
+
 const monthName = (key: string) => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${key}-01T00:00:00Z`))
 const prevMonth = (key: string) => {
   const [y, m] = key.split('-').map(Number)
@@ -77,7 +84,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await amount.click() // tap 1
     await page.keyboard.type('500')
     await qa.getByRole('button', { name: 'Water', exact: true }).click() // tap 2: cash comes from the category
-    await expect(qa.getByRole('button', { name: 'Cash' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(qa.getByTestId('quick-extras-line')).toContainText('Today · Cash') // the value is on the closed line
     await qa.getByRole('button', { name: 'Save this expense' }).click() // tap 3
     await expect(amount).toHaveValue('')
     await expect(amount).toBeFocused() // the row stays open for the next one
@@ -110,6 +117,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     const amt = base() + 7
     await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill(String(amt))
     await pickCategory(qa, 'Repairs & maintenance')
+    await openExtras(qa)
     await qa.getByRole('checkbox', { name: 'Has a GST invoice' }).click()
     await qa.getByRole('textbox', { name: 'GST on this bill, PKR' }).fill('180')
     await qa.getByRole('button', { name: 'Save this expense' }).click()
@@ -128,6 +136,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     const qa = page.getByTestId('quick-add')
     await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill(String(amt))
     await pickCategory(qa, 'Salaries')
+    await openExtras(qa)
     await qa.getByLabel('Paid on').fill(paidOn)
     await qa.getByLabel('Paid on').blur()
     await expect(page.getByTestId('quick-for-month')).toContainText('This bill is for')
@@ -171,7 +180,8 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     const qa = page.getByTestId('quick-add')
     await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill('1200')
     await pickCategory(qa, 'Courier & postage')
-    await qa.getByRole('button', { name: 'Cash' }).click()
+    await openExtras(qa)
+    await qa.getByRole('button', { name: 'Cash', exact: true }).click()
     await qa.getByRole('button', { name: 'Save this expense' }).click()
     await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
     // to the paisa: other suites on this database leave fractional cash, and float noise (18000.300000000004) is refused by the box
