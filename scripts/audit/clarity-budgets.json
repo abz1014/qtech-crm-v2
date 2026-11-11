@@ -1406,7 +1406,7 @@
   "boxDepth": 2,
   "boxesAtFold": 10,
   "contentHeight": 1374,
-  "aboveFold": 18
+  "aboveFold": 19
  },
  "admin/rfq-new-2-suppliers/320x640": {
   "boxDepth": 2,
@@ -1430,7 +1430,7 @@
   "boxDepth": 2,
   "boxesAtFold": 3,
   "contentHeight": 1902,
-  "aboveFold": 11
+  "aboveFold": 12
  },
  "admin/rfq-new-3-message/375x812": {
   "boxDepth": 2,
@@ -1439,20 +1439,20 @@
   "aboveFold": 14
  },
  "admin/rfq-new-4-sent/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 944,
   "aboveFold": 21
  },
  "admin/rfq-new-4-sent/320x640": {
-  "boxDepth": 1,
+  "boxDepth": 2,
   "boxesAtFold": 1,
   "contentHeight": 1625,
   "aboveFold": 11
  },
  "admin/rfq-new-4-sent/375x812": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 1529,
   "aboveFold": 14
  },
@@ -2259,13 +2259,13 @@
  },
  "engineer/rfq-new-2-suppliers/320x640": {
   "boxDepth": 2,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 2557,
-  "aboveFold": 6
+  "aboveFold": 7
  },
  "engineer/rfq-new-2-suppliers/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 5,
+  "boxesAtFold": 6,
   "contentHeight": 2135,
   "aboveFold": 7
  },
@@ -2279,7 +2279,7 @@
   "boxDepth": 2,
   "boxesAtFold": 3,
   "contentHeight": 1902,
-  "aboveFold": 8
+  "aboveFold": 9
  },
  "engineer/rfq-new-3-message/375x812": {
   "boxDepth": 2,
@@ -2288,20 +2288,20 @@
   "aboveFold": 11
  },
  "engineer/rfq-new-4-sent/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 944,
   "aboveFold": 18
  },
  "engineer/rfq-new-4-sent/320x640": {
-  "boxDepth": 1,
+  "boxDepth": 2,
   "boxesAtFold": 1,
   "contentHeight": 1625,
   "aboveFold": 8
  },
  "engineer/rfq-new-4-sent/375x812": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 1529,
   "aboveFold": 11
  },
@@ -3169,7 +3169,7 @@
   "boxDepth": 2,
   "boxesAtFold": 10,
   "contentHeight": 1374,
-  "aboveFold": 18
+  "aboveFold": 19
  },
  "sales/rfq-new-2-suppliers/320x640": {
   "boxDepth": 2,
@@ -3193,7 +3193,7 @@
   "boxDepth": 2,
   "boxesAtFold": 3,
   "contentHeight": 1902,
-  "aboveFold": 11
+  "aboveFold": 12
  },
  "sales/rfq-new-3-message/375x812": {
   "boxDepth": 2,
@@ -3202,20 +3202,20 @@
   "aboveFold": 14
  },
  "sales/rfq-new-4-sent/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 944,
   "aboveFold": 21
  },
  "sales/rfq-new-4-sent/320x640": {
-  "boxDepth": 1,
+  "boxDepth": 2,
   "boxesAtFold": 1,
   "contentHeight": 1625,
   "aboveFold": 11
  },
  "sales/rfq-new-4-sent/375x812": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 1529,
   "aboveFold": 14
  },

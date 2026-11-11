@@ -19,7 +19,7 @@ export function withShortlist(
       name: i.supplierName,
       city: i.supplierCity ?? null,
       group: 'supplied_before',
-      groupKey: 'supplied_before',
+      groupKey: 'shortlist',
       groupLabel: 'Shortlist',
       preTicked: true,
       tierLabel: 'same item',
