@@ -46,7 +46,7 @@ let fake: ReturnType<typeof install> | null = null
 afterEach(() => fake?.uninstall())
 
 describe('Today screen', () => {
-  it('"New here?" is wired with the account created date: gone after 14 days, shown before (the expiry was dead code)', async () => {
+  it('"New here?" is wired with the account created date: gone after 7 days, shown before (the expiry was dead code)', async () => {
     fake = install()
     const old = renderAs('sales', new Date(Date.now() - 40 * 86_400_000).toISOString())
     expect(await screen.findByText('Needs suppliers')).toBeInTheDocument()
@@ -154,6 +154,22 @@ describe('Today screen', () => {
     const late = await screen.findByRole('region', { name: 'Late' })
     expect(late).toHaveAttribute('data-block', 'late')
     expect(within(late).getByRole('button', { name: /^Send quotation/ })).toBeInTheDocument()
+  })
+
+  it('Late is open; Today is one closed row with its count that opens on tap and stays open for the session', async () => {
+    const late = { ...rfqState, received_on: addDays(businessToday(), -4), due_on: addDays(businessToday(), -1), bid_state: 'to_bid', sourcing_state: 'priced' }
+    const todayRow = { ...rfqState, rfq_id: 'r2', number: 185, received_on: businessToday(), companies: { name: 'Today Customer' } }
+    fake = install({ rfqs: [late, todayRow] })
+    renderAs('sales')
+    await screen.findByRole('region', { name: 'Late' })
+    const closed = document.querySelector('[data-block-closed="today"]') as HTMLElement
+    expect(closed).toHaveAttribute('aria-expanded', 'false')
+    expect(closed).toHaveTextContent('Today1')
+    expect(screen.queryByRole('region', { name: 'Today' })).toBeNull()
+    fireEvent.click(closed)
+    const open = await screen.findByRole('region', { name: 'Today' })
+    expect(within(open).getAllByRole('listitem').filter(li => li.hasAttribute('data-rule'))).toHaveLength(1)
+    expect(within(open).getByRole('button', { name: 'Today 1' })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('shows seven rows and folds the rest into "N more", every one still reachable', async () => {
