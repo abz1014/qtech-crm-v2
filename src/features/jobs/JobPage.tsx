@@ -222,7 +222,7 @@ function JobView({ facts }: { facts: JobFacts }) {
       ) : null}
 
       {/* An engineer: the On site buttons are a card on a computer and the sticky bar on a phone. Contact and Add photo or note are rows of the list below. */}
-      {role === 'engineer' ? (
+      {role === 'engineer' && !phone ? (
         <Suspense fallback={null}>
           <EngineerActions facts={facts} data={data} />
         </Suspense>
@@ -247,6 +247,11 @@ function JobView({ facts }: { facts: JobFacts }) {
           <NotesFilesRow facts={facts} data={data} ctx={ctx} />
         </aside>
       </div>
+      {role === 'engineer' && phone ? (
+        <Suspense fallback={null}>
+          <EngineerActions facts={facts} data={data} />
+        </Suspense>
+      ) : null}
       {role === 'engineer' ? (
         <Suspense fallback={null}>
           <EngineerPapers data={data} />
