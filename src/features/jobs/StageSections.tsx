@@ -43,11 +43,12 @@ const dash = <span className="text-fg-muted">—</span>
 const day = (iso: string | null | undefined) => (iso ? <span className="num">{formatShortDate(iso, businessToday())}</span> : dash)
 
 function Table({ head, rows, label }: { head: readonly string[]; rows: ReactNode[][]; label: string }) {
+  const right = (h: string) => /^(Qty|Amount|Each)/.test(h)
+  // A money column is as wide as its figure ("2,244,360"), never narrower: the figure is not cut or pushed out of its box at 320 px (clarity L4).
   const cols = { gridTemplateColumns: `minmax(0,1.6fr) ${head
     .slice(1)
-    .map(() => 'minmax(0,1fr)')
+    .map(h => (/^Amount/.test(h) ? 'auto' : 'minmax(0,1fr)'))
     .join(' ')}` }
-  const right = (h: string) => /^(Qty|Amount|Each)/.test(h)
   return (
     <div role="table" aria-label={label} className="text-sm">
       <div role="row" style={cols} className="grid gap-x-2 px-1 py-2 text-fg-muted">

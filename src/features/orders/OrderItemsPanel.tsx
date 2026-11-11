@@ -365,7 +365,7 @@ export function OrderItemsPanel({
   ) : undefined
 
   return (
-    <section aria-label="Items" className="min-w-0 rounded-panel border bg-surface">
+    <section aria-label="Items" className="min-w-0">
       <DataTable
         label="Order items"
         columns={columns}

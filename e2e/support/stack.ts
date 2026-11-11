@@ -71,6 +71,13 @@ export const OPEN_CURRENT_STEP = (): void => {
     if (!list || w.__keepStepsClosed) return
     // opening a step can unmount the dialog that was raised from another one: wait until no dialog is open
     if (document.querySelector('[role="dialog"]')) return
+    // The rows inside an opened step (Commissioning, Challans, Optional details...) are closed too: they are opened as they appear, once each,
+    // because the specs were written when those panels were always drawn. Only inside a step that is open.
+    for (const inner of Array.from(list.querySelectorAll('[data-fold-row] [data-fold-row] > button'))) {
+      if (done.has(inner)) continue
+      done.add(inner)
+      if (inner.getAttribute('aria-expanded') === 'false') (inner as HTMLButtonElement).click()
+    }
     const head = Array.from(list.querySelectorAll('[data-fold-row] > button')).find(b => b.querySelector('.sr-only')?.textContent === 'Now') as HTMLButtonElement | undefined
     if (!head || done.has(head)) return
     done.add(head)
