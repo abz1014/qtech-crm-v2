@@ -344,6 +344,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
       <div className="grid gap-6">
         <DetailHeader
           name={company.name}
+          phoneSrOnly
           breadcrumb={[{ label: 'Companies', to: '/companies' }, { label: company.name }]}
           more={moreMenu(false)}
           // the role is identity, not state: a Tag on its own row above the meta line (so no "·" follows it), never a chip in the h1
