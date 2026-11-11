@@ -191,25 +191,25 @@ export function CategoriesPage() {
           Check your connection, then try again.
         </Banner>
       ) : loading ? (
-        <div role="status" className="grid gap-px overflow-hidden rounded-panel border bg-line" aria-busy="true" aria-label="Loading categories">
+        <div role="status" className="grid border-y" aria-busy="true" aria-label="Loading categories">
           {[0, 1, 2, 3].map(i => (
-            <div key={i} className="bg-surface p-4">
+            <div key={i} className="border-t py-2 first:border-t-0">
               <Skeleton className="h-8 w-full" />
             </div>
           ))}
         </div>
       ) : (
         <>
-          <p className="-mb-3 text-sm text-fg-muted">Amounts are what was paid in {monthName}, cash and bank together.</p>
-          {sections.map(s => (
-            <GroupSection key={s.group.id} s={s} phone={phone} totals={totals} groupItems={groupItems(s)} itemsFor={c => categoryItems(c, s)} onAdd={() => setOpen({ kind: 'add', groupId: s.group.id })} />
+          <p className="-mb-3 text-base text-fg-muted">Amounts are what was paid in {monthName}, cash and bank together.</p>
+          {sections.map((s, i) => (
+            <GroupSection key={s.group.id} first={i === 0} s={s} phone={phone} totals={totals} groupItems={groupItems(s)} itemsFor={c => categoryItems(c, s)} onAdd={() => setOpen({ kind: 'add', groupId: s.group.id })} />
           ))}
           {archived.length > 0 ? (
-            <details className="group/arch rounded-panel border bg-surface">
-              <summary className="flex min-h-touch cursor-pointer items-center gap-2 px-4 text-base font-medium text-fg-2 [&::-webkit-details-marker]:hidden">
+            <details className="group/arch border-y">
+              <summary className="flex min-h-touch cursor-pointer items-center gap-2 pl-1 text-base font-medium text-fg-2 [&::-webkit-details-marker]:hidden">
                 <Icon16 />
                 Archived ({archived.length})
-                <span className="text-sm font-normal text-fg-muted">hidden from new expenses</span>
+                <span className="text-base font-normal text-fg-muted">hidden from new expenses</span>
               </summary>
               <ul aria-label="Archived categories" className="border-t">
                 {archived.map(c => (
@@ -218,7 +218,7 @@ export function CategoriesPage() {
               </ul>
             </details>
           ) : null}
-          <p className="text-sm text-fg-muted" data-testid="categories-footer">
+          <p className="text-base text-fg-muted" data-testid="categories-footer">
             {categoriesFooter(rows)} · {groups.length} {groups.length === 1 ? 'group' : 'groups'}
           </p>
         </>
@@ -253,6 +253,7 @@ function GroupSection({
   groupItems,
   itemsFor,
   onAdd,
+  first,
 }: {
   s: CategorySection
   phone: boolean
@@ -260,27 +261,26 @@ function GroupSection({
   groupItems: RowMenuItem[]
   itemsFor: (c: Category) => RowMenuItem[]
   onAdd: () => void
+  first: boolean
 }) {
   const headId = `grp-${s.group.id}`
   return (
-    <section aria-labelledby={headId} data-group={s.group.name} className="overflow-hidden rounded-panel border bg-surface">
-      <header className="flex items-center gap-3 border-b bg-sunken py-2 pl-4 pr-1">
-        <div className="grid min-w-0 flex-1">
-          <h2 id={headId} className="min-w-0 text-lg font-semibold tracking-snug [overflow-wrap:anywhere]">
-            {s.group.name}
-          </h2>
-          {kindNote(s.group) ? <span className="text-sm text-fg-muted">{kindNote(s.group)}</span> : null}
-        </div>
-        <div className="grid justify-items-end text-right">
-          <span className="num text-base font-medium" data-testid="group-total">
-            PKR {amountText(s.monthTotal)}
-          </span>
-          <span className="text-sm text-fg-muted">this month</span>
-        </div>
-        <RowMenu label={`More for the group ${s.group.name}`} title={s.group.name} subtitle={KIND_WORDS[s.group.kind]} items={groupItems} phone={phone} />
+    <section aria-labelledby={headId} data-group={s.group.name}>
+      <header className="flex items-center gap-3 border-b py-1 pl-1">
+        <h2 id={headId} className="type-section min-w-0 flex-1 [overflow-wrap:anywhere]">
+          {s.group.name}
+          {kindNote(s.group) ? <span className="ml-3 text-base font-normal text-fg-muted">{kindNote(s.group)}</span> : null}
+        </h2>
+        <span className="num shrink-0 text-base font-medium" data-testid="group-total">
+          PKR {amountText(s.monthTotal)}
+          <span className="ml-2 font-normal text-fg-muted">this month</span>
+        </span>
+        <span data-row-actions="" className="-my-1 flex shrink-0">
+          <RowMenu label={`More for the group ${s.group.name}`} title={s.group.name} subtitle={KIND_WORDS[s.group.kind]} items={groupItems} phone={phone} />
+        </span>
       </header>
       {s.rows.length === 0 ? (
-        <div className="flex min-h-touch items-center gap-3 px-4 py-2 text-base text-fg-muted">
+        <div className="flex min-h-touch items-center gap-3 border-b py-2 pl-1 text-base text-fg-muted">
           <span className="flex-1">{s.held > 0 ? 'Every category here is archived.' : 'No categories yet.'}</span>
           <Button variant="quiet" icon={Plus} onClick={onAdd}>
             Add one
@@ -288,8 +288,8 @@ function GroupSection({
         </div>
       ) : (
         <ul aria-label={`${s.group.name} categories`}>
-          {s.rows.map(c => (
-            <CategoryRow key={c.id} c={c} spent={totals[c.id] ?? 0} phone={phone} items={itemsFor(c)} />
+          {s.rows.map((c, i) => (
+            <CategoryRow key={c.id} c={c} spent={totals[c.id] ?? 0} phone={phone} items={itemsFor(c)} work={first && i === 0} />
           ))}
         </ul>
       )}
@@ -297,35 +297,41 @@ function GroupSection({
   )
 }
 
-function CategoryRow({ c, spent, phone, items, groupName }: { c: Category; spent: number; phone: boolean; items: RowMenuItem[]; groupName?: string }) {
+function CategoryRow({ c, spent, phone, items, groupName, work }: { c: Category; spent: number; phone: boolean; items: RowMenuItem[]; groupName?: string; work?: boolean }) {
   const b = budgetState(spent, c.monthly_budget_pkr)
   const meta = [groupName, `Usually ${PAID_VIA_LABEL[c.default_paid_via].toLowerCase()}`, usageText(c.used)].filter(Boolean).join(' · ')
   return (
-    <li data-category={c.name} className={cn('grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b py-2 pl-4 pr-1 last:border-b-0', !c.active && 'bg-canvas')}>
-      <div className="grid min-w-0">
+    <li
+      data-category={c.name}
+      data-work={work ? '' : undefined}
+      className={cn('grid min-h-[48px] grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b py-1 pl-1 last:border-b-0', !c.active && 'bg-canvas')}
+    >
+      <div className="grid min-w-0 md:flex md:items-baseline md:gap-3">
         <span className={cn('min-w-0 text-base font-medium [overflow-wrap:anywhere]', !c.active && 'text-fg-2')}>{c.name}</span>
-        <span className="min-w-0 text-sm text-fg-muted" data-testid="usage">
+        <span className="min-w-0 text-base text-fg-muted" data-testid="usage">
           {groupName ? <span className="whitespace-nowrap">{groupName} · </span> : null}
           <span className="whitespace-nowrap">{phone ? PAID_VIA_LABEL[c.default_paid_via] : `Usually ${PAID_VIA_LABEL[c.default_paid_via].toLowerCase()}`} · </span>
           <span className="whitespace-nowrap">{usageText(c.used)}</span>
         </span>
       </div>
-      <div className="grid justify-items-end text-right">
-        <span className={cn('num text-base', spent > 0 ? 'text-fg' : 'text-fg-muted')} data-testid="spent">
-          {spent > 0 ? amountText(spent) : '—'}
-          <span className="sr-only">{spent > 0 ? ' PKR this month' : 'nothing paid this month'}</span>
-        </span>
+      <div className="grid justify-items-end text-right md:flex md:items-baseline md:gap-3">
         {b.kind === 'over' ? (
-          <span className="num text-sm font-medium text-tone-warning-fg" data-testid="budget">
+          <span className="num text-base font-medium text-tone-warning-fg md:order-first" data-testid="budget">
             {amountText(b.over)} over budget
           </span>
         ) : b.kind === 'under' ? (
-          <span className="num text-sm text-fg-muted" data-testid="budget">
+          <span className="num text-base text-fg-muted md:order-first" data-testid="budget">
             {amountText(b.left)} left of {amountText(b.budget)}
           </span>
         ) : null}
+        <span className={cn('num text-base md:min-w-[7rem]', spent > 0 ? 'text-fg' : 'text-fg-muted')} data-testid="spent">
+          {spent > 0 ? amountText(spent) : '—'}
+          <span className="sr-only">{spent > 0 ? ' PKR this month' : 'nothing paid this month'}</span>
+        </span>
       </div>
-      <RowMenu label={`More for ${c.name}`} title={c.name} subtitle={meta} items={items} phone={phone} />
+      <span data-row-actions="" className="-my-1 flex shrink-0">
+        <RowMenu label={`More for ${c.name}`} title={c.name} subtitle={meta} items={items} phone={phone} />
+      </span>
     </li>
   )
 }

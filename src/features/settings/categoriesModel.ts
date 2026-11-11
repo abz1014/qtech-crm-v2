@@ -86,7 +86,7 @@ export const categoriesFooter = (rows: readonly Pick<Category, 'active'>[]): str
   return `${rows.length} ${rows.length === 1 ? 'category' : 'categories'}${archived ? ` · ${archived} archived` : ''}`
 }
 
-export const usageText = (used: number) => (used === 0 ? 'Not used yet' : `${used} ${used === 1 ? 'use' : 'uses'}`)
+export const usageText = (used: number) => (used === 0 ? 'Unused' : `${used} ${used === 1 ? 'use' : 'uses'}`)
 
 // ------------------------------------------------------------------ groups (0086)
 
