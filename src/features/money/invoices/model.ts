@@ -279,13 +279,17 @@ export function matchesSearch(r: GstRow, text: string): boolean {
   return words.every(w => hay.includes(w))
 }
 
+const paisaFigure = (rows: readonly GstRow[], get: (r: GstRow) => number): number =>
+  Number(paisaToFixed(rows.reduce((sum, r) => sum + toPaisa(get(r)), 0n)))
+
 export function registerTotals(rows: readonly GstRow[]): { count: number; net: number; gst: number; gross: number } {
   return {
     // invoices only: a void invoice and a credit note are lines of the register but not another invoice (their figures still add in)
     count: rows.filter(r => !isInert(r)).length,
-    net: round2(rows.reduce((s, r) => s + r.net, 0)),
-    gst: round2(rows.reduce((s, r) => s + r.gst, 0)),
-    gross: round2(rows.reduce((s, r) => s + r.gross, 0)),
+    // summed in paisa, so a month's subtotal and the page total are exactly the sum of the rows drawn (no float drift)
+    net: paisaFigure(rows, r => r.net),
+    gst: paisaFigure(rows, r => r.gst),
+    gross: paisaFigure(rows, r => r.gross),
   }
 }
 

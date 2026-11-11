@@ -11,6 +11,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { useToast } from '@/ui/useToast'
+import { ReportCsv } from '@/ui/ReportCsv'
 import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { IN_OUT_REPORT_TITLE } from '@/features/money/monthEnd/reportList'
 import { ReportError, ReportLoading } from '@/features/money/monthEnd/ReportParts'
@@ -145,6 +146,7 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
   return (
     <>
       <Summary v={v} onPick={onPick} />
+      <ReportCsv />
       {v.total.count === 0 && v.prev.count === 0 ? (
         <section className="rounded-panel border bg-surface">
           <EmptyState title={`No expenses in ${v.label}`}>Expenses dated in this period show here. The columns above still show the periods before.</EmptyState>

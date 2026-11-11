@@ -238,9 +238,9 @@ test.describe('month-end (M10)', () => {
     await page.waitForLoadState('networkidle')
     await review(page, 'm10-checklist-375')
     expect(await axeViolations(page)).toEqual([])
-    // the four Money tabs wrap on a phone: nothing scrolls sideways and every tab is on screen
+    // the admin's phone has ONE switcher row in place of the tabs: nothing scrolls sideways and the row is on screen
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
-    for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
+    await expect(page.getByTestId('money-switcher')).toBeInViewport()
     await page.goto(`/money/reports?month=${STMT.key}`)
     await page.waitForLoadState('networkidle')
     await review(page, 'm10-reports-375')

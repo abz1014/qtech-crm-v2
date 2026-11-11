@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import { CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { formatPaisa, paisaToFixed, toPaisa, type Amount, type PaisaMode } from '@/lib/money'
@@ -44,10 +45,50 @@ function FigureList({ parts }: { parts: string[] }) {
   )
 }
 
-export function SumBar({ items, label, className }: { items: SumBarItem[]; label: string; className?: string }) {
+export function SumBar({
+  items,
+  label,
+  className,
+  phone,
+  caption,
+}: {
+  items: SumBarItem[]
+  label: string
+  className?: string
+  /**
+   * 'lines': on a phone (below 640) the summary is one line per figure, the label on the left and the figure on the right, at 16 px,
+   * so every figure shows without a tap and the block is short (clarity lane L2). Desktop keeps the tiles.
+   */
+  phone?: 'lines'
+  /** With `phone="lines"`: the ONE line that says what the figures are ("PKR · Sep to Oct 2026, by invoice date"), shown once above them. The tiles keep their own `sub`. */
+  caption?: ReactNode
+}) {
+  const narrow = useMediaQuery('(max-width: 639px)')
+  if (phone === 'lines' && narrow) {
+    return (
+      <section aria-label={label} data-work="" className={cn('grid gap-1 px-1', className)}>
+        {caption ? <p className="type-body text-fg-2">{caption}</p> : null}
+        <dl className="grid gap-1">
+          {items.map(item => (
+            <div key={item.label} className="flex items-baseline justify-between gap-4">
+              <dt className={cn('type-body', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg')}>{item.label}</dt>
+              <dd className={cn('num type-row', item.tone === 'danger' && 'text-tone-danger-fg')}>
+                {item.count !== undefined || item.figure !== undefined ? (
+                  Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)
+                ) : (
+                  <Money value={item.amount} size="base" strong prefix={false} provisional={item.provisional} paisa={item.paisa ?? 'never'} />
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    )
+  }
   return (
     <section
       aria-label={label}
+      data-work=""
       className={cn(
         'grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-flow-col md:auto-cols-fr md:grid-cols-none',
         className,

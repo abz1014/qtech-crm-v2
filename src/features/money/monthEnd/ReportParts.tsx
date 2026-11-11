@@ -145,7 +145,7 @@ export function ReportError({ title, onRetry }: { title: string; onRetry: () => 
         mood="error"
         title={title}
         actions={
-          <Button variant="primary" onClick={onRetry}>
+          <Button variant="secondary" onClick={onRetry}>
             Try again
           </Button>
         }
