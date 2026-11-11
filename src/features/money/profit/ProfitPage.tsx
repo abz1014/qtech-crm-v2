@@ -104,7 +104,7 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
         </p>
         <p className="text-base text-fg-2 md:basis-full">
           Average monthly profit on invoices over the same months: <span className="num font-medium text-fg">{pkr(avgProfit)}</span>.{' '}
-          <Link to="/money/margins" className="inline-flex items-center gap-1 rounded font-medium text-primary-text hover:underline">
+          <Link to="/money/margins" className="inline-flex items-center gap-1 rounded font-medium text-primary-text hover:underline md:hidden">
             See the profit of each order <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </p>
@@ -145,6 +145,10 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
       </Panel>
 
       <ProfitTable rows={[...shown].reverse()} label={`Profit by month, last ${range} months`} />
+      {/* From 768 up the way on to each order sits under the table, so the strip at the top stays figures only. */}
+      <Link to="/money/margins" className="hidden w-fit items-center gap-1 rounded font-medium text-primary-text hover:underline md:inline-flex">
+        See the profit of each order <ArrowRight aria-hidden="true" className="size-4" />
+      </Link>
     </>
   )
 }

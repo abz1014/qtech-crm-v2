@@ -443,6 +443,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
     <>
       <SumBar
         desktop="strip"
+        caption={`${plural(v.rows.length, 'invoice')} open, as of ${asOfLabel}`}
         label="Overdue by age"
         items={AGING_BUCKETS.map(b => ({
           label: BUCKET_TITLE[b],
@@ -637,7 +638,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       {missing.length ? (
-        <Banner tone="warning" title={`No exchange rate for ${day}`}>
+        <Banner tone="warning" title={`No exchange rate for ${day}`} className="md:rounded-none md:border-x-0">
           {/* The link sits in the text, not beside it: a side button squeezed the words into one column on a phone. */}
           {missing.join(', ')} {missing.length === 1 ? 'is' : 'are'} shown in {missing.length === 1 ? 'its' : 'their'} own currency.
           {partPaid ? ` ${plural(partPaid, 'supplier order is', 'supplier orders are')} part paid in PKR: what is left shows once a rate is added.` : ''}{' '}
@@ -649,6 +650,11 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       <SumBar
         className="max-sm:grid-cols-1"
         desktop="strip"
+        caption={
+          <>
+            {plural(v.rows.length, 'supplier order')}, <Num>{v.paidLegs}</Num> with a payment{missing.length ? '' : <>, owed at the rate on {day}</>}
+          </>
+        }
         label="What we owe"
         items={[
           missing.length
