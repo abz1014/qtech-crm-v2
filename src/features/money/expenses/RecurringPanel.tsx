@@ -93,7 +93,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
   const none = !loading && !templates.isError && (templates.data ?? []).length === 0
   if (none)
     return (
-      <section aria-labelledby="recurring-h" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border bg-surface px-4 py-2 max-sm:min-h-touch max-sm:flex-nowrap max-sm:rounded-none max-sm:border-0 max-sm:border-b max-sm:bg-transparent max-sm:px-0">
+      <section aria-labelledby="recurring-h" className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-2 max-sm:min-h-touch max-sm:flex-nowrap">
         <Icon icon={Repeat} className="text-fg-muted" />
         <h2 id="recurring-h" className="type-row">
           Recurring
