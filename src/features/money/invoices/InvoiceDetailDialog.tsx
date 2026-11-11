@@ -498,7 +498,6 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
           open={detailsOpen}
           onToggle={() => setDetailsOpen(o => !o)}
           controlsId="invoice-more-details"
-          bodyLabel="Courier, FBR and notes"
         >
           <div className="grid gap-4">
             <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
