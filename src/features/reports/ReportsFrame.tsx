@@ -1,16 +1,17 @@
-import type { ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Download } from 'lucide-react'
 import { useSession } from '@/app/session'
-import { Button } from '@/ui/Button'
+import { NoPrimary } from '@/ui/NoPrimary'
 import { Select } from '@/ui/form/Select'
+import { CsvButton } from '@/ui/ReportCsv'
+import { ReportCsvContext } from '@/ui/reportCsvContext'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { reportOptionsFor, reportTitle, type ReportKey } from '@/features/money/monthEnd/reportList'
 
 /*
  * Money > Reports (round 3, areas audit: "Reports shows one report at a time"). Reports is the fifth Money tab; inside it ONE
- * report is shown, picked from a select ("Report: Profit and loss"), with its period control beside it and Export CSV as the
- * page's one green button. Changing the report keeps the month (?month=2026-09). The h1 is the tab's name ("Reports", like the other Money tabs) with the report's name as the line under it; the phone bar names the report.
+ * report is shown, picked from a select ("Report: Profit and loss"), with its period control on the same row and Export CSV (a secondary
+ * button, never green: a report has no next step) under the summary (<ReportCsv />, drawn by each report body). Changing the report keeps the month (?month=2026-09). The h1 is the tab's name ("Reports", like the other Money tabs); the select names the report, and the phone bar says "Money".
  *
  *   <ReportsFrame report="owe" period={<MonthPager … />} csv={view ? () => downloadReport(…) : null}>…</ReportsFrame>
  */
@@ -36,22 +37,23 @@ export function ReportsFrame({
     const month = params.get('month')
     navigate({ pathname: `/money/reports/${key}`, search: month ? `?month=${month}` : '' })
   }
+  const [claimed, setClaimed] = useState(false)
+  const ctx = useMemo(() => ({ csv, claim: setClaimed }), [csv])
+  const named = options.length > 1 // the select names the report; with no select (sales, one report) the name is shown
+  const name = reportTitle(report)
   return (
     <MoneyFrame
       active="reports"
-      barTitle={reportTitle(report)}
-      lede={<span className="max-md:hidden" data-testid="report-name">{reportTitle(report)}</span>}
-      actions={
-        csv === undefined ? undefined : (
-          <Button variant="primary" icon={Download} onClick={() => csv?.()} disabled={!csv}>
-            Export CSV
-          </Button>
-        )
-      }
+      barTitle="Money"
+      // The select names the report, so the name is not repeated as a line under the heading. It stays for assistive technology
+      // (and for the one-report view, where there is no select, it is shown).
+      lede={<span className={named ? 'sr-only' : 'max-md:hidden'} data-testid="report-name">{name}</span>}
     >
+      <NoPrimary />
+      {/* The report's select and its period on ONE row. */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        {options.length > 1 ? (
-          <label className="grid w-full gap-1 text-sm font-medium text-fg-2 sm:w-[320px]">
+        {named ? (
+          <label className="grid min-w-0 flex-[1_1_200px] gap-1 text-base font-medium text-fg-2 sm:w-[320px] sm:flex-none">
             Report
             <Select
               data-testid="report-picker"
@@ -63,7 +65,9 @@ export function ReportsFrame({
         ) : null}
         {period}
       </div>
-      {children}
+      {/* Export CSV: each report body draws <ReportCsv /> right under its summary (not green: a report has no next step). */}
+      {csv !== undefined && !claimed ? <CsvButton csv={csv} /> : null}
+      <ReportCsvContext.Provider value={ctx}>{children}</ReportCsvContext.Provider>
     </MoneyFrame>
   )
 }

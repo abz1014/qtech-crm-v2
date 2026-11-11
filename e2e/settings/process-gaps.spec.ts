@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { openStage } from '../support/job'
+import { showAllTodo } from '../support/todo'
 
 /*
  * Process audit round 1 (migrations 0121 to 0125), end to end against the local CI stack. Synthetic data only.
@@ -120,6 +121,7 @@ test('an older month of undeposited GST stays on To do', async ({ page }) => {
   const old = new Date(Date.UTC(y, m - 4, 5)).toISOString().slice(0, 10) // three months back
   await invoice(o.id, `OG-${Date.now().toString(36)}`, old, 100000, 18000)
   await openAs(page, 'admin', '/todo')
+  await showAllTodo(page)
   await expect(page.locator('li[data-rule="gst_fbr"]').first()).toBeAttached()
 })
 

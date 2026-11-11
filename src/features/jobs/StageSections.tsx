@@ -1,15 +1,16 @@
-import { Fragment, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useState, type ReactNode } from 'react'
 import { visitTypeLabel } from '@/features/orders/lib/visit'
 import { isContentDrawn, whenContentDrawn } from '@/lib/afterContent'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
 import { useWonDialog } from '@/features/orders/useWonDialog'
-import { Check, ChevronRight } from 'lucide-react'
+import { CircleCheck, CircleDashed, CircleDot, CircleX, Minus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
+import { FoldRow, type FoldRowTone } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import type { JobFacts } from '@/features/jobs/api'
@@ -37,6 +38,7 @@ function LaterEnquiryWork({ rfqId, jobKey }: { rfqId: string; jobKey: string }) 
  * actions arrive stage by stage in the slots under each body (slots.tsx). An engineer's sections hold no amount, and Invoice and
  * Payment say "Handled by the office".
  */
+export const WITH_OFFICE = 'With the office'
 const dash = <span className="text-fg-muted">—</span>
 const day = (iso: string | null | undefined) => (iso ? <span className="num">{formatShortDate(iso, businessToday())}</span> : dash)
 
@@ -79,7 +81,7 @@ interface Section {
   body: ReactNode
 }
 
-function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobContext, markWon: () => void): Section[] {
+function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobContext, markWon: () => void, meta: ReactNode): Section[] {
   const { job } = facts
   const direct = job.kind === 'direct'
   const today = businessToday()
@@ -101,9 +103,9 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
     <Note>This job started as an order, without an enquiry.</Note>
   ) : (
     <div className="grid gap-2">
+      {meta}
       <p className="text-base text-fg-2">
         {facts.contact ? `From ${facts.contact.name}. ` : ''}
-        {facts.customerRef ? `Their reference ${facts.customerRef}. ` : ''}
         {facts.dueOn ? <>Answer due {day(facts.dueOn)}.</> : null}
       </p>
       {items.length ? (
@@ -151,9 +153,9 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
     </div>
   ) : (
     <div className="grid gap-2">
+      {direct ? meta : null}
       <p className="text-base text-fg-2">
         {order?.orderedOn ? <>Ordered {day(order.orderedOn)}. </> : null}
-        {ctx.money && order?.customerPo ? `Customer's order no. ${order.customerPo}. ` : ''}
         {ctx.money && order?.paymentTermsDays != null ? `Payment terms ${order.paymentTermsDays} days. ` : ''}
       </p>
       {/* the order lines, Edit GST and lines and Remove line are the slot below (orders/jobSlots/OrderWork) */}
@@ -216,103 +218,103 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
 
   const bodies: ReactNode[] = [enquiryBody, quotationBody, orderBody, legBody, deliveryBody, invoiceBody, paymentBody]
 
+  // One short line per row (clarity redesign): "30 Jun · 32 items", "1 of 10 answered", "Ordered 9 Jul". The customer's PO is not here:
+  // it is in the key facts line under the stage block, once. A step not reached says "Not yet".
+  const lastDelivered = legs
+    .map(l => l.deliveredOn)
+    .filter((x): x is string => Boolean(x))
+    .sort()
+    .at(-1)
+  const installation = order?.needsCommissioning
+    ? order.doneOn
+      ? `${visitTypeLabel(order.visitType) || 'Installation'} done`
+      : order.plannedOn
+        ? `${visitTypeLabel(order.visitType) || 'Installation'} planned ${formatShortDate(order.plannedOn, today)}`
+        : 'Installation needs a date'
+    : null
+  const deliveryState = !job.orderId
+    ? 'Not yet'
+    : legs.length === 0
+      ? 'No goods'
+      : delivered === legs.length && lastDelivered
+        ? `Delivered ${formatShortDate(lastDelivered, today)}`
+        : delivered > 0
+          ? `${delivered} of ${legs.length} delivered`
+          : 'Not delivered yet'
   const summaries: ReactNode[] = [
-    direct ? 'No enquiry: this job started as an order' : [facts.receivedOn ? `Received ${formatShortDate(facts.receivedOn, today)}` : null, facts.customerRef ? `their ref ${facts.customerRef}` : null, items.length ? `${items.length} ${items.length === 1 ? 'item' : 'items'}` : null].filter(Boolean).join(' · ') || 'Enquiry',
     direct
-      ? 'No quotation'
-      : [
-          ctx.money && quotes.length ? `${quotationRef(quotes[quotes.length - 1].number, quotes[quotes.length - 1].issuedOn)} sent ${formatShortDate(quotes[quotes.length - 1].issuedOn, today)}` : null,
-          asked ? `${answered} of ${asked} suppliers answered` : 'No supplier asked yet',
-        ]
-          .filter(Boolean)
-          .join(' · '),
-    job.orderId ? [order?.orderedOn ? `Ordered ${formatShortDate(order.orderedOn, today)}` : orderRef(order?.number ?? 0), ctx.money && order?.customerPo ? `customer's order ${order.customerPo}` : null].filter(Boolean).join(' · ') : "Waiting for the customer's order",
-    legs.length ? `${legs.length} supplier ${legs.length === 1 ? 'order' : 'orders'}${delivered ? ` · ${delivered} delivered` : ''}` : job.orderId ? 'To source and place' : 'Starts after the order',
-    detailFor(4) ?? (order?.needsCommissioning ? (order.doneOn ? `${visitTypeLabel(order.visitType) || 'Installation'} done` : order.plannedOn ? `${visitTypeLabel(order.visitType) || 'Installation'} planned ${formatShortDate(order.plannedOn, today)}` : 'Installation needs a date') : job.orderId ? 'Goods to the customer' : 'Starts after the goods arrive'),
-    ctx.money ? (invoices.length ? `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}` : 'Invoice after delivery') : 'Handled by the office',
-    ctx.money ? (m ? (m.balance <= 0 && m.settled > 0 ? 'Paid' : m.settled > 0 ? 'Part paid, the rest to collect' : 'Not paid yet') : 'Starts after the invoice') : 'Handled by the office',
+      ? 'No enquiry: this job started as an order'
+      : [facts.receivedOn ? formatShortDate(facts.receivedOn, today) : null, items.length ? `${items.length} ${items.length === 1 ? 'item' : 'items'}` : null].filter(Boolean).join(' · ') || 'Enquiry',
+    direct ? 'No quotation' : asked ? `${answered} of ${asked} answered` : 'No supplier asked yet',
+    job.orderId ? (order?.orderedOn ? `Ordered ${formatShortDate(order.orderedOn, today)}` : orderRef(order?.number ?? 0)) : 'Waiting for the customer',
+    legs.length ? (delivered > 0 ? `${delivered} of ${legs.length} delivered` : `${legs.length} supplier ${legs.length === 1 ? 'order' : 'orders'}`) : job.orderId ? 'To source and place' : 'Not yet',
+    detailFor(4) ?? (installation && !order?.doneOn ? installation : deliveryState),
+    ctx.money ? (invoices.length ? `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}` : job.orderId ? 'Not invoiced yet' : 'Not yet') : WITH_OFFICE,
+    ctx.money ? (m ? (m.balance <= 0 && m.settled > 0 ? 'Paid' : m.settled > 0 ? 'Part paid' : 'Not paid yet') : 'Not yet') : WITH_OFFICE,
   ]
 
   return STOPS.map((stop, index) => ({ stop, shown: model.stops[index].shown, index, state: state(index), summary: summaries[index], body: bodies[index] }))
 }
 
-const TAG: Record<StopState, string | null> = { done: 'Done', current: 'Now', future: null, none: null, stopped: null }
-
 export const NO_ENQUIRY_ROW = 'No enquiry or quotation: this job started as an order'
 
+const STATE: Record<StopState, { icon: LucideIcon; word: string; className: string }> = {
+  done: { icon: CircleCheck, word: 'Done', className: 'text-tone-success-fg' },
+  current: { icon: CircleDot, word: 'Now', className: 'text-fg' },
+  future: { icon: CircleDashed, word: 'Not yet', className: 'text-fg-muted' },
+  none: { icon: Minus, word: 'Not part of this job', className: 'text-fg-muted' },
+  stopped: { icon: CircleX, word: 'Not reached', className: 'text-fg-muted' },
+}
+
 /**
- * On a phone the stage the job is at comes first, directly under the Next step band; the rest keep their order. A finished job has no
- * current stage, so nothing moves. The ids (stage-N) stay with their sections, so ?stage= links and the ruler still find them.
+ * The job's seven steps as one hairline list (clarity redesign): each step is one FoldRow, closed, in its natural order on a phone and a
+ * computer. The step the job is at is marked by a filled dot and a coloured summary; it is not moved and not opened. The ids (stage-N)
+ * stay with their rows, so ?stage= links and the ruler still find them.
  */
-export function StageSections({ facts, data, model, ctx, open, onToggle, phone = false }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void; phone?: boolean }) {
+export function StageSections({ facts, data, model, ctx, open, onToggle, meta }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void; meta?: ReactNode }) {
   const [, setWon] = useWonDialog()
-  const built = buildSections(facts, data, model, ctx, () => setWon(true))
-  // A job that began as an order has no enquiry and no quotation: one grey row says so, instead of two cards that each say it.
+  const built = buildSections(facts, data, model, ctx, () => setWon(true), meta)
+  // A job that began as an order has no enquiry and no quotation: one grey row says so, instead of two rows that each say it.
   const merged = facts.job.kind === 'direct'
   const sections = merged ? built.slice(2) : built
-  const ordered = phone ? [...sections.filter(s => s.state === 'current'), ...sections.filter(s => s.state !== 'current')] : sections
-  const row = (
-    <section key="no-enquiry" id="stage-0" data-stage="Enquiry" className="rounded-panel border bg-sunken">
-      <p className="min-h-touch px-4 py-3 text-base text-fg-muted">
-        <span id="stage-1" data-stage="Quotation" />
-        {NO_ENQUIRY_ROW}
-      </p>
-    </section>
-  )
-  // the grey row comes first, except on a phone where the current stage leads
-  const rowAt = phone && ordered[0]?.state === 'current' ? 1 : 0
   return (
-    <div className="grid gap-2" data-stages>
-      {merged && rowAt === 0 ? row : null}
-      {ordered.map((s, n) => {
+    <div className="min-w-0 lg:rounded-panel lg:border lg:bg-surface lg:px-4 lg:[&>:last-child]:border-b-0" data-stages>
+      {merged ? (
+        <div id="stage-0" data-stage="Enquiry" data-fold-row="" className="flex min-h-touch items-center gap-3 border-b py-2 text-fg-muted">
+          <Icon icon={Minus} />
+          <p className="type-body min-w-0">
+            <span id="stage-1" data-stage="Quotation" />
+            {NO_ENQUIRY_ROW}
+          </p>
+        </div>
+      ) : null}
+      {sections.map(s => {
         const none = s.state === 'none'
         const isOpen = open === s.index && !none
-        const head = (
-          <>
-            <Icon icon={ChevronRight} className={cn('shrink-0 text-fg-muted transition-transform', isOpen && 'rotate-90')} />
-            <span className={cn('w-[8.5rem] shrink-0 text-left text-base font-semibold', (s.state === 'future' || none || s.state === 'stopped') && 'font-medium text-fg-muted')}>{s.shown}</span>
-            <span className="min-w-0 flex-1 text-left font-sans text-base font-normal text-fg-2 [overflow-wrap:anywhere]">{s.summary}</span>
-            {TAG[s.state] ? (
-              <span
-                className={cn(
-                  'inline-flex min-h-chip shrink-0 items-center gap-1 rounded-round px-[10px] text-sm font-medium',
-                  s.state === 'done' ? 'bg-tone-success-bg text-tone-success-fg' : 'bg-tone-warning-bg text-tone-warning-fg',
-                )}
-              >
-                {s.state === 'done' ? <Icon icon={Check} size="sm" /> : null}
-                {TAG[s.state]}
-              </span>
-            ) : null}
-          </>
-        )
+        // The money steps are the office's: an engineer's rows say so, whatever their mark, and so does the quotation while the job waits at it.
+        const withOffice = !ctx.money && (s.stop === 'Invoice' || s.stop === 'Payment' || (s.state === 'current' && s.stop === 'Quotation'))
+        const tone: FoldRowTone | undefined = s.state === 'current' ? 'warning' : undefined
         return (
-          <Fragment key={s.stop}>
-          <section id={`stage-${s.index}`} data-stage={s.stop} className={cn('rounded-panel border bg-surface', (s.state === 'future' || none) && 'bg-sunken')}>
-            <h2 className="type-row">
-              {none ? (
-                <div className="flex min-h-touch flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 max-sm:[&>span:nth-of-type(2)]:basis-[calc(100%-2rem)]">{head}</div>
-              ) : (
-                <button
-                  type="button"
-                  data-nav-strip=""
-                  aria-expanded={isOpen}
-                  aria-controls={`stage-body-${s.index}`}
-                  onClick={() => onToggle(s.index)}
-                  className="flex min-h-touch w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-panel px-4 py-2 hover:bg-sunken max-sm:[&>span:nth-of-type(2)]:basis-[calc(100%-2rem)]"
-                >
-                  {head}
-                </button>
-              )}
-            </h2>
-            {isOpen ? (
-              <div id={`stage-body-${s.index}`} role="region" aria-label={`${s.shown} stage`} className="grid gap-3 border-t px-4 py-3">
-                {s.body}
-                <JobSlot name={stageSlot(s.stop)} context={ctx} />
-              </div>
-            ) : null}
-          </section>
-          {merged && rowAt === 1 && n === 0 ? row : null}
-          </Fragment>
+          <FoldRow
+            key={s.stop}
+            id={`stage-${s.index}`}
+            dataStage={s.stop}
+            controlsId={`stage-body-${s.index}`}
+            bodyLabel={`${s.shown} stage`}
+            state={STATE[s.state]}
+            title={s.shown}
+            summary={withOffice ? WITH_OFFICE : s.state === 'future' ? 'Not yet' : s.summary}
+            tone={tone}
+            muted={s.state === 'future' || none || s.state === 'stopped'}
+            disabled={none}
+            open={isOpen}
+            onToggle={() => onToggle(s.index)}
+          >
+            <div className="grid gap-3">
+              {s.body}
+              <JobSlot name={stageSlot(s.stop)} context={ctx} />
+            </div>
+          </FoldRow>
         )
       })}
     </div>

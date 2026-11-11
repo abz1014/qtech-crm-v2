@@ -20,13 +20,15 @@ export interface StickyActionBarProps {
   more?: ReactNode
   /** Names the toolbar ("RFQ actions"). */
   label: string
+  /** "toolbar" (default), or "region" where the bar is the screen's own named block (the engineer's On site buttons on a phone). */
+  role?: 'toolbar' | 'region'
   className?: string
 }
 
-export function StickyActionBar({ primary, secondary, more, label, className }: StickyActionBarProps) {
+export function StickyActionBar({ primary, secondary, more, label, role = 'toolbar', className }: StickyActionBarProps) {
   return (
     <div
-      role="toolbar"
+      role={role}
       aria-label={label}
       data-action-bar
       // Navy, like the next-step band it repeats (direction C): data-surface re-inks the buttons and rings the green one.

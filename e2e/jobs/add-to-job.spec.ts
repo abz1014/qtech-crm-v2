@@ -41,7 +41,9 @@ test('a pasted WhatsApp price is read, matched to the supplier, and Accept saves
   ].join('\n')
 
   await openAs(page, 'sales', `/jobs/${s.rfq.number}`)
-  await expect(page.getByRole('region', { name: 'Add to this job' })).toBeVisible()
+  // the row is closed until something is handed to it: the paste opens it
+  await expect(page.getByTestId('add-to-job')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Add to this job/ })).toHaveAttribute('aria-expanded', 'false')
   await paste(page, message)
 
   await expect(page.getByTestId('guess-line')).toHaveText(`Supplier price from ${s.rhein.name}`)
@@ -62,6 +64,7 @@ test('a pasted WhatsApp price is read, matched to the supplier, and Accept saves
 test('a note and a photo are added together with Add note and files', async ({ page }) => {
   const s = await seed()
   await openAs(page, 'sales', `/jobs/${s.rfq.number}`)
+  await page.getByRole('button', { name: /^Add to this job/ }).click()
   await expect(page.getByRole('region', { name: 'Add to this job' })).toBeVisible()
   await page.getByRole('textbox', { name: 'Paste here' }).fill('Customer wants the PDF datasheet too.')
   await page.getByTestId('add-photo-input').setInputFiles({ name: 'site.png', mimeType: 'image/png', buffer: Buffer.from(PNG_B64, 'base64') })

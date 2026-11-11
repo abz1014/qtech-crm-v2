@@ -12,4 +12,4 @@ related: photo-or-note, i-paid
 
 The big button hides on screens that have their own Save button, such as [I paid] and your details, so it never covers it.
 
-Tip: You never see prices. The same photo and note buttons are on the [On site] card of each job.
+Tip: You never see prices. The same photo and note button is in the [Add to this job] row of each job.

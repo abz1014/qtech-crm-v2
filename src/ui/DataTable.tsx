@@ -134,6 +134,16 @@ export interface DataTableProps<T> {
   twoLine?: boolean
   /** Below 640px, draw each row as a stacked card with this content instead of columns. */
   mobileRow?: (row: T) => ReactNode
+  /**
+   * Phone cards only, with `group`: the header of a group (a month) as a phone card, given the group's key and its rows. Sum the rows
+   * in paisa here (the same rows the table draws) so a subtotal never disagrees with them. Absent: the group's plain label.
+   */
+  mobileGroup?: (key: string, rows: T[]) => ReactNode
+  /**
+   * Phone cards only: what a tap on the card shows under it (a row's detail and its buttons). Return null for a row that has none: its
+   * tap opens it (`onRowOpen`) as before. Enter does what a tap does. Absent: every tap opens the row.
+   */
+  mobileExpand?: (row: T) => ReactNode | null
   className?: string
 }
 
@@ -188,6 +198,8 @@ function TableView<T>(props: DataTableProps<T>) {
     virtualAfter = 80,
     twoLine,
     mobileRow,
+    mobileGroup,
+    mobileExpand,
     className,
   } = props
   const phone = useMediaQuery('(max-width: 639px)')
@@ -310,6 +322,7 @@ function TableView<T>(props: DataTableProps<T>) {
 
   // ---- keyboard focus -----------------------------------------------------
   const [focusDi, setFocusDi] = useState(0)
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
   const pendingFocus = useRef(false)
   const bodyRef = useRef<HTMLTableSectionElement>(null)
   const safeFocus = Math.min(focusDi, Math.max(0, dataRows.length - 1))
@@ -512,8 +525,14 @@ function TableView<T>(props: DataTableProps<T>) {
   )
 
   const labelCols = firstTotal < 0 ? columns.length : firstTotal
-  const summaryRow = (kind: 'group' | 'foot', labelNode: ReactNode, list: readonly T[], key: string, groupIds?: string[]) =>
-    cards ? (
+  const summaryRow = (kind: 'group' | 'foot', labelNode: ReactNode, list: readonly T[], key: string, groupIds?: string[], groupKey?: string) =>
+    cards && kind === 'group' && mobileGroup && groupKey !== undefined ? (
+      <tr key={key} role="row" data-row-kind="group" className="block bg-canvas">
+        <td role="cell" className="block border-b border-line px-4 py-3">
+          {mobileGroup(groupKey, [...list])}
+        </td>
+      </tr>
+    ) : cards ? (
       <tr key={key} role="row" data-row-kind={kind} className="block bg-canvas">
         <td role="cell" className="block border-b border-line px-4 py-2 text-xs font-medium text-fg-muted">
           {labelNode}
@@ -568,12 +587,22 @@ function TableView<T>(props: DataTableProps<T>) {
 
   const renderItem = (item: Item<T>, flat: number) => {
     if (item.t === 'group')
-      return summaryRow('group', item.label, item.rows, `g:${item.key}`, item.rows.map(getRowId))
+      return summaryRow('group', item.label, item.rows, `g:${item.key}`, item.rows.map(getRowId), item.key)
     const { row, di } = item
     const id = getRowId(row)
     const ticked = !!selected?.has(id)
     const active = activeRowId === id
-    if (cards && mobileRow)
+    if (cards && mobileRow) {
+      const extra = mobileExpand ? mobileExpand(row) : null
+      const expandable = extra !== null && extra !== undefined
+      const isOpen = expandable && expanded.has(id)
+      const toggleOpen = () =>
+        setExpanded(prev => {
+          const next = new Set(prev)
+          if (next.has(id)) next.delete(id)
+          else next.add(id)
+          return next
+        })
       return (
         <tr
           key={id}
@@ -581,25 +610,45 @@ function TableView<T>(props: DataTableProps<T>) {
           data-di={di}
           data-card=""
           aria-selected={selection || activeRowId !== undefined ? ticked || active : undefined}
+          // not aria-expanded: axe allows it on treegrid rows only, and a card row is a plain table row
+          data-expanded={expandable ? isOpen : undefined}
           tabIndex={di === safeFocus ? 0 : -1}
           onFocus={e => e.target === e.currentTarget && setFocusDi(di)}
-          onKeyDown={e => onRowKey(e, di, row)}
+          onKeyDown={e => {
+            if (expandable && e.key === 'Enter' && e.target === e.currentTarget && !e.altKey && !e.ctrlKey && !e.metaKey) {
+              e.preventDefault()
+              toggleOpen()
+              return
+            }
+            onRowKey(e, di, row)
+          }}
           onClick={e => {
-            if (onRowOpen && !(e.target as HTMLElement).closest('a,button,input,label,select,textarea')) openRow(row)
+            if ((e.target as HTMLElement).closest('a,button,input,label,select,textarea')) return
+            if (expandable) toggleOpen()
+            else if (onRowOpen) openRow(row)
           }}
           className={cn(
             'relative block border-b border-line transition-colors focus-visible:bg-sunken focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
-            onRowOpen && 'cursor-pointer',
+            (onRowOpen || expandable) && 'cursor-pointer',
             ticked || active ? 'bg-selected' : 'active:bg-sunken',
             active && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
           )}
         >
           <td role="cell" className="flex min-h-[44px] items-start gap-3 px-4 py-3">
             {selection ? <span className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
-            <div className="min-w-0 flex-1">{mobileRow(row)}</div>
+            <div className="min-w-0 flex-1">
+              {mobileRow(row)}
+              {isOpen ? (
+                // a button in here (or a dialog it opens, whose clicks bubble through the portal) must not fold the card again
+                <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                  {extra}
+                </div>
+              ) : null}
+            </div>
           </td>
         </tr>
       )
+    }
     return (
       <tr
         key={id}

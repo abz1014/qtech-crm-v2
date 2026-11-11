@@ -215,6 +215,9 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     expect(taps).toBe(2) // Issue, Share
 
     await dialog(page).getByRole('button', { name: 'Done' }).click()
+    // Done closes the dialog; the job then moves on to the next step and the helper opens it, so the Quotation step is opened again here
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await openStage(page, 'Quotation')
     const row = page.getByTestId('quotation-0')
     await expect(row).toContainText(refOf(q)) // on screen the number, no "R0" (the PDF and its file name keep it)
     await expect(row).not.toContainText(`${refOf(q)} R0`)
@@ -272,6 +275,8 @@ test.describe('re-issue', () => {
     expect(pdfIsValid(pdf0)).toBe(true)
 
     // A quotation is out: Mark won is the green button, and the Quotations panel offers Revise quotation.
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await openStage(page, 'Quotation')
     await expect(page.getByRole('button', { name: 'Mark won', exact: true })).toBeVisible()
     await page.locator('[data-slot="quotations"]').getByRole('button', { name: 'Revise quotation' }).click()
     await expect(dialog(page).getByRole('heading', { name: `Revise quotation ${refOf(r0)}` })).toBeVisible()
@@ -360,6 +365,8 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
       expect((await rfqOf(s.rfq.id)).quoted_on).toBe(karachiDay(0))
 
       await dialog(page).getByRole('button', { name: 'Done' }).click()
+      await expect(page.getByRole('dialog')).toBeHidden()
+      await openStage(page, 'Quotation')
       await expect(page.locator('[data-slot="quotations"]').getByText(/A PDF needs the company's legal name and address/)).toBeVisible()
       await expect(page.getByTestId('quotation-0').getByRole('button', { name: 'Open PDF' })).toBeDisabled()
       await shot(page, 'rfq-quotation-09-profile-incomplete-list-1440')
@@ -490,6 +497,8 @@ for (const width of [1440, 375]) {
     await shot(page, `rfq-quotation-issued-${width}`)
 
     await dialog(page).getByRole('button', { name: 'Done' }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await openStage(page, 'Quotation')
     await expect(page.getByTestId('quotation-0')).toBeVisible()
     await page.locator('#main').evaluate(m => m.scrollTo(0, m.scrollHeight)) // at the end of the page the phone's sticky action bar covers nothing
     expect(await pageViolations(page)).toEqual([])

@@ -729,6 +729,22 @@ export const VISITS: readonly Visit[] = [
   screen('enquiry-new', 'New enquiry', MONEY, () => '/enquiries/new'),
   screen('review-imported', 'Money: Review imported', ADMIN, () => '/money/review-imported'),
   screen('today', 'Today, with items', ALL, () => '/todo'),
+  {
+    // L6: To do with the This week block opened (Late is open on arrival; Today and This week are closed rows with their count).
+    id: 'today-open-week',
+    title: 'To do: the This week block opened',
+    roles: ALL,
+    screens: ['today-open-week'],
+    run: async (page, _fx, capture) => {
+      await open(page, '/todo')
+      const closed = page.locator('[data-block-closed="week"]').first()
+      if (await closed.count()) {
+        await closed.click()
+        await settle(page)
+      }
+      await capture('today-open-week')
+    },
+  },
   screen('weekly-review', 'To do: weekly review', ADMIN, () => '/todo/review'),
   screen('capture-pick-job', 'Photo or note: which job (the share target with nothing shared)', ALL, () => '/capture'),
   screen('engineer-i-paid', 'I paid: my expense claims', ['sales', 'engineer'], () => '/my-expenses'),

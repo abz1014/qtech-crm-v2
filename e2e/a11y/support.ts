@@ -2,7 +2,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test as base, expect, type Browser, type Page, type TestInfo } from '@playwright/test'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
-import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName, type Role } from '../support/stack'
+import { openClosedBlocks } from '../support/todo'
+import { createCompany, createRfq, karachiDay, must, OPEN_CURRENT_STEP, openAs, rest, uniqueName, type Role } from '../support/stack'
 
 /*
  * The cross-cutting accessibility suite (docs/audit a11y recommendations, section 7). The feature suites keep their own axe calls;
@@ -181,6 +182,7 @@ export async function seedChase(): Promise<{ ref: string; rfqId: string }> {
 
 /** On Today (already open): selects the chase for `ref` and returns its pane and its 1-tap chase button. */
 export async function openChase(page: Page, ref: string) {
+  await openClosedBlocks(page)
   await page.locator('li[data-rule="chase_customer"]').filter({ hasText: ref }).getByRole('button').first().click()
   const pane = page.getByRole('region', { name: new RegExp(ref) })
   const button = pane.getByRole('button', { name: UI.chase })
@@ -241,6 +243,7 @@ export { expect }
 
 /** Opens `path` and waits until the screen has settled: the shell, the page's heading, no request in flight, no animation. */
 export async function open(page: Page, path: string): Promise<void> {
+  await page.addInitScript(OPEN_CURRENT_STEP)
   await page.goto(path)
   await page.locator('#main').waitFor()
   await page.locator('#main h1').first().waitFor({ state: 'attached' })

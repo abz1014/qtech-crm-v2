@@ -5,9 +5,7 @@ import { useSession } from '@/app/session'
 import { whenContentDrawn } from '@/lib/afterContent'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import type { helpPaletteSource } from '@/features/help/helpPalette'
-import { howItWorksFor, howItWorksKey } from '@/features/help/howItWorks'
 import type { Recipe } from '@/features/help/recipes'
-import { useDismissed } from '@/features/help/useDismissed'
 import { HELP_PARAM, useHelp, withHelp } from '@/features/help/useHelp'
 import { importWithReload, useRetryableLazy } from '@/lib/importWithReload'
 import { LoadBoundary } from '@/ui/LoadBoundary'
@@ -127,7 +125,6 @@ export function HelpHost() {
   )
   usePaletteSource(source)
 
-  const [dismissed, setDismissed] = useDismissed(user ? howItWorksKey(user.id) : null)
   // For the one render between a link's navigation and the carry-over above, keep the panel mounted (no flash).
   const carrying = !open && navigationType === 'PUSH' ? lastOpen.current : null
   if ((!open && carrying === null) || !user || !recipes) return null
@@ -142,7 +139,6 @@ export function HelpHost() {
         onShow={id => openHelp(id)}
         onClose={closeHelp}
         wide={wide}
-        onShowHowItWorks={dismissed && howItWorksFor(user.role).length ? () => setDismissed(false) : undefined}
       />
     </Suspense>
     </LoadBoundary>

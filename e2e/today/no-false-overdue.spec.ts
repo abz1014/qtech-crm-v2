@@ -171,7 +171,7 @@ async function checkRfqs(page: Page, s: Seeded): Promise<void> {
   await expectNoFalseOverdue(page, '/jobs (open)')
   for (const r of [s.rfqSent, s.rfqOpen]) {
     await page.goto(`/rfqs/${r.id}`)
-    await expect(page.getByText(r.customer).first()).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(r.customer)
     await expectNoFalseOverdue(page, `Job page of ${r.ref}`)
   }
 }
@@ -182,7 +182,7 @@ async function checkOrders(page: Page, s: Seeded): Promise<void> {
   await expectNoFalseOverdue(page, '/jobs (history)')
   for (const [name, o] of Object.entries({ partInvoiced: s.partInvoiced, notInvoiced: s.notInvoiced, latePayment: s.latePayment, poOpen: s.poOpen })) {
     await page.goto(`/orders/${o.id}`)
-    await expect(page.getByText(o.customer).first()).toBeVisible()
+    await expect(page.getByText(o.customer).filter({ visible: true }).first()).toBeVisible()
     await expectNoFalseOverdue(page, `the imported order page (${name})`)
   }
 }
@@ -208,7 +208,7 @@ async function checkMoney(page: Page, s: Seeded): Promise<void> {
 
 async function checkControl(page: Page, s: Seeded): Promise<void> {
   await page.goto(`/orders/${s.control.id}`)
-  await expect(page.getByText(s.control.customer).first()).toBeVisible()
+  await expect(page.getByText(s.control.customer).filter({ visible: true }).first()).toBeVisible()
   await expectNoFalseOverdue(page, 'the control job page')
 }
 

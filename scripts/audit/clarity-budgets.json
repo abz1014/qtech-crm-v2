@@ -176,7 +176,7 @@
  },
  "admin/job-commissioning/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "stepRowMax": 124,
   "contentHeight": 3721,
   "aboveFold": 4
@@ -593,7 +593,7 @@
  },
  "admin/money-aging/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1547,
   "aboveFold": 22
  },
@@ -617,7 +617,7 @@
  },
  "admin/money-bank/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 2873,
   "aboveFold": 20
  },
@@ -647,7 +647,7 @@
  },
  "admin/money-expense-report-quarter/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 4741,
   "aboveFold": 20
  },
@@ -665,7 +665,7 @@
  },
  "admin/money-expense-report/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 4053,
   "aboveFold": 20
  },
@@ -725,7 +725,7 @@
  },
  "admin/money-gst-fbr/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1481,
   "aboveFold": 22
  },
@@ -755,7 +755,7 @@
  },
  "admin/money-in-out/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 3820,
   "aboveFold": 20
  },
@@ -791,13 +791,13 @@
  },
  "admin/money-month-end/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1844,
   "aboveFold": 17
  },
  "admin/money-month-end/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 1604,
   "aboveFold": 18
  },
@@ -809,7 +809,7 @@
  },
  "admin/money-owe/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 2919,
   "aboveFold": 22
  },
@@ -827,13 +827,13 @@
  },
  "admin/money-pnl/320x640": {
   "boxDepth": 2,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 2059,
   "aboveFold": 22
  },
  "admin/money-pnl/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 1922,
   "aboveFold": 23
  },
@@ -851,7 +851,7 @@
  },
  "admin/money-profit/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 2905,
   "aboveFold": 17
  },
@@ -863,7 +863,7 @@
  },
  "admin/money-receivables/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 0,
+  "boxesAtFold": 1,
   "contentHeight": 2374,
   "aboveFold": 19
  },
@@ -887,7 +887,7 @@
  },
  "admin/money-team/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 1302,
   "aboveFold": 22
  },
@@ -1356,13 +1356,13 @@
  },
  "admin/reports/320x640": {
   "boxDepth": 2,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 2059,
   "aboveFold": 22
  },
  "admin/reports/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 1922,
   "aboveFold": 23
  },
@@ -1374,7 +1374,7 @@
  },
  "admin/review-imported/320x640": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 1323,
   "aboveFold": 16
  },
@@ -1406,7 +1406,7 @@
   "boxDepth": 2,
   "boxesAtFold": 10,
   "contentHeight": 1374,
-  "aboveFold": 18
+  "aboveFold": 19
  },
  "admin/rfq-new-2-suppliers/320x640": {
   "boxDepth": 2,
@@ -1430,7 +1430,7 @@
   "boxDepth": 2,
   "boxesAtFold": 3,
   "contentHeight": 1902,
-  "aboveFold": 11
+  "aboveFold": 12
  },
  "admin/rfq-new-3-message/375x812": {
   "boxDepth": 2,
@@ -1439,20 +1439,20 @@
   "aboveFold": 14
  },
  "admin/rfq-new-4-sent/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 944,
   "aboveFold": 21
  },
  "admin/rfq-new-4-sent/320x640": {
-  "boxDepth": 1,
+  "boxDepth": 2,
   "boxesAtFold": 1,
   "contentHeight": 1625,
   "aboveFold": 11
  },
  "admin/rfq-new-4-sent/375x812": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 1529,
   "aboveFold": 14
  },
@@ -1638,7 +1638,7 @@
  },
  "admin/today/1440x900": {
   "boxDepth": 1,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "contentHeight": 900,
   "aboveFold": 26
  },
@@ -1650,7 +1650,7 @@
  },
  "admin/today/375x812": {
   "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "contentHeight": 2082,
   "aboveFold": 19
  },
@@ -1785,17 +1785,17 @@
  },
  "engineer/job-commissioning/1440x900": {
   "boxDepth": 3,
-  "boxesAtFold": 3,
+  "boxesAtFold": 6,
   "stepRowMax": 44,
   "contentHeight": 2109,
   "aboveFold": 20
  },
  "engineer/job-commissioning/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "stepRowMax": 100,
   "contentHeight": 3552,
-  "aboveFold": 2
+  "aboveFold": 3
  },
  "engineer/job-commissioning/375x812": {
   "boxDepth": 3,
@@ -1869,21 +1869,21 @@
  },
  "engineer/job-key-facts/1440x900": {
   "boxDepth": 3,
-  "boxesAtFold": 5,
+  "boxesAtFold": 7,
   "stepRowMax": 44,
   "contentHeight": 2109,
   "aboveFold": 18
  },
  "engineer/job-key-facts/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 2,
+  "boxesAtFold": 3,
   "stepRowMax": 100,
   "contentHeight": 3552,
   "aboveFold": 5
  },
  "engineer/job-key-facts/375x812": {
   "boxDepth": 3,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "stepRowMax": 100,
   "contentHeight": 3069,
   "aboveFold": 5
@@ -1953,7 +1953,7 @@
  },
  "engineer/job-po-issued/1440x900": {
   "boxDepth": 3,
-  "boxesAtFold": 4,
+  "boxesAtFold": 5,
   "stepRowMax": 44,
   "contentHeight": 1615,
   "aboveFold": 19
@@ -2259,13 +2259,13 @@
  },
  "engineer/rfq-new-2-suppliers/320x640": {
   "boxDepth": 2,
-  "boxesAtFold": 3,
+  "boxesAtFold": 4,
   "contentHeight": 2557,
-  "aboveFold": 6
+  "aboveFold": 7
  },
  "engineer/rfq-new-2-suppliers/375x812": {
   "boxDepth": 2,
-  "boxesAtFold": 5,
+  "boxesAtFold": 6,
   "contentHeight": 2135,
   "aboveFold": 7
  },
@@ -2279,7 +2279,7 @@
   "boxDepth": 2,
   "boxesAtFold": 3,
   "contentHeight": 1902,
-  "aboveFold": 8
+  "aboveFold": 9
  },
  "engineer/rfq-new-3-message/375x812": {
   "boxDepth": 2,
@@ -2288,20 +2288,20 @@
   "aboveFold": 11
  },
  "engineer/rfq-new-4-sent/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 944,
   "aboveFold": 18
  },
  "engineer/rfq-new-4-sent/320x640": {
-  "boxDepth": 1,
+  "boxDepth": 2,
   "boxesAtFold": 1,
   "contentHeight": 1625,
   "aboveFold": 8
  },
  "engineer/rfq-new-4-sent/375x812": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 1529,
   "aboveFold": 11
  },
@@ -2572,7 +2572,7 @@
  },
  "sales/job-commissioning/320x640": {
   "boxDepth": 3,
-  "boxesAtFold": 1,
+  "boxesAtFold": 2,
   "stepRowMax": 124,
   "contentHeight": 3383,
   "aboveFold": 4
@@ -3169,7 +3169,7 @@
   "boxDepth": 2,
   "boxesAtFold": 10,
   "contentHeight": 1374,
-  "aboveFold": 18
+  "aboveFold": 19
  },
  "sales/rfq-new-2-suppliers/320x640": {
   "boxDepth": 2,
@@ -3193,7 +3193,7 @@
   "boxDepth": 2,
   "boxesAtFold": 3,
   "contentHeight": 1902,
-  "aboveFold": 11
+  "aboveFold": 12
  },
  "sales/rfq-new-3-message/375x812": {
   "boxDepth": 2,
@@ -3202,20 +3202,20 @@
   "aboveFold": 14
  },
  "sales/rfq-new-4-sent/1440x900": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 944,
   "aboveFold": 21
  },
  "sales/rfq-new-4-sent/320x640": {
-  "boxDepth": 1,
+  "boxDepth": 2,
   "boxesAtFold": 1,
   "contentHeight": 1625,
   "aboveFold": 11
  },
  "sales/rfq-new-4-sent/375x812": {
-  "boxDepth": 1,
-  "boxesAtFold": 1,
+  "boxDepth": 2,
+  "boxesAtFold": 2,
   "contentHeight": 1529,
   "aboveFold": 14
  },
