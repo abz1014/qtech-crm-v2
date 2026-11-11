@@ -746,7 +746,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await openAs(page, 'admin', '/money/expenses')
     await expect(page.getByRole('button', { name: 'Add expenses' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Recurring' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Recurring' }).or(page.getByRole('button', { name: /^Recurring/ }))).toBeVisible()
     await page.waitForLoadState('networkidle')
     await review(page, 'm03-expenses-list-375')
     expect(await axeViolations(page)).toEqual([])

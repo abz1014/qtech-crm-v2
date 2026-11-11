@@ -93,7 +93,8 @@ test.describe('in vs out (owner request 2026-10-20)', () => {
     await expect(page.getByRole('table', { name: 'The last 4 quarters' })).toBeVisible()
 
     await page.setViewportSize({ width: 375, height: 812 })
-    await expect(page.getByTestId('cash-out')).toBeVisible()
+    // a phone draws the figures as lines in a region, not the table rows
+    await expect(page.getByRole('region', { name: 'Cash in and out' })).toContainText(whole(quarterOut))
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
   })
 

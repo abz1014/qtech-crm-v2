@@ -181,7 +181,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill('1200')
     await pickCategory(qa, 'Courier & postage')
     await openExtras(qa)
-    await qa.getByRole('button', { name: 'Cash' }).click()
+    await qa.getByRole('button', { name: 'Cash', exact: true }).click()
     await qa.getByRole('button', { name: 'Save this expense' }).click()
     await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
     // to the paisa: other suites on this database leave fractional cash, and float noise (18000.300000000004) is refused by the box
