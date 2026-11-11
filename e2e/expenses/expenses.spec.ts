@@ -789,7 +789,7 @@ test.describe('expenses (M03, M11)', () => {
     // The box already SHOWS the typed name while the category is still being created, so toHaveValue(name) is true at once. The picker
     // keeps the Create option until the new category's id is on the row; Save before that files the row under the old favourite (or is
     // refused: "No category matches"), and the sheet stays open. Wait for the option to go, the signal that the row now holds the id.
-    await expect(page.getByRole('option', { name: /^Create / })).toBeHidden({ timeout: 20_000 })
+    await expect(page.getByRole('option', { name: /^Create / })).toHaveCount(0, { timeout: 20_000 }) // two options (cash, bank): count, not toBeHidden
     await expect(page.getByRole('combobox', { name: 'Category, expense 1' })).toHaveValue(name)
     await page.getByRole('button', { name: /^Save 1 expense · PKR 500$/ }).click() // tap 3
     await expect(page.getByRole('dialog')).toBeHidden()
