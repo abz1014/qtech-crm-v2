@@ -23,7 +23,7 @@ on:
       viewports:
         description: Viewports as WIDTHxHEIGHT (space separated)
         required: false
-        default: 1440x900 375x812 320x640
+        default: 1440x900 1280x800 375x812 320x640
       set:
         description: "standard: the audit above. layout: admin at 768 1024 1280 1440 1600 on the layout screens and dialogs (viewports, roles and screens inputs are ignored)"
         required: false
