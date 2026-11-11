@@ -274,6 +274,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
 
       {/* With unsaved changes the bar sticks to the bottom of the screen, so Save is never a long scroll away (audit 2026-10-22). */}
       <div
+        data-sticky-bar=""
         data-save-bar
         className={cn('flex flex-wrap items-center gap-3 border-t py-3', dirty.length > 0 && 'sticky bottom-0 z-10 bg-surface')}
       >
