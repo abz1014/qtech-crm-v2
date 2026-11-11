@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSession } from '@/app/session'
-import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
-import { Ban, Camera, Check, ExternalLink, FilePlus2, History as HistoryIcon, Lock, Trash2 } from 'lucide-react'
+import { Ban, Camera, Check, ClipboardList, Ellipsis, ExternalLink, FilePlus2, History as HistoryIcon, Lock, Pencil, Printer, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, DEFAULT_ACCEPT } from '@/lib/fileIntake'
@@ -13,6 +12,9 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { FoldRow } from '@/ui/FoldRow'
+import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
+import { lazyDialog } from '@/lib/lazyDialog'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -42,6 +44,9 @@ import { pkr } from '@/features/money/expenses/model'
  * GST return may already be filed (an FBR GST payment or PSID on that month, or past the 18th of the next month) warns with a tick
  * and goes on: never a block. Delete (admin) is permanent; History shows who changed what.
  */
+// Downloaded the first time it opens (perf/lcp, lazyDialog.tsx): Print invoice is a line of the More menu here.
+const InvoicePdfDialog = lazyDialog(() => import('@/features/money/invoices/pdf/InvoicePdfDialog').then(m => m.InvoicePdfDialog))
+
 const optionalDate = z.string()
 const schema = z
   .object({
@@ -111,6 +116,8 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
     !!invoice.invoice_date && (isAdmin ? (closedQ.data ?? []).some(c => c.key === invoice.invoice_date?.slice(0, 7)) : staffClosedQ.data === true)
   const registerQ = useGstRegister()
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [printing, setPrinting] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   /** The GST return of a month may be in when an FBR payment or PSID is on it, or the 18th of the next month has gone by. */
   const gstDl = useGstDeadlines()
   const mayBeFiled = (d: string | null | undefined) => gstReturnMayBeFiled(d, today, monthHasFbrRecord(registerQ.data ?? [], d), gstDl.deadlines)
@@ -122,6 +129,9 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const filed = !!invoice.psid?.trim() || !!invoice.tax_deposited_on
   const voided = invoice.voided_at !== null
   const figuresLocked = monthClosed || filed || voided
+  // A filed invoice opens as a summary: its numbers are fixed and what is left to change (courier, receipt, notes) is one Edit away.
+  const [editing, setEditing] = useState(false)
+  const summary = filed && !editing
 
   const sf = useSubmitForm({
     schema,
@@ -220,9 +230,83 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   }
 
   const date = (name: DateField, label: string) => (
-    <FormField<Values, DateField> name={name} label={label} requirement="optional">
+    <FormField<Values, DateField> name={name} label={label}>
       {f => <DateInput name={f.name} ref={f.ref} onBlur={f.onBlur} value={f.value as string} onChange={f.onChange as (v: string) => void} defaultToday={false} />}
     </FormField>
+  )
+
+  const watched = sf.form.watch(['copyReceivedOn', 'tcsSentOn', 'clientReceivedOn', 'receiptOn', 'depositedOn', 'tcsNumber', 'psid', 'notes'])
+  const dates = watched.slice(0, 5).filter(d => typeof d === 'string' && d !== '').length
+  const detailsLine = [
+    watched[5] ? `TCS ${watched[5]}` : null,
+    watched[6] ? `PSID ${watched[6]}` : null,
+    dates > 0 ? `${dates} ${dates === 1 ? 'date' : 'dates'}` : null,
+    watched[7] ? '1 note' : 'no notes',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  /** The one menu of the footer: everything that is not the dialog's main button (Save, or Edit on a filed invoice). */
+  const more = (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="quiet" size="lg" icon={Ellipsis} className="text-base">
+          More
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent variant="menu" align="start">
+        <MenuItem icon={HistoryIcon} onClick={() => setHistoryOpen(true)}>
+          History
+        </MenuItem>
+        <MenuItem icon={Printer} onClick={() => setPrinting(true)}>
+          Print invoice
+        </MenuItem>
+        {isAdmin && invoice.number !== null ? (
+          <MenuItem icon={FilePlus2} onClick={creditNoteFlow.ask} disabled={sf.pending}>
+            Create credit note
+          </MenuItem>
+        ) : null}
+        {isAdmin && invoice.number !== null ? (
+          <MenuItem icon={Ban} danger onClick={voidFlow.ask} disabled={sf.pending}>
+            Void invoice
+          </MenuItem>
+        ) : null}
+        {isAdmin && invoice.number === null && !monthClosed ? (
+          <MenuItem icon={Trash2} danger onClick={deleteFlow.ask} disabled={sf.pending}>
+            Delete invoice
+          </MenuItem>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  )
+  const overlays = (
+    <>
+      {deleteFlow.node}
+      {voidFlow.node}
+      {creditNoteFlow.node}
+      {printing ? <InvoicePdfDialog open onOpenChange={o => !o && setPrinting(false)} invoiceId={invoice.id} /> : null}
+      {historyOpen ? (
+        <LazyHistoryPanel
+          open
+          onOpenChange={o => !o && setHistoryOpen(false)}
+          table="invoices"
+          id={invoice.id}
+          context={`${invoice.number ?? 'Invoice'}${invoice.invoice_date ? ` · ${formatDay(invoice.invoice_date)}` : ''}`}
+          imported={invoice.legacy_source !== null}
+        />
+      ) : null}
+    </>
+  )
+  const row = 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b py-2 type-body'
+  const dash = <span className="text-fg-muted">Not yet</span>
+  const day = (iso: string | null) => (iso ? <span className="num">{formatDay(iso)}</span> : dash)
+  const fact = (k: string, v: React.ReactNode, testid?: string) => (
+    <div className={row} key={k}>
+      <dt className="text-fg-2">{k}</dt>
+      <dd className="m-0 min-w-0 text-right [overflow-wrap:anywhere]" data-testid={testid}>
+        {v}
+      </dd>
+    </div>
   )
 
   if (voided) {
@@ -253,42 +337,131 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
     )
   }
 
+  const lockLine = figuresLocked ? (
+    <p className="flex items-center gap-2 py-2 text-base text-fg-2" data-testid="invoice-closed-line">
+      <Lock className="size-5 shrink-0 text-fg-muted" aria-hidden="true" />
+      {monthClosed ? (
+        <>
+          {invoice.number ?? 'This invoice'} is in a closed month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
+        </>
+      ) : (
+        <span data-testid="invoice-filed-line">
+          {invoice.number ?? 'This invoice'} has a PSID or a tax deposit recorded, so its number, date and amounts are fixed.{isAdmin ? ' To correct it, issue a credit note.' : ' An admin can issue a credit note to correct it.'}
+        </span>
+      )}
+    </p>
+  ) : null
+
+  const receiptsAndNotes = (
+    <>
+      {(creditNotes.data ?? []).length > 0 ? (
+        <section aria-label="Credit notes" className="grid" data-testid="invoice-credit-notes">
+          <h3 className="py-2 type-row">Credit notes</h3>
+          <ul className="m-0 list-none p-0">
+            {(creditNotes.data ?? []).map(n => (
+              <li key={n.id} className="flex items-center justify-between gap-3 border-b py-2 type-body">
+                <span className="min-w-0">
+                  <span className="num font-medium">{n.number}</span> · {formatDay(n.issuedOn)} · <span className="num">{pkr(n.net + n.gst)}</span> · {n.reason}
+                </span>
+                <CreditNotePdfButton creditNoteId={n.id} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section aria-label="Receipts" className="grid">
+        <div className="flex items-center gap-3 border-b py-2">
+          <h3 className="type-row">FBR receipt</h3>
+          <Button size="sm" icon={Camera} className="ml-auto" onClick={() => fileRef.current?.click()}>
+            Add receipt
+          </Button>
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" tabIndex={-1} aria-label="Receipt file" className="sr-only" onChange={e => { void addFile(e.target.files); e.target.value = '' }} />
+        </div>
+        {fileError ? <Banner tone="danger" title="That file was not added">{fileError}</Banner> : null}
+        {(receipts.data ?? []).length === 0 ? (
+          <p className="border-b py-2 type-body text-fg-muted">
+            No receipt uploaded yet. A photo or a PDF, up to 5 MB.
+            {invoice.psid?.trim() ? ' One receipt covers every invoice with this PSID.' : ''}
+          </p>
+        ) : (
+          <ul className="m-0 list-none p-0">
+            {(receipts.data ?? []).map(r => (
+              <li key={r.id} className="flex items-center justify-between gap-3 border-b py-2 type-body">
+                <button type="button" onClick={() => void open(r.path)} className="inline-flex min-w-0 items-center gap-2 text-left font-medium text-primary hover:underline">
+                  <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 [overflow-wrap:anywhere] break-all">{r.fileName}</span>
+                </button>
+                {r.invoiceId !== invoice.id ? <span className="shrink-0 text-fg-muted">same PSID</span> : null}
+                <Button size="sm" variant="quiet" aria-label={`Remove ${r.fileName}`} onClick={() => remove.mutate(r)}>
+                  Remove
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  )
+
+  const paymentsLink =
+    isAdmin && invoice.order_id ? (
+      <Link to={`/orders/${invoice.order_id}#payments`} onClick={onClose} className="mr-auto type-body font-medium text-primary underline-offset-2 hover:underline">
+        Payments on the order
+      </Link>
+    ) : null
+
+  // A filed invoice: a summary of what is on file, with Edit. Nothing is a field until Edit is tapped.
+  if (summary) {
+    const gross = net + gst
+    return (
+      <>
+        <dl className="m-0" data-testid="invoice-summary">
+          {fact('Invoice number', <span className="num">{invoice.number ?? 'No number'}</span>)}
+          {fact('Invoice date', day(invoice.invoice_date))}
+          {fact('Net', <Money value={net} />)}
+          {fact('GST', <Money value={gst} />)}
+          {fact('Gross', <Money value={gross} strong />)}
+          {fact('PSID', invoice.psid?.trim() ? <span className="num">{invoice.psid}</span> : dash)}
+          {fact('GST paid to FBR', invoice.tax_deposited_on ? <span className="num">{`${formatDay(invoice.tax_deposited_on)}${invoice.tax_deposit_amount !== null ? ` · ${pkr(Number(invoice.tax_deposit_amount))}` : ''}`}</span> : dash)}
+          {fact('Receipt received', day(invoice.wasif_receipt_on))}
+          {fact('Courier (TCS)', invoice.tcs_number || invoice.tcs_sent_on ? <span className="num">{[invoice.tcs_number, invoice.tcs_sent_on ? `posted ${formatDay(invoice.tcs_sent_on)}` : null].filter(Boolean).join(' · ')}</span> : dash)}
+          {fact('Client received', day(invoice.client_received_on))}
+          {fact('Notes', invoice.notes ? invoice.notes : <span className="text-fg-muted">None</span>)}
+        </dl>
+        {lockLine}
+        {receiptsAndNotes}
+        <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
+          {paymentsLink}
+          {more}
+          <Button variant="quiet" onClick={onClose} data-cancel>
+            Close
+          </Button>
+          <Button variant="primary" icon={Pencil} onClick={() => setEditing(true)}>
+            Edit
+          </Button>
+        </div>
+        {overlays}
+      </>
+    )
+  }
+
   return (
     <>
       {figuresLocked ? (
-      <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-panel border bg-line text-sm">
-        {[
-          ['Net', net],
-          ['GST', gst],
-          ['Gross', net + gst],
-        ].map(([k, v]) => (
-          <div key={String(k)} className="grid gap-[2px] bg-surface px-4 py-3">
-            <dt className="text-xs text-fg-muted">{k}</dt>
-            <dd>
-              <Money value={Number(v)} size="lg" />
-            </dd>
-          </div>
-        ))}
-      </dl>
+        <dl className="m-0">
+          {fact('Net', <Money value={net} />)}
+          {fact('GST', <Money value={gst} />)}
+          {fact('Gross', <Money value={net + gst} strong />)}
+        </dl>
       ) : null}
-      <Form sf={sf} labels={{ number: 'Invoice number', invoiceDate: 'Invoice date', net: 'Net amount', gst: 'GST', ack: 'The GST return warning' }} className="grid gap-5">
+      <Form sf={sf} labels={{ number: 'Invoice number', invoiceDate: 'Invoice date', net: 'Net amount', gst: 'GST', ack: 'The GST return warning' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
         {figuresLocked ? (
-          <p className="flex items-center gap-2 text-base text-fg-2" data-testid="invoice-closed-line">
-            <Lock className="size-5 shrink-0 text-fg-muted" aria-hidden="true" />
-            {monthClosed ? (
-              <>
-                {invoice.number ?? 'This invoice'} is in a closed month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
-              </>
-            ) : (
-              <span data-testid="invoice-filed-line">
-                {invoice.number ?? 'This invoice'} has a PSID or a tax deposit recorded, so its number, date and amounts are fixed.{isAdmin ? ' To correct it, issue a credit note.' : ' An admin can issue a credit note to correct it.'}
-              </span>
-            )}
-          </p>
+          lockLine
         ) : (
           <fieldset className="grid min-w-0 gap-4 md:grid-cols-2" data-testid="invoice-edit">
-            <legend className="mb-2 text-base font-semibold">Invoice</legend>
+            <legend className="mb-2 type-row">Invoice</legend>
             <FormField<Values, 'number'> name="number" label="Invoice number">
               {f => <TextField {...f} autoComplete="off" className="num" />}
             </FormField>
@@ -313,104 +486,49 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
             {sf.form.formState.errors.ack ? <p role="alert" className="text-tone-danger-fg">{sf.form.formState.errors.ack.message}</p> : null}
           </div>
         ) : null}
-        <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
-          <legend className="mb-2 text-sm font-semibold">Courier (TCS)</legend>
-          {date('copyReceivedOn', 'Copy received')}
-          {date('tcsSentOn', 'Invoice posted')}
-          <FormField<Values, 'tcsNumber'> name="tcsNumber" label="Consignment number" requirement="optional">
-            {f => <TextField {...f} autoComplete="off" className="num" />}
-          </FormField>
-          {date('clientReceivedOn', 'Client received')}
-        </fieldset>
-        <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
-          <legend className="mb-2 text-sm font-semibold">FBR</legend>
-          <FormField<Values, 'psid'> name="psid" label="PSID" requirement="optional" help={!isAdmin && invoice.psid?.trim() ? 'Change it if it was typed wrong. Only an admin can clear it.' : undefined}>
-            {f => <TextField {...f} autoComplete="off" spellCheck={false} className="num" />}
-          </FormField>
-          {date('receiptOn', 'Receipt received')}
-          {date('depositedOn', 'GST paid to FBR')}
-          <FormField<Values, 'depositAmount'> name="depositAmount" label="Deposit amount, PKR" requirement="optional" help="Defaults to the GST amount when you stamp the month.">
-            {f => <NumberInput {...f} />}
-          </FormField>
-        </fieldset>
-        <FormField<Values, 'notes'> name="notes" label="Notes" requirement="optional">
-          {f => <TextField {...f} autoComplete="off" />}
-        </FormField>
+        {/* The courier, FBR and note fields: none is required, so they are one closed row whose line says what is in them. */}
+        <FoldRow
+          state={{ icon: ClipboardList, word: '' }}
+          title="Courier, FBR and notes"
+          summary={detailsLine}
+          open={detailsOpen}
+          onToggle={() => setDetailsOpen(o => !o)}
+          controlsId="invoice-more-details"
+          bodyLabel="Courier, FBR and notes"
+        >
+          <div className="grid gap-4">
+            <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
+              <legend className="mb-2 type-row">Courier (TCS)</legend>
+              {date('copyReceivedOn', 'Copy received')}
+              {date('tcsSentOn', 'Invoice posted')}
+              <FormField<Values, 'tcsNumber'> name="tcsNumber" label="Consignment number">
+                {f => <TextField {...f} autoComplete="off" className="num" />}
+              </FormField>
+              {date('clientReceivedOn', 'Client received')}
+            </fieldset>
+            <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
+              <legend className="mb-2 type-row">FBR</legend>
+              <FormField<Values, 'psid'> name="psid" label="PSID" help={!isAdmin && invoice.psid?.trim() ? 'Change it if it was typed wrong. Only an admin can clear it.' : undefined}>
+                {f => <TextField {...f} autoComplete="off" spellCheck={false} className="num" />}
+              </FormField>
+              {date('receiptOn', 'Receipt received')}
+              {date('depositedOn', 'GST paid to FBR')}
+              <FormField<Values, 'depositAmount'> name="depositAmount" label="Deposit amount, PKR" help="Defaults to the GST amount when you stamp the month.">
+                {f => <NumberInput {...f} />}
+              </FormField>
+            </fieldset>
+            <FormField<Values, 'notes'> name="notes" label="Notes">
+              {f => <TextField {...f} autoComplete="off" />}
+            </FormField>
+          </div>
+        </FoldRow>
       </Form>
 
-      {(creditNotes.data ?? []).length > 0 ? (
-        <section aria-label="Credit notes" className="grid gap-2" data-testid="invoice-credit-notes">
-          <h3 className="text-sm font-semibold">Credit notes</h3>
-          <ul className="grid gap-1">
-            {(creditNotes.data ?? []).map(n => (
-              <li key={n.id} className="flex items-center justify-between gap-3 rounded-row border px-3 py-2 text-sm">
-                <span className="min-w-0">
-                  <span className="num font-medium">{n.number}</span> · {formatDay(n.issuedOn)} · <span className="num">{pkr(n.net + n.gst)}</span> · {n.reason}
-                </span>
-                <CreditNotePdfButton creditNoteId={n.id} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      {receiptsAndNotes}
 
-      <section aria-label="Receipts" className="grid gap-2">
-        <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold">FBR receipt</h3>
-          <Button size="sm" icon={Camera} onClick={() => fileRef.current?.click()}>
-            Add receipt
-          </Button>
-          <input ref={fileRef} type="file" accept="image/*,application/pdf" tabIndex={-1} aria-label="Receipt file" className="sr-only" onChange={e => { void addFile(e.target.files); e.target.value = '' }} />
-        </div>
-        {fileError ? <Banner tone="danger" title="That file was not added">{fileError}</Banner> : null}
-        {(receipts.data ?? []).length === 0 ? (
-          <p className="text-xs text-fg-muted">
-            No receipt uploaded yet. A photo or a PDF, up to 5 MB.
-            {invoice.psid?.trim() ? ' One receipt covers every invoice with this PSID.' : ''}
-          </p>
-        ) : (
-          <ul className="grid gap-1">
-            {(receipts.data ?? []).map(r => (
-              <li key={r.id} className="flex items-center justify-between gap-3 rounded-row border px-3 py-2 text-sm">
-                <button type="button" onClick={() => void open(r.path)} className="inline-flex min-w-0 items-center gap-2 text-left font-medium text-primary hover:underline">
-                  <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="min-w-0 [overflow-wrap:anywhere] break-all">{r.fileName}</span>
-                </button>
-                {r.invoiceId !== invoice.id ? <span className="shrink-0 text-xs text-fg-muted">same PSID</span> : null}
-                <Button size="sm" variant="quiet" aria-label={`Remove ${r.fileName}`} onClick={() => remove.mutate(r)}>
-                  Remove
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
-        {isAdmin && invoice.number === null && !monthClosed ? (
-          <Button variant="secondary" size="lg" icon={Trash2} className="min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg" onClick={deleteFlow.ask} disabled={sf.pending}>
-            Delete invoice
-          </Button>
-        ) : null}
-        {isAdmin && invoice.number !== null ? (
-          <>
-            <Button variant="secondary" size="lg" icon={FilePlus2} className="min-h-[44px] text-base" onClick={creditNoteFlow.ask} disabled={sf.pending}>
-              Create credit note
-            </Button>
-            <Button variant="secondary" size="lg" icon={Ban} className="min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg" onClick={voidFlow.ask} disabled={sf.pending}>
-              Void invoice
-            </Button>
-          </>
-        ) : null}
-        <Button variant="quiet" size="lg" icon={HistoryIcon} onClick={() => setHistoryOpen(true)} className="text-base">
-          History
-        </Button>
-        {isAdmin && invoice.order_id ? (
-          <Link to={`/orders/${invoice.order_id}#payments`} onClick={onClose} className="mr-auto text-sm font-medium text-primary underline-offset-2 hover:underline">
-            Payments on the order
-          </Link>
-        ) : null}
-        <InvoicePdfButton invoiceId={invoice.id} variant="secondary" />
+      <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
+        {paymentsLink}
+        {more}
         <Button variant="quiet" onClick={onClose} data-cancel>
           Close
         </Button>
@@ -418,19 +536,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
           {sf.failed ? 'Try again' : 'Save'}
         </Button>
       </div>
-      {deleteFlow.node}
-      {voidFlow.node}
-      {creditNoteFlow.node}
-      {historyOpen ? (
-        <LazyHistoryPanel
-          open
-          onOpenChange={o => !o && setHistoryOpen(false)}
-          table="invoices"
-          id={invoice.id}
-          context={`${invoice.number ?? 'Invoice'}${invoice.invoice_date ? ` · ${formatDay(invoice.invoice_date)}` : ''}`}
-          imported={invoice.legacy_source !== null}
-        />
-      ) : null}
+      {overlays}
     </>
   )
 }
