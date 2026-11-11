@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Ban, CircleDashed, Lock, type LucideIcon } from 'lucide-react'
 import { useFxLatest } from '@/features/rfqs/hooks'
@@ -101,39 +101,39 @@ function latestOf(shown: number, total: number): ReactNode {
  * brand and the lead time under it), the price (original currency, then the PKR value at the time), and what came of it.
  */
 const QGRID = 'md:grid-cols-[minmax(0,1fr)_minmax(0,176px)_minmax(0,176px)] md:gap-x-5'
-const QHEAD = cn('hidden border-b bg-sunken px-5 py-2 text-sm text-fg-muted md:grid', QGRID)
+const QHEAD = cn('hidden border-b px-5 py-2 text-sm text-fg-muted md:grid', QGRID)
 const QROW = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', QGRID)
 /** An engineer's quotes: what, and what came of it (no price). */
 const QGRID_NO_PRICES = 'md:grid-cols-[minmax(0,1fr)_minmax(0,176px)] md:gap-x-5'
-const QHEAD_NO_PRICES = cn('hidden border-b bg-sunken px-5 py-2 text-sm text-fg-muted md:grid', QGRID_NO_PRICES)
+const QHEAD_NO_PRICES = cn('hidden border-b px-5 py-2 text-sm text-fg-muted md:grid', QGRID_NO_PRICES)
 const QROW_NO_PRICES = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', QGRID_NO_PRICES)
 
 function PriceCell({ r }: { r: QuoteRow }) {
   const p = r.price
   if (p.state === 'hidden') {
     return (
-      <span className="inline-flex items-start gap-2 text-sm text-fg-muted md:justify-end md:text-right">
+      <span className="inline-flex items-start gap-2 text-base text-fg-muted md:justify-end md:text-right">
         <Icon icon={Lock} size="sm" className="mt-[3px]" />
         Price on file, currency unverified
       </span>
     )
   }
-  if (p.state === 'none') return <span className="text-sm text-fg-muted text-pretty">{r.pkrNote ?? '—'}</span>
+  if (p.state === 'none') return <span className="text-base text-fg-muted text-pretty">{r.pkrNote ?? '—'}</span>
   const cur = (p.amount ?? '').split(' ')[0]
   return (
     <span className="grid gap-[2px] md:justify-items-end">
       <span className="num whitespace-nowrap">
-        <span className="mr-1 font-sans text-sm text-fg-muted">{cur}</span>
+        <span className="mr-1 font-sans text-base text-fg-muted">{cur}</span>
         {p.figure}
       </span>
       {p.pkr ? (
-        <span className="num whitespace-nowrap text-sm text-fg-2">
+        <span className="num whitespace-nowrap text-base text-fg-2">
           <span className="mr-1 font-sans text-fg-muted">≈ PKR</span>
           {p.pkr}
         </span>
       ) : null}
-      {p.pkr && p.rate ? <span className="num text-xs text-fg-muted">{`at ${p.rate}`}</span> : null}
-      {!p.pkr && !p.inPkr ? <span className="text-xs text-fg-muted">No rate captured</span> : null}
+      {p.pkr && p.rate ? <span className="num text-base text-fg-muted">{`at ${p.rate}`}</span> : null}
+      {!p.pkr && !p.inPkr ? <span className="text-base text-fg-muted">No rate captured</span> : null}
     </span>
   )
 }
@@ -182,6 +182,54 @@ function ReplyLine({ reply }: { reply: ReplyFact | undefined }) {
   return <span className="num text-sm text-fg-2">{`Replied in ${reply.days === 0 ? 'under a day' : reply.days === 1 ? '1 day' : `${reply.days} days`}`}</span>
 }
 
+/**
+ * A phone's enquiry row: a hairline row, not a card. The item, then reference · date · outcome once on one line, then the price
+ * figures (always shown). Brand, lead time, notes and reply time open under "Details" on a tap.
+ */
+function QuotePhoneRow({ r, reply, prices }: { r: QuoteRow; reply: ReplyFact | undefined; prices: boolean }) {
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+  const replied = reply && !reply.legacy && reply.days !== null ? reply : undefined
+  const hasMore = Boolean(r.brand || r.imported || r.leadTime || r.itemNote || r.ago || replied)
+  return (
+    <li className="grid gap-1 border-t py-3 first:border-t-0">
+      <span className="type-row line-clamp-2 break-words" title={r.item}>
+        {r.item}
+        {r.qty ? <span className={cn('num ml-1 font-regular text-fg-muted', !r.qty.startsWith('+') && 'whitespace-nowrap')}>{r.qty.startsWith('+') ? r.qty : `×${r.qty.replace(' ', ' ')}`}</span> : null}
+      </span>
+      <span className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 text-fg-2">
+        <Link to={`/rfqs/${r.rfqId}`} className="w-fit rounded hover:underline" aria-label={`Open ${r.rfqRef}`}>
+          <Tag>{r.rfqRef}</Tag>
+        </Link>
+        <span className="num">{r.dateText}</span>
+        <OutcomeCell r={r} />
+      </span>
+      {prices ? (
+        <div className="type-body">
+          <PriceCell r={r} />
+        </div>
+      ) : null}
+      {hasMore ? (
+        <>
+          <Button variant="quiet" size="sm" className="max-md:h-touch w-fit" aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setOpen(o => !o)}>
+            {open ? 'Hide details' : 'Details'}
+          </Button>
+          {open ? (
+            <div id={panelId} className="type-body grid gap-1 text-fg-2">
+              {r.brand ? <span>{r.brand}</span> : null}
+              {r.imported ? <span>Imported</span> : null}
+              {r.leadTime ? <span className="text-pretty">Lead time: {r.leadTime}</span> : null}
+              {r.itemNote ? <span>{r.itemNote}</span> : null}
+              {r.ago ? <span className="text-tone-warning-fg">{r.ago}</span> : null}
+              <ReplyLine reply={reply} />
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </li>
+  )
+}
+
 const ENQUIRY_ROWS_FIRST = 5
 
 /**
@@ -204,10 +252,12 @@ export function RecentQuotes({
   replies?: ReadonlyMap<string, ReplyFact>
 }) {
   const prices = useSeesPrices()
+  const wide = useMediaQuery('(min-width: 768px)')
   const [all, setAll] = useState(false)
   const rows = view ? (all ? view.allQuotes : view.allQuotes.slice(0, ENQUIRY_ROWS_FIRST)) : []
   return (
     <Panel
+      flat
       title="Enquiries"
       info={
         prices ? (
@@ -229,13 +279,18 @@ export function RecentQuotes({
         <p className="px-5 py-6 text-sm text-fg-muted">No enquiry asked of them yet.</p>
       ) : (
         <div>
-          <div className={prices ? QHEAD : QHEAD_NO_PRICES} aria-hidden="true">
-            <span>Item</span>
-            {prices ? <span className="text-right">Quoted price</span> : null}
-            <span>Outcome</span>
-          </div>
+          {wide ? (
+            <div className={prices ? QHEAD : QHEAD_NO_PRICES} aria-hidden="true">
+              <span>Item</span>
+              {prices ? <span className="text-right">Quoted price</span> : null}
+              <span>Outcome</span>
+            </div>
+          ) : null}
           <ul>
-            {rows.map(r => (
+            {rows.map(r =>
+              !wide ? (
+                <QuotePhoneRow key={r.key} r={r} reply={replies?.get(r.inquiryId)} prices={prices} />
+              ) : (
               <li key={r.key} className={prices ? QROW : QROW_NO_PRICES}>
                 <div className="col-span-2 grid content-start gap-1 md:col-span-1">
                   <ItemCell r={r} />
@@ -252,10 +307,11 @@ export function RecentQuotes({
                   <OutcomeCell r={r} />
                 </div>
               </li>
-            ))}
+              ),
+            )}
           </ul>
           {view.allQuotes.length > ENQUIRY_ROWS_FIRST ? (
-            <div className="border-t px-5 py-2">
+            <div className="border-t py-2">
               <Button variant="quiet" size="sm" className="max-md:h-touch" aria-expanded={all} onClick={() => setAll(a => !a)}>
                 {all ? 'Show the latest 5' : `Show all ${view.allQuotes.length}`}
               </Button>
@@ -270,7 +326,7 @@ export function RecentQuotes({
 // ------------------------------------------------------------------------------------------------ deliveries
 
 const DGRID = 'md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] md:gap-x-5'
-const DHEAD = cn('hidden border-b bg-sunken px-5 py-2 text-sm text-fg-muted md:grid', DGRID)
+const DHEAD = cn('hidden border-b px-5 py-2 text-sm text-fg-muted md:grid', DGRID)
 const DROW = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', DGRID)
 
 /** A delivery's result as status text: a history fact ("Delivered 6 days late"), late in red only while it is still not delivered. */
@@ -290,6 +346,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
   const wide = useMediaQuery('(min-width: 768px)')
   return (
     <Panel
+      flat
       title="Deliveries"
       info={
         <InfoTip label="About the dates">
@@ -374,7 +431,7 @@ function DateText({ iso, today, estimated }: { iso: string | null; today: string
 export function OpenWithThem({ view, loading, error, onRetry }: { view: SupplierRecord | null; loading: boolean; error: boolean; onRetry: () => void }) {
   const row = 'flex items-baseline justify-between gap-4 border-t py-2 text-sm first:border-t-0'
   return (
-    <Panel title="Open with them">
+    <Panel flat title="Open with them">
       <div className="px-5 py-3">
         {loading ? (
           <div role="status" className="grid gap-2" aria-busy="true" aria-label="Loading what is open with them">

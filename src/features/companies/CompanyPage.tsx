@@ -301,7 +301,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   ) : null
   const detailsPanel = <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} />
   const notesPanel = company.notes ? (
-    <Panel title="Notes">
+    <Panel flat title="Notes">
       <p className="whitespace-pre-line px-5 py-4 text-base text-fg-2">{company.notes}</p>
     </Panel>
   ) : null
@@ -309,7 +309,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const sidePanels = (
     <>
       {isAdmin && money.data && money.data.orders > 0 ? (
-        <Panel title="Money with them">
+        <Panel flat title="Money with them">
           <div className="px-5 py-3">
             <KeyValue
               rows={[
@@ -399,7 +399,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
         {recordHistory.node}
 
         {wide ? (
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div data-work className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div className="grid min-w-0 gap-6">
               {supplierPanel}
               {supplierOnly ? moreAbout : sitesPanel}
@@ -412,7 +412,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
           </div>
         ) : (
           // Below 1024 one column, in the order a phone needs it: who to call, what is open, the history, then the rest.
-          <div className="grid min-w-0 gap-6">
+          <div data-work className="grid min-w-0 gap-6">
             {contactsPanel}
             {openPanel}
             {supplierPanel}
@@ -490,6 +490,7 @@ function ContactsPanel({
   }
   return (
     <Panel
+      flat
       title="Contacts"
       actions={
         <Button variant="quiet" size="sm" icon={Plus} onClick={onAdd}>
@@ -589,13 +590,13 @@ function PhoneLinks({ name, phone }: { name: string; phone: string }) {
  */
 function MoreAbout({ children, defaultOpen = false }: { children: ReactNode; defaultOpen?: boolean }) {
   return (
-    <details className="group rounded-panel border bg-surface" open={defaultOpen || undefined}>
-      <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded px-5 py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
+    <details className="group border-t" open={defaultOpen || undefined}>
+      <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
         <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90" />
         More about this supplier
         <span className="text-sm font-regular text-fg-muted">Sites, brands, details</span>
       </summary>
-      <div className="grid gap-6 border-t p-4">{children}</div>
+      <div className="grid gap-6 border-t py-4">{children}</div>
     </details>
   )
 }
@@ -641,7 +642,7 @@ function DetailsPanel({ company, customerSince, brands }: { company: CompanyDeta
   const tax = company.isCustomer
   if (rows.length === 0 && !brands && !tax) return null
   return (
-    <Panel title="Details">
+    <Panel flat title="Details">
       <div className="grid gap-3 px-5 py-3">
         {rows.length > 0 ? <KeyValue rows={rows} /> : null}
         {tax ? <TaxDetails companyId={company.id} divided={rows.length > 0} /> : null}
