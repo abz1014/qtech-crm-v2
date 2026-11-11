@@ -275,7 +275,9 @@ test.describe('comparison', () => {
       { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[0].id, unit_price: 1, currency: 'CNY' },
     ] }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await expect(page.getByRole('article', { name: 'Item 1' }).getByText('2 prices so far', { exact: true })).toBeVisible()
+    // "Priced" is said once, on each supplier's row: the item shows its two price rows and no count chip
+    await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-price-row]')).toHaveCount(2)
+    await expect(page.getByRole('article', { name: 'Item 1' }).getByText('2 prices so far', { exact: true })).toHaveCount(0)
     await expect(page.locator('[data-lowest], [data-recommended]')).toHaveCount(0)
   })
 
@@ -494,7 +496,8 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const one = page.getByRole('article', { name: 'Item 1' })
-    await expect(one.getByText('1 price so far', { exact: true })).toBeVisible()
+    await expect(one.locator('[data-price-row]')).toHaveCount(1)
+    await expect(one.getByText('1 price so far', { exact: true })).toHaveCount(0) // said once, on the supplier's row
     await expect(one.locator(`[data-waiting~="${s.china.id}"]`)).toHaveText('Waiting on 2 suppliers') // China and Germany, one line
     // A price is in: Issue quotation is the green button.
     await expect(page.getByRole('button', { name: 'Send quotation', exact: true })).toBeVisible()
@@ -504,7 +507,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
       { inquiry_id: s.germany.inquiryId, rfq_item_id: s.items[1].id, unit_price: 5, currency: 'EUR' },
     ] }))
     await page.reload()
-    await expect(page.getByRole('article', { name: 'Item 1' }).getByText('1 price', { exact: true })).toBeVisible()
+    await expect(page.getByRole('article', { name: 'Item 1' }).getByText('1 price', { exact: true })).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-waiting]')).toHaveCount(0)
   })
 
@@ -665,7 +668,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     const s = await seed({ brand: true })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const rail = page.locator('[data-slot="suppliers-asked"]')
-    await expect(rail).toContainText('3 asked · 0 replied')
+    await expect(rail.locator('[data-supplier-asked]')).toHaveCount(3)
     const usd = rail.locator(`[data-supplier-asked="${s.usd.id}"]`)
     await expect(usd).toContainText(/Asked (once|twice), 1 reply\. Not enough history to say more\./)
     await expect(usd).toContainText('Asked ')
@@ -688,7 +691,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     const made = await must(rest<{ sent_on: string | null; id: string }[]>('admin', `supplier_inquiries?rfq_id=eq.${s.rfq.id}&supplier_id=eq.${s.carrier!.id}&select=id,sent_on`))
     expect(made).toHaveLength(1)
     expect(made[0].sent_on).toBe(today())
-    await expect(rail).toContainText('4 asked')
+    await expect(rail.locator('[data-supplier-asked]')).toHaveCount(4)
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect.poll(async () => (await must(rest<unknown[]>('admin', `supplier_inquiries?rfq_id=eq.${s.rfq.id}&supplier_id=eq.${s.carrier!.id}&select=id`))).length).toBe(0)
   })

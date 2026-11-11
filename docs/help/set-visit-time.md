@@ -6,7 +6,7 @@ keywords: visit, type, installation, survey, service, site, commissioning, date
 screens: /jobs
 related: change-planned-date
 ---
-1. Open the order. Engineers tap [Visit type]. Admin and sales tap [Edit] under Commissioning.
+1. Open the order. Engineers tap [Visit type]. Admin and sales open the Commissioning row in the Delivery step and tap [Edit].
 2. Choose the type: Installation, Survey or Service. A visit has a date and a type, no time of day.
 3. Tap [Save].
 

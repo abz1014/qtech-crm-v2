@@ -28,16 +28,16 @@ function ChooseSuppliers({ order, items, legs }: { order: OrderHeader; items: re
   const unsourced = items.filter(i => !i.isService && !i.legId)
   if (unsourced.length === 0) return null
   return (
-    <section aria-label="Lines with no supplier" className="rounded-panel border bg-surface" data-slot="choose-supplier">
-      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-        <h3 className="text-base font-semibold">{unsourced.length === 1 ? '1 line has no supplier' : `${unsourced.length} lines have no supplier`}</h3>
+    <section aria-label="Lines with no supplier" className="min-w-0" data-slot="choose-supplier">
+      <div className="flex flex-wrap items-center gap-3 border-b py-2">
+        <h3 className="type-row">{unsourced.length === 1 ? '1 line has no supplier' : `${unsourced.length} lines have no supplier`}</h3>
         <Button size="sm" icon={Plus} className="ml-auto" onClick={() => setAdding(true)}>
           Add supplier
         </Button>
       </div>
-      <ul className="divide-y">
+      <ul>
         {unsourced.map(it => (
-          <li key={it.id} className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] sm:items-center">
+          <li key={it.id} className="grid gap-2 border-b py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] sm:items-center">
             <span className="min-w-0 text-base [overflow-wrap:anywhere]">
               <span className="font-medium">{it.description}</span> <span className="num text-fg-muted">{`× ${it.qty}`}</span>
             </span>

@@ -23,38 +23,40 @@ import { companyProfileQuery } from '@/features/settings/hooks'
  * every goods line at its full quantity; untick a line or lower a quantity for a part delivery. Where it goes starts as the site and can be
  * changed. Any role may issue one (an engineer takes the goods to site); the paper has no price on it.
  */
-export function ChallansPanel({ order, items }: { order: OrderHeader; items: readonly OrderItemRow[] }) {
+export function ChallansPanel({ order, items, inFold = false }: { order: OrderHeader; items: readonly OrderItemRow[]; /** Drawn inside a FoldRow named "Delivery challans" (the job page's Delivery step): no region or heading of its own. */ inFold?: boolean }) {
   const challans = useOrderChallans(order.id)
   const [making, setMaking] = useState(false)
   const cancelled = order.cancelledOn !== null
   const hasGoods = items.some(i => !i.isService)
   const rows = challans.data ?? []
+  const canNew = !cancelled && hasGoods
+  const Wrap = inFold ? 'div' : 'section'
 
   return (
-    <section aria-label="Delivery challans" className="min-w-0 rounded-panel border bg-surface" data-testid="challans">
-      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-5">
-        <h2 className="text-base font-semibold">Delivery challans</h2>
-        {!cancelled && hasGoods ? (
-          <Button size="sm" variant="quiet" icon={Plus} className="ml-auto" onClick={() => setMaking(true)}>
-            New challan
-          </Button>
-        ) : null}
-      </div>
-      <div className="grid gap-3 px-4 py-4 md:px-5">
-        {challans.isError ? <p className="text-sm text-fg-muted">The challans did not load. Reload the page to try again.</p> : null}
-        {!challans.isError && !challans.isLoading && rows.length === 0 ? (
-          <p className="text-sm text-fg-muted">{hasGoods ? 'None issued yet. A challan lists the goods and quantities delivered, with no prices.' : 'This order has no goods to deliver.'}</p>
-        ) : null}
-        {rows.length > 0 ? (
-          <ul className="grid gap-2" aria-label="Challans issued for this order">
-            {rows.map(c => (
-              <ChallanItem key={c.id} order={order} challan={c} />
-            ))}
-          </ul>
-        ) : null}
-      </div>
+    <Wrap aria-label={inFold ? undefined : 'Delivery challans'} className="min-w-0" data-testid="challans">
+      {!inFold || canNew ? (
+        <div className="flex flex-wrap items-center gap-3 border-b py-2">
+          {inFold ? null : <h2 className="type-section">Delivery challans</h2>}
+          {canNew ? (
+            <Button size="sm" variant="quiet" icon={Plus} className="ml-auto" onClick={() => setMaking(true)}>
+              New challan
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {challans.isError ? <p className="border-b py-2 type-body text-fg-muted">The challans did not load. Reload the page to try again.</p> : null}
+      {!challans.isError && !challans.isLoading && rows.length === 0 ? (
+        <p className="border-b py-2 type-body text-fg-muted">{hasGoods ? 'None issued yet. A challan lists the goods and quantities delivered, with no prices.' : 'This order has no goods to deliver.'}</p>
+      ) : null}
+      {rows.length > 0 ? (
+        <ul className="m-0 list-none p-0" aria-label="Challans issued for this order">
+          {rows.map(c => (
+            <ChallanItem key={c.id} order={order} challan={c} />
+          ))}
+        </ul>
+      ) : null}
       {making ? <NewChallanDialog order={order} items={items} onClose={() => setMaking(false)} /> : null}
-    </section>
+    </Wrap>
   )
 }
 
@@ -82,7 +84,7 @@ function useChallanDownload(order: OrderHeader) {
 function ChallanItem({ order, challan }: { order: OrderHeader; challan: ChallanRow }) {
   const file = useChallanDownload(order)
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border px-3 py-3" data-challan={challan.number}>
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b py-3" data-challan={challan.number}>
       <span className="num text-sm font-medium">{challan.number}</span>
       <span className="num text-sm text-fg-muted">{formatDay(challan.issuedOn)}</span>
       <span className="text-sm text-fg-muted">{challan.lines.length === 1 ? '1 line' : `${challan.lines.length} lines`}</span>

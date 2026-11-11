@@ -139,7 +139,7 @@ describe('the supplier comparison', () => {
     expect(screen.queryByRole('button', { name: /Add reply|Enter reply|Can't quote/ })).toBeNull()
     const art = screen.getByRole('article', { name: 'Item 1' })
     expect(within(art).getByText('Keller GmbH')).toBeInTheDocument() // one supplier: named
-    expect(within(art).getByText('1 price so far')).toBeInTheDocument()
+    expect(within(art).queryByText('1 price so far')).toBeNull() // "Priced" is said once, on the supplier's row (Suppliers asked), not again on the item
     cleanup()
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), waiting, other])
     const two = screen.getByRole('article', { name: 'Item 1' })

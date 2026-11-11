@@ -6,7 +6,7 @@ keywords: challan, delivery, dispatch, goods, received, signature, DC, part deli
 screens: /jobs
 related: add-a-visit
 ---
-1. Open the order and find Delivery challans.
+1. Open the job. Admin and sales: tap Delivery, then the Challans row. Engineers find Delivery challans on their job page.
 2. Tap [New challan]. Every goods line is ticked at its full quantity.
 3. For a part delivery, untick a line or lower its quantity.
 4. Check where it goes, then tap [Issue and download]. The challan gets the next DC number and downloads as a PDF.
