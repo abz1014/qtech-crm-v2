@@ -19,7 +19,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
-import { ReportError, Panel } from '@/features/money/monthEnd/ReportParts'
+import { ReportError } from '@/features/money/monthEnd/ReportParts'
 import { closeWindowDay, formatClosedAt, formatClosedDay } from '@/features/money/monthEnd/format'
 import { closeButtonLabel, closedThrough, closeNeedsMove, closeTarget, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
 
@@ -70,7 +70,10 @@ export function ChecklistPage() {
 
       {isClosed ? <LockBar month={ctx.month} /> : null}
       {/* 0087 (A9, owner: yes): cash in hand, with Count cash, so a missing small cash expense shows before the month is locked */}
-      <CashInHandLine />
+      {/* Desktop: one line under the pager, not a box of its own (the box is CashInHand's own panel; only its frame is dropped here). */}
+      <div className="md:[&>section]:rounded-none md:[&>section]:border-x-0 md:[&>section]:border-t-0 md:[&>section]:bg-transparent md:[&>section]:px-0">
+        <CashInHandLine />
+      </div>
 
       {ctx.statusError ? (
         <ReportError title="The checklist did not load" onRetry={ctx.refetch} />
@@ -164,7 +167,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   return (
     <section
       aria-label={`${monthKeyLabel(ctx.month)} summary`}
-      className="grid items-center gap-x-8 gap-y-4 rounded-panel border bg-surface px-6 py-5 md:grid-cols-[minmax(0,1fr)_auto]"
+      className="grid items-center gap-x-8 gap-y-4 rounded-panel border bg-surface px-6 py-5 md:grid-cols-[minmax(0,1fr)_auto] md:rounded-none md:border-x-0 md:border-t-0 md:bg-transparent md:px-0 md:py-4"
     >
       <div className="grid gap-1">
         {/* No chip in the heading (spec 1.2): the month's state is the Closed chip beside the pager and the lock bar. */}
@@ -182,7 +185,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
         {state?.kind === 'open' && target !== ctx.month ? (
           // One month at a time (owner decision 2026-10-22): an older open month is closed first, and the button names it.
           <span className="text-sm text-fg-2" data-testid="close-order">
-            {monthKeyLabel(target)} is still open and has to be closed before {name}. The green button takes you there.
+            {monthKeyLabel(target)} is still open and has to be closed before {name}.
           </span>
         ) : null}
         {closed && ctx.closedEntry ? (
@@ -225,10 +228,10 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
   return (
     <section aria-label="Checklist" className="grid gap-2">
       {rows.length > 0 ? (
-        <ul className="grid overflow-hidden rounded-panel border bg-surface">
+        <ul className="grid overflow-hidden rounded-panel border bg-surface md:overflow-visible md:rounded-none md:border-x-0 md:bg-transparent">
           {rows.map(r => (
             <li key={r.key} data-testid={`check-${r.key}`} className="border-t first:border-t-0">
-              <Link to={r.to} className="grid min-h-[64px] grid-cols-[4px_minmax(0,1fr)_auto] items-center gap-4 pr-4 hover:bg-sunken md:grid-cols-[4px_minmax(0,1fr)_auto_auto]">
+              <Link to={r.to} className="grid min-h-[64px] grid-cols-[4px_minmax(0,1fr)_auto] items-center gap-4 pr-4 hover:bg-sunken md:grid-cols-[4px_minmax(0,1fr)_auto_auto] md:pr-0">
                 <i aria-hidden="true" className="self-stretch bg-tone-warning-fg" />
                 <span className="grid min-w-0 gap-1 py-3">
                   <span className="flex flex-wrap items-baseline gap-x-2 text-base font-medium">
@@ -287,14 +290,18 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
   // month to reopen before them, so nobody meets the database's refusal.
   const latest = ctx.closed.reduce<string | null>((m, c) => (m === null || c.key > m ? c.key : m), null)
   return (
-    <Panel title="Closed months" meta={through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null}>
+    <section className="overflow-hidden rounded-panel border bg-surface md:overflow-visible md:rounded-none md:border-x-0 md:bg-transparent">
+      <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b px-5 py-2 md:px-0">
+        <h2 className="min-w-0 text-base font-semibold">Closed months</h2>
+        {through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null}
+      </header>
       {/* Closed months only (an open month here contradicted the title); the month on screen says Open or Closed above. */}
       <ul aria-label="Closed months">
         {shown.map(c => (
           <li
             key={c.key}
             data-testid={`closed-${c.key}`}
-            className={cn('grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 border-t px-5 py-3 text-sm first:border-t-0', c.key === ctx.month && 'bg-selected')}
+            className={cn('grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 border-t px-5 py-3 text-sm first:border-t-0 md:px-0', c.key === ctx.month && 'bg-selected')}
           >
             <Icon icon={Lock} size="md" className="text-fg-muted" />
             <span className="grid min-w-0">
@@ -316,16 +323,16 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
             )}
           </li>
         ))}
-        {ctx.closed.length === 0 ? <li className="px-5 py-4 text-sm text-fg-2">None closed yet.</li> : null}
+        {ctx.closed.length === 0 ? <li className="px-5 py-4 text-sm text-fg-2 md:px-0">None closed yet.</li> : null}
       </ul>
       {ctx.closed.length > 4 ? (
-        <div className="border-t px-5 py-2">
+        <div className="border-t px-5 py-2 md:px-0">
           <Button size="sm" variant="quiet" onClick={() => setAll(a => !a)}>
             {all ? 'Show fewer' : `Show all ${ctx.closed.length} closed months`}
           </Button>
         </div>
       ) : null}
-    </Panel>
+    </section>
   )
 }
 

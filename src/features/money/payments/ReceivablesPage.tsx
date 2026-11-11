@@ -259,6 +259,7 @@ export function ReceivablesPage() {
         <div className="min-w-0">
           <DataTable
             label={tabLabel}
+            className="md:rounded-none md:border-x-0"
             columns={columns}
             rows={shown}
             getRowId={r => r.orderId}

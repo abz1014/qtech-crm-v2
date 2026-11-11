@@ -327,6 +327,7 @@ export function GstRegisterPage() {
 
       <DataTable
         label="GST register"
+        className="md:rounded-none md:border-x-0"
         sortParam="sort"
         columns={columns}
         rows={shown}
