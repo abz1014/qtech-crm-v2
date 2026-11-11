@@ -242,6 +242,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
                   type="button"
                   aria-expanded={false}
                   data-block-closed={id}
+                  data-work={n === 0 ? '' : undefined}
                   onClick={() => toggleBlock(id, false)}
                   className={cn('type-section mx-2 mb-3 flex min-h-touch items-center gap-2 rounded-panel px-4 py-2 text-left first:mt-1 md:mx-3', BLOCK[id])}
                 >
@@ -252,7 +253,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
               )
             }
             return (
-              <section key={`${id}-${n}`} aria-label={title} data-block={id} className={cn('mx-2 mb-3 rounded-panel px-3 py-2 first-of-type:mt-1 md:mx-3', BLOCK[id])}>
+              <section key={`${id}-${n}`} aria-label={title} data-block={id} data-work={n === 0 ? '' : undefined} className={cn('mx-2 mb-3 rounded-panel px-3 py-2 first-of-type:mt-1 md:mx-3', BLOCK[id])}>
                 <h2 className="type-section">
                   {foldable ? (
                     <button type="button" aria-expanded={true} onClick={() => toggleBlock(id, true)} className="flex min-h-touch w-full items-center gap-2 text-left">
