@@ -4,6 +4,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useMiscSuggestions, usePromoteMiscTitle } from '@/features/money/expenses/hooks'
 import type { MiscSuggestion } from '@/features/money/expenses/api'
 import { pkr } from '@/features/money/expenses/model'
@@ -17,11 +18,12 @@ import { pkr } from '@/features/money/expenses/model'
 export function MiscPromoteBanners() {
   const q = useMiscSuggestions()
   const [hidden, setHidden] = useState<readonly string[]>([])
+  const phone = useMediaQuery('(max-width: 639px)')
   const shown = (q.data ?? []).filter(s => !hidden.includes(key(s)))
   if (shown.length === 0) return null
   return (
     <section aria-label="One-off titles that keep coming back" className="grid gap-3" data-testid="misc-promote">
-      {shown.slice(0, 3).map(s => (
+      {shown.slice(0, phone ? 1 : 3).map(s => (
         <Suggestion key={key(s)} s={s} onHide={() => setHidden(h => [...h, key(s)])} />
       ))}
     </section>
@@ -48,9 +50,9 @@ function Suggestion({ s, onHide }: { s: MiscSuggestion; onHide: () => void }) {
     )
   }
   return (
-    <div className="grid gap-3 rounded-row border border-tone-info-fg/25 bg-tone-info-bg px-4 py-3 text-base" data-testid="misc-promote-item">
+    <div className="grid gap-2 border-b py-2 text-base" data-testid="misc-promote-item">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Icon icon={Lightbulb} className="text-tone-info-fg" />
+        <Icon icon={Lightbulb} className="text-fg-muted" />
         <p className="min-w-0 flex-1">
           <b className="font-semibold">‘{s.title}’</b> used {s.uses} times ({pkr(s.spent)}): make it a category?
         </p>

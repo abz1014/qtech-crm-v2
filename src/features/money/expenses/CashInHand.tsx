@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { ArrowDownToLine, Calculator, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
@@ -6,6 +6,8 @@ import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { FoldRow } from '@/ui/FoldRow'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
 import { useToast } from '@/ui/useToast'
@@ -21,14 +23,65 @@ import type { CashInHand as CashState } from '@/features/money/expenses/claimsAp
  * over). "Cash drawn" records cash taken from the bank into the box (not an expense). The first count is the opening balance.
  * Shown on Expenses and on Lock a month. 16 px text, 44 px taps.
  */
-export function CashInHandLine({ compact = false }: { compact?: boolean }) {
+export function CashInHandLine({ compact = false, fold = false }: { compact?: boolean; fold?: boolean }) {
   const q = useCashInHand()
+  const phone = useMediaQuery('(max-width: 639px)')
+  const [open, setOpen] = useState(false)
+  const foldId = useId()
   const [counting, setCounting] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const c = q.data
   if (q.isPending) return <div className="h-[60px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />
   if (q.isError || !c) return null
   const none = c.kind === 'none' || c.expected === null
+  // `fold` (the Expenses page) on a phone: ONE line. Not set up: the words and the action. Set up: the figure on the line, the buttons under a tap.
+  if (fold && phone) {
+    const actions = (
+      <>
+        {counting ? <CountDialog state={c} onClose={() => setCounting(false)} /> : null}
+        {drawing ? <TopupDialog onClose={() => setDrawing(false)} /> : null}
+      </>
+    )
+    if (none)
+      return (
+        <section aria-label="Cash in hand" data-testid="cash-in-hand" className="flex min-h-touch items-center gap-3 border-b py-1">
+          <Icon icon={Wallet} className="text-fg-muted" />
+          <span className="type-body min-w-0 flex-1">
+            <b className="font-semibold">Cash in hand</b> is not set up
+          </span>
+          <Button size="touch" variant="quiet" onClick={() => setCounting(true)} className="text-base">
+            Set opening cash
+          </Button>
+          {actions}
+        </section>
+      )
+    const diff = c.kind === 'count' && c.lastDifference !== null && c.lastDifference !== 0 ? ` (${c.lastDifference < 0 ? 'short' : 'over'} ${pkr(Math.abs(c.lastDifference))})` : ''
+    return (
+      <section aria-label="Cash in hand" data-testid="cash-in-hand">
+        <FoldRow
+          state={{ icon: Wallet, word: 'Cash' }}
+          title="Cash in hand"
+          summary={`${pkr(c.expected ?? 0)} expected · ${c.kind === 'opening' ? 'opening' : 'counted'} ${c.baseOn ? formatShortDate(c.baseOn, businessToday()) : ''}${diff}`}
+          open={open}
+          onToggle={() => setOpen(o => !o)}
+          controlsId={foldId}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="touch" icon={ArrowDownToLine} onClick={() => setDrawing(true)} className="text-base">
+              Cash drawn
+            </Button>
+            <Button size="touch" icon={Calculator} onClick={() => setCounting(true)} className="text-base">
+              Count cash
+            </Button>
+            <InfoTip label="How cash in hand is worked out">
+              {`${c.kind === 'opening' ? 'Opening balance' : 'Last count'} ${pkr(c.base)} + cash drawn from the bank since ${pkr(c.topups)} (${c.topupCount}) - cash expenses since ${pkr(c.cashOut)} (${c.cashOutCount}) = ${pkr(c.expected ?? 0)}. Cash drawn from the bank is not an expense.`}
+            </InfoTip>
+          </div>
+        </FoldRow>
+        {actions}
+      </section>
+    )
+  }
   return (
     <section
       aria-label="Cash in hand"

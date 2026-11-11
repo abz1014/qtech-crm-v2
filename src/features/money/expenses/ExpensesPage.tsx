@@ -63,11 +63,14 @@ export function ExpensesPage() {
         </Button>
       }
     >
-      {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
-      <OwedToStaff />
       {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
-      <MiscPromoteBanners />
-      <CashInHandLine />
+      {/* One quiet line each (a phone folds them): what needs the admin, with its figure on the line. */}
+      <div className="grid gap-0 empty:hidden">
+        {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
+        <OwedToStaff />
+        <CashInHandLine fold />
+        <MiscPromoteBanners />
+      </div>
       <ExpensesTab />
       <BurstSheet
         open={burst}

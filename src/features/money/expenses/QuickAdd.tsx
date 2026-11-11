@@ -1,11 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState, type SelectHTMLAttributes } from 'react'
-import { Camera, Check, ChevronDown, CircleAlert, X } from 'lucide-react'
+import { Camera, Check, ChevronDown, ChevronRight, CircleAlert, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { PaidByToggle } from '@/features/money/expenses/PaidByToggle'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
@@ -30,6 +31,7 @@ import {
   miscFor,
   monthKey,
   monthKeyLabel,
+  monthKeyShort,
   needsTitle,
   pkr,
   sortGroups,
@@ -37,6 +39,7 @@ import {
   type PaidVia,
 } from '@/features/money/expenses/model'
 import { forMonthHelp } from '@/features/money/expenses/forMonth'
+import { formatShortDate } from '@/lib/formatDay'
 import { AMOUNT_ABOVE_ZERO, pickableCategories, quickInsert, quickProblem, sessionTotal, topCategories } from '@/features/money/expenses/quick'
 
 /*
@@ -94,6 +97,8 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   const [problem, setProblem] = useState<string | null>(null)
   const [saved, setSaved] = useState<{ amount: number }[]>([])
   const [busy, setBusy] = useState(false)
+  /** The one line under Save opens Paid by, date, detail, receipt and GST. An Other (it needs its title) and a title error keep it open. */
+  const [extrasOpen, setExtrasOpen] = useState(false)
   /** Bumped after each Save: the effect below puts the focus back on the (fresh) amount box once it is in the page. */
   const [refocus, setRefocus] = useState(0)
   const amountRef = useRef<HTMLInputElement | null>(null)
@@ -215,16 +220,32 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
     }
   }
 
+  const showExtras = extrasOpen || isOther || !!titleError
+  const extrasId = `${uid}-extras`
+  const dayLabel = paidOn === today ? 'Today' : formatShortDate(paidOn, today)
+  const detailWords = detail.trim()
+  // The values the closed line stands for: always on the page, never behind the tap.
+  const extrasLine = [
+    dayLabel,
+    paidVia === 'cash' ? 'Cash' : 'Bank',
+    period ? `For ${monthKeyShort(period).split(' ')[0]}` : null,
+    photo && !photo.error ? 'Receipt added' : 'No receipt',
+    hasGst ? `GST ${pkr(tax ?? 0)}` : 'No GST',
+    detailWords ? `“${detailWords.length > 18 ? `${detailWords.slice(0, 17)}…` : detailWords}”` : null,
+  ].filter(Boolean)
   const here = sessionTotal(saved)
   const paidThisMonth = month.data ? listTotals(month.data.rows).total : null
 
   return (
-    <section aria-labelledby={`${uid}-h`} className="grid gap-4 rounded border bg-surface p-4 md:p-5" data-testid="quick-add">
+    <section aria-labelledby={`${uid}-h`} className="grid gap-3 border-b pb-3 md:gap-4 md:rounded md:border md:bg-surface md:p-5" data-testid="quick-add" data-work="">
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id={`${uid}-h`} className="text-lg font-semibold">
+        <h2 id={`${uid}-h`} className="type-section">
           Quick add
+          <InfoTip label="Paying a supplier?" className="ml-2">
+            Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
+          </InfoTip>
         </h2>
-        <p className="text-base text-fg-2" aria-live="polite" data-testid="quick-total">
+        <p className="type-body text-fg-2" aria-live="polite" data-testid="quick-total">
           {here.count > 0 ? (
             <>
               Added here: <b className="num font-semibold text-fg">{here.count}</b>, <span className="num">{pkr(here.total)}</span>
@@ -240,41 +261,47 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
       </header>
 
       <form
-        className="grid gap-4"
+        className="grid gap-3"
         autoComplete="off"
         onSubmit={e => {
           e.preventDefault()
           void save()
         }}
       >
-        <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
           <div className="grid content-start gap-2">
             {/* Words of their own (Amount (PKR), Paid on, Has a GST invoice): the Add expense dialog over this screen says
                 Amount, PKR and Date paid, and one name must find one field. */}
-            <label htmlFor={`${uid}-amount`} className="text-base font-medium">
+            <label htmlFor={`${uid}-amount`} className="type-body font-medium">
               Amount (PKR)
             </label>
-            <NumberInput
-              // a fresh field per entry: the box is empty again after Save even though it gets the focus at once
-              key={entryId}
-              id={`${uid}-amount`}
-              ref={amountRef}
-              value={amount}
-              min={0.01}
-              inputMode="decimal"
-              enterKeyHint="done"
-              placeholder="0"
-              onChange={v => {
-                setAmount(v)
-                setProblem(null)
-              }}
-              className="num h-12 text-xl font-medium"
-            />
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <NumberInput
+                  // a fresh field per entry: the box is empty again after Save even though it gets the focus at once
+                  key={entryId}
+                  id={`${uid}-amount`}
+                  ref={amountRef}
+                  value={amount}
+                  min={0.01}
+                  inputMode="decimal"
+                  enterKeyHint="done"
+                  placeholder="0"
+                  onChange={v => {
+                    setAmount(v)
+                    setProblem(null)
+                  }}
+                  className="num h-12 text-xl font-medium"
+                />
+              </div>
+              <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="h-12 min-w-[112px] text-base">
+                Save
+                <span className="sr-only"> this expense</span>
+              </Button>
+            </div>
           </div>
           <fieldset className="grid min-w-0 gap-2">
-            <legend className="mb-2 text-base font-medium">
-              What for <span className="font-regular text-fg-muted">· used most first</span>
-            </legend>
+            <legend className="sr-only">What for, used most first</legend>
             <div className="flex flex-wrap gap-2">
               {top.map(c => (
                 <button
@@ -309,14 +336,14 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
               </QuickSelect>
             </div>
             <div className="grid gap-2" data-testid="quick-find">
-              <label htmlFor={`${uid}-find`} className="text-base text-fg-2">
+              <label htmlFor={`${uid}-find`} className="sr-only">
                 Or type what it was
               </label>
               <input
                 id={`${uid}-find`}
                 value={typed}
                 maxLength={80}
-                placeholder="e.g. courier, tea, tyre"
+                placeholder="Or type what it was: courier, tea, tyre"
                 onChange={e => setTyped(e.target.value)}
                 onKeyDown={e => {
                   if (e.key !== 'Enter') return
@@ -360,128 +387,137 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           </div>
         ) : null}
 
-        {monthly && period ? (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-info-fg/25 bg-tone-info-bg px-4 py-3 text-base" data-testid="quick-for-month">
-            <label htmlFor={`${uid}-for`} className="font-medium">
-              This bill is for
-            </label>
-            <QuickSelect id={`${uid}-for`} value={period} onChange={e => setForChoice({ key: forKey, value: e.target.value })} className="w-auto">
-              {forMonthChoices(paidOn).map(o => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </QuickSelect>
-            <span className="text-fg-2">
-              {forMonthHelp(paidOn, categoryId)} Reports count it in that month.
-            </span>
+        {/* ONE line with the values that are not in the top row; a tap opens Paid by, the date, detail, receipt and GST. */}
+        <button
+          type="button"
+          aria-expanded={showExtras}
+          aria-controls={extrasId}
+          onClick={() => setExtrasOpen(o => !o)}
+          data-testid="quick-extras-line"
+          className="type-body flex min-h-touch w-full items-center gap-2 rounded text-left text-fg-2 hover:bg-sunken"
+        >
+          <span className="min-w-0 flex-1 truncate">{extrasLine.join(' · ')}</span>
+          <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform', showExtras && 'rotate-90')} />
+        </button>
+
+        {showExtras ? (
+          <div id={extrasId} className="grid gap-3" data-testid="quick-extras">
+            {monthly && period ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-y py-2 text-base" data-testid="quick-for-month">
+                <label htmlFor={`${uid}-for`} className="font-medium">
+                  This bill is for
+                </label>
+                <QuickSelect id={`${uid}-for`} value={period} onChange={e => setForChoice({ key: forKey, value: e.target.value })} className="w-auto">
+                  {forMonthChoices(paidOn).map(o => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </QuickSelect>
+                <span className="text-fg-2">{forMonthHelp(paidOn, categoryId)} Reports count it in that month.</span>
+              </div>
+            ) : null}
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+              <div className="grid gap-2">
+                <span className="text-base font-medium" aria-hidden="true">
+                  Paid by
+                </span>
+                <PaidByToggle value={paidVia} onChange={setVia} />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor={`${uid}-date`} className="text-base font-medium">
+                  Paid on
+                </label>
+                {/* Shows "Tue 27 Oct 2026", takes 27 oct, 27/10, yesterday typed (Enter only reads the date; it does not Save). */}
+                <DateInput
+                  id={`${uid}-date`}
+                  value={paidOn}
+                  defaultToday={false}
+                  onChange={v => v && setPaidOn(v)}
+                  onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
+                  placeholder="e.g. 27 oct, yesterday"
+                  wrapperClassName="w-[13.5rem] max-w-full"
+                  className="h-auto min-h-touch text-base max-md:text-base"
+                />
+              </div>
+              <div className="grid min-w-0 gap-2 lg:flex-1">
+                <label htmlFor={`${uid}-detail`} className="text-base font-medium">
+                  {isOther ? (
+                    MISC_TITLE_LABEL
+                  ) : (
+                    <>
+                      Detail <span className="font-regular text-fg-muted">optional</span>
+                    </>
+                  )}
+                </label>
+                <input
+                  id={`${uid}-detail`}
+                  ref={detailRef}
+                  value={detail}
+                  maxLength={200}
+                  aria-required={isOther || undefined}
+                  aria-invalid={titleError ? true : undefined}
+                  aria-describedby={titleError ? `${uid}-detail-err` : undefined}
+                  placeholder={isOther ? 'e.g. Courier to office' : 'e.g. Office water'}
+                  onChange={e => {
+                    setDetail(e.target.value)
+                    setTitleError(null)
+                  }}
+                  className={cn(
+                    'min-h-touch w-full min-w-0 rounded border bg-surface px-3 text-base placeholder:text-fg-muted',
+                    titleError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
+                  )}
+                />
+                {titleError ? (
+                  <p id={`${uid}-detail-err`} className="text-base text-tone-danger-fg">
+                    {titleError}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex items-end gap-2">
+                {photo && !photo.error ? (
+                  <Button size="touch" icon={X} onClick={() => setPhoto(null)} className="text-base">
+                    Receipt added
+                  </Button>
+                ) : (
+                  <Button size="touch" icon={Camera} onClick={() => fileRef.current?.click()} className="text-base">
+                    Receipt
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} />
+              {hasGst ? (
+                <div className="flex flex-wrap items-center gap-3 border-y py-2 text-base">
+                  <label htmlFor={`${uid}-tax`} className="font-medium">
+                    GST on this bill, PKR
+                  </label>
+                  <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num h-[2.75rem] w-[10rem] text-base" />
+                  <span className="text-fg-2">Counts toward GST paid on purchases, so less GST to pay FBR.</span>
+                </div>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
-          <div className="grid gap-2">
-            <span className="text-base font-medium" aria-hidden="true">
-              Paid by
-            </span>
-            <PaidByToggle value={paidVia} onChange={setVia} />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor={`${uid}-date`} className="text-base font-medium">
-              Paid on
-            </label>
-            {/* Shows "Tue 27 Oct 2026", takes 27 oct, 27/10, yesterday typed (Enter only reads the date; it does not Save). */}
-            <DateInput
-              id={`${uid}-date`}
-              value={paidOn}
-              defaultToday={false}
-              onChange={v => v && setPaidOn(v)}
-              onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
-              placeholder="e.g. 27 oct, yesterday"
-              wrapperClassName="w-[13.5rem] max-w-full"
-              className="h-auto min-h-touch text-base max-md:text-base"
-            />
-          </div>
-          <div className="grid min-w-0 gap-2 lg:flex-1">
-            <label htmlFor={`${uid}-detail`} className="text-base font-medium">
-              {isOther ? (
-                MISC_TITLE_LABEL
-              ) : (
-                <>
-                  Detail <span className="font-regular text-fg-muted">optional</span>
-                </>
-              )}
-            </label>
-            <input
-              id={`${uid}-detail`}
-              ref={detailRef}
-              value={detail}
-              maxLength={200}
-              aria-required={isOther || undefined}
-              aria-invalid={titleError ? true : undefined}
-              aria-describedby={titleError ? `${uid}-detail-err` : undefined}
-              placeholder={isOther ? 'e.g. Courier from shop to office' : 'e.g. Office water, LEA-1234'}
-              onChange={e => {
-                setDetail(e.target.value)
-                setTitleError(null)
-              }}
-              className={cn(
-                'min-h-touch w-full min-w-0 rounded border bg-surface px-3 text-base placeholder:text-fg-muted',
-                titleError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
-              )}
-            />
-            {titleError ? (
-              <p id={`${uid}-detail-err`} className="text-base text-tone-danger-fg">
-                {titleError}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex items-end gap-2">
-            {photo && !photo.error ? (
-              <Button size="touch" icon={X} onClick={() => setPhoto(null)} className="text-base">
-                Receipt added
-              </Button>
-            ) : (
-              <Button size="touch" icon={Camera} onClick={() => fileRef.current?.click()} className="text-base">
-                Receipt
-              </Button>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*,application/pdf"
-              tabIndex={-1}
-              aria-hidden="true"
-              className="sr-only"
-              onChange={async e => {
-                const f = e.target.files?.[0]
-                e.target.value = ''
-                if (!f) return
-                const [one] = await intakeFiles([f], { accept: PHOTO_TYPES })
-                setPhoto(one)
-              }}
-            />
-            <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="min-w-[112px] text-base">
-              Save
-              <span className="sr-only"> this expense</span>
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} />
-          {hasGst ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-row border bg-canvas px-4 py-3 text-base">
-              <label htmlFor={`${uid}-tax`} className="font-medium">
-                GST on this bill, PKR
-              </label>
-              <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num h-[2.75rem] w-[10rem] text-base" />
-              <span className="text-fg-2">Counts toward GST paid on purchases, so less GST to pay FBR.</span>
-            </div>
-          ) : null}
-          <p className="text-base text-fg-2">
-            Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
-          </p>
-        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*,application/pdf"
+          tabIndex={-1}
+          aria-hidden="true"
+          className="sr-only"
+          onChange={async e => {
+            const f = e.target.files?.[0]
+            e.target.value = ''
+            if (!f) return
+            const [one] = await intakeFiles([f], { accept: PHOTO_TYPES })
+            setPhoto(one)
+          }}
+        />
 
         {problem ? (
           <p role="alert" className="flex items-center gap-2 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
