@@ -152,6 +152,8 @@ describe('Job page', () => {
       expect(container.textContent).not.toMatch(forbidden)
       expect(container.innerHTML).not.toContain('PO-77')
       for (const b of stagesOf(container).getAllByRole('button')) await user.click(b)
+      // and the rows inside an opened step (Commissioning, Challans and the like), each opened once
+      for (const b of [...container.querySelectorAll<HTMLElement>('[data-stages] [data-fold-row] [data-fold-row] > button[aria-expanded="false"]')]) await user.click(b)
       expect(container.textContent).not.toMatch(forbidden)
       cleanup()
     }

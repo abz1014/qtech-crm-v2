@@ -71,6 +71,16 @@ describe('LegsPanel split over the supplier-order and delivery stages', () => {
     expect(screen.queryByRole('button', { name: /^Chase goods/ })).toBeNull()
   })
 
+  it('both stages draw the supplier orders as hairline rows: no box around the list, none around a row', () => {
+    for (const part of ['order', 'delivery'] as const) {
+      render(wrap(panel(part)).ui)
+      const region = screen.getByRole('region', { name: part === 'delivery' ? 'Deliveries' : 'Supplier orders' })
+      expect(region.className).not.toMatch(/rounded|border|bg-surface/)
+      for (const li of region.querySelectorAll('li[data-testid^="leg-"]')) expect(li.className).not.toMatch(/rounded|bg-surface/)
+      cleanup()
+    }
+  })
+
   it('Delivery stage: exactly one Delivered today and the goods chase; no PO or supplier buttons', () => {
     render(wrap(panel('delivery')).ui)
     expect(screen.getAllByRole('button', { name: /^Delivered today/ })).toHaveLength(1)
