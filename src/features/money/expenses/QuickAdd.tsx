@@ -239,7 +239,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   const paidThisMonth = month.data ? listTotals(month.data.rows).total : null
 
   return (
-    <section aria-labelledby={`${uid}-h`} className="grid gap-3 border-b pb-3 md:gap-4 md:rounded md:border md:bg-surface md:p-5" data-testid="quick-add" data-work="">
+    <section aria-labelledby={`${uid}-h`} className="grid gap-3 border-b pb-3 md:gap-4 md:rounded md:border-0 md:bg-surface md:p-5" data-testid="quick-add" data-work="">
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
