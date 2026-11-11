@@ -341,7 +341,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   return (
     <Shell sticky>
-      <div className="grid gap-6">
+      <div className="grid gap-6 max-md:gap-4">
         <DetailHeader
           name={company.name}
           phoneSrOnly
@@ -355,7 +355,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
             // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
             // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
             // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
-            <p className="mt-2 overflow-x-clip text-base text-fg-2" data-testid="supplier-record-line">
+            <p className="mt-1 overflow-x-clip text-base text-fg-2 md:mt-2" data-testid="supplier-record-line">
               <span className="-ml-5 flex flex-wrap items-center">
                 {recordUnits(supplierRecordLine).map((unit, i) => (
                   <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
@@ -389,11 +389,14 @@ function Loaded({ company }: { company: CompanyDetail }) {
           {isEngineer ? (
             <NoPrimary />
           ) : (
-            <NextStepBox
-              tone="quiet"
-              text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
-              action={phone ? undefined : primary}
-            />
+            // the phone's New RFQ is the bar at the bottom, so the sentence is not drawn above the fold there
+            <div className="max-md:hidden">
+              <NextStepBox
+                tone="quiet"
+                text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
+                action={phone ? undefined : primary}
+              />
+            </div>
           )}
         </DetailHeader>
         {phone && !isEngineer ? <StickyActionBar label="Company actions" primary={primary} /> : null}
@@ -514,7 +517,7 @@ function ContactsPanel({
         ) : (
           <ul className="grid">
             {contacts.map(c => (
-              <li key={c.id} className="grid gap-[2px] border-t py-3 text-sm first:border-t-0 first:pt-0 last:pb-0">
+              <li key={c.id} data-row-actions="" className="grid gap-[2px] border-t py-3 text-sm first:border-t-0 first:pt-0 last:pb-0">
                 {removing?.id === c.id ? (
                   <ConfirmRemove
                     title={`Remove ${c.name}?`}
