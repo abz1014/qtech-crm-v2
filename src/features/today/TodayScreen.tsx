@@ -87,7 +87,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
   const team = user.role === 'admin' && params.get('view') === 'team'
   const setView = (v: string) => setParams(p => { const n = new URLSearchParams(p); if (v === 'team') n.set('view', 'team'); else n.delete('view'); return n }, { replace: true })
   const switcher = user.role === 'admin' ? (
-    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
       <SegmentedControl aria-label="Whose list" value={team ? 'team' : 'mine'} onValueChange={setView} options={[{ value: 'mine', label: 'Mine' }, { value: 'team', label: 'Team' }]} />
       <Link to="/todo/review" className="inline-flex min-h-touch items-center rounded text-base font-medium text-primary underline underline-offset-2">
         Weekly review
