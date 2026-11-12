@@ -10,7 +10,7 @@ import { navItems } from '@/app/navConfig'
  * line, because that is what a person types into Help's search.
  */
 const DIR = path.resolve(__dirname, '../../../docs/help')
-const RETIRED = ['Who owes us', 'Invoices & GST', 'Month end', 'Match bank statement', 'Things to check', 'Close through', 'Tax deposited', 'Sent to customer', 'Recurring expenses']
+const RETIRED = ['Who owes us', 'Invoices & GST', 'Month end', 'Match bank statement', 'Things to check', 'Close through', 'Close <month>', 'Closed months', 'Close a month', 'Tax deposited', 'Sent to customer', 'Recurring expenses']
 const files = readdirSync(DIR).filter(f => f.endsWith('.md'))
 const body = (f: string) => readFileSync(path.join(DIR, f), 'utf8').replace(/^---[\s\S]*?\n---/, '')
 

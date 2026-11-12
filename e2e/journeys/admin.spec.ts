@@ -12,7 +12,7 @@ import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext 
  *   Five small spends in a burst   at most 5 amounts + 6 keys, 0 mouse, one atomic request
  *   Tick a bank item               1 tap each
  *   Monthly report viewed          1 tap (the tab)
- *   Close month (checklist seen)   2 taps          Reopen   2 taps
+ *   Lock month (checklist seen)   2 taps          Reopen   2 taps
  * The month that is closed is last month (the current month cannot be closed). Its records, and the margin and exception cases, are made
  * through the API as the admin; the burst, the ticks, the review, the close, the refusals and the reopen are all done on screen.
  */
@@ -89,7 +89,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   const m = await seedMargins()
   const ctx = await roleContext(browser, info, 'admin')
   const sentence = `${STMT.label} is closed. An admin can reopen it.`
-  const closeName = `Close ${STMT.name}`
+  const closeName = `Lock ${STMT.name}`
 
   // ---- 1. Burst entry, keyboard only -------------------------------------------------------------------------------------------------
   await test.step('five small spends in a burst: 5 amounts + 6 keys, 0 mouse, one request', async () => {
@@ -196,11 +196,11 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(closeBtn).toBeEnabled()
     await resetCount(page)
     await closeBtn.click()
-    const d = page.getByRole('dialog', { name: `Close ${STMT.label}?` })
+    const d = page.getByRole('dialog', { name: `Lock ${STMT.label}?` })
     await expect(d.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
     await d.getByRole('button', { name: closeName, exact: true }).click()
-    await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)
-    fe2('Close the month (checklist reviewed): the button, then the confirmation', (await readCount(page)).mouse, 2)
+    await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is locked.`)
+    fe2('Lock the month (checklist reviewed): the button, then the confirmation', (await readCount(page)).mouse, 2)
     const closed = await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))
     expect(closed.map(c => c.month)).toContain(STMT.start)
   })
@@ -234,7 +234,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
 
   await test.step('reopen the month: 2 taps, and the books accept an edit again', async () => {
     await page.goto(`/money/month-end?month=${STMT.key}`)
-    await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)
+    await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is locked.`)
     await resetCount(page)
     await page.getByTestId(`closed-${STMT.key}`).getByRole('button', { name: `Reopen ${STMT.label}` }).click()
     await page.getByRole('dialog', { name: `Reopen ${STMT.label}?` }).getByRole('button', { name: `Reopen ${STMT.name}` }).click()

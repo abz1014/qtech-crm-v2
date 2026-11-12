@@ -15,8 +15,8 @@ import { formatClosedAt, longDay } from '@/features/money/monthEnd/format'
 import type { MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 
 /*
- * Close and reopen, each one confirmation (g2-month-end "Close confirmation" and "Reopen confirmation").
- * Close October: the button (1), then "Close October" here (2). Nothing is typed. Reopen: the list's button (1), this one (2); a reason is optional.
+ * Lock and reopen, each one confirmation (g2-month-end "Close confirmation" and "Reopen confirmation").
+ * Lock October: the button (1), then "Lock October" here (2). Nothing is typed. Reopen: the list's button (1), this one (2); a reason is optional.
  * Owner decision 2026-10-22 (redesign, decision 5): months lock ONE AT A TIME, oldest first. The dialog closes exactly one month,
  * the month on screen, and only when no older open month comes first. Owner decision 2026-11-06: a month is locked only while it is
  * on screen; when another month would be locked, the page's button says "Go to <Month> <Year>" and moves there instead (no dialog).
@@ -27,11 +27,11 @@ function closeFailure(err: unknown, month: string): string {
   const m = mapPgError(err, { entity: 'month' })
   if (m.kind === 'network') return m.message
   const code = typeof err === 'object' && err !== null && 'code' in err ? (err as { code?: string }).code : undefined
-  if (code === '42501') return 'Only an admin can close a month. Nothing was changed.'
+  if (code === '42501') return 'Only an admin can lock a month. Nothing was changed.'
   // A rule the server explains ("Close March 2024 first. Months close in order.") is said as written.
   if (code === 'P0001' && m.help) return `${m.message} Nothing was changed.`
-  if (code === 'P0001') return `${monthKeyLabel(month)} could not be closed. Close the earlier months first, or wait until the month has ended. Nothing was changed.`
-  return 'Something went wrong. The month was not closed. Try again.'
+  if (code === 'P0001') return `${monthKeyLabel(month)} could not be locked. Lock the earlier months first, or wait until the month has ended. Nothing was changed.`
+  return 'Something went wrong. The month was not locked. Try again.'
 }
 
 export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; onOpenChange: (o: boolean) => void; ctx: MonthEndCtx }) {
@@ -45,7 +45,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
   const blocked = closeNeedsMove(ctx.month, state)
   const cards: CheckCard[] = ctx.cards
   const label = monthKeyLabel(target)
-  const button = `Close ${monthName(target)}`
+  const button = `Lock ${monthName(target)}`
 
   const confirm = () => {
     if (blocked) return
@@ -56,7 +56,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
         onSuccess: () => {
           onOpenChange(false)
           toast.toast({
-            title: `${label} closed`,
+            title: `${label} locked`,
             body: 'Payments, expenses and invoices dated in it are frozen.',
             tone: 'success',
           })
@@ -76,14 +76,14 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
       busy={close.isPending}
     >
       <DialogContent
-        title={`Close ${label}?`}
+        title={`Lock ${label}?`}
         context={
           <>
             {longDay(ctx.today)} · <span className="num">{checksWithItems(cards)}</span> of <span className="num">{cards.length}</span> checks have items
           </>
         }
         size="md"
-        lead={`This closes ${label} only. Months close one at a time, oldest first.`}
+        lead={`This locks ${label} only. Months lock one at a time, oldest first.`}
         footer={
           <>
             <Button data-cancel onClick={() => onOpenChange(false)} disabled={close.isPending}>
@@ -110,12 +110,12 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
         <div className="flex items-start gap-3 rounded-row bg-sunken px-4 py-3 text-sm">
           <Icon icon={Info} className="mt-[2px] text-fg-muted" />
           <p>
-            <span className="font-medium text-fg">These are warnings, not blockers.</span> Closing locks {label}: payments, expenses and invoices dated in it are
-            frozen. No other month is changed. Bank matching and the TCS and FBR stamps stay editable. An admin can reopen {label} from the closed-months list.
+            <span className="font-medium text-fg">These are warnings, not blockers.</span> Locking locks {label}: payments, expenses and invoices dated in it are
+            frozen. No other month is changed. Bank matching and the TCS and FBR stamps stay editable. An admin can reopen {label} from the locked-months list.
           </p>
         </div>
         {error ? (
-          <Banner tone="danger" title="The month was not closed">
+          <Banner tone="danger" title="The month was not locked">
             {error}
           </Banner>
         ) : null}
@@ -140,7 +140,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
         onSuccess: () => {
           onClose()
           setNote('')
-          toast.toast({ title: `${name} reopened`, body: 'It can be changed until you close it again.', tone: 'success' })
+          toast.toast({ title: `${name} reopened`, body: 'It can be changed until you lock it again.', tone: 'success' })
         },
         onError: e => {
           const m = mapPgError(e, { entity: 'month' })
@@ -165,7 +165,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
       {entry ? (
         <DialogContent
           title={`Reopen ${monthKeyLabel(entry.key)}?`}
-          context={`Closed ${formatClosedAt(entry.closedAt)}${entry.closedBy ? ` by ${entry.closedBy}` : ''}`}
+          context={`Locked ${formatClosedAt(entry.closedAt)}${entry.closedBy ? ` by ${entry.closedBy}` : ''}`}
           size="md"
           footer={
             <>
@@ -182,7 +182,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
             <TextArea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="For example: a supplier invoice arrived late" maxLength={500} />
           </Field>
           <Banner tone="warning" title={`${name} becomes editable again`}>
-            Payments, expenses and invoices dated in {name} can be changed until you close it a second time.
+            Payments, expenses and invoices dated in {name} can be changed until you lock it a second time.
           </Banner>
           {error ? (
             <Banner tone="danger" title="The month was not reopened">

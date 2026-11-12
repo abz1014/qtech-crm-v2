@@ -116,7 +116,7 @@ describe('closing', () => {
   it('an open month after closed ones closes on its own', () => {
     const s = closeState('2026-10', '2026-11-06', closed, ['2026-08', '2026-09', '2026-10'])
     expect(s).toEqual({ kind: 'open', target: '2026-10', earlier: [] })
-    expect(closeButtonLabel('2026-10', s)).toBe('Close October')
+    expect(closeButtonLabel('2026-10', s)).toBe('Lock October')
     expect(closeTarget('2026-10', s)).toBe('2026-10')
     expect(closeNeedsMove('2026-10', s)).toBe(false)
   })

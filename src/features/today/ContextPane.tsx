@@ -622,7 +622,7 @@ function howTo(item: TodayItem): string {
     case 'delivered_not_invoiced':
       return 'Everything on this order has been delivered and no invoice exists. Open the order to invoice it.'
     case 'close_month':
-      return 'Open the month-end checklist, look at what it lists and close the month. Nothing blocks closing; each check is a warning.'
+      return 'Open the month-end checklist, look at what it lists and lock the month. Nothing blocks locking; each check is a warning.'
     case 'costs_incomplete':
       return 'These orders are paid in full but their costs are not marked complete, so their margin is not final. Open Margins, check the costs and mark each order complete.'
     case 'fbr_attention':

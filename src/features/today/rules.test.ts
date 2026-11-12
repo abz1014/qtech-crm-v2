@@ -463,8 +463,8 @@ describe('rule: close month (admin only, 1st to 10th)', () => {
   it('says how many checks and is one item', () => {
     const [e, ...rest] = ruleCloseMonth(ctx({ today: '2026-11-05', monthEnd: me }, 'admin'))
     expect(rest).toEqual([])
-    expect(e).toMatchObject({ rule: 'close_month', title: 'Close October: 4 checks', group: 'ready', subjectId: '00000000-0000-4000-8000-000000202610' })
-    expect(ruleCloseMonth(ctx({ today: '2026-11-05', monthEnd: { ...me, checks: 1 } }, 'admin'))[0].title).toBe('Close October: 1 check')
+    expect(e).toMatchObject({ rule: 'close_month', title: 'Lock October: 4 checks', group: 'ready', subjectId: '00000000-0000-4000-8000-000000202610' })
+    expect(ruleCloseMonth(ctx({ today: '2026-11-05', monthEnd: { ...me, checks: 1 } }, 'admin'))[0].title).toBe('Lock October: 1 check')
   })
   it('shows on the 1st through the 10th and not on the 11th, or before', () => {
     expect(ruleCloseMonth(ctx({ today: '2026-11-01', monthEnd: me }, 'admin'))).toHaveLength(1)

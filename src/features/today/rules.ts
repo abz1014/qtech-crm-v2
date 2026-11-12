@@ -715,7 +715,7 @@ export function ruleCloseMonth(ctx: TodayInputs): Entry[] {
         rule: 'close_month',
         subjectId: closeMonthSubjectId(ctx.monthEnd.month),
         tab: tabFor('close_month'),
-        title: n > 0 ? `Close ${name}: ${n} ${n === 1 ? 'check' : 'checks'}` : `Close ${name}: no checks open`,
+        title: n > 0 ? `Lock ${name}: ${n} ${n === 1 ? 'check' : 'checks'}` : `Lock ${name}: no checks open`,
         ref: 'Lock a month',
         party: `${name} ${ctx.monthEnd.month.slice(0, 4)}`,
         actionDueOn: `${today1(ctx.today)}`, // the 1st of the month it is shown in; always shown as ready to move

@@ -45,7 +45,7 @@ describe('rpcMessages (learnability spec 3.4)', () => {
 describe('mapPgError uses the table', () => {
   it('P0001 month still open says the fix and links to Lock a month', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is still open. Close earlier months first (close_months_through closes them all).' })
-    expect(m.message).toBe('Close March 2026 first. Months close in order.')
+    expect(m.message).toBe('Lock March 2026 first. Months lock in order.')
     expect(m.action?.href).toBe('/money/month-end')
     expect(m.help).toBe('month-end-close')
   })
@@ -65,7 +65,7 @@ describe('mapPgError uses the table', () => {
   it('42501 keeps the permission kind', () => {
     const m = mapPgError({ code: '42501', message: 'only an admin can close a month' })
     expect(m.kind).toBe('permission')
-    expect(m.message).toBe('Only an admin can close a month. Ask an admin if it needs doing.')
+    expect(m.message).toBe('Only an admin can lock a month. Ask an admin if it needs doing.')
   })
 
   it('0096 linking and review: the admin-only refusal says so, an unknown record says reload, the rest keep their plain text', () => {

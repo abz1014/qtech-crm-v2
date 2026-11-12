@@ -326,14 +326,14 @@ export const closeTarget = (month: string, state: CloseState | null): string => 
 export const closeNeedsMove = (month: string, state: CloseState | null): boolean => closeTarget(month, state) !== month
 
 /**
- * A month can only be locked while it is on screen (owner decision 2026-11-06). The green button says "Close October" for the
+ * A month can only be locked while it is on screen (owner decision 2026-11-06). The green button says "Lock October" for the
  * month shown; when the month it would lock is another one, it says "Go to September 2026" and only moves the page there.
  */
 export function closeButtonLabel(month: string, state: CloseState): string {
-  return closeNeedsMove(month, state) ? `Go to ${monthKeyLabel(closeTarget(month, state))}` : `Close ${monthName(month)}`
+  return closeNeedsMove(month, state) ? `Go to ${monthKeyLabel(closeTarget(month, state))}` : `Lock ${monthName(month)}`
 }
 
-/** "Closed through September" for the closed list header: the latest closed month. */
+/** "Locked through September" for the locked list header: the latest closed month. */
 export function closedThrough(closed: readonly ClosedMonth[]): string | null {
   return closed.length ? monthName(closed.map(c => c.key).sort().at(-1) as string) : null
 }

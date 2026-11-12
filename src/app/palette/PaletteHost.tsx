@@ -128,7 +128,7 @@ const MONEY_PLACES: ReadonlyArray<{
     href: "/money/month-end",
     icon: CalendarCheck,
     roles: ["admin"],
-    keywords: ["month end", "close month", "close through"],
+    keywords: ["month end", "lock month", "close month", "close through"],
   },
   {
     id: "money:bank",

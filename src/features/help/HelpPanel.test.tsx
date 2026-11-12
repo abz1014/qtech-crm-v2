@@ -39,9 +39,9 @@ describe('Help panel', () => {
     const orders = within(panel()).getByRole('region', { name: 'Jobs' })
     expect(within(orders).getByRole('button', { name: 'Mark goods delivered' })).toBeInTheDocument()
     expect(within(panel()).queryByRole('region', { name: 'Money' })).toBeNull()
-    expect(within(panel()).queryByRole('button', { name: 'Close a month' })).toBeNull()
+    expect(within(panel()).queryByRole('button', { name: 'Lock a month' })).toBeNull()
     await user.click(within(panel()).getByRole('checkbox', { name: "Show other roles' help" }))
-    expect(within(panel()).getByRole('region', { name: 'Money' })).toHaveTextContent('Close a month')
+    expect(within(panel()).getByRole('region', { name: 'Money' })).toHaveTextContent('Lock a month')
   })
 
   it('opens a recipe with its steps and labels as chips, focuses its title, and goes back to the list', async () => {

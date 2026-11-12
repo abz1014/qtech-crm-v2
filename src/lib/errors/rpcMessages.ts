@@ -38,10 +38,10 @@ const RELOAD = 'Something this needs is no longer there. Reload the page, then t
 
 export const RPC_MESSAGES: readonly RpcEntry[] = [
   // Months
-  { match: /^(.+?) cannot be closed yet: it is the current month or later\.?$/, message: m => `${m[1]} can be closed from the 1st of next month.`, help: 'month-end-close' },
+  { match: /^(.+?) cannot be closed yet: it is the current month or later\.?$/, message: m => `${m[1]} can be locked from the 1st of next month.`, help: 'month-end-close' },
   { match: /^(.+?) is closed\. An admin can reopen it\.?$/, action: MONTH_END },
   { match: /^(.+?) is closed\. Reopen it first \(Money, Month-end\), then change this payment\.?$/, action: MONTH_END },
-  { match: /^(.+?) is still open\. Close earlier months first/, message: m => `Close ${m[1]} first. Months close in order.`, help: 'month-end-close', action: MONTH_END },
+  { match: /^(.+?) is still open\. Close earlier months first/, message: m => `Lock ${m[1]} first. Months lock in order.`, help: 'month-end-close', action: MONTH_END },
   { match: /^The new date is in (.+?), which is closed\./, action: MONTH_END },
   // 0080 (owner decision 2026-10-22): months reopen newest first.
   {
@@ -51,7 +51,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
     action: MONTH_END,
   },
   { match: /^a month is required$/, message: () => 'Choose a month first.' },
-  { match: /^only an admin can (close|reopen) a month$/, message: m => `Only an admin can ${m[1]} a month. Ask an admin if it needs doing.` },
+  { match: /^only an admin can (close|reopen) a month$/, message: m => `Only an admin can ${m[1] === 'close' ? 'lock' : m[1]} a month. Ask an admin if it needs doing.` },
 
   // Payments: these are already written for people
   { match: /^Give a reason for voiding this payment/ },

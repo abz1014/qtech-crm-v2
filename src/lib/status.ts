@@ -173,7 +173,7 @@ export const STATUS = {
   'fx-capture': { captured: hid('Rate at the time', 'neutral'), none: def('No rate', 'warning') },
   user: { active: hid('Active', 'success'), deactivated: def('Deactivated', 'neutral', { icon: Ban }) },
   // Amendment A6: monthly bookkeeping. Only a closed month shows a chip.
-  month: { open: hid('Open', 'info'), closed: def('Closed', 'neutral', { icon: Lock }) },
+  month: { open: hid('Open', 'info'), closed: def('Locked', 'neutral', { icon: Lock }) },
   // Report text from here down: no chips.
   aging: {
     '0-30': hid('0 to 30 days', 'neutral'),
