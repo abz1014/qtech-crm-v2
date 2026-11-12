@@ -7,7 +7,6 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { PaidByToggle } from '@/features/money/expenses/PaidByToggle'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
@@ -60,7 +59,6 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'ima
 /** sheetOpen: the Add expenses sheet is open over this form; its Save expenses is then the one green button, so this Save is drawn quiet. */
 export function QuickAdd({ categories, sheetOpen = false }: { categories: readonly Category[]; sheetOpen?: boolean }) {
   const today = businessToday()
-  const phone = useMediaQuery('(max-width: 639px)')
   const toast = useToast()
   const uid = useId()
   const insert = useInsertExpenses()
@@ -239,15 +237,13 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   const paidThisMonth = month.data ? listTotals(month.data.rows).total : null
 
   return (
-    <section aria-labelledby={`${uid}-h`} className="grid gap-3 border-b pb-3 md:gap-4 md:rounded md:border-0 md:bg-surface md:p-5" data-testid="quick-add" data-work="">
+    <section aria-labelledby={`${uid}-h`} className="grid gap-3 border-b pb-3 md:gap-4 md:rounded md:border-0 md:bg-surface md:p-5 lg:rounded-none lg:border-b lg:bg-transparent lg:p-0 lg:pb-3" data-testid="quick-add" data-work="">
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
-          {phone ? (
-          <InfoTip label="Paying a supplier?" className="ml-2">
+          <InfoTip label="Paying a supplier?" className="ml-2 sm:hidden">
             Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
           </InfoTip>
-          ) : null}
         </h2>
         <p className="type-body text-fg-2" aria-live="polite" data-testid="quick-total">
           {here.count > 0 ? (
@@ -305,9 +301,9 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
               </Button>
             </div>
           </div>
-          <fieldset className="grid min-w-0 gap-2">
+          <fieldset className="grid min-w-0 gap-2 lg:flex lg:flex-wrap lg:gap-x-2">
             <legend className="sr-only">What for, used most first</legend>
-            <div className="flex flex-wrap gap-2" data-row-actions="">
+            <div className="flex flex-wrap gap-2 lg:contents" data-row-actions="">
               {top.map(c => (
                 <button
                   key={c.id}
@@ -340,7 +336,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                 ))}
               </QuickSelect>
             </div>
-            <div className="grid gap-2" data-testid="quick-find">
+            <div className="grid gap-2 lg:min-w-[16rem] lg:flex-1" data-testid="quick-find">
               <label htmlFor={`${uid}-find`} className="sr-only">
                 Or type what it was
               </label>
@@ -405,11 +401,9 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform', showExtras && 'rotate-90')} />
         </button>
 
-        {phone ? null : (
-          <p className="type-body text-fg-2">
-            Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
-          </p>
-        )}
+        <p className="type-body text-fg-2 max-sm:hidden">
+          Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
+        </p>
 
         {showExtras ? (
           <div id={extrasId} className="grid gap-3" data-testid="quick-extras">

@@ -23,7 +23,6 @@ import type { ExpenseListing } from '@/features/money/expenses/api'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
 import { CLOSED_MONTH_LINE, useDeleteExpenseFlow } from '@/features/money/expenses/deleteFlow'
 import { useCategories, useExpenseMonth, useGroups } from '@/features/money/expenses/hooks'
-import { RecurringPanel } from '@/features/money/expenses/RecurringPanel'
 import { forMonthNote } from '@/features/money/expenses/forMonth'
 import {
   NO_FILTERS,
@@ -107,10 +106,6 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
 
   return (
     <div className="grid gap-4">
-      <div className="max-sm:order-last">
-        <RecurringPanel categories={categories} today={today} />
-      </div>
-
       <section aria-labelledby="expenses-h" className="grid gap-3" data-work="">
         {monthClosed ? (
           <p className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 border-b py-2 text-fg-2" data-testid="expenses-closed">
@@ -125,7 +120,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
         ) : null}
         <DataTable
           label="Expenses"
-          className="max-sm:rounded-none max-sm:border-0"
+          className="max-sm:rounded-none max-sm:border-0 lg:rounded-none lg:border-x-0"
           columns={columns}
           rows={rows}
           getRowId={r => r.id}
@@ -372,7 +367,7 @@ function buildColumns(
         // A closed month cannot be edited or deleted, but what changed and who changed it is still there to read: History sits by the lock.
         if (act.locked)
           return (
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1" data-row-actions="">
               <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked: the month is closed">
                 <Icon icon={Lock} size="sm" />
                 <span className="sr-only">Locked, the month is closed</span>
@@ -381,6 +376,7 @@ function buildColumns(
             </span>
           )
         return (
+          <span className="inline-flex" data-row-actions="">
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="quiet" size="sm" icon={Ellipsis} aria-label={`More for ${name} of ${r.amount}`} />
@@ -397,6 +393,7 @@ function buildColumns(
               </MenuItem>
             </PopoverContent>
           </Popover>
+          </span>
         )
       },
     },

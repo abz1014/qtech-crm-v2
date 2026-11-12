@@ -113,7 +113,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
   const list = (
     <ul className="divide-y">
       {(templates.data ?? []).map(t => (
-        <li key={t.id} className="grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2" data-testid={`recurring-${t.label}`}>
+        <li key={t.id} className="grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2 lg:px-0" data-testid={`recurring-${t.label}`}>
           {/* the name opens the template (on a phone this is the edit control; the pencil shows from sm up) */}
           <button type="button" onClick={() => setEditing(t)} className="grid min-w-0 gap-px rounded text-left">
             <span className="min-w-0 [overflow-wrap:anywhere] text-base font-medium">{t.label}</span>
@@ -139,14 +139,14 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
                 Record
               </Button>
             ) : t.active && t.startMonth && t.startMonth > periodOf(t) ? (
-              <span className="text-sm text-fg-2 sm:w-[96px]">Starts {monthKeyLabel(t.startMonth).split(' ')[0]}</span>
+              <span className="text-sm text-fg-2 sm:w-[96px] lg:w-auto">Starts {monthKeyLabel(t.startMonth).split(' ')[0]}</span>
             ) : t.active ? (
-              <span className="inline-flex items-center gap-1 text-sm text-tone-success-fg sm:w-[96px]">
+              <span className="inline-flex items-center gap-1 text-sm text-tone-success-fg sm:w-[96px] lg:w-auto">
                 <Icon icon={Check} size="sm" />
                 Recorded
               </span>
             ) : (
-              <span className="sm:w-[96px]" />
+              <span className="sm:w-[96px] lg:w-auto" />
             )}
             <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${t.label}`} onClick={() => setEditing(t)} className="max-sm:hidden" />
           </span>
@@ -177,9 +177,9 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
       </section>
     )
   return (
-    <section aria-labelledby="recurring-h" className="rounded-panel border bg-surface">
-      <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-        <h2 id="recurring-h" className="text-base font-semibold">
+    <section aria-labelledby="recurring-h" className="rounded-panel border bg-surface lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 lg:px-0 lg:py-2">
+        <h2 id="recurring-h" className="type-row">
           Recurring
         </h2>
         <span className="text-base text-fg-2">

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CircleAlert, Download, FileText, Lock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleAlert, Download, FileText, ListOrdered } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
+import { FoldRow } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
 import { SumBar } from '@/ui/SumBar'
@@ -149,33 +150,37 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
   const narrow = useMediaQuery('(max-width: 639px)')
   return (
     <>
-      <Summary v={v} onPick={onPick} narrow={narrow} />
+      <Summary v={v} narrow={narrow} />
       <ReportCsv />
-      {v.total.count === 0 && v.prev.count === 0 ? (
-        <section className="rounded-panel border bg-surface">
-          <EmptyState title={`No expenses in ${v.label}`}>Expenses dated in this period show here. The columns above still show the periods before.</EmptyState>
-        </section>
-      ) : (
-        <section aria-labelledby="exp-where" className="overflow-hidden rounded-panel border bg-surface max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent">
-          <header className="flex min-h-[56px] flex-wrap items-center gap-3 border-b px-5 py-2">
-            <h2 id="exp-where" className="text-lg font-semibold">
-              Where the money went
-            </h2>
-            <span className="flex-1" />
-            <SegmentedControl
-              aria-label="Show by"
-              options={[
-                { value: 'category', label: 'By category' },
-                { value: 'detail', label: 'By detail' },
-              ]}
-              value={view}
-              onValueChange={x => setView(x as 'category' | 'detail')}
-            />
-          </header>
-          {view === 'category' ? <Breakdown v={v} /> : <ByDetail v={v} />}
-        </section>
-      )}
-      {v.top.length > 0 ? <TopTen v={v} /> : null}
+      {/* Desktop (lg): the category table is the main column, the chart a narrow one beside it. Below lg the chart follows the table. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-x-8">
+        {v.total.count === 0 && v.prev.count === 0 ? (
+          <section className="rounded-panel border bg-surface lg:rounded-none lg:border-x-0 lg:bg-transparent">
+            <EmptyState title={`No expenses in ${v.label}`}>Expenses dated in this period show here. The columns above still show the periods before.</EmptyState>
+          </section>
+        ) : (
+          <section aria-labelledby="exp-where" className="overflow-hidden rounded-panel border bg-surface max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent lg:rounded-none lg:border-x-0 lg:bg-transparent">
+            <header className="flex min-h-[56px] flex-wrap items-center gap-3 border-b px-5 py-2 lg:px-0">
+              <h2 id="exp-where" className="text-lg font-semibold">
+                Where the money went
+              </h2>
+              <span className="flex-1" />
+              <SegmentedControl
+                aria-label="Show by"
+                options={[
+                  { value: 'category', label: 'By category' },
+                  { value: 'detail', label: 'By detail' },
+                ]}
+                value={view}
+                onValueChange={x => setView(x as 'category' | 'detail')}
+              />
+            </header>
+            {view === 'category' ? <Breakdown v={v} /> : <ByDetail v={v} />}
+          </section>
+        )}
+        {narrow ? null : <Trend bars={v.trend} kind={v.period.kind} onPick={onPick} />}
+      </div>
+      {v.top.length > 0 ? <TopTen v={v} narrow={narrow} /> : null}
       {/* A phone reads the figures first; the six-column chart (the same figures are in the table) comes last. */}
       {narrow ? <Trend bars={v.trend} kind={v.period.kind} onPick={onPick} /> : null}
     </>
@@ -184,10 +189,9 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
 
 // ------------------------------------------------------------------------------------------------ 1 and 2: the summary
 
-function Summary({ v, onPick, narrow }: { v: ExpenseReportView; onPick: (p: Period) => void; narrow: boolean }) {
+function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
   const up = toPaisa(v.change) > 0n
   const same = toPaisa(v.change) === 0n
-  const cashShare = toPaisa(v.total.amount) === 0n ? 0 : Number((toPaisa(v.total.cash) * 1000n) / toPaisa(v.total.amount)) / 10
   const frozen = v.frozenMonths === 0 ? null : v.frozenMonths === v.months ? 'Closed: figures frozen' : `${plural(v.frozenMonths, 'month')} closed: figures frozen`
   if (narrow) {
     // Phone: ONE summary, a line per figure (SumBar lines). The by-the-day-paid sentence is the (i); the chart comes after the table.
@@ -234,107 +238,50 @@ function Summary({ v, onPick, narrow }: { v: ExpenseReportView; onPick: (p: Peri
       </>
     )
   }
+  // Desktop: ONE strip of figures between two hairlines and ONE muted line under it (what the figures count). No box, no tiles.
+  const paidElsewhere = toPaisa(v.forHerePaidElsewhere) !== 0n || toPaisa(v.paidForOther) !== 0n
   return (
-    <section aria-label={`Spent in ${v.label}`} className="overflow-hidden rounded-panel border bg-surface">
-      <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
-        <div className="grid content-start gap-3">
-          <p className="text-base text-fg-2">
-            Spent in {v.label}
-            {frozen ? (
-              <span className="ml-2 inline-flex items-center gap-1 text-sm text-fg-muted" data-testid="expense-report-frozen">
-                <Icon icon={Lock} size="chip" />
-                {frozen}
-              </span>
-            ) : null}
-          </p>
-          <p className="text-display font-medium tracking-tight" data-testid="expense-report-total">
-            <span className="text-xl font-medium text-fg-muted">PKR </span>
-            {rupees(v.total.amount)}
-          </p>
-          <p className="text-base text-fg-2">
-            <span className="num">{plural(v.total.count, 'expense')}</span>
-            {' · '}
-            {same ? (
-              <>the same as {v.prevLabel}</>
-            ) : (
-              <>
-                <b className="num font-semibold text-fg">PKR {rupees(up ? v.change : (-Number(v.change)).toFixed(2))}</b>
-                {v.changePct !== null ? <span className="num"> ({Math.abs(v.changePct)}%)</span> : null} {up ? 'more' : 'less'} than {v.prevLabel}
-              </>
-            )}
-          </p>
-          <CashBank v={v} cashShare={cashShare} />
-          <p className="text-base text-fg-2" data-testid="expense-report-paid">
-            By the month each expense is for (September&apos;s salary paid in October is September&apos;s). Paid in {v.label}, by the day paid:{' '}
-            <b className="num font-semibold text-fg">PKR {rupees(v.paid.amount)}</b>
-            {toPaisa(v.forHerePaidElsewhere) !== 0n || toPaisa(v.paidForOther) !== 0n ? (
-              <span className="num">
-                {' '}
-                (= {rupees(v.total.amount)}
-                {toPaisa(v.forHerePaidElsewhere) !== 0n ? ` − ${rupees(v.forHerePaidElsewhere)} paid in another month` : ''}
-                {toPaisa(v.paidForOther) !== 0n ? ` + ${rupees(v.paidForOther)} paid now for another month` : ''})
-              </span>
-            ) : null}
-            .
-          </p>
-          <Link
-            to={`/money/reports/in-out?by=${v.period.kind}&period=${v.period.key}`}
-            className="inline-flex min-h-touch items-center gap-1 justify-self-start text-sm font-medium text-primary hover:underline md:min-h-0"
-          >
-            {IN_OUT_REPORT_TITLE}, same period
-            <Icon icon={ChevronRight} size="sm" />
-          </Link>
-          {toPaisa(v.unexplained) !== 0n ? (
-            <p className="flex items-start gap-2 text-sm text-tone-danger-fg" data-testid="expense-report-unexplained">
-              <Icon icon={CircleAlert} size="sm" className="mt-[3px]" />
-              In vs out has {signed(v.unexplained)} more paid out than the entries paid in this period: a closed month was changed after it was closed.
-            </p>
-          ) : null}
-        </div>
-        <Trend bars={v.trend} kind={v.period.kind} onPick={onPick} />
-      </div>
-      <dl className="grid grid-cols-2 border-t md:grid-cols-4" aria-label="In profit and loss">
-        <Kind label="Running costs" sub="Overheads in Profit and loss" amount={v.kinds.running} testId="kind-running" />
-        <Kind label="Order costs" sub="Supplier, freight, customs" amount={v.kinds.order} testId="kind-order" />
-        <Kind label="Not a cost" sub="Owner drawings, loan repayments" amount={v.kinds.notCost} testId="kind-notcost" />
-        <Kind label="GST paid on purchases" sub="Claimed back, so not a cost" amount={v.kinds.inputTax} testId="kind-tax" />
-      </dl>
-    </section>
-  )
-}
-
-function Kind({ label, sub, amount, testId }: { label: string; sub: string; amount: string; testId: string }) {
-  return (
-    <div className="grid gap-[2px] border-line px-5 py-3 max-md:odd:border-r md:border-r md:last:border-r-0 max-md:[&:nth-child(-n+2)]:border-b">
-      <dt className="text-sm text-fg-2">{label}</dt>
-      <dd className="num text-lg font-semibold" data-testid={testId}>
-        {rupees(amount)}
-      </dd>
-      <dd className="text-xs text-fg-muted">{sub}</dd>
-    </div>
-  )
-}
-
-function CashBank({ v, cashShare }: { v: ExpenseReportView; cashShare: number }) {
-  if (v.total.count === 0) return null
-  return (
-    <div className="grid gap-2" data-testid="expense-report-via">
-      <div className="flex h-2 gap-[2px] overflow-hidden" aria-hidden="true">
-        {toPaisa(v.total.cash) > 0n ? <span className="h-full rounded-[2px] bg-fg-2" style={{ width: `${cashShare}%` }} /> : null}
-        {toPaisa(v.total.bank) > 0n ? <span className="h-full flex-1 rounded-[2px] bg-line-input" /> : null}
-      </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-        <span className="inline-flex items-center gap-2">
-          <i className="size-[10px] rounded-[2px] bg-fg-2" aria-hidden="true" />
-          Cash <b className="num font-medium">{rupees(v.total.cash)}</b>
-          <span className="num text-fg-muted">({plural(v.total.cashCount, 'payment')})</span>
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <i className="size-[10px] rounded-[2px] bg-line-input" aria-hidden="true" />
-          Bank <b className="num font-medium">{rupees(v.total.bank)}</b>
-          <span className="num text-fg-muted">({plural(v.total.bankCount, 'payment')})</span>
-        </span>
-      </div>
+    <div className="grid gap-2" data-testid="expense-report-total">
+      <SumBar
+        desktop="strip"
+        label={`Spent in ${v.label}`}
+        caption={
+          <span>
+            <span>
+              PKR · Spent in {v.label}, {plural(v.total.count, 'expense')}
+              {frozen ? ` · ${frozen}` : ''}.{' '}
+            </span>
+            <span data-testid="expense-report-paid">
+              By the month each expense is for (September&apos;s salary paid in October is September&apos;s). Paid in {v.label}, by the day paid: PKR {rupees(v.paid.amount)}
+              {paidElsewhere
+                ? ` (= ${rupees(v.total.amount)}${toPaisa(v.forHerePaidElsewhere) !== 0n ? ` − ${rupees(v.forHerePaidElsewhere)} paid in another month` : ''}${toPaisa(v.paidForOther) !== 0n ? ` + ${rupees(v.paidForOther)} paid now for another month` : ''})`
+                : ''}
+              .
+            </span>{' '}
+            <span>Running costs are overheads in Profit and loss; order costs are supplier, freight and customs; not a cost is owner drawings and loan repayments; GST paid on purchases is claimed back.</span>
+          </span>
+        }
+        items={[
+          { label: 'Spent', amount: v.total.amount },
+          { label: `vs ${v.prevLabel}`, figure: same ? 'the same' : `${up ? '+' : '−'}${rupees(up ? v.change : (-Number(v.change)).toFixed(2))}${v.changePct !== null ? ` (${Math.abs(v.changePct)}%)` : ''}` },
+          { label: 'Cash', amount: v.total.cash },
+          { label: 'Bank', amount: v.total.bank },
+          { label: 'Running costs', amount: v.kinds.running },
+          { label: 'Order costs', amount: v.kinds.order },
+          { label: 'Not a cost', amount: v.kinds.notCost },
+          { label: 'GST paid on purchases', amount: v.kinds.inputTax },
+        ]}
+      />
+      <Link to={`/money/reports/in-out?by=${v.period.kind}&period=${v.period.key}`} className="type-body inline-flex min-h-0 items-center gap-1 justify-self-start font-medium text-primary hover:underline">
+        {IN_OUT_REPORT_TITLE}, same period
+        <Icon icon={ChevronRight} size="sm" />
+      </Link>
+      {toPaisa(v.unexplained) !== 0n ? (
+        <p className="type-body flex items-start gap-2 text-tone-danger-fg" data-testid="expense-report-unexplained">
+          <Icon icon={CircleAlert} size="sm" className="mt-[3px]" />
+          In vs out has {signed(v.unexplained)} more paid out than the entries paid in this period: a closed month was changed after it was closed.
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -349,7 +296,7 @@ function Trend({ bars, kind, onPick }: { bars: TrendBar[]; kind: PeriodKind; onP
   const h = (a: string) => (max === 0n ? 0 : Math.max(Number((toPaisa(a) * 1000n) / max) / 10, toPaisa(a) > 0n ? 2 : 0))
   const title = kind === 'month' ? 'Last 6 months, paid out by the day paid' : 'Last 4 quarters, paid out by the day paid'
   return (
-    <figure className="grid content-start gap-2" data-testid="expense-report-trend">
+    <figure className="grid content-start gap-2 lg:border-b lg:pb-3" data-testid="expense-report-trend">
       <figcaption className="text-base text-fg-2">{title}</figcaption>
       <div className="grid h-[148px] items-end gap-px border-b border-line px-3" style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0,1fr))` }}>
         {bars.map(b => (
@@ -663,20 +610,38 @@ function ByDetail({ v }: { v: ExpenseReportView }) {
 
 // ------------------------------------------------------------------------------------------------ 4: the ten biggest
 
-function TopTen({ v }: { v: ExpenseReportView }) {
+function TopTen({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
   const names = new Map(v.groups.flatMap(g => g.categories.map(c => [c.id, c.name] as const)))
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  const title = v.top.length === 10 ? 'The 10 biggest expenses' : `The ${plural(v.top.length, 'expense')}`
+  const list = v.top.map(e => <EntryLine key={e.id} e={e} category={names.get(e.categoryId) ?? 'Category removed'} />)
+  // Desktop (and tablet): the repeated list is one hairline row, the count and the total on it; a tap opens the entries.
+  if (!narrow)
+    return (
+      <section aria-label={title} data-testid="expense-report-top">
+        <FoldRow
+          state={{ icon: ListOrdered, word: 'List' }}
+          title={title}
+          summary={`${plural(v.top.length, 'expense')} · PKR ${rupees(paisaToFixed(sumPaisa(v.top.map(e => e.amount))))}`}
+          open={open}
+          onToggle={() => setOpen(o => !o)}
+          controlsId={id}
+        >
+          <ol className="grid pb-2">
+            {list}
+          </ol>
+        </FoldRow>
+      </section>
+    )
   return (
     <section aria-labelledby="exp-top" className="overflow-hidden rounded-panel border bg-surface max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent" data-testid="expense-report-top">
       <header className="flex min-h-[56px] items-center border-b px-5">
         <h2 id="exp-top" className="text-lg font-semibold">
-          {v.top.length === 10 ? 'The 10 biggest expenses' : `The ${plural(v.top.length, 'expense')}`}
+          {title}
         </h2>
       </header>
-      <ol className="grid px-5 py-1">
-        {v.top.map(e => (
-          <EntryLine key={e.id} e={e} category={names.get(e.categoryId) ?? 'Category removed'} />
-        ))}
-      </ol>
+      <ol className="grid px-5 py-1">{list}</ol>
     </section>
   )
 }

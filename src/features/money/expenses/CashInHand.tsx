@@ -86,7 +86,7 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
     <section
       aria-label="Cash in hand"
       data-testid="cash-in-hand"
-      className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border bg-surface px-4 py-3 text-base', compact && 'py-2')}
+      className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border bg-surface px-4 py-3 text-base', compact && 'py-2', fold && 'lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent lg:px-0 lg:py-2')}
     >
       <Icon icon={Wallet} className="text-fg-muted" />
       {none ? (

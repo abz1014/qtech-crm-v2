@@ -16,7 +16,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { InfoTip } from '@/ui/InfoTip'
 import { ReportCsv } from '@/ui/ReportCsv'
 import { ReportsFrame } from '@/features/reports/ReportsFrame'
-import { ClockTag, Panel, ReportError, ReportLoading, TwoProfitsTip } from '@/features/money/monthEnd/ReportParts'
+import { ReportError, ReportLoading, TwoProfitsTip } from '@/features/money/monthEnd/ReportParts'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
 import { useInOutReport } from '@/features/money/inOut/hooks'
 import {
@@ -166,19 +166,19 @@ function PeriodPager({ period, atNow, go }: { period: Period; atNow: boolean; go
 /** One figure line: label, its basis in small words, this period, the previous one and the change. */
 function Row({ label, sub, now, before, strong, testId }: { label: string; sub?: ReactNode; now: Amount; before: Amount; strong?: boolean; testId?: string }) {
   return (
-    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-[2px] border-b px-5 py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_120px_100px]', strong && 'bg-sunken')}>
-      <span role="rowheader" className={cn('text-base', strong && 'font-semibold')}>
+    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-[2px] border-b px-0 py-2 md:grid-cols-[minmax(0,1fr)_140px_140px_120px]', strong && 'border-b-2')}>
+      <span role="rowheader" className={cn('type-body', strong && 'font-semibold')}>
         {label}
-        {sub ? <span className="block text-sm text-fg-muted">{sub}</span> : null}
+        {sub ? <span className="type-body block text-fg-muted">{sub}</span> : null}
       </span>
-      <span role="cell" className={cn('num text-right text-base', strong && 'font-semibold')}>
+      <span role="cell" className={cn('num type-body text-right', strong && 'font-semibold')}>
         {rupees(now)}
       </span>
-      <span role="cell" className="num text-right text-sm text-fg-muted max-md:col-start-2">
+      <span role="cell" className="num type-body text-right text-fg-muted max-md:col-start-2">
         <span className="md:hidden">before </span>
         {rupees(before)}
       </span>
-      <span role="cell" className="num text-right text-sm text-fg-2 max-md:hidden">
+      <span role="cell" className="num type-body text-right text-fg-2 max-md:hidden">
         {signed(change(now, before))}
       </span>
     </div>
@@ -187,7 +187,7 @@ function Row({ label, sub, now, before, strong, testId }: { label: string; sub?:
 
 function Head({ prev }: { prev: string }) {
   return (
-    <div role="row" className="hidden min-h-[36px] grid-cols-[minmax(0,1fr)_120px_120px_100px] items-center gap-x-4 border-b bg-sunken px-5 text-xs font-medium text-fg-muted md:grid">
+    <div role="row" className="type-body hidden min-h-[36px] grid-cols-[minmax(0,1fr)_140px_140px_120px] items-center gap-x-4 border-b px-0 font-medium text-fg-muted md:grid">
       <span role="columnheader">Line</span>
       <span role="columnheader" className="text-right">
         PKR
@@ -217,7 +217,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
     <>
       {narrow ? null : <ReportCsv />} {/* a phone draws it after the two summaries below */}
       {empty ? (
-        <section className="rounded-panel border bg-surface">
+        <section className="rounded-panel border bg-surface lg:rounded-none lg:border-x-0 lg:bg-transparent">
           <EmptyState title={`Nothing in ${v.label} yet`}>No payment, expense or invoice is dated in it. The trend below still shows the periods before.</EmptyState>
         </section>
       ) : null}
@@ -257,8 +257,33 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
           <ReportCsv />
         </>
       ) : (
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-          <Panel title="Cash in and out" meta={<><ClockTag>On the day money moved</ClockTag>{frozen ? <span className="text-sm text-fg-muted" data-testid="in-out-frozen">{frozen}</span> : null}</>}>
+        <>
+          {/* Desktop: one strip with the headline figures, then ONE column of hairline rows with the period before and the change. */}
+          <SumBar
+            desktop="strip"
+            label={`Cash and profit, ${v.label}`}
+            caption={
+              <span>
+                PKR · {v.label} · cash on the day money moved, profit by invoice date{frozen ? ` · ${frozen}` : ''}
+              </span>
+            }
+            items={[
+              { label: 'Money in', amount: v.cash.in },
+              { label: 'Money out', amount: v.cash.out },
+              { label: 'Cash in minus cash out', amount: v.cash.net },
+              { label: 'Profit on invoices', amount: v.profit.profit },
+            ]}
+          />
+          <section className="grid gap-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 className="type-section">Cash in and out</h2>
+              <span className="type-body text-fg-muted">On the day money moved</span>
+              {frozen ? (
+                <span className="type-body text-fg-muted" data-testid="in-out-frozen">
+                  {frozen}
+                </span>
+              ) : null}
+            </div>
             <div role="table" aria-label="Cash in and out">
               <Head prev={prev} />
               <Row testId="cash-in" label="Money in" sub={`${plural(v.cash.payments, 'customer payment')} received, GST included`} now={v.cash.in} before={v.prevCash.in} />
@@ -268,8 +293,13 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               ) : null}
               <Row testId="cash-net" label="Cash in minus cash out" now={v.cash.net} before={v.prevCash.net} strong />
             </div>
-          </Panel>
-          <Panel title="Profit on invoices" meta={<><ClockTag>By invoice date</ClockTag><TwoProfitsTip /></>}>
+          </section>
+          <section className="grid gap-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 className="type-section">Profit on invoices</h2>
+              <span className="type-body text-fg-muted">By invoice date</span>
+              <TwoProfitsTip />
+            </div>
             <div role="table" aria-label="Profit on invoices">
               <Head prev={prev} />
               <Row label="Sales" sub={`${plural(v.profit.invoices, 'invoice')}, GST taken out`} now={v.profit.sales} before={v.prevProfit.sales} />
@@ -277,8 +307,8 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               <Row label="Overheads" sub="When paid, GST paid on purchases taken out" now={v.profit.overheads} before={v.prevProfit.overheads} />
               <Row testId="profit" label="Profit on invoices" now={v.profit.profit} before={v.prevProfit.profit} strong />
             </div>
-          </Panel>
-        </div>
+          </section>
+        </>
       )}
 
       {narrow ? (
@@ -317,8 +347,8 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
           </FoldRow>
         </section>
       ) : (
-      <section aria-labelledby="in-out-why" className="grid gap-2 rounded-panel border bg-surface px-5 py-4" data-testid="in-out-why">
-          <h2 id="in-out-why" className="flex flex-wrap items-center gap-2 text-base font-semibold">
+      <section aria-labelledby="in-out-why" className="grid gap-2 border-b pb-3" data-testid="in-out-why">
+          <h2 id="in-out-why" className="type-section flex flex-wrap items-center gap-2">
             Why profit and cash differ in {v.label}
             <InfoTip label="About supplier bills">
               Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We
@@ -326,15 +356,15 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             </InfoTip>
           </h2>
           {whyLines.length === 0 ? (
-            <p className="text-base text-fg-2" data-testid="in-out-why-none">
+            <p className="type-body text-fg-2" data-testid="in-out-why-none">
               Nothing separates them: profit on invoices and cash in minus cash out agree for {v.label}.
             </p>
           ) : (
             <>
-              <p className="num text-base">
+              <p className="num type-body">
                 Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
               </p>
-              <ul className="grid gap-1 text-base text-fg-2">
+              <ul className="type-body grid gap-1 text-fg-2">
                 {whyLines.map(l => (
                   <li key={l.key}>
                     <span className="num font-medium text-fg">{signed(l.amount)}</span> {l.text}
@@ -372,7 +402,7 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
   return (
     <DataTable
       label={`Money out by category, ${v.label}`}
-      className="max-sm:rounded-none max-sm:border-0"
+      className="max-sm:rounded-none max-sm:border-0 lg:rounded-none lg:border-x-0"
       columns={columns}
       rows={rows}
       getRowId={r => r.id}
@@ -438,7 +468,7 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
   return (
     <DataTable
       label={title}
-      className="max-sm:rounded-none max-sm:border-0"
+      className="max-sm:rounded-none max-sm:border-0 lg:rounded-none lg:border-x-0"
       columns={columns}
       rows={v.trend}
       getRowId={t => t.period.key}
