@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { InfoTip } from '@/ui/InfoTip'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { businessToday } from '@/lib/dates'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
@@ -27,6 +28,8 @@ const items = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`
 
 export function BankTickPage() {
   const today = businessToday()
+  // Desktop: the statement month sits on the title's line; a phone keeps its own row under the bar.
+  const wide = useMediaQuery('(min-width: 768px)')
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const asked = params.get('month')
@@ -78,25 +81,30 @@ export function BankTickPage() {
       view.out.older.length ===
       0
 
-  return (
-    <MoneyFrame active={null}>
-      <MoneySubHeader
-        back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
-        title="Bank check"
-        meta={totals ? <StateChip open={openCount ?? 0} /> : null}
-      />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm font-medium text-fg-2">Statement month</span>
-        <span className="inline-flex items-center gap-2">
+  const picker = (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="text-sm font-medium text-fg-2">Statement month</span>
+      <span className="inline-flex items-center gap-2">
         <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
         <InfoTip label="About matching the bank statement">
           Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement; tap again to undo. Cash items never appear here.
           An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&rsquo;s total
           credits and debits. Ticking changes nothing in the books and stays editable after the month closes.
         </InfoTip>
-        </span>
-      </div>
+      </span>
+    </div>
+  )
+
+  return (
+    <MoneyFrame active={null}>
+      <MoneySubHeader
+        back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
+        title="Bank check"
+        meta={totals ? <StateChip open={openCount ?? 0} /> : null}
+        actions={wide ? picker : undefined}
+      />
+
+      {wide ? null : picker}
 
       {data.isError ? (
         <div className="mx-auto mt-12 max-w-[520px] rounded-panel border bg-surface p-6">
@@ -126,6 +134,7 @@ export function BankTickPage() {
           <SumBar
             className="max-sm:grid-cols-1"
             label="Running ticked totals"
+            desktop="strip"
             items={[
               {
                 label: 'Matched, money in',

@@ -297,7 +297,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         {files.length > 0 ? (
           <ul className="grid gap-1" aria-label="Files to add">
             {files.map(f => (
-              <li key={f.id} className="flex items-center justify-between gap-2 rounded-row border px-3 py-2 text-base">
+              <li key={f.id} className="flex items-center justify-between gap-2 rounded-row border px-3 py-2 text-base md:rounded-none md:border-x-0 md:border-t-0 md:px-0">
                 <span className={cn('min-w-0 [overflow-wrap:anywhere]', f.error && 'text-tone-danger-fg')}>{f.error ? `${f.file.name}: ${f.error}` : f.file.name}</span>
                 <Button size="touch" variant="quiet" icon={X} aria-label={`Remove ${f.file.name}`} onClick={() => setFiles(prev => prev.filter(x => x.id !== f.id))} />
               </li>
@@ -306,7 +306,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         ) : null}
 
         {present ? (
-          <div className="grid gap-3 rounded-row border bg-canvas p-3" data-testid="add-guess">
+          <div className="grid gap-3 rounded-row border bg-canvas p-3 md:rounded-none md:border-x-0 md:border-b-0 md:bg-transparent md:px-0 md:pb-0" data-testid="add-guess">
             <p className="text-base">
               <span className="text-fg-2">This looks like: </span>
               <b className="font-semibold" data-testid="guess-line">

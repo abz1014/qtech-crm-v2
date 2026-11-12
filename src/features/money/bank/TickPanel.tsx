@@ -34,8 +34,8 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
   const older = showAllOlder ? side.older : side.older.slice(0, COLLAPSED_OLDER)
 
   return (
-    <section aria-label={heading} data-testid={`bank-${dir}`} className="min-w-0 rounded-panel border bg-surface">
-      <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b py-2 pl-5 pr-4">
+    <section aria-label={heading} data-testid={`bank-${dir}`} className="min-w-0 rounded-panel border bg-surface md:rounded-none md:border-0 md:bg-transparent">
+      <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b py-2 pl-5 pr-4 md:pl-0 md:pr-0">
         <h2 className="text-base font-semibold">{heading}</h2>
         <span className="inline-flex min-h-[22px] items-center gap-[6px] rounded bg-selected px-2 py-[2px] text-xs font-medium text-fg-2">
           <Icon icon={dir === 'in' ? ArrowDownLeft : ArrowUpRight} size="sm" />
@@ -47,12 +47,12 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
         </span>
       </header>
       {total === 0 ? (
-        <p className="px-5 py-6 text-sm text-fg-muted">
+        <p className="px-5 py-6 text-sm text-fg-muted md:px-0">
           {dir === 'in' ? 'No bank payments for this month.' : 'No bank expenses or FBR payments for this month.'}
         </p>
       ) : (
         <div>
-          <div aria-hidden="true" className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-5 py-1 text-xs font-medium text-fg-2">
+          <div aria-hidden="true" className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-5 py-1 text-xs font-medium text-fg-2 md:px-0">
             <span>On statement? Tick it</span>
             <span>PKR</span>
           </div>
@@ -106,7 +106,7 @@ function GroupHead({ label, count, first }: { label: string; count: number; firs
   return (
     <div
       className={cn(
-        'flex min-h-8 items-center justify-between gap-3 border-b bg-canvas px-5 py-1 text-xs font-medium text-fg-muted',
+        'flex min-h-8 items-center justify-between gap-3 border-b bg-canvas px-5 py-1 text-xs font-medium text-fg-muted md:px-0',
         !first && 'border-t',
       )}
     >
@@ -122,7 +122,7 @@ function MoreButton({ open, hidden, word, onClick }: { open: boolean; hidden: nu
       type="button"
       onClick={onClick}
       aria-expanded={open}
-      className="flex h-10 w-full items-center gap-2 px-5 text-sm font-medium text-primary hover:bg-sunken"
+      className="flex h-10 w-full items-center gap-2 px-5 text-sm md:px-0 font-medium text-primary hover:bg-sunken"
     >
       <Icon icon={open ? ChevronUp : ChevronDown} size="sm" />
       {open ? 'Show fewer' : `${hidden} more ${word}`}
@@ -146,7 +146,7 @@ function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l
         title={line.psid ? `PSID ${line.psid}` : undefined}
         onClick={() => onTick(line)}
         className={cn(
-          'grid min-h-[48px] w-full grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 border-b px-5 py-[6px] text-left transition-colors duration-fast ease-out hover:bg-sunken',
+          'grid min-h-[48px] w-full grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 border-b px-5 py-[6px] text-left md:px-0 transition-colors duration-fast ease-out hover:bg-sunken',
           group && 'bg-surface',
           just && 'bg-tone-success-bg hover:bg-tone-success-bg',
         )}
@@ -182,7 +182,7 @@ function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l
           {line.kids.map(k => (
             <div
               key={k.id}
-              className="grid min-h-8 grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-[2px] text-xs text-fg-muted"
+              className="grid min-h-8 grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-[2px] text-xs text-fg-muted md:px-0"
             >
               <span aria-hidden="true" className="h-full w-px justify-self-center bg-line-strong" />
               <span className="num">{k.date ? formatShortDate(k.date, today) : ''}</span>

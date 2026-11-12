@@ -247,6 +247,7 @@ export function ReceivablesPage() {
       <SumBar
         className="max-sm:hidden"
         label="Balance by status, includes GST"
+        desktop="strip"
         items={[
           { label: 'Outstanding', amount: totals.outstanding, sub: `${totals.openCount} open ${totals.openCount === 1 ? 'order' : 'orders'}` },
           { label: 'Overdue', amount: totals.overdue, tone: totals.overdue > 0 ? 'danger' : undefined, sub: `${totals.overdueCount} ${totals.overdueCount === 1 ? 'order' : 'orders'}${totals.overdueCount ? `, ${reminderPhrase(totals.overdueCount, totals.reminderDueCount)}` : ''}` },
@@ -259,6 +260,7 @@ export function ReceivablesPage() {
         <div className="min-w-0">
           <DataTable
             label={tabLabel}
+            className="md:rounded-none md:border-x-0"
             columns={columns}
             rows={shown}
             getRowId={r => r.orderId}
