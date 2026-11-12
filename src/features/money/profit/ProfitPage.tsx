@@ -9,6 +9,7 @@ import { BarChart } from '@/ui/BarChart'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { InfoTip } from '@/ui/InfoTip'
+import { Money } from '@/ui/Money'
 import { NoPrimary } from '@/ui/NoPrimary'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
@@ -78,24 +79,32 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
     : `Income and cash received for each of the last ${range} complete months, ${spanLabel(shown.map(x => x.month))}. Average monthly income over the last 12 months is ${pkr(avgIncome)}, GST left out.${best ? ` The highest month was ${shortMonth(best.month)} at ${pkr(best.income)}.` : ''}`
   return (
     <>
-      <section aria-label="Average monthly income" className="grid gap-4 rounded-panel border bg-surface p-4 md:grid-cols-2 md:p-6" data-testid="profit-average">
-        <div className="grid content-start gap-1">
-          <h2 className="text-base font-semibold">Average monthly income</h2>
-          <p className="num text-2xl font-semibold" data-testid="profit-average-income">
+      <section
+        aria-label="Average monthly income"
+        className="grid gap-4 rounded-panel border bg-surface p-4 md:flex md:flex-wrap md:items-baseline md:gap-x-8 md:gap-y-2 md:rounded-none md:border-x-0 md:bg-transparent md:px-0 md:py-2"
+        data-testid="profit-average"
+      >
+        {/* From 768 up the averages are one strip: label and figure inline, the two notes joined in one muted line under it. */}
+        <div className="grid content-start gap-1 md:flex md:items-baseline md:gap-2">
+          <h2 className="text-base font-semibold md:font-normal md:text-fg-2">Average monthly income</h2>
+          <p className="num text-2xl font-semibold md:text-base" data-testid="profit-average-income">
             {pkr(avgIncome)}
           </p>
-          <p className="text-base text-fg-2">Invoiced, GST left out. Last 12 complete months, {span}. This month is left out.</p>
+          <p className="text-base text-fg-2 md:hidden">Invoiced, GST left out. Last 12 complete months, {span}. This month is left out.</p>
         </div>
-        <div className="grid content-start gap-1">
-          <h2 className="text-base font-semibold">Average cash received a month</h2>
-          <p className="num text-2xl font-semibold" data-testid="profit-average-cash">
+        <div className="grid content-start gap-1 md:flex md:items-baseline md:gap-2">
+          <h2 className="text-base font-semibold md:font-normal md:text-fg-2">Average cash received a month</h2>
+          <p className="num text-2xl font-semibold md:text-base" data-testid="profit-average-cash">
             {pkr(avgCash)}
           </p>
-          <p className="text-base text-fg-2">Includes GST. What customers actually paid in the same 12 months.</p>
+          <p className="text-base text-fg-2 md:hidden">Includes GST. What customers actually paid in the same 12 months.</p>
         </div>
-        <p className="text-base text-fg-2 md:col-span-2">
+        <p className="hidden text-base text-fg-muted md:order-last md:block md:basis-full">
+          Income is invoiced, GST left out. Cash received includes GST: what customers actually paid. Last 12 complete months, {span}. This month is left out.
+        </p>
+        <p className="text-base text-fg-2 md:basis-full">
           Average monthly profit on invoices over the same months: <span className="num font-medium text-fg">{pkr(avgProfit)}</span>.{' '}
-          <Link to="/money/margins" className="inline-flex items-center gap-1 rounded font-medium text-primary-text hover:underline">
+          <Link to="/money/margins" className="inline-flex items-center gap-1 rounded font-medium text-primary-text hover:underline md:hidden">
             See the profit of each order <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </p>
@@ -115,7 +124,8 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
             large
           />
         }
-        bodyClassName="p-4 md:p-6"
+        flat
+        bodyClassName="p-4 md:px-0 md:py-4"
       >
         {empty ? (
           <EmptyState title="Nothing invoiced or received yet">No invoice or payment is dated in these months.</EmptyState>
@@ -135,36 +145,71 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
       </Panel>
 
       <ProfitTable rows={[...shown].reverse()} label={`Profit by month, last ${range} months`} />
+      {/* From 768 up the way on to each order sits under the table, so the strip at the top stays figures only. */}
+      <Link to="/money/margins" className="hidden w-fit items-center gap-1 rounded font-medium text-primary-text hover:underline md:inline-flex">
+        See the profit of each order <ArrowRight aria-hidden="true" className="size-4" />
+      </Link>
     </>
   )
 }
 
+type DrawnRow = ProfitPoint & { run?: string }
+
+/** Newest-first months with each run of two or more empty ones (nothing invoiced, paid or received) folded into one row labelled "Jan to Sep 2026". */
+function runEmptyMonths(rows: ProfitPoint[]): DrawnRow[] {
+  const empty = (r: ProfitPoint) => r.income === 0n && r.cash === 0n && r.costs === 0n && r.profit === 0n
+  const out: DrawnRow[] = []
+  for (let i = 0; i < rows.length; ) {
+    let j = i
+    while (j < rows.length && empty(rows[j])) j++
+    if (j - i >= 2) {
+      const newest = rows[i].month
+      const oldest = rows[j - 1].month
+      const run = newest.slice(0, 4) === oldest.slice(0, 4) ? `${shortMonth(oldest).slice(0, 3)} to ${shortMonth(newest)}` : `${shortMonth(oldest)} to ${shortMonth(newest)}`
+      out.push({ ...rows[i], run })
+      i = j
+    } else {
+      out.push(rows[i])
+      i++
+    }
+  }
+  return out
+}
+
 /** The monthly profit on invoices with the cash received beside it; newest month first. Totals are summed from the rows drawn. */
-function ProfitTable({ rows, label }: { rows: ProfitPoint[]; label: string }) {
-  const columns: Column<ProfitPoint>[] = [
-    { id: 'month', header: 'Month', value: r => r.month, cell: r => shortMonth(r.month) },
-    { id: 'income', header: 'Income (PKR)', kind: 'money', value: r => paisaToFixed(r.income), total: true, paisa: 'never' },
-    { id: 'costs', header: 'Costs (PKR)', kind: 'money', value: r => paisaToFixed(r.costs), total: true, paisa: 'never', hideBelowMd: true },
-    { id: 'profit', header: 'Profit (PKR)', kind: 'money', value: r => paisaToFixed(r.profit), total: true, paisa: 'never' },
-    { id: 'cash', header: 'Cash received, includes GST (PKR)', kind: 'money', value: r => paisaToFixed(r.cash), total: true, paisa: 'never' },
+function ProfitTable({ rows: monthRows, label }: { rows: ProfitPoint[]; label: string }) {
+  // Presentation only: two or more empty months in a row show as one line, "Jan to Sep 2026: nothing recorded". Every figure stays as it was (an empty month adds 0).
+  const rows = useMemo(() => runEmptyMonths(monthRows), [monthRows])
+  const money = (get: (r: DrawnRow) => bigint) => (r: DrawnRow) => (r.run ? <span /> : <Money value={paisaToFixed(get(r))} prefix={false} paisa="never" />)
+  const columns: Column<DrawnRow>[] = [
+    { id: 'month', header: 'Month', value: r => r.month, cell: r => (r.run ? <span className="text-fg-2">{r.run}: nothing recorded</span> : shortMonth(r.month)) },
+    { id: 'income', header: 'Income (PKR)', kind: 'money', value: r => paisaToFixed(r.income), total: true, paisa: 'never', cell: money(r => r.income) },
+    { id: 'costs', header: 'Costs (PKR)', kind: 'money', value: r => paisaToFixed(r.costs), total: true, paisa: 'never', hideBelowMd: true, cell: money(r => r.costs) },
+    { id: 'profit', header: 'Profit (PKR)', kind: 'money', value: r => paisaToFixed(r.profit), total: true, paisa: 'never', cell: money(r => r.profit) },
+    { id: 'cash', header: 'Cash received, includes GST (PKR)', kind: 'money', value: r => paisaToFixed(r.cash), total: true, paisa: 'never', cell: money(r => r.cash) },
   ]
   return (
     <DataTable
+      className="md:rounded-none md:border-x-0"
       label={label}
       columns={columns}
       rows={rows}
       getRowId={r => r.month}
-      footerLabel={`Total of ${rows.length} months`}
+      footerLabel={`Total of ${monthRows.length} months`}
       summary="Income is invoiced, GST left out. Cash received includes GST."
       toolbar={<h2 className="text-base font-semibold">Profit by month</h2>}
-      mobileRow={r => (
+      mobileRow={r =>
+        r.run ? (
+          <span className="text-fg-2">{r.run}: nothing recorded</span>
+        ) : (
         <span className="grid gap-1">
           <span className="font-medium">{shortMonth(r.month)}</span>
           <span className="num text-base text-fg-2">
             Income {rupees(r.income)} · profit {rupees(r.profit)} · cash received {rupees(r.cash)}
           </span>
         </span>
-      )}
+        )
+      }
     />
   )
 }
@@ -191,11 +236,12 @@ function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | u
     { id: 'last', header: 'Last paid', value: r => r.lastPaidOn ?? '', cell: r => (r.lastPaidOn ? formatShortDate(r.lastPaidOn, undefined, true) : ''), hideBelowMd: true },
   ]
   return (
-    <Panel title={title} meta={<InfoTip label="About enquiries we did not win">Costs paid on an enquiry that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
+    <Panel flat title={title} meta={<InfoTip label="About enquiries we did not win">Costs paid on an enquiry that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
       {rows.length === 0 ? (
         <EmptyState title="Nothing spent on a lost enquiry">No cost is recorded against an enquiry that was closed without an order.</EmptyState>
       ) : (
         <DataTable
+          className="md:rounded-none md:border-x-0"
           label={title}
           columns={columns}
           rows={rows}

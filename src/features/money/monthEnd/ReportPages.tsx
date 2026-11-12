@@ -118,7 +118,7 @@ function whole<T>(get: (r: T) => Amount | null | undefined) {
 
 function Empty({ ctx, what }: { ctx: MonthEndCtx; what: string }) {
   return (
-    <section className="rounded-panel border bg-surface">
+    <section className="md:border-t">
       <EmptyState title={`Nothing to report for ${monthKeyLabel(ctx.month)}`}>
         {what} The report fills in as payments and expenses are recorded in {monthName(ctx.month)}.
       </EmptyState>
@@ -199,6 +199,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
     <>
       <SumBar
         className={drawings ? 'max-sm:grid-cols-1' : undefined}
+        desktop="strip"
         label="Profit and loss"
         items={[
           {
@@ -216,9 +217,10 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         ]}
       />
       <ReportCsv />
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
         <div className="grid gap-6">
           <Panel
+            flat
             title="Profit on money received"
             meta={
               <>
@@ -275,8 +277,8 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
 
           {/* Shown only when something was drawn or repaid: an empty panel every month was noise. */}
           {drawings ? (
-          <section aria-label="Not a cost" className="overflow-hidden rounded-panel border border-dashed border-line-input bg-canvas">
-            <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
+          <section aria-label="Not a cost" className="overflow-hidden rounded-panel border border-dashed border-line-input bg-canvas md:rounded-none md:border-x-0 md:border-b-0 md:bg-transparent">
+            <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3 md:px-0">
               <h3 className="text-base font-semibold">Drawings and loan repayment</h3>
               <InfoTip label="About drawings">Owner drawings and loan repayment are money out, but not a cost of doing business, so they are not in the profit.</InfoTip>
             </header>
@@ -305,9 +307,9 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         </div>
 
         <div className="grid gap-6">
-          <Panel title="Where the money went" meta={<span className="num text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
+          <Panel flat title="Where the money went" meta={<span className="num text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
             <div className="grid gap-3 px-5 py-4">
-              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 gap-[2px] overflow-hidden rounded-panel border bg-surface">
+              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 gap-[2px] overflow-hidden rounded-panel border bg-surface md:border-0 md:bg-sunken">
                 <i className="block bg-tone-info-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />
                 <i className="block bg-tone-warning-fg" style={{ width: w(toPaisa(v.overheads.net)) }} />
                 {resultPositive ? <i className="block flex-1 bg-brand-green" /> : null}
@@ -335,7 +337,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             </div>
           </Panel>
 
-          <Panel title="Paid out this month">
+          <Panel flat title="Paid out this month">
             <dl className="text-table">
               {[
                 [`All expenses paid, ${plural(v.cash.allPaidCount, 'expense')}`, v.cash.allPaid],
@@ -440,6 +442,8 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       <SumBar
+        desktop="strip"
+        caption={`${plural(v.rows.length, 'invoice')} open, as of ${asOfLabel}`}
         label="Overdue by age"
         items={AGING_BUCKETS.map(b => ({
           label: BUCKET_TITLE[b],
@@ -473,7 +477,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           getRowId={r => r.invoiceId}
           twoLine
           footerLabel={`${plural(v.rows.length, 'invoice')} open`}
-          className={v.advances.length ? 'rounded-b-none' : undefined}
+          className={cn('md:rounded-none md:border-x-0', v.advances.length && 'rounded-b-none')}
           toolbar={
             <div className="flex w-full flex-wrap items-center gap-3">
               <span className="flex min-w-0 items-center gap-3">
@@ -506,7 +510,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           )}
         />
         {v.advances.length ? (
-          <ul aria-label="Advances held" className="rounded-b border border-t-0 border-dashed border-line-input bg-canvas">
+          <ul aria-label="Advances held" className="rounded-b border border-t-0 border-dashed border-line-input bg-canvas md:rounded-none md:border-x-0 md:bg-transparent">
             {v.advances.map(a => (
               <li key={a.orderId} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 text-sm">
                 <Icon icon={Wallet} size="md" className="text-fg-muted" />
@@ -578,7 +582,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{r.supplier}</span>
             <span className="min-w-0 num text-xs text-fg-2 [overflow-wrap:anywhere]">
               {r.orderId && r.orderRef ? (
-                <Link to={`/orders/${r.orderId}`} className="rounded hover:underline">
+                <Link to={`/orders/${r.orderId}`} data-row-actions="" className="rounded hover:underline">
                   {r.orderRef}
                 </Link>
               ) : (
@@ -634,7 +638,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       {missing.length ? (
-        <Banner tone="warning" title={`No exchange rate for ${day}`}>
+        <Banner tone="warning" title={`No exchange rate for ${day}`} className="md:rounded-none md:border-x-0">
           {/* The link sits in the text, not beside it: a side button squeezed the words into one column on a phone. */}
           {missing.join(', ')} {missing.length === 1 ? 'is' : 'are'} shown in {missing.length === 1 ? 'its' : 'their'} own currency.
           {partPaid ? ` ${plural(partPaid, 'supplier order is', 'supplier orders are')} part paid in PKR: what is left shows once a rate is added.` : ''}{' '}
@@ -645,6 +649,12 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       ) : null}
       <SumBar
         className="max-sm:grid-cols-1"
+        desktop="strip"
+        caption={
+          <>
+            {plural(v.rows.length, 'supplier order')}, <Num>{v.paidLegs}</Num> with a payment{missing.length ? '' : <>, owed at the rate on {day}</>}
+          </>
+        }
         label="What we owe"
         items={[
           missing.length
@@ -662,6 +672,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         columns={columns}
         rows={v.rows}
         getRowId={r => r.legId}
+        className="md:rounded-none md:border-x-0"
         twoLine
         footerLabel={plural(v.rows.length, 'supplier order')}
         toolbar={
@@ -704,7 +715,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
 function PayState({ r, asOf }: { r: PayableRow; asOf: string }) {
   const href = payHref(r, asOf)
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+    <span data-row-actions="" className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
       <span className={cn('text-sm', r.flag === 'overpaid' ? 'font-medium text-tone-warning-fg' : 'text-fg')}>{payableStateWord(r)}</span>
       {href ? (
         <Link to={href} className="inline-flex items-center gap-1 rounded text-sm font-medium text-primary hover:underline" aria-label={`Pay ${r.supplier}${r.orderRef ? `, ${r.orderRef}` : ''}`}>
@@ -773,6 +784,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       <SumBar
+        desktop="strip"
         label="GST and FBR"
         items={[
           { label: `${name} invoices`, count: sel?.invoiceCount ?? 0, sub: <>Net PKR <Num>{rupees(sel?.net ?? 0)}</Num></> },
@@ -782,12 +794,14 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         ]}
       />
       <ReportCsv />
+      <div className={cn('grid items-start gap-6', v.showInputTax && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]')}>
       <DataTable
         label="GST and FBR, by invoice month"
         columns={v.showInputTax ? columns : columns.filter(c => c.id !== 'tax')}
         rows={v.rows}
         getRowId={r => r.month}
         activeRowId={ctx.month}
+        className="md:rounded-none md:border-x-0"
         footerLabel={`${plural(note, 'month')}`}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
@@ -817,6 +831,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       />
       {v.showInputTax ? (
         <Panel
+          flat
           title="GST charged and GST paid on purchases, side by side"
           meta={
             <InfoTip label="About GST paid on purchases">
@@ -825,22 +840,21 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             </InfoTip>
           }
         >
-          <div className="grid gap-4 px-5 py-4">
-            <div className="grid divide-y rounded-panel border md:grid-cols-2 md:divide-x md:divide-y-0">
-              <div className="grid gap-1 px-4 py-3">
-                <span className="text-xs text-fg-2">GST charged, {name} invoices</span>
-                <span className="num text-base">
-                  {pkr(sel?.gst ?? 0)} · {plural(sel?.invoiceCount ?? 0, 'invoice')}
-                </span>
-              </div>
-              <div className="grid gap-1 px-4 py-3">
-                <span className="text-xs text-fg-2">GST paid on purchases in {name}, for the tax agent</span>
-                <span className="num text-base">{pkr(sel?.inputTax ?? 0)}</span>
-              </div>
+          <dl className="text-table">
+            <div className="grid gap-1 border-t px-5 py-3 first:border-t-0">
+              <dt className="text-fg-2">GST charged, {name} invoices</dt>
+              <dd className="num type-row">
+                {pkr(sel?.gst ?? 0)} · {plural(sel?.invoiceCount ?? 0, 'invoice')}
+              </dd>
             </div>
-          </div>
+            <div className="grid gap-1 border-t px-5 py-3">
+              <dt className="text-fg-2">GST paid on purchases in {name}, for the tax agent</dt>
+              <dd className="num type-row">{pkr(sel?.inputTax ?? 0)}</dd>
+            </div>
+          </dl>
         </Panel>
       ) : null}
+      </div>
     </>
   )
 }
@@ -908,6 +922,7 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       <SumBar
+        desktop="strip"
         label="Sales by person"
         items={[
           { label: 'Net cash credited', amount: v.credited,  sub: <><Num>{v.creditedPayments}</Num> {v.creditedPayments === 1 ? 'payment' : 'payments'} credited to <Num>{v.creditedPeople}</Num> {v.creditedPeople === 1 ? 'person' : 'people'}</> },
@@ -922,6 +937,7 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         columns={columns}
         rows={v.rows}
         getRowId={r => r.userId}
+        className="md:rounded-none md:border-x-0"
         twoLine
         footerLabel="Credited to people"
         toolbar={

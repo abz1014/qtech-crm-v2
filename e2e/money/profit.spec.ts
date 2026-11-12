@@ -101,7 +101,7 @@ test.describe('Money > Profitability (admin)', () => {
     await expect(avg).toContainText('Average monthly income')
     await expect(avg).toContainText('GST left out')
     await expect(avg).toContainText('This month is left out')
-    await expect(avg).toContainText('Includes GST')
+    await expect(avg).toContainText(/includes GST/i)
     expect(Math.abs(digits(await page.getByTestId('profit-average-income').innerText()) - income / 12)).toBeLessThanOrEqual(1)
     expect(Math.abs(digits(await page.getByTestId('profit-average-cash').innerText()) - cash / 12)).toBeLessThanOrEqual(1)
 
@@ -115,8 +115,14 @@ test.describe('Money > Profitability (admin)', () => {
     // the profit table lists the 12 complete months, newest first, and not this month
     const label = (key: string) => `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(key.slice(5)) - 1]} ${key.slice(0, 4)}`
     const table = page.getByRole('table', { name: 'Profit by month, last 12 months' })
-    await expect(table).toContainText(label(months[11]))
-    await expect(table).toContainText(label(months[0]))
+    // a run of empty months is one line ("Jan to Sep 2026: nothing recorded"), so a month is either a row or inside such a line
+    const short = (key: string) => label(key).slice(0, 3)
+    const shown = async (key: string) => {
+      const text = await table.innerText()
+      return text.includes(label(key)) || (text.includes('nothing recorded') && text.includes(short(key)))
+    }
+    expect(await shown(months[11])).toBe(true)
+    expect(await shown(months[0])).toBe(true)
     await expect(table).not.toContainText(label(today().slice(0, 7)))
     await expect(table).toContainText('Cash received, includes GST')
 

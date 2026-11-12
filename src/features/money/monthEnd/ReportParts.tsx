@@ -51,6 +51,7 @@ export function Panel({
   children,
   className,
   bodyClassName,
+  flat,
 }: {
   title: ReactNode
   meta?: ReactNode
@@ -58,10 +59,12 @@ export function Panel({
   children?: ReactNode
   className?: string
   bodyClassName?: string
+  /** Desktop clarity (lane D2): from 768 up no box, a hairline above the heading and one below it instead of a frame. Phones keep the panel. */
+  flat?: boolean
 }) {
   return (
-    <section className={cn('overflow-hidden rounded-panel border bg-surface', className)}>
-      <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b px-5 py-2">
+    <section className={cn('overflow-hidden rounded-panel border bg-surface', flat && 'md:rounded-none md:border-x-0 md:border-b-0 md:bg-transparent', className)}>
+      <header className={cn('flex min-h-[52px] flex-wrap items-center gap-3 border-b px-5 py-2', flat && 'md:min-h-[44px]')}>
         {/* Title and its note ("i") stay together: the note sits beside the last line of a long title, never alone on a line of its own. */}
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="min-w-0 text-base font-semibold">{title}</h2>
