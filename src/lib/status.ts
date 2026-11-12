@@ -22,7 +22,7 @@ import {
  * the StatusText colours, and a unit test (status.test.ts) fails if it disagrees with tokens.css, if a
  * token has no entry here, or if an entry has no token.
  *
- * Vocabulary (DESIGN_SYSTEM section 6): 34 visible labels; one label means one thing and has one tone
+ * Vocabulary (DESIGN_SYSTEM section 6): 35 visible labels; one label means one thing and has one tone
  * everywhere. The tone says who acts next: warning = we act (now), info = someone else acts (waiting),
  * success = finished (done), danger = past its date and still open (late), neutral = closed, not asked,
  * not needed (inert). The normal state never draws a chip: those keys carry `hidden: true`, StatusBadge

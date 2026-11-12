@@ -167,7 +167,7 @@ export function StatusMoneyTableSections() {
       <Section
         id="status"
         title="Status vocabulary"
-        note="The 34 visible labels, grouped by who acts next: as a chip (StatusBadge) and as status text (StatusText). One label, one tone, everywhere. Colours come from the data-status map in tokens.css."
+        note="The 35 visible labels, grouped by who acts next: as a chip (StatusBadge) and as status text (StatusText). One label, one tone, everywhere. Colours come from the data-status map in tokens.css."
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {STEPS.map(({ step, title }) => (
