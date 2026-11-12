@@ -92,4 +92,12 @@ describe('an engineer\'s ruler', () => {
     expect(m.detail).toBe('installation planned 28 Oct')
     expect(JSON.stringify([m.stops.map(s => [s.shown, s.note]), m.label, m.phoneLabel, m.detail])).not.toMatch(/nvoice|advance/)
   })
+
+  it('an engineer never reads a payment word in the label, even at stage 7 or part paid', () => {
+    const paid = stageModel({ stage: 'paid', stageDetail: null, kind: 'enquiry', office: true })
+    expect(paid.label).toBe('All 7 stages done')
+    const part = stageModel({ stage: 'invoiced', stageDetail: 'part paid', kind: 'enquiry', office: true })
+    expect(part.label).not.toMatch(/paid/i)
+    expect(stageModel({ stage: 'paid', stageDetail: null, kind: 'enquiry' }).label).toBe('Paid')
+  })
 })

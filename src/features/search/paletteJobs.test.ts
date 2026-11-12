@@ -23,4 +23,12 @@ describe('Jobs in the palette', () => {
     expect(meta).toMatch(/Billing/)
     expect(meta).not.toMatch(/nvoice|advance/)
   })
+
+  it('an engineer reads no payment word for a paid job', async () => {
+    job.stage = 'paid'
+    job.stageDetail = null
+    const meta = (await find(true))?.meta ?? ''
+    expect(meta).toMatch(/All 7 stages done/)
+    expect(meta).not.toMatch(/paid/i)
+  })
 })

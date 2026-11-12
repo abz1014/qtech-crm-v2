@@ -101,8 +101,9 @@ export interface Metrics {
    * scroll 0 (null when there is none). boxDepth: the deepest chain of nested boxes (a box is a visible element in the page with a border
    * on 3 or more sides, a radius above 0 and 2000 px2 or more; controls, chips and inputs are not boxes). boxesAtFold: boxes in the first screen (top above the fold, bottom below 0)
    * stepRowMax: height of the tallest job step row (null when the page has none).
+   * todoRowMax: height of the tallest visible To do row, a [data-block] li (null when the page has none).
    */
-  clarity: { firstWorkY: number | null; boxDepth: number; boxesAtFold: number; stepRowMax: number | null }
+  clarity: { firstWorkY: number | null; boxDepth: number; boxesAtFold: number; stepRowMax: number | null; todoRowMax: number | null }
 }
 
 export interface CollectOptions {
@@ -1038,7 +1039,7 @@ export function collect(opts: CollectOptions): Metrics {
   }
 
   // ---------------------------------------------------------------- clarity
-  const clarity: Metrics['clarity'] = { firstWorkY: null, boxDepth: 0, boxesAtFold: 0, stepRowMax: null }
+  const clarity: Metrics['clarity'] = { firstWorkY: null, boxDepth: 0, boxesAtFold: 0, stepRowMax: null, todoRowMax: null }
   if (main) {
     const scrolledY = (document.querySelector<HTMLElement>('#main')?.scrollTop ?? 0) + window.scrollY
     const work = Array.from(main.querySelectorAll<HTMLElement>('[data-work]')).find(visible)
@@ -1073,6 +1074,8 @@ export function collect(opts: CollectOptions): Metrics {
     const rows = Array.from(main.querySelectorAll<HTMLElement>('[data-stages] [data-fold-row] > button'))
     const stepRows = (rows.length ? rows : Array.from(main.querySelectorAll<HTMLElement>('[data-stage] h2 button'))).filter(visible)
     if (stepRows.length) clarity.stepRowMax = Math.round(Math.max(...stepRows.map(b => rect(b).height)))
+    const todoRows = Array.from(main.querySelectorAll<HTMLElement>('[data-block] li')).filter(visible)
+    if (todoRows.length) clarity.todoRowMax = Math.round(Math.max(...todoRows.map(li => rect(li).height)))
   }
 
   const contentHeight = Math.round(Math.max(se.scrollHeight, main ? main.scrollHeight + (vh - main.clientHeight) : 0))

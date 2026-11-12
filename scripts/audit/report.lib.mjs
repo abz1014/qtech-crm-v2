@@ -265,6 +265,15 @@ TARGETS.push(
     worse: 'higher',
   },
   {
+    key: 'todoRowMax',
+    label: 'Tallest To do row (px)',
+    target: 'at most 140',
+    source: 'clarity: a To do row is a few short lines. 140 is the measured 375 value (138) rounded up to 10; the earlier 110 was a guess',
+    value: c => c.metrics.clarity?.todoRowMax ?? null,
+    pass: v => v <= 140,
+    worse: 'higher',
+  },
+  {
     key: 'aboveFold',
     label: 'Buttons and links above the fold, nothing left out',
     target: 'at most 12',
@@ -301,6 +310,7 @@ export const RATCHET = [
   { key: 'boxDepth', tolerance: 0, value: c => c.metrics.clarity?.boxDepth ?? null },
   { key: 'boxesAtFold', tolerance: 0, value: c => c.metrics.clarity?.boxesAtFold ?? null },
   { key: 'stepRowMax', tolerance: 8, value: c => c.metrics.clarity?.stepRowMax ?? null },
+  { key: 'todoRowMax', tolerance: 8, reportOnly: true, value: c => c.metrics.clarity?.todoRowMax ?? null },
   // contentHeight depends on the day's dates and data (the seed's overdue and this-month rows), so it is shown with its budget and delta and never gated.
   { key: 'contentHeight', tolerance: 8, reportOnly: true, value: c => c.metrics.contentHeight ?? null },
   { key: 'aboveFold', tolerance: 0, value: c => c.metrics.actions?.aboveFold ?? null },
