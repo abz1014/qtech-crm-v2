@@ -54,7 +54,8 @@ describe('Settings > Product categories', () => {
     const { container } = mount()
     const list = await screen.findByRole('list', { name: 'Product categories' })
     const con = within(list).getByText('Contactors').closest('li') as HTMLElement
-    expect(con).toHaveTextContent('Curated · 2 suppliers')
+    expect(con).toHaveTextContent('2 suppliers')
+    expect(con).not.toHaveTextContent('Curated')
     expect(within(list).queryByText('Old family')).toBeNull()
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
     await userEvent.click(screen.getByRole('radio', { name: 'Others' }))

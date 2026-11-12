@@ -95,9 +95,9 @@ export function ProductCategoriesPage() {
           Check your connection, then try again.
         </Banner>
       ) : q.isPending ? (
-        <div role="status" className="grid gap-px overflow-hidden rounded-panel border bg-line" aria-busy="true" aria-label="Loading product categories">
+        <div role="status" className="grid border-y" aria-busy="true" aria-label="Loading product categories">
           {[0, 1, 2, 3].map(i => (
-            <div key={i} className="bg-surface p-4">
+            <div key={i} className="border-t py-2 first:border-t-0">
               <Skeleton className="h-8 w-full" />
             </div>
           ))}
@@ -112,18 +112,21 @@ export function ProductCategoriesPage() {
             </div>
           </div>
           {shown.length === 0 ? (
-            <p className="rounded-panel border bg-surface p-4 text-base text-fg-muted">{text ? 'No category matches.' : view === 'curated' ? 'No curated category yet.' : 'Nothing here.'}</p>
+            <p className="border-y py-4 text-base text-fg-muted">{text ? 'No category matches.' : view === 'curated' ? 'No curated category yet.' : 'Nothing here.'}</p>
           ) : (
-            <ul aria-label="Product categories" className="overflow-hidden rounded-panel border bg-surface">
-              {shown.slice(0, SHOWN_MAX).map(c => (
-                <li key={c.id} className="flex min-h-[56px] items-center gap-3 border-t px-4 py-2 first:border-t-0" data-curated={c.curated || undefined}>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-base font-medium [overflow-wrap:anywhere]">{c.name}</p>
-                    <p className="text-base text-fg-muted">
-                      {c.curated ? 'Curated' : 'Not curated'} · {c.suppliers} {c.suppliers === 1 ? 'supplier' : 'suppliers'}
-                    </p>
-                  </div>
-                  <RowMenu label={`More for ${c.name}`} title={c.name} subtitle={c.curated ? 'Curated category' : 'Not curated'} items={itemsFor(c)} phone={phone} />
+            <ul aria-label="Product categories" className="border-y">
+              {shown.slice(0, SHOWN_MAX).map((c, i) => (
+                <li key={c.id} className="flex min-h-[48px] items-center gap-3 border-t py-1 pl-1 first:border-t-0" data-curated={c.curated || undefined} data-work={i === 0 ? '' : undefined}>
+                  <p className="min-w-0 flex-1 text-base font-medium [overflow-wrap:anywhere]">
+                    {c.name}
+                    {view === 'all' && !c.curated ? <span className="ml-2 font-normal text-fg-muted">Not curated</span> : null}
+                  </p>
+                  <span className="shrink-0 text-base text-fg-muted">
+                    {c.suppliers} {c.suppliers === 1 ? 'supplier' : 'suppliers'}
+                  </span>
+                  <span data-row-actions="" className="-my-1 flex shrink-0">
+                    <RowMenu label={`More for ${c.name}`} title={c.name} subtitle={c.curated ? 'Curated category' : 'Not curated'} items={itemsFor(c)} phone={phone} />
+                  </span>
                 </li>
               ))}
             </ul>

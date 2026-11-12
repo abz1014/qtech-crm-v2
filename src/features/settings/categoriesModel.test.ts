@@ -107,7 +107,7 @@ describe('deleteAdvice', () => {
     expect(a.message).toContain('It is archived')
   })
   it('counts in words', () => {
-    expect(usageText(0)).toBe('Not used yet')
+    expect(usageText(0)).toBe('Unused')
     expect(usageText(1)).toBe('1 use')
     expect(usageText(5)).toBe('5 uses')
   })

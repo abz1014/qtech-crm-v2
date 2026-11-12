@@ -110,20 +110,20 @@ function MissingBanner({ profile, onAdd }: { profile: Pick<CompanyProfile, Docum
   )
 }
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Section({ title, hint, children, work }: { title: string; hint?: string; children: ReactNode; work?: boolean }) {
   return (
-    <section className="grid gap-4 rounded-panel border bg-surface p-5">
+    <section className="grid gap-4 border-t pt-4" data-work={work ? '' : undefined}>
       <div className="grid gap-[2px]">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {hint ? <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{hint}</p> : null}
+        <h2 className="type-section">{title}</h2>
+        {hint ? <p className="max-w-[62ch] text-base text-fg-muted text-pretty">{hint}</p> : null}
       </div>
       {children}
     </section>
   )
 }
 
-const NEEDED = <span className="ml-2 text-sm font-regular text-fg-muted">Needed for PDFs</span>
-const NEEDED_GST = <span className="ml-2 text-sm font-regular text-fg-muted">Needed for GST invoices</span>
+const NEEDED = <span className="ml-2 text-base font-regular text-fg-muted">Needed for PDFs</span>
+const NEEDED_GST = <span className="ml-2 text-base font-regular text-fg-muted">Needed for GST invoices</span>
 
 /**
  * The two fields a PDF cannot be issued without. While one is empty it is drawn invalid with its own
@@ -192,7 +192,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
           document.querySelector(`[name="${first}"]`)?.scrollIntoView({ block: 'center' })
         }} />
       <Form sf={sf} labels={LABELS} className="grid gap-4">
-        <Section title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
+        <Section work title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
           <NeededField name="legal_name" label="Legal name" message="Add the legal name before issuing a PDF.">
             {f => <TextField {...f} placeholder="As registered with SECP" autoComplete="organization" />}
           </NeededField>
@@ -274,11 +274,12 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
 
       {/* With unsaved changes the bar sticks to the bottom of the screen, so Save is never a long scroll away (audit 2026-10-22). */}
       <div
+        data-sticky-bar=""
         data-save-bar
-        className={cn('flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3', dirty.length > 0 && 'sticky bottom-3 z-10 shadow-pop')}
+        className={cn('flex flex-wrap items-center gap-3 border-t py-3', dirty.length > 0 && 'sticky bottom-0 z-10 bg-surface')}
       >
         {dirty.length > 0 ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
-        <p role="status" className="text-sm text-fg-muted">
+        <p role="status" className="text-base text-fg-muted">
           {dirty.length === 0
             ? 'Nothing to save yet'
             : `${dirty.length} unsaved ${dirty.length === 1 ? 'change' : 'changes'}: ${dirty.map(k => LABELS[k]).join(', ')}`}
@@ -353,14 +354,14 @@ function Row({
   )
 }
 
-const KV = 'grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]'
+const KV = 'grid gap-x-4 gap-y-2 text-base sm:grid-cols-[160px_minmax(0,1fr)]'
 
 /** `financial` is false for an engineer: the database does not give them the tax and bank details, so those sections are not drawn. */
 function ProfileReadOnly({ profile: p, financial }: { profile: CompanyProfile; financial: boolean }) {
   return (
     <>
       <MissingBanner profile={financial ? p : { ...p, ntn: 'n/a', strn: 'n/a' }} />
-      <Section title="Business details">
+      <Section work title="Business details">
         <dl className={KV}>
           <Row label="Legal name" value={p.legal_name} needed />
           <Row label="Address" value={p.address} needed />

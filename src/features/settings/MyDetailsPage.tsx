@@ -56,10 +56,10 @@ export function MyDetailsPage() {
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <section className="grid gap-4 rounded-panel border bg-surface p-5">
+    <section className="grid gap-4 border-t pt-4" data-work="">
       <div className="grid gap-[2px]">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {hint ? <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{hint}</p> : null}
+        <h2 className="type-section">{title}</h2>
+        {hint ? <p className="max-w-[62ch] text-base text-fg-muted text-pretty">{hint}</p> : null}
       </div>
       {children}
     </section>
@@ -89,7 +89,7 @@ function DetailsForm({ details }: { details: MyDetails }) {
       <Form sf={sf} labels={{ phone: 'Phone' }} className="grid gap-4">
         <Section title="Your details" hint="Your name, email and job title are set by an admin.">
           {/* Label left, value right: the same shape as the Company profile (the section's hint says an admin sets these). */}
-          <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]" data-testid="your-facts">
+          <dl className="grid gap-x-4 gap-y-2 text-base sm:grid-cols-[160px_minmax(0,1fr)]" data-testid="your-facts">
             <dt className="text-fg-muted">Name</dt>
             <dd className="min-w-0 [overflow-wrap:anywhere]">{details.name}</dd>
             <dt className="text-fg-muted">Email</dt>
@@ -104,9 +104,9 @@ function DetailsForm({ details }: { details: MyDetails }) {
       </Form>
 
       {/* With unsaved changes the bar sticks above the phone's bottom tabs (the page scrolls inside <main>, which ends where the tabs start). */}
-      <div data-save-bar className={cn('flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3', dirty && 'sticky bottom-3 z-10 shadow-pop')}>
+      <div data-sticky-bar="" data-save-bar className={cn('flex flex-wrap items-center gap-3 border-t py-3', dirty && 'sticky bottom-0 z-10 bg-surface')}>
         {dirty ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
-        <p role="status" className="text-sm text-fg-muted">
+        <p role="status" className="text-base text-fg-muted">
           {dirty ? '1 unsaved change: Phone' : 'Nothing to save yet'}
         </p>
         <div className="ml-auto flex gap-2">

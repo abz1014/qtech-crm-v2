@@ -260,7 +260,7 @@ test.describe('Settings › Expense categories (M13, groups 0082)', () => {
     ])
     const office = page.locator('[data-group="Office running"]')
     await expect(office.locator('[data-category="Water"]')).toBeVisible()
-    await expect(office.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Usually bank · Not used yet')
+    await expect(office.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Usually bank · Unused')
     await expect(page.locator('[data-group="Vehicles"] [data-category="Token tax"]')).toBeVisible()
     await expect(page.locator('[data-group="Order costs"] [data-category="Customs duty"]')).toBeVisible()
     await expect(page.getByRole('textbox')).toHaveCount(0) // read-only rows; nothing to type into until a dialog opens
@@ -381,7 +381,7 @@ test.describe('Settings › Expense categories (M13, groups 0082)', () => {
   test('a category nothing uses can be deleted after a question', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
     await addCategory(page, spare)
-    await expect(rowOf(page, spare).getByTestId('usage')).toContainText('Not used yet')
+    await expect(rowOf(page, spare).getByTestId('usage')).toContainText('Unused')
     await (await menuOf(page, spare)).getByRole('menuitem', { name: 'Delete' }).click()
     const dlg = page.getByRole('dialog', { name: `Delete ${spare}?` })
     await expect(dlg).toContainText('Nothing uses it')

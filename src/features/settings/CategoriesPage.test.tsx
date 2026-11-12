@@ -116,7 +116,7 @@ describe('Expense categories (M13, 0086)', () => {
     expect(within(row('Water')).getByTestId('spent')).toHaveTextContent('2,800')
     expect(within(row('Water')).getByTestId('budget')).toHaveTextContent('200 left of 3,000')
     expect(within(row('Fuel & travel')).getByTestId('budget')).toHaveTextContent('3,360 over budget')
-    expect(within(row('Spare')).getByTestId('usage')).toHaveTextContent('Not used yet')
+    expect(within(row('Spare')).getByTestId('usage')).toHaveTextContent('Unused')
     expect(within(row('Spare')).getByTestId('spent')).toHaveTextContent('—')
     // the empty group says so and offers to add one
     expect(within(document.querySelector('[data-group="Site visits"]') as HTMLElement).getByText('No categories yet.')).toBeInTheDocument()
