@@ -635,7 +635,22 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
     await shot(ep, 'B-engineer-phone-order')
   })
 
-  // Retired: 'B engineer changes the planned date, then Undo'. The engineer's "Change planned date" button is gone from the redesigned job page (the office plans the visit).
+  // Replaces the retired 'B engineer changes the planned date, then Undo': the order page that had "Change planned date" is gone. An engineer now moves
+  // the date by editing a visit in the job's Visits list (no Undo toast on that save), and the order's planned date follows the next open visit.
+  await probe(info, ep, 'B engineer edits a visit date in the Visits list, the planned date follows', async () => {
+    await visit(ep, info, `/orders/${id}`)
+    const visits = ep.getByRole('region', { name: 'Visits' })
+    await visits.waitFor({ timeout: T })
+    await visits.getByRole('button', { name: 'Edit visit' }).first().click({ timeout: T })
+    const d = ep.getByRole('dialog', { name: 'Visit' })
+    const box = d.getByRole('textbox', { name: 'Date' })
+    await box.fill(slashDate(karachiDay(1)))
+    await box.press('Tab')
+    await shot(ep, 'B-engineer-edit-visit-date')
+    await d.getByRole('button', { name: 'Save' }).click({ timeout: T })
+    const moved = await until(orderRow, r => r.commissioning_planned_on === karachiDay(1))
+    want(info, 'B visit date', moved.commissioning_planned_on === karachiDay(1), `planned date after the engineer edits the visit is ${moved.commissioning_planned_on}`)
+  })
 
   await probe(info, ep, 'B engineer Installed today: double tap, Undo, then done', async () => {
     await ep.reload()
