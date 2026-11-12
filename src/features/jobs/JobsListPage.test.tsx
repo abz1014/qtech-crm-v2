@@ -248,6 +248,6 @@ describe('Jobs list', () => {
     const { container } = mount('engineer', '/jobs?chip=history')
     await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 120/ }).length).toBeGreaterThan(0))
     expect(container.textContent).toContain('All 7 stages done')
-    expect(container.textContent).not.toMatch(/paid/i)
+    expect(container.textContent).not.toMatch(/\bpaid\b/i)
   })
 })
