@@ -613,7 +613,8 @@ const OPENED_VISITS: readonly Visit[] = [
         ['op-claims', async () => {
           await open(page, '/money/expenses')
           const found = await page.evaluate(() => {
-            const h = Array.from(document.querySelectorAll('#main h2, #main h3, #main summary, #main legend')).find(x => /approve|claim|i paid/i.test(x.textContent ?? ''))
+            // phone: the claims are one fold row (no heading), so the section itself is the target
+            const h = document.querySelector('#main [data-testid="claims-review"]') ?? Array.from(document.querySelectorAll('#main h2, #main h3, #main summary, #main legend')).find(x => /approve|claim|i paid/i.test(x.textContent ?? ''))
             h?.setAttribute('data-audit-target', '1')
             return !!h
           })
