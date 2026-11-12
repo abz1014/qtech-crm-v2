@@ -224,7 +224,7 @@ describe('label matching', () => {
     expect(match('Copy message for N suppliers', ...copy)).toBe(true)
     expect(match('Copy message for 3 suppliers', ...copy)).toBe(true)
     expect(match('Copy message for N companies', ...copy)).toBe(false)
-    expect(match('Close <month>', 'Close ', { alts: [] })).toBe(true)
+    expect(match('Lock <month>', 'Lock ', { alts: [] })).toBe(true)
     expect(match('Open Money', 'Open ', { alts: [] })).toBe(false)
   })
   it('plain strings match whole, ignoring spacing and a trailing colon or ellipsis', () => {

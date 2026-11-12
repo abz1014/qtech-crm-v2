@@ -226,10 +226,10 @@ describe('Lock a month checklist', () => {
 
   it('has one green button with its (i), one link to the month’s reports, and no repeated panels', async () => {
     at(`/money/month-end?month=${MONTH}`)
-    expect(await screen.findByRole('button', { name: 'Close June' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'About closing a month' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Lock June' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'About locking a month' })).toBeInTheDocument()
     expect(screen.getByTestId('month-reports-link')).toHaveAttribute('href', `/money/reports?month=${MONTH}`)
-    expect(screen.queryByText('What closing does')).toBeNull()
+    expect(screen.queryByText('What locking does')).toBeNull()
     expect(screen.queryByRole('list', { name: 'Reports' })).toBeNull()
   })
 

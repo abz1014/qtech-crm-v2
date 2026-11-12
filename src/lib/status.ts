@@ -22,7 +22,7 @@ import {
  * the StatusText colours, and a unit test (status.test.ts) fails if it disagrees with tokens.css, if a
  * token has no entry here, or if an entry has no token.
  *
- * Vocabulary (DESIGN_SYSTEM section 6): 34 visible labels; one label means one thing and has one tone
+ * Vocabulary (DESIGN_SYSTEM section 6): 35 visible labels; one label means one thing and has one tone
  * everywhere. The tone says who acts next: warning = we act (now), info = someone else acts (waiting),
  * success = finished (done), danger = past its date and still open (late), neutral = closed, not asked,
  * not needed (inert). The normal state never draws a chip: those keys carry `hidden: true`, StatusBadge
@@ -173,7 +173,7 @@ export const STATUS = {
   'fx-capture': { captured: hid('Rate at the time', 'neutral'), none: def('No rate', 'warning') },
   user: { active: hid('Active', 'success'), deactivated: def('Deactivated', 'neutral', { icon: Ban }) },
   // Amendment A6: monthly bookkeeping. Only a closed month shows a chip.
-  month: { open: hid('Open', 'info'), closed: def('Closed', 'neutral', { icon: Lock }) },
+  month: { open: hid('Open', 'info'), closed: def('Locked', 'neutral', { icon: Lock }) },
   // Report text from here down: no chips.
   aging: {
     '0-30': hid('0 to 30 days', 'neutral'),

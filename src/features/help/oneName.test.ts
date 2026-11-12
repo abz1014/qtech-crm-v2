@@ -34,7 +34,7 @@ export const GROUPS: readonly Group[] = [
   { keep: 'Chase again', others: ['Chase again now'] },
   { keep: 'To collect', others: ['Who owes us', 'Receivables', 'Order balances'] },
   { keep: 'Invoices', others: ['Invoices & GST'] },
-  { keep: 'Lock a month', others: ['Month end', 'Close through'] },
+  { keep: 'Lock a month', others: ['Month end', 'Close through', 'Close a month', 'Closed months'] },
   { keep: 'Invoice posted', others: ['Sent to customer', 'Sent by TCS'] },
   { keep: 'GST paid to FBR', others: ['Tax deposited'] },
   { keep: 'Mistakes to fix', others: ['Things to check', 'Exceptions'] },

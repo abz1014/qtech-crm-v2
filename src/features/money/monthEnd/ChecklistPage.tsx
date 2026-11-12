@@ -24,11 +24,11 @@ import { closeWindowDay, formatClosedAt, formatClosedDay } from '@/features/mone
 import { closeButtonLabel, closedThrough, closeNeedsMove, closeTarget, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
 
 /*
- * Money › Lock a month (M10; admin only). Owner decision 2026-10-19: the phone layout everywhere. The month and its Close button
+ * Money › Lock a month (M10; admin only). Owner decision 2026-10-19: the phone layout everywhere. The month and its Lock button
  * on top; then ONLY the checks that have items, one row each, with what the count is made of and a link to the screen that fixes
  * it (Bank check, Expenses, Margins, Invoices, To collect, Mistakes to fix); the checks that are clear are one
- * line. None blocks the close: "Close September" is two taps, the button then the confirmation, and what closing does is one (i)
- * beside the button. The money reports for the month are one link to Reports. Closed months, with Reopen, sit under the list.
+ * line. None blocks the lock: "Lock September" is two taps, the button then the confirmation, and what locking does is one (i)
+ * beside the button. The money reports for the month are one link to Reports. Locked months, with Reopen, sit under the list.
  *
  * "Mistakes to fix" (the reconciliation checks, M07) joins the list here: it looks at every month, not only this one, so its row
  * says so.
@@ -94,8 +94,8 @@ export function ChecklistPage() {
               </>
             }
           >
-            No payments or expenses are recorded for {monthName(ctx.month)}. The current month cannot be closed; once it has ended this page lists its checks and Today shows &ldquo;Close {monthName(ctx.month)}&rdquo;.
-            {ctx.closed.length ? ` ${closedThrough(ctx.closed)} and earlier are closed.` : ''}
+            No payments or expenses are recorded for {monthName(ctx.month)}. The current month cannot be locked; once it has ended this page lists its checks and Today shows &ldquo;Lock {monthName(ctx.month)}&rdquo;.
+            {ctx.closed.length ? ` ${closedThrough(ctx.closed)} and earlier are locked.` : ''}
           </EmptyState>
         </section>
       ) : (
@@ -117,7 +117,7 @@ function LockBar({ month }: { month: string }) {
     <div data-testid="lock-bar" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded bg-tone-ink-bg px-5 py-3 text-sm text-tone-ink-fg">
       <Icon icon={Lock} size="md" />
       <span>
-        <span className="font-medium">{monthKeyLabel(month)} is closed.</span> Payments, expenses and invoices dated in {name} are frozen.
+        <span className="font-medium">{monthKeyLabel(month)} is locked.</span> Payments, expenses and invoices dated in {name} are frozen.
       </span>
       <span className="flex-1" />
       <span className="text-sm opacity-90">Bank matching and the sent-to-customer and FBR dates stay open.</span>
@@ -154,14 +154,14 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
         disabled={state?.kind === 'not-ended'}
         onClick={() => (move ? ctx.setMonth(target) : setOpen(true))}
       >
-        {state ? closeButtonLabel(ctx.month, state) : `Close ${name}`}
+        {state ? closeButtonLabel(ctx.month, state) : `Lock ${name}`}
       </Button>
     )
   const tip = (
-    <InfoTip label="About closing a month">
-      {state?.kind === 'not-ended' ? <>{name} can be closed once it has ended. </> : null}
-      Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. You can reopen
-      it any time; both are written to the audit log. Months close one at a time, oldest first, and only while they are on screen.
+    <InfoTip label="About locking a month">
+      {state?.kind === 'not-ended' ? <>{name} can be locked once it has ended. </> : null}
+      Locking freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. You can reopen
+      it any time; both are written to the audit log. Months lock one at a time, oldest first, and only while they are on screen.
     </InfoTip>
   )
   return (
@@ -170,28 +170,28 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
       className="grid items-center gap-x-8 gap-y-4 rounded-panel border bg-surface px-6 py-5 md:grid-cols-[minmax(0,1fr)_auto] md:rounded-none md:border-x-0 md:border-t-0 md:bg-transparent md:px-0 md:py-4"
     >
       <div className="grid gap-1">
-        {/* No chip in the heading (spec 1.2): the month's state is the Closed chip beside the pager and the lock bar. */}
+        {/* No chip in the heading (spec 1.2): the month's state is the Locked chip beside the pager and the lock bar. */}
         <h2 className="text-xl font-semibold tracking-snug">{monthKeyLabel(ctx.month)}</h2>
         <p className="text-base" data-testid="checks-summary">
           {withItems === 0 ? (
             'Every check is clear.'
           ) : (
             <>
-              <b className="num font-semibold">{withItems}</b> {withItems === 1 ? 'check has' : 'checks have'} something to look at. None of them stops the close.
+              <b className="num font-semibold">{withItems}</b> {withItems === 1 ? 'check has' : 'checks have'} something to look at. None of them stops the lock.
             </>
           )}
         </p>
-        {/* Only a fact that matters: when it was closed, or how far into the 10-day close window we are. No bare date. */}
+        {/* Only a fact that matters: when it was locked, or how far into the 10-day lock window we are. No bare date. */}
         {state?.kind === 'open' && target !== ctx.month ? (
           // One month at a time (owner decision 2026-10-22): an older open month is closed first, and the button names it.
           <span className="text-sm text-fg-2" data-testid="close-order">
-            {monthKeyLabel(target)} is still open and has to be closed before {name}.
+            {monthKeyLabel(target)} is still open and has to be locked before {name}.
           </span>
         ) : null}
         {closed && ctx.closedEntry ? (
-          <span className="text-sm text-fg-muted">Closed {formatClosedAt(ctx.closedEntry.closedAt)}</span>
+          <span className="text-sm text-fg-muted">Locked {formatClosedAt(ctx.closedEntry.closedAt)}</span>
         ) : day ? (
-          <span className="text-sm text-fg-muted">Day {day} of the 10-day close window</span>
+          <span className="text-sm text-fg-muted">Day {day} of the 10-day lock window</span>
         ) : null}
       </div>
       {phone ? (
@@ -292,11 +292,11 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
   return (
     <section className="overflow-hidden rounded-panel border bg-surface md:overflow-visible md:rounded-none md:border-x-0 md:bg-transparent">
       <header className="flex min-h-[52px] flex-wrap items-center gap-3 border-b px-5 py-2 md:px-0">
-        <h2 className="min-w-0 text-base font-semibold">Closed months</h2>
-        {through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null}
+        <h2 className="min-w-0 text-base font-semibold">Locked months</h2>
+        {through ? <span className="text-sm text-fg-muted">Locked through {through}</span> : null}
       </header>
-      {/* Closed months only (an open month here contradicted the title); the month on screen says Open or Closed above. */}
-      <ul aria-label="Closed months">
+      {/* Locked months only (an open month here contradicted the title); the month on screen says Open or Locked above. */}
+      <ul aria-label="Locked months">
         {shown.map(c => (
           <li
             key={c.key}
@@ -307,7 +307,7 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
             <span className="grid min-w-0">
               <span className="font-medium">{monthKeyLabel(c.key)}</span>
               <span className="text-sm text-fg-muted">
-                Closed {formatClosedDay(c.closedAt, ctx.today)}
+                Locked {formatClosedDay(c.closedAt, ctx.today)}
                 {c.closedBy ? ` by ${c.closedBy}` : ''}
                 {c.note ? ` · ${c.note}` : ''}
               </span>
@@ -323,12 +323,12 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
             )}
           </li>
         ))}
-        {ctx.closed.length === 0 ? <li className="px-5 py-4 text-sm text-fg-2 md:px-0">None closed yet.</li> : null}
+        {ctx.closed.length === 0 ? <li className="px-5 py-4 text-sm text-fg-2 md:px-0">None locked yet.</li> : null}
       </ul>
       {ctx.closed.length > 4 ? (
         <div className="border-t px-5 py-2 md:px-0">
           <Button size="sm" variant="quiet" onClick={() => setAll(a => !a)}>
-            {all ? 'Show fewer' : `Show all ${ctx.closed.length} closed months`}
+            {all ? 'Show fewer' : `Show all ${ctx.closed.length} locked months`}
           </Button>
         </div>
       ) : null}

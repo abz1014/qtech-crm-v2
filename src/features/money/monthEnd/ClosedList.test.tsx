@@ -18,7 +18,7 @@ const ctx = {
   ],
 } as unknown as MonthEndCtx
 
-describe('Closed months: reopen newest first', () => {
+describe('Locked months: reopen newest first', () => {
   it('only the latest closed month has Reopen; the earlier ones say which month to reopen first', async () => {
     const onReopen = vi.fn()
     render(
@@ -26,7 +26,7 @@ describe('Closed months: reopen newest first', () => {
         <ClosedList ctx={ctx} onReopen={onReopen} />
       </MemoryRouter>,
     )
-    const list = screen.getByRole('list', { name: 'Closed months' })
+    const list = screen.getByRole('list', { name: 'Locked months' })
     expect(within(list).getAllByRole('button', { name: /^Reopen / })).toHaveLength(1)
     await userEvent.click(within(screen.getByTestId('closed-2026-09')).getByRole('button', { name: /^Reopen / }))
     expect(onReopen).toHaveBeenCalledWith(expect.objectContaining({ key: '2026-09' }))

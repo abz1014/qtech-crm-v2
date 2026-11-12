@@ -59,10 +59,10 @@ describe('status registry vs tokens.css', () => {
 describe('status vocabulary (DESIGN_SYSTEM section 6, consistency spec 1.7)', () => {
   const visible = STATUS_ENTRIES.filter(([, , s]) => !s.hidden)
 
-  it('(a) the non-hidden entries use at most 35 labels (34 today)', () => {
+  it('(a) the non-hidden entries use at most 35 labels (35 today)', () => {
     const labels = new Set(visible.map(([, , s]) => s.label))
     expect(labels.size).toBeLessThanOrEqual(35)
-    expect(labels.size).toBe(34)
+    expect(labels.size).toBe(35)
   })
 
   it('(b) each visible label has exactly one tone', () => {

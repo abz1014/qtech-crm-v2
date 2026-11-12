@@ -43,7 +43,7 @@ export function ExpenseReportDocument({ v, logoSrc, printedOn }: { v: ExpenseRep
         </View>
         <Text style={s.h1}>Expenses, {v.label}</Text>
         <Text style={s.sub}>
-          All amounts in PKR, as paid (GST paid on purchases included). {v.frozenMonths > 0 ? 'Closed months: figures frozen at close.' : ''}
+          All amounts in PKR, as paid (GST paid on purchases included). {v.frozenMonths > 0 ? 'Locked months: figures frozen at close.' : ''}
         </Text>
         <View style={s.tiles}>
           <View style={s.tile}>

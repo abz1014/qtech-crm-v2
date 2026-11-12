@@ -193,7 +193,7 @@ export interface ExpenseReportView {
   top: ReportEntry[]
   byDetail: AcrossDetail[]
   trend: TrendBar[]
-  /** Closed months in the period (figures frozen), out of `months`. */
+  /** Locked months in the period (figures frozen), out of `months`. */
   frozenMonths: number
   /** Money out as In vs out has it (v_month_cash_flow) less what the entries paid IN the period: 0 unless a closed month differs from the books. */
   unexplained: string

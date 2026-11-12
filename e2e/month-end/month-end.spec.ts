@@ -12,7 +12,7 @@ import { axeViolations } from '../support/axe'
  *   Jump from a check to the fix        1 tap
  *   Monthly report viewed               1 tap (its line in Reports; Reports is 1 tap from the checklist)
  *   CSV export                          1 tap, one file named for the report and month
- *   Close a month (checklist reviewed)  2 taps, nothing typed
+ *   Lock a month (checklist reviewed)  2 taps, nothing typed
  *   Reopen                              2 taps (a reason is optional)
  * plus: the closed-month sentence reaches the person word for word, sales and engineer see nothing of Month-end (no request is made
  * and the database gives them no rows), sales still read the GST register, and axe (WCAG 2.2 AA) at 1440 and 375.
@@ -113,8 +113,8 @@ test.describe('month-end (M10)', () => {
     await expect(page.getByTestId('checks-summary')).toBeVisible()
     const clear = page.getByTestId('checks-clear')
     await expect(clear).toContainText(/checks? (is|are) clear/)
-    await expect(page.getByText('What closing does')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'About closing a month' })).toBeVisible()
+    await expect(page.getByText('What locking does')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'About locking a month' })).toBeVisible()
     await startCounting(page)
     await page.getByTestId('month-reports-link').click()
     await expect(page).toHaveURL(new RegExp(`/money/reports/pnl\\?month=${STMT.key}`))
@@ -273,8 +273,8 @@ test.describe('month-end (M10)', () => {
     // Owner decisions 2026-10-22 and 2026-11-06: one tap never closes more than one month, and a month is locked only while it is on
     // screen. With an older month open the green button says "Go to <Month> <Year>", moves the page there and locks nothing.
     await expect(page.getByRole('button', { name: /^Close through/ })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: `Close ${STMT.name}`, exact: true })).toHaveCount(0)
-    await expect(page.getByTestId('close-order')).toContainText(`${oldest} is still open and has to be closed before ${STMT.name}.`)
+    await expect(page.getByRole('button', { name: `Lock ${STMT.name}`, exact: true })).toHaveCount(0)
+    await expect(page.getByTestId('close-order')).toContainText(`${oldest} is still open and has to be locked before ${STMT.name}.`)
     const goTo = page.getByRole('button', { name: `Go to ${oldest}`, exact: true })
     await expect(goTo).toBeEnabled()
     await goTo.click()
@@ -283,12 +283,12 @@ test.describe('month-end (M10)', () => {
     expect(await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))).toHaveLength(shut.size)
     // Now the oldest month is on screen: the normal Close button and its confirmation.
     const oldestName = oldest.split(' ')[0]
-    const first = page.getByRole('button', { name: `Close ${oldestName}`, exact: true })
+    const first = page.getByRole('button', { name: `Lock ${oldestName}`, exact: true })
     await expect(first).toBeEnabled()
     await first.click()
-    const firstDialog = page.getByRole('dialog', { name: `Close ${oldest}?` })
-    await expect(firstDialog).toContainText(`This closes ${oldest} only.`)
-    await firstDialog.getByRole('button', { name: `Close ${oldestName}`, exact: true }).click()
+    const firstDialog = page.getByRole('dialog', { name: `Lock ${oldest}?` })
+    await expect(firstDialog).toContainText(`This locks ${oldest} only.`)
+    await firstDialog.getByRole('button', { name: `Lock ${oldestName}`, exact: true }).click()
     await expect(firstDialog).toBeHidden()
     const afterFirst = (await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))).map(c => c.month)
     expect(afterFirst.filter(m => !shut.has(m))).toEqual([before[0]])
@@ -296,15 +296,15 @@ test.describe('month-end (M10)', () => {
     // The other older months one by one (the RPC), then last month on the page: the button (1) and the confirmation (2).
     for (const m of before.slice(1)) await must(rest('admin', 'rpc/close_month', { method: 'POST', body: { p_month: m }, prefer: 'return=minimal' }))
     await page.goto(`/money/month-end?month=${STMT.key}`)
-    const closeBtn = page.getByRole('button', { name: `Close ${STMT.name}`, exact: true })
+    const closeBtn = page.getByRole('button', { name: `Lock ${STMT.name}`, exact: true })
     await expect(closeBtn).toBeEnabled()
     await startCounting(page)
     await closeBtn.click()
-    const dialog = page.getByRole('dialog', { name: `Close ${STMT.label}?` })
+    const dialog = page.getByRole('dialog', { name: `Lock ${STMT.label}?` })
     await expect(dialog.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
     await review(page, 'm10-close-dialog-1440')
-    await dialog.getByRole('button', { name: `Close ${STMT.name}`, exact: true }).click()
-    await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)
+    await dialog.getByRole('button', { name: `Lock ${STMT.name}`, exact: true }).click()
+    await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is locked.`)
     expect(await mouse(page)).toBe(2)
     const closed = await must(rest<{ month: string }[]>('admin', 'closed_months?select=month'))
     expect(closed.map(c => c.month)).toContain(STMT.start)

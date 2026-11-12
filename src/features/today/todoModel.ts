@@ -39,7 +39,7 @@ export const ACTION_LABEL: Record<RuleKey, string> = {
   plan_commissioning: 'Plan visit',
   to_source: 'Find suppliers',
   delivered_not_invoiced: 'Create invoice',
-  close_month: 'Close month',
+  close_month: 'Lock month',
   costs_incomplete: 'Add costs',
   fbr_attention: 'Check invoices',
   tcs_not_sent: 'Mark posted',
