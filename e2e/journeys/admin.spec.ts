@@ -77,10 +77,10 @@ async function seedFavouriteCategory() {
   }
 }
 
-/** The "Ticked, money in" figure in rupees. */
+/** The "Matched, money in" figure in rupees (the desktop strip shows the number without PKR). */
 async function tickedIn(page: Page): Promise<number> {
   const text = await page.getByRole('region', { name: 'Running ticked totals' }).getByText('Matched, money in').locator('..').innerText()
-  return Number((/PKR\s*([\d,.]+)/.exec(text)?.[1] ?? 'NaN').replace(/,/g, ''))
+  return Number((/(?:PKR\s*)?(\d[\d,.]*)/.exec(text)?.[1] ?? 'NaN').replace(/,/g, ''))
 }
 
 test('admin: burst expenses, the bank statement, the margins, and a month closed and reopened', async ({ browser }, info) => {

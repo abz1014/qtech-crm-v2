@@ -76,10 +76,10 @@ async function startCounting(page: Page) {
 }
 const mouse = (page: Page) => page.evaluate(() => (window as unknown as { __mouse: number }).__mouse)
 
-/** The "Ticked, money in" figure in rupees. */
+/** The "Matched, money in" figure in rupees (the desktop strip shows the number without PKR). */
 async function tickedTotal(page: Page): Promise<number> {
   const text = await page.getByRole('region', { name: 'Running ticked totals' }).getByText('Matched, money in').locator('..').innerText()
-  return Number((/PKR\s*([\d,.]+)/.exec(text)?.[1] ?? 'NaN').replace(/,/g, ''))
+  return Number((/(?:PKR\s*)?(\d[\d,.]*)/.exec(text)?.[1] ?? 'NaN').replace(/,/g, ''))
 }
 
 function writes(page: Page) {
