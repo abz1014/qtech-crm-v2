@@ -3,6 +3,7 @@ import { expect, test, type BrowserContext, type Locator, type Page, type TestIn
 import { API_URL, ANON_KEY, karachiDay, login } from '../../support/stack'
 import { db, USER } from '../../verify/support/db'
 import { monthBefore, monthOf, order, payment, post } from '../../verify/support/fixtures'
+import { openStage, stagesOf } from '../../support/job'
 import { blankCtx, ctxAs, layout, note, probe, settle, shot, tag, visit, watch } from './support'
 
 /*
@@ -201,7 +202,20 @@ interface InOut {
 }
 async function readInOut(page: Page, info: TestInfo, url: string): Promise<InOut> {
   await visit(page, info, url, 'in-out')
-  await page.getByTestId('cash-in').waitFor({ timeout: 15_000 })
+  const region = page.getByRole('region', { name: 'Cash in and out' })
+  await page.getByTestId('cash-in').or(region.getByText('Money in', { exact: true })).first().waitFor({ timeout: 15_000 })
+  if ((await page.getByTestId('cash-in').count()) === 0) {
+    // phone: one line per figure (label and amount), no period before and no per-row test ids
+    const line = async (label: string) => toNum(await region.locator('dt', { hasText: new RegExp(`^${label}$`) }).locator('xpath=following-sibling::dd[1]').innerText())
+    return {
+      in: await line('Money in'),
+      out: await line('Money out'),
+      net: await line('Cash in minus cash out'),
+      beforeIn: NaN,
+      beforeOut: NaN,
+      frozen: /frozen/i.test(await region.innerText()),
+    }
+  }
   const cell = async (id: string, i: number) => toNum(await page.getByTestId(id).getByRole('cell').nth(i).innerText())
   return {
     in: await cell('cash-in', 0),
@@ -610,7 +624,10 @@ test('books: two admins, one closes last month while the other has Add expense o
   const before = await closedMonths()
   const amtC = 30000 + rnd()
   const descC = `hunt closed ${T}`
-  const sentence = `${M1.label} is closed. An admin can reopen it.`
+  const sentence = new RegExp(`${M1.label} is (closed|locked)\\.`)
+  // Lane A renames Close <month> to Lock <month> (button and dialog); until it merges the old words are accepted too.
+  const lockName = new RegExp(`^(Close|Lock) ${M1.name}$`)
+  const lockTitle = new RegExp(`^(Close|Lock) ${M1.label}\\?$`)
   const ctxA = await ctxAs(browser, info, 'admin', 'desktop')
   const ctxB = await ctxAs(browser, info, 'admin', 'phone')
   const ctxC = await ctxAs(browser, info, 'admin', 'desktop')
@@ -640,14 +657,14 @@ test('books: two admins, one closes last month while the other has Add expense o
       await visit(a, info, `/money/month-end?month=${M1.key}`, 'month-end A')
       await layout(a, info, 'month-end desktop open')
       await shot(a, 'books-month-end-open')
-      await a.getByRole('button', { name: `Close ${M1.name}`, exact: true }).click({ timeout: 10_000 })
-      const dlg = a.getByRole('dialog', { name: `Close ${M1.label}?` })
+      await a.getByRole('button', { name: lockName }).click({ timeout: 10_000 })
+      const dlg = a.getByRole('dialog', { name: lockTitle })
       await dlg.waitFor({ timeout: 10_000 })
       await layout(a, info, 'close dialog')
       await shot(a, 'books-close-dialog')
-      await dlg.getByRole('button', { name: `Close ${M1.name}`, exact: true }).dblclick()
+      await dlg.getByRole('button', { name: lockName }).dblclick()
       await a.getByTestId('lock-bar').waitFor({ timeout: 15_000 })
-      if ((await a.getByText('The month was not closed').count()) > 0) note(info, { kind: 'observation', where: 'close double-click', what: 'an error banner after a double-click on Close' })
+      if ((await a.getByText(/The month was not (closed|locked)/).count()) > 0) note(info, { kind: 'observation', where: 'close double-click', what: 'an error banner after a double-click on Close' })
       if (!(await closedMonths()).includes(M1.start)) throw new Error('the month is not in closed_months')
       await shot(a, 'books-month-end-closed')
     })
@@ -665,11 +682,11 @@ test('books: two admins, one closes last month while the other has Add expense o
     })
 
     await probe(info, c, 'admin C on a stale Month-end page presses Close', async () => {
-      const btn = c.getByRole('button', { name: `Close ${M1.name}`, exact: true })
+      const btn = c.getByRole('button', { name: lockName })
       if (!(await btn.isVisible({ timeout: 3_000 }).catch(() => false))) return
       await btn.click()
-      const dlg = c.getByRole('dialog', { name: `Close ${M1.label}?` })
-      await dlg.getByRole('button', { name: `Close ${M1.name}`, exact: true }).click({ timeout: 10_000 })
+      const dlg = c.getByRole('dialog', { name: lockTitle })
+      await dlg.getByRole('button', { name: lockName }).click({ timeout: 10_000 })
       await sleep(2000)
       note(info, { kind: 'observation', where: 'stale close', what: `a second admin closing an already-closed month sees: ${(await c.locator('body').innerText()).replace(/\s+/g, ' ').match(/(closed|could not|went wrong)[^.]*\./gi)?.slice(0, 3).join(' | ') ?? 'nothing'}` })
       await c.keyboard.press('Escape')
@@ -677,13 +694,9 @@ test('books: two admins, one closes last month while the other has Add expense o
 
     await probe(info, a, 'Record payment dated in the closed month: the sentence, nothing saved', async () => {
       await visit(a, info, `/orders/${o.order.id}`, 'order A')
-      // Before an invoice (an advance) Record payment is in the order's More menu (r3/rfq-orders, UX audit P2); a button once one is owed.
-      const pay = a.getByRole('button', { name: 'Record payment' }).first()
-      if (await pay.waitFor({ timeout: 5_000 }).then(() => true).catch(() => false)) await pay.click()
-      else {
-        await a.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: 10_000 })
-        await a.getByRole('menuitem', { name: 'Record payment' }).click({ timeout: 10_000 })
-      }
+      // The job page: Record payment (an advance, before any invoice) is a button of the Invoice step.
+      await openStage(a, 'Invoice')
+      await stagesOf(a).getByRole('button', { name: 'Record payment' }).first().click({ timeout: 10_000 })
       const d = a.getByRole('dialog', { name: 'Record payment' })
       await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
       await d.getByRole('textbox', { name: 'Date received' }).fill(typed(M1.day(5)))
@@ -695,7 +708,8 @@ test('books: two admins, one closes last month while the other has Add expense o
 
     await probe(info, a, 'Create invoice dated in the closed month: the sentence, nothing saved', async () => {
       await visit(a, info, `/orders/${o.order.id}`, 'order A invoice')
-      await a.getByRole('button', { name: 'Create invoice' }).first().click({ timeout: 10_000 })
+      await openStage(a, 'Invoice')
+      await stagesOf(a).getByRole('button', { name: 'Create invoice', exact: true }).first().click({ timeout: 10_000 })
       const d = a.getByRole('dialog', { name: 'Create invoice' })
       await d.getByRole('textbox', { name: 'Invoice date' }).fill(typed(M1.day(6)))
       await d.getByRole('button', { name: 'Create invoice' }).click()
@@ -740,7 +754,8 @@ test('books: two admins, one closes last month while the other has Add expense o
       const d = b.getByRole('dialog', { name: 'Add expense' })
       await d.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amtC), { timeout: 10_000 })
       await d.getByRole('textbox', { name: 'Date paid' }).fill(typed(M1.day(20)))
-      await d.getByRole('button', { name: 'Add a detail' }).click()
+      // the dialog may reopen with the detail box already shown
+      if (!(await d.getByRole('combobox', { name: 'Detail' }).isVisible().catch(() => false))) await d.getByRole('button', { name: 'Add a detail' }).click()
       await d.getByRole('combobox', { name: 'Detail' }).fill(descC)
       await d.getByRole('button', { name: /^(Save expense|Try again)$/ }).click()
       await d.waitFor({ state: 'hidden', timeout: 10_000 })
@@ -1011,21 +1026,21 @@ test('settings: company profile, exchange rates, targets, categories, my details
         await rate.fill(v)
         if (!(await save.isDisabled())) note(info, { kind: 'observation', where: 'exchange rates', what: `Save rate is enabled for "${v}"` })
       }
-      await rate.fill('1000000000')
-      await save.click()
-      await sleep(2000)
-      const toast = (await page.getByRole('status').allInnerTexts().catch(() => [])).join(' | ')
-      note(info, { kind: 'observation', where: 'exchange rates huge', what: `1,000,000,000 PKR per SAR: ${toast.slice(0, 300) || 'no message'}` })
-      await rate.fill('50000000')
-      await save.click()
-      await sleep(2000)
+      // Too large a rate is refused on the form: Save rate stays aria-disabled and nothing is saved (an expected refusal).
+      for (const v of ['1000000000', '50000000']) {
+        await rate.fill(v)
+        if (!(await save.isDisabled())) note(info, { kind: 'observation', where: 'exchange rates', what: `Save rate is enabled for ${v} PKR per SAR (no sanity check)` })
+      }
       const huge = await db.rows<{ rate_pkr: number }>(`fx_rates?currency=eq.SAR&as_of=eq.${TODAY}&select=rate_pkr`)
       if (huge.some(r => Number(r.rate_pkr) >= 50000000)) note(info, { kind: 'observation', where: 'exchange rates', what: 'a SAR rate of 50,000,000 PKR is accepted without a sanity check' })
       await rate.fill('75')
       await form.getByLabel('As of').fill(typed(karachiDay(30)))
       await form.getByLabel('As of').press('Tab')
-      await save.click()
-      await sleep(2000)
+      // a date ahead is refused the same way
+      if (!(await save.isDisabled())) {
+        await save.click()
+        await sleep(2000)
+      }
       const future = await db.rows<{ as_of: string }>(`fx_rates?currency=eq.SAR&as_of=gt.${TODAY}&select=as_of`)
       if (future.length) {
         const latest = await db.view<{ as_of: string; rate_pkr: number }>('v_fx_latest?currency=eq.SAR&select=as_of,rate_pkr')
@@ -1038,6 +1053,7 @@ test('settings: company profile, exchange rates, targets, categories, my details
     await probe(info, page, 'targets: text and a negative in a cell that holds a target', async () => {
       await db.add('targets', { user_id: USER.engineer, year: Y1, quarter: 1, target_net_pkr: 500000 })
       await visit(page, info, '/settings/targets', 'targets')
+      await page.getByRole('button', { name: 'Show earlier quarters' }).click()
       await page.getByRole('button', { name: 'Next year' }).click()
       const cell = page.getByRole('button', { name: new RegExp(`^Test Engineer, Q1 ${Y1} target`) })
       await cell.click({ timeout: 10_000 })
@@ -1060,21 +1076,29 @@ test('settings: company profile, exchange rates, targets, categories, my details
       await post('expenses', { amount_pkr: 1, category_id: made.id, paid_on: TODAY, paid_via: 'bank', description: `hunt in use ${T}` })
       await visit(page, info, '/settings/categories', 'categories')
       const row = page.locator(`[data-category="${c}"]`)
-      const nameBox = row.getByLabel(`Name of ${c}`)
-      await nameBox.fill(' rent ', { timeout: 10_000 })
+      const openMenu = async () => {
+        await row.getByRole('button', { name: `More for ${c}`, exact: true }).click({ timeout: 10_000 })
+        return page.getByRole('menu', { name: `More for ${c}`, exact: true })
+      }
+      await (await openMenu()).getByRole('menuitem', { name: 'Rename' }).click()
+      const ren = page.getByRole('dialog', { name: `Rename ${c}` })
+      const nameBox = ren.getByLabel('Name', { exact: true })
+      await nameBox.fill(' rent ')
       await nameBox.press('Enter')
-      if (!(await row.getByText('A category with this name already exists.').isVisible({ timeout: 3_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'categories rename', what: 'renaming to " rent " gave no duplicate message' })
+      if (!(await ren.getByText('A category with this name already exists.').isVisible({ timeout: 3_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'categories rename', what: 'renaming to " rent " gave no duplicate message' })
       if ((await db.one<{ name: string }>(`expense_categories?id=eq.${made.id}&select=name`)).name !== c) note(info, { kind: 'observation', where: 'categories rename', what: 'a duplicate rename was saved' })
-      await nameBox.press('Escape')
-      await row.getByRole('button', { name: `Delete ${c}` }).click()
-      const panel = row.getByRole('group', { name: `Delete ${c}` })
-      if (!/cannot be deleted/.test(await panel.innerText({ timeout: 5_000 }))) note(info, { kind: 'observation', where: 'categories delete', what: 'in-use category: no "cannot be deleted"' })
-      if ((await panel.getByRole('button', { name: 'Delete', exact: true }).count()) > 0) note(info, { kind: 'observation', where: 'categories delete', what: 'in-use category still offers Delete' })
-      await panel.getByRole('button', { name: 'Close' }).click()
+      await page.keyboard.press('Escape')
+      // A category in use never offers Delete (the expected refusal); it offers Archive and Merge instead.
+      const menu = await openMenu()
+      if ((await menu.getByRole('menuitem', { name: 'Delete', exact: true }).count()) > 0) note(info, { kind: 'observation', where: 'categories delete', what: 'in-use category still offers Delete' })
+      await page.keyboard.press('Escape')
       const dbl = `Hunt Twice ${T}`
-      await page.getByLabel('New category').fill(dbl)
-      await page.getByLabel('New category').press('Enter')
-      await page.getByLabel('New category').press('Enter')
+      await page.getByRole('button', { name: 'Add category' }).click()
+      const add = page.getByRole('dialog', { name: 'Add category' })
+      const addName = add.getByLabel('Name', { exact: true })
+      await addName.fill(dbl)
+      await addName.press('Enter')
+      await addName.press('Enter').catch(() => undefined)
       await sleep(2500)
       const n = (await db.rows(`expense_categories?name=eq.${encodeURIComponent(dbl)}&select=id`)).length
       const err = await page.getByText('A category with this name already exists.').isVisible().catch(() => false)

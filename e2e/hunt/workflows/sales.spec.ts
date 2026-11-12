@@ -59,8 +59,16 @@ const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
  */
 async function replyDialog(page: Page, name: string): Promise<Locator> {
   const d = page.getByRole('dialog', { name, exact: true })
-  if (!(await d.isVisible().catch(() => false)))
-    await vis(page.getByRole('button', { name: `Enter reply, ${name}`, exact: true }).or(page.getByRole('button', { name: `Edit reply, ${name}`, exact: true }))).click()
+  if (!(await d.isVisible().catch(() => false))) {
+    const reply = vis(page.getByRole('button', { name: `Enter reply, ${name}`, exact: true }).or(page.getByRole('button', { name: `Edit reply, ${name}`, exact: true })))
+    if (!(await reply.isVisible().catch(() => false))) {
+      // The Quotation step may have folded (one step open at a time), and on a phone a supplier who has answered is one line until tapped.
+      await openStage(page, 'Quotation').catch(() => undefined)
+      const folded = page.locator('[data-reply-row]').filter({ hasText: name }).getByRole('button', { expanded: false }).first()
+      if (await folded.isVisible().catch(() => false)) await folded.click()
+    }
+    await reply.click()
+  }
   await expect(d).toBeVisible(T)
   return d
 }
@@ -276,6 +284,13 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await layout(page, info, `${W} items`)
       await shot(page, `${W}-paste-odd-items`)
 
+      // A quantity of 0 is refused (the expected refusal): "Looks right" stays on step 1 and the cursor goes to that quantity.
+      await vis(page.getByRole('button', { name: /Looks right: find suppliers/ })).click()
+      await page.waitForTimeout(600)
+      if ((await stepOf(page)) !== 'Step 1 of 4') note(info, { kind: 'observation', where: `${W} zero quantity`, what: 'a quantity of 0 did not stop "Looks right"' })
+      const zeroN = rows.findIndex(([d]) => d.includes('Thermowell')) + 1
+      await page.getByLabel(`Quantity of item ${zeroN}`, { exact: true }).fill('1')
+
       // double-click "Looks right": the next step's button appears where it was
       await vis(page.getByRole('button', { name: /Looks right: find suppliers/ })).dblclick()
       await page.waitForTimeout(800)
@@ -288,15 +303,20 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
         await vis(page.getByRole('button', { name: /^Write the message/ })).click()
       }
       const copy = vis(page.getByRole('button', { name: 'Copy message for 1 supplier' }))
-      await expect(copy).toBeVisible(T)
-      await layout(page, info, `${W} message`)
-      await shot(page, `${W}-message-step`)
-      await resetClipboard(page)
-      await copy.dblclick()
-      const text = await readClipboardWhen(page, s => s.includes('Hi hope you are doing well,'))
-      for (const want of ['Pressure gauge 0-16 bar', 'پریشر', 'Flow switch paddle type'])
-        if (!text.includes(want)) note(info, { kind: 'observation', where: `${W} copied message`, what: `the supplier message lacks "${want}"`, detail: text.slice(0, 600) })
-      if (/RFQ-####|\{\{|undefined|NaN/.test(text)) note(info, { kind: 'observation', where: `${W} copied message`, what: 'placeholder or junk in the supplier message', detail: text.slice(0, 600) })
+      // A double-click on "Looks right" can chain through the next buttons to Copy (the step bar's primary button sits where it was):
+      // then the RFQ is already floated and no Copy button is left to click. Say so and carry on with the stored-data checks.
+      if (await copy.waitFor({ timeout: 8_000 }).then(() => true).catch(() => false)) {
+        await layout(page, info, `${W} message`)
+        await shot(page, `${W}-message-step`)
+        await resetClipboard(page)
+        await copy.dblclick()
+        const text = await readClipboardWhen(page, s => s.includes('Hi hope you are doing well,'))
+        for (const want of ['Pressure gauge 0-16 bar', 'پریشر', 'Flow switch paddle type'])
+          if (!text.includes(want)) note(info, { kind: 'observation', where: `${W} copied message`, what: `the supplier message lacks "${want}"`, detail: text.slice(0, 600) })
+        if (/RFQ-####|\{\{|undefined|NaN/.test(text)) note(info, { kind: 'observation', where: `${W} copied message`, what: 'placeholder or junk in the supplier message', detail: text.slice(0, 600) })
+      } else {
+        note(info, { kind: 'observation', where: `${W} paste odd enquiry`, what: `no Copy message button after the double-click on Looks right (now ${await stepOf(page)}): the second click went on to the next steps` })
+      }
       await expect.poll(async () => (await rfqsOf(cust.id)).length, T).toBeGreaterThan(0)
       await page.waitForTimeout(1500)
       const saved = await rfqsOf(cust.id)
@@ -307,7 +327,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       note(info, { kind: 'observation', where: `${W} stored items`, what: `${items.length} items stored`, detail: items.map(i => [i.description.slice(0, 40), num(i.qty), i.unit]) })
       if (items.some(i => !i.description.trim())) note(info, { kind: 'observation', where: `${W} stored items`, what: 'a whitespace-only item was stored' })
       const th = items.find(i => i.description.includes('Thermowell'))
-      if (th && num(th.qty) === 1) note(info, { kind: 'observation', where: `${W} stored items`, what: 'a quantity of 0 was saved as 1 silently (effectiveQty), the customer asked for 0' })
+      if (th && num(th.qty) !== 1) note(info, { kind: 'observation', where: `${W} stored items`, what: `the quantity typed over the refused 0 was stored as ${th.qty}` })
       const dec = items.find(i => i.description.includes('Pressure gauge'))
       if (dec && num(dec.qty) !== 2.5) note(info, { kind: 'observation', where: `${W} stored items`, what: `2.5 nos stored as ${dec.qty}` })
       const big = items.find(i => i.description.includes('Flow switch'))
@@ -420,7 +440,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await startIntake(page, info, cust)
       await pasteOnPage(page, { text: `Temperature transmitter PT100 ${tag()} - 4 nos` })
       await expect(page.getByRole('textbox', { name: 'Description of item 1', exact: true })).toBeVisible(T)
-      await vis(page.getByRole('link', { name: 'Orders', exact: true })).click()
+      await vis(page.getByRole('link', { name: /^Jobs/ })).click()
       const leave = page.getByRole('dialog', { name: 'Leave this new RFQ?' })
       await expect(leave).toBeVisible(T)
       await layout(page, info, `${W} leave dialog`)
@@ -716,6 +736,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
       if (!/exempt/i.test(text)) note(info, { kind: 'observation', where: `${W} PDF`, what: 'the PDF does not say which line is GST-exempt' })
     }
     await dialog(page).getByRole('button', { name: 'Done' }).click()
+    await openStage(page, 'Quotation') // the Quotations block lives in the Quotation step, which may have folded
     const row = page.getByTestId('quotation-0')
     await expect(row).toBeVisible(T)
     if (!(await row.innerText()).includes(amount(exp0.gross))) note(info, { kind: 'observation', where: `${W} Quotations list`, what: `the list row does not show the gross ${amount(exp0.gross)}`, detail: await row.innerText() })
@@ -730,7 +751,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
   await revive()
   await probe(info, page, `${W} revise: R1 under the same number, R0 kept`, async () => {
     const r0 = (await quotationsOf(r.rfq.id))[0]
-    await page.locator('[data-slot="quotations"]').getByRole('button', { name: 'Revise quotation' }).click()
+    await openReviseFromMenu(page)
     await expect(dialog(page).getByText('Revision 1', { exact: true })).toBeVisible(T)
     const kept = await dialog(page).getByLabel('Unit price, net PKR, item 1').inputValue()
     if (kept !== '1,234.56') note(info, { kind: 'observation', where: `${W} revise`, what: `the last price is not pre-filled for item 1 (shows ${JSON.stringify(kept)})` })
@@ -742,6 +763,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     await dialog(page).getByRole('button', { name: 'Issue revised quotation' }).dblclick()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
     await dialog(page).getByRole('button', { name: 'Done' }).click()
+    await openStage(page, 'Quotation')
     const qs = await quotationsOf(r.rfq.id)
     if (qs.length !== 2) note(info, { kind: 'observation', where: `${W} revise`, what: `${qs.length} quotations after one revise (wanted 2)` })
     const [a, b] = qs
@@ -819,20 +841,11 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     const before = await itemsOf(r.rfq.id)
     await openReviseFromMenu(page)
     await fillPrice(page, 1, '999999999999')
-    await dialog(page).getByRole('button', { name: 'Issue revised quotation' }).click()
-    const outcome = await Promise.race([
-      dialog(page).getByTestId('pdf-ready').waitFor({ timeout: 30_000 }).then(() => 'issued'),
-      dialog(page).getByText('Could not issue the quotation').waitFor({ timeout: 30_000 }).then(() => 'refused'),
-    ]).catch(() => 'nothing happened')
-    const message = outcome === 'refused' ? (await dialog(page).getByText('Could not issue the quotation').locator('..').innerText()).replace(/\s+/g, ' ') : ''
+    // The expected refusal: a total that cannot be stored is stopped in the dialog (Issue revised quotation stays disabled), so nothing
+    // is sent and nothing is written.
+    await expect(dialog(page).getByRole('button', { name: 'Issue revised quotation' })).toBeDisabled(T)
     const after = await itemsOf(r.rfq.id)
-    const changed = num(after[0].quoted_unit_price_net) !== num(before[0].quoted_unit_price_net)
-    note(info, {
-      kind: 'observation',
-      where: `${W} overflowing total`,
-      what: `price 999,999,999,999 x 2.5: ${outcome}${changed && outcome !== 'issued' ? '; rfq_items.quoted_unit_price_net WAS changed although nothing was issued' : ''}`,
-      detail: { message: message.slice(0, 300), itemPrice: after[0].quoted_unit_price_net },
-    })
+    if (num(after[0].quoted_unit_price_net) !== num(before[0].quoted_unit_price_net)) note(info, { kind: 'observation', where: `${W} overflowing total`, what: 'rfq_items.quoted_unit_price_net was changed although Issue stayed disabled', detail: { itemPrice: after[0].quoted_unit_price_net } })
     await shot(page, `${W}-overflow`)
     if (await dialog(page).isVisible().catch(() => false)) await page.keyboard.press('Escape')
     await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { quoted_unit_price_net: 1300 })
@@ -842,6 +855,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
   await revive()
   await probe(info, page, `${W} issue call fails after the prices were written`, async () => {
     const count0 = (await quotationsOf(r.rfq.id)).length
+    await visit(page, info, `/rfqs/${r.rfq.id}`, W)
     await page.route(/\/rest\/v1\/rpc\/issue_quotation/, route => route.abort('failed'))
     try {
       await openReviseFromMenu(page)
@@ -917,12 +931,13 @@ test('quotation at phone: issue and revise at 375 with layout', async ({ browser
     if (text && !text.includes('1.25')) note(info, { kind: 'observation', where: `${W} PDF`, what: 'the decimal quantity 1.25 is not printed as such' })
   })
   await probe(info, page, `${W} revise`, async () => {
-    await page.locator('[data-slot="quotations"]').getByRole('button', { name: 'Revise quotation' }).click()
+    await openReviseFromMenu(page)
     await expect(dialog(page).getByText('Revision 1', { exact: true })).toBeVisible(T)
     await fillPrice(page, 2, '18000')
     await dialog(page).getByRole('button', { name: 'Issue revised quotation' }).click()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
     await dialog(page).getByRole('button', { name: 'Done' }).click()
+    await openStage(page, 'Quotation')
     const qs = await quotationsOf(r.rfq.id)
     if (qs.length !== 2 || qs[1].number !== qs[0].number || qs[1].revision !== 1) note(info, { kind: 'observation', where: `${W} revise`, what: 'revise did not give R1 under the same number', detail: qs.map(q => [q.number, q.revision]) })
     await page.locator('[data-slot="quotations"]').scrollIntoViewIfNeeded()
@@ -953,19 +968,15 @@ test('two tabs on one RFQ: a stale Issue after another tab issued, and a quantit
       await fillPrice(b, 1, '6000')
       await dialog(b).getByRole('button', { name: 'Issue quotation' }).click()
       await expect(dialog(b).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
-      const aTitle = (await dialog(a).getByRole('heading').first().innerText()).trim()
       const aShown = await dialog(a).getByTestId('total-net').innerText()
+      // Fixed (HW-4): the stale Issue is refused and says a quotation was just issued; a second press is a deliberate revision.
       await dialog(a).getByRole('button', { name: /^Issue (revised )?quotation$/ }).click()
-      const done = dialog(a).getByRole('heading', { name: /issued$/ })
-      await expect(done).toBeVisible({ timeout: 45_000 })
-      const doneTitle = await done.innerText()
+      await expect(dialog(a).getByText(/was just issued for this RFQ/)).toBeVisible({ timeout: 45_000 })
+      if ((await quotationsOf(r.rfq.id)).length !== 1) note(info, { kind: 'observation', where: `${W} stale issue`, what: 'the refused stale Issue still made a quotation' })
+      await dialog(a).getByRole('button', { name: /^Issue (revised )?quotation$/ }).click()
+      await expect(dialog(a).getByRole('heading', { name: /issued$/ })).toBeVisible({ timeout: 45_000 })
       const qs = await quotationsOf(r.rfq.id)
-      note(info, {
-        kind: 'observation',
-        where: `${W} stale issue`,
-        what: `tab A still titled "${aTitle}" after tab B issued; A's Issue made ${qs.length === 2 ? `revision ${qs[1].revision}` : `${qs.length} quotations`} ("${doneTitle}") with no warning that one had just been issued`,
-        detail: qs.map(q => ({ n: q.number, rev: q.revision, net: q.net_total })),
-      })
+      if (qs.length !== 2 || qs[1].revision !== 1) note(info, { kind: 'observation', where: `${W} stale issue`, what: 'the deliberate second press did not make revision 1', detail: qs.map(q => ({ n: q.number, rev: q.revision, net: q.net_total })) })
       if (qs.length === 2 && num(qs[1].net_total) !== 20000) note(info, { kind: 'observation', where: `${W} stale issue`, what: `A showed ${aShown} but its quotation stored net ${qs[1].net_total}` })
       await shot(a, `${W}-stale-A-done`)
     })
@@ -985,11 +996,17 @@ test('two tabs on one RFQ: a stale Issue after another tab issued, and a quantit
       // Someone else corrects the quantity to 5 meanwhile.
       await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { qty: 5 })
       await dialog(a).getByRole('button', { name: 'Issue quotation' }).click()
+      // Fixed (HW-3): the issue is refused with the reason, nothing is issued, and the dialog shows the real total before the next try.
+      await expect(dialog(a).getByText(/changed the quantity/)).toBeVisible({ timeout: 30_000 })
+      if ((await quotationsOf(r.rfq.id)).length !== 0) note(info, { kind: 'observation', where: `${W} quantity changed under an open dialog`, what: 'a quotation was issued although the quantity had changed' })
+      await expect(dialog(a).getByTestId('total-gross')).not.toHaveText(shown, T)
+      const shownNow = await dialog(a).getByTestId('total-gross').innerText()
+      await dialog(a).getByRole('button', { name: 'Issue quotation' }).click()
       await expect(dialog(a).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
       const [q] = await quotationsOf(r.rfq.id)
       const stored = num(q.net_total) + num(q.gst_total)
-      if (`PKR ${amount(stored)}` !== shown)
-        note(info, { kind: 'observation', where: `${W} quantity changed under an open dialog`, what: `the dialog showed ${shown} but the issued quotation (and its PDF) says PKR ${amount(stored)}: issued from a quantity the person never saw` })
+      if (`PKR ${amount(stored)}` !== shownNow)
+        note(info, { kind: 'observation', where: `${W} quantity changed under an open dialog`, what: `the dialog showed ${shownNow} but the issued quotation says PKR ${amount(stored)}` })
     })
     await a.close()
   }
@@ -1012,6 +1029,18 @@ async function closeWith(page: Page, label: string): Promise<void> {
   await moreButton(page).click()
   await page.getByRole('menuitem', { name: new RegExp(`^${label}`) }).click()
   await expect(toast(page, 'Closed').first()).toBeVisible(T)
+  await toastsGone(page)
+}
+
+/**
+ * The toast (with its Undo) rises over the bottom of the screen: on a phone it covers the bottom-sheet menu's items for its few seconds,
+ * so the next menu waits until it has gone.
+ */
+async function toastsGone(page: Page): Promise<void> {
+  // A toast under the pointer or holding focus waits (it pauses on hover and focus): dismiss it, which is not an Undo.
+  const withUndo = page.getByRole('status').filter({ has: page.getByRole('button', { name: /^Undo/ }) })
+  for (const d of await withUndo.getByRole('button', { name: 'Dismiss' }).all()) await d.click({ timeout: 3_000 }).catch(() => undefined)
+  await expect(withUndo).toHaveCount(0, { timeout: 20_000 })
 }
 
 async function rfqRow(id: string): Promise<RfqRow> {
@@ -1080,6 +1109,7 @@ test('close and win: every close reason and Reopen, won from lost with Back and 
         await moreButton(page).click()
         await page.getByRole('menuitem', { name: 'Reopen' }).click()
         await expect.poll(async () => (await rfqRow(r.rfq.id)).closed_on, T).toBeNull()
+        await toastsGone(page)
         const after = await rfqRow(r.rfq.id)
         if (after.close_reason !== null) note(info, { kind: 'observation', where: `${W} reopen after ${key}`, what: `reopened but close_reason is still ${after.close_reason}` })
         await page.waitForTimeout(300)

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { rest } from '../../support/stack'
-import { openStage, stagesOf } from '../../support/job'
+import { openStage, stagesOf, type StageName } from '../../support/job'
 import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../../support/pdf'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 import { db, num, USER } from '../../verify/support/db'
@@ -59,6 +59,33 @@ const addDays = (iso: string, n: number) => {
 const actions = (p: Page) => stagesOf(p)
 const legRow = (p: Page, supplierName: string) => p.getByRole('listitem', { name: `Supplier order, ${supplierName}` })
 const payPanel = (p: Page) => p.getByTestId('order-payment-lines')
+/** Opens `stage`, then returns the supplier order row of `supplierName` (Issue PO is in Supplier order; Delivered today and Chase goods are in Delivery). */
+async function legIn(p: Page, stage: StageName, supplierName: string): Promise<Locator> {
+  await openStage(p, stage)
+  return legRow(p, supplierName)
+}
+/** Opens the Invoice stage and returns one of its buttons (Create invoice, Print invoice, Record payment). */
+async function invoiceButton(p: Page, name: string): Promise<Locator> {
+  await openStage(p, 'Invoice')
+  return stagesOf(p).getByRole('button', { name, exact: true }).first()
+}
+/** The balance the Payment step shows ("Still to collect PKR 1,234.56"); the old order page's order-balance cell is gone. NaN when the step does not say. */
+async function balanceShown(p: Page): Promise<number> {
+  const body = await openStage(p, 'Payment')
+  const text = (await body.innerText({ timeout: T })).replace(/\s+/g, ' ')
+  const m = /Still to collect\s+(?:PKR\s*)?([−-]?[\d,]+(?:\.\d+)?)/.exec(text)
+  return m ? toNum(m[1]) : NaN
+}
+/** Delivery stage, Commissioning row open: returns the row. */
+async function commissioningRow(p: Page): Promise<Locator> {
+  await openStage(p, 'Delivery')
+  const row = stagesOf(p).locator('[data-stage="Commissioning"]')
+  const head = row.locator(':scope > button')
+  await head.waitFor({ timeout: T })
+  if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click()
+  await expect(head).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 })
+  return row
+}
 const toNum = (s: string | null | undefined): number => {
   const t = (s ?? '').replace(/−/g, '-').replace(/[^0-9.-]/g, '')
   return t ? Number(t) : NaN
@@ -203,7 +230,7 @@ async function threeWay(info: TestInfo, orderPage: Page, rp: Page, orderId: stri
   }
   await orderPage.reload()
   await settle(orderPage)
-  const shown = toNum(await orderPage.getByTestId('order-balance').innerText({ timeout: T }))
+  const shown = await balanceShown(orderPage)
   want(info, where, same(shown, r.balance), `order page balance ${shown} != order_receivables balance ${r.balance}`, r)
   await visit(rp, info, `/money/receivables?q=${encodeURIComponent(customer)}`)
   await rp
@@ -255,17 +282,9 @@ async function paymentMenu(p: Page, amt: number, item: RegExp): Promise<void> {
   await p.getByRole('menuitem', { name: item }).click({ timeout: T })
 }
 
-/**
- * Opens Record payment. It is a button in the order header while an invoice is owed; before an invoice (an advance) and once the
- * order is paid it lives in the order's More menu (r3/rfq-orders, UX audit P2).
- */
+/** Opens Record payment: a button of the Invoice step (admin; an advance before an invoice, and a settled order too). */
 async function openRecordPayment(p: Page): Promise<Locator> {
-  const button = actions(p).getByRole('button', { name: 'Record payment', exact: true }).first()
-  if (await button.waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) await button.click({ timeout: T })
-  else {
-    await p.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: T })
-    await p.getByRole('menuitem', { name: 'Record payment' }).click({ timeout: T })
-  }
+  await (await invoiceButton(p, 'Record payment')).click({ timeout: T })
   const d = p.getByRole('dialog', { name: 'Record payment' })
   await d.getByRole('textbox', { name: 'Amount received, PKR' }).waitFor({ timeout: T })
   return d
@@ -301,8 +320,9 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
   await probe(info, page, 'A order page totals vs DB (2.5 qty, paisa prices, exempt service)', async () => {
     const db_ = await itemsTotal(id)
     want(info, 'A totals', same(db_.net, M.net) && same(db_.gst, M.gst) && same(db_.gross, M.gross), `v_order_items_total ${JSON.stringify(db_)} != hand-worked ${JSON.stringify({ net: M.net, gst: M.gst, gross: M.gross })}`)
-    await visit(page, info, '/orders')
+    await visit(page, info, '/jobs')
     await visit(page, info, `/orders/${id}`)
+    await openStage(page, 'Order')
     const table = page.getByRole('table', { name: 'Order items' })
     const footer = await table.getByRole('row').filter({ hasText: /Total before GST/ }).innerText({ timeout: T })
     want(info, 'A totals', flat(footer).includes(amount(db_.net)), `items footer does not show the DB net ${amount(db_.net)}`, flat(footer))
@@ -322,18 +342,18 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
   })
 
   await probe(info, page, 'A leg totals in EUR and USD, priced count, PKR estimate', async () => {
-    const e = flat(await legRow(page, supE.name).innerText({ timeout: T }))
+    const e = flat(await (await legIn(page, 'Supplier order', supE.name)).innerText({ timeout: T }))
     // 2.5 x 812.35 = 2,030.875 EUR (shown to the paisa); line 2 has no price
     want(info, 'A leg EUR', /2,030\.88/.test(e), 'EUR supplier order total is not 2,030.88 (2.5 x 812.35 = 2,030.875)', e)
     want(info, 'A leg EUR', e.includes('1 of 2 lines priced'), 'EUR supplier order does not say "1 of 2 lines priced"', e)
-    const u = flat(await legRow(page, supU.name).innerText())
+    const u = flat(await (await legIn(page, 'Supplier order', supU.name)).innerText())
     // 4 x 99.99 = 399.96 USD, at 280 = PKR 111,988.80
     want(info, 'A leg USD', u.includes('399.96'), 'USD supplier order total is not 399.96', u)
     want(info, 'A leg USD', u.includes('111,988.80') || u.includes('111,988.8'), 'USD supplier order PKR estimate is not 111,988.80 at 280', u)
   })
 
   await probe(info, page, 'A browser Back with the Issue PO dialog open', async () => {
-    await legRow(page, supU.name).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Supplier order', supU.name)).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
     const d = page.getByRole('dialog')
     await d.getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
     await page.goBack()
@@ -347,7 +367,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
 
   await probe(info, page, 'A reload with the Issue PO dialog open', async () => {
     await visit(page, info, `/orders/${id}`)
-    await legRow(page, supU.name).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Supplier order', supU.name)).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
     await page.getByRole('dialog').getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
     await page.reload()
     await settle(page)
@@ -359,7 +379,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
   // Line amounts: 2.5 x 812.35 = 2,030.875 -> 2,030.88; 3 x 17.255 = 51.765 -> 51.77 (half away from zero); total 2,082.65 EUR.
   const poTotalE = (productPaisa(2.5, 812.35) + productPaisa(3, 17.255)) / 100
   await probe(info, page, 'A Issue PO (EUR) with a missing supplier price, double click Issue PO', async () => {
-    await legRow(page, supE.name).getByRole('button', { name: `Issue PO, ${supE.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Supplier order', supE.name)).getByRole('button', { name: `Issue PO, ${supE.name}` }).click({ timeout: T })
     const d = page.getByRole('dialog')
     await d.getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
     await d.getByTestId('po-missing').waitFor({ timeout: T })
@@ -412,7 +432,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     const primary = actions(page).getByRole('button', { name: `Issue PO, ${supU.name}` })
     if ((await primary.count()) === 0) {
       obs(info, 'A primary', 'the page\'s primary step is not "Issue PO" for the USD supplier after the EUR PO', flat(await actions(page).innerText()).slice(0, 300))
-      await legRow(page, supU.name).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
+      await (await legIn(page, 'Supplier order', supU.name)).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
     } else await primary.first().click()
     const d = page.getByRole('dialog')
     await d.getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
@@ -428,7 +448,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
       const w = inWords(poTotalU, ['US dollar', 'US dollars', 'cent', 'cents'])
       want(info, 'A PO PDF USD', pdfHas(text, w), `USD PO PDF lacks the words "${w}"`)
     }
-    const chip = await legRow(page, supU.name).locator('[data-testid$="-po"]').innerText()
+    const chip = await (await legIn(page, 'Supplier order', supU.name)).locator('[data-testid$="-po"]').innerText()
     want(info, 'A Issue PO USD', /^PO-\d\d-\d{4} · R0$/.test(chip.trim()), `PO chip reads "${chip}"`)
     await shot(page, 'A-both-pos-issued')
   })
@@ -444,7 +464,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     want(info, 'A Today goods_late', before.count === 1 && before.waiting === 0, `Today goods_late for ${supE.name}: ${JSON.stringify(before)}, expected 1 active`)
     await page.reload()
     await settle(page)
-    await legRow(page, supE.name).getByRole('button', { name: `Chase goods, ${supE.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Delivery', supE.name)).getByRole('button', { name: `Chase goods, ${supE.name}` }).click({ timeout: T })
     const d = page.getByRole('dialog', { name: 'Chase the goods' })
     const draft = flat(await d.getByTestId('draft-text').innerText({ timeout: T }))
     want(info, 'A chase', draft.length > 40, 'the chase draft is (nearly) empty', draft)
@@ -463,7 +483,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     // chase again and leave it: Today should move it to Waiting
     await page.reload()
     await settle(page)
-    await legRow(page, supE.name).getByRole('button', { name: `Chase goods, ${supE.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Delivery', supE.name)).getByRole('button', { name: `Chase goods, ${supE.name}` }).click({ timeout: T })
     await resetClipboard(page)
     await page.getByRole('dialog', { name: 'Chase the goods' }).getByRole('button', { name: 'Copy and mark chased' }).click({ timeout: T })
     await until(() => legDates(legE), r => r.chase_count === 1)
@@ -475,7 +495,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     await page.reload()
     await settle(page)
     const before = await legDates(legE)
-    await legRow(page, supE.name).getByRole('button', { name: `Delivered today, ${supE.name}` }).dblclick({ timeout: T })
+    await (await legIn(page, 'Delivery', supE.name)).getByRole('button', { name: `Delivered today, ${supE.name}` }).dblclick({ timeout: T })
     const d1 = await until(() => legDates(legE), r => r.delivered_on === today())
     want(info, 'A delivered', d1.delivered_on === today() && d1.received_on === today(), `after Delivered today: ${JSON.stringify(d1)}`)
     await page.waitForTimeout(800)
@@ -499,6 +519,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     // With two suppliers, a supplier order already delivered when the page opens folds to one line (r3/rfq-orders, UX audit P9):
     // open it first. A folded one is delivered already (the Undo above did not take it back) and has no Delivered today: only a
     // supplier order still to deliver is stamped here.
+    await openStage(page, 'Delivery')
     const fold = legRow(page, supE.name).locator(':scope > button[aria-expanded="false"]')
     if (await fold.isVisible().catch(() => false)) await fold.click()
     if ((await legDates(legE)).delivered_on === null) await legRow(page, supE.name).getByRole('button', { name: `Delivered today, ${supE.name}` }).click({ timeout: T })
@@ -507,8 +528,9 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     want(info, 'A part delivery', /part/.test(s.goods_state), `goods_state with one of two suppliers delivered is "${s.goods_state}"`)
     await page.reload()
     await settle(page)
-    const cell = flat(await page.getByRole('group', { name: 'State of this order' }).innerText({ timeout: T }))
-    want(info, 'A part delivery', /part|some|1 of 2/i.test(cell), 'the Goods cell does not say the goods are part delivered', cell.slice(0, 300))
+    // the old Goods cell is gone: the Delivery step's own summary and body say how many supplier orders are delivered
+    const cell = flat(await (await openStage(page, 'Delivery')).innerText({ timeout: T })) + ' ' + flat(await stagesOf(page).getByRole('button', { name: /^Delivery/ }).innerText({ timeout: T }))
+    want(info, 'A part delivery', /1 of 2/i.test(cell), 'the Delivery step does not say the goods are part delivered (1 of 2)', cell.slice(0, 300))
     await layout(page, info, 'A part delivered desktop')
     await shot(page, 'A-part-delivered')
     const eng = await ctxAs(browser, info, 'engineer', 'phone')
@@ -570,9 +592,9 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
     const st = await stateOf(id)
     want(info, 'B plan', st.commissioning_state === 'to_plan', `commissioning_state before planning is ${st.commissioning_state}`)
     await visit(sp, info, `/orders/${id}`)
-    const bar = sp.getByRole('toolbar', { name: 'Order actions' })
-    want(info, 'B plan', (await bar.count()) === 1, 'no sticky "Order actions" bar on the phone')
-    await bar.getByRole('button', { name: 'Plan commissioning' }).click({ timeout: T })
+    // the old sticky "Order actions" bar is gone: planning is the Edit button of the Commissioning row in the Delivery step
+    const row = await commissioningRow(sp)
+    await row.getByRole('button', { name: 'Edit', exact: true }).click({ timeout: T })
     const d = sp.getByRole('dialog')
     const planned = d.getByRole('textbox', { name: 'Planned on' })
     await planned.fill(slashDate(today()))
@@ -603,7 +625,8 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
 
   await probe(info, ep, 'B engineer phone order page: no prices, Your job, tap targets', async () => {
     await visit(ep, info, `/orders/${id}`)
-    await ep.getByRole('region', { name: 'Your job' }).waitFor({ timeout: T })
+    // the old "Your job" card is the site card: its buttons are in the "On site" region
+    await ep.getByRole('region', { name: 'On site' }).waitFor({ timeout: T })
     const text = flat(await ep.locator('#main').innerText())
     for (const price of ['48,765.43', '39,876.50', '25,000.75', '121,913.58']) want(info, 'B engineer prices', !text.includes(price), `the engineer sees ${price}`)
     for (const header of ['Unit price', 'Total']) want(info, 'B engineer prices', (await ep.getByRole('columnheader', { name: new RegExp(header) }).count()) === 0, `the engineer's items table has a "${header}" column`)
@@ -612,40 +635,27 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
     await shot(ep, 'B-engineer-phone-order')
   })
 
-  await probe(info, ep, 'B engineer changes the planned date, then Undo', async () => {
-    await ep.getByRole('button', { name: 'Change planned date' }).click({ timeout: T })
-    const pop = ep.getByRole('dialog', { name: 'Planned date' })
-    const box = pop.getByRole('textbox').first()
-    await box.fill(slashDate(karachiDay(1)))
-    await box.press('Tab')
-    await shot(ep, 'B-engineer-change-planned-date')
-    await pop.getByRole('button', { name: 'Save' }).click({ timeout: T })
-    const moved = await until(orderRow, r => r.commissioning_planned_on === karachiDay(1))
-    want(info, 'B planned date', moved.commissioning_planned_on === karachiDay(1), `planned date after the engineer's change is ${moved.commissioning_planned_on}`)
-    await undoIn(toast(ep, /Planned date changed/)).click({ timeout: 8000 })
-    const back = await until(orderRow, r => r.commissioning_planned_on === today())
-    want(info, 'B planned date Undo', back.commissioning_planned_on === today(), `Undo of the planned date left ${back.commissioning_planned_on}`)
-  })
+  // Retired: 'B engineer changes the planned date, then Undo'. The engineer's "Change planned date" button is gone from the redesigned job page (the office plans the visit).
 
-  await probe(info, ep, 'B engineer Mark done today: double tap, Undo, then done', async () => {
+  await probe(info, ep, 'B engineer Installed today: double tap, Undo, then done', async () => {
     await ep.reload()
     await settle(ep)
-    const btn = ep.getByRole('button', { name: 'Mark done today' }).first()
+    const btn = ep.getByRole('region', { name: 'On site' }).getByRole('button', { name: 'Installed today' })
     const box = await btn.boundingBox()
-    want(info, 'B mark done', !!box && box.height >= 44, `"Mark done today" is ${box ? Math.round(box.height) : 0} px tall on the phone (touch target)`)
+    want(info, 'B mark done', !!box && box.height >= 44, `"Installed today" is ${box ? Math.round(box.height) : 0} px tall on the phone (touch target)`)
     await btn.dblclick({ timeout: T })
     const done = await until(orderRow, r => r.commissioning_done_on === today())
     want(info, 'B mark done', done.commissioning_done_on === today(), `done_on after Mark done is ${done.commissioning_done_on}`)
     await ep.waitForTimeout(800)
     const n = await toast(ep, /Commissioning marked done/).count()
-    want(info, 'B mark done', n <= 1, `a double tap on Mark done today showed ${n} toasts`)
+    want(info, 'B mark done', n <= 1, `a double tap on Installed today showed ${n} toasts`)
     await shot(ep, 'B-engineer-marked-done')
     await undoIn(toast(ep, /Commissioning marked done/)).click({ timeout: 8000 })
     const undone = await until(orderRow, r => r.commissioning_done_on === null)
     want(info, 'B mark done Undo', undone.commissioning_done_on === null, `Undo of Mark done left done_on ${undone.commissioning_done_on}`)
     await ep.reload()
     await settle(ep)
-    await ep.getByRole('button', { name: 'Mark done today' }).first().click({ timeout: T })
+    await ep.getByRole('region', { name: 'On site' }).getByRole('button', { name: 'Installed today' }).click({ timeout: T })
     await until(orderRow, r => r.commissioning_done_on === today())
     want(info, 'B mark done', (await stateOf(id)).commissioning_state === 'done', 'commissioning_state is not done after Mark done')
   })
@@ -698,7 +708,7 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
   })
 
   await probe(info, ap, 'C Create invoice, double click: one invoice, figures from the lines', async () => {
-    await actions(ap).getByRole('button', { name: 'Create invoice', exact: true }).first().click({ timeout: T })
+    await (await invoiceButton(ap, 'Create invoice')).click({ timeout: T })
     const d = ap.getByRole('dialog', { name: 'Create invoice' })
     await d.getByText(amount(M.gross), { exact: true }).waitFor({ timeout: T })
     for (const f of [M.net, M.gst]) want(info, 'C create invoice', (await d.getByText(amount(f), { exact: true }).count()) > 0, `the dialog does not show ${amount(f)}`)
@@ -718,7 +728,7 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
     const [inv] = await invoicesOf(id)
     await ap.reload()
     await settle(ap)
-    await ap.getByRole('button', { name: 'Print invoice' }).first().click({ timeout: T })
+    await (await invoiceButton(ap, 'Print invoice')).click({ timeout: T })
     const d = ap.getByRole('dialog', { name: 'Sales tax invoice' })
     const dl = d.getByRole('button', { name: /^(Download|Share)$/ })
     await dl.waitFor({ timeout: T })
@@ -813,9 +823,7 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
     want(info, 'C over', !!r && same(r.over, P3) && r.balance === 0, `DB after the over-payment ${JSON.stringify(r)}`)
     await ap.reload()
     await settle(ap)
-    want(info, 'C over', toNum(await ap.getByTestId('order-balance').innerText({ timeout: T })) === 0, 'order page balance is not 0 after an over-payment')
-    const cell = flat(await ap.getByRole('group', { name: 'State of this order' }).innerText())
-    want(info, 'C over', /over|more than/i.test(cell), 'the order page does not say the order is overpaid', cell.slice(0, 300))
+    want(info, 'C over', (await balanceShown(ap)) === 0, 'the Payment step balance is not 0 after an over-payment')
   })
 
   await probe(info, ap, 'C void the over-payment (double click Void payment), toast Undo, void again', async () => {
@@ -894,10 +902,14 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
   })
 
   await probe(info, sp, 'C a stale sales page edits a line of the fully invoiced order', async () => {
-    const stale = toNum(await sp.getByTestId('order-balance').innerText({ timeout: T }).catch(() => ''))
+    const stale = await balanceShown(sp).catch(() => NaN)
     const r = await rec(id)
     obs(info, 'C stale page', `the sales page opened before the invoice still shows balance ${stale}; DB balance ${r?.balance} (no live refresh)`)
-    await sp.getByRole('button', { name: 'Edit GST and lines' }).click({ timeout: T })
+    await openStage(sp, 'Order')
+    // HW-14: a fully invoiced order's lines are locked, so a page that has the fresh data does not offer the button: that is the expected refusal
+    const edit = sp.getByRole('button', { name: 'Edit GST and lines' })
+    if (!(await edit.waitFor({ timeout: 5000 }).then(() => true).catch(() => false))) return obs(info, 'C stale page', 'Edit GST and lines is not offered on the fully invoiced order (locked, as HW-14 intends)')
+    await edit.click({ timeout: T })
     await sp.getByLabel('GST rate, line 3').selectOption('18')
     await sp.waitForTimeout(2000)
     const rate = (await db.rows<{ gst_rate: number }>(`order_items?order_id=eq.${id}&select=gst_rate&order=position`)).map(x => num(x.gst_rate))
@@ -976,7 +988,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
   const sp = await newPage(salesCtx, info, 'D sales stale')
   await probe(info, sp, 'D two people: admin records 10,000 while sales has the order open; sales invoices the rest from the stale page', async () => {
     await visit(sp, info, `/orders/${id}`)
-    const staleBalance = toNum(await sp.getByTestId('order-balance').innerText({ timeout: T }))
+    const staleBalance = await balanceShown(sp)
     await visit(ap, info, `/orders/${id}`)
     const d = await openRecordPayment(ap)
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10000')
@@ -984,7 +996,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     await d.waitFor({ state: 'hidden', timeout: T })
     await until(() => counting(id), p => p.length === 1)
     // sales, on the page opened before the payment, without a reload
-    await actions(sp).getByRole('button', { name: 'Create invoice', exact: true }).first().click({ timeout: T })
+    await (await invoiceButton(sp, 'Create invoice')).click({ timeout: T })
     const inv = sp.getByRole('dialog', { name: 'Create invoice' })
     await inv.getByText('what is left to invoice', { exact: false }).waitFor({ timeout: T })
     const gross2 = r2(M.per[1].net + M.per[1].gst) // 9,439.99
@@ -999,7 +1011,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     want(info, 'D stale invoice', same(sumNet, M.net) && sumGst === M.gst, `the invoices add up to net ${sumNet} GST ${sumGst}, order net ${M.net} GST ${M.gst}`)
     want(info, 'D stale invoice', (await stateOf(id)).invoicing_state === 'fully_invoiced', 'the order is not fully invoiced after both invoices')
     const r = await rec(id)
-    const shown = await until(async () => toNum(await sp.getByTestId('order-balance').innerText()), v => !!r && same(v, r.balance), 6000)
+    const shown = await until(() => balanceShown(sp), v => !!r && same(v, r.balance), 6000)
     want(info, 'D stale balance', !!r && same(shown, r.balance), `sales page (no reload) shows balance ${shown}, DB ${r?.balance} (was ${staleBalance} before the admin's payment)`)
   })
 
@@ -1009,7 +1021,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     const r = await rec(id)
     await sp.reload()
     await settle(sp)
-    await sp.getByRole('button', { name: 'Print invoice' }).first().click({ timeout: T })
+    await (await invoiceButton(sp, 'Print invoice')).click({ timeout: T })
     const d = sp.getByRole('dialog', { name: 'Sales tax invoice' })
     const dl = d.getByRole('button', { name: /^(Download|Share)$/ })
     await dl.waitFor({ timeout: T })
@@ -1038,7 +1050,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
       owner: 'sales',
     })
     await visit(ap, info, `/orders/${mixed.order.id}`)
-    await actions(ap).getByRole('button', { name: 'Create invoice', exact: true }).first().click({ timeout: T })
+    await (await invoiceButton(ap, 'Create invoice')).click({ timeout: T })
     const d = ap.getByRole('dialog', { name: 'Create invoice' })
     await d.getByRole('button', { name: /Edit the amounts/ }).click({ timeout: T })
     const net = d.getByRole('textbox', { name: 'Net amount, PKR' })
@@ -1053,7 +1065,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     await d.waitFor({ state: 'hidden', timeout: T })
     await ap.reload()
     await settle(ap)
-    await ap.getByRole('button', { name: 'Print invoice' }).first().click({ timeout: T })
+    await (await invoiceButton(ap, 'Print invoice')).click({ timeout: T })
     const pd = ap.getByRole('dialog', { name: 'Sales tax invoice' })
     const dl = pd.getByRole('button', { name: /^(Download|Share)$/ })
     await dl.waitFor({ timeout: T })
@@ -1062,7 +1074,7 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     await pd.getByRole('button', { name: 'Close' }).first().click().catch(() => undefined)
     // More than is left: does the dialog warn before saving?
     await ap.keyboard.press('Escape').catch(() => undefined)
-    await actions(ap).getByRole('button', { name: 'Create invoice', exact: true }).first().click({ timeout: T })
+    await (await invoiceButton(ap, 'Create invoice')).click({ timeout: T })
     const d2 = ap.getByRole('dialog', { name: 'Create invoice' })
     await d2.getByRole('button', { name: /Edit the amounts/ }).click({ timeout: T })
     const net2 = d2.getByRole('textbox', { name: 'Net amount, PKR' })
@@ -1097,7 +1109,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
   const orderRow = () => db.one<{ cancelled_on: string | null; cancel_reason: string | null }>(`orders?id=eq.${id}&select=cancelled_on,cancel_reason`)
 
   await probe(info, ap, 'E Back with Record payment open (amount typed)', async () => {
-    await visit(ap, info, '/orders')
+    await visit(ap, info, '/jobs')
     await visit(ap, info, `/orders/${id}`)
     const d = await openRecordPayment(ap)
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('777')
@@ -1119,6 +1131,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
   })
 
   await probe(info, ap, 'E Back with the Cancel dialog open; it lists the PO already sent', async () => {
+    await visit(ap, info, `/orders/${id}`)
     await ap.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: T })
     await ap.getByRole('menuitem', { name: 'Cancel order' }).click({ timeout: T })
     const d = ap.getByRole('dialog', { name: 'Cancel this order' })
@@ -1166,7 +1179,10 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     }
     await salesCtx.close()
     await visit(ap, info, `/orders/${id}`)
-    want(info, 'E cancelled page', (await actions(ap).getByRole('button', { name: /Record payment|Create invoice|Issue PO|Delivered today/ }).count()) === 0, 'a cancelled order still offers a work button in its header')
+    for (const stage of ['Supplier order', 'Delivery', 'Invoice'] as const) {
+      await openStage(ap, stage)
+      want(info, 'E cancelled page', (await actions(ap).getByRole('button', { name: /Record payment|Create invoice|Issue PO|Delivered today/ }).count()) === 0, `a cancelled order still offers a work button in its ${stage} step`)
+    }
     await layout(ap, info, 'E cancelled order desktop')
     await shot(ap, 'E-cancelled-order')
     await ap.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: T })
@@ -1185,24 +1201,9 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     const ctx = await ctxAs(browser, info, 'admin', 'phone')
     const p = await newPage(ctx, info, 'E admin phone')
     await visit(p, info, `/orders/${id}`)
-    const bar = p.getByRole('toolbar', { name: 'Order actions' })
-    let btn = bar.getByRole('button', { name: 'Record payment', exact: true })
-    if ((await btn.count()) === 0) {
-      obs(info, 'E phone pay', 'the sticky bar of a delivered, invoiced, unpaid order is not Record payment', flat(await bar.innerText().catch(() => '')))
-      btn = p.getByRole('button', { name: 'Record payment', exact: true })
-      if ((await btn.count()) === 0) {
-        await bar.getByRole('button', { name: /More/ }).first().click({ timeout: 3000 }).catch(() => undefined)
-        const item = p.getByRole('menuitem', { name: /Record payment/ })
-        if ((await item.count()) === 0) {
-          obs(info, 'E phone pay', 'no reachable Record payment on the phone for a delivered, invoiced, unpaid order')
-          await shot(p, 'E-admin-phone-no-pay')
-          await ctx.close()
-          return
-        }
-        btn = item
-      }
-    }
-    await btn.first().tap()
+    // the sticky bar is gone: Record payment is a button of the Invoice step
+    const btn = await invoiceButton(p, 'Record payment')
+    await btn.tap()
     const d = p.getByRole('dialog', { name: 'Record payment' })
     const box = d.getByRole('textbox', { name: 'Amount received, PKR' })
     await box.waitFor({ timeout: T })
@@ -1219,7 +1220,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     want(info, 'E phone pay', !!r && same(r.balance, r2(M.gross - 32751.5)), `DB after the phone payment ${JSON.stringify(r)}`)
     await p.reload()
     await settle(p)
-    const shown = toNum(await p.getByTestId('order-balance').innerText({ timeout: T }))
+    const shown = await balanceShown(p)
     want(info, 'E phone pay', !!r && same(shown, r.balance), `phone order page balance ${shown} != DB ${r?.balance}`)
     await layout(p, info, 'E admin phone order after pay')
     await shot(p, 'E-admin-phone-after-pay')
