@@ -310,7 +310,8 @@ function CategoryRow({ c, spent, phone, items, groupName, work }: { c: Category;
         <span className={cn('min-w-0 text-base font-medium [overflow-wrap:anywhere]', !c.active && 'text-fg-2')}>{c.name}</span>
         <span className="min-w-0 text-base text-fg-muted" data-testid="usage">
           {groupName ? <span className="whitespace-nowrap">{groupName} · </span> : null}
-          <span className="whitespace-nowrap">{phone ? PAID_VIA_LABEL[c.default_paid_via] : `Usually ${PAID_VIA_LABEL[c.default_paid_via].toLowerCase()}`} · </span>
+          {groupName ? ' ' : null}
+          <span className="whitespace-nowrap">{phone ? PAID_VIA_LABEL[c.default_paid_via] : `Usually ${PAID_VIA_LABEL[c.default_paid_via].toLowerCase()}`} · </span>{' '}
           <span className="whitespace-nowrap">{usageText(c.used)}</span>
         </span>
       </div>

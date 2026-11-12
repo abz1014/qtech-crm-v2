@@ -380,7 +380,15 @@ async function legAction(page: Page, direct: RegExp, item: RegExp): Promise<void
 
 const LAYOUT_VISITS: readonly Visit[] = [
   layoutDialog('lg-add-expense', 'Layout: Add expense dialog (?add=1)', () => '/money/expenses?add=1', async () => undefined, DIALOG, true),
-  layoutDialog('lg-pay', 'Layout: Pay supplier dialog', fx => `/orders/${fx.order.multiLeg}`, (page) => legAction(page, /^Pay /, /^Pay /)),
+  layoutDialog('lg-pay', 'Layout: Pay supplier dialog', fx => `/orders/${fx.order.multiLeg}`, async page => {
+    // Pay sits on the Supplier order step, which starts folded.
+    const head = stageHead(page, 3)
+    if (await head.isVisible().catch(() => false)) {
+      if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click()
+      await settle(page)
+    }
+    await legAction(page, /^Pay /, /^Pay /)
+  }),
   layoutDialog('lg-recurring', 'Layout: Recurring template dialog', () => '/money/expenses', async page => {
     await page.getByRole('button', { name: /^Add recurring$/ }).filter({ visible: true }).first().click()
   }),
