@@ -905,18 +905,20 @@ test.describe('expenses (M03, M11)', () => {
 
     test('the single dialog shows the plain sentence under the date and keeps every entry', async ({ page }) => {
       const z = base() + 31
+      // The amount is random, so it can equal one another test saved: the detail carries a tag of its own and the check reads by it.
+      const kept = `kept-${unique()}`
       await openAs(page, 'admin', '/money/expenses?add=1')
       await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(z))
       await page.getByRole('textbox', { name: 'Date paid' }).fill(prev.typed)
       await page.getByRole('button', { name: 'Add a detail' }).click()
-      await page.getByRole('combobox', { name: 'Detail' }).fill('kept in the form')
+      await page.getByRole('combobox', { name: 'Detail' }).fill(kept)
       await page.getByRole('button', { name: 'Save expense' }).click()
       await expect(page.getByText(sentence)).toBeVisible()
       await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue(z.toLocaleString('en-US'))
-      await expect(page.getByRole('combobox', { name: 'Detail' })).toHaveValue('kept in the form')
+      await expect(page.getByRole('combobox', { name: 'Detail' })).toHaveValue(kept)
       await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
       await review(page, 'm03-closed-month-dialog-1440')
-      expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${z}&select=id`))).length).toBe(0)
+      expect(await byNote(kept)).toHaveLength(0)
     })
 
     test('the list locks a closed month: one line says so, no row can be edited or deleted', async ({ page }) => {
