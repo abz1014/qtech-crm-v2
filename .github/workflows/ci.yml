@@ -119,6 +119,8 @@ jobs:
       - name: Install system dependencies only (browser restored from cache)
         if: steps.pwcache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+      - name: Audit collector unit test (needs Chromium)
+        run: npx vitest run scripts/audit/collect.test.mjs
       - name: Regenerate baselines (manual run with update_baselines)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_baselines }}
         run: npx playwright test e2e/gallery.visual.spec.ts --project=w1440 --project=w375 --update-snapshots
