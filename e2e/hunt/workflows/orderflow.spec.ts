@@ -342,18 +342,18 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
   })
 
   await probe(info, page, 'A leg totals in EUR and USD, priced count, PKR estimate', async () => {
-    const e = flat(await legRow(page, supE.name).innerText({ timeout: T }))
+    const e = flat(await (await legIn(page, 'Supplier order', supE.name)).innerText({ timeout: T }))
     // 2.5 x 812.35 = 2,030.875 EUR (shown to the paisa); line 2 has no price
     want(info, 'A leg EUR', /2,030\.88/.test(e), 'EUR supplier order total is not 2,030.88 (2.5 x 812.35 = 2,030.875)', e)
     want(info, 'A leg EUR', e.includes('1 of 2 lines priced'), 'EUR supplier order does not say "1 of 2 lines priced"', e)
-    const u = flat(await legRow(page, supU.name).innerText())
+    const u = flat(await (await legIn(page, 'Supplier order', supU.name)).innerText())
     // 4 x 99.99 = 399.96 USD, at 280 = PKR 111,988.80
     want(info, 'A leg USD', u.includes('399.96'), 'USD supplier order total is not 399.96', u)
     want(info, 'A leg USD', u.includes('111,988.80') || u.includes('111,988.8'), 'USD supplier order PKR estimate is not 111,988.80 at 280', u)
   })
 
   await probe(info, page, 'A browser Back with the Issue PO dialog open', async () => {
-    await legRow(page, supU.name).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Supplier order', supU.name)).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
     const d = page.getByRole('dialog')
     await d.getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
     await page.goBack()
@@ -367,7 +367,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
 
   await probe(info, page, 'A reload with the Issue PO dialog open', async () => {
     await visit(page, info, `/orders/${id}`)
-    await legRow(page, supU.name).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Supplier order', supU.name)).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
     await page.getByRole('dialog').getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
     await page.reload()
     await settle(page)
@@ -379,7 +379,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
   // Line amounts: 2.5 x 812.35 = 2,030.875 -> 2,030.88; 3 x 17.255 = 51.765 -> 51.77 (half away from zero); total 2,082.65 EUR.
   const poTotalE = (productPaisa(2.5, 812.35) + productPaisa(3, 17.255)) / 100
   await probe(info, page, 'A Issue PO (EUR) with a missing supplier price, double click Issue PO', async () => {
-    await legRow(page, supE.name).getByRole('button', { name: `Issue PO, ${supE.name}` }).click({ timeout: T })
+    await (await legIn(page, 'Supplier order', supE.name)).getByRole('button', { name: `Issue PO, ${supE.name}` }).click({ timeout: T })
     const d = page.getByRole('dialog')
     await d.getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
     await d.getByTestId('po-missing').waitFor({ timeout: T })
@@ -432,7 +432,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     const primary = actions(page).getByRole('button', { name: `Issue PO, ${supU.name}` })
     if ((await primary.count()) === 0) {
       obs(info, 'A primary', 'the page\'s primary step is not "Issue PO" for the USD supplier after the EUR PO', flat(await actions(page).innerText()).slice(0, 300))
-      await legRow(page, supU.name).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
+      await (await legIn(page, 'Supplier order', supU.name)).getByRole('button', { name: `Issue PO, ${supU.name}` }).click({ timeout: T })
     } else await primary.first().click()
     const d = page.getByRole('dialog')
     await d.getByRole('heading', { name: 'Issue purchase order' }).waitFor({ timeout: T })
@@ -448,7 +448,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
       const w = inWords(poTotalU, ['US dollar', 'US dollars', 'cent', 'cents'])
       want(info, 'A PO PDF USD', pdfHas(text, w), `USD PO PDF lacks the words "${w}"`)
     }
-    const chip = await legRow(page, supU.name).locator('[data-testid$="-po"]').innerText()
+    const chip = await (await legIn(page, 'Supplier order', supU.name)).locator('[data-testid$="-po"]').innerText()
     want(info, 'A Issue PO USD', /^PO-\d\d-\d{4} · R0$/.test(chip.trim()), `PO chip reads "${chip}"`)
     await shot(page, 'A-both-pos-issued')
   })

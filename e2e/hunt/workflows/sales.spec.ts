@@ -284,6 +284,13 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await layout(page, info, `${W} items`)
       await shot(page, `${W}-paste-odd-items`)
 
+      // A quantity of 0 is refused (the expected refusal): "Looks right" stays on step 1 and the cursor goes to that quantity.
+      await vis(page.getByRole('button', { name: /Looks right: find suppliers/ })).click()
+      await page.waitForTimeout(600)
+      if ((await stepOf(page)) !== 'Step 1 of 4') note(info, { kind: 'observation', where: `${W} zero quantity`, what: 'a quantity of 0 did not stop "Looks right"' })
+      const zeroN = rows.findIndex(([d]) => d.includes('Thermowell')) + 1
+      await page.getByLabel(`Quantity of item ${zeroN}`, { exact: true }).fill('1')
+
       // double-click "Looks right": the next step's button appears where it was
       await vis(page.getByRole('button', { name: /Looks right: find suppliers/ })).dblclick()
       await page.waitForTimeout(800)
@@ -320,7 +327,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       note(info, { kind: 'observation', where: `${W} stored items`, what: `${items.length} items stored`, detail: items.map(i => [i.description.slice(0, 40), num(i.qty), i.unit]) })
       if (items.some(i => !i.description.trim())) note(info, { kind: 'observation', where: `${W} stored items`, what: 'a whitespace-only item was stored' })
       const th = items.find(i => i.description.includes('Thermowell'))
-      if (th && num(th.qty) === 1) note(info, { kind: 'observation', where: `${W} stored items`, what: 'a quantity of 0 was saved as 1 silently (effectiveQty), the customer asked for 0' })
+      if (th && num(th.qty) !== 1) note(info, { kind: 'observation', where: `${W} stored items`, what: `the quantity typed over the refused 0 was stored as ${th.qty}` })
       const dec = items.find(i => i.description.includes('Pressure gauge'))
       if (dec && num(dec.qty) !== 2.5) note(info, { kind: 'observation', where: `${W} stored items`, what: `2.5 nos stored as ${dec.qty}` })
       const big = items.find(i => i.description.includes('Flow switch'))
@@ -1030,7 +1037,10 @@ async function closeWith(page: Page, label: string): Promise<void> {
  * so the next menu waits until it has gone.
  */
 async function toastsGone(page: Page): Promise<void> {
-  await expect(page.getByRole('status').filter({ has: page.getByRole('button', { name: /^Undo/ }) })).toHaveCount(0, { timeout: 20_000 })
+  // A toast under the pointer or holding focus waits (it pauses on hover and focus): dismiss it, which is not an Undo.
+  const withUndo = page.getByRole('status').filter({ has: page.getByRole('button', { name: /^Undo/ }) })
+  for (const d of await withUndo.getByRole('button', { name: 'Dismiss' }).all()) await d.click({ timeout: 3_000 }).catch(() => undefined)
+  await expect(withUndo).toHaveCount(0, { timeout: 20_000 })
 }
 
 async function rfqRow(id: string): Promise<RfqRow> {

@@ -979,7 +979,10 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
     if ((await askCount(s.clar)) !== 1) note(info, { kind: 'observation', where: 'offline chase', what: 'ask_count changed while offline' })
     await shot(page, 'offline-chase', false)
     await goOnline('offline chase')
-    await copy.click()
+    // The list reloads when the connection returns and may close the pane: open the item again before the retry.
+    await visit(page, info, '/todo', 'offline chase online')
+    const again = (await openItem(page, 'desktop', 'chase_customer', s.ref)).getByRole('button', { name: /^Copy (message )?and mark chased$/ }).first()
+    await again.click()
     const n = await until(() => askCount(s.clar), v => v >= 2, 8_000)
     if (n !== 2) note(info, { kind: 'observation', where: 'offline chase', what: `after the retry ask_count is ${n} (expected exactly 2)` })
   })
