@@ -213,6 +213,6 @@ describe('Toast Undo that fails (code review p9)', () => {
     setup({ title: 'Closed RFQ-0101', undo: { onUndo } })
     await user.click(screen.getByRole('button', { name: 'Fire' }))
     await user.click(await screen.findByRole('button', { name: /Undo/ }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Close March 2026 first. Months close in order.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Lock March 2026 first. Months lock in order.')
   })
 })
