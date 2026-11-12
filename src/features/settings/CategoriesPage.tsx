@@ -306,7 +306,7 @@ function CategoryRow({ c, spent, phone, items, groupName, work }: { c: Category;
       data-work={work ? '' : undefined}
       className={cn('grid min-h-[48px] grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b py-1 pl-1 last:border-b-0', !c.active && 'bg-canvas')}
     >
-      <div className="grid min-w-0 md:flex md:items-baseline md:gap-3">
+      <div className="grid min-w-0 md:flex md:flex-wrap md:items-baseline md:gap-x-3">
         <span className={cn('min-w-0 text-base font-medium [overflow-wrap:anywhere]', !c.active && 'text-fg-2')}>{c.name}</span>
         <span className="min-w-0 text-base text-fg-muted" data-testid="usage">
           {groupName ? <span className="whitespace-nowrap">{groupName} · </span> : null}
