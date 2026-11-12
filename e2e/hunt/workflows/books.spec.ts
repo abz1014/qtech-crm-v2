@@ -275,7 +275,7 @@ test('books: Add expense with a category made inline, the burst sheet, recurring
     // the list is one section per group (a heading with the group's name, plus its kind when the name does not say it); a row has no Group field
     const grp = await row.locator('xpath=ancestor::section[@data-group][1]//h2').first().innerText()
     const usage = await row.getByTestId('usage').innerText()
-    if (!/running costs|overhead/i.test(grp) || !/1 use/.test(usage)) note(info, { kind: 'observation', where: 'categories', what: `inline category shows under "${grp}", usage "${usage}"` })
+    if (!/running costs|overhead/i.test(grp) || !/1 use\b/.test(usage)) note(info, { kind: 'observation', where: 'categories', what: `inline category shows under "${grp}", usage "${usage}"` })
   })
 
   await probe(info, page, 'dialog: a name differing only in case, a 61-char name, and a name made elsewhere after the dialog opened', async () => {
