@@ -134,7 +134,8 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS, office = false): P
       // The jobs code is downloaded while the search waits and runs, not after it (perf: first-load JS).
       const jobsCode = Promise.all([import('@/features/jobs/api'), import('@/features/jobs/lib/stages')])
       if (!(await pause(debounceMs, signal))) return []
-      const hits = await searchAll(q, signal, FETCH_LIMIT)
+      // Supplier POs are money: an engineer's search never lists them, nor opens a job through one (bug 31); the database gate follows in a later migration.
+      const hits = (await searchAll(q, signal, FETCH_LIMIT)).filter(h => !(office && h.kind === 'po'))
       if (signal.aborted) return []
       const [{ findJobs }, { stageModel }] = await jobsCode
       const jobs = await findJobs(q, signal, hits).catch(() => [] as JobRow[])
@@ -143,8 +144,7 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS, office = false): P
         ...jobs.slice(0, SHOWN_PER_KIND).map(j => jobItem(j, office, stageModel)),
         ...(jobs.length > SHOWN_PER_KIND ? [{ id: 'see-all-jobs', group: JOBS, label: `See all ${jobs.length >= 200 ? '200+' : jobs.length} results`, meta: 'In Jobs', icon: ListIcon, href: `/jobs?q=${encodeURIComponent(q)}` }] : []),
       ]
-      // Supplier POs are money: an engineer's search never lists them (bug 31); the database gate follows in a later migration.
-      const items = kindOrder(q).filter(kind => !(office && kind === 'po')).flatMap(kind => {
+      const items = kindOrder(q).flatMap(kind => {
         const ofKind = hits.filter(h => h.kind === kind).sort((a, b) => b.score - a.score)
         const shown = ofKind.slice(0, SHOWN_PER_KIND).map(toItem)
         return ofKind.length > SHOWN_PER_KIND ? [...shown, seeAll(kind, q, ofKind.length)] : shown
