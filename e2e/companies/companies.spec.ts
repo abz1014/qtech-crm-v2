@@ -237,6 +237,8 @@ test.describe('company page', () => {
     expect(order.every(y => y >= 0)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
     await expect(page.getByText('More about this supplier')).toBeVisible()
+    // an engineer is not shown the supplier's currency (live bug 10)
+    await expect(page.getByRole('region', { name: 'Open with them' })).not.toContainText('Currency')
 
     // The rules behind the numbers are behind the (i), not printed on the page.
     await expect(page.getByText('With so few enquiries')).toHaveCount(0)

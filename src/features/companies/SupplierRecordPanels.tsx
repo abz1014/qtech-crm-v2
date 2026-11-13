@@ -436,6 +436,7 @@ function DateText({ iso, today, estimated }: { iso: string | null; today: string
 
 export function OpenWithThem({ view, loading, error, onRetry }: { view: SupplierRecord | null; loading: boolean; error: boolean; onRetry: () => void }) {
   const row = 'flex items-baseline justify-between gap-4 border-t py-2 text-sm first:border-t-0'
+  const prices = useSeesPrices()
   return (
     <Panel flat title="Open with them">
       <div className="px-5 py-3">
@@ -485,10 +486,12 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
                 </ul>
               )}
             </div>
-            <div className={row}>
-              <span className="text-fg-muted">Currency</span>
-              <CurrencyValue currency={view.open.currency} />
-            </div>
+            {prices ? (
+              <div className={row}>
+                <span className="text-fg-muted">Currency</span>
+                <CurrencyValue currency={view.open.currency} />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

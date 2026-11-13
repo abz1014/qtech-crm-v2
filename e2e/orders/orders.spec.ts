@@ -704,6 +704,9 @@ test.describe('O03: role views', () => {
     await page.waitForLoadState('networkidle')
 
     const text = await page.locator('#main').innerText()
+    // no currency chip and no PO chip on a supplier order (live bug 10, owner decision A)
+    await expect(leg(page, 'A').getByTestId('leg-A-po')).toHaveCount(0)
+    expect(text).not.toMatch(/No PO yet|EUR/)
     expect(text).not.toMatch(/PKR|48,500|96,500|135,000|Margin|Terms|Exempt|Costs|Balance|Add line|Add supplier|Issue PO|Record payment|Add expense|Create invoice/i)
     await expect(page.locator('.sr-only', { hasText: 'Not set' })).toHaveCount(0)
     // the page leads with the engineer's job: Delivered today and Installed today
