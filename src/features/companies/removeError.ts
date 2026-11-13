@@ -9,6 +9,6 @@ import { mapPgError } from '@/lib/pgErrors'
 export function removeErrorMessage(err: unknown, entity: string): string {
   if (err instanceof InUseError) return err.message
   // On a remove, a foreign-key refusal can only mean something still uses it.
-  if ((err as { code?: string } | null)?.code === '23503') return `This ${entity} is still used by other records, so it can't be removed.`
+  if ((err as { code?: string } | null)?.code === '23503') return `This ${entity} is still used by other records, so it cannot be removed.`
   return mapPgError(err, { entity }).message
 }

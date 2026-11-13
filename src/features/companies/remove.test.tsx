@@ -31,16 +31,16 @@ afterEach(() => {
 
 describe('in-use sentence', () => {
   it('names the count, with the right plural and a joined list', () => {
-    expect(inUseSentence('site', { rfqs: 3, orders: 0, quotations: 0 })).toBe("This site is used on 3 RFQs; it can't be removed.")
-    expect(inUseSentence('site', { rfqs: 1, orders: 0, quotations: 0 })).toBe("This site is used on 1 RFQ; it can't be removed.")
-    expect(inUseSentence('site', { rfqs: 2, orders: 1, quotations: 0 })).toBe("This site is used on 2 RFQs and 1 order; it can't be removed.")
-    expect(inUseSentence('contact', { rfqs: 1, orders: 2, quotations: 4 })).toBe("This contact is used on 1 RFQ, 2 orders and 4 quotations; it can't be removed.")
+    expect(inUseSentence('site', { rfqs: 3, orders: 0, quotations: 0 })).toBe("This site is used on 3 RFQs and cannot be removed.")
+    expect(inUseSentence('site', { rfqs: 1, orders: 0, quotations: 0 })).toBe("This site is used on 1 RFQ and cannot be removed.")
+    expect(inUseSentence('site', { rfqs: 2, orders: 1, quotations: 0 })).toBe("This site is used on 2 RFQs and 1 order and cannot be removed.")
+    expect(inUseSentence('contact', { rfqs: 1, orders: 2, quotations: 4 })).toBe("This contact is used on 1 RFQ, 2 orders and 4 quotations and cannot be removed.")
   })
 
   it('removeErrorMessage uses it, and turns a database 23503 into a plain sentence', () => {
-    expect(removeErrorMessage(new InUseError('site', { rfqs: 3, orders: 0, quotations: 0 }), 'site')).toBe("This site is used on 3 RFQs; it can't be removed.")
+    expect(removeErrorMessage(new InUseError('site', { rfqs: 3, orders: 0, quotations: 0 }), 'site')).toBe("This site is used on 3 RFQs and cannot be removed.")
     expect(removeErrorMessage({ code: '23503', message: 'update or delete on table "contacts" violates foreign key constraint "x"' }, 'contact')).toBe(
-      "This contact is still used by other records, so it can't be removed.",
+      "This contact is still used by other records, so it cannot be removed.",
     )
     expect(removeErrorMessage({ code: '42501', message: 'denied' }, 'site')).toMatch(/Nothing was saved/)
   })
@@ -61,7 +61,7 @@ describe('removing a site', () => {
       await result.current.mutateAsync('site-1').catch(e => (caught = e))
     })
     expect(caught).toBeInstanceOf(InUseError)
-    expect((caught as Error).message).toBe("This site is used on 3 RFQs; it can't be removed.")
+    expect((caught as Error).message).toBe("This site is used on 3 RFQs and cannot be removed.")
     expect((caught as InUseError).code).toBe('23503')
     expect(db.calls[0].verb).toBe('delete')
     expect(db.calls.slice(1).every(c => c.verb === 'select')).toBe(true)
@@ -75,7 +75,7 @@ describe('removing a site', () => {
     await act(async () => {
       await result.current.mutateAsync('site-1').catch(e => (caught = e))
     })
-    expect((caught as Error).message).toBe("This site is used on 1 order; it can't be removed.")
+    expect((caught as Error).message).toBe("This site is used on 1 order and cannot be removed.")
   })
 
   it('deletes an unused site with a single call, scoped to its company, and refreshes that company', async () => {
@@ -100,7 +100,7 @@ describe('removing a site', () => {
     await act(async () => {
       await result.current.mutateAsync('s').catch(e => (caught = e))
     })
-    expect(removeErrorMessage(caught, 'site')).toBe("This site is still used by other records, so it can't be removed.")
+    expect(removeErrorMessage(caught, 'site')).toBe("This site is still used by other records, so it cannot be removed.")
   })
 
   it('other failures pass through untouched, with no counting', async () => {
@@ -123,7 +123,7 @@ describe('removing a contact', () => {
     await act(async () => {
       await result.current.mutateAsync('ct').catch(e => (caught = e))
     })
-    expect((caught as Error).message).toBe("This contact is used on 1 RFQ, 2 orders and 1 quotation; it can't be removed.")
+    expect((caught as Error).message).toBe("This contact is used on 1 RFQ, 2 orders and 1 quotation and cannot be removed.")
     expect(db.calls[0].verb).toBe('delete')
     expect(db.calls.slice(1).map(c => opArgs(c, 'eq'))).toEqual([
       ['contact_id', 'ct'],
@@ -194,8 +194,8 @@ describe('ConfirmRemove', () => {
   })
 
   it('a refusal replaces the question with the reason and leaves only Close', () => {
-    render(<ConfirmRemove title="Remove Karachi?" error="This site is used on 3 RFQs; it can't be removed." onConfirm={() => undefined} onCancel={() => undefined} />)
-    expect(screen.getByRole('alert').textContent).toContain("This site is used on 3 RFQs; it can't be removed.")
+    render(<ConfirmRemove title="Remove Karachi?" error="This site is used on 3 RFQs and cannot be removed." onConfirm={() => undefined} onCancel={() => undefined} />)
+    expect(screen.getByRole('alert').textContent).toContain("This site is used on 3 RFQs and cannot be removed.")
     expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
   })

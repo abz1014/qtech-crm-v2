@@ -87,7 +87,7 @@ export const reactivatePerson = (userId: string) => call<{ user_id: string }>({ 
  */
 export async function setPhone(userId: string, phone: string | null): Promise<string | null> {
   const rows = unwrap(await requireSupabase().from('users').update({ phone }).eq('id', userId).select('id, phone'))
-  if (!rows || rows.length === 0) throw new PlainError('You can only change your own phone number.')
+  if (!rows || rows.length === 0) throw new PlainError('Only your own phone number can be changed.')
   return (rows[0] as unknown as { phone: string | null }).phone
 }
 
@@ -137,7 +137,7 @@ export async function saveCompanyProfile(values: ProfileValues): Promise<Company
 export async function changeOwnPassword(current: string, next: string): Promise<void> {
   const db = requireSupabase()
   const email = (await db.auth.getSession()).data.session?.user.email
-  if (!email) throw new PlainError('You are signed out. Sign in again, then change your password.')
+  if (!email) throw new PlainError('Signed out. Sign in again, then change the password.')
 
   const check = await db.auth.signInWithPassword({ email, password: current })
   if (check.error) {

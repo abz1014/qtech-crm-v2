@@ -34,7 +34,7 @@ describe('rates table', () => {
     expect(bandLabel('fresh', 0)).toBe('today')
     expect(bandLabel('stale', 8)).toBe('Old rate, 8 days old')
     expect(bandLabel('unusable', 54)).toBe('No rate, 54 days old')
-    expect(sourceText('manual')).toBe('Entered by hand')
+    expect(sourceText('manual')).toBe('Entered manually')
     expect(sourceText('auto')).toBe('Automatic')
   })
   it('warns only about an unusable rate, in the mockup words', () => {
@@ -66,8 +66,8 @@ describe('autoRunStamp', () => {
 })
 
 describe('rateCardLine (phone cards)', () => {
-  it('reads "USD 280.50 · 22 Oct · by hand", and says when there is no rate', () => {
-    expect(rateCardLine({ currency: 'USD', ratePkr: 280.5, asOf: '2026-10-22', source: 'manual' })).toBe('USD 280.50 · 22 Oct · by hand')
+  it('reads "USD 280.50 · 22 Oct · manual", and says when there is no rate', () => {
+    expect(rateCardLine({ currency: 'USD', ratePkr: 280.5, asOf: '2026-10-22', source: 'manual' })).toBe('USD 280.50 · 22 Oct · manual')
     expect(rateCardLine({ currency: 'EUR', ratePkr: 301.15, asOf: '2026-10-21', source: 'auto' })).toBe('EUR 301.15 · 21 Oct · automatic')
     expect(rateCardLine({ currency: 'JPY', ratePkr: null, asOf: null, source: null })).toBe('JPY · no rate yet')
   })

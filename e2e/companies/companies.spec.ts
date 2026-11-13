@@ -327,7 +327,7 @@ test.describe('admin merge', () => {
 
     // The page for the removed company says where to look instead of crashing.
     await page.goto(`/companies/${drop.id}`)
-    await expect(page.getByText("This company isn't here")).toBeVisible()
+    await expect(page.getByText("This company was not found")).toBeVisible()
   })
 
   test('a clash the database cannot settle is refused in plain words and nothing moves', async ({ page }) => {

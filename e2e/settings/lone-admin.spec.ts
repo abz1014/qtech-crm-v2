@@ -11,7 +11,7 @@ test('Team warns when there is only one active admin and the help explains how t
 
   await openAs(page, 'admin', '/settings/team')
   await expect(page.getByText('Only one active admin')).toBeVisible()
-  await expect(page.getByText(/Add a second admin so someone always can/)).toBeVisible()
+  await expect(page.getByText(/With one admin, a lost password cannot be reset\. Add a second admin\./)).toBeVisible()
   await page.getByRole('link', { name: 'How to get back in' }).click()
   await expect(page).toHaveURL(/help=lone-admin-recovery/)
   await expect(page.getByRole('dialog', { name: 'Help' })).toContainText('Get back in if the only admin is locked out')

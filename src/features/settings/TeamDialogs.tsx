@@ -77,7 +77,7 @@ export function AddPersonDialog({
         field: 'email',
         message: owner
           ? `${owner.name} already uses this email. Use a different address, or change their details from the Team list.`
-          : 'Someone already uses this email. Use a different address.',
+          : 'This email is already in use. Use a different address.',
       }
     },
   })
@@ -85,12 +85,12 @@ export function AddPersonDialog({
     <Dialog open onOpenChange={open => !open && !sf.pending && onClose()} busy={sf.pending}>
       <DialogContent
         title="Add person"
-        context="They sign in with the email below and a password we generate."
+        context="They sign in with the email below and a generated password."
         icon={UserPlus}
         lead={
           <>
             <Icon icon={KeyRound} size="sm" />
-            Password is generated for you
+            Password is generated automatically
           </>
         }
         footer={
@@ -244,7 +244,7 @@ export function ChangeRoleDialog({ member, members, onClose }: Base & { member: 
   return (
     <Dialog open onOpenChange={open => !open && !sf.pending && onClose()} busy={sf.pending}>
       <DialogContent
-        title={`Change ${member.name}’s role`}
+        title={`Change ${member.name}'s role`}
         context="Takes effect immediately."
         icon={Shield}
         footer={
@@ -267,7 +267,7 @@ export function ChangeRoleDialog({ member, members, onClose }: Base & { member: 
       >
         {locked ? (
           <Banner tone="warning" title={`${firstName(member.name)} is the only active admin`}>
-            Make someone else an admin first. Q-Tech CRM always needs at least one.
+            Make another user an admin first. Q-Tech CRM always needs at least one admin.
           </Banner>
         ) : null}
         <Form sf={sf}>
@@ -310,7 +310,7 @@ export function ResetPasswordDialog({
   return (
     <Dialog open onOpenChange={open => !open && !sf.pending && onClose()} busy={sf.pending}>
       <DialogContent
-        title={`Reset ${member.name}’s password?`}
+        title={`Reset ${member.name}'s password?`}
         icon={KeyRound}
         tone="warning"
         size="sm"
@@ -327,7 +327,7 @@ export function ResetPasswordDialog({
       >
         <Form sf={sf}>
           <p className="max-w-prose">
-            We generate a new password and show it to you once. {firstName(member.name)}&apos;s current password stops working and they
+            A new password is generated and shown once. The current password of {firstName(member.name)} stops working and they
             are signed out on every device.
           </p>
         </Form>
@@ -393,18 +393,18 @@ export function DeactivateDialog({ member, members, onClose }: Base & { member: 
       >
         <Form sf={sf}>
           {locked ? (
-            <Banner tone="danger" title="You can't deactivate the only active admin">
+            <Banner tone="danger" title="The only active admin cannot be deactivated">
               Make another person an admin first, then try again.
             </Banner>
           ) : (
             <ul className="grid gap-3">
               <Consequence icon={LogOut}>
-                {first} is signed out on every device straight away, and can&apos;t sign in again until you reactivate them.
+                {first} is signed out on every device immediately and cannot sign in until reactivated.
               </Consequence>
               <Consequence icon={FileText}>
                 Their RFQs, orders and notes stay exactly as they are, with their name as the author.
               </Consequence>
-              <Consequence icon={History}>You can reactivate them at any time. Their role and job title are kept.</Consequence>
+              <Consequence icon={History}>Reactivation is possible at any time. The role and job title are kept.</Consequence>
               {openCount > 0 ? (
                 <li className="grid gap-2 rounded-row border bg-sunken px-3 py-3" data-testid="deactivate-open-work">
                   <span className="text-pretty">

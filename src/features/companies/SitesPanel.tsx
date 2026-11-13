@@ -152,7 +152,7 @@ export function SitesPanel({
         </div>
       ) : error ? (
         <div className="p-4">
-          <Banner tone="danger" title="Couldn't load the sites">
+          <Banner tone="danger" title="Could not load the sites">
             Reload the page to try again. Nothing was changed.
           </Banner>
         </div>

@@ -70,7 +70,7 @@ export function ReassignOwnerDialog({
       >
         <div className="grid gap-3">
           {error ? (
-            <Banner tone="danger" title="Couldn't change the owner">
+            <Banner tone="danger" title="Could not change the owner">
               {error}
             </Banner>
           ) : null}
@@ -122,7 +122,7 @@ export function ReassignWorkDialog({ fromId, fromName, onClose }: { fromId: stri
       >
         <div className="grid gap-3">
           {error ? (
-            <Banner tone="danger" title="Couldn't move the work">
+            <Banner tone="danger" title="Could not move the work">
               {error}
             </Banner>
           ) : null}

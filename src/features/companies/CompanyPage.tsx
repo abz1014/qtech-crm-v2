@@ -93,7 +93,7 @@ export function CompanyPage() {
       <Shell>
         <EmptyState
           mood="error"
-          title="Couldn't load this company"
+          title="Could not load this company"
           actions={
             <Button onClick={() => void company.refetch()} variant="primary">
               Try again
@@ -110,7 +110,7 @@ export function CompanyPage() {
       <Shell>
         <EmptyState
           icon={Building2}
-          title="This company isn't here"
+          title="This company was not found"
           actions={
             <AllCompaniesButton />
           }
@@ -211,7 +211,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   })()
   const copyLink = async () => {
     const ok = await copyToClipboard(window.location.href)
-    toast({ title: ok ? 'Link copied' : "Couldn't copy the link", body: ok ? company.name : 'Copy it from the address bar.', tone: ok ? 'success' : 'danger' })
+    toast({ title: ok ? 'Link copied' : "Could not copy the link", body: ok ? company.name : 'Copy it from the address bar.', tone: ok ? 'success' : 'danger' })
   }
 
   // A supplier-only company has no plants to list until one is added; a customer always shows its sites.
@@ -324,7 +324,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
           </div>
         </Panel>
       ) : null}
-      {isAdmin && money.isError ? <Banner tone="warning" title="Couldn't load the money figures">Reload the page to try again.</Banner> : null}
+      {isAdmin && money.isError ? <Banner tone="warning" title="Could not load the money figures">Reload the page to try again.</Banner> : null}
       <CreditPanel companyId={company.id} companyName={company.name} isAdmin={isAdmin} />
       {detailsPanel}
       {notesPanel}
@@ -509,7 +509,7 @@ function ContactsPanel({
             <Skeleton className="h-3 w-1/3" />
           </div>
         ) : error ? (
-          <Banner tone="danger" title="Couldn't load the contacts">
+          <Banner tone="danger" title="Could not load the contacts">
             Reload the page to try again.
           </Banner>
         ) : !contacts || contacts.length === 0 ? (

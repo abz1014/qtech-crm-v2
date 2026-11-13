@@ -34,7 +34,7 @@ export function MyDetailsPage() {
     <div className="grid content-start gap-4">
       <PageHeader
         title="Your details"
-        lede="How you appear to customers. Your phone number is printed under your signature on follow-up texts and quotations."
+        lede="How the name appears to customers. Your phone number is printed under your signature on follow-up texts and quotations."
       />
       {q.isLoading ? (
         <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading your details">

@@ -24,7 +24,7 @@ export function entryAccess(
   if (me.role === 'admin') return { can: true, note: null }
   if (entry.createdBy === me.id || entry.ownerId === me.id) return { can: true, note: null }
   const who = entry.createdBy ? names?.[entry.createdBy] : undefined
-  if (entry.createdBy && !who) return { can: false, note: 'Entered by someone else: only they or an admin can change this' }
+  if (entry.createdBy && !who) return { can: false, note: 'Entered by another user. Only that user or an admin can change this.' }
   if (!entry.createdBy) return { can: false, note: 'Entered by the old CRM import: only an admin can change this' }
   return { can: false, note: `Entered by ${who}: only they or an admin can change this` }
 }

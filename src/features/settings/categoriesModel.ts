@@ -75,7 +75,7 @@ export function deleteAdvice(c: Pick<Category, 'name' | 'used' | 'active'>): { c
   return {
     canDelete: false,
     message: c.active
-      ? `${n} "${c.name}", so it cannot be deleted. Archive it instead: it stops showing up for new expenses and the old ones keep it. Or merge it into another category.`
+      ? `${n} "${c.name}", so it cannot be deleted. Archive it to stop offering it for new expenses. Existing expenses keep it. Or merge it into another category.`
       : `${n} "${c.name}", so it cannot be deleted. It is archived, which hides it from new expenses.`,
   }
 }

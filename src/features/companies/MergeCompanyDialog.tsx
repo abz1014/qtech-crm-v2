@@ -103,7 +103,7 @@ function MergeBody({ onOpenChange, subject, onMerged }: Omit<Props, 'open'>) {
       }
     >
       {error ? (
-        <Banner tone="danger" title="Couldn't merge these companies">
+        <Banner tone="danger" title="Could not merge these companies">
           {error}
         </Banner>
       ) : null}
@@ -123,7 +123,7 @@ function MergeBody({ onOpenChange, subject, onMerged }: Omit<Props, 'open'>) {
           cannot be undone.
         </p>
       ) : (
-        <p>Everything on {subject.name} moves to the company you pick, and {subject.name} is removed. Nothing is changed until you confirm.</p>
+        <p>Everything on {subject.name} moves to the selected company, and {subject.name} is removed. Nothing is changed until confirmed.</p>
       )}
     </DialogContent>
   )

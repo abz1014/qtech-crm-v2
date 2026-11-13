@@ -280,7 +280,7 @@ export function RecentQuotes({
       {loading ? (
         <ListSkeleton label="Loading RFQs" />
       ) : error ? (
-        <LoadError title="Couldn't load the RFQs" onRetry={onRetry} />
+        <LoadError title="Could not load the RFQs" onRetry={onRetry} />
       ) : !view || view.allQuotes.length === 0 ? (
         <p className="px-5 py-6 text-sm text-fg-muted">No RFQ asked of them yet.</p>
       ) : (
@@ -364,7 +364,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
       {loading ? (
         <ListSkeleton label="Loading deliveries" />
       ) : error ? (
-        <LoadError title="Couldn't load the deliveries" onRetry={onRetry} />
+        <LoadError title="Could not load the deliveries" onRetry={onRetry} />
       ) : !view || view.deliveries.length === 0 ? (
         <p className="px-5 py-6 text-sm text-fg-muted">No deliveries from them yet.</p>
       ) : (
@@ -446,7 +446,7 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : error ? (
-          <Banner tone="danger" title="Couldn't load what is open" action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
+          <Banner tone="danger" title="Could not load what is open" action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
             Nothing was changed.
           </Banner>
         ) : view ? (

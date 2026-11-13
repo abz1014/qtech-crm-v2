@@ -26,8 +26,8 @@ vi.mock('./api', async orig => {
 describe('reassign owner (process audit 1)', () => {
   it('says the open work in words', () => {
     expect(workSentence({ rfqs: 0, orders: 0 })).toBe('no open work')
-    expect(workSentence({ rfqs: 1, orders: 0 })).toBe('1 open enquiry')
-    expect(workSentence({ rfqs: 2, orders: 3 })).toBe('2 open enquiries and 3 live orders')
+    expect(workSentence({ rfqs: 1, orders: 0 })).toBe('1 open RFQ')
+    expect(workSentence({ rfqs: 2, orders: 3 })).toBe('2 open RFQs and 3 live orders')
   })
 
   it('moves all of a leaver\'s open work to the person chosen, and not to the leaver', async () => {
@@ -40,7 +40,7 @@ describe('reassign owner (process audit 1)', () => {
         </ToastProvider>
       </QueryClientProvider>,
     )
-    expect(await screen.findByText('Sana Sales has 2 open enquiries and 1 live order.')).toBeInTheDocument()
+    expect(await screen.findByText('Sana Sales has 2 open RFQs and 1 live order.')).toBeInTheDocument()
     const pick = await screen.findByLabelText('New owner')
     expect(screen.queryByRole('option', { name: 'Sana Sales' })).toBeNull()
     const go = screen.getByRole('button', { name: 'Move it all' })

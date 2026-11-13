@@ -64,7 +64,7 @@ export function InstallBanner() {
           </Button>
         }
       >
-        Tap <Icon icon={Share} size="sm" className="inline align-[-2px]" /> <span className="font-medium">Share</span> in Safari, then{' '}
+        Select <Icon icon={Share} size="sm" className="inline align-[-2px]" /> <span className="font-medium">Share</span> in Safari, then{' '}
         <span className="font-medium">Add to Home Screen</span>.
       </Banner>
     )

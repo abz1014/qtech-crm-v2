@@ -98,7 +98,7 @@ function DaysSection({ deadlines, isAdmin }: { deadlines: GstDeadlines; isAdmin:
   }
 
   return (
-    <Section title="Usual days" hint="Every month's GST uses these days of the following month, unless you set a one-off date below. Days 1 to 28.">
+    <Section title="Usual days" hint="Every month's GST uses these days of the following month, unless a one-off date is set below. Days 1 to 28.">
       {isAdmin ? (
         <form
           className="grid gap-4"
