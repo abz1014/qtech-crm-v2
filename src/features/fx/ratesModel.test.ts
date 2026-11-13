@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FxLatestRow } from '@/features/rfqs/api'
-import { ageText, autoRunStamp, bandLabel, buildRateBar, buildRateRows, rateBarNote, manualRateProblem, rateCardLine, sourceText, unusableWarning } from './ratesModel'
+import { CURRENCY_NAMES, ageText, autoRunStamp, bandLabel, buildRateBar, buildRateRows, rateBarNote, manualRateProblem, rateCardLine, sourceText, unusableWarning } from './ratesModel'
 
 const row = (currency: string, ratePkr: number, ageDays: number, source = 'auto'): FxLatestRow => ({
   currency,
@@ -11,10 +11,16 @@ const row = (currency: string, ratePkr: number, ageDays: number, source = 'auto'
   staleness: ageDays <= 7 ? 'fresh' : ageDays <= 30 ? 'stale' : 'unusable',
 })
 
+describe('currency names', () => {
+  it('names the Swiss franc, so the rates table never shows a bare CHF', () => {
+    expect(CURRENCY_NAMES.CHF).toBe('Swiss franc')
+  })
+})
+
 describe('rates table', () => {
   const rows = buildRateRows([row('GBP', 372.4, 54), row('USD', 281.35, 0), row('CNY', 38.85, 8, 'manual')])
   it('orders fresh, stale, unusable, then currencies with no rate', () => {
-    expect(rows.map(r => r.currency)).toEqual(['USD', 'CNY', 'GBP', 'AED', 'EUR', 'JPY', 'SAR', 'CHF'])
+    expect(rows.map(r => r.currency)).toEqual(['USD', 'CNY', 'GBP', 'AED', 'EUR', 'JPY', 'SAR'])
   })
   it('offers every currency of the app, with no rate, so Add rate is always there', () => {
     expect(rows.find(r => r.currency === 'EUR')).toMatchObject({ ratePkr: null, staleness: null, source: null })
