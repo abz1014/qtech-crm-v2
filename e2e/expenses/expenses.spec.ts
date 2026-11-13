@@ -656,7 +656,7 @@ test.describe('expenses (M03, M11)', () => {
     await pane.getByRole('textbox', { name: `Amount for ${label}, PKR` }).fill('9,750')
     await page.keyboard.press('Tab')
     await review(page, 'recurring-reminder-1440')
-    await pane.getByRole('button', { name: /^Record all \(Rs / }).click()
+    await pane.getByRole('button', { name: /^Record all \(PKR / }).click()
     await expect(pane.getByTestId(`reminder-${label}`)).toHaveCount(0)
     const rows = await must(rest<ExpenseRow[]>('admin', `expenses?recurring_id=eq.${tpl.id}&select=*`))
     expect(rows).toHaveLength(1)

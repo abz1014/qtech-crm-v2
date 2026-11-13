@@ -223,7 +223,7 @@ function Ready({
               <p className="text-sm text-fg-2" data-testid="gst-adjust-note">
                 Sales tax is rounded to whole rupees on each line. To add up to this invoice’s GST of {pkr(built.doc.figures.gst)} (the register figure), line
                 {built.doc.figures.adjustedLines.length === 1 ? ' ' : 's '}
-                {built.doc.figures.adjustedLines.join(', ')} {built.doc.figures.adjustedLines.length === 1 ? 'carries' : 'carry'} Rs 1{' '}
+                {built.doc.figures.adjustedLines.join(', ')} {built.doc.figures.adjustedLines.length === 1 ? 'carries' : 'carry'} PKR 1{' '}
                 {built.doc.figures.adjustment > 0n ? 'more' : 'less'} than {built.doc.figures.adjustedLines.length === 1 ? 'its' : 'their'} own rounding.
               </p>
             ) : null}
@@ -325,7 +325,7 @@ function ProblemNote({ problem, src }: { problem: FiguresProblem; src: InvoicePd
     case 'gst-differs':
       return (
         <Banner tone="danger" title="The sales tax does not match the invoice">
-          The lines’ own sales tax comes to {pkr(problem.linesGst)}; the invoice’s GST is {pkr(problem.invoiceGst)}. That is more than rounding (at most Rs 1 on each of the{' '}
+          The lines’ own sales tax comes to {pkr(problem.linesGst)}; the invoice’s GST is {pkr(problem.invoiceGst)}. That is more than rounding (at most PKR 1 on each of the{' '}
           {problem.taxableLines} taxed {problem.taxableLines === 1 ? 'line' : 'lines'}), so the PDF is not made. Check the lines ticked, or the GST rate on the order’s lines.
         </Banner>
       )

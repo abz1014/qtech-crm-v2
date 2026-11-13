@@ -110,7 +110,7 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
   return (
     <>
       <p className="-mt-3 text-sm text-fg-muted">
-        {companyName} · holds <span className="num">Rs {formatAmount(credit.balance)}</span> of credit
+        {companyName} · holds <span className="num">PKR {formatAmount(credit.balance)}</span> of credit
       </p>
       <Form sf={sf} labels={{ orderId: 'Order', amount: 'Amount to apply', appliedOn: 'Date' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
@@ -122,7 +122,7 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
                 f.onChange(e)
                 setAmountFor(e.target.value)
               }}
-              options={targets.map(t => ({ value: t.orderId, label: `${orderRef(t.orderNumber)} · owes Rs ${formatAmount(t.balance)}` }))}
+              options={targets.map(t => ({ value: t.orderId, label: `${orderRef(t.orderNumber)} · owes PKR ${formatAmount(t.balance)}` }))}
             />
           )}
         </FormField>

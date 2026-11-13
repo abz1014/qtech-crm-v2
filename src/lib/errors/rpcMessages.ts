@@ -303,13 +303,22 @@ export function rpcEntry(text: string): { entry: RpcEntry; m: RegExpMatchArray }
   return null
 }
 
+/** Server texts say "Rs 1,200.00" and "closed" for a month; the app says PKR and locked (decisions I and H). */
+export function rupeesToPkr(text: string): string {
+  return text.replace(/\bRs\.? ?(?=\S)/g, 'PKR ')
+}
+
+function plainWording(text: string): string {
+  return rupeesToPkr(text).replace(/\bclosed\b/g, 'locked')
+}
+
 /** A plain message for a server rule text, or null when none is mapped or the entry is internal. */
 export function rpcMessage(text: string): RpcMessage | null {
   const hit = rpcEntry(text)
   if (!hit || hit.entry.internal) return null
   const { entry, m } = hit
   return {
-    message: entry.message ? entry.message(m) : text.trim(),
+    message: entry.message ? entry.message(m) : plainWording(text.trim()),
     ...(entry.help ? { help: entry.help } : {}),
     ...(entry.action ? { action: entry.action } : {}),
   }

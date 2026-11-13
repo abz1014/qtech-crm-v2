@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FxLatestRow } from '@/features/rfqs/api'
-import { ageText, autoRunStamp, bandLabel, buildRateBar, buildRateRows, rateBarNote, manualRateProblem, rateCardLine, sourceText, unusableWarning } from './ratesModel'
+import { CURRENCY_NAMES, ageText, autoRunStamp, bandLabel, buildRateBar, buildRateRows, rateBarNote, manualRateProblem, rateCardLine, sourceText, unusableWarning } from './ratesModel'
 
 const row = (currency: string, ratePkr: number, ageDays: number, source = 'auto'): FxLatestRow => ({
   currency,
@@ -9,6 +9,12 @@ const row = (currency: string, ratePkr: number, ageDays: number, source = 'auto'
   source,
   ageDays,
   staleness: ageDays <= 7 ? 'fresh' : ageDays <= 30 ? 'stale' : 'unusable',
+})
+
+describe('currency names', () => {
+  it('names the Swiss franc, so the rates table never shows a bare CHF', () => {
+    expect(CURRENCY_NAMES.CHF).toBe('Swiss franc')
+  })
 })
 
 describe('rates table', () => {

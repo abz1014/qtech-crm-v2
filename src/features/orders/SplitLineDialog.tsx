@@ -243,7 +243,7 @@ export function SplitLineDialog({
                   <b className="font-medium">Result:</b> {resultText}
                 </span>
                 <InfoTip label="What the new line copies" side="top" align="end">
-                  The new line copies the description, brand, unit, selling price and GST rate. Order totals stay the same, give or take Rs 1 of GST rounding.
+                  The new line copies the description, brand, unit, selling price and GST rate. Order totals stay the same, give or take PKR 1 of GST rounding.
                 </InfoTip>
               </span>
             </div>
