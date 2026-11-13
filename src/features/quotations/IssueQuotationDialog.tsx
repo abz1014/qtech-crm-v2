@@ -267,7 +267,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
       if ((latest?.id ?? null) !== builtOn.current && latest?.id !== claimId.current) {
         builtOn.current = latest?.id ?? null
         setError(
-          `${latest ? quotationRef(latest.number, firstYear, latest.revision) : 'A quotation'} was just issued for this RFQ, from another tab or by someone else. Nothing was issued now. Check it first; press Issue again only to make a revision.`,
+          `${latest ? quotationRef(latest.number, firstYear, latest.revision) : 'A quotation'} was just issued for this RFQ, from another tab or by another user. Nothing was issued now. Check it first. Select Issue again only to make a revision.`,
         )
         return
       }
@@ -415,7 +415,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         >
           {gaps.length > 0 ? (
             <Banner tone="warning" title="The PDF was not made">
-              Add the {gaps.join(' and ')} in Settings, Company. The quotation itself is saved; make its PDF from the list once that is done. <SettingsLink />
+              Add the {gaps.join(' and ')} in Settings, Company. The quotation itself is saved. Make its PDF from the list once that is done. <SettingsLink />
             </Banner>
           ) : null}
           {pdfError ? (
@@ -466,7 +466,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
           ) : (
             <>
               Issuing marks the quotation sent today.
-              <InfoTip label="What issuing does" side="top" align="start">It gets a number and a PDF and cannot be edited. You can always Revise it; the first one stays on record.</InfoTip>
+              <InfoTip label="What issuing does" side="top" align="start">Issuing assigns a number and makes a PDF. An issued quotation cannot be edited. Revise it to change it. The first one stays on record.</InfoTip>
             </>
           )
         }
@@ -493,7 +493,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             <Skeleton className="h-[6rem] w-full" />
           </div>
         ) : loadFailed ? (
-          <Banner tone="danger" title="Couldn't load the items to quote">
+          <Banner tone="danger" title="Items could not be loaded">
             Nothing was changed. Close this and try again.
           </Banner>
         ) : (
@@ -538,7 +538,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                 <span className="text-right">Qty</span>
                 <span>Unit price, net PKR</span>
                 <span>GST</span>
-                <span>Lead time we quote</span>
+                <span>Lead time quoted</span>
                 <span className="text-right">Line net, PKR</span>
               </div>
               <ul aria-label="Items to quote" className="divide-y">
@@ -631,10 +631,10 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                       <div className="grid min-w-0 content-start gap-2 max-lg:col-start-2">
                         <div className="grid gap-1">
                           <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
-                            Lead time we quote
+                            Lead time quoted
                           </span>
                           <TextField
-                            aria-label={`Lead time we quote, item ${n}`}
+                            aria-label={`Lead time quoted, item ${n}`}
                             value={leads[it.id] ?? ''}
                             placeholder="e.g. 8 to 10 weeks"
                             onChange={e => setLeads(l => ({ ...l, [it.id]: e.target.value }))}
@@ -694,7 +694,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </p>
             ) : zero.length > 0 ? (
               <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">
-                {`A quotation can't carry a price of 0. Enter the price for item ${zero.map(i => list.indexOf(i) + 1).join(', ')}, or untick it.`}
+                {`A quotation cannot include a price of 0. Enter the price for item ${zero.map(i => list.indexOf(i) + 1).join(', ')}, or clear the tick.`}
               </p>
             ) : tooBig.length > 0 ? (
               <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">

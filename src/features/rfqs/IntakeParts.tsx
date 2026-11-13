@@ -31,7 +31,7 @@ const SECONDARY_LINK =
   'inline-flex h-control items-center justify-center rounded border border-line-strong bg-surface px-3 text-sm font-medium leading-none text-fg transition-colors duration-fast ease-out hover:bg-sunken'
 
 /** The words for saving without asking anyone (owner audit N2): what it does, and what it does not. */
-export const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
+export const SAVE_FOR_LATER = "Save as draft"
 
 /** One button of the step bar. */
 export interface BarAction {
@@ -160,7 +160,7 @@ export function DraftOffer({
       <div className="grid gap-[2px]">
         <h2 className="font-semibold">You have a draft from {draftAge(draft.savedAt)}</h2>
         <p className="text-fg-2">
-          {draftSummary(draft)}. It is kept on this device until you save it or start new; Start new forgets it.
+          {draftSummary(draft)}. It is kept on this device until it is saved. Start new discards it.
           {keepsCapture ? ' If you continue it, the message you brought is not added.' : ''}
         </p>
       </div>
@@ -492,7 +492,7 @@ export function FloatedPanel({
           ) : null}
         </dl>
       ) : null}
-      {dueOn ? null : <p className="type-body m-0 text-fg-2">No quotation due date was given, so nothing is followed up until you add one.</p>}
+      {dueOn ? null : <p className="type-body m-0 text-fg-2">No quotation due date was given, so no follow-up is scheduled until one is added.</p>}
       {unfloated.map(u => (
         <Hint key={u.key} tone="info">
           {u.text}

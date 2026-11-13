@@ -126,7 +126,7 @@ function AddQuestionsForm({ rfqId, inquiries, onDone }: { rfqId: string; inquiri
         <Button variant="quiet" onClick={onDone} disabled={add.isPending}>
           Cancel
         </Button>
-        {lines.length > 0 && inquiries.length > 0 ? <span className="text-sm text-fg-muted">Say which supplier asked, or leave it as our own question.</span> : null}
+        {lines.length > 0 && inquiries.length > 0 ? <span className="text-sm text-fg-muted">Select the supplier who asked, or leave it as an own question.</span> : null}
       </div>
     </div>
   )
@@ -293,7 +293,7 @@ export function QuestionRow({
                 rows={3}
                 value={draft}
                 ref={answerBox}
-                placeholder="Your answer, as you would write it to the supplier"
+                placeholder="Answer to send to the supplier"
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

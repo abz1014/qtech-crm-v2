@@ -58,7 +58,7 @@ export function PasteReplyPanel({
 
       {set.question !== null ? (
         <div className="rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm" data-reply-question="">
-          <p className="font-medium">They are asking you something, not quoting.</p>
+          <p className="font-medium">The reply is a question, not a quotation.</p>
           {set.question ? <p className="mt-1 break-words text-fg-2">{set.question}</p> : null}
           <p className="mt-1 text-fg-muted">Nothing here is a price. Answer them, then paste their next reply.</p>
         </div>
@@ -70,7 +70,7 @@ export function PasteReplyPanel({
 
       {set.regret ? (
         <div className="flex flex-wrap items-center gap-3 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
-          <span className="min-w-0 flex-1 basis-[14rem]">{`They say they can't quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
+          <span className="min-w-0 flex-1 basis-[14rem]">{`The supplier cannot quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
           <Button variant="primary" size="sm" busy={busy} busyLabel="Saving" onClick={() => onCantQuote(set.regret!.reason)}>
             {"Mark can't quote"}
           </Button>
@@ -136,7 +136,7 @@ export function PasteReplyPanel({
 
       {set.declined.length > 0 ? (
         <p className="text-sm text-fg-2">
-          {`They decline ${set.declined.map(d => `item ${d.itemNumber}`).join(', ')}. Accepting records that as can't quote: ${[...new Set(set.declined.map(d => reasonLabel(d.reason)))].join(', ')}.`}
+          {`They decline ${set.declined.map(d => `item ${d.itemNumber}`).join(', ')}. Accepting records that as cannot quote: ${[...new Set(set.declined.map(d => reasonLabel(d.reason)))].join(', ')}.`}
         </p>
       ) : null}
 

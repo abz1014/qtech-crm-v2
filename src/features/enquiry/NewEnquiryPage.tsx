@@ -165,7 +165,7 @@ function DropZone({ onFiles }: { onFiles: (f: File[]) => void }) {
     >
       <Icon icon={Upload} size="lg" className="text-fg-muted" />
       <p className="m-0 font-medium">Drop the customer&rsquo;s PDF, photo or spreadsheet here</p>
-      <p className="m-0 text-fg-2">Or paste their message anywhere on this page. Nothing is saved until you create the job.</p>
+      <p className="m-0 text-fg-2">Or paste their message anywhere on this page. Nothing is saved until the job is created.</p>
       <input
         ref={input}
         type="file"

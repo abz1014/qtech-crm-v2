@@ -51,7 +51,7 @@ const vis = (l: Locator) => l.filter({ visible: true }).first()
 const moreButton = (p: Page) => vis(p.getByRole('button', { name: /^More( actions)?$/ }))
 const T = { timeout: 15_000 }
 /** New RFQ's save-only action (r3/rfq-orders renamed "Save without asking"); on a phone it sits in the step bar's ⋯ menu. */
-const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
+const SAVE_FOR_LATER = "Save as draft"
 
 /**
  * A supplier's reply form. Each supplier is listed once, in Suppliers asked, and "Enter reply" (or "Edit reply" once there is a

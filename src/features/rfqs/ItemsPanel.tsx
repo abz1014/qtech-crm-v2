@@ -308,7 +308,7 @@ export function ItemsPanel({
       meta={
         <>
           {items.length} {items.length === 1 ? 'item' : 'items'}
-          {nobodyAsked ? ' · nobody asked yet' : ''}
+          {nobodyAsked ? ' · no supplier asked yet' : ''}
         </>
       }
       actions={
@@ -332,7 +332,7 @@ export function ItemsPanel({
       ) : null}
       {nobodyAsked && items.length > 0 ? (
         <p className="border-b px-0 py-4 text-fg-2">
-          <b className="font-semibold text-fg">Ask suppliers for prices.</b> One tap copies a message listing every item, ready to paste into WhatsApp or email.
+          <b className="font-semibold text-fg">Ask a supplier first.</b> Replies are entered under Suppliers asked.
         </p>
       ) : null}
       {items.length === 0 ? (
@@ -416,7 +416,7 @@ export function ItemsPanel({
                                 : 'Every supplier asked said they cannot quote it.'}
                             </b>{' '}
                             {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}
-                            Ask someone else before the quotation is due.
+                            Ask another supplier before the quotation is due.
                           </p>
                         </div>
                         {forThis.length > 0 ? (
@@ -437,9 +437,7 @@ export function ItemsPanel({
                       </div>
                     ) : null}
 
-                    {nobodyAsked ? (
-                      <p className="px-0 pb-4 pt-3 text-fg-muted">No supplier has been asked about this item.</p>
-                    ) : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
+                    {nobodyAsked ? null : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
                       <div className="mt-3 lg:mt-1">
                         {entries.length > 0 && prices ? (
                           item.id !== headItemId ? null : <div className={HEAD} aria-hidden="true">

@@ -1062,7 +1062,7 @@ export async function markInquiriesSent(ids: readonly string[], on: string): Pro
 }
 
 /**
- * "Did you send it? Yes, sent" (0097): stamp sent_confirmed_at on inquiries that were asked and not yet confirmed. Only this call writes
+ * "Confirm the message was sent", then "Yes, sent" (0097): stamp sent_confirmed_at on inquiries that were asked and not yet confirmed. Only this call writes
  * the column, so "Sent" on a screen always means a person said so. Returns the ids that changed, for the Undo.
  */
 export async function confirmInquiriesSent(ids: readonly string[]): Promise<string[]> {

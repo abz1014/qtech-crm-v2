@@ -227,7 +227,7 @@ export function SupplierReplyDialog({
       })
       onClose()
     } catch (err) {
-      toast({ title: "Could not mark can't quote", body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
+      toast({ title: "Could not record that the supplier cannot quote", body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
     }
   }
 
@@ -235,7 +235,7 @@ export function SupplierReplyDialog({
     try {
       await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, reason: null })
     } catch (err) {
-      toast({ title: "Could not take back can't quote", body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: "Could not undo the cannot-quote record", body: mapPgError(err).message, tone: 'danger' })
     }
   }
 

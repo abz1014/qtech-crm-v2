@@ -226,7 +226,7 @@ export function PasteZone({
             <kbd className="num rounded border border-line-strong bg-sunken px-1">V</kbd> anywhere on this page.{' '}
           </>
         )}
-        Paste the whole email, a PDF or a screenshot — we pick out the items; you check them before saving.
+        Paste the whole email, a PDF or a screenshot. The items are picked out and can be checked before saving.
       </p>
     </div>
   )

@@ -6,12 +6,12 @@ keywords: enquiry, inquiry, customer, request, price, paste, pdf, excel, spreads
 screens: /rfqs, /todo
 related: ask-suppliers
 ---
-1. Tap [New], then [New RFQ].
-2. Paste what the customer sent, or tap [Choose PDF or photo] for their PDF, a screenshot, a photo or an Excel sheet (.xlsx, .xls, .csv). It splits into items.
-3. Under [Customer], tap [Use <Company>] if it is suggested, or pick the company.
-4. Check the items, then tap [Looks right: find suppliers].
+1. Select [New], then [New RFQ].
+2. Paste what the customer sent, or select [Choose PDF or photo] for their PDF, a screenshot, a photo or an Excel sheet (.xlsx, .xls, .csv). It splits into items.
+3. Under [Customer], select [Use <Company>] if it is suggested, or pick the company.
+4. Check the items, then select [Looks right: find suppliers].
 5. Next, ask suppliers for prices.
 
-Tip: The reference and due date are filled in from the PDF when it has them. More to add after the split? Tap [Paste more]. Not ready to ask suppliers? Tap [Save for later (don't ask suppliers yet)]; on a phone it is under the ⋯ button. Left halfway? Open [New RFQ] again and tap [Continue your draft]. A message or photo from WhatsApp can also start with [New RFQ].
+Tip: The reference and due date are filled in from the PDF when it has them. More to add after the split? Select [Paste more]. Not ready to ask suppliers? Select [Save as draft]; on a phone it is under the ⋯ button. Left halfway? Open [New RFQ] again and select [Continue your draft]. A message or photo from WhatsApp can also start with [New RFQ].
 
 Safe to try: nothing is saved until you copy the supplier message or save.
