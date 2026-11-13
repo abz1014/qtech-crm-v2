@@ -4,14 +4,15 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 
 /*
- * Banner (D08 section 01): info, warning, error (danger) and success strips with
- * an optional action. Tone is carried by glyph + colour + text, never colour alone.
+ * Banner (D08 section 01; Forest .qb-banner): info, warning, error (danger) and success strips with
+ * an optional action. Tone is carried by glyph + colour + text, never colour alone. Forest: the tone's tint with its ink,
+ * no edge, 12 px corners; the action sits at the end and drops under the words when the strip is narrow.
  */
 const TONES: Record<string, { icon: LucideIcon; box: string; glyph: string; live: 'status' | 'alert' }> = {
-  info: { icon: Info, box: 'border-tone-info-fg/25 bg-tone-info-bg', glyph: 'text-tone-info-fg', live: 'status' },
-  warning: { icon: TriangleAlert, box: 'border-tone-warning-fg/25 bg-tone-warning-bg', glyph: 'text-tone-warning-fg', live: 'status' },
-  danger: { icon: CircleAlert, box: 'border-tone-danger-fg/25 bg-tone-danger-bg', glyph: 'text-tone-danger-fg', live: 'alert' },
-  success: { icon: CircleCheck, box: 'border-tone-success-fg/25 bg-tone-success-bg', glyph: 'text-tone-success-fg', live: 'status' },
+  info: { icon: Info, box: 'bg-tone-info-bg text-tone-info-fg', glyph: 'text-tone-info-fg', live: 'status' },
+  warning: { icon: TriangleAlert, box: 'bg-tone-warning-bg text-tone-warning-fg', glyph: 'text-tone-warning-fg', live: 'status' },
+  danger: { icon: CircleAlert, box: 'bg-tone-danger-bg text-tone-danger-fg', glyph: 'text-tone-danger-fg', live: 'alert' },
+  success: { icon: CircleCheck, box: 'bg-tone-success-bg text-tone-success-fg', glyph: 'text-tone-success-fg', live: 'status' },
 }
 
 export type BannerTone = 'info' | 'warning' | 'danger' | 'success'
@@ -32,11 +33,11 @@ interface BannerProps {
 export function Banner({ tone = 'info', title, children, action, icon, className }: BannerProps) {
   const t = TONES[tone]
   return (
-    <div role={t.live} className={cn('flex flex-wrap items-start gap-3 rounded-row border px-4 py-3 text-sm', t.box, className)}>
+    <div role={t.live} className={cn('flex flex-wrap items-start gap-3 rounded-control px-4 py-3 text-sm font-medium', t.box, className)}>
       <Icon icon={icon ?? t.icon} className={cn('mt-[2px]', t.glyph)} />
       <div className="grid min-w-[12rem] flex-1 gap-[2px] text-pretty">
-        <p className="font-semibold">{title}</p>
-        {children ? <p className="text-fg-2">{children}</p> : null}
+        <p className="font-bold">{title}</p>
+        {children ? <p className="font-regular text-fg">{children}</p> : null}
       </div>
       {action ? <div className="ml-auto self-center">{action}</div> : null}
     </div>

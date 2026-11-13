@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
  *   - call `useMobileBar({ …, hideTabs: true })`, so the bottom tabs do not sit under this bar;
  *   - add `max-md:pb-[calc(var(--control-lg-h)+2rem)]` to its content, so the last row is not hidden behind the bar.
  * It replaces the three hand-rolled bars (RfqHeaderBlock `sticky bottom-0`, OrderHeaderBlock `PhoneSticky`, ChecklistPage).
+ * Forest .qb-sticky-bar: a white bar with the e3 lift and 16 px top corners (was the navy band), so the buttons inside are the
+ * ordinary light ones.
  */
 export interface StickyActionBarProps {
   /** The page's one primary button (touch size). Stretches to fill the bar. */
@@ -31,10 +33,8 @@ export function StickyActionBar({ primary, secondary, more, label, role = 'toolb
       role={role}
       aria-label={label}
       data-action-bar
-      // Navy, like the next-step band it repeats (direction C): data-surface re-inks the buttons and rings the green one.
-      data-surface="navy"
       className={cn(
-        'fixed inset-x-0 bottom-0 z-20 flex items-center gap-2 bg-chrome px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 text-fg shadow-pop md:hidden',
+        'fixed inset-x-0 bottom-0 z-sticky flex items-center gap-2 rounded-t-card border-t bg-surface px-4 pb-[calc(var(--sp-3)+env(safe-area-inset-bottom,0px))] pt-3 text-fg shadow-e3 md:hidden',
         className,
       )}
     >

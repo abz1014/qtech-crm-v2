@@ -5,18 +5,20 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 
 /*
- * Button (docs/design/INVENTORY.md; D08 section 01). Variants primary,
- * secondary, quiet, danger. Sizes read the density tokens, so they follow the text size:
- * lg 52 (40 with smaller text), md 44 (32), sm 40 (28; 44 on touch), touch 44 (phone chrome).
- * States: default, hover, pressed, focus (global ring), disabled, busy.
- * Direction C: semibold labels, 10 px corners. On a navy surface (data-surface="navy": the next-step band, the top bar) the
- * green button gets a 2 px white ring, because green on navy alone is 2.71:1 (WCAG 1.4.11 wants 3:1 for its edge).
+ * Button (docs/design/INVENTORY.md; D08 section 01; Forest .qb-btn). Variants primary, secondary, quiet, danger. Sizes read
+ * the density tokens, so they follow the text size and the pointer: lg 48 (56 on touch), md 40 (48 on touch), sm 36 (48 on
+ * touch), touch 44 (phone chrome).
+ * States: default, hover, pressed (scale .98), focus (global ring), disabled, busy.
+ * Forest: bold labels, 12 px corners (rounded-control). Primary is the forest green fill; secondary a white tile with a strong
+ * edge; quiet the ghost (green words, a brand-100 tint on hover); danger an outline in the late red, filled with its tint on
+ * hover. On a forest surface (data-surface="navy": the next-step band, the top bar) the green button gets a 2 px white ring,
+ * because green on the forest alone is under 3:1 (WCAG 1.4.11 wants 3:1 for its edge).
  */
 const button = cva(
   [
-    'group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded border',
-    'font-semibold leading-none transition-[background-color,border-color,transform] duration-fast ease-out',
-    'active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:active:translate-y-0',
+    'group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control border',
+    'font-bold leading-none transition-[background-color,border-color,color,transform] duration-fast ease-out',
+    'active:scale-press disabled:cursor-not-allowed disabled:active:transform-none',
   ],
   {
     variants: {
@@ -24,31 +26,32 @@ const button = cva(
         primary: [
           'border-primary bg-primary text-primary-foreground [[data-surface=navy]_&]:shadow-on-navy',
           'hover:border-primary-hover hover:bg-primary-hover active:border-primary-active active:bg-primary-active',
-          'disabled:border-line disabled:bg-selected disabled:text-fg-muted',
+          'disabled:border-transparent disabled:bg-deep disabled:text-fg-disabled',
         ],
         secondary: [
           'border-line-strong bg-surface text-fg',
-          'hover:border-line-input hover:bg-sunken active:bg-selected',
-          'disabled:border-line disabled:bg-sunken disabled:text-fg-disabled',
+          'hover:bg-selected active:bg-selected',
+          'disabled:border-transparent disabled:bg-deep disabled:text-fg-disabled',
         ],
         quiet: [
-          // An underlined label is the affordance: a bare word read as plain text, not something to press (an icon-only quiet button has no text to underline).
-          'border-transparent bg-transparent text-fg underline decoration-fg/40 decoration-1 underline-offset-4',
-          'hover:bg-sunken hover:decoration-fg active:bg-selected',
-          'disabled:bg-sunken disabled:text-fg-disabled',
+          // Forest ghost: the green words are the affordance (--primary-text, re-inked to white on the forest), a tint on hover.
+          'border-transparent bg-transparent text-primary',
+          'hover:bg-selected active:bg-selected',
+          'disabled:bg-transparent disabled:text-fg-disabled',
         ],
         danger: [
-          'border-tone-danger-fg bg-tone-danger-fg text-tone-ink-fg',
-          'hover:brightness-90 active:brightness-75',
-          'disabled:border-line disabled:bg-sunken disabled:text-fg-disabled disabled:brightness-100',
+          // On the forest the surface is re-inked dark, so the outline sits on its own tint there (red on the forest is unreadable).
+          'border-tone-danger-fg bg-surface text-tone-danger-fg [[data-surface=navy]_&]:bg-tone-danger-bg',
+          'hover:bg-tone-danger-bg active:bg-tone-danger-bg',
+          'disabled:border-transparent disabled:bg-deep disabled:text-fg-disabled',
         ],
       },
       size: {
-        lg: 'h-control-lg px-4 text-base',
-        md: 'h-control px-3 text-sm',
-        sm: 'h-control-sm px-[10px] text-xs',
+        lg: 'h-control-lg px-5 text-base',
+        md: 'h-control px-4 text-sm',
+        sm: 'h-control-sm px-3 text-xs',
         /** Phone chrome: the 44px minimum tap target (--hit-touch). */
-        touch: 'h-touch px-3 text-sm',
+        touch: 'h-touch px-4 text-sm',
       },
       iconOnly: { true: 'px-0', false: '' },
     },
@@ -92,7 +95,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const action = busyProp !== undefined
   // Busy keeps focus (WCAG 2.4.3): aria-disabled instead of disabled, and clicks are ignored while in flight.
   const iconOnly = children === undefined || children === null
-  const glyph = variant === 'primary' || variant === 'danger' ? '' : 'text-fg-muted group-disabled:text-fg-disabled'
+  const glyph = variant === undefined || variant === null || variant === 'secondary' ? 'text-fg-muted group-disabled:text-fg-disabled' : ''
   return (
     <button
       ref={ref}
@@ -100,7 +103,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled && !busy}
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
-      className={cn(button({ variant, size, iconOnly }), busy && 'cursor-progress active:translate-y-0', className)}
+      className={cn(button({ variant, size, iconOnly }), busy && 'cursor-progress active:transform-none', className)}
       {...rest}
       onClick={e => {
         if (busy || (action && (inFlight.current || e.detail > 1))) {

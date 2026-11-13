@@ -5,19 +5,19 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 
 /*
- * Checkbox (INVENTORY: U07; D08 section 01). 18px box. The
+ * Checkbox (INVENTORY: U07; D08 section 01; Forest .qb-check). 24px box (--sp-6) with a 2px edge and 4px corners. The
  * checked fill is the primary action colour.
  * Label is the click target as well as the name. The only label-less use is a
  * table row or header tick: pass `aria-label` instead and no label is drawn.
  * Supports "indeterminate" for a select-all header. Space toggles.
  * Touch (pointer: coarse): the label is 44px tall (--hit-touch) with the box centred on its line. A label-less box (aria-label,
- * often with the caller's own <label htmlFor>) is itself a 44px target there, the 18px square drawn inside it, with negative
+ * often with the caller's own <label htmlFor>) is itself a 44px target there, the 24px square drawn inside it, with negative
  * margins so the row keeps its height.
  */
 const TOUCH_LABEL = '[@media(pointer:coarse)]:py-[calc((var(--hit-touch)-var(--lh-sm))/2)]'
-const TOUCH_BOX = '[@media(pointer:coarse)]:mt-[calc((var(--hit-touch)-18px)/2)]'
+const TOUCH_BOX = '[@media(pointer:coarse)]:mt-[calc((var(--hit-touch)-var(--sp-6))/2)]'
 const SQUARE = [
-  'grid size-[18px] shrink-0 place-items-center rounded-[5px] border border-line-input bg-surface text-primary-foreground',
+  'grid size-6 shrink-0 place-items-center rounded-[var(--sp-1)] border-2 border-line-input bg-surface text-primary-foreground',
   'transition-colors duration-fast ease-out',
 ]
 const SQUARE_STATES =
@@ -42,7 +42,7 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
   }
   const indicator = (
     <RadixCheckbox.Indicator>
-      <Icon icon={rest.checked === 'indeterminate' ? Minus : Check} size="chip" />
+      <Icon icon={rest.checked === 'indeterminate' ? Minus : Check} size="md" className="[stroke-width:3]" />
     </RadixCheckbox.Indicator>
   )
   const box =
@@ -51,8 +51,8 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
         ref={ref}
         id={id}
         aria-describedby={help ? `${id}-help` : undefined}
-        // before: a 24px hit area around the 18px square (WCAG 2.5.8), nothing drawn; the label is a target as well
-        className={cn(SQUARE, SQUARE_STATES, 'relative mt-[calc((var(--lh-sm)-18px)/2)] before:absolute before:-inset-[3px] before:content-[""]', TOUCH_BOX, className)}
+        // the 24px square is itself the WCAG 2.5.8 target; the label is a target as well
+        className={cn(SQUARE, SQUARE_STATES, 'relative mt-[calc((var(--lh-sm)-var(--sp-6))/2)]', TOUCH_BOX, className)}
         {...rest}
       >
         {indicator}
@@ -63,8 +63,8 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
         id={id}
         aria-describedby={help ? `${id}-help` : undefined}
         className={cn(
-          'group mt-[calc((var(--lh-sm)-18px)/2)] grid size-[18px] shrink-0 place-items-center rounded-[5px] disabled:cursor-not-allowed',
-          '[@media(pointer:coarse)]:-m-[13px] [@media(pointer:coarse)]:size-touch',
+          'group mt-[calc((var(--lh-sm)-var(--sp-6))/2)] grid size-6 shrink-0 place-items-center rounded-[var(--sp-1)] disabled:cursor-not-allowed',
+          '[@media(pointer:coarse)]:-m-[10px] [@media(pointer:coarse)]:size-touch',
           className,
         )}
         {...rest}
@@ -75,7 +75,7 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
       </RadixCheckbox.Root>
     )
   return (
-    <div className="flex items-start gap-3 text-sm">
+    <div className="flex items-start gap-3 text-sm font-medium">
       {box}
       {label !== undefined ? (
         <div className="grid">
@@ -83,7 +83,7 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
             {label}
           </label>
           {help ? (
-            <span id={`${id}-help`} className="text-xs text-fg-muted">
+            <span id={`${id}-help`} className="text-xs font-regular text-fg-muted">
               {help}
             </span>
           ) : null}

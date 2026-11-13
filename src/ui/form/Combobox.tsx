@@ -189,14 +189,15 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
           onInteractOutside={e => {
             if (anchorHas(e.target)) e.preventDefault()
           }}
-          className="z-[70] w-[var(--radix-popover-trigger-width)] focus:outline-none"
+          // z-dialog, not z-picker: the list portals to <body>, so in a dialog it must stack over it (same layer, later in the DOM).
+          className="z-dialog w-[var(--radix-popover-trigger-width)] focus:outline-none"
         >
         <ul
           id={listId}
           role="listbox"
           aria-label="Matches"
           onMouseDown={e => e.preventDefault()}
-          className="max-h-[320px] animate-rise-4 overflow-y-auto rounded bg-surface p-1 shadow-pop"
+          className="max-h-[320px] animate-rise-4 overflow-y-auto rounded-control border bg-surface p-2 shadow-e3"
         >
           {matches.map((o, i) => (
             <li
@@ -208,26 +209,26 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
               onMouseMove={() => setActive(i)}
               onClick={() => pick(o)}
               className={cn(
-                'flex cursor-pointer items-center gap-3 rounded px-2 text-sm',
+                'flex cursor-pointer items-center gap-3 rounded-control px-3 text-sm font-medium',
                 metaBelow ? 'min-h-control py-[6px]' : 'h-control',
                 i === activeIndex && 'bg-selected',
               )}
             >
               {metaBelow ? (
                 <span className="grid min-w-0">
-                  <span className="min-w-0 truncate">{o.label}</span>
-                  {o.meta ? <span className="min-w-0 truncate text-xs text-fg-muted">{o.meta}</span> : null}
+                  <span className="min-w-0 truncate" title={o.label}>{o.label}</span>
+                  {o.meta ? <span className="min-w-0 truncate text-xs text-fg-muted" title={o.meta}>{o.meta}</span> : null}
                 </span>
               ) : (
                 <>
-                  <span className="min-w-0 truncate">{o.label}</span>
+                  <span className="min-w-0 truncate" title={o.label}>{o.label}</span>
                   {o.meta ? <span className="shrink-0 text-xs text-fg-muted">{o.meta}</span> : null}
                 </>
               )}
             </li>
           ))}
           {rows === 0 ? (
-            <li role="presentation" className="flex h-control items-center gap-2 px-2 text-sm text-fg-muted">
+            <li role="presentation" className="flex h-control items-center gap-2 px-3 text-sm text-fg-muted">
               <Icon icon={Search} />
               {loading ? 'Searching' : `No match for “${typed.trim()}”`}
             </li>
@@ -241,15 +242,15 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
               onMouseMove={() => setActive(matches.length)}
               onClick={create}
               className={cn(
-                'flex cursor-pointer items-center gap-2 rounded px-2 text-sm text-primary',
+                'flex cursor-pointer items-center gap-2 rounded-control px-3 text-sm font-card text-primary',
                 createHint ? 'min-h-control py-[6px]' : 'h-control',
                 matches.length > 0 && 'mt-1 border-t border-line pt-1',
                 matches.length === activeIndex && 'bg-selected',
               )}
             >
-              <Icon icon={Plus} className="text-fg-muted" />
+              <Icon icon={Plus} />
               <span className="grid min-w-0">
-                <span className="min-w-0 truncate">{createLabel ? createLabel(typed.trim()) : `Add “${typed.trim()}” as new`}</span>
+                <span className="min-w-0 truncate" title={createLabel ? createLabel(typed.trim()) : `Add “${typed.trim()}” as new`}>{createLabel ? createLabel(typed.trim()) : `Add “${typed.trim()}” as new`}</span>
                 {createHint ? <span className="text-xs text-fg-muted">{createHint}</span> : null}
               </span>
             </li>

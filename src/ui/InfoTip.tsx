@@ -38,8 +38,8 @@ export function InfoTip({ label, children, side = 'bottom', align = 'start', cla
           data-infotip=""
           onClick={e => e.stopPropagation()}
           className={cn(
-            'relative inline-grid size-6 shrink-0 place-items-center rounded align-middle text-fg-muted',
-            'transition-colors duration-fast ease-out hover:bg-sunken hover:text-fg data-[state=open]:bg-sunken data-[state=open]:text-fg',
+            'relative inline-grid size-6 shrink-0 place-items-center rounded-pill align-middle text-primary',
+            'transition-colors duration-fast ease-out hover:bg-selected data-[state=open]:bg-selected',
             // touch: the button itself is 44px; the negative margin keeps the 24px footprint beside the text it explains
             '[@media(pointer:coarse)]:size-touch [@media(pointer:coarse)]:-m-[10px]',
             className,
