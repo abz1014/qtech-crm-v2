@@ -90,7 +90,7 @@ import {
  */
 const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-x-3 gap-y-2 px-6'
+const GRID = 'grid grid-cols-[28px_minmax(88px,112px)_minmax(0,1.25fr)_minmax(120px,176px)_minmax(88px,104px)_minmax(0,1.3fr)_minmax(96px,124px)_minmax(88px,104px)_minmax(96px,120px)_36px] items-start gap-x-3 gap-y-2 px-6'
 
 const NO_JOBS: readonly JobTagOption[] = []
 const NO_GROUPS: readonly ExpenseGroup[] = []
@@ -675,7 +675,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
       </div>
       <div className="flex h-[36px] items-center">
         <Checkbox
-          label="Monthly"
+          label="Every month"
           checked={!!row.repeat}
           onCheckedChange={c => onPatch({ repeat: c === true })}
           title={`Row ${index} repeats every month`}

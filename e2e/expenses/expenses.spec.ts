@@ -803,7 +803,7 @@ test.describe('expenses (M03, M11)', () => {
     expect(rows[0]).toMatchObject({ amount_pkr: 500, paid_via: 'cash', paid_on: today() })
   })
 
-  test('"Monthly" on a row adds a recurring template and links the expense to it, so it is not due again this month', async ({ page }) => {
+  test('"Every month" on a row adds a recurring template and links the expense to it, so it is not due again this month', async ({ page }) => {
     const label = `Office rent ${unique()}`
     const amount = 70000 + base()
     await openAs(page, 'admin', '/money/expenses')
@@ -811,7 +811,7 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
     await page.keyboard.type(String(amount))
     await page.getByRole('combobox', { name: 'Detail, row 1' }).fill(label)
-    await page.getByRole('group', { name: 'Row 1' }).getByRole('checkbox', { name: 'Monthly' }).click()
+    await page.getByRole('group', { name: 'Row 1' }).getByRole('checkbox', { name: 'Every month' }).click()
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
     const [tpl] = await must(rest<{ id: string; amount: number; day_of_month: number; start_month: string; active: boolean }[]>('admin', `recurring_expenses?label=eq.${encodeURIComponent(label)}&select=*`))
