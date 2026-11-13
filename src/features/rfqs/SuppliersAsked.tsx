@@ -211,7 +211,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           Ask more suppliers
         </Button>
         {onReplyFrom ? (
-          <Button variant="quiet" icon={MessageSquareReply} onClick={onReplyFrom}>
+          <Button variant="quiet" icon={MessageSquareReply} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" onClick={onReplyFrom}>
             Enter reply from another supplier
           </Button>
         ) : null}
