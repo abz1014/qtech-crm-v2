@@ -156,7 +156,7 @@ export function TeamPage() {
       <PageHeader
         title="Team"
         className="max-md:[&>div:last-child]:w-full"
-        lede={<span className="max-md:hidden">Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.</span>}
+        lede={<span className="max-md:hidden">Users who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.</span>}
         primary={
           <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="max-md:h-touch max-md:w-full">
             Add person
@@ -198,7 +198,7 @@ export function TeamPage() {
         error={
           team.isError
             ? {
-                title: 'Couldn’t load the team',
+                title: 'Could not load the team',
                 message: 'Nothing has changed. Check your connection, then try again.',
                 onRetry: () => void team.refetch(),
                 reference: errorCode || undefined,
@@ -216,7 +216,7 @@ export function TeamPage() {
             />
           ) : filtered ? (
             <EmptyState title={filter === 'deactivated' ? 'No one is deactivated' : 'No one is active'} actions={<Button onClick={clearFilter}>Show everyone</Button>}>
-              {filter === 'deactivated' ? 'Everyone on the team can sign in.' : 'Reactivate someone to let them sign in again.'}
+              {filter === 'deactivated' ? 'All users can sign in.' : 'Reactivate a user to allow sign-in again.'}
             </EmptyState>
           ) : (
             <EmptyState title="No people yet">Add the first person to give them a way to sign in.</EmptyState>

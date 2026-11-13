@@ -59,7 +59,7 @@ for (const { label, width, height } of WIDTHS) {
       await expect(page.getByRole('group', { name: 'Remove Naveed Akhtar?' })).toBeVisible()
       await page.getByRole('region', { name: 'Main plant' }).getByRole('button', { name: 'Remove Main plant' }).click()
       await page.getByRole('group', { name: 'Remove Main plant?' }).getByRole('button', { name: 'Remove', exact: true }).click()
-      await expect(page.getByRole('alert').filter({ hasText: "can't be removed" })).toBeVisible()
+      await expect(page.getByRole('alert').filter({ hasText: 'cannot be removed' })).toBeVisible()
       await settle(page)
       expect(await violations(page, true)).toEqual([])
     })

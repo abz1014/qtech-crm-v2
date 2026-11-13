@@ -65,7 +65,7 @@ function CreateBody({ onOpenChange, initialName = '', defaultCountry, onCreated 
   const prefill = useMemo(() => {
     if (defaultCountry) return defaultCountry
     const common = commonCountry(client.getQueryData<CompanyListRow[]>(qk.companies.list()))
-    return common ? { value: common, source: `Most of your companies are in ${common}` } : null
+    return common ? { value: common, source: `Most companies are in ${common}` } : null
   }, [client, defaultCountry])
 
   const sf = useSubmitForm({

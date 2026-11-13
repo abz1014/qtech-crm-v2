@@ -138,7 +138,7 @@ export function TargetsPage() {
         },
       })
     } catch (err) {
-      toast({ title: "Couldn't copy the targets", body: mapPgError(err, { entity: 'target' }).message, tone: 'danger', action: { label: 'Try again', onClick: () => void copy() } })
+      toast({ title: "Could not copy the targets", body: mapPgError(err, { entity: 'target' }).message, tone: 'danger', action: { label: 'Try again', onClick: () => void copy() } })
     }
   }
 
@@ -155,7 +155,7 @@ export function TargetsPage() {
             <InfoTip label="About targets">
               Per person, per quarter, in net cash received (GST left out). Achieved is net cash received and credited to the person in
               that quarter. On pace is the target spread evenly over the days of the quarter, counting today (the tick on the bar).
-              Engineers carry no sales target unless you set one.
+              Engineers have no sales target unless one is set.
             </InfoTip>
           </>
         }
@@ -196,7 +196,7 @@ export function TargetsPage() {
 
       {progressFailed && !failed ? (
         <Banner tone="warning" title="Achieved and on-pace figures could not be read" action={<Button size="sm" onClick={retry}>Try again</Button>}>
-          You can still set and change targets.
+          Targets can still be set and changed.
         </Banner>
       ) : null}
 
@@ -347,7 +347,7 @@ function Progress({ p, target, year, quarter }: { p: ReturnType<typeof cellProgr
         done={p.achieved}
         total={amount}
         marker={amount > 0 ? Math.min(100, Math.max(0, (p.onPace / amount) * 100)) : undefined}
-        label={`Achieved ${p.achieved} of ${amount}; on pace is ${p.onPace}`}
+        label={`Achieved ${p.achieved} of ${amount}, on pace ${p.onPace}`}
       />
       {p.excluded > 0 ? (
         <p className="text-right text-sm text-fg-muted">

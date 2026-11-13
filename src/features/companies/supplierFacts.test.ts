@@ -37,7 +37,7 @@ describe('supplierFacts (5c display rules)', () => {
 
   it('shows every rate with its counts from three enquiries up', () => {
     const f = supplierFacts({ ...base, asked: 6, replied: 5, quoted: 4, no_offer: 1, reply_days_n: 3, median_reply_days: 2 })!
-    expect(f.enquirySummary).toBe("Replied 5 of 6 · quoted 4 · couldn't offer 1")
+    expect(f.enquirySummary).toBe("Replied 5 of 6 · quoted 4 · could not offer 1")
     expect(f.waiting).toBe(1)
     expect(f.replyTime).toEqual({ kind: 'known', days: 2, logged: 3, importedLeftOut: 2 })
   })

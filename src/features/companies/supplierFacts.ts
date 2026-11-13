@@ -48,7 +48,7 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
 
   const enquirySummary =
     asked >= 3
-      ? `Replied ${replied} of ${asked} · quoted ${quoted}${declined >= 1 ? ` · couldn't offer ${declined}` : ''}`
+      ? `Replied ${replied} of ${asked} · quoted ${quoted}${declined >= 1 ? ` · could not offer ${declined}` : ''}`
       : asked === 0
         ? 'No RFQs yet'
         : `Asked ${times(asked)} · ${replies(replied)}`

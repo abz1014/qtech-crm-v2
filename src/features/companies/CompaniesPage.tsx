@@ -137,7 +137,7 @@ export function CompaniesPage() {
             <span className="whitespace-nowrap">
               what happens.{' '}
               <InfoTip label="About roles" className="align-middle">
-                Nobody sets a role by hand. An RFQ or an order makes a company a customer (a prospect until it orders); asking it for prices, ordering from it or listing a brand makes it a supplier.
+                Roles are set automatically. A company with an RFQ is a prospect until it orders, then a customer. Asking it for prices, ordering from it or listing a brand makes it a supplier.
               </InfoTip>
             </span>
           </span>
@@ -172,7 +172,7 @@ export function CompaniesPage() {
         loading={list.isPending}
         error={
           list.isError
-            ? { title: "Couldn't load the companies", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void list.refetch() }
+            ? { title: "Could not load the companies", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void list.refetch() }
             : null
         }
         toolbar={
@@ -238,7 +238,7 @@ export function CompaniesPage() {
                 </Button>
               }
             >
-              Companies are added as you log RFQs, or here. A name is all it needs.
+              Companies are added when RFQs are logged, or here. Only a name is needed.
             </EmptyState>
           )
         }
@@ -249,7 +249,7 @@ export function CompaniesPage() {
         onOpenChange={o => (o ? setCreating(true) : closeCreate())}
         initialName={linkedName || typedName}
         onCreated={c => {
-          toast({ title: `Added ${c.name}`, body: 'Open it to add sites, contacts and brands when you have them.', tone: 'success' })
+          toast({ title: `Added ${c.name}`, body: 'Open it to add sites, contacts and brands later.', tone: 'success' })
           navigate(`/companies/${c.id}`)
         }}
       />

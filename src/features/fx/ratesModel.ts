@@ -95,7 +95,7 @@ export const bandDetail = (ageDays: number): string => `${ageText(ageDays)} old`
 /** The sentence under the table for a rate that can no longer be used; null for any other band. */
 export function unusableWarning(r: RateRow): string | null {
   if (r.staleness !== 'unusable' || r.ageDays === null) return null
-  return `${r.currency} has not been updated for ${r.ageDays} days. A rate older than 30 days is not used, so ${r.currency} supplier prices show in ${r.currency} only and are left out of price comparisons until someone adds a current rate.`
+  return `${r.currency} has not been updated for ${r.ageDays} days. A rate older than 30 days is not used, so ${r.currency} supplier prices show in ${r.currency} only and are left out of price comparisons until a current rate is added.`
 }
 
 const runDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', weekday: 'short', day: 'numeric', month: 'short' })
@@ -109,7 +109,7 @@ export function autoRunStamp(createdAt: string): string {
 
 /** The words for where a rate came from. */
 export function sourceText(source: 'auto' | 'manual' | null): string {
-  return source === 'manual' ? 'Entered by hand' : source === 'auto' ? 'Automatic' : 'No rate yet'
+  return source === 'manual' ? 'Entered manually' : source === 'auto' ? 'Automatic' : 'No rate yet'
 }
 
 const cardDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' })
@@ -118,7 +118,7 @@ const cardDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: 'numeri
 export function rateCardLine(r: Pick<RateRow, 'currency' | 'ratePkr' | 'asOf' | 'source'>): string {
   if (r.ratePkr === null || r.asOf === null) return `${r.currency} · no rate yet`
   const day = cardDay.format(new Date(`${r.asOf.slice(0, 10)}T00:00:00Z`))
-  return `${r.currency} ${formatRate(r.ratePkr)} · ${day} · ${r.source === 'manual' ? 'by hand' : 'automatic'}`
+  return `${r.currency} ${formatRate(r.ratePkr)} · ${day} · ${r.source === 'manual' ? 'manual' : 'automatic'}`
 }
 
 /** The rate bar on the RFQ page: one entry per currency that matters here (has a rate, or appears on a price). */

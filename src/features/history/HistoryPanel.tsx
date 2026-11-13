@@ -52,7 +52,7 @@ function HistoryBody({ table, id, imported }: { table: HistoryTable; id: string;
     )
   if (q.isError)
     return (
-      <EmptyState mood="error" title="Couldn't load the history" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+      <EmptyState mood="error" title="Could not load the history" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
         Nothing was changed. Check your connection and try again.
       </EmptyState>
     )
