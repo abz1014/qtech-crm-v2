@@ -351,7 +351,7 @@ describe('rule: decision overdue', () => {
   })
   it('is raised when the quotation expired', () => {
     const [e] = ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'quotation_expired', quotedOn: '2026-10-01', quotationValidUntil: '2026-11-20' })] }))
-    expect(e.title).toBe('Quotation expired: check prices before you revise it')
+    expect(e.title).toBe('Quotation expired. Check prices before revising it.')
     expect(e.badge.text).toBe('7 days overdue')
   })
   it('is not raised for a bid still to send', () => {

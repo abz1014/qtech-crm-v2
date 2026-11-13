@@ -6,17 +6,17 @@ keywords: to do, todo, today, late, this week, list, what to do, button, next st
 screens: /todo
 related: today-chase, snooze
 ---
-1. Tap [To do]. Red [Late] rows come first, then [Today], then [This week].
-2. Every row has its own button: [Follow up], [Send quotation], [Ask suppliers], [Create invoice] and so on. Tap it to do that step.
-3. Not now? Tap [Snooze] on the row.
+1. Select [To do]. Red [Late] rows come first, then [Today], then [This week].
+2. Every row has its own button: [Follow up], [Send quotation], [Ask suppliers], [Create invoice] and so on. Select it to do that step.
+3. To postpone a row, select [Snooze] on it.
 4. Seven rows show at most. The rest wait under [Older than 30 days] and the grey lines below.
 
 Tip: The number on [To do] is Late plus Today. It is the only number in the app.
 
 @engineer
-1. Tap [To do]. Red [Late] rows come first, then [Today], then [This week].
-2. Every row has its own button for the next step. Tap it to do that step.
-3. Not now? Tap [Snooze] on the row.
+1. Select [To do]. Red [Late] rows come first, then [Today], then [This week].
+2. Every row has its own button for the next step. Select it to do that step.
+3. To postpone a row, select [Snooze] on it.
 4. Seven rows show at most. The rest wait under [Older than 30 days] and the grey lines below.
 
 Tip: The number on [To do] is Late plus Today. It is the only number in the app.

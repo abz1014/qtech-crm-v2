@@ -35,10 +35,10 @@ describe('Today pane, the message could not be loaded', () => {
         </SessionContext.Provider>
       </QueryClientProvider>,
     )
-    expect(await screen.findByText(/Couldn't load the message for this item/)).toBeInTheDocument()
+    expect(await screen.findByText(/Could not load the message for this item/)).toBeInTheDocument()
     expect(screen.queryByText(/nothing to write/)).toBeNull()
     fail = false
     await user.click(screen.getByRole('button', { name: 'Try again' }))
-    await waitFor(() => expect(screen.queryByText(/Couldn't load the message for this item/)).toBeNull())
+    await waitFor(() => expect(screen.queryByText(/Could not load the message for this item/)).toBeNull())
   })
 })

@@ -79,7 +79,7 @@ describe('Today screen', () => {
     renderAs('sales')
     const fold = await screen.findByRole('region', { name: 'Older than 30 days' })
     expect(document.querySelector('[data-needs-you-count]')?.textContent).toBe('0')
-    expect(screen.getByText('Nothing needs you today')).toBeInTheDocument()
+    expect(screen.getByText('No tasks for today')).toBeInTheDocument()
     expect(within(fold).queryByText('Needs suppliers')).toBeNull() // closed until opened
     fireEvent.click(within(fold).getByRole('button', { name: /Older than 30 days/ }))
     expect(within(fold).getByText('Needs suppliers')).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('Today screen', () => {
   it('reads as the goal state when nothing needs you', async () => {
     fake = install({ rfqs: [] })
     renderAs('sales')
-    expect(await screen.findByText('Nothing needs you today')).toBeInTheDocument()
+    expect(await screen.findByText('No tasks for today')).toBeInTheDocument()
   })
 
   it('says so and offers a retry when it cannot load', async () => {
@@ -104,7 +104,7 @@ describe('Today screen', () => {
     renderAs('engineer')
     await waitFor(() => expect(fake?.calls.length).toBeGreaterThan(0))
     // phase 7: an engineer's list is their jobs; a sales rule (Needs suppliers) never reaches it, even for an RFQ they own
-    await screen.findByText('Nothing needs you today')
+    await screen.findByText('No tasks for today')
     expect(screen.queryByText('Needs suppliers')).toBeNull()
     expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
     const targets = fake?.calls.map(c => c.target) ?? []
@@ -244,7 +244,7 @@ describe('Today screen', () => {
     renderAs('admin')
     await screen.findByText('Needs suppliers')
     fireEvent.click(screen.getByRole('radio', { name: 'Team' }))
-    expect(await screen.findByText('Nobody else is on the team yet')).toBeInTheDocument()
+    expect(await screen.findByText('No other team members yet')).toBeInTheDocument()
     expect(screen.queryByText('Needs suppliers')).toBeNull()
   })
 })

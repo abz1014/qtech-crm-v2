@@ -58,13 +58,13 @@ export function RecurringReminder({ item, bills, today, compact }: { item: Today
     }
     setBusy(false)
     if (done > 0) toast({ title: `Recorded ${done} recurring ${done === 1 ? 'expense' : 'expenses'}`, body: `${pkr(sum)} · ${[...new Set(lines.map(l => monthKeyLabel(l.period)))].join(' and ')}`, tone: 'success' })
-    if (failed.length > 0) toast({ title: `Couldn't record ${failed.join(', ')}`, body: 'Nothing else was changed. Try again.', tone: 'danger' })
+    if (failed.length > 0) toast({ title: `Could not record ${failed.join(', ')}`, body: 'Nothing else was changed. Try again.', tone: 'danger' })
   }
 
   const loading = categories.isPending
   return (
     <section aria-label="Recurring bills to record" className="grid gap-4 rounded-panel border bg-surface p-4" data-testid="recurring-reminder">
-      <p className="text-base text-fg-2">These bills have no entry yet. Change an amount if this month&rsquo;s bill is different, then record them all in one tap.</p>
+      <p className="text-base text-fg-2">These bills have no entry yet. Change an amount if the bill for this month is different, then record them all at once.</p>
       <ul className="grid gap-2">
         {lines.map(l => (
           <li key={l.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1" data-testid={`reminder-${l.label}`}>

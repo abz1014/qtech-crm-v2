@@ -21,22 +21,22 @@ describe('backup and plan chores', () => {
     expect(rules({ ...ok, backupOn: '2026-10-28' })).toEqual([]) // exactly 2 days: still fine
     const r = ruleHealth(ctx({ ...ok, backupOn: '2026-10-27' }))[0]
     expect(r.rule).toBe('backup_stale')
-    expect(r.title).toBe('Backup is 3 days old: check GitHub')
+    expect(r.title).toBe('Last backup 3 days ago. Check the backup service.')
     expect(r.badge.tone).toBe('danger')
     expect(r.group).toBe('now')
     expect(r.href).toBe('/settings/backups')
     const never = ruleHealth(ctx({ ...ok, backupOn: '2026-10-20', backupRecorded: false }))[0]
-    expect(never.title).toBe('No backup has reported yet: check GitHub')
+    expect(never.title).toBe('No backup has reported yet. Check the backup service.')
   })
 
   it('warns from 70% of either limit, amber, red from 90%', () => {
     expect(rules({ ...ok, dbBytes: 0.69 * FREE_DB_BYTES })).toEqual([])
     const db = ruleHealth(ctx({ ...ok, dbBytes: 0.7 * FREE_DB_BYTES }))[0]
     expect(db.rule).toBe('usage_high')
-    expect(db.title).toBe('Free plan 70% full (database)')
+    expect(db.title).toBe('Storage at 70% of the plan limit (database)')
     expect(db.badge.tone).toBe('warning')
     const files = ruleHealth(ctx({ ...ok, storageBytes: 0.95 * FREE_STORAGE_BYTES }))[0]
-    expect(files.title).toBe('Free plan 95% full (file storage)')
+    expect(files.title).toBe('Storage at 95% of the plan limit (file storage)')
     expect(files.badge.tone).toBe('danger')
   })
 
