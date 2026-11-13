@@ -88,8 +88,8 @@ export function Rail({ user, counts, dots, collapsed, onToggle, links: given, cu
                   <span className="relative grid shrink-0 place-items-center">
                     <Icon icon={link.icon} size="lg" />
                     {/* While the words are hidden the number and the dot sit on the icon; the link's name still says them. */}
-                    {/* Pulled in over the icon (left-2), so a "99+" stays inside the 72 px rail. */}
-                    <NeedsCount n={count} badge silent className={cn('left-2', collapsed ? undefined : 'lg:hidden')} />
+                    {/* Pulled in over the icon (left-1), so a "99+" stays inside the 72 px rail. */}
+                    <NeedsCount n={count} badge silent className={cn('left-1', collapsed ? undefined : 'lg:hidden')} />
                     {dot ? <LateDot badge silent className={collapsed ? undefined : 'lg:hidden'} /> : null}
                   </span>
                   <span data-nav-label="" className={cn(text, 'min-w-0 flex-1')}>
