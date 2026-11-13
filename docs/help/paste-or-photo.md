@@ -15,3 +15,13 @@ related: new-enquiry
 Tip: An engineer can add a photo or a note. Prices are for sales and the owner.
 
 Safe to try: added to the wrong job? Tap Undo on the message at the bottom.
+
+@engineer
+1. Open the job, then the row [Add to this job]. Paste the message under [Paste here], or tap [Take a photo] or [Choose a file].
+2. It says what it looks like: a site photo or a note. Wrong guess? Tap the right one.
+3. A photo or a note: tap [Add photo] or [Add note]. There are no other fields.
+4. Sharing from WhatsApp on your phone? Share to Q-Tech CRM, then pick [Add to job…].
+
+Tip: An engineer can add a photo or a note. The other kinds are for the office.
+
+Safe to try: added to the wrong job? Tap Undo on the message at the bottom.

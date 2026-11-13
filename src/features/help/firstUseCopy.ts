@@ -65,7 +65,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
   orders: {
     sales: {
       title: 'No orders of yours yet',
-      body: 'Orders start when you mark an RFQ won. You never type an order from scratch.',
+      body: 'Orders start when you mark an RFQ won, or from Order without enquiry.',
       action: { kind: 'link', label: 'Open RFQs', to: '/rfqs' },
       recipe: 'mark-won',
     },
@@ -118,3 +118,12 @@ export const NOTHING_YET: Record<NothingYetScreen, FirstUseCopy> = {
     recipe: 'record-payment',
   },
 }
+
+/** The engineer's empty Orders line stops at "delivered": payment is not an engineer's screen. Everyone else keeps NOTHING_YET. */
+export function nothingYetCopy(screen: NothingYetScreen, role?: string): FirstUseCopy {
+  if (screen === 'orders' && role === 'engineer') {
+    return { ...NOTHING_YET.orders, body: 'An order starts when you mark an RFQ won, and stays here until it is delivered.' }
+  }
+  return NOTHING_YET[screen]
+}
+
