@@ -70,7 +70,7 @@ describe('iPhone Safari hint', () => {
     expect(screen.getByText('Add Q-Tech CRM to your home screen')).toBeInTheDocument()
     expect(container).toHaveTextContent('Share in Safari, then Add to Home Screen.')
     expect(await axeViolations(container)).toEqual([])
-    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByText('Add Q-Tech CRM to your home screen')).toBeNull()
     expect(window.localStorage.getItem(IOS_BANNER_KEY)).toBe('1')
   })

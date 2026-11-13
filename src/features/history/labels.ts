@@ -85,7 +85,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     visit_type: { kind: 'enum', label: 'Visit type', words: { installation: 'Installation', survey: 'Survey', service: 'Service' } },
   },
   invoices: {
-    client_received_on: d('Client received on'),
+    client_received_on: d('Customer received on'),
     company_id: r('Company'),
     copy_received_on: d('Copy received on'),
     gst_amount: m('GST'),
@@ -247,7 +247,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
   supplier_inquiries: {
     chase_count: hide,
     last_chased_by: hide,
-    last_chased_on: d('Last chased on'),
+    last_chased_on: d('Last followed up on'),
     last_relayed_at: hide,
     no_offer_on: d('No offer on'),
     no_offer_reason: t('Why no offer'),
@@ -307,7 +307,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     expected_on: d('Expected on'),
     inquiry_id: hide,
     last_chased_by: hide,
-    last_chased_on: d('Last chased on'),
+    last_chased_on: d('Last followed up on'),
     order_id: hide,
     placed_on: d('Placed on'),
     received_on: d('Received on'),

@@ -77,7 +77,7 @@ describe('ClarificationsPanel chase text', () => {
     // The message waits under "Show the whole message": the questions are listed right above it.
     expect(screen.queryByTestId('chase-text')).toBeNull()
     const user = userEvent.setup()
-    expect(await screen.findByRole('button', { name: 'Copy chase text' })).toBeInTheDocument() // wider screens: the card shows
+    expect(await screen.findByRole('button', { name: 'Copy follow-up text' })).toBeInTheDocument() // wider screens: the card shows
     expect(screen.queryByRole('button', { name: 'Email instead' })).toBeNull() // the other channel waits with the whole message
     await user.click(screen.getByRole('button', { name: 'Show the whole message' }))
     expect(screen.getByRole('button', { name: 'Email instead' })).toBeInTheDocument()
@@ -117,9 +117,9 @@ describe('ClarificationsPanel copy and mark asked', () => {
         </SessionContext.Provider>
       </QueryClientProvider>,
     )
-    await user.dblClick(await screen.findByRole('button', { name: 'Copy chase text' }))
+    await user.dblClick(await screen.findByRole('button', { name: 'Copy follow-up text' }))
     release()
-    await waitFor(() => expect(screen.getAllByText('Chase text copied').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Follow-up text copied').length).toBeGreaterThan(0))
     expect(stamps).toHaveLength(1)
   })
 })
@@ -152,9 +152,9 @@ describe('ClarificationsPanel on a phone (grade-A 6 fix 2)', () => {
         </QueryClientProvider>,
       )
       const user = userEvent.setup()
-      await user.click(await screen.findByRole('button', { name: 'Chase the customer' }))
-      expect(screen.getByRole('button', { name: 'Copy chase text' })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Chase the customer' })).toBeNull()
+      await user.click(await screen.findByRole('button', { name: 'Follow up with the customer' }))
+      expect(screen.getByRole('button', { name: 'Copy follow-up text' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Follow up with the customer' })).toBeNull()
     } finally {
       window.matchMedia = orig
     }

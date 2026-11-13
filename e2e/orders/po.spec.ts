@@ -73,7 +73,7 @@ test.describe('O07: Issue PO', () => {
     await shot(page, 'o07-issue-po-dialog-1440')
 
     await price(page, 4).fill('18.50')
-    await expect(d.getByTestId('po-source-4')).toContainText('Typed by you, check it')
+    await expect(d.getByTestId('po-source-4')).toContainText('Entered manually, check it')
     // 3 x 612 + 2 x 742 + 2 x 214 + 8 x 18.50 = 1,836 + 1,484 + 428 + 148
     await expect(d.getByTestId('po-total')).toContainText('USD 3,896.00')
     // an edited price becomes typed, and the totals move

@@ -202,7 +202,7 @@ test('Undo of a supplier chase restores the count and the date; the earlier chas
   const before = (await rows<Record<string, unknown>>(`supplier_inquiries?id=eq.${inquiry}&select=${pick}`))[0]
   await openAs(page, 'admin', `/rfqs/${world.rfq.id}`)
   await openStage(page, 'Quotation')
-  const chase = page.getByRole('button', { name: /^Chase/ }).first()
+  const chase = page.getByRole('button', { name: /^Follow up/ }).first()
   test.skip((await chase.count()) === 0, 'no chase button in this state')
   await chase.click()
   const undo = page.getByRole('region', { name: 'Notifications' }).getByRole('button', { name: /^Undo/ }).first()

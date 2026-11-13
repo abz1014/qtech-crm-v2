@@ -5,7 +5,7 @@ import type { CarriedBrand, SupplierCategoryEvidence } from '@/features/companie
 export interface DealtRow {
   familyId: string
   name: string
-  /** "quoted 6 · ordered 2", "asked 3, no quote yet", or "no history yet" for a tag with nothing behind it. */
+  /** "quoted 6 · ordered 2", "asked 3, no supplier price yet", or "no history yet" for a tag with nothing behind it. */
   evidence: string
   /** Carried as a tag (company_brands): set by hand here, or learned from a quote. */
   tagged: boolean
@@ -18,7 +18,7 @@ export function evidenceText(e: Pick<SupplierCategoryEvidence, 'asked' | 'quoted
   if (e && e.quoted > 0) parts.push(`quoted ${e.quoted}`)
   if (e && e.ordered > 0) parts.push(`ordered ${e.ordered}`)
   if (parts.length > 0) return parts.join(' · ')
-  if (e && e.asked > 0) return `asked ${e.asked}, no quote yet`
+  if (e && e.asked > 0) return `asked ${e.asked}, no supplier price yet`
   return 'no history yet'
 }
 

@@ -481,7 +481,7 @@ export function FloatedPanel({
           {replyBy.date ? (
             <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
               <dt className="num m-0">{formatDay(replyBy.date)}</dt>
-              <dd className="m-0 text-fg-2">Reply-by date. Any supplier still silent then appears on Today as a chase.</dd>
+              <dd className="m-0 text-fg-2">Reply-by date. Any supplier still silent then appears on Today for a follow-up.</dd>
             </div>
           ) : null}
           {dueOn ? (
@@ -492,7 +492,7 @@ export function FloatedPanel({
           ) : null}
         </dl>
       ) : null}
-      {dueOn ? null : <p className="type-body m-0 text-fg-2">No quotation due date was given, so nothing is chased until you add one.</p>}
+      {dueOn ? null : <p className="type-body m-0 text-fg-2">No quotation due date was given, so nothing is followed up until you add one.</p>}
       {unfloated.map(u => (
         <Hint key={u.key} tone="info">
           {u.text}

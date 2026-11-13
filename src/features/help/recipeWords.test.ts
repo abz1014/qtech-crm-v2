@@ -11,7 +11,9 @@ import { parseRecipe, recipesAs } from '@/features/help/recipes'
  * line, because that is what a person types into Help's search.
  */
 const DIR = path.resolve(__dirname, '../../../docs/help')
-const RETIRED = ['Who owes us', 'Invoices & GST', 'Month end', 'Match bank statement', 'Things to check', 'Close through', 'Close <month>', 'Closed months', 'Close a month', 'Tax deposited', 'Sent to customer', 'Recurring expenses']
+const RETIRED = ['Who owes us', 'Invoices & GST', 'Month end', 'Match bank statement', 'Things to check', 'Close through', 'Close <month>', 'Closed months', 'Close a month', 'Tax deposited', 'Sent to customer', 'Recurring expenses', 'Dismiss', 'closed month', 'in-app enquiry']
+/** Spoken words the tone rewrite retired (whole words: "purchase" is fine). */
+const RETIRED_WORD = /\b(chase[sd]?|chasing|nudge[sd]?)\b/i
 const files = readdirSync(DIR).filter(f => f.endsWith('.md'))
 const body = (f: string) => readFileSync(path.join(DIR, f), 'utf8').replace(/^---[\s\S]*?\n---/, '')
 
@@ -21,16 +23,17 @@ describe('help recipes use the current words', () => {
   it.each(files)('%s names no retired word', f => {
     const text = body(f)
     expect(RETIRED.filter(w => text.includes(w)), `${f} says a retired name`).toEqual([])
+    expect(RETIRED_WORD.exec(text)?.[0] ?? null, `${f} says a retired spoken word`).toBeNull()
   })
 
   it('a step never taps RFQs or Orders as a menu item: they are Jobs now', () => {
-    const bad = files.filter(f => /\bTap \[(RFQs|Orders)\]/.test(body(f)))
+    const bad = files.filter(f => /\b(Tap|Select|Open) \[(RFQs|Orders)\]/.test(body(f)))
     expect(bad).toEqual([])
   })
 
   it('the menu words a recipe taps are the menu\'s own', () => {
     const menu = new Set(navItems.map(i => i.label))
-    const tapped = files.flatMap(f => [...body(f).matchAll(/Tap \[(To do|Jobs|Money|Companies|Today)\]/g)].map(m => `${f}: ${m[1]}`))
+    const tapped = files.flatMap(f => [...body(f).matchAll(/(Tap|Select|Open) \[(To do|Jobs|Money|Companies|Today)\]/g)].map(m => `${f}: ${m[2]}`))
     expect(tapped.filter(t => !menu.has(t.split(': ')[1]))).toEqual([])
   })
 

@@ -103,7 +103,7 @@ export function prefillLines(input: PrefillInput): Record<string, LinePrefill> {
     const q = input.quoteOf(it.id)
     const warnings: string[] = []
     if (q?.legacyFlags?.includes('item_guessed')) warnings.push('Imported: this supplier price may belong to another item. Check it.')
-    if (q?.legacyFlags?.includes('currency_unverified')) warnings.push('Imported: the currency of this supplier quote was not confirmed. Check it.')
+    if (q?.legacyFlags?.includes('currency_unverified')) warnings.push('Imported: the currency of this supplier price was not confirmed. Check it.')
     if (noRate(q)) warnings.push(`No current ${q.currency} rate: pick the supplier.`)
 
     const line = input.latest?.lines.find(l => l.rfq_item_id === it.id && isPrice(l.unit_price_net))

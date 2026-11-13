@@ -344,6 +344,6 @@ describe('the collision line (O-3)', () => {
     expect(agoWhen('2026-11-20', now)).toBe('7 days ago')
   })
   it('names the colleague by first name', () => {
-    expect(chasedByText('Ali Raza', '2026-11-27T09:00:00+05:00', now)).toBe('Ali chased this 1h ago')
+    expect(chasedByText('Ali Raza', '2026-11-27T09:00:00+05:00', now)).toBe('Ali followed up on this 1h ago')
   })
 })

@@ -242,7 +242,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
           <InfoTip label="Paying a supplier?" className="ml-2 sm:hidden">
-            Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
+            Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers), so what we owe goes down.
           </InfoTip>
         </h2>
         <p className="type-body text-fg-2" aria-live="polite" data-testid="quick-total">
@@ -402,7 +402,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         </button>
 
         <p className="type-body text-fg-2 max-sm:hidden">
-          Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in We owe suppliers), so what we owe goes down.
+          Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers), so what we owe goes down.
         </p>
 
         {showExtras ? (

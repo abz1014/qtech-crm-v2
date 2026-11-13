@@ -143,7 +143,7 @@ describe('memory card', () => {
   it('(b) two enquiries, one reply: raw facts and the too-few note', () => {
     const c = buildMemoryCard(row({ best_tier: 2 }), { asked: 2, replied: 1, last_contact: '2026-06-19' }, TODAY)
     expect(c.replies).toEqual({ main: 'asked twice', sub: '1 reply' })
-    expect(c.footnote).toContain('Two enquiries on record. Too few to say how quickly they usually reply.')
+    expect(c.footnote).toContain('Two RFQs on record. Too few to say how quickly they usually reply.')
     expect(c.scope).toBe('brand')
     expect(c.tierLabel).toBe('same brand')
   })

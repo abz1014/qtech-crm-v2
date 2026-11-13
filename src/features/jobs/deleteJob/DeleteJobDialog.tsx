@@ -14,7 +14,7 @@ import { blockerLine, blockerLink, guideIntro, guideOf, KEEP_TITLE, STEP_TITLE, 
  * Delete a job (migration 0132; owner request 2026-11-05: "if not, tell the steps that help delete the job without causing any issue").
  * Admin only (the menu item is not drawn for anyone else, and the database refuses them anyway). The dialog first asks the database
  * what stops the delete:
- *   nothing    the shared confirm (ConfirmDelete): what goes with the job, "This can't be undone", Delete.
+ *   nothing    the shared confirm (ConfirmDelete): what goes with the job, "This cannot be undone", Delete.
  *   something  a guide instead of Delete: "To do first" (numbered, each with a link to where it is cleared) and "These stay for the
  *              books" (a numbered invoice, a voided payment: never deleted, so the way out is Mark the job cancelled). Check again reads the
  *              database again; when nothing is left the dialog becomes the confirm.
@@ -51,7 +51,7 @@ export default function DeleteJobDialog({ job, onClose, onCancelInstead }: { job
 
   const list = blockers.data
   if (!list || blockers.isError || list.length === 0) {
-    const also = [job.rfqId ? 'the enquiry and its items' : null, job.orderId || job.rfqId ? 'its orders and their lines' : null, 'its files'].filter((x): x is string => x !== null)
+    const also = [job.rfqId ? 'the RFQ and its items' : null, job.orderId || job.rfqId ? 'its orders and their lines' : null, 'its files'].filter((x): x is string => x !== null)
     return (
       <ConfirmDelete
         open

@@ -23,8 +23,8 @@ describe('help markdown parser (no dependency, no HTML)', () => {
   })
 
   it('marks **bold** and [Label]; a [text](url) link keeps only its words; unclosed marks stay as typed', () => {
-    expect(parseInline('**Got it** then [Mark won]')).toEqual([
-      { kind: 'strong', text: 'Got it' },
+    expect(parseInline('**Dismiss** then [Mark won]')).toEqual([
+      { kind: 'strong', text: 'Dismiss' },
       { kind: 'text', text: ' then ' },
       { kind: 'label', text: 'Mark won' },
     ])

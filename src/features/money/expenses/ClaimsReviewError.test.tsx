@@ -34,11 +34,11 @@ describe('To approve', () => {
   })
 })
 
-describe('Owed to staff', () => {
+describe('Claims to repay', () => {
   it('says it could not load, with Try again', async () => {
     installFakeDb((c: FakeCall) => (c.target === 'expense_claims' ? { data: null, error: { message: 'boom' } } : { data: [] }))
     wrap(<OwedToStaff />)
-    expect(await screen.findByText("Couldn't load what is owed to staff")).toBeInTheDocument()
+    expect(await screen.findByText("Claims to repay could not be loaded")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 })

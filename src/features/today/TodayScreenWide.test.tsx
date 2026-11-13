@@ -31,8 +31,8 @@ describe('Today at desktop width', () => {
       </QueryClientProvider>,
     )
     // The row and the pane's heading. The pane is a download of its own (perf/lcp), so it may come a moment after the row.
-    await waitFor(() => expect(screen.getAllByText('Chase customer for clarifications').length).toBeGreaterThan(1))
-    expect(await screen.findAllByText(/Ali chased this/)).not.toHaveLength(0)
+    await waitFor(() => expect(screen.getAllByText('Follow up with customer: questions open').length).toBeGreaterThan(1))
+    expect(await screen.findAllByText(/Ali followed up on this/)).not.toHaveLength(0)
   })
 })
 
@@ -75,12 +75,12 @@ describe('Today at desktop width, after a chase', () => {
         </QueryClientProvider>,
       )
       // Nothing clicked: the first item (the chase) is in the pane by default.
-      fireEvent.click(await screen.findByRole('button', { name: /Copy and mark chased/ }))
+      fireEvent.click(await screen.findByRole('button', { name: /Copy and record follow-up/ }))
       // Close the Undo window: the stamp settles, Today re-reads, and the chase joins Waiting.
       fireEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
       expect(await screen.findByText('Moved to Waiting.')).toBeInTheDocument()
       // Waiting starts collapsed (R2-08), a count in words with the next nudge; the open row still shows inside it.
-      const toggle = screen.getByRole('button', { name: /^Chased, waiting · 1 · until \w{3} \d{1,2} \w{3}$/ })
+      const toggle = screen.getByRole('button', { name: /^Followed up, waiting · 1 · until \w{3} \d{1,2} \w{3}$/ })
       expect(toggle).toHaveAttribute('aria-expanded', 'false')
       expect(within(screen.getByRole('region', { name: 'Waiting' })).getAllByRole('listitem')).toHaveLength(1)
     } finally {

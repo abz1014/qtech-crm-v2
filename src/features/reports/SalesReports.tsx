@@ -36,7 +36,7 @@ export function SalesReports() {
   const r = repeat.data ? summariseRepeat(repeat.data) : null
   return (
     // The page title (Reports frame h1) already names it: only the scope line here, not the title twice.
-    <section aria-label="Enquiries and customers" className="grid gap-3">
+    <section aria-label="RFQs and customers" className="grid gap-3">
       <NoPrimary />
       <p className="text-sm text-fg-2">All time, counts only</p>
       {o && r ? (

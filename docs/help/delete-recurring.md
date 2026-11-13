@@ -10,4 +10,4 @@ related: add-expenses, month-end-close
 2. Tap [Delete recurring expense]. It says how many expenses were recorded from it.
 3. Tap [Delete]. It is no longer due each month. It cannot be undone.
 
-Tip: Expenses already recorded from it stay as they are, even in a closed month. To stop it for a while instead, untick [Active (due each month)] and tap [Save].
+Tip: Expenses already recorded from it stay as they are, even in a locked month. To stop it for a while instead, untick [Active (due each month)] and tap [Save].

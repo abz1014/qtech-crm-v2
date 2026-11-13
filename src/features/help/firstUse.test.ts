@@ -80,7 +80,7 @@ describe('first-use words (live bugs 34 and 35)', () => {
   it('sales is not told an order is never typed: Order without enquiry exists', () => {
     const body = FIRST_USE_COPY.orders.sales?.body ?? ''
     expect(body).not.toMatch(/from scratch/i)
-    expect(body).toContain('Order without enquiry')
+    expect(body).toContain('Order without RFQ')
   })
 
   it('an engineer reads no money word on any first-use or nothing-yet line', () => {

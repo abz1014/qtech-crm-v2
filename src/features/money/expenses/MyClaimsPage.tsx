@@ -29,7 +29,7 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'ima
 
 export function MyClaimsPage() {
   const session = useSession()
-  if (session.status !== 'signed-in' || session.user.role !== 'engineer' && session.user.role !== 'sales') return <NoAccessPage area="I paid" roles={['sales', 'engineer']} adminNote="Admins approve what people paid on the Expenses page, so there is no I paid page for you." />
+  if (session.status !== 'signed-in' || session.user.role !== 'engineer' && session.user.role !== 'sales') return <NoAccessPage area="I paid" roles={['sales', 'engineer']} adminNote="Admins approve claims on the Expenses page, so there is no I paid page for you." />
   return <MyClaims />
 }
 

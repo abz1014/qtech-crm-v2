@@ -238,7 +238,7 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
       const u = userEvent.setup()
       shell('sales')
       const dlg = await search(u, q)
-      await within(dlg).findByRole('option', { name: /New enquiry/ })
+      await within(dlg).findByRole('option', { name: /New RFQ/ })
       cleanup()
     }
   })

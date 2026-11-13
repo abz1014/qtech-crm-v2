@@ -34,8 +34,8 @@ import type { Role } from '@/features/today/types'
  */
 const SECTIONS: ReadonlyArray<{ kind: ReviewKind; title: string; why: string }> = [
   { kind: 'quotation', title: 'Quotations with no decision after 10 working days', why: 'Ask the customer, or let it go.' },
-  { kind: 'enquiry', title: 'Enquiries with no supplier asked after 10 days', why: 'Ask suppliers now, or close it.' },
-  { kind: 'goods', title: 'Goods more than 14 days late', why: 'Chase the supplier, or move the date.' },
+  { kind: 'enquiry', title: 'RFQs with no supplier asked after 10 days', why: 'Ask suppliers now, or close it.' },
+  { kind: 'goods', title: 'Goods more than 14 days late', why: 'Follow up with the supplier, or move the date.' },
   { kind: 'payment', title: 'Payments more than 30 days late', why: 'They also stay at the top of To do.' },
 ]
 
@@ -169,7 +169,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
         <>
           {total === 0 ? (
             <EmptyState mood="goal" title="Nothing to decide this week">
-              No quotation, enquiry, delivery or payment has been waiting past its limit.
+              No quotation, RFQ, delivery or payment has been waiting past its limit.
             </EmptyState>
           ) : null}
 
@@ -259,11 +259,11 @@ function Row({ row, owner, ticked, busy, onTick, onStillLive, onClose, onGo }: {
         {act('Still live', onStillLive)}
         {row.kind === 'payment' ? (
           <>
-            {act('Chase', () => onGo(row.href))}
+            {act('Follow up', () => onGo(row.href))}
             {act('Record payment', () => onGo(`/money/receivables?pay=1&order=${row.orderId}`))}
           </>
         ) : (
-          act('Chase', () => onGo(row.href))
+          act('Follow up', () => onGo(row.href))
         )}
         {closable ? act('Close as lost', onClose) : null}
       </div>

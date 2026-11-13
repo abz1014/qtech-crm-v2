@@ -256,10 +256,10 @@ describe('Reports view (one report at a time)', () => {
       'Money in and out',
       'Expenses',
       'Overdue by age',
-      'We owe suppliers',
+      'Payable to suppliers',
       'GST and FBR',
       'Sales by person',
-      'Enquiries and customers',
+      'RFQs and customers',
     ])
     // drawn by the report body once its figures are in, right under the summary, and never green
     const csv = await screen.findByRole('button', { name: 'Export CSV' })
@@ -270,7 +270,7 @@ describe('Reports view (one report at a time)', () => {
   it('sales: only the enquiry reports, and no money report is requested', async () => {
     const db = at('/money/reports', 'sales')
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/reports/enquiries'))
-    expect(await screen.findByTestId('report-name')).toHaveTextContent('Enquiries and customers')
+    expect(await screen.findByTestId('report-name')).toHaveTextContent('RFQs and customers')
     expect(screen.queryByTestId('report-picker')).toBeNull()
     const targets = db.calls.map(c => c.target)
     for (const t of ['v_month_pnl', 'v_payment_net', 'v_month_expense_category', 'expenses', 'expense_groups', 'expense_categories', 'rpc:aging_as_of', 'rpc:payables_as_of', 'v_gst_month', 'v_month_team', 'v_order_money', 'rpc:month_end_status'])

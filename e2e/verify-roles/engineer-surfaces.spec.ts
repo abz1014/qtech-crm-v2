@@ -141,7 +141,7 @@ test('engineer: New enquiry opens with no price anywhere', async ({ page }) => {
   await openAs(page, 'engineer', '/enquiries/new')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await page.waitForLoadState('networkidle').catch(() => undefined)
-  expect(moneyIn(await page.locator('#main').innerText()), 'New enquiry').toEqual([])
+  expect(moneyIn(await page.locator('#main').innerText()), 'New RFQ').toEqual([])
   expect(w.requests).toEqual([])
   expect([...new Set(w.leaks)]).toEqual([])
 })

@@ -634,9 +634,9 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
     await probe(info, page, `${W} close a reply with typed prices, then Back`, async () => {
       await replyDialog(page, pk.name)
       await price(pk, 1).fill('1111')
-      // The dialog's Close with a typed price asks first, in the dialog's own bar ("Discard what you typed?").
+      // The dialog's Close with a typed price asks first, in the dialog's own bar ("Discard unsaved changes?").
       await region(pk).getByRole('button', { name: 'Close', exact: true }).click()
-      const confirm = page.getByRole('group', { name: 'Discard what you typed?' })
+      const confirm = page.getByRole('group', { name: 'Discard unsaved changes?' })
       await expect(confirm).toBeVisible(T)
       await page.goBack()
       await settle(page)

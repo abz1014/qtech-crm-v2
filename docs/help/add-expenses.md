@@ -12,6 +12,6 @@ related: expense-categories, expense-report, pay-supplier, cash-in-hand, approve
 4. A salary or other monthly bill paid by the 10th says [This bill is for] last month. Change it if needed.
 5. Optional: [Paid on], a [Detail] like "LEA-1234", a [Receipt] photo, or tick [Has a GST invoice] for the GST.
 6. Many receipts at once? Tap [Add expenses] for one row each, then [Save N expenses].
-7. Spent on a job or an enquiry? Type its number in [Job]. A cost on an enquiry joins its order when the enquiry is won.
+7. Spent on a job or an RFQ? Type its number in [Job]. A cost on an RFQ joins its order when the RFQ is won.
 
-Tip: A lost enquiry keeps its costs as their own line. On the Job page of an enquiry, Add cost adds one. A supplier is paid with Pay on the supplier order, not here. A wrong expense: open its ⋯ menu and delete it (Undo is offered). A closed month's expenses are locked, but [History] beside the lock still shows who changed what.
+Tip: A lost RFQ keeps its costs as their own line. On the Job page of an RFQ, Add cost adds one. A supplier is paid with Pay on the supplier order, not here. A wrong expense: open its ⋯ menu and delete it (Undo is offered). A locked month's expenses are locked, but [History] beside the lock still shows who changed what.

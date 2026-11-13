@@ -155,7 +155,10 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   }, [draftReady, item.rule, item.inquiryId, rfq, header.data, questions, items.data, inquiries.data, legFact, leg.data, receivable, payment.data, today, user?.name, data.jobTitle, data.phone])
 
   const wasCopied = copied.has(item.key)
-  const verb = item.rule === 'payment_overdue' ? 'reminded' : 'chased'
+  const verb = item.rule === 'payment_overdue' ? 'reminded' : 'followed up'
+  const marked = item.rule === 'payment_overdue' ? 'marked reminded' : 'marked as followed up'
+  const markLabel = item.rule === 'payment_overdue' ? 'Mark reminded' : 'Record follow-up'
+  const doneLabel = item.rule === 'payment_overdue' ? 'Marked reminded today' : 'Follow-up recorded today'
   const memo = chaseMemo(item.key)
   const shownMessage = draft ? (channel === 'email' ? draft.email : draft.whatsapp) : null
   // The clipboard gets the body: an email's subject has its own row and its own copy button.
@@ -188,7 +191,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       setSentKey(copied ? null : item.key)
       onCopied(item.key)
       toast({
-        title: `${lead}${item.ref} marked ${verb}.`,
+        title: `${lead}${item.ref} ${marked}.`,
         body: item.party,
         tone: 'success',
         undo: {
@@ -205,10 +208,10 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           onSettle: () => {
             void refresh().finally(() => onReleased(item.key))
           },
-          settledTitle: `${item.ref} marked ${verb}`,
+          settledTitle: `${item.ref} ${marked}`,
           settledBody: 'It moves to Waiting and comes back on its date.',
           undoneTitle: 'Undone.',
-          undoneBody: `${item.ref} is not marked ${verb}.`,
+          undoneBody: `${item.ref} is not ${marked}.`,
         },
       })
     } catch (err) {
@@ -249,7 +252,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const firstFloat = inquiries.data ? inquiries.data.map(i => i.sentOn).filter((d): d is string => Boolean(d)).sort()[0] : undefined
 
   // One label per action at every width (the glossary's short form), so help, toasts and the phone all name the same button.
-  const copyLabel = item.rule === 'payment_overdue' ? 'Copy and mark reminded' : 'Copy and mark chased'
+  const copyLabel = item.rule === 'payment_overdue' ? 'Copy and mark reminded' : 'Copy and record follow-up'
   const touch = compact ? 'min-h-touch' : ''
 
   return (
@@ -276,7 +279,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
       {item.collision && data.names[item.collision.by] ? (
         <p data-collision className="flex items-center gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm text-tone-warning-fg">
-          <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before you chase it again.
+          <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before you follow up again.
         </p>
       ) : null}
 
@@ -294,7 +297,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         </div>
       ) : item.waiting ? (
         <Banner tone="info" title={`Waiting until ${formatDay(item.waiting.nextNudgeOn)}`}>
-          It returns to the list on that day. You are looking at the message again; copying it chases once more.
+          It returns to the list on that day. You are looking at the message again; copying it follows up once more.
         </Banner>
       ) : null}
 
@@ -355,7 +358,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         <div className="grid overflow-hidden rounded-panel border bg-surface">
           {wasCopied ? (
             <p role="status" className="flex items-center gap-2 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
-              <Icon icon={CircleCheck} size="sm" /> {sentKey === item.key ? `Marked ${verb}.` : `Copied. Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`}
+              <Icon icon={CircleCheck} size="sm" /> {sentKey === item.key ? `${capital(marked)}.` : `Copied. Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`}
             </p>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
@@ -381,7 +384,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               />
               {opened ? (
                 <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()}>
-                  Mark {verb}
+                  {markLabel}
                 </Button>
               ) : null}
               <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
@@ -407,7 +410,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
             compact ? (
               <div className="flex items-center gap-2 border-t bg-sunken px-4 py-3">
                 <Button icon={Check} disabled className={cn('flex-1', touch)}>
-                  Marked {verb} today
+                  {doneLabel}
                 </Button>
                 <SnoozeMenu item={item} today={today} iconOnly />
               </div>
@@ -438,7 +441,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               <div className="flex items-center gap-2">
                 {opened ? (
                   <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()} className={cn('flex-1', touch)}>
-                    Mark {verb}
+                    {markLabel}
                   </Button>
                 ) : null}
                 <SnoozeMenu item={item} today={today} iconOnly />
@@ -500,7 +503,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
                     {q.question}
                     <span className="text-xs text-fg-muted">
                       asked {formatDay(q.firstAskedOn).replace(/^\w+ /, '')}
-                      {q.askCount > 1 ? ` · chased ${formatDay(q.lastAskedOn).replace(/^\w+ /, '')}` : ''} · no reply
+                      {q.askCount > 1 ? ` · followed up ${formatDay(q.lastAskedOn).replace(/^\w+ /, '')}` : ''} · no reply
                     </span>
                   </span>
                 </li>
@@ -515,11 +518,11 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               <Event on={questions.map(q => q.firstAskedOn).sort()[0]} text={`${questions.length} ${questions.length === 1 ? 'question' : 'questions'} sent to customer`} />
               {item.waiting ? (
                 <>
-                  <Event on={item.waiting.chasedOn} text={`Chased customer, asked ×${askedTimes}`} warn />
-                  <Event on={item.waiting.nextNudgeOn} text="Chase again if no reply" />
+                  <Event on={item.waiting.chasedOn} text={`Customer followed up, asked ×${askedTimes}`} warn />
+                  <Event on={item.waiting.nextNudgeOn} text="Follow up again if no reply" />
                 </>
               ) : (
-                <Event on={today} text="Not chased yet" warn />
+                <Event on={today} text="Not followed up yet" warn />
               )}
             </ul>
           </section>
@@ -584,11 +587,11 @@ function copyingNote(item: TodayItem, draft: Draft, returnsOn: string, chaseCoun
   const when = formatDay(returnsOn)
   switch (item.rule) {
     case 'chase_customer':
-      return `Copying records a chase today (asked ×${draft.countAfter}). ${item.ref} moves to Waiting and returns on ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
+      return `Copying records a follow-up today (asked ×${draft.countAfter}). ${item.ref} moves to Waiting and returns on ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
     case 'chase_supplier':
-      return `Copying records chase ${chaseCount + 1} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
+      return `Copying records follow-up ${chaseCount + 1} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
     case 'goods_late':
-      return `Copying records chase ${draft.countAfter} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days late.' : ''}`
+      return `Copying records follow-up ${draft.countAfter} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days late.' : ''}`
     default:
       return `Copying records a reminder today (×${draft.countAfter}). ${item.ref} moves to Waiting and returns on ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days overdue.' : ''}`
   }
@@ -615,7 +618,7 @@ export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, 
 
 function noDraftText(item: TodayItem): string {
   if (item.rule === 'chase_supplier') return 'Every item has a price or a "Can’t quote" from this supplier. Nothing to ask.'
-  if (item.rule === 'goods_late') return 'There is no expected date on this order, so there is nothing to chase. Open the order.'
+  if (item.rule === 'goods_late') return 'There is no expected date on this order, so there is no follow-up to send. Open the order.'
   return 'There is nothing to write for this item yet. Open the record.'
 }
 
@@ -624,11 +627,11 @@ function howTo(item: TodayItem): string {
     case 'relay_answers':
       return 'The customer has answered what this supplier asked. Open the RFQ to send the answers back to them.'
     case 'not_floated':
-      return 'Nobody has been asked for a price yet. Open the RFQ to pick suppliers and send the enquiry.'
+      return 'Nobody has been asked for a price yet. Open the RFQ to pick suppliers and ask for prices.'
     case 'bid_due':
       return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':
-      return 'No decision since the quotation went out. Chase the customer, or close it here if they said no.'
+      return 'No decision since the quotation went out. Follow up with the customer, or close it here if they said no.'
     case 'place_po':
       return 'A supplier on this order has no PO yet. Open the order and send the PO.'
     case 'to_source':
@@ -660,7 +663,7 @@ function howTo(item: TodayItem): string {
     case 'claims_to_approve':
       return 'An engineer paid for something and asked to be paid back. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':
-      return 'Quotations nobody decided, enquiries nobody asked suppliers about, goods and payments far past their date. Decide each one: still live, chase, or close as lost.'
+      return 'Quotations nobody decided, RFQs nobody asked suppliers about, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
     case 'recurring_due':
       return 'These recurring expenses have no entry for this month yet. Record them all in one tap, changing an amount first if this month’s bill is different.'
     default:
@@ -702,14 +705,14 @@ function factsFor(
   const bid: Fact | null = rfq?.dueOn ? { label: 'Quotation due in', short: 'Quotation due', icon: CalendarDays, value: distanceText(rfq.dueOn, today), sub: formatDay(rfq.dueOn), tone: rfq.dueOn <= today ? 'danger' : undefined } : null
   /** The two cells that change once it has been chased: "Chased ..." and "Next nudge". */
   const chased = (who: string, count: number, on: string): Fact => ({
-    label: `Chased ${who}`,
-    short: 'Chased',
+    label: `Followed up ${who}`,
+    short: 'Followed up',
     icon: Check,
     tone: 'success',
     value: on === today ? 'Today' : agoText(on, today).replace(/^\w/, ch => ch.toUpperCase()),
     sub: `${formatDay(on)} · ${count > 0 ? `${who === 'customer' ? 'asked' : 'chase'} ×${count}` : 'once'}`,
   })
-  const nextNudge = (on: string): Fact => ({ label: 'Chase again on', short: 'Chase again', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
+  const nextNudge = (on: string): Fact => ({ label: 'Follow up again on', short: 'Follow up again', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
   const out: Array<Fact | null> = []
   switch (item.rule) {
     case 'chase_customer': {
@@ -736,7 +739,7 @@ function factsFor(
         out.push(pricedFact, sent, chased('supplier', i?.chaseCount ?? 1, item.waiting.chasedOn), nextNudge(item.waiting.nextNudgeOn))
         break
       }
-      out.push(pricedFact, sent, i ? { label: 'Chased', icon: Hourglass, value: i.chaseCount > 0 ? `×${i.chaseCount}` : 'not yet', sub: i.lastChasedOn ? `last ${formatDay(i.lastChasedOn)}` : undefined } : null, bid)
+      out.push(pricedFact, sent, i ? { label: 'Followed up', icon: Hourglass, value: i.chaseCount > 0 ? `×${i.chaseCount}` : 'not yet', sub: i.lastChasedOn ? `last ${formatDay(i.lastChasedOn)}` : undefined } : null, bid)
       break
     }
     case 'goods_late': {
@@ -750,7 +753,7 @@ function factsFor(
       out.push(
         late,
         expected,
-        l ? { label: 'Chased', icon: Hourglass, value: l.chaseCount > 0 ? `×${l.chaseCount}` : 'not yet', sub: l.lastChasedOn ? `last ${formatDay(l.lastChasedOn)}` : undefined } : null,
+        l ? { label: 'Followed up', icon: Hourglass, value: l.chaseCount > 0 ? `×${l.chaseCount}` : 'not yet', sub: l.lastChasedOn ? `last ${formatDay(l.lastChasedOn)}` : undefined } : null,
         l?.reference ? { label: 'Reference', value: l.reference } : null,
       )
       break
@@ -834,7 +837,7 @@ function ChasedCard({
     item.rule === 'chase_customer' && askedNow === 2
       ? 'A third ask suggests closing as no reply.'
       : item.rule === 'chase_supplier'
-        ? 'Chased twice with no reply: ask another supplier.'
+        ? 'Followed up twice with no reply: ask another supplier.'
         : null
   const excerpt = memo ? excerptOf(memo.text) : null
   return (
@@ -858,7 +861,7 @@ function ChasedCard({
           Open {item.ref}
         </Button>
         <Button variant="quiet" icon={AlarmClock} onClick={onAgain}>
-          Chase again
+          Follow up again
         </Button>
         {next ? <span className="ml-auto text-xs text-fg-muted">{next}</span> : null}
       </div>
@@ -869,7 +872,7 @@ function ChasedCard({
 /** Escalation for a customer: a suggestion, never automatic. */
 function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
   return (
-    <CloseRfqBanner item={item} today={today} title="3 chases, no answer" reasons={['no_reply_to_clarification']} buttonLabel={() => 'Close as no reply'}>
+    <CloseRfqBanner item={item} today={today} title="3 follow-ups, no answer" reasons={['no_reply_to_clarification']} buttonLabel={() => 'Close as no reply'}>
       This is a suggestion. Nothing is closed for you. Closing records the reason “No reply to our questions”.
     </CloseRfqBanner>
   )

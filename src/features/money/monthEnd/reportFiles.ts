@@ -19,7 +19,7 @@ export function payHref(r: Pick<PayableRow, 'state' | 'orderId' | 'legId' | 'owe
   const owed = r.owedPkr === null ? 0 : Math.round(Number(r.owedPkr))
   if (owed > 0) {
     p.set('amount', String(owed))
-    p.set('note', `Owed (about) on ${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7)).slice(0, 3)}, from We owe suppliers`)
+    p.set('note', `Owed (about) on ${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7)).slice(0, 3)}, from Payable to suppliers`)
   }
   return `/money/expenses?${p.toString()}`
 }

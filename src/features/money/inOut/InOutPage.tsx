@@ -212,7 +212,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   const [whyOpen, setWhyOpen] = useState(false)
   const whyId = useId()
   const frozen =
-    v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Closed: figures frozen when the month was closed' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
+    v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Locked: figures final when the month was locked' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
   return (
     <>
       {narrow ? null : <ReportCsv />} {/* a phone draws it after the two summaries below */}
@@ -341,7 +341,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             </>
           )}
           <p className="type-body text-fg-2">
-            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We owe suppliers report.
+            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the Payable to suppliers report.
           </p>
             </div>
           </FoldRow>

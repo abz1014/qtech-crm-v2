@@ -217,7 +217,7 @@ describe('Today screen', () => {
     fake = install()
     renderAs('sales')
     fireEvent.click(await screen.findByRole('button', { name: 'Snooze' }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: /Not ours to chase/ }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Handled by another team member/ }))
     await waitFor(() => expect(fake?.calls.some(c => c.target === 'snoozes' && c.verb === 'upsert')).toBe(true))
     const call = fake?.calls.find(c => c.target === 'snoozes' && c.verb === 'upsert')
     expect(call?.ops.find(([n]) => n === 'upsert')?.[1][0]).toMatchObject({ rule: 'not_floated', until_change: true, until_on: '2099-12-31' })

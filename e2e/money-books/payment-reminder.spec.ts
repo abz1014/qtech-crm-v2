@@ -145,7 +145,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await page.goto('/todo')
     await showAllTodo(page)
     // Waiting starts collapsed (R2-08): open it to see the reminded order
-    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Chased, waiting · \d+/ }).click()
+    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Followed up, waiting · \d+/ }).click()
     await expect(page.locator('li[data-rule="payment_overdue"][data-waiting]').filter({ hasText: s.company.name })).toHaveCount(1)
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })

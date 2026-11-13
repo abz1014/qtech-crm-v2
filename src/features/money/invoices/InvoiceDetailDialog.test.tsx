@@ -101,7 +101,7 @@ describe('Invoice: edit', () => {
 describe('Invoice: a closed month for sales (M4)', () => {
   it('sales cannot read closed_months, so they ask the one month: read-only with the reason, no edit boxes', async () => {
     setup({}, ['2025-01'], 'sales')
-    expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('INV-0012 is in a closed month. An admin can reopen it.')
+    expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('INV-0012 is in a locked month. An admin can reopen it.')
     expect(screen.queryByLabelText('Net amount, PKR')).toBeNull()
   })
   it('sales in an open month still edit', async () => {

@@ -33,7 +33,7 @@ const FieldLabels = createContext<Map<string, string> | null>(null)
 export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children, className }: FormProps<TIn, TOut>) {
   const { form } = sf
   const fieldLabels = useRef(new Map<string, string>()).current
-  // Inside a Dialog, changes here make closing ask "Discard what you typed?" (learnability spec 3.3). Elsewhere a no-op.
+  // Inside a Dialog, changes here make closing ask "Discard unsaved changes?" (learnability spec 3.3). Elsewhere a no-op.
   useReportDialogDirty(form.formState.isDirty && !sf.pending)
   return (
     <FormProvider {...(form as unknown as UseFormReturn<TIn>)}>
@@ -94,7 +94,7 @@ export function FormSummary({ labels }: { labels: Partial<Record<string, string>
 
 export function FormErrorBanner({ error, entity }: { error: MappedError; entity?: string }) {
   return (
-    <Banner tone="danger" title={entity ? `Couldn't save the ${entity}` : "Couldn't save"}>
+    <Banner tone="danger" title={entity ? `The ${entity} was not saved` : 'Not saved'}>
       {error.message}
     </Banner>
   )

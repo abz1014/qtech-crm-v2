@@ -85,7 +85,7 @@ export function pagePrimary(step: OrderStep, f: OrderFacts): PrimaryAction | nul
     case 'await-payment':
       return admin ? { kind: 'record-payment', label: 'Record payment' } : money ? { kind: 'copy-reminder', label: 'Copy reminder' } : null
     case 'goods-late':
-      return money ? onLeg('chase-goods', 'Chase goods') : onLeg('deliver', 'Delivered today')
+      return money ? onLeg('chase-goods', 'Follow up on delivery') : onLeg('deliver', 'Delivered today')
     case 'add-supplier':
       return money ? { kind: 'add-supplier', label: 'Add supplier' } : null
     case 'place':

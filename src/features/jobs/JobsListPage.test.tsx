@@ -67,7 +67,7 @@ describe('Jobs list', () => {
     const headers = screen.getAllByRole('columnheader').map(h => h.textContent?.trim()).filter(Boolean)
     expect(headers).toEqual(['Job', 'Customer', 'Customer PO', 'Items', 'Where it stands', 'Next step', 'Owner'])
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'New enquiry' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'New RFQ' })).toBeInTheDocument()
     expect(container).toHaveTextContent('Repeat of Job 139')
   })
 
@@ -121,7 +121,7 @@ describe('Jobs list', () => {
     expect(live.querySelector('[data-stage-line]')).toHaveTextContent('Stage 4 of 7 · Supplier order')
     expect(live.querySelectorAll('[data-stage-mini]')).toHaveLength(0)
     expect(live).toHaveTextContent('3 items · Flow meter RST 1158S')
-    expect(live).toHaveTextContent('The goods are late: chase the supplier')
+    expect(live).toHaveTextContent('The goods are late: follow up with the supplier')
     expect(live).not.toHaveTextContent('Imported')
     const imported = cards.find(c => /Job O-45/.test(c.textContent ?? ''))!
     expect(imported).toHaveTextContent('Imported')
@@ -147,7 +147,7 @@ describe('Jobs list', () => {
     const { container } = mount('engineer')
     await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
     expect(screen.queryAllByRole('row', { name: /Job 140/ })).toHaveLength(0)
-    expect(screen.queryByRole('button', { name: 'New enquiry' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'New RFQ' })).toBeNull()
     expect(container.textContent).not.toMatch(/PKR|Rs\.? ?\d/)
   })
 

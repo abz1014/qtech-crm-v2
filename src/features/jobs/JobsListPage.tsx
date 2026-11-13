@@ -199,7 +199,7 @@ export default function JobsListPage() {
 
   const loading = jobs.isPending || (searching && found.isPending)
   const error = jobs.isError ? jobs : searching && found.isError ? found : null
-  const lede = jobs.isSuccess ? `${counts.open} open · ${counts.history} in history` : 'Every customer request, from enquiry to payment.'
+  const lede = jobs.isSuccess ? `${counts.open} open · ${counts.history} in history` : 'Every customer request, from RFQ to payment.'
 
   const empty = searching ? (
     <NoResults query={text} scope="every job (open and history)" fields="job number, customer, item, RFQ, order, quotation, PO and invoice number" onClear={() => change({ q: null })} />
@@ -226,7 +226,7 @@ export default function JobsListPage() {
     <EmptyState title="Nothing in history yet">A job moves here once it is paid and installed, lost, or cancelled with no money open.</EmptyState>
   ) : (
     <EmptyState mood="goal" title="No open jobs">
-      Every job is done. A new enquiry starts one.
+      Every job is done. A new RFQ starts one.
     </EmptyState>
   )
 
@@ -239,7 +239,7 @@ export default function JobsListPage() {
         primary={
           money ? (
             <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/enquiries/new')}>
-              New enquiry
+              New RFQ
             </Button>
           ) : undefined
         }

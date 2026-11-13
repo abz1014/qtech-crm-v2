@@ -48,7 +48,7 @@ describe('Profitability: spent on enquiries we did not win', () => {
   it('lists each lost enquiry with what was spent, and totals them', async () => {
     const seen: FakeCall[] = []
     open(respond(LOST, seen))
-    const table = await screen.findByRole('table', { name: 'Spent on enquiries we did not win' })
+    const table = await screen.findByRole('table', { name: 'Spent on RFQs we did not win' })
     expect(within(table).getByRole('link', { name: 'RFQ-0181' })).toHaveAttribute('href', '/rfqs/r-1')
     expect(within(table).getByText('Indus Textile Mills')).toBeInTheDocument()
     expect(within(table).getByText('Karachi Dyeing Co')).toBeInTheDocument()
@@ -60,12 +60,12 @@ describe('Profitability: spent on enquiries we did not win', () => {
 
   it('says so when nothing was spent on a lost enquiry', async () => {
     open(respond([]))
-    expect(await screen.findByText('Nothing spent on a lost enquiry')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing spent on a lost RFQ')).toBeInTheDocument()
   })
 
   it('a failed read of the costs does not hide the profit figures', async () => {
     open(respond('error'))
-    expect(await screen.findByText('Spent on enquiries we did not win did not load')).toBeInTheDocument()
+    expect(await screen.findByText('Spent on RFQs we did not win did not load')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('profit-average')).toBeInTheDocument())
   })
 })

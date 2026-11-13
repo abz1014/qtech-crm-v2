@@ -97,7 +97,7 @@ export function sentLine(i: SentLineInput): string {
   const parts = [`${i.sentConfirmedAt ? 'Sent' : 'Asked'} ${formatDay(i.sentOn)}`]
   if (i.quoteReceivedOn) parts.push(`replied ${formatDay(i.quoteReceivedOn)}`)
   else if (i.noOfferOn) parts.push(`can't quote ${formatDay(i.noOfferOn)}`)
-  else if (i.lastChasedOn) parts.push(`chased ${formatDay(i.lastChasedOn)}`)
+  else if (i.lastChasedOn) parts.push(`followed up ${formatDay(i.lastChasedOn)}`)
   return parts.join(' · ')
 }
 

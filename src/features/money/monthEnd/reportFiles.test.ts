@@ -14,7 +14,7 @@ describe('We owe suppliers: the Pay link', () => {
       order: 'o-1',
       leg: 'l-1',
       amount: '384497',
-      note: 'Owed (about) on 30 Nov, from We owe suppliers',
+      note: 'Owed (about) on 30 Nov, from Payable to suppliers',
     })
   })
 

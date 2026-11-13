@@ -340,7 +340,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
             <SourceNote source={p?.sourceText ?? ''} edited={edited} />
           </span>
         ) : null}
-        {!empty && edited ? <span className="sr-only">Typed by you</span> : null}
+        {!empty && edited ? <span className="sr-only">Entered manually</span> : null}
         {p?.qtyNote && on ? <span className="text-base text-fg-2">{p.qtyNote}</span> : null}
         {warns.map(w => (
           <span key={w} className="flex items-start gap-[6px] text-base text-tone-warning-fg" data-testid={`convert-item-${n}-warning`}>
@@ -378,7 +378,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
               Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with the supplier you choose for it.
             </span>
             <InfoTip label="How the order is made">
-              No supplier is chosen for you. Pick one for each item from its quotes, or split an item between two suppliers. Prices and terms copy from the quotation.
+              No supplier is chosen for you. Pick one for each item from its supplier prices, or split an item between two suppliers. Prices and terms copy from the quotation.
             </InfoTip>
           </p>
 
@@ -512,8 +512,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                                 value={p.lineId}
                                 quotes={qs}
                                 usedLineIds={new Set(parts.filter(x => x.key !== p.key).map(x => x.lineId))}
-                                usedNote="A supplier used by another part of this item cannot be picked twice. Quotes from other suppliers can be added from the RFQ."
-                                header={`Quotes for item ${n}, with the reason`}
+                                usedNote="A supplier used by another part of this item cannot be picked twice. Supplier prices from other suppliers can be added from the RFQ."
+                                header={`Supplier prices for item ${n}, with the reason`}
                                 onChange={v => patchPart(it.id, p.key, { lineId: v })}
                               />
                               {supplierCell(pq)}

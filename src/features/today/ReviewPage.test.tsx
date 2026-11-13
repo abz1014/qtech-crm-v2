@@ -50,7 +50,7 @@ describe('Weekly review', () => {
     mount('admin')
     const quotes = await screen.findByRole('region', { name: /^Quotations with no decision/ })
     expect(within(quotes).getAllByRole('listitem')).toHaveLength(2)
-    expect(within(screen.getByRole('region', { name: /^Enquiries with no supplier asked/ })).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(screen.getByRole('region', { name: /^RFQs with no supplier asked/ })).getAllByRole('listitem')).toHaveLength(1)
     expect(document.querySelector('[data-review-count]')?.textContent).toBe('3')
     expect(screen.queryByRole('region', { name: /^Payments more than 30 days/ })).toBeNull()
   })
@@ -71,7 +71,7 @@ describe('Weekly review', () => {
 
   it('Close as lost closes that RFQ and offers Undo', async () => {
     mount('admin')
-    const enquiries = await screen.findByRole('region', { name: /^Enquiries with no supplier asked/ })
+    const enquiries = await screen.findByRole('region', { name: /^RFQs with no supplier asked/ })
     fireEvent.click(within(enquiries).getByRole('button', { name: /^Close as lost/ }))
     await waitFor(() => expect(fake?.calls.some(c => c.target === 'rfqs' && c.verb === 'update')).toBe(true))
     const call = fake!.calls.find(c => c.target === 'rfqs' && c.verb === 'update')!

@@ -101,7 +101,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   const detailFor = (i: number) => model.stops[i].note
 
   const enquiryBody = direct ? (
-    <Note>This job started as an order, without an enquiry.</Note>
+    <Note>This job started as an order, without an RFQ.</Note>
   ) : (
     <div className="grid gap-2">
       {meta}
@@ -144,7 +144,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
 
   const orderBody = !job.orderId ? (
     <div className="grid gap-2">
-      <Note>{direct ? 'The order is not available.' : "There is no order yet. It starts when the customer's order arrives and the enquiry is marked won."}</Note>
+      <Note>{direct ? 'The order is not available.' : "There is no order yet. It starts when the customer's order arrives and the RFQ is marked won."}</Note>
       {/* once quoted, Mark won is the next-step band's green button: not repeated here */}
       {!direct && ctx.money && job.stage !== 'lost' && job.stage !== 'quoted' ? (
         <p>
@@ -244,8 +244,8 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
           : 'Not delivered yet'
   const summaries: ReactNode[] = [
     direct
-      ? 'No enquiry: this job started as an order'
-      : [facts.receivedOn ? formatShortDate(facts.receivedOn, today) : null, items.length ? `${items.length} ${items.length === 1 ? 'item' : 'items'}` : null].filter(Boolean).join(' · ') || 'Enquiry',
+      ? 'No RFQ: this job started as an order'
+      : [facts.receivedOn ? formatShortDate(facts.receivedOn, today) : null, items.length ? `${items.length} ${items.length === 1 ? 'item' : 'items'}` : null].filter(Boolean).join(' · ') || 'RFQ',
     direct ? 'No quotation' : asked ? `${answered} of ${asked} answered` : 'No supplier asked yet',
     job.orderId ? (order?.orderedOn ? `Ordered ${formatShortDate(order.orderedOn, today)}` : orderRef(order?.number ?? 0)) : 'Waiting for the customer',
     legs.length ? (delivered > 0 ? `${delivered} of ${legs.length} delivered` : `${legs.length} supplier ${legs.length === 1 ? 'order' : 'orders'}`) : job.orderId ? 'To source and place' : 'Not yet',
@@ -257,7 +257,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   return STOPS.map((stop, index) => ({ stop, shown: model.stops[index].shown, index, state: state(index), summary: summaries[index], body: bodies[index] }))
 }
 
-export const NO_ENQUIRY_ROW = 'No enquiry or quotation: this job started as an order'
+export const NO_ENQUIRY_ROW = 'No RFQ or quotation: this job started as an order'
 
 const STATE: Record<StopState, { icon: LucideIcon; word: string; className: string }> = {
   done: { icon: CircleCheck, word: 'Done', className: 'text-tone-success-fg' },
@@ -281,7 +281,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta }:
   return (
     <div className="min-w-0 lg:rounded-panel lg:border lg:bg-surface lg:px-4 lg:[&>:last-child]:border-b-0" data-stages>
       {merged ? (
-        <div id="stage-0" data-stage="Enquiry" data-fold-row="" className="flex min-h-touch items-center gap-3 border-b py-2 text-fg-muted">
+        <div id="stage-0" data-stage="RFQ" data-fold-row="" className="flex min-h-touch items-center gap-3 border-b py-2 text-fg-muted">
           <Icon icon={Minus} />
           <p className="type-body min-w-0">
             <span id="stage-1" data-stage="Quotation" />

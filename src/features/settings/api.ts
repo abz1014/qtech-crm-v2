@@ -62,7 +62,7 @@ async function call<T>(body: Body): Promise<T> {
     } catch {
       // not JSON: fall through to the generic sentence
     }
-    const message = typeof json?.error === 'string' ? json.error : (FALLBACK[res.status] ?? 'Something went wrong. Nothing was changed. Try again.')
+    const message = typeof json?.error === 'string' ? json.error : (FALLBACK[res.status] ?? 'The change was not made. Try again.')
     throw new PlainError(message, typeof json?.code === 'string' ? json.code : undefined)
   }
   // The request never reached the function (offline, DNS): a TypeError makes mapPgError say so.

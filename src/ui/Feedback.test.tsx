@@ -62,7 +62,7 @@ describe('Toast (U03)', () => {
   it('Cmd/Ctrl+Z undoes the newest open Undo', async () => {
     const user = userEvent.setup()
     const onUndo = vi.fn()
-    setup({ title: 'Marked chased', undo: { onUndo } })
+    setup({ title: 'Marked as followed up', undo: { onUndo } })
     await user.click(screen.getByText('Fire'))
     await screen.findByRole('button', { name: /Undo/ })
     act(() => {
@@ -130,8 +130,8 @@ describe('InlineConfirm and Callout (U03)', () => {
     const onUndo = vi.fn()
     const { container } = render(
       <>
-        <InlineConfirm onUndo={onUndo}>Copied. Marked as chased today, Fri 27 Nov.</InlineConfirm>
-        <InlineConfirm variant="line">Chased Fri 27 Nov</InlineConfirm>
+        <InlineConfirm onUndo={onUndo}>Copied. Follow-up recorded today, Fri 27 Nov.</InlineConfirm>
+        <InlineConfirm variant="line">Followed up Fri 27 Nov</InlineConfirm>
         <Callout title="No message is sent from here.">The text is copied and you send it yourself.</Callout>
       </>,
     )
@@ -176,7 +176,7 @@ describe('ToggleButton and Radio (U07)', () => {
             <Radio value="supplier" label="Supplier" />
           </RadioGroup>
           <RadioGroup aria-label="What to do" defaultValue="chase">
-            <RadioCard value="chase" label="Chase" help="Prepares a message" />
+            <RadioCard value="chase" label="Follow up" help="Prepares a message" />
             <RadioCard value="log" label="Log a reply" help="Capture what they said" disabled />
           </RadioGroup>
         </>
@@ -188,7 +188,7 @@ describe('ToggleButton and Radio (U07)', () => {
     await user.keyboard('{ArrowDown>}')
     await waitFor(() => expect(screen.getByRole('radio', { name: 'Supplier' })).toBeChecked())
     await user.keyboard('{/ArrowDown}')
-    const card = screen.getByRole('radio', { name: /Chase/ })
+    const card = screen.getByRole('radio', { name: /Follow up/ })
     expect(card).toHaveAccessibleDescription('Prepares a message')
     expect(screen.getByRole('radio', { name: /Log a reply/ })).toBeDisabled()
     expect(await axeViolations(container)).toEqual([])

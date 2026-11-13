@@ -145,6 +145,7 @@ export function blockerLine(b: Blocker, today?: string): string {
 /** The stop a ?stage= value opens on the job page (index in STOPS), or null for anything unknown. */
 export function stageIndexOf(slug: string | null, stops: readonly string[]): number | null {
   if (!slug) return null
-  const i = stops.findIndex(s => s.toLowerCase().replace(/ /g, '-') === slug)
+  const want = slug === 'enquiry' ? 'rfq' : slug // an older link still says enquiry
+  const i = stops.findIndex(s => s.toLowerCase().replace(/ /g, '-') === want)
   return i < 0 ? null : i
 }

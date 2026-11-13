@@ -12,4 +12,4 @@ related: add-expenses, expense-report
 4. Two categories for the same thing? Open one's ⋯ menu, tap [Merge into…] and pick the other. Its expenses move across.
 5. Not needed any more? Tap [Archive]. Old expenses keep it; new ones cannot pick it.
 
-Tip: The group decides where the spending shows in Profit and loss. A category with expenses in a closed month can only move to a group of the same kind.
+Tip: The group decides where the spending shows in Profit and loss. A category with expenses in a locked month can only move to a group of the same kind.

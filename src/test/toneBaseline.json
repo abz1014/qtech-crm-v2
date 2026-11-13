@@ -1,0 +1,543 @@
+{
+  "app/capture/CaptureProvider.tsx": {
+    "enquiry": 3
+  },
+  "app/pages/OfflinePage.tsx": {
+    "contractions": 7,
+    "curly": 7,
+    "signal": 4,
+    "semicolon": 2
+  },
+  "app/pages/SignInPage.tsx": {
+    "signal": 1,
+    "contractions": 1,
+    "curly": 1
+  },
+  "app/palette/PaletteHost.tsx": {
+    "enquiry": 6,
+    "signal": 1
+  },
+  "app/routeChunks.ts": {
+    "enquiry": 3
+  },
+  "app/routes.tsx": {
+    "enquiry": 1
+  },
+  "app/shell/AppShell.tsx": {
+    "enquiry": 1
+  },
+  "app/shell/hidesEngineerFab.ts": {
+    "enquiry": 1
+  },
+  "app/shell/newEntries.ts": {
+    "enquiry": 3
+  },
+  "app/shell/PwaPrompts.tsx": {
+    "tap": 1
+  },
+  "app/shell/QuickExpenseDialog.tsx": {
+    "signal": 1
+  },
+  "app/shell/shortcuts.ts": {
+    "semicolon": 1
+  },
+  "app/shell/UpdateNeededBanner.tsx": {
+    "tap": 2
+  },
+  "features/capture/CaptureRoute.tsx": {
+    "enquiry": 1,
+    "curly": 1
+  },
+  "features/companies/api.ts": {
+    "exclaim": 4,
+    "contractions": 1,
+    "semicolon": 1
+  },
+  "features/companies/BrandsPanel.tsx": {
+    "contractions": 2
+  },
+  "features/companies/CategoriesDealtIn.tsx": {
+    "contractions": 3
+  },
+  "features/companies/CompaniesPage.tsx": {
+    "semicolon": 1,
+    "contractions": 1
+  },
+  "features/companies/CompanyPage.tsx": {
+    "contractions": 5
+  },
+  "features/companies/MergeCompanyDialog.tsx": {
+    "contractions": 1
+  },
+  "features/companies/removeError.ts": {
+    "contractions": 1
+  },
+  "features/companies/SitesPanel.tsx": {
+    "contractions": 1
+  },
+  "features/companies/supplierFacts.ts": {
+    "contractions": 1
+  },
+  "features/companies/SupplierRecordPanels.tsx": {
+    "contractions": 4,
+    "curly": 1
+  },
+  "features/enquiry/NewEnquiryPage.tsx": {
+    "enquiry": 6,
+    "semicolon": 1
+  },
+  "features/fx/ExchangeRatesPage.tsx": {
+    "semicolon": 1,
+    "contractions": 1
+  },
+  "features/fx/ratesModel.ts": {
+    "contractions": 1,
+    "curly": 1
+  },
+  "features/help/firstUseCopy.ts": {
+    "curly": 1
+  },
+  "features/help/firstWeek.ts": {
+    "chase": 2
+  },
+  "features/help/firstWeekApi.ts": {
+    "chase": 2
+  },
+  "features/help/HelpHost.tsx": {
+    "signal": 1
+  },
+  "features/help/howItWorks.ts": {
+    "tap": 1
+  },
+  "features/history/HistoryPanel.tsx": {
+    "contractions": 1
+  },
+  "features/invalidation.ts": {
+    "enquiry": 6,
+    "chase": 4
+  },
+  "features/jobs/AddToJob.tsx": {
+    "curly": 2,
+    "semicolon": 1
+  },
+  "features/jobs/api.ts": {
+    "enquiry": 3,
+    "exclaim": 4
+  },
+  "features/jobs/deleteJob/model.ts": {
+    "enquiry": 1
+  },
+  "features/jobs/EngineerActions.tsx": {
+    "signal": 1
+  },
+  "features/jobs/EnquiryWork.tsx": {
+    "enquiry": 1
+  },
+  "features/jobs/JobPage.tsx": {
+    "contractions": 1
+  },
+  "features/jobs/JobsListPage.tsx": {
+    "enquiry": 1,
+    "contractions": 1
+  },
+  "features/jobs/lib/nextStep.ts": {
+    "enquiry": 1
+  },
+  "features/jobs/lib/stages.ts": {
+    "enquiry": 4
+  },
+  "features/jobs/slotRegistry.ts": {
+    "enquiry": 3
+  },
+  "features/money/accounts/GstToFbrPage.tsx": {
+    "semicolon": 1
+  },
+  "features/money/bank/BankTickPage.tsx": {
+    "tap": 1,
+    "semicolon": 2,
+    "contractions": 1
+  },
+  "features/money/credit/CreditPanel.tsx": {
+    "contractions": 1
+  },
+  "features/money/credit/model.ts": {
+    "semicolon": 1
+  },
+  "features/money/credit/RefundDialog.tsx": {
+    "semicolon": 1
+  },
+  "features/money/exceptions/ExceptionsPage.tsx": {
+    "contractions": 1
+  },
+  "features/money/expenseReport/ExpenseReportPage.tsx": {
+    "contractions": 1,
+    "semicolon": 1
+  },
+  "features/money/expenses/BurstSheet.tsx": {
+    "semicolon": 1
+  },
+  "features/money/expenses/CashInHand.tsx": {
+    "semicolon": 2
+  },
+  "features/money/expenses/CategoryPicker.tsx": {
+    "curly": 2
+  },
+  "features/money/expenses/ClaimsReview.tsx": {
+    "contractions": 2
+  },
+  "features/money/expenses/deleteFlow.tsx": {
+    "contractions": 1
+  },
+  "features/money/expenses/ExpensesTab.tsx": {
+    "contractions": 1,
+    "semicolon": 1
+  },
+  "features/money/expenses/MiscPromote.tsx": {
+    "curly": 1
+  },
+  "features/money/expenses/MyClaimsPage.tsx": {
+    "semicolon": 1,
+    "contractions": 1
+  },
+  "features/money/expenses/QuickAdd.tsx": {
+    "tap": 1,
+    "semicolon": 1
+  },
+  "features/money/expenses/RecurringPanel.tsx": {
+    "contractions": 2,
+    "tap": 1
+  },
+  "features/money/invoices/CreateInvoiceDialog.tsx": {
+    "curly": 2,
+    "semicolon": 1
+  },
+  "features/money/invoices/GstRegisterPage.tsx": {
+    "contractions": 1,
+    "semicolon": 1
+  },
+  "features/money/invoices/pdf/buyerTax.ts": {
+    "curly": 2
+  },
+  "features/money/invoices/pdf/BuyerTaxFields.tsx": {
+    "curly": 2
+  },
+  "features/money/invoices/pdf/InvoicePdfDialog.tsx": {
+    "curly": 7,
+    "semicolon": 2
+  },
+  "features/money/invoices/pdf/model.ts": {
+    "curly": 8,
+    "semicolon": 1
+  },
+  "features/money/margins/MarginsPage.tsx": {
+    "semicolon": 1,
+    "contractions": 1
+  },
+  "features/money/MoneyScreen.tsx": {
+    "enquiry": 1
+  },
+  "features/money/monthEnd/ChecklistPage.tsx": {
+    "semicolon": 2
+  },
+  "features/money/monthEnd/reportList.ts": {
+    "enquiry": 2
+  },
+  "features/money/monthEnd/ReportPages.tsx": {
+    "semicolon": 2
+  },
+  "features/money/monthEnd/ReportParts.tsx": {
+    "semicolon": 1
+  },
+  "features/money/payments/ReceivablesPage.tsx": {
+    "semicolon": 1
+  },
+  "features/money/payments/RecordPaymentDialog.tsx": {
+    "semicolon": 1
+  },
+  "features/money/profit/hooks.ts": {
+    "enquiry": 1
+  },
+  "features/money/profit/ProfitPage.tsx": {
+    "enquiry": 2
+  },
+  "features/money/review/ReviewImportedPage.tsx": {
+    "semicolon": 1
+  },
+  "features/money/statement/StatementDialog.tsx": {
+    "contractions": 2
+  },
+  "features/orders/AddDialogs.tsx": {
+    "contractions": 2
+  },
+  "features/orders/api.ts": {
+    "exclaim": 1
+  },
+  "features/orders/CommissioningPanel.tsx": {
+    "tap": 1
+  },
+  "features/orders/ConvertDialog.tsx": {
+    "contractions": 2,
+    "semicolon": 1
+  },
+  "features/orders/GoodsChaseDialog.tsx": {
+    "contractions": 1
+  },
+  "features/orders/NewOrderDialog.tsx": {
+    "contractions": 2
+  },
+  "features/orders/ResolveBasisDialog.tsx": {
+    "semicolon": 1,
+    "contractions": 1
+  },
+  "features/orders/SplitLineDialog.tsx": {
+    "contractions": 2
+  },
+  "features/owners/api.ts": {
+    "enquiry": 2
+  },
+  "features/owners/ReassignDialogs.tsx": {
+    "contractions": 2
+  },
+  "features/purchaseOrders/api.ts": {
+    "exclaim": 1
+  },
+  "features/purchaseOrders/IssuePoDialog.tsx": {
+    "contractions": 2,
+    "semicolon": 1
+  },
+  "features/purchaseOrders/lib/cancelText.ts": {
+    "contractions": 1
+  },
+  "features/purchaseOrders/lib/prefill.ts": {
+    "curly": 1
+  },
+  "features/queryKeys.ts": {
+    "enquiry": 1
+  },
+  "features/quotations/IssueQuotationDialog.tsx": {
+    "semicolon": 3,
+    "contractions": 2
+  },
+  "features/quotations/QuotationsPanel.tsx": {
+    "contractions": 1
+  },
+  "features/reports/ReportsPage.tsx": {
+    "enquiry": 1
+  },
+  "features/rfqs/api.ts": {
+    "exclaim": 3
+  },
+  "features/rfqs/AttachmentsPanel.tsx": {
+    "curly": 2
+  },
+  "features/rfqs/ClarificationsPanel.tsx": {
+    "tap": 1
+  },
+  "features/rfqs/deleteFlow.tsx": {
+    "semicolon": 1
+  },
+  "features/rfqs/hooks.ts": {
+    "enquiry": 7,
+    "chase": 2
+  },
+  "features/rfqs/IntakeParts.tsx": {
+    "enquiry": 4,
+    "contractions": 1,
+    "semicolon": 1
+  },
+  "features/rfqs/IntakeScreen.tsx": {
+    "enquiry": 11,
+    "curly": 2,
+    "semicolon": 2,
+    "exclaim": 1
+  },
+  "features/rfqs/ItemsEditor.tsx": {
+    "tap": 2,
+    "curly": 1,
+    "semicolon": 1
+  },
+  "features/rfqs/ItemsPanel.tsx": {
+    "tap": 1,
+    "enquiry": 1
+  },
+  "features/rfqs/lib/cantQuote.ts": {
+    "contractions": 3
+  },
+  "features/rfqs/lib/customerChase.ts": {
+    "semicolon": 1
+  },
+  "features/rfqs/lib/detailView.ts": {
+    "contractions": 1
+  },
+  "features/rfqs/lib/enquiryDraft.ts": {
+    "semicolon": 1
+  },
+  "features/rfqs/lib/nextAction.ts": {
+    "chase": 4
+  },
+  "features/rfqs/lib/parseItems.ts": {
+    "exclaim": 1
+  },
+  "features/rfqs/lib/ranking/reasons.ts": {
+    "semicolon": 1
+  },
+  "features/rfqs/lib/replyParse.ts": {
+    "exclaim": 5,
+    "curly": 5
+  },
+  "features/rfqs/lib/replyPrice.ts": {
+    "contractions": 1
+  },
+  "features/rfqs/lib/replySuggest.ts": {
+    "curly": 1
+  },
+  "features/rfqs/PasteReply.tsx": {
+    "contractions": 5
+  },
+  "features/rfqs/SentConfirm.tsx": {
+    "enquiry": 1
+  },
+  "features/rfqs/SupplierReplies.tsx": {
+    "enquiry": 4,
+    "chase": 1,
+    "contractions": 12,
+    "tap": 1,
+    "semicolon": 2
+  },
+  "features/rfqs/SuppliersAsked.tsx": {
+    "contractions": 4
+  },
+  "features/rfqs/useAskSuppliers.ts": {
+    "enquiry": 1
+  },
+  "features/settings/CategoriesPage.tsx": {
+    "contractions": 2
+  },
+  "features/settings/ExportPage.tsx": {
+    "contractions": 1
+  },
+  "features/settings/InstallBanner.tsx": {
+    "tap": 1
+  },
+  "features/settings/productCategories/ProductCategoriesPage.tsx": {
+    "contractions": 1
+  },
+  "features/settings/RatesTable.tsx": {
+    "contractions": 1,
+    "curly": 1
+  },
+  "features/settings/TargetsPage.tsx": {
+    "contractions": 1,
+    "semicolon": 1
+  },
+  "features/settings/TeamDialogs.tsx": {
+    "curly": 2,
+    "contractions": 1
+  },
+  "features/settings/TeamPage.tsx": {
+    "contractions": 1,
+    "curly": 1
+  },
+  "features/statement/model.ts": {
+    "contractions": 3
+  },
+  "features/statement/StatementPage.tsx": {
+    "contractions": 1
+  },
+  "features/today/api.ts": {
+    "exclaim": 1
+  },
+  "features/today/ContextPane.tsx": {
+    "semicolon": 3,
+    "contractions": 2,
+    "enquiry": 2,
+    "curly": 2,
+    "tap": 1,
+    "chase": 1
+  },
+  "features/today/hooks.ts": {
+    "chase": 1
+  },
+  "features/today/RecurringReminder.tsx": {
+    "contractions": 1,
+    "tap": 1
+  },
+  "features/today/ReviewPage.tsx": {
+    "enquiry": 6
+  },
+  "features/today/TargetTile.tsx": {
+    "semicolon": 1
+  },
+  "features/today/TeamView.tsx": {
+    "semicolon": 1
+  },
+  "features/today/weeklyReview.ts": {
+    "enquiry": 4
+  },
+  "lib/categories/dictionary.ts": {
+    "signal": 2
+  },
+  "lib/docread/corpus/gen1.ts": {
+    "semicolon": 2
+  },
+  "lib/docread/corpus/gen12.ts": {
+    "exclaim": 1
+  },
+  "lib/docread/corpus/gen26.ts": {
+    "semicolon": 1
+  },
+  "lib/docread/corpus/gen29.ts": {
+    "semicolon": 1
+  },
+  "lib/docread/corpus/gen3.ts": {
+    "semicolon": 1
+  },
+  "lib/docread/corpus/gen31.ts": {
+    "signal": 1,
+    "semicolon": 1,
+    "client": 1
+  },
+  "lib/docread/corpus/html.ts": {
+    "exclaim": 2,
+    "semicolon": 2
+  },
+  "lib/docread/corpus/quotes.ts": {
+    "exclaim": 1
+  },
+  "lib/docread/imageText.ts": {
+    "contractions": 1,
+    "semicolon": 1
+  },
+  "lib/docread/pdfText.ts": {
+    "semicolon": 1
+  },
+  "lib/docread/sheetText.ts": {
+    "semicolon": 1
+  },
+  "lib/docread/supplierQuoteParse.ts": {
+    "exclaim": 2
+  },
+  "lib/errors/rpcMessages.ts": {
+    "contractions": 2
+  },
+  "lib/importWithReload.ts": {
+    "signal": 2
+  },
+  "lib/pwa/minVersion.ts": {
+    "tap": 1
+  },
+  "lib/status.ts": {
+    "contractions": 1,
+    "enquiry": 1
+  },
+  "lib/supabaseClient.ts": {
+    "semicolon": 1
+  },
+  "ui/MessageActions.demo.tsx": {
+    "semicolon": 1,
+    "tap": 1
+  },
+  "ui/MessageActions.tsx": {
+    "exclaim": 1
+  }
+}

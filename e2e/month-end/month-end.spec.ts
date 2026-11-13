@@ -134,7 +134,7 @@ test.describe('month-end (M10)', () => {
       // the Expenses report (2026-10-22) replaced "Expenses by category"; the select keeps the month (?month=)
       { title: 'Expenses', key: 'expenses', file: `expenses-${STMT.key}.csv`, header: 'Section', shows: /Where the money went/ },
       { title: 'Overdue by age', key: 'aging', file: `overdue-by-age-${STMT.key}.csv`, header: 'As of', shows: /What customers owe, by how late/ },
-      { title: 'We owe suppliers', key: 'owe', file: `we-owe-suppliers-${STMT.key}.csv`, header: 'As of', shows: /What we owe suppliers/ },
+      { title: 'Payable to suppliers', key: 'owe', file: `we-owe-suppliers-${STMT.key}.csv`, header: 'As of', shows: /Payable to suppliers/ },
       { title: 'GST and FBR', key: 'gst', file: `gst-and-fbr-${STMT.key}.csv`, header: 'Invoice month', shows: /GST and FBR, by invoice month/ },
       { title: 'Sales by person', key: 'team', file: `sales-by-person-${STMT.key}.csv`, header: 'Month', shows: /Net cash credited to each person/ },
     ]

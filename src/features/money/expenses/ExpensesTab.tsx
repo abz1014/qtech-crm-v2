@@ -368,9 +368,9 @@ function buildColumns(
         if (act.locked)
           return (
             <span className="inline-flex items-center gap-1" data-row-actions="">
-              <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked: the month is closed">
+              <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked month">
                 <Icon icon={Lock} size="sm" />
-                <span className="sr-only">Locked, the month is closed</span>
+                <span className="sr-only">Locked month</span>
               </span>
               <Button variant="quiet" size="touch" icon={History} aria-label={`History of ${name} of ${r.amount}`} className="min-w-[44px]" onClick={() => act.onHistory(r)} />
             </span>

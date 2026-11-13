@@ -523,10 +523,10 @@ export function pnlCsv(v: PnlView): { headers: string[]; rows: unknown[][] } {
     ['Money in', 'Payments received, all', v.payments.count, csvNum(v.grossReceived), csvNum(v.gstIn), csvNum(v.netIn)],
     ['Money out', 'Order costs', v.orderCosts.count, csvNum(v.orderCosts.gross), csvNum(v.orderCosts.inputTax), csvNum(negate(v.orderCosts.net))],
     ['Money out', 'Overheads', v.overheads.count, csvNum(v.overheads.gross), csvNum(v.overheads.inputTax), csvNum(negate(v.overheads.net))],
-    ...(toPaisa(v.adjustResult) !== 0n ? [['Adjustment', 'Changes to closed months, counted this month', '', '', '', csvNum(v.adjustResult)]] : []),
+    ...(toPaisa(v.adjustResult) !== 0n ? [['Adjustment', 'Changes to locked months, counted this month', '', '', '', csvNum(v.adjustResult)]] : []),
     ['Result', `Result for ${monthKeyLabel(v.month)}`, '', '', '', csvNum(v.result)],
     ...v.notInPnl.lines.map(l => ['Not a cost', l.category, l.count, csvNum(l.gross), csvNum(l.inputTax), csvNum(negate(l.net))]),
-    ...(toPaisa(v.adjustNonPnl) !== 0n ? [['Not a cost', 'Changes to closed months, counted this month', '', '', '', csvNum(negate(v.adjustNonPnl))]] : []),
+    ...(toPaisa(v.adjustNonPnl) !== 0n ? [['Not a cost', 'Changes to locked months, counted this month', '', '', '', csvNum(negate(v.adjustNonPnl))]] : []),
     ['Not a cost', 'Not a cost, total', v.notInPnl.total.count, csvNum(v.notInPnl.total.gross), csvNum(v.notInPnl.total.inputTax), csvNum(negate(v.notInPnl.total.net))],
     ['After drawings', 'Result less Not a cost', '', '', '', csvNum(v.afterDrawings)],
   ]

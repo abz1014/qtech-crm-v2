@@ -12,7 +12,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
  * The old /rfqs/<id> and /orders/<id> addresses redirect here (src/app/oldAddresses.tsx), so a spec may open either; the job page opens on
  * the stage the job is at.
  */
-export type StageName = 'Enquiry' | 'Quotation' | 'Order' | 'Supplier order' | 'Delivery' | 'Invoice' | 'Payment'
+export type StageName = 'RFQ' | 'Quotation' | 'Order' | 'Supplier order' | 'Delivery' | 'Invoice' | 'Payment'
 
 /** What the address becomes once an order is made, or an old address has redirected: /jobs/139, /jobs/O-45. */
 export const JOB_URL = /\/jobs\/[^/?#]+(?:[?#].*)?$/

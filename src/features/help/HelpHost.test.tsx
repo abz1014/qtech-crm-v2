@@ -56,7 +56,7 @@ describe('HelpHost: one Help for the whole app', () => {
     const user = userEvent.setup()
     mount('/rfqs?help=new-rfq')
     const panel = await screen.findByRole('dialog', { name: 'Help' })
-    expect(within(panel).getByRole('heading', { name: /Log a new enquiry/ })).toBeInTheDocument()
+    expect(within(panel).getByRole('heading', { name: /Log a new RFQ/ })).toBeInTheDocument()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Help' })).toBeNull())
     expect(at()).toBe('/rfqs')

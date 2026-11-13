@@ -409,8 +409,8 @@ function Leg({
               </span>
             ) : null}
             {canChase && late && part !== 'order' ? (
-              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${name}`}>
-                Chase goods
+              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Follow up on delivery, ${name}`}>
+                Follow up on delivery
               </Button>
             ) : null}
             {menu ? (
@@ -442,7 +442,7 @@ function Leg({
                   ) : null}
                   {canChase && !late && part !== 'order' ? (
                     <MenuItem icon={MessageSquareWarning} onClick={onChase}>
-                      Chase goods
+                      Follow up on delivery
                     </MenuItem>
                   ) : null}
                   {isAdmin && po?.id && part !== 'delivery' ? (

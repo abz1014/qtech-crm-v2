@@ -159,7 +159,7 @@ test('crawl: deep links to records that do not exist, and junk params', async ({
       await page.locator('#main').waitFor({ timeout: 15_000 })
       await settle(page)
       const body = (await page.locator('#main').innerText()).replace(/\s+/g, ' ').slice(0, 220)
-      const crashed = (await page.getByText(/Something went wrong|Unexpected error|crashed/i).count()) > 0
+      const crashed = (await page.getByText(/The page stopped working|Unexpected error|crashed/i).count()) > 0
       const spinning = (await page.locator('#main .skeleton').count()) > 0
       note(info, { kind: 'observation', where: `junk ${path}`, what: `${crashed ? 'CRASH SCREEN ' : ''}${spinning ? 'STILL LOADING ' : ''}shows: ${body}` })
       await shot(page, `junk-${path}`)

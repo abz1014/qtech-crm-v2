@@ -213,7 +213,7 @@ export function EditPhoneDialog({ member, onClose }: Base & { member: TeamMember
         }
       >
         <Form sf={sf} labels={{ phone: 'Phone' }}>
-          <FormField name="phone" label="Phone" requirement="optional" help="Printed under the signature on chase texts and quotations.">
+          <FormField name="phone" label="Phone" requirement="optional" help="Printed under the signature on follow-up texts and quotations.">
             {f => <TextField {...f} type="tel" className="num" placeholder="0300 1234567" autoComplete="off" />}
           </FormField>
         </Form>
