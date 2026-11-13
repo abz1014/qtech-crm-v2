@@ -39,7 +39,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
       title: 'Your jobs show up here',
       body: 'When an order needs you on site, the admin adds you to it and it appears here with its date. You can already save a site photo or note to any job: open it and use Add to this job.',
       action: { kind: 'link', label: 'Open Jobs', to: '/jobs' },
-      recipe: 'photo-or-note',
+      recipe: 'paste-or-photo',
     },
     admin: {
       title: 'Nothing needs you yet',

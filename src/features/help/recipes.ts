@@ -13,6 +13,10 @@ import { labelsIn, parseInline, parseMarkdown, plainText, type Block } from '@/f
  *   ---
  *   1. Tap [RFQs], then [New RFQ].   at most 7 steps; [Label] is the exact on-screen label
  *
+ * A recipe shared with engineers that names money (prices, PO, invoice, payment) can end with a line holding only `@engineer`;
+ * everything after it is the engineers' version of the body, and what is above it stays for sales and admin. recipesAs('engineer')
+ * swaps it in. Without that line every role reads the same text.
+ *
  * A writer changes help by editing markdown only: no screen registers anything. labelSync.test.ts keeps every [Label]
  * true to the screens.
  */
@@ -35,6 +39,8 @@ export interface Recipe {
   steps: string[]
   /** Every [Label] in the body. */
   labels: string[]
+  /** The engineers' own version of the body (after an `@engineer` line), when the recipe has one. */
+  engineer?: { body: string; blocks: Block[]; steps: string[]; labels: string[] }
 }
 
 const list = (v: string | undefined) =>
@@ -62,9 +68,12 @@ export function parseRecipe(raw: string, file: string): Recipe {
   const roles = list(meta.roles)
   const bad = roles.filter(r => !(HELP_ROLES as readonly string[]).includes(r))
   if (!roles.length || bad.length) throw new Error(`${file}: roles must list sales, engineer or admin (got "${meta.roles ?? ''}")`)
-  const body = fm[2].trim()
+  const [mainRaw = '', engineerRaw] = fm[2].split(/^@engineer *$/m)
+  const body = mainRaw.trim()
   const blocks = parseMarkdown(body)
   const steps = blocks.flatMap(b => (b.kind === 'steps' ? b.items.map(plainText) : []))
+  const engineerBody = engineerRaw?.trim()
+  const engineerBlocks = engineerBody ? parseMarkdown(engineerBody) : []
   return {
     id,
     title: meta.title,
@@ -76,6 +85,9 @@ export function parseRecipe(raw: string, file: string): Recipe {
     blocks,
     steps,
     labels: labelsIn(body),
+    ...(engineerBody
+      ? { engineer: { body: engineerBody, blocks: engineerBlocks, steps: engineerBlocks.flatMap(b => (b.kind === 'steps' ? b.items.map(plainText) : [])), labels: labelsIn(engineerBody) } }
+      : {}),
   }
 }
 
@@ -91,6 +103,12 @@ export function allRecipes(): Recipe[] {
     .map(([file, raw]) => parseRecipe(raw, file))
     .sort((a, b) => a.title.localeCompare(b.title))
   return cache
+}
+
+/** Every recipe as this role reads it: an engineer gets the engineer version where a recipe has one. */
+export function recipesAs(role: string | null | undefined, recipes: readonly Recipe[] = allRecipes()): Recipe[] {
+  if (role !== 'engineer') return recipes.slice()
+  return recipes.map(r => (r.engineer ? { ...r, ...r.engineer, engineer: undefined } : r))
 }
 
 export function findRecipe(id: string | null | undefined, recipes: readonly Recipe[] = allRecipes()): Recipe | undefined {
