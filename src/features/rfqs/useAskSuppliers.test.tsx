@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionContext } from '@/app/session'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useAskSuppliers, type AskResult } from '@/features/rfqs/useAskSuppliers'
@@ -81,5 +81,33 @@ describe('useAskSuppliers', () => {
     expect(opArgs(update, 'is')).toEqual(['sent_on', null])
     const insert = calls.find(c => c.target === 'supplier_inquiries' && c.verb === 'insert') as FakeCall
     expect((opArgs(insert, 'insert')?.[0] as { supplier_id: string }[]).map(r => r.supplier_id)).toEqual(['s-new'])
+  })
+
+  it('record puts the suppliers under Suppliers asked without touching the clipboard', async () => {
+    const inserts: FakeCall[] = []
+    installFakeDb(call => {
+      if (call.target === 'supplier_inquiries' && call.verb === 'insert') {
+        inserts.push(call)
+        return { data: [{ id: 'inq-1' }] }
+      }
+      return { data: [] }
+    })
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SessionContext.Provider>
+      </QueryClientProvider>
+    )
+    const { result } = renderHook(() => useAskSuppliers(rfq, []), { wrapper })
+    await act(async () => {
+      expect(await result.current.record({ supplierIds: ['s-1'], names: ['Orient'] })).toMatchObject({ ok: true, supplierIds: ['s-1'] })
+    })
+    expect(writeText).not.toHaveBeenCalled()
+    expect(inserts).toHaveLength(1)
+    expect((opArgs(inserts[0], 'insert')?.[0] as { supplier_id: string; sent_on: string }[])[0]).toMatchObject({ supplier_id: 's-1', sent_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })
   })
 })

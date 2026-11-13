@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, ChevronDown, Copy, Pencil, Plus, Undo2 } from 'lucide-react'
+import { Check, ChevronDown, Copy, MessageSquareReply, Pencil, Plus, Undo2 } from 'lucide-react'
 import { useSeesPrices } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
@@ -82,9 +82,14 @@ interface Props {
   /** Phone: scroll to the first supplier still without a reply when the page opens (once). */
   jump?: boolean
   onFloat: () => void
+  /** "Enter reply from another supplier"; left out for a person who does not see prices. */
+  onReplyFrom?: () => void
+  /** A supplier just recorded as asked for a reply to be entered: its reply dialog opens as soon as its row is here (then `onOpened`). */
+  openFor?: string | null
+  onOpened?: () => void
 }
 
-export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase = 'card', chaseIsMain = false, jump = false, onFloat }: Props) {
+export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase = 'card', chaseIsMain = false, jump = false, onFloat, onReplyFrom, openFor, onOpened }: Props) {
   const chaseable = chase === 'none' ? [] : inquiries.filter(i => canChaseInquiry(i, items))
   const [picked, setPicked] = useState<string | null>(null)
   const [channel, setChannel] = useChannelPreference()
@@ -94,8 +99,16 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   const reply = useReplyDialog()
   // A reply is prices: an engineer has no Enter or Edit reply and the dialog never opens (owner decision 2026-10-22).
   const prices = useSeesPrices()
-  const replying = prices && reply.open ?inquiries.find(i => i.id === reply.open?.inquiryId) : undefined
+  const replying = prices && reply.open ? inquiries.find(i => i.id === reply.open?.inquiryId) : undefined
   const phone = useMediaQuery('(max-width: 767px)')
+  const askedForReply = openFor ? inquiries.find(i => i.supplierId === openFor) : undefined
+  useEffect(() => {
+    if (!askedForReply) return
+    reply.show(askedForReply.id)
+    onOpened?.()
+    // reply.show and onOpened are stable enough: this runs once per supplier named
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askedForReply?.id])
   // Phone: the answered suppliers opened by a tap (each starts as one line).
   const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set())
   const toggle = (id: string) =>
@@ -193,10 +206,15 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           )
         })}
       </ul>
-      <div className="border-t px-0 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-t px-0 py-3">
         <Button icon={Plus} onClick={onFloat}>
           Ask more suppliers
         </Button>
+        {onReplyFrom ? (
+          <Button variant="quiet" icon={MessageSquareReply} onClick={onReplyFrom}>
+            Enter reply from another supplier
+          </Button>
+        ) : null}
       </div>
       {replying ? (
         <SupplierReplyDialog
