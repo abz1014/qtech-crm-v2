@@ -88,6 +88,8 @@ test.describe('expenses report (2026-10-22)', () => {
     await expect(page.getByTestId('expense-report-total')).toContainText(whole(total))
     await expect(page.getByRole('table', { name: /^Where the money went/ }).getByRole('row').filter({ hasText: fuel })).toContainText(whole(25000.5))
     await expect(page.getByTestId('expense-report-trend')).toBeVisible()
+    // every column prints its own short value, not only the shown one (a phone cannot hover)
+    for (const col of await page.getByTestId('expense-report-trend').getByRole('button').all()) await expect(col).toContainText(/\d/)
     await page.setViewportSize({ width: 375, height: 812 })
     // a phone draws the summary as lines (a region named for the period), not the big figure
     await expect(page.getByRole('region', { name: /^Spent in / })).toContainText(whole(total))
