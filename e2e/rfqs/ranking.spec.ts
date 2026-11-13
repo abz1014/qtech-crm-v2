@@ -302,7 +302,7 @@ test.describe('R26 float suggestions: ordered by track record, citing the eviden
 
     const last = s.zuluOrders[2]
     const zulu = card.locator('li', { hasText: s.zulu.name })
-    await expect(zulu.locator('[data-evidence]')).toContainText(`Ordered ${s.brandName} 3 times; last for ORD-${String(last.number).padStart(4, '0')}, placed ${dmy(last.placed)}, delivered after ${last.deliveredIn} days`)
+    await expect(zulu.locator('[data-evidence]')).toContainText(`Ordered ${s.brandName} 3 times, last for ORD-${String(last.number).padStart(4, '0')}, placed ${dmy(last.placed)}, delivered after ${last.deliveredIn} days`)
     await expect(zulu.locator('[data-record]')).toHaveText('On time 3 of 3 deliveries')
     await expect(card.locator('li', { hasText: s.mike.name }).locator('[data-record]')).toContainText('Often late: on time 1 of 3')
     await expect(card.locator('li', { hasText: s.alpha.name }).locator('[data-evidence]')).toHaveCount(0)

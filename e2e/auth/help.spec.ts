@@ -44,7 +44,7 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   // an old bookmark (even one with the retired ?old=1 on it) opens the Jobs list, which says what is true for a new person
   await page.goto('/rfqs?old=1')
   await expect(page).toHaveURL(/\/jobs$/)
-  await expect(page.getByText(/^(No open jobs|None of your jobs are open)$/)).toBeVisible()
+  await expect(page.getByText(/^(No open jobs|No jobs owned by you are open)$/)).toBeVisible()
   await page.goto('/orders')
   await expect(page).toHaveURL(/\/jobs\?stage=orders$/)
 

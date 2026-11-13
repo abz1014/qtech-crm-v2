@@ -117,7 +117,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     const d = page.getByRole('dialog')
-    await expect(d.getByTestId('cancel-sent-pos')).toContainText(`${ref} was sent to ${s.supplier.name}. Tell them it's cancelled.`)
+    await expect(d.getByTestId('cancel-sent-pos')).toContainText(`${ref} was sent to ${s.supplier.name}. Tell them it has been cancelled.`)
     await resetCount(page)
     await resetClipboard(page)
     await d.getByRole('button', { name: 'Copy cancellation message' }).click()

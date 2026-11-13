@@ -29,7 +29,7 @@ import type { StepTone } from '@/lib/status'
 /*
  * Outcomes are history facts, so they are status text (icon and words, no box; consistency spec 1.5), toned by who acts next:
  * done when it was priced or ordered here, waiting while the supplier still has to answer, inert for the rest. Only the
- * registry's icon overrides are used (Ban for "Can't quote", CircleDashed for no reply: not firm).
+ * registry's icon overrides are used (Ban for "Cannot quote", CircleDashed for no reply: not firm).
  */
 const OUTCOME: Record<QuoteOutcome, { label: string; tone: StepTone; icon?: LucideIcon }> = {
   quoted: { label: 'Quoted', tone: 'done' },
@@ -39,7 +39,7 @@ const OUTCOME: Record<QuoteOutcome, { label: string; tone: StepTone; icon?: Luci
   'quoted-open': { label: 'Quoted, RFQ open', tone: 'waiting' },
   waiting: { label: 'Waiting for a reply', tone: 'waiting' },
   'no-reply': { label: 'No reply', tone: 'inert', icon: CircleDashed },
-  declined: { label: "Can't quote", tone: 'inert', icon: Ban },
+  declined: { label: "Cannot quote", tone: 'inert', icon: Ban },
 }
 
 /** One outcome as status text. Used by the quotes and the enquiries lists. */
@@ -269,7 +269,7 @@ export function RecentQuotes({
         prices ? (
           <InfoTip label="About the prices">
             <span className="grid gap-2">
-              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the supplier price was typed in, not today’s.</span>
+              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the supplier price was typed in, not today&apos;s.</span>
               <span>A locked price is on file, but its currency was never checked, so it is not shown.</span>
             </span>
           </InfoTip>

@@ -10,7 +10,7 @@ import { uploadReceipt } from '@/features/money/expenses/api'
  */
 export const CLAIM_BUCKET = 'claim-receipts'
 
-/** 'owed' (0124): approved, not paid yet: "Approved, owed to <person>". Paid back, it becomes 'approved'. */
+/** 'owed' (0124): approved, not paid yet: "Approved, to repay <person>". Paid back, it becomes 'approved'. */
 export type ClaimStatus = 'pending' | 'approved' | 'rejected' | 'owed'
 export type PaidHow = 'cash_back' | 'petty_cash' | 'bank'
 

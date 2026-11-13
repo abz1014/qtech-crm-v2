@@ -62,7 +62,7 @@ describe('file rows and the Files panel wording', () => {
 
   it('the empty order Files panel says "PO" to admin and sales, never to an engineer', () => {
     const admin = as('admin', <AttachmentsPanel orderId="o1" />)
-    expect(screen.getByText(/customer’s PO/)).toBeInTheDocument()
+    expect(screen.getByText(/customer's PO/)).toBeInTheDocument()
     admin.unmount()
     as('engineer', <AttachmentsPanel orderId="o1" />)
     expect(screen.getByText(/No files yet/)).toBeInTheDocument()

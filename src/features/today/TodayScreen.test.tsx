@@ -46,14 +46,14 @@ let fake: ReturnType<typeof install> | null = null
 afterEach(() => fake?.uninstall())
 
 describe('Today screen', () => {
-  it('"New here?" is wired with the account created date: gone after 7 days, shown before (the expiry was dead code)', async () => {
+  it('The "How Q-Tech CRM works" card is wired with the account created date: gone after 7 days, shown before (the expiry was dead code)', async () => {
     fake = install()
     const old = renderAs('sales', new Date(Date.now() - 40 * 86_400_000).toISOString())
     expect(await screen.findByText('Needs suppliers')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /New here\? How Q-Tech CRM works/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /How Q-Tech CRM works/ })).toBeNull()
     old.unmount()
     renderAs('sales', new Date(Date.now() - 2 * 86_400_000).toISOString())
-    expect(await screen.findByRole('button', { name: /New here\? How Q-Tech CRM works/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /How Q-Tech CRM works/ })).toBeInTheDocument()
   })
 
   it('lists an item with its title and reference', async () => {
@@ -70,7 +70,7 @@ describe('Today screen', () => {
     renderAs('sales')
     await screen.findByText('Needs suppliers')
     expect(document.querySelector('[data-needs-you-count]')?.textContent).toBe('1')
-    expect(screen.queryByText(/due now/)).toBeNull()
+    expect(screen.getAllByText(/due now/)).toHaveLength(1) // the header says it once; no second tally
     expect(document.querySelector('[data-needs-count]')).toBeNull()
   })
 

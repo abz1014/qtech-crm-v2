@@ -76,7 +76,7 @@ describe('customer clarification chase', () => {
         '1. Line size and flange rating on the process line (item 2)',
         '2. Fluid temperature range, and whether the meter sees CIP cleaning (items 2 and 3)',
         '',
-        'Kindly confirm by *Thursday 10 December*; our quotation is due on Friday 11 December.',
+        'Kindly confirm by *Thursday 10 December*. Our quotation is due on Friday 11 December.',
         '',
         'Thank you.',
         'Regards,',

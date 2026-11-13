@@ -20,7 +20,7 @@ import { useBuyerTax, useSaveBuyerTax } from '@/features/money/invoices/pdf/hook
  */
 export function BuyerTaxFields({ companyId, onSaved, onCancel }: { companyId: string; onSaved?: () => void; onCancel?: () => void }) {
   const q = useBuyerTax(companyId)
-  if (q.isError) return <p role="alert" className="text-sm text-tone-danger-fg">The company’s tax details could not be loaded. Close this and try again.</p>
+  if (q.isError) return <p role="alert" className="text-sm text-tone-danger-fg">The company&apos;s tax details could not be loaded. Close this and try again.</p>
   if (q.isPending)
     return (
       <div className="grid gap-3" aria-busy="true">
@@ -80,7 +80,7 @@ function BuyerTaxForm({ companyId, buyer, onSaved, onCancel }: { companyId: stri
           </Field>
         ) : null}
       </div>
-      <Field label="Address on invoices" requirement="optional" help="Leave it empty to print the order’s delivery address." error={errors.invoiceAddress}>
+      <Field label="Address on invoices" requirement="optional" help="Leave it empty to print the order's delivery address." error={errors.invoiceAddress}>
         <TextArea value={values.invoiceAddress} onChange={e => set('invoiceAddress', e.target.value)} rows={2} />
       </Field>
       {failed ? <Banner tone="danger" title="The tax details were not saved">{failed}</Banner> : null}

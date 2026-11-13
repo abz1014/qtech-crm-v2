@@ -3,7 +3,7 @@ import { openAs, review } from '../support/stack'
 
 /*
  * What the owner saw on the live site on a brand-new CRM (empty database, admin, 1920x1080 desktop Chrome), 2026-10-20:
- *  1. Today: the list pane scrolled sideways under the "Just you so far" card.
+ *  1. Today: the list pane scrolled sideways under the "No other users yet" card.
  *  2. To collect: two (i) tips side by side after "Balance is gross, GST included".
  *  3. Orders: a stray up/down scroller at the right end of the Active / Done / Cancelled tabs.
  *  4. Amounts and counts set with a slashed zero.
@@ -55,7 +55,7 @@ test.describe('a brand-new CRM, as the admin', () => {
     for (const [width, height] of [[1920, 1080], [1366, 768], [375, 812]] as const) {
       await page.setViewportSize({ width, height })
       await open(page, '/todo')
-      await expect(page.getByText('Just you so far')).toBeVisible()
+      await expect(page.getByText('No other users yet')).toBeVisible()
       const m = await page.evaluate(() => {
         const list = document.querySelector('[data-today-list]') as HTMLElement
         return { listScroll: list.scrollWidth, listClient: list.clientWidth, page: document.documentElement.scrollWidth, view: window.innerWidth }

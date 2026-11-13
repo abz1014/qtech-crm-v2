@@ -131,11 +131,11 @@ describe('buildStatement', () => {
     const s = buildStatement(ITEMS, all, { showNoReply: true })
     expect(s.sections[0].noQuote).toEqual([
       { label: 'No reply', names: ['Silent Ltd'] },
-      { label: "Can't quote", names: ['Cant Ltd'] },
+      { label: "Cannot quote", names: ['Cant Ltd'] },
     ])
     expect(s.sections[1].noQuote).toEqual([
       { label: 'No reply', names: ['Silent Ltd'] },
-      { label: "Can't quote", names: ['Cant Ltd', 'Partial Ltd'] },
+      { label: "Cannot quote", names: ['Cant Ltd', 'Partial Ltd'] },
     ])
     expect(s.noReplyCount).toBe(2)
     // a supplier with no price has no totals row

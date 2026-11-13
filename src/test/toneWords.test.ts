@@ -20,9 +20,11 @@ import { sourceFiles, SRC, visibleStrings } from '@/test/visibleStrings'
  *   exclaim        "!" in a sentence: rule 4
  *   semicolon      "; " in a sentence: rule 12, one sentence one idea
  *
- * The counts are compared with src/test/toneBaseline.json, the counts on the day the rewrite started. The test fails only when a
- * file's count goes UP, so the words can only shrink. A lane that rewrites a screen never edits the baseline: the last lane sets
- * every count to zero. To rebuild the baseline (and only then): UPDATE_TONE_BASELINE=1 npx vitest run src/test/toneWords.test.ts
+ * The counts are compared with src/test/toneBaseline.json. The rewrite is finished, so the baseline is empty (zero everywhere) and
+ * the test fails when any file has any of these. What is not counted: a string with no space that starts in lower case (a route, a
+ * query key, a database value or a CSS class, not a sentence), a regular expression written as text, a bare "; " list separator,
+ * and the files in SKIP_FILES below. To rebuild the baseline (only if the owner allows a new exception):
+ * UPDATE_TONE_BASELINE=1 npx vitest run src/test/toneWords.test.ts
  */
 
 type Rule = { name: string; test: (s: string) => boolean }
@@ -38,8 +40,8 @@ const rules: Rule[] = [
   { name: 'enquiry', test: s => /\b(?:enquir(?:y|ies)|inquir(?:y|ies))\b/i.test(s) },
   { name: 'client', test: s => /(?<![\w/-])clients?(?![\w-])/i.test(s) },
   { name: 'somethingWrong', test: s => /^\s*Something went wrong\.?\s*$/i.test(s) },
-  { name: 'exclaim', test: s => /!(?!=)/.test(s.replace(/\(\?!/g, '')) },
-  { name: 'semicolon', test: s => /;\s/.test(s.replace(/&[a-z]+;/gi, '')) },
+  { name: 'exclaim', test: s => /\S!(?=\s|$)/.test(s) },
+  { name: 'semicolon', test: s => s.trim() !== ';' && /;\s/.test(s.replace(/&[a-z]+;/gi, '')) },
 ]
 
 /**
@@ -52,6 +54,17 @@ const ENQUIRY_OK = [
   /^features\/rfqs\/lib\/(customerChase|supplierChase|goodsChase|paymentReminder|enquiryDraft|parseItems|replyParse|replyPrice)\.ts$/,
 ]
 
+/**
+ * Files that are not screen wording: the document reader's generated test corpus (it imitates what customers send), the product
+ * category search words and the database client's user-agent text.
+ */
+const SKIP_FILES = [/^lib\/docread\/corpus\//, /^lib\/categories\/dictionary\.ts$/, /^lib\/supabaseClient\.ts$/]
+
+/** A route, a key or a value rather than a sentence: no space and no capital first letter. */
+const isToken = (s: string) => !/\s/.test(s) && !/^[A-Z]/.test(s)
+/** A regular expression written as text. */
+const isRegexText = (s: string) => /\(\?[:=!<]/.test(s)
+
 const rel = (f: string) => path.relative(SRC, f).split(path.sep).join('/')
 const BASELINE = path.join(SRC, 'test', 'toneBaseline.json')
 /** Files with no words on screen: generated database types. */
@@ -63,11 +76,11 @@ function count(): Counts {
   const out: Counts = {}
   for (const file of sourceFiles(SRC)) {
     const r = rel(file)
-    if (NOT_UI.some(n => r.startsWith(n))) continue
+    if (NOT_UI.some(n => r.startsWith(n)) || SKIP_FILES.some(re => re.test(r))) continue
     const mine: Record<string, number> = {}
     for (const pieces of visibleStrings(file)) {
       const s = pieces.map(p => (typeof p === 'string' ? p : '{}')).join('')
-      if (!s.trim()) continue
+      if (!s.trim() || isToken(s) || isRegexText(s)) continue
       for (const rule of rules) {
         if (rule.name === 'enquiry' && ENQUIRY_OK.some(re => re.test(r))) continue
         if (rule.test(s)) mine[rule.name] = (mine[rule.name] ?? 0) + 1

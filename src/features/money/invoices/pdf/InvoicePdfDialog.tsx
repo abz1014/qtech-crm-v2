@@ -65,7 +65,7 @@ function Loading() {
 function OrderInvoices({ orderId, onBusy, onClose }: { orderId: string; onBusy: (b: boolean) => void; onClose: () => void }) {
   const q = useOrderInvoices(orderId)
   const [picked, setPicked] = useState<string | null>(null)
-  if (q.isError) return <p role="alert" className="text-sm text-tone-danger-fg">The order’s invoices could not be loaded. Close this and try again.</p>
+  if (q.isError) return <p role="alert" className="text-sm text-tone-danger-fg">The order&apos;s invoices could not be loaded. Close this and try again.</p>
   if (q.isPending) return <Loading />
   const rows = q.data
   if (rows.length === 0) return <p className="text-sm text-fg-2">This order has no invoice yet. Create the invoice first, then print it here.</p>
@@ -162,7 +162,7 @@ function Ready({
         ) : null}
         {sellerGaps.length > 0 ? (
           <p className="text-sm text-fg-2">
-            Your company’s details print in the letterhead. An admin fills them in once, in Settings, Company.{' '}
+            Your company&apos;s details print in the letterhead. An admin fills them in once, in Settings, Company.{' '}
             <Link to="/settings/company" className="font-medium text-fg underline underline-offset-2 hover:text-fg-2">
               Open Settings, Company
             </Link>
@@ -221,7 +221,7 @@ function Ready({
             {built.ok ? null : built.problem ? <ProblemNote problem={built.problem} src={src} /> : null}
             {built.ok && built.doc.figures.adjustedLines.length > 0 ? (
               <p className="text-sm text-fg-2" data-testid="gst-adjust-note">
-                Sales tax is rounded to whole rupees on each line. To add up to this invoice’s GST of {pkr(built.doc.figures.gst)} (the register figure), line
+                Sales tax is rounded to whole rupees on each line. To add up to this invoice&apos;s GST of {pkr(built.doc.figures.gst)} (the register figure), line
                 {built.doc.figures.adjustedLines.length === 1 ? ' ' : 's '}
                 {built.doc.figures.adjustedLines.join(', ')} {built.doc.figures.adjustedLines.length === 1 ? 'carries' : 'carry'} PKR 1{' '}
                 {built.doc.figures.adjustment > 0n ? 'more' : 'less'} than {built.doc.figures.adjustedLines.length === 1 ? 'its' : 'their'} own rounding.
@@ -286,12 +286,12 @@ function LinesNote({ match, picks, src, orderLabel }: { match: LineMatch; picks:
       const nos = src.lines.map((l, i) => (match.picks.some(p => p.id === l.id) ? i + 1 : null)).filter((n): n is number => n !== null)
       return (
         <p className="text-sm text-fg-2">
-          Line{nos.length === 1 ? '' : 's'} {nos.join(', ')} of {orderLabel}: the only lines that add up to this invoice’s net.{otherText}
+          Line{nos.length === 1 ? '' : 's'} {nos.join(', ')} of {orderLabel}: the only lines that add up to this invoice&apos;s net.{otherText}
         </p>
       )
     }
     case 'ambiguous':
-      return <p className="text-sm text-fg-2">More than one set of {orderLabel}’s lines adds up to this invoice. Tick the lines it covers.{otherText}</p>
+      return <p className="text-sm text-fg-2">More than one set of {orderLabel}&apos;s lines adds up to this invoice. Tick the lines it covers.{otherText}</p>
     case 'none':
       return (
         <p className="text-sm text-fg-2">
@@ -317,16 +317,16 @@ function ProblemNote({ problem, src }: { problem: FiguresProblem; src: InvoicePd
       const diff = problem.invoiceNet - problem.linesNet
       return (
         <Banner tone="warning" title="The ticked lines do not add up to this invoice">
-          They come to {pkr(problem.linesNet)} before tax; the invoice is {pkr(problem.invoiceNet)}, {pkr(diff < 0n ? -diff : diff)} {diff < 0n ? 'less' : 'more'}. The
-          invoice’s amounts are fixed in the GST register, so tick the lines and quantities it covers.
+          They come to {pkr(problem.linesNet)} before tax. The invoice is {pkr(problem.invoiceNet)}, {pkr(diff < 0n ? -diff : diff)} {diff < 0n ? 'less' : 'more'}. The
+          invoice&apos;s amounts are fixed in the GST register, so tick the lines and quantities it covers.
         </Banner>
       )
     }
     case 'gst-differs':
       return (
         <Banner tone="danger" title="The sales tax does not match the invoice">
-          The lines’ own sales tax comes to {pkr(problem.linesGst)}; the invoice’s GST is {pkr(problem.invoiceGst)}. That is more than rounding (at most PKR 1 on each of the{' '}
-          {problem.taxableLines} taxed {problem.taxableLines === 1 ? 'line' : 'lines'}), so the PDF is not made. Check the lines ticked, or the GST rate on the order’s lines.
+          The lines&apos; own sales tax comes to {pkr(problem.linesGst)}. The invoice&apos;s GST is {pkr(problem.invoiceGst)}. That is more than rounding (at most PKR 1 on each of the{' '}
+          {problem.taxableLines} taxed {problem.taxableLines === 1 ? 'line' : 'lines'}), so the PDF is not made. Check the lines ticked, or the GST rate on the order&apos;s lines.
         </Banner>
       )
   }

@@ -162,7 +162,7 @@ export type Rule = 'not_floated' | 'chase_supplier' | 'bid_due' | 'chase_custome
 export async function todayHas(context: BrowserContext, rule: Rule, text: string[], listed: boolean): Promise<void> {
   const page = await openPage(context, '/todo')
   await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
-  await expect(page.getByText(/\d+ need you/)).toBeVisible() // the list has loaded
+  await expect(page.getByText(/\d+ due now/)).toBeVisible() // the list has loaded
   // Waiting starts collapsed (R2-08): open it, so a waiting row counts as listed as it did before
   const waiting = page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Followed up, waiting · \d+/ })
   if ((await waiting.count()) > 0 && (await waiting.getAttribute('aria-expanded')) === 'false') await waiting.click()

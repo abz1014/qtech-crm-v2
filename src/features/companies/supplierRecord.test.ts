@@ -109,7 +109,7 @@ describe('recent quotes', () => {
     const by = Object.fromEntries(r.quotes.map(q => [q.rfqRef, q]))
     expect(by['RFQ-0171']).toMatchObject({ outcome: 'waiting', itemNote: 'Asked 24 Nov, 3 days ago', pkrNote: 'Awaiting a supplier price' })
     expect(by['RFQ-0088']).toMatchObject({ outcome: 'no-reply', itemNote: null, pkrNote: 'Asked 2 Jun, never answered' })
-    expect(by['RFQ-0104']).toMatchObject({ outcome: 'declined', pkrNote: "Doesn't carry this brand", qty: '+ 1 more item' })
+    expect(by['RFQ-0104']).toMatchObject({ outcome: 'declined', pkrNote: "Does not carry this brand", qty: '+ 1 more item' })
     expect(by['RFQ-0171'].price.state).toBe('none')
   })
 

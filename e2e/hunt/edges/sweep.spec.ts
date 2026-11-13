@@ -36,7 +36,7 @@ for (const v of VIEWPORTS) {
         if (ms > 6000) w.add('slow', `${ms} ms to settle`)
         const h1 = (await page.locator('h1').allInnerTexts().catch(() => [])).join(' | ')
         const main = await page.locator('#main').innerText().catch(() => '')
-        if (/The page stopped working|Couldn.t load|could not load/i.test(main)) w.add('error-state', `error text on screen (h1 "${h1}")`)
+        if (/The page stopped working|could not load|could not be loaded/i.test(main)) w.add('error-state', `error text on screen (h1 "${h1}")`)
         const bad = main.match(/.{0,40}\b(NaN|undefined|null|Infinity|Invalid Date)\b.{0,40}/)
         if (bad) w.add('bad-text', `"${bad[0].replace(/\s+/g, ' ')}"`)
         recordLayout(w, await layout(page), r.path)

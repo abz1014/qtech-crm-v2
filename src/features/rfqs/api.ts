@@ -596,7 +596,7 @@ export async function saveReply(input: SaveReplyInput): Promise<number> {
   return input.prices.length
 }
 
-/** Marks the inquiry "can't quote" (the day and the reason key go together), or takes it back (both null). The notes are never touched. */
+/** Marks the inquiry "cannot quote" (the day and the reason key go together), or takes it back (both null). The notes are never touched. */
 export async function setInquiryNoOffer(input: { inquiryId: string; noOfferOn: string | null; reason: string | null }): Promise<void> {
   const db = requireSupabase()
   const { error } = await db.from('supplier_inquiries').update({ no_offer_on: input.noOfferOn, no_offer_reason: input.reason }).eq('id', input.inquiryId)
@@ -950,7 +950,7 @@ export async function removeRfqItem(id: string): Promise<RemovedItemSnapshot | n
   return r ? { position: Number(r.position), gstRate: Number(r.gst_rate), createdAt: r.created_at, createdBy: r.created_by } : null
 }
 
-/** Undo of "Remove item": the item with its old id, then the prices and "can't quote" reasons that went with it. */
+/** Undo of "Remove item": the item with its old id, then the prices and "cannot quote" reasons that went with it. */
 export async function restoreRfqItem(input: {
   rfqId: string
   item: Pick<RfqItemRow, 'id' | 'description' | 'brandId' | 'familyId' | 'qty' | 'unit'>

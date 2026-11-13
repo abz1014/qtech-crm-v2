@@ -136,7 +136,7 @@ describe('the supplier comparison', () => {
     const waiting: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }
     const other: InquiryRow = { ...inquiry('x', 'Midlands Valves', []), responseState: 'awaiting', itemsQuoted: 0 }
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), waiting])
-    expect(screen.queryByRole('button', { name: /Add reply|Enter reply|Can't quote/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Add reply|Enter reply|Cannot quote/ })).toBeNull()
     const art = screen.getByRole('article', { name: 'Item 1' })
     expect(within(art).getByText('Keller GmbH')).toBeInTheDocument() // one supplier: named
     expect(within(art).queryByText('1 price so far')).toBeNull() // "Priced" is said once, on the supplier's row (Suppliers asked), not again on the item

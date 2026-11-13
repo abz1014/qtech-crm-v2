@@ -35,7 +35,7 @@ const OWNER_TEXT = [
   'Please include in your reply:',
   '* Unit price and currency',
   '* Lead time',
-  '* Origin and authenticity (country of origin; original and genuine)',
+  '* Origin and authenticity (country of origin, original and genuine)',
   '* Stock position',
   '* MOQ, offer validity and payment terms',
   '* Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important)',

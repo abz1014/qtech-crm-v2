@@ -180,5 +180,5 @@ export const STANDARD_TERMS = [
   'Please acknowledge this order in writing within 2 working days.',
   'Goods must be new, genuine and exactly the models and options described above.',
   'Any change to price, quantity or delivery needs our written approval before it takes effect.',
-  'Mark every package with the PO number. Goods that do not match this order may be returned at the supplier’s cost.',
+  "Mark every package with the PO number. Goods that do not match this order may be returned at the supplier's cost.",
 ]

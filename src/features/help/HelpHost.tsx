@@ -77,7 +77,7 @@ export function HelpHost() {
       toast?.({
         tone: 'danger',
         title: 'Help could not open',
-        body: err instanceof Error && err.name === 'StaleAppError' ? err.message : 'Check your signal, then try again.',
+        body: err instanceof Error && err.name === 'StaleAppError' ? err.message : 'Check the connection, then try again.',
         action: { label: 'Try again', onClick: () => openHelp() },
       })
     },

@@ -21,7 +21,7 @@ export function replyPriceProblem(text: string): string | null {
   if (!text.trim()) return null
   const n = parseReplyPrice(text)
   if (n === null) return 'Type the price as a number, like 1200.'
-  if (n < 0) return "A price can't be below zero."
+  if (n < 0) return "A price cannot be below zero."
   if (n === 0) return 'Type a price above zero, or leave it empty.'
   return null
 }

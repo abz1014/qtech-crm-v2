@@ -92,7 +92,7 @@ describe('invoiceFigures: the whole order, as the create dialog pre-fills it (st
   })
 })
 
-describe('the +/- Rs 1 rule: stored GST that differs from the lines’ own rounding', () => {
+describe("the +/- Rs 1 rule: stored GST that differs from the lines' own rounding", () => {
   it('adds the missing rupee to the line rounded down the most (GST on the total, from "Edit the amounts")', () => {
     // three lines of 2.50: each line's own tax 0.45 rounds to 0; GST on the total 7.50 is 1.35, rounded 1
     const lines = [line(1, '2.50'), line(1, '2.50'), line(1, '2.50')]
@@ -131,7 +131,7 @@ describe('the +/- Rs 1 rule: stored GST that differs from the lines’ own round
     expect(r.figures.lines.every(l => l.gst - l.ownGst <= 100n && l.ownGst - l.gst <= 100n)).toBe(true)
   })
 
-  it('carries an imported invoice’s paisa on one line', () => {
+  it("carries an imported invoice's paisa on one line", () => {
     const lines = [line(1, 1000), line(1, 500)]
     const r = invoiceFigures(lines, all(lines), { net: 1500, gst: '270.37' })
     expect(r.ok).toBe(true)
@@ -224,7 +224,7 @@ describe('invoiceFigures: blocked, never a wrong PDF', () => {
     expect(invoiceFigures([line(1, 1)], [], { net: 1, gst: 0 })).toEqual({ ok: false, problem: { kind: 'no-lines' } })
   })
 
-  it('when a quantity is zero or above the order’s', () => {
+  it("when a quantity is zero or above the order's", () => {
     const l = line(10, 150.25, 18, 'm')
     expect(invoiceFigures([l], [{ id: l.id, qty: 0 }], { net: 0, gst: 0 })).toMatchObject({ ok: false, problem: { kind: 'bad-qty', max: 10 } })
     expect(invoiceFigures([l], [{ id: l.id, qty: 11 }], { net: 0, gst: 0 })).toMatchObject({ ok: false, problem: { kind: 'bad-qty' } })
@@ -237,7 +237,7 @@ describe('invoiceFigures: blocked, never a wrong PDF', () => {
   })
 })
 
-describe('matchLines: which of the order’s lines an invoice covers', () => {
+describe("matchLines: which of the order's lines an invoice covers", () => {
   it('every line when they add up to the invoice (free lines included)', () => {
     const lines = [line(1, 1000), line(1, 0), line(2, 250)]
     expect(matchLines(lines, 1500)).toEqual({ how: 'whole-order', picks: all(lines) })
@@ -282,7 +282,7 @@ describe('invoiceReadiness (section 23(1) Sales Tax Act 1990)', () => {
     expect(invoiceReadiness(ready())).toEqual({ gaps: [], warnings: [] })
   })
 
-  it('blocks on the supplier’s name, address, NTN and STRN', () => {
+  it("blocks on the supplier's name, address, NTN and STRN", () => {
     const r = invoiceReadiness(ready({ seller: { legal_name: ' ', address: null, ntn: null, strn: '' } }))
     expect(r.gaps.map(g => g.where)).toEqual(['company-profile', 'company-profile', 'company-profile', 'company-profile'])
     expect(r.gaps.map(g => g.text).join(' | ')).toMatch(/legal name.*address.*NTN.*STRN/)
@@ -290,7 +290,7 @@ describe('invoiceReadiness (section 23(1) Sales Tax Act 1990)', () => {
 
   it('blocks on a registered buyer with no STRN, naming the buyer', () => {
     const r = invoiceReadiness(ready({ buyer: { ...BUYER, strn: null } }))
-    expect(r.gaps).toEqual([{ where: 'buyer', text: 'Acme Cement’s STRN (it is registered for sales tax)' }])
+    expect(r.gaps).toEqual([{ where: 'buyer', text: "Acme Cement's STRN (it is registered for sales tax)" }])
   })
 
   it('asks whether the buyer is registered when nobody has said and there is no STRN', () => {
@@ -312,7 +312,7 @@ describe('invoiceReadiness (section 23(1) Sales Tax Act 1990)', () => {
 
   it('uses the delivery site address when the company has no invoice address, and blocks with neither', () => {
     expect(invoiceReadiness(ready({ buyer: { ...BUYER, invoiceAddress: null }, siteAddress: 'Kotri plant' })).gaps).toEqual([])
-    expect(invoiceReadiness(ready({ buyer: { ...BUYER, invoiceAddress: null } })).gaps).toEqual([{ where: 'buyer', text: 'Acme Cement’s address' }])
+    expect(invoiceReadiness(ready({ buyer: { ...BUYER, invoiceAddress: null } })).gaps).toEqual([{ where: 'buyer', text: "Acme Cement's address" }])
   })
 
   it('blocks a register-only imported invoice (no order, no number) and an order whose prices may include GST', () => {
@@ -371,7 +371,7 @@ describe('buildInvoiceDoc', () => {
     expect(d.words).toBe('Three thousand six hundred fifty-one rupees only.')
   })
 
-  it('uses the company’s default terms when the order has none, and no PO date without a PO', () => {
+  it("uses the company's default terms when the order has none, and no PO date without a PO", () => {
     const src = source({ order: { id: 'o1', number: 38, customerPo: null, orderedOn: '2026-10-01', paymentTermsDays: null, legacyFlags: [] } })
     const r = buildInvoiceDoc(src, PROFILE, all(src.lines), 'duplicate')
     expect(r.ok && [r.doc.dueOn, r.doc.poDate, r.doc.copy]).toEqual(['2026-11-19', null, 'duplicate'])

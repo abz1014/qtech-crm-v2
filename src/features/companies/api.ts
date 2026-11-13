@@ -701,7 +701,7 @@ export interface CompanyMoney {
   receivable: number
   /** Received from them. */
   settled: number
-  /** Still owed: the sum of each order's balance (an overpaid order counts 0 here, its excess is `overpaid`). */
+  /** Balance due: the sum of each order's balance (an overpaid order counts 0 here, its excess is `overpaid`). */
   balance: number
   /** Paid above an order's gross, kept apart, never netted into the balance. */
   overpaid: number

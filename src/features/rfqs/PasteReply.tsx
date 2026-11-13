@@ -13,7 +13,7 @@ import { reasonLabel, type Suggestion, type SuggestionSet } from '@/features/rfq
  * "Paste reply" suggestions (R08 parser, R07 screen). Everything the parser read is offered here and nothing is saved until
  * "Accept". All offers that can be accepted start ticked, so accepting them all is one tap. An offer the parser is unsure of
  * (low confidence, an ambiguous separator, matched by position) is highlighted with the reason. A price with no currency in
- * the reply takes the supplier's pre-filled currency and says so. A regret is offered as "can't quote" with its reason.
+ * the reply takes the supplier's pre-filled currency and says so. A regret is offered as "cannot quote" with its reason.
  */
 
 function stockText(v: boolean | null) {
@@ -72,7 +72,7 @@ export function PasteReplyPanel({
         <div className="flex flex-wrap items-center gap-3 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
           <span className="min-w-0 flex-1 basis-[14rem]">{`The supplier cannot quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
           <Button variant="primary" size="sm" busy={busy} busyLabel="Saving" onClick={() => onCantQuote(set.regret!.reason)}>
-            {"Mark can't quote"}
+            {"Mark cannot quote"}
           </Button>
         </div>
       ) : null}
@@ -153,7 +153,7 @@ export function PasteReplyPanel({
             disabled={count === 0 && !declinedOnly}
             onClick={() => onAccept(selected)}
           >
-            {declinedOnly ? "Record can't quote" : `Accept ${count} ${count === 1 ? 'price' : 'prices'}`}
+            {declinedOnly ? "Record cannot quote" : `Accept ${count} ${count === 1 ? 'price' : 'prices'}`}
           </Button>
         ) : null}
       </div>

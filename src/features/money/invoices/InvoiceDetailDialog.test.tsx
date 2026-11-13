@@ -92,7 +92,7 @@ describe('Invoice: edit', () => {
 
   it('a closed month shows the figures as text with the lock line, and no edit boxes or Delete', async () => {
     const { user } = setup({}, ['2025-01'])
-    expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('Month closed. Reopen the month first, in Lock a month, to change or delete.')
+    expect(await screen.findByTestId('invoice-closed-line')).toHaveTextContent('Month locked. Reopen the month first, in Lock a month, to change or delete.')
     expect(screen.queryByLabelText('Net amount, PKR')).toBeNull()
     expect(await moreItems(user)).not.toContain('Delete invoice')
   })

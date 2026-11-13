@@ -253,6 +253,6 @@ describe('MessageActionsDemo', () => {
     render(<MessageActionsDemo only="ready" />)
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Open in WhatsApp' }))
-    expect(screen.getByRole('status')).toHaveTextContent('The screen now offers its own "Record follow-up" tap.')
+    expect(screen.getByRole('status')).toHaveTextContent('The screen now offers its own "Record follow-up" button.')
   })
 })

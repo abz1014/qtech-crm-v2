@@ -228,7 +228,7 @@ describe('Team screen', () => {
     await user.click(within(secret).getByRole('button', { name: 'Copy sign-in message' }))
     expect(writeText).toHaveBeenCalledTimes(1)
     const text = writeText.mock.calls[0][0] as string
-    expect(text).toContain('Hi Hira,')
+    expect(text).toContain('Dear Hira,')
     expect(text).toContain('Email: h@q.example')
     expect(text).toContain('Password: Vk7xmQ3pRt9wHn2e')
     expect(within(secret).getByRole('button', { name: 'Done' })).toBeEnabled()

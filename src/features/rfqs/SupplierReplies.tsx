@@ -57,15 +57,15 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  * today's rate (never whether it is the lowest); with no rate it says the reply can be saved and the rate added afterwards.
  *
  *   FE-2  supplier reply   Enter reply, one typed price per item, currency never typed, then Save reply
- *         can't quote      Enter reply, Can't quote, the reason (the five reasons sit behind one menu, not five buttons)
+ *         cannot quote      Enter reply, Cannot quote, the reason (the five reasons sit behind one menu, not five buttons)
  *
- * "Can't quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); "Cannot offer" beside an
+ * "Cannot quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); "Cannot offer" beside an
  * item's price box records a reason for that one item, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
  * Closing with prices typed and not saved asks first (the Dialog's own discard guard).
  *
  * An engineer (owner decision 2026-10-22: engineers see and write no prices) never gets this dialog: a reply is prices
  * (supplier_quote_lines.unit_price is required), so Suppliers asked shows them no Enter or Edit reply and useReplyDialog never opens
- * it for them (nor from a price row's menu or Capture). Take back on a whole "can't quote" stays in Suppliers asked (no price in it).
+ * it for them (nor from a price row's menu or Capture). Take back on a whole "cannot quote" stays in Suppliers asked (no price in it).
  */
 
 /** The status of a supplier's reply, as one chip. */
@@ -101,13 +101,13 @@ function PricePreview({ amount, currency, rates }: { amount: number; currency: s
   )
 }
 
-/** "Can't quote ▾": the five reasons behind one menu, one tap each. */
+/** "Cannot quote ▾": the five reasons behind one menu, one tap each. */
 export function CantQuoteMenu({ supplierName, busy, onPick, className }: { supplierName: string; busy?: boolean; onPick: (reason: string) => void; className?: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button icon={Ban} disabled={busy} className={className} aria-label={`Can't quote, ${supplierName}`}>
-          {"Can't quote"}
+        <Button icon={Ban} disabled={busy} className={className} aria-label={`Cannot quote, ${supplierName}`}>
+          {"Cannot quote"}
           <Icon icon={ChevronDown} size="sm" />
         </Button>
       </PopoverTrigger>
@@ -215,14 +215,14 @@ export function SupplierReplyDialog({
     try {
       await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: businessToday(), reason })
       toast({
-        title: "Marked can't quote",
+        title: "Marked cannot quote",
         body: `${inquiry.supplierName} · ${reasonLabel(reason)}`,
         undo: {
           onUndo: async () => {
             await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: before.noOfferOn, reason: before.reason })
           },
-          settledTitle: "Marked can't quote",
-          undoneTitle: "Can't quote taken back",
+          settledTitle: "Marked cannot quote",
+          undoneTitle: "Cannot quote taken back",
         },
       })
       onClose()
@@ -342,7 +342,7 @@ export function SupplierReplyDialog({
           {declinedAll ? (
             <div className="flex flex-wrap items-center gap-3 rounded-row border border-line bg-sunken px-3 py-2">
               <span>
-                <span className="font-medium">{"Can't quote"}</span>
+                <span className="font-medium">{"Cannot quote"}</span>
                 {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
                 <span className="text-fg-muted">{` · ${formatDay(inquiry.noOfferOn as string)}`}</span>
               </span>
@@ -535,7 +535,7 @@ export function SupplierReplyDialog({
               </div>
               <details className="text-sm" open={Object.keys(draft.extras ?? {}).length > 0 || undefined} data-reply-extras="">
                 <summary className="w-fit cursor-pointer text-fg-muted hover:text-fg">Weight and country of origin (optional)</summary>
-                <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement; nothing is worked out from it.</p>
+                <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement. Nothing is worked out from it.</p>
                 <ul className="mt-2 grid gap-3">
                   {items
                     .filter(it => !inquiry.itemDeclines[it.id])

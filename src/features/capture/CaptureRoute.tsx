@@ -133,7 +133,7 @@ function JobPicker({ onPick, showMine = false }: { onPick: (key: string) => void
       {find.trim() === '' ? showMine ? <MyActiveJobs onPick={onPick} /> : null : jobs.isPending ? (
         <p className="text-base text-fg-2">Looking…</p>
       ) : (jobs.data ?? []).length === 0 ? (
-        <p className="text-base text-fg-2">No job found. Try the customer’s name or the job number.</p>
+        <p className="text-base text-fg-2">No job found. Try the customer&apos;s name or the job number.</p>
       ) : (
         <ul className="grid gap-2" aria-label="Jobs found">
           {(jobs.data ?? []).slice(0, 8).map(j => (

@@ -58,7 +58,7 @@ describe('first-use empty states', () => {
   it('Today, admin alone on the team: the one button adds people', async () => {
     const user = userEvent.setup()
     mount(<FirstUseState screen="today" role="admin" alone />)
-    expect(screen.getByText('Just you so far')).toBeInTheDocument()
+    expect(screen.getByText('No other users yet')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Add person' }))
     expect(screen.getByTestId('at')).toHaveTextContent('/settings/team')
   })
@@ -67,7 +67,7 @@ describe('first-use empty states', () => {
     const user = userEvent.setup()
     const onEveryone = vi.fn()
     const { container } = mount(<FirstUseState screen="orders" role="engineer" onEveryone={onEveryone} everyoneCount={12} />)
-    await user.click(within(container).getByRole('button', { name: 'Show everyone’s (12)' }))
+    await user.click(within(container).getByRole('button', { name: "Show everyone's (12)" }))
     expect(onEveryone).toHaveBeenCalledTimes(1)
   })
 

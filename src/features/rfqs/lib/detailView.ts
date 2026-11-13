@@ -89,14 +89,14 @@ export interface SentLineInput {
 }
 
 /**
- * "Asked Sun 22 Nov · replied Mon 23 Nov" / "· chased Wed 25 Nov" / "· can't quote Mon 23 Nov" / "Not asked yet". The word is "Asked" until
+ * "Asked Sun 22 Nov · replied Mon 23 Nov" / "· chased Wed 25 Nov" / "· cannot quote Mon 23 Nov" / "Not asked yet". The word is "Asked" until
  * the person confirmed they really sent the message ("Yes, sent", 0097); only then it is "Sent Sun 22 Nov". Copying a message proves nothing.
  */
 export function sentLine(i: SentLineInput): string {
   if (!i.sentOn) return 'Not asked yet'
   const parts = [`${i.sentConfirmedAt ? 'Sent' : 'Asked'} ${formatDay(i.sentOn)}`]
   if (i.quoteReceivedOn) parts.push(`replied ${formatDay(i.quoteReceivedOn)}`)
-  else if (i.noOfferOn) parts.push(`can't quote ${formatDay(i.noOfferOn)}`)
+  else if (i.noOfferOn) parts.push(`cannot quote ${formatDay(i.noOfferOn)}`)
   else if (i.lastChasedOn) parts.push(`followed up ${formatDay(i.lastChasedOn)}`)
   return parts.join(' · ')
 }

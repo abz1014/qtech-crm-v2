@@ -41,13 +41,13 @@ function mount(role: 'admin' | 'engineer', rfqs = [open(1)]) {
 describe('the top bar has one number: Today\'s "needs you"', () => {
   it('makes no head request for active orders: every number comes from the Today list', async () => {
     const { fake, bar } = mount('admin')
-    await within(bar).findByRole('link', { name: /^To do\s?, 1 need you$/ })
+    await within(bar).findByRole('link', { name: /^To do\s?, 1 due now$/ })
     expect(fake.calls.some(c => c.target === 'v_order_state' && /head|count/.test(JSON.stringify(c)))).toBe(false)
   })
 
   it('Today counts the items due today or late (three RFQs nobody asked suppliers about); Jobs, Money and Companies carry no number', async () => {
     const { bar } = mount('admin', [open(1), open(2), open(3)])
-    expect(await within(bar).findByRole('link', { name: /^To do\s?, 3 need you$/ })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: /^To do\s?, 3 due now$/ })).toBeInTheDocument()
     // "Plan commissioning" and the FBR roll-up are ready-to-move chores: listed on Today, never counted
     expect(within(bar).getByRole('link', { name: 'Jobs' })).toBeInTheDocument()
     expect(within(bar).getByRole('link', { name: 'Money' })).toBeInTheDocument()
@@ -59,7 +59,7 @@ describe('the top bar has one number: Today\'s "needs you"', () => {
     // the fresh one is counted, the one from January 2025 is not (on a Monday the admin's weekly review row, which that old enquiry
     // is on, is counted too: it is real work for that day)
     const n = isMonday(businessToday()) ? 2 : 1
-    expect(await within(bar).findByRole('link', { name: new RegExp(`^To do\\s?, ${n} need you$`) })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: new RegExp(`^To do\\s?, ${n} due now$`) })).toBeInTheDocument()
     expect(fake.calls.some(c => c.target === 'v_rfq_state')).toBe(true)
     expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
   })

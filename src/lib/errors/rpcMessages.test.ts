@@ -45,7 +45,7 @@ describe('rpcMessages (learnability spec 3.4)', () => {
 describe('mapPgError uses the table', () => {
   it('P0001 month still open says the fix and links to Lock a month', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is still open. Close earlier months first (close_months_through closes them all).' })
-    expect(m.message).toBe('Lock March 2026 first. Months lock in order.')
+    expect(m.message).toBe('The month was not locked. Lock March 2026 first. Months lock in order.')
     expect(m.action?.href).toBe('/money/month-end')
     expect(m.help).toBe('month-end-close')
   })
@@ -58,14 +58,14 @@ describe('mapPgError uses the table', () => {
 
   it('22023 missing price', () => {
     expect(mapPgError({ code: '22023', message: 'set the currency of this supplier order before issuing a PO' }).message).toBe(
-      "Pick the supplier's currency on this supplier order, then issue the PO.",
+      "The PO was not issued. Choose the supplier's currency on this supplier order, then issue the PO.",
     )
   })
 
   it('42501 keeps the permission kind', () => {
     const m = mapPgError({ code: '42501', message: 'only an admin can close a month' })
     expect(m.kind).toBe('permission')
-    expect(m.message).toBe('Only an admin can lock a month. Ask an admin if it needs doing.')
+    expect(m.message).toBe('Only an admin can lock a month. Nothing was changed. Ask an admin if it needs doing.')
   })
 
   it('0096 linking and review: the admin-only refusal says so, an unknown record says reload, the rest keep their plain text', () => {
@@ -86,7 +86,7 @@ describe('mapPgError uses the table', () => {
 
   it('P0001 reopen out of order names the month to reopen first (0080, owner decision 2026-10-22)', () => {
     const m = mapPgError({ code: 'P0001', message: 'August 2026 cannot be reopened while September 2026 is closed. Reopen September 2026 first.' })
-    expect(m.message).toBe('Reopen September 2026 first. Months reopen newest first, so August 2026 can be reopened once every month after it is open.')
+    expect(m.message).toBe('The month was not reopened. Reopen September 2026 first. Months reopen newest first, so August 2026 can be reopened once every month after it is open.')
     expect(m.help).toBe('month-end-close')
     expect(m.action?.href).toBe('/money/month-end')
   })

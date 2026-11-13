@@ -740,7 +740,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   }
 
   // ---- text
-  const heading = step === 'floated' ? (copied ? 'Copied. Paste it into each supplier’s chat.' : 'Marked as asked. Copy the message below.') : null
+  const heading = step === 'floated' ? (copied ? "Copied. Paste it into each supplier's chat." : 'Marked as asked. Copy the message below.') : null
   const lede =
     step === 'build'
       ? real.length > 0
@@ -1079,7 +1079,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                         onMessage={setPdfNote}
                       />
                       {items.length === 0 ? (
-                        <Button variant="quiet" onClick={addBlank}>Add an item by hand</Button>
+                        <Button variant="quiet" onClick={addBlank}>Add an item manually</Button>
                       ) : null}
                     </div>
                   </>
@@ -1190,7 +1190,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
               <StepBar
                 summary={
                   saved ? (
-                    <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier’s chat.</>
+                    <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier&apos;s chat.</>
                   ) : (
                     'Copies the message and marks the RFQ as asked.'
                   )

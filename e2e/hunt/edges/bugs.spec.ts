@@ -134,7 +134,7 @@ test('HE-9 a hand-entered exchange rate dated in 2200 is refused as a typo, not 
   await page.getByLabel('As of').fill('1/1/2200')
   await page.getByLabel('As of').press('Tab')
   // Refused, with the reason under the date: Save rate stays aria-disabled and nothing is stored.
-  await expect(page.getByText(/can.t be dated in the future|Use a date between/).first()).toBeVisible()
+  await expect(page.getByText(/cannot be dated in the future|Use a date between/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save rate' })).toHaveAttribute('aria-disabled', 'true')
   await page.getByRole('button', { name: 'Save rate' }).click({ force: true })
   await page.waitForTimeout(1000)

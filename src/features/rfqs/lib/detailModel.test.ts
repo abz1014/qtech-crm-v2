@@ -29,18 +29,18 @@ describe('currencyForSupplier', () => {
   })
 })
 
-describe("can't quote reasons", () => {
+describe("cannot quote reasons", () => {
   it('has five stable snake_case keys, the ones the database accepts', () => {
     expect(CANT_QUOTE_REASONS.map(r => r.key)).toEqual(['no_brand', 'cant_source_in_time', 'discontinued', 'wont_quote_quantity', 'other'])
     for (const r of CANT_QUOTE_REASONS) expect(r.key).toMatch(/^[a-z_]+$/)
   })
   it('builds the words from the key, and reads an unknown key as other', () => {
-    expect(reasonLabel('no_brand')).toBe("Doesn't carry this brand")
+    expect(reasonLabel('no_brand')).toBe("Does not carry this brand")
     expect(reasonLabel('discontinued')).toBe('Item discontinued')
     expect(reasonLabel('something_new')).toBe('Other reason')
     expect(reasonLabel(null)).toBe('Other reason')
     expect(isCantQuoteReason('other')).toBe(true)
-    expect(isCantQuoteReason("Doesn't carry this brand")).toBe(false)
+    expect(isCantQuoteReason("Does not carry this brand")).toBe(false)
   })
   it('an item override wins over the inquiry reason, which only counts once the inquiry is marked', () => {
     const base = { noOfferOn: '2026-11-27', noOfferReason: 'no_brand', itemDeclines: { b: 'discontinued' } }

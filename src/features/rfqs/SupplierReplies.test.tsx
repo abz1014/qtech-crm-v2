@@ -82,13 +82,13 @@ describe('SupplierReplyDialog', () => {
     expect(onClose).toHaveBeenCalled() // saved: the dialog closes
   })
 
-  it("the five Can't quote reasons sit behind one menu, not five buttons", async () => {
+  it("the five Cannot quote reasons sit behind one menu, not five buttons", async () => {
     installFakeDb(() => ({ data: [] }))
     const user = userEvent.setup()
     renderDialog()
-    expect(screen.queryByRole('button', { name: "Doesn't carry this brand" })).toBeNull()
-    await user.click(screen.getByRole('button', { name: "Can't quote, Orient Analytical" }))
-    expect(await screen.findByRole('menuitem', { name: "Doesn't carry this brand" })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: "Does not carry this brand" })).toBeNull()
+    await user.click(screen.getByRole('button', { name: "Cannot quote, Orient Analytical" }))
+    expect(await screen.findByRole('menuitem', { name: "Does not carry this brand" })).toBeInTheDocument()
   })
 
   it('closing with prices typed and not saved asks first; Keep editing keeps them', async () => {
@@ -121,7 +121,7 @@ describe('SupplierReplyDialog', () => {
     renderDialog()
     const box = screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })
     await user.type(box, '-5')
-    expect(screen.getByText("A price can't be below zero.")).toBeInTheDocument()
+    expect(screen.getByText("A price cannot be below zero.")).toBeInTheDocument()
     expect(box).toHaveAttribute('aria-invalid', 'true')
     // The typed text is replaced in one go (selected, then typed over), as a person does; the box is never left empty between.
     await user.type(box, 'about 12', { initialSelectionStart: 0, initialSelectionEnd: 2 })

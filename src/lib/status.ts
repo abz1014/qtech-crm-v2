@@ -101,7 +101,7 @@ export const STATUS = {
     chased: def('Waiting for prices', 'info'),
     awaiting: def('Waiting for prices', 'info'),
     quoted: def('Priced', 'success'),
-    'no-offer': def("Can't quote", 'neutral', { icon: Ban }),
+    'no-offer': def("Cannot quote", 'neutral', { icon: Ban }),
   },
   // UI-only: an item's price state on the RFQ items panel. Not a database value.
   'item-price': {

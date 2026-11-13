@@ -95,7 +95,7 @@ export function ChecklistPage() {
               </>
             }
           >
-            No payments or expenses are recorded for {monthName(ctx.month)}. The current month cannot be locked; once it has ended this page lists its checks and Today shows &ldquo;Lock {monthName(ctx.month)}&rdquo;.
+            No payments or expenses are recorded for {monthName(ctx.month)}. The current month cannot be locked. Once it has ended, this page lists its checks and Today shows &ldquo;Lock {monthName(ctx.month)}&rdquo;.
             {ctx.closed.length ? ` ${closedThrough(ctx.closed)} and earlier are locked.` : ''}
           </EmptyState>
         </section>

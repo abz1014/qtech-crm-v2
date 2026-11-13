@@ -43,9 +43,9 @@ import { formatDay } from '@/lib/formatDay'
 /*
  * "Suppliers asked" (g2-rfq-detail rail; UX audit 2026-10-19; grade-B R2, R3, R4 2026-10-22): every supplier asked, listed ONCE on
  * the page, with where each one stands and the one way in to their reply. Under each name: one chip (Priced 2 of 4, Waiting for
- * prices chased ×1, Can't quote, Not asked yet), when it was sent and a memory line from v_supplier_stats ("Replied 5 of 7,
+ * prices chased ×1, Cannot quote, Not asked yet), when it was sent and a memory line from v_supplier_stats ("Replied 5 of 7,
  * usually ~2 days, now 5 days"; amber when the wait is longer than usual). "Enter reply" (or "Edit reply" once there is a price)
- * opens the reply dialog (SupplierReplies.tsx), which holds the prices, Paste reply and "Can't quote". A supplier who can't quote
+ * opens the reply dialog (SupplierReplies.tsx), which holds the prices, Paste reply and "Cannot quote". A supplier who cannot quote
  * shows the reason and Take back. An engineer (owner decision 2026-10-22: engineers see and write no prices) sees who replied and
  * who is waited on, and can chase, but has no Enter or Edit reply: the dialog is a price form and never opens for them.
  *
@@ -63,7 +63,7 @@ import { formatDay } from '@/lib/formatDay'
  * switches it to another supplier (one control instead of a "Show message" on every row; grade-A 9, at most ~25 actions).
  *
  * Phone (grade-A 6 fix 2): the page opens at the first supplier still without a reply (`jump`), and a supplier who has answered
- * (priced, or can't quote) is ONE line, the name and its chip, opening on a tap.
+ * (priced, or cannot quote) is ONE line, the name and its chip, opening on a tap.
  */
 
 export type ChaseMode = 'card' | 'button' | 'none'
@@ -232,7 +232,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   )
 }
 
-/** "Can't quote: reason · date" and Take back, for a supplier who said no to everything. */
+/** "Cannot quote: reason · date" and Take back, for a supplier who said no to everything. */
 function TakeBack({ rfq, inquiry }: { rfq: RfqHeader; inquiry: InquiryRow }) {
   const { toast } = useToast()
   const noOffer = useSetInquiryNoOffer(rfq.id)
@@ -246,11 +246,11 @@ function TakeBack({ rfq, inquiry }: { rfq: RfqHeader; inquiry: InquiryRow }) {
   return (
     <>
       <span className="text-sm text-fg-2">
-        {"Can't quote"}
+        {"Cannot quote"}
         {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
         <span className="text-fg-muted">{` · ${formatDay(inquiry.noOfferOn as string)}`}</span>
       </span>
-      <Button size="sm" variant="quiet" icon={Undo2} onClick={() => void takeBack()} busy={noOffer.isPending} aria-label={`Take back can't quote, ${inquiry.supplierName}`}>
+      <Button size="sm" variant="quiet" icon={Undo2} onClick={() => void takeBack()} busy={noOffer.isPending} aria-label={`Take back cannot quote, ${inquiry.supplierName}`}>
         Take back
       </Button>
     </>

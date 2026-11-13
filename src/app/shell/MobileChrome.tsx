@@ -129,13 +129,13 @@ export function BottomTabs({
                 {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 top-0 h-1 rounded-b bg-brand-green" /> : null}
                 <span className="relative">
                   <Icon icon={item.icon} size="lg" />
-                  {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
+                  {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("To do, 4 due now"). */}
                   <NeedsCount n={count} badge silent className={roomy ? 'left-[calc(100%+2px)]' : 'left-[calc(100%-2px)]'} />
                   {dots?.[item.key] ? <LateDot badge silent className={roomy ? '-right-[14px]' : undefined} /> : null}
                 </span>
                 <span className="whitespace-nowrap">
                   {item.label}
-                  {count ? <span className="sr-only">{`, ${count} need you`}</span> : null}
+                  {count ? <span className="sr-only">{`, ${count} due now`}</span> : null}
                   {dots?.[item.key] ? <span className="sr-only">, an invoice is late</span> : null}
                 </span>
               </>

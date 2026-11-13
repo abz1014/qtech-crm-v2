@@ -29,7 +29,7 @@ export const ORDERS = {
   today: {
     path: '/todo',
     heading: 'To do',
-    loaded: /\d+ need you/,
+    loaded: /\d+ due now/,
   },
   invoice: {
     create: 'Create invoice',

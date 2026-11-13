@@ -124,7 +124,7 @@ async function todayReading(page: Page) {
   const header = page.locator('[data-needs-you-count]')
   await expect(header).toBeVisible()
   const n = Number(await header.innerText())
-  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^To do\\s?, ${n} need you$`) : /^To do$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
+  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^To do\\s?, ${n} due now$`) : /^To do$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
   await showAllTodo(page)
   const rules = await dueRows(page).evaluateAll(ls => ls.map(l => l.getAttribute('data-rule') ?? ''))
   const link = (await nav(page).getByRole('link', { name: /^To do/ }).first().textContent()) ?? ''

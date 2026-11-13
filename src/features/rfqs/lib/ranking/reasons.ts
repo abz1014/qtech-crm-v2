@@ -207,7 +207,7 @@ export function deliveryState(ev: Evidence, today?: string | null): { kind: 'on-
 /**
  * The evidence line, in the owner's words: the order number, the date we placed it and the days to delivery.
  *   tier 0, 1  "Ordered Siemens SITRANS P320 ×4 for ORD-0031, placed 12 Mar 2026, delivered after 19 days (expected 14)"
- *   tier 2, 3  "Ordered in Flow meters 3 times; last for ORD-0027, placed 3 Feb 2026, delivered after 9 days"
+ *   tier 2, 3  "Ordered in Flow meters 3 times, last for ORD-0027, placed 3 Feb 2026, delivered after 9 days"
  *   not yet    "..., placed 1 Nov 2026, not delivered yet"
  */
 export function evidenceReason(ev: Evidence, names: EvidenceNames = {}): Reason {
@@ -220,7 +220,7 @@ export function evidenceReason(ev: Evidence, names: EvidenceNames = {}): Reason 
     parts.push(t(' for '), n(ref))
   } else {
     const scope = ev.tier === 2 ? (names.brand?.trim() ? names.brand.trim() : 'this brand') : names.family?.trim() ? `in ${names.family.trim()}` : 'in this family'
-    parts.push(t(`Ordered ${scope} `), n(times(ev.count ?? 1)), t('; last for '), n(ref))
+    parts.push(t(`Ordered ${scope} `), n(times(ev.count ?? 1)), t(', last for '), n(ref))
   }
   if (ev.placedOn) parts.push(t(', placed '), n(dmy(ev.placedOn)))
   if (ev.deliveredAfterDays !== null) {

@@ -209,7 +209,7 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
                 owe.mutate(
                   { id: claim.id, categoryId },
                   {
-                    onSuccess: () => toast.toast({ title: `Approved, owed to ${claim.byName}`, body: `${label} · ${categories.find(c => c.id === categoryId)?.name ?? ''} · mark it paid back when repaid`, tone: 'success' }),
+                    onSuccess: () => toast.toast({ title: `Approved, to repay ${claim.byName}`, body: `${label} · ${categories.find(c => c.id === categoryId)?.name ?? ''} · mark it paid back when repaid`, tone: 'success' }),
                     onError: e => setError(mapPgError(e, { entity: 'expense' }).message),
                   },
                 )

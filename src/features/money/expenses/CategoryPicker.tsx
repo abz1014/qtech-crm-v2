@@ -345,7 +345,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                     matches.length === activeIndex && 'bg-selected',
                   )}
                 >
-                  <span className="truncate" title={`Other: ‘${typed}’`}>Other: ‘{typed}’</span>
+                  <span className="truncate" title={`Other: '${typed}'`}>Other: &apos;{typed}&apos;</span>
                   <span className="text-xs font-normal text-fg-muted">{sortedGroups.find(g => g.id === misc.groupId)?.name ?? misc.name}</span>
                 </li>
               ) : null}

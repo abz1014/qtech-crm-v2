@@ -5,7 +5,7 @@ const po: SentPo = { ref: 'PO-26-0017', supplierName: 'Alpenmark Controls', item
 
 describe('cancel text for a sent PO', () => {
   it('says which PO went to whom', () => {
-    expect(sentPoSentence(po)).toBe("PO-26-0017 was sent to Alpenmark Controls. Tell them it's cancelled.")
+    expect(sentPoSentence(po)).toBe("PO-26-0017 was sent to Alpenmark Controls. Tell them it has been cancelled.")
   })
   it('names the PO and the items, asks politely, and carries no price', () => {
     const t = cancellationMessage(po, 'Q-Tech Solutions')

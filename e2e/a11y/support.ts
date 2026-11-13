@@ -35,7 +35,7 @@ export const UI = {
   burstAmount: (n: number) => new RegExp(`^Amount, expense ${n}$`),
   burstRemove: (n: number) => new RegExp(`^Remove expense ${n}$`),
   addRow: /^Add a row$/,
-  addItemByHand: /^Add an item by hand$/,
+  addItemByHand: /^Add an item manually$/,
   issue: /Send quotation/,
   issuePoLegA: /^Issue PO, /,
   chase: /record follow-up/i,

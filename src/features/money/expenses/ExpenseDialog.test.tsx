@@ -222,7 +222,7 @@ describe('Add expense dialog (M03)', () => {
 
     it('a closed month shows the lock line and no Delete', async () => {
       setup({ expense, closed: ['2026-11'] })
-      expect(await screen.findByTestId('expense-closed-line')).toHaveTextContent('Month closed. Reopen the month first, in Lock a month, to change or delete.')
+      expect(await screen.findByTestId('expense-closed-line')).toHaveTextContent('Month locked. Reopen the month first, in Lock a month, to change or delete.')
       expect(screen.queryByRole('button', { name: 'Delete expense' })).not.toBeInTheDocument()
     })
   })

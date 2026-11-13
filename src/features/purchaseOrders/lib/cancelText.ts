@@ -11,8 +11,8 @@ export interface SentPo {
   contact?: { name: string; phone: string | null; email: string | null } | null
 }
 
-/** "PO-26-0017 was sent to Alpenmark. Tell them it's cancelled." One sentence per PO. */
-export const sentPoSentence = (po: SentPo): string => `${po.ref} was sent to ${po.supplierName}. Tell them it's cancelled.`
+/** "PO-26-0017 was sent to Alpenmark. Tell them it has been cancelled." One sentence per PO. */
+export const sentPoSentence = (po: SentPo): string => `${po.ref} was sent to ${po.supplierName}. Tell them it has been cancelled.`
 
 const qtyText = (i: SentPo['items'][number]): string => `${i.qty}${i.unit ? ` ${i.unit}` : ''}`
 
