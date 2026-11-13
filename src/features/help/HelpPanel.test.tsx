@@ -32,7 +32,6 @@ const panel = () => screen.getByRole('dialog', { name: 'Help' })
 
 describe('Help panel', () => {
   it('lists the screen\'s recipes, then the role\'s own by area; other roles only on request', async () => {
-    const user = userEvent.setup()
     render(<Harness role="engineer" pathname="/jobs/123" />)
     const forScreen = within(panel()).getByRole('region', { name: 'For this screen' })
     expect(within(forScreen).getAllByRole('button').length).toBeLessThanOrEqual(3)
@@ -40,8 +39,47 @@ describe('Help panel', () => {
     expect(within(orders).getByRole('button', { name: 'Mark goods delivered' })).toBeInTheDocument()
     expect(within(panel()).queryByRole('region', { name: 'Money' })).toBeNull()
     expect(within(panel()).queryByRole('button', { name: 'Lock a month' })).toBeNull()
+    // An engineer is not offered other roles' help at all (live bug 33).
+    expect(within(panel()).queryByRole('checkbox', { name: "Show other roles' help" })).toBeNull()
+  })
+
+  it("a sales person can still show other roles' help; admin sees everything with no checkbox", async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<Harness role="sales" pathname="/todo" />)
+    expect(within(panel()).queryByRole('button', { name: 'Lock a month' })).toBeNull()
     await user.click(within(panel()).getByRole('checkbox', { name: "Show other roles' help" }))
     expect(within(panel()).getByRole('region', { name: 'Money' })).toHaveTextContent('Lock a month')
+    unmount()
+    render(<Harness role="admin" pathname="/todo" />)
+    expect(within(panel()).queryByRole('checkbox', { name: "Show other roles' help" })).toBeNull()
+    expect(within(panel()).getByRole('button', { name: 'Lock a month' })).toBeInTheDocument()
+  })
+
+  it('an engineer cannot open a non-engineer recipe through a ?help= id or a related link (owner decision D)', () => {
+    const recipes = allRecipes()
+    const blocked = recipes.find(r => !r.roles.includes('engineer'))!
+    render(<Harness role="engineer" pathname="/jobs/123" start={blocked.id} />)
+    expect(within(panel()).queryByRole('heading', { name: n => n.includes(blocked.title) })).toBeNull()
+    expect(within(panel()).getByText('That help page is not here any more. Pick one below.')).toBeInTheDocument()
+  })
+
+  it("an engineer's recipe does not link to a recipe the engineer cannot open", () => {
+    const recipes = allRecipes()
+    const mine = recipes.filter(r => r.roles.includes('engineer'))
+    const withHidden = mine.find(r => r.related.some(id => recipes.find(x => x.id === id && !x.roles.includes('engineer'))))
+    if (!withHidden) return // no engineer recipe links to a non-engineer one today; the id test above covers the direct route
+    render(<Harness role="engineer" start={withHidden.id} />)
+    const next = within(panel()).queryByRole('region', { name: 'Next' })
+    for (const id of withHidden.related) {
+      const r = recipes.find(x => x.id === id)
+      if (r && !r.roles.includes('engineer') && next) expect(within(next).queryByRole('button', { name: r.title })).toBeNull()
+    }
+  })
+
+  it('an admin can open any recipe by id', () => {
+    const blocked = allRecipes().find(r => !r.roles.includes('engineer'))!
+    render(<Harness role="admin" start={blocked.id} />)
+    expect(within(panel()).getByRole('heading', { name: n => n.includes(blocked.title) })).toBeInTheDocument()
   })
 
   it('opens a recipe with its steps and labels as chips, focuses its title, and goes back to the list', async () => {
