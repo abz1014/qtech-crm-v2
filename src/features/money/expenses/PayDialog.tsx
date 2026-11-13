@@ -184,7 +184,7 @@ function PayFormReady({
               ? `That is PKR ${rate.toLocaleString('en-US', { maximumFractionDigits: 2 })} per ${currency}. Charges go in the next box.`
               : 'What reached the supplier, from your bank statement. Charges go in the next box.'
             : !foreign && owedPkr
-              ? `Still owed: ${pkr(owedPkr)}${context.amountNote ? ` (${context.amountNote})` : ''}`
+              ? `Still owed: ${pkr(owedPkr)}${context.amountNote ? ` (${context.amountNote.replace(/^still oweds*/i, '')})` : ''}`
               : 'What reached the supplier. Charges go in the next box.'}
         </span>
       </label>

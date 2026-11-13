@@ -389,14 +389,14 @@ describe('burst entry sheet (M11)', () => {
     expect(within(list).getAllByRole('option').slice(0, 2).map(o => o.textContent)).toEqual(['Office supplies & snackscash', 'Fuel & travelcash'])
   })
 
-  it('"Monthly": Save adds the recurring template first, then the expense linked to it for its month', async () => {
+  it('"Every month": Save adds the recurring template first, then the expense linked to it for its month', async () => {
     const user = userEvent.setup()
     const db = setup()
     const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
     await waitFor(() => expect(amount).toHaveFocus())
     await user.keyboard('85000')
     await user.type(screen.getByRole('combobox', { name: 'Detail, row 1' }), 'Office rent')
-    await user.click(screen.getByRole('checkbox', { name: 'Monthly' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Every month' }))
     await user.click(screen.getByRole('button', { name: /^Save 1 expense/ }))
     await waitFor(() => expect(saves(db)).toHaveLength(1))
     const tplCall = db.calls.find(c => c.target === 'recurring_expenses' && c.verb === 'insert')!
