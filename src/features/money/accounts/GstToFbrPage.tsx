@@ -126,6 +126,19 @@ function MonthCard({ l }: { l: GstLine }) {
   )
 }
 
+/** Each payment slip on its own line with the day its money went in (a month can be paid in more than one deposit). */
+function PsidDays({ l }: { l: GstLine }) {
+  return (
+    <ul className="grid gap-px" aria-label="Payment slips">
+      {l.psidDeposits.map(d => (
+        <li key={d.psid} className="num [overflow-wrap:anywhere]" data-testid={`psid-${d.psid}`}>
+          PSID {d.psid}, {d.on ? `deposited ${formatDay(d.on)}` : 'not deposited yet'}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function Status({ l }: { l: GstLine }) {
   if (l.tone === 'paid')
     return (
@@ -134,7 +147,7 @@ function Status({ l }: { l: GstLine }) {
           <Icon icon={CircleCheck} />
           Paid{l.paidOn ? ` ${formatDay(l.paidOn)}` : ''}
         </span>
-        {l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">Payment slip no. (PSID) {l.psids.join(', ')}</span> : null}
+        {l.psidDeposits.length > 1 ? <PsidDays l={l} /> : l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">Payment slip no. (PSID) {l.psids.join(', ')}</span> : null}
         {Number(l.deposited) > 0 ? <span className="num text-fg-2">Deposited PKR {rs(l.deposited)}</span> : null}
       </div>
     )
@@ -151,7 +164,7 @@ function Status({ l }: { l: GstLine }) {
         {l.tone === 'late' ? `Late: was due ${formatDay(l.payBy)}` : `Pay by ${formatDay(l.payBy)}${l.payOverridden ? ' (date moved)' : ''}`}
       </span>
       <span>Return by {formatDay(l.returnBy)}{l.returnOverridden ? ' (date moved)' : ''}</span>
-      {l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">PSID {l.psids.join(', ')} (not deposited yet)</span> : null}
+      {l.psidDeposits.length > 1 && l.psidDeposits.some(d => d.on) ? <PsidDays l={l} /> : l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">PSID {l.psids.join(', ')} (not deposited yet)</span> : null}
     </div>
   )
 }
