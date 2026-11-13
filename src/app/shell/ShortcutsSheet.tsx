@@ -2,7 +2,8 @@ import { Fragment, useMemo } from 'react'
 import { Keyboard } from 'lucide-react'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Kbd } from '@/ui/Kbd'
-import { GROUP_NOTES, KEY_WORDS, SHORTCUT_GROUPS, shortcutList, type Shortcut } from '@/app/shell/shortcuts'
+import { useSession } from '@/app/session'
+import { KEY_WORDS, SHORTCUT_GROUPS, groupNote, shortcutsFor, type Shortcut } from '@/app/shell/shortcuts'
 
 /*
  * Keyboard shortcuts sheet (spec round 2, 4.2). A 520 px dialog drawn from the one list in shortcuts.ts, in its five
@@ -10,19 +11,23 @@ import { GROUP_NOTES, KEY_WORDS, SHORTCUT_GROUPS, shortcutList, type Shortcut } 
  * Loaded lazily by PaletteHost: it costs nothing until someone asks for it.
  */
 export function ShortcutsSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const list = useMemo(() => shortcutList(), [])
+  const session = useSession()
+  const role = session.status === 'signed-in' ? session.user.role : undefined
+  const list = useMemo(() => shortcutsFor(role), [role])
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title="Keyboard shortcuts" icon={Keyboard} size="md">
         {SHORTCUT_GROUPS.map(group => {
           const rows = list.filter(s => s.group === group)
+          if (rows.length === 0) return null
+          const note = groupNote(group, role)
           const id = `shortcuts-${group.replace(/\W+/g, '-').toLowerCase()}`
           return (
             <section key={group} aria-labelledby={id} className="grid gap-2">
               <h3 id={id} className="text-base font-semibold text-fg">
                 {group}
               </h3>
-              {GROUP_NOTES[group] ? <p className="text-sm text-fg-2 text-pretty">{GROUP_NOTES[group]}</p> : null}
+              {note ? <p className="text-sm text-fg-2 text-pretty">{note}</p> : null}
               <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2">
                 {rows.map(s => (
                   <Fragment key={`${s.what}|${s.keys.join(' ')}`}>
