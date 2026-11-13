@@ -171,4 +171,19 @@ describe('SupplierReplyDialog', () => {
     await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Paste what they sent' })).toBeNull())
     expect(screen.queryByText(/This looks like/)).toBeNull()
   })
+
+  it("each item has a visible Cannot offer toggle; a reason is saved as that item's decline", async () => {
+    const writes: FakeCall[] = []
+    installFakeDb(call => {
+      if (call.target === 'inquiry_item_declines') writes.push(call)
+      return { data: [] }
+    })
+    const user = userEvent.setup()
+    renderDialog()
+    expect(screen.queryByText('A different reason for one item')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Cannot offer item 1 from Orient Analytical' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Item discontinued' }))
+    await waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0].verb).toBe('upsert')
+  })
 })

@@ -21,7 +21,21 @@ const schema = z.object({
   contact: z.string().trim().optional(),
 })
 
-export function CreateCompanyInline({ initialName, onCreated, onCancel }: { initialName: string; onCreated: (c: CreatedCompany) => void; onCancel: () => void }) {
+export function CreateCompanyInline({
+  initialName,
+  onCreated,
+  onCancel,
+  noun = 'company',
+  submitVariant = 'primary',
+}: {
+  initialName: string
+  onCreated: (c: CreatedCompany) => void
+  onCancel: () => void
+  /** What the form calls the new row: the supplier forms on the RFQ page say "supplier" (the role itself comes from the first inquiry). */
+  noun?: 'company' | 'supplier'
+  /** The RFQ page already has its one green button, so its supplier form asks with a secondary one. */
+  submitVariant?: 'primary' | 'secondary'
+}) {
   const create = useCreateCompany()
   const [duplicate, setDuplicate] = useState<CompanyHit | null>(null)
   const savedId = useRef('')
@@ -44,7 +58,7 @@ export function CreateCompanyInline({ initialName, onCreated, onCancel }: { init
     onSuccess: v => onCreated({ id: savedId.current, name: v.name, city: v.city || null }),
   })
   return (
-    <section aria-label="New company" className="m-1 grid gap-3 rounded-panel border bg-sunken p-4">
+    <section aria-label={noun === 'supplier' ? 'New supplier' : 'New company'} className="m-1 grid gap-3 rounded-panel border bg-sunken p-4">
       <Form sf={sf} labels={{ name: 'Company name' }}>
         <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <FormField
@@ -74,7 +88,7 @@ export function CreateCompanyInline({ initialName, onCreated, onCancel }: { init
         </div>
       </Form>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" form={sf.formId} variant="primary" size="sm" icon={Check} busy={sf.pending} busyLabel="Creating">
+        <Button type="submit" form={sf.formId} variant={submitVariant} size="sm" icon={Check} busy={sf.pending} busyLabel="Creating">
           {sf.formError ? 'Try again' : 'Create and use'}
         </Button>
         <Button variant="quiet" size="sm" onClick={onCancel} disabled={sf.pending}>

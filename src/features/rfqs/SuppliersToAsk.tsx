@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, FileCheck } from 'lucide-react'
+import { ClipboardCheck, Copy, FileCheck, MessageSquareReply } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Checkbox } from '@/ui/form/Checkbox'
@@ -9,6 +9,7 @@ import { Skeleton } from '@/ui/Skeleton'
 import { PartialNote, ReasonParts } from '@/features/rfqs/ranking/RankParts'
 import type { RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
+import { FindSupplier, type FoundSupplier } from '@/features/rfqs/FindSupplier'
 import type { SupplierSuggestion } from '@/features/rfqs/lib'
 
 /*
@@ -21,12 +22,63 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib'
  */
 const copyLabel = (n: number) => `Copy message for ${n} ${n === 1 ? 'supplier' : 'suppliers'}`
 
-/** The ticked suppliers, starting with the pre-ticked ones; a tick or untick by hand is kept. */
+/** Who is asked: only the name and the id are used. */
+export type TickedSupplier = Pick<SupplierSuggestion, 'supplierId' | 'name'>
+
+/**
+ * The ticked suppliers, starting with the pre-ticked ones; a tick or untick by hand is kept. A supplier found or added with
+ * "Search or add a supplier" who is not in the suggestions is listed under "Added by you", ticked.
+ */
 function useTicks(suggestions: readonly SupplierSuggestion[] | undefined) {
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [added, setAdded] = useState<FoundSupplier[]>([])
+  const listed = (id: string) => (suggestions ?? []).some(s => s.supplierId === id)
   const isTicked = (s: SupplierSuggestion) => touched[s.supplierId] ?? s.preTicked
-  const ticked = (suggestions ?? []).filter(isTicked)
-  return { isTicked, ticked, set: (id: string, on: boolean) => setTouched(t => ({ ...t, [id]: on })) }
+  const extras = added.filter(a => !listed(a.id))
+  const addedTicked = (a: FoundSupplier) => touched[a.id] ?? true
+  const ticked: TickedSupplier[] = [
+    ...(suggestions ?? []).filter(isTicked),
+    ...extras.filter(addedTicked).map(a => ({ supplierId: a.id, name: a.name })),
+  ]
+  return {
+    isTicked,
+    ticked,
+    extras,
+    addedTicked,
+    set: (id: string, on: boolean) => setTouched(t => ({ ...t, [id]: on })),
+    pick: (f: FoundSupplier) => {
+      setTouched(t => ({ ...t, [f.id]: true }))
+      setAdded(a => (a.some(x => x.id === f.id) ? a : [...a, f]))
+    },
+  }
+}
+
+/** "Search or add a supplier", and the ones found or added so far, ticked. */
+function FindAndAdded({ t, excludeIds }: { t: ReturnType<typeof useTicks>; excludeIds?: ReadonlySet<string> }) {
+  return (
+    <>
+      {t.extras.length > 0 ? (
+        <ul data-slot="added-suppliers">
+          <li className="border-t bg-sunken px-5 py-2 text-base font-semibold">Added by you</li>
+          {t.extras.map(a => {
+            const id = `ask-${a.id}`
+            return (
+              <li key={a.id} className="relative flex min-w-0 items-center gap-3 border-t px-5 py-3">
+                <Checkbox id={id} checked={t.addedTicked(a)} onCheckedChange={v => t.set(a.id, v === true)} aria-label={a.name} />
+                <label htmlFor={id} className="min-w-0 text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
+                  {a.name}
+                  {a.city ? <span className="ml-2 text-xs font-regular text-fg-muted">{a.city}</span> : null}
+                </label>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+      <div className="border-t px-5 py-3">
+        <FindSupplier excludeIds={excludeIds} onPick={t.pick} />
+      </div>
+    </>
+  )
 }
 
 function PickList({
@@ -114,6 +166,9 @@ export function SuppliersToAskCard({
   items,
   busy,
   onAsk,
+  onRecord,
+  onReplyFrom,
+  excludeIds,
   coverage,
   partial,
 }: {
@@ -125,7 +180,13 @@ export function SuppliersToAskCard({
   coverage?: string | null
   items: readonly RfqItemRow[]
   busy: boolean
-  onAsk: (ticked: readonly SupplierSuggestion[]) => void
+  /** Never found by "Search or add a supplier": the customer itself. */
+  excludeIds?: ReadonlySet<string>
+  onAsk: (ticked: readonly TickedSupplier[]) => void
+  /** "Record as asked": the ticked suppliers are recorded as asked, nothing is copied. */
+  onRecord: (ticked: readonly TickedSupplier[]) => void
+  /** "Enter reply from another supplier"; left out for a person who does not see prices. */
+  onReplyFrom?: () => void
 }) {
   const t = useTicks(suggestions)
   return (
@@ -135,15 +196,22 @@ export function SuppliersToAskCard({
           <Skeleton className="h-10" />
           <Skeleton className="h-10" />
         </div>
-      ) : suggestions.length === 0 ? (
-        <Empty coverage={coverage} />
       ) : (
         <>
-          <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />
-          <div className="border-t px-5 py-3">
+          {suggestions.length === 0 ? <Empty coverage={coverage} /> : <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />}
+          <FindAndAdded t={t} excludeIds={excludeIds} />
+          <div className="flex flex-wrap items-center gap-2 border-t px-5 py-3">
             <Button icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0 || items.length === 0} onClick={() => onAsk(t.ticked)}>
               {t.ticked.length === 0 ? 'Tick a supplier to ask' : copyLabel(t.ticked.length)}
             </Button>
+            <Button variant="quiet" icon={ClipboardCheck} disabled={t.ticked.length === 0 || busy} onClick={() => onRecord(t.ticked)}>
+              Record as asked
+            </Button>
+            {onReplyFrom ? (
+              <Button variant="quiet" icon={MessageSquareReply} onClick={onReplyFrom}>
+                Enter reply from another supplier
+              </Button>
+            ) : null}
           </div>
         </>
       )}
@@ -158,17 +226,21 @@ export function FloatDialog({
   itemCount,
   busy,
   onAsk,
+  onRecord,
+  excludeIds,
   onClose,
   coverage,
   partial,
 }: {
   title?: string
+  excludeIds?: ReadonlySet<string>
+  onRecord: (ticked: readonly TickedSupplier[]) => void
   partial?: boolean
   coverage?: string | null
   suggestions: readonly SupplierSuggestion[] | undefined
   itemCount: number
   busy: boolean
-  onAsk: (ticked: readonly SupplierSuggestion[]) => void
+  onAsk: (ticked: readonly TickedSupplier[]) => void
   onClose: () => void
 }) {
   const t = useTicks(suggestions)
@@ -183,6 +255,9 @@ export function FloatDialog({
             <Button data-cancel onClick={onClose} disabled={busy}>
               Cancel
             </Button>
+            <Button icon={ClipboardCheck} disabled={t.ticked.length === 0 || busy} onClick={() => onRecord(t.ticked)}>
+              Record as asked
+            </Button>
             <Button variant="primary" icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0} onClick={() => onAsk(t.ticked)}>
               {t.ticked.length === 0 ? 'Tick a supplier' : copyLabel(t.ticked.length)}
             </Button>
@@ -191,11 +266,10 @@ export function FloatDialog({
       >
         {suggestions === undefined ? (
           <Skeleton className="h-[6rem]" />
-        ) : suggestions.length === 0 ? (
-          <Empty coverage={coverage} />
         ) : (
           <div className="-mx-5 -my-2">
-            <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />
+            {suggestions.length === 0 ? <Empty coverage={coverage} /> : <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />}
+            <FindAndAdded t={t} excludeIds={excludeIds} />
           </div>
         )}
       </DialogContent>

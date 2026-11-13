@@ -34,6 +34,7 @@ const QuotationsPanel = lazyWithReload(() => import('@/features/quotations/Quota
 const SuppliersAsked = lazyWithReload(() => import('@/features/rfqs/SuppliersAsked').then(m => ({ default: m.SuppliersAsked })))
 const SuppliersToAskCard = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.SuppliersToAskCard })))
 const FloatDialog = lazyWithReload(() => import('@/features/rfqs/SuppliersToAsk').then(m => ({ default: m.FloatDialog })))
+const ReplyFromOther = lazyWithReload(() => import('@/features/rfqs/ReplyFromOther').then(m => ({ default: m.ReplyFromOther })))
 const ClarificationsPanel = lazyWithReload(() => import('@/features/rfqs/ClarificationsPanel').then(m => ({ default: m.ClarificationsPanel })))
 const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
 const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/ExpenseDialog').then(m => m.AddExpenseDialog))
@@ -133,7 +134,10 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const today = businessToday()
-  const { ask, busy: asking } = useAskSuppliers(rfq, inquiryList)
+  const { ask, record, busy: asking } = useAskSuppliers(rfq, inquiryList)
+  // "Enter reply from another supplier": the picker, and the supplier whose reply dialog should open once it is under Suppliers asked.
+  const [pickingReply, setPickingReply] = useState(false)
+  const [replyFor, setReplyFor] = useState<string | null>(null)
   const [lastAsk, clearLastAsk] = useLastAsk(rfq.id)
 
   const candidates = useSupplierCandidates(true)
@@ -167,6 +171,20 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
   const sent = quotationSent({ bidState: rfq.state?.bid_state, quotationCount })
   const chaseMode: ChaseMode = !open || sent ? 'none' : hasPrices ? 'button' : 'card'
   const askFrom = async (ticked: readonly { supplierId: string; name: string }[], list: RfqItemRow[]) => ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
+  const recordFrom = async (ticked: readonly { supplierId: string; name: string }[]) => record({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name) })
+  // Never found by "Search or add a supplier": the customer itself, and suppliers already asked.
+  const askExclude = useMemo(() => new Set([rfq.company.id, ...inquiryList.filter(i => i.sentOn || i.noOfferOn).map(i => i.supplierId)]), [rfq.company.id, inquiryList])
+  const replyExclude = useMemo(() => new Set([rfq.company.id]), [rfq.company.id])
+  // A reply is prices: an engineer is never offered it.
+  const onReplyFrom = prices ? () => setPickingReply(true) : undefined
+  const replyFromPicked = async (s: { id: string; name: string }) => {
+    const have = inquiryList.find(i => i.supplierId === s.id)
+    if (!have || (!have.sentOn && !have.noOfferOn)) {
+      if (!(await record({ supplierIds: [s.id], names: [s.name] })).ok) return
+    }
+    setPickingReply(false)
+    setReplyFor(s.id)
+  }
   const chaseable = inquiryList.filter(i => canChaseInquiry(i, itemList)).length
 
   return (
@@ -181,9 +199,19 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
       {lastAsk ? <SendToEachCard ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
       <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
         {nobodyAsked ? (
-          <SuppliersToAskCard suggestions={askList} items={itemList} busy={asking} coverage={coverage} partial={extras.partial} onAsk={ticked => void askFrom(ticked, itemList)} />
+          <SuppliersToAskCard
+            suggestions={askList}
+            items={itemList}
+            busy={asking}
+            coverage={coverage}
+            partial={extras.partial}
+            excludeIds={askExclude}
+            onAsk={ticked => void askFrom(ticked, itemList)}
+            onRecord={ticked => void recordFrom(ticked)}
+            onReplyFrom={onReplyFrom}
+          />
         ) : (
-          <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} rates={rates} chase={chaseMode} onFloat={() => setFloating(true)} />
+          <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} rates={rates} chase={chaseMode} onFloat={() => setFloating(true)} onReplyFrom={onReplyFrom} openFor={replyFor} onOpened={() => setReplyFor(null)} />
         )}
       </Suspense>
       <ItemsPanel
@@ -208,12 +236,24 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
           <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} />
         </Suspense>
       ) : null}
+      {pickingReply ? (
+        <Suspense fallback={null}>
+          <ReplyFromOther
+            excludeIds={replyExclude}
+            busy={asking}
+            onClose={() => setPickingReply(false)}
+            onPick={s => void replyFromPicked(s)}
+          />
+        </Suspense>
+      ) : null}
       {floating ? (
         <Suspense fallback={null}>
           <FloatDialog
             title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
             suggestions={askList}
- coverage={coverage}
+            coverage={coverage}
+            excludeIds={askExclude}
+            onRecord={ticked => void recordFrom(ticked).then(r => r.ok && setFloating(false))}
             itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
             busy={asking}
             onClose={() => setFloating(false)}
