@@ -79,13 +79,13 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k)))
     await share(page, 'Reply: line size is 4 inch.')
     await page.waitForURL(/\/login/)
-    await expect(page.getByText('Your shared item is safe')).toBeVisible()
+    await expect(page.getByText('Shared item kept on this device')).toBeVisible()
     await page.getByLabel('Email').fill('sales@test.invalid')
     await page.getByLabel('Password', { exact: true }).fill('fixture-only-password')
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(page.getByTestId('share-target')).toBeVisible()
     await expect(page.getByText('Reply: line size is 4 inch.')).toBeVisible()
-    await expect(page.getByText('Your shared item is back')).toBeVisible()
+    await expect(page.getByText('Shared item restored')).toBeVisible()
   })
 
   test('an item older than 7 days is gone, and the page says so', async ({ page }) => {

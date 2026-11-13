@@ -32,8 +32,8 @@ describe('sign-in offline (phone audit 2c)', () => {
   it('offline: says to sign in again when there is signal, and offers no form that cannot work', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
     mount()
-    expect(screen.getByRole('heading', { name: 'You’re offline' })).toBeInTheDocument()
-    expect(screen.getByText(/Sign in again when you have signal/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'No connection' })).toBeInTheDocument()
+    expect(screen.getByText(/Sign in again when the connection returns/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Email')).toBeNull()
   })
 

@@ -67,11 +67,11 @@ describe('iPhone Safari hint', () => {
     asIphone()
     const user = userEvent.setup()
     const { container } = render(<InstallBanner />)
-    expect(screen.getByText('Add Q-Tech CRM to your home screen')).toBeInTheDocument()
+    expect(screen.getByText('Add Q-Tech CRM to the home screen')).toBeInTheDocument()
     expect(container).toHaveTextContent('Share in Safari, then Add to Home Screen.')
     expect(await axeViolations(container)).toEqual([])
     await user.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(screen.queryByText('Add Q-Tech CRM to your home screen')).toBeNull()
+    expect(screen.queryByText('Add Q-Tech CRM to the home screen')).toBeNull()
     expect(window.localStorage.getItem(IOS_BANNER_KEY)).toBe('1')
   })
 
@@ -82,7 +82,7 @@ describe('iPhone Safari hint', () => {
         <PwaPrompts />
       </ToastProvider>,
     )
-    expect(screen.getByText('Tap Share, then Add to Home Screen.')).toBeInTheDocument()
+    expect(screen.getByText('Select Share, then Add to Home Screen.')).toBeInTheDocument()
     expect(window.localStorage.getItem(IOS_HINT_KEY)).toBe('1')
     first.unmount()
     render(
@@ -90,7 +90,7 @@ describe('iPhone Safari hint', () => {
         <PwaPrompts />
       </ToastProvider>,
     )
-    expect(screen.queryByText('Tap Share, then Add to Home Screen.')).toBeNull()
+    expect(screen.queryByText('Select Share, then Add to Home Screen.')).toBeNull()
   })
 
   it('shows nothing on other browsers', () => {

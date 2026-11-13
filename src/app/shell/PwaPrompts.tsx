@@ -28,17 +28,17 @@ export function PwaPrompts() {
         action: {
           label: 'Reload',
           onClick: () => {
-            if (applyUpdate() === 'blocked') offer('Save your changes, then reload', 'The update waits until your form is saved.')
+            if (applyUpdate() === 'blocked') offer('Save your changes, then reload', 'The update waits until the form is saved.')
           },
         },
       })
-    offer('New version ready', 'Reload to update (your typing is kept).')
+    offer('New version ready', 'Reload to update. Entered details are kept.')
   }, [updateReady, toast])
 
   useEffect(() => {
     if (!showIosHint || readFlag(IOS_HINT_KEY)) return
     writeFlag(IOS_HINT_KEY)
-    toast({ title: 'Add Q-Tech CRM to your home screen', body: 'Tap Share, then Add to Home Screen.', duration: 15000 })
+    toast({ title: 'Add Q-Tech CRM to the home screen', body: 'Select Share, then Add to Home Screen.', duration: 15000 })
   }, [showIosHint, toast])
 
   return null

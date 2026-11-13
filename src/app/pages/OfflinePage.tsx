@@ -14,8 +14,8 @@ import { Icon } from '@/ui/Icon'
  *  - OfflineSignInPage: signed out and offline. Signing in needs signal, so the form is not shown at all.
  */
 const COPY: Record<Exclude<Connection, 'online'>, { title: string; body: string }> = {
-  offline: { title: 'You’re offline', body: 'Showing what’s saved; changes need signal.' },
-  reconnecting: { title: 'Reconnecting', body: 'Showing what’s saved; changes need signal.' },
+  offline: { title: 'No connection', body: 'Saved records are shown. Changes need a connection.' },
+  reconnecting: { title: 'Reconnecting', body: 'Saved records are shown. Changes need a connection.' },
 }
 
 export function OfflineBanner({ connection }: { connection: Exclude<Connection, 'online'> }) {
@@ -75,9 +75,9 @@ export function OfflineWaitingPage({ connection }: { connection: Exclude<Connect
   }
   return (
     <Frame>
-      <Lead icon={connection === 'offline' ? WifiOff : CloudOff} title={connection === 'offline' ? 'You’re offline' : 'Can’t reach Q-Tech yet'}>
-        <p>You’re still signed in. Q-Tech opens by itself as soon as there is signal.</p>
-        <p>Anything you shared to Q-Tech is kept on this phone.</p>
+      <Lead icon={connection === 'offline' ? WifiOff : CloudOff} title={connection === 'offline' ? 'No connection' : 'Q-Tech CRM cannot be reached yet'}>
+        <p>You are still signed in. Q-Tech CRM reopens when the connection returns.</p>
+        <p>Anything shared to Q-Tech CRM is kept on this device.</p>
       </Lead>
       <Button icon={RefreshCw} busy={trying} busyLabel="Trying" onClick={() => void tryAgain()} className="w-full">
         Try again
@@ -89,8 +89,8 @@ export function OfflineWaitingPage({ connection }: { connection: Exclude<Connect
 export function OfflineSignInPage({ children }: { children?: ReactNode }) {
   return (
     <Frame>
-      <Lead icon={WifiOff} title="You’re offline">
-        <p>Sign in again when you have signal. This page changes to the sign-in form by itself.</p>
+      <Lead icon={WifiOff} title="No connection">
+        <p>Sign in again when the connection returns. This page changes to the sign-in form automatically.</p>
       </Lead>
       {children}
     </Frame>
