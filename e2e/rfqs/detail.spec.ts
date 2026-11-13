@@ -726,7 +726,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.getByText('No price yet', { exact: true })).toBeVisible()
     await expect(one.getByText(/None of the 1 supplier who replied quoted this item/)).toBeVisible()
-    await expect(one.getByText(/Ask someone else before the quotation is due\./)).toBeVisible()
+    await expect(one.getByText(/Ask another supplier before the quotation is due./)).toBeVisible()
     await resetClipboard(page)
     await one.getByRole('button', { name: `Copy message for ${s.carrier!.name}` }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Message copied' })).toBeVisible()
