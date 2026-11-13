@@ -113,7 +113,7 @@ export function CantQuoteMenu({ supplierName, busy, onPick, className }: { suppl
       </PopoverTrigger>
       <PopoverContent variant="menu" align="start" side="top" aria-label="Reason">
         <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
-          One tap records the reason
+          Choose a reason to record it
         </p>
         {CANT_QUOTE_REASONS.map(r => (
           <MenuItem key={r.key} onClick={() => onPick(r.key)}>
@@ -479,7 +479,7 @@ export function SupplierReplyDialog({
                             </PopoverTrigger>
                             <PopoverContent variant="menu" align="end" side="bottom" aria-label="Reason">
                               <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
-                                One tap records the reason
+                                Choose a reason to record it
                               </p>
                               {CANT_QUOTE_REASONS.map(r => (
                                 <MenuItem
