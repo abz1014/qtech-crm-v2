@@ -305,7 +305,7 @@ export function rpcEntry(text: string): { entry: RpcEntry; m: RegExpMatchArray }
 
 /** Server texts say "Rs 1,200.00" and "closed" for a month; the app says PKR and locked (decisions I and H). */
 export function rupeesToPkr(text: string): string {
-  return text.replace(/\bRs\.? ?(?=[\d.-])/g, 'PKR ')
+  return text.replace(/\bRs\.? ?(?=\S)/g, 'PKR ')
 }
 
 function plainWording(text: string): string {
