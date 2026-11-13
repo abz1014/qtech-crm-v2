@@ -22,6 +22,7 @@ const REGISTER = [
   row('2', '2026-10-12', 'INV-0104', 'Karachi Refinery Services', 942000.1, 169560.02),
   row('3', '2026-09-25', 'INV-0103', 'Sindh Gas Pipelines', 1375000, 247500),
 ]
+const WITH_VOID = [...REGISTER, { ...row('4', '2026-10-05', 'INV-0101', 'Voided Co', 100, 18), voided_at: '2026-10-06T00:00:00Z' }, { ...row('5', '2026-10-06', 'CN-0001', 'Credit Co', -100, -18), row_kind: 'credit_note' }]
 
 const desktopMedia = window.matchMedia
 function phone() {
@@ -33,9 +34,9 @@ afterEach(() => {
   installFakeDb(() => ({})).uninstall()
 })
 
-function mount(role: 'admin' | 'sales') {
+function mount(role: 'admin' | 'sales', data: object[] = REGISTER) {
   phone()
-  installFakeDb(c => (c.target === 'v_gst_register' ? { data: REGISTER } : { data: [] }))
+  installFakeDb(c => (c.target === 'v_gst_register' ? { data } : { data: [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
@@ -76,6 +77,13 @@ describe('Invoices on a phone: admin', () => {
     expect(october).toHaveTextContent('Gross3,355,920')
     const september = rows.find(r => r.textContent?.includes('September 2026') && r.getAttribute('data-row-kind') === 'group')
     expect(september).toHaveTextContent('Net1,375,000')
+  })
+
+  it('the month header counts invoices only, not a void invoice or a credit note', async () => {
+    mount('admin', WITH_VOID)
+    await screen.findByText('INV-0108')
+    const october = screen.getAllByRole('row').find(r => r.textContent?.includes('October 2026') && r.getAttribute('data-row-kind') === 'group')
+    expect(october).toHaveTextContent('2 invoices')
   })
 
   it('a tap unfolds Net, GST, Open invoice and PDF; a second tap folds it', async () => {

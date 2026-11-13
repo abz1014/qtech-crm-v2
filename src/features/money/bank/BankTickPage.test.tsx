@@ -118,6 +118,18 @@ beforeEach(() => {
 })
 
 describe('Bank check (M12, the old Bank tick)', () => {
+  it('draws a loading row with the same cells as a loaded row', async () => {
+    mount()
+    const skel = screen.getAllByTestId('bank-skeleton-row')[0]
+    const skelCells = skel.children.length
+    const skelLines = skel.children[2].children.length
+    await screen.findByTestId('bank-out')
+    const row = screen.getAllByTestId('bank-row')[0]
+    expect(row.children.length).toBe(skelCells)
+    expect(skelCells).toBe(4)
+    expect(row.children[2].children.length).toBe(skelLines) // the title cell is two lines (name, then detail)
+  })
+
   it('is reached from Lock a month with a back link, never a third strip of tabs', async () => {
     mount()
     await screen.findByTestId('bank-out')

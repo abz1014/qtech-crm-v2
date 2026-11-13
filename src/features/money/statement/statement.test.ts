@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildStatement, financialYearStart, fixed, toLines, type RawStatementLine } from './model'
+import { buildStatement, financialYearStart, fixed, grouped, toLines, type RawStatementLine } from './model'
 
 const raw = (line_on: string, kind: string, debit: number, credit: number, ref: string, seq: number): RawStatementLine => ({
   line_on, kind, ref, order_number: 7, note: null, debit, credit, seq,
@@ -69,3 +69,14 @@ describe('single-order statement (0127): applied credit', () => {
   })
 })
 
+describe('amounts on the screen carry thousands commas; the PDF and CSV text does not', () => {
+  it('groups by thousands, keeps paisa and the minus sign, and leaves fixed alone', () => {
+    expect(grouped(123450n)).toBe('1,234.50')
+    expect(grouped(100000000n)).toBe('1,000,000.00')
+    expect(grouped(68000n)).toBe('680.00')
+    expect(grouped(-138000n)).toBe('-1,380.00')
+    expect(grouped(0n)).toBe('0.00')
+    expect(fixed(123450n)).toBe('1234.50')
+    expect(fixed(-138000n)).toBe('-1380.00')
+  })
+})
