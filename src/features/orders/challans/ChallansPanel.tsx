@@ -70,7 +70,7 @@ function useChallanDownload(order: OrderHeader) {
     setPending(true)
     try {
       const profile = await client.fetchQuery({ ...companyProfileQuery(money), staleTime: 30_000 })
-      const doc = buildChallanDoc(order, challan)
+      const doc = buildChallanDoc(order, challan, money)
       saveBlob(await generateChallanPdf(doc, profile), challanFileName(doc))
     } catch (err) {
       toast({ title: 'Could not make the challan', body: mapPgError(err, { entity: 'challan' }).message, tone: 'danger' })
