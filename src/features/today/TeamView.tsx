@@ -13,13 +13,13 @@ import type { TodayItem } from '@/features/today/types'
  */
 export function TeamView({ data, today, selfId }: { data: TodayData; today: string; selfId: string }) {
   const people = useMemo(() => buildTeam(data, today, selfId), [data, today, selfId])
-  if (people.length === 0) return <EmptyState mood="goal" title="Nobody else is on the team yet">Add people in Settings, Team.</EmptyState>
+  if (people.length === 0) return <EmptyState mood="goal" title="No other team members yet">Add people in Settings, Team.</EmptyState>
   return (
     <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3" data-team>
       {people.map(p => (
         <Person key={p.id} person={p} />
       ))}
-      <p className="text-base text-fg-muted md:col-span-2 xl:col-span-3">Read only. Each person works their own list; late work shows here so you can see who is slipping.</p>
+      <p className="text-base text-fg-muted md:col-span-2 xl:col-span-3">Read only. Each person works their own list. Late work is shown here to see who is behind.</p>
     </div>
   )
 }

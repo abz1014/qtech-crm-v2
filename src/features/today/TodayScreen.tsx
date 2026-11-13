@@ -219,16 +219,16 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
           {firstUse.isNew ? (
             <FirstUseState screen="today" role={user.role} alone={firstUse.alone} className="mx-5 my-4" />
           ) : model.total === 0 ? (
-            <EmptyState mood="goal" title="Nothing needs you today">
+            <EmptyState mood="goal" title="No tasks for today">
               {waiting.length > 0
                 ? 'Everything followed up is waiting for its date. It comes back here when it is time to send a reminder.'
                 : imported.length > 0
-                  ? 'Orders imported from the old CRM are folded away below until you review them. They are not counted.'
+                  ? 'Orders imported from the old CRM are folded away below until reviewed. They are not counted.'
                   : stale.length > 0
                   ? 'Work older than 30 days is folded away below. It is not counted.'
                   : user.role === 'engineer'
                   ? 'Commissioning jobs you are assigned to, and the goods on your orders, appear here.'
-                  : 'Follow-ups, quotations, goods and payments that need you will appear here.'}
+                  : 'Follow-ups, quotations, deliveries and payments due appear here.'}
             </EmptyState>
           ) : null}
           {blocks.map(([id, items, title], n) => {

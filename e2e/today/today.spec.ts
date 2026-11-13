@@ -124,7 +124,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(page.locator('[data-needs-you-count]')).not.toHaveText('0') // the one count (redesign phase 0)
     await row.getByRole('button').first().click() // selecting a row is not a chase
     const pane = paneFor(page, s.ref)
-    await expect(pane.getByText('Prepared for you')).toBeVisible()
+    await expect(pane.getByText('Prepared message')).toBeVisible()
     await expect(pane.getByTestId('draft-text')).toContainText('1. Line size and flange rating on the process line')
     await review(page, 'today-01-draft-1440')
 
@@ -382,7 +382,7 @@ test.describe('Today: accessibility and mobile', () => {
     await showAllTodo(page)
     await expect(rowOf(page, s.ref).first()).toBeVisible()
     await rowOf(page, s.ref).first().getByRole('button').first().click()
-    await expect(paneFor(page, s.ref).getByText('Prepared for you')).toBeVisible()
+    await expect(paneFor(page, s.ref).getByText('Prepared message')).toBeVisible()
     expect(await violations(page), 'axe at 1440').toEqual([])
 
     await page.setViewportSize({ width: 375, height: 812 })
@@ -396,7 +396,7 @@ test.describe('Today: accessibility and mobile', () => {
     const tile = await page.getByRole('region', { name: /target/ }).boundingBox()
     expect(firstRow?.y ?? 9999).toBeLessThan(tile?.y ?? 0)
     await row.getByRole('button').first().click() // the accordion opens under the row
-    await expect(row.getByText('Prepared for you')).toBeVisible()
+    await expect(row.getByText('Prepared message')).toBeVisible()
     await review(page, 'today-08-mobile-accordion-375')
     expect(await violations(page), 'axe at 375, accordion open').toEqual([])
     const hit = await row.getByRole('button', { name: 'Copy and record follow-up' }).boundingBox()

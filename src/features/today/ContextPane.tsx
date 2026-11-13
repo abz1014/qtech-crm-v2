@@ -54,7 +54,7 @@ import { daysBetween } from '@/features/rfqs/lib/dateText'
  * already written. Owner decision 2026-10-19: each fact is said once (the four cells; no chip row and no date rail repeating
  * them), and the one job, "Copy and mark chased", sits right under the card's header, above the message, so it is
  * on the first screen of a 1366 x 768 laptop at the larger text size. States:
- *   draft        facts, "Prepared for you" with WhatsApp or Email, one tap: "Copy and mark chased"
+ *   draft        facts, "Prepared message" with WhatsApp or Email, one tap: "Copy and mark chased"
  *   copied       the green "Copied. Paste it into WhatsApp." bar replaces the card header; the footer says
  *                "Chased today. Moves to Waiting when the undo closes." while the 10 s Undo is open (the toast)
  *   just chased  after the undo closes the row has joined Waiting: the title stays, a "Moved to Waiting" bar says when it
@@ -226,7 +226,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       // The copy is the first thing that happens inside the tap (a browser only allows it during the gesture).
       const ok = await copyToClipboard(text)
       if (!ok) {
-        toast({ title: 'Could not copy the message', body: 'Select the text in the draft and copy it by hand. Nothing was marked.', tone: 'danger' })
+        toast({ title: 'Could not copy the message', body: 'Select the text in the draft and copy it manually. Nothing was marked.', tone: 'danger' })
         return
       }
       await mark(true)
@@ -279,7 +279,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
       {item.collision && data.names[item.collision.by] ? (
         <p data-collision className="flex items-center gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm text-tone-warning-fg">
-          <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before you follow up again.
+          <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before following up again.
         </p>
       ) : null}
 
@@ -297,7 +297,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         </div>
       ) : item.waiting ? (
         <Banner tone="info" title={`Waiting until ${formatDay(item.waiting.nextNudgeOn)}`}>
-          It returns to the list on that day. You are looking at the message again; copying it follows up once more.
+          It returns to the list on that day. Copying the message again records another follow-up.
         </Banner>
       ) : null}
 
@@ -363,8 +363,8 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
               <div className="grid gap-px">
-                <h3 className="text-base font-semibold">Prepared for you</h3>
-                {compact ? null : <p className="text-sm text-fg-muted">{preparedFrom(item, questions.length)} Edit anything before you send.</p>}
+                <h3 className="text-base font-semibold">Prepared message</h3>
+                {compact ? null : <p className="text-sm text-fg-muted">{preparedFrom(item, questions.length)} Edit the message before sending.</p>}
               </div>
               {/* The remembered channel as a link (R2-07); Open in WhatsApp / Open in email is MessageActions, in the row below. */}
               <ChannelLink value={channel} onChange={setChannel} />
@@ -452,7 +452,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : isChase(item) && loadFailed ? (
         <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4" data-testid="draft-failed">
           <p role="alert" className="mr-auto text-sm text-fg-muted">
-            Couldn't load the message for this item. Nothing was changed. Check your connection and try again.
+            Could not load the message for this item. Nothing was changed. Check your connection and try again.
           </p>
           <Button onClick={retryLoad}>Try again</Button>
           <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
@@ -617,7 +617,7 @@ export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, 
 }
 
 function noDraftText(item: TodayItem): string {
-  if (item.rule === 'chase_supplier') return 'Every item has a price or a "Can’t quote" from this supplier. Nothing to ask.'
+  if (item.rule === 'chase_supplier') return 'Every item has a price or a reason for no price from this supplier. Nothing to ask.'
   if (item.rule === 'goods_late') return 'There is no expected date on this order, so there is no follow-up to send. Open the order.'
   return 'There is nothing to write for this item yet. Open the record.'
 }
@@ -627,7 +627,7 @@ function howTo(item: TodayItem): string {
     case 'relay_answers':
       return 'The customer has answered what this supplier asked. Open the RFQ to send the answers back to them.'
     case 'not_floated':
-      return 'Nobody has been asked for a price yet. Open the RFQ to pick suppliers and ask for prices.'
+      return 'No supplier has been asked for a price yet. Open the RFQ to pick suppliers and ask for prices.'
     case 'bid_due':
       return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':
@@ -641,7 +641,7 @@ function howTo(item: TodayItem): string {
     case 'delivered_not_invoiced':
       return 'Everything on this order has been delivered and no invoice exists. Open the order to invoice it.'
     case 'close_month':
-      return 'Open the month-end checklist, look at what it lists and lock the month. Nothing blocks locking; each check is a warning.'
+      return 'Open the month-end checklist, look at what it lists and lock the month. Nothing blocks locking. Each check is a warning.'
     case 'costs_incomplete':
       return 'These orders are paid in full but their costs are not marked complete, so their margin is not final. Open Margins, check the costs and mark each order complete.'
     case 'fbr_attention':
@@ -657,15 +657,15 @@ function howTo(item: TodayItem): string {
     case 'backup_stale':
       return 'The nightly backup has not run for more than two days. Open GitHub, Actions, Backup, look at the latest run and fix what it says. Until it runs, nothing protects the data.'
     case 'usage_high':
-      return 'The free plan is filling up. Open Settings, Backups and usage, to see the database and the files. Old files can be deleted; a full plan stops saving.'
+      return 'The free plan is filling up. Open Settings, Backups and usage, to see the database and the files. Old files can be deleted. A full plan stops saving.'
     case 'decrypt_test':
       return "Once a month, download last night's backup from GitHub and open it with your private key. Then press the button in Settings, Backups and usage."
     case 'claims_to_approve':
-      return 'An engineer paid for something and asked to be paid back. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
+      return 'An engineer paid for work and asked to be repaid. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':
-      return 'Quotations nobody decided, RFQs nobody asked suppliers about, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
+      return 'Quotations with no decision, RFQs with no supplier asked, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
     case 'recurring_due':
-      return 'These recurring expenses have no entry for this month yet. Record them all in one tap, changing an amount first if this month’s bill is different.'
+      return 'These recurring expenses have no entry for this month yet. Record them all at once, changing an amount first if the bill for this month is different.'
     default:
       return 'Open the record.'
   }
@@ -873,7 +873,7 @@ function ChasedCard({
 function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
   return (
     <CloseRfqBanner item={item} today={today} title="3 follow-ups, no answer" reasons={['no_reply_to_clarification']} buttonLabel={() => 'Close as no reply'}>
-      This is a suggestion. Nothing is closed for you. Closing records the reason “No reply to our questions”.
+      This is a suggestion. Nothing is closed automatically. Closing records the reason “No reply to our questions”.
     </CloseRfqBanner>
   )
 }
@@ -882,7 +882,7 @@ function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
 function CloseLost({ item, today }: { item: TodayItem; today: string }) {
   return (
     <CloseRfqBanner item={item} today={today} title="No decision yet" reasons={['price', 'competitor']} buttonLabel={r => (r === 'price' ? 'Lost on price' : 'Lost to a competitor')}>
-      If the customer has said no, close it here. Nothing is closed for you.
+      If the customer has said no, close it here. Nothing is closed automatically.
     </CloseRfqBanner>
   )
 }
