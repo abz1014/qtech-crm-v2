@@ -3,47 +3,47 @@
 @tailwind utilities;
 
 /*
- * Webfont: Archivo (direction C, DECISIONS 2026-10-22), self-hosted from @fontsource-variable/archivo (latin, woff2, variable,
- * font-display: swap). No third-party font host is used (CSP keeps font-src 'self').
- *   "Archivo"       the UI face: the weight axis, 400 to 700, normal width.
- *   "Archivo Wide"  titles (--font-display): the width axis pinned at 118 % and weight 600 to 800 (titles are 750).
+ * Webfonts: Geist and Geist Mono (Forest, owner approval 2026-11-14), self-hosted from @fontsource-variable/geist and
+ * @fontsource-variable/geist-mono (latin, woff2, variable, font-display: swap). No third-party font host is used (CSP keeps
+ * font-src 'self'). SIL Open Font License 1.1: src/assets/fonts/OFL-LICENSE.txt.
+ *   "Geist"       every word in the app, and the heavy titles (--font-sans and --font-display): the weight axis, 400 to 800.
+ *   "Geist Mono"  job, invoice and PO numbers (--font-mono): the weight axis, 400 to 800.
  *
  * Each face is two files split by unicode-range (perf/lcp): a core file with the characters the app's own words use
- * (src/assets/fonts, made by scripts/fonts/subset-archivo.py: printable ASCII and the app's punctuation and symbols; 19 KB and
- * 15 KB), and the full @fontsource latin file for every other character, which the browser downloads only when one is on screen
- * (an accented name, say). Same glyphs, kerning and features either way. The Wide face falls back to the normal-width file for
- * those rare characters (a third of the size of the width-and-weight file).
+ * (src/assets/fonts, made by scripts/fonts/subset-geist.py: printable ASCII and the app's punctuation and symbols; 15 KB and
+ * 11 KB), and the full @fontsource latin file for every other character, which the browser downloads only when one is on screen
+ * (an accented name, say). Same glyphs, kerning and features either way.
  */
 @font-face {
-  font-family: "Archivo";
+  font-family: "Geist";
   font-style: normal;
   font-display: swap;
-  font-weight: 400 700;
-  src: url("@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+000D, U+00A1-00A2, U+00A4-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+2009, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122, U+2215, U+FEFF;
+  font-weight: 400 800;
+  src: url("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+00A1-00A2, U+00A4-00AC, U+00AE-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122;
 }
 @font-face {
-  font-family: "Archivo";
+  font-family: "Geist";
   font-style: normal;
   font-display: swap;
-  font-weight: 400 700;
-  src: url("./assets/fonts/archivo-core.woff2") format("woff2-variations");
+  font-weight: 400 800;
+  src: url("./assets/fonts/geist-core.woff2") format("woff2-variations");
   unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2191, U+2193, U+2212;
 }
 @font-face {
-  font-family: "Archivo Wide";
+  font-family: "Geist Mono";
   font-style: normal;
   font-display: swap;
-  font-weight: 600 800;
-  src: url("@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+000D, U+00A1-00A2, U+00A4-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+2009, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122, U+2215, U+FEFF;
+  font-weight: 400 800;
+  src: url("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+00A1-00A2, U+00A4-00AC, U+00AE-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122;
 }
 @font-face {
-  font-family: "Archivo Wide";
+  font-family: "Geist Mono";
   font-style: normal;
   font-display: swap;
-  font-weight: 600 800;
-  src: url("./assets/fonts/archivo-wide-core.woff2") format("woff2-variations");
+  font-weight: 400 800;
+  src: url("./assets/fonts/geist-mono-core.woff2") format("woff2-variations");
   unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2191, U+2193, U+2212;
 }
 
@@ -56,6 +56,7 @@
 :root:not(.fonts-on) {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 }
 
 /* ==========================================================================
@@ -66,82 +67,94 @@
 /* tokens:start */
 /* ==========================================================================
    Q-Tech CRM v2 — design tokens. SINGLE SOURCE OF TRUTH.
-   Direction C, "Colour blocks" (owner decision, DECISIONS 2026-10-22): a navy top bar, white tiles on a quiet blue-grey
-   field, Late / Today / This week as red, yellow and blue blocks, the next step in a navy band, Archivo with a wide cut for
-   titles, rounded corners on a 10 / 12 / 16 ladder.
+   "Forest" (owner approval 2026-11-14, docs/design/mockups/proposal-2026-11): a deep forest-green rail and hero cards, white
+   cards with real depth on a warm off-white canvas, lime only on the forest, Geist heavy titles and big numbers, Geist Mono for
+   job / invoice / PO numbers, corners on a 12 / 16 / 999 ladder. Replaces direction C "Colour blocks" (navy, Archivo).
+   The semantic NAMES are unchanged (canvas, surface, primary, chrome, tone-*, block-*): only their values moved to Forest, so a
+   component that reads a token follows without an edit. "chrome" is now the forest, not the navy.
    Light theme only (default). Components must read these; never hard-code.
-   Layers: 1 primitives (--neutral-*, --navy-*) → 2 semantic (--bg-*, --fg-*, --tone-*, --block-*)
+   Layers: 1 primitives (--neutral-*, --brand-*, --lime-*) → 2 semantic (--bg-*, --fg-*, --tone-*, --block-*)
    → 3 component-facing (--status-*, --row-h, …). Prose rules: ../DESIGN_SYSTEM.md
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
-  /* ---- 1. Neutral ramp (blue-grey, hue ≈ 218°) and the navy ------------- */
+  /* ---- 1. Neutral ramp (warm grey-green) -------------------------------- */
   --neutral-0: #ffffff;
-  --neutral-25: #f6f8fb;
-  --neutral-50: #eef2f7;    /* the quiet field: canvas and sunken blocks */
-  --neutral-100: #e3eaf4;   /* selected row, neutral chip */
-  --neutral-150: #dbe2ed;
-  --neutral-200: #d3dae5;
-  --neutral-250: #c5cedb;   /* hairline, where one is still needed: 1.59 on white */
-  --neutral-300: #8592a6;   /* strong edge, secondary button: 3.15 on white */
-  --neutral-400: #68758c;   /* form control edge: 4.65 on white, 4.14 on the field */
-  --neutral-500: #56637a;
-  --neutral-600: #4a566d;
-  --neutral-650: #364259;   /* hints: 10.09 white, 8.98 field, 8.34 selected (darkened 2026-10-28: the owner finds secondary text faint) */
-  --neutral-700: #28354d;   /* second line: 10.95 on the field */
-  --neutral-800: #1c2638;
-  --neutral-900: #0c1526;   /* ink: 18.25 on white */
+  --neutral-25: #f7f8f4;
+  --neutral-50: #f2f3ee;    /* the canvas: the warm off-white page ground */
+  --neutral-100: #e6e8e0;   /* canvas-deep: segmented track, sunken fields */
+  --neutral-150: #dde0d7;   /* hairline: row dividers, card edges */
+  --neutral-200: #d3d7cd;
+  --neutral-250: #c4c9bf;
+  --neutral-300: #9aa39d;   /* disabled controls only (WCAG exempt) */
+  --neutral-400: #6f7b74;   /* form control edge and secondary button edge: 3:1 or better on white and the canvas */
+  --neutral-500: #5a6660;
+  --neutral-600: #4c5852;
+  --neutral-650: #414c45;   /* muted text: 7:1 or better on white, the canvas, a selected row and every tone tint (Forest #434e47 was 6.99 on the late tint) */
+  --neutral-700: #3a463f;   /* second line (ink-2) */
+  --neutral-800: #25302a;
+  --neutral-900: #0f1a14;   /* ink */
 
-  --navy-900: #132a4c;      /* top bar, next-step band: white text 14.35:1 */
-  --navy-800: #1d3760;      /* a field or button on the navy */
-  --navy-700: #26457a;      /* its hover */
-  --navy-500: #7f93b5;      /* an edge on the navy: 4.61:1 (WCAG 1.4.11) */
-  --navy-200: #cdd7e6;      /* quiet text on the navy: 9.88:1 */
+  /* ---- 1b. Forest and lime ---------------------------------------------- */
+  --brand-950: #0b3d24;     /* desktop rail, hero cards, phone top band: white text 12.30:1 */
+  --brand-900: #0f4a2c;     /* end stop of the hero gradient; a field on the forest */
+  --brand-800: #0e5230;     /* hover of the primary fill */
+  --brand-700: #136b3d;     /* primary fill: white text 6.57:1 */
+  --brand-500: #429446;     /* NON-TEXT only: focus ring, active indicator, progress, logo */
+  --brand-100: #e4f2e6;     /* selected row / active pill tint */
+  --lime-300: #b9e769;      /* ONLY on the forest: hero numbers, the active nav pill, the Create button. Never on white */
+  --lime-hover: #c8f07e;
+  --lime-press: #a9d95a;
+  --on-lime: var(--brand-950);   /* text on lime: 8.61:1 */
 
   /* ---- 2a. Brand & action ----------------------------------------------- */
-  --brand-green: #429446;        /* NON-TEXT ONLY: focus ring, active indicator, progress, logo (3.78 white, 3.36 field) */
-  --indicator-on-chrome: #4caf52; /* the same role on the navy: 5.17:1 (brand green is 3.80 there) */
-  --primary: #1a7b46;             /* primary action fills (5.30:1 white text on it) */
-  --primary-hover: #166a3b;
-  --primary-active: #115a31;
-  --primary-text: #1a7645;        /* ANY green text: 5.64 white, 4.66 selected, 4.55 on the lowest block tint, 3.23 against --fg (axe link-in-text-block) */
+  --brand-green: var(--brand-500);  /* NON-TEXT ONLY: focus ring, active indicator, progress, logo (3.27 selected, 3.39 canvas) */
+  --indicator-on-chrome: var(--lime-300); /* the same role on the forest: 8.61:1 (lime is the forest's focus colour) */
+  --primary: var(--brand-700);      /* primary action fills (6.57:1 white text on it) */
+  --primary-hover: var(--brand-800);
+  --primary-active: var(--brand-900);
+  --primary-text: #1a7645;          /* ANY green text: 5.06 canvas, 4.88 selected, 3.16 against --fg (axe link-in-text-block; brand-700 is 2.71) */
   --on-primary: var(--neutral-0);
 
   /* ---- 2b. Surfaces ------------------------------------------------------ */
-  --bg-canvas: var(--neutral-50);       /* the quiet field behind the white tiles */
-  --bg-surface: var(--neutral-0);       /* tiles: panels, lists, inputs */
+  --bg-canvas: var(--neutral-50);       /* the warm page ground behind the white cards */
+  --bg-surface: var(--neutral-0);       /* cards: panels, lists, inputs */
   --bg-sunken: var(--neutral-50);       /* table header, hover row, quiet block */
-  --bg-selected: var(--neutral-100);    /* selected row / active segment */
-  --bg-scrim: rgb(12 21 38 / 0.48);     /* behind modals only */
+  --bg-deep: var(--neutral-100);        /* segmented track, sunken fields */
+  --bg-selected: var(--brand-100);      /* selected row / active segment */
+  --bg-scrim: rgb(11 26 18 / 0.52);     /* behind modals and sheets only */
 
-  /* Navy chrome: the top bar, the phone bars and the next-step band ([data-surface="navy"] below) */
-  --bg-chrome: var(--navy-900);
+  /* Forest chrome: the rail, the phone bars, hero cards ([data-surface="navy"] below; the attribute name is kept) */
+  --bg-chrome: var(--brand-950);
   --fg-on-chrome: var(--neutral-0);
-  --fg-on-chrome-2: var(--navy-200);
-  --chrome-field: var(--navy-800);
-  --chrome-field-hover: var(--navy-700);
-  --chrome-input: var(--navy-500);
+  --fg-on-chrome-2: #cfe0d5;            /* secondary text on the forest: 8.95:1, 7.50 on a field */
+  --chrome-field: var(--brand-900);     /* the search field on the forest */
+  --chrome-field-hover: #1a5a38;        /* white 8.19, quiet text 5.96 */
+  --chrome-input: #8aab99;              /* an edge on the forest: 4.90, 4.11 on a field (WCAG 1.4.11) */
 
   /* ---- 2c. Text ---------------------------------------------------------- */
   --fg: var(--neutral-900);
   --fg-2: var(--neutral-700);
-  --fg-muted: var(--neutral-650);       /* captions, hints, placeholders. Never on the yellow block */
+  --fg-muted: var(--neutral-650);       /* captions, hints, placeholders */
   --fg-disabled: var(--neutral-300);    /* disabled controls only (WCAG-exempt) */
 
   /* ---- 2d. Lines & focus ------------------------------------------------- */
-  --border: var(--neutral-250);         /* hairline: row dividers, tile edges */
-  --border-strong: var(--neutral-300);  /* secondary button, popover edge, a table header's rule */
+  --border: var(--neutral-150);         /* hairline: row dividers, card edges */
+  --border-strong: var(--neutral-400);  /* secondary button, popover edge, a table header's rule */
   --border-input: var(--neutral-400);   /* form control edge (WCAG 1.4.11) */
   --hairline: 1px;
-  --focus-width: 2px;
-  --focus-offset: 2px;                  /* ring colour is --brand-green */
+  --focus-width: 2px;                   /* border-2 */
+  --ring-width: 3px;                    /* the focus ring (Forest): 3px brand green, lime on the forest */
+  --focus-offset: 2px;
 
-  /* ---- 2e. Semantic tones (text ≥ 7:1 on white, the field, a selected row and every tint) */
-  --tone-neutral-fg: var(--neutral-700);
-  --tone-neutral-bg: var(--neutral-100);
-  --tone-info-fg: #124a7c;        /* 9.15 white, 7.55 selected, 7.53 this-week tint */
+  /* ---- 2e. Semantic tones, by who acts next (text ≥ 7:1 on white, the canvas, a selected row and its tint). Unchanged by Forest:
+     warning = now (we act), info = waiting (someone else), success = done (teal: success is never brand green),
+     danger = late, neutral = inert. */
+  --tone-neutral-fg: #28354d;
+  --tone-neutral-bg: #e3eaf4;
+  --tone-info-fg: #124a7c;        /* 9.15 white, 7.90 selected */
   --tone-info-bg: #e1eaf6;
   --tone-success-fg: #0a4e44;     /* 8.04 on its tint */
   --tone-success-bg: #d9f0e8;
@@ -150,66 +163,87 @@
   --tone-danger-fg: #8a1010;      /* 7.82 on its tint */
   --tone-danger-bg: #fbe1dd;
   --tone-ink-fg: var(--neutral-0);
-  --tone-ink-bg: var(--navy-900);
+  --tone-ink-bg: var(--brand-950);
 
   /* ---- 2f. Colour blocks: the To do groups (red only for late money or a broken promise) */
   --block-late-bg: var(--tone-danger-bg);
-  --block-late-fg: var(--tone-danger-fg);     /* 7.82 */
+  --block-late-fg: var(--tone-danger-fg);
   --block-today-bg: var(--tone-warning-bg);
-  --block-today-fg: var(--tone-warning-fg);   /* 8.44 */
+  --block-today-fg: var(--tone-warning-fg);
   --block-week-bg: var(--tone-info-bg);
-  --block-week-fg: var(--navy-900);           /* 11.82 */
+  --block-week-fg: var(--tone-info-fg);
   --block-quiet-bg: var(--neutral-50);
-  --block-quiet-fg: var(--neutral-700);       /* 10.95 */
+  --block-quiet-fg: var(--neutral-700);
+
+  /* ---- 2g. Hero and depth (Forest) ------------------------------------- */
+  --hero-gradient: linear-gradient(135deg, var(--brand-950), var(--brand-900)); /* the one gradient: hero cards only */
+  --ring-current: 0 0 0 4px var(--brand-100);                                  /* halo on the current stage stop */
 
   /* ---- 3. Type ----------------------------------------------------------- */
-  --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Archivo Wide", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
-  /* 16 px is the floor for anything read (owner decision 2026-10-22). xs, sm and base are all 16 and differ in line height;
-     14 px is --text-stamp, for timestamps only. [data-text="small"] below restores the old 12/13/14 scale. */
-  --text-stamp: 14px; --lh-stamp: 20px;
+  /* 16 px is the floor for anything read (owner decision 2026-10-22); body is 17 (Forest). 13 px is --text-stamp, timestamps only.
+     Phone values here; the desktop steps are in the (min-width: 768px) block below. [data-text] keeps its own scale. */
+  --text-stamp: 13px; --lh-stamp: 18px;
   --text-xs: 16px;   --lh-xs: 22px;
   --text-sm: 16px;   --lh-sm: 24px;
-  --text-base: 16px; --lh-base: 24px;
-  --text-lg: 18px;   --lh-lg: 26px;
-  --text-xl: 22px;   --lh-xl: 30px;
-  --text-2xl: 32px;  --lh-2xl: 40px;
-  --text-display: 38px; --lh-display: 44px;
+  --text-base: 17px; --lh-base: 26px;
+  --text-lg: 18px;   --lh-lg: 24px;    /* card title, row primary */
+  --text-xl: 21px;   --lh-xl: 28px;    /* section title */
+  --text-2xl: 28px;  --lh-2xl: 34px;   /* page title */
+  --text-display: 40px; --lh-display: 44px;
+  --text-kpi: 30px;  --lh-kpi: 36px;   /* KPI tile figure */
+  --text-hero: 40px; --lh-hero: 44px;  /* the hero number */
 
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
-  --weight-heavy: 750;         /* page titles and block headings only, in --font-display */
+  --weight-card: 650;          /* card title, row primary */
+  --weight-bold: 700;          /* section titles */
+  --weight-heavy: 800;         /* page titles, hero and KPI numbers */
 
-  --tracking-tight: -0.015em;  /* ≥ 28px */
-  --tracking-snug: -0.01em;    /* 16–20px */
+  --tracking-tight: -0.02em;   /* page titles, ≥ 28px */
+  --tracking-snug: -0.01em;    /* 16–24px */
 
   /* ---- 4. Spacing: 4px rhythm ------------------------------------------- */
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
   --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --card-pad: 20px;      /* 24 on desktop */
+  --card-gap: 16px;      /* 24 on desktop */
+  --gutter: 16px;        /* 32 on desktop */
 
-  /* ---- 5. Shape & elevation (a radius ladder; colour blocks separate, shadows on overlays only) -- */
-  --radius: 10px;                       /* controls: buttons, inputs, chips, menus */
+  /* ---- 5. Shape & elevation (Forest: 12 controls, 16 cards, 999 pills, 24 sheets; cards have real depth) -- */
+  --radius: 12px;                       /* controls: buttons, inputs, menus */
   --radius-row: 12px;                   /* a row drawn as a tile, a small card */
   --radius-panel: 16px;                 /* panels and colour blocks */
   --radius-round: 999px;                /* tags, counts, dots, avatars, progress ends */
-  --shadow-pop: 0 0 0 1px rgb(12 21 38 / 0.08), 0 4px 6px -2px rgb(12 21 38 / 0.06), 0 12px 28px -6px rgb(12 21 38 / 0.16);
-  --shadow-modal: 0 0 0 1px rgb(12 21 38 / 0.08), 0 8px 16px -4px rgb(12 21 38 / 0.10), 0 32px 64px -12px rgb(12 21 38 / 0.26);
-  --shadow-on-navy: 0 0 0 2px var(--neutral-0);  /* the green button on the navy band: green on navy alone is 2.71:1 */
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-pill: 999px;                 /* chips, segmented control, nav pills */
+  --radius-sheet: 24px;                 /* bottom sheets, top corners */
+  --shadow-e1: 0 1px 2px rgb(15 26 20 / 0.06), 0 6px 16px -4px rgb(15 26 20 / 0.08);   /* card, with a 1px --border edge */
+  --shadow-e2: 0 12px 32px -8px rgb(11 61 36 / 0.22);                                  /* raised, hover, hero */
+  --shadow-e3: 0 24px 64px -12px rgb(15 26 20 / 0.30);                                 /* sheet, dialog */
+  --shadow-pop: 0 0 0 1px rgb(15 26 20 / 0.06), 0 12px 32px -8px rgb(11 61 36 / 0.22);
+  --shadow-modal: 0 0 0 1px rgb(15 26 20 / 0.06), 0 24px 64px -12px rgb(15 26 20 / 0.30);
+  --shadow-on-navy: 0 0 0 2px var(--neutral-0);  /* the green button on the forest: green on forest alone is 1.87:1 */
 
   /* ---- 6. Motion (transform + opacity only) ------------------------------ */
   --dur-fast: 120ms;     /* hover, press, focus */
-  --dur-base: 200ms;     /* popovers, row state change */
-  --dur-slow: 320ms;     /* panels, page-level reveal (max one per view) */
-  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-base: 200ms;     /* popovers, row state change, card hover rise */
+  --dur-slow: 320ms;     /* sheets, panels, page-level reveal (max one per view) */
+  --dur-track: 400ms;    /* the stage track fills once */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --press-scale: 0.98;
+  --hover-rise: -2px;
 
-  /* ---- 7. Density (default; compact and small text override below) ------- */
-  --control-h: 44px;     /* buttons, inputs, selects */
-  --control-sm-h: 40px;  /* small buttons, row actions */
-  --control-lg-h: 52px;  /* large buttons */
+  /* ---- 7. Density (desktop; compact, small text and touch override below) ------- */
+  --control-h: 40px;     /* buttons, inputs, selects (Forest: 40 desktop, 48 touch) */
+  --control-sm-h: 36px;  /* small buttons, row actions */
+  --control-lg-h: 48px;  /* large buttons */
   --segment-h: 40px;     /* one segment of a SegmentedControl (filter chips) */
   --chip-h: 28px;        /* status chip, tag, key hint */
   --icon-chip: 16px;     /* the glyph inside a status chip */
@@ -219,15 +253,50 @@
   --cell-px: var(--sp-3);
   --text-table: var(--text-sm);
   --lh-table: var(--lh-sm);
-  --hit-touch: 44px;     /* minimum tap target on phones */
+  --hit-touch: 44px;     /* minimum tap target on phones (touch controls are 48, set below) */
 
   /* ---- 8. Layout --------------------------------------------------------- */
-  --nav-w: 224px;        /* left navigation */
+  --nav-w: 240px;            /* the forest rail */
+  --nav-w-collapsed: 72px;
   --topbar-h: 64px;
+  --tabbar-h: 72px;          /* phone bottom bar */
+  --sticky-bar-h: 72px;      /* reserved under a sticky action bar */
+  --content-max: 1200px;
+  --sheet-max: 560px;
+  --dialog-w: 560px;
+  --dialog-w-wide: 760px;
+  --panel-w: 360px;
+
+  /* ---- 9. Layers: one scale, nothing else uses a raw z-index. Toast above all; dialogs above sheets and pickers. */
+  --z-base: 1;
+  --z-sticky: 20;        /* top band, sticky action bars, sticky table heads */
+  --z-nav: 30;           /* phone tab bar */
+  --z-picker: 35;        /* combobox / date popovers, popover menus */
+  --z-scrim: 40;
+  --z-sheet: 41;
+  --z-dialog: 50;
+  --z-toast: 70;
 }
 
-/* The navy surfaces (top bar, phone bars, next-step band): the same components, re-inked. A primitive inside reads --fg,
-   --bg-surface and --border-input as always and gets the navy versions. Pop-ups portal out of it and stay light. */
+/* Desktop and tablet (768 px and wider): the bigger Forest type steps and roomier cards. Before the [data-text] blocks, so a
+   person's own text size still wins at equal specificity. */
+@media (min-width: 768px) {
+  :root {
+    --text-lg: 19px;   --lh-lg: 26px;
+    --text-xl: 24px;   --lh-xl: 30px;
+    --text-2xl: 36px;  --lh-2xl: 42px;
+    --text-display: 52px; --lh-display: 56px;
+    --text-kpi: 36px;  --lh-kpi: 40px;
+    --text-hero: 52px; --lh-hero: 56px;
+    --card-pad: 24px;
+    --card-gap: 24px;
+    --gutter: 32px;
+  }
+}
+
+/* The forest surfaces (rail, phone bars, hero cards): the same components, re-inked. A primitive inside reads --fg,
+   --bg-surface and --border-input as always and gets the forest versions. Pop-ups portal out of it and stay light.
+   The attribute keeps its old name ("navy") so no component has to change. */
 [data-surface="navy"] {
   --bg-surface: var(--chrome-field);
   --bg-sunken: var(--chrome-field-hover);
@@ -241,7 +310,7 @@
   --brand-green: var(--indicator-on-chrome);
   --primary-text: var(--fg-on-chrome);
   --tone-ink-bg: var(--neutral-0);
-  --tone-ink-fg: var(--navy-900);
+  --tone-ink-fg: var(--brand-950);
 }
 
 /* "Smaller text" (Settings > Your details, the account menu): the pre-2026-10-19 scale and heights. The person's own choice, so
@@ -306,14 +375,15 @@
   --row-h: 32px;
 }
 
-/* Phones and tablets, at EITHER text size: every control, small button and segment 44px (--hit-touch, WCAG 2.5.5), 56px rows.
-   Smaller text never shrinks a tap target (this block comes after [data-text="small"] and wins at equal specificity). */
+/* Phones and tablets, at EITHER text size: every control, small button and segment 48px (Forest's touch target, over the 44px
+   --hit-touch floor, WCAG 2.5.5), 64px rows. Smaller text never shrinks a tap target (this block comes after [data-text="small"]
+   and wins at equal specificity). */
 @media (pointer: coarse) {
-  :root { --control-h: 44px; --control-lg-h: 52px; --control-sm-h: 44px; --segment-h: 44px; --row-h: 56px; }
+  :root { --control-h: 48px; --control-lg-h: 56px; --control-sm-h: 48px; --segment-h: 48px; --row-h: 64px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --dur-fast: 0.01ms; --dur-base: 0.01ms; --dur-slow: 0.01ms; }
+  :root { --dur-fast: 0.01ms; --dur-base: 0.01ms; --dur-slow: 0.01ms; --dur-track: 0.01ms; --press-scale: 1; --hover-rise: 0px; }
 }
 
 /* ==========================================================================
@@ -487,7 +557,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Titles balance, paragraphs avoid orphans (section 2). Headings are set in the wide cut (direction C); their weight is the
+  /* Titles balance, paragraphs avoid orphans (section 2). Headings read --font-display (Geist, Forest); their weight is the
      component's (page titles and block headings font-heavy, panel titles font-semibold). */
   h1, h2, h3, h4 { text-wrap: balance; }
   h1, h2, h3 { font-family: var(--font-display); }
@@ -495,9 +565,9 @@
 
   a { color: inherit; text-decoration: none; }
 
-  /* Section 8: one ring, 2px brand green, offset 2px, keyboard only. */
+  /* Section 8: one ring, 3px brand green (lime on the forest: --brand-green is re-inked there), offset 2px, keyboard only. */
   :focus-visible {
-    outline: var(--focus-width) solid var(--brand-green);
+    outline: var(--ring-width) solid var(--brand-green);
     outline-offset: var(--focus-offset);
   }
   :focus:not(:focus-visible) { outline: none; }
@@ -523,7 +593,7 @@
 }
 
 @layer utilities {
-  /* Tabular figures: PKR amounts, reference numbers, dates in tables (section 2). Set in the sans (Archivo's own tnum figures,
+  /* Tabular figures: PKR amounts, reference numbers, dates in tables (section 2). Set in the sans (Geist's own tnum figures,
      plain zero), never a monospace: a slashed zero read as a struck-out digit on the live app (owner 2026-10-20). Never add
      slashed-zero here. */
   .num {
@@ -540,7 +610,7 @@
     box-shadow: inset 0 calc(-1 * var(--hairline)) 0 var(--border);
   }
   /* Type roles (clarity redesign step 0): four jobs, four classes. They read the size tokens above, so Smaller and Larger text
-     (data-text) move them with everything else. The wide face is for headings only: page and section. */
+     (data-text) move them with everything else. --font-display is for headings only: page and section. */
   .type-page {
     font-family: var(--font-display);
     font-size: var(--text-xl);
@@ -574,7 +644,7 @@
     line-height: var(--lh-base);
     font-weight: var(--weight-regular);
   }
-  /* Archivo has no rupee glyph (U+20A8): render it through the fallback stack. */
+  /* Geist has no rupee glyph (U+20A8): render it through the fallback stack. */
   .cur {
     font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   }
