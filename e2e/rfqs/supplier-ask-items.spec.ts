@@ -36,7 +36,9 @@ async function pickSupplierAndUntick(page: Page, s: Awaited<ReturnType<typeof se
   await expect(card.getByRole('checkbox', { name: s.supplier.name })).toBeChecked()
   const list = card.getByRole('list', { name: 'Items to ask about' })
   for (const [n, it] of s.items.entries()) await expect(list.getByRole('checkbox', { name: `Item ${n + 1}: ${it.description}` })).toBeChecked()
-  await list.getByRole('checkbox', { name: `Item ${untick}: ${s.items[untick - 1].description}` }).click()
+  // The whole row is the tap target (the label stretches over it, as on the supplier rows), so a person taps the row.
+  await list.locator('label', { hasText: s.items[untick - 1].description }).click()
+  await expect(list.getByRole('checkbox', { name: `Item ${untick}: ${s.items[untick - 1].description}` })).not.toBeChecked()
   await expect(list).toContainText('2 of 3')
   return card
 }
