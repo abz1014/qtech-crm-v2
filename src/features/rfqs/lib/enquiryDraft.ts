@@ -168,7 +168,7 @@ export function generateEnquiryDraft(input: EnquiryInput): EnquiryDraft {
 
   const replyBy = computeReplyBy(input.dueOn, input.today)
   const body = [
-    'Hi hope you are doing well,',
+    'Dear Sir/Madam,',
     '',
     'Please quote your best price, availability and lead time for the following :',
     '',

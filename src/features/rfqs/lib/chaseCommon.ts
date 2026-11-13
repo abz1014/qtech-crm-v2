@@ -37,7 +37,7 @@ export function byDayText(iso: string, today: string): string {
 
 /** Greeting in the approved shape, the same for WhatsApp and email (no religious wording, owner 2026-10-28). */
 export function greetingFor(_variant: EnquiryVariant, contactName: string | null): string {
-  return contactName ? `Hi ${contactName}, hope you are doing well,` : 'Hi hope you are doing well,'
+  return contactName ? `Dear ${contactName},` : 'Dear Sir/Madam,'
 }
 
 export function signOff(_variant: EnquiryVariant, sig: ChaseSignature): string[] {

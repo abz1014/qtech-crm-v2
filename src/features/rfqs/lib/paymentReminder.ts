@@ -62,7 +62,7 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
     : input.invoiceNumber
       ? `Sales Tax Invoice ${input.invoiceNumber}${input.invoiceDate ? ` dated ${dayMonthYear(input.invoiceDate)}` : ''}${po}`
       : `our order${po}`
-  const greeting = input.contactName ? `Hi ${input.contactName}, hope you are doing well,` : 'Hi hope you are doing well,'
+  const greeting = input.contactName ? `Dear ${input.contactName},` : 'Dear Sir/Madam,'
   const reminded =
     input.reminderCount > 0
       ? ` We have reminded you ${times(input.reminderCount)}${input.lastRemindedOn ? `, most recently on ${dayMonth(input.lastRemindedOn)}` : ''}.`
