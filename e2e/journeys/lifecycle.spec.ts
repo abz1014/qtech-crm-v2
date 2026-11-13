@@ -136,7 +136,7 @@ test.describe('cancelling an order after its PO was issued', () => {
 
 test.describe('the closed-month refusal, in the screens, for a payment and an invoice', () => {
   const stmt = monthBefore(today, 1)
-  const sentence = `${stmt.label} is closed. An admin can reopen it.`
+  const sentence = `${stmt.label} is locked. An admin can reopen it.`
   const typed = `05/${stmt.key.slice(5)}/${stmt.key.slice(0, 4)}`
 
   test.beforeAll(async () => {

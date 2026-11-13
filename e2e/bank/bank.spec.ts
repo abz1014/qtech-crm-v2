@@ -185,7 +185,7 @@ test.describe('bank tick (M12)', () => {
     const { customer, order } = await newOrder('Refused Payer')
     await addPayment(order.id, { amount: base() })
     await openAs(page, 'admin', '/money/month-end/bank')
-    const sentence = 'September 2026 is closed. An admin can reopen it.'
+    const sentence = 'September 2026 is locked. An admin can reopen it.'
     await page.route('**/rest/v1/payments_in*', route =>
       route.request().method() === 'PATCH'
         ? route.fulfill({

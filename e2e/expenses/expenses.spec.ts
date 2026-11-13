@@ -840,7 +840,7 @@ test.describe('expenses (M03, M11)', () => {
         label: new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(d),
       }
     })()
-    const sentence = `${prev.label} is closed. An admin can reopen it.`
+    const sentence = `${prev.label} is locked. An admin can reopen it.`
 
     test.beforeAll(async () => {
       // beforeAll runs again when a failed test restarts the worker; a second seed row would make the list ambiguous

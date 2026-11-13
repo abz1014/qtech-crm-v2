@@ -88,7 +88,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   const stmt = await seedStatementMonth()
   const m = await seedMargins()
   const ctx = await roleContext(browser, info, 'admin')
-  const sentence = `${STMT.label} is closed. An admin can reopen it.`
+  const sentence = `${STMT.label} is locked. An admin can reopen it.`
   const closeName = `Lock ${STMT.name}`
 
   // ---- 1. Burst entry, keyboard only -------------------------------------------------------------------------------------------------
