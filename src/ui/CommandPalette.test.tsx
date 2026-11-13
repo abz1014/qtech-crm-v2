@@ -29,12 +29,12 @@ const actions = (onSelect = vi.fn()): PaletteSource => ({
   search: q => filterItems([{ id: 'new-rfq', label: 'New RFQ', onSelect }], q),
 })
 
-function Host({ sources, onNavigate, personId = 'u1' }: { sources: PaletteSource[]; onNavigate?: (h: string, o: { newTab: boolean }) => void; personId?: string }) {
+function Host({ sources, onNavigate, personId = 'u1', shortcutsHint }: { shortcutsHint?: boolean; sources: PaletteSource[]; onNavigate?: (h: string, o: { newTab: boolean }) => void; personId?: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button onClick={() => setOpen(true)}>Search or jump to</button>
-      <CommandPalette open={open} onOpenChange={setOpen} sources={sources} personId={personId} onNavigate={onNavigate ?? (() => {})} />
+      <CommandPalette open={open} onOpenChange={setOpen} sources={sources} personId={personId} shortcutsHint={shortcutsHint} onNavigate={onNavigate ?? (() => {})} />
     </>
   )
 }
@@ -150,6 +150,43 @@ describe('CommandPalette (U08)', () => {
     render(<Host sources={[broken, actions()]} />)
     await user.click(screen.getByRole('button'))
     expect(await screen.findByRole('option', { name: /New RFQ/ })).toBeInTheDocument()
+  })
+
+  it('a search that fails says it could not run, with Try again, not "Nothing found" (bug 37)', async () => {
+    const user = userEvent.setup()
+    let fail = true
+    const flaky = places({ search: async q => (fail ? Promise.reject(new Error('down')) : filterItems(PLACES, q)) })
+    render(<Host sources={[flaky]} />)
+    await user.click(screen.getByRole('button'))
+    await user.type(await screen.findByRole('combobox'), 'indus')
+    expect(await screen.findByText('Search could not run')).toBeInTheDocument()
+    expect(screen.queryByText(/Nothing found/)).toBeNull()
+    fail = false
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('option', { name: /Indus Textile/ })).toBeInTheDocument()
+    expect(screen.queryByText('Search could not run')).toBeNull()
+  })
+
+  it('long result text wraps and carries a title instead of being cut (bug 38)', async () => {
+    const user = userEvent.setup()
+    const long = 'Indus Textile Mills Faisalabad Unit Two Extension Road Warehouse Annex'
+    render(<Host sources={[places({ idle: () => [{ id: 'x', label: long, meta: 'RFQ · due Tue 1 Dec · quoted twice', href: '/x' }] })]} />)
+    await user.click(screen.getByRole('button'))
+    const label = await screen.findByTitle(long)
+    expect(label.className).not.toMatch(/truncate/)
+    expect(label.className).toMatch(/break-words/)
+    expect(screen.getByTitle('RFQ · due Tue 1 Dec · quoted twice').className).not.toMatch(/truncate/)
+  })
+
+  it('key hints are hidden on touch screens (bug 39)', async () => {
+    const user = userEvent.setup()
+    render(<Host sources={[actions()]} shortcutsHint />)
+    await user.click(screen.getByRole('button'))
+    await screen.findByRole('option', { name: /New RFQ/ })
+    const hidden = (el: Element | null) => el?.closest('[class*="pointer:coarse"]') != null
+    expect(hidden(screen.getByText('N'))).toBe(true)
+    expect(hidden(screen.getByText('move'))).toBe(true)
+    expect(hidden(screen.getByText('Shortcuts'))).toBe(true)
   })
 
   it('remembers what was opened and lists it under Recent next time', async () => {
