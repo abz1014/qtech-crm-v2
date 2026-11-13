@@ -926,7 +926,7 @@ test.describe('expenses (M03, M11)', () => {
       await page.getByRole('button', { name: 'Previous month' }).click()
       // The closed-months query and last month's list are two requests; on a loaded runner either can take longer than 5 s. Wait on the
       // line that needs both (closed AND this month), then count the rows: the old count came first and timed out while the list loaded.
-      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is closed.`, { timeout: 20_000 })
+      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is locked.`, { timeout: 20_000 })
       await expect(page.getByText('before the close')).toHaveCount(1, { timeout: 20_000 })
       await expect(page.getByRole('link', { name: 'Open Lock a month' })).toBeVisible()
       await expect(page.getByRole('button', { name: /^More for Rent of 11/ })).toHaveCount(0)

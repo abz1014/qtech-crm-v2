@@ -111,7 +111,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           <p className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 border-b py-2 text-fg-2" data-testid="expenses-closed">
             <Icon icon={Lock} className="text-fg-muted" />
             <span>
-              <b className="font-medium text-fg">{monthKeyLabel(month)}  is locked.</b> {CLOSED_MONTH_LINE}
+              <b className="font-medium text-fg">{monthKeyLabel(month)} is locked.</b> {CLOSED_MONTH_LINE}
             </span>
             <Link to={`/money/month-end?month=${month}`} className="font-medium text-primary underline-offset-2 hover:underline">
               Open Lock a month
