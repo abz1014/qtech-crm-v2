@@ -206,7 +206,7 @@ export default function JobsListPage() {
   ) : chip === 'mine' && stage === null && counts.open > 0 ? (
     <EmptyState
       mood="goal"
-      title={role === 'engineer' ? 'No jobs assigned' : 'None of your jobs are open'}
+      title={role === 'engineer' ? 'No jobs assigned' : 'No jobs owned by you are open'}
       actions={
         <Button onClick={() => change({ chip: 'open' })}>
           Show every open job ({counts.open})

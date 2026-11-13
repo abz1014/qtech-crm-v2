@@ -63,7 +63,7 @@ describe('one-time password helpers', () => {
     const text = signInMessage({ name: 'Hira Siddiqui', email: 'hira@qtech.example', password: 'Vk7xmQ3pRt9wHn2e', signInUrl: 'https://crm.example/login' })
     expect(text).toBe(
       [
-        'Hi Hira, your Q-Tech CRM account is ready.',
+        'Dear Hira, your Q-Tech CRM account is ready.',
         'Sign in: https://crm.example/login',
         'Email: hira@qtech.example',
         'Password: Vk7xmQ3pRt9wHn2e',

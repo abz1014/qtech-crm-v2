@@ -20,7 +20,7 @@ export function manualRateProblem(p: { text: string; rate: number | null; asOf: 
   warning: string | null
 } {
   const none = { error: null, field: null, warning: null }
-  if (p.asOf && p.asOf > p.today) return { error: 'A rate can’t be dated in the future. Use today or an earlier day.', field: 'asOf', warning: null }
+  if (p.asOf && p.asOf > p.today) return { error: 'A rate cannot be dated in the future. Use today or an earlier day.', field: 'asOf', warning: null }
   if (p.text.trim() === '') return none
   if (p.rate === null || p.rate <= 0) return { error: 'Enter a rate above zero, for example 281.35.', field: 'rate', warning: null }
   if (p.rate > MAX_RATE_PKR) {
@@ -147,9 +147,9 @@ export function buildRateBar(latest: readonly FxLatestRow[], currenciesOnPrices:
     .sort((a, b) => (a.ratePkr === null ? 1 : 0) - (b.ratePkr === null ? 1 : 0) || a.currency.localeCompare(b.currency))
 }
 
-/** "auto · today", "auto · 3 days ago", "by hand · today", "auto · 12 days ago, stale". */
+/** "auto · today", "auto · 3 days ago", "manual · today", "auto · 12 days ago, stale". */
 export function rateBarNote(e: RateBarEntry): string {
-  const who = e.source === 'manual' ? 'by hand' : 'auto'
+  const who = e.source === 'manual' ? 'manual' : 'auto'
   const age = e.ageDays === null ? '' : e.ageDays <= 0 ? 'today' : `${e.ageDays} ${e.ageDays === 1 ? 'day' : 'days'} ago`
   const band = e.staleness === 'stale' ? ', stale' : e.staleness === 'unusable' ? ', too old' : ''
   return `${who} · ${age}${band}`

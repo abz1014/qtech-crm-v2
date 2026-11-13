@@ -58,7 +58,7 @@ export function passwordGroups(password: string): string[] {
 /** The text an admin pastes into WhatsApp. Carries the password, so it is built only at the moment of copying. */
 export function signInMessage(p: { name: string; email: string; password: string; signInUrl: string }): string {
   return [
-    `Hi ${firstName(p.name)}, your Q-Tech CRM account is ready.`,
+    `Dear ${firstName(p.name)}, your Q-Tech CRM account is ready.`,
     `Sign in: ${p.signInUrl}`,
     `Email: ${p.email}`,
     `Password: ${p.password}`,

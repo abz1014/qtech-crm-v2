@@ -26,7 +26,7 @@ describe('phone tabs: the top bar counts as badges', () => {
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: /^To do\s?, 140 need you$/ })).toHaveTextContent('99+')
+    expect(within(nav).getByRole('link', { name: /^To do\s?, 140 due now$/ })).toHaveTextContent('99+')
     expect(within(nav).getByRole('link', { name: 'Jobs' }).querySelector('[data-needs-count]')).toBeNull()
     expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
     // Money has no number, only a red dot while an invoice is late, and its name says so

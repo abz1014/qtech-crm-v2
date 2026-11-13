@@ -46,7 +46,7 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
  *
  * Fewer actions on show (grade-A 9 fix 3): a price line has ONE control, its chevron; its "..." menu (Edit reply, Copy price,
  * Remove reply) shows once the line is open. Phone (grade-A 6 fix 2): the items are an accordion. An item with prices (or a
- * can't quote) is its header line until tapped, one open at a time, the first such item open to start; an item only waiting is
+ * cannot quote) is its header line until tapped, one open at a time, the first such item open to start; an item only waiting is
  * its header and chip, the "Waiting on" line left to Suppliers asked.
  *
  * An engineer (owner decision 2026-10-22: no prices anywhere) gets the same items with who replied, lead time and stock only: no
@@ -208,7 +208,7 @@ function RowMenu({ rfqId, entry, item }: { rfqId: string; entry: Entry; item: Rf
 
 /**
  * The suppliers asked about this item who have not answered yet, as ONE line (grade-B R1): "Waiting on Midlands Valves Ltd", or
- * "Waiting on 3 suppliers" with the names in the title. Who they are, the chase and "Can't quote" live once per supplier in
+ * "Waiting on 3 suppliers" with the names in the title. Who they are, the chase and "Cannot quote" live once per supplier in
  * Suppliers asked (SuppliersAsked.tsx), not on every item.
  */
 function WaitingLine({ waiting }: { waiting: readonly InquiryRow[] }) {
@@ -295,7 +295,7 @@ export function ItemsPanel({
       )
     : []
   const nobodyAsked = inquiries.length === 0
-  // Something under the header besides the waiting line: a price or a can't quote.
+  // Something under the header besides the waiting line: a price or a cannot quote.
   const hasBody = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId) || Boolean(reasonForItem(itemId, i)))
   // Desktop: the column names show once, over the first item that has prices (they were repeated over every item).
   const headItemId = items.find(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id)))?.id
@@ -359,7 +359,7 @@ export function ItemsPanel({
             const cov = itemCoverage(lines.length, waiting.length, responders.length, askedCount)
             const q = qtyText(item.qty, item.unit)
             const forThis = (suggestions ?? []).filter(s => s.coversItemIds.includes(item.id)).slice(0, 3)
-            // Phone accordion: an item with prices, a can't quote or the warning folds to its header; one open at a time.
+            // Phone accordion: an item with prices, a cannot quote or the warning folds to its header; one open at a time.
             const foldable = phone && !nobodyAsked && (entries.length > 0 || declined.length > 0 || cov.kind === 'uncovered')
             const folded = foldable && shownItem !== item.id
             const bodyId = `item-body-${item.id}`

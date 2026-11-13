@@ -168,7 +168,7 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
           </FormField>
         ) : null}
         {showVia ? (
-          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" help="Bank refunds are matched to the bank statement at month end; cash comes out of cash in hand.">
+          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" help="Bank refunds are matched to the bank statement at month end. Cash comes out of cash in hand.">
             {f => <Select {...f} options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))} />}
           </FormField>
         ) : null}

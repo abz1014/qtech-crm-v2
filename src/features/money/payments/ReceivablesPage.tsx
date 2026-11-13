@@ -309,7 +309,7 @@ export function ReceivablesPage() {
                 // No balance has ever been recorded (a new CRM): "Every order is paid in full" would be untrue.
                 <NothingYetState screen="receivables" />
               ) : filter === 'open' ? (
-                <EmptyState mood="goal" title="Nothing is owed">
+                <EmptyState mood="goal" title="No balance due">
                   Every order is paid in full. New balances appear here when an order is won.
                 </EmptyState>
               ) : (

@@ -12,7 +12,7 @@ import type { Role } from '../../support/stack'
  * Cross-cutting daily use (hunt round 1). Everything is recorded with probe()/note(), nothing stops at the first failure.
  * Desktop is 1366x768, phone is 375x812 with touch. What is probed:
  *
- *   today        per role and size: the "N need you" header, the rows due now on the list and the one nav badge (Today's)
+ *   today        per role and size: the "N due now" header, the rows due now on the list and the one nav badge (Today's)
  *                agree; a customer chase (copy and mark chased) stamps once, Undo puts the count back and the row stays; after the
  *                Undo window the row moves to Waiting and every count drops by one; Snooze hides the row, Undo brings it back (DB).
  *   palette      Ctrl+K / Search button; company, partial words, contact, RFQ-0001 style refs, bare numbers, ORD refs, the customer PO,
@@ -79,11 +79,11 @@ async function until<T>(read: () => Promise<T>, ok: (v: T) => boolean, ms = 10_0
 
 /**
  * The numbers the screen shows: Today's header, the rows that need you (the "Overdue or due today" group: redesign phase 0, one
- * definition), and each nav badge (parsed from the ", N need you" words; only Today has one now).
+ * definition), and each nav badge (parsed from the ", N due now" words; only Today has one now).
  */
 async function todayNumbers(page: Page) {
   const text = await mainText(page)
-  const m = /(\d+)\s+need you/.exec(text)
+  const m = /(\d+)\s+due now/.exec(text)
   const header = m ? Number(m[1]) : null
   const rows = await page.locator('section[data-block="late"], section[data-block="today"]').locator('li[data-rule]').count()
   const links = await page
@@ -94,7 +94,7 @@ async function todayNumbers(page: Page) {
     .evaluateAll(as => as.map(a => (a.textContent ?? '').replace(/\s+/g, ' ').trim()))
   const nav: Record<string, number> = {}
   for (const l of links) {
-    const n = /, (\d+) need you/.exec(l)
+    const n = /, (\d+) due now/.exec(l)
     const key = /^(\d*)\s*(Today|RFQs|Orders|Money|Companies|Reports)/.exec(l)?.[2]
     if (key) nav[key] = n ? Number(n[1]) : 0
   }
@@ -104,7 +104,7 @@ async function todayNumbers(page: Page) {
 async function checkParity(page: Page, info: TestInfo, where: string) {
   const n = await todayNumbers(page)
   const others = (n.nav.RFQs ?? 0) + (n.nav.Orders ?? 0) + (n.nav.Money ?? 0)
-  if (n.header !== null && n.header !== n.rows) note(info, { kind: 'observation', where, what: `Today header says ${n.header} need you but the list has ${n.rows} rows due now`, detail: n })
+  if (n.header !== null && n.header !== n.rows) note(info, { kind: 'observation', where, what: `Today header says ${n.header} due now but the list has ${n.rows} rows due now`, detail: n })
   if (n.header !== null && n.nav.Today !== undefined && n.nav.Today !== n.header) note(info, { kind: 'observation', where, what: `Today nav badge ${n.nav.Today} differs from the header ${n.header}`, detail: n })
   if (others > 0) note(info, { kind: 'observation', where, what: `a nav badge other than Today's shows a number (${others})`, detail: n })
   return n
@@ -295,7 +295,7 @@ test('crosscut: palette search with refs, partial words, Urdu, wildcard and SQL-
   for (const c of cases)
     await probe(info, page, `palette "${c.q.slice(0, 40)}" (${c.why})`, async () => {
       const a = await paletteAsk(page, dialog, c.q)
-      const err = await dialog.getByText(/went wrong|could not search|couldn.t search|error/i).count()
+      const err = await dialog.getByText(/went wrong|could not search|could not be searched|error/i).count()
       if (err) note(info, { kind: 'observation', where: `palette ${c.why}`, what: `error text shown for "${c.q.slice(0, 60)}"`, detail: a.options.slice(0, 6) })
       if (a.status !== null && a.status >= 400) note(info, { kind: 'observation', where: `palette ${c.why}`, what: `search_all answered ${a.status} for "${c.q.slice(0, 60)}"` })
       if (a.ms > 2500) note(info, { kind: 'slow', where: `palette ${c.why}`, what: `results took ${a.ms} ms` })
@@ -676,12 +676,12 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
     note(info, { kind: 'observation', where: 'jobs junk params', what: `shows: ${(await mainText(page)).replace(/\s+/g, ' ').slice(0, 240)}` })
     await shot(page, 'jobs-junk-params', false)
   })
-  await probe(info, page, 'orders lede "need you" vs Orders nav badge', async () => {
+  await probe(info, page, 'orders lede "due now" vs Orders nav badge', async () => {
     await visit(page, info, '/orders', 'orders mine')
-    const lede = /(\d+) need you/.exec(await mainText(page))
+    const lede = /(\d+) due now/.exec(await mainText(page))
     const n = await todayNumbers(page)
     if (lede && n.nav.Orders !== undefined && Number(lede[1]) !== n.nav.Orders)
-      note(info, { kind: 'observation', where: 'orders counts', what: `Orders page says ${lede[1]} need you, the Orders nav badge says ${n.nav.Orders} (two different rules)` })
+      note(info, { kind: 'observation', where: 'orders counts', what: `Orders page says ${lede[1]} due now, the Orders nav badge says ${n.nav.Orders} (two different rules)` })
   })
   await ctx.close()
 

@@ -72,7 +72,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
     engineer: {
       title: 'No jobs yet',
       body: 'Orders assigned to you appear here with the site and the date.',
-      action: { kind: 'everyone', label: 'Show everyone’s' },
+      action: { kind: 'everyone', label: "Show everyone's" },
       recipe: 'today-jobs',
     },
   },
@@ -80,7 +80,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
 
 /** Admin, when the owner is still the only person on the team: the one button is adding people. */
 export const ADMIN_ALONE: FirstUseCopy = {
-  title: 'Just you so far',
+  title: 'No other users yet',
   body: 'Add the people who will use the app. Each one sees only what their role needs.',
   action: { kind: 'link', label: 'Add person', to: '/settings/team' },
   recipe: 'add-person',

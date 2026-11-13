@@ -23,7 +23,7 @@ export const QUOTES = {
       ['no_reply_to_clarification', 'No reply to our questions'],
       ['customer_cancelled', 'The customer cancelled'],
       ['could_not_source', 'We could not source it'],
-      ['we_were_late', 'We were too late'],
+      ['we_were_late', 'Quotation was late'],
       ['other', 'Another reason'],
     ] as const,
   },

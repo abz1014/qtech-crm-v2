@@ -270,7 +270,7 @@ export function GstRegisterPage() {
       <InfoTip label="About sending, FBR and PSID">
         By invoice date{all.length > 0 ? `, ${rangeLabel(all)}` : ''}. <b className="font-medium text-fg">Invoice posted</b> means the TCS courier took
         the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the tax office: the GST on every invoice is deposited with FBR.{' '}
-        <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit; one PSID can cover several invoices. Money actually
+        <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit. One PSID can cover several invoices. Money actually
         received is under To collect.
       </InfoTip>
     </div>

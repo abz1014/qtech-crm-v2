@@ -117,9 +117,9 @@ describe('evidence: order number, date, days to delivery', () => {
   })
   it('brand and family level cite the count and the last order', () => {
     expect(evidenceReason({ ...ev, tier: 3, count: 3, itemDesc: null, qty: null, expectedOn: null }, { family: 'Flow meters' }).text).toBe(
-      'Ordered in Flow meters 3 times; last for ORD-0027, placed 3 Feb 2026, delivered after 9 days',
+      'Ordered in Flow meters 3 times, last for ORD-0027, placed 3 Feb 2026, delivered after 9 days',
     )
-    expect(evidenceReason({ ...ev, tier: 2, count: 1 }, { brand: 'Hach' }).text).toContain('Ordered Hach 1 time; last for ORD-0027')
+    expect(evidenceReason({ ...ev, tier: 2, count: 1 }, { brand: 'Hach' }).text).toContain('Ordered Hach 1 time, last for ORD-0027')
   })
   it('an order that is not delivered yet says so, and never says "received"', () => {
     const e = evidenceReason({ ...ev, deliveredOn: null, deliveredAfterDays: null })

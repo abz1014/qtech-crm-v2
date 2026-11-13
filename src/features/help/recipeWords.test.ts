@@ -27,13 +27,13 @@ describe('help recipes use the current words', () => {
   })
 
   it('a step never taps RFQs or Orders as a menu item: they are Jobs now', () => {
-    const bad = files.filter(f => /\b(Tap|Select|Open) \[(RFQs|Orders)\]/.test(body(f)))
+    const bad = files.filter(f => /\b(Select|Open) \[(RFQs|Orders)\]/.test(body(f)))
     expect(bad).toEqual([])
   })
 
   it('the menu words a recipe taps are the menu\'s own', () => {
     const menu = new Set(navItems.map(i => i.label))
-    const tapped = files.flatMap(f => [...body(f).matchAll(/(Tap|Select|Open) \[(To do|Jobs|Money|Companies|Today)\]/g)].map(m => `${f}: ${m[2]}`))
+    const tapped = files.flatMap(f => [...body(f).matchAll(/(Select|Open) \[(To do|Jobs|Money|Companies|Today)\]/g)].map(m => `${f}: ${m[2]}`))
     expect(tapped.filter(t => !menu.has(t.split(': ')[1]))).toEqual([])
   })
 

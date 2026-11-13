@@ -848,8 +848,8 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           title="GST charged and GST paid on purchases, side by side"
           meta={
             <InfoTip label="About GST paid on purchases">
-              Never netted on this page; filing stays with the tax agent. GST paid on purchases is the part of a Supplier payment, Clearing or Freight
-              amount that Q-Tech can claim; profit and loss and the margins use the amount without it.
+              Never netted on this page. Filing stays with the tax agent. GST paid on purchases is the part of a Supplier payment, Clearing or Freight
+              amount that Q-Tech can claim. Profit and loss and the margins use the amount without it.
             </InfoTip>
           }
         >

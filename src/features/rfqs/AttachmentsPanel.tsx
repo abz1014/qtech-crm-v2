@@ -106,7 +106,7 @@ export function AttachmentsPanel({
             </button>
           </p>
         ) : slim ? null : list.length === 0 ? (
-          <p className="text-sm text-fg-muted">{orderId ? (seesPrices ? 'No files yet. The customer’s PO or a photo from site goes here.' : 'No files yet. A photo from site goes here.') : compact ? 'No files yet.' : 'No files yet. A nameplate photo or the customer’s RFQ PDF goes here, next to the questions.'}</p>
+          <p className="text-sm text-fg-muted">{orderId ? (seesPrices ? "No files yet. The customer's PO or a photo from site goes here." : 'No files yet. A photo from site goes here.') : compact ? 'No files yet.' : "No files yet. A nameplate photo or the customer's RFQ PDF goes here, next to the questions."}</p>
         ) : (
           <ul className="grid gap-2" aria-label={orderId ? 'Files on this order' : 'Files on this RFQ'}>
             {list.map(a => (

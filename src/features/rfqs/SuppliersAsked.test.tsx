@@ -280,9 +280,9 @@ describe('SuppliersAsked: each supplier once, with its reply (grade-B R2, R3, R4
     }
   })
 
-  it("a supplier who can't quote shows Take back instead of Enter reply", () => {
+  it("a supplier who cannot quote shows Take back instead of Enter reply", () => {
     renderMode('card', { ...inquiry, noOfferOn: '2026-10-03', noOfferReason: 'other' })
-    expect(screen.getByRole('button', { name: "Take back can't quote, Silent Traders" })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: "Take back cannot quote, Silent Traders" })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Enter reply/ })).toBeNull()
   })
 })

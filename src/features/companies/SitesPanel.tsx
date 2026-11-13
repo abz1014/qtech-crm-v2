@@ -49,7 +49,7 @@ const CLOSED_WHY: Record<string, string> = {
   no_reply_to_clarification: 'No reply from customer',
   customer_cancelled: 'Customer cancelled',
   could_not_source: 'Could not source',
-  we_were_late: 'We were too late',
+  we_were_late: 'Quotation was late',
   other: 'Another reason',
 }
 

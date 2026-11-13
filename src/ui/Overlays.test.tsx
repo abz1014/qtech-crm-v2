@@ -132,7 +132,7 @@ describe('Tabs and SegmentedControl (U03)', () => {
     await user.keyboard('{End}')
     expect(screen.getByRole('tab', { name: /Questions/ })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: /Questions/ })).toHaveTextContent('2')
-    expect(screen.getByRole('tab', { name: /^Questions\s*, 2 need you$/ })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Questions\s*, 2 due now$/ })).toBeInTheDocument()
   })
 
   function Seg({ mode }: { mode: 'radio' | 'tabs' }) {

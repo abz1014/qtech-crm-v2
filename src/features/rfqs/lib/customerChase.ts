@@ -123,7 +123,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
     } else if (kind === 'firm') {
       lines.push(`Without your reply by ${bold(by)} we will close the enquiry. If it is still live, please confirm the points above.`)
     } else if (kind === 'first' || kind === 'gentle') {
-      lines.push(`Kindly confirm by ${bold(by)}${dueLong ? `; our quotation is due on ${dueLong}` : ''}.`)
+      lines.push(`Kindly confirm by ${bold(by)}${dueLong ? `. Our quotation is due on ${dueLong}` : ''}.`)
     } else {
       lines.push(`Kindly confirm by ${bold(by)}.`)
     }

@@ -195,7 +195,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
           {view ? (
             <>
               {' · '}
-              <b className="num font-medium text-fg" data-needs-you-count>{needYou}</b> need you
+              <b className="num font-medium text-fg" data-needs-you-count>{needYou}</b> due now
               {model && model.weekTotal > 0 ? ` · ${model.weekTotal} later this week` : ''}
             </>
           ) : null}

@@ -14,7 +14,7 @@ import { PAID_HOW_LABEL, owedByPerson, type Claim, type PaidHow } from '@/featur
 import { pkr } from '@/features/money/expenses/model'
 
 /*
- * "Owed to staff" (0124, process audit 5). A claim the admin approved without paying yet: "Approved, owed to <person>". One line per
+ * "Owed to staff" (0124, process audit 5). A claim the admin approved without paying yet: "Approved, to repay <person>". One line per
  * person with the total, and under it each claim with Mark paid back, which says how it was paid (cash given back, from petty cash, or
  * by bank) and writes the expense on that day. `summary` is the Money home's short form: the people and what each is owed, no buttons.
  * Admin only: for anyone else nothing is drawn and nothing is asked.
@@ -112,7 +112,7 @@ function OwedRow({ claim }: { claim: Claim }) {
     <li className="grid gap-2 px-4 py-3 text-base lg:px-0" data-testid={`owed-${claim.id}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="min-w-0">
-          Approved, owed to <b className="font-semibold">{claim.byName}</b>: <b className="num font-semibold">{pkr(claim.amount)}</b>
+          Approved, to repay <b className="font-semibold">{claim.byName}</b>: <b className="num font-semibold">{pkr(claim.amount)}</b>
           {claim.note ? <span> for {claim.note}</span> : null}
           {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
         </span>

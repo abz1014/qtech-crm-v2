@@ -997,7 +997,7 @@ test('two tabs on one RFQ: a stale Issue after another tab issued, and a quantit
       await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { qty: 5 })
       await dialog(a).getByRole('button', { name: 'Issue quotation' }).click()
       // Fixed (HW-3): the issue is refused with the reason, nothing is issued, and the dialog shows the real total before the next try.
-      await expect(dialog(a).getByText(/changed the quantity/)).toBeVisible({ timeout: 30_000 })
+      await expect(dialog(a).getByText(/was changed to .* while this was open/)).toBeVisible({ timeout: 30_000 })
       if ((await quotationsOf(r.rfq.id)).length !== 0) note(info, { kind: 'observation', where: `${W} quantity changed under an open dialog`, what: 'a quotation was issued although the quantity had changed' })
       await expect(dialog(a).getByTestId('total-gross')).not.toHaveText(shown, T)
       const shownNow = await dialog(a).getByTestId('total-gross').innerText()
@@ -1021,7 +1021,7 @@ const REASONS = [
   ['no_reply_to_clarification', 'No reply to our questions'],
   ['customer_cancelled', 'The customer cancelled'],
   ['could_not_source', 'We could not source it'],
-  ['we_were_late', 'We were too late'],
+  ['we_were_late', 'Quotation was late'],
   ['other', 'Another reason'],
 ] as const
 
@@ -1197,7 +1197,7 @@ test('HW-3: a quantity changed while the Issue quotation dialog is open is issue
   await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { qty: 5 }) // someone else corrects the quantity
   await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
   // Fixed (HW-3): the issue is refused with the reason, nothing is issued, and the dialog shows the real total before the next try.
-  await expect(dialog(page).getByText(/changed the quantity/)).toBeVisible({ timeout: 30_000 })
+  await expect(dialog(page).getByText(/was changed to .* while this was open/)).toBeVisible({ timeout: 30_000 })
   expect(await quotationsOf(r.rfq.id)).toHaveLength(0)
   await expect(dialog(page).getByTestId('total-gross')).toHaveText('PKR 5,900', T)
   const shownNow = await dialog(page).getByTestId('total-gross').innerText()

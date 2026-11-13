@@ -304,7 +304,7 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
   return (
     <section aria-label={`Item ${item.number}`} className="min-w-0 rounded-panel border bg-surface" data-statement-item={item.number}>
       <header className="border-b bg-sunken px-4 py-4">
-        <h2 className="break-words text-lg font-semibold">{`${item.number}. ${title.trim()} — Qty: ${sec.quantityText}`}</h2>
+        <h2 className="break-words text-lg font-semibold">{`${item.number}. ${title.trim()}, Qty ${sec.quantityText}`}</h2>
         {spec ? <p className="mt-1 break-words text-base text-fg-muted">{spec}</p> : null}
       </header>
       {sec.rows.length === 0 ? (

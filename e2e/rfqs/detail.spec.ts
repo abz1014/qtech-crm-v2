@@ -11,7 +11,7 @@ import { openStage, stagesOf } from '../support/job'
  * FE-2 targets asserted here (BUILD_PLAN FE-2; the UX audit of 2026-10-19 moved the rare actions into More):
  *   Supplier reply        Enter reply, then at most 1 typed price per item, currency never typed (then one Save reply)
  *   Paste reply           paste + accept, at most 2 actions once the reply is open (nothing is saved until Accept)
- *   Can't quote           Enter reply, Can't quote, the reason (the five reasons sit behind one menu: grade-B R2)
+ *   Cannot quote           Enter reply, Cannot quote, the reason (the five reasons sit behind one menu: grade-B R2)
  *   Chase                 1 tap for EVERY supplier asked (Copy and mark chased on the one shown, Chase on the others)
  *   Mark quotation sent   2 taps (More, then the item): a quotation issued from the app is marked sent by Issue itself
  *   Lose / close          at most 2 taps (open More, choose the reason; the suggested one is marked)
@@ -217,14 +217,14 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
     expect(await linesOf(s.germany.inquiryId)).toHaveLength(0)
   })
 
-  test("a regret becomes can't quote with the reason filled in", async ({ page }) => {
+  test("a regret becomes cannot quote with the reason filled in", async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.china.name)
     await copy(page, 'Regret, we do not handle this brand. Sorry we cannot quote.')
     await r.getByRole('button', { name: 'Paste reply' }).click()
     await expect(r.getByText(/The supplier cannot quote\. Reason:/)).toBeVisible()
-    await r.getByRole('button', { name: "Mark can't quote" }).click()
+    await r.getByRole('button', { name: "Mark cannot quote" }).click()
     await expect.poll(async () => (await inquiryOf(s.china.inquiryId)).no_offer_on).toBe(today())
     const done = await inquiryOf(s.china.inquiryId)
     expect(['no_brand', 'other']).toContain(done.no_offer_reason)
@@ -291,27 +291,27 @@ test.describe('comparison', () => {
   })
 })
 
-test.describe("can't quote (Enter reply, Can't quote, the reason)", () => {
+test.describe("cannot quote (Enter reply, Cannot quote, the reason)", () => {
   test('the reasons sit behind one menu; one tap records the reason, and it can be taken back', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', `supplier_inquiries?id=eq.${s.china.inquiryId}`, { method: 'PATCH', body: { notes: 'Call Imran on Monday' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.china.name)
-    await expect(r.getByRole('button', { name: "Doesn't carry this brand" })).toHaveCount(0) // not five buttons (grade-B R2)
-    await r.getByRole('button', { name: `Can't quote, ${s.china.name}` }).click()
-    await page.getByRole('menuitem', { name: "Doesn't carry this brand" }).click() // the one tap on the reason
-    await expect(page.getByRole('status').filter({ hasText: "Marked can't quote" })).toBeVisible()
+    await expect(r.getByRole('button', { name: "Does not carry this brand" })).toHaveCount(0) // not five buttons (grade-B R2)
+    await r.getByRole('button', { name: `Cannot quote, ${s.china.name}` }).click()
+    await page.getByRole('menuitem', { name: "Does not carry this brand" }).click() // the one tap on the reason
+    await expect(page.getByRole('status').filter({ hasText: "Marked cannot quote" })).toBeVisible()
     await expect(r).toHaveCount(0) // the dialog closes
     // The supplier's row in Suppliers asked: the reason and Take back.
     const closed = page.locator(`[data-reply-row="${s.china.id}"]`)
-    await expect(closed).toContainText("Can't quote: Doesn't carry this brand")
+    await expect(closed).toContainText("Cannot quote: Does not carry this brand")
     const after = await inquiryOf(s.china.inquiryId)
     expect(after.no_offer_on).toBe(today())
     expect(after.no_offer_reason).toBe('no_brand') // a stored key, not a phrase
     expect(after.notes).toBe('Call Imran on Monday') // the notes belong to people and are never written
-    await expect(page.getByRole('article', { name: 'Item 1' }).locator(`[data-declined="${s.china.id}"]`)).toContainText("Doesn't carry this brand")
+    await expect(page.getByRole('article', { name: 'Item 1' }).locator(`[data-declined="${s.china.id}"]`)).toContainText("Does not carry this brand")
 
-    await closed.getByRole('button', { name: `Take back can't quote, ${s.china.name}` }).click()
+    await closed.getByRole('button', { name: `Take back cannot quote, ${s.china.name}` }).click()
     await expect(closed.getByRole('button', { name: `Enter reply, ${s.china.name}` })).toBeVisible() // a reply is expected again
     const back = await inquiryOf(s.china.inquiryId)
     expect(back.no_offer_on).toBeNull()
@@ -517,7 +517,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.locator('[data-waiting]')).toHaveCount(1)
     await expect(one.locator('[data-waiting]')).toHaveText('Waiting on 3 suppliers')
-    await expect(one.getByRole('button', { name: /Add reply|Enter reply|Can't quote/ })).toHaveCount(0)
+    await expect(one.getByRole('button', { name: /Add reply|Enter reply|Cannot quote/ })).toHaveCount(0)
     // No price boxes until a supplier's Enter reply is tapped.
     await expect(page.getByLabel(`Price for item 1 from ${s.germany.name}`)).toHaveCount(0)
     await expect(page.locator(`[data-reply-row="${s.germany.id}"]`)).toHaveCount(1)
@@ -614,7 +614,7 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     // One line (grade-B R5): a fresh rate is its figure (where it came from is its title); a stale one says how old.
     await expect(bar).toContainText('Rates today, PKR per unit')
     await expect(bar.locator('[data-rate="USD"]')).toContainText('USD 280.00')
-    await expect(bar.locator('[data-rate="USD"]')).toHaveAttribute('title', 'by hand · today')
+    await expect(bar.locator('[data-rate="USD"]')).toHaveAttribute('title', 'manual · today')
     await expect(bar.locator('[data-rate="EUR"]')).toContainText('12 days old')
     await expect(bar.locator('[data-rate="EUR"]')).toHaveAttribute('data-band', 'stale')
     await expect(bar.locator('[data-rate="JPY"]')).toContainText(/JPY\s*no rate, not compared/)

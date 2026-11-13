@@ -30,7 +30,7 @@ export function DeletePoRevisionConfirm({
         if (!o) onClose()
       }}
       thing={ref}
-      summary={`${ref} · ${supplierName}. Supplier prices it already wrote onto the order's lines stay as they are.`}
+      summary={`${ref} · ${supplierName}. Supplier prices already written onto the order's lines are unchanged.`}
       also={['its PDF']}
       onConfirm={async () => {
         await del.mutateAsync(po.id)

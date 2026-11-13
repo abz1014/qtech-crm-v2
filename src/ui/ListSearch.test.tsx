@@ -30,17 +30,17 @@ function phoneWidth(phone: boolean) {
 }
 
 describe('NeedsCount', () => {
-  it('draws the number, says ", N need you" to screen readers, and draws nothing for 0 or no count', () => {
+  it('draws the number, says ", N due now" to screen readers, and draws nothing for 0 or no count', () => {
     const { container, rerender } = render(<NeedsCount n={4} />)
     expect(container.querySelector('[data-needs-count="warning"]')).toHaveTextContent('4')
     expect(container.querySelector('[data-needs-count]')).toHaveAttribute('aria-hidden', 'true')
-    expect(container).toHaveTextContent(', 4 need you')
+    expect(container).toHaveTextContent(', 4 due now')
     rerender(<NeedsCount n={2} variant="danger" sr="2 critical" />)
     expect(container.querySelector('[data-needs-count="danger"]')).toBeInTheDocument()
     expect(container).toHaveTextContent(', 2 critical')
     rerender(<NeedsCount n={140} badge />)
     expect(container.querySelector('[data-needs-count]')).toHaveTextContent('99+')
-    expect(container).toHaveTextContent(', 140 need you')
+    expect(container).toHaveTextContent(', 140 due now')
     rerender(<NeedsCount n={0} />)
     expect(container).toBeEmptyDOMElement()
     rerender(<NeedsCount n={undefined} />)
@@ -50,7 +50,7 @@ describe('NeedsCount', () => {
   it('a segmented option takes `needs`, never a total', () => {
     render(<SegmentedControl aria-label="Show" value="a" onValueChange={() => undefined} options={[{ value: 'a', label: 'All' }, { value: 'b', label: 'Needs action', needs: 3 }, { value: 'c', label: 'Waiting', needs: 0 }]} />)
     expect(screen.getByRole('radio', { name: 'All' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: /^Needs action\s*, 3 need you$/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /^Needs action\s*, 3 due now$/ })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Waiting' })).toBeInTheDocument()
   })
 })

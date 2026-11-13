@@ -134,7 +134,7 @@ test('HE-9 a hand-entered exchange rate dated in 2200 is refused as a typo, not 
   await page.getByLabel('As of').fill('1/1/2200')
   await page.getByLabel('As of').press('Tab')
   // Refused, with the reason under the date: Save rate stays aria-disabled and nothing is stored.
-  await expect(page.getByText(/can.t be dated in the future|Use a date between/).first()).toBeVisible()
+  await expect(page.getByText(/cannot be dated in the future|Use a date between/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save rate' })).toHaveAttribute('aria-disabled', 'true')
   await page.getByRole('button', { name: 'Save rate' }).click({ force: true })
   await page.waitForTimeout(1000)
@@ -166,7 +166,7 @@ test('HE-11 RFQ intake: a quantity too big for the database (9999999999) is acce
   await page.getByRole('option', { name: new RegExp(world.tag) }).first().click()
   await paste(page, 'Pressure gauge 0-10 bar 9999999999 nos')
   await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toBeVisible()
-  await page.getByRole('button', { name: /^Save (for later|without asking)/ }).click()
+  await page.getByRole('button', { name: /^Save (as draft|for later|without asking)/ }).click()
   await page.waitForTimeout(2000)
   await expect(page.getByText('The change was not saved.').first()).toHaveCount(0)
   await context.close()

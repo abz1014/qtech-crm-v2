@@ -347,7 +347,7 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.locator('#intake-company')).toBeFocused()
     await pickCompany(page, customer.name)
-    await page.getByRole('button', { name: 'Add an item by hand' }).click()
+    await page.getByRole('button', { name: 'Add an item manually' }).click()
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Spare gasket set')
     await page.getByRole('button', { name: "Save as draft" }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()

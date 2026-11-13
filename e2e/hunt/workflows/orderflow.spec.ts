@@ -209,7 +209,7 @@ async function todayItems(ctx: BrowserContext, info: TestInfo, rule: string, tex
   try {
     await visit(p, info, '/todo')
     await p.getByRole('heading', { level: 1, name: 'To do' }).waitFor({ timeout: T }).catch(() => undefined)
-    await p.getByText(/\d+ need you|Nothing due|all done/i).first().waitFor({ timeout: T }).catch(() => undefined)
+    await p.getByText(/\d+ due now|Nothing due|all done/i).first().waitFor({ timeout: T }).catch(() => undefined)
     // Waiting starts collapsed (R2-08): open it so its items are in the DOM too.
     const toggle = p.getByRole('region', { name: 'Waiting' }).getByRole('button', { expanded: false })
     if (await toggle.count()) await toggle.first().click().catch(() => undefined)
@@ -235,7 +235,7 @@ async function threeWay(info: TestInfo, orderPage: Page, rp: Page, orderId: stri
   await visit(rp, info, `/money/receivables?q=${encodeURIComponent(customer)}`)
   await rp
     .getByRole('link', { name: /^Open ORD-\d+/ })
-    .or(rp.getByText(/Nothing matches|Nothing is owed/))
+    .or(rp.getByText(/Nothing matches|No balance due/))
     .first()
     .waitFor({ timeout: T })
     .catch(() => undefined)

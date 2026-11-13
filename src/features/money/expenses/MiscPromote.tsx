@@ -54,7 +54,7 @@ function Suggestion({ s, onHide }: { s: MiscSuggestion; onHide: () => void }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <Icon icon={Lightbulb} className="text-fg-muted" />
         <p className="min-w-0 flex-1">
-          <b className="font-semibold">‘{s.title}’</b> used {s.uses} times ({pkr(s.spent)}): make it a category.
+          <b className="font-semibold">&apos;{s.title}&apos;</b> used {s.uses} times ({pkr(s.spent)}): make it a category.
         </p>
         {naming ? null : (
           <span className="flex flex-wrap gap-2">

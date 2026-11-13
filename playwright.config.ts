@@ -31,7 +31,7 @@ import { defineConfig, devices } from '@playwright/test'
  *      E2E_SUITE=rfq-intake REVIEW_DIR=review-shots npx playwright test --project=rfq-intake
  *
  *  - rfq-detail (R07, R09, R10): the Job page of an enquiry on the same stack and build.
- *    Reply capture, can't quote, the lowest mark, chase, close, the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
+ *    Reply capture, cannot quote, the lowest mark, chase, close, the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-detail REVIEW_DIR=review-shots npx playwright test --project=rfq-detail
  *
  *  - rfq-quotation (R19): the Issue quotation dialog on the RFQ page, issue and re-issue (same number, new revision), the PDF stored in

@@ -7,7 +7,7 @@ export const CLOSE_REASONS = [
   { value: 'no_reply_to_clarification', label: 'No reply to our questions' },
   { value: 'customer_cancelled', label: 'The customer cancelled' },
   { value: 'could_not_source', label: 'We could not source it' },
-  { value: 'we_were_late', label: 'We were too late' },
+  { value: 'we_were_late', label: 'Quotation was late' },
   { value: 'other', label: 'Another reason' },
 ] as const
 

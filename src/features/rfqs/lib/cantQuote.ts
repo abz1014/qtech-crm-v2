@@ -1,4 +1,4 @@
-// "Can't quote" (Gate 2 decision, 2026-10-14): ONE reason per supplier inquiry, with an optional per-item override.
+// "Cannot quote" (Gate 2 decision, 2026-10-14): ONE reason per supplier inquiry, with an optional per-item override.
 // Stored as structured records (migration 0032), never as text in the notes:
 //   supplier_inquiries.no_offer_on + no_offer_reason   the whole inquiry
 //   inquiry_item_declines (inquiry_id, rfq_item_id)    a different reason for one item
@@ -6,10 +6,10 @@
 // from the key here, in one place.
 
 export const CANT_QUOTE_REASONS = [
-  { key: 'no_brand', label: "Doesn't carry this brand" },
-  { key: 'cant_source_in_time', label: "Can't source in time" },
+  { key: 'no_brand', label: "Does not carry this brand" },
+  { key: 'cant_source_in_time', label: "Cannot source in time" },
   { key: 'discontinued', label: 'Item discontinued' },
-  { key: 'wont_quote_quantity', label: "Won't quote this quantity" },
+  { key: 'wont_quote_quantity', label: "Will not quote this quantity" },
   { key: 'other', label: 'Other reason' },
 ] as const
 

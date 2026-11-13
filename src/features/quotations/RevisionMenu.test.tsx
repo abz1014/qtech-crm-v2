@@ -66,7 +66,7 @@ describe('delete the latest PO revision', () => {
       <DeletePoRevisionConfirm orderId="o-1" po={{ id: 'p-1', number: 17, revision: 2, firstIssuedOn: '2026-10-02' }} supplierName="Keller GmbH" onClose={() => undefined} />,
     )
     expect(screen.getByRole('dialog', { name: 'Delete PO-26-0017 R2?' })).toBeInTheDocument()
-    expect(screen.getByText(/stay as they are/)).toBeInTheDocument()
+    expect(screen.getByText(/are unchanged/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText('PO-26-0017 R2 deleted')).toBeInTheDocument()
     expect(fake.calls.find(c => c.target === 'rpc:delete_po_revision')?.ops[0]).toEqual(['args', [{ p_po_id: 'p-1' }]])

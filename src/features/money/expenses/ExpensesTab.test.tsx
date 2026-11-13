@@ -110,7 +110,7 @@ describe('Expenses list (0086)', () => {
 
   it('a closed month: one line says so, every row is locked and nothing opens for editing', async () => {
     setup(['2026-09'])
-    expect(await screen.findByTestId('expenses-closed')).toHaveTextContent('September 2026 is locked. Month closed. Reopen the month first, in Lock a month, to change or delete.')
+    expect(await screen.findByTestId('expenses-closed')).toHaveTextContent('September 2026 is locked. Month locked. Reopen the month first, in Lock a month, to change or delete.')
     await screen.findByTestId('expenses-month-total')
     expect(screen.queryByRole('button', { name: /^More for/ })).not.toBeInTheDocument()
     expect(screen.getAllByText('Locked month').length).toBe(3)

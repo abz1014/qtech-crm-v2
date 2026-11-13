@@ -304,7 +304,7 @@ describe('intake screen', () => {
     await user.dblClick(button)
 
     expect(await screen.findByText(/is waiting for prices/)).toBeInTheDocument()
-    expect(screen.getByText('Copied. Paste it into each supplier’s chat.')).toBeInTheDocument()
+    expect(screen.getByText("Copied. Paste it into each supplier's chat.")).toBeInTheDocument()
     // No supplier chat is listed to open here, so Open RFQ is the one green button.
     expect(screen.getByRole('link', { name: 'Open RFQ-0185' })).toHaveClass('bg-primary')
     const floats = db.calls.filter(c => c.target === 'rpc:float_rfq')
