@@ -77,8 +77,8 @@ export function ResolveBasisDialog({ order, items, money, onClose }: { order: Or
       >
         <div className="grid gap-4">
           <p className="text-sm text-fg-2">
-            The old CRM did not say. Choose one: each choice shows what the order would come to. Nothing changes until you press Save answer.
-            <InfoTip label="About this question" className="ml-1">Old orders did not say whether prices included GST. Your answer fixes the totals; it is asked once.</InfoTip>
+            The old CRM did not say. Each choice shows what the order would come to. Nothing changes until Save answer is pressed.
+            <InfoTip label="About this question" className="ml-1">Old orders did not say whether prices included GST. The answer fixes the totals and is asked once.</InfoTip>
           </p>
           <RadioGroup aria-label="Is GST included?" value={basis ?? ''} onValueChange={v => setBasis(v as 'net' | 'gross')} className="gap-3">
             {option('gross', 'The prices include GST')}
@@ -86,7 +86,7 @@ export function ResolveBasisDialog({ order, items, money, onClose }: { order: Or
           </RadioGroup>
           <p className="text-xs text-fg-muted">Rewrites the item prices once. Recorded in the audit log.</p>
           {error ? (
-            <Banner tone="danger" title="Couldn't save the answer">
+            <Banner tone="danger" title="The answer could not be saved">
               {error}
             </Banner>
           ) : null}

@@ -109,7 +109,7 @@ export function MoneyRow({ data, hasOrder }: { data: JobData; hasOrder: boolean 
         ) : (
           <p className="text-base text-fg-muted">No money yet: no quotation has been sent.</p>
         )}
-        <p className="mt-2 text-base text-fg-muted">{q ? 'Nothing is owed until the customer places an order.' : 'Money appears here once a quotation is sent and an order is placed.'}</p>
+        <p className="mt-2 text-base text-fg-muted">{q ? 'No balance is due until the customer places an order.' : 'Money appears here once a quotation is sent and an order is placed.'}</p>
       </>,
     )
   }

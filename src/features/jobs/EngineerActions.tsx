@@ -39,7 +39,7 @@ import type { JobData } from '@/features/jobs/useJobData'
  * One of them is the page's green button (the first that applies); the rest are plain. With no signal nothing is sent: the buttons are
  * off and a plain line says so, and what was typed stays in the box (there is no offline queue). Every control is 52 px tall.
  */
-export const OFFLINE_TEXT = 'Needs signal to save. Your typing is kept.'
+export const OFFLINE_TEXT = 'No connection. The note is kept and can be saved later.'
 
 const NOTE_KEEP = 'qtech.engineer.note.'
 
@@ -358,7 +358,7 @@ function PhotoOrNote({
           {canNote ? (
             <label className="grid gap-2 text-base font-medium">
               Note
-              <TextArea rows={4} value={text} onChange={e => setText(e.target.value)} placeholder="What you saw or did on site" />
+              <TextArea rows={4} value={text} onChange={e => setText(e.target.value)} placeholder="Observations and work done on site" />
             </label>
           ) : (
             <p className="text-base text-fg-muted">Notes go on the order. This job has no order yet, so only photos can be added.</p>

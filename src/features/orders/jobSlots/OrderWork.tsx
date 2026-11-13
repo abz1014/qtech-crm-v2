@@ -40,7 +40,7 @@ function BasisQuestion({ order, items, money, admin }: { order: OrderHeader; ite
           ) : undefined
         }
       >
-        The old CRM did not say. Until someone answers, this order is left out of margin, GST totals and the net cash that counts towards targets.
+        The old CRM did not say. Until this is answered, this order is left out of margin, GST totals and the net cash that counts towards targets.
       </Banner>
       {resolving ? <ResolveBasisDialog order={order} items={items} money={money} onClose={() => setResolving(false)} /> : null}
     </>

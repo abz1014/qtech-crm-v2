@@ -180,7 +180,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
               <Skeleton className="h-4 w-5/6" />
             </div>
           ) : draftData.isError ? (
-            <Banner tone="danger" title="Couldn't prepare the message" action={<Button onClick={() => void draftData.refetch()}>Try again</Button>}>
+            <Banner tone="danger" title="The message could not be prepared" action={<Button onClick={() => void draftData.refetch()}>Try again</Button>}>
               Nothing was changed.
             </Banner>
           ) : draft ? (

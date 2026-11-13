@@ -140,7 +140,7 @@ export function SplitLineDialog({
 
           {noQuotes ? (
             <div className="grid gap-4">
-              <Field label="Move to" requirement="required" help="Suppliers you have asked, ordered from or carry a brand for.">
+              <Field label="Move to" requirement="required" help="Suppliers already asked, ordered from, or carrying a brand for.">
                 <Select
                   value={supplierId}
                   onChange={e => {
@@ -169,7 +169,7 @@ export function SplitLineDialog({
               {rankQ.isPending ? (
                 <p className="text-sm text-fg-muted">Loading the supplier prices</p>
               ) : rankQ.isError ? (
-                <Banner tone="danger" title="Couldn't load the supplier prices" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
+                <Banner tone="danger" title="The supplier prices could not be loaded" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
                   Nothing was changed.
                 </Banner>
               ) : (
@@ -263,7 +263,7 @@ export function SplitLineDialog({
           ) : null}
 
           {error ? (
-            <Banner tone="danger" title="Couldn't split the line">
+            <Banner tone="danger" title="The line could not be split">
               {error} Nothing was changed.
             </Banner>
           ) : null}

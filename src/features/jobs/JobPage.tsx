@@ -86,7 +86,7 @@ export default function JobPage() {
         <EmptyState
           mood="error"
           icon={CloudOff}
-          title="Couldn't open this job"
+          title="Could not open this job"
           actions={
             <Button onClick={() => void facts.refetch()} variant="primary">
               Try again

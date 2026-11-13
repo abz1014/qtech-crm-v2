@@ -312,7 +312,7 @@ describe('the order page after the 2026-10-22 audit (P1 to P10)', () => {
     const header = container.querySelector('header') as HTMLElement
     expect(header).toHaveTextContent('Waiting for payment')
     expect(header).not.toHaveTextContent(/\bDone\b/)
-    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('Customer owes PKR 730,420, due')
+    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('To collect PKR 730,420, due')
     expect(greens(container).map(b => b.textContent)).toEqual(['Copy reminder'])
   })
 
