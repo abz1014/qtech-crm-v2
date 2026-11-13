@@ -108,7 +108,7 @@ export function BrandsCarried({ companyId, withQuoteCounts }: { companyId: strin
       {removing ? (
         <ConfirmRemove
           title={`Remove ${removing.name}?`}
-          detail="It stops being listed for them. The brand itself and any quotes for it stay."
+          detail="It stops being listed for them. The brand itself and any supplier prices for it stay."
           busy={unlink.isPending}
           error={removeError}
           onConfirm={confirmRemove}

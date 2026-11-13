@@ -95,7 +95,7 @@ export const bandDetail = (ageDays: number): string => `${ageText(ageDays)} old`
 /** The sentence under the table for a rate that can no longer be used; null for any other band. */
 export function unusableWarning(r: RateRow): string | null {
   if (r.staleness !== 'unusable' || r.ageDays === null) return null
-  return `${r.currency} has not been updated for ${r.ageDays} days. A rate older than 30 days is not used, so ${r.currency} quotes show in ${r.currency} only and are left out of price comparisons until someone adds a current rate.`
+  return `${r.currency} has not been updated for ${r.ageDays} days. A rate older than 30 days is not used, so ${r.currency} supplier prices show in ${r.currency} only and are left out of price comparisons until someone adds a current rate.`
 }
 
 const runDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', weekday: 'short', day: 'numeric', month: 'short' })

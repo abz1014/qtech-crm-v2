@@ -262,8 +262,8 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
             ? reasonLabel(inq.noOfferReason)
             : 'No reason given'
           : outcome === 'no-reply'
-            ? `Asked ${formatShortDate(inq.sentOn, today)}, ${inq.chaseCount > 0 ? `chased ${inq.chaseCount === 1 ? 'once' : `${inq.chaseCount} times`}, ` : ''}never answered`
-            : 'Awaiting a quote',
+            ? `Asked ${formatShortDate(inq.sentOn, today)}, ${inq.chaseCount > 0 ? `followed up ${inq.chaseCount === 1 ? 'once' : `${inq.chaseCount} times`}, ` : ''}never answered`
+            : 'Awaiting a supplier price',
       imported: inq.legacy,
     })
   }
@@ -334,11 +334,11 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
       const replied = (linesByInquiry.get(i.id)?.length ?? 0) > 0 || Boolean(i.noOfferOn)
       const tail =
         i.chaseCount > 0 && i.lastChasedOn
-          ? ` Chased ${i.chaseCount === 1 ? 'once' : i.chaseCount === 2 ? 'twice' : `${i.chaseCount} times`} on ${formatShortDate(i.lastChasedOn, today)}.`
+          ? ` Followed up ${i.chaseCount === 1 ? 'once' : i.chaseCount === 2 ? 'twice' : `${i.chaseCount} times`} on ${formatShortDate(i.lastChasedOn, today)}.`
           : replied
             ? ''
             : ' No reply yet.'
-      events.push({ on: i.lastChasedOn && i.lastChasedOn > i.sentOn ? i.lastChasedOn : i.sentOn, parts: ['Enquiry asked for ', { rfqId: i.rfqId, ref: ref(i.rfqId) }, `.${tail}`] })
+      events.push({ on: i.lastChasedOn && i.lastChasedOn > i.sentOn ? i.lastChasedOn : i.sentOn, parts: ['RFQ asked for ', { rfqId: i.rfqId, ref: ref(i.rfqId) }, `.${tail}`] })
     }
   }
   for (const l of raw.legs) {

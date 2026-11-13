@@ -167,17 +167,17 @@ export function SplitLineDialog({
             <div className="grid gap-2">
               <span className="text-sm font-medium">Move to</span>
               {rankQ.isPending ? (
-                <p className="text-sm text-fg-muted">Loading the quotes</p>
+                <p className="text-sm text-fg-muted">Loading the supplier prices</p>
               ) : rankQ.isError ? (
-                <Banner tone="danger" title="Couldn't load the quotes" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
+                <Banner tone="danger" title="Couldn't load the supplier prices" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
                   Nothing was changed.
                 </Banner>
               ) : (
                 <>
                   <p className="text-xs font-medium text-fg-muted">
-                    Ranked quotes from {order.rfqId ? 'the RFQ' : ''}, item {item.number}
+                    Ranked supplier prices from {order.rfqId ? 'the RFQ' : ''}, item {item.number}
                   </p>
-                  <div role="radiogroup" aria-label="Ranked quotes" className="grid gap-1 rounded border p-1">
+                  <div role="radiogroup" aria-label="Ranked supplier prices" className="grid gap-1 rounded border p-1">
                     {quotes.map(q => {
                       const isHere = here(q)
                       const on = target?.kind === 'quote' && target.q.lineId === q.lineId

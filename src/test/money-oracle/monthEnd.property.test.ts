@@ -155,7 +155,7 @@ describe('P&L (buildPnl, pnlCsv) shows the oracle figures and adds up', () => {
           toPaisa(net('Payments received, split into net and GST') as number) +
           toPaisa(net('Order costs') as number) +
           toPaisa(net('Overheads') as number) +
-          (adjust !== 0n ? toPaisa(net('Changes to closed months, counted this month') as number) : 0n)
+          (adjust !== 0n ? toPaisa(net('Changes to locked months, counted this month') as number) : 0n)
         expect(sumLines).toBe(toPaisa(result))
         expect(toPaisa(csv.rows.find(r => r[0] === 'After drawings')?.[5] as number)).toBe(o.result + adjust - o.nonPnl)
         // the payment counts partition the month's payments

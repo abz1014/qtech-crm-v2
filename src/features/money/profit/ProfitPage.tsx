@@ -216,13 +216,13 @@ function ProfitTable({ rows: monthRows, label }: { rows: ProfitPoint[]; label: s
 
 /** Money spent on enquiries that ended without an order. Its own panel, so a failed read never hides the profit figures. */
 function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | undefined; isError: boolean; onRetry: () => void }) {
-  const title = 'Spent on enquiries we did not win'
+  const title = 'Spent on RFQs we did not win'
   if (isError) return <ReportError title={`${title} did not load`} onRetry={onRetry} />
   if (!rows) return <ReportLoading label={`Loading: ${title}`} />
   const columns: Column<LostEnquiryCost>[] = [
     {
       id: 'rfq',
-      header: 'Enquiry',
+      header: 'RFQ',
       value: r => r.rfqNumber,
       cell: r => (
         <Link to={`/rfqs/${r.rfqId}`} className="font-medium text-primary-text hover:underline">
@@ -236,9 +236,9 @@ function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | u
     { id: 'last', header: 'Last paid', value: r => r.lastPaidOn ?? '', cell: r => (r.lastPaidOn ? formatShortDate(r.lastPaidOn, undefined, true) : ''), hideBelowMd: true },
   ]
   return (
-    <Panel flat title={title} meta={<InfoTip label="About enquiries we did not win">Costs paid on an enquiry that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
+    <Panel flat title={title} meta={<InfoTip label="About RFQs we did not win">Costs paid on an RFQ that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
       {rows.length === 0 ? (
-        <EmptyState title="Nothing spent on a lost enquiry">No cost is recorded against an enquiry that was closed without an order.</EmptyState>
+        <EmptyState title="Nothing spent on a lost RFQ">No cost is recorded against an RFQ that was closed without an order.</EmptyState>
       ) : (
         <DataTable
           className="md:rounded-none md:border-x-0"

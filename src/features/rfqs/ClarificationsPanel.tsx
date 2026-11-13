@@ -101,7 +101,7 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
 
   /** Stamps the questions as asked, with Undo. `copied`: the copy button did it, else a WhatsApp / email link was opened. */
   const markAsk = async (group: ClarificationRow[], repeat: boolean, copied: boolean) => {
-    const done = copied ? (repeat ? 'Chase text copied' : 'Questions copied') : 'Marked as asked'
+    const done = copied ? (repeat ? 'Follow-up text copied' : 'Questions copied') : 'Marked as asked'
     const before = group.map(c => ({ id: c.id, firstAskedAt: c.firstAskedAt, lastAskedAt: c.lastAskedAt, lastAskedBy: c.lastAskedBy ?? null, askCount: c.askCount }))
     try {
       await stamp.mutateAsync(group.map(c => c.id))
@@ -114,7 +114,7 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
             await restore.mutateAsync(before)
           },
           settledTitle: done,
-          settledBody: `${rfqRef(rfq.number)} marked chased`,
+          settledBody: `${rfqRef(rfq.number)} marked as followed up`,
           undoneTitle: 'Undone.',
           undoneBody: 'The questions are not marked as asked.',
         },
@@ -251,7 +251,7 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
                 today={today}
                 header={`Waiting on the customer · ${groups.asked.length}`}
                 hint={askedHint(groups.asked, today)}
-                copyLabel="Copy chase text"
+                copyLabel="Copy follow-up text"
                 stamping={copying || stamp.isPending}
                 onCopy={(selected, text) => void once(() => copyAsk(selected, true, text))}
                 onMark={selected => void once(() => markAsk(selected, true, false))}
@@ -306,7 +306,7 @@ function chaseDueNote(rows: ClarificationRow[], dueOn: string | null, today: str
   const days = last ? daysBetween(toBusinessDate(new Date(last)), today) : 0
   if (!chaseDue(days, dueOn, today)) return null
   const soon = dueOn ? daysBetween(today, dueOn.slice(0, 10)) <= 3 && dueOn.slice(0, 10) >= today : false
-  return `A chase is due: ${days} ${days === 1 ? 'day' : 'days'} since the last ask${soon ? ' and the quotation is due within 3 days' : ''}.`
+  return `A follow-up is due: ${days} ${days === 1 ? 'day' : 'days'} since the last ask${soon ? ' and the quotation is due within 3 days' : ''}.`
 }
 
 /**
@@ -409,7 +409,7 @@ function ChaseGroup({
       {repeat && phone && !chasing ? (
         <div className="mx-4 mb-3 mt-2 grid gap-1">
           <Button size="sm" icon={Send} className="w-fit" aria-expanded={false} onClick={() => setChasing(true)}>
-            Chase the customer
+            Follow up with the customer
           </Button>
           {dueNote ? <p className="text-sm text-tone-warning-fg">{dueNote}</p> : null}
         </div>
@@ -447,7 +447,7 @@ function ChaseGroup({
         ) : null}
         {whole ? (
           <ChaseNote className="border-t">
-            Copying records {repeat ? 'a chase today' : 'the ask today'} (asked ×{count}). {rfqRef(rfq.number)} moves to Waiting and returns on {formatDay(returnsOn)}.
+            Copying records {repeat ? 'a follow-up today' : 'the ask today'} (asked ×{count}). {rfqRef(rfq.number)} moves to Waiting and returns on {formatDay(returnsOn)}.
             {dueNote ? ` ${dueNote}` : ''}
           </ChaseNote>
         ) : null}

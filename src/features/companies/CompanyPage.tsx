@@ -393,7 +393,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
             <div className="max-md:hidden">
               <NextStepBox
                 tone="quiet"
-                text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
+                text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send a request for a price, log it as a new RFQ.'}
                 action={phone ? undefined : primary}
               />
             </div>

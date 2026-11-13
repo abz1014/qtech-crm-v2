@@ -31,7 +31,7 @@ describe('I paid refusal for an admin', () => {
     installFakeDb(() => ({ data: [] }))
     mount('admin')
     expect(screen.getAllByText('I paid is for sales and engineers').length).toBeGreaterThan(0)
-    expect(screen.getByText('Your role is Admin. Admins approve what people paid on the Expenses page, so there is no I paid page for you.')).toBeInTheDocument()
+    expect(screen.getByText('Your role is Admin. Admins approve claims on the Expenses page, so there is no I paid page for you.')).toBeInTheDocument()
     expect(screen.queryByText(/Ask an admin/)).toBeNull()
   })
 })

@@ -6,7 +6,7 @@ const states = (m: ReturnType<typeof stageModel>) => m.stops.map(s => s.state)
 
 describe('the seven stops', () => {
   it('has the seven stops of the plan, in order', () => {
-    expect([...STOPS]).toEqual(['Enquiry', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'])
+    expect([...STOPS]).toEqual(['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'])
   })
 
   it('the current stop is the earliest one not finished, for every stage word the database sends', () => {

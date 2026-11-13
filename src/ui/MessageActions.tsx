@@ -131,7 +131,7 @@ export function MessageActions({
     if (!link.filled) {
       // Too long for a link: copied first (inside the tap, before the new tab takes focus), then the empty chat opens.
       if (!(await copyToClipboard(c === 'email' ? mailBody : text))) {
-        toast({ title: 'Could not copy the message', body: 'It is too long to fill in. Select the text and copy it by hand.', tone: 'danger' })
+        toast({ title: 'Could not copy the message', body: 'It is too long to fill in. Select the text and copy it manually.', tone: 'danger' })
         return
       }
       toast({ title: 'Message copied', body: `It is too long to fill in. Paste it into ${c === 'email' ? 'the email' : 'the chat'}.`, tone: 'success' })
@@ -147,7 +147,7 @@ export function MessageActions({
       toast(
         ok
           ? { title: 'Copied', body: `Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`, tone: 'success' }
-          : { title: 'Could not copy the message', body: 'Select the text and copy it by hand.', tone: 'danger' },
+          : { title: 'Could not copy the message', body: 'Select the text and copy it manually.', tone: 'danger' },
       )
     } finally {
       setCopying(false)

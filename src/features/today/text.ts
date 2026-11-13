@@ -3,8 +3,8 @@
 import { daysBetween } from '@/features/rfqs/lib/dateText'
 import { formatDay } from '@/lib/formatDay'
 
-/** "chased just now", "chased yesterday", "chased 2 days ago". `verb` is "chased" for a chase, "reminded" for a payment reminder. */
-export function chasedAgo(chasedOn: string, today: string, verb = 'chased'): string {
+/** "followed up just now", "followed up yesterday", "followed up 2 days ago". `verb` is "chased" for a chase, "reminded" for a payment reminder. */
+export function chasedAgo(chasedOn: string, today: string, verb = 'followed up'): string {
   const d = Math.max(0, daysBetween(chasedOn, today))
   if (d === 0) return `${verb} just now`
   if (d === 1) return `${verb} yesterday`
@@ -12,8 +12,8 @@ export function chasedAgo(chasedOn: string, today: string, verb = 'chased'): str
 }
 
 /** "chased 2 days ago · next nudge on Mon 30 Nov". */
-export function waitingLine(chasedOn: string, nextNudgeOn: string, today: string, verb = 'chased'): string {
-  return `${chasedAgo(chasedOn, today, verb)} · next nudge on ${formatDay(nextNudgeOn)}`
+export function waitingLine(chasedOn: string, nextNudgeOn: string, today: string, verb = 'followed up'): string {
+  return `${chasedAgo(chasedOn, today, verb)} · next reminder on ${formatDay(nextNudgeOn)}`
 }
 
 /** "6 days ago", "today", "yesterday". */

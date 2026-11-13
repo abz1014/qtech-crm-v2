@@ -367,7 +367,7 @@ export function MoveDialog({ c, rows, groups, onClose }: { c: Category; rows: re
       </Field>
       {changesKind && target ? (
         <Banner tone="warning" title="This changes Profit and loss">
-          {`Past and new ${c.name} expenses will count as ${KIND_EFFECT[target.kind]}, not ${KIND_EFFECT[c.grp]}. Not allowed while ${c.name} has expenses in a closed month.`}
+          {`Past and new ${c.name} expenses will count as ${KIND_EFFECT[target.kind]}, not ${KIND_EFFECT[c.grp]}. Not allowed while ${c.name} has expenses in a locked month.`}
         </Banner>
       ) : null}
     </FormDialog>
@@ -461,7 +461,7 @@ export function MergeDialog({ c, rows, groups, onClose }: { c: Category; rows: r
       ) : null}
       {target && target.grp !== c.grp ? (
         <Banner tone="warning" title="This changes Profit and loss">
-          {`${c.name} expenses will count as ${KIND_EFFECT[target.grp]}, not ${KIND_EFFECT[c.grp]}. Not allowed while ${c.name} has expenses in a closed month.`}
+          {`${c.name} expenses will count as ${KIND_EFFECT[target.grp]}, not ${KIND_EFFECT[c.grp]}. Not allowed while ${c.name} has expenses in a locked month.`}
         </Banner>
       ) : null}
     </FormDialog>

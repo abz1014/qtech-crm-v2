@@ -73,7 +73,7 @@ export function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCou
   if (!inquiry.sentOn && !inquiry.noOfferOn && inquiry.lines.length === 0) return <StatusBadge dimension="inquiry" value="shortlisted" />
   if (inquiry.responseState === 'quoted' || inquiry.lines.length > 0) return <StatusBadge dimension="inquiry" value="quoted" detail={`${inquiry.lines.length} of ${itemCount}`} />
   if (inquiry.responseState === 'no_offer' || inquiry.noOfferOn) return <StatusBadge dimension="inquiry" value="no-offer" />
-  return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `chased ×${inquiry.chaseCount}` : undefined} />
+  return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `followed up ×${inquiry.chaseCount}` : undefined} />
 }
 
 /** What a typed price reads as in PKR at today's rate. It never says whether it is the lowest: the CRM suggests no supplier. */

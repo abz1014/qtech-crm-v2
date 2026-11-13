@@ -60,7 +60,7 @@ export function InstallBanner() {
               setIosHidden(true)
             }}
           >
-            Got it
+            Dismiss
           </Button>
         }
       >

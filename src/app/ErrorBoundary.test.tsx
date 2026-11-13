@@ -18,7 +18,7 @@ describe('ErrorBoundary', () => {
     const el = document.createElement('div')
     const root = createRoot(el)
     act(() => root.render(<ErrorBoundary><Boom /></ErrorBoundary>))
-    expect(el.textContent).toContain('Something went wrong')
+    expect(el.textContent).toContain('The page stopped working')
     expect(el.querySelector('button')?.textContent).toBe('Reload page')
     act(() => root.unmount())
   })

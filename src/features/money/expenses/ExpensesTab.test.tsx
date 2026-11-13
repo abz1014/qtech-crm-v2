@@ -77,7 +77,7 @@ describe('Expenses list (0086)', () => {
     await user.click(screen.getByRole('button', { name: 'More for Supplier payment of 380000' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete expense' }))
     expect(await screen.findByTestId('delete-expense-what')).toHaveTextContent('Supplier payment · PKR 380,000 · 11 Sep 2026')
-    expect(screen.getByText('This can’t be undone.')).toBeInTheDocument()
+    expect(screen.getByText('This cannot be undone.')).toBeInTheDocument()
     expect(db.calls.some(c => c.verb === 'delete')).toBe(false)
     await user.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(db.calls.some(c => c.target === 'expenses' && c.verb === 'delete')).toBe(true))
@@ -113,7 +113,7 @@ describe('Expenses list (0086)', () => {
     expect(await screen.findByTestId('expenses-closed')).toHaveTextContent('September 2026 is closed. Month closed. Reopen the month first, in Lock a month, to change or delete.')
     await screen.findByTestId('expenses-month-total')
     expect(screen.queryByRole('button', { name: /^More for/ })).not.toBeInTheDocument()
-    expect(screen.getAllByText('Locked, the month is closed').length).toBe(3)
+    expect(screen.getAllByText('Locked month').length).toBe(3)
   })
 
   it('a closed month: History sits next to the lock on every row and opens the history of that expense', async () => {

@@ -378,8 +378,8 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
         <DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} error={{ reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />,
       ),
     )
-    expect(el.textContent).toContain('Couldn’t load RFQs')
-    expect(el.textContent).toContain('Your changes are safe. Check your connection and try again.')
+    expect(el.textContent).toContain('RFQs could not be loaded')
+    expect(el.textContent).toContain('Entered changes are kept. Check the connection and try again.')
     expect(el.textContent).toContain('Request failed · Fri 27 Nov, 09:41 · reference 4f1c9a')
   })
 

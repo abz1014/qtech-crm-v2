@@ -28,7 +28,7 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     const both = [legRow('a'), late]
     const items = [item('1', 'a'), item('2', 'b')]
     const sales = page(header(), both, items, 'sales')
-    expect(sales.primary).toMatchObject({ kind: 'chase-goods', label: 'Chase goods', supplierName: 'Dubai Instrumentation' })
+    expect(sales.primary).toMatchObject({ kind: 'chase-goods', label: 'Follow up on delivery', supplierName: 'Dubai Instrumentation' })
     expect(sales.text).toBe('Goods from Dubai Instrumentation are 3 days late')
     expect(sales.step.tone).toBe('now') // amber: late goods are our own pace; red is for late money and promises (redesign phase 0)
     expect(page(header(), both, items, 'engineer').primary).toMatchObject({ kind: 'deliver', label: 'Delivered today' })

@@ -34,7 +34,7 @@ export interface ConfirmDeleteProps {
   blocked?: ReactNode
   /** A warning with a box to tick: Delete stays disabled until it is ticked. Not a block: the person can tick and go on. */
   tick?: { warning: ReactNode; label: ReactNode }
-  /** For a caller whose success toast offers Undo: this sentence replaces "This can’t be undone.". Leave it out and nothing changes. */
+  /** For a caller whose success toast offers Undo: this sentence replaces "This cannot be undone.". Leave it out and nothing changes. */
   undoNote?: ReactNode
   /** Runs the delete. Resolve when the server has confirmed; throw to keep the dialog open with the message. */
   onConfirm: () => Promise<void>
@@ -130,7 +130,7 @@ export function ConfirmDelete({
               {blocked}
             </p>
           ) : (
-            <p data-slot={undoNote ? 'delete-undo-note' : undefined}>{undoNote ?? 'This can’t be undone.'}</p>
+            <p data-slot={undoNote ? 'delete-undo-note' : undefined}>{undoNote ?? 'This cannot be undone.'}</p>
           )}
           {error ? (
             <p role="alert" className="text-tone-danger-fg">

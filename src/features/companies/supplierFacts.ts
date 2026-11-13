@@ -50,7 +50,7 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
     asked >= 3
       ? `Replied ${replied} of ${asked} · quoted ${quoted}${declined >= 1 ? ` · couldn't offer ${declined}` : ''}`
       : asked === 0
-        ? 'No enquiries yet'
+        ? 'No RFQs yet'
         : `Asked ${times(asked)} · ${replies(replied)}`
 
   return {
@@ -126,8 +126,8 @@ export function factNotes(f: SupplierFacts, span: { from: string; to: string } |
   if (p.importedOnly) {
     out.push(`All imported from the old CRM${span ? `, ${monthYear(span.from)} to ${monthYear(span.to)}` : ''}. Nothing logged here since.`)
   } else {
-    out.push('Counted from enquiries, quotes, POs and delivery dates. Nothing is typed in.')
-    if (p.hasImported) out.push(`Includes imported history: ${p.legacyAsked} of ${f.asked} enquiries came from the old CRM.`)
+    out.push('Counted from RFQs, supplier prices, POs and delivery dates. Nothing is typed in.')
+    if (p.hasImported) out.push(`Includes imported history: ${p.legacyAsked} of ${f.asked} RFQs came from the old CRM.`)
   }
   if (p.pricesHidden > 0) out.push(`${p.pricesHidden} ${isAre(p.pricesHidden, 'price is', 'prices are')} hidden: the currency was never checked.`)
   const r = f.replyTime
@@ -141,8 +141,8 @@ export function factNotes(f: SupplierFacts, span: { from: string; to: string } |
     out.push(`Reply time shows once 3 replies are logged here (${r.logged} so far).`)
   }
   if (f.chosen.kind === 'known') out.push(`Chosen: ${chosenText(f)} were later ordered from them.`)
-  else if (f.chosen.kind === 'orders') out.push(`Ordered: ${chosenText(f)}, none traced back to one of their quotes.`)
+  else if (f.chosen.kind === 'orders') out.push(`Ordered: ${chosenText(f)}, none traced back to one of their supplier prices.`)
   // Imported delivery dates being estimates is said by the Deliveries tip and the "est." beside each such date.
-  if (f.lowData && !p.importedOnly) out.push('With so few enquiries these are facts, not a pattern.')
+  if (f.lowData && !p.importedOnly) out.push('With so few RFQs these are facts, not a pattern.')
   return out
 }

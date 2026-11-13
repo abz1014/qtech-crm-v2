@@ -209,7 +209,7 @@ export function whyTheyDiffer(r: Reconcile): { key: string; amount: string; text
     { key: 'ahead', amount: r.costsAhead, text: 'supplier costs paid before their sale was invoiced (held for it), or less when earlier payments are matched now' },
     { key: 'drawings', amount: r.drawingsAndTax, text: 'owner drawings, loan repayments and GST paid on purchases: cash out that is not a cost' },
     { key: 'refunds', amount: r.refunds, text: 'refunds paid back to customers: cash out that is not a cost' },
-    { key: 'other', amount: r.other, text: "other: a closed month's frozen cash figure differs from the books" },
+    { key: 'other', amount: r.other, text: "other: a locked month's frozen cash figure differs from the books" },
   ].filter(l => toPaisa(l.amount) !== 0n)
 }
 

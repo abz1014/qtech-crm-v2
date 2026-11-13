@@ -97,7 +97,7 @@ export default function CaptureRoute() {
             onClick={() => navigate('/enquiries/new', { replace: true, state: { capture: { id: item.id, text: item.text, files: files(item) } } })}
             className="text-base"
           >
-            New enquiry
+            New RFQ
           </Button>
         ) : null}
         <Button size="touch" icon={Search} onClick={() => setPicking(p => !p)} aria-expanded={picking} className="text-base">

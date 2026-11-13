@@ -109,7 +109,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
             </Link>
           }
         >
-          {`${jobLabel(job.key)} was made as an order, with no enquiry, so no supplier was asked for a price.`}
+          {`${jobLabel(job.key)} was made as an order, with no RFQ, so no supplier was asked for a price.`}
         </EmptyState>
       </Shell>
     )
@@ -277,7 +277,7 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
       ) : null}
 
       {(items.data ?? []).length === 0 ? (
-        <p className="mt-6 text-base text-fg-muted">This enquiry has no items yet.</p>
+        <p className="mt-6 text-base text-fg-muted">This RFQ has no items yet.</p>
       ) : (
         <div className="mt-4 grid gap-4" data-testid="statement">
           {statement.sections.map(sec => (
@@ -317,7 +317,7 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
         </ul>
       ) : (
         <div className="overflow-x-auto">
-          <div role="table" aria-label={`Quotes for item ${item.number}`} className="min-w-[36rem] text-left text-base">
+          <div role="table" aria-label={`Supplier prices for item ${item.number}`} className="min-w-[36rem] text-left text-base">
             <div role="rowgroup">
               <div role="row" className={cn(ROW, 'border-b text-sm text-fg-muted')}>
                 {COLUMNS.map(c => {

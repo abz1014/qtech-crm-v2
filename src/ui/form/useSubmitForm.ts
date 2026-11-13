@@ -41,7 +41,7 @@ interface UseSubmitFormOptions<S extends z.ZodTypeAny> {
   defaultValues: DefaultValues<z.input<S>>
   onSubmit: (values: z.output<S>, ctx: SubmitContext) => unknown | Promise<unknown>
   onSuccess?: (values: z.output<S>) => void
-  /** What is being saved, for the banner title ("company": "Couldn't save the company"). */
+  /** What is being saved, for the banner title ("company": "The company was not saved"). */
   entity?: string
   /** Route a mapped error to one field (return { field, message }) or leave it in the banner (return undefined). */
   routeError?: (error: MappedError) => FieldRoute | undefined

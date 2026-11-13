@@ -64,7 +64,7 @@ export function AppShell({ counts }: AppShellProps) {
  */
 function phoneTitle(pathname: string): string | undefined {
   const at = (p: string) => pathname === p || pathname === `${p}/`
-  if (at('/enquiries/new')) return 'New enquiry'
+  if (at('/enquiries/new')) return 'New RFQ'
   if (at('/rfqs/new')) return 'New RFQ'
   if (at('/rfqs')) return 'RFQs'
   if (pathname.startsWith('/rfqs/')) return 'RFQ'

@@ -129,7 +129,7 @@ describe('StickyActionBar (phone detail pages)', () => {
       <StickyActionBar
         label="RFQ actions"
         primary={<Button variant="primary" size="touch">Issue quotation</Button>}
-        secondary={<Button size="touch">Chase</Button>}
+        secondary={<Button size="touch">Follow up</Button>}
         more={
           <MoreMenu touch side="top">
             <MenuItem>Edit</MenuItem>
@@ -141,7 +141,7 @@ describe('StickyActionBar (phone detail pages)', () => {
     expect(bar.className).toMatch(/fixed/)
     expect(bar.className).toMatch(/md:hidden/)
     expect(bar.className).toMatch(/safe-area-inset-bottom/)
-    expect(within(bar).getAllByRole('button').map(b => b.textContent || b.getAttribute('aria-label'))).toEqual(['Issue quotation', 'Chase', 'More actions'])
+    expect(within(bar).getAllByRole('button').map(b => b.textContent || b.getAttribute('aria-label'))).toEqual(['Issue quotation', 'Follow up', 'More actions'])
   })
 })
 

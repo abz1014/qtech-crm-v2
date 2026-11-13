@@ -31,7 +31,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
   today: {
     sales: {
       title: 'Your work shows up here',
-      body: 'To do lists customers to chase, suppliers to ask and quotations due. It fills up once you log your first RFQ.',
+      body: 'To do lists customers to follow up, suppliers to ask and quotations due. It fills up once you log your first RFQ.',
       action: { kind: 'link', label: 'New RFQ', to: '/rfqs/new' },
       recipe: 'new-rfq',
     },
@@ -43,7 +43,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
     },
     admin: {
       title: 'Nothing needs you yet',
-      body: 'To do lists payments to chase, invoices to send and month-end checks.',
+      body: 'To do lists payments to follow up, invoices to send and month-end checks.',
       action: { kind: 'link', label: 'Open Money', to: '/money' },
       recipe: 'record-payment',
     },
@@ -65,7 +65,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
   orders: {
     sales: {
       title: 'No orders of yours yet',
-      body: 'Orders start when you mark an RFQ won, or from Order without enquiry.',
+      body: 'Orders start when you mark an RFQ won, or from Order without RFQ.',
       action: { kind: 'link', label: 'Open RFQs', to: '/rfqs' },
       recipe: 'mark-won',
     },

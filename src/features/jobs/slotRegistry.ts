@@ -28,6 +28,6 @@ export const JOB_SLOTS: Record<JobSlotName, readonly SlotComponent[]> = {
   'stage:payment': [lazy(() => import('@/features/orders/jobSlots/PaymentWork'))],
 }
 
-/** The slot name of a stop ("Supplier order" -> 'stage:supplier-order'). */
-export const stageSlot = (stop: StopName): StageSlotName => `stage:${stop.toLowerCase().replace(/ /g, '-')}` as StageSlotName
+/** The slot name of a stop ("Supplier order" -> 'stage:supplier-order'; the RFQ stop keeps its original slot name 'stage:enquiry'). */
+export const stageSlot = (stop: StopName): StageSlotName => (stop === 'RFQ' ? 'stage:enquiry' : `stage:${stop.toLowerCase().replace(/ /g, '-')}`) as StageSlotName
 

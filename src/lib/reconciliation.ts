@@ -294,7 +294,7 @@ export function computeReconciliationExceptions(input: ReconciliationInput): Rec
     const trail: [string, string | null][] = [
       ['copy received', g.copyReceivedOn],
       ['TCS sent', g.tcsSentOn],
-      ['client received', g.clientReceivedOn],
+      ['customer received', g.clientReceivedOn],
     ]
     const filled = trail.filter((t): t is [string, string] => Boolean(t[1]))
     for (let i = 1; i < filled.length; i++) {

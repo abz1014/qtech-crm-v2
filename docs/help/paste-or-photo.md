@@ -10,7 +10,7 @@ related: new-enquiry
 2. It says what it looks like: a supplier price, the customer's answer, a site photo or a note. Wrong guess? Tap the right one.
 3. A supplier's prices: tap [Accept N prices]. The prices go on that supplier's row.
 4. A photo or a note: tap [Add photo] or [Add note]. There are no other fields.
-5. Sharing from WhatsApp on your phone? Share to Q-Tech CRM, then pick [New enquiry] or [Add to job…].
+5. Sharing from WhatsApp on your phone? Share to Q-Tech CRM, then pick [New RFQ] or [Add to job…].
 
 Tip: An engineer can add a photo or a note. Prices are for sales and the owner.
 

@@ -161,7 +161,7 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
       expect(p.frozen).toBe(true)
       expect(figures(p)).toEqual([70000, 12600, 20000, 12345.67, 37654.33, 7000, 30654.33, 42945.67, 3600])
       const next = await pnlOf(NEXT.start)
-      expect(num(next.adj_net_in), 'the change to the closed month is carried by the first open month after it').toBe(2678.57)
+      expect(num(next.adj_net_in), 'the change to the locked month is carried by the first open month after it').toBe(2678.57)
       await page.goto(BOOKS.monthEnd.pnl(M.key))
       await expect(page.getByTestId('pnl-frozen')).toBeVisible()
       const sum = page.getByRole('region', { name: BOOKS.pnl.sumBar }).first()

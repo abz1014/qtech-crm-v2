@@ -68,7 +68,7 @@ describe('LegsPanel split over the supplier-order and delivery stages', () => {
     expect(screen.getByRole('button', { name: 'Add supplier' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Issue PO, Alpenmark Controls/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Delivered today/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: /^Chase goods/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Follow up on delivery/ })).toBeNull()
   })
 
   it('both stages draw the supplier orders as hairline rows: no box around the list, none around a row', () => {
@@ -84,7 +84,7 @@ describe('LegsPanel split over the supplier-order and delivery stages', () => {
   it('Delivery stage: exactly one Delivered today and the goods chase; no PO or supplier buttons', () => {
     render(wrap(panel('delivery')).ui)
     expect(screen.getAllByRole('button', { name: /^Delivered today/ })).toHaveLength(1)
-    expect(screen.getByRole('button', { name: /^Chase goods, Dubai Instrumentation/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Follow up on delivery, Dubai Instrumentation/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Issue PO/ })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add supplier' })).toBeNull()
     expect(screen.getByRole('region', { name: 'Deliveries' })).toBeInTheDocument()

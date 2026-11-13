@@ -61,7 +61,7 @@ describe('supplierFacts (5c display rules)', () => {
     const f = supplierFacts({ ...base, asked: 4, replied: 4, quoted: 4, chosen_of: 0, chosen: 0, orders_count: 3 })!
     expect(f.chosen).toEqual({ kind: 'orders', orders: 3 })
     expect(chosenText(f)).toBe('3 orders with them')
-    expect(factNotes(f, null)).toContain('Ordered: 3 orders with them, none traced back to one of their quotes.')
+    expect(factNotes(f, null)).toContain('Ordered: 3 orders with them, none traced back to one of their supplier prices.')
     expect(chosenText(supplierFacts({ ...base, orders_count: 1 })!)).toBe('1 order with them')
     // traced quotes win: "2 of 3 quoted items"
     expect(chosenText(supplierFacts({ ...base, chosen_of: 3, chosen: 2, orders_count: 5 })!)).toBe('2 of 3 quoted items')
@@ -80,7 +80,7 @@ describe('supplierFacts (5c display rules)', () => {
   })
 
   it('says "No enquiries yet" rather than "Asked no times"', () => {
-    expect(supplierFacts({ ...base, deliveries: 1 })!.enquirySummary).toBe('No enquiries yet')
+    expect(supplierFacts({ ...base, deliveries: 1 })!.enquirySummary).toBe('No RFQs yet')
   })
 })
 
@@ -123,7 +123,7 @@ describe('factNotes (the rules behind "What we know", shown in its (i) tip)', ()
   it('own history: where it comes from, the reply-time rule and what Chosen means', () => {
     const f = supplierFacts({ ...base, asked: 6, replied: 5, quoted: 4, reply_days_n: 5, median_reply_days: 3, chosen_of: 4, chosen: 2 })!
     expect(factNotes(f, null)).toEqual([
-      'Counted from enquiries, quotes, POs and delivery dates. Nothing is typed in.',
+      'Counted from RFQs, supplier prices, POs and delivery dates. Nothing is typed in.',
       'Reply time is the middle of the 5 replies logged here.',
       'Chosen: 2 of 4 quoted items were later ordered from them.',
     ])
@@ -131,8 +131,8 @@ describe('factNotes (the rules behind "What we know", shown in its (i) tip)', ()
   it('mixed history: how much was imported, hidden prices and replies left out', () => {
     const f = supplierFacts({ ...base, asked: 6, replied: 5, quoted: 4, legacy_asked: 3, reply_days_n: 3, median_reply_days: 2, prices_hidden: 1, deliveries: 2, late: 1 })!
     expect(factNotes(f, null)).toEqual([
-      'Counted from enquiries, quotes, POs and delivery dates. Nothing is typed in.',
-      'Includes imported history: 3 of 6 enquiries came from the old CRM.',
+      'Counted from RFQs, supplier prices, POs and delivery dates. Nothing is typed in.',
+      'Includes imported history: 3 of 6 RFQs came from the old CRM.',
       '1 price is hidden: the currency was never checked.',
       'Reply time is the middle of the 3 replies logged here. 2 imported replies are left out (no real date).',
     ])
@@ -146,6 +146,6 @@ describe('factNotes (the rules behind "What we know", shown in its (i) tip)', ()
   it('low data: says how many replies a reply time needs, and that no pattern is implied', () => {
     const notes = factNotes(supplierFacts({ ...base, asked: 1, replied: 1, quoted: 1, reply_days_n: 1 })!, null)
     expect(notes).toContain('Reply time shows once 3 replies are logged here (1 so far).')
-    expect(notes[notes.length - 1]).toBe('With so few enquiries these are facts, not a pattern.')
+    expect(notes[notes.length - 1]).toBe('With so few RFQs these are facts, not a pattern.')
   })
 })

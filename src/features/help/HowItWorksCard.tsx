@@ -84,7 +84,7 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
           </ol>
           <div className="flex gap-2">
             <Button size="touch" onClick={() => setDismissed(true)}>
-              Got it
+              Dismiss
             </Button>
             <Button variant="quiet" size="touch" onClick={() => openHelp(null)}>
               Open Help

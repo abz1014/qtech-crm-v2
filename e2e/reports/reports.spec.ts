@@ -75,7 +75,7 @@ for (const role of ['admin', 'sales'] as const) {
         await expect(page.getByTestId('report-name')).toHaveText('Profit and loss')
         await page.getByTestId('report-picker').selectOption('enquiries')
       }
-      await expect(page.getByTestId('report-name')).toHaveText('Enquiries and customers')
+      await expect(page.getByTestId('report-name')).toHaveText('RFQs and customers')
       await expect(page.getByRole('region', { name: 'At a glance' })).toContainText('Win rate')
       for (const q of QUESTIONS) await expect(page.getByText(q, { exact: true })).toBeVisible()
       await openAll(page)

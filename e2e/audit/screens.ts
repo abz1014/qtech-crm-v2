@@ -395,10 +395,10 @@ const LAYOUT_VISITS: readonly Visit[] = [
   layoutDialog('lg-invoice-detail', 'Layout: Invoice detail dialog', () => '/money/gst-register', async page => {
     await page.locator('#main tbody tr, #main [role="row"]').filter({ hasText: /d/ }).first().click()
   }),
-  layoutDialog('lg-goods-chase', 'Layout: Chase goods dialog', fx => `/orders/${fx.order.multiLeg}`, async page => {
+  layoutDialog('lg-goods-chase', 'Layout: Follow up on delivery dialog', fx => `/orders/${fx.order.multiLeg}`, async page => {
     // Chase goods sits in the Delivery section's supplier lines, which start folded.
     await page.getByRole('button', { name: /^Delivery/ }).filter({ visible: true }).first().click().catch(() => undefined)
-    await legAction(page, /^Chase goods/, /^Chase goods$/)
+    await legAction(page, /^Follow up on delivery/, /^Follow up on delivery$/)
   }),
   layoutDialog(
     'lg-filter-sheet',
@@ -453,7 +453,7 @@ async function firstRow(page: Page): Promise<void> {
 }
 
 const STAGE_IDS = ['enquiry', 'quotation', 'order', 'supplier-order', 'delivery', 'invoice', 'payment'] as const
-const STAGE_NAMES = ['Enquiry', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
+const STAGE_NAMES = ['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
 /** The folded control of one job step, found by the step's name at the start of its text, among the buttons that fold (a stage bar link of the same name is not one). Case-sensitive: the row's text is the title then the state word ("EnquiryDone"), so a case-insensitive lookahead for a lowercase letter never matched (L4) (it survives a change of the row markup). */
 const stageHead = (page: Page, i: number) =>
   page
@@ -738,7 +738,7 @@ export const VISITS: readonly Visit[] = [
   screen('job-commissioning', 'Job page: 3 supplier orders, commissioning', ALL, fx => `/orders/${fx.order.multiLeg}`),
   // The header's key facts (Customer PO for admin and sales only, Supplier, Delivery), at every viewport the audit runs.
   screen('job-key-facts', 'Job page: header key facts (PO, supplier, delivery)', ALL, fx => `/orders/${fx.order.multiLeg}`, { scrollTo: '[aria-label="Key facts"]' }),
-  screen('enquiry-new', 'New enquiry', MONEY, () => '/enquiries/new'),
+  screen('enquiry-new', 'New RFQ', MONEY, () => '/enquiries/new'),
   screen('review-imported', 'Money: Review imported', ADMIN, () => '/money/review-imported'),
   screen('today', 'Today, with items', ALL, () => '/todo'),
   {

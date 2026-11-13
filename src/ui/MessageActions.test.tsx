@@ -173,14 +173,14 @@ describe('MessageActions (owner decision 2026-10-20)', () => {
   it('the screen’s own copy (copy and mark) replaces the plain one; busy shows its label', async () => {
     const user = userEvent.setup()
     const onCopy = vi.fn()
-    const { rerender } = show({ copy: { label: 'Copy and mark chased', onCopy } })
-    await user.click(screen.getByRole('button', { name: 'Copy and mark chased' }))
+    const { rerender } = show({ copy: { label: 'Copy and record follow-up', onCopy } })
+    await user.click(screen.getByRole('button', { name: 'Copy and record follow-up' }))
     expect(onCopy).toHaveBeenCalledTimes(1)
     expect(copyToClipboard).not.toHaveBeenCalled()
     rerender(
       <SessionProvider value={SIGNED_IN}>
         <ToastProvider>
-          <MessageActions to={AHMED} text={TEXT} copy={{ label: 'Copy and mark chased', onCopy, busy: true, busyLabel: 'Marking' }} />
+          <MessageActions to={AHMED} text={TEXT} copy={{ label: 'Copy and record follow-up', onCopy, busy: true, busyLabel: 'Marking' }} />
         </ToastProvider>
       </SessionProvider>,
     )
@@ -253,6 +253,6 @@ describe('MessageActionsDemo', () => {
     render(<MessageActionsDemo only="ready" />)
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Open in WhatsApp' }))
-    expect(screen.getByRole('status')).toHaveTextContent('The screen now offers its own "Mark chased" tap.')
+    expect(screen.getByRole('status')).toHaveTextContent('The screen now offers its own "Record follow-up" tap.')
   })
 })

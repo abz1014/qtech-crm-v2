@@ -32,7 +32,7 @@ function closeFailure(err: unknown, month: string): string {
   // A rule the server explains ("Close March 2024 first. Months close in order.") is said as written.
   if (code === 'P0001' && m.help) return `${m.message} Nothing was changed.`
   if (code === 'P0001') return `${monthKeyLabel(month)} could not be locked. Lock the earlier months first, or wait until the month has ended. Nothing was changed.`
-  return 'Something went wrong. The month was not locked. Try again.'
+  return 'The month was not locked. Try again.'
 }
 
 export function CloseMonthDialog({
@@ -157,7 +157,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
         onError: e => {
           const m = mapPgError(e, { entity: 'month' })
           // A rule the server explains (0080: months reopen newest first) is said as written; anything else stays generic.
-          setError(m.kind === 'network' || m.help ? m.message : 'Something went wrong. The month was not reopened. Try again.')
+          setError(m.kind === 'network' || m.help ? m.message : 'The month was not reopened. Try again.')
         },
       },
     )

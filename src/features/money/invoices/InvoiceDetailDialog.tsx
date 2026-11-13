@@ -38,7 +38,7 @@ import { pkr } from '@/features/money/expenses/model'
 /*
  * One invoice's steps (M01): the dates the register's tracks are built from, the TCS consignment number, the PSID, the receipt
  * (uploaded to gst-receipts) and a note. Nothing here is required; the monthly stamps on the register do the usual work and this
- * is where a single step is corrected or filled in ("Client received" is set here, when the customer confirms).
+ * is where a single step is corrected or filled in ("Customer received" is set here, when the customer confirms).
  * W11: the invoice number, date, net and GST are edited here too, in an open month (a closed month shows them as text and the
  * lock line: reopen it on Lock a month first; the database refuses a change there as well). A change, or a delete, of an invoice whose
  * GST return may already be filed (an FBR GST payment or PSID on that month, or past the 18th of the next month) warns with a tick
@@ -354,7 +354,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
       <Lock className="size-5 shrink-0 text-fg-muted" aria-hidden="true" />
       {monthClosed ? (
         <>
-          {invoice.number ?? 'This invoice'} is in a closed month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
+          {invoice.number ?? 'This invoice'} is in a locked month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
         </>
       ) : (
         <span data-testid="invoice-filed-line">
@@ -431,7 +431,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
           {fact('GST paid to FBR', invoice.tax_deposited_on ? <span className="num">{`${formatDay(invoice.tax_deposited_on)}${invoice.tax_deposit_amount !== null ? ` · ${pkr(Number(invoice.tax_deposit_amount))}` : ''}`}</span> : dash)}
           {fact('Receipt received', day(invoice.wasif_receipt_on))}
           {fact('Courier (TCS)', invoice.tcs_number || invoice.tcs_sent_on ? <span className="num">{[invoice.tcs_number, invoice.tcs_sent_on ? `posted ${formatDay(invoice.tcs_sent_on)}` : null].filter(Boolean).join(' · ')}</span> : dash)}
-          {fact('Client received', day(invoice.client_received_on))}
+          {fact('Customer received', day(invoice.client_received_on))}
           {fact('Notes', invoice.notes ? invoice.notes : <span className="text-fg-muted">None</span>)}
         </dl>
         {lockLine}
@@ -508,7 +508,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
               <FormField<Values, 'tcsNumber'> name="tcsNumber" label="Consignment number">
                 {f => <TextField {...f} autoComplete="off" className="num" />}
               </FormField>
-              {date('clientReceivedOn', 'Client received')}
+              {date('clientReceivedOn', 'Customer received')}
             </fieldset>
             <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
               <legend className="mb-2 type-row">FBR</legend>

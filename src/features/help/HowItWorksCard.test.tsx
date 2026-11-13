@@ -57,7 +57,7 @@ describe('How this works card', () => {
     const user = userEvent.setup()
     const first = mount()
     await openCard(user)
-    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('region', { name: REGION })).toBeNull()
     expect(window.localStorage.getItem('qtech.howItWorks.u1')).toBe('dismissed')
     first.unmount()
@@ -83,7 +83,7 @@ describe('How this works card', () => {
     })
     mount()
     await openCard(user)
-    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('region', { name: REGION })).toBeNull()
   })
 

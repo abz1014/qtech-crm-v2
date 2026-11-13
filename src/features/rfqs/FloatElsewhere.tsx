@@ -60,14 +60,14 @@ export function FloatElsewhere({
   return (
     <Banner
       tone="warning"
-      title={`Chased twice, no reply from ${supplierName}`}
+      title={`Followed up twice, no reply from ${supplierName}`}
       action={
         <div className="flex flex-wrap gap-2">
           <Button size="sm" icon={TriangleAlert} busy={busy} busyLabel="Choosing" disabled={next.length === 0} onClick={() => onChoose({ supplierIds: next.map(s => s.supplierId), names: next.map(s => s.name), items })}>
             Choose suppliers for {all}
           </Button>
           <Button size="sm" onClick={onChaseAgain}>
-            Chase again
+            Follow up again
           </Button>
         </div>
       }

@@ -298,7 +298,7 @@ function ExpenseFormReady({
 
   useEffect(() => onBusy(sf.pending), [sf.pending, onBusy])
   // A reload keeps what was typed (HW-23): the draft is in this tab's sessionStorage while the dialog is open, and goes when it
-  // closes (saved, cancelled, discarded). Restored as changes, so closing still asks "Discard what you typed?".
+  // closes (saved, cancelled, discarded). Restored as changes, so closing still asks "Discard unsaved changes?".
   // Amount first: the person types it and presses Enter (A6.5: one expense in the default category). After a restore the
   // focus waits a tick, so the amount field shows the kept number (a focused number field does not take outside changes).
   const draftKey = expense ? null : expenseDraftKey(context?.orderId ?? context?.rfqId, context?.legId)

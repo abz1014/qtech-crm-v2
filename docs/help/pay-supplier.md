@@ -12,4 +12,4 @@ related: add-expenses, month-reports
 4. Bank charges go in [Bank charges, PKR]. They are saved as their own Bank charges expense.
 5. Tap [Save payment].
 
-Tip: This is the only way to record a supplier payment, so We owe suppliers always goes down. [We owe suppliers] under Reports has [Pay] on each row, which opens the same form.
+Tip: This is the only way to record a supplier payment, so Payable to suppliers always goes down. [Payable to suppliers] under Reports has [Pay] on each row, which opens the same form.

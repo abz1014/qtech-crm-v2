@@ -96,7 +96,7 @@ test('To do is laid out in colour blocks, at most 7 rows before "N more", and ev
     await expect(row.locator('[data-row-actions] button').first()).toBeVisible()
   }
   await page.locator('li[data-rule][data-due]').first().getByRole('button', { name: 'Snooze' }).click()
-  await expect(page.getByRole('menuitem', { name: 'Not ours to chase' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Handled by another team member' })).toBeVisible()
   await page.keyboard.press('Escape')
 
   // the badge, the header and the rows are one number (the counters test above proves it against the other counters)

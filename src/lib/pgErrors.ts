@@ -82,7 +82,7 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
   if (err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false)) return { ...NETWORK }
   if (err instanceof PlainError) return { kind: 'unknown', message: lockedWording(err.message), code: err.code }
   if (!isPgLike(err)) {
-    return { kind: 'unknown', message: 'Something went wrong. Nothing was saved. Try again.' }
+    return { kind: 'unknown', message: 'The change was not saved. Try again.' }
   }
   const text = typeof err.message === 'string' ? err.message : ''
   if (!err.code && FETCH_FAILED.test(text)) return { ...NETWORK }
@@ -131,6 +131,6 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
       }
       return { kind: 'unknown', message: 'This change was refused. Nothing was saved.' }
     default:
-      return { kind: 'unknown', message: 'Something went wrong. Nothing was saved. Try again.' }
+      return { kind: 'unknown', message: 'The change was not saved. Try again.' }
   }
 }

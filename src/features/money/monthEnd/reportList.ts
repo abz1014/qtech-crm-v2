@@ -11,7 +11,7 @@ export const MONTH_REPORT_TITLE: Record<MonthReportKey, string> = {
   // replaced by the Expenses report (/money/reports/expenses, 2026-10-22); the old address redirects there
   categories: 'Expenses',
   aging: 'Overdue by age',
-  owe: 'We owe suppliers',
+  owe: 'Payable to suppliers',
   gst: 'GST and FBR',
   team: 'Sales by person',
 }
@@ -40,7 +40,7 @@ export const REPORT_OPTIONS: readonly ReportOption[] = [
   { key: 'owe', title: MONTH_REPORT_TITLE.owe, adminOnly: true },
   { key: 'gst', title: MONTH_REPORT_TITLE.gst, adminOnly: true },
   { key: 'team', title: MONTH_REPORT_TITLE.team, adminOnly: true },
-  { key: 'enquiries', title: 'Enquiries and customers', adminOnly: false },
+  { key: 'enquiries', title: 'RFQs and customers', adminOnly: false },
 ]
 
 export const reportOptionsFor = (isAdmin: boolean): ReportOption[] => REPORT_OPTIONS.filter(o => isAdmin || !o.adminOnly)

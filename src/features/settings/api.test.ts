@@ -101,7 +101,7 @@ describe('settings api: admin-users calls', () => {
     h.invoke.mockResolvedValue({ data: null, error: httpError(403, '<html>forbidden</html>') })
     expect((await fail(api.listTeam())).message).toBe('Only an active admin can manage people.')
     h.invoke.mockResolvedValue({ data: null, error: httpError(500, 'boom') })
-    expect((await fail(api.listTeam())).message).toBe('Something went wrong. Nothing was changed. Try again.')
+    expect((await fail(api.listTeam())).message).toBe('The change was not made. Try again.')
   })
 
   it('treats a request that never arrived as a network error', async () => {

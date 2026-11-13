@@ -77,7 +77,7 @@ describe('Job page', () => {
     // one block: the seven-part bar and "Stage 4 of 7 · <the next step>"; no second ruler, no second Next step band
     expect(container.querySelectorAll('[data-stage-block]')).toHaveLength(1)
     expect(screen.queryByRole('list', { name: 'Stages of this job' })).toBeNull()
-    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · Chase the supplier')
+    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · Follow up with the supplier')
     expect(screen.getAllByRole('region', { name: 'Next step' })).toHaveLength(1)
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
     // the steps are one hairline list, in their natural order, all closed; the one the job is at is marked by its state word, not opened
@@ -85,7 +85,7 @@ describe('Job page', () => {
     expect(rows.map(e => e.id)).toEqual(['stage-0', 'stage-1', 'stage-2', 'stage-3', 'stage-4', 'stage-5', 'stage-6'])
     for (const b of stagesOf(container).getAllByRole('button')) expect(b).toHaveAttribute('aria-expanded', 'false')
     expect(stagesOf(container).getByRole('button', { name: /^Supplier order Now/ })).toBeInTheDocument()
-    expect(stagesOf(container).getByRole('button', { name: /^Enquiry Done/ })).toBeInTheDocument()
+    expect(stagesOf(container).getByRole('button', { name: /^RFQ Done/ })).toBeInTheDocument()
     expect(stagesOf(container).getByRole('button', { name: /^Delivery Not yet Not yet$/ })).toBeInTheDocument()
     // no "Done" or "Now" chips are drawn
     expect(container.querySelectorAll('[data-stages] .rounded-round')).toHaveLength(0)
@@ -195,9 +195,9 @@ describe('Job page', () => {
     const user = userEvent.setup()
     const { container } = mount(job({}), 'admin')
     await screen.findByRole('heading', { level: 1 })
-    await user.click(stagesOf(container).getByRole('button', { name: /Enquiry/ }))
-    expect(stagesOf(container).getByRole('button', { name: /Enquiry/ })).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('region', { name: 'Enquiry stage' })).toHaveTextContent('Flowmeter')
+    await user.click(stagesOf(container).getByRole('button', { name: /RFQ/ }))
+    expect(stagesOf(container).getByRole('button', { name: /RFQ/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('region', { name: 'RFQ stage' })).toHaveTextContent('Flowmeter')
   })
 
   it('Job O-45 (an order with no enquiry) starts at Order and links to the job it repeats', async () => {
@@ -246,7 +246,7 @@ describe('Job page: the stage list', () => {
       const { container } = mount(job({}), 'admin')
       await screen.findByRole('heading', { level: 1 })
       expect(sectionIds(container)).toEqual(['stage-0', 'stage-1', 'stage-2', 'stage-3', 'stage-4', 'stage-5', 'stage-6'])
-      expect(stagesOf(container).getAllByRole('button')[0]).toHaveTextContent(/Enquiry/)
+      expect(stagesOf(container).getAllByRole('button')[0]).toHaveTextContent(/RFQ/)
       expect(stagesOf(container).getByRole('button', { name: /^Supplier order/ })).toHaveAttribute('aria-expanded', 'false')
       // on a phone the bar holds the action only: the stage sentence is in the block, not in the bar
       const bar = screen.getByRole('toolbar', { name: 'Job actions' })
@@ -277,8 +277,8 @@ describe('Job page: the stage list', () => {
     const { container } = mount(job({ key: 'O-45', kind: 'direct', rfqId: null, orderId: 'o45', stage: 'ordered', stageDetail: 'to source' }), 'sales')
     await screen.findByRole('heading', { level: 1 })
     const stages = stagesOf(container)
-    expect(stages.getAllByText('No enquiry or quotation: this job started as an order')).toHaveLength(1)
-    expect(stages.queryByRole('button', { name: /^Enquiry/ })).toBeNull()
+    expect(stages.getAllByText('No RFQ or quotation: this job started as an order')).toHaveLength(1)
+    expect(stages.queryByRole('button', { name: /^RFQ/ })).toBeNull()
     expect(stages.queryByRole('button', { name: /^Quotation/ })).toBeNull()
     expect(container.querySelector('#stage-0')).not.toBeNull()
     expect(container.querySelector('#stage-1')).not.toBeNull()
@@ -301,7 +301,7 @@ describe('Job page: the stage list', () => {
     const { container } = mount(job({ stage: 'paid', stageDetail: null }), 'admin', c => c.setQueryData([...qk.jobs.part('139', 'invoices'), 'o1'], [{ id: 'v1', number: 'INV-1', invoiceDate: '2026-10-01', gross: 1392400 }]))
     await screen.findByRole('heading', { level: 1 })
     const stages = stagesOf(container)
-    expect(stages.getByRole('button', { name: /^Enquiry Done 12 Aug · 1 item$/ })).toBeInTheDocument()
+    expect(stages.getByRole('button', { name: /^RFQ Done 12 Aug · 1 item$/ })).toBeInTheDocument()
     expect(stages.getByRole('button', { name: /^Order Done Ordered 2 Sep$/ })).toBeInTheDocument()
     expect(stages.queryByText('Done', { selector: ':not(.sr-only)' })).toBeNull()
     expect(container.textContent).not.toMatch(/their ref|Goods to the customer/)

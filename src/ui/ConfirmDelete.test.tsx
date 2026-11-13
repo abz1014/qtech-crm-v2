@@ -29,7 +29,7 @@ describe('ConfirmDelete', () => {
     expect(screen.getByText(/Also deletes:/).parentElement).toHaveTextContent(
       'Also deletes: 2 issued quotations (QT-26-0012 R0, R1), 5 supplier prices, 3 files',
     )
-    expect(screen.getByText('This can’t be undone.')).toBeInTheDocument()
+    expect(screen.getByText('This cannot be undone.')).toBeInTheDocument()
   })
 
   it('leaves the also line out when nothing else goes', () => {
@@ -95,7 +95,7 @@ describe('ConfirmDelete', () => {
     const { onConfirm } = open({ blocked: 'Has order ORD-0038. Delete or cancel the order first.' })
     expect(screen.getByRole('alert')).toHaveTextContent('Has order ORD-0038. Delete or cancel the order first.')
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
-    expect(screen.queryByText('This can’t be undone.')).toBeNull()
+    expect(screen.queryByText('This cannot be undone.')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'OK' }))
     expect(onConfirm).not.toHaveBeenCalled()
   })
@@ -105,9 +105,9 @@ describe('ConfirmDelete undoNote', () => {
   it('replaces the can’t-be-undone line when a caller offers Undo, and changes nothing when it does not', () => {
     open({ undoNote: 'The toast has an Undo.' })
     expect(screen.getByText('The toast has an Undo.')).toBeInTheDocument()
-    expect(screen.queryByText('This can’t be undone.')).toBeNull()
+    expect(screen.queryByText('This cannot be undone.')).toBeNull()
     cleanup()
     open()
-    expect(screen.getByText('This can’t be undone.')).toBeInTheDocument()
+    expect(screen.getByText('This cannot be undone.')).toBeInTheDocument()
   })
 })

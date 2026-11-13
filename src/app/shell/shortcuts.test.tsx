@@ -83,7 +83,7 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New enquiryGo to intakeN', 'Go to To doG T']))
+    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Go to To doG T']))
     expect(text.some(t => /Paste or photo/.test(t ?? ''))).toBe(false)
   })
 
@@ -108,7 +108,7 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
-    expect(within(dlg).getAllByRole('option').some(r => /New enquiry/.test(r.textContent ?? ''))).toBe(false)
+    expect(within(dlg).getAllByRole('option').some(r => /New RFQ/.test(r.textContent ?? ''))).toBe(false)
   })
 
   it('O starts an order without an enquiry (admin and sales)', () => {
@@ -185,9 +185,9 @@ describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
     press('?')
     const dlg = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
     const whats = [...dlg.querySelectorAll('dt')].map(dt => dt.textContent ?? '')
-    expect(whats.some(w => w.startsWith('New enquiry'))).toBe(false)
+    expect(whats.some(w => w.startsWith('New RFQ'))).toBe(false)
     expect(whats.some(w => w.startsWith('Add an expense'))).toBe(false)
-    expect(whats.some(w => w.startsWith('Order without enquiry'))).toBe(false)
+    expect(whats.some(w => w.startsWith('Order without RFQ'))).toBe(false)
     expect(whats.some(w => /price|cost/i.test(w))).toBe(false)
     expect(within(dlg).queryByRole('heading', { name: 'Add expenses' })).toBeNull()
     expect(within(dlg).getByText(/^Single keys \(G then T, \/, \?\)/)).toBeInTheDocument()
@@ -197,11 +197,11 @@ describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
 
   it('shortcutsFor: sales keeps N and O but not E; admin keeps everything; shortcutList stays complete', () => {
     const w = (role: string) => shortcutsFor(role).map(s => s.what)
-    expect(w('sales')).toContain('New enquiry')
+    expect(w('sales')).toContain('New RFQ')
     expect(w('sales')).not.toContain('Add an expense')
-    expect(w('engineer')).not.toContain('New enquiry')
+    expect(w('engineer')).not.toContain('New RFQ')
     const adminKeys = shortcutsFor('admin').map(s => s.what)
-    expect(adminKeys).toEqual(expect.arrayContaining(['New enquiry', 'Add an expense', 'Order without enquiry']))
+    expect(adminKeys).toEqual(expect.arrayContaining(['New RFQ', 'Add an expense', 'Order without RFQ']))
     expect(shortcutsFor().length).toBe(shortcutList().length)
     // Every key the app handles is still in the complete list.
     expect(handledKeys(shortcutList()).has('e')).toBe(true)

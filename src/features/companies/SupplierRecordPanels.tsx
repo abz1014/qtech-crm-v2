@@ -264,12 +264,12 @@ export function RecentQuotes({
   return (
     <Panel
       flat
-      title="Enquiries"
+      title="RFQs"
       info={
         prices ? (
           <InfoTip label="About the prices">
             <span className="grid gap-2">
-              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the quote was typed in, not today’s.</span>
+              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the supplier price was typed in, not today’s.</span>
               <span>A locked price is on file, but its currency was never checked, so it is not shown.</span>
             </span>
           </InfoTip>
@@ -278,11 +278,11 @@ export function RecentQuotes({
       meta={view ? latestOf(rows.length, view.quoteCount) : undefined}
     >
       {loading ? (
-        <ListSkeleton label="Loading enquiries" />
+        <ListSkeleton label="Loading RFQs" />
       ) : error ? (
-        <LoadError title="Couldn't load the enquiries" onRetry={onRetry} />
+        <LoadError title="Couldn't load the RFQs" onRetry={onRetry} />
       ) : !view || view.allQuotes.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-fg-muted">No enquiry asked of them yet.</p>
+        <p className="px-5 py-6 text-sm text-fg-muted">No RFQ asked of them yet.</p>
       ) : (
         <div>
           {wide ? (

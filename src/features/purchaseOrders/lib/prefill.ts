@@ -54,14 +54,14 @@ export function sourceText(row: PrefillRow, typed: Typed, today: string): Source
   if (src === 'quote') {
     return {
       chip: 'quote',
-      detail: `Their quote${row.sourceNumber !== null ? `, ${rfqRef(row.sourceNumber)}` : ''}${row.sourceOn ? `, ${formatShortDate(row.sourceOn, today)}` : ''}`,
+      detail: `Their supplier price${row.sourceNumber !== null ? `, ${rfqRef(row.sourceNumber)}` : ''}${row.sourceOn ? `, ${formatShortDate(row.sourceOn, today)}` : ''}`,
     }
   }
   if (src === 'last_po') {
     const ref = row.sourceNumber !== null && row.sourceOn ? `${poRef(row.sourceNumber, row.sourceOn)}${row.sourceRevision ? ` R${row.sourceRevision}` : ''}` : 'Last PO'
     return { chip: 'last PO', detail: `${ref}${row.sourceOn ? `, ${formatDay(row.sourceOn).replace(/^\w{3} /, '')} ${row.sourceOn.slice(0, 4)}` : ''}` }
   }
-  return { chip: 'typed', detail: priceOf(row, typed) === null ? 'Type a price' : 'Typed by you, check it' }
+  return { chip: 'typed', detail: priceOf(row, typed) === null ? 'Type a price' : 'Entered manually, check it' }
 }
 
 /**
