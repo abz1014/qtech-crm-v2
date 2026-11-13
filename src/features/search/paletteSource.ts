@@ -134,7 +134,8 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS, office = false): P
       // The jobs code is downloaded while the search waits and runs, not after it (perf: first-load JS).
       const jobsCode = Promise.all([import('@/features/jobs/api'), import('@/features/jobs/lib/stages')])
       if (!(await pause(debounceMs, signal))) return []
-      const hits = await searchAll(q, signal, FETCH_LIMIT)
+      // Supplier POs are money: an engineer's search never lists them, nor opens a job through one (bug 31); the database gate follows in a later migration.
+      const hits = (await searchAll(q, signal, FETCH_LIMIT)).filter(h => !(office && h.kind === 'po'))
       if (signal.aborted) return []
       const [{ findJobs }, { stageModel }] = await jobsCode
       const jobs = await findJobs(q, signal, hits).catch(() => [] as JobRow[])

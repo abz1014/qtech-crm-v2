@@ -520,12 +520,13 @@ export function PaletteHost({
               newTab ? window.open(href, "_blank", "noopener") : navigate(href)
             }
             emptyHint={
-              <>
-                {role === "engineer"
-                  ? "Search covers RFQs, orders, purchase orders, companies, contacts and order items."
-                  : "Search covers RFQs, orders, invoices, purchase orders, companies, contacts and order items."}{" "}
-                Try one word, or press <Kbd>N</Kbd> to start an RFQ.
-              </>
+              role === "engineer" ? (
+                <>Search covers RFQs, orders, companies, contacts and order items. Try one word.</>
+              ) : (
+                <>
+                  Search covers RFQs, orders, invoices, purchase orders, companies, contacts and order items. Try one word, or press <Kbd>N</Kbd> to start an RFQ.
+                </>
+              )
             }
           />
         </Suspense>

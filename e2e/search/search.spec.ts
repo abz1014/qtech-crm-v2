@@ -233,7 +233,7 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
     await expect(page.getByRole('dialog', { name: new RegExp(`Invoice ${f.invoice}`) })).toBeVisible()
   })
 
-  test('an engineer: the order and the item and the supplier PO are found, the invoice and the customer PO are not, at the API too', async ({ page }) => {
+  test('an engineer: the order and the item are found, the invoice, the customer PO and the supplier PO are not', async ({ page }) => {
     const f = await seedV2()
     await openAs(page, 'engineer', '/todo')
     await openPalette(page)
@@ -250,6 +250,12 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
       await expect(page.getByRole('option')).toHaveCount(1)
     }
 
+    // a typed supplier PO number finds no purchase order in the palette (it is a money number)
+    await input.fill(`PO-${f.supplierPo}`)
+    await expect(page.getByRole('option', { name: new RegExp('PO-[0-9]{2}-' + f.supplierPo) })).toHaveCount(0)
+    await expect(page.getByRole('option', { name: new RegExp(`Add “PO-${f.supplierPo}”`) })).toBeVisible()
+    await expect(page.getByRole('option')).toHaveCount(1)
+
     // network assertion: the response to an invoice-number search contains no invoice row for an engineer, and does for sales
     const call = async (role: 'engineer' | 'sales', q: string) => {
       const session = await login(role)
@@ -260,6 +266,5 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
     expect((await call('engineer', f.company.name)).filter(r => r.kind === 'invoice')).toEqual([])
     expect((await call('engineer', f.po)).some(r => `${r.label} ${r.meta ?? ''}`.includes(f.po))).toBe(false)
     expect((await call('sales', f.invoice)).filter(r => r.kind === 'invoice').map(r => r.label)).toEqual([f.invoice])
-    expect((await call('engineer', `PO-${f.supplierPo}`)).some(r => r.kind === 'po')).toBe(true)
   })
 })

@@ -74,6 +74,17 @@ describe('search palette source (R12)', () => {
     expect((await p).map(i => i.group)[0]).toBe('RFQs')
   })
 
+  it('an engineer never gets supplier PO results, even when a PO number is typed; others do', async () => {
+    searchAll.mockResolvedValue([hit('po', 'p1', 'PO-26-0017 · R0', { orderId: 'o1' }), hit('order', 'o1', 'ORD-0001 Co')])
+    const eng = searchPaletteSource(0, true).search!('PO-26-0017', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    expect((await eng).map(i => i.group)).not.toContain('Purchase orders')
+    expect(kindOrder('PO-26-0017')[0]).toBe('po')
+    const sales = searchPaletteSource(0).search!('PO-26-0017', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    expect((await sales).map(i => i.label)).toContain('PO-26-0017 · R0')
+  })
+
   it('no company match means no New RFQ for action', async () => {
     searchAll.mockResolvedValue([hit('rfq', 'r1', 'RFQ-0042 Co')])
     const p = searchPaletteSource(0).search!('zzz', new AbortController().signal)
