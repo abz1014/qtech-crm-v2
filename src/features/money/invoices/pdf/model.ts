@@ -333,23 +333,23 @@ export function invoiceReadiness(input: ReadinessInput): Readiness {
   const gaps: Gap[] = []
   const warnings: string[] = []
   const s = input.seller
-  if (!filled(s?.legal_name)) gaps.push({ where: 'company-profile', text: 'your company’s legal name' })
-  if (!filled(s?.address)) gaps.push({ where: 'company-profile', text: 'your company’s address' })
-  if (!filled(s?.ntn)) gaps.push({ where: 'company-profile', text: 'your company’s NTN' })
-  if (!filled(s?.strn)) gaps.push({ where: 'company-profile', text: 'your company’s STRN (sales-tax registration number)' })
+  if (!filled(s?.legal_name)) gaps.push({ where: 'company-profile', text: "your company's legal name" })
+  if (!filled(s?.address)) gaps.push({ where: 'company-profile', text: "your company's address" })
+  if (!filled(s?.ntn)) gaps.push({ where: 'company-profile', text: "your company's NTN" })
+  if (!filled(s?.strn)) gaps.push({ where: 'company-profile', text: "your company's STRN (sales-tax registration number)" })
 
   if (!filled(input.invoice.number)) gaps.push({ where: 'invoice', text: 'the invoice number (this imported invoice has none)' })
   if (!input.invoice.invoiceDate) gaps.push({ where: 'invoice', text: 'the invoice date' })
   if (!input.invoice.orderId) gaps.push({ where: 'invoice', text: 'the order (this invoice is in the register without an order, so it has no lines to print)' })
-  if (input.orderFlags.includes('value_basis_unknown')) gaps.push({ where: 'order', text: 'whether the order’s prices include GST (answer it on the order page)' })
+  if (input.orderFlags.includes('value_basis_unknown')) gaps.push({ where: 'order', text: "whether the order's prices include GST (answer it on the order page)" })
 
   const b = input.buyer
   if (b) {
-    if (!buyerAddress(b, input.siteAddress)) gaps.push({ where: 'buyer', text: `${b.name}’s address` })
+    if (!buyerAddress(b, input.siteAddress)) gaps.push({ where: 'buyer', text: `${b.name}'s address` })
     const registered = buyerRegistered(b)
     if (registered === null) gaps.push({ where: 'buyer', text: `whether ${b.name} is registered for sales tax` })
-    else if (registered && !filled(b.strn)) gaps.push({ where: 'buyer', text: `${b.name}’s STRN (it is registered for sales tax)` })
-    if (!filled(b.ntn)) warnings.push(`No NTN or CNIC for ${b.name}. It prints without one; FBR’s digital invoicing asks for it.`)
+    else if (registered && !filled(b.strn)) gaps.push({ where: 'buyer', text: `${b.name}'s STRN (it is registered for sales tax)` })
+    if (!filled(b.ntn)) warnings.push(`No NTN or CNIC for ${b.name}. It prints without one. FBR's digital invoicing asks for it.`)
   }
   return { gaps, warnings }
 }

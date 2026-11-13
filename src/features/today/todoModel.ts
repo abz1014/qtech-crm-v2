@@ -21,20 +21,20 @@ export const MAX_ROWS = 7
 export const NOT_OURS_UNTIL = '2099-12-31'
 
 /** The grey fold of chased items (a label the help recipes name). */
-export const WAITING_TITLE = 'Chased, waiting'
+export const WAITING_TITLE = 'Followed up, waiting'
 
 export const BLOCK_TITLE: Record<TodoBlock, string> = { late: 'Late', today: 'Today', week: 'This week' }
 
 /** The words on each row's own button. Every rule has one; a rule that was added without a button does not compile. */
 export const ACTION_LABEL: Record<RuleKey, string> = {
-  chase_customer: 'Chase',
+  chase_customer: 'Follow up',
   relay_answers: 'Send answers',
   not_floated: 'Ask suppliers',
-  chase_supplier: 'Chase',
+  chase_supplier: 'Follow up',
   bid_due: 'Send quotation',
-  decision_overdue: 'Chase',
+  decision_overdue: 'Follow up',
   payment_overdue: 'Copy reminder',
-  goods_late: 'Chase',
+  goods_late: 'Follow up',
   place_po: 'Place order',
   plan_commissioning: 'Plan visit',
   to_source: 'Find suppliers',

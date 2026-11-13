@@ -73,8 +73,6 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
 
   /** The enquiry text once it is copied and recorded; null when nothing was recorded. */
   const askOnce = async (input: { supplierIds: readonly string[]; items: readonly RfqItemRow[]; names: readonly string[] }): Promise<string | null> => {
-    const fresh = input.supplierIds.filter(id => !inquiries.some(i => i.supplierId === id))
-    const shortlisted = inquiries.filter(i => input.supplierIds.includes(i.supplierId) && !i.sentOn && !i.noOfferOn).map(i => i.id)
     if (input.items.length === 0 || input.supplierIds.length === 0) return null
     const text = generateEnquiryDraft({
       rfqRef: rfqRef(rfq.number),
@@ -89,6 +87,17 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
       toast({ title: 'Could not copy the message', body: 'The browser refused the clipboard. Nothing was recorded.', tone: 'danger' })
       return null
     }
+    const saved = await recordInquiries(input, { settledTitle: 'Message copied', failTitle: 'Copied, but the suppliers were not recorded' })
+    return saved ? text : null
+  }
+
+  /**
+   * Put the suppliers under "Suppliers asked" as asked today: a new inquiry stamped sent, or the shortlisted one stamped. The toast has
+   * the Undo. Nothing is copied here; `askOnce` copies first and calls this.
+   */
+  const recordInquiries = async (input: { supplierIds: readonly string[]; names: readonly string[] }, titles: { settledTitle: string; failTitle: string }): Promise<boolean> => {
+    const fresh = input.supplierIds.filter(id => !inquiries.some(i => i.supplierId === id))
+    const shortlisted = inquiries.filter(i => input.supplierIds.includes(i.supplierId) && !i.sentOn && !i.noOfferOn).map(i => i.id)
     try {
       const today = businessToday()
       const [ids, stamped] = await Promise.all([
@@ -97,7 +106,7 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
       ])
       const who = input.names.length === 1 ? input.names[0] : `${input.names.length} suppliers`
       toast({
-        title: 'Message copied',
+        title: titles.settledTitle,
         body: ids.length + stamped.length > 0 ? `${who} added to the suppliers asked` : `${who} already asked`,
         tone: 'success',
         undo:
@@ -106,17 +115,31 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
                 onUndo: async () => {
                   await Promise.all([ids.length > 0 ? remove.mutateAsync(ids) : null, stamped.length > 0 ? mark.mutateAsync({ ids: stamped, on: today, undo: true }) : null])
                 },
-                settledTitle: 'Message copied',
+                settledTitle: titles.settledTitle,
                 undoneTitle: 'Taken back',
               }
             : undefined,
       })
-      return text
+      return true
     } catch (err) {
-      toast({ title: 'Copied, but the suppliers were not recorded', body: mapPgError(err, { entity: 'enquiry' }).message, tone: 'danger' })
-      return null
+      toast({ title: titles.failTitle, body: mapPgError(err, { entity: 'enquiry' }).message, tone: 'danger' })
+      return false
     }
   }
 
-  return { ask, busy: copying || add.isPending || remove.isPending || mark.isPending }
+  /** "Record as asked": the same recording as the copy, with no message copied. */
+  const record = async (input: { supplierIds: readonly string[]; names: readonly string[] }): Promise<AskResult> => {
+    if (inFlight.current || input.supplierIds.length === 0) return { ok: false, text: '', supplierIds: [] }
+    inFlight.current = true
+    setCopying(true)
+    try {
+      const ok = await recordInquiries(input, { settledTitle: 'Recorded as asked', failTitle: 'The suppliers were not recorded' })
+      return ok ? { ok: true, text: '', supplierIds: [...input.supplierIds] } : { ok: false, text: '', supplierIds: [] }
+    } finally {
+      inFlight.current = false
+      setCopying(false)
+    }
+  }
+
+  return { ask, record, busy: copying || add.isPending || remove.isPending || mark.isPending }
 }

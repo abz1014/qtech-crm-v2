@@ -27,8 +27,8 @@ const DEMOS = {
     props: { to: { name: 'Naveed Akhtar', phone: 'Off: 042-35761234 / WhatsApp: 0321 7654321', email: null }, text: TEXT },
   },
   copyAndMark: {
-    title: 'Screen primary already used; Copy also marks',
-    props: { to: AHMED, text: TEXT, email: EMAIL, copy: { label: 'Copy and mark chased' } },
+    title: 'Screen primary already used. Copy also marks',
+    props: { to: AHMED, text: TEXT, email: EMAIL, copy: { label: 'Copy and record follow-up' } },
   },
   tooLong: {
     title: 'Too long for a link: opening copies it first',
@@ -52,7 +52,7 @@ function Case({ id }: { id: MessageActionsDemoId }) {
         {...demo.props}
         channel={channel}
         onChannelChange={setChannel}
-        onOpen={c => setNote(`Opened ${c === 'email' ? 'email' : 'WhatsApp'}. The screen now offers its own "Mark chased" tap.`)}
+        onOpen={c => setNote(`Opened ${c === 'email' ? 'email' : 'WhatsApp'}. The screen now offers its own "Record follow-up" button.`)}
         onFixContact={demo.fix ? () => setNote('The screen opens the contact to add a mobile number.') : undefined}
       />
       {note ? (

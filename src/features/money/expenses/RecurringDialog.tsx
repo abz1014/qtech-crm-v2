@@ -82,7 +82,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
     <Dialog open onOpenChange={o => !o && !sf.pending && onClose()} busy={sf.pending}>
       <DialogContent
         title={template ? 'Edit recurring expense' : 'Add recurring expense'}
-        context="Shows as due each month until you record it"
+        context="Shown as due each month until it is recorded"
         footer={
           <>
             {template && isAdmin ? (
@@ -152,7 +152,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
           summary={
             <span data-testid="delete-recurring-what">
               {template.label} · {pkr(template.amount)} every month
-              {used.data ? ` · ${used.data} ${used.data === 1 ? 'expense' : 'expenses'} recorded from it stay as they are` : ' · past expenses stay'}
+              {used.data ? ` · ${used.data} ${used.data === 1 ? 'expense' : 'expenses'} recorded from it ${used.data === 1 ? 'stays as it is' : 'stay as they are'}` : ' · past expenses stay'}
             </span>
           }
           loading={used.isPending}

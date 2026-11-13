@@ -14,8 +14,10 @@ import { daysBetween } from '@/features/rfqs/lib/dateText'
 import { businessToday, toBusinessDate } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
+import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
+import { Icon } from '@/ui/Icon'
 import { PageHeader } from '@/ui/PageHeader'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -29,7 +31,7 @@ export function BackupsPage() {
   const q = useHealth()
   return (
     <div className="grid content-start gap-4">
-      <PageHeader title="Backups and usage" lede="Is the nightly backup alive, how full the free plan is, and the monthly check that your key opens a backup." />
+      <PageHeader title="Backups and usage" lede="Nightly backup status, free plan usage and the monthly check that the key opens a backup." />
       {q.isPending ? (
         <div role="status" aria-busy="true" aria-label="Loading backups and usage" className="grid gap-4">
           <Skeleton className="h-[140px]" />
@@ -74,7 +76,7 @@ function BackupSection({ h }: { h: HealthRow }) {
       work
       testId="backup-status"
       title="Nightly backup"
-      hint="Every night the whole database and every stored file is copied, encrypted with your public key, and kept for 30 days in GitHub. Only your private key can open it."
+      hint="Every night the whole database and every stored file is copied, encrypted with the public key and kept for 30 days in GitHub. Only the private key can open it."
     >
       <dl className="grid gap-3 sm:grid-cols-2">
         <div className="grid gap-1">
@@ -124,8 +126,10 @@ function Meter({ label, used, limit, testId }: { label: string; used: number; li
     <div className="grid gap-1" data-testid={testId}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-base font-medium">{label}</span>
-        <span className={warn ? 'text-base font-medium text-tone-danger-fg' : 'text-base text-fg-muted'}>
+        <span className={warn ? 'inline-flex flex-wrap items-center gap-1 text-base font-medium text-tone-danger-fg' : 'text-base text-fg-muted'}>
+          {warn ? <Icon icon={AlertTriangle} size="sm" /> : null}
           {formatBytes(used)} of {formatBytes(limit)} ({percentText(share)})
+          {warn ? <span>Over {percentText(USAGE_WARN_AT)}</span> : null}
         </span>
       </div>
       <div
@@ -147,7 +151,7 @@ function UsageSection({ h }: { h: HealthRow }) {
     <Section
       testId="usage"
       title="Free plan usage"
-      hint={`The free plan allows ${formatBytes(FREE_DB_BYTES)} of database and ${formatBytes(FREE_STORAGE_BYTES)} of files. To do warns you from ${percentText(USAGE_WARN_AT)}.`}
+      hint={`The free plan allows ${formatBytes(FREE_DB_BYTES)} of database and ${formatBytes(FREE_STORAGE_BYTES)} of files. To do warns from ${percentText(USAGE_WARN_AT)}.`}
     >
       <Meter label="Database" used={h.dbBytes} limit={FREE_DB_BYTES} testId="usage-db" />
       <Meter label="File storage" used={h.storageBytes} limit={FREE_STORAGE_BYTES} testId="usage-storage" />
@@ -174,7 +178,7 @@ function DecryptSection({ h }: { h: HealthRow }) {
     <Section
       testId="decrypt-check"
       title="Monthly key check"
-      hint="A backup nobody can open is not a backup. Once a month, download last night's backup from GitHub and open it with your private key, then press the button."
+      hint="Test the backup once a month: download the latest backup from GitHub, open it with the private key, then select the button."
     >
       <p className={due ? 'text-base font-medium text-tone-danger-fg' : 'text-base'} data-testid="decrypt-last">
         {h.lastDecryptTestAt ? `Last checked ${formatDay(base)}.` : `Never checked. Watching since ${formatDay(base)}.`}

@@ -117,7 +117,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     const d = page.getByRole('dialog')
-    await expect(d.getByTestId('cancel-sent-pos')).toContainText(`${ref} was sent to ${s.supplier.name}. Tell them it's cancelled.`)
+    await expect(d.getByTestId('cancel-sent-pos')).toContainText(`${ref} was sent to ${s.supplier.name}. Tell them it has been cancelled.`)
     await resetCount(page)
     await resetClipboard(page)
     await d.getByRole('button', { name: 'Copy cancellation message' }).click()
@@ -136,7 +136,7 @@ test.describe('cancelling an order after its PO was issued', () => {
 
 test.describe('the closed-month refusal, in the screens, for a payment and an invoice', () => {
   const stmt = monthBefore(today, 1)
-  const sentence = `${stmt.label} is closed. An admin can reopen it.`
+  const shown = `${stmt.label} is locked. An admin can reopen it.` // the screen says locked; the server raises "is closed"
   const typed = `05/${stmt.key.slice(5)}/${stmt.key.slice(0, 4)}`
 
   test.beforeAll(async () => {
@@ -158,7 +158,7 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
     await d.getByRole('textbox', { name: 'Date received' }).fill(typed)
     await d.getByRole('button', { name: 'Save payment' }).click()
-    await expect(d.getByText(sentence)).toBeVisible()
+    await expect(d.getByText(shown)).toBeVisible()
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('10,000')
     expect(await must(rest<{ id: string }[]>('admin', `payments_in?order_id=eq.${o.order.id}&select=id`))).toHaveLength(0)
     await ctx.close()
@@ -173,12 +173,12 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await d.getByRole('textbox', { name: 'Invoice date' }).fill(typed)
     await d.getByRole('button', { name: 'Create invoice' }).click()
-    await expect(d.getByText(sentence)).toBeVisible()
+    await expect(d.getByText(shown)).toBeVisible()
     expect(await must(rest<{ id: string }[]>('admin', `invoices?order_id=eq.${o.order.id}&select=id`))).toHaveLength(0)
     // dated today it goes through: the lock is about the month, not the order
     await d.getByRole('textbox', { name: 'Invoice date' }).fill(typedDate(today))
     await d.getByRole('textbox', { name: 'Invoice date' }).press('Tab') // the date is read when the cell is left
-    await expect(d.getByText(sentence)).toBeHidden() // changing the date clears the refusal
+    await expect(d.getByText(shown)).toBeHidden() // changing the date clears the refusal
     await d.getByRole('button', { name: /Create invoice|Try again/ }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
     expect(await must(rest<{ id: string }[]>('admin', `invoices?order_id=eq.${o.order.id}&select=id`))).toHaveLength(1)

@@ -104,7 +104,7 @@ export function pdfFailureMessage(reason: PdfReadFailure, subject: PdfSubject = 
     case 'password':
       return `This PDF is locked with a password. Open it, copy the text and paste it here, or ${what}.`
     case 'too_big':
-      return `This PDF is ${size !== undefined ? mb(size) : 'too big'}; the limit is ${mb(maxBytes)}. Copy the text from it and paste it here, or ${what}.`
+      return `This PDF is ${size !== undefined ? mb(size) : 'too big'}. The limit is ${mb(maxBytes)}. Copy the text from it and paste it here, or ${what}.`
     case 'not_pdf':
       return `This file is not a PDF. Choose a PDF, a screenshot or a photo, or ${what}.`
     case 'unreadable':

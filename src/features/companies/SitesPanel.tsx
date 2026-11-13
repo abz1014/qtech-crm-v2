@@ -49,7 +49,7 @@ const CLOSED_WHY: Record<string, string> = {
   no_reply_to_clarification: 'No reply from customer',
   customer_cancelled: 'Customer cancelled',
   could_not_source: 'Could not source',
-  we_were_late: 'We were too late',
+  we_were_late: 'Quotation was late',
   other: 'Another reason',
 }
 
@@ -152,7 +152,7 @@ export function SitesPanel({
         </div>
       ) : error ? (
         <div className="p-4">
-          <Banner tone="danger" title="Couldn't load the sites">
+          <Banner tone="danger" title="Could not load the sites">
             Reload the page to try again. Nothing was changed.
           </Banner>
         </div>

@@ -54,7 +54,7 @@ import { daysBetween } from '@/features/rfqs/lib/dateText'
  * already written. Owner decision 2026-10-19: each fact is said once (the four cells; no chip row and no date rail repeating
  * them), and the one job, "Copy and mark chased", sits right under the card's header, above the message, so it is
  * on the first screen of a 1366 x 768 laptop at the larger text size. States:
- *   draft        facts, "Prepared for you" with WhatsApp or Email, one tap: "Copy and mark chased"
+ *   draft        facts, "Prepared message" with WhatsApp or Email, one tap: "Copy and mark chased"
  *   copied       the green "Copied. Paste it into WhatsApp." bar replaces the card header; the footer says
  *                "Chased today. Moves to Waiting when the undo closes." while the 10 s Undo is open (the toast)
  *   just chased  after the undo closes the row has joined Waiting: the title stays, a "Moved to Waiting" bar says when it
@@ -134,6 +134,12 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           ? Boolean(receivable) && Boolean(payment.data)
           : false
 
+  // A read the message needs failed: say so with Try again, never "nothing to write" or bars for ever.
+  const needed = [customerRule ? header : null, supplierRule ? items : null, supplierRule ? inquiries : null, item.rule === 'goods_late' ? leg : null, item.rule === 'payment_overdue' ? payment : null].filter(
+    (q): q is NonNullable<typeof q> => q !== null,
+  )
+  const loadFailed = needed.some(q => q.isError)
+  const retryLoad = () => needed.filter(q => q.isError).forEach(q => void q.refetch())
   const draft: Draft | null = useMemo(() => {
     if (!draftReady) return null
     if (customerRule && rfq) return buildCustomerDraft({ rfq, contact: header.data?.contact ?? null, questions, items: items.data, today, signature })
@@ -149,7 +155,10 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   }, [draftReady, item.rule, item.inquiryId, rfq, header.data, questions, items.data, inquiries.data, legFact, leg.data, receivable, payment.data, today, user?.name, data.jobTitle, data.phone])
 
   const wasCopied = copied.has(item.key)
-  const verb = item.rule === 'payment_overdue' ? 'reminded' : 'chased'
+  const verb = item.rule === 'payment_overdue' ? 'reminded' : 'followed up'
+  const marked = item.rule === 'payment_overdue' ? 'marked reminded' : 'marked as followed up'
+  const markLabel = item.rule === 'payment_overdue' ? 'Mark reminded' : 'Record follow-up'
+  const doneLabel = item.rule === 'payment_overdue' ? 'Marked reminded today' : 'Follow-up recorded today'
   const memo = chaseMemo(item.key)
   const shownMessage = draft ? (channel === 'email' ? draft.email : draft.whatsapp) : null
   // The clipboard gets the body: an email's subject has its own row and its own copy button.
@@ -182,7 +191,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       setSentKey(copied ? null : item.key)
       onCopied(item.key)
       toast({
-        title: `${lead}${item.ref} marked ${verb}.`,
+        title: `${lead}${item.ref} ${marked}.`,
         body: item.party,
         tone: 'success',
         undo: {
@@ -199,10 +208,10 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           onSettle: () => {
             void refresh().finally(() => onReleased(item.key))
           },
-          settledTitle: `${item.ref} marked ${verb}`,
+          settledTitle: `${item.ref} ${marked}`,
           settledBody: 'It moves to Waiting and comes back on its date.',
           undoneTitle: 'Undone.',
-          undoneBody: `${item.ref} is not marked ${verb}.`,
+          undoneBody: `${item.ref} is not ${marked}.`,
         },
       })
     } catch (err) {
@@ -217,7 +226,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       // The copy is the first thing that happens inside the tap (a browser only allows it during the gesture).
       const ok = await copyToClipboard(text)
       if (!ok) {
-        toast({ title: 'Could not copy the message', body: 'Select the text in the draft and copy it by hand. Nothing was marked.', tone: 'danger' })
+        toast({ title: 'Could not copy the message', body: 'Select the text in the draft and copy it manually. Nothing was marked.', tone: 'danger' })
         return
       }
       await mark(true)
@@ -243,7 +252,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const firstFloat = inquiries.data ? inquiries.data.map(i => i.sentOn).filter((d): d is string => Boolean(d)).sort()[0] : undefined
 
   // One label per action at every width (the glossary's short form), so help, toasts and the phone all name the same button.
-  const copyLabel = item.rule === 'payment_overdue' ? 'Copy and mark reminded' : 'Copy and mark chased'
+  const copyLabel = item.rule === 'payment_overdue' ? 'Copy and mark reminded' : 'Copy and record follow-up'
   const touch = compact ? 'min-h-touch' : ''
 
   return (
@@ -270,7 +279,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
       {item.collision && data.names[item.collision.by] ? (
         <p data-collision className="flex items-center gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm text-tone-warning-fg">
-          <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before you chase it again.
+          <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before following up again.
         </p>
       ) : null}
 
@@ -288,7 +297,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         </div>
       ) : item.waiting ? (
         <Banner tone="info" title={`Waiting until ${formatDay(item.waiting.nextNudgeOn)}`}>
-          It returns to the list on that day. You are looking at the message again; copying it chases once more.
+          It returns to the list on that day. Copying the message again records another follow-up.
         </Banner>
       ) : null}
 
@@ -345,17 +354,17 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           onOpen={() => navigate(item.href)}
           onAgain={() => setAgain(true)}
         />
-      ) : draft ? (
+      ) : draft && !loadFailed ? (
         <div className="grid overflow-hidden rounded-panel border bg-surface">
           {wasCopied ? (
             <p role="status" className="flex items-center gap-2 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
-              <Icon icon={CircleCheck} size="sm" /> {sentKey === item.key ? `Marked ${verb}.` : `Copied. Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`}
+              <Icon icon={CircleCheck} size="sm" /> {sentKey === item.key ? `${capital(marked)}.` : `Copied. Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`}
             </p>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
               <div className="grid gap-px">
-                <h3 className="text-base font-semibold">Prepared for you</h3>
-                {compact ? null : <p className="text-sm text-fg-muted">{preparedFrom(item, questions.length)} Edit anything before you send.</p>}
+                <h3 className="text-base font-semibold">Prepared message</h3>
+                {compact ? null : <p className="text-sm text-fg-muted">{preparedFrom(item, questions.length)} Edit the message before sending.</p>}
               </div>
               {/* The remembered channel as a link (R2-07); Open in WhatsApp / Open in email is MessageActions, in the row below. */}
               <ChannelLink value={channel} onChange={setChannel} />
@@ -375,7 +384,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               />
               {opened ? (
                 <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()}>
-                  Mark {verb}
+                  {markLabel}
                 </Button>
               ) : null}
               <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
@@ -401,7 +410,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
             compact ? (
               <div className="flex items-center gap-2 border-t bg-sunken px-4 py-3">
                 <Button icon={Check} disabled className={cn('flex-1', touch)}>
-                  Marked {verb} today
+                  {doneLabel}
                 </Button>
                 <SnoozeMenu item={item} today={today} iconOnly />
               </div>
@@ -432,13 +441,23 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               <div className="flex items-center gap-2">
                 {opened ? (
                   <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()} className={cn('flex-1', touch)}>
-                    Mark {verb}
+                    {markLabel}
                   </Button>
                 ) : null}
                 <SnoozeMenu item={item} today={today} iconOnly />
               </div>
             </div>
           ) : null}
+        </div>
+      ) : isChase(item) && loadFailed ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4" data-testid="draft-failed">
+          <p role="alert" className="mr-auto text-sm text-fg-muted">
+            Could not load the message for this item. Nothing was changed. Check your connection and try again.
+          </p>
+          <Button onClick={retryLoad}>Try again</Button>
+          <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
+            Open {item.ref}
+          </Button>
         </div>
       ) : isChase(item) && (draftReady || !pending(header, items, inquiries, leg, payment)) ? (
         <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4">
@@ -484,7 +503,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
                     {q.question}
                     <span className="text-xs text-fg-muted">
                       asked {formatDay(q.firstAskedOn).replace(/^\w+ /, '')}
-                      {q.askCount > 1 ? ` · chased ${formatDay(q.lastAskedOn).replace(/^\w+ /, '')}` : ''} · no reply
+                      {q.askCount > 1 ? ` · followed up ${formatDay(q.lastAskedOn).replace(/^\w+ /, '')}` : ''} · no reply
                     </span>
                   </span>
                 </li>
@@ -499,11 +518,11 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               <Event on={questions.map(q => q.firstAskedOn).sort()[0]} text={`${questions.length} ${questions.length === 1 ? 'question' : 'questions'} sent to customer`} />
               {item.waiting ? (
                 <>
-                  <Event on={item.waiting.chasedOn} text={`Chased customer, asked ×${askedTimes}`} warn />
-                  <Event on={item.waiting.nextNudgeOn} text="Chase again if no reply" />
+                  <Event on={item.waiting.chasedOn} text={`Customer followed up, asked ×${askedTimes}`} warn />
+                  <Event on={item.waiting.nextNudgeOn} text="Follow up again if no reply" />
                 </>
               ) : (
-                <Event on={today} text="Not chased yet" warn />
+                <Event on={today} text="Not followed up yet" warn />
               )}
             </ul>
           </section>
@@ -568,11 +587,11 @@ function copyingNote(item: TodayItem, draft: Draft, returnsOn: string, chaseCoun
   const when = formatDay(returnsOn)
   switch (item.rule) {
     case 'chase_customer':
-      return `Copying records a chase today (asked ×${draft.countAfter}). ${item.ref} moves to Waiting and returns on ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
+      return `Copying records a follow-up today (asked ×${draft.countAfter}). ${item.ref} moves to Waiting and returns on ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
     case 'chase_supplier':
-      return `Copying records chase ${chaseCount + 1} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
+      return `Copying records follow-up ${chaseCount + 1} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days.' : ''}`
     case 'goods_late':
-      return `Copying records chase ${draft.countAfter} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days late.' : ''}`
+      return `Copying records follow-up ${draft.countAfter} for this supplier. ${item.ref} moves to Waiting and returns if still silent after ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days late.' : ''}`
     default:
       return `Copying records a reminder today (×${draft.countAfter}). ${item.ref} moves to Waiting and returns on ${when}.${draft.firm ? ' Firmer wording, because it is more than 30 days overdue.' : ''}`
   }
@@ -598,8 +617,8 @@ export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, 
 }
 
 function noDraftText(item: TodayItem): string {
-  if (item.rule === 'chase_supplier') return 'Every item has a price or a "Can’t quote" from this supplier. Nothing to ask.'
-  if (item.rule === 'goods_late') return 'There is no expected date on this order, so there is nothing to chase. Open the order.'
+  if (item.rule === 'chase_supplier') return 'Every item has a price or a reason for no price from this supplier. Nothing to ask.'
+  if (item.rule === 'goods_late') return 'There is no expected date on this order, so there is no follow-up to send. Open the order.'
   return 'There is nothing to write for this item yet. Open the record.'
 }
 
@@ -608,11 +627,11 @@ function howTo(item: TodayItem): string {
     case 'relay_answers':
       return 'The customer has answered what this supplier asked. Open the RFQ to send the answers back to them.'
     case 'not_floated':
-      return 'Nobody has been asked for a price yet. Open the RFQ to pick suppliers and send the enquiry.'
+      return 'No supplier has been asked for a price yet. Open the RFQ to pick suppliers and ask for prices.'
     case 'bid_due':
       return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':
-      return 'No decision since the quotation went out. Chase the customer, or close it here if they said no.'
+      return 'No decision since the quotation went out. Follow up with the customer, or close it here if they said no.'
     case 'place_po':
       return 'A supplier on this order has no PO yet. Open the order and send the PO.'
     case 'to_source':
@@ -622,7 +641,7 @@ function howTo(item: TodayItem): string {
     case 'delivered_not_invoiced':
       return 'Everything on this order has been delivered and no invoice exists. Open the order to invoice it.'
     case 'close_month':
-      return 'Open the month-end checklist, look at what it lists and lock the month. Nothing blocks locking; each check is a warning.'
+      return 'Open the month-end checklist, look at what it lists and lock the month. Nothing blocks locking. Each check is a warning.'
     case 'costs_incomplete':
       return 'These orders are paid in full but their costs are not marked complete, so their margin is not final. Open Margins, check the costs and mark each order complete.'
     case 'fbr_attention':
@@ -638,15 +657,15 @@ function howTo(item: TodayItem): string {
     case 'backup_stale':
       return 'The nightly backup has not run for more than two days. Open GitHub, Actions, Backup, look at the latest run and fix what it says. Until it runs, nothing protects the data.'
     case 'usage_high':
-      return 'The free plan is filling up. Open Settings, Backups and usage, to see the database and the files. Old files can be deleted; a full plan stops saving.'
+      return 'The free plan is filling up. Open Settings, Backups and usage, to see the database and the files. Old files can be deleted. A full plan stops saving.'
     case 'decrypt_test':
       return "Once a month, download last night's backup from GitHub and open it with your private key. Then press the button in Settings, Backups and usage."
     case 'claims_to_approve':
-      return 'An engineer paid for something and asked to be paid back. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
+      return 'An engineer paid for work and asked to be repaid. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':
-      return 'Quotations nobody decided, enquiries nobody asked suppliers about, goods and payments far past their date. Decide each one: still live, chase, or close as lost.'
+      return 'Quotations with no decision, RFQs with no supplier asked, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
     case 'recurring_due':
-      return 'These recurring expenses have no entry for this month yet. Record them all in one tap, changing an amount first if this month’s bill is different.'
+      return 'These recurring expenses have no entry for this month yet. Record them all at once, changing an amount first if the bill for this month is different.'
     default:
       return 'Open the record.'
   }
@@ -686,14 +705,14 @@ function factsFor(
   const bid: Fact | null = rfq?.dueOn ? { label: 'Quotation due in', short: 'Quotation due', icon: CalendarDays, value: distanceText(rfq.dueOn, today), sub: formatDay(rfq.dueOn), tone: rfq.dueOn <= today ? 'danger' : undefined } : null
   /** The two cells that change once it has been chased: "Chased ..." and "Next nudge". */
   const chased = (who: string, count: number, on: string): Fact => ({
-    label: `Chased ${who}`,
-    short: 'Chased',
+    label: `${who === 'customer' ? 'Customer' : 'Supplier'} followed up`,
+    short: 'Followed up',
     icon: Check,
     tone: 'success',
     value: on === today ? 'Today' : agoText(on, today).replace(/^\w/, ch => ch.toUpperCase()),
-    sub: `${formatDay(on)} · ${count > 0 ? `${who === 'customer' ? 'asked' : 'chase'} ×${count}` : 'once'}`,
+    sub: `${formatDay(on)} · ${count > 0 ? `${who === 'customer' ? 'asked' : 'follow-up'} ×${count}` : 'once'}`,
   })
-  const nextNudge = (on: string): Fact => ({ label: 'Chase again on', short: 'Chase again', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
+  const nextNudge = (on: string): Fact => ({ label: 'Follow up again on', short: 'Follow up again', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
   const out: Array<Fact | null> = []
   switch (item.rule) {
     case 'chase_customer': {
@@ -720,7 +739,7 @@ function factsFor(
         out.push(pricedFact, sent, chased('supplier', i?.chaseCount ?? 1, item.waiting.chasedOn), nextNudge(item.waiting.nextNudgeOn))
         break
       }
-      out.push(pricedFact, sent, i ? { label: 'Chased', icon: Hourglass, value: i.chaseCount > 0 ? `×${i.chaseCount}` : 'not yet', sub: i.lastChasedOn ? `last ${formatDay(i.lastChasedOn)}` : undefined } : null, bid)
+      out.push(pricedFact, sent, i ? { label: 'Followed up', icon: Hourglass, value: i.chaseCount > 0 ? `×${i.chaseCount}` : 'not yet', sub: i.lastChasedOn ? `last ${formatDay(i.lastChasedOn)}` : undefined } : null, bid)
       break
     }
     case 'goods_late': {
@@ -734,7 +753,7 @@ function factsFor(
       out.push(
         late,
         expected,
-        l ? { label: 'Chased', icon: Hourglass, value: l.chaseCount > 0 ? `×${l.chaseCount}` : 'not yet', sub: l.lastChasedOn ? `last ${formatDay(l.lastChasedOn)}` : undefined } : null,
+        l ? { label: 'Followed up', icon: Hourglass, value: l.chaseCount > 0 ? `×${l.chaseCount}` : 'not yet', sub: l.lastChasedOn ? `last ${formatDay(l.lastChasedOn)}` : undefined } : null,
         l?.reference ? { label: 'Reference', value: l.reference } : null,
       )
       break
@@ -818,7 +837,7 @@ function ChasedCard({
     item.rule === 'chase_customer' && askedNow === 2
       ? 'A third ask suggests closing as no reply.'
       : item.rule === 'chase_supplier'
-        ? 'Chased twice with no reply: ask another supplier.'
+        ? 'Followed up twice with no reply: ask another supplier.'
         : null
   const excerpt = memo ? excerptOf(memo.text) : null
   return (
@@ -842,7 +861,7 @@ function ChasedCard({
           Open {item.ref}
         </Button>
         <Button variant="quiet" icon={AlarmClock} onClick={onAgain}>
-          Chase again
+          Follow up again
         </Button>
         {next ? <span className="ml-auto text-xs text-fg-muted">{next}</span> : null}
       </div>
@@ -853,8 +872,8 @@ function ChasedCard({
 /** Escalation for a customer: a suggestion, never automatic. */
 function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
   return (
-    <CloseRfqBanner item={item} today={today} title="3 chases, no answer" reasons={['no_reply_to_clarification']} buttonLabel={() => 'Close as no reply'}>
-      This is a suggestion. Nothing is closed for you. Closing records the reason “No reply to our questions”.
+    <CloseRfqBanner item={item} today={today} title="3 follow-ups, no answer" reasons={['no_reply_to_clarification']} buttonLabel={() => 'Close as no reply'}>
+      This is a suggestion. Nothing is closed automatically. Closing records the reason “No reply to our questions”.
     </CloseRfqBanner>
   )
 }
@@ -863,7 +882,7 @@ function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
 function CloseLost({ item, today }: { item: TodayItem; today: string }) {
   return (
     <CloseRfqBanner item={item} today={today} title="No decision yet" reasons={['price', 'competitor']} buttonLabel={r => (r === 'price' ? 'Lost on price' : 'Lost to a competitor')}>
-      If the customer has said no, close it here. Nothing is closed for you.
+      If the customer has said no, close it here. Nothing is closed automatically.
     </CloseRfqBanner>
   )
 }

@@ -87,8 +87,7 @@ export function ExceptionsPage() {
         meta={
           <InfoTip label="About mistakes to fix">
             Checked, in every month: customer payments against the order total, invoices against the order, costs against the expected cost
-            and the POs, dates in sequence, the GST on each invoice, sending to the customer and the tax deposit, and orders where nobody has
-            said whether GST is included in the price. Mark as checked hides a finding for everyone until its figures change.
+            and the POs, dates in sequence, the GST on each invoice, sending to the customer and the tax deposit, and orders where it is not recorded whether GST is included in the price. Mark as checked hides a finding for all users until its figures change.
           </InfoTip>
         }
         actions={
@@ -139,7 +138,7 @@ export function ExceptionsPage() {
           <div className="p-4">
             <Banner
               tone="danger"
-              title="Couldn't run the checks"
+              title="The checks could not be run"
               action={
                 <Button size="sm" onClick={() => void q.refetch()}>
                   Try again

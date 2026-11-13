@@ -84,7 +84,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
         <EmptyState
           mood="error"
           icon={CloudOff}
-          title="Couldn't open the statement"
+          title="The statement could not be opened"
           actions={
             <Button variant="primary" onClick={() => void facts.refetch()}>
               Try again
@@ -109,7 +109,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
             </Link>
           }
         >
-          {`${jobLabel(job.key)} was made as an order, with no enquiry, so no supplier was asked for a price.`}
+          {`${jobLabel(job.key)} was made as an order, with no RFQ, so no supplier was asked for a price.`}
         </EmptyState>
       </Shell>
     )
@@ -140,8 +140,8 @@ const COLUMNS: Array<{ key: SortKey; label: string; align?: 'right' }> = [
 ]
 
 /** The columns of an item's quotes, as a grid: the table roles are on the elements (the raw table tags are for DataTable only). */
-const ROW = 'grid grid-cols-[minmax(12rem,2fr)_minmax(8rem,1fr)_minmax(9rem,1fr)_minmax(8rem,1fr)_minmax(6rem,0.8fr)_minmax(8rem,1.2fr)] items-start'
-const TOTAL_ROW = 'grid grid-cols-[minmax(12rem,2fr)_minmax(6rem,0.7fr)_minmax(10rem,1.3fr)_minmax(7rem,1fr)] items-start'
+const ROW = 'grid grid-cols-[minmax(7rem,2fr)_minmax(6rem,1fr)_minmax(7rem,1fr)_minmax(5rem,1fr)_minmax(4.5rem,0.8fr)_minmax(5rem,1.2fr)] items-start'
+const TOTAL_ROW = 'grid grid-cols-[minmax(8rem,2fr)_minmax(5rem,0.7fr)_minmax(8rem,1.3fr)_minmax(6rem,1fr)] items-start'
 
 const SORT_CHOICES = [
   { value: 'supplier:asc', label: 'Supplier name, A to Z' },
@@ -277,7 +277,7 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
       ) : null}
 
       {(items.data ?? []).length === 0 ? (
-        <p className="mt-6 text-base text-fg-muted">This enquiry has no items yet.</p>
+        <p className="mt-6 text-base text-fg-muted">This RFQ has no items yet.</p>
       ) : (
         <div className="mt-4 grid gap-4" data-testid="statement">
           {statement.sections.map(sec => (
@@ -304,7 +304,7 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
   return (
     <section aria-label={`Item ${item.number}`} className="min-w-0 rounded-panel border bg-surface" data-statement-item={item.number}>
       <header className="border-b bg-sunken px-4 py-4">
-        <h2 className="break-words text-lg font-semibold">{`${item.number}. ${title.trim()} — Qty: ${sec.quantityText}`}</h2>
+        <h2 className="break-words text-lg font-semibold">{`${item.number}. ${title.trim()}, Qty ${sec.quantityText}`}</h2>
         {spec ? <p className="mt-1 break-words text-base text-fg-muted">{spec}</p> : null}
       </header>
       {sec.rows.length === 0 ? (
@@ -317,7 +317,7 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
         </ul>
       ) : (
         <div className="overflow-x-auto">
-          <div role="table" aria-label={`Quotes for item ${item.number}`} className="min-w-[48rem] text-left text-base">
+          <div role="table" aria-label={`Supplier prices for item ${item.number}`} className="min-w-[36rem] text-left text-base">
             <div role="rowgroup">
               <div role="row" className={cn(ROW, 'border-b text-sm text-fg-muted')}>
                 {COLUMNS.map(c => {
@@ -430,7 +430,7 @@ function Totals({ totals, quotedAny, phone }: { totals: SupplierTotal[]; quotedA
         </ul>
       ) : (
         <div className="overflow-x-auto">
-          <div role="table" aria-label="Totals by supplier" className="min-w-[36rem] text-left text-base">
+          <div role="table" aria-label="Totals by supplier" className="min-w-[30rem] text-left text-base">
             <div role="rowgroup">
               <div role="row" className={cn(TOTAL_ROW, 'border-b text-sm text-fg-muted')}>
                 <div role="columnheader" className="px-4 py-2 font-medium">

@@ -50,7 +50,7 @@ export interface QuotedRow {
 
 /** Suppliers asked who gave no price for an item, grouped on one compact line: "No reply: A, B" and "Did not quote: C". */
 export interface NoQuoteGroup {
-  /** "No reply", "Can't quote" or "Did not quote". */
+  /** "No reply", "Cannot quote" or "Did not quote". */
   label: string
   names: string[]
 }
@@ -191,11 +191,11 @@ export function buildStatement(items: readonly RfqItemRow[], inquiries: readonly
       }
       if (!opts.showNoReply) continue
       const declined = inq.itemDeclines[item.id]
-      const label = inq.lines.length === 0 && inq.noOfferOn ? "Can't quote" : declined ? "Can't quote" : inq.lines.length === 0 ? 'No reply' : 'Did not quote'
+      const label = inq.lines.length === 0 && inq.noOfferOn ? "Cannot quote" : declined ? "Cannot quote" : inq.lines.length === 0 ? 'No reply' : 'Did not quote'
       noQuote.set(label, [...(noQuote.get(label) ?? []), inq.supplierName])
     }
     const currencies = [...new Set(rows.map(r => r.currency))]
-    const groups: NoQuoteGroup[] = ['No reply', "Can't quote", 'Did not quote']
+    const groups: NoQuoteGroup[] = ['No reply', "Cannot quote", 'Did not quote']
       .filter(l => noQuote.has(l))
       .map(l => ({ label: l, names: (noQuote.get(l) as string[]).sort((x, y) => x.localeCompare(y, 'en', { sensitivity: 'base' })) }))
     return { item, quantityText: quantityText(item.qty, item.unit), rows: sortRows(rows, opts.sort), sharedCurrency: currencies.length === 1 ? currencies[0] : null, noQuote: groups }

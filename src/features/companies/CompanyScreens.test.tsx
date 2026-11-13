@@ -133,12 +133,12 @@ describe('supplier page', () => {
       mount('/companies/s1', <CompanyPage />)
       await screen.findByRole('heading', { level: 1, name: /Alpenmark Controls/ })
       await screen.findByText('Belimo NM24A-SR damper actuator')
-      const main = screen.getByRole('heading', { name: 'Enquiries' }).closest('div.grid') as HTMLElement
-      expect(h2s(main).slice(0, 2)).toEqual(['Enquiries', 'Deliveries'])
+      const main = screen.getByRole('heading', { name: 'RFQs' }).closest('div.grid') as HTMLElement
+      expect(h2s(main).slice(0, 2)).toEqual(['RFQs', 'Deliveries'])
       expect(within(main).getByText('More about this supplier').closest('details')).not.toHaveAttribute('open')
       const side = screen.getByRole('complementary', { name: 'Company details' })
       expect(h2s(side)).toEqual(['Contacts', 'Open with them'])
-      for (const gone of ['What we know', 'Recent quotes', 'Recent enquiries', 'Roles']) expect(screen.queryByRole('heading', { name: gone })).not.toBeInTheDocument()
+      for (const gone of ['What we know', 'Recent quotes', 'Recent RFQs', 'Roles']) expect(screen.queryByRole('heading', { name: gone })).not.toBeInTheDocument()
       expect(await axeViolations(document.body)).toEqual([])
     } finally {
       restore()
@@ -150,7 +150,7 @@ describe('supplier page', () => {
     mount('/companies/s1', <CompanyPage />)
     await screen.findByText('Belimo NM24A-SR damper actuator')
     const order = screen.getAllByRole('heading', { level: 2 }).map(h => h.textContent)
-    expect(order.slice(0, 4)).toEqual(['Contacts', 'Open with them', 'Enquiries', 'Deliveries'])
+    expect(order.slice(0, 4)).toEqual(['Contacts', 'Open with them', 'RFQs', 'Deliveries'])
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
   })
 
@@ -180,7 +180,7 @@ describe('supplier page', () => {
 
     await user.click(within(line).getByRole('button', { name: 'About these numbers' }))
     const tip = await screen.findByRole('dialog', { name: 'About these numbers' })
-    expect(tip).toHaveTextContent('Counted from enquiries, quotes, POs and delivery dates. Nothing is typed in.')
+    expect(tip).toHaveTextContent('Counted from RFQs, supplier prices, POs and delivery dates. Nothing is typed in.')
     expect(tip).toHaveTextContent('Reply time is the middle of the 5 replies logged here.')
     expect(tip).toHaveTextContent('Chosen: 2 of 4 quoted items were later ordered from them.')
     expect(await axeViolations(tip)).toEqual([])
@@ -191,7 +191,7 @@ describe('supplier page', () => {
   it('one Enquiries list reads item, reply time, price (with PKR at the time) and outcome; deliveries keep their PO and result', async () => {
     installFakeDb(supplierDb)
     mount('/companies/s1', <CompanyPage />)
-    const quotes = await screen.findByRole('region', { name: 'Enquiries' })
+    const quotes = await screen.findByRole('region', { name: 'RFQs' })
     const row = await within(quotes).findByText('Belimo NM24A-SR damper actuator')
     const li = row.closest('li') as HTMLElement
     expect(li).toHaveTextContent(/EUR\s*214\.00/)
@@ -206,6 +206,18 @@ describe('supplier page', () => {
     expect(open).toHaveTextContent('Supplier orders')
     // "Waiting for their reply", not "Enquiries: None open" beside quotes that read "Quoted, RFQ open"
     expect(open).toHaveTextContent('Waiting for their replyNone')
+  })
+
+  it('an engineer does not see the supplier currency row; sales do', async () => {
+    installFakeDb(supplierDb)
+    const { unmount } = mount('/companies/s1', <CompanyPage />, 'engineer')
+    const open = await screen.findByRole('region', { name: 'Open with them' })
+    await waitFor(() => expect(open).toHaveTextContent('Supplier orders'))
+    expect(open).not.toHaveTextContent('Currency')
+    unmount()
+    mount('/companies/s1', <CompanyPage />, 'sales')
+    const salesOpen = await screen.findByRole('region', { name: 'Open with them' })
+    await waitFor(() => expect(salesOpen).toHaveTextContent('Currency'))
   })
 
   it('Details (in the fold) holds the brands carried as tags, with how often each was quoted, and Add and remove', async () => {
@@ -227,7 +239,7 @@ describe('supplier page', () => {
   it('no table is locked to the compact density', async () => {
     installFakeDb(supplierDb)
     mount('/companies/s1', <CompanyPage />)
-    await screen.findByRole('region', { name: 'Enquiries' })
+    await screen.findByRole('region', { name: 'RFQs' })
     expect(document.querySelector('[data-density="compact"]')).toBeNull()
   })
 })

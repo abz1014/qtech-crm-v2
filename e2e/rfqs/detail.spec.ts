@@ -11,7 +11,7 @@ import { openStage, stagesOf } from '../support/job'
  * FE-2 targets asserted here (BUILD_PLAN FE-2; the UX audit of 2026-10-19 moved the rare actions into More):
  *   Supplier reply        Enter reply, then at most 1 typed price per item, currency never typed (then one Save reply)
  *   Paste reply           paste + accept, at most 2 actions once the reply is open (nothing is saved until Accept)
- *   Can't quote           Enter reply, Can't quote, the reason (the five reasons sit behind one menu: grade-B R2)
+ *   Cannot quote           Enter reply, Cannot quote, the reason (the five reasons sit behind one menu: grade-B R2)
  *   Chase                 1 tap for EVERY supplier asked (Copy and mark chased on the one shown, Chase on the others)
  *   Mark quotation sent   2 taps (More, then the item): a quotation issued from the app is marked sent by Issue itself
  *   Lose / close          at most 2 taps (open More, choose the reason; the suggested one is marked)
@@ -217,14 +217,14 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
     expect(await linesOf(s.germany.inquiryId)).toHaveLength(0)
   })
 
-  test("a regret becomes can't quote with the reason filled in", async ({ page }) => {
+  test("a regret becomes cannot quote with the reason filled in", async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.china.name)
     await copy(page, 'Regret, we do not handle this brand. Sorry we cannot quote.')
     await r.getByRole('button', { name: 'Paste reply' }).click()
-    await expect(r.getByText(/They say they can't quote\. Reason:/)).toBeVisible()
-    await r.getByRole('button', { name: "Mark can't quote" }).click()
+    await expect(r.getByText(/The supplier cannot quote\. Reason:/)).toBeVisible()
+    await r.getByRole('button', { name: "Mark cannot quote" }).click()
     await expect.poll(async () => (await inquiryOf(s.china.inquiryId)).no_offer_on).toBe(today())
     const done = await inquiryOf(s.china.inquiryId)
     expect(['no_brand', 'other']).toContain(done.no_offer_reason)
@@ -291,27 +291,27 @@ test.describe('comparison', () => {
   })
 })
 
-test.describe("can't quote (Enter reply, Can't quote, the reason)", () => {
+test.describe("cannot quote (Enter reply, Cannot quote, the reason)", () => {
   test('the reasons sit behind one menu; one tap records the reason, and it can be taken back', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', `supplier_inquiries?id=eq.${s.china.inquiryId}`, { method: 'PATCH', body: { notes: 'Call Imran on Monday' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.china.name)
-    await expect(r.getByRole('button', { name: "Doesn't carry this brand" })).toHaveCount(0) // not five buttons (grade-B R2)
-    await r.getByRole('button', { name: `Can't quote, ${s.china.name}` }).click()
-    await page.getByRole('menuitem', { name: "Doesn't carry this brand" }).click() // the one tap on the reason
-    await expect(page.getByRole('status').filter({ hasText: "Marked can't quote" })).toBeVisible()
+    await expect(r.getByRole('button', { name: "Does not carry this brand" })).toHaveCount(0) // not five buttons (grade-B R2)
+    await r.getByRole('button', { name: `Cannot quote, ${s.china.name}` }).click()
+    await page.getByRole('menuitem', { name: "Does not carry this brand" }).click() // the one tap on the reason
+    await expect(page.getByRole('status').filter({ hasText: "Marked cannot quote" })).toBeVisible()
     await expect(r).toHaveCount(0) // the dialog closes
     // The supplier's row in Suppliers asked: the reason and Take back.
     const closed = page.locator(`[data-reply-row="${s.china.id}"]`)
-    await expect(closed).toContainText("Can't quote: Doesn't carry this brand")
+    await expect(closed).toContainText("Cannot quote: Does not carry this brand")
     const after = await inquiryOf(s.china.inquiryId)
     expect(after.no_offer_on).toBe(today())
     expect(after.no_offer_reason).toBe('no_brand') // a stored key, not a phrase
     expect(after.notes).toBe('Call Imran on Monday') // the notes belong to people and are never written
-    await expect(page.getByRole('article', { name: 'Item 1' }).locator(`[data-declined="${s.china.id}"]`)).toContainText("Doesn't carry this brand")
+    await expect(page.getByRole('article', { name: 'Item 1' }).locator(`[data-declined="${s.china.id}"]`)).toContainText("Does not carry this brand")
 
-    await closed.getByRole('button', { name: `Take back can't quote, ${s.china.name}` }).click()
+    await closed.getByRole('button', { name: `Take back cannot quote, ${s.china.name}` }).click()
     await expect(closed.getByRole('button', { name: `Enter reply, ${s.china.name}` })).toBeVisible() // a reply is expected again
     const back = await inquiryOf(s.china.inquiryId)
     expect(back.no_offer_on).toBeNull()
@@ -323,14 +323,14 @@ test.describe("can't quote (Enter reply, Can't quote, the reason)", () => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.germany.name)
-    await r.getByText('A different reason for one item').click()
-    await r.getByLabel(`Can't quote reason for item 2 from ${s.germany.name}`).selectOption('Item discontinued')
+    await r.getByRole('button', { name: `Cannot offer item 2 from ${s.germany.name}` }).click()
+    await page.getByRole('menuitem', { name: 'Item discontinued' }).click()
     await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[1].id, 'discontinued']])
     const after = await inquiryOf(s.germany.inquiryId)
     expect(after.notes).toBeNull()
     expect(after.no_offer_on).toBeNull()
     // The reply dialog says it at once; the page behind it (hidden while the dialog is open) shows it on the item once it closes.
-    await expect(r).toContainText("Can't quote: Item discontinued")
+    await expect(r).toContainText('Cannot offer: Item discontinued')
     await page.keyboard.press('Escape')
     await expect(r).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Item 2' }).locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
@@ -343,8 +343,8 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const card = page.locator(`[data-chase-card="${s.china.id}"]`) // the supplier shown in the Suppliers asked card
     await resetClipboard(page)
-    await card.getByRole('button', { name: 'Copy and mark chased' }).click() // the one tap
-    await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
+    await card.getByRole('button', { name: 'Copy and record follow-up' }).click() // the one tap
+    await expect(page.getByRole('status').filter({ hasText: 'Follow-up text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, 'Following up on our enquiry')
     expect(text).not.toMatch(/RFQ-|assalam/i) // no RFQ number or religious greeting in the supplier text
     expect(text).toContain('these 2 requirements are very important')
@@ -355,11 +355,11 @@ test.describe('chase (FE-2: 1 tap)', () => {
     const after = await inquiryOf(s.china.inquiryId)
     expect(after.chase_count).toBe(1)
     expect(after.last_chased_on).toBe(today())
-    await expect(card.getByText('Chased once already')).toBeVisible()
+    await expect(card.getByText('Followed up once already')).toBeVisible()
 
     // The second chase uses the second-reminder wording.
     await resetClipboard(page)
-    await card.getByRole('button', { name: 'Copy and mark chased' }).click()
+    await card.getByRole('button', { name: 'Copy and record follow-up' }).click()
     await readClipboardWhen(page, 'A second reminder')
     // the stamp is written just after the text is copied: poll, do not read once
     await expect.poll(async () => (await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
@@ -401,10 +401,10 @@ test.describe('chase (FE-2: 1 tap)', () => {
     let taps = 0
     // Not the supplier shown in the card: the Germany supplier, straight from its entry in Suppliers asked.
     await resetClipboard(page)
-    await page.getByRole('button', { name: `Chase ${s.germany.name}`, exact: true }).click()
+    await page.getByRole('button', { name: `Follow up with ${s.germany.name}`, exact: true }).click()
     taps++
     expect(taps).toBe(1)
-    await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Follow-up text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, 'Following up on our enquiry')
     expect(text).toContain('Following up on our enquiry')
     expect(text).toContain(s.items[0].description)
@@ -414,7 +414,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     expect(after.last_chased_on).toBe(today())
     expect((await inquiryOf(s.usd.inquiryId)).chase_count).toBe(0) // only that supplier
     // And the next one, 1 tap again.
-    await page.getByRole('button', { name: `Chase ${s.usd.name}`, exact: true }).click()
+    await page.getByRole('button', { name: `Follow up with ${s.usd.name}`, exact: true }).click()
     await expect.poll(async () => (await inquiryOf(s.usd.inquiryId)).chase_count).toBe(1)
   })
 })
@@ -517,14 +517,14 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.locator('[data-waiting]')).toHaveCount(1)
     await expect(one.locator('[data-waiting]')).toHaveText('Waiting on 3 suppliers')
-    await expect(one.getByRole('button', { name: /Add reply|Enter reply|Can't quote/ })).toHaveCount(0)
+    await expect(one.getByRole('button', { name: /Add reply|Enter reply|Cannot quote/ })).toHaveCount(0)
     // No price boxes until a supplier's Enter reply is tapped.
     await expect(page.getByLabel(`Price for item 1 from ${s.germany.name}`)).toHaveCount(0)
     await expect(page.locator(`[data-reply-row="${s.germany.id}"]`)).toHaveCount(1)
     // A reason for this one item is set in that supplier's reply.
     const r = await row(page, s.germany.name)
-    await r.getByText('A different reason for one item').click()
-    await r.getByLabel(`Can't quote reason for item 1 from ${s.germany.name}`).selectOption('Item discontinued')
+    await r.getByRole('button', { name: `Cannot offer item 1 from ${s.germany.name}` }).click()
+    await page.getByRole('menuitem', { name: 'Item discontinued' }).click()
     await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[0].id, 'discontinued']])
     await page.keyboard.press('Escape')
     await expect(one.locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
@@ -614,7 +614,7 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     // One line (grade-B R5): a fresh rate is its figure (where it came from is its title); a stale one says how old.
     await expect(bar).toContainText('Rates today, PKR per unit')
     await expect(bar.locator('[data-rate="USD"]')).toContainText('USD 280.00')
-    await expect(bar.locator('[data-rate="USD"]')).toHaveAttribute('title', 'by hand · today')
+    await expect(bar.locator('[data-rate="USD"]')).toHaveAttribute('title', 'manual · today')
     await expect(bar.locator('[data-rate="EUR"]')).toContainText('12 days old')
     await expect(bar.locator('[data-rate="EUR"]')).toHaveAttribute('data-band', 'stale')
     await expect(bar.locator('[data-rate="JPY"]')).toContainText(/JPY\s*no rate, not compared/)
@@ -701,9 +701,9 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await openStage(page, 'Quotation') // nobody is asked yet, so the job is still at the Enquiry stage
     const panel = page.locator('[data-slot="items"]')
-    await expect(panel).toContainText('2 items · nobody asked yet')
-    await expect(panel).toContainText('Ask suppliers for prices. One tap copies a message listing every item')
-    await expect(page.getByText('No supplier has been asked about this item.')).toHaveCount(2)
+    await expect(panel).toContainText('2 items · no supplier asked yet')
+    await expect(panel).toContainText('Ask a supplier first. Replies are entered under Suppliers asked.')
+    await expect(page.getByText('No supplier has been asked about this item.')).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-status]')).toHaveCount(0) // no item chip while nobody is asked: the header says it
     const card = page.locator('[data-slot="suppliers-to-ask"]')
     await expect(card).toContainText('suggested')
@@ -726,7 +726,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.getByText('No price yet', { exact: true })).toBeVisible()
     await expect(one.getByText(/None of the 1 supplier who replied quoted this item/)).toBeVisible()
-    await expect(one.getByText(/Ask someone else before the quotation is due\./)).toBeVisible()
+    await expect(one.getByText(/Ask another supplier before the quotation is due./)).toBeVisible()
     await resetClipboard(page)
     await one.getByRole('button', { name: `Copy message for ${s.carrier!.name}` }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Message copied' })).toBeVisible()

@@ -23,7 +23,7 @@ function mount(props: Partial<Parameters<typeof HowItWorksCard>[0]> = {}) {
 
 const REGION = /How Q-Tech CRM works/
 /** The one collapsed row, at every width (audit T1): opening it shows the steps, "Got it" and "Open Help". */
-const openCard = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: /^New here\? How Q-Tech CRM works/ }))
+const openCard = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: /^How Q-Tech CRM works/ }))
 
 afterEach(() => {
   // Unmount first: clearing the flag would otherwise re-render a card outside act().
@@ -57,7 +57,7 @@ describe('How this works card', () => {
     const user = userEvent.setup()
     const first = mount()
     await openCard(user)
-    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('region', { name: REGION })).toBeNull()
     expect(window.localStorage.getItem('qtech.howItWorks.u1')).toBe('dismissed')
     first.unmount()
@@ -83,14 +83,14 @@ describe('How this works card', () => {
     })
     mount()
     await openCard(user)
-    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('region', { name: REGION })).toBeNull()
   })
 
   it('one collapsed row at every width that opens on tap, and can be hidden without opening; axe-clean', async () => {
     const user = userEvent.setup()
     mount({ role: 'engineer' })
-    const row = screen.getByRole('button', { name: 'New here? How Q-Tech CRM works · 3 steps' })
+    const row = screen.getByRole('button', { name: 'How Q-Tech CRM works · 3 steps' })
     expect(row).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('listitem')).toBeNull()
     await user.click(row)
@@ -98,7 +98,7 @@ describe('How this works card', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
     expect(await axeViolations()).toEqual([])
     await user.click(screen.getByRole('button', { name: 'Hide How this works' }))
-    expect(screen.queryByRole('button', { name: /New here/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /How Q-Tech CRM works/ })).toBeNull()
   })
 
   it('is not shown to someone added more than 7 days ago, or to a role with no steps', () => {

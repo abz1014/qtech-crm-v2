@@ -15,16 +15,16 @@ const base: MetaInput = {
 
 describe('companyMeta (g2-company: the line under the name)', () => {
   it('supplier with history: place, quotes in, supplier since', () => {
-    expect(companyMeta({ ...base, city: 'Linz' })).toEqual(['Linz, Austria', 'Quotes in EUR', 'Supplier since 2023'])
+    expect(companyMeta({ ...base, city: 'Linz' })).toEqual(['Linz, Austria', 'Supplier prices in EUR', 'Supplier since 2023'])
   })
   it('falls back to the country alone when there is no city', () => {
     expect(companyMeta(base)[0]).toBe('Austria')
   })
   it('low data says when it was added instead of a "since" year', () => {
-    expect(companyMeta({ ...base, country: 'China', currency: 'CNY', lowData: true })).toEqual(['China', 'Quotes in CNY', 'Added Oct 2026'])
+    expect(companyMeta({ ...base, country: 'China', currency: 'CNY', lowData: true })).toEqual(['China', 'Supplier prices in CNY', 'Added Oct 2026'])
   })
   it('imported only says so', () => {
-    expect(companyMeta({ ...base, country: 'Pakistan', currency: 'PKR', legacyImported: true })).toEqual(['Pakistan', 'Quotes in PKR', 'Imported from the old CRM'])
+    expect(companyMeta({ ...base, country: 'Pakistan', currency: 'PKR', legacyImported: true })).toEqual(['Pakistan', 'Supplier prices in PKR', 'Imported from the old CRM'])
   })
   it('leaves out "Quotes in" until a currency is known', () => {
     expect(companyMeta({ ...base, currency: null })).toEqual(['Austria', 'Supplier since 2023'])

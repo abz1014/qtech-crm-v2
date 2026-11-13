@@ -4,6 +4,7 @@ import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -25,7 +26,16 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
   const [open, setOpen] = useState(false)
   const id = useId()
   const claims = q.data ?? []
-  if (q.isPending || q.isError || claims.length === 0) return null
+  if (q.isPending) return null
+  if (q.isError)
+    return (
+      <section aria-label="To approve" data-testid="claims-review">
+        <EmptyState mood="error" title="Claims to approve could not be loaded" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+          Nothing was changed. Check your connection and try again.
+        </EmptyState>
+      </section>
+    )
+  if (claims.length === 0) return null
   const count = claims.length === 1 ? '1 claim' : `${claims.length} claims`
   const total = pkr(claims.reduce((s, c) => s + c.amount, 0))
   const list = (
@@ -39,7 +49,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
   if (phone)
     return (
       <section aria-label="To approve" data-testid="claims-review">
-        <FoldRow state={{ icon: HandCoins, word: 'Waiting for you' }} title="To approve" summary={`${count} · ${total}`} open={open} onToggle={() => setOpen(o => !o)} controlsId={id}>
+        <FoldRow state={{ icon: HandCoins, word: 'Action needed' }} title="To approve" summary={`${count} · ${total}`} open={open} onToggle={() => setOpen(o => !o)} controlsId={id}>
           {list}
         </FoldRow>
       </section>
@@ -51,7 +61,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
           To approve
         </h2>
         <span className="text-base text-fg-2">
-          {count} from engineers · {total} · not counted until approved
+          {count} from staff · {total} · not counted until approved
         </span>
       </header>
       {list}
@@ -86,7 +96,7 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
     try {
       window.open(await signClaimPhoto(path), '_blank', 'noopener')
     } catch {
-      toast.toast({ title: "Couldn't open the photo", body: 'Try again in a moment.', tone: 'danger' })
+      toast.toast({ title: "The photo could not be opened", body: 'Try again in a moment.', tone: 'danger' })
     }
   }
 
@@ -199,7 +209,7 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
                 owe.mutate(
                   { id: claim.id, categoryId },
                   {
-                    onSuccess: () => toast.toast({ title: `Approved, owed to ${claim.byName}`, body: `${label} · ${categories.find(c => c.id === categoryId)?.name ?? ''} · mark it paid back when you pay`, tone: 'success' }),
+                    onSuccess: () => toast.toast({ title: `Approved, to repay ${claim.byName}`, body: `${label} · ${categories.find(c => c.id === categoryId)?.name ?? ''} · mark it paid back when repaid`, tone: 'success' }),
                     onError: e => setError(mapPgError(e, { entity: 'expense' }).message),
                   },
                 )

@@ -57,7 +57,7 @@ function ApplyLoader(props: { companyId: string; companyName: string; credit: Cr
     return (
       <>
         <p className="text-sm text-fg-2" data-testid="no-targets">
-          None of {props.companyName}&rsquo;s orders owes anything, so there is nothing to put the credit against. Refund it instead.
+          No order of {props.companyName} has a balance due, so there is nothing to put the credit against. Refund it instead.
         </p>
         <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end border-t bg-sunken px-5 py-3">
           <Button variant="quiet" onClick={props.onCancel} data-cancel>
@@ -110,11 +110,11 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
   return (
     <>
       <p className="-mt-3 text-sm text-fg-muted">
-        {companyName} · holds <span className="num">Rs {formatAmount(credit.balance)}</span> of credit
+        {companyName} · holds <span className="num">PKR {formatAmount(credit.balance)}</span> of credit
       </p>
       <Form sf={sf} labels={{ orderId: 'Order', amount: 'Amount to apply', appliedOn: 'Date' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
-        <FormField<Values, 'orderId'> name="orderId" label="Put it against" source={{ label: 'Their oldest order that owes' }}>
+        <FormField<Values, 'orderId'> name="orderId" label="Put it against" source={{ label: 'Their oldest order with a balance due' }}>
           {f => (
             <Select
               {...f}
@@ -122,12 +122,12 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
                 f.onChange(e)
                 setAmountFor(e.target.value)
               }}
-              options={targets.map(t => ({ value: t.orderId, label: `${orderRef(t.orderNumber)} · owes Rs ${formatAmount(t.balance)}` }))}
+              options={targets.map(t => ({ value: t.orderId, label: `${orderRef(t.orderNumber)} · due PKR ${formatAmount(t.balance)}` }))}
             />
           )}
         </FormField>
         <div className="grid gap-4 md:grid-cols-2">
-          <FormField<Values, 'amount'> name="amount" label="Amount to apply, PKR" source={{ label: 'The smaller of the credit and what it owes' }}>
+          <FormField<Values, 'amount'> name="amount" label="Amount to apply, PKR" source={{ label: 'The smaller of the credit and the balance due' }}>
             {f => <NumberInput {...f} inputMode="decimal" />}
           </FormField>
           <FormField<Values, 'appliedOn'> name="appliedOn" label="Date" source={{ label: 'Today', plain: true }}>

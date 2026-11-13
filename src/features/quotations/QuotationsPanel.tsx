@@ -120,14 +120,14 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
         </div>
       ) : quotations.isError ? (
         <div className="py-5">
-          <Banner tone="danger" title="Couldn't load the quotations" action={<Button onClick={() => void quotations.refetch()}>Try again</Button>}>
+          <Banner tone="danger" title="Quotations could not be loaded" action={<Button onClick={() => void quotations.refetch()}>Try again</Button>}>
             Nothing was changed.
           </Banner>
         </div>
       ) : rows.length === 0 ? (
         <p className="px-0 py-5 text-fg-muted">
           {prices
-            ? 'Nothing issued yet. Issue quotation sets your price on each item, from a supplier price or one you type, and makes the PDF.'
+            ? 'Nothing issued yet. Issue quotation sets the price for each item, from a supplier price or an entered price, and makes the PDF.'
             : 'Nothing issued yet. Sales issue the quotation.'}
         </p>
       ) : (

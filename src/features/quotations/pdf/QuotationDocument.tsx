@@ -148,8 +148,8 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
 
         <View style={s.titleRow}>
           <View>
-            <Text style={s.h1}>Quotation</Text>
-            {data.preview ? <Text style={[s.muted, { marginTop: 3 }]}>Preview, not issued yet</Text> : null}
+            <Text style={s.h1}>QUOTATION</Text>
+            {data.preview ? <Text style={[s.muted, { marginTop: 3 }]}>DRAFT – NOT ISSUED</Text> : null}
             {!data.previous && !data.preview ? <Text style={[s.muted, { marginTop: 3 }]}>First issue</Text> : null}
             {data.previous ? (
               <Text style={[s.muted, { marginTop: 3 }]}>
@@ -196,7 +196,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
               </View>
             ) : null}
             <View style={s.refRow}>
-              <Text style={s.refLabel}>Our RFQ</Text>
+              <Text style={s.refLabel}>Our reference</Text>
               <Text style={[s.strongText, s.mono]}>RFQ-{String(data.rfqNumber).padStart(4, '0')}</Text>
             </View>
             <View style={s.refRow}>

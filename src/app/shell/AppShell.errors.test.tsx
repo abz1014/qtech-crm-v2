@@ -39,7 +39,7 @@ describe('ErrorBoundary inside the shell', () => {
         </QueryClientProvider>,
       ),
     )
-    expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong')
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('The page stopped working')
     expect(el.querySelectorAll('nav[aria-label="Main"] a').length).toBe(8) // four destinations, top bar and tab bar
     act(() => root.unmount())
   })

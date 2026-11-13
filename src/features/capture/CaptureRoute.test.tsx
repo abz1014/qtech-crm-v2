@@ -124,4 +124,22 @@ describe('Capture route: Photo or note with nothing shared', () => {
     await user.click(await screen.findByRole('button', { name: /Job 139/ }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139?shared=oldnull'))
   })
+
+  it('a share that is gone says shared items are kept up to 7 days and that signing out clears them (live bug 48)', async () => {
+    render(
+      <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ali', role: 'sales' } }}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={['/capture?share=missing']}>
+            <Routes>
+              <Route path="/capture" element={<CaptureRoute />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
+      </SessionProvider>,
+    )
+    const gone = await screen.findByTestId('share-gone')
+    expect(gone).toHaveTextContent('no longer on this device')
+    expect(gone).toHaveTextContent('kept for up to 7 days')
+    expect(gone).toHaveTextContent('signing out clears them')
+  })
 })

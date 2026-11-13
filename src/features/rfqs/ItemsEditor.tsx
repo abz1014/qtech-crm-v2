@@ -164,7 +164,7 @@ export function PasteZone({
     } catch {
       // The browser would not let the page read the clipboard: the box takes a paste the usual way.
       zoneRef.current?.focus()
-      setHint('Tap and hold in the box, then Paste.')
+      setHint('Press and hold in the box, then Paste.')
     }
   }
   return (
@@ -177,7 +177,7 @@ export function PasteZone({
     >
       {filled ? null : <Icon icon={ClipboardPaste} size="lg" className="text-fg-muted" />}
       <label htmlFor="intake-paste" className={cn('text-base', filled ? 'font-medium' : 'text-fg-2')}>
-        {filled ? 'Paste another email or list' : 'Paste the customer’s email or item list'}
+        {filled ? 'Paste another email or list' : "Paste the customer's email or item list"}
       </label>
       <textarea
         id="intake-paste"
@@ -206,7 +206,7 @@ export function PasteZone({
             setDraft('')
           }
         }}
-        placeholder={touch ? 'Tap here to paste, or type one item per line' : 'Click here and paste, or type one item per line'}
+        placeholder={touch ? 'Select here to paste, or type one item per line' : 'Click here and paste, or type one item per line'}
         className="w-full resize-y rounded border border-line-input bg-surface px-3 py-2 font-mono text-sm leading-5 text-fg placeholder:text-fg-muted hover:border-fg-muted focus-visible:border-fg max-md:text-base max-md:leading-6"
       />
       {touch ? (
@@ -226,7 +226,7 @@ export function PasteZone({
             <kbd className="num rounded border border-line-strong bg-sunken px-1">V</kbd> anywhere on this page.{' '}
           </>
         )}
-        Paste the whole email, a PDF or a screenshot — we pick out the items; you check them before saving.
+        Paste the whole email, a PDF or a screenshot. The items are picked out and can be checked before saving.
       </p>
     </div>
   )

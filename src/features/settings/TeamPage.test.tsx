@@ -165,7 +165,7 @@ describe('Team screen', () => {
     h.list.mockRejectedValueOnce(new PlainError('Only an active admin can manage people.'))
     const user = setupUser()
     mount()
-    expect(await screen.findByText('Couldn’t load the team')).toBeInTheDocument()
+    expect(await screen.findByText('Could not load the team')).toBeInTheDocument()
     expect(screen.getByText('Nothing has changed. Check your connection, then try again.')).toBeInTheDocument()
     expect(screen.queryByText('Only an active admin can manage people.')).toBeNull() // never the raw error text
     await user.click(screen.getByRole('button', { name: /try again|retry/i }))
@@ -228,7 +228,7 @@ describe('Team screen', () => {
     await user.click(within(secret).getByRole('button', { name: 'Copy sign-in message' }))
     expect(writeText).toHaveBeenCalledTimes(1)
     const text = writeText.mock.calls[0][0] as string
-    expect(text).toContain('Hi Hira,')
+    expect(text).toContain('Dear Hira,')
     expect(text).toContain('Email: h@q.example')
     expect(text).toContain('Password: Vk7xmQ3pRt9wHn2e')
     expect(within(secret).getByRole('button', { name: 'Done' })).toBeEnabled()
@@ -246,7 +246,7 @@ describe('Team screen', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Create account' }))
     const secret = await screen.findByRole('dialog', { name: 'Account created' })
     await user.click(within(secret).getByRole('button', { name: 'Copy' }))
-    expect(await within(secret).findByText('Copy it by hand from the box')).toBeInTheDocument()
+    expect(await within(secret).findByText('Copy it manually from the box')).toBeInTheDocument()
     expect(within(secret).getByRole('button', { name: 'Done' })).toBeEnabled()
   })
 
@@ -312,7 +312,7 @@ describe('Team screen', () => {
     mount()
     await openRowMenu(user, 'Bilal Chaudhry', 'Deactivate')
     const dialog = await screen.findByRole('dialog', { name: 'Deactivate Bilal Chaudhry?' })
-    expect(within(dialog).getByText("You can't deactivate the only active admin")).toBeInTheDocument()
+    expect(within(dialog).getByText("The only active admin cannot be deactivated")).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeDisabled() // plain while blocked
     expect(h.deactivate).not.toHaveBeenCalled()
   })
@@ -338,7 +338,7 @@ describe('Team screen', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Deactivate Usman Tariq?' })
     expect(within(dialog).getByText(/signed out on every device/)).toBeInTheDocument()
     expect(within(dialog).getByText(/RFQs, orders and notes stay/)).toBeInTheDocument()
-    expect(within(dialog).getByText(/reactivate them at any time/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/Reactivation is possible at any time/)).toBeInTheDocument()
     expect(h.deactivate).not.toHaveBeenCalled()
     await user.click(within(dialog).getByRole('button', { name: 'Deactivate Usman' }))
     expect(h.deactivate).toHaveBeenCalledWith('usman')

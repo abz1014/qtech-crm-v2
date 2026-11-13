@@ -17,6 +17,7 @@ import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { openFindings, useCheckedSet } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
+import { lockChecks, lockChecksWithItems } from '@/features/money/monthEnd/lockChecks'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 import { ReportError } from '@/features/money/monthEnd/ReportParts'
@@ -94,7 +95,7 @@ export function ChecklistPage() {
               </>
             }
           >
-            No payments or expenses are recorded for {monthName(ctx.month)}. The current month cannot be locked; once it has ended this page lists its checks and Today shows &ldquo;Lock {monthName(ctx.month)}&rdquo;.
+            No payments or expenses are recorded for {monthName(ctx.month)}. The current month cannot be locked. Once it has ended, this page lists its checks and Today shows &ldquo;Lock {monthName(ctx.month)}&rdquo;.
             {ctx.closed.length ? ` ${closedThrough(ctx.closed)} and earlier are locked.` : ''}
           </EmptyState>
         </section>
@@ -130,7 +131,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const [open, setOpen] = useState(false)
   const state = ctx.state
   const closed = state?.kind === 'closed'
-  const withItems = ctx.withItems + (extra > 0 ? 1 : 0)
+  const withItems = lockChecksWithItems(lockChecks(ctx.cards, extra))
   const day = closeWindowDay(ctx.month, ctx.today)
   const name = monthName(ctx.month)
   const target = closeTarget(ctx.month, state)
@@ -160,8 +161,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const tip = (
     <InfoTip label="About locking a month">
       {state?.kind === 'not-ended' ? <>{name} can be locked once it has ended. </> : null}
-      Locking freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. You can reopen
-      it any time; both are written to the audit log. Months lock one at a time, oldest first, and only while they are on screen.
+      Locking freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. It can be reopened at any time. Both actions are written to the audit log. Months lock one at a time, oldest first, and only while they are on screen.
     </InfoTip>
   )
   return (
@@ -203,7 +203,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
           {closed ? <span className="text-sm text-fg-muted">Reopen it from the list below.</span> : tip}
         </div>
       )}
-      {closed || move ? null : <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} />}
+      {closed || move ? null : <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} mistakes={extra} />}
     </section>
   )
 }

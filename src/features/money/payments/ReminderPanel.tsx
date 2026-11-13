@@ -60,7 +60,7 @@ export function ReminderPanel({ row, today }: { row: ReceivableRow | null; today
     return (
       <PanelShell title="Payment reminder" meta={row.companyName}>
         <EmptyNote
-          title={row.state === 'settled' ? 'Nothing is owed.' : 'Not overdue yet.'}
+          title={row.state === 'settled' ? 'No balance due.' : 'Not overdue yet.'}
           body={row.state === 'settled' ? 'This order is paid in full.' : `Due on ${formatDay(row.dueOn)}, in ${d} ${d === 1 ? 'day' : 'days'}. A reminder becomes available once the invoice is overdue.`}
         />
         {row.state !== 'settled' ? <PayFooter orderId={row.orderId} /> : null}
@@ -238,7 +238,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
       // The copy is the first thing in the tap: a browser only allows it during the gesture.
       const ok = await copyToClipboard(text)
       if (!ok) {
-        toast({ title: 'Could not copy the message', body: 'Select the text and copy it by hand. Nothing was marked.', tone: 'danger' })
+        toast({ title: 'Could not copy the message', body: 'Select the text and copy it manually. Nothing was marked.', tone: 'danger' })
         return
       }
       await mark(true)

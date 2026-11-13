@@ -57,15 +57,15 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  * today's rate (never whether it is the lowest); with no rate it says the reply can be saved and the rate added afterwards.
  *
  *   FE-2  supplier reply   Enter reply, one typed price per item, currency never typed, then Save reply
- *         can't quote      Enter reply, Can't quote, the reason (the five reasons sit behind one menu, not five buttons)
+ *         cannot quote      Enter reply, Cannot quote, the reason (the five reasons sit behind one menu, not five buttons)
  *
- * "Can't quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); a different reason for
- * one item is an option, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
+ * "Cannot quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); "Cannot offer" beside an
+ * item's price box records a reason for that one item, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
  * Closing with prices typed and not saved asks first (the Dialog's own discard guard).
  *
  * An engineer (owner decision 2026-10-22: engineers see and write no prices) never gets this dialog: a reply is prices
  * (supplier_quote_lines.unit_price is required), so Suppliers asked shows them no Enter or Edit reply and useReplyDialog never opens
- * it for them (nor from a price row's menu or Capture). Take back on a whole "can't quote" stays in Suppliers asked (no price in it).
+ * it for them (nor from a price row's menu or Capture). Take back on a whole "cannot quote" stays in Suppliers asked (no price in it).
  */
 
 /** The status of a supplier's reply, as one chip. */
@@ -73,7 +73,7 @@ export function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCou
   if (!inquiry.sentOn && !inquiry.noOfferOn && inquiry.lines.length === 0) return <StatusBadge dimension="inquiry" value="shortlisted" />
   if (inquiry.responseState === 'quoted' || inquiry.lines.length > 0) return <StatusBadge dimension="inquiry" value="quoted" detail={`${inquiry.lines.length} of ${itemCount}`} />
   if (inquiry.responseState === 'no_offer' || inquiry.noOfferOn) return <StatusBadge dimension="inquiry" value="no-offer" />
-  return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `chased ×${inquiry.chaseCount}` : undefined} />
+  return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `followed up ×${inquiry.chaseCount}` : undefined} />
 }
 
 /** What a typed price reads as in PKR at today's rate. It never says whether it is the lowest: the CRM suggests no supplier. */
@@ -101,19 +101,19 @@ function PricePreview({ amount, currency, rates }: { amount: number; currency: s
   )
 }
 
-/** "Can't quote ▾": the five reasons behind one menu, one tap each. */
+/** "Cannot quote ▾": the five reasons behind one menu, one tap each. */
 export function CantQuoteMenu({ supplierName, busy, onPick, className }: { supplierName: string; busy?: boolean; onPick: (reason: string) => void; className?: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button icon={Ban} disabled={busy} className={className} aria-label={`Can't quote, ${supplierName}`}>
-          {"Can't quote"}
+        <Button icon={Ban} disabled={busy} className={className} aria-label={`Cannot quote, ${supplierName}`}>
+          {"Cannot quote"}
           <Icon icon={ChevronDown} size="sm" />
         </Button>
       </PopoverTrigger>
       <PopoverContent variant="menu" align="start" side="top" aria-label="Reason">
         <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
-          One tap records the reason
+          Choose a reason to record it
         </p>
         {CANT_QUOTE_REASONS.map(r => (
           <MenuItem key={r.key} onClick={() => onPick(r.key)}>
@@ -215,19 +215,19 @@ export function SupplierReplyDialog({
     try {
       await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: businessToday(), reason })
       toast({
-        title: "Marked can't quote",
+        title: "Marked cannot quote",
         body: `${inquiry.supplierName} · ${reasonLabel(reason)}`,
         undo: {
           onUndo: async () => {
             await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: before.noOfferOn, reason: before.reason })
           },
-          settledTitle: "Marked can't quote",
-          undoneTitle: "Can't quote taken back",
+          settledTitle: "Marked cannot quote",
+          undoneTitle: "Cannot quote taken back",
         },
       })
       onClose()
     } catch (err) {
-      toast({ title: "Could not mark can't quote", body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
+      toast({ title: "Could not record that the supplier cannot quote", body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
     }
   }
 
@@ -235,7 +235,7 @@ export function SupplierReplyDialog({
     try {
       await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, reason: null })
     } catch (err) {
-      toast({ title: "Could not take back can't quote", body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: "Could not undo the cannot-quote record", body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
@@ -342,7 +342,7 @@ export function SupplierReplyDialog({
           {declinedAll ? (
             <div className="flex flex-wrap items-center gap-3 rounded-row border border-line bg-sunken px-3 py-2">
               <span>
-                <span className="font-medium">{"Can't quote"}</span>
+                <span className="font-medium">{"Cannot quote"}</span>
                 {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
                 <span className="text-fg-muted">{` · ${formatDay(inquiry.noOfferOn as string)}`}</span>
               </span>
@@ -418,7 +418,7 @@ export function SupplierReplyDialog({
                   const problem = reason || (typeof price === 'number' && price > 0) ? null : replyPriceProblem(priceText[it.id] ?? '')
                   return (
                     <li key={it.id} className="grid content-start gap-1">
-                      <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_170px]">
+                      <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto]" data-reply-item={it.id}>
                         <span className="flex min-w-0 items-start gap-2" aria-hidden="true">
                           <span className="num mt-[2px] text-sm text-fg-muted">{it.number}</span>
                           <span className="min-w-0">
@@ -428,9 +428,16 @@ export function SupplierReplyDialog({
                             {q ? <span className="num ml-2 text-sm text-fg-muted">{q}</span> : null}
                           </span>
                         </span>
+                        <span className="flex min-w-0 items-center gap-2 max-sm:flex-wrap">
                         {reason ? (
-                          <span className="text-sm text-fg-muted">{`Can't quote: ${reasonLabel(reason)}`}</span>
+                          <>
+                            <span className="min-w-0 text-sm text-fg-muted">{`Cannot offer: ${reasonLabel(reason)}`}</span>
+                            <Button size="sm" variant="quiet" icon={Undo2} disabled={itemReason.isPending} aria-label={`Take back cannot offer, item ${it.number} from ${inquiry.supplierName}`} onClick={() => void setItem(it.id, null)}>
+                              Take back
+                            </Button>
+                          </>
                         ) : (
+                          <>
                           <NumberInput
                             id={replyInputId(inquiry.id, it.id)}
                             data-autofocus={it.id === autofocusId ? '' : undefined}
@@ -456,8 +463,40 @@ export function SupplierReplyDialog({
                                 void doSave()
                               }
                             }}
+                            className="sm:w-[170px]"
                           />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                size="sm"
+                                icon={Ban}
+                                disabled={itemReason.isPending || inquiry.lines.some(l => l.itemId === it.id)}
+                                aria-label={`Cannot offer item ${it.number} from ${inquiry.supplierName}`}
+                                className="shrink-0"
+                              >
+                                Cannot offer
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent variant="menu" align="end" side="bottom" aria-label="Reason">
+                              <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
+                                Choose a reason to record it
+                              </p>
+                              {CANT_QUOTE_REASONS.map(r => (
+                                <MenuItem
+                                  key={r.key}
+                                  onClick={() => {
+                                    setDraft(d => ({ ...d, prices: { ...d.prices, [it.id]: null } }))
+                                    void setItem(it.id, r.key)
+                                  }}
+                                >
+                                  {r.label}
+                                </MenuItem>
+                              ))}
+                            </PopoverContent>
+                          </Popover>
+                          </>
                         )}
+                        </span>
                       </div>
                       {problem ? (
                         <p id={`${replyInputId(inquiry.id, it.id)}-problem`} className="text-sm font-medium text-tone-danger-fg sm:text-right">
@@ -496,7 +535,7 @@ export function SupplierReplyDialog({
               </div>
               <details className="text-sm" open={Object.keys(draft.extras ?? {}).length > 0 || undefined} data-reply-extras="">
                 <summary className="w-fit cursor-pointer text-fg-muted hover:text-fg">Weight and country of origin (optional)</summary>
-                <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement; nothing is worked out from it.</p>
+                <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement. Nothing is worked out from it.</p>
                 <ul className="mt-2 grid gap-3">
                   {items
                     .filter(it => !inquiry.itemDeclines[it.id])
@@ -552,30 +591,6 @@ export function SupplierReplyDialog({
                     />
                   ) : null}
                 </p>
-              ) : null}
-
-              {items.length > 1 ? (
-                <details className="text-sm">
-                  <summary className="w-fit cursor-pointer text-fg-muted hover:text-fg">A different reason for one item</summary>
-                  <ul className="mt-2 grid gap-2">
-                    {items.map(it => (
-                      <li key={it.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3">
-                        <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
-                          <span className="num mr-2 text-fg-muted">{it.number}</span>
-                          {it.description}
-                        </span>
-                        <Select
-                          aria-label={`Can't quote reason for item ${it.number} from ${inquiry.supplierName}`}
-                          placeholder="Can quote"
-                          options={CANT_QUOTE_REASONS.map(r => ({ value: r.key, label: r.label }))}
-                          value={inquiry.itemDeclines[it.id] ?? ''}
-                          onChange={e => void setItem(it.id, e.target.value || null)}
-                          disabled={itemReason.isPending || inquiry.lines.some(l => l.itemId === it.id)}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </details>
               ) : null}
             </>
           )}

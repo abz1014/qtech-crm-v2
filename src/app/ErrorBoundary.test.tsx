@@ -18,8 +18,19 @@ describe('ErrorBoundary', () => {
     const el = document.createElement('div')
     const root = createRoot(el)
     act(() => root.render(<ErrorBoundary><Boom /></ErrorBoundary>))
-    expect(el.textContent).toContain('Something went wrong')
+    expect(el.textContent).toContain('The page stopped working')
     expect(el.querySelector('button')?.textContent).toBe('Reload page')
+    act(() => root.unmount())
+  })
+
+  it('uses dvh, not vh, so a phone address bar does not cut it', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const el = document.createElement('div')
+    const root = createRoot(el)
+    act(() => root.render(<ErrorBoundary><Boom /></ErrorBoundary>))
+    const cls = el.querySelector('[role="alert"]')?.className ?? ''
+    expect(cls).toContain('min-h-dvh')
+    expect(cls).not.toContain('min-h-screen')
     act(() => root.unmount())
   })
 

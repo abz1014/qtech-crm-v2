@@ -79,7 +79,7 @@ describe('HistoryPanel', () => {
 
   it('offers Try again when the history cannot be loaded', async () => {
     setup([page([])], { error: true })
-    expect(await screen.findByText("Couldn't load the history")).toBeInTheDocument()
+    expect(await screen.findByText("Could not load the history")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 

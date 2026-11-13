@@ -701,7 +701,7 @@ export interface CompanyMoney {
   receivable: number
   /** Received from them. */
   settled: number
-  /** Still owed: the sum of each order's balance (an overpaid order counts 0 here, its excess is `overpaid`). */
+  /** Balance due: the sum of each order's balance (an overpaid order counts 0 here, its excess is `overpaid`). */
   balance: number
   /** Paid above an order's gross, kept apart, never netted into the balance. */
   overpaid: number
@@ -782,7 +782,7 @@ export async function updateCompany(id: string, patch: CompanyEditable, base?: R
   const stale = () => {
     const theirs = changed.filter(k => (current[k] ?? null) !== (base[k] ?? null)).map(k => EDITABLE_LABEL[k])
     const what = theirs.length ? theirs.join(', ') : 'This company'
-    return new PlainError(`Changed by someone else while you were editing (${what}). Nothing was saved. Reload the page to see their change, then make yours again.`, STALE_EDIT)
+    return new PlainError(`Changed by another user while editing (${what}). Nothing was saved. Reload the page to see the change, then enter the edit again.`, STALE_EDIT)
   }
   if (changed.some(k => (current[k] ?? null) !== (base[k] ?? null))) throw stale()
   const send: typeof next = {}
@@ -876,7 +876,7 @@ const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? on
 export function inUseSentence(noun: string, u: { rfqs: number; orders: number; quotations: number }): string {
   const parts = [u.rfqs > 0 ? count(u.rfqs, 'RFQ') : '', u.orders > 0 ? count(u.orders, 'order') : '', u.quotations > 0 ? count(u.quotations, 'quotation') : ''].filter(Boolean)
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
-  return `This ${noun} is used on ${list}; it can't be removed.`
+  return `This ${noun} is used on ${list} and cannot be removed.`
 }
 
 /** How many rows of RFQs, orders and quotations point at a site or contact. */

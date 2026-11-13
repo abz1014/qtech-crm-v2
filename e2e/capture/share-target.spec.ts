@@ -44,7 +44,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await share(page, 'Customer says: the gate pass is needed 2 days ahead.')
 
     await expect(page.getByTestId('share-target')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'New enquiry' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'New RFQ' })).toBeVisible()
     await page.getByRole('button', { name: 'Add to job…' }).click()
     await page.getByRole('textbox', { name: 'Find the job' }).fill(s.customer)
     await page.getByRole('button', { name: new RegExp(`Job ${s.rfq.number} · ${s.customer}`) }).click()
@@ -67,7 +67,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await seed()
     await ready(page)
     await share(page, 'Please quote 2 nos level switch LSX-200 24V.')
-    await page.getByRole('button', { name: 'New enquiry' }).click()
+    await page.getByRole('button', { name: 'New RFQ' }).click()
     await expect(page).toHaveURL(/\/enquiries\/new$/)
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/level switch LSX-200/i)
   })
@@ -79,13 +79,13 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k)))
     await share(page, 'Reply: line size is 4 inch.')
     await page.waitForURL(/\/login/)
-    await expect(page.getByText('Your shared item is safe')).toBeVisible()
+    await expect(page.getByText('Shared item kept on this device')).toBeVisible()
     await page.getByLabel('Email').fill('sales@test.invalid')
     await page.getByLabel('Password', { exact: true }).fill('fixture-only-password')
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(page.getByTestId('share-target')).toBeVisible()
     await expect(page.getByText('Reply: line size is 4 inch.')).toBeVisible()
-    await expect(page.getByText('Your shared item is back')).toBeVisible()
+    await expect(page.getByText('Shared item restored')).toBeVisible()
   })
 
   test('an item older than 7 days is gone, and the page says so', async ({ page }) => {

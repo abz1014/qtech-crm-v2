@@ -29,18 +29,18 @@ describe('currencyForSupplier', () => {
   })
 })
 
-describe("can't quote reasons", () => {
+describe("cannot quote reasons", () => {
   it('has five stable snake_case keys, the ones the database accepts', () => {
     expect(CANT_QUOTE_REASONS.map(r => r.key)).toEqual(['no_brand', 'cant_source_in_time', 'discontinued', 'wont_quote_quantity', 'other'])
     for (const r of CANT_QUOTE_REASONS) expect(r.key).toMatch(/^[a-z_]+$/)
   })
   it('builds the words from the key, and reads an unknown key as other', () => {
-    expect(reasonLabel('no_brand')).toBe("Doesn't carry this brand")
+    expect(reasonLabel('no_brand')).toBe("Does not carry this brand")
     expect(reasonLabel('discontinued')).toBe('Item discontinued')
     expect(reasonLabel('something_new')).toBe('Other reason')
     expect(reasonLabel(null)).toBe('Other reason')
     expect(isCantQuoteReason('other')).toBe(true)
-    expect(isCantQuoteReason("Doesn't carry this brand")).toBe(false)
+    expect(isCantQuoteReason("Does not carry this brand")).toBe(false)
   })
   it('an item override wins over the inquiry reason, which only counts once the inquiry is marked', () => {
     const base = { noOfferOn: '2026-11-27', noOfferReason: 'no_brand', itemDeclines: { b: 'discontinued' } }
@@ -97,7 +97,7 @@ describe('supplier chase text', () => {
     expect(t.subject).toBeNull()
     expect(t.body).toBe(
       [
-        'Hi Mr. Imran, hope you are doing well,',
+        'Dear Mr. Imran,',
         '',
         'Following up on our enquiry of *Monday 23 November*. Thank you for pricing item 1. We are still awaiting your price for:',
         '2. Yokogawa EJA530E pressure transmitter, 0-1 MPa, 3 nos',
@@ -122,7 +122,7 @@ describe('supplier chase text', () => {
   it('email carries a subject and the longer wording', () => {
     const t = generateSupplierChase({ ...input, variant: 'email', signature: { ...input.signature, jobTitle: 'Sales' } })
     expect(t.subject).toBe('Request for quotation: reminder for 2 items')
-    expect(t.body).toContain('Hi Mr. Imran, hope you are doing well,')
+    expect(t.body).toContain('Dear Mr. Imran,')
     expect(t.body).toContain('Thank you for pricing item 1.')
     expect(t.body).toContain('(these 2 requirements are very important)')
     expect(t.body.endsWith('Regards,\nAyesha Rana\nQ-Tech Solutions')).toBe(true)
@@ -130,7 +130,7 @@ describe('supplier chase text', () => {
   })
   it('never names the customer or a price, and copes with no contact, no bid date, nothing priced', () => {
     const t = generateSupplierChase({ ...input, contactName: null, dueOn: null, pricedNumbers: [], sentOn: null })
-    expect(t.body.startsWith('Hi hope you are doing well,\n')).toBe(true)
+    expect(t.body.startsWith('Dear Sir/Madam,\n')).toBe(true)
     expect(t.body).toContain('Following up on our enquiry. We are still awaiting')
     expect(t.replyBy).toBe('2026-12-02')
   })

@@ -50,7 +50,7 @@ describe('Categories they deal in', () => {
     expect(pt).toHaveTextContent('quoted 6 · ordered 2')
     expect(within(pt).getByRole('button', { name: 'Untag Pressure transmitters' })).toBeEnabled()
     const cab = within(list).getByText('Cables').closest('li') as HTMLElement
-    expect(cab).toHaveTextContent('asked 3, no quote yet')
+    expect(cab).toHaveTextContent('asked 3, no supplier price yet')
     await userEvent.click(within(cab).getByRole('button', { name: 'Tag Cables' }))
     await waitFor(() => expect(fake?.calls.some(c => c.target === 'company_brands' && c.verb === 'upsert')).toBe(true))
     const up = fake?.calls.find(c => c.target === 'company_brands' && c.verb === 'upsert')

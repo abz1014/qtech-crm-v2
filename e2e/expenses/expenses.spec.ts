@@ -429,7 +429,7 @@ test.describe('expenses (M03, M11)', () => {
     const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
     const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id } })))[0]
     await openAs(page, 'admin', '/todo')
-    const note = 'Owed (about) on 30 Nov, from We owe suppliers'
+    const note = 'Payable (about) on 30 Nov, from Payable to suppliers'
     await page.goto(`/money/expenses?add=1&order=${order.id}&leg=${leg.id}&amount=384497&note=${encodeURIComponent(note)}`)
     const dialog = page.getByRole('dialog', { name: `Pay ${supplier.name}` })
     await expect(dialog).toBeVisible()
@@ -656,7 +656,7 @@ test.describe('expenses (M03, M11)', () => {
     await pane.getByRole('textbox', { name: `Amount for ${label}, PKR` }).fill('9,750')
     await page.keyboard.press('Tab')
     await review(page, 'recurring-reminder-1440')
-    await pane.getByRole('button', { name: /^Record all \(Rs / }).click()
+    await pane.getByRole('button', { name: /^Record all \(PKR / }).click()
     await expect(pane.getByTestId(`reminder-${label}`)).toHaveCount(0)
     const rows = await must(rest<ExpenseRow[]>('admin', `expenses?recurring_id=eq.${tpl.id}&select=*`))
     expect(rows).toHaveLength(1)
@@ -803,7 +803,7 @@ test.describe('expenses (M03, M11)', () => {
     expect(rows[0]).toMatchObject({ amount_pkr: 500, paid_via: 'cash', paid_on: today() })
   })
 
-  test('"Monthly" on a row adds a recurring template and links the expense to it, so it is not due again this month', async ({ page }) => {
+  test('"Every month" on a row adds a recurring template and links the expense to it, so it is not due again this month', async ({ page }) => {
     const label = `Office rent ${unique()}`
     const amount = 70000 + base()
     await openAs(page, 'admin', '/money/expenses')
@@ -811,7 +811,7 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
     await page.keyboard.type(String(amount))
     await page.getByRole('combobox', { name: 'Detail, row 1' }).fill(label)
-    await page.getByRole('group', { name: 'Row 1' }).getByRole('checkbox', { name: 'Monthly' }).click()
+    await page.getByRole('group', { name: 'Row 1' }).getByRole('checkbox', { name: 'Every month' }).click()
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
     const [tpl] = await must(rest<{ id: string; amount: number; day_of_month: number; start_month: string; active: boolean }[]>('admin', `recurring_expenses?label=eq.${encodeURIComponent(label)}&select=*`))
@@ -840,7 +840,7 @@ test.describe('expenses (M03, M11)', () => {
         label: new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(d),
       }
     })()
-    const sentence = `${prev.label} is closed. An admin can reopen it.`
+    const shown = `${prev.label} is locked. An admin can reopen it.` // what the screen says (the server raises "is closed")
 
     test.beforeAll(async () => {
       // beforeAll runs again when a failed test restarts the worker; a second seed row would make the list ambiguous
@@ -880,7 +880,7 @@ test.describe('expenses (M03, M11)', () => {
       await page.keyboard.press('Tab') // detail
       await page.keyboard.type(tag)
       await page.keyboard.press('Control+Enter')
-      const alert = page.getByRole('alert').filter({ hasText: sentence })
+      const alert = page.getByRole('alert').filter({ hasText: shown })
       await expect(alert).toBeVisible()
       await expect(alert).toContainText('Nothing was saved')
       await expect(alert).toContainText('The other 2 rows are still here')
@@ -913,7 +913,7 @@ test.describe('expenses (M03, M11)', () => {
       await page.getByRole('button', { name: 'Add a detail' }).click()
       await page.getByRole('combobox', { name: 'Detail' }).fill(kept)
       await page.getByRole('button', { name: 'Save expense' }).click()
-      await expect(page.getByText(sentence)).toBeVisible()
+      await expect(page.getByText(shown)).toBeVisible()
       await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue(z.toLocaleString('en-US'))
       await expect(page.getByRole('combobox', { name: 'Detail' })).toHaveValue(kept)
       await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
@@ -926,11 +926,11 @@ test.describe('expenses (M03, M11)', () => {
       await page.getByRole('button', { name: 'Previous month' }).click()
       // The closed-months query and last month's list are two requests; on a loaded runner either can take longer than 5 s. Wait on the
       // line that needs both (closed AND this month), then count the rows: the old count came first and timed out while the list loaded.
-      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is closed.`, { timeout: 20_000 })
+      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is locked.`, { timeout: 20_000 })
       await expect(page.getByText('before the close')).toHaveCount(1, { timeout: 20_000 })
       await expect(page.getByRole('link', { name: 'Open Lock a month' })).toBeVisible()
       await expect(page.getByRole('button', { name: /^More for Rent of 11/ })).toHaveCount(0)
-      await expect(page.getByText('Locked, the month is closed').first()).toBeAttached()
+      await expect(page.getByText('Locked month').first()).toBeAttached()
       // the database refuses too
       const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?description=eq.${encodeURIComponent('before the close')}&select=*`))
       const res = await rest('admin', `expenses?id=eq.${row.id}`, { method: 'DELETE' })

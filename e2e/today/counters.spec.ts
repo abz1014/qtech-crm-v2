@@ -32,7 +32,7 @@ async function todayReading(page: Page) {
   await expect(header).toBeVisible()
   // the top-bar numbers load once the page has its data (perf/lcp): give them a moment before reading the badge
   const n = Number(await header.innerText())
-  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^To do\\s?, ${n} need you$`) : /^To do$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
+  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^To do\\s?, ${n} due now$`) : /^To do$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
   // Late + Today wherever they are drawn: To do shows 7 rows at most and folds the rest into "N more" (opened here)
   await showAllTodo(page)
   const rules = await dueRows(page).evaluateAll(ls => ls.map(l => l.getAttribute('data-rule') ?? ''))
@@ -96,7 +96,7 @@ test('To do is laid out in colour blocks, at most 7 rows before "N more", and ev
     await expect(row.locator('[data-row-actions] button').first()).toBeVisible()
   }
   await page.locator('li[data-rule][data-due]').first().getByRole('button', { name: 'Snooze' }).click()
-  await expect(page.getByRole('menuitem', { name: 'Not ours to chase' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Handled by another team member' })).toBeVisible()
   await page.keyboard.press('Escape')
 
   // the badge, the header and the rows are one number (the counters test above proves it against the other counters)

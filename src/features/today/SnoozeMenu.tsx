@@ -30,7 +30,7 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
       {
         onSuccess: () =>
           toast({
-            title: untilChange ? 'Marked not ours to chase' : `Snoozed until ${formatDay(untilOn)}`,
+            title: untilChange ? 'Marked as handled by another team member' : `Snoozed until ${formatDay(untilOn)}`,
             body: untilChange ? `${item.ref} · ${item.party} comes back if the job changes.` : `${item.ref} · ${item.party}`,
             tone: 'neutral',
             undo: { onUndo: () => unsnooze.mutateAsync({ rule, subjectId: item.subjectId }).then(() => undefined) },
@@ -69,7 +69,7 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
             Pick a date
           </MenuItem>
           <MenuItem icon={UserRoundX} onClick={() => apply(NOT_OURS_UNTIL, true)}>
-            Not ours to chase
+            Handled by another team member
           </MenuItem>
             </MenuGroup>
           </>) : (<>
@@ -83,12 +83,12 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
             Pick a date
           </MenuItem>
           <MenuItem icon={UserRoundX} onClick={() => apply(NOT_OURS_UNTIL, true)}>
-            Not ours to chase
+            Handled by another team member
           </MenuItem>
           </>)}
         </PopoverContent>
       </Popover>
-      {iconOnly ? null : <InfoTip label="About snooze">Hides this item until the day you pick, or until the job changes (Not ours to chase). Only for you.</InfoTip>}
+      {iconOnly ? null : <InfoTip label="About snooze">Hides this item until the day you pick, or until the job changes (Handled by another team member). Only for you.</InfoTip>}
       <Dialog open={picking} onOpenChange={setPicking}>
         <DialogContent
           title="Snooze until"

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { CalendarDays, Download } from 'lucide-react'
+import { CalendarDays, CircleAlert, Download, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
@@ -15,7 +15,7 @@ import { DateInput } from '@/ui/form/DateInput'
  * the month (v_month_pnl); Money in and out also shows profit ON INVOICES (v_month_profit). Both are right; they are labelled
  * so they are never read as one number, and the same (i) explains the gap on both pages.
  */
-export const TWO_PROFITS_LABEL = 'Why two profits?'
+export const TWO_PROFITS_LABEL = 'Profit on invoices and profit on cash'
 export function TwoProfitsTip() {
   return (
     <InfoTip label={TWO_PROFITS_LABEL}>
@@ -82,6 +82,24 @@ export function Panel({
  * The exact as-of date, behind "Change date" (round 3, M4: the month pager is the page's one date control). Closed: a quiet
  * "Change date" button. Open, or a date chosen: the date field and "Back to month end".
  */
+/**
+ * An overdue amount's age band: the late buckets are said by an icon and a word as well as the tint, so a reader who cannot tell the
+ * tints apart (or reads a printout) still sees which are late. The early buckets stay plain.
+ */
+export function AgeBand({ bucket, children, className }: { bucket: string; children?: ReactNode; className?: string }) {
+  if (bucket !== '61-90' && bucket !== '90+') return <>{children}</>
+  const severe = bucket === '90+'
+  return (
+    <span className={cn('inline-grid justify-items-end gap-px rounded px-2 py-[2px]', severe ? 'bg-tone-danger-bg' : 'bg-tone-warning-bg', className)}>
+      <span className={cn('inline-flex items-center gap-1 text-xs font-medium', severe ? 'text-tone-danger-fg' : 'text-tone-warning-fg')}>
+        <Icon icon={severe ? CircleAlert : TriangleAlert} size="sm" />
+        {severe ? 'Over 90 days' : 'Over 60 days'}
+      </span>
+      {children}
+    </span>
+  )
+}
+
 export function AsOfControl({ asOf, chosen, onChange }: { asOf: string; chosen: boolean; onChange: (iso: string | null) => void }) {
   const [open, setOpen] = useState(false)
   if (!open && !chosen) {
@@ -95,7 +113,7 @@ export function AsOfControl({ asOf, chosen, onChange }: { asOf: string; chosen: 
     <span className="flex flex-wrap items-center gap-2">
       <label className="inline-flex items-center gap-2 text-sm text-fg-2">
         As of
-        <span className="w-[232px] shrink-0">
+        <span className="w-full min-w-0 sm:max-w-[232px]">
           <DateInput aria-label="As of date" value={asOf} onChange={v => v && onChange(v)} defaultToday={false} />
         </span>
       </label>
@@ -153,7 +171,7 @@ export function ReportError({ title, onRetry }: { title: string; onRetry: () => 
           </Button>
         }
       >
-        Your payments, expenses and ticks are safe; nothing was changed. Try again, and if it keeps failing, tell the admin.
+        Nothing was changed. Payments, expenses and ticks are kept. Try again, and if the error continues, tell the admin.
       </EmptyState>
     </div>
   )

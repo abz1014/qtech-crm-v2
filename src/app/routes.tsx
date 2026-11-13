@@ -43,7 +43,7 @@ const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfile
 const IntakeScreen = lazy(routeChunks.rfqNew)
 /** 0087: an engineer's "I paid" (their own expense claims). The page itself refuses anyone but an engineer. */
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
-/** The Android share target and sign-in return point (R22): opens the Capture sheet. */
+/** The Android share target and sign-in return point (R22): opens the Shared with Q-Tech CRM page. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
 /** New enquiry (P4-A): the document beside what was read; wraps the intake. */
 const NewEnquiryPage = lazy(routeChunks.enquiryNew)

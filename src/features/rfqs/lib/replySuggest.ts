@@ -5,7 +5,7 @@
 //  - an offer that names no currency takes the row's currency (and says so);
 //  - an offer in a different currency is not selectable (the row cannot hold two; enter it separately);
 //  - an offer the parser is unsure of is highlighted for checking: low confidence, ambiguous separator, matched by position;
-//  - a regret becomes a "can't quote" with the reason chosen from the kind of regret.
+//  - a regret becomes a "cannot quote" with the reason chosen from the kind of regret.
 // Nothing here writes. "Accept" in the screen turns the selected suggestions into a ReplyDraft and saves it.
 
 import type { CantQuoteReason } from './cantQuote'
@@ -67,7 +67,7 @@ export interface SuggestionSet {
   nothingFound: boolean
 }
 
-/** The stored "can't quote" key (lib/cantQuote.ts) for the kind of regret the parser saw. */
+/** The stored "cannot quote" key (lib/cantQuote.ts) for the kind of regret the parser saw. */
 export function reasonForRegret(kind: RegretKind | null): CantQuoteReason {
   switch (kind) {
     case 'not_handled':
@@ -114,7 +114,7 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
     if (!o.rfqItemId || itemNumber === null) blocked = 'No matching item: enter this one by hand'
     else if (o.unitPrice === null && o.flags.includes('price_uncertain')) blocked = `A price (${o.suspectPrice ?? '?'}) sits where it may belong to another row or column: check the quotation and enter it by hand`
     else if (o.unitPrice === null) blocked = o.flags.includes('ambiguous_separator') ? 'The figure could be read two ways (1.234 or 1,234): enter it by hand' : 'No price found on this line'
-    else if (!o.currency && !currency) blocked = 'No currency stated: pick the supplier’s currency above first'
+    else if (!o.currency && !currency) blocked = "No currency stated: pick the supplier's currency above first"
     else if (o.currency && currency && o.currency !== currency) blocked = `${o.currency} price: this row is in ${currency}, enter it separately`
     else if (taken.has(o.rfqItemId)) blocked = 'Another price above already covers this item'
     if (!blocked && o.rfqItemId) taken.add(o.rfqItemId)

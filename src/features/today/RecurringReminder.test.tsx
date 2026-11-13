@@ -37,13 +37,13 @@ afterEach(() => installFakeDb(() => ({})).uninstall())
 describe('To do: record the recurring bills in one tap', () => {
   it('offers Record all with the total, and records each bill at the amount shown (edited ones too)', async () => {
     const { d, user } = setup()
-    expect(await screen.findByRole('button', { name: 'Record all (Rs 118,000)' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Record all (PKR 118,000)' })).toBeInTheDocument()
 
     const field = screen.getByLabelText('Amount for Electricity, PKR')
     await user.clear(field)
     await user.type(field, '21350')
     await user.tab()
-    await user.click(await screen.findByRole('button', { name: 'Record all (Rs 121,350)' }))
+    await user.click(await screen.findByRole('button', { name: 'Record all (PKR 121,350)' }))
 
     await waitFor(() => expect(d.calls.filter(c => c.target === 'expenses' && c.verb === 'insert')).toHaveLength(2))
     const rows = d.calls

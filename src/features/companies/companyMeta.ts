@@ -54,7 +54,7 @@ export function companyMeta(i: MetaInput): string[] {
   const place = [i.city?.trim(), i.country?.trim()].filter(Boolean).join(', ')
   if (place) out.push(place)
   if (i.isSupplier) {
-    if (i.currency) out.push(`Quotes in ${i.currency}`)
+    if (i.currency) out.push(`Supplier prices in ${i.currency}`)
     out.push(i.legacyImported ? 'Imported from the old CRM' : i.lowData || i.sinceYear === null ? `Added ${monthYearOf(i.createdAt)}` : `Supplier since ${i.sinceYear}`)
     if (i.isCustomer && i.counts) out.push(`${plural(i.counts.sites, 'site')} · ${plural(i.counts.rfqs, 'RFQ')} · ${plural(i.counts.orders, 'order')}`)
     return out

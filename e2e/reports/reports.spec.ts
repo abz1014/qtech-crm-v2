@@ -49,10 +49,10 @@ function watch(page: Page) {
 }
 
 const QUESTIONS = [
-  'How many RFQs did we win, and why did we lose the others?',
-  'Does asking suppliers for prices help us win?',
-  'How fast do customers answer our questions?',
-  'Which customers come back?',
+  'RFQs won and lost, with the reasons',
+  'Effect of asking suppliers for prices on wins',
+  'How fast customers answer questions',
+  'Returning customers',
 ]
 
 /** Each report is one line until it is opened: open all four. */
@@ -75,7 +75,7 @@ for (const role of ['admin', 'sales'] as const) {
         await expect(page.getByTestId('report-name')).toHaveText('Profit and loss')
         await page.getByTestId('report-picker').selectOption('enquiries')
       }
-      await expect(page.getByTestId('report-name')).toHaveText('Enquiries and customers')
+      await expect(page.getByTestId('report-name')).toHaveText('RFQs and customers')
       await expect(page.getByRole('region', { name: 'At a glance' })).toContainText('Win rate')
       for (const q of QUESTIONS) await expect(page.getByText(q, { exact: true })).toBeVisible()
       await openAll(page)

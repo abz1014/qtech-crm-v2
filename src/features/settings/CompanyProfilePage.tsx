@@ -53,8 +53,8 @@ export function CompanyProfilePage() {
         title="Company profile"
         lede={
           isAdmin
-            ? 'Your registered details and standard wording. Only admins can change them.'
-            : 'Your registered details and standard wording, as printed on quotations and purchase orders.'
+            ? 'Registered details and standard wording. Only admins can change them.'
+            : 'Registered details and standard wording, as printed on quotations and purchase orders.'
         }
         secondary={
           !isAdmin ? (
@@ -253,7 +253,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
 
         <Section
           title="Quotations and purchase orders"
-          hint="Standard wording that is added to every document. You can still edit it on each document before issuing."
+          hint="Standard wording that is added to every document. It can still be edited on each document before issuing."
         >
           <FormField
             name="quotation_validity_days"

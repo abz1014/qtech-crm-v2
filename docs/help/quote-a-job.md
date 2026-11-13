@@ -6,9 +6,9 @@ keywords: job, enquiry, suppliers, prices, quotation, won, order, quote
 screens: /jobs
 related: read-a-job
 ---
-1. Open the job. The top block says what is due: tap its green button, for example [Ask suppliers].
-2. On the Quotation stage, pick the suppliers and ask them. When a supplier answers, tap [Enter reply] and type the prices.
-3. When the prices are in, tap [Issue quotation] in the top block, check the prices and send it.
-4. When the customer orders, tap [Mark won] and confirm the lines: the order starts and the job moves on.
+1. Open the job. The top block says what is due: select its green button, for example [Ask suppliers].
+2. On the Quotation stage, pick the suppliers and ask them. When a supplier answers, select [Enter reply] and type the prices.
+3. When the prices are in, select [Issue quotation] in the top block, check the prices and send it.
+4. When the customer orders, select [Mark won] and confirm the lines: the order starts and the job moves on.
 
 Tip: The old RFQ page still works and does the same. Engineers do not see prices, quotations or Mark won.

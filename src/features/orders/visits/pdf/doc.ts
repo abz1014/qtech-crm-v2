@@ -26,7 +26,7 @@ export interface ServiceReportDoc {
   printedOn: string
 }
 
-export function buildServiceReportDoc(order: OrderHeader, visit: VisitRow, items: readonly OrderItemRow[], printedOn: string): ServiceReportDoc {
+export function buildServiceReportDoc(order: OrderHeader, visit: VisitRow, items: readonly OrderItemRow[], printedOn: string, showPo: boolean): ServiceReportDoc {
   return {
     orderRef: orderRef(order.number),
     visitType: VISIT_TYPE_LABEL[visit.type],
@@ -38,7 +38,7 @@ export function buildServiceReportDoc(order: OrderHeader, visit: VisitRow, items
     siteAddress: order.site?.address ?? null,
     contactName: order.contact?.name ?? null,
     contactPhone: order.contact?.phone ?? null,
-    customerPo: order.customerPo,
+    customerPo: showPo ? order.customerPo : null,
     workDone: visit.notes,
     items: items.filter(i => !i.isService).map((i, n) => ({ no: n + 1, description: i.description, qty: i.qty, unit: i.unit })),
     printedOn,

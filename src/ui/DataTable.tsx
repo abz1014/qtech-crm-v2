@@ -121,7 +121,7 @@ export interface DataTableProps<T> {
   toolbar?: ReactNode | ((ctx: { selectedCount: number }) => ReactNode)
   exportCsv?: { filename: string; label?: string }
   loading?: boolean
-  /** title, message and the stamp have defaults ("Couldn’t load RFQs", "Your changes are safe...", the time the error first showed). */
+  /** title, message and the stamp have defaults ("RFQs could not be loaded", "Entered changes are kept...", the time the error first showed). */
   error?: { title?: string; message?: ReactNode; onRetry?: () => void; reference?: string; at?: Date } | null
   /** The empty-state slot. Say what is true and what happens next ("Every quotation is sent"). */
   empty?: ReactNode
@@ -713,7 +713,7 @@ function TableView<T>(props: DataTableProps<T>) {
             {pinned(
             <EmptyState
               mood="error"
-              title={error.title ?? `Couldn’t load ${what}`}
+              title={error.title ?? `${what} could not be loaded`}
               actions={error.onRetry ? <Button variant="primary" icon={RefreshCw} onClick={error.onRetry}>Try again</Button> : undefined}
               meta={
                 <>

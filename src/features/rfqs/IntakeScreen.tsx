@@ -248,7 +248,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   }, [arrival, wanted.data])
 
   // A supplier's company page arrives with ?supplier=<id>: that supplier is already on the list of suppliers to ask (ticked, under
-  // "Added by you", or ticked in its reason group when it is suggested anyway), with no extra step. Taken once, like the company.
+  // "Added manually", or ticked in its reason group when it is suggested anyway), with no extra step. Taken once, like the company.
   const presetId = params.get('supplier')
   const preset = useCompany(presetId ?? undefined)
   const tookSupplier = useRef(false)
@@ -740,12 +740,12 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   }
 
   // ---- text
-  const heading = step === 'floated' ? (copied ? 'Copied. Paste it into each supplier’s chat.' : 'Marked as asked. Copy the message below.') : null
+  const heading = step === 'floated' ? (copied ? "Copied. Paste it into each supplier's chat." : 'Marked as asked. Copy the message below.') : null
   const lede =
     step === 'build'
       ? real.length > 0
         ? 'Check the split, then find suppliers.'
-        : 'Paste what the customer sent. Nothing is saved until you copy the message or save.'
+        : 'Paste what the customer sent. Nothing is saved until the message is copied or the RFQ is saved.'
       : step === 'suppliers'
         ? suggestions.preTickedIds.length > 0
           ? 'Ticked: suppliers who supplied these items before. Tick or untick any.'
@@ -814,7 +814,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
         ) : undefined
       }
     >
-      {error.customerRef ? 'Nothing was saved.' : 'Nothing was saved. Try again; it cannot create a duplicate.'}
+      {error.customerRef ? 'Nothing was saved.' : 'Nothing was saved. Try again. A duplicate cannot be created.'}
     </Banner>
   ) : null
 
@@ -867,7 +867,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
       ) : (
         <>
           <strong className="font-medium text-fg">Item {itemNumber(k)} has no supplier yet.</strong>{' '}
-          {alt ? `${alt.name} is on your shortlist for it.${alt.memoryLine === 'no history yet' ? ' It has no history with us.' : ''}` : 'Nothing on file carries it. Add a supplier from the RFQ.'}
+          {alt ? `${alt.name} is on your shortlist for it.${alt.memoryLine === 'no history yet' ? ' It has no history with Q-Tech.' : ''}` : 'Nothing on file carries it. Add a supplier from the RFQ.'}
         </>
       ),
       action: !done && alt ? { label: `Ask them for item ${itemNumber(k)}`, onClick: () => void floatItem(k, alt.supplierId, alt.name), busy: floating === k } : undefined,
@@ -927,9 +927,9 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
             <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted max-md:hidden">
               <Link to={enquiry ? '/jobs' : '/rfqs'} className="hover:text-fg">{enquiry ? 'Jobs' : 'RFQs'}</Link>
               <Icon icon={ChevronRight} size="sm" />
-              <span aria-current="page">{enquiry ? 'New enquiry' : 'New RFQ'}</span>
+              <span aria-current="page">{enquiry ? 'New RFQ' : 'New RFQ'}</span>
             </nav>
-            <h1 className="type-page max-md:sr-only">{enquiry ? 'New enquiry' : 'New RFQ'}</h1>
+            <h1 className="type-page max-md:sr-only">{enquiry ? 'New RFQ' : 'New RFQ'}</h1>
             <p className="type-body max-w-prose text-fg-muted">{lede}</p>
             {step === 'build' && !offer && presetSupplier ? (
               <p className="type-body max-w-prose text-fg-2" data-preset-supplier>
@@ -988,7 +988,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {/* Their own number for the request: it is how the RFQ is found again later, so it sits with the company. */}
-                  <Field label="Customer reference" requirement="optional" help="Their RFQ or enquiry number. Search finds the RFQ by it." source={refSource ? (enquiry ? `${refSource}, check this` : refSource) : undefined}>
+                  <Field label="Customer reference" requirement="optional" help="The customer's own RFQ number. Search finds the RFQ by it." source={refSource ? (enquiry ? `${refSource}, check this` : refSource) : undefined}>
                     <TextField
                       value={customerRef}
                       onChange={e => {
@@ -1036,16 +1036,16 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
               <section aria-labelledby="h-items" className="grid gap-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <h2 id="h-items" className="type-section">Items</h2>
-                  <p className="type-body text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. We split it.'}</p>
+                  <p className="type-body text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. The text is split into items.'}</p>
                 </div>
                 {heldDoc ? (
                   <Banner
                     tone="warning"
                     className="text-base"
-                    title={`This looks like ${KIND_LABEL[heldDoc.kind]}, not an enquiry.`}
+                    title={`This looks like ${KIND_LABEL[heldDoc.kind]}, not an RFQ.`}
                     action={
                       <Button size="lg" onClick={() => takePaste(heldDoc.text, heldDoc.from, true)}>
-                        Read as an enquiry anyway
+                        Read as an RFQ anyway
                       </Button>
                     }
                   >
@@ -1079,7 +1079,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                         onMessage={setPdfNote}
                       />
                       {items.length === 0 ? (
-                        <Button variant="quiet" onClick={addBlank}>Add an item by hand</Button>
+                        <Button variant="quiet" onClick={addBlank}>Add an item manually</Button>
                       ) : null}
                     </div>
                   </>
@@ -1190,7 +1190,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
               <StepBar
                 summary={
                   saved ? (
-                    <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier’s chat.</>
+                    <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier&apos;s chat.</>
                   ) : (
                     'Copies the message and marks the RFQ as asked.'
                   )

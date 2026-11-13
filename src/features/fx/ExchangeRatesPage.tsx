@@ -64,8 +64,8 @@ export function ExchangeRatesPage() {
           <>
             {latest.data ? `${ratesStatusLine(latest.data)} ` : null}
             <InfoTip label="About rates">
-              Anyone on the team can enter a rate by hand, for example the bank&apos;s TT rate. A rate entered by hand wins for its own
-              day; the next automatic rate replaces it unless you enter another. Rates are used only to compare supplier prices in PKR,
+              Any team member can enter a rate manually, for example the bank&apos;s TT rate. A manual rate wins for its own day.
+              The next automatic rate replaces it unless another is entered. Rates are used only to compare supplier prices in PKR,
               never for invoices.
             </InfoTip>
           </>
@@ -80,7 +80,7 @@ export function ExchangeRatesPage() {
       ) : latest.isError ? (
         <EmptyState
           mood="error"
-          title="Couldn't load the exchange rates"
+          title="Could not load the exchange rates"
           actions={
             <Button variant="primary" onClick={() => void latest.refetch()}>
               Try again
@@ -299,7 +299,7 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
 
   return (
     <div ref={panelRef} className="scroll-mt-[5rem]">
-      <Panel flat title="Add a rate by hand">
+      <Panel flat title="Add a rate manually">
         <form
           className="grid gap-4 px-5 py-4"
           onSubmit={e => {

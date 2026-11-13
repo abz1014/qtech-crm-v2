@@ -62,7 +62,7 @@ const VISIT: VisitRow = { id: 'v1', orderId: 'o', type: 'service', on: '2026-10-
 
 describe('service report', () => {
   it('is built from the visit and the order, goods only, with no price', () => {
-    const doc = buildServiceReportDoc(ORDER, VISIT, [item(1), item(2, { isService: true, description: 'Commissioning' })], '2026-10-30')
+    const doc = buildServiceReportDoc(ORDER, VISIT, [item(1), item(2, { isService: true, description: 'Commissioning' })], '2026-10-30', true)
     expect(doc).toMatchObject({ orderRef: 'ORD-0038', visitType: 'Service', engineer: 'Hamza Sheikh', customer: 'Alpenmark Controls', siteName: 'Plant 2', workDone: VISIT.notes })
     expect(doc.items).toEqual([{ no: 1, description: 'Cable gland M20 1', qty: 2, unit: 'pcs' }])
     expect(JSON.stringify(doc)).not.toMatch(/1234|999|price|gst/i)
@@ -70,14 +70,14 @@ describe('service report', () => {
   })
 
   it('renders a multi-page PDF', async () => {
-    const doc = buildServiceReportDoc(ORDER, VISIT, Array.from({ length: 45 }, (_, i) => item(i + 1)), '2026-10-30')
+    const doc = buildServiceReportDoc(ORDER, VISIT, Array.from({ length: 45 }, (_, i) => item(i + 1)), '2026-10-30', true)
     const buf = await renderToBuffer(<ServiceReportDocument doc={doc} profile={PROFILE} logoSrc={LOGO} />)
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-')
     expect(buf.length).toBeGreaterThan(3000)
   })
 
   it('renders with nothing optional filled in', async () => {
-    const doc = buildServiceReportDoc(header({ number: 5 }), { ...VISIT, on: null, doneOn: null, engineerName: null, notes: null }, [], '2026-10-30')
+    const doc = buildServiceReportDoc(header({ number: 5 }), { ...VISIT, on: null, doneOn: null, engineerName: null, notes: null }, [], '2026-10-30', true)
     const buf = await renderToBuffer(<ServiceReportDocument doc={doc} profile={{ ...PROFILE, legal_name: null, address: null }} logoSrc={LOGO} />)
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-')
   })
@@ -95,7 +95,7 @@ describe('delivery challan', () => {
   }
 
   it('is built from the challan, with a number and no price', () => {
-    const doc = buildChallanDoc(ORDER, CHALLAN)
+    const doc = buildChallanDoc(ORDER, CHALLAN, true)
     expect(doc).toMatchObject({ number: 'DC-0007', orderRef: 'ORD-0038', customer: 'Alpenmark Controls', customerPo: 'PO-7781' })
     expect(doc.lines).toHaveLength(40)
     expect(JSON.stringify(doc)).not.toMatch(/1234|999|price|gst/i)
@@ -103,7 +103,7 @@ describe('delivery challan', () => {
   })
 
   it('renders a multi-page PDF', async () => {
-    const buf = await renderToBuffer(<ChallanDocument doc={buildChallanDoc(ORDER, CHALLAN)} profile={PROFILE} logoSrc={LOGO} />)
+    const buf = await renderToBuffer(<ChallanDocument doc={buildChallanDoc(ORDER, CHALLAN, true)} profile={PROFILE} logoSrc={LOGO} />)
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-')
     expect(buf.length).toBeGreaterThan(3000)
   })

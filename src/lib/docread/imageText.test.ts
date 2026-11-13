@@ -87,9 +87,9 @@ describe('readImageText', () => {
 
   it('says plainly when it could not read the picture clearly, or found no text', async () => {
     const unsure = await readImageText(png(), { prepare: async () => prepared(), engine: engine(page(['Vavle 2 nso'], { conf: 40 })) })
-    expect(unsure).toEqual({ ok: false, reason: 'unclear', message: "Couldn't read this clearly — type or paste the items." })
+    expect(unsure).toEqual({ ok: false, reason: 'unclear', message: 'The image is not clear enough to read. Please type or paste the items.' })
     const blank = await readImageText(png(), { prepare: async () => prepared(), engine: engine([]), subject: 'prices' })
-    expect(blank).toEqual({ ok: false, reason: 'unclear', message: "Couldn't read this clearly — type or paste the prices." })
+    expect(blank).toEqual({ ok: false, reason: 'unclear', message: 'The image is not clear enough to read. Please type or paste the prices.' })
   })
 
   it('turns away what is not a picture, too big, or cannot be opened here, before the engine loads', async () => {
@@ -138,7 +138,7 @@ describe('helpers', () => {
 
   it('words the messages for the screen', () => {
     expect(imageFailureMessage('too_big', 'items', 30 * 1024 * 1024)).toBe(
-      'This picture is 30 MB; the limit is 25 MB. Take a screenshot of it and use that, or type or paste the items.',
+      'This picture is 30 MB. The limit is 25 MB. Take a screenshot of it and use that, or type or paste the items.',
     )
     expect(imageFailureMessage('aborted')).toBe('')
   })

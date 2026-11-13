@@ -21,10 +21,10 @@ function mount(i = inquiry, variant: 'ask' | 'later' = 'ask') {
   )
 }
 
-describe('Did you send it?', () => {
+describe('Confirm the message was sent', () => {
   it('asks, and says nothing is Sent yet', () => {
     mount()
-    expect(screen.getByText('Did you send it?')).toBeInTheDocument()
+    expect(screen.getByText('Confirm the message was sent')).toBeInTheDocument()
     expect(screen.queryByText('Sent')).toBeNull()
   })
 
@@ -50,16 +50,16 @@ describe('Did you send it?', () => {
   it('a confirmed enquiry says Sent and asks nothing; one never asked draws nothing', () => {
     const { unmount } = mount({ ...inquiry, sentConfirmedAt: '2026-10-26T09:00:00Z' })
     expect(screen.getByText('Sent')).toBeInTheDocument()
-    expect(screen.queryByText('Did you send it?')).toBeNull()
+    expect(screen.queryByText('Confirm the message was sent')).toBeNull()
     unmount()
     mount({ ...inquiry, sentOn: null })
     expect(screen.queryByRole('button')).toBeNull()
-    expect(screen.queryByText('Did you send it?')).toBeNull()
+    expect(screen.queryByText('Confirm the message was sent')).toBeNull()
   })
 
   it('the later variant is one quiet Yes, sent', () => {
     mount(inquiry, 'later')
     expect(screen.getByRole('button', { name: /^Yes, sent/ })).toBeInTheDocument()
-    expect(screen.queryByText('Did you send it?')).toBeNull()
+    expect(screen.queryByText('Confirm the message was sent')).toBeNull()
   })
 })

@@ -14,7 +14,7 @@ test('the review lists a stuck enquiry; Still live and Close as lost both have a
 
   await openAs(page, 'admin', '/todo/review')
   await expect(page.getByRole('heading', { name: 'Weekly review', level: 1 })).toBeVisible()
-  const enquiries = page.getByRole('region', { name: /^Enquiries with no supplier asked/ })
+  const enquiries = page.getByRole('region', { name: /^RFQs with no supplier asked/ })
   const liveRow = enquiries.locator('li').filter({ hasText: rfqRef(live.number) })
   const lostRow = enquiries.locator('li').filter({ hasText: rfqRef(lost.number) })
   await expect(liveRow).toBeVisible()

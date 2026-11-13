@@ -30,7 +30,7 @@ export function useServiceReport(order: OrderHeader, visit: VisitRow) {
         client.fetchQuery({ ...orderItemsQuery(order.id, money), staleTime: 30_000 }),
         client.fetchQuery({ ...companyProfileQuery(money), staleTime: 30_000 }),
       ])
-      const doc = buildServiceReportDoc(order, visit, items, businessToday())
+      const doc = buildServiceReportDoc(order, visit, items, businessToday(), money)
       saveBlob(await generateServiceReportPdf(doc, profile), serviceReportFileName(doc))
     } catch (err) {
       toast({ title: 'Could not make the service report', body: mapPgError(err, { entity: 'service report' }).message, tone: 'danger' })

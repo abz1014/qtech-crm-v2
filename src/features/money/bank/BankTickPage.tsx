@@ -87,9 +87,9 @@ export function BankTickPage() {
       <span className="inline-flex items-center gap-2">
         <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
         <InfoTip label="About matching the bank statement">
-          Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement; tap again to undo. Cash items never appear here.
-          An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&rsquo;s total
-          credits and debits. Ticking changes nothing in the books and stays editable after the month closes.
+          Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement. Select a line again to undo. Cash items never appear here.
+          An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&apos;s total
+          credits and debits. Ticking changes nothing in the books and stays editable after the month is locked.
         </InfoTip>
       </span>
     </div>
@@ -117,7 +117,7 @@ export function BankTickPage() {
               </Button>
             }
           >
-            Your payments, expenses and ticks are safe; nothing was changed. Try again, and if it keeps failing, tell the admin.
+            Payments, expenses and ticks are safe. Nothing was changed. Try again, and if it keeps failing, tell the admin.
           </EmptyState>
         </div>
       ) : data.isPending || !view || !totals ? (
@@ -125,7 +125,7 @@ export function BankTickPage() {
       ) : (
         <>
           {error ? (
-            <Banner tone="danger" title={error.kind === 'closed-month' ? error.message : "Couldn't save that tick"}>
+            <Banner tone="danger" title={error.kind === 'closed-month' ? error.message : "The tick was not saved"}>
               {error.kind === 'closed-month'
                 ? 'The tick was not saved. Ask an admin to reopen the month, then tick again.'
                 : `${error.message} The line is back where it was.`}
@@ -228,15 +228,22 @@ function Loading() {
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         {[0, 1].map(i => (
-          <div key={i} className="rounded border bg-surface">
-            <div className="flex min-h-[52px] items-center border-b px-5">
+          <div key={i} className="min-w-0 rounded-panel border bg-surface md:rounded-none md:border-0 md:bg-transparent">
+            <div className="flex min-h-[52px] items-center border-b py-2 pl-5 pr-4 md:pl-0 md:pr-0">
               <Skeleton className="h-4 w-[7rem]" />
             </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-5 py-1 md:px-0">
+              <Skeleton className="h-3 w-[8rem]" />
+              <Skeleton className="h-3 w-8" />
+            </div>
             {[0, 1, 2, 3, 4].map(r => (
-              <div key={r} className="flex min-h-[48px] items-center gap-3 border-b px-5">
+              <div key={r} data-testid="bank-skeleton-row" className="grid min-h-[48px] grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 border-b px-5 py-[6px] md:px-0">
                 <Skeleton className="size-[20px]" />
                 <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-3 flex-1" />
+                <span className="grid min-w-0 gap-1">
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </span>
                 <Skeleton className="h-3 w-16" />
               </div>
             ))}

@@ -135,7 +135,7 @@ describe('Credit balance panel', () => {
     await user.click(await screen.findByRole('button', { name: /Apply to an order/ }))
     const dialog = await screen.findByRole('dialog')
     const select = await within(dialog).findByRole('combobox', { name: /Put it against/ })
-    expect(within(select).getAllByRole('option').map(o => o.textContent)).toEqual(['ORD-0011 · owes Rs 500', 'ORD-0013 · owes Rs 50'])
+    expect(within(select).getAllByRole('option').map(o => o.textContent)).toEqual(['ORD-0011 · due PKR 500', 'ORD-0013 · due PKR 50'])
     expect(within(dialog).getByRole('textbox', { name: /Amount to apply/ })).toHaveValue('220')
     await user.selectOptions(select, 'o13')
     expect(within(dialog).getByRole('textbox', { name: /Amount to apply/ })).toHaveValue('50')
@@ -163,5 +163,24 @@ describe('Credit balance panel', () => {
     await user.click(within(screen.getByRole('group', { name: 'Remove this refund?' })).getByRole('button', { name: 'Remove' }))
     await screen.findByRole('region', { name: 'Credit balance' })
     expect(d.calls.some(c => c.target === 'customer_refunds' && c.verb === 'delete')).toBe(true)
+  })
+})
+
+describe('Credit balance failed load', () => {
+  it('says it could not load, with Try again that reloads; nothing for a non-admin', async () => {
+    const user = userEvent.setup()
+    let fail = true
+    db(c => (c.target === 'v_company_credit' && fail ? { data: null, error: { message: 'boom' } } : undefined))
+    mount()
+    expect(await screen.findByText(/The credit balance could not be loaded/)).toBeInTheDocument()
+    fail = false
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByTestId('credit-balance')).toBeInTheDocument()
+  })
+  it('draws nothing for a non-admin even when the load would fail', () => {
+    db(() => ({ data: null, error: { message: 'boom' } }))
+    mount(false)
+    expect(screen.queryByText('Credit balance')).toBeNull()
+    expect(screen.queryByTestId('credit-error')).toBeNull()
   })
 })

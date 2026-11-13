@@ -95,7 +95,7 @@ describe('the order page: one primary button, chosen by state', () => {
     const next = screen.getByRole('region', { name: 'Next step' })
     expect(next).toHaveTextContent('Goods from Dubai Instrumentation are 3 days late')
     expect(greens(container)).toHaveLength(1)
-    expect(greens(container)[0]).toHaveAccessibleName('Chase goods, Dubai Instrumentation')
+    expect(greens(container)[0]).toHaveAccessibleName('Follow up on delivery, Dubai Instrumentation')
     // nothing is invoiced yet, so there is no Record payment anywhere (UX audit P2); Add expense is not in the header
     expect(screen.queryByRole('button', { name: 'Record payment' })).toBeNull()
     expect(within(container.querySelector('header') as HTMLElement).queryByRole('button', { name: 'Add expense' })).toBeNull()
@@ -250,6 +250,44 @@ describe('the items table: five columns, the rest behind "Edit GST and lines"', 
   })
 })
 
+describe('what an engineer is not shown on a supplier order (owner decision A, live bugs 10, 11, 13)', () => {
+  const onTime = legs.map(l => (l.id === 'lb' ? { ...l, expectedOn: day(5) } : l))
+
+  it('engineer: no currency chip, no PO chip, no "No PO yet"; admin and sales keep them', () => {
+    installFakeDb(() => ({ data: [] }))
+    const { unmount } = page('engineer', order, legs)
+    const panel = screen.getByRole('region', { name: 'Supplier orders' })
+    expect(panel.textContent).not.toMatch(/EUR|USD|No PO yet/)
+    expect(within(panel).queryByTestId('leg-A-po')).toBeNull()
+    expect(within(panel).queryByTestId('leg-B-po')).toBeNull()
+    unmount()
+    page('admin', order, legs)
+    const adminPanel = screen.getByRole('region', { name: 'Supplier orders' })
+    expect(adminPanel.textContent).toContain('No PO yet')
+    expect(adminPanel.textContent).toMatch(/EUR/)
+  })
+
+  it('a row with nothing in its More menu has no More button (the order half of the page, engineer, a leg not late)', () => {
+    installFakeDb(() => ({ data: [] }))
+    const { container } = mount(<LegsPanel order={order} legs={onTime} items={items} pos={[]} money={false} isAdmin={false} canEdit part="order" />, 'engineer')
+    expect(container.querySelector('[aria-label^="More for"]')).toBeNull()
+  })
+
+  it('admin keeps More on the same half of the page (Pay, Delete are there)', () => {
+    installFakeDb(() => ({ data: [] }))
+    mount(<LegsPanel order={order} legs={onTime} items={items} pos={[]} money isAdmin canEdit part="order" />, 'admin')
+    expect(screen.getAllByRole('button', { name: /^More for / }).length).toBeGreaterThan(0)
+  })
+
+  it('Create invoice is not offered in the Invoicing cell while a supplier order is still on order', () => {
+    installFakeDb(() => ({ data: [] }))
+    page('admin', order, legs)
+    const header = document.body
+    expect(within(header).queryByRole('button', { name: /Create invoice/ })).toBeNull()
+    expect(within(header).getByTestId('order-invoiced')).toBeInTheDocument()
+  })
+})
+
 describe('supplier orders, in plain words', () => {
   it('is called Supplier orders with Add supplier; no leg letters; actions name the supplier', () => {
     installFakeDb(() => ({ data: [] }))
@@ -260,7 +298,7 @@ describe('supplier orders, in plain words', () => {
     expect(within(panel).getByRole('button', { name: 'Issue PO, Alpenmark Controls' })).toBeInTheDocument()
     expect(within(panel).getByRole('button', { name: 'Delivered today, Dubai Instrumentation' })).toBeInTheDocument()
     // goods from Dubai are late: Chase goods is on the row
-    expect(within(panel).getByRole('button', { name: 'Chase goods, Dubai Instrumentation' })).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'Follow up on delivery, Dubai Instrumentation' })).toBeInTheDocument()
   })
 })
 
@@ -274,7 +312,7 @@ describe('the order page after the 2026-10-22 audit (P1 to P10)', () => {
     const header = container.querySelector('header') as HTMLElement
     expect(header).toHaveTextContent('Waiting for payment')
     expect(header).not.toHaveTextContent(/\bDone\b/)
-    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('Customer owes PKR 730,420, due')
+    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('To collect PKR 730,420, due')
     expect(greens(container).map(b => b.textContent)).toEqual(['Copy reminder'])
   })
 

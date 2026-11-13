@@ -52,7 +52,7 @@ test.describe('delete a job', () => {
     const dialog = page.getByRole('dialog', { name: `Delete Job ${job.key}?` })
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('[data-slot="delete-also"]')).toContainText('its orders and their lines')
-    await expect(dialog.getByText('This can’t be undone.')).toBeVisible()
+    await expect(dialog.getByText('This cannot be undone.')).toBeVisible()
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
     await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
 

@@ -304,7 +304,7 @@ describe('intake screen', () => {
     await user.dblClick(button)
 
     expect(await screen.findByText(/is waiting for prices/)).toBeInTheDocument()
-    expect(screen.getByText('Copied. Paste it into each supplier’s chat.')).toBeInTheDocument()
+    expect(screen.getByText("Copied. Paste it into each supplier's chat.")).toBeInTheDocument()
     // No supplier chat is listed to open here, so Open RFQ is the one green button.
     expect(screen.getByRole('link', { name: 'Open RFQ-0185' })).toHaveClass('bg-primary')
     const floats = db.calls.filter(c => c.target === 'rpc:float_rfq')
@@ -317,7 +317,7 @@ describe('intake screen', () => {
       { description: '24V actuator for ball valve', qty: 2, gst_rate: 18 },
     ])
     await waitFor(() => expect(copied).toHaveLength(1))
-    expect(copied[0]).toContain('Hi hope you are doing well,')
+    expect(copied[0]).toContain('Dear Sir/Madam,')
     expect(copied[0]).not.toMatch(/RFQ|Spec:|assalam/i)
     expect(copied[0]).not.toContain('####')
   })
@@ -342,7 +342,7 @@ describe('intake screen', () => {
     expect(db.calls.filter(c => c.target === 'rpc:set_rfq_floated').map(c => (opArgs(c, 'args')?.[0] as { p_floated: boolean }).p_floated)).toEqual([false, true])
   })
 
-  it("Save for later (don't ask suppliers yet) keeps the supplier shortlisted (p_mark_sent false)", async () => {
+  it("Save as draft keeps the supplier shortlisted (p_mark_sent false)", async () => {
     const db = installFakeDb(respond)
     const user = setup()
     renderScreen()
@@ -352,7 +352,7 @@ describe('intake screen', () => {
     await screen.findByText('2 items found')
     await user.click(screen.getByRole('button', { name: 'Looks right: find suppliers' }))
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
-    await user.click(screen.getByRole('button', { name: "Save for later (don't ask suppliers yet)" }))
+    await user.click(screen.getByRole('button', { name: "Save as draft" }))
     expect(await screen.findByText(/is saved/)).toBeInTheDocument()
     const args = opArgs(db.calls.find(c => c.target === 'rpc:float_rfq') as FakeCall, 'args')?.[0] as Record<string, unknown>
     expect(args.p_mark_sent).toBe(false)
@@ -386,7 +386,7 @@ describe('New RFQ from a supplier\'s page (?supplier=)', () => {
     renderScreen('/rfqs/new?supplier=s-zeta')
     expect(await screen.findByText(/is ticked as a supplier to ask\./)).toHaveTextContent('Zeta Instruments is ticked as a supplier to ask.')
     await toSuppliers(user)
-    const added = await screen.findByRole('region', { name: 'Added by you' })
+    const added = await screen.findByRole('region', { name: 'Added manually' })
     expect(within(added).getByRole('checkbox', { name: 'Zeta Instruments' })).toBeChecked()
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
     await user.click(screen.getByRole('button', { name: 'Write the message' }))
@@ -401,7 +401,7 @@ describe('New RFQ from a supplier\'s page (?supplier=)', () => {
     await toSuppliers(user)
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
     expect(screen.getAllByRole('checkbox', { name: 'Orient Analytical' })).toHaveLength(1)
-    expect(screen.queryByRole('region', { name: 'Added by you' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Added manually' })).toBeNull()
   })
 })
 
@@ -631,15 +631,15 @@ describe('the New RFQ draft (kept on this device)', () => {
       const user = setup()
       renderScreen()
       fireEvent.paste(document.body, { clipboardData: { getData: () => PO } })
-      expect(await screen.findByText('This looks like a purchase order, not an enquiry.')).toBeInTheDocument()
+      expect(await screen.findByText('This looks like a purchase order, not an RFQ.')).toBeInTheDocument()
       expect(screen.getByText(/No items were added/)).toBeInTheDocument()
       expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
       expect(screen.queryByText(/items? found/)).toBeNull()
       // Plain text, 16px or larger: the warning and its button use the large text size.
       expect(screen.getByRole('status', { name: '' }).className).toMatch(/text-base/)
-      await user.click(screen.getByRole('button', { name: 'Read as an enquiry anyway' }))
+      await user.click(screen.getByRole('button', { name: 'Read as an RFQ anyway' }))
       expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
-      expect(screen.queryByText('This looks like a purchase order, not an enquiry.')).toBeNull()
+      expect(screen.queryByText('This looks like a purchase order, not an RFQ.')).toBeNull()
     })
 
     it('says so when it is our own quotation, not the header cells as items', async () => {
@@ -647,9 +647,9 @@ describe('the New RFQ draft (kept on this device)', () => {
       setup()
       renderScreen()
       fireEvent.paste(document.body, { clipboardData: { getData: () => OWN_QUOTE } })
-      expect(await screen.findByText('This looks like your own quotation, not an enquiry.')).toBeInTheDocument()
+      expect(await screen.findByText('This looks like your own quotation, not an RFQ.')).toBeInTheDocument()
       expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
-      expect(screen.getByRole('button', { name: 'Read as an enquiry anyway' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Read as an RFQ anyway' })).toBeInTheDocument()
     })
 
     it('a paste it cannot place (unknown) shows no warning and is never held back', async () => {
@@ -659,7 +659,7 @@ describe('the New RFQ draft (kept on this device)', () => {
       fireEvent.paste(document.body, { clipboardData: { getData: () => 'hello, call me when you are free' } })
       await screen.findByRole('textbox', { name: 'Customer reference' })
       expect(screen.queryByText(/This looks like/)).toBeNull()
-      expect(screen.queryByRole('button', { name: 'Read as an enquiry anyway' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Read as an RFQ anyway' })).toBeNull()
     })
 
     it('a real enquiry shows no warning', async () => {
@@ -669,7 +669,7 @@ describe('the New RFQ draft (kept on this device)', () => {
       fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
       expect(await screen.findByText('2 items found')).toBeInTheDocument()
       expect(screen.queryByText(/This looks like/)).toBeNull()
-      expect(screen.queryByRole('button', { name: 'Read as an enquiry anyway' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Read as an RFQ anyway' })).toBeNull()
     })
   })
 })

@@ -209,7 +209,7 @@ describe('isPdfFile and messages', () => {
 
   it('words the size limit', () => {
     expect(pdfFailureMessage('too_big', 'prices', 18.4 * 1024 * 1024)).toBe(
-      'This PDF is 18.4 MB; the limit is 15 MB. Copy the text from it and paste it here, or type or paste the prices.',
+      'This PDF is 18.4 MB. The limit is 15 MB. Copy the text from it and paste it here, or type or paste the prices.',
     )
   })
 })

@@ -54,7 +54,7 @@ export function BrandsCarried({ companyId, withQuoteCounts }: { companyId: strin
       onError: err => setRemoveError(removeErrorMessage(err, 'brand')),
     })
   }
-  const fail = (err: unknown) => toast({ title: "Couldn't add the brand", body: mapPgError(err, { entity: 'brand' }).message, tone: 'danger' })
+  const fail = (err: unknown) => toast({ title: "Could not add the brand", body: mapPgError(err, { entity: 'brand' }).message, tone: 'danger' })
 
   return (
     <section aria-labelledby={headingId} className="grid gap-3">
@@ -71,11 +71,11 @@ export function BrandsCarried({ companyId, withQuoteCounts }: { companyId: strin
       {carried.isPending ? (
         <Skeleton className="h-5 w-2/3" />
       ) : carried.isError ? (
-        <Banner tone="danger" title="Couldn't load the brands">
+        <Banner tone="danger" title="Could not load the brands">
           Reload the page to try again.
         </Banner>
       ) : carried.data.length === 0 && !adding ? (
-        <Fine>None yet. A brand is added by itself when they quote one of its items.</Fine>
+        <Fine>None yet. A brand is added automatically when the supplier prices one of its items.</Fine>
       ) : (
         <ul className="flex flex-wrap gap-x-3 gap-y-2">
           {carried.data.map(b => {
@@ -108,7 +108,7 @@ export function BrandsCarried({ companyId, withQuoteCounts }: { companyId: strin
       {removing ? (
         <ConfirmRemove
           title={`Remove ${removing.name}?`}
-          detail="It stops being listed for them. The brand itself and any quotes for it stay."
+          detail="It stops being listed for them. The brand itself and any supplier prices for it stay."
           busy={unlink.isPending}
           error={removeError}
           onConfirm={confirmRemove}

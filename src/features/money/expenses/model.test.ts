@@ -126,6 +126,7 @@ describe('burst rows to one bulk insert', () => {
 describe('closed month', () => {
   it('names the month from the P0001 sentence', () => {
     expect(closedMonthOf('September 2026 is closed. An admin can reopen it.')).toBe('September 2026')
+    expect(closedMonthOf('September 2026 is locked. An admin can reopen it.')).toBe('September 2026')
     expect(closedMonthOf('Something else')).toBeNull()
     expect(monthLabel('2026-09-30')).toBe('September 2026')
   })
@@ -136,10 +137,10 @@ describe('closed month', () => {
       { ...base, amount: 450 },
       { ...base, id: 'bad', amount: 100000, date: '2026-09-30', dateTyped: true },
     ]
-    const marked = markClosedRows(rows, 'September 2026 is closed. An admin can reopen it.')
+    const marked = markClosedRows(rows, 'September 2026 is locked. An admin can reopen it.')
     expect(marked).toHaveLength(2)
     expect(marked[0].error).toBeUndefined()
-    expect(marked[1].error).toBe('September 2026 is closed. An admin can reopen it.')
+    expect(marked[1].error).toBe('September 2026 is locked. An admin can reopen it.')
     expect(marked[1].amount).toBe(100000)
   })
 })
@@ -192,7 +193,7 @@ describe('job tag type-ahead (audit X1, 0136)', () => {
     company,
     ...(rfq ? { rfqRef: `RFQ-${String(rfq).padStart(4, '0')}` } : {}),
   })
-  const R = (n: number, company: string, note = 'Enquiry'): JobTagOption => ({ id: `r${n}`, kind: 'rfq', ref: `RFQ-${String(n).padStart(4, '0')}`, company, note })
+  const R = (n: number, company: string, note = 'RFQ'): JobTagOption => ({ id: `r${n}`, kind: 'rfq', ref: `RFQ-${String(n).padStart(4, '0')}`, company, note })
   const JOBS = [O(142, 'Karachi Glass'), O(42, 'Lahore Beverages', 139), O(7, 'Margalla Foods'), O(8, 'Indus Beverages'), R(139, 'Other Co'), R(205, 'Lahore Beverages', 'Lost enquiry')]
 
   it('a bare number finds the job with that number first, then jobs that contain the digits', () => {

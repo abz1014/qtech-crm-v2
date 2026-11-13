@@ -29,7 +29,7 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'ima
 
 export function MyClaimsPage() {
   const session = useSession()
-  if (session.status !== 'signed-in' || session.user.role !== 'engineer' && session.user.role !== 'sales') return <NoAccessPage area="I paid" />
+  if (session.status !== 'signed-in' || session.user.role !== 'engineer' && session.user.role !== 'sales') return <NoAccessPage area="I paid" roles={['sales', 'engineer']} adminNote="Admins approve claims on the Expenses page, so there is no I paid page for admins." />
   return <MyClaims />
 }
 
@@ -78,7 +78,7 @@ function MyClaims() {
         onSuccess: photoOk => {
           toast.toast({
             title: 'Sent for approval',
-            body: `${pkr(amount)}${photoOk ? '' : ' · the receipt photo did not upload; add it again'}`,
+            body: `${pkr(amount)}${photoOk ? '' : '  · the receipt photo was not uploaded. Add it again'}`,
             tone: photoOk ? 'success' : 'neutral',
           })
           setId(crypto.randomUUID())
@@ -96,7 +96,7 @@ function MyClaims() {
 
   return (
     <div className="mx-auto grid w-full max-w-[720px] grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
-      <PageHeader title="I paid" lede={<span className="text-base">Money you paid yourself for work. The office pays you back once it is approved, now or a little later.</span>} />
+      <PageHeader title="I paid" lede={<span className="text-base">Amounts paid personally for work. Repaid after approval.</span>} />
       <form
         className="grid gap-4 rounded-panel border bg-surface p-4 text-base"
         autoComplete="off"
@@ -212,8 +212,12 @@ function MyClaims() {
         </h2>
         {claims.isPending ? (
           <div className="h-16 animate-pulse rounded-row border bg-sunken" aria-busy="true" />
+        ) : claims.isError ? (
+          <EmptyState mood="error" title="Claims could not be loaded" actions={<Button onClick={() => void claims.refetch()}>Try again</Button>}>
+            Nothing was changed. Check your connection and try again.
+          </EmptyState>
         ) : (claims.data ?? []).length === 0 ? (
-          <EmptyState title="Nothing yet">What you send shows here, with whether it was approved.</EmptyState>
+          <EmptyState title="Nothing yet">Submitted claims and their approval status appear here.</EmptyState>
         ) : (
           <ul className="divide-y rounded-panel border bg-surface">
             {(claims.data ?? []).map(c => (
@@ -234,7 +238,7 @@ function ClaimLine({ claim, onWithdraw, busy }: { claim: Claim; onWithdraw: () =
       </StatusText>
     ) : claim.status === 'owed' ? (
       <StatusText tone="waiting" className="text-base">
-        Approved, the office owes you
+        Approved, to be repaid to you
       </StatusText>
     ) : claim.status === 'approved' ? (
       <StatusText tone="done" className="text-base">

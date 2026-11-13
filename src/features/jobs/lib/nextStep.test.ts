@@ -33,9 +33,9 @@ describe('next step in words', () => {
     expect(jobNext({ stage: 'ordered', stageDetail: 'to source', role: 'admin' })).toMatchObject({ button: 'Choose suppliers', stop: 3 })
     expect(jobNext({ stage: 'ordered', stageDetail: 'to place', role: 'sales' })).toMatchObject({ button: 'Place the order', stop: 3 })
     expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'arrived, not delivered', role: 'sales' })).toMatchObject({ button: 'Deliver the goods', stop: 4 })
-    expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'admin' })).toMatchObject({ button: 'Chase the supplier', stop: 4 })
+    expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'admin' })).toMatchObject({ button: 'Follow up with the supplier', stop: 4 })
     expect(jobNext({ stage: 'delivered', stageDetail: 'not invoiced yet', role: 'admin' })).toMatchObject({ button: 'Create invoice', stop: 5 })
-    expect(jobNext({ stage: 'invoiced', stageDetail: 'part paid', role: 'admin' })).toMatchObject({ button: 'Chase the payment', stop: 5 })
+    expect(jobNext({ stage: 'invoiced', stageDetail: 'part paid', role: 'admin' })).toMatchObject({ button: 'Send payment reminder', stop: 5 })
     expect(jobNext({ stage: 'delivered', stageDetail: 'installation to plan', role: 'engineer' })).toMatchObject({ button: 'Plan installation', stop: 4 })
   })
 
@@ -50,14 +50,14 @@ describe('an imported job', () => {
     const old = jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'sales', imported: true })
     expect(live.tone).toBe('late')
     expect(old.tone).toBe('inert')
-    expect(old.text).toBe('Imported · The goods are late: chase the supplier')
+    expect(old.text).toBe('Imported · The goods are late: follow up with the supplier')
     // a finished or already quiet step is left as it is
     expect(jobNext({ stage: 'paid', stageDetail: null, role: 'admin', imported: true }).text).toBe('Done')
   })
 
   it('drops the "Imported · " prefix, and keeps the grey tone, when the row already wears an Imported tag', () => {
     const tagged = jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'sales', imported: true }, { imported: 'tag' })
-    expect(tagged.text).toBe('The goods are late: chase the supplier')
+    expect(tagged.text).toBe('The goods are late: follow up with the supplier')
     expect(tagged.tone).toBe('inert')
     expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'sales' }, { imported: 'tag' }).tone).toBe('late')
   })

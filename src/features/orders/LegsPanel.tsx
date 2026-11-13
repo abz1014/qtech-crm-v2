@@ -140,7 +140,7 @@ export function LegsPanel({
       )}
       {legs.length === 0 ? (
         flat ? null : <EmptyState title="No supplier orders yet">
-          {imported ? 'Imported orders arrive without suppliers. Add a supplier only if you need to track a reorder.' : 'Lines with a supplier appear here, one per supplier. A service has none.'}
+          {imported ? 'Imported orders have no suppliers. Add a supplier only to track a reorder.' : 'Lines with a supplier appear here, one per supplier. A service has none.'}
         </EmptyState>
       ) : (
         <ul className={flat ? undefined : 'divide-y'}>
@@ -286,7 +286,9 @@ function Leg({
   const pastPo = delivered || order.state?.invoicing === 'fully_invoiced'
   const issueOnRow = money && !po && !pastPo
   const issueInMenu = money && !po && pastPo
-  const menu = Boolean(money && po) || (canChase && !late) || isAdmin || placeInMenu || issueInMenu
+  // The More button shows only when at least one of its items would: the same conditions as the items below.
+  const menu =
+    (part !== 'delivery' && Boolean((money && po) || issueInMenu || placeInMenu || isAdmin)) || (Boolean(canChase) && !late && part !== 'order')
   // An engineer may mark an order placed (they sometimes order by phone on site), in their own words.
   const stampLabel = stamp && stamp.step === 'place' && !money ? 'I placed this order' : stamp?.label
 
@@ -321,12 +323,12 @@ function Leg({
       <div className="grid min-w-0 content-start gap-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="min-w-0 break-words font-medium">{name}</span>
-          {ccy ? <span className="num inline-flex h-chip items-center rounded-round border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
+          {money && ccy ? <span className="num inline-flex h-chip items-center rounded-round border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
           <span data-testid={`leg-${letter}-state`}>
             <StatusBadge dimension="goods" value={STATE_DIM[state]} />
           </span>
           {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
-          {po || !pastPo ? (
+          {money && (po || !pastPo) ? (
           <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-chip items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
@@ -354,7 +356,7 @@ function Leg({
               value={leg.reference}
               label={`Reference, ${name}`}
               empty="add"
-              placeholder="Our PO or the supplier's PI"
+              placeholder={money ? "Our PO or the supplier's PI" : "The supplier's reference"}
               disabled={!canEdit}
               render={v => <span className="num">{v}</span>}
               onSave={v => actions.run({ reference: v }, v ? 'Reference saved' : 'Reference cleared', name)}
@@ -407,11 +409,11 @@ function Leg({
               </span>
             ) : null}
             {canChase && late && part !== 'order' ? (
-              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${name}`}>
-                Chase goods
+              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Follow up on delivery, ${name}`}>
+                Follow up on delivery
               </Button>
             ) : null}
-            {menu && (part !== 'delivery' || (canChase && !late)) ? (
+            {menu ? (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button size="sm" variant="quiet" icon={Ellipsis} aria-label={`More for ${name}`} />
@@ -440,7 +442,7 @@ function Leg({
                   ) : null}
                   {canChase && !late && part !== 'order' ? (
                     <MenuItem icon={MessageSquareWarning} onClick={onChase}>
-                      Chase goods
+                      Follow up on delivery
                     </MenuItem>
                   ) : null}
                   {isAdmin && po?.id && part !== 'delivery' ? (

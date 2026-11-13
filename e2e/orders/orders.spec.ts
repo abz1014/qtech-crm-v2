@@ -226,7 +226,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByRole('heading', { name: 'Mark won' })).toBeVisible()
     await expect(dialog.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked()
     await expect(price(dialog, 1)).toHaveValue('')
-    await expect(dialog).toContainText('Type the selling price from your costing sheet')
+    await expect(dialog).toContainText('Enter the selling price from the costing sheet')
     await shot(page, 'a1-markwon-owner-shape-1440')
     expect(await dialogViolations(page)).toEqual([])
     // the same dialog on a phone: the price input stacks under its label, nothing scrolls sideways
@@ -392,7 +392,7 @@ test.describe('O01: Mark won creates the order', () => {
     const dialog = page.getByRole('dialog')
     await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(supplierB.name)) // the warnings are about the quote chosen
     await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('may belong to another item')
-    await expect(dialog.getByTestId('convert-item-1')).toContainText('currency of this supplier quote was not confirmed')
+    await expect(dialog.getByTestId('convert-item-1')).toContainText('currency of this supplier price was not confirmed')
     await expect(price(dialog, 1)).toHaveValue('')
     await price(dialog, 1).fill('1500')
     await price(dialog, 2).fill('3000')
@@ -549,14 +549,14 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     await openStage(page, 'Delivery')
     const b = leg(page, 'B')
     await expect(page.getByTestId('leg-B-state')).toContainText('Overdue')
-    await b.getByRole('button', { name: `Chase goods, ${s.supplierB.name}` }).click()
+    await b.getByRole('button', { name: `Follow up on delivery, ${s.supplierB.name}` }).click()
     const dialog = page.getByRole('dialog')
     // the same wording as Today: the leg's reference is in the text
     await expect(dialog.getByTestId('draft-text')).toContainText('PI-123')
     await expect(dialog.getByTestId('draft-text')).toContainText('Memosens pH sensor')
     await shot(page, 'o03-goods-chase-dialog-1440')
     await resetClipboard(page)
-    await dialog.getByRole('button', { name: 'Copy and mark chased' }).click()
+    await dialog.getByRole('button', { name: 'Copy and record follow-up' }).click()
     await expect.poll(async () => (await legRow(s.legB)).chase_count).toBe(1)
     expect((await legRow(s.legB)).last_chased_on).toBe(karachiDay(0))
     await readClipboardWhen(page, 'PI-123')
@@ -704,6 +704,9 @@ test.describe('O03: role views', () => {
     await page.waitForLoadState('networkidle')
 
     const text = await page.locator('#main').innerText()
+    // no currency chip and no PO chip on a supplier order (live bug 10, owner decision A)
+    await expect(leg(page, 'A').getByTestId('leg-A-po')).toHaveCount(0)
+    expect(text).not.toMatch(/No PO yet|EUR/)
     expect(text).not.toMatch(/PKR|48,500|96,500|135,000|Margin|Terms|Exempt|Costs|Balance|Add line|Add supplier|Issue PO|Record payment|Add expense|Create invoice/i)
     await expect(page.locator('.sr-only', { hasText: 'Not set' })).toHaveCount(0)
     // the page leads with the engineer's job: Delivered today and Installed today

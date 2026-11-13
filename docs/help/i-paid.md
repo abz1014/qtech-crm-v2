@@ -6,9 +6,9 @@ keywords: i paid, paid myself, petrol, fuel, cable, tools, receipt, claim, reimb
 screens: /my-expenses
 related: site-question
 ---
-1. Tap your initials at the top, then [I paid].
-2. Type [How much, PKR] and, if you like, [What for], the [Job] and [Which visit?]. Today's visit is already chosen.
-3. Tap [Photo of the receipt] and take the photo.
-4. Tap [Send for approval].
+1. Select your initials at the top, then [I paid].
+2. Enter [How much, PKR]. [What for], the [Job] and [Which visit?] are optional. Today's visit is already selected.
+3. Select [Photo of the receipt] and take the photo.
+4. Select [Send for approval].
 
-Tip: The office approves it and pays you back. [My claims] shows Waiting, Approved or Not approved. Sent the wrong one? Tap [Take back] while it is waiting.
+Note: The office approves the claim and repays it. [My claims] shows Waiting, Approved or Not approved. To withdraw a claim sent by mistake, select [Take back] while it is waiting.

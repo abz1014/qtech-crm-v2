@@ -15,7 +15,7 @@ export function sortRates(rows: readonly FxLatestRow[]): FxLatestRow[] {
 }
 
 export function sourceLabel(source: string): string {
-  return source === 'auto' ? 'Automatic' : 'Entered by hand'
+  return source === 'auto' ? 'Automatic' : 'Entered manually'
 }
 
 /** "Today", "1 day old", "14 days old", "52 days old, not compared". */
@@ -38,7 +38,7 @@ export function ratesStatusLine(rows: readonly Pick<FxLatestRow, 'asOf' | 'sourc
   if (rows.length === 0) return 'No rates yet.'
   const auto = rows.filter(r => r.source === 'auto').map(r => r.asOf).sort()
   const byHand = rows.length - auto.length
-  if (auto.length === 0) return 'No automatic update yet. Rates entered by hand.'
+  if (auto.length === 0) return 'No automatic update yet. Rates entered manually.'
   const last = `Last automatic update ${formatDay(auto[auto.length - 1])}.`
-  return byHand === 0 ? last : `${last} ${byHand} ${byHand === 1 ? 'rate' : 'rates'} entered by hand.`
+  return byHand === 0 ? last : `${last} ${byHand} ${byHand === 1 ? 'rate' : 'rates'} entered manually.`
 }

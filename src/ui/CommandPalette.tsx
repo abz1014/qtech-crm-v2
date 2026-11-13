@@ -121,6 +121,8 @@ export function CommandPalette({
   const [searching, setSearching] = useState(false)
   const [slow, setSlow] = useState(false)
   const [settled, setSettled] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const itemsById = useRef(new Map<string, PaletteItem>())
   const openerRef = useRef<HTMLElement | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -154,6 +156,7 @@ export function CommandPalette({
     const ctl = new AbortController()
     const q = query.trim()
     setSettled(false)
+    setFailed(false)
     const slots: Group[][] = ordered.map(() => [])
     const publish = () => {
       const merged = slots.flat().filter(g => g.items.length)
@@ -196,7 +199,8 @@ export function CommandPalette({
           publish()
         })
         .catch(() => {
-          /* one failing source must not blank the others */
+          // One failing source must not blank the others; remember it so an empty list is not called "Nothing found".
+          if (!ctl.signal.aborted) setFailed(true)
         })
         .finally(done)
     })
@@ -207,7 +211,7 @@ export function CommandPalette({
       ctl.abort()
       window.clearTimeout(timer)
     }
-  }, [open, query, ordered, personId])
+  }, [open, query, ordered, personId, attempt])
 
   const close = useCallback(() => {
     onOpenChange(false)
@@ -275,7 +279,7 @@ export function CommandPalette({
                 placeholder="Search or jump to"
                 className="min-w-0 flex-1 bg-transparent text-lg text-fg placeholder:text-fg-muted focus:outline-none"
               />
-              <Kbd className="text-xs">Esc</Kbd>
+              <Kbd className="text-xs [@media(pointer:coarse)]:hidden">Esc</Kbd>
             </div>
 
             <Command.List className="max-h-[min(480px,60dvh)] min-h-0 overflow-y-auto pb-2 pt-1">
@@ -290,20 +294,20 @@ export function CommandPalette({
                       key={item.id}
                       value={`${g.key}:${item.id}`}
                       onSelect={() => run(item, false)}
-                      className="group relative flex h-row cursor-pointer items-center gap-3 px-4 text-sm data-[selected=true]:bg-selected"
+                      className="group relative flex min-h-row cursor-pointer items-center gap-3 px-4 py-1 text-sm data-[selected=true]:bg-selected"
                     >
                       <span aria-hidden="true" className="absolute inset-y-0 left-0 hidden w-[3px] bg-brand-green group-data-[selected=true]:block" />
                       {item.icon ? <Icon icon={item.icon} className="text-fg-muted group-data-[selected=true]:text-fg" /> : <span className="w-4" />}
-                      <span className="min-w-0 flex-1 truncate">
+                      <span className="min-w-0 flex-1 break-words" title={item.label}>
                         <Highlight text={item.label} q={q} />
                       </span>
                       {item.meta ? (
-                        <span className="min-w-0 max-w-[45%] shrink-0 truncate text-xs text-fg-muted">
+                        <span className="min-w-0 max-w-[45%] shrink-0 break-words text-xs text-fg-muted" title={item.meta}>
                           <Highlight text={item.meta} q={g.key === 'recent' ? '' : q} />
                         </span>
                       ) : null}
                       {item.shortcut?.length ? (
-                        <span className="inline-flex gap-1">
+                        <span className="inline-flex gap-1 [@media(pointer:coarse)]:hidden">
                           {item.shortcut.map(k => (
                             <Kbd key={k}>{k}</Kbd>
                           ))}
@@ -328,7 +332,17 @@ export function CommandPalette({
               </div>
             ) : null}
 
-            {settled && !searching && total === 0 && q ? (
+            {settled && !searching && failed && q ? (
+              <div role="status" className={cn('grid justify-items-center gap-2 px-6 text-center text-sm text-fg-muted', total === 0 ? 'py-8' : 'border-t py-3')}>
+                <b className="font-medium text-fg">Search could not run</b>
+                <p className="max-w-prose text-pretty">{total === 0 ? 'Nothing was lost. Check your connection and try again.' : 'Some results could not load. The rest are shown above.'}</p>
+                <button type="button" onClick={() => setAttempt(n => n + 1)} className="rounded border border-line-strong px-3 py-1 text-fg hover:bg-selected focus-visible:outline focus-visible:outline-2">
+                  Try again
+                </button>
+              </div>
+            ) : null}
+
+            {settled && !searching && !failed && total === 0 && q ? (
               <div role="status" className="grid justify-items-center gap-2 px-6 py-8 text-center text-sm text-fg-muted">
                 <span className="grid size-10 place-items-center rounded bg-selected text-fg-2">
                   <Icon icon={Search} size="lg" />
@@ -339,22 +353,22 @@ export function CommandPalette({
             ) : null}
 
             <div className="flex min-h-head items-center gap-4 border-t bg-sunken px-4 py-1 text-xs text-fg-muted">
-              <span className="inline-flex items-center gap-[6px]">
+              <span className="inline-flex items-center gap-[6px] [@media(pointer:coarse)]:hidden">
                 <Kbd><Icon icon={ArrowUp} size="chip" /></Kbd>
                 <Kbd><Icon icon={ArrowDown} size="chip" /></Kbd>
                 move
               </span>
-              <span className="inline-flex items-center gap-[6px]">
+              <span className="inline-flex items-center gap-[6px] [@media(pointer:coarse)]:hidden">
                 <Kbd><Icon icon={CornerDownLeft} size="chip" /></Kbd>
                 open
               </span>
-              <span className="inline-flex items-center gap-[6px] max-md:hidden">
+              <span className="inline-flex items-center gap-[6px] max-md:hidden [@media(pointer:coarse)]:hidden">
                 <Kbd>{m}</Kbd>
                 <Kbd><Icon icon={CornerDownLeft} size="chip" /></Kbd>
                 open in new tab
               </span>
               {shortcutsHint ? (
-                <span className="inline-flex items-center gap-[6px] max-md:hidden">
+                <span className="inline-flex items-center gap-[6px] max-md:hidden [@media(pointer:coarse)]:hidden">
                   <Kbd>?</Kbd>
                   Shortcuts
                 </span>

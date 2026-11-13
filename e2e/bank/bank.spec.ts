@@ -185,7 +185,8 @@ test.describe('bank tick (M12)', () => {
     const { customer, order } = await newOrder('Refused Payer')
     await addPayment(order.id, { amount: base() })
     await openAs(page, 'admin', '/money/month-end/bank')
-    const sentence = 'September 2026 is closed. An admin can reopen it.'
+    const sentence = 'September 2026 is closed. An admin can reopen it.' // what the server raises
+    const shown = 'September 2026 is locked. An admin can reopen it.' // what the screen says
     await page.route('**/rest/v1/payments_in*', route =>
       route.request().method() === 'PATCH'
         ? route.fulfill({
@@ -197,7 +198,7 @@ test.describe('bank tick (M12)', () => {
     )
     const row = page.getByRole('checkbox', { name: new RegExp(customer.name) })
     await row.click()
-    await expect(page.getByRole('alert').filter({ hasText: sentence })).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: shown })).toBeVisible()
     await expect(row).toHaveAttribute('aria-checked', 'false')
     await review(page, 'm12-bank-tick-refused-1440')
   })

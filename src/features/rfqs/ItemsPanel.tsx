@@ -46,7 +46,7 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
  *
  * Fewer actions on show (grade-A 9 fix 3): a price line has ONE control, its chevron; its "..." menu (Edit reply, Copy price,
  * Remove reply) shows once the line is open. Phone (grade-A 6 fix 2): the items are an accordion. An item with prices (or a
- * can't quote) is its header line until tapped, one open at a time, the first such item open to start; an item only waiting is
+ * cannot quote) is its header line until tapped, one open at a time, the first such item open to start; an item only waiting is
  * its header and chip, the "Waiting on" line left to Suppliers asked.
  *
  * An engineer (owner decision 2026-10-22: no prices anywhere) gets the same items with who replied, lead time and stock only: no
@@ -208,7 +208,7 @@ function RowMenu({ rfqId, entry, item }: { rfqId: string; entry: Entry; item: Rf
 
 /**
  * The suppliers asked about this item who have not answered yet, as ONE line (grade-B R1): "Waiting on Midlands Valves Ltd", or
- * "Waiting on 3 suppliers" with the names in the title. Who they are, the chase and "Can't quote" live once per supplier in
+ * "Waiting on 3 suppliers" with the names in the title. Who they are, the chase and "Cannot quote" live once per supplier in
  * Suppliers asked (SuppliersAsked.tsx), not on every item.
  */
 function WaitingLine({ waiting }: { waiting: readonly InquiryRow[] }) {
@@ -295,7 +295,7 @@ export function ItemsPanel({
       )
     : []
   const nobodyAsked = inquiries.length === 0
-  // Something under the header besides the waiting line: a price or a can't quote.
+  // Something under the header besides the waiting line: a price or a cannot quote.
   const hasBody = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId) || Boolean(reasonForItem(itemId, i)))
   // Desktop: the column names show once, over the first item that has prices (they were repeated over every item).
   const headItemId = items.find(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id)))?.id
@@ -308,7 +308,7 @@ export function ItemsPanel({
       meta={
         <>
           {items.length} {items.length === 1 ? 'item' : 'items'}
-          {nobodyAsked ? ' · nobody asked yet' : ''}
+          {nobodyAsked ? ' · no supplier asked yet' : ''}
         </>
       }
       actions={
@@ -332,7 +332,7 @@ export function ItemsPanel({
       ) : null}
       {nobodyAsked && items.length > 0 ? (
         <p className="border-b px-0 py-4 text-fg-2">
-          <b className="font-semibold text-fg">Ask suppliers for prices.</b> One tap copies a message listing every item, ready to paste into WhatsApp or email.
+          <b className="font-semibold text-fg">Ask a supplier first.</b> Replies are entered under Suppliers asked.
         </p>
       ) : null}
       {items.length === 0 ? (
@@ -359,7 +359,7 @@ export function ItemsPanel({
             const cov = itemCoverage(lines.length, waiting.length, responders.length, askedCount)
             const q = qtyText(item.qty, item.unit)
             const forThis = (suggestions ?? []).filter(s => s.coversItemIds.includes(item.id)).slice(0, 3)
-            // Phone accordion: an item with prices, a can't quote or the warning folds to its header; one open at a time.
+            // Phone accordion: an item with prices, a cannot quote or the warning folds to its header; one open at a time.
             const foldable = phone && !nobodyAsked && (entries.length > 0 || declined.length > 0 || cov.kind === 'uncovered')
             const folded = foldable && shownItem !== item.id
             const bodyId = `item-body-${item.id}`
@@ -416,7 +416,7 @@ export function ItemsPanel({
                                 : 'Every supplier asked said they cannot quote it.'}
                             </b>{' '}
                             {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}
-                            Ask someone else before the quotation is due.
+                            Ask another supplier before the quotation is due.
                           </p>
                         </div>
                         {forThis.length > 0 ? (
@@ -437,9 +437,7 @@ export function ItemsPanel({
                       </div>
                     ) : null}
 
-                    {nobodyAsked ? (
-                      <p className="px-0 pb-4 pt-3 text-fg-muted">No supplier has been asked about this item.</p>
-                    ) : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
+                    {nobodyAsked ? null : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
                       <div className="mt-3 lg:mt-1">
                         {entries.length > 0 && prices ? (
                           item.id !== headItemId ? null : <div className={HEAD} aria-hidden="true">

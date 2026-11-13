@@ -6,12 +6,12 @@ keywords: enquiry cost, rfq cost, job number, expense, expenses, spend, bill, co
 screens: /money/expenses
 related: expense-categories, expense-report, pay-supplier, cash-in-hand, approve-claims, in-vs-out
 ---
-1. Tap [Money], then [Expenses]. [Quick add] is at the top.
-2. Type the amount, tap what it was for, then tap [Save]. Cash or bank comes from the category.
-3. Not in the buttons? Pick it from [More…]. The row stays open for the next expense.
+1. Select [Money], then [Expenses]. [Quick add] is at the top.
+2. Enter the amount, select a category, then select [Save]. Cash or bank comes from the category.
+3. If the category is not shown, select it from [More…]. The row stays open for the next expense.
 4. A salary or other monthly bill paid by the 10th says [This bill is for] last month. Change it if needed.
 5. Optional: [Paid on], a [Detail] like "LEA-1234", a [Receipt] photo, or tick [Has a GST invoice] for the GST.
-6. Many receipts at once? Tap [Add expenses] for one row each, then [Save N expenses].
-7. Spent on a job or an enquiry? Type its number in [Job]. A cost on an enquiry joins its order when the enquiry is won.
+6. For several receipts, select [Add expenses] for one row each, then [Save N expenses].
+7. For a job or an RFQ, enter its number in [Job]. A cost on an RFQ joins its order when the RFQ is won.
 
-Tip: A lost enquiry keeps its costs as their own line. On the Job page of an enquiry, Add cost adds one. A supplier is paid with Pay on the supplier order, not here. A wrong expense: open its ⋯ menu and delete it (Undo is offered). A closed month's expenses are locked, but [History] beside the lock still shows who changed what.
+Note: A lost RFQ keeps its costs as their own line. On the Job page of an RFQ, Add cost adds one. A supplier is paid with Pay on the supplier order, not here. To remove a wrong expense, open its ⋯ menu and delete it (Undo is offered). The expenses of a locked month cannot be changed, but [History] beside the lock shows who changed what.

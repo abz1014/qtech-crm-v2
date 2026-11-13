@@ -218,9 +218,9 @@ export const RENT_CATEGORY_ID = 'ca7e0000-0000-4000-8000-000000000002'
 export const monthKeyLabel = (key: string): string => monthLabel(monthStart(key))
 export const monthKeyShort = (key: string): string => `${monthLabel(monthStart(key)).slice(0, 3)} ${key.slice(0, 4)}`
 
-/** The month a closed-month error names ("September 2026"), or null when the message is some other sentence. */
+/** The month a closed-month error names ("September 2026"; the server says closed, the app shows locked), or null when the message is some other sentence. */
 export function closedMonthOf(message: string | undefined | null): string | null {
-  const m = /^(.+?) is closed\.\s*An admin can reopen it\.?$/i.exec((message ?? '').trim())
+  const m = /^(.+?) is (?:closed|locked)\.\s*An admin can reopen it\.?$/i.exec((message ?? '').trim())
   return m ? m[1] : null
 }
 

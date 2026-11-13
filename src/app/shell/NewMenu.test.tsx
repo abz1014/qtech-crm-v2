@@ -20,10 +20,10 @@ const mount = (role: string) =>
 
 describe('the + New menu, by role', () => {
   it('admin: New enquiry, Expense, Payment received, Order without enquiry', () => {
-    expect(newEntries('admin').map(e => e.label)).toEqual(['New enquiry', 'Expense', 'Payment received', 'Order without enquiry'])
+    expect(newEntries('admin').map(e => e.label)).toEqual(['New RFQ', 'Expense', 'Payment received', 'Order without RFQ'])
   })
   it('sales: New enquiry and Order without enquiry, no Payment received and no Expense', () => {
-    expect(newEntries('sales').map(e => e.label)).toEqual(['New enquiry', 'Order without enquiry'])
+    expect(newEntries('sales').map(e => e.label)).toEqual(['New RFQ', 'Order without RFQ'])
   })
   it('the button shows the word New by default, and iconOnly keeps the name "New" with no visible word', () => {
     const { unmount } = mount('admin')
@@ -43,13 +43,13 @@ describe('the + New menu, by role', () => {
     mount('admin')
     fireEvent.click(screen.getByRole('button', { name: 'New' }))
     expect(await screen.findByRole('menuitem', { name: /Payment received/ })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('menuitem', { name: /Order without enquiry/ }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Order without RFQ/ }))
     expect(screen.getByTestId('where').textContent).toBe('/orders?new=1')
   })
   it('a salesperson\'s menu has no Payment received', async () => {
     mount('sales')
     fireEvent.click(screen.getByRole('button', { name: 'New' }))
-    await screen.findByRole('menuitem', { name: /New enquiry/ })
+    await screen.findByRole('menuitem', { name: /New RFQ/ })
     expect(screen.queryByRole('menuitem', { name: /Payment received/ })).toBeNull()
   })
 })

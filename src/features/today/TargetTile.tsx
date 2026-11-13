@@ -67,7 +67,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
         </p>
         <div
           role="img"
-          aria-label={`Achieved ${pkr(w.achieved)} of ${pkr(w.target)}; on pace today ${pkr(w.onPaceExact)}`}
+          aria-label={`Achieved ${pkr(w.achieved)} of ${pkr(w.target)}. On pace today ${pkr(w.onPaceExact)}`}
           title={`Exact: achieved ${w.achieved}, on pace ${w.onPaceExact}, target ${w.target}`}
           className="relative h-2 overflow-hidden rounded bg-selected"
         >
@@ -108,7 +108,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
           <p className="mt-1 text-fg-muted">
             Net cash received by you since {w.startText}, GST left out. Shown to the nearest PKR 10,000: exact on pace {rupees(w.onPaceExact)}
             {w.status === 'ahead' ? `, ahead ${rupees(w.aheadExact)}` : `, behind ${rupees(w.behindExact)}`}.
-            {w.excludedCount > 0 ? ` ${w.excludedCount} ${w.excludedCount === 1 ? 'payment is' : 'payments are'} not counted yet: nobody has said whether GST is included.` : ''}
+            {w.excludedCount > 0 ? ` ${w.excludedCount} ${w.excludedCount === 1 ? 'payment is' : 'payments are'} not counted yet. GST inclusion has not been stated.` : ''}
           </p>
         </div>
       ) : null}

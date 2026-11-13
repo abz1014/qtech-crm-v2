@@ -156,7 +156,7 @@ export function formatStamp(at: Date): string {
 }
 
 /** The default sentence under a table that failed to load, with the stamp and the request reference. */
-export const ERROR_MESSAGE = 'Your changes are safe. Check your connection and try again.'
+export const ERROR_MESSAGE = 'Entered changes are kept. Check the connection and try again.'
 
 /** Row, two-line row and header heights in px, as DataTable's windowing uses them. */
 export interface RowMetrics {

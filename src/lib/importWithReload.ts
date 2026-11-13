@@ -44,10 +44,10 @@ export class StaleAppError extends PlainError {
   }
 }
 
-const OFFLINE = 'You are offline, and this part of Q-Tech has not been downloaded to this device yet. Try again when you have signal.'
+const OFFLINE = 'You are offline, and this part of Q-Tech has not been downloaded to this device yet. Try again when the connection is back.'
 const UNSAVED = 'Q-Tech has been updated. Save what you are typing, then reload the page and try again.'
 const SPENT = 'Q-Tech has been updated. Close the app (or the tab) and open it again, then try once more.'
-const NOT_LOADED = 'This part of Q-Tech could not be downloaded. Check your signal, then try again.'
+const NOT_LOADED = 'This part of Q-Tech could not be downloaded. Check the connection, then try again.'
 
 function readMark(): boolean {
   try {

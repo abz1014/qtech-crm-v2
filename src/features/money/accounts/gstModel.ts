@@ -22,6 +22,13 @@ export interface GstFiling {
   month: string
   psids: string[]
   lastDepositedOn: string | null
+  /** Each PSID with the last day money went in under it (null while none of its invoices is deposited). */
+  psidDeposits: PsidDeposit[]
+}
+
+export interface PsidDeposit {
+  psid: string
+  on: string | null
 }
 
 export type GstTone = 'paid' | 'ok' | 'soon' | 'late' | 'nothing'
@@ -45,6 +52,7 @@ export interface GstLine {
   deposited: string
   psids: string[]
   paidOn: string | null
+  psidDeposits: PsidDeposit[]
 }
 
 export function gstLine(row: GstMonthRow, filing: GstFiling | undefined, today: string, deadlines: GstDeadlines = DEFAULT_GST_DEADLINES): GstLine {
@@ -75,6 +83,7 @@ export function gstLine(row: GstMonthRow, filing: GstFiling | undefined, today: 
     deposited: row.depositedAmount,
     psids: filing?.psids ?? [],
     paidOn: filing?.lastDepositedOn ?? null,
+    psidDeposits: filing?.psidDeposits ?? [],
   }
 }
 
@@ -94,9 +103,16 @@ export function filingsOf(invoices: readonly { invoice_date: string | null; psid
   for (const i of invoices) {
     if (!i.invoice_date) continue
     const month = i.invoice_date.slice(0, 7)
-    const f = by.get(month) ?? { month, psids: [], lastDepositedOn: null }
+    const f = by.get(month) ?? { month, psids: [], lastDepositedOn: null, psidDeposits: [] }
     const psid = i.psid?.trim()
-    if (psid && !f.psids.includes(psid)) f.psids.push(psid)
+    if (psid) {
+      if (!f.psids.includes(psid)) {
+        f.psids.push(psid)
+        f.psidDeposits.push({ psid, on: null })
+      }
+      const d = f.psidDeposits.find(x => x.psid === psid)!
+      if (i.tax_deposited_on && (!d.on || i.tax_deposited_on > d.on)) d.on = i.tax_deposited_on
+    }
     if (i.tax_deposited_on && (!f.lastDepositedOn || i.tax_deposited_on > f.lastDepositedOn)) f.lastDepositedOn = i.tax_deposited_on
     by.set(month, f)
   }

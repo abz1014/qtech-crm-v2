@@ -5,6 +5,7 @@ import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useToast } from '@/ui/useToast'
@@ -13,7 +14,7 @@ import { PAID_HOW_LABEL, owedByPerson, type Claim, type PaidHow } from '@/featur
 import { pkr } from '@/features/money/expenses/model'
 
 /*
- * "Owed to staff" (0124, process audit 5). A claim the admin approved without paying yet: "Approved, owed to <person>". One line per
+ * "Owed to staff" (0124, process audit 5). A claim the admin approved without paying yet: "Approved, to repay <person>". One line per
  * person with the total, and under it each claim with Mark paid back, which says how it was paid (cash given back, from petty cash, or
  * by bank) and writes the expense on that day. `summary` is the Money home's short form: the people and what each is owed, no buttons.
  * Admin only: for anyone else nothing is drawn and nothing is asked.
@@ -26,16 +27,25 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
   const [open, setOpen] = useState(false)
   const id = useId()
   const claims = q.data ?? []
-  if (!admin || q.isPending || q.isError || claims.length === 0) return null
+  if (!admin || q.isPending) return null
+  if (q.isError)
+    return (
+      <section aria-label="Claims to repay" data-testid="owed-to-staff">
+        <EmptyState mood="error" title="Claims to repay could not be loaded" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+          Nothing was changed. Check your connection and try again.
+        </EmptyState>
+      </section>
+    )
+  if (claims.length === 0) return null
   const people = owedByPerson(claims)
   const total = claims.reduce((s, c) => s + c.amount, 0)
   // Phone, full form: one line with the figure and who; a tap opens the people and each claim's Mark paid back.
   if (phone && !summary)
     return (
-      <section aria-label="Owed to staff" data-testid="owed-to-staff">
+      <section aria-label="Claims to repay" data-testid="owed-to-staff">
         <FoldRow
-          state={{ icon: HandCoins, word: 'Waiting for you' }}
-          title="Owed to staff"
+          state={{ icon: HandCoins, word: 'Action needed' }}
+          title="Claims to repay"
           summary={`${pkr(total)} to ${people.length === 1 ? people[0].name : `${people.length} people`}`}
           open={open}
           onToggle={() => setOpen(o => !o)}
@@ -45,7 +55,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
             {people.map(p => (
               <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 text-base">
                 <span>
-                  Owed to <b className="font-semibold">{p.name}</b>
+                  To repay <b className="font-semibold">{p.name}</b>
                   <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
                 </span>
                 <b className="num font-semibold">{pkr(p.total)}</b>
@@ -64,7 +74,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
     <section aria-labelledby="owed-staff-h" className="grid gap-0 rounded border border-tone-warning-fg/30 bg-surface lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent" data-testid="owed-to-staff">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3 lg:px-0 lg:py-2">
         <h2 id="owed-staff-h" className="type-row lg:font-semibold">
-          Owed to staff
+          Claims to repay
         </h2>
         <span className="text-base text-fg-2">
           {pkr(total)} approved, not paid back yet
@@ -74,7 +84,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
         {people.map(p => (
           <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-base lg:px-0 lg:py-2">
             <span>
-              Owed to <b className="font-semibold">{p.name}</b>
+              To repay <b className="font-semibold">{p.name}</b>
               <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
             </span>
             <b className="num font-semibold">{pkr(p.total)}</b>
@@ -102,7 +112,7 @@ function OwedRow({ claim }: { claim: Claim }) {
     <li className="grid gap-2 px-4 py-3 text-base lg:px-0" data-testid={`owed-${claim.id}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="min-w-0">
-          Approved, owed to <b className="font-semibold">{claim.byName}</b>: <b className="num font-semibold">{pkr(claim.amount)}</b>
+          Approved, to repay <b className="font-semibold">{claim.byName}</b>: <b className="num font-semibold">{pkr(claim.amount)}</b>
           {claim.note ? <span> for {claim.note}</span> : null}
           {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
         </span>

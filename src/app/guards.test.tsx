@@ -47,7 +47,7 @@ describe('RequireSession offline (phone audit 2c)', () => {
 
   it('offline with a remembered person: the shell under the offline banner, not the sign-in form', () => {
     render(tree(signedIn, 'offline', () => {}))
-    expect(screen.getByRole('status')).toHaveTextContent('You’re offline — Showing what’s saved; changes need signal.')
+    expect(screen.getByRole('status')).toHaveTextContent('No connection — Saved records are shown. Changes need a connection.')
     expect(screen.getByText('today')).toBeInTheDocument()
     expect(screen.queryByText('sign-in form')).toBeNull()
   })
@@ -64,8 +64,8 @@ describe('RequireSession offline (phone audit 2c)', () => {
 
   it('still signed in but nobody remembered yet: a waiting page, not an endless splash', () => {
     render(tree({ status: 'loading' }, 'offline', () => {}))
-    expect(screen.getByRole('heading', { name: 'You’re offline' })).toBeInTheDocument()
-    expect(screen.getByText(/You’re still signed in/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'No connection' })).toBeInTheDocument()
+    expect(screen.getByText(/You are still signed in/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 

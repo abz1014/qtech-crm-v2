@@ -45,7 +45,7 @@ describe('rpcMessages (learnability spec 3.4)', () => {
 describe('mapPgError uses the table', () => {
   it('P0001 month still open says the fix and links to Lock a month', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is still open. Close earlier months first (close_months_through closes them all).' })
-    expect(m.message).toBe('Lock March 2026 first. Months lock in order.')
+    expect(m.message).toBe('The month was not locked. Lock March 2026 first. Months lock in order.')
     expect(m.action?.href).toBe('/money/month-end')
     expect(m.help).toBe('month-end-close')
   })
@@ -58,14 +58,14 @@ describe('mapPgError uses the table', () => {
 
   it('22023 missing price', () => {
     expect(mapPgError({ code: '22023', message: 'set the currency of this supplier order before issuing a PO' }).message).toBe(
-      "Pick the supplier's currency on this supplier order, then issue the PO.",
+      "The PO was not issued. Choose the supplier's currency on this supplier order, then issue the PO.",
     )
   })
 
   it('42501 keeps the permission kind', () => {
     const m = mapPgError({ code: '42501', message: 'only an admin can close a month' })
     expect(m.kind).toBe('permission')
-    expect(m.message).toBe('Only an admin can lock a month. Ask an admin if it needs doing.')
+    expect(m.message).toBe('Only an admin can lock a month. Nothing was changed. Ask an admin if it needs doing.')
   })
 
   it('0096 linking and review: the admin-only refusal says so, an unknown record says reload, the rest keep their plain text', () => {
@@ -79,19 +79,40 @@ describe('mapPgError uses the table', () => {
     expect(rpcMessage('set_legacy_review needs kind order or invoice, and state to_review, live or settled')).toBeNull()
   })
 
-  it('closed month passthrough is unchanged', () => {
+  it('closed month says locked (decision H)', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is closed. An admin can reopen it.' })
-    expect(m).toEqual({ kind: 'closed-month', message: 'March 2026 is closed. An admin can reopen it.' })
+    expect(m).toEqual({ kind: 'closed-month', message: 'March 2026 is locked. An admin can reopen it.' })
   })
 
   it('P0001 reopen out of order names the month to reopen first (0080, owner decision 2026-10-22)', () => {
     const m = mapPgError({ code: 'P0001', message: 'August 2026 cannot be reopened while September 2026 is closed. Reopen September 2026 first.' })
-    expect(m.message).toBe('Reopen September 2026 first. Months reopen newest first, so August 2026 can be reopened once every month after it is open.')
+    expect(m.message).toBe('The month was not reopened. Reopen September 2026 first. Months reopen newest first, so August 2026 can be reopened once every month after it is open.')
     expect(m.help).toBe('month-end-close')
     expect(m.action?.href).toBe('/money/month-end')
   })
 
   it('internal texts still fall back', () => {
     expect(mapPgError({ code: 'P0001', message: 'float_rfq needs at least one item' }).message).toBe('This change was refused. Nothing was saved.')
+  })
+
+  it('shows PKR, never Rs, in a server text kept as written (decision I)', () => {
+    expect(rpcMessage('That order only owes Rs 1,200.00, so Rs 2,000.00 cannot be applied to it.')?.message).toBe('That order only owes PKR 1,200.00, so PKR 2,000.00 cannot be applied to it.')
+    expect(rpcMessage('Rs 900.00 for 1 USD is more than 20 percent away from the latest rate (Rs 280.00). Check it for a typing slip.')?.message).toMatch(/^PKR 900\.00 for 1 USD .*\(PKR 280\.00\)/)
+  })
+
+  it('says locked, never closed, for a month (decision H)', () => {
+    expect(rpcMessage('October 2026 is closed. An admin can reopen it.')?.message).toBe('October 2026 is locked. An admin can reopen it.')
+    expect(rpcMessage('The new date is in October 2026, which is closed. Reopen it first (Money, Month-end), or choose a date in an open month.')?.message).toMatch(/which is locked\./)
+    expect(rpcMessage('October 2026 is closed, so invoice INV-1 cannot be voided. Issue a credit note instead.')?.message).toMatch(/is locked, so/)
+  })
+
+  it('no mapped message shows Rs or closed', () => {
+    for (const t of raisedTexts()) {
+      const msg = rpcMessage(t)?.message
+      if (msg) {
+        expect(msg, t).not.toMatch(/\bRs\b/)
+        expect(msg, t).not.toMatch(/\bclosed\b/)
+      }
+    }
   })
 })

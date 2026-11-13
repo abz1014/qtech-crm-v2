@@ -190,7 +190,7 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
     <Dialog open busy={update.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         title="Commissioning"
-        context="Mark it done with one tap on the page."
+        context="Mark it done from the page."
         footer={
           <>
             <Button data-cancel onClick={onClose} disabled={update.isPending}>

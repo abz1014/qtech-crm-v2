@@ -37,6 +37,7 @@ import {
   isCreditNote,
   cleanPsid,
   matchesSearch,
+  isInert,
   needsAttention,
   tcsNotSent,
   rangeLabel,
@@ -123,7 +124,8 @@ export function GstRegisterPage() {
   const totals = registerTotals(shown)
   const monthCounts = useMemo(() => {
     const m = new Map<string, number>()
-    for (const r of shown) m.set(rowMonth(r), (m.get(rowMonth(r)) ?? 0) + 1)
+    // invoices only: a void invoice and a credit note stay in the month's lines but are not another invoice (same rule as the totals)
+    for (const r of shown) m.set(rowMonth(r), (m.get(rowMonth(r)) ?? 0) + (isInert(r) ? 0 : 1))
     return m
   }, [shown])
   const tickedRows = useMemo(() => shown.filter(r => ticked.has(r.invoiceId)), [shown, ticked])
@@ -243,7 +245,7 @@ export function GstRegisterPage() {
       })
       if (kind === 'psid') setPsid('')
     } catch (err) {
-      toast.toast({ title: "Couldn't stamp the invoices", body: mapPgError(err, { entity: 'invoice' }).message, tone: 'danger' })
+      toast.toast({ title: "The invoices were not stamped", body: mapPgError(err, { entity: 'invoice' }).message, tone: 'danger' })
     } finally {
       setBusy(false)
     }
@@ -268,7 +270,7 @@ export function GstRegisterPage() {
       <InfoTip label="About sending, FBR and PSID">
         By invoice date{all.length > 0 ? `, ${rangeLabel(all)}` : ''}. <b className="font-medium text-fg">Invoice posted</b> means the TCS courier took
         the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the tax office: the GST on every invoice is deposited with FBR.{' '}
-        <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit; one PSID can cover several invoices. Money actually
+        <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit. One PSID can cover several invoices. Money actually
         received is under To collect.
       </InfoTip>
     </div>
@@ -365,7 +367,7 @@ export function GstRegisterPage() {
         loading={register.isPending}
         error={
           register.isError
-            ? { title: 'The invoices did not load', message: 'Your invoices are safe. The server did not answer in time. Try again, and if it keeps failing, tell the admin.', onRetry: () => void register.refetch() }
+            ? { title: 'The invoices did not load', message: 'Invoices are safe. The server did not answer in time. Try again, and if it keeps failing, tell the admin.', onRetry: () => void register.refetch() }
             : null
         }
         toolbar={({ selectedCount }) => (
@@ -424,7 +426,7 @@ export function GstRegisterPage() {
             />
           ) : (
             <EmptyState title="No invoices yet" actions={<Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>Create invoice</Button>}>
-              Invoices appear here as you create them from an order, by invoice date. Every invoice goes to FBR.
+              Invoices appear here when they are created from an order, by invoice date. Every invoice goes to FBR.
             </EmptyState>
           )
         }

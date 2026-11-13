@@ -9,7 +9,7 @@ import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
-import { KEY_WORDS, handledKeys, shortcutList } from '@/app/shell/shortcuts'
+import { KEY_WORDS, handledKeys, shortcutList, shortcutsFor } from '@/app/shell/shortcuts'
 import { setSingleKeyShortcuts } from '@/ui/useShortcutsSetting'
 import { Avatar } from '@/ui/Avatar'
 import { installFakeDb } from '@/test/fakeSupabase'
@@ -83,7 +83,7 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New enquiryGo to intakeN', 'Go to To doG T']))
+    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Go to To doG T']))
     expect(text.some(t => /Paste or photo/.test(t ?? ''))).toBe(false)
   })
 
@@ -108,7 +108,7 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
-    expect(within(dlg).getAllByRole('option').some(r => /New enquiry/.test(r.textContent ?? ''))).toBe(false)
+    expect(within(dlg).getAllByRole('option').some(r => /New RFQ/.test(r.textContent ?? ''))).toBe(false)
   })
 
   it('O starts an order without an enquiry (admin and sales)', () => {
@@ -165,19 +165,46 @@ describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
     shell('/rfqs')
     press('?')
     const dlg = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
-    for (const g of ['Anywhere', 'Lists and tables', 'Search box', 'Writing', 'Add expenses'])
+    for (const g of ['Anywhere', 'Lists and tables', 'Search box', 'Writing'])
       expect(within(dlg).getByRole('heading', { name: g })).toBeInTheDocument()
     const rows = [...dlg.querySelectorAll('dt')].map(dt => ({
       what: dt.textContent ?? '',
       keys: [...(dt.nextElementSibling?.children ?? [])].map(k => k.textContent),
     }))
-    for (const s of shortcutList()) {
+    for (const s of shortcutsFor('sales')) {
       const row = rows.find(r => r.what === s.what + (s.where ?? '') && r.keys.join(' ') === s.keys.join(' '))
       expect(row, `${s.group}: ${s.what}`).toBeTruthy()
     }
     // Joining words are text; every other key is a key cap.
     const caps = [...dlg.querySelectorAll('kbd')].map(k => k.textContent)
-    for (const k of shortcutList().flatMap(s => s.keys).filter(k => !KEY_WORDS.has(k))) expect(caps).toContain(k)
+    for (const k of shortcutsFor('sales').flatMap(s => s.keys).filter(k => !KEY_WORDS.has(k))) expect(caps).toContain(k)
+  })
+
+  it("an engineer's sheet leaves out keys that do nothing for them (live bug 32)", async () => {
+    shell('/todo', 'engineer')
+    press('?')
+    const dlg = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
+    const whats = [...dlg.querySelectorAll('dt')].map(dt => dt.textContent ?? '')
+    expect(whats.some(w => w.startsWith('New RFQ'))).toBe(false)
+    expect(whats.some(w => w.startsWith('Add an expense'))).toBe(false)
+    expect(whats.some(w => w.startsWith('Order without RFQ'))).toBe(false)
+    expect(whats.some(w => /price|cost/i.test(w))).toBe(false)
+    expect(within(dlg).queryByRole('heading', { name: 'Add expenses' })).toBeNull()
+    expect(within(dlg).getByText(/^Single keys \(G then T, \/, \?\)/)).toBeInTheDocument()
+    expect(within(dlg).getByRole('heading', { name: 'Search box' })).toBeInTheDocument()
+    expect(whats.some(w => w.startsWith('Go to To do'))).toBe(true)
+  })
+
+  it('shortcutsFor: sales keeps N and O but not E; admin keeps everything; shortcutList stays complete', () => {
+    const w = (role: string) => shortcutsFor(role).map(s => s.what)
+    expect(w('sales')).toContain('New RFQ')
+    expect(w('sales')).not.toContain('Add an expense')
+    expect(w('engineer')).not.toContain('New RFQ')
+    const adminKeys = shortcutsFor('admin').map(s => s.what)
+    expect(adminKeys).toEqual(expect.arrayContaining(['New RFQ', 'Add an expense', 'Order without RFQ']))
+    expect(shortcutsFor().length).toBe(shortcutList().length)
+    // Every key the app handles is still in the complete list.
+    expect(handledKeys(shortcutList()).has('e')).toBe(true)
   })
 
   it('? does nothing while typing, with a dialog open, or with single-key shortcuts off', async () => {

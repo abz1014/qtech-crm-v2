@@ -90,7 +90,7 @@ import {
  */
 const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_176px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-x-3 gap-y-2 px-6'
+const GRID = 'grid grid-cols-[28px_minmax(88px,112px)_minmax(0,1.25fr)_minmax(120px,176px)_minmax(88px,104px)_minmax(0,1.3fr)_minmax(96px,124px)_minmax(88px,104px)_minmax(96px,120px)_36px] items-start gap-x-3 gap-y-2 px-6'
 
 const NO_JOBS: readonly JobTagOption[] = []
 const NO_GROUPS: readonly ExpenseGroup[] = []
@@ -302,7 +302,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
         toast.toast({ title: 'Already saved', body: 'These expenses were added a moment ago.', tone: 'neutral' })
         onClose()
       } else {
-        setBanner(`${m.message} Nothing was saved. Your rows are still here.`)
+        setBanner(`${m.message} Nothing was saved. The rows are kept.`)
       }
     } finally {
       lock.current = false
@@ -675,7 +675,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
       </div>
       <div className="flex h-[36px] items-center">
         <Checkbox
-          label="Monthly"
+          label="Every month"
           checked={!!row.repeat}
           onCheckedChange={c => onPatch({ repeat: c === true })}
           title={`Row ${index} repeats every month`}
@@ -713,7 +713,7 @@ function ClosedError({ message, others }: { message: string; others: number }) {
       <div className="grid gap-0">
         <b className="text-sm font-medium text-tone-danger-fg">{message}</b>
         <span className="text-xs text-fg-2">
-          Nothing was saved. This row keeps what you typed; change the date or reopen {message.split(' ')[0]} in Month-end, then save again. {others === 1 ? 'The other row is still here.' : others > 1 ? `The other ${others} rows are still here.` : ''}
+          Nothing was saved. The row keeps its details. Change the date or reopen {message.split(' ')[0]} in Month-end, then save again. {others === 1 ? 'The other row is still here.' : others > 1 ? `The other ${others} rows are still here.` : ''}
         </span>
       </div>
     </div>
@@ -1014,7 +1014,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         <div role="alert" className="flex gap-2 rounded-row bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
           <Icon icon={CircleAlert} size="sm" className="mt-[1px] text-tone-danger-fg" />
           <span>
-            <b className="font-medium text-tone-danger-fg">{err}</b> This row keeps what you typed.
+            <b className="font-medium text-tone-danger-fg">{err}</b> The row keeps its details.
           </span>
         </div>
       ) : null}

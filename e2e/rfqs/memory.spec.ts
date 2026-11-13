@@ -404,7 +404,7 @@ test.describe('R18 company page: What we know', () => {
     await expect(brands.locator('li', { hasText: listed.name })).not.toContainText('quoted')
 
     // one Enquiries list (was Recent quotes and Recent enquiries): the latest 5, then "Show all 6"
-    const quotes = page.getByRole('region', { name: 'Enquiries' })
+    const quotes = page.getByRole('region', { name: 'RFQs' })
     await quotes.getByRole('button', { name: 'Show all 6' }).click()
     const rowA = quotes.locator('li', { hasText: 'NM24A-SR' })
     await expect(rowA).toContainText(/EUR\s*214\.00/)
@@ -416,7 +416,7 @@ test.describe('R18 company page: What we know', () => {
     const rowC = quotes.locator('li', { hasText: 'CQ24A-SR' })
     await expect(rowC).toContainText('Price on file, currency unverified')
     await expect(rowC).toContainText('Imported')
-    await expect(quotes.locator('li', { hasText: 'QAA2030' })).toContainText("Can't quote")
+    await expect(quotes.locator('li', { hasText: 'QAA2030' })).toContainText("Cannot quote")
     await expect(quotes.locator('li', { hasText: 'AME435' })).toContainText('No reply')
     await expect(quotes.locator('li', { hasText: 'LR24A-SR' })).toContainText('Waiting for a reply')
     await expect(rowA).toContainText(/Replied in \d+ days?/)

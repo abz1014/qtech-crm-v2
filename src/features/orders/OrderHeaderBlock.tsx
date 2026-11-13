@@ -221,7 +221,7 @@ export function OrderHeaderBlock({
         {orderedText ?? 'Dates estimated'}
       </span>
       <InfoTip label="About these dates">
-        The old CRM did not record exact dates for this order, so its dates are estimates. Change any of them if you know the real one.
+        The old CRM did not record exact dates for this order, so its dates are estimates. Change any date when the real one is known.
       </InfoTip>
     </>
   ) : order.imported && orderedText ? (
@@ -285,7 +285,7 @@ export function OrderHeaderBlock({
               ) : undefined
             }
           >
-            The old CRM did not say. Until someone answers, this order is left out of margin, GST totals and the net cash that counts towards targets. Its payments still count in gross cash.
+            The old CRM did not say. Until this is answered, this order is left out of margin, GST totals and the net cash that counts towards targets. Its payments still count in gross cash.
           </Banner>
         ) : null}
 
@@ -314,7 +314,7 @@ export function OrderHeaderBlock({
                 action={
                   <div className="flex flex-wrap gap-2">
                     {(invoiced ?? 0) > 0 ? <InvoicePdfButton orderId={order.id} size="sm" /> : null}
-                    {!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
+                    {!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' && goodsLegs.every(l => l.deliveredOn !== null) ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
                   </div>
                 }
               >

@@ -38,13 +38,13 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await signIn(page, email, password)
 
   // Today: what it is for, one button.
-  await expect(page.getByText('Your work shows up here', { exact: true })).toBeVisible()
+  await expect(page.getByText('Your tasks appear here', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'New RFQ' }).first()).toBeVisible()
 
   // an old bookmark (even one with the retired ?old=1 on it) opens the Jobs list, which says what is true for a new person
   await page.goto('/rfqs?old=1')
   await expect(page).toHaveURL(/\/jobs$/)
-  await expect(page.getByText(/^(No open jobs|None of your jobs are open)$/)).toBeVisible()
+  await expect(page.getByText(/^(No open jobs|No jobs owned by you are open)$/)).toBeVisible()
   await page.goto('/orders')
   await expect(page).toHaveURL(/\/jobs\?stage=orders$/)
 
@@ -68,4 +68,15 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await expect(page.getByRole('dialog', { name: 'Help' })).toBeVisible()
   await page.goBack()
   await expect(page.getByRole('dialog', { name: 'Help' })).toBeHidden()
+})
+
+test('an engineer sees no "Show other roles\' help" and cannot open another role\'s help from a ?help= link (live bug 33)', async ({ browser }) => {
+  const page = await (await browser.newContext({ baseURL: 'http://127.0.0.1:4173' })).newPage()
+  await signIn(page, 'engineer@test.invalid')
+  await page.goto('/todo?help=month-end-close')
+  const help = page.getByRole('dialog', { name: 'Help' })
+  await expect(help).toBeVisible()
+  await expect(help.getByText('That help page is not here any more. Pick one below.')).toBeVisible()
+  await expect(help.getByRole('heading', { name: /Lock a month/ })).toHaveCount(0)
+  await expect(help.getByRole('checkbox', { name: "Show other roles' help" })).toHaveCount(0)
 })

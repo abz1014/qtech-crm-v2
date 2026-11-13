@@ -8,7 +8,7 @@ describe('categories a supplier deals in', () => {
     expect(evidenceText(ev('a', 'A', { quoted: 6, ordered: 2 }))).toBe('quoted 6 · ordered 2')
     expect(evidenceText(ev('a', 'A', { quoted: 1 }))).toBe('quoted 1')
     expect(evidenceText(ev('a', 'A', { ordered: 3 }))).toBe('ordered 3')
-    expect(evidenceText(ev('a', 'A', { asked: 3 }))).toBe('asked 3, no quote yet')
+    expect(evidenceText(ev('a', 'A', { asked: 3 }))).toBe('asked 3, no supplier price yet')
     expect(evidenceText(undefined)).toBe('no history yet')
   })
 
@@ -20,7 +20,7 @@ describe('categories a supplier deals in', () => {
     expect(rows.map(r => [r.name, r.evidence, r.tagged])).toEqual([
       ['Pressure transmitters', 'quoted 6 · ordered 2', true],
       ['MCB', 'quoted 9', false],
-      ['Cables', 'asked 2, no quote yet', false],
+      ['Cables', 'asked 2, no supplier price yet', false],
       ['Contactors', 'no history yet', true],
     ])
   })

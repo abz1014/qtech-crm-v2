@@ -34,7 +34,7 @@ test('HE-1 an old Orders link with an old or hand-typed filter value (?invoicing
   const page = await context.newPage()
   await page.goto('/orders?invoicing=open&payment=unpaid')
   await settle(page)
-  await expect(page.getByRole('heading', { name: 'Something went wrong' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'The page stopped working' })).toHaveCount(0)
   // the old Orders address opens the Jobs list, the old filters dropped
   await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
   await context.close()
@@ -49,7 +49,7 @@ test('HE-2 with no signal, the lazily loaded search palette failing to download 
   const d = page.getByRole('dialog', { name: 'New company' })
   await d.getByRole('textbox', { name: /Company name/ }).fill('Hunt Offline Typing Ltd')
   await page.waitForTimeout(4000) // the idle-time palette load happens and fails
-  await expect(page.getByRole('heading', { name: 'Something went wrong' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'The page stopped working' })).toHaveCount(0)
   await expect(d.getByRole('textbox', { name: /Company name/ })).toHaveValue('Hunt Offline Typing Ltd')
   await context.close()
 })
@@ -110,7 +110,7 @@ test('HE-7 an amount too large for the database says "Something went wrong ... T
   await d.getByLabel('Amount received, PKR').fill('99999999999999')
   await d.getByRole('button', { name: 'Save payment' }).click()
   await expect(d.getByText(/Couldn.t save the payment|too large|Fix 1 field/).first()).toBeVisible()
-  await expect(d).not.toContainText('Something went wrong')
+  await expect(d).not.toContainText('The change was not saved. Try again.')
   await context.close()
 })
 
@@ -134,7 +134,7 @@ test('HE-9 a hand-entered exchange rate dated in 2200 is refused as a typo, not 
   await page.getByLabel('As of').fill('1/1/2200')
   await page.getByLabel('As of').press('Tab')
   // Refused, with the reason under the date: Save rate stays aria-disabled and nothing is stored.
-  await expect(page.getByText(/can.t be dated in the future|Use a date between/).first()).toBeVisible()
+  await expect(page.getByText(/cannot be dated in the future|Use a date between/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save rate' })).toHaveAttribute('aria-disabled', 'true')
   await page.getByRole('button', { name: 'Save rate' }).click({ force: true })
   await page.waitForTimeout(1000)
@@ -166,9 +166,9 @@ test('HE-11 RFQ intake: a quantity too big for the database (9999999999) is acce
   await page.getByRole('option', { name: new RegExp(world.tag) }).first().click()
   await paste(page, 'Pressure gauge 0-10 bar 9999999999 nos')
   await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toBeVisible()
-  await page.getByRole('button', { name: /^Save (for later|without asking)/ }).click()
+  await page.getByRole('button', { name: /^Save (as draft|for later|without asking)/ }).click()
   await page.waitForTimeout(2000)
-  await expect(page.getByText('Something went wrong. Nothing was saved.').first()).toHaveCount(0)
+  await expect(page.getByText('The change was not saved.').first()).toHaveCount(0)
   await context.close()
 })
 

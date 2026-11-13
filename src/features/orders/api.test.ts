@@ -133,7 +133,7 @@ describe('orders api: updateOrder is conditional on updated_at (optimistic locki
     const db = installFakeDb(() => ({ data: [] }))
     uninstall = db.uninstall
     await expect(updateOrder('o1', { notes: 'x' }, 'T1')).rejects.toMatchObject({ message: ORDER_CHANGED, code: 'order_changed' })
-    expect(ORDER_CHANGED).toBe('Someone else changed this order. Reload to see their changes.')
+    expect(ORDER_CHANGED).toBe('This order was changed by another user. Reload to see the changes.')
   })
 
   it('without a version (an undo) the write is unconditional', async () => {

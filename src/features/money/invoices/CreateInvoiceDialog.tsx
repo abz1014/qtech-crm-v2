@@ -128,8 +128,8 @@ function schemaFor(start: InvoiceStart, itemsNet: number) {
       path: ['net'],
       message:
         left > 0
-          ? `Only PKR ${formatPaisa(toPaisa(left), 'always')} is left to invoice on this order. To invoice more, add the extra to the order’s lines first.`
-          : 'Everything on this order is already invoiced. To invoice more, add the extra to the order’s lines first.',
+          ? `Only PKR ${formatPaisa(toPaisa(left), 'always')} is left to invoice on this order. To invoice more, add the extra to the lines of the order first.`
+          : 'Everything on this order is already invoiced. To invoice more, add the extra to the lines of the order first.',
     })
   })
 }
@@ -199,7 +199,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
         {order.cancelled ? <Banner tone="warning" title="This order is cancelled">An invoice can still be created, for example to record what was already supplied.</Banner> : null}
         {start.fullyInvoiced ? (
           <Banner tone="info" title="Every line of this order is already invoiced">
-            To invoice more, add the extra to the order&rsquo;s lines first. An invoice cannot carry more than the lines.
+            To invoice more, add the extra to the lines of the order first. An invoice cannot carry more than the lines.
           </Banner>
         ) : null}
         <div className="grid gap-4 md:grid-cols-2">
@@ -259,8 +259,8 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
             ) : null}
             {gstIsShare(typeof net === 'number' ? net : 0, option, start) ? (
               <p className="text-sm text-tone-warning-fg">
-                This amount is not a set of whole lines, so its GST is a share of the GST left. To print this invoice you will tick
-                its lines; invoicing whole lines keeps the GST exact.
+                This amount is not a set of whole lines, so its GST is a share of the GST left. To print this invoice, tick
+                its lines. Invoicing whole lines keeps the GST exact.
               </p>
             ) : null}
             <div className="grid gap-[6px]">

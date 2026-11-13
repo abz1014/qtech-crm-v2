@@ -19,10 +19,10 @@ function Opener() {
   )
 }
 
-function host() {
+function host(role: 'sales' | 'engineer' = 'sales') {
   return render(
     <MemoryRouter>
-      <PaletteHost role="sales">
+      <PaletteHost role={role}>
         <Opener />
       </PaletteHost>
     </MemoryRouter>,
@@ -57,6 +57,17 @@ describe('PaletteHost', () => {
     await user.type(within(dlg).getByRole('combobox'), 'zzqqxx')
     const status = await within(dlg).findByText(/Search covers/)
     expect(status).toHaveTextContent('Search covers RFQs, orders, invoices, purchase orders, companies, contacts and order items.')
+  })
+
+  it('for an engineer the hint names no purchase orders and no N shortcut', async () => {
+    const user = userEvent.setup()
+    host('engineer')
+    await user.click(screen.getByRole('button', { name: 'Plain open' }))
+    const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
+    await user.type(within(dlg).getByRole('combobox'), 'zzqqxx')
+    const status = await within(dlg).findByText(/Search covers/)
+    expect(status).toHaveTextContent('Search covers RFQs, orders, companies, contacts and order items.')
+    expect(status.textContent).not.toMatch(/purchase order|press/i)
   })
 
   it('open(query) starts the search box with that text; a plain open, after closing, starts empty', async () => {

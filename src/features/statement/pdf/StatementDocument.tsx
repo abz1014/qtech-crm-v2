@@ -6,7 +6,7 @@ import type { QuotedRow, Statement } from '@/features/statement/model'
  * The Comparative Statement PDF (owner request, 2026-10-29; made simpler and clearer the same day). A4 LANDSCAPE, Geist, the company
  * letterhead (company_profile and the wordmark) like the invoice and the quotation.
  *
- * Per item: a bold heading band ("1. Pressure transmitter, Qty: 12.5 m", the spec in smaller type under it), then one row per supplier that
+ * Per item: a bold heading band ("1. Pressure transmitter, Qty 12.5 m", the spec in smaller type under it), then one row per supplier that
  * quoted: Supplier | Unit cost | Total cost | Lead time | Weight (of one unit) | Country of origin. A note, when there is one, is a small
  * grey line under its row. Suppliers that did not reply or did not quote are ONE compact grey line under the item. An item is kept on one
  * page where it fits, and has its own column headings, so every page has them. Money has thousands separators and exactly 2 decimals
@@ -177,7 +177,7 @@ export function StatementDocument({ data, profile, logoSrc }: { data: StatementP
           return (
             <View key={sec.item.id} style={s.item} wrap={sec.rows.length > 10}>
               <View style={s.itemBand} minPresenceAhead={90}>
-                <Text style={s.itemTitle}>{`${sec.item.number}. ${d.title} — Qty: ${sec.quantityText}`}</Text>
+                <Text style={s.itemTitle}>{`${sec.item.number}. ${d.title}, Qty ${sec.quantityText}`}</Text>
                 {d.spec ? <Text style={s.itemSpec}>{d.spec}</Text> : null}
               </View>
               {sec.rows.length > 0 ? (

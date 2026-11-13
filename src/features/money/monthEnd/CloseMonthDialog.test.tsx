@@ -14,12 +14,12 @@ import { ToastProvider } from '@/ui/Toast'
  */
 const history = Array.from({ length: 24 }, (_, i) => `${2024 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`)
 
-function setup(month: string, moneyMonths: string[]) {
+function setup(month: string, moneyMonths: string[], cards: unknown[] = [], mistakes?: number) {
   const db = installFakeDb(() => ({ data: [] }))
   const ctx = {
     month,
     today: '2026-10-22',
-    cards: [],
+    cards,
     withItems: 0,
     closed: [],
     state: closeState(month, '2026-10-22', new Set(), moneyMonths),
@@ -28,7 +28,7 @@ function setup(month: string, moneyMonths: string[]) {
   render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <CloseMonthDialog open onOpenChange={() => {}} ctx={ctx} />
+        <CloseMonthDialog open onOpenChange={() => {}} ctx={ctx} mistakes={mistakes} />
       </ToastProvider>
     </QueryClientProvider>,
   )
@@ -53,5 +53,32 @@ describe('Lock month: one month at a time', () => {
     const close = db.calls.find(c => c.target.startsWith('rpc:close_'))
     expect(close?.target).toBe('rpc:close_month')
     expect(opArgs(close!, 'args')).toEqual([{ p_month: '2026-09-01' }])
+  })
+})
+
+describe('Lock month: the dialog counts the same checks as the page', () => {
+  const card = (key: string, label: string, n: number) => ({ key, label, n, unit: 'items', clear: n === 0, sub: '', parts: [], linkLabel: '', to: '', glyph: 'x' })
+  const six = [
+    card('bank_unticked', 'Not matched to the bank statement', 3),
+    card('uncategorised', 'Expenses without a category', 0),
+    card('recurring_missing', 'Recurring expenses not recorded', 1),
+    card('margin_not_final', 'Margin not final', 2),
+    card('gst_undeposited', 'GST not deposited with FBR', 1),
+    card('unsplit', 'Payments not split', 0),
+  ]
+
+  it('lists Mistakes to fix as the seventh check and counts it: 5 of 7', async () => {
+    setup('2026-09', ['2026-09'], six, 3)
+    const dialog = await screen.findByRole('dialog', { name: 'Lock September 2026?' })
+    expect(within(dialog).getByText('Mistakes to fix')).toBeInTheDocument()
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(7)
+    expect(dialog.textContent).toContain('5 of 7 checks have items')
+  })
+
+  it('a clear Mistakes to fix is still the seventh row: 4 of 7', async () => {
+    setup('2026-09', ['2026-09'], six, 0)
+    const dialog = await screen.findByRole('dialog', { name: 'Lock September 2026?' })
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(7)
+    expect(dialog.textContent).toContain('4 of 7 checks have items')
   })
 })

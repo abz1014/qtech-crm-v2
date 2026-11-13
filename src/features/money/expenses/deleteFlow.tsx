@@ -11,7 +11,7 @@ import { pkr, type ListedExpense } from '@/features/money/expenses/model'
  * and is permanent (the audit log keeps the row). "Expense deleted" shows only after the server confirms; on an error the
  * server's sentence is shown and the row stays. Used by the dialog's Delete button and the row's "⋯" menu, on phone and desktop.
  */
-export const CLOSED_MONTH_LINE = 'Month closed. Reopen the month first, in Lock a month, to change or delete.'
+export const CLOSED_MONTH_LINE = 'Month locked. Reopen the month first, in Lock a month, to change or delete.'
 
 /** The database says "An admin can reopen it."; the screen says where. */
 export function deleteErrorMessage(e: unknown): string {
@@ -46,7 +46,7 @@ export function useDeleteExpenseFlow(categoryName: (r: ListedExpense) => string,
       onConfirm={confirm}
       errorMessage={deleteErrorMessage}
       // The row stays; the sentence is on the confirm so it is read where the tap was, and again as a toast.
-      onError={e => toast.toast({ title: "Couldn't delete the expense", body: deleteErrorMessage(e), tone: 'danger' })}
+      onError={e => toast.toast({ title: "The expense could not be deleted", body: deleteErrorMessage(e), tone: 'danger' })}
     />
   ) : null
 

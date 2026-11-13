@@ -184,7 +184,7 @@ test.describe('Team (A04)', () => {
 
     await rowAction(page, 'Test Admin', 'Deactivate')
     const dialog = page.getByRole('dialog', { name: 'Deactivate Test Admin?' })
-    await expect(dialog.getByText("You can't deactivate the only active admin")).toBeVisible()
+    await expect(dialog.getByText("The only active admin cannot be deactivated")).toBeVisible()
     await expect(dialog.getByRole('button', { name: /^Deactivate$/ })).toBeDisabled()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await ctx.close()

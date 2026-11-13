@@ -12,7 +12,7 @@ import type { Role } from '../../support/stack'
  * Cross-cutting daily use (hunt round 1). Everything is recorded with probe()/note(), nothing stops at the first failure.
  * Desktop is 1366x768, phone is 375x812 with touch. What is probed:
  *
- *   today        per role and size: the "N need you" header, the rows due now on the list and the one nav badge (Today's)
+ *   today        per role and size: the "N due now" header, the rows due now on the list and the one nav badge (Today's)
  *                agree; a customer chase (copy and mark chased) stamps once, Undo puts the count back and the row stays; after the
  *                Undo window the row moves to Waiting and every count drops by one; Snooze hides the row, Undo brings it back (DB).
  *   palette      Ctrl+K / Search button; company, partial words, contact, RFQ-0001 style refs, bare numbers, ORD refs, the customer PO,
@@ -79,11 +79,11 @@ async function until<T>(read: () => Promise<T>, ok: (v: T) => boolean, ms = 10_0
 
 /**
  * The numbers the screen shows: Today's header, the rows that need you (the "Overdue or due today" group: redesign phase 0, one
- * definition), and each nav badge (parsed from the ", N need you" words; only Today has one now).
+ * definition), and each nav badge (parsed from the ", N due now" words; only Today has one now).
  */
 async function todayNumbers(page: Page) {
   const text = await mainText(page)
-  const m = /(\d+)\s+need you/.exec(text)
+  const m = /(\d+)\s+due now/.exec(text)
   const header = m ? Number(m[1]) : null
   const rows = await page.locator('section[data-block="late"], section[data-block="today"]').locator('li[data-rule]').count()
   const links = await page
@@ -94,7 +94,7 @@ async function todayNumbers(page: Page) {
     .evaluateAll(as => as.map(a => (a.textContent ?? '').replace(/\s+/g, ' ').trim()))
   const nav: Record<string, number> = {}
   for (const l of links) {
-    const n = /, (\d+) need you/.exec(l)
+    const n = /, (\d+) due now/.exec(l)
     const key = /^(\d*)\s*(Today|RFQs|Orders|Money|Companies|Reports)/.exec(l)?.[2]
     if (key) nav[key] = n ? Number(n[1]) : 0
   }
@@ -104,7 +104,7 @@ async function todayNumbers(page: Page) {
 async function checkParity(page: Page, info: TestInfo, where: string) {
   const n = await todayNumbers(page)
   const others = (n.nav.RFQs ?? 0) + (n.nav.Orders ?? 0) + (n.nav.Money ?? 0)
-  if (n.header !== null && n.header !== n.rows) note(info, { kind: 'observation', where, what: `Today header says ${n.header} need you but the list has ${n.rows} rows due now`, detail: n })
+  if (n.header !== null && n.header !== n.rows) note(info, { kind: 'observation', where, what: `Today header says ${n.header} due now but the list has ${n.rows} rows due now`, detail: n })
   if (n.header !== null && n.nav.Today !== undefined && n.nav.Today !== n.header) note(info, { kind: 'observation', where, what: `Today nav badge ${n.nav.Today} differs from the header ${n.header}`, detail: n })
   if (others > 0) note(info, { kind: 'observation', where, what: `a nav badge other than Today's shows a number (${others})`, detail: n })
   return n
@@ -140,7 +140,7 @@ async function snoozeAndUndo(page: Page, info: TestInfo, vp: Viewport, rule: str
 
 for (const vp of ['desktop', 'phone'] as Viewport[])
   test(`crosscut: Today counts, chase and snooze with Undo, every role at ${vp}`, async ({ browser }, info) => {
-    const salesA = await seedChase('sales', `Today Chase ${vp}`)
+    const salesA = await seedChase('sales', `Today Follow up with ${vp}`)
     const salesB = await seedChase('sales', `Today Snooze ${vp}`)
     const adminA = await seedChase('admin', `Today Admin ${vp}`)
     // An engineer's job: goods delivered to site, commissioning not dated yet (job_on_site), on an order owned by sales.
@@ -168,10 +168,10 @@ for (const vp of ['desktop', 'phone'] as Viewport[])
           before = await todayNumbers(page)
           const scope = await openItem(page, vp, 'chase_customer', salesA.ref)
           if (vp === 'phone') await layout(page, info, `${where} accordion open`)
-          await scope.getByRole('button', { name: /^Copy (message )?and mark chased$/ }).first().click()
+          await scope.getByRole('button', { name: /^Copy (message )?and record follow-up$/ }).first().click()
           const after = await until(() => askCount(salesA.clar), c => c === 2)
           if (after !== 2) note(info, { kind: 'observation', where, what: `one chase tap left ask_count at ${after} (expected 2)` })
-          await page.getByRole('status').filter({ hasText: /marked chased/ }).getByRole('button', { name: /^Undo/ }).first().click({ timeout: 8_000 })
+          await page.getByRole('status').filter({ hasText: /marked as followed up/ }).getByRole('button', { name: /^Undo/ }).first().click({ timeout: 8_000 })
           const undone = await until(() => askCount(salesA.clar), c => c === 1)
           if (undone !== 1) note(info, { kind: 'observation', where, what: `Undo of a chase left ask_count at ${undone} (expected 1)` })
           await page.waitForTimeout(800)
@@ -181,7 +181,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[])
         })
         await probe(info, page, `${where} chase, let the Undo window close, item moves to Waiting`, async () => {
           const scope = await openItem(page, vp, 'chase_customer', salesA.ref)
-          await scope.getByRole('button', { name: /^Copy (message )?and mark chased$/ }).first().click()
+          await scope.getByRole('button', { name: /^Copy (message )?and record follow-up$/ }).first().click()
           await until(() => askCount(salesA.clar), c => c === 2)
           await page.waitForTimeout(12_000)
           await settle(page)
@@ -199,9 +199,9 @@ for (const vp of ['desktop', 'phone'] as Viewport[])
       if (role === 'admin')
         await probe(info, page, `${where} admin chase then Undo`, async () => {
           const scope = await openItem(page, vp, 'chase_customer', adminA.ref)
-          await scope.getByRole('button', { name: /^Copy (message )?and mark chased$/ }).first().click()
+          await scope.getByRole('button', { name: /^Copy (message )?and record follow-up$/ }).first().click()
           if ((await until(() => askCount(adminA.clar), c => c === 2)) !== 2) note(info, { kind: 'observation', where, what: 'admin chase tap did not stamp ask_count 2' })
-          await page.getByRole('status').filter({ hasText: /marked chased/ }).getByRole('button', { name: /^Undo/ }).first().click({ timeout: 8_000 })
+          await page.getByRole('status').filter({ hasText: /marked as followed up/ }).getByRole('button', { name: /^Undo/ }).first().click({ timeout: 8_000 })
           if ((await until(() => askCount(adminA.clar), c => c === 1)) !== 1) note(info, { kind: 'observation', where, what: 'admin Undo did not restore ask_count 1' })
         })
       if (role === 'engineer')
@@ -295,7 +295,7 @@ test('crosscut: palette search with refs, partial words, Urdu, wildcard and SQL-
   for (const c of cases)
     await probe(info, page, `palette "${c.q.slice(0, 40)}" (${c.why})`, async () => {
       const a = await paletteAsk(page, dialog, c.q)
-      const err = await dialog.getByText(/went wrong|could not search|couldn.t search|error/i).count()
+      const err = await dialog.getByText(/went wrong|could not search|could not be searched|error/i).count()
       if (err) note(info, { kind: 'observation', where: `palette ${c.why}`, what: `error text shown for "${c.q.slice(0, 60)}"`, detail: a.options.slice(0, 6) })
       if (a.status !== null && a.status >= 400) note(info, { kind: 'observation', where: `palette ${c.why}`, what: `search_all answered ${a.status} for "${c.q.slice(0, 60)}"` })
       if (a.ms > 2500) note(info, { kind: 'slow', where: `palette ${c.why}`, what: `results took ${a.ms} ms` })
@@ -419,7 +419,7 @@ test('crosscut: single-key shortcuts never fire while typing; Help panel and men
     await blur(page)
     await page.keyboard.press('n')
     await page.waitForTimeout(500)
-    if (/\/(rfqs|enquiries)\/new/.test(page.url())) note(info, { kind: 'observation', where: 'single-key shortcuts off', what: 'N still opens New enquiry with shortcuts turned off' })
+    if (/\/(rfqs|enquiries)\/new/.test(page.url())) note(info, { kind: 'observation', where: 'single-key shortcuts off', what: 'N still opens New RFQ with shortcuts turned off' })
     await page.evaluate(() => localStorage.removeItem('qtech.single-keys'))
   })
   await probe(info, page, 'G then T, ? and / outside text boxes', async () => {
@@ -676,12 +676,12 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
     note(info, { kind: 'observation', where: 'jobs junk params', what: `shows: ${(await mainText(page)).replace(/\s+/g, ' ').slice(0, 240)}` })
     await shot(page, 'jobs-junk-params', false)
   })
-  await probe(info, page, 'orders lede "need you" vs Orders nav badge', async () => {
+  await probe(info, page, 'orders lede "due now" vs Orders nav badge', async () => {
     await visit(page, info, '/orders', 'orders mine')
-    const lede = /(\d+) need you/.exec(await mainText(page))
+    const lede = /(\d+) due now/.exec(await mainText(page))
     const n = await todayNumbers(page)
     if (lede && n.nav.Orders !== undefined && Number(lede[1]) !== n.nav.Orders)
-      note(info, { kind: 'observation', where: 'orders counts', what: `Orders page says ${lede[1]} need you, the Orders nav badge says ${n.nav.Orders} (two different rules)` })
+      note(info, { kind: 'observation', where: 'orders counts', what: `Orders page says ${lede[1]} due now, the Orders nav badge says ${n.nav.Orders} (two different rules)` })
   })
   await ctx.close()
 
@@ -968,10 +968,10 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
     const s = await seedChase('sales', 'Offline Chase')
     await visit(page, info, '/todo', 'offline chase')
     const scope = await openItem(page, 'desktop', 'chase_customer', s.ref)
-    const copy = scope.getByRole('button', { name: /^Copy (message )?and mark chased$/ }).first()
+    const copy = scope.getByRole('button', { name: /^Copy (message )?and record follow-up$/ }).first()
     await copy.waitFor({ state: 'visible', timeout: 10_000 })
     await goOffline()
-    if (!(await copy.isVisible().catch(() => false))) note(info, { kind: 'observation', where: 'offline chase', what: 'the Copy and mark chased button disappeared when the browser went offline' })
+    if (!(await copy.isVisible().catch(() => false))) note(info, { kind: 'observation', where: 'offline chase', what: 'the Copy and record follow-up button disappeared when the browser went offline' })
     await copy.click()
     await page.waitForTimeout(1500)
     const said = (await page.getByRole('status').allInnerTexts()).join(' | ')
@@ -981,7 +981,7 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
     await goOnline('offline chase')
     // The list reloads when the connection returns and may close the pane: open the item again before the retry.
     await visit(page, info, '/todo', 'offline chase online')
-    const again = (await openItem(page, 'desktop', 'chase_customer', s.ref)).getByRole('button', { name: /^Copy (message )?and mark chased$/ }).first()
+    const again = (await openItem(page, 'desktop', 'chase_customer', s.ref)).getByRole('button', { name: /^Copy (message )?and record follow-up$/ }).first()
     await again.click()
     const n = await until(() => askCount(s.clar), v => v >= 2, 8_000)
     if (n !== 2) note(info, { kind: 'observation', where: 'offline chase', what: `after the retry ask_count is ${n} (expected exactly 2)` })
@@ -1048,7 +1048,7 @@ test('crosscut: Back/Forward through dialogs, refresh, deep link after sign in, 
         await page.reload()
         await settle(page)
         const t = await mainText(page)
-        if (/Something went wrong|Unexpected error/i.test(t)) note(info, { kind: 'observation', where: `refresh ${path} (${vp})`, what: 'crash screen after refresh' })
+        if (/The page stopped working|Unexpected error/i.test(t)) note(info, { kind: 'observation', where: `refresh ${path} (${vp})`, what: 'crash screen after refresh' })
         if (path.includes('new=1')) {
           const d = page.getByRole('dialog', { name: 'New company' })
           if (!(await d.isVisible().catch(() => false))) note(info, { kind: 'observation', where: `refresh ${path}`, what: 'the New company dialog is gone after refresh' })

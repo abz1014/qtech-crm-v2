@@ -101,6 +101,14 @@ export const KIND_LABEL: Record<StatementKind, string> = {
 /** "Rs 1,234.00" style amount for a statement cell, always with paisa so columns line up. */
 export const fixed = (p: bigint): string => paisaToFixed(p)
 
+/** The same amount for the screen only, with thousands commas ("1,234.50"). The CSV and the PDF keep `fixed`. */
+export const grouped = (p: bigint): string => {
+  const [whole, paisa] = paisaToFixed(p).split('.')
+  const neg = whole.startsWith('-')
+  const digits = neg ? whole.slice(1) : whole
+  return `${neg ? '-' : ''}${digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${paisa}`
+}
+
 /** The first day of the Pakistani financial year (1 July) that `today` falls in. */
 export function financialYearStart(today: string): string {
   const y = Number(today.slice(0, 4))

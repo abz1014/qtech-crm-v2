@@ -14,7 +14,7 @@ function mount(wht: unknown[] = []) {
   return mountWith(wht)
 }
 
-function mountWith(wht: unknown[]) {
+function mountWith(wht: unknown[], invoices: unknown[] = [{ invoice_date: '2020-02-10', psid: '1023-4471-0226', tax_deposited_on: '2020-03-14' }]) {
   const fake = installFakeDb((c: FakeCall) => {
     if (c.target === 'v_wht_deducted') return { data: wht }
     if (c.target === 'payments_in') return { data: [{ id: 'p1' }] }
@@ -25,7 +25,7 @@ function mountWith(wht: unknown[]) {
           { month: '2020-03-01', invoice_count: 2, net: 50000, gst: 9000, psid_set_count: 0, deposited_count: 0, deposited_amount: 0, gst_to_deposit: 9000, input_tax: 1000 },
         ],
       }
-    if (c.target === 'invoices') return { data: [{ invoice_date: '2020-02-10', psid: '1023-4471-0226', tax_deposited_on: '2020-03-14' }] }
+    if (c.target === 'invoices') return { data: invoices }
     return { data: [] }
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -57,10 +57,20 @@ describe('GST to FBR page', () => {
     expect(within(mar).getByTestId('status-2020-03')).toHaveTextContent('Late: was due Wed 15 Apr')
     expect(within(mar).getByTestId('status-2020-03')).toHaveTextContent('Return by Sat 18 Apr')
   })
+  it('shows each PSID with its own deposit day when a month was paid in two deposits', async () => {
+    mountWith([], [
+      { invoice_date: '2020-02-10', psid: 'AAA-1', tax_deposited_on: '2020-03-10' },
+      { invoice_date: '2020-02-11', psid: 'BBB-2', tax_deposited_on: '2020-03-14' },
+    ])
+    const feb = within(await screen.findByTestId('gst-2020-02'))
+    expect(await feb.findByTestId('psid-AAA-1')).toHaveTextContent('deposited')
+    expect(feb.getByTestId('psid-AAA-1')).toHaveTextContent('10 Mar')
+    expect(feb.getByTestId('psid-BBB-2')).toHaveTextContent('14 Mar')
+  })
   it('says what the page is for in the words of the plan', async () => {
     mount()
     await screen.findByTestId('gst-months')
-    expect(screen.getByText(/GST charged on invoices, less GST paid on purchases, is what you pay FBR/)).toBeInTheDocument()
+    expect(screen.getByText(/GST charged on invoices, less GST paid on purchases, is the amount payable to FBR/)).toBeInTheDocument()
     expect(screen.getAllByText('GST charged').length).toBeGreaterThan(0)
     expect(screen.getAllByText('GST paid on purchases').length).toBeGreaterThan(0)
   })

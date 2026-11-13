@@ -124,7 +124,7 @@ export async function deleteRefund(id: string): Promise<void> {
   const db = requireSupabase()
   const { data, error } = await db.from('customer_refunds').delete().eq('id', id).select('id')
   if (error) throw error
-  if (!data || data.length === 0) throw new Error('Not removed. You may not have permission, or the month is closed.')
+  if (!data || data.length === 0) throw new Error('Not removed. Permission may be missing, or the month is locked.')
 }
 
 /** Take an applied credit back (delete it; the order owes again and the customer holds the credit again). */
@@ -132,5 +132,5 @@ export async function deleteApplication(id: string): Promise<void> {
   const db = requireSupabase()
   const { data, error } = await db.from('credit_applications').delete().eq('id', id).select('id')
   if (error) throw error
-  if (!data || data.length === 0) throw new Error('Not removed. You may not have permission, or the month is closed.')
+  if (!data || data.length === 0) throw new Error('Not removed. Permission may be missing, or the month is locked.')
 }

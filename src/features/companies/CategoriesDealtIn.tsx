@@ -45,7 +45,7 @@ export function CategoriesDealtIn({ companyId }: { companyId: string }) {
             Reload the page to try again.
           </Banner>
         ) : rows.length === 0 ? (
-          <Fine>None yet. A category is added by itself when they quote an item in it, or you can tag one below.</Fine>
+          <Fine>None yet. A category is added automatically when the supplier prices an item in it. A category can also be tagged below.</Fine>
         ) : (
           <ul className="grid gap-1" aria-label="Categories they deal in">
             {rows.map(r => (
@@ -57,11 +57,11 @@ export function CategoriesDealtIn({ companyId }: { companyId: string }) {
                 {r.tagged ? <span className="inline-flex min-h-chip items-center gap-1 text-base text-fg-2"><TagIcon aria-hidden="true" className="size-4" />Tagged</span> : null}
                 {canTag ? (
                   r.tagged ? (
-                    <Button size="sm" disabled={busy} aria-label={`Untag ${r.name}`} onClick={() => unlink.mutate(r.familyId, { onSuccess: () => toast({ title: `Untagged ${r.name}`, tone: 'success' }), onError: fail("Couldn't untag") })}>
+                    <Button size="sm" disabled={busy} aria-label={`Untag ${r.name}`} onClick={() => unlink.mutate(r.familyId, { onSuccess: () => toast({ title: `Untagged ${r.name}`, tone: 'success' }), onError: fail("Could not untag") })}>
                       Untag
                     </Button>
                   ) : (
-                    <Button size="sm" disabled={busy} aria-label={`Tag ${r.name}`} onClick={() => carry.mutate({ brandId: r.familyId }, { onSuccess: () => toast({ title: `Tagged ${r.name}`, tone: 'success' }), onError: fail("Couldn't tag") })}>
+                    <Button size="sm" disabled={busy} aria-label={`Tag ${r.name}`} onClick={() => carry.mutate({ brandId: r.familyId }, { onSuccess: () => toast({ title: `Tagged ${r.name}`, tone: 'success' }), onError: fail("Could not tag") })}>
                       Tag
                     </Button>
                   )
@@ -84,7 +84,7 @@ export function CategoriesDealtIn({ companyId }: { companyId: string }) {
               onChange={e => {
                 const id = e.target.value
                 const name = options.find(o => o.value === id)?.label ?? 'the category'
-                if (id) carry.mutate({ brandId: id }, { onSuccess: () => toast({ title: `Tagged ${name}`, tone: 'success' }), onError: fail("Couldn't tag") })
+                if (id) carry.mutate({ brandId: id }, { onSuccess: () => toast({ title: `Tagged ${name}`, tone: 'success' }), onError: fail("Could not tag") })
               }}
               options={options}
             />

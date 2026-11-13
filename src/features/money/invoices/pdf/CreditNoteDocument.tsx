@@ -75,7 +75,7 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
 
         <View style={s.titleRow}>
           <View>
-            <Text style={s.h1}>Credit Note</Text>
+            <Text style={s.h1}>CREDIT NOTE</Text>
             <Text style={s.muted}>Sales tax credit note</Text>
           </View>
           <View style={s.meta}>

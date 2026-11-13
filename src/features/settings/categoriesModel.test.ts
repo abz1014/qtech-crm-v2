@@ -98,7 +98,7 @@ describe('deleteAdvice', () => {
     expect(a.canDelete).toBe(false)
     expect(a.message).toContain('12')
     expect(a.message).toContain('cannot be deleted')
-    expect(a.message).toContain('Archive it instead')
+    expect(a.message).toContain('Archive it to stop offering it for new expenses')
     expect(a.message).toContain('merge')
   })
   it('an archived used category says it is already hidden', () => {

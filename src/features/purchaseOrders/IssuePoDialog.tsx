@@ -57,7 +57,7 @@ import {
  *   interactions "Issue PO" on the leg (1), then "Issue PO" in the dialog (2), with nothing typed when every line is priced.
  *
  * Issuing stamps the leg placed today when it is empty (the RPC does this), writes the issued prices back to the order lines, and, when the
- * leg has no expected date, suggests one from the placed date plus the supplier's lead time. The PO is a snapshot: later edits to the
+ * leg has no expected date, suggests one from the placed date plus the supplier's lead time. The PO is a snapshot, so later edits to the
  * order do not change it. The PDF never blocks issuing: with the legal name or address missing from the company profile the PO is still
  * issued, and a plain banner links to Settings, Company.
  */
@@ -335,7 +335,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
             <Skeleton className="h-[10rem] w-full" />
           </div>
         ) : loadFailed ? (
-          <Banner tone="danger" title="Couldn't prepare the purchase order" action={<Button onClick={() => void prefill.refetch()}>Try again</Button>}>
+          <Banner tone="danger" title="The purchase order could not be prepared" action={<Button onClick={() => void prefill.refetch()}>Try again</Button>}>
             Nothing was changed.
           </Banner>
         ) : (
@@ -422,8 +422,8 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
             <p className="flex items-center gap-1 text-sm text-fg-2">
               Issuing marks the order with {leg.supplierName} as placed today.
               <InfoTip label="What issuing does" side="top">
-                Incoterm and terms are copied from this supplier&rsquo;s last PO: change them only if this order differs. Issuing saves these prices back to the order items, so the order keeps one working
-                price. The PO is a snapshot: later edits to the order do not change it.
+                Incoterm and terms are copied from this supplier&apos;s last PO. Change them only if this order differs. Issuing saves these prices back to the order items, so the order keeps one working
+                price. The PO is a snapshot, so later edits to the order do not change it.
               </InfoTip>
             </p>
 
@@ -434,11 +434,11 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
             ) : null}
             {gaps.length > 0 ? (
               <Banner tone="warning" title={`A PDF needs the company's ${gaps.join(' and ')}`}>
-                The PO can still be issued; its PDF is made once the profile is complete. <SettingsLink />
+                The PO can still be issued. Its PDF is made once the profile is complete. <SettingsLink />
               </Banner>
             ) : null}
             {error ? (
-              <Banner tone="danger" title="Couldn't issue the purchase order">
+              <Banner tone="danger" title="The purchase order could not be issued">
                 {error} Nothing was issued twice: pressing Issue PO again is safe.
               </Banner>
             ) : null}

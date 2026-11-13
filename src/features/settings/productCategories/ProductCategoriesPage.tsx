@@ -60,7 +60,7 @@ export function ProductCategoriesPage() {
         undo: { onUndo: () => curate.mutateAsync({ id: c.id, curated: c.curated }).then(() => undefined) },
       })
     } catch (err) {
-      toast({ title: `Couldn't change ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
+      toast({ title: `Could not change ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
     }
   }
 

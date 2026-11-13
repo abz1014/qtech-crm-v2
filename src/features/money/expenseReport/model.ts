@@ -401,7 +401,7 @@ export function expenseReportCsv(v: ExpenseReportView): { headers: string[]; row
     ['By the day paid', v.label, 'Paid in this period for other months', '', '', n(v.paidForOther), '', '', ''],
     ['By the day paid', v.label, 'Paid in this period (In vs out money out)', '', v.paid.count, n(v.paid.amount), '', '', ''],
   )
-  if (P(v.unexplained) !== 0n) rows.push(['Total', v.label, 'Changed after the month was closed', '', '', n(v.unexplained), '', '', ''])
+  if (P(v.unexplained) !== 0n) rows.push(['Total', v.label, 'Changed after the month was locked', '', '', n(v.unexplained), '', '', ''])
   for (const g of v.groups) {
     rows.push(['Group', v.label, g.name, '', g.count, n(g.amount), n(g.prev), g.share, g.budget === null ? '' : n(g.budget)])
     for (const c of g.categories) {

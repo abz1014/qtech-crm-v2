@@ -108,7 +108,7 @@ describe('Record payment (M02)', () => {
     mount(<RecordPaymentDialog open onOpenChange={() => {}} orderId="o38" />)
     await screen.findByRole('textbox', { name: 'Amount received, PKR' })
     await user.click(screen.getByRole('button', { name: 'Save payment' }))
-    expect(await screen.findByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
+    expect(await screen.findByText('September 2026 is locked. An admin can reopen it.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('1,600,764')
   })
 })
@@ -273,7 +273,7 @@ describe('To collect (M02)', () => {
     expect(screen.getByRole('button', { name: 'About the balance and reminders' })).toBeInTheDocument()
   })
 
-  it('an empty list says "Nothing is owed" only when orders exist; with none ever, a neutral first-use line', async () => {
+  it('an empty list says "No balance due" only when orders exist; with none ever, a neutral first-use line', async () => {
     const empty = db(c => (c.target === 'rpc:receivables_list' ? receivablesListResult(c, [], {}) : undefined))
     const first = mount(<ReceivablesPage />)
     expect(await screen.findByText('No balances yet')).toBeInTheDocument()
@@ -284,7 +284,7 @@ describe('To collect (M02)', () => {
     const settled = receivables.map(r => ({ ...r, balance: 0, settled: r.gross_target, is_overdue: false, payment_state: 'settled' }))
     db(c => (c.target === 'rpc:receivables_list' ? receivablesListResult(c, settled, { companyName: () => 'Punjab Cement Ltd' }) : undefined))
     mount(<ReceivablesPage />)
-    expect(await screen.findByText('Nothing is owed')).toBeInTheDocument()
+    expect(await screen.findByText('No balance due')).toBeInTheDocument()
     expect(screen.getByText(/Every order is paid in full/)).toBeInTheDocument()
   })
 
@@ -303,7 +303,7 @@ describe('To collect (M02)', () => {
     await screen.findAllByText('Punjab Cement Ltd')
     const owed = screen.getByTestId('owed-line')
     expect(owed.className).toContain('sticky')
-    expect(owed).toHaveTextContent(/^Owed PKR/)
+    expect(owed).toHaveTextContent(/^To collect PKR/)
     expect(owed).not.toHaveTextContent('Overdue')
     const split = screen.getByTestId('owed-split')
     expect(split.className).not.toContain('sticky')

@@ -124,7 +124,7 @@ export const CHECKS: readonly CheckDef[] = [
     key: 'unresolved_payments',
     label: 'Payments not split',
     unit: ['payment', 'payments'],
-    has: () => 'Counted in gross but not yet split into net and GST, because nobody has said whether GST is included in the order price.',
+    has: () => 'Counted in gross but not yet split into net and GST, because it is not recorded whether GST is included in the order price.',
     none: () => 'Every payment is split into net and GST.',
     linkLabel: 'Open To collect',
     to: () => '/money/receivables',
@@ -523,10 +523,10 @@ export function pnlCsv(v: PnlView): { headers: string[]; rows: unknown[][] } {
     ['Money in', 'Payments received, all', v.payments.count, csvNum(v.grossReceived), csvNum(v.gstIn), csvNum(v.netIn)],
     ['Money out', 'Order costs', v.orderCosts.count, csvNum(v.orderCosts.gross), csvNum(v.orderCosts.inputTax), csvNum(negate(v.orderCosts.net))],
     ['Money out', 'Overheads', v.overheads.count, csvNum(v.overheads.gross), csvNum(v.overheads.inputTax), csvNum(negate(v.overheads.net))],
-    ...(toPaisa(v.adjustResult) !== 0n ? [['Adjustment', 'Changes to closed months, counted this month', '', '', '', csvNum(v.adjustResult)]] : []),
+    ...(toPaisa(v.adjustResult) !== 0n ? [['Adjustment', 'Changes to locked months, counted this month', '', '', '', csvNum(v.adjustResult)]] : []),
     ['Result', `Result for ${monthKeyLabel(v.month)}`, '', '', '', csvNum(v.result)],
     ...v.notInPnl.lines.map(l => ['Not a cost', l.category, l.count, csvNum(l.gross), csvNum(l.inputTax), csvNum(negate(l.net))]),
-    ...(toPaisa(v.adjustNonPnl) !== 0n ? [['Not a cost', 'Changes to closed months, counted this month', '', '', '', csvNum(negate(v.adjustNonPnl))]] : []),
+    ...(toPaisa(v.adjustNonPnl) !== 0n ? [['Not a cost', 'Changes to locked months, counted this month', '', '', '', csvNum(negate(v.adjustNonPnl))]] : []),
     ['Not a cost', 'Not a cost, total', v.notInPnl.total.count, csvNum(v.notInPnl.total.gross), csvNum(v.notInPnl.total.inputTax), csvNum(negate(v.notInPnl.total.net))],
     ['After drawings', 'Result less Not a cost', '', '', '', csvNum(v.afterDrawings)],
   ]
@@ -763,7 +763,7 @@ export function unconvertedByCurrency(rows: readonly PayableRow[]): Unconverted[
 }
 
 export const PAYABLE_STATE_LABEL: Record<PayableRow['state'], string> = {
-  owing: 'Owed',
+  owing: 'Payable',
   settled: 'Settled (≈)',
   unpriced: 'No price yet',
   no_rate: 'Needs a rate',
@@ -771,7 +771,7 @@ export const PAYABLE_STATE_LABEL: Record<PayableRow['state'], string> = {
 
 export function payablesCsv(v: PayablesView): { headers: string[]; rows: unknown[][] } {
   return {
-    headers: ['As of', 'Supplier', 'Order', 'Supplier order', 'Currency', 'Committed', 'Rate', 'Committed, PKR', 'Paid, PKR', 'Owed, PKR (approx.)', 'State'],
+    headers: ['As of', 'Supplier', 'Order', 'Supplier order', 'Currency', 'Committed', 'Rate', 'Committed, PKR', 'Paid, PKR', 'Payable, PKR (approx.)', 'State'],
     rows: v.rows.map(r => [
       v.asOf,
       r.supplier,

@@ -161,14 +161,14 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
           </FormField>
         ) : null}
         {showOrder ? (
-          <FormField<Values, 'orderId'> name="orderId" label="Paid back from order" requirement="optional" help="Which order's overpayment it comes from. Left empty, it is taken from the oldest order that holds enough.">
+          <FormField<Values, 'orderId'> name="orderId" label="Paid back from order" requirement="optional" help="Which order's overpayment is refunded. Left empty, the oldest order that holds enough is used.">
             {f => (
               <Select {...f} options={[{ value: '', label: 'Oldest order that holds enough' }, ...(orders.data ?? []).map(o => ({ value: o.orderId, label: orderRef(o.orderNumber) }))]} />
             )}
           </FormField>
         ) : null}
         {showVia ? (
-          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" help="Bank refunds are matched to the bank statement at month end; cash comes out of the cash box.">
+          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" help="Bank refunds are matched to the bank statement at month end. Cash comes out of cash in hand.">
             {f => <Select {...f} options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))} />}
           </FormField>
         ) : null}

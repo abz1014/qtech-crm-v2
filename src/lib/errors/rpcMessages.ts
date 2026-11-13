@@ -34,24 +34,24 @@ const TEAM: RpcAction = { label: 'Open Team', href: '/settings/team' }
 
 const ADMIN_ONLY = 'Only an admin can do this. Nothing was saved. Ask an admin if it needs doing.'
 const ADMIN_SALES = 'Only admin and sales can do this. Nothing was saved. Ask one of them if it needs doing.'
-const RELOAD = 'Something this needs is no longer there. Reload the page, then try again.'
+const RELOAD = 'A record this needs is no longer there. Reload the page, then try again.'
 
 export const RPC_MESSAGES: readonly RpcEntry[] = [
   // Months
-  { match: /^(.+?) cannot be closed yet: it is the current month or later\.?$/, message: m => `${m[1]} can be locked from the 1st of next month.`, help: 'month-end-close' },
+  { match: /^(.+?) cannot be closed yet: it is the current month or later\.?$/, message: m => `The month was not locked. ${m[1]} can be locked from the 1st of next month.`, help: 'month-end-close' },
   { match: /^(.+?) is closed\. An admin can reopen it\.?$/, action: MONTH_END },
   { match: /^(.+?) is closed\. Reopen it first \(Money, Month-end\), then change this payment\.?$/, action: MONTH_END },
-  { match: /^(.+?) is still open\. Close earlier months first/, message: m => `Lock ${m[1]} first. Months lock in order.`, help: 'month-end-close', action: MONTH_END },
+  { match: /^(.+?) is still open\. Close earlier months first/, message: m => `The month was not locked. Lock ${m[1]} first. Months lock in order.`, help: 'month-end-close', action: MONTH_END },
   { match: /^The new date is in (.+?), which is closed\./, action: MONTH_END },
   // 0080 (owner decision 2026-10-22): months reopen newest first.
   {
     match: /^(.+?) cannot be reopened while (.+?) is closed\. Reopen (.+?) first\.?$/,
-    message: m => `Reopen ${m[2]} first. Months reopen newest first, so ${m[1]} can be reopened once every month after it is open.`,
+    message: m => `The month was not reopened. Reopen ${m[2]} first. Months reopen newest first, so ${m[1]} can be reopened once every month after it is open.`,
     help: 'month-end-close',
     action: MONTH_END,
   },
   { match: /^a month is required$/, message: () => 'Choose a month first.' },
-  { match: /^only an admin can (close|reopen) a month$/, message: m => `Only an admin can ${m[1] === 'close' ? 'lock' : m[1]} a month. Ask an admin if it needs doing.` },
+  { match: /^only an admin can (close|reopen) a month$/, message: m => `Only an admin can ${m[1] === 'close' ? 'lock' : m[1]} a month. Nothing was changed. Ask an admin if it needs doing.` },
 
   // Payments: these are already written for people
   { match: /^Give a reason for voiding this payment/ },
@@ -89,19 +89,19 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^payment reminders are for admin and sales only$/, message: () => ADMIN_SALES },
 
   // Quotations and POs
-  { match: /^a quoted price above zero is needed for: (.+)$/, message: m => `A quotation can't carry a price of 0. Enter the price for "${m[1]}", or untick it.`, help: 'issue-quotation' },
+  { match: /^a quoted price above zero is needed for: (.+)$/, message: m => `The quotation was not issued. A quotation cannot include a price of 0. Enter the price for "${m[1]}", or clear its tick.`, help: 'issue-quotation' },
   {
     match: /^the quantity of (.+) changed to (.+) since this quotation was opened$/,
-    message: m => `Someone changed the quantity of "${m[1]}" to ${m[2]} while this was open. Nothing was issued. Check the new total below, then issue again.`,
+    message: m => `The quantity of "${m[1]}" was changed to ${m[2]} while this was open. Nothing was issued. Check the new total below, then issue again.`,
     help: 'issue-quotation',
   },
   { match: /^a quoted price is needed for: (.+)$/, message: m => `Add a price for "${m[1]}", then issue the quotation again.`, help: 'issue-quotation' },
   { match: /^a selling price is needed for: (.+)$/, message: m => `Add a selling price for "${m[1]}", then try again.` },
   { match: /^a price is needed for: (.+)$/, message: m => `Add the supplier price for "${m[1]}", then issue the PO again.`, help: 'issue-po' },
-  { match: /^set the currency of this supplier order before issuing a PO$/, message: () => "Pick the supplier's currency on this supplier order, then issue the PO.", help: 'issue-po' },
-  { match: /^an issued (.+?) cannot be changed; issue a new revision$/, message: () => "An issued quotation or PO can't be edited. Use Revise.", help: 'revise-quotation' },
+  { match: /^set the currency of this supplier order before issuing a PO$/, message: () => "The PO was not issued. Choose the supplier's currency on this supplier order, then issue the PO.", help: 'issue-po' },
+  { match: /^an issued (.+?) cannot be changed; issue a new revision$/, message: () => 'An issued quotation or PO cannot be edited. Use Revise.', help: 'revise-quotation' },
   { match: /^the PDF of this issued (.+?) is already attached; only an admin can replace it$/, message: m => `This ${m[1]} already has its PDF. Only an admin can replace it.` },
-  { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'Add at least one item first.' },
+  { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'The RFQ has no items. Add at least one item, then try again.' },
   // 0077: already plain; Create order opens that order instead (existingOrderOf in src/features/orders/api.ts).
   { match: /^This RFQ is already order ORD-.+\.$/ },
   // 0094 (HW-60): the quotation or a quantity moved on while Mark won was open. Already plain; the dialog reloads the lines.
@@ -113,7 +113,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^The order lines changed\. Review again\.$/ },
   { match: /^PO R.+ was just issued by .+\. Revise instead\?$/ },
   { match: /^the supplier order has no goods lines to issue$/, message: () => 'Add at least one goods line to this supplier order, then issue the PO.' },
-  { match: /^the chosen quote line is not a quote for the item: (.+)$/, message: m => `The chosen supplier quote does not belong to "${m[1]}". Choose the quote again.` },
+  { match: /^the chosen quote line is not a quote for the item: (.+)$/, message: m => `The chosen supplier price does not belong to "${m[1]}". Choose the supplier price again.` },
   { match: /^an item (to quote )?does not belong to this RFQ$/, message: () => RELOAD },
   { match: /^every item needs a description$/, message: () => 'Every item needs a description. Fill in the empty ones, then save.' },
   { match: /^invoice numbers are for admin and sales only$/, message: () => ADMIN_SALES },
@@ -127,7 +127,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^choose a different supplier order from the one the line is on$/, message: () => 'Choose a different supplier order from the one the line is on.' },
   { match: /^name either an existing supplier order or a supplier to move the quantity to$/, message: () => 'Choose a supplier order or a supplier to move the quantity to.' },
   { match: /^split parts of an item must use different suppliers: (.+)$/, message: m => `Each part of "${m[1]}" needs a different supplier.` },
-  { match: /^the quantity to move must be more than 0 and less than the line quantity \((.+?)\)$/, message: m => `Move more than 0 and less than ${m[1]}.` },
+  { match: /^the quantity to move must be more than 0 and less than the line quantity \((.+?)\)$/, message: m => `The quantity to move must be more than 0 and less than ${m[1]}.` },
   { match: /^the supplier order is not a leg of this order$/, message: () => RELOAD },
 
   // Merges, roles, ownership
@@ -137,8 +137,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^merge needs two different (brands|companies)$/, message: m => `Choose two different ${m[1]} to merge.` },
   { match: /^a brand and a family cannot be merged$/, message: () => 'A brand and a family cannot be merged. Choose two brands or two families.' },
   { match: /^only an admin can (merge brands|merge companies|change who owns an RFQ|change who owns an order|resolve a value basis|change the legacy flags of an order|set legacy flags on an order|set legacy flags|change legacy flags)$/, message: () => ADMIN_ONLY },
-  { match: /^the system must keep at least one active admin$/, message: () => 'Make someone else an admin first. The app always keeps one.', action: TEAM },
-  { match: /^category "(.+?)" is inactive; pick an active category$/, message: m => `"${m[1]}" is archived. Pick another category, or bring it back in Settings, Expense categories.`, action: CATEGORIES },
+  { match: /^the system must keep at least one active admin$/, message: () => 'At least one active admin is required. Make another user an admin first.', action: TEAM },
+  { match: /^category "(.+?)" is inactive; pick an active category$/, message: m => `"${m[1]}" is archived. Pick another category, or restore it in Settings, Expense categories.`, action: CATEGORIES },
   // 0086: groups, moves and merges (already written for people)
   { match: /^There is no expense group for this kind of expense\. Add a group first\.$/, action: CATEGORIES },
   { match: /^".+?" has expenses in .+? and that month is closed\. (Moving|Merging) it /, action: CATEGORIES },
@@ -165,16 +165,16 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This claim is already (.+)\.$/, message: m => `This claim was already ${m[1] === 'rejected' ? 'not approved' : m[1]}. Reload the page.` },
   { match: /^the order has no unresolved value basis$/, message: () => 'This order has no value basis left to resolve. Reload the page.' },
   { match: /^basis must be net or gross$/, message: () => 'Choose net or gross.' },
-  { match: /^a PSID is required$/, message: () => 'Enter the PSID, then save.' },
+  { match: /^a PSID is required$/, message: () => 'The PSID is missing. Enter the PSID, then save.' },
 
   // 0092 (owner decisions): fixing and removing mistakes. The server texts are already plain; each carries a HINT
   // (not_yours, admin_only, not_found, has_order, has_invoice, has_payment, has_expense, has_po, bank_ticked, voided,
   // correction_chain, not_latest, in_use, linked_to_order) that mapPgError passes on as `hint`.
   { match: /^Only the person who entered this, or an admin, can change it\.$/ },
   // 0101: an engineer's visit type, on a site assigned to them only (HINT not_assigned)
-  { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'You can set the visit type only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
+  { match: /^Only an engineer assigned to this order can set its visit time or type\.$/, message: () => 'The visit type can be set only on a site assigned to you. Nothing was saved. Ask an admin to assign you.' },
   // 0098: a product category is renamed and curated by an admin (HINT admin_only)
-  { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved.' },
+  { match: /^Only an admin can (rename or curate a|add a curated) product category\.$/, message: () => 'Only an admin can rename or curate a product category. Nothing was saved. Ask an admin if it needs doing.' },
   { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
   { match: /^Only an admin can (see|do) this\.$/, message: () => ADMIN_ONLY },   // 0120: admin_health, confirm_backup_decrypt_test
   { match: /^This (RFQ|order|invoice|quotation|purchase order|company|job) is no longer there\. Reload the page\.$/ },
@@ -303,13 +303,32 @@ export function rpcEntry(text: string): { entry: RpcEntry; m: RegExpMatchArray }
   return null
 }
 
+/** Server texts say "Rs 1,200.00" and "closed" for a month; the app says PKR and locked (decisions I and H). */
+export function rupeesToPkr(text: string): string {
+  return text.replace(/\bRs\.? ?(?=\S)/g, 'PKR ')
+}
+
+/**
+ * The month sentences of the server and of the app ("September 2026 is closed", "which is closed", "the month is closed") say locked
+ * (decision H). Narrow on purpose: any other "closed" (an enquiry closed as lost) keeps its word.
+ */
+export function lockedWording(text: string): string {
+  return text
+    .replace(/\b((?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4}(?:, which)? is) closed\b/g, '$1 locked')
+    .replace(/\b(the month is) closed\b/g, '$1 locked')
+}
+
+function plainWording(text: string): string {
+  return rupeesToPkr(text).replace(/\bclosed\b/g, 'locked')
+}
+
 /** A plain message for a server rule text, or null when none is mapped or the entry is internal. */
 export function rpcMessage(text: string): RpcMessage | null {
   const hit = rpcEntry(text)
   if (!hit || hit.entry.internal) return null
   const { entry, m } = hit
   return {
-    message: entry.message ? entry.message(m) : text.trim(),
+    message: entry.message ? entry.message(m) : plainWording(text.trim()),
     ...(entry.help ? { help: entry.help } : {}),
     ...(entry.action ? { action: entry.action } : {}),
   }

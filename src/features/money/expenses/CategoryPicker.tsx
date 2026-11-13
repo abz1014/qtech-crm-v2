@@ -325,7 +325,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                   onClick={() => pick(c)}
                   className={cn('grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded px-2 text-sm', rowHeight, i === activeIndex && 'bg-selected')}
                 >
-                  <span className="truncate">
+                  <span className="truncate" title={c.name}>
                     <Highlight label={c.name} q={q} />
                   </span>
                   <span className="text-xs text-fg-muted">{q ? categoryMeta(c, groups) : c.defaultPaidVia}</span>
@@ -345,7 +345,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                     matches.length === activeIndex && 'bg-selected',
                   )}
                 >
-                  <span className="truncate">Other: ‘{typed}’</span>
+                  <span className="truncate" title={`Other: '${typed}'`}>Other: &apos;{typed}&apos;</span>
                   <span className="text-xs font-normal text-fg-muted">{sortedGroups.find(g => g.id === misc.groupId)?.name ?? misc.name}</span>
                 </li>
               ) : null}
@@ -377,7 +377,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                       >
                         <span className="inline-flex min-w-0 items-center gap-2">
                           <Icon icon={Plus} size="sm" />
-                          <span className="truncate">Create “{typed}”</span>
+                          <span className="truncate" title={`Create “${typed}”`}>Create “{typed}”</span>
                         </span>
                         <span className="text-xs font-normal text-fg-muted">{via === 'cash' ? 'paid in cash' : 'paid by bank'}</span>
                       </li>

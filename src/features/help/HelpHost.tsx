@@ -58,7 +58,7 @@ export function HelpHost() {
       .then(([m, p]) => {
         if (!live) return
         setRecipesFailed(false)
-        setRecipes(m.allRecipes())
+        setRecipes(m.recipesAs(user?.role))
         setToSource({ make: p.helpPaletteSource })
       })
       .catch(() => {
@@ -67,7 +67,7 @@ export function HelpHost() {
     return () => {
       live = false
     }
-  }, [wanted, recipesTry])
+  }, [wanted, recipesTry, user?.role])
   const panel = useRetryableLazy(loadHelpPanel)
   const toast = useContext(ToastContext)?.toast
   const retryPanel = panel.retry
@@ -77,7 +77,7 @@ export function HelpHost() {
       toast?.({
         tone: 'danger',
         title: 'Help could not open',
-        body: err instanceof Error && err.name === 'StaleAppError' ? err.message : 'Check your signal, then try again.',
+        body: err instanceof Error && err.name === 'StaleAppError' ? err.message : 'Check the connection, then try again.',
         action: { label: 'Try again', onClick: () => openHelp() },
       })
     },

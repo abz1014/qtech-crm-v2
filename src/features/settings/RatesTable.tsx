@@ -45,7 +45,7 @@ export function RatesTable({ label = 'Exchange rates' }: { label?: string }) {
       loading={q.isLoading}
       error={
         q.isError
-          ? { title: 'Couldn’t load the exchange rates', message: 'Nothing has changed. Check your connection, then try again.', onRetry: () => void q.refetch() }
+          ? { title: 'Could not load the exchange rates', message: 'Nothing has changed. Check your connection, then try again.', onRetry: () => void q.refetch() }
           : null
       }
       empty={<p className="px-6 py-10 text-center text-sm text-fg-muted">No rates yet. They arrive every night, or enter one where a price needs it.</p>}

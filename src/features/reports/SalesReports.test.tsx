@@ -59,10 +59,10 @@ describe('Enquiry and customer reports (inside Money > Reports)', () => {
     expect(screen.getByText('1 won, 3 lost, 3 open')).toBeInTheDocument()
     expect(screen.getByText('1 of 2 came back')).toBeInTheDocument()
     for (const q of [
-      'How many RFQs did we win, and why did we lose the others?',
-      'Does asking suppliers for prices help us win?',
-      'How fast do customers answer our questions?',
-      'Which customers come back?',
+      'RFQs won and lost, with the reasons',
+      'Effect of asking suppliers for prices on wins',
+      'How fast customers answer questions',
+      'Returning customers',
     ])
       await user.click(screen.getByText(q))
     expect(await screen.findByText('Price too high')).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('Enquiry and customer reports (inside Money > Reports)', () => {
     show(() => ({ data: [] }))
     expect(await screen.findByText(/Not enough data yet\. These fill in/)).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'At a glance' })).toBeNull()
-    for (const q of ['How many RFQs did we win, and why did we lose the others?', 'How fast do customers answer our questions?', 'Which customers come back?']) await user.click(screen.getByText(q))
+    for (const q of ['RFQs won and lost, with the reasons', 'How fast customers answer questions', 'Returning customers']) await user.click(screen.getByText(q))
     expect(await screen.findByText(/No RFQ has been closed yet/)).toBeInTheDocument()
     expect(await screen.findByText(/No customer has an order yet/)).toBeInTheDocument()
     expect(await screen.findByText(/No question has been asked of a customer yet/)).toBeInTheDocument()
@@ -110,8 +110,8 @@ describe('Enquiry and customer reports (inside Money > Reports)', () => {
     show(c => (c.target === 'v_report_float' ? { error: { message: 'boom' } } : { data: VIEWS[c.target] ?? [] }))
     // the closed line already says so; nobody has to open it to find out
     expect(await screen.findByText('Could not load')).toBeInTheDocument()
-    await user.click(await screen.findByText('Does asking suppliers for prices help us win?'))
-    await user.click(screen.getByText('How many RFQs did we win, and why did we lose the others?'))
+    await user.click(await screen.findByText('Effect of asking suppliers for prices on wins'))
+    await user.click(screen.getByText('RFQs won and lost, with the reasons'))
     expect(await screen.findByText(/This report could not be read/)).toBeInTheDocument()
     expect(await screen.findByText('Price too high')).toBeInTheDocument()
   })

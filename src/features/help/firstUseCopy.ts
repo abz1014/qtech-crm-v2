@@ -30,20 +30,20 @@ export interface FirstUseCopy {
 export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, FirstUseCopy>>> = {
   today: {
     sales: {
-      title: 'Your work shows up here',
-      body: 'To do lists customers to chase, suppliers to ask and quotations due. It fills up once you log your first RFQ.',
+      title: 'Your tasks appear here',
+      body: 'To do lists customers to follow up, suppliers to ask and quotations due. It fills up once you log your first RFQ.',
       action: { kind: 'link', label: 'New RFQ', to: '/rfqs/new' },
       recipe: 'new-rfq',
     },
     engineer: {
-      title: 'Your jobs show up here',
+      title: 'Your jobs appear here',
       body: 'When an order needs you on site, the admin adds you to it and it appears here with its date. You can already save a site photo or note to any job: open it and use Add to this job.',
       action: { kind: 'link', label: 'Open Jobs', to: '/jobs' },
       recipe: 'paste-or-photo',
     },
     admin: {
-      title: 'Nothing needs you yet',
-      body: 'To do lists payments to chase, invoices to send and month-end checks.',
+      title: 'No tasks yet',
+      body: 'To do lists payments to follow up, invoices to send and month-end checks.',
       action: { kind: 'link', label: 'Open Money', to: '/money' },
       recipe: 'record-payment',
     },
@@ -51,13 +51,13 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
   rfqs: {
     sales: {
       title: 'No RFQs of yours yet',
-      body: 'An RFQ is a customer asking for a price. Paste their message and the app splits it into items.',
+      body: 'An RFQ is a customer request for a price. Paste the customer message to list its items.',
       action: { kind: 'link', label: 'New RFQ', to: '/rfqs/new' },
       recipe: 'new-rfq',
     },
     admin: {
       title: 'No RFQs of yours yet',
-      body: 'An RFQ is a customer asking for a price. Paste their message and the app splits it into items.',
+      body: 'An RFQ is a customer request for a price. Paste the customer message to list its items.',
       action: { kind: 'link', label: 'New RFQ', to: '/rfqs/new' },
       recipe: 'new-rfq',
     },
@@ -65,14 +65,14 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
   orders: {
     sales: {
       title: 'No orders of yours yet',
-      body: 'Orders start when you mark an RFQ won. You never type an order from scratch.',
+      body: 'Orders start when you mark an RFQ won, or from Order without RFQ.',
       action: { kind: 'link', label: 'Open RFQs', to: '/rfqs' },
       recipe: 'mark-won',
     },
     engineer: {
       title: 'No jobs yet',
-      body: 'Orders you are put on appear here with the site and the date.',
-      action: { kind: 'everyone', label: 'Show everyone’s' },
+      body: 'Orders assigned to you appear here with the site and the date.',
+      action: { kind: 'everyone', label: "Show everyone's" },
       recipe: 'today-jobs',
     },
   },
@@ -80,7 +80,7 @@ export const FIRST_USE_COPY: Record<FirstUseScreen, Partial<Record<HelpRole, Fir
 
 /** Admin, when the owner is still the only person on the team: the one button is adding people. */
 export const ADMIN_ALONE: FirstUseCopy = {
-  title: 'Just you so far',
+  title: 'No other users yet',
   body: 'Add the people who will use the app. Each one sees only what their role needs.',
   action: { kind: 'link', label: 'Add person', to: '/settings/team' },
   recipe: 'add-person',
@@ -102,7 +102,7 @@ export type NothingYetScreen = 'rfqs' | 'orders' | 'receivables'
 export const NOTHING_YET: Record<NothingYetScreen, FirstUseCopy> = {
   rfqs: {
     title: 'No RFQs yet',
-    body: 'An RFQ is a customer asking for a price. Start one and it stays here until it is quoted, won or closed.',
+    body: 'An RFQ is a customer request for a price. It stays here until it is quoted, won or closed.',
     action: { kind: 'link', label: 'New RFQ', to: '/rfqs/new' },
     recipe: 'new-rfq',
   },
@@ -114,7 +114,16 @@ export const NOTHING_YET: Record<NothingYetScreen, FirstUseCopy> = {
   },
   receivables: {
     title: 'No balances yet',
-    body: 'Once an order is won, what the customer owes shows here until it is paid.',
+    body: 'Once an order is won, the amount due from the customer appears here until it is paid.',
     recipe: 'record-payment',
   },
 }
+
+/** The engineer's empty Orders line stops at "delivered": payment is not an engineer's screen. Everyone else keeps NOTHING_YET. */
+export function nothingYetCopy(screen: NothingYetScreen, role?: string): FirstUseCopy {
+  if (screen === 'orders' && role === 'engineer') {
+    return { ...NOTHING_YET.orders, body: 'An order starts when you mark an RFQ won, and stays here until it is delivered.' }
+  }
+  return NOTHING_YET[screen]
+}
+

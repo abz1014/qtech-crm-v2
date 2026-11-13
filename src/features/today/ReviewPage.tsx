@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
@@ -34,8 +34,8 @@ import type { Role } from '@/features/today/types'
  */
 const SECTIONS: ReadonlyArray<{ kind: ReviewKind; title: string; why: string }> = [
   { kind: 'quotation', title: 'Quotations with no decision after 10 working days', why: 'Ask the customer, or let it go.' },
-  { kind: 'enquiry', title: 'Enquiries with no supplier asked after 10 days', why: 'Ask suppliers now, or close it.' },
-  { kind: 'goods', title: 'Goods more than 14 days late', why: 'Chase the supplier, or move the date.' },
+  { kind: 'enquiry', title: 'RFQs with no supplier asked after 10 days', why: 'Ask suppliers now, or close it.' },
+  { kind: 'goods', title: 'Goods more than 14 days late', why: 'Follow up with the supplier, or move the date.' },
   { kind: 'payment', title: 'Payments more than 30 days late', why: 'They also stay at the top of To do.' },
 ]
 
@@ -50,7 +50,24 @@ export default function ReviewPage() {
   return <ReviewBody user={{ id: session.user.id, role: 'admin' }} />
 }
 
+/** The phone's bottom tabs stay, so the bottom bar is lifted by their height (kept in --tabs-h while the page is open). */
+function useTabsHeight() {
+  useLayoutEffect(() => {
+    const navs = Array.from(document.querySelectorAll('nav[aria-label="Main"]'))
+    const nav = navs.find(n => n.getBoundingClientRect().height > 0) ?? navs[navs.length - 1] ?? null
+    const set = () => document.documentElement.style.setProperty('--tabs-h', `${nav ? Math.round(nav.getBoundingClientRect().height) : 0}px`)
+    set()
+    const ro = nav && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null
+    if (nav) ro?.observe(nav)
+    return () => {
+      ro?.disconnect()
+      document.documentElement.style.removeProperty('--tabs-h')
+    }
+  }, [])
+}
+
 function ReviewBody({ user }: { user: { id: string; role: Role } }) {
+  useTabsHeight()
   useMobileBar({ title: 'Weekly review', back: { to: '/todo', label: 'To do' } })
   const today = useBusinessToday()
   const navigate = useNavigate()
@@ -125,7 +142,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
   }
 
   return (
-    <div className="mx-auto grid max-w-[920px] gap-5 px-4 py-5 md:px-6" data-review>
+    <div className={cn('mx-auto grid max-w-[920px] gap-5 px-4 py-5 md:px-6', selected.length > 0 && 'pb-[calc(var(--tabs-h,0px)+1.5rem)]')} data-review>
       <NoPrimary />
       <header className="grid gap-1">
         <Link to="/todo" className="inline-flex min-h-touch items-center gap-1 justify-self-start rounded text-base font-medium text-primary underline-offset-2 hover:underline max-md:hidden">
@@ -152,25 +169,8 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
         <>
           {total === 0 ? (
             <EmptyState mood="goal" title="Nothing to decide this week">
-              No quotation, enquiry, delivery or payment has been waiting past its limit.
+              No quotation, RFQ, delivery or payment has been waiting past its limit.
             </EmptyState>
-          ) : null}
-
-          {selected.length > 0 ? (
-            <div role="region" aria-label="Selected" className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-3 shadow-pop" data-bulk>
-              <span className="mr-auto text-base font-semibold">
-                <span className="num">{selected.length}</span> selected
-              </span>
-              <Button disabled={busy} onClick={() => void stillLive(selected)}>
-                Still live
-              </Button>
-              <Button disabled={busy || closable.length === 0} onClick={() => void closeLost(closable)}>
-                Close selected as lost
-              </Button>
-              <Button variant="quiet" onClick={() => setTicked(new Set())}>
-                Clear
-              </Button>
-            </div>
           ) : null}
 
           {SECTIONS.map(s =>
@@ -212,6 +212,23 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
               </ul>
             </section>
           ) : null}
+
+          {selected.length > 0 ? (
+            <div role="region" aria-label="Selected" className="sticky bottom-[calc(var(--tabs-h,0px)+0.5rem)] z-20 flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-3 shadow-pop" data-bulk>
+              <span className="mr-auto text-base font-semibold">
+                <span className="num">{selected.length}</span> selected
+              </span>
+              <Button disabled={busy} onClick={() => void stillLive(selected)}>
+                Still live
+              </Button>
+              <Button disabled={busy || closable.length === 0} onClick={() => void closeLost(closable)}>
+                Close selected as lost
+              </Button>
+              <Button variant="quiet" onClick={() => setTicked(new Set())}>
+                Clear
+              </Button>
+            </div>
+          ) : null}
         </>
       )}
     </div>
@@ -242,11 +259,11 @@ function Row({ row, owner, ticked, busy, onTick, onStillLive, onClose, onGo }: {
         {act('Still live', onStillLive)}
         {row.kind === 'payment' ? (
           <>
-            {act('Chase', () => onGo(row.href))}
+            {act('Follow up', () => onGo(row.href))}
             {act('Record payment', () => onGo(`/money/receivables?pay=1&order=${row.orderId}`))}
           </>
         ) : (
-          act('Chase', () => onGo(row.href))
+          act('Follow up', () => onGo(row.href))
         )}
         {closable ? act('Close as lost', onClose) : null}
       </div>

@@ -150,7 +150,7 @@ export function MarginsPage() {
         title="Order margins"
         meta={
           <InfoTip label="About margins">
-            Margin is the net sale less the expenses tagged to the order, over the whole life of the order; GST is outside both sides.
+            Margin is the net sale less the expenses tagged to the order, over the whole life of the order. GST is outside both sides.
             Only orders whose costs are marked complete are added up. A margin that is not final is an estimate: costs may still come in.
           </InfoTip>
         }
@@ -201,7 +201,7 @@ export function MarginsPage() {
           <div className="p-4">
             <Banner
               tone="danger"
-              title="Couldn't load the order margins"
+              title="Order margins could not be loaded"
               action={
                 <Button size="sm" onClick={() => void q.refetch()}>
                   Try again
@@ -266,7 +266,7 @@ function CashBody({ rows, totals }: { rows: readonly MarginRow[]; totals: CashTo
   return (
     <div data-testid="margins-cash">
       <p className="border-b px-4 py-3 text-base text-fg-2">
-        Cash so far: received less paid out. It includes GST, so it is more than the invoiced margin. Nothing is taken off for the GST you owe FBR.
+        Cash so far: received less paid out. It includes GST, so it is more than the invoiced margin. Nothing is taken off for the GST payable to FBR.
       </p>
       <div className={`hidden border-b bg-sunken px-4 py-2 text-base text-fg-2 md:grid md:gap-4 ${CASH_COLS}`} aria-hidden="true">
         <span>Customer and order</span>
@@ -339,7 +339,7 @@ function CompleteManyDialog({ rows, onClose }: { rows: readonly MarginRow[]; onC
     <Dialog open busy={many.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         title={`Mark costs complete for ${rows.length} orders?`}
-        context="Their margins become final. You can reopen one on its order page."
+        context="Their margins become final. Each can be reopened on its order page."
         footer={
           <>
             <Button data-cancel onClick={onClose} disabled={many.isPending}>

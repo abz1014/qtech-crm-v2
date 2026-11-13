@@ -35,9 +35,9 @@ export function ImportedNote({ rfqId, orderId, role }: { rfqId: string | null; o
     <FoldRow state={{ icon: FileText, word: 'Text from the old system' }} title="Imported note" summary={`${rows.length} ${rows.length === 1 ? 'note' : 'notes'}`} open={open} onToggle={() => setOpen(o => !o)} controlsId="imported-note-body" bodyLabel="Imported note">
       <div className="grid gap-4">
         <p className="text-base text-fg-muted">Text from the old system. It may name suppliers and prices. Admin and sales only.</p>
-        <Block title="Enquiry notes" rows={of('rfqs')} />
+        <Block title="RFQ notes" rows={of('rfqs')} />
         <Block title="Order notes" rows={of('orders')} />
-        <Block title="Enquiry items, as imported" rows={of('rfq_items')} />
+        <Block title="RFQ items, as imported" rows={of('rfq_items')} />
         <Block title="Order items, as imported" rows={of('order_items')} />
       </div>
     </FoldRow>

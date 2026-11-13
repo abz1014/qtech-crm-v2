@@ -27,7 +27,7 @@ import type { DialogContentProps } from '@/ui/dialogImpl'
 /*
  * Discard guard (learnability spec 3.3): once something was typed, a stray tap must not throw it away. While the dialog is
  * `dirty` (the prop, or any <Form> inside it with changes, reported through useReportDialogDirty) the scrim does nothing,
- * and Esc, the close button and a [data-cancel] button show an inline bar, "Discard what you typed?", with focus on
+ * and Esc, the close button and a [data-cancel] button show an inline bar, "Discard unsaved changes?", with focus on
  * Keep editing. A dialog that closes itself after a save (its own setOpen(false)) is not asked.
  */
 interface DialogProps {
@@ -36,7 +36,7 @@ interface DialogProps {
   onOpenChange?: (open: boolean) => void
   /** A request is in flight: Esc, scrim and close are ignored, the body is dimmed. */
   busy?: boolean
-  /** Something was typed: closing asks "Discard what you typed?" first. A <Form> inside reports this on its own. */
+  /** Something was typed: closing asks "Discard unsaved changes?" first. A <Form> inside reports this on its own. */
   dirty?: boolean
   children: ReactNode
 }
@@ -84,7 +84,7 @@ export function Dialog({ busy = false, dirty = false, open, defaultOpen, onOpenC
   // Android Back (and the browser's) closes the open dialog instead of leaving the page: the same path as Esc (asks first
   // when something was typed), and ignored while a save is in flight.
   // Phones and touch screens always: that is where a system Back button closes a sheet. On a desktop only while something
-  // is typed (Back asks "Discard what you typed?" instead of leaving the page); a clean dialog leaves Back its usual meaning.
+  // is typed (Back asks "Discard unsaved changes?" instead of leaving the page); a clean dialog leaves Back its usual meaning.
   const touch = useMediaQuery('(max-width: 767px), (pointer: coarse)')
   useBackToClose(isOpen, () => {
     if (busy) return

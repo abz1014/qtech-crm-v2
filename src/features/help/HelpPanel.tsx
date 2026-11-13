@@ -40,10 +40,12 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
   const searchRef = useRef<HTMLInputElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
   const recipeHeadingRef = useRef<HTMLHeadingElement>(null)
-  const recipe = findRecipe(recipeId, recipes as Recipe[])
+  // An engineer opens only engineer help, even through a ?help= link or a related link (live bug 33, owner decision D).
+  const allowed = useMemo(() => recipesForRole(recipes, role), [recipes, role])
+  const recipe = findRecipe(recipeId, allowed)
   const view: 'results' | 'recipe' | 'home' = query.trim() ? 'results' : recipe ? 'recipe' : 'home'
 
-  const mine = useMemo(() => recipesForRole(recipes, role, everyone), [recipes, role, everyone])
+  const mine = useMemo(() => recipesForRole(recipes, role, everyone && role !== 'engineer'), [recipes, role, everyone])
   const here = useMemo(() => recipesForPath(recipes, pathname, role).slice(0, FOR_SCREEN), [recipes, pathname, role])
   const results = useMemo(() => (query.trim() ? searchRecipes(mine, query) : []), [mine, query])
 
@@ -123,7 +125,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
             {view === 'results' ? (
               <Results results={results} query={query} onShow={show} />
             ) : view === 'recipe' && recipe ? (
-              <RecipeView recipe={recipe} recipes={recipes} headingRef={recipeHeadingRef} onShow={show} wide={wide} />
+              <RecipeView recipe={recipe} recipes={allowed} headingRef={recipeHeadingRef} onShow={show} wide={wide} />
             ) : (
               <div className="grid content-start gap-6">
                 {recipeId && !recipe ? (
@@ -135,9 +137,9 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
                 {groupByArea(mine).map(g => (
                   <RecipeList key={g.area} title={g.area} recipes={g.recipes} onShow={show} />
                 ))}
-                {role === 'admin' ? null : <Checkbox label="Show other roles' help" checked={everyone} onCheckedChange={v => setEveryone(v === true)} />}
+                {role === 'admin' || role === 'engineer' ? null : <Checkbox label="Show other roles' help" checked={everyone} onCheckedChange={v => setEveryone(v === true)} />}
                 <HowItWorksList role={role} onShow={show} />
-                <p className="text-base text-fg-muted">Still stuck? Tell the owner what you were trying to do. They can add a step here.</p>
+                <p className="text-base text-fg-muted">Answer not found. Tell the owner what the task was. A step can be added here.</p>
               </div>
             )}
           </div>

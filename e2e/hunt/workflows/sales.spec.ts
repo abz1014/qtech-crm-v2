@@ -51,7 +51,7 @@ const vis = (l: Locator) => l.filter({ visible: true }).first()
 const moreButton = (p: Page) => vis(p.getByRole('button', { name: /^More( actions)?$/ }))
 const T = { timeout: 15_000 }
 /** New RFQ's save-only action (r3/rfq-orders renamed "Save without asking"); on a phone it sits in the step bar's ⋯ menu. */
-const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
+const SAVE_FOR_LATER = "Save as draft"
 
 /**
  * A supplier's reply form. Each supplier is listed once, in Suppliers asked, and "Enter reply" (or "Edit reply" once there is a
@@ -310,7 +310,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
         await shot(page, `${W}-message-step`)
         await resetClipboard(page)
         await copy.dblclick()
-        const text = await readClipboardWhen(page, s => s.includes('Hi hope you are doing well,'))
+        const text = await readClipboardWhen(page, s => s.includes('Dear Sir/Madam,'))
         for (const want of ['Pressure gauge 0-16 bar', 'پریشر', 'Flow switch paddle type'])
           if (!text.includes(want)) note(info, { kind: 'observation', where: `${W} copied message`, what: `the supplier message lacks "${want}"`, detail: text.slice(0, 600) })
         if (/RFQ-####|\{\{|undefined|NaN/.test(text)) note(info, { kind: 'observation', where: `${W} copied message`, what: 'placeholder or junk in the supplier message', detail: text.slice(0, 600) })
@@ -634,9 +634,9 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
     await probe(info, page, `${W} close a reply with typed prices, then Back`, async () => {
       await replyDialog(page, pk.name)
       await price(pk, 1).fill('1111')
-      // The dialog's Close with a typed price asks first, in the dialog's own bar ("Discard what you typed?").
+      // The dialog's Close with a typed price asks first, in the dialog's own bar ("Discard unsaved changes?").
       await region(pk).getByRole('button', { name: 'Close', exact: true }).click()
-      const confirm = page.getByRole('group', { name: 'Discard what you typed?' })
+      const confirm = page.getByRole('group', { name: 'Discard unsaved changes?' })
       await expect(confirm).toBeVisible(T)
       await page.goBack()
       await settle(page)
@@ -997,7 +997,7 @@ test('two tabs on one RFQ: a stale Issue after another tab issued, and a quantit
       await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { qty: 5 })
       await dialog(a).getByRole('button', { name: 'Issue quotation' }).click()
       // Fixed (HW-3): the issue is refused with the reason, nothing is issued, and the dialog shows the real total before the next try.
-      await expect(dialog(a).getByText(/changed the quantity/)).toBeVisible({ timeout: 30_000 })
+      await expect(dialog(a).getByText(/was changed to .* while this was open/)).toBeVisible({ timeout: 30_000 })
       if ((await quotationsOf(r.rfq.id)).length !== 0) note(info, { kind: 'observation', where: `${W} quantity changed under an open dialog`, what: 'a quotation was issued although the quantity had changed' })
       await expect(dialog(a).getByTestId('total-gross')).not.toHaveText(shown, T)
       const shownNow = await dialog(a).getByTestId('total-gross').innerText()
@@ -1021,7 +1021,7 @@ const REASONS = [
   ['no_reply_to_clarification', 'No reply to our questions'],
   ['customer_cancelled', 'The customer cancelled'],
   ['could_not_source', 'We could not source it'],
-  ['we_were_late', 'We were too late'],
+  ['we_were_late', 'Quotation was late'],
   ['other', 'Another reason'],
 ] as const
 
@@ -1197,7 +1197,7 @@ test('HW-3: a quantity changed while the Issue quotation dialog is open is issue
   await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { qty: 5 }) // someone else corrects the quantity
   await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
   // Fixed (HW-3): the issue is refused with the reason, nothing is issued, and the dialog shows the real total before the next try.
-  await expect(dialog(page).getByText(/changed the quantity/)).toBeVisible({ timeout: 30_000 })
+  await expect(dialog(page).getByText(/was changed to .* while this was open/)).toBeVisible({ timeout: 30_000 })
   expect(await quotationsOf(r.rfq.id)).toHaveLength(0)
   await expect(dialog(page).getByTestId('total-gross')).toHaveText('PKR 5,900', T)
   const shownNow = await dialog(page).getByTestId('total-gross').innerText()

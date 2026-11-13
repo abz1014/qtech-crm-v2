@@ -137,7 +137,7 @@ function Preview({ file }: { file: File }) {
       ) : url && image ? (
         <img src={url} alt={`The photo ${file.name}`} className="max-h-[78vh] w-full border-y object-contain" />
       ) : (
-        <p className="border-y py-3 text-base text-fg-2">A spreadsheet has no preview. It is read on this device; the items are on the right.</p>
+        <p className="border-y py-3 text-base text-fg-2">A spreadsheet has no preview. It is read on this device. The items are on the right.</p>
       )}
     </figure>
   )
@@ -165,7 +165,7 @@ function DropZone({ onFiles }: { onFiles: (f: File[]) => void }) {
     >
       <Icon icon={Upload} size="lg" className="text-fg-muted" />
       <p className="m-0 font-medium">Drop the customer&rsquo;s PDF, photo or spreadsheet here</p>
-      <p className="m-0 text-fg-2">Or paste their message anywhere on this page. Nothing is saved until you create the job.</p>
+      <p className="m-0 text-fg-2">Or paste their message anywhere on this page. Nothing is saved until the job is created.</p>
       <input
         ref={input}
         type="file"

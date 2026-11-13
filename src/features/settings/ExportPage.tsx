@@ -20,14 +20,14 @@ export function ExportPage() {
       const n = await downloadExport(kind, businessToday())
       toast.toast({ title: `${kind.label} exported`, body: `${n} ${n === 1 ? 'row' : 'rows'} in the file`, tone: 'success' })
     } catch (err) {
-      toast.toast({ title: `Couldn't export ${kind.label.toLowerCase()}`, body: mapPgError(err, { entity: 'export' }).message, tone: 'danger' })
+      toast.toast({ title: `Could not export ${kind.label.toLowerCase()}`, body: mapPgError(err, { entity: 'export' }).message, tone: 'danger' })
     } finally {
       setBusy(null)
     }
   }
   return (
     <div className="grid gap-4" data-testid="export-page">
-      <PageHeader title="Export data" lede={<span className="text-base">Download your records as files you can open in Excel. Nothing is changed.</span>} />
+      <PageHeader title="Export data" lede={<span className="text-base">Download records as files that open in Excel. Nothing is changed.</span>} />
       <ul className="divide-y border-y">
         {EXPORTS.map(k => (
           <li key={k.id} className="flex min-h-[48px] flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 pl-1" data-work={k === EXPORTS[0] ? '' : undefined}>

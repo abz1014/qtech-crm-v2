@@ -65,13 +65,23 @@ describe('GST to FBR: the months and their payment slips', () => {
       { invoice_date: '2026-10-01', psid: null, tax_deposited_on: null },
     ])
     expect(f).toEqual([
-      { month: '2026-09', psids: ['1023-4471', '9999'], lastDepositedOn: '2026-10-15' },
-      { month: '2026-10', psids: [], lastDepositedOn: null },
+      { month: '2026-09', psids: ['1023-4471', '9999'], lastDepositedOn: '2026-10-15', psidDeposits: [{ psid: '1023-4471', on: '2026-10-15' }, { psid: '9999', on: null }] },
+      { month: '2026-10', psids: [], lastDepositedOn: null, psidDeposits: [] },
     ])
     const l = gstLine(row('2026-09', { depositedCount: 4, depositedAmount: '15000.00' }), f[0], '2026-10-20')
     expect(l.tone).toBe('paid')
     expect(l.paidOn).toBe('2026-10-15')
     expect(l.psids).toEqual(['1023-4471', '9999'])
+    expect(l.psidDeposits).toEqual([{ psid: '1023-4471', on: '2026-10-15' }, { psid: '9999', on: null }])
+  })
+  it('keeps one deposit day for each PSID, not one for the month', () => {
+    const [f] = filingsOf([
+      { invoice_date: '2026-09-04', psid: 'A-1', tax_deposited_on: '2026-10-10' },
+      { invoice_date: '2026-09-05', psid: 'B-2', tax_deposited_on: '2026-10-18' },
+      { invoice_date: '2026-09-06', psid: 'A-1', tax_deposited_on: '2026-10-12' },
+    ])
+    expect(f.psidDeposits).toEqual([{ psid: 'A-1', on: '2026-10-12' }, { psid: 'B-2', on: '2026-10-18' }])
+    expect(f.lastDepositedOn).toBe('2026-10-18')
   })
 })
 

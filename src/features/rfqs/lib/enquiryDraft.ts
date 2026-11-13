@@ -147,7 +147,7 @@ function itemLines(items: readonly EnquiryItem[]): string[] {
 const ASKS = [
   'Unit price and currency',
   'Lead time',
-  'Origin and authenticity (country of origin; original and genuine)',
+  'Origin and authenticity (country of origin, original and genuine)',
   'Stock position',
   'MOQ, offer validity and payment terms',
   'Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important)',
@@ -168,7 +168,7 @@ export function generateEnquiryDraft(input: EnquiryInput): EnquiryDraft {
 
   const replyBy = computeReplyBy(input.dueOn, input.today)
   const body = [
-    'Hi hope you are doing well,',
+    'Dear Sir/Madam,',
     '',
     'Please quote your best price, availability and lead time for the following :',
     '',

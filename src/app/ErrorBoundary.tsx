@@ -35,13 +35,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           role="alert"
           className={cn(
             'flex items-center justify-center bg-canvas p-4',
-            this.props.variant === 'inline' ? 'min-h-full py-16' : 'min-h-screen',
+            this.props.variant === 'inline' ? 'min-h-full py-16' : 'min-h-dvh',
           )}
         >
           <div className="grid w-full max-w-sm justify-items-center gap-4 text-center">
-            <h1 className="text-xl font-semibold tracking-snug">Something went wrong</h1>
+            <h1 className="text-xl font-semibold tracking-snug">The page stopped working</h1>
             <p className="text-sm text-fg-2">
-              This page stopped because of an error. Nothing you saved has changed. Reload to try again.
+              This page stopped because of an error. Nothing that was saved has changed. Reload to try again.
             </p>
             <Button variant="primary" icon={RefreshCw} onClick={() => window.location.reload()}>
               Reload page

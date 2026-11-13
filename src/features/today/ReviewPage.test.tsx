@@ -50,7 +50,7 @@ describe('Weekly review', () => {
     mount('admin')
     const quotes = await screen.findByRole('region', { name: /^Quotations with no decision/ })
     expect(within(quotes).getAllByRole('listitem')).toHaveLength(2)
-    expect(within(screen.getByRole('region', { name: /^Enquiries with no supplier asked/ })).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(screen.getByRole('region', { name: /^RFQs with no supplier asked/ })).getAllByRole('listitem')).toHaveLength(1)
     expect(document.querySelector('[data-review-count]')?.textContent).toBe('3')
     expect(screen.queryByRole('region', { name: /^Payments more than 30 days/ })).toBeNull()
   })
@@ -71,7 +71,7 @@ describe('Weekly review', () => {
 
   it('Close as lost closes that RFQ and offers Undo', async () => {
     mount('admin')
-    const enquiries = await screen.findByRole('region', { name: /^Enquiries with no supplier asked/ })
+    const enquiries = await screen.findByRole('region', { name: /^RFQs with no supplier asked/ })
     fireEvent.click(within(enquiries).getByRole('button', { name: /^Close as lost/ }))
     await waitFor(() => expect(fake?.calls.some(c => c.target === 'rfqs' && c.verb === 'update')).toBe(true))
     const call = fake!.calls.find(c => c.target === 'rfqs' && c.verb === 'update')!
@@ -86,6 +86,12 @@ describe('Weekly review', () => {
     for (const box of screen.getAllByRole('checkbox').slice(0, 2)) fireEvent.click(box)
     const bar = await screen.findByRole('region', { name: 'Selected' })
     expect(within(bar).getByText('selected').parentElement).toHaveTextContent('2 selected')
+    // a bottom bar: last in the page, stuck to the bottom above the phone tabs, with room under the content
+    expect(bar.className).toContain('sticky')
+    expect(bar.className).toContain('bottom-[')
+    expect(bar.className).not.toContain('top-0')
+    expect(bar.parentElement?.lastElementChild).toBe(bar)
+    expect(bar.parentElement?.className).toContain('pb-')
     fireEvent.click(within(bar).getByRole('button', { name: 'Close selected as lost' }))
     await waitFor(() => expect(fake?.calls.filter(c => c.target === 'rfqs' && c.verb === 'update')).toHaveLength(2))
   })

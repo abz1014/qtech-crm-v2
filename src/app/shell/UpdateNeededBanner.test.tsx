@@ -12,10 +12,10 @@ afterEach(() => {
   vi.mocked(reloadOntoNewVersion).mockClear()
 })
 
-describe('Update needed — tap Reload (owner decision 2026-10-22)', () => {
+describe('Update required. Select Reload. (owner decision 2026-10-22)', () => {
   it('says saving is paused and reloads onto the new version at once when nothing is being typed', async () => {
     render(<UpdateNeededBanner />)
-    expect(screen.getByRole('alert')).toHaveTextContent('Update needed — tap Reload')
+    expect(screen.getByRole('alert')).toHaveTextContent('Update required. Select Reload.')
     expect(screen.getByRole('alert')).toHaveTextContent(/saving is paused/)
     await userEvent.click(screen.getByRole('button', { name: 'Reload' }))
     expect(reloadOntoNewVersion).toHaveBeenCalledTimes(1)

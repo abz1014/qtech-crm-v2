@@ -7,9 +7,9 @@ screens: /jobs
 related: commissioning-done
 ---
 1. Open the job. On a computer the [On site] card has the big buttons; on a phone they are in the bar at the bottom.
-2. Tap [Delivered today] when the goods reach the site, or [Installed today] when the work is done.
-3. Open the row [Add to this job] and tap [Add photo or note]. Then [Take or choose a photo], or type a note and tap [Save note].
+2. Select [Delivered today] when the goods reach the site, or [Installed today] when the work is done.
+3. Open the row [Add to this job] and select [Add photo or note]. Then [Take or choose a photo], or type a note and select [Save note].
 
-Tip: with no signal nothing is sent. The card says "Needs signal to save. Your typing is kept." Try again when the signal is back.
+Note: Without a connection nothing is sent. The card says "No connection. The note is kept and can be saved later." Try again when the connection is back.
 
-Safe to try: tapped by mistake? Tap [Undo] on the message at the bottom.
+Note: To reverse a wrong selection, select [Undo] on the message at the bottom.

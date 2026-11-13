@@ -65,7 +65,7 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
           unlocked ? (
             <>
               <Icon icon={Check} size="sm" />
-              {copy === 'blocked' ? 'Copy it by hand from the box' : 'Copied to clipboard'}
+              {copy === 'blocked' ? 'Copy it manually from the box' : 'Copied to clipboard'}
             </>
           ) : (
             'Copy the password to continue'
@@ -116,8 +116,8 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
         </div>
 
         <Banner tone="warning" title="This password is shown once">
-          Copy it now and send it to {first} yourself. After you close this window it can&apos;t be shown again. You would reset it
-          instead.
+          Copy it now and send it to {first}. After this window is closed it cannot be shown again. A lost password needs
+          a reset.
         </Banner>
 
         <div className="flex flex-wrap items-center gap-3">

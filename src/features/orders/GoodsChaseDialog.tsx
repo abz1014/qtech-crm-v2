@@ -76,7 +76,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
       const r = await performChase({ kind: 'goods', legId: leg.id, before: { lastChasedOn: leg.lastChasedOn, chaseCount: leg.chaseCount } })
       setCopied(true)
       toast({
-        title: `${copied ? 'Copied. ' : ''}${leg.supplierName} marked chased.`,
+        title: `${copied ? 'Copied. ' : ''}${leg.supplierName} marked as followed up.`,
         body: orderRef(order.number),
         tone: 'success',
         undo: {
@@ -90,9 +90,9 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
             }
           },
           onSettle: () => void refresh(),
-          settledTitle: `${leg.supplierName} marked chased`,
+          settledTitle: `${leg.supplierName} marked as followed up`,
           undoneTitle: 'Undone.',
-          undoneBody: `${leg.supplierName} is not marked chased.`,
+          undoneBody: `${leg.supplierName} is not marked as followed up.`,
         },
       })
       onClose()
@@ -107,7 +107,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
     try {
       // The copy comes first inside the tap: a browser only allows it during the gesture.
       if (!(await copyToClipboard(text))) {
-        toast({ title: 'Could not copy the message', body: 'Select the text and copy it by hand. Nothing was marked.', tone: 'danger' })
+        toast({ title: 'Could not copy the message', body: 'Select the text and copy it manually. Nothing was marked.', tone: 'danger' })
         return
       }
       await mark(true)
@@ -130,7 +130,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         size="lg"
-        title="Chase the goods"
+        title="Follow up on delivery"
         context={`${orderRef(order.number)} · ${leg.supplierName}${leg.expectedOn ? ` · expected ${formatDay(leg.expectedOn)}` : ''}`}
         icon={MessageSquareWarning}
         footer={
@@ -140,7 +140,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
             </Button>
             {copied ? (
               <Button icon={Check} disabled>
-                Marked chased today
+                Follow-up recorded today
               </Button>
             ) : draft ? (
               <>
@@ -149,20 +149,20 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
                   text={draft.whatsapp.body}
                   email={{ subject: draft.email.subject, body: draft.email.body }}
                   variant={opened ? 'secondary' : 'primary'}
-                  copy={{ label: 'Copy and mark chased', onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+                  copy={{ label: 'Copy and record follow-up', onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
                   onOpen={() => setOpened(true)}
                   channel={channel}
                   onChannelChange={setChannel}
                 />
                 {opened ? (
                   <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()}>
-                    Mark chased
+                    Record follow-up
                   </Button>
                 ) : null}
               </>
             ) : (
               <Button variant="primary" disabled>
-                Copy and mark chased
+                Copy and record follow-up
               </Button>
             )}
           </>
@@ -180,7 +180,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
               <Skeleton className="h-4 w-5/6" />
             </div>
           ) : draftData.isError ? (
-            <Banner tone="danger" title="Couldn't prepare the message" action={<Button onClick={() => void draftData.refetch()}>Try again</Button>}>
+            <Banner tone="danger" title="The message could not be prepared" action={<Button onClick={() => void draftData.refetch()}>Try again</Button>}>
               Nothing was changed.
             </Banner>
           ) : draft ? (
@@ -197,7 +197,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
                 {(channel === 'email' ? draft.email : draft.whatsapp).body}
               </pre>
               <p className="text-xs text-fg-muted">
-                Copying records a chase today (chased ×{draft.countAfter}). Asks for a dispatch date by {formatDay(draft.answerBy ?? today)}.
+                Copying records a follow-up today (followed up ×{draft.countAfter}). Asks for a dispatch date by {formatDay(draft.answerBy ?? today)}.
                 {draft.firm ? ' Firmer wording, because it is more than 30 days late.' : ''}
               </p>
             </>

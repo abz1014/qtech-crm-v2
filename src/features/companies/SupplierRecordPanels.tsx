@@ -29,7 +29,7 @@ import type { StepTone } from '@/lib/status'
 /*
  * Outcomes are history facts, so they are status text (icon and words, no box; consistency spec 1.5), toned by who acts next:
  * done when it was priced or ordered here, waiting while the supplier still has to answer, inert for the rest. Only the
- * registry's icon overrides are used (Ban for "Can't quote", CircleDashed for no reply: not firm).
+ * registry's icon overrides are used (Ban for "Cannot quote", CircleDashed for no reply: not firm).
  */
 const OUTCOME: Record<QuoteOutcome, { label: string; tone: StepTone; icon?: LucideIcon }> = {
   quoted: { label: 'Quoted', tone: 'done' },
@@ -39,7 +39,7 @@ const OUTCOME: Record<QuoteOutcome, { label: string; tone: StepTone; icon?: Luci
   'quoted-open': { label: 'Quoted, RFQ open', tone: 'waiting' },
   waiting: { label: 'Waiting for a reply', tone: 'waiting' },
   'no-reply': { label: 'No reply', tone: 'inert', icon: CircleDashed },
-  declined: { label: "Can't quote", tone: 'inert', icon: Ban },
+  declined: { label: "Cannot quote", tone: 'inert', icon: Ban },
 }
 
 /** One outcome as status text. Used by the quotes and the enquiries lists. */
@@ -264,12 +264,12 @@ export function RecentQuotes({
   return (
     <Panel
       flat
-      title="Enquiries"
+      title="RFQs"
       info={
         prices ? (
           <InfoTip label="About the prices">
             <span className="grid gap-2">
-              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the quote was typed in, not today’s.</span>
+              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the supplier price was typed in, not today&apos;s.</span>
               <span>A locked price is on file, but its currency was never checked, so it is not shown.</span>
             </span>
           </InfoTip>
@@ -278,11 +278,11 @@ export function RecentQuotes({
       meta={view ? latestOf(rows.length, view.quoteCount) : undefined}
     >
       {loading ? (
-        <ListSkeleton label="Loading enquiries" />
+        <ListSkeleton label="Loading RFQs" />
       ) : error ? (
-        <LoadError title="Couldn't load the enquiries" onRetry={onRetry} />
+        <LoadError title="Could not load the RFQs" onRetry={onRetry} />
       ) : !view || view.allQuotes.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-fg-muted">No enquiry asked of them yet.</p>
+        <p className="px-5 py-6 text-sm text-fg-muted">No RFQ asked of them yet.</p>
       ) : (
         <div>
           {wide ? (
@@ -364,7 +364,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
       {loading ? (
         <ListSkeleton label="Loading deliveries" />
       ) : error ? (
-        <LoadError title="Couldn't load the deliveries" onRetry={onRetry} />
+        <LoadError title="Could not load the deliveries" onRetry={onRetry} />
       ) : !view || view.deliveries.length === 0 ? (
         <p className="px-5 py-6 text-sm text-fg-muted">No deliveries from them yet.</p>
       ) : (
@@ -436,6 +436,7 @@ function DateText({ iso, today, estimated }: { iso: string | null; today: string
 
 export function OpenWithThem({ view, loading, error, onRetry }: { view: SupplierRecord | null; loading: boolean; error: boolean; onRetry: () => void }) {
   const row = 'flex items-baseline justify-between gap-4 border-t py-2 text-sm first:border-t-0'
+  const prices = useSeesPrices()
   return (
     <Panel flat title="Open with them">
       <div className="px-5 py-3">
@@ -445,7 +446,7 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : error ? (
-          <Banner tone="danger" title="Couldn't load what is open" action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
+          <Banner tone="danger" title="Could not load what is open" action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
             Nothing was changed.
           </Banner>
         ) : view ? (
@@ -485,10 +486,12 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
                 </ul>
               )}
             </div>
-            <div className={row}>
-              <span className="text-fg-muted">Currency</span>
-              <CurrencyValue currency={view.open.currency} />
-            </div>
+            {prices ? (
+              <div className={row}>
+                <span className="text-fg-muted">Currency</span>
+                <CurrencyValue currency={view.open.currency} />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

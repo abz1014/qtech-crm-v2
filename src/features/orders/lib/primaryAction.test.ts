@@ -20,7 +20,7 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     expect(page(header({}, { goods: 'delivered' }), [delivered], [item('1', 'a')]).primary).toMatchObject({ kind: 'create-invoice' })
     const invoiced = page(header({}, { goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 }), [delivered], [item('1', 'a')], 'admin', money({ dueOn: '2026-12-20' }))
     expect(invoiced.primary).toMatchObject({ kind: 'record-payment' })
-    expect(invoiced.text).toBe('Customer owes PKR 1,180, due 20 Dec')
+    expect(invoiced.text).toBe('To collect PKR 1,180, due 20 Dec')
   })
 
   it('late goods come first: admin and sales chase them; an engineer marks them delivered', () => {
@@ -28,7 +28,7 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     const both = [legRow('a'), late]
     const items = [item('1', 'a'), item('2', 'b')]
     const sales = page(header(), both, items, 'sales')
-    expect(sales.primary).toMatchObject({ kind: 'chase-goods', label: 'Chase goods', supplierName: 'Dubai Instrumentation' })
+    expect(sales.primary).toMatchObject({ kind: 'chase-goods', label: 'Follow up on delivery', supplierName: 'Dubai Instrumentation' })
     expect(sales.text).toBe('Goods from Dubai Instrumentation are 3 days late')
     expect(sales.step.tone).toBe('now') // amber: late goods are our own pace; red is for late money and promises (redesign phase 0)
     expect(page(header(), both, items, 'engineer').primary).toMatchObject({ kind: 'deliver', label: 'Delivered today' })
@@ -79,10 +79,10 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
   it('sales never get Record payment (it is admin only): they get Copy reminder while the customer owes, overdue or not', () => {
     const r = page(header({}, { goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 }), [], [], 'sales', money({ paymentState: 'overdue', dueOn: '2026-11-10' }))
     expect(r.primary).toMatchObject({ kind: 'copy-reminder', label: 'Copy reminder' })
-    expect(r.text).toBe('Customer owes PKR 1,180, 10 days overdue')
+    expect(r.text).toBe('To collect PKR 1,180, 10 days overdue')
     const notDue = page(header({}, { goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 }), [], [], 'sales', money({ dueOn: '2026-12-03' }))
     expect(notDue.primary).toMatchObject({ kind: 'copy-reminder' })
-    expect(notDue.text).toBe('Customer owes PKR 1,180, due 3 Dec')
+    expect(notDue.text).toBe('To collect PKR 1,180, due 3 Dec')
   })
 
   it('an engineer waits for the admin to place the order, and is told so', () => {

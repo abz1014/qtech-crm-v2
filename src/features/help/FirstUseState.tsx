@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Banknote, CalendarCheck, CircleHelp, FileText, Package, type LucideIcon } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
-import { firstUseCopy, NOTHING_YET, type FirstUseCopy, type FirstUseScreen, type NothingYetScreen } from '@/features/help/firstUseCopy'
+import { firstUseCopy, nothingYetCopy, type FirstUseCopy, type FirstUseScreen, type NothingYetScreen } from '@/features/help/firstUseCopy'
 import { useHelp } from '@/features/help/useHelp'
 
 /*
@@ -38,8 +38,8 @@ export function FirstUseState({ screen, role, alone, onEveryone, everyoneCount, 
  * instead of the goal state ("Every order is paid in full") that is only true once records exist. Unbordered by default, because
  * it sits inside a table body that already has its edge.
  */
-export function NothingYetState({ screen, bordered = false, className }: { screen: NothingYetScreen; bordered?: boolean; className?: string }) {
-  return <FirstUseCard copy={NOTHING_YET[screen]} icon={ICON[screen]} bordered={bordered} className={className} />
+export function NothingYetState({ screen, role, bordered = false, className }: { screen: NothingYetScreen; role?: string; bordered?: boolean; className?: string }) {
+  return <FirstUseCard copy={nothingYetCopy(screen, role)} icon={ICON[screen]} bordered={bordered} className={className} />
 }
 
 function FirstUseCard({

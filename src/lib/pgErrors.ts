@@ -17,7 +17,7 @@
  * Works on a PostgrestError ({ code, message, details }) or anything shaped like one.
  */
 import { PlainError } from '@/lib/errors/plainError'
-import { rpcMessage, type RpcAction } from '@/lib/errors/rpcMessages'
+import { lockedWording, rpcMessage, type RpcAction } from '@/lib/errors/rpcMessages'
 
 export interface PgLikeError {
   code?: string
@@ -80,9 +80,9 @@ export function constraintOf(err: PgLikeError): string | undefined {
 export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
   const exists = opts.entity ? `A ${opts.entity} with these details already exists.` : 'That already exists.'
   if (err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false)) return { ...NETWORK }
-  if (err instanceof PlainError) return { kind: 'unknown', message: err.message, code: err.code }
+  if (err instanceof PlainError) return { kind: 'unknown', message: lockedWording(err.message), code: err.code }
   if (!isPgLike(err)) {
-    return { kind: 'unknown', message: 'Something went wrong. Nothing was saved. Try again.' }
+    return { kind: 'unknown', message: 'The change was not saved. Try again.' }
   }
   const text = typeof err.message === 'string' ? err.message : ''
   if (!err.code && FETCH_FAILED.test(text)) return { ...NETWORK }
@@ -127,10 +127,10 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
       return { kind: 'not-found', message: 'This record is no longer there. It may have been removed. Reload the page.' }
     case 'P0001':
       if (CLOSED_MONTH.test(text.trim())) {
-        return { kind: 'closed-month', message: text.trim() }
+        return { kind: 'closed-month', message: lockedWording(text.trim()) }
       }
       return { kind: 'unknown', message: 'This change was refused. Nothing was saved.' }
     default:
-      return { kind: 'unknown', message: 'Something went wrong. Nothing was saved. Try again.' }
+      return { kind: 'unknown', message: 'The change was not saved. Try again.' }
   }
 }

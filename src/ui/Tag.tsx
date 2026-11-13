@@ -67,7 +67,7 @@ export function NeedsCount({
       >
         {shown}
       </span>
-      {silent ? null : <span className="sr-only">{`, ${sr ?? `${n} need you`}`}</span>}
+      {silent ? null : <span className="sr-only">{`, ${sr ?? `${n} due now`}`}</span>}
     </>
   )
 }

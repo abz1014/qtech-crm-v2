@@ -42,7 +42,7 @@ describe('exchange rate helpers', () => {
     expect(rateAgeLabel({ ageDays: 14, staleness: 'stale' })).toBe('14 days old')
     expect(rateAgeLabel({ ageDays: 52, staleness: 'unusable' })).toBe('52 days old, not compared')
     expect(sourceLabel('auto')).toBe('Automatic')
-    expect(sourceLabel('manual')).toBe('Entered by hand')
+    expect(sourceLabel('manual')).toBe('Entered manually')
   })
 })
 
@@ -59,7 +59,7 @@ describe('exchange rate table', () => {
     expect(within(usd).getByText('Thu 26 Nov')).toBeInTheDocument()
     expect(within(usd).getByText('1 day old')).toBeInTheDocument()
     expect(within(usd).queryByText('Fresh')).toBeNull()
-    expect(within(table).getByText('Entered by hand')).toBeInTheDocument()
+    expect(within(table).getByText('Entered manually')).toBeInTheDocument()
     const cny = within(table).getByText('CNY').closest('tr') as HTMLElement
     expect(within(cny).getByText('Old rate')).toBeInTheDocument()
     expect(within(cny).getByText('14 days old')).toBeInTheDocument()
@@ -71,7 +71,7 @@ describe('exchange rate table', () => {
   it('says plainly when the rates cannot load', () => {
     h.state = { data: [], isLoading: false, isError: true, refetch: vi.fn() }
     render(<RatesTable />)
-    expect(screen.getByText('Couldn’t load the exchange rates')).toBeInTheDocument()
+    expect(screen.getByText('Could not load the exchange rates')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument()
   })
 })
@@ -89,7 +89,7 @@ describe('Settings home', () => {
     )
     expect(screen.getByRole('heading', { name: "Today's exchange rates" })).toBeInTheDocument()
     // RATES: 3 automatic (newest 26 Nov), 1 by hand
-    expect(screen.getByText('Last automatic update Thu 26 Nov. 1 rate entered by hand.')).toBeInTheDocument()
+    expect(screen.getByText('Last automatic update Thu 26 Nov. 1 rate entered manually.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Add a rate or see history/ })).toHaveAttribute('href', '/settings/exchange-rates')
     expect(screen.queryByRole('heading', { name: 'Company profile' })).toBeNull()
     expect(screen.queryByText(/Updated every night/)).toBeNull()
@@ -114,10 +114,10 @@ describe('ratesStatusLine', () => {
   const r = (asOf: string, source: string) => ({ asOf, source })
   it('says what actually happened, never "updated every night" over rows entered by hand', () => {
     expect(ratesStatusLine([])).toBe('No rates yet.')
-    expect(ratesStatusLine([r('2026-10-22', 'manual'), r('2026-10-22', 'manual')])).toBe('No automatic update yet. Rates entered by hand.')
+    expect(ratesStatusLine([r('2026-10-22', 'manual'), r('2026-10-22', 'manual')])).toBe('No automatic update yet. Rates entered manually.')
     expect(ratesStatusLine([r('2026-10-20', 'auto'), r('2026-10-22', 'auto')])).toBe('Last automatic update Thu 22 Oct.')
     expect(ratesStatusLine([r('2026-10-21', 'auto'), r('2026-10-22', 'manual'), r('2026-10-22', 'manual')])).toBe(
-      'Last automatic update Wed 21 Oct. 2 rates entered by hand.',
+      'Last automatic update Wed 21 Oct. 2 rates entered manually.',
     )
   })
 })

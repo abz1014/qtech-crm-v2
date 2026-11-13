@@ -43,12 +43,12 @@ describe('mapPgError (U07)', () => {
     const m = mapPgError({ code: '22003', message: 'numeric field overflow' })
     expect(m.kind).toBe('too-large')
     expect(m.message).toMatch(/too large/)
-    expect(m.message).not.toMatch(/Something went wrong/)
+    expect(m.message).not.toBe('The change was not saved. Try again.')
   })
 
-  it('P0001 closed month: the server wording is passed through unchanged', () => {
+  it('P0001 closed month: the server sentence is shown with locked (decision H)', () => {
     const msg = 'September 2026 is closed. An admin can reopen it.'
-    expect(mapPgError({ code: 'P0001', message: msg })).toEqual({ kind: 'closed-month', message: msg })
+    expect(mapPgError({ code: 'P0001', message: msg })).toEqual({ kind: 'closed-month', message: 'September 2026 is locked. An admin can reopen it.' })
   })
 
   it('P0001 with any other text is not shown to people', () => {
@@ -105,7 +105,7 @@ describe('mapPgError (U07)', () => {
   })
 
   it('anything else gets a plain fallback', () => {
-    expect(mapPgError({ code: '99999', message: 'boom' }).message).toBe('Something went wrong. Nothing was saved. Try again.')
+    expect(mapPgError({ code: '99999', message: 'boom' }).message).toBe('The change was not saved. Try again.')
     expect(mapPgError('nope').kind).toBe('unknown')
   })
 })

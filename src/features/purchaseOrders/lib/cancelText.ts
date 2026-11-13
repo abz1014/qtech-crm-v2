@@ -11,8 +11,8 @@ export interface SentPo {
   contact?: { name: string; phone: string | null; email: string | null } | null
 }
 
-/** "PO-26-0017 was sent to Alpenmark. Tell them it's cancelled." One sentence per PO. */
-export const sentPoSentence = (po: SentPo): string => `${po.ref} was sent to ${po.supplierName}. Tell them it's cancelled.`
+/** "PO-26-0017 was sent to Alpenmark. Tell them it has been cancelled." One sentence per PO. */
+export const sentPoSentence = (po: SentPo): string => `${po.ref} was sent to ${po.supplierName}. Tell them it has been cancelled.`
 
 const qtyText = (i: SentPo['items'][number]): string => `${i.qty}${i.unit ? ` ${i.unit}` : ''}`
 
@@ -20,12 +20,12 @@ const qtyText = (i: SentPo['items'][number]): string => `${i.qty}${i.unit ? ` ${
 export function cancellationMessage(po: SentPo, ourName: string): string {
   const lines = po.items.map((i, n) => `${n + 1}. ${i.description}, ${qtyText(i)}`)
   return [
-    'Hi hope you are doing well,',
+    'Dear Sir/Madam,',
     '',
     `Regarding our purchase order *${po.ref}*: our customer has cancelled the order, so we have to ask you to cancel it as well.`,
     ...(lines.length ? ['', 'It covered:', ...lines] : []),
     '',
-    'If anything has already been ordered or shipped, please let us know so we can sort it out together. Sorry for the trouble, and thank you for your understanding.',
+    'If anything has already been ordered or shipped, please inform us so that the matter can be settled. We regret the inconvenience and thank you for your cooperation.',
     '',
     'Regards,',
     ourName,

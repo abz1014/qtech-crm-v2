@@ -26,7 +26,7 @@ describe('phone tabs: the top bar counts as badges', () => {
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: /^To do\s?, 140 need you$/ })).toHaveTextContent('99+')
+    expect(within(nav).getByRole('link', { name: /^To do\s?, 140 due now$/ })).toHaveTextContent('99+')
     expect(within(nav).getByRole('link', { name: 'Jobs' }).querySelector('[data-needs-count]')).toBeNull()
     expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
     // Money has no number, only a red dot while an invoice is late, and its name says so
@@ -238,7 +238,7 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
       const u = userEvent.setup()
       shell('sales')
       const dlg = await search(u, q)
-      await within(dlg).findByRole('option', { name: /New enquiry/ })
+      await within(dlg).findByRole('option', { name: /New RFQ/ })
       cleanup()
     }
   })

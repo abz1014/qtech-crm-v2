@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, ChevronDown, Copy, Pencil, Plus, Undo2 } from 'lucide-react'
+import { Check, ChevronDown, Copy, MessageSquareReply, Pencil, Plus, Undo2 } from 'lucide-react'
 import { useSeesPrices } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
@@ -43,9 +43,9 @@ import { formatDay } from '@/lib/formatDay'
 /*
  * "Suppliers asked" (g2-rfq-detail rail; UX audit 2026-10-19; grade-B R2, R3, R4 2026-10-22): every supplier asked, listed ONCE on
  * the page, with where each one stands and the one way in to their reply. Under each name: one chip (Priced 2 of 4, Waiting for
- * prices chased ×1, Can't quote, Not asked yet), when it was sent and a memory line from v_supplier_stats ("Replied 5 of 7,
+ * prices chased ×1, Cannot quote, Not asked yet), when it was sent and a memory line from v_supplier_stats ("Replied 5 of 7,
  * usually ~2 days, now 5 days"; amber when the wait is longer than usual). "Enter reply" (or "Edit reply" once there is a price)
- * opens the reply dialog (SupplierReplies.tsx), which holds the prices, Paste reply and "Can't quote". A supplier who can't quote
+ * opens the reply dialog (SupplierReplies.tsx), which holds the prices, Paste reply and "Cannot quote". A supplier who cannot quote
  * shows the reason and Take back. An engineer (owner decision 2026-10-22: engineers see and write no prices) sees who replied and
  * who is waited on, and can chase, but has no Enter or Edit reply: the dialog is a price form and never opens for them.
  *
@@ -58,12 +58,12 @@ import { formatDay } from '@/lib/formatDay'
  *           it (open by itself it would compete with the green Issue quotation).
  *   none    a quotation went out, or the RFQ is won or closed: no chase at all.
  * The channel is the person's remembered one, with the other as a link under "Show the whole message". The text lists only the
- * items that supplier has not priced, and never names the customer or our price. From the second chase it asks for a "cannot
+ * items that supplier has not priced, and never names the customer or the Q-Tech price. From the second chase it asks for a "cannot
  * offer" today. While the card shows, the other suppliers have Enter reply and Chase only: the card's "Message for" picker
  * switches it to another supplier (one control instead of a "Show message" on every row; grade-A 9, at most ~25 actions).
  *
  * Phone (grade-A 6 fix 2): the page opens at the first supplier still without a reply (`jump`), and a supplier who has answered
- * (priced, or can't quote) is ONE line, the name and its chip, opening on a tap.
+ * (priced, or cannot quote) is ONE line, the name and its chip, opening on a tap.
  */
 
 export type ChaseMode = 'card' | 'button' | 'none'
@@ -82,9 +82,14 @@ interface Props {
   /** Phone: scroll to the first supplier still without a reply when the page opens (once). */
   jump?: boolean
   onFloat: () => void
+  /** "Enter reply from another supplier"; left out for a person who does not see prices. */
+  onReplyFrom?: () => void
+  /** A supplier just recorded as asked for a reply to be entered: its reply dialog opens as soon as its row is here (then `onOpened`). */
+  openFor?: string | null
+  onOpened?: () => void
 }
 
-export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase = 'card', chaseIsMain = false, jump = false, onFloat }: Props) {
+export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase = 'card', chaseIsMain = false, jump = false, onFloat, onReplyFrom, openFor, onOpened }: Props) {
   const chaseable = chase === 'none' ? [] : inquiries.filter(i => canChaseInquiry(i, items))
   const [picked, setPicked] = useState<string | null>(null)
   const [channel, setChannel] = useChannelPreference()
@@ -94,8 +99,16 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   const reply = useReplyDialog()
   // A reply is prices: an engineer has no Enter or Edit reply and the dialog never opens (owner decision 2026-10-22).
   const prices = useSeesPrices()
-  const replying = prices && reply.open ?inquiries.find(i => i.id === reply.open?.inquiryId) : undefined
+  const replying = prices && reply.open ? inquiries.find(i => i.id === reply.open?.inquiryId) : undefined
   const phone = useMediaQuery('(max-width: 767px)')
+  const askedForReply = openFor ? inquiries.find(i => i.supplierId === openFor) : undefined
+  useEffect(() => {
+    if (!askedForReply) return
+    reply.show(askedForReply.id)
+    onOpened?.()
+    // reply.show and onOpened are stable enough: this runs once per supplier named
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askedForReply?.id])
   // Phone: the answered suppliers opened by a tap (each starts as one line).
   const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set())
   const toggle = (id: string) =>
@@ -193,10 +206,15 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           )
         })}
       </ul>
-      <div className="border-t px-0 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-t px-0 py-3">
         <Button icon={Plus} onClick={onFloat}>
           Ask more suppliers
         </Button>
+        {onReplyFrom ? (
+          <Button variant="quiet" icon={MessageSquareReply} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" onClick={onReplyFrom}>
+            Enter reply from another supplier
+          </Button>
+        ) : null}
       </div>
       {replying ? (
         <SupplierReplyDialog
@@ -214,7 +232,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   )
 }
 
-/** "Can't quote: reason · date" and Take back, for a supplier who said no to everything. */
+/** "Cannot quote: reason · date" and Take back, for a supplier who said no to everything. */
 function TakeBack({ rfq, inquiry }: { rfq: RfqHeader; inquiry: InquiryRow }) {
   const { toast } = useToast()
   const noOffer = useSetInquiryNoOffer(rfq.id)
@@ -222,17 +240,17 @@ function TakeBack({ rfq, inquiry }: { rfq: RfqHeader; inquiry: InquiryRow }) {
     try {
       await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, reason: null })
     } catch (err) {
-      toast({ title: "Could not take back can't quote", body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: "Could not undo the cannot-quote record", body: mapPgError(err).message, tone: 'danger' })
     }
   }
   return (
     <>
       <span className="text-sm text-fg-2">
-        {"Can't quote"}
+        {"Cannot quote"}
         {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
         <span className="text-fg-muted">{` · ${formatDay(inquiry.noOfferOn as string)}`}</span>
       </span>
-      <Button size="sm" variant="quiet" icon={Undo2} onClick={() => void takeBack()} busy={noOffer.isPending} aria-label={`Take back can't quote, ${inquiry.supplierName}`}>
+      <Button size="sm" variant="quiet" icon={Undo2} onClick={() => void takeBack()} busy={noOffer.isPending} aria-label={`Take back cannot quote, ${inquiry.supplierName}`}>
         Take back
       </Button>
     </>
@@ -305,32 +323,32 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
     if (!chase) return
     const ok = await copyToClipboard(text)
     if (!ok) {
-      toast({ title: 'Could not copy the text', body: 'Show the whole message and copy it by hand. The chase was not recorded.', tone: 'danger' })
+      toast({ title: 'Could not copy the text', body: 'Show the whole message and copy it manually. The follow-up was not recorded.', tone: 'danger' })
       return
     }
     await stampChase(true)
   }
   const stampChase = async (copied: boolean) => {
-    const done = copied ? 'Chase text copied' : 'Marked chased'
+    const done = copied ? 'Follow-up text copied' : 'Marked as followed up'
     const before = { lastChasedOn: inquiry.lastChasedOn, lastChasedBy: inquiry.lastChasedBy ?? null, chaseCount: inquiry.chaseCount }
     try {
       const n = await stamp.mutateAsync(inquiry.id)
       toast({
         title: done,
-        body: `${inquiry.supplierName} · chased ${n} ${n === 1 ? 'time' : 'times'}`,
+        body: `${inquiry.supplierName} · followed up ${n} ${n === 1 ? 'time' : 'times'}`,
         tone: 'success',
         undo: {
           onUndo: async () => {
             await restore.mutateAsync({ inquiryId: inquiry.id, before })
           },
           settledTitle: done,
-          settledBody: `${rfqRef(rfq.number)} marked chased`,
+          settledBody: `${rfqRef(rfq.number)} marked as followed up`,
           undoneTitle: 'Undone.',
-          undoneBody: `${inquiry.supplierName} is not marked chased.`,
+          undoneBody: `${inquiry.supplierName} is not marked as followed up.`,
         },
       })
     } catch (err) {
-      toast({ title: copied ? 'Copied, but the chase was not recorded' : 'The chase was not recorded', body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: copied ? 'Copied, but the follow-up was not recorded' : 'The follow-up was not recorded', body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
@@ -341,8 +359,8 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
 function ChaseNow({ rfq, items, inquiry, variant }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; variant: EnquiryVariant }) {
   const c = useSupplierChase(rfq, items, inquiry, variant)
   return (
-    <Button size="sm" icon={Copy} onClick={() => void c.doChase()} busy={c.busy} busyLabel="Marking chased" aria-label={`Chase ${inquiry.supplierName}`}>
-      Chase
+    <Button size="sm" icon={Copy} onClick={() => void c.doChase()} busy={c.busy} busyLabel="Recording follow-up" aria-label={`Follow up with ${inquiry.supplierName}`}>
+      Follow up
     </Button>
   )
 }
@@ -408,7 +426,7 @@ function ChaseCard({
           onChaseAgain={() => setDismissed(true)}
         />
       ) : null}
-      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] border-y">
+      <div role="group" aria-label={`Follow up with ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] border-y">
         <RecipientRow channel={channel} lead={channel === 'email' ? 'Email to' : 'WhatsApp to'} contact={recipient} />
         {whole ? (
           <div id={wholeId} className="grid">
@@ -440,7 +458,7 @@ function ChaseCard({
               label="Reply by"
               value={chosen ?? defaultBy}
               onChange={v => setChosen(v && v !== defaultBy ? v : null)}
-              note={`${rfq.dueOn ? 'Two working days before our quotation is due.' : 'Three working days from today.'} You can change it.`}
+              note={`${rfq.dueOn ? 'Two working days before our quotation is due.' : 'Three working days from today.'} It can be changed.`}
             />
             {channel === 'email' && chase?.subject ? <SubjectRow subject={chase.subject} /> : null}
           </div>
@@ -454,8 +472,8 @@ function ChaseCard({
         </div>
         {whole ? (
           <ChaseNote className="border-t">
-            Copying records chase {inquiry.chaseCount + 1} for this supplier. {rfqRef(rfq.number)} moves to Waiting and returns if still silent after {formatDay(returnsOn)}. It lists only the
-            items this supplier has not priced, and never names the customer or our price.
+            Copying records follow-up {inquiry.chaseCount + 1} for this supplier. {rfqRef(rfq.number)} moves to Waiting and returns if still silent after {formatDay(returnsOn)}. It lists only the
+            items this supplier has not priced, and never names the customer or the Q-Tech price.
           </ChaseNote>
         ) : null}
         <div className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t bg-sunken px-4 py-3">
@@ -466,14 +484,14 @@ function ChaseCard({
                 text={both.whatsapp.body}
                 email={{ subject: both.email.subject, body: both.email.body }}
                 variant={main && !opened ? 'primary' : 'secondary'}
-                copy={{ label: 'Copy and mark chased', onCopy: doChase, busy, busyLabel: 'Marking chased' }}
+                copy={{ label: 'Copy and record follow-up', onCopy: doChase, busy, busyLabel: 'Recording follow-up' }}
                 onOpen={() => setOpened(true)}
                 channel={channel}
                 onChannelChange={onChannel}
               />
             ) : (
               <Button variant={main ? 'primary' : 'secondary'} icon={Copy} disabled className="w-fit">
-                Copy and mark chased
+                Copy and record follow-up
               </Button>
             )}
             {opened && chase ? (
@@ -481,13 +499,13 @@ function ChaseCard({
                 variant="primary"
                 icon={Check}
                 busy={busy}
-                busyLabel="Marking chased"
+                busyLabel="Recording follow-up"
                 onClick={() => {
                   setOpened(false)
                   void markOnly()
                 }}
               >
-                Mark chased
+                Record follow-up
               </Button>
             ) : null}
           </div>
@@ -495,7 +513,7 @@ function ChaseCard({
             <MoreToggle open={whole} onToggle={() => setWhole(w => !w)} controls={wholeId} />
             {/* The other channel is a rare switch: it waits with the whole message (both Open buttons already show). */}
             {whole ? <ChannelLink value={channel} onChange={onChannel} /> : null}
-            <span className="text-sm text-fg-muted">{inquiry.chaseCount === 0 ? 'Not chased yet' : `Chased ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>
+            <span className="text-sm text-fg-muted">{inquiry.chaseCount === 0 ? 'Not followed up yet' : `Followed up ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>
           </div>
           {others.length > 1 && onPick ? (
             <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">

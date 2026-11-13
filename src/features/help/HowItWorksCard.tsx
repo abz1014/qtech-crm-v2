@@ -10,7 +10,7 @@ import { useHelp } from '@/features/help/useHelp'
 
 /*
  * "How this works" (learnability spec 1.3): an optional card above Today's list for someone new. Never a modal, never in
- * the way. At every width it is one collapsed row, "New here? How Q-Tech CRM works · 4 steps", that opens on tap to the role's
+ * the way. At every width it is one collapsed row, "How Q-Tech CRM works · 4 steps", that opens on tap to the role's
  * 3 to 5 steps, each with "Show me" (opens that recipe in Help), so the list does not move down: on a 1366 x 768 laptop
  * the open card pushed Today's jobs below the fold (audit T1). The × hides it without opening it.
  * "Got it" hides it for this person on this device (localStorage qtech.howItWorks.<id>); Help offers it again.
@@ -56,7 +56,7 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
           >
             <Icon icon={CircleHelp} className="text-fg-muted" />
             <span className="min-w-0 flex-1">
-              New here? How Q-Tech CRM works · {steps.length} steps
+              How Q-Tech CRM works · {steps.length} steps
             </span>
             <Icon icon={ChevronDown} className={cn('text-fg-muted transition-transform duration-fast', expanded && 'rotate-180')} />
           </button>
@@ -84,7 +84,7 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
           </ol>
           <div className="flex gap-2">
             <Button size="touch" onClick={() => setDismissed(true)}>
-              Got it
+              Dismiss
             </Button>
             <Button variant="quiet" size="touch" onClick={() => openHelp(null)}>
               Open Help

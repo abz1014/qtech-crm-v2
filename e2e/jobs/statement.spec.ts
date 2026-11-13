@@ -64,8 +64,8 @@ for (const role of ['sales', 'admin'] as const) {
     const statement = page.getByTestId('statement')
     await expect(statement.locator('[data-statement-item]')).toHaveCount(2)
     await expect(page.locator('[data-statement-item="1"]')).toContainText('Pressure transmitter 0-10 bar, 4-20 mA')
-    await expect(page.locator('[data-statement-item="1"]')).toContainText('Qty: 4 pcs')
-    await expect(page.locator('[data-statement-item="2"]')).toContainText('Qty: 2.5 m')
+    await expect(page.locator('[data-statement-item="1"]')).toContainText('Qty 4 pcs')
+    await expect(page.locator('[data-statement-item="2"]')).toContainText('Qty 2.5 m')
 
     // by supplier name, A to Z (Alpha, Mid, Zeta), though Mid is cheapest in rupees terms and Zeta quoted both items
     expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.mid, s.names.zeta])
@@ -253,4 +253,15 @@ test('a pasted reply that gives a weight and a country of origin saves them with
     [item.id, 3610, 4.5, 'kg', 'Germany'],
     [second.id, 980, null, 'kg', null],
   ])
+})
+
+test('at 1024 px wide the quotes table fits the page: no sideways scroll inside the item or the totals', async ({ page }) => {
+  const s = await seed()
+  await page.setViewportSize({ width: 1024, height: 800 })
+  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
+  await expect(page.locator('[data-statement-item="1"]')).toBeVisible()
+  const overflow = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-statement-item] .overflow-x-auto, [data-statement-totals] .overflow-x-auto')).filter(el => el.scrollWidth > el.clientWidth + 1).length,
+  )
+  expect(overflow).toBe(0)
 })

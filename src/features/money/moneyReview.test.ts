@@ -111,8 +111,8 @@ describe('MR-8 a change to a closed month is shown where it lands (owner decisio
   it('the P&L carries the adjustment, and its CSV has a line for it so the rows add up to the result', () => {
     const v = buildPnl('2026-02', raw, { count: 0, unresolved: [] }, [], via)
     expect(v.adjustResult).toBe('180.00')
-    const row = pnlCsv(v).rows.find(r => r[1] === 'Changes to closed months, counted this month')
-    expect(row).toEqual(['Adjustment', 'Changes to closed months, counted this month', '', '', '', 180])
+    const row = pnlCsv(v).rows.find(r => r[1] === 'Changes to locked months, counted this month')
+    expect(row).toEqual(['Adjustment', 'Changes to locked months, counted this month', '', '', '', 180])
   })
   it('a closed month says it is frozen; an open month with no change has no adjustment line', () => {
     expect(buildPnl('2026-01', { ...ZERO_PNL, frozenAt: '2026-02-03T10:00:00Z' }, { count: 0, unresolved: [] }, [], via).frozenAt).toBe('2026-02-03T10:00:00Z')

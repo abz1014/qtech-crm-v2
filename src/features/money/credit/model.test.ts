@@ -17,8 +17,8 @@ describe('customer credit rules (0126, 0127)', () => {
   })
 
   it('the refund note says what is left, refunds-all, or that it is too much', () => {
-    expect(refundNote(credit(320), null)).toEqual({ kind: 'ok', text: 'This customer holds Rs 320 of credit.' })
-    expect(refundNote(credit(320), 100)).toEqual({ kind: 'ok', text: 'Rs 220 of credit stays with them.' })
+    expect(refundNote(credit(320), null)).toEqual({ kind: 'ok', text: 'This customer holds PKR 320 of credit.' })
+    expect(refundNote(credit(320), 100)).toEqual({ kind: 'ok', text: 'PKR 220 of credit stays with them.' })
     expect(refundNote(credit(320), 320)).toEqual({ kind: 'ok', text: 'This refunds all of their credit.' })
     expect(refundNote(credit(320), 320.01).kind).toBe('over')
     expect(refundNote(credit(320), 0).kind).toBe('ok')
@@ -35,7 +35,7 @@ describe('customer credit rules (0126, 0127)', () => {
     expect(applyNote(credit(120), { balance: 500 }, 121).kind).toBe('over')
     expect(applyNote(credit(120), { balance: 50 }, 60).kind).toBe('over')
     expect(applyNote(credit(120), { balance: 50 }, 50)).toEqual({ kind: 'ok', text: 'This settles the order. No cash moves.' })
-    expect(applyNote(credit(120), { balance: 500 }, 120)).toEqual({ kind: 'ok', text: 'The order will still owe Rs 380. No cash moves.' })
+    expect(applyNote(credit(120), { balance: 500 }, 120)).toEqual({ kind: 'ok', text: 'PKR 380 will still be due on the order. No cash moves.' })
   })
 
   it('refunds and applied credit are one history, newest first', () => {

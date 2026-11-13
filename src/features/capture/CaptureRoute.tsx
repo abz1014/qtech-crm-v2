@@ -39,7 +39,7 @@ export default function CaptureRoute() {
       const found = id ? await safely(() => getCapture(id), null) : null
       if (!live) return
       setItem(found)
-      if (found && takeBackFromSignIn()) toast({ title: 'Your shared item is back', body: 'Choose where it goes to finish.' })
+      if (found && takeBackFromSignIn()) toast({ title: 'Shared item restored', body: 'Choose where it goes to finish.' })
     })()
     return () => {
       live = false
@@ -50,13 +50,13 @@ export default function CaptureRoute() {
 
   if (!id) return <JobFirst />
 
-  if (item === undefined) return <div className="px-4 py-8 text-base text-fg-2">Opening what you shared…</div>
+  if (item === undefined) return <div className="px-4 py-8 text-base text-fg-2">Opening the shared item…</div>
 
   if (item === null)
     return (
       <div className="mx-auto grid max-w-xl gap-4 px-4 py-8" data-testid="share-gone">
         <h1 className="text-2xl font-semibold tracking-tight">Nothing to add</h1>
-        <p className="text-base text-fg-2">That shared item is no longer on this device (shared items are kept for 7 days). Share it again from WhatsApp, or start from a job.</p>
+        <p className="text-base text-fg-2">That shared item is no longer on this device (shared items are kept for up to 7 days, and signing out clears them). Share it again from WhatsApp, or start from a job.</p>
         <div>
           <Button size="touch" onClick={() => navigate('/jobs')} className="text-base">
             Open Jobs
@@ -97,7 +97,7 @@ export default function CaptureRoute() {
             onClick={() => navigate('/enquiries/new', { replace: true, state: { capture: { id: item.id, text: item.text, files: files(item) } } })}
             className="text-base"
           >
-            New enquiry
+            New RFQ
           </Button>
         ) : null}
         <Button size="touch" icon={Search} onClick={() => setPicking(p => !p)} aria-expanded={picking} className="text-base">
@@ -133,7 +133,7 @@ function JobPicker({ onPick, showMine = false }: { onPick: (key: string) => void
       {find.trim() === '' ? showMine ? <MyActiveJobs onPick={onPick} /> : null : jobs.isPending ? (
         <p className="text-base text-fg-2">Looking…</p>
       ) : (jobs.data ?? []).length === 0 ? (
-        <p className="text-base text-fg-2">No job found. Try the customer’s name or the job number.</p>
+        <p className="text-base text-fg-2">No job found. Try the customer&apos;s name or the job number.</p>
       ) : (
         <ul className="grid gap-2" aria-label="Jobs found">
           {(jobs.data ?? []).slice(0, 8).map(j => (

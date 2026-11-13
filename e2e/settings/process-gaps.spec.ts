@@ -109,7 +109,7 @@ test('a staff claim is approved as owed, then marked paid back; sales may claim'
   await must(rpc('admin', 'owe_expense_claim', { p_claim: claim.id, p_category: 'ca7e0000-0000-4000-8000-000000000004' }))
   await openAs(page, 'admin', '/money/expenses')
   const owedRow = page.getByTestId(`owed-${claim.id}`)
-  await expect(owedRow).toContainText('Approved, owed to')
+  await expect(owedRow).toContainText('Approved, to repay')
   await owedRow.getByRole('button', { name: /Mark paid back/ }).click()
   await expect.poll(async () => (await must(rest<{ status: string; expense_id: string | null }[]>('admin', `expense_claims?id=eq.${claim.id}&select=status,expense_id`)))[0]).toMatchObject({ status: 'approved' })
 })

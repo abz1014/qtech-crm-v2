@@ -1,4 +1,4 @@
-// The collision line (O-3): "Ali chased this 1h ago". Nobody should chase a customer or supplier a colleague has just chased.
+// The collision line (O-3): "Ali followed up on this 1h ago". Nobody should chase a customer or supplier a colleague has just chased.
 // Pure: the clock comes in. `at` is a timestamp (the time is known: "1h ago") or a plain date (only the day is known).
 
 import { daysBetween } from './dateText'
@@ -24,8 +24,8 @@ export function agoWhen(at: string, nowMs: number): string {
   return d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`
 }
 
-/** "Ali chased this 1h ago": the first name only, as people say it. */
+/** "Ali followed up on this 1h ago": the first name only, as people say it. */
 export function chasedByText(name: string, at: string, nowMs: number): string {
   const first = name.trim().split(/\s+/)[0] || name
-  return `${first} chased this ${agoWhen(at, nowMs)}`
+  return `${first} followed up on this ${agoWhen(at, nowMs)}`
 }

@@ -64,7 +64,7 @@ describe('Add expense dialog (M03)', () => {
   it('from a supplier order: Supplier payment, payee and supplier order filled, the amount starts at the balance, two taps to save', async () => {
     const user = userEvent.setup()
     const db = setup({
-      context: { orderId: 'o1', orderLabel: 'ORD-0038', legId: 'leg1', legLabel: 'leg A', payeeId: 'p1', payeeName: 'Alpenmark Controls GmbH', amount: 384497, amountNote: 'Still owed on leg A: EUR 2,430.00 less the 412,300 advance' },
+      context: { orderId: 'o1', orderLabel: 'ORD-0038', legId: 'leg1', legLabel: 'leg A', payeeId: 'p1', payeeName: 'Alpenmark Controls GmbH', amount: 384497, amountNote: 'Balance due on leg A: EUR 2,430.00 less the 412,300 advance' },
     })
     await screen.findByRole('textbox', { name: 'Amount, PKR' })
     expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
@@ -73,7 +73,7 @@ describe('Add expense dialog (M03)', () => {
     expect(screen.getByLabelText('Payee, from the supplier order')).toHaveTextContent('Alpenmark Controls GmbH')
     expect(screen.getByLabelText('Payee, from the supplier order')).not.toHaveTextContent(/leg/i)
     expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('384,497')
-    expect(screen.getByText(/Still owed on leg A/)).toBeInTheDocument()
+    expect(screen.getByText(/Balance due on leg A/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save expense' }))
     await waitFor(() => expect(saves(db)).toHaveLength(1))
     const [row] = opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[]
@@ -140,7 +140,7 @@ describe('Add expense dialog (M03)', () => {
     await user.keyboard('450')
     await user.click(screen.getByRole('textbox', { name: 'Date paid' }))
     await user.keyboard('30 sep{Enter}')
-    expect(await screen.findByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
+    expect(await screen.findByText('September 2026 is locked. An admin can reopen it.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('450')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
@@ -216,13 +216,13 @@ describe('Add expense dialog (M03)', () => {
       setup({ expense, del: () => ({ data: [] }) })
       await user.click(await screen.findByRole('button', { name: 'Delete expense' }))
       await user.click(await screen.findByRole('button', { name: 'Delete' }))
-      expect((await screen.findAllByText('Not deleted. You may not have permission, or the month is closed.')).length).toBeGreaterThan(0)
+      expect((await screen.findAllByText('Not deleted. Permission may be missing, or the month is locked.')).length).toBeGreaterThan(0)
       expect(screen.queryByText('Expense deleted')).not.toBeInTheDocument()
     })
 
     it('a closed month shows the lock line and no Delete', async () => {
       setup({ expense, closed: ['2026-11'] })
-      expect(await screen.findByTestId('expense-closed-line')).toHaveTextContent('Month closed. Reopen the month first, in Lock a month, to change or delete.')
+      expect(await screen.findByTestId('expense-closed-line')).toHaveTextContent('Month locked. Reopen the month first, in Lock a month, to change or delete.')
       expect(screen.queryByRole('button', { name: 'Delete expense' })).not.toBeInTheDocument()
     })
   })
