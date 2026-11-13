@@ -24,6 +24,8 @@ function respond(call: FakeCall) {
       return has('update') || call.verb === 'update' ? { data: [{ id: 'f-con' }] } : { data: FAMILIES }
     case 'company_brands':
       return { data: [{ brand_id: 'f-con', company_id: 's1' }, { brand_id: 'f-con', company_id: 's2' }] }
+    case 'v_supplier_category_evidence':
+      return { data: [{ supplier_id: 's2', family_id: 'f-con' }, { supplier_id: 's3', family_id: 'f-con' }, { supplier_id: 's3', family_id: 'f-pt' }] }
     case 'rfq_items':
       return call.verb === 'update' ? { data: ((opArgs(call, 'in')?.[1] as string[]) ?? []).map(id => ({ id })) } : { data: [{ id: 'r1', description: 'Contactor 25A' }, { id: 'r2', description: 'Pressure transmitter 0-10 bar' }] }
     case 'order_items':
@@ -54,7 +56,8 @@ describe('Settings > Product categories', () => {
     const { container } = mount()
     const list = await screen.findByRole('list', { name: 'Product categories' })
     const con = within(list).getByText('Contactors').closest('li') as HTMLElement
-    expect(con).toHaveTextContent('2 suppliers')
+    expect(con).toHaveTextContent('3 suppliers') // s1, s2 tagged; s3 from evidence; s2 once
+    expect(within(list).getByText('Pressure transmitters').closest('li')).toHaveTextContent('1 supplier')
     expect(con).not.toHaveTextContent('Curated')
     expect(within(list).queryByText('Old family')).toBeNull()
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)

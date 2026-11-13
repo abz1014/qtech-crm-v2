@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { countSuppliersByCategory } from '@/features/settings/productCategories/model'
 import type { FillBatch, ItemToFill } from '@/features/settings/productCategories/fillModel'
 
 /*
@@ -10,19 +11,24 @@ export interface ProductCategory {
   id: string
   name: string
   curated: boolean
-  /** Suppliers tagged with it (company_brands). */
+  /** Distinct suppliers tagged with it (company_brands) or asked/ordered for it (v_supplier_category_evidence). */
   suppliers: number
+  /** Of those, the ones tagged (company_brands): what a merge moves. */
+  tagged: number
 }
 
 export async function listProductCategories(): Promise<ProductCategory[]> {
   const db = requireSupabase()
-  const [families, tags] = await Promise.all([
+  const [families, tags, evidence] = await Promise.all([
     fetchAll((from, to) => db.from('brands').select('id, name, curated').eq('kind', 'family').order('name').range(from, to)),
     fetchAll((from, to) => db.from('company_brands').select('brand_id, company_id').range(from, to)),
+    fetchAll((from, to) => db.from('v_supplier_category_evidence').select('supplier_id, family_id').range(from, to)),
   ])
-  const counts = new Map<string, number>()
-  for (const t of tags) counts.set(t.brand_id, (counts.get(t.brand_id) ?? 0) + 1)
-  return families.map(f => ({ id: f.id, name: f.name, curated: f.curated, suppliers: counts.get(f.id) ?? 0 }))
+  const { suppliers, tagged } = countSuppliersByCategory(
+    tags,
+    evidence.flatMap(e => (e.supplier_id && e.family_id ? [{ supplier_id: e.supplier_id, family_id: e.family_id }] : [])),
+  )
+  return families.map(f => ({ id: f.id, name: f.name, curated: f.curated, suppliers: suppliers.get(f.id) ?? 0, tagged: tagged.get(f.id) ?? 0 }))
 }
 
 export async function renameProductCategory(id: string, name: string): Promise<void> {
