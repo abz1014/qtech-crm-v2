@@ -143,7 +143,7 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
         if (!keepOpen && !e.defaultPrevented) state?.close()
       }}
       className={cn(
-        'flex h-control w-full items-center gap-3 rounded-control px-3 text-left text-sm font-card transition-colors duration-fast ease-out',
+        'flex h-control w-full items-center gap-2 rounded-control px-2 text-left text-sm font-card transition-colors duration-fast ease-out',
         'hover:bg-selected focus-visible:bg-selected focus-visible:outline-offset-[-2px] disabled:text-fg-disabled disabled:hover:bg-transparent',
         danger ? 'text-tone-danger-fg' : 'text-fg',
         className,

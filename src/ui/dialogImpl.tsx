@@ -50,7 +50,7 @@ export interface DialogContentProps {
   context?: ReactNode
   /** A small chip beside the title ("Re-issue"). It sits next to the heading, not inside it. */
   titleChip?: ReactNode
-  /** The 40px tile glyph. A destructive confirm uses tone="danger". */
+  /** The 36px tile glyph. A destructive confirm uses tone="danger". */
   icon?: LucideIcon
   tone?: Tone
   /** sm 440 (confirm), md 560 (default), lg 760. */
@@ -136,7 +136,7 @@ export function DialogContentImpl({
           <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-pill bg-line-input md:hidden" />
           <header className="flex items-start gap-3 px-card pb-1 pt-5 max-md:border-b max-md:pb-3 max-md:pt-6 [@media(max-height:480px)]:sticky [@media(max-height:480px)]:top-0 [@media(max-height:480px)]:z-sticky [@media(max-height:480px)]:bg-surface [@media(max-height:480px)]:pb-2">
             {icon ? (
-              <span aria-hidden="true" className={cn('grid size-10 shrink-0 place-items-center rounded-control', TILE[tone])}>
+              <span aria-hidden="true" className={cn('grid size-[36px] shrink-0 place-items-center rounded-control', TILE[tone])}>
                 <Icon icon={icon} size="lg" />
               </span>
             ) : null}

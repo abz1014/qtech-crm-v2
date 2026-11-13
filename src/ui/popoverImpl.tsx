@@ -105,7 +105,7 @@ export const PopoverContentImpl = forwardRef<ElementRef<typeof RadixPopover.Cont
         className={cn(
           // z-dialog, not z-picker: it portals to <body>, so one opened inside a dialog must stack over it (same layer, later in the DOM).
           'z-dialog animate-rise-4 rounded-control border bg-surface shadow-e3 focus:outline-none',
-          isMenu ? 'max-h-[var(--radix-popover-content-available-height)] min-w-[200px] overflow-y-auto p-2' : 'max-w-[320px] p-4 text-sm',
+          isMenu ? 'max-h-[var(--radix-popover-content-available-height)] min-w-[200px] max-w-[calc(100vw-2*var(--sp-2))] overflow-y-auto p-1' : 'max-w-[320px] p-4 text-sm',
           className,
         )}
         {...rest}
