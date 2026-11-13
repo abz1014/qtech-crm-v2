@@ -37,7 +37,7 @@ export function FileRow({ item, onRemove, className }: { item: AddedFile; onRemo
         {url && !unreadable ? <img src={url} alt="" onError={() => setUnreadable(true)} className="size-full object-cover" /> : <Icon icon={isImage ? ImageIcon : FileText} size="lg" />}
       </span>
       <span className="grid min-w-0 flex-1">
-        <b className="truncate font-medium">{file.name}</b>
+        <b title={file.name} className="line-clamp-2 break-words font-medium">{file.name}</b>
         <span className={cn('num text-xs', error ? 'font-medium text-tone-danger-fg' : 'text-fg-muted')}>
           {error ?? (shrunk ? `${formatBytes(originalSize)} → ${formatBytes(file.size)}` : formatBytes(file.size))}
         </span>

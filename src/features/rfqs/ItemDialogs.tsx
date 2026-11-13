@@ -146,6 +146,7 @@ export function RemoveItemConfirm({ rfq, item, onClose }: { rfq: RfqHeader; item
       }
       loading={inquiries.isPending && !inquiries.isError}
       blocked={access.can ? null : access.note}
+      undoNote="This can be undone: the removed message has an Undo that puts the item and its prices back."
       onConfirm={async () => {
         const lines = quoted.flatMap(i => i.lines.filter(l => l.itemId === item.id))
         const declines = (inquiries.data ?? []).flatMap(i => (i.itemDeclines[item.id] ? [{ inquiryId: i.id, reason: i.itemDeclines[item.id] }] : []))
