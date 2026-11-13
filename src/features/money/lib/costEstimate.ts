@@ -132,5 +132,5 @@ export function stillOwedOnLeg(est: CostEstimate, legId: string, paidPkr: number
   if (owed <= 0) return null
   const basis = leg.source === 'prices' ? 'Supplier prices' : 'PO total'
   const what = leg.currency === 'PKR' ? `${basis} PKR ${formatAmount(leg.amount)}` : `${basis} ${leg.currency} ${formatAmount(leg.amount)}, about PKR ${formatAmount(leg.pkr)} today`
-  return { amount: owed, note: paidPkr > 0 ? `Still owed: ${what}, less PKR ${formatAmount(paidPkr)} paid` : `Still owed: ${what}` }
+  return { amount: owed, note: paidPkr > 0 ? `Balance due: ${what}, less PKR ${formatAmount(paidPkr)} paid` : `Balance due: ${what}` }
 }

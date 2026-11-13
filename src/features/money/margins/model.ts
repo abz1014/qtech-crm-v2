@@ -92,10 +92,10 @@ export function marginPct(r: Pick<MarginRow, 'margin' | 'netSale'>): string | nu
 export function marginNote(t: MarginTotals): string {
   const parts: string[] = ['Only orders with costs marked complete are totalled.']
   if (t.provisional > 0) {
-    parts.push(`The ${t.provisional} provisional ${t.provisional === 1 ? 'margin is' : 'margins are'} shown so you can see the trend, but ${t.provisional === 1 ? 'it is' : 'they are'} not added up`)
+    parts.push(`The ${t.provisional} provisional ${t.provisional === 1 ? 'margin is' : 'margins are'} shown to indicate the trend, but ${t.provisional === 1 ? 'it is' : 'they are'} not added up`)
   }
   if (t.basisUnknown > 0) {
-    const unknown = `the ${t.basisUnknown === 1 ? 'order' : `${t.basisUnknown} orders`} with an unknown price basis ${t.basisUnknown === 1 ? 'is' : 'are'} left out until someone resolves ${t.basisUnknown === 1 ? 'it' : 'them'}`
+    const unknown = `the ${t.basisUnknown === 1 ? 'order' : `${t.basisUnknown} orders`} with an unknown price basis ${t.basisUnknown === 1 ? 'is' : 'are'} left out until it is resolved ${t.basisUnknown === 1 ? 'it' : 'them'}`
     parts.push(t.provisional > 0 ? `, and ${unknown}.` : `${unknown[0].toUpperCase()}${unknown.slice(1)}.`)
   } else if (t.provisional > 0) {
     parts.push('.')

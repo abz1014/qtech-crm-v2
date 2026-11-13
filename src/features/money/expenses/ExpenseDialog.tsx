@@ -72,7 +72,7 @@ const NO_TEMPLATES: readonly RecurringTemplate[] = []
  *
  *   <AddExpenseDialog open={open} onOpenChange={setOpen}
  *     context={{ orderId, orderLabel: 'ORD-0038', legId, legLabel: 'leg A', payeeId, payeeName, amount: 384497,
- *                amountNote: 'Still owed on leg A: EUR 2,430.00 less the 412,300 advance' }} />
+ *                amountNote: 'Balance due on leg A: EUR 2,430.00 less the 412,300 advance' }} />
  */
 export interface ExpenseContext {
   orderId?: string
@@ -211,7 +211,7 @@ function ExpenseFormReady({
   // ---- the pre-fills, and where each came from (FE-2)
   const pre = (() => {
     if (expense) return { categoryId: expense.categoryId, note: undefined as string | undefined }
-    if (context?.categoryId) return { categoryId: context.categoryId, note: 'Chosen for you' }
+    if (context?.categoryId) return { categoryId: context.categoryId, note: 'Suggested category' }
     if (fromLeg) return { categoryId: SUPPLIER_PAYMENT_ID, note: 'Opened from a supplier order' }
     if (lastForOrder && context?.orderId)
       return { categoryId: lastForOrder, note: `Last used on ${context.orderLabel ?? 'this order'}` }

@@ -183,7 +183,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
             : p === 'large'
               ? 'That amount is too large. Check it for an extra digit.'
               : p === 'category'
-                ? 'Tap what it was for.'
+                ? 'Select a category.'
                 : 'The GST cannot be more than the amount.',
       )
       if (p === 'amount' || p === 'positive' || p === 'large') amountRef.current?.focus()
@@ -213,7 +213,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         setTitleError(MISC_TITLE_ERROR)
         return
       }
-      setProblem(m.kind === 'already-saved' ? 'That one was already added.' : `${m.message} Nothing was saved; what you typed is still here.`)
+      setProblem(m.kind === 'already-saved' ? 'That one was already added.' : `${m.message} Nothing was saved. The entered details are kept.`)
       if (m.kind === 'already-saved') reset()
     } finally {
       setBusy(false)
@@ -241,8 +241,8 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
-          <InfoTip label="Paying a supplier?" className="ml-2 sm:hidden">
-            Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers), so what we owe goes down.
+          <InfoTip label="Paying a supplier" className="ml-2 sm:hidden">
+            To pay a supplier, use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers). This reduces the amount payable.
           </InfoTip>
         </h2>
         <p className="type-body text-fg-2" aria-live="polite" data-testid="quick-total">
@@ -384,7 +384,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                 </option>
               ))}
             </QuickSelect>
-            <span className="text-fg-2">Reports show it by what you write.</span>
+            <span className="text-fg-2">Reports show it under the text entered.</span>
           </div>
         ) : null}
 
@@ -402,7 +402,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         </button>
 
         <p className="type-body text-fg-2 max-sm:hidden">
-          Paying a supplier? Use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers), so what we owe goes down.
+          To pay a supplier, use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers). This reduces the amount payable.
         </p>
 
         {showExtras ? (

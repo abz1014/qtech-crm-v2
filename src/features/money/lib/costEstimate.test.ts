@@ -75,10 +75,10 @@ describe('estimateExpectedCost (supplier prices x today\'s rate)', () => {
 describe('stillOwedOnLeg (Pay supplier pre-fill)', () => {
   const est = (pkr: number | null, currency = 'PKR') => ({ pkr, legs: [{ legId: 'L', currency, amount: 1000, source: 'po' as const, pkr }], linesWithoutPrice: 0, unconverted: [] })
   it('is the PO total less what is paid', () => {
-    expect(stillOwedOnLeg(est(1000), 'L', 400)).toEqual({ amount: 600, note: 'Still owed: PO total PKR 1,000, less PKR 400 paid' })
+    expect(stillOwedOnLeg(est(1000), 'L', 400)).toEqual({ amount: 600, note: 'Balance due: PO total PKR 1,000, less PKR 400 paid' })
   })
   it('labels a foreign currency as about, at today', () => {
-    expect(stillOwedOnLeg(est(280000, 'EUR'), 'L', 0)?.note).toBe('Still owed: PO total EUR 1,000, about PKR 280,000 today')
+    expect(stillOwedOnLeg(est(280000, 'EUR'), 'L', 0)?.note).toBe('Balance due: PO total EUR 1,000, about PKR 280,000 today')
   })
   it('offers nothing when paid in full or not convertible', () => {
     expect(stillOwedOnLeg(est(1000), 'L', 1000)).toBeNull()

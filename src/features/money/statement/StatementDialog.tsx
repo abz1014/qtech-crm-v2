@@ -55,7 +55,7 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
       const blob = await generateStatementPdf(st, companyName, profile.data, today)
       saveBlob(blob, `Statement ${companyName} ${from} to ${to}.pdf`.replace(/[\\/:*?"<>|]/g, ''))
     } catch {
-      toast.toast({ title: "Couldn't make the PDF", body: 'Nothing was changed. Try again.', tone: 'danger' })
+      toast.toast({ title: "The PDF could not be made", body: 'Nothing was changed. Try again.', tone: 'danger' })
     } finally {
       setMaking(false)
     }
@@ -96,7 +96,7 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
             </Banner>
           ) : null}
           {lines.isError ? (
-            <Banner tone="danger" title="Couldn't load the statement">
+            <Banner tone="danger" title="The statement could not be loaded">
               Nothing was changed. Close this and try again.
             </Banner>
           ) : lines.isPending ? (
@@ -142,7 +142,7 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
               </div>
             </div>
           ) : null}
-          <p className="text-sm text-fg-muted">A positive balance is what the customer owes us. Invoices paid before the new system started are not listed.</p>
+          <p className="text-sm text-fg-muted">A positive balance is the amount the customer owes. Invoices paid before the new system started are not listed.</p>
         </div>
       </DialogContent>
     </Dialog>

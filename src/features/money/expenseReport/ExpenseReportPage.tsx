@@ -79,7 +79,7 @@ export function ExpenseReportPage() {
       const { generateExpenseReportPdf, saveBlob } = await import('@/features/money/expenseReport/pdf/generate')
       saveBlob(await generateExpenseReportPdf(v, formatShortDate(today, undefined, true)), `expenses-${period.key}.pdf`)
     } catch {
-      toast.toast({ title: "Couldn't make the PDF", body: 'Nothing was changed. Try again, or use Export CSV.', tone: 'danger' })
+      toast.toast({ title: "The PDF could not be made", body: 'Nothing was changed. Try again, or use Export CSV.', tone: 'danger' })
     } finally {
       setPdfBusy(false)
     }
@@ -258,7 +258,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
                 : ''}
               .
             </span>{' '}
-            <span>Running costs are overheads in Profit and loss; order costs are supplier, freight and customs; not a cost is owner drawings and loan repayments; GST paid on purchases is claimed back.</span>
+            <span>Running costs are overheads in Profit and loss. Order costs are supplier, freight and customs. Not a cost is owner drawings and loan repayments. GST paid on purchases is claimed back.</span>
           </span>
         }
         items={[
@@ -597,7 +597,7 @@ function ByDetail({ v }: { v: ExpenseReportView }) {
         )}
         empty={
           <EmptyState title="No details typed in this period">
-            Type a detail when you add an expense (the car, the bill) and this list shows what each one cost, across categories.
+            Enter a detail when adding an expense (the car, the bill). This list shows what each one cost, across categories.
           </EmptyState>
         }
       />

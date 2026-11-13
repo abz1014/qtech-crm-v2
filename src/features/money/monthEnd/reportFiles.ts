@@ -11,7 +11,7 @@ export function downloadReport(table: { headers: string[]; rows: unknown[][] }, 
 /**
  * "Pay" on a We owe suppliers row: the Add expense dialog on Expenses, filled in like the order's Pay {supplier} (the same dialog:
  * the order, the supplier order and so the supplier, and the amount still owed). Only a row still owing that knows its order.
- *   /money/expenses?add=1&order=<id>&leg=<id>&amount=384497&note=Owed (about) on 30 Nov, from We owe suppliers
+ *   /money/expenses?add=1&order=<id>&leg=<id>&amount=384497&note=Payable (about) on 30 Nov, from We owe suppliers
  */
 export function payHref(r: Pick<PayableRow, 'state' | 'orderId' | 'legId' | 'owedPkr'>, asOf: string): string | null {
   if (r.state !== 'owing' || !r.orderId) return null
@@ -19,7 +19,7 @@ export function payHref(r: Pick<PayableRow, 'state' | 'orderId' | 'legId' | 'owe
   const owed = r.owedPkr === null ? 0 : Math.round(Number(r.owedPkr))
   if (owed > 0) {
     p.set('amount', String(owed))
-    p.set('note', `Owed (about) on ${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7)).slice(0, 3)}, from Payable to suppliers`)
+    p.set('note', `Payable (about) on ${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7)).slice(0, 3)}, from Payable to suppliers`)
   }
   return `/money/expenses?${p.toString()}`
 }

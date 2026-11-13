@@ -30,7 +30,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
   if (q.isError)
     return (
       <section aria-label="To approve" data-testid="claims-review">
-        <EmptyState mood="error" title="Couldn't load the claims to approve" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" title="Claims to approve could not be loaded" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       </section>
@@ -49,7 +49,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
   if (phone)
     return (
       <section aria-label="To approve" data-testid="claims-review">
-        <FoldRow state={{ icon: HandCoins, word: 'Waiting for you' }} title="To approve" summary={`${count} · ${total}`} open={open} onToggle={() => setOpen(o => !o)} controlsId={id}>
+        <FoldRow state={{ icon: HandCoins, word: 'Action needed' }} title="To approve" summary={`${count} · ${total}`} open={open} onToggle={() => setOpen(o => !o)} controlsId={id}>
           {list}
         </FoldRow>
       </section>
@@ -96,7 +96,7 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
     try {
       window.open(await signClaimPhoto(path), '_blank', 'noopener')
     } catch {
-      toast.toast({ title: "Couldn't open the photo", body: 'Try again in a moment.', tone: 'danger' })
+      toast.toast({ title: "The photo could not be opened", body: 'Try again in a moment.', tone: 'danger' })
     }
   }
 
@@ -209,7 +209,7 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
                 owe.mutate(
                   { id: claim.id, categoryId },
                   {
-                    onSuccess: () => toast.toast({ title: `Approved, owed to ${claim.byName}`, body: `${label} · ${categories.find(c => c.id === categoryId)?.name ?? ''} · mark it paid back when you pay`, tone: 'success' }),
+                    onSuccess: () => toast.toast({ title: `Approved, owed to ${claim.byName}`, body: `${label} · ${categories.find(c => c.id === categoryId)?.name ?? ''} · mark it paid back when repaid`, tone: 'success' }),
                     onError: e => setError(mapPgError(e, { entity: 'expense' }).message),
                   },
                 )

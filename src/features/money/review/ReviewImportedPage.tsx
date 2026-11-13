@@ -37,8 +37,7 @@ export function ReviewImportedPage() {
       <NoPrimary />
       <MoneySubHeader back={{ to: '/money', label: 'Money' }} title="Review imported" />
       <p className="max-w-prose text-base text-fg-2">
-        Records imported from the old system that still show money or goods open. Decide each one once: still open, or settled and kept as history. Nothing is hidden
-        until you decide.
+        Records imported from the old system that still show money or goods open. Decide each one once: still open, or settled and kept as history. Nothing is hidden until each is decided.
       </p>
       <Matches />
       <section aria-labelledby="review-h" className="rounded-panel border bg-surface">
@@ -227,7 +226,7 @@ function Matches() {
         </p>
       ) : null}
       {found === null ? (
-        <p className="px-5 py-4 text-base text-fg-2">Imported invoices came without their orders. Find matches proposes them: the same customer, the PO number and the amount. Nothing is linked until you say so.</p>
+        <p className="px-5 py-4 text-base text-fg-2">Imported invoices came without their orders. Find matches proposes them: the same customer, the PO number and the amount. Nothing is linked until it is confirmed.</p>
       ) : shown.length === 0 ? (
         <p className="px-5 py-4 text-base text-fg-2" data-testid="no-matches">
           No matches left to propose.

@@ -124,7 +124,7 @@ export const CHECKS: readonly CheckDef[] = [
     key: 'unresolved_payments',
     label: 'Payments not split',
     unit: ['payment', 'payments'],
-    has: () => 'Counted in gross but not yet split into net and GST, because nobody has said whether GST is included in the order price.',
+    has: () => 'Counted in gross but not yet split into net and GST, because it is not recorded whether GST is included in the order price.',
     none: () => 'Every payment is split into net and GST.',
     linkLabel: 'Open To collect',
     to: () => '/money/receivables',
@@ -763,7 +763,7 @@ export function unconvertedByCurrency(rows: readonly PayableRow[]): Unconverted[
 }
 
 export const PAYABLE_STATE_LABEL: Record<PayableRow['state'], string> = {
-  owing: 'Owed',
+  owing: 'Payable',
   settled: 'Settled (≈)',
   unpriced: 'No price yet',
   no_rate: 'Needs a rate',
@@ -771,7 +771,7 @@ export const PAYABLE_STATE_LABEL: Record<PayableRow['state'], string> = {
 
 export function payablesCsv(v: PayablesView): { headers: string[]; rows: unknown[][] } {
   return {
-    headers: ['As of', 'Supplier', 'Order', 'Supplier order', 'Currency', 'Committed', 'Rate', 'Committed, PKR', 'Paid, PKR', 'Owed, PKR (approx.)', 'State'],
+    headers: ['As of', 'Supplier', 'Order', 'Supplier order', 'Currency', 'Committed', 'Rate', 'Committed, PKR', 'Paid, PKR', 'Payable, PKR (approx.)', 'State'],
     rows: v.rows.map(r => [
       v.asOf,
       r.supplier,

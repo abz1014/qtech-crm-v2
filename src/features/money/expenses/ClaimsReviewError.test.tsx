@@ -27,10 +27,10 @@ describe('To approve', () => {
     let fail = true
     installFakeDb((c: FakeCall) => (c.target === 'expense_claims' ? (fail ? { data: null, error: { message: 'boom' } } : { data: [] }) : { data: [] }))
     wrap(<ClaimsReview categories={[]} groups={[]} />)
-    expect(await screen.findByText("Couldn't load the claims to approve")).toBeInTheDocument()
+    expect(await screen.findByText("Claims to approve could not be loaded")).toBeInTheDocument()
     fail = false
     await user.click(screen.getByRole('button', { name: 'Try again' }))
-    await waitFor(() => expect(screen.queryByText("Couldn't load the claims to approve")).toBeNull())
+    await waitFor(() => expect(screen.queryByText("Claims to approve could not be loaded")).toBeNull())
   })
 })
 
