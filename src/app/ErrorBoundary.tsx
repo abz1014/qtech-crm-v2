@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           role="alert"
           className={cn(
             'flex items-center justify-center bg-canvas p-4',
-            this.props.variant === 'inline' ? 'min-h-full py-16' : 'min-h-screen',
+            this.props.variant === 'inline' ? 'min-h-full py-16' : 'min-h-dvh',
           )}
         >
           <div className="grid w-full max-w-sm justify-items-center gap-4 text-center">

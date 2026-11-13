@@ -75,6 +75,21 @@ test.describe('expenses layout (2026-11-06)', () => {
     })
   }
 
+  for (const width of [1280, 1707]) {
+    test(`the Add expenses row at ${width}: date and Every month are visible and nothing spills past the row`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 850 })
+      await openAs(page, 'admin', '/money/expenses')
+      await page.getByRole('button', { name: 'Add expenses' }).click()
+      const row = page.getByRole('group', { name: 'Row 1' })
+      const date = row.getByRole('textbox', { name: 'Date, row 1' })
+      await expect(date).toBeVisible()
+      expect((await date.boundingBox())!.width).toBeGreaterThanOrEqual(100)
+      await expect(row.getByRole('checkbox', { name: 'Every month' })).toBeVisible()
+      const spill = await row.evaluate(el => el.scrollWidth - el.clientWidth)
+      expect(spill).toBeLessThanOrEqual(1)
+    })
+  }
+
   test('the sheet at 1024 is the card list, not a squeezed grid', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 })
     await openAs(page, 'admin', '/money/expenses')

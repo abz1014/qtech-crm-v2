@@ -254,3 +254,14 @@ test('a pasted reply that gives a weight and a country of origin saves them with
     [second.id, 980, null, 'kg', null],
   ])
 })
+
+test('at 1024 px wide the quotes table fits the page: no sideways scroll inside the item or the totals', async ({ page }) => {
+  const s = await seed()
+  await page.setViewportSize({ width: 1024, height: 800 })
+  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
+  await expect(page.locator('[data-statement-item="1"]')).toBeVisible()
+  const overflow = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-statement-item] .overflow-x-auto, [data-statement-totals] .overflow-x-auto')).filter(el => el.scrollWidth > el.clientWidth + 1).length,
+  )
+  expect(overflow).toBe(0)
+})

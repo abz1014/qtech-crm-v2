@@ -103,7 +103,7 @@ describe('Expenses list (0086)', () => {
     await user.click(screen.getByRole('button', { name: 'More for Water of 500' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete expense' }))
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
-    expect((await screen.findAllByText('September 2026 is closed. Reopen the month first, in Lock a month.')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('September 2026 is locked. Reopen the month first, in Lock a month.')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Expense deleted')).not.toBeInTheDocument()
     expect(screen.getByTestId('expenses-month-total')).toHaveTextContent('3 expenses')
   })

@@ -23,6 +23,17 @@ describe('ErrorBoundary', () => {
     act(() => root.unmount())
   })
 
+  it('uses dvh, not vh, so a phone address bar does not cut it', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const el = document.createElement('div')
+    const root = createRoot(el)
+    act(() => root.render(<ErrorBoundary><Boom /></ErrorBoundary>))
+    const cls = el.querySelector('[role="alert"]')?.className ?? ''
+    expect(cls).toContain('min-h-dvh')
+    expect(cls).not.toContain('min-h-screen')
+    act(() => root.unmount())
+  })
+
   it('renders children when nothing throws', () => {
     const el = document.createElement('div')
     const root = createRoot(el)

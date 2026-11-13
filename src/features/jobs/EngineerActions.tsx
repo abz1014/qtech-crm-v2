@@ -47,7 +47,7 @@ function LegDelivered({ order, leg, variant, offline, label }: { order: OrderHea
   const actions = useLegActions(order, leg)
   return (
     <Button size="lg" variant={variant} icon={Truck} className="w-full justify-center" disabled={offline} busy={actions.pending} busyLabel="Saving" onClick={() => void actions.doStamp()} aria-label={label}>
-      Delivered today
+      {label}
     </Button>
   )
 }

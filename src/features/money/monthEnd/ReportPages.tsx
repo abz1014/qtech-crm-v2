@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Receipt, Wallet } from 'lucide-react'
+import { CircleAlert, Receipt, TriangleAlert, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
@@ -26,6 +26,7 @@ import {
   TwoProfitsTip,
   ReportError,
   ReportLoading,
+  AgeBand,
 } from '@/features/money/monthEnd/ReportParts'
 import { csvFile, downloadReport, payHref } from '@/features/money/monthEnd/reportFiles'
 import {
@@ -406,9 +407,9 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           ...whole<AgingRow>(r => (r.bucket === b && !r.importedUnlinked ? r.remaining : null)),
           cell: r =>
             r.bucket === b && !r.importedUnlinked ? (
-              <span className={cn('-mx-2 inline-block rounded px-2 py-[2px]', b === '61-90' && 'bg-tone-warning-bg', b === '90+' && 'bg-tone-danger-bg')}>
+              <AgeBand bucket={b} className="-mx-2">
                 <Money value={r.remaining} prefix={false} paisa="never" />
-              </span>
+              </AgeBand>
             ) : (
               <span className="text-fg-muted">{'—'}</span>
             ),
@@ -504,6 +505,18 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
                 <span className={cn(!r.importedUnlinked && r.bucket === '61-90' && 'text-tone-warning-fg', !r.importedUnlinked && r.bucket === '90+' && 'font-medium text-tone-danger-fg')}>
                   {r.importedUnlinked ? <>{IMPORTED_GROUP_LABEL}, </> : null}
                   <Num>{r.ageDays}</Num> days old
+                  {!r.importedUnlinked && r.bucket === '61-90' ? (
+                    <>
+                      {' '}
+                      <Icon icon={TriangleAlert} size="sm" className="inline align-text-bottom" /> Over 60 days
+                    </>
+                  ) : null}
+                  {!r.importedUnlinked && r.bucket === '90+' ? (
+                    <>
+                      {' '}
+                      <Icon icon={CircleAlert} size="sm" className="inline align-text-bottom" /> Over 90 days
+                    </>
+                  ) : null}
                 </span>
               </span>
             </span>
@@ -681,7 +694,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <h2 className="text-base font-semibold">What we owe suppliers</h2>
               <InfoTip label="About what we owe">
                 As of {asOfLabel}. Owed is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
-                paid. A supplier order in a foreign currency paid to within 3% counts as paid (exchange-rate slippage); in rupees it counts as paid when Rs 1 or less is left.
+                paid. A supplier order in a foreign currency paid to within 3% counts as paid (exchange-rate slippage); in rupees it counts as paid when PKR 1 or less is left.
               </InfoTip>
             </span>
             <span className="flex-1" />

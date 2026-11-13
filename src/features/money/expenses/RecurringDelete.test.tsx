@@ -52,6 +52,24 @@ describe('Delete a recurring expense', () => {
     expect(d.calls.some(c => c.target === 'expenses' && c.verb === 'delete')).toBe(false)
   })
 
+  it('one expense says "stays as it is", not "stay as they are"', async () => {
+    const d = installFakeDb((c: FakeCall) => (c.target === 'expenses' ? { data: null, count: 1 } : { data: [] }))
+    void d
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Ayesha Rana', role: 'admin' } }}>
+          <ToastProvider>
+            <RecurringDialog template={TEMPLATE} categories={CATEGORIES} onClose={() => undefined} />
+          </ToastProvider>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Delete recurring expense' }))
+    const dialog = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement
+    await waitFor(() => expect(within(dialog).getByTestId('delete-recurring-what').textContent).toContain('1 expense recorded from it stays as it is'))
+  })
+
   it('is not offered to anyone but an admin', async () => {
     setup('sales')
     await screen.findByRole('button', { name: 'Save' })

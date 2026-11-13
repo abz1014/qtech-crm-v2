@@ -166,7 +166,7 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
                   )}
                 >
                   <span className="num font-medium">{o.ref}</span>
-                  <span className="truncate text-sm text-fg-muted">
+                  <span className="truncate text-sm text-fg-muted" title={[o.company, o.rfqRef, o.note].filter(Boolean).join(' · ')}>
                     {[o.company, o.rfqRef, o.note].filter(Boolean).join(' · ')}
                   </span>
                 </li>

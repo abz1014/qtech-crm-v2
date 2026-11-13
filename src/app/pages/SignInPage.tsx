@@ -81,7 +81,7 @@ export function SignInPage() {
       <OfflineSignInPage>
         {kept ? (
           <Banner tone="success" title="Your shared item is safe">
-            {`${kept.what}, kept on this phone until ${kept.until}. Sign in when you have signal and the Capture sheet opens with it.`}
+            {`${kept.what}, kept on this phone until ${kept.until}. Sign in when you have signal and the Shared with Q-Tech CRM page opens with it.`}
           </Banner>
         ) : null}
       </OfflineSignInPage>
@@ -115,7 +115,7 @@ export function SignInPage() {
         {kept ? (
           <>
             <Banner tone="success" title="Your shared item is safe">
-              Sign in and the Capture sheet opens with it.
+              Sign in and the Shared with Q-Tech CRM page opens with it.
             </Banner>
             <div className="flex items-center gap-3 rounded border border-line-strong bg-sunken p-3 text-sm">
               <span aria-hidden="true" className="grid size-[32px] shrink-0 place-items-center rounded border bg-surface text-fg-2">

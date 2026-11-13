@@ -199,7 +199,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               <NoResults query={q} scope={`expenses in ${monthKeyLabel(month)}`} fields="payee, detail, category and order number" filtersOn={filtersOn} onClear={clearAll} />
             ) : (
               <EmptyState icon={Receipt} title={`No expenses in ${monthKeyLabel(month)}`}>
-                Add every spend, even a Rs 500 water bottle, with Add expenses. It shows here under its group.
+                Add every spend, even a PKR 500 water bottle, with Add expenses. It shows here under its group.
               </EmptyState>
             )
           }

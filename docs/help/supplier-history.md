@@ -10,3 +10,9 @@ related: supplier-prices
 2. The line under the name counts their replies, orders and late deliveries. Tap (i) for how they are counted.
 3. [Enquiries] lists each item they were asked about, with the price, reply time and outcome. Tap [Show all N] for older ones.
 4. Sites, brands and details are under [More about this supplier].
+
+@engineer
+1. Tap [Companies], then [Suppliers], and open the supplier.
+2. The line under the name counts their replies, orders and late deliveries. Tap (i) for how they are counted.
+3. [Enquiries] lists each item they were asked about, with the reply time and outcome. Tap [Show all N] for older ones.
+4. Sites, brands and details are under [More about this supplier].

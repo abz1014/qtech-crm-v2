@@ -225,7 +225,7 @@ describe('Expense categories (M13, 0086)', () => {
     const dlg = await screen.findByRole('dialog', { name: 'Merge Water' })
     await user.selectOptions(within(dlg).getByLabelText('Merge into'), 'freight')
     await user.click(within(dlg).getByRole('button', { name: 'Merge' }))
-    expect(await within(dlg).findByText(/that month is closed/)).toBeInTheDocument()
+    expect(await within(dlg).findByText(/that month is locked/)).toBeInTheDocument()
   })
 
   it('moves to a group of another kind only after saying what changes in Profit and loss', async () => {

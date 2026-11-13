@@ -126,6 +126,7 @@ describe('burst rows to one bulk insert', () => {
 describe('closed month', () => {
   it('names the month from the P0001 sentence', () => {
     expect(closedMonthOf('September 2026 is closed. An admin can reopen it.')).toBe('September 2026')
+    expect(closedMonthOf('September 2026 is locked. An admin can reopen it.')).toBe('September 2026')
     expect(closedMonthOf('Something else')).toBeNull()
     expect(monthLabel('2026-09-30')).toBe('September 2026')
   })
@@ -136,10 +137,10 @@ describe('closed month', () => {
       { ...base, amount: 450 },
       { ...base, id: 'bad', amount: 100000, date: '2026-09-30', dateTyped: true },
     ]
-    const marked = markClosedRows(rows, 'September 2026 is closed. An admin can reopen it.')
+    const marked = markClosedRows(rows, 'September 2026 is locked. An admin can reopen it.')
     expect(marked).toHaveLength(2)
     expect(marked[0].error).toBeUndefined()
-    expect(marked[1].error).toBe('September 2026 is closed. An admin can reopen it.')
+    expect(marked[1].error).toBe('September 2026 is locked. An admin can reopen it.')
     expect(marked[1].amount).toBe(100000)
   })
 })

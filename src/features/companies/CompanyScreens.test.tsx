@@ -208,6 +208,18 @@ describe('supplier page', () => {
     expect(open).toHaveTextContent('Waiting for their replyNone')
   })
 
+  it('an engineer does not see the supplier currency row; sales do', async () => {
+    installFakeDb(supplierDb)
+    const { unmount } = mount('/companies/s1', <CompanyPage />, 'engineer')
+    const open = await screen.findByRole('region', { name: 'Open with them' })
+    await waitFor(() => expect(open).toHaveTextContent('Supplier orders'))
+    expect(open).not.toHaveTextContent('Currency')
+    unmount()
+    mount('/companies/s1', <CompanyPage />, 'sales')
+    const salesOpen = await screen.findByRole('region', { name: 'Open with them' })
+    await waitFor(() => expect(salesOpen).toHaveTextContent('Currency'))
+  })
+
   it('Details (in the fold) holds the brands carried as tags, with how often each was quoted, and Add and remove', async () => {
     installFakeDb(supplierDb)
     const user = userEvent.setup()

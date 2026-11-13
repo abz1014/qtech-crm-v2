@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { UI, expect, focusedThing, open, test } from './support'
+import { UI, asRole, expect, focusedThing, open, test } from './support'
 
 /*
  * (e) Single-key shortcuts (WCAG 2.1.4, level A). The first test documents what the app does today, so a change to it is noticed:
@@ -62,4 +62,19 @@ test('? opens the keyboard shortcuts sheet on a computer; a phone shows no key h
   await expect(sheet).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(sheet).toBeHidden()
+})
+
+test('an engineer\'s shortcuts sheet lists only keys that work for them (live bug 32)', async ({ browser }, info) => {
+  await asRole(browser, info, 'engineer', '/todo', async page => {
+    const width = page.viewportSize()?.width ?? 1440
+    test.skip(width < 768, 'No shortcuts sheet on a phone')
+    await pressOnNavLink(page, '?')
+    const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByText('Go to To do')).toBeVisible()
+    await expect(sheet.getByText('New enquiry')).toHaveCount(0)
+    await expect(sheet.getByText('Add an expense')).toHaveCount(0)
+    await expect(sheet.getByText('Order without enquiry')).toHaveCount(0)
+    await expect(sheet.getByRole('heading', { name: 'Add expenses' })).toHaveCount(0)
+  })
 })

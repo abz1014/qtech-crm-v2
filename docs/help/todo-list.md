@@ -12,3 +12,11 @@ related: today-chase, snooze
 4. Seven rows show at most. The rest wait under [Older than 30 days] and the grey lines below.
 
 Tip: The number on [To do] is Late plus Today. It is the only number in the app.
+
+@engineer
+1. Tap [To do]. Red [Late] rows come first, then [Today], then [This week].
+2. Every row has its own button for the next step. Tap it to do that step.
+3. Not now? Tap [Snooze] on the row.
+4. Seven rows show at most. The rest wait under [Older than 30 days] and the grey lines below.
+
+Tip: The number on [To do] is Late plus Today. It is the only number in the app.

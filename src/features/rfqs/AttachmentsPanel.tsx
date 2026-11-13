@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSeesPrices } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import type { AddedFile } from '@/lib/fileIntake'
 import { Panel } from '@/features/companies/CompanyParts'
@@ -36,6 +37,7 @@ export function AttachmentsPanel({
   slimWhenEmpty?: boolean
 }) {
   // One panel for an RFQ's files and an order's files (R22): give it the RFQ, or the order.
+  const seesPrices = useSeesPrices()
   const parentId = (orderId ?? rfqId) as string
   const rfqAtts = useRfqAttachments(orderId ? undefined : rfqId)
   const orderAtts = useOrderAttachments(orderId)
@@ -104,7 +106,7 @@ export function AttachmentsPanel({
             </button>
           </p>
         ) : slim ? null : list.length === 0 ? (
-          <p className="text-sm text-fg-muted">{orderId ? 'No files yet. The customer’s PO or a photo from site goes here.' : compact ? 'No files yet.' : 'No files yet. A nameplate photo or the customer’s enquiry PDF goes here, next to the questions.'}</p>
+          <p className="text-sm text-fg-muted">{orderId ? (seesPrices ? 'No files yet. The customer’s PO or a photo from site goes here.' : 'No files yet. A photo from site goes here.') : compact ? 'No files yet.' : 'No files yet. A nameplate photo or the customer’s enquiry PDF goes here, next to the questions.'}</p>
         ) : (
           <ul className="grid gap-2" aria-label={orderId ? 'Files on this order' : 'Files on this RFQ'}>
             {list.map(a => (

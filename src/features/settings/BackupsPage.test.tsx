@@ -56,6 +56,14 @@ describe('Settings > Backups and usage', () => {
     expect(screen.getByRole('progressbar', { name: 'File storage' })).toHaveAttribute('aria-valuenow', '78')
   })
 
+  it('a meter over the warning line says so in words and an icon, not colour alone', async () => {
+    mount(row())
+    const full = await screen.findByTestId('usage-storage')
+    expect(full).toHaveTextContent('Over 70%')
+    expect(full.querySelector('svg')).not.toBeNull()
+    expect(screen.getByTestId('usage-db')).not.toHaveTextContent('Over 70%')
+  })
+
   it('shows the last backup, the drill and the trash', async () => {
     mount(row({ last_backup_at: NOW, last_backup_bytes: 3 * MB, last_backup_storage_bytes: 200 * MB, last_backup_objects: 12, last_drill_at: NOW, last_drill_ok: true, trash_files: 4, trash_oldest: '2026-10-01T00:00:00Z' }))
     expect(await screen.findByTestId('backup-last')).toHaveTextContent('(today)')

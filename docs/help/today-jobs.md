@@ -11,4 +11,4 @@ related: goods-delivered, commissioning-done
 3. Red means today or late.
 4. Tap a row, then [Open <order number>] to see the site, the contact and the notes.
 
-Tip: You do not see payments, costs or margins. That is normal.
+Tip: Money pages are for the office. That is normal.

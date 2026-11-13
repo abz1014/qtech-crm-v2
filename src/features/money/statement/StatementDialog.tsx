@@ -15,7 +15,7 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { saveBlob } from '@/features/money/expenseReport/pdf/generate'
 import { fetchStatementLines } from '@/features/money/statement/api'
 import { generateStatementPdf } from '@/features/money/statement/generate'
-import { KIND_LABEL, buildStatement, financialYearStart, fixed } from '@/features/money/statement/model'
+import { KIND_LABEL, buildStatement, financialYearStart, grouped } from '@/features/money/statement/model'
 
 /*
  * Statement of account (process audit 7). On the company page, admin only: choose the dates, see the opening balance, the invoices,
@@ -36,7 +36,7 @@ export function StatementButton({ companyId, companyName }: { companyId: string;
   )
 }
 
-const ROW = 'grid grid-cols-[6rem_minmax(0,1fr)_7rem_7rem_8rem] gap-x-3 px-3 py-2'
+const ROW = 'grid grid-cols-[minmax(0,5.5rem)_minmax(0,1fr)_minmax(0,6.5rem)_minmax(0,6.5rem)_minmax(0,7.5rem)] gap-x-2 px-3 py-2 sm:gap-x-3'
 
 function StatementDialog({ companyId, companyName, onClose }: { companyId: string; companyName: string; onClose: () => void }) {
   const today = businessToday()
@@ -102,8 +102,8 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
           ) : lines.isPending ? (
             <Skeleton className="h-[8rem] w-full" />
           ) : st ? (
-            <div className="overflow-x-auto rounded border">
-              <div className="min-w-[34rem] text-sm" role="list" aria-label="Statement lines">
+            <div className="rounded border">
+              <div className="min-w-0 text-sm" role="list" aria-label="Statement lines">
                 <div className={`${ROW} bg-sunken text-fg-muted`} role="presentation">
                   <span className="font-medium">Date</span>
                   <span className="font-medium">Document</span>
@@ -112,32 +112,32 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
                   <span className="text-right font-medium">Balance</span>
                 </div>
                 <div className={`${ROW} bg-sunken font-medium`} role="listitem" data-testid="statement-opening">
-                  <span className="num">{formatShortDate(st.from, today)}</span>
+                  <span className="num [overflow-wrap:anywhere]">{formatShortDate(st.from, today)}</span>
                   <span>Opening balance</span>
                   <span />
                   <span />
-                  <span className="num text-right">{fixed(st.opening)}</span>
+                  <span className="num text-right [overflow-wrap:anywhere]">{grouped(st.opening)}</span>
                 </div>
                 {st.rows.map((r, i) => (
                   <div key={i} className={`${ROW} border-t`} role="listitem" data-testid="statement-row">
-                    <span className="num">{formatShortDate(r.on, today)}</span>
-                    <span>
+                    <span className="num [overflow-wrap:anywhere]">{formatShortDate(r.on, today)}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
                       {KIND_LABEL[r.kind]}
                       {r.ref ? <span className="num text-fg-2">{` ${r.ref}`}</span> : null}
                       {r.note ? <span className="text-fg-muted">{` · ${r.note}`}</span> : null}
                     </span>
-                    <span className="num text-right">{r.debit > 0n ? fixed(r.debit) : ''}</span>
-                    <span className="num text-right">{r.credit > 0n ? fixed(r.credit) : ''}</span>
-                    <span className="num text-right">{fixed(r.balance)}</span>
+                    <span className="num text-right [overflow-wrap:anywhere]">{r.debit > 0n ? grouped(r.debit) : ''}</span>
+                    <span className="num text-right [overflow-wrap:anywhere]">{r.credit > 0n ? grouped(r.credit) : ''}</span>
+                    <span className="num text-right [overflow-wrap:anywhere]">{grouped(r.balance)}</span>
                   </div>
                 ))}
                 {st.rows.length === 0 ? <p className="border-t px-3 py-3 text-fg-muted">Nothing happened on this account between these dates.</p> : null}
                 <div className={`${ROW} border-t font-semibold`} role="listitem" data-testid="statement-closing">
-                  <span className="num">{formatShortDate(st.to, today)}</span>
+                  <span className="num [overflow-wrap:anywhere]">{formatShortDate(st.to, today)}</span>
                   <span>Closing balance</span>
                   <span />
                   <span />
-                  <span className="num text-right">{fixed(st.closing)}</span>
+                  <span className="num text-right [overflow-wrap:anywhere]">{grouped(st.closing)}</span>
                 </div>
               </div>
             </div>

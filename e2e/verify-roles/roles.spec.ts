@@ -60,7 +60,7 @@ async function stateOf(page: Page): Promise<Visit> {
   if (new URL(url).pathname.startsWith('/login')) return { state: 'login', url }
   const h1 = (await page.locator('h1').allInnerTexts().catch(() => [] as string[])).join(' | ')
   const titles = (await page.locator('[data-mood="warning"]').allInnerTexts().catch(() => [] as string[])).join(' | ')
-  if (/ is for (admins|admins and sales)|has no access yet/.test(`${h1} ${titles}`)) return { state: 'no-access', url }
+  if (/ is for (admins|admins and sales|sales and engineers)|has no access yet/.test(`${h1} ${titles}`)) return { state: 'no-access', url }
   if (/Page not found/.test(h1)) return { state: 'not-found', url }
   return { state: 'page', url }
 }

@@ -18,9 +18,9 @@ function joinWords(words: string[]): string {
 /**
  * Role-limited state (components-09, "Not available to this role"): a warning tile with a lock, what is
  * missing and who can change it. Names the role. Used for a destination the role cannot reach and for an
- * account with no role.
+ * account with no role. `adminNote` replaces "Ask an admin" for an admin who opens a page that is not theirs.
  */
-export function NoAccessPage({ area, roles }: { area?: string; roles?: readonly string[] }) {
+export function NoAccessPage({ area, roles, adminNote }: { area?: string; roles?: readonly string[]; adminNote?: string }) {
   const session = useSession()
   const navigate = useNavigate()
   const role = session.status === 'signed-in' ? session.user.role : ''
@@ -29,7 +29,9 @@ export function NoAccessPage({ area, roles }: { area?: string; roles?: readonly 
   const allowed = area ? (roles ?? navItems.find(i => i.label === area)?.roles ?? ['admin']) : []
   const title = area ? `${area} is for ${joinWords(allowed.map(r => WHO[r] ?? r))}` : 'This account has no access yet'
   const body = known
-    ? `Your role is ${ROLE_LABEL[role] ?? role}. Ask an admin ${area ? (NEED[area] ?? `if you need access to ${area}`) : 'if you need access to this page'}.`
+    ? role === 'admin' && adminNote
+      ? `Your role is ${ROLE_LABEL[role] ?? role}. ${adminNote}`
+      : `Your role is ${ROLE_LABEL[role] ?? role}. Ask an admin ${area ? (NEED[area] ?? `if you need access to ${area}`) : 'if you need access to this page'}.`
     : 'Your account has no role assigned. Ask an admin to set one on the Team screen.'
   return (
     <div className="mx-auto grid max-w-list content-start px-4 pb-12 pt-6 md:px-8 md:pt-12">

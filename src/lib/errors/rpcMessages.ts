@@ -303,13 +303,32 @@ export function rpcEntry(text: string): { entry: RpcEntry; m: RegExpMatchArray }
   return null
 }
 
+/** Server texts say "Rs 1,200.00" and "closed" for a month; the app says PKR and locked (decisions I and H). */
+export function rupeesToPkr(text: string): string {
+  return text.replace(/\bRs\.? ?(?=\S)/g, 'PKR ')
+}
+
+/**
+ * The month sentences of the server and of the app ("September 2026 is closed", "which is closed", "the month is closed") say locked
+ * (decision H). Narrow on purpose: any other "closed" (an enquiry closed as lost) keeps its word.
+ */
+export function lockedWording(text: string): string {
+  return text
+    .replace(/\b((?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4}(?:, which)? is) closed\b/g, '$1 locked')
+    .replace(/\b(the month is) closed\b/g, '$1 locked')
+}
+
+function plainWording(text: string): string {
+  return rupeesToPkr(text).replace(/\bclosed\b/g, 'locked')
+}
+
 /** A plain message for a server rule text, or null when none is mapped or the entry is internal. */
 export function rpcMessage(text: string): RpcMessage | null {
   const hit = rpcEntry(text)
   if (!hit || hit.entry.internal) return null
   const { entry, m } = hit
   return {
-    message: entry.message ? entry.message(m) : text.trim(),
+    message: entry.message ? entry.message(m) : plainWording(text.trim()),
     ...(entry.help ? { help: entry.help } : {}),
     ...(entry.action ? { action: entry.action } : {}),
   }

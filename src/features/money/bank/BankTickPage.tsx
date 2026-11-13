@@ -228,15 +228,22 @@ function Loading() {
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         {[0, 1].map(i => (
-          <div key={i} className="rounded border bg-surface">
-            <div className="flex min-h-[52px] items-center border-b px-5">
+          <div key={i} className="min-w-0 rounded-panel border bg-surface md:rounded-none md:border-0 md:bg-transparent">
+            <div className="flex min-h-[52px] items-center border-b py-2 pl-5 pr-4 md:pl-0 md:pr-0">
               <Skeleton className="h-4 w-[7rem]" />
             </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-5 py-1 md:px-0">
+              <Skeleton className="h-3 w-[8rem]" />
+              <Skeleton className="h-3 w-8" />
+            </div>
             {[0, 1, 2, 3, 4].map(r => (
-              <div key={r} className="flex min-h-[48px] items-center gap-3 border-b px-5">
+              <div key={r} data-testid="bank-skeleton-row" className="grid min-h-[48px] grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 border-b px-5 py-[6px] md:px-0">
                 <Skeleton className="size-[20px]" />
                 <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-3 flex-1" />
+                <span className="grid min-w-0 gap-1">
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </span>
                 <Skeleton className="h-3 w-16" />
               </div>
             ))}

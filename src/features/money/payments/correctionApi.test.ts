@@ -65,7 +65,7 @@ describe('payment correction calls (0073)', () => {
     installFakeDb((): FakeResult => ({ error: { code: 'P0001', message, hint: 'month_closed' } as FakeResult['error'] }))
     const err = await voidPayment({ paymentId: 'p1', reason: 'x' }).catch(e => e)
     expect(err).toBeInstanceOf(PlainError)
-    expect(mapPgError(err)).toMatchObject({ message, code: 'month_closed' })
+    expect(mapPgError(err)).toMatchObject({ message: message.replace('is closed', 'is locked'), code: 'month_closed' })
   })
 
   it('every refusal hint is mapped; anything else is left for mapPgError (role, network, unknown)', () => {

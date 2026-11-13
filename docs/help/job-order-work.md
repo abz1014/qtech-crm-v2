@@ -13,3 +13,11 @@ related: issue-po, goods-delivered
 5. To delete a mistaken order, tap [More], then [Delete order]. Only an admin sees it.
 
 Tip: Engineers see the goods and the installation, never prices or invoices.
+
+@engineer
+1. Open the job. The green button says the next step. Tap it: that step opens right here.
+2. Delivery: tap [Delivered today] when the goods arrive. Late? Tap [Chase goods].
+3. On site, tap [Installed today] when the work is done.
+4. Add a photo or note to the job from the row [Add to this job].
+
+Tip: Money pages are for the office.

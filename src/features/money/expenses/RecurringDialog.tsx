@@ -152,7 +152,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
           summary={
             <span data-testid="delete-recurring-what">
               {template.label} · {pkr(template.amount)} every month
-              {used.data ? ` · ${used.data} ${used.data === 1 ? 'expense' : 'expenses'} recorded from it stay as they are` : ' · past expenses stay'}
+              {used.data ? ` · ${used.data} ${used.data === 1 ? 'expense' : 'expenses'} recorded from it ${used.data === 1 ? 'stays as it is' : 'stay as they are'}` : ' · past expenses stay'}
             </span>
           }
           loading={used.isPending}

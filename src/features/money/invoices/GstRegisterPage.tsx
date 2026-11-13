@@ -37,6 +37,7 @@ import {
   isCreditNote,
   cleanPsid,
   matchesSearch,
+  isInert,
   needsAttention,
   tcsNotSent,
   rangeLabel,
@@ -123,7 +124,8 @@ export function GstRegisterPage() {
   const totals = registerTotals(shown)
   const monthCounts = useMemo(() => {
     const m = new Map<string, number>()
-    for (const r of shown) m.set(rowMonth(r), (m.get(rowMonth(r)) ?? 0) + 1)
+    // invoices only: a void invoice and a credit note stay in the month's lines but are not another invoice (same rule as the totals)
+    for (const r of shown) m.set(rowMonth(r), (m.get(rowMonth(r)) ?? 0) + (isInert(r) ? 0 : 1))
     return m
   }, [shown])
   const tickedRows = useMemo(() => shown.filter(r => ticked.has(r.invoiceId)), [shown, ticked])

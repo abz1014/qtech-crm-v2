@@ -79,8 +79,8 @@ describe('blockerLink', () => {
 
 describe('blockerLine', () => {
   it('adds the date when there is one', () => {
-    expect(blockerLine(toBlockers([row({})])[0])).toBe('Rs 10.00 payment · 2 Nov 2026')
-    expect(blockerLine(toBlockers([row({ ref_on: null })])[0])).toBe('Rs 10.00 payment')
+    expect(blockerLine(toBlockers([row({})])[0])).toBe('PKR 10.00 payment · 2 Nov 2026')
+    expect(blockerLine(toBlockers([row({ ref_on: null })])[0])).toBe('PKR 10.00 payment')
   })
 })
 

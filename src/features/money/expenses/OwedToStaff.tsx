@@ -5,6 +5,7 @@ import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useToast } from '@/ui/useToast'
@@ -26,7 +27,16 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
   const [open, setOpen] = useState(false)
   const id = useId()
   const claims = q.data ?? []
-  if (!admin || q.isPending || q.isError || claims.length === 0) return null
+  if (!admin || q.isPending) return null
+  if (q.isError)
+    return (
+      <section aria-label="Owed to staff" data-testid="owed-to-staff">
+        <EmptyState mood="error" title="Couldn't load what is owed to staff" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+          Nothing was changed. Check your connection and try again.
+        </EmptyState>
+      </section>
+    )
+  if (claims.length === 0) return null
   const people = owedByPerson(claims)
   const total = claims.reduce((s, c) => s + c.amount, 0)
   // Phone, full form: one line with the figure and who; a tap opens the people and each claim's Mark paid back.

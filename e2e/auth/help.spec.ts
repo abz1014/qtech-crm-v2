@@ -69,3 +69,14 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await page.goBack()
   await expect(page.getByRole('dialog', { name: 'Help' })).toBeHidden()
 })
+
+test('an engineer sees no "Show other roles\' help" and cannot open another role\'s help from a ?help= link (live bug 33)', async ({ browser }) => {
+  const page = await (await browser.newContext({ baseURL: 'http://127.0.0.1:4173' })).newPage()
+  await signIn(page, 'engineer@test.invalid')
+  await page.goto('/todo?help=month-end-close')
+  const help = page.getByRole('dialog', { name: 'Help' })
+  await expect(help).toBeVisible()
+  await expect(help.getByText('That help page is not here any more. Pick one below.')).toBeVisible()
+  await expect(help.getByRole('heading', { name: /Lock a month/ })).toHaveCount(0)
+  await expect(help.getByRole('checkbox', { name: "Show other roles' help" })).toHaveCount(0)
+})

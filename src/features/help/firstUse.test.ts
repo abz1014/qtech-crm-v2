@@ -3,6 +3,7 @@ import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
 import { fetchFirstUse, isNewOn, type FirstUseFacts } from '@/features/help/firstUseApi'
 import { firstWeekRows, inFirstWeeks } from '@/features/help/firstWeek'
 import { fetchFirstWeek } from '@/features/help/firstWeekApi'
+import { FIRST_USE_COPY, nothingYetCopy } from '@/features/help/firstUseCopy'
 
 const none: FirstUseFacts = { ownsRfq: false, ownsOrder: false, onJob: false, companyHasInvoice: true, ownerAlone: false }
 
@@ -74,3 +75,25 @@ describe('first-week checklist (learnability 5.1)', () => {
     expect(fake.calls.some(c => c.target === 'payments_in')).toBe(false)
   })
 })
+
+describe('first-use words (live bugs 34 and 35)', () => {
+  it('sales is not told an order is never typed: Order without enquiry exists', () => {
+    const body = FIRST_USE_COPY.orders.sales?.body ?? ''
+    expect(body).not.toMatch(/from scratch/i)
+    expect(body).toContain('Order without enquiry')
+  })
+
+  it('an engineer reads no money word on any first-use or nothing-yet line', () => {
+    const lines = [...Object.values(FIRST_USE_COPY).map(s => s.engineer), nothingYetCopy('orders', 'engineer')]
+    for (const c of lines) {
+      if (c) expect(`${c.title} ${c.body}`).not.toMatch(/\b(paid|prices?|POs?|invoices?|quotations?|payments?|owe[sd]?)\b/i)
+    }
+    expect(nothingYetCopy('orders', 'engineer').body).toMatch(/delivered\.$/)
+  })
+
+  it('sales and admin keep the "delivered and paid" line', () => {
+    expect(nothingYetCopy('orders', 'sales').body).toContain('delivered and paid')
+    expect(nothingYetCopy('orders', 'admin').body).toContain('delivered and paid')
+  })
+})
+

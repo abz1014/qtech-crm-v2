@@ -39,7 +39,7 @@ function mount(opts: { items?: unknown[]; needsCommissioning?: boolean; legs?: R
     notes: null, site: null, contact: null, owner: null, state: null,
   })
   client.setQueryData(qk.orders.part('o1', 'items'), opts.items ?? [])
-  client.setQueryData(qk.orders.part('o1', 'legs'), { legs: opts.legs ?? [leg()], names: new Map([['s1', 'Orient Analytical']]), quoteLines: [] })
+  client.setQueryData(qk.orders.part('o1', 'legs'), { legs: opts.legs ?? [leg()], names: new Map([['s1', 'Orient Analytical'], ['s2', 'Pacific Supply']]), quoteLines: [] })
   client.setQueryData(qk.orders.part('o1', 'engineers'), [])
   client.setQueryData(qk.orders.part('o1', 'files'), [])
   return render(
@@ -94,6 +94,13 @@ describe("the engineer's Job page", () => {
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
     expect(within(card).getByRole('button', { name: 'Delivered today' })).toHaveClass('bg-primary')
     expect(container.textContent).not.toMatch(/PKR|Invoic|Price|Gross/)
+  })
+
+  it('with two suppliers to deliver, each button says which supplier in its visible words; with one it stays plain', async () => {
+    mount({ legs: [leg(), leg({ id: 'l2', supplier_id: 's2' })] })
+    const card = await screen.findByRole('region', { name: 'On site' })
+    expect(within(card).getByRole('button', { name: 'Delivered today, Orient Analytical' })).toHaveTextContent('Delivered today, Orient Analytical')
+    expect(within(card).getByRole('button', { name: 'Delivered today, Pacific Supply' })).toHaveTextContent('Delivered today, Pacific Supply')
   })
 
   it('shows the order delivery challans (list, download, New challan) with no price', async () => {

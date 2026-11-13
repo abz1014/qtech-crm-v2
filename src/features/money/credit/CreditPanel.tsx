@@ -22,7 +22,21 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
   const q = useCompanyCredit(companyId, isAdmin)
   const [refund, setRefund] = useState(false)
   const [apply, setApply] = useState(false)
-  if (!isAdmin || !q.data) return null
+  if (!isAdmin) return null
+  if (q.isError)
+    return (
+      <Panel title="Credit balance">
+        <div className="px-5 py-3" data-testid="credit-error">
+          <p role="alert" className="mb-2 text-sm text-fg-2">
+            Couldn't load the credit balance. Nothing was changed. Check your connection and try again.
+          </p>
+          <Button size="sm" onClick={() => void q.refetch()}>
+            Try again
+          </Button>
+        </div>
+      </Panel>
+    )
+  if (!q.data) return null
   const { summary, refunds, applications, orderRefs, jobKeys } = q.data
   if (!showCredit(summary, refunds.length, applications.length)) return null
   const events = creditEvents(refunds, applications)

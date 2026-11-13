@@ -40,6 +40,7 @@ export const CURRENCY_NAMES: Record<string, string> = {
   GBP: 'Pound sterling',
   JPY: 'Japanese yen',
   SAR: 'Saudi riyal',
+  CHF: 'Swiss franc',
 }
 
 export interface RateRow {

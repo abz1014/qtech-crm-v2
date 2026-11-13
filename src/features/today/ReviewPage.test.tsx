@@ -86,6 +86,12 @@ describe('Weekly review', () => {
     for (const box of screen.getAllByRole('checkbox').slice(0, 2)) fireEvent.click(box)
     const bar = await screen.findByRole('region', { name: 'Selected' })
     expect(within(bar).getByText('selected').parentElement).toHaveTextContent('2 selected')
+    // a bottom bar: last in the page, stuck to the bottom above the phone tabs, with room under the content
+    expect(bar.className).toContain('sticky')
+    expect(bar.className).toContain('bottom-[')
+    expect(bar.className).not.toContain('top-0')
+    expect(bar.parentElement?.lastElementChild).toBe(bar)
+    expect(bar.parentElement?.className).toContain('pb-')
     fireEvent.click(within(bar).getByRole('button', { name: 'Close selected as lost' }))
     await waitFor(() => expect(fake?.calls.filter(c => c.target === 'rfqs' && c.verb === 'update')).toHaveLength(2))
   })
