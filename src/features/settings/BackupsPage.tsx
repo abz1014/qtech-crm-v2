@@ -14,8 +14,10 @@ import { daysBetween } from '@/features/rfqs/lib/dateText'
 import { businessToday, toBusinessDate } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
+import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
+import { Icon } from '@/ui/Icon'
 import { PageHeader } from '@/ui/PageHeader'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -124,8 +126,10 @@ function Meter({ label, used, limit, testId }: { label: string; used: number; li
     <div className="grid gap-1" data-testid={testId}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-base font-medium">{label}</span>
-        <span className={warn ? 'text-base font-medium text-tone-danger-fg' : 'text-base text-fg-muted'}>
+        <span className={warn ? 'inline-flex flex-wrap items-center gap-1 text-base font-medium text-tone-danger-fg' : 'text-base text-fg-muted'}>
+          {warn ? <Icon icon={AlertTriangle} size="sm" /> : null}
           {formatBytes(used)} of {formatBytes(limit)} ({percentText(share)})
+          {warn ? <span>Over {percentText(USAGE_WARN_AT)}</span> : null}
         </span>
       </div>
       <div
