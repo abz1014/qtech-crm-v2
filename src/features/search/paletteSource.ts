@@ -143,7 +143,8 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS, office = false): P
         ...jobs.slice(0, SHOWN_PER_KIND).map(j => jobItem(j, office, stageModel)),
         ...(jobs.length > SHOWN_PER_KIND ? [{ id: 'see-all-jobs', group: JOBS, label: `See all ${jobs.length >= 200 ? '200+' : jobs.length} results`, meta: 'In Jobs', icon: ListIcon, href: `/jobs?q=${encodeURIComponent(q)}` }] : []),
       ]
-      const items = kindOrder(q).flatMap(kind => {
+      // Supplier POs are money: an engineer's search never lists them (bug 31); the database gate follows in a later migration.
+      const items = kindOrder(q).filter(kind => !(office && kind === 'po')).flatMap(kind => {
         const ofKind = hits.filter(h => h.kind === kind).sort((a, b) => b.score - a.score)
         const shown = ofKind.slice(0, SHOWN_PER_KIND).map(toItem)
         return ofKind.length > SHOWN_PER_KIND ? [...shown, seeAll(kind, q, ofKind.length)] : shown
