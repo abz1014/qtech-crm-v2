@@ -4,6 +4,7 @@ import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -25,7 +26,16 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
   const [open, setOpen] = useState(false)
   const id = useId()
   const claims = q.data ?? []
-  if (q.isPending || q.isError || claims.length === 0) return null
+  if (q.isPending) return null
+  if (q.isError)
+    return (
+      <section aria-label="To approve" data-testid="claims-review">
+        <EmptyState mood="error" title="Couldn't load the claims to approve" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+          Nothing was changed. Check your connection and try again.
+        </EmptyState>
+      </section>
+    )
+  if (claims.length === 0) return null
   const count = claims.length === 1 ? '1 claim' : `${claims.length} claims`
   const total = pkr(claims.reduce((s, c) => s + c.amount, 0))
   const list = (
@@ -51,7 +61,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
           To approve
         </h2>
         <span className="text-base text-fg-2">
-          {count} from engineers · {total} · not counted until approved
+          {count} from staff · {total} · not counted until approved
         </span>
       </header>
       {list}

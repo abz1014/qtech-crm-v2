@@ -29,7 +29,7 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'ima
 
 export function MyClaimsPage() {
   const session = useSession()
-  if (session.status !== 'signed-in' || session.user.role !== 'engineer' && session.user.role !== 'sales') return <NoAccessPage area="I paid" />
+  if (session.status !== 'signed-in' || session.user.role !== 'engineer' && session.user.role !== 'sales') return <NoAccessPage area="I paid" roles={['sales', 'engineer']} adminNote="Admins approve what people paid on the Expenses page, so there is no I paid page for you." />
   return <MyClaims />
 }
 
@@ -212,6 +212,10 @@ function MyClaims() {
         </h2>
         {claims.isPending ? (
           <div className="h-16 animate-pulse rounded-row border bg-sunken" aria-busy="true" />
+        ) : claims.isError ? (
+          <EmptyState mood="error" title="Couldn't load your claims" actions={<Button onClick={() => void claims.refetch()}>Try again</Button>}>
+            Nothing was changed. Check your connection and try again.
+          </EmptyState>
         ) : (claims.data ?? []).length === 0 ? (
           <EmptyState title="Nothing yet">What you send shows here, with whether it was approved.</EmptyState>
         ) : (

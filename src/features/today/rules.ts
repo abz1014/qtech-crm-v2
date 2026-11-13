@@ -1077,7 +1077,7 @@ export function ruleClaimsToApprove(ctx: TodayInputs): Entry[] {
         tab: tabFor('claims_to_approve'),
         title: `I paid: ${n} to approve`,
         ref: 'Expense claims',
-        party: n === 1 ? 'From an engineer' : 'From engineers',
+        party: 'From staff',
         actionDueOn: since,
         group: 'now',
         badge: ageBadge(since, ctx.today),
