@@ -1,3 +1,4 @@
+import { rupeesToPkr } from '@/lib/errors/rpcMessages'
 import { formatShortDate } from '@/lib/formatDay'
 
 /*
@@ -16,7 +17,7 @@ export interface Blocker {
   orderId: string | null
   orderNumber: number | null
   refId: string | null
-  /** "Rs 10,000.00 payment", "Invoice INV-0042": what it is, in words. */
+  /** "PKR 10,000.00 payment", "Invoice INV-0042": what it is, in words. */
   label: string
   on: string | null
   canClear: boolean
@@ -54,7 +55,7 @@ export function toBlockers(rows: readonly BlockerRow[]): Blocker[] {
       orderId: r.order_id,
       orderNumber: r.order_number,
       refId: r.ref_id,
-      label: r.ref_label,
+      label: rupeesToPkr(r.ref_label),
       on: r.ref_on,
       canClear: r.can_clear,
       why: plainWhy(r.why),
@@ -136,7 +137,7 @@ export function blockerLink(b: Blocker, job: JobRef): BlockerLink | null {
   return null
 }
 
-/** "Rs 10,000.00 payment · 5 Nov 2026". */
+/** "PKR 10,000.00 payment · 5 Nov 2026". */
 export function blockerLine(b: Blocker, today?: string): string {
   return b.on ? `${b.label} · ${formatShortDate(b.on, today, true)}` : b.label
 }

@@ -59,21 +59,21 @@ export type CreditNote = { kind: 'ok' | 'over'; text: string }
 
 /** The line under a refund amount: what is left, or why it cannot be refunded. */
 export function refundNote(c: CreditSummary, amount: number | null): CreditNote {
-  const left = `Rs ${formatAmount(c.balance)}`
+  const left = `PKR ${formatAmount(c.balance)}`
   if (amount === null || !(amount > 0)) return { kind: 'ok', text: `This customer holds ${left} of credit.` }
   if (p(amount) > p(c.balance)) return { kind: 'over', text: `That is more than the ${left} this customer holds. Record the overpayment or a credit note first.` }
   const rest = paisaToFixed(p(c.balance) - p(amount))
-  return { kind: 'ok', text: p(amount) === p(c.balance) ? 'This refunds all of their credit.' : `Rs ${formatAmount(rest)} of credit stays with them.` }
+  return { kind: 'ok', text: p(amount) === p(c.balance) ? 'This refunds all of their credit.' : `PKR ${formatAmount(rest)} of credit stays with them.` }
 }
 
 /** The line under an apply amount: against the credit and against what the order owes. */
 export function applyNote(c: CreditSummary, target: Pick<ApplyTarget, 'balance'> | null, amount: number | null): CreditNote {
   if (!target) return { kind: 'ok', text: 'Choose the order to put the credit against.' }
-  if (amount === null || !(amount > 0)) return { kind: 'ok', text: `They hold Rs ${formatAmount(c.balance)} of credit; the order owes Rs ${formatAmount(target.balance)}.` }
-  if (p(amount) > p(c.balance)) return { kind: 'over', text: `That is more than the Rs ${formatAmount(c.balance)} of credit they hold.` }
-  if (p(amount) > p(target.balance)) return { kind: 'over', text: `That is more than the Rs ${formatAmount(target.balance)} the order still owes.` }
+  if (amount === null || !(amount > 0)) return { kind: 'ok', text: `They hold PKR ${formatAmount(c.balance)} of credit; the order owes PKR ${formatAmount(target.balance)}.` }
+  if (p(amount) > p(c.balance)) return { kind: 'over', text: `That is more than the PKR ${formatAmount(c.balance)} of credit they hold.` }
+  if (p(amount) > p(target.balance)) return { kind: 'over', text: `That is more than the PKR ${formatAmount(target.balance)} the order still owes.` }
   const owing = paisaToFixed(p(target.balance) - p(amount))
-  return { kind: 'ok', text: p(amount) === p(target.balance) ? 'This settles the order. No cash moves.' : `The order will still owe Rs ${formatAmount(owing)}. No cash moves.` }
+  return { kind: 'ok', text: p(amount) === p(target.balance) ? 'This settles the order. No cash moves.' : `The order will still owe PKR ${formatAmount(owing)}. No cash moves.` }
 }
 
 /** One line of the credit history, refunds and applied credit together, newest first. */

@@ -15,7 +15,7 @@ import type { TodayItem } from '@/features/today/types'
 
 /*
  * The To do item for recurring bills (0138): every bill that is due, each with its amount (change it first for a bill that
- * varies, like electricity), and one "Record all (Rs X)". Recording is safe to repeat: (recurring_id, period) is unique, so a bill
+ * varies, like electricity), and one "Record all (PKR X)". Recording is safe to repeat: (recurring_id, period) is unique, so a bill
  * another tab or the "Book it for me" job already recorded is skipped, not doubled. Text is 16px and up.
  */
 export function RecurringReminder({ item, bills, today, compact }: { item: TodayItem; bills: readonly ReminderBill[]; today: string; compact?: boolean }) {
@@ -90,7 +90,7 @@ export function RecurringReminder({ item, bills, today, compact }: { item: Today
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="primary" icon={Check} busy={busy} busyLabel="Recording" disabled={loading || lines.length === 0 || bad.length > 0} onClick={() => void recordAll()} className={compact ? 'min-h-touch' : undefined}>
-          {`Record all (Rs ${formatAmount(total)})`}
+          {`Record all (PKR ${formatAmount(total)})`}
         </Button>
         <Button variant="quiet" icon={ExternalLink} onClick={() => navigate(item.href)} className={compact ? 'min-h-touch' : undefined}>
           Open Expenses

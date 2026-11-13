@@ -94,4 +94,25 @@ describe('mapPgError uses the table', () => {
   it('internal texts still fall back', () => {
     expect(mapPgError({ code: 'P0001', message: 'float_rfq needs at least one item' }).message).toBe('This change was refused. Nothing was saved.')
   })
+
+  it('shows PKR, never Rs, in a server text kept as written (decision I)', () => {
+    expect(rpcMessage('That order only owes Rs 1,200.00, so Rs 2,000.00 cannot be applied to it.')?.message).toBe('That order only owes PKR 1,200.00, so PKR 2,000.00 cannot be applied to it.')
+    expect(rpcMessage('Rs 900.00 for 1 USD is more than 20 percent away from the latest rate (Rs 280.00). Check it for a typing slip.')?.message).toMatch(/^PKR 900\.00 for 1 USD .*\(PKR 280\.00\)/)
+  })
+
+  it('says locked, never closed, for a month (decision H)', () => {
+    expect(rpcMessage('October 2026 is closed. An admin can reopen it.')?.message).toBe('October 2026 is locked. An admin can reopen it.')
+    expect(rpcMessage('The new date is in October 2026, which is closed. Reopen it first (Money, Month-end), or choose a date in an open month.')?.message).toMatch(/which is locked\./)
+    expect(rpcMessage('October 2026 is closed, so invoice INV-1 cannot be voided. Issue a credit note instead.')?.message).toMatch(/is locked, so/)
+  })
+
+  it('no mapped message shows Rs or closed', () => {
+    for (const t of raisedTexts()) {
+      const msg = rpcMessage(t)?.message
+      if (msg) {
+        expect(msg, t).not.toMatch(/\bRs\b/)
+        expect(msg, t).not.toMatch(/\bclosed\b/)
+      }
+    }
+  })
 })

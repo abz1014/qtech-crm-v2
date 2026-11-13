@@ -135,7 +135,7 @@ describe('Credit balance panel', () => {
     await user.click(await screen.findByRole('button', { name: /Apply to an order/ }))
     const dialog = await screen.findByRole('dialog')
     const select = await within(dialog).findByRole('combobox', { name: /Put it against/ })
-    expect(within(select).getAllByRole('option').map(o => o.textContent)).toEqual(['ORD-0011 · owes Rs 500', 'ORD-0013 · owes Rs 50'])
+    expect(within(select).getAllByRole('option').map(o => o.textContent)).toEqual(['ORD-0011 · owes PKR 500', 'ORD-0013 · owes PKR 50'])
     expect(within(dialog).getByRole('textbox', { name: /Amount to apply/ })).toHaveValue('220')
     await user.selectOptions(select, 'o13')
     expect(within(dialog).getByRole('textbox', { name: /Amount to apply/ })).toHaveValue('50')
