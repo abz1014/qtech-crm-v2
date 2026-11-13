@@ -43,7 +43,9 @@ export function Rail({ user, counts, dots, collapsed, onToggle, links: given, cu
   const text = railTextClass(collapsed)
   const shape = collapsed ? 'justify-center px-0' : 'px-4 max-lg:justify-center max-lg:px-0'
   return (
-    <div
+    // One landmark around the whole rail (axe region): the lanes inside are the Main navigation.
+    <aside
+      aria-label="Menu"
       data-surface="navy"
       data-rail={collapsed ? 'collapsed' : 'expanded'}
       className={cn(
@@ -130,6 +132,6 @@ export function Rail({ user, counts, dots, collapsed, onToggle, links: given, cu
           <span className="text-xs text-fg-2">{ROLE_LABEL[user.role] ?? user.role}</span>
         </span>
       </div>
-    </div>
+    </aside>
   )
 }
