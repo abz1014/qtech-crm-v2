@@ -180,7 +180,7 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
     const price = await screen.findByLabelText('Selling price, line 1')
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked())
     expect(price).toHaveValue('')
-    expect(screen.getByText('Type the selling price from your costing sheet')).toBeInTheDocument()
+    expect(screen.getByText('Enter the selling price from the costing sheet')).toBeInTheDocument()
     // no price is invented from the supplier's
     expect(screen.queryByText(/suggested/)).toBeNull()
     expect(create).toBeEnabled()

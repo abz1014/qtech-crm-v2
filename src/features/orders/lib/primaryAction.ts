@@ -118,7 +118,7 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
       return 'The old CRM did not say whether these prices include GST'
     case 'chase-payment': {
       const late = step.lateDays && step.lateDays > 0 && f.dueOn ? overdueWords(step.lateDays, f.dueOn) : 'overdue'
-      return `Customer owes ${pkr(f.balance)}, ${late}`
+      return `To collect ${pkr(f.balance)}, ${late}`
     }
     case 'goods-late': {
       const late = step.lateDays && step.lateDays > 0 ? (step.lateDays > COUNT_WORDS_MAX_DAYS ? (step.leg?.expectedOn ? sinceWords(step.leg.expectedOn) : 'late') : daysLate(step.lateDays)) : 'late'
@@ -145,7 +145,7 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
     case 'commissioning-later':
       return f.plannedOn ? `Commissioning planned ${formatShortDate(f.plannedOn, f.today)}` : 'Waiting for the commissioning date'
     case 'await-payment':
-      return `Customer owes ${pkr(f.balance)}${f.dueOn ? `, due ${formatShortDate(f.dueOn, f.today)}` : ''}`
+      return `To collect ${pkr(f.balance)}${f.dueOn ? `, due ${formatShortDate(f.dueOn, f.today)}` : ''}`
     case 'costs':
       return 'Mark costs complete in the Margin panel'
     case 'done':

@@ -6,17 +6,17 @@ keywords: visit, second visit, survey, installation, service, report, signature,
 screens: /jobs
 related: set-visit-time, commissioning-done
 ---
-1. Open the job. Admin and sales: tap Delivery, then the [Commissioning] row, and look at Visits. Engineers see Visits on their job page.
-2. Admin and sales tap [Add visit], pick the type and the day, and optionally the engineer and a note. Tap [Save].
-3. When a visit is finished, tap [Mark visit done] on it. The order is done when every visit is done.
-4. Tap [Service report] on a visit to download a PDF with a line each for the customer and the engineer to sign.
+1. Open the job. Admin and sales: select Delivery, then the [Commissioning] row, and look at Visits. Engineers see Visits on their job page.
+2. Admin and sales select [Add visit], pick the type and the day, and optionally the engineer and a note. Select [Save].
+3. When a visit is finished, select [Mark visit done] on it. The order is done when every visit is done.
+4. Select [Service report] on a visit to download a PDF with a line each for the customer and the engineer to sign.
 
-Tip: an engineer can change only the visits that are theirs. The report has no prices.
+Note: An engineer can change only the visits that are theirs. The report has no prices.
 
 @engineer
-1. Open the job. Admin and sales: tap Delivery, then the [Commissioning] row, and look at Visits. Engineers see Visits on their job page.
-2. Admin and sales tap [Add visit], pick the type and the day, and optionally the engineer and a note. Tap [Save].
-3. When a visit is finished, tap [Mark visit done] on it. The order is done when every visit is done.
-4. Tap [Service report] on a visit to download a PDF with a line each for the customer and the engineer to sign.
+1. Open the job. Admin and sales: select Delivery, then the [Commissioning] row, and look at Visits. Engineers see Visits on their job page.
+2. Admin and sales select [Add visit], pick the type and the day, and optionally the engineer and a note. Select [Save].
+3. When a visit is finished, select [Mark visit done] on it. The order is done when every visit is done.
+4. Select [Service report] on a visit to download a PDF with a line each for the customer and the engineer to sign.
 
-Tip: an engineer can change only the visits that are theirs. Money pages are for the office.
+Note: An engineer can change only the visits that are theirs. Money pages are for the office.

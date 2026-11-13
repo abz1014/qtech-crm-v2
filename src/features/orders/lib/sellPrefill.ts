@@ -9,14 +9,14 @@
 //   1 quotation   the LATEST issued quotation's line (never rfq_items: an item a later revision dropped keeps its old price there)
 //   2 draft       the unissued Issue-quotation draft kept in this browser tab
 //   3 memory      what we last quoted this customer for the item, else what we last sold it at
-//   4 none        empty: "Type the selling price from your costing sheet"
+//   4 none        empty: "Enter the selling price from the costing sheet"
 
 import { formatAmount } from '@/lib/money'
 import { orderRef } from '@/lib/refs'
 
 export type SellSource = 'quotation' | 'draft' | 'last_quoted' | 'last_sold' | 'none'
 
-export const NO_PRICE_HINT = 'Type the selling price from your costing sheet'
+export const NO_PRICE_HINT = 'Enter the selling price from the costing sheet'
 
 export interface PrefillItem {
   id: string

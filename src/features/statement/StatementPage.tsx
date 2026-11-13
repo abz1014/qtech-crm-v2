@@ -84,7 +84,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
         <EmptyState
           mood="error"
           icon={CloudOff}
-          title="Couldn't open the statement"
+          title="The statement could not be opened"
           actions={
             <Button variant="primary" onClick={() => void facts.refetch()}>
               Try again

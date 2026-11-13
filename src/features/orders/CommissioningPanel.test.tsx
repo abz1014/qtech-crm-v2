@@ -46,7 +46,7 @@ describe('Commissioning panel: someone else changed the order', () => {
     await user.clear(box)
     await user.type(box, 'Bring the long ladder')
     await user.click(screen.getByRole('button', { name: 'Save notes' }))
-    expect(await screen.findByText('Someone else changed this order. Reload to see their changes.')).toBeInTheDocument()
+    expect(await screen.findByText('This order was changed by another user. Reload to see the changes.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Order notes' })).toHaveValue('Bring the long ladder')
   })
 })

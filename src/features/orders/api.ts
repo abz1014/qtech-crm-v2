@@ -377,7 +377,7 @@ export function existingOrderOf(err: { hint?: string | null } | null | undefined
 }
 
 /** What an edit says when the order changed under it (the conditional write below matched no row). */
-export const ORDER_CHANGED = 'Someone else changed this order. Reload to see their changes.'
+export const ORDER_CHANGED = 'This order was changed by another user. Reload to see the changes.'
 
 /**
  * Updates an order. With `expectedUpdatedAt` (the order's `updated_at` as the screen last loaded it) the write is conditional on it, the

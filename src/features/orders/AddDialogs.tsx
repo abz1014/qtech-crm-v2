@@ -127,7 +127,7 @@ export function AddLineDialog({ order, items, legs, onClose }: { order: OrderHea
             </div>
           ) : null}
           {error ? (
-            <Banner tone="danger" title="Couldn't add the line">
+            <Banner tone="danger" title="The line could not be added">
               {error}
             </Banner>
           ) : null}
@@ -188,7 +188,7 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
         }
       >
         <div className="grid gap-4">
-          <Field label="Supplier" requirement="required" help="Suppliers you have asked, ordered from or carry a brand for.">
+          <Field label="Supplier" requirement="required" help="Suppliers already asked, ordered from, or carrying a brand for.">
             <Select
               value={supplierId}
               onChange={e => setSupplierId(e.target.value)}
@@ -198,7 +198,7 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
           </Field>
           <Field
             label="Currency"
-            source={chosen && !touched ? (chosen.lastCurrency ? `${chosen.name} last used ${chosen.lastCurrency}` : 'PKR unless you change it') : undefined}
+            source={chosen && !touched ? (chosen.lastCurrency ? `${chosen.name} last used ${chosen.lastCurrency}` : 'PKR unless changed') : undefined}
             edited={touched}
             error={duplicate ? 'This order already has this supplier in this currency.' : undefined}
           >
@@ -212,7 +212,7 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
             />
           </Field>
           {error ? (
-            <Banner tone="danger" title="Couldn't add the supplier">
+            <Banner tone="danger" title="The supplier could not be added">
               {error}
             </Banner>
           ) : null}

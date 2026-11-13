@@ -334,7 +334,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
           data-testid={`convert-price-${n}`}
         />
         {!on && p?.notIn ? <span className="text-base text-fg-2" data-testid={`convert-item-${n}-not-in`}>{p.notIn}. Tick it to add it.</span> : null}
-        {on && empty ? <span className="text-base text-fg-2">{edited ? 'Type the selling price.' : p?.sourceText ?? ''}</span> : null}
+        {on && empty ? <span className="text-base text-fg-2">{edited ? 'Enter the selling price.' : p?.sourceText ?? ''}</span> : null}
         {!empty && p?.source !== 'none' ? (
           <span className="text-base" data-testid={`convert-price-${n}-source`}>
             <SourceNote source={p?.sourceText ?? ''} edited={edited} />
@@ -375,10 +375,10 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
         <div className="grid gap-4">
           <p className="flex items-center gap-1 text-sm text-fg-2">
             <span>
-              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with the supplier you choose for it.
+              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with the supplier chosen for it.
             </span>
             <InfoTip label="How the order is made">
-              No supplier is chosen for you. Pick one for each item from its supplier prices, or split an item between two suppliers. Prices and terms copy from the quotation.
+              No supplier is chosen automatically. Pick one for each item from its supplier prices, or split an item between two suppliers. Prices and terms copy from the quotation.
             </InfoTip>
           </p>
 
@@ -390,7 +390,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
           ) : itemsQ.isError || rankQ.isError ? (
             <Banner
               tone="danger"
-              title="Couldn't load the lines"
+              title="The lines could not be loaded"
               action={
                 <Button
                   onClick={() => {
@@ -535,7 +535,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                               <b className="font-medium">
                                 Parts add up to {chk.total}, but the item is {it.qty}.
                               </b>{' '}
-                              Check the quantities. Nothing is blocked: you can still create the order, and {chk.total > it.qty ? 'the extra is ordered as typed' : 'only what is typed is ordered'}.
+                              Check the quantities. Nothing is blocked. The order can still be created, and {chk.total > it.qty ? 'the extra is ordered as typed' : 'only what is typed is ordered'}.
                             </span>
                           </div>
                         ) : null}
@@ -559,7 +559,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                         <Button size="sm" icon={Split} onClick={() => split(it.id)} aria-label={`Split this item, line ${n}`}>
                           Split this item
                         </Button>
-                        <span className="text-xs text-fg-muted">Adds a part. Choose its supplier and type its quantity; the first part takes the rest.</span>
+                        <span className="text-xs text-fg-muted">Adds a part. Choose its supplier and enter its quantity. The first part takes the rest.</span>
                       </div>
                     ) : null}
                   </div>
@@ -637,7 +637,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
           </Field>
 
           {error ? (
-            <Banner tone="danger" title="Couldn't create the order">
+            <Banner tone="danger" title="The order could not be created">
               {error} Nothing was created twice: pressing Create order again is safe.
             </Banner>
           ) : null}

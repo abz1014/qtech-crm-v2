@@ -226,7 +226,7 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByRole('heading', { name: 'Mark won' })).toBeVisible()
     await expect(dialog.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked()
     await expect(price(dialog, 1)).toHaveValue('')
-    await expect(dialog).toContainText('Type the selling price from your costing sheet')
+    await expect(dialog).toContainText('Enter the selling price from the costing sheet')
     await shot(page, 'a1-markwon-owner-shape-1440')
     expect(await dialogViolations(page)).toEqual([])
     // the same dialog on a phone: the price input stacks under its label, nothing scrolls sideways
