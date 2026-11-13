@@ -35,7 +35,7 @@ describe('customer credit rules (0126, 0127)', () => {
     expect(applyNote(credit(120), { balance: 500 }, 121).kind).toBe('over')
     expect(applyNote(credit(120), { balance: 50 }, 60).kind).toBe('over')
     expect(applyNote(credit(120), { balance: 50 }, 50)).toEqual({ kind: 'ok', text: 'This settles the order. No cash moves.' })
-    expect(applyNote(credit(120), { balance: 500 }, 120)).toEqual({ kind: 'ok', text: 'The order will still owe PKR 380. No cash moves.' })
+    expect(applyNote(credit(120), { balance: 500 }, 120)).toEqual({ kind: 'ok', text: 'PKR 380 will still be due on the order. No cash moves.' })
   })
 
   it('refunds and applied credit are one history, newest first', () => {

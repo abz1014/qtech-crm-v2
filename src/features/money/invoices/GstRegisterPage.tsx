@@ -245,7 +245,7 @@ export function GstRegisterPage() {
       })
       if (kind === 'psid') setPsid('')
     } catch (err) {
-      toast.toast({ title: "Couldn't stamp the invoices", body: mapPgError(err, { entity: 'invoice' }).message, tone: 'danger' })
+      toast.toast({ title: "The invoices were not stamped", body: mapPgError(err, { entity: 'invoice' }).message, tone: 'danger' })
     } finally {
       setBusy(false)
     }
@@ -367,7 +367,7 @@ export function GstRegisterPage() {
         loading={register.isPending}
         error={
           register.isError
-            ? { title: 'The invoices did not load', message: 'Your invoices are safe. The server did not answer in time. Try again, and if it keeps failing, tell the admin.', onRetry: () => void register.refetch() }
+            ? { title: 'The invoices did not load', message: 'Invoices are safe. The server did not answer in time. Try again, and if it keeps failing, tell the admin.', onRetry: () => void register.refetch() }
             : null
         }
         toolbar={({ selectedCount }) => (
@@ -426,7 +426,7 @@ export function GstRegisterPage() {
             />
           ) : (
             <EmptyState title="No invoices yet" actions={<Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>Create invoice</Button>}>
-              Invoices appear here as you create them from an order, by invoice date. Every invoice goes to FBR.
+              Invoices appear here when they are created from an order, by invoice date. Every invoice goes to FBR.
             </EmptyState>
           )
         }

@@ -9,6 +9,6 @@ related: tcs-fbr, payment-reminder
 1. Open the order. Once everything is delivered, the green button is [Create invoice].
 2. Check the [Invoice number] (it continues the series) and the [Invoice date].
 3. Check the [Net amount] and the GST. Lower the amount to invoice part of the order.
-4. Tap [Create invoice], then [Print invoice] for the sales-tax invoice PDF to send the customer.
+4. Select [Create invoice], then [Print invoice] for the sales tax invoice PDF to send to the customer.
 
-Tip: An admin can also start one from [Invoices] with [Create invoice]. The customer's NTN and STRN go under [Tax details for invoices] on the company.
+Tip: An admin can also start one from [Invoices] with [Create invoice]. The customer's NTN and STRN are entered under [Tax details for invoices] on the company.

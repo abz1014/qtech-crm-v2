@@ -72,7 +72,7 @@ describe('Invoice: edit', () => {
     const warning = await screen.findByTestId('gst-filed-warning')
     expect(warning.textContent).toContain("This month's GST return may already be filed. File a revised return with FBR.")
     await user.click(screen.getByRole('button', { name: 'Save' }))
-    expect((await screen.findAllByText(/Tick the box to go on/)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/Tick the box to continue/)).length).toBeGreaterThan(0)
     expect(d.calls.some(c => c.target === 'invoices' && c.verb === 'update')).toBe(false)
     await user.click(within(warning).getByRole('checkbox', { name: 'I understand' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -227,7 +227,7 @@ describe('Invoice: void and credit note (0112)', () => {
     const upd = d.calls.find(c => c.target === 'invoices' && c.verb === 'update') as FakeCall
     expect(JSON.stringify(upd)).toContain('2025-01-11T00:00:00Z')
     // the fake answers an update with no row: the version had moved on
-    expect(await screen.findByText(/Someone else changed this invoice while you had it open/)).toBeInTheDocument()
+    expect(await screen.findByText(/This invoice was changed by another user/)).toBeInTheDocument()
   })
 })
 

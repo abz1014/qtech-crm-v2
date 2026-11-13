@@ -126,7 +126,7 @@ function Sentences({ f }: { f: MoneyHomeFigures }) {
             PKR <span className="num">{rs(f.received.total)}</span> came in this month
             {f.gstShare && Number(f.gstShare) > 0 ? (
               <>
-                , and about <b className="num font-semibold">PKR {rs(f.gstShare)}</b> of it is GST we owe FBR
+                , and about <b className="num font-semibold">PKR {rs(f.gstShare)}</b> of it is GST payable to FBR
               </>
             ) : null}
             . PKR <span className="num">{rs(f.paidOut.total)}</span> went out.

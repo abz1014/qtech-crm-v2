@@ -215,11 +215,11 @@ export function ReceivablesPage() {
       {/* Phone: only Owed stays in view while the cards scroll (the five tiles took half the screen); the split sits under it and scrolls away. */}
       <p data-testid="owed-line" className="sticky top-0 z-10 -mx-4 flex flex-wrap items-baseline gap-x-3 border-b bg-canvas px-4 py-2 text-base sm:hidden">
         <span>
-          Owed <b className="num font-semibold">PKR {phoneMoney(totals.outstanding)}</b>
+          To collect <b className="num font-semibold">PKR {phoneMoney(totals.outstanding)}</b>
         </span>
       </p>
       {/* The same split as the desktop tiles. Imported balances are counted apart, so the fourth line appears when there are any, and the lines add up to Owed. */}
-      <ul data-testid="owed-split" aria-label="Owed, by status" className="grid gap-1 text-base sm:hidden">
+      <ul data-testid="owed-split" aria-label="To collect, by status" className="grid gap-1 text-base sm:hidden">
         {phoneSplit(totals).map(l => (
           <li key={l.label} className={cn('flex items-baseline justify-between gap-3', l.tone === 'danger' && 'text-tone-danger-fg')}>
             <span>
@@ -269,7 +269,7 @@ export function ReceivablesPage() {
             activeRowId={selected?.orderId ?? null}
             footerLabel={`${shown.length} ${filter === 'settled' ? 'paid' : filter === 'overdue' ? 'overdue' : 'open'} ${shown.length === 1 ? 'order' : 'orders'}`}
             loading={q.isPending}
-            error={q.isError ? { title: 'The balances did not load', message: 'Your invoices and payments are safe. Try again, and if it keeps failing, tell the admin.', onRetry: () => void q.refetch() } : null}
+            error={q.isError ? { title: 'The balances did not load', message: 'Invoices and payments are safe. Try again, and if it keeps failing, tell the admin.', onRetry: () => void q.refetch() } : null}
             toolbar={
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center gap-3">
@@ -278,8 +278,8 @@ export function ReceivablesPage() {
                   <span className="inline-flex items-center gap-2">
                   <span className="text-base text-fg-2">Balance includes GST</span>
                   <InfoTip label="About the balance and reminders">
-                    The balance is what the customer still owes, gross (GST included), after payments recorded. A reminder is due when an
-                    order is overdue and has not been reminded in the last 7 days; copying the reminder records it, and the order moves to
+                    The balance is what the customer still has to pay, gross (GST included), after payments recorded. A reminder is due when an
+                    order is overdue and has not been reminded in the last 7 days. Copying the reminder records it, and the order moves to
                     Waiting on Today.{' '}
                     {isAdmin ? 'Pick an order to see its reminder and Record payment.' : 'Payments are recorded by an admin.'}
                   </InfoTip>

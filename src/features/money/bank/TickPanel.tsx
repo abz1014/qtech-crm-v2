@@ -53,7 +53,7 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
       ) : (
         <div>
           <div aria-hidden="true" className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-5 py-1 text-xs font-medium text-fg-2 md:px-0">
-            <span>On statement? Tick it</span>
+            <span>Tick if on the statement</span>
             <span>PKR</span>
           </div>
           {side.open.length > 0 ? (

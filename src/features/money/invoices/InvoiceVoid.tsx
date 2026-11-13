@@ -105,7 +105,7 @@ export function useVoidInvoiceFlow(invoice: InvoiceRow, opts: { monthClosed: boo
   const upfront = filed
     ? `Invoice ${invoice.number ?? ''} has a PSID or a tax deposit recorded, so it cannot be voided.`
     : opts.monthClosed
-      ? `The month of invoice ${invoice.number ?? ''} is closed, so it cannot be voided.`
+      ? `The month of invoice ${invoice.number ?? ''} is locked, so it cannot be voided.`
       : null
 
   const close = () => {
@@ -166,10 +166,10 @@ export function useVoidInvoiceFlow(invoice: InvoiceRow, opts: { monthClosed: boo
           ) : (
             <>
               <p>
-                The invoice keeps its number in the register but counts for nothing: it leaves what customers owe, the aging report, sales and the month&rsquo;s GST. This can&rsquo;t be undone.
+                The invoice keeps its number in the register but counts for nothing: it leaves the amount to collect, the aging report, sales and the GST of the month. This cannot be undone.
               </p>
               <label className="grid gap-1">
-                <span className="font-medium">Why is it being voided?</span>
+                <span className="font-medium">Reason for voiding</span>
                 <TextArea value={reason} onChange={e => setReason(e.target.value)} maxLength={300} rows={2} aria-label="Reason for voiding" />
               </label>
             </>
@@ -252,7 +252,7 @@ export function useCreditNoteFlow(invoice: InvoiceRow, opts: { onDone?: () => vo
         }
       >
         <div className="grid gap-3 text-base" data-testid="credit-note-dialog">
-          <p>A credit note reduces what the customer owes and the GST of the month it is issued in (today). The invoice and its number stay as they are.</p>
+          <p>A credit note reduces the amount to collect and the GST of the month it is issued in (today). The invoice and its number stay as they are.</p>
           <p className="num text-fg-2" data-testid="credit-note-left">
             Invoice {pkr(invNet)} + GST {pkr(invGst)}. Left to credit: {pkr(Math.max(leftNet, 0))}.
           </p>
@@ -264,7 +264,7 @@ export function useCreditNoteFlow(invoice: InvoiceRow, opts: { onDone?: () => vo
             {valid ? `GST on it: ${pkr(gst)}. The customer is credited ${pkr(amount + gst)}.` : `Enter an amount up to ${pkr(Math.max(leftNet, 0))}.`}
           </p>
           <label className="grid gap-1">
-            <span className="font-medium">Why is it being credited?</span>
+            <span className="font-medium">Reason for the credit note</span>
             <TextArea value={reason} onChange={e => setReason(e.target.value)} maxLength={300} rows={2} aria-label="Reason for the credit note" />
           </label>
           {error ? (
