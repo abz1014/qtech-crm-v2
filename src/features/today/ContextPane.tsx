@@ -134,6 +134,12 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           ? Boolean(receivable) && Boolean(payment.data)
           : false
 
+  // A read the message needs failed: say so with Try again, never "nothing to write" or bars for ever.
+  const needed = [customerRule ? header : null, supplierRule ? items : null, supplierRule ? inquiries : null, item.rule === 'goods_late' ? leg : null, item.rule === 'payment_overdue' ? payment : null].filter(
+    (q): q is NonNullable<typeof q> => q !== null,
+  )
+  const loadFailed = needed.some(q => q.isError)
+  const retryLoad = () => needed.filter(q => q.isError).forEach(q => void q.refetch())
   const draft: Draft | null = useMemo(() => {
     if (!draftReady) return null
     if (customerRule && rfq) return buildCustomerDraft({ rfq, contact: header.data?.contact ?? null, questions, items: items.data, today, signature })
@@ -345,7 +351,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           onOpen={() => navigate(item.href)}
           onAgain={() => setAgain(true)}
         />
-      ) : draft ? (
+      ) : draft && !loadFailed ? (
         <div className="grid overflow-hidden rounded-panel border bg-surface">
           {wasCopied ? (
             <p role="status" className="flex items-center gap-2 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
@@ -439,6 +445,16 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               </div>
             </div>
           ) : null}
+        </div>
+      ) : isChase(item) && loadFailed ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4" data-testid="draft-failed">
+          <p role="alert" className="mr-auto text-sm text-fg-muted">
+            Couldn't load the message for this item. Nothing was changed. Check your connection and try again.
+          </p>
+          <Button onClick={retryLoad}>Try again</Button>
+          <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
+            Open {item.ref}
+          </Button>
         </div>
       ) : isChase(item) && (draftReady || !pending(header, items, inquiries, leg, payment)) ? (
         <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4">

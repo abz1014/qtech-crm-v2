@@ -165,3 +165,22 @@ describe('Credit balance panel', () => {
     expect(d.calls.some(c => c.target === 'customer_refunds' && c.verb === 'delete')).toBe(true)
   })
 })
+
+describe('Credit balance failed load', () => {
+  it('says it could not load, with Try again that reloads; nothing for a non-admin', async () => {
+    const user = userEvent.setup()
+    let fail = true
+    db(c => (c.target === 'v_company_credit' && fail ? { data: null, error: { message: 'boom' } } : undefined))
+    mount()
+    expect(await screen.findByText(/Couldn't load the credit balance/)).toBeInTheDocument()
+    fail = false
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByTestId('credit-balance')).toBeInTheDocument()
+  })
+  it('draws nothing for a non-admin even when the load would fail', () => {
+    db(() => ({ data: null, error: { message: 'boom' } }))
+    mount(false)
+    expect(screen.queryByText('Credit balance')).toBeNull()
+    expect(screen.queryByTestId('credit-error')).toBeNull()
+  })
+})

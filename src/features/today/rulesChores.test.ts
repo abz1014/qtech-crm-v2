@@ -114,6 +114,10 @@ describe('I paid: N to approve', () => {
     expect(r[0]).toMatchObject({ rule: 'claims_to_approve', title: 'I paid: 3 to approve', href: '/money/expenses', group: 'now' })
     expect(r[0].badge.text).toMatch(/6 days old/)
   })
+  it('names the source "From staff", whoever paid', () => {
+    expect(ruleClaimsToApprove(ctx('2026-10-26', { claims: claims(1) }))[0].party).toBe('From staff')
+    expect(ruleClaimsToApprove(ctx('2026-10-26', { claims: claims(3) }))[0].party).toBe('From staff')
+  })
   it('counts as needing the admin, and is not there for nobody, sales or an engineer', () => {
     expect(needsYouItems(buildToday(ctx('2026-10-26', { gst: null, claims: claims(1) }))).map(i => i.rule)).toEqual(['claims_to_approve'])
     expect(ruleClaimsToApprove(ctx('2026-10-26', { claims: claims(0) }))).toEqual([])
