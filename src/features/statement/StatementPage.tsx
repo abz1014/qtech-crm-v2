@@ -140,8 +140,8 @@ const COLUMNS: Array<{ key: SortKey; label: string; align?: 'right' }> = [
 ]
 
 /** The columns of an item's quotes, as a grid: the table roles are on the elements (the raw table tags are for DataTable only). */
-const ROW = 'grid grid-cols-[minmax(12rem,2fr)_minmax(8rem,1fr)_minmax(9rem,1fr)_minmax(8rem,1fr)_minmax(6rem,0.8fr)_minmax(8rem,1.2fr)] items-start'
-const TOTAL_ROW = 'grid grid-cols-[minmax(12rem,2fr)_minmax(6rem,0.7fr)_minmax(10rem,1.3fr)_minmax(7rem,1fr)] items-start'
+const ROW = 'grid grid-cols-[minmax(7rem,2fr)_minmax(6rem,1fr)_minmax(7rem,1fr)_minmax(5rem,1fr)_minmax(4.5rem,0.8fr)_minmax(5rem,1.2fr)] items-start'
+const TOTAL_ROW = 'grid grid-cols-[minmax(8rem,2fr)_minmax(5rem,0.7fr)_minmax(8rem,1.3fr)_minmax(6rem,1fr)] items-start'
 
 const SORT_CHOICES = [
   { value: 'supplier:asc', label: 'Supplier name, A to Z' },
@@ -317,7 +317,7 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
         </ul>
       ) : (
         <div className="overflow-x-auto">
-          <div role="table" aria-label={`Quotes for item ${item.number}`} className="min-w-[48rem] text-left text-base">
+          <div role="table" aria-label={`Quotes for item ${item.number}`} className="min-w-[36rem] text-left text-base">
             <div role="rowgroup">
               <div role="row" className={cn(ROW, 'border-b text-sm text-fg-muted')}>
                 {COLUMNS.map(c => {
@@ -430,7 +430,7 @@ function Totals({ totals, quotedAny, phone }: { totals: SupplierTotal[]; quotedA
         </ul>
       ) : (
         <div className="overflow-x-auto">
-          <div role="table" aria-label="Totals by supplier" className="min-w-[36rem] text-left text-base">
+          <div role="table" aria-label="Totals by supplier" className="min-w-[30rem] text-left text-base">
             <div role="rowgroup">
               <div role="row" className={cn(TOTAL_ROW, 'border-b text-sm text-fg-muted')}>
                 <div role="columnheader" className="px-4 py-2 font-medium">

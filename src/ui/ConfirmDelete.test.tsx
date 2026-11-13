@@ -100,3 +100,14 @@ describe('ConfirmDelete', () => {
     expect(onConfirm).not.toHaveBeenCalled()
   })
 })
+
+describe('ConfirmDelete undoNote', () => {
+  it('replaces the can’t-be-undone line when a caller offers Undo, and changes nothing when it does not', () => {
+    open({ undoNote: 'The toast has an Undo.' })
+    expect(screen.getByText('The toast has an Undo.')).toBeInTheDocument()
+    expect(screen.queryByText('This can’t be undone.')).toBeNull()
+    cleanup()
+    open()
+    expect(screen.getByText('This can’t be undone.')).toBeInTheDocument()
+  })
+})

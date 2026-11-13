@@ -40,7 +40,7 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
   const openClass = 'flex min-w-0 flex-1 items-center gap-3 rounded text-left focus-visible:outline-none'
   const text = (
     <span className="grid min-w-0 text-xs">
-      <b className="truncate text-sm font-medium">{att.fileName}</b>
+      <b title={att.fileName} className="line-clamp-2 break-words text-sm font-medium">{att.fileName}</b>
       <span className="num truncate text-fg-muted">{[formatBytes(att.sizeBytes), note].filter(Boolean).join(' · ')}</span>
     </span>
   )
@@ -119,7 +119,7 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
             </>
           }
         >
-          <p className="text-sm text-fg-2">It is removed from this RFQ and cannot be brought back. A question it answered stays answered.</p>
+          <p className="text-sm text-fg-2">{orderId ? 'It is removed from this order and cannot be brought back.' : 'It is removed from this RFQ and cannot be brought back. A question it answered stays answered.'}</p>
         </DialogContent>
       </Dialog>
     </div>
