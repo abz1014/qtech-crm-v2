@@ -58,7 +58,7 @@ import { formatDay } from '@/lib/formatDay'
  *           it (open by itself it would compete with the green Issue quotation).
  *   none    a quotation went out, or the RFQ is won or closed: no chase at all.
  * The channel is the person's remembered one, with the other as a link under "Show the whole message". The text lists only the
- * items that supplier has not priced, and never names the customer or our price. From the second chase it asks for a "cannot
+ * items that supplier has not priced, and never names the customer or the Q-Tech price. From the second chase it asks for a "cannot
  * offer" today. While the card shows, the other suppliers have Enter reply and Chase only: the card's "Message for" picker
  * switches it to another supplier (one control instead of a "Show message" on every row; grade-A 9, at most ~25 actions).
  *
@@ -240,7 +240,7 @@ function TakeBack({ rfq, inquiry }: { rfq: RfqHeader; inquiry: InquiryRow }) {
     try {
       await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, reason: null })
     } catch (err) {
-      toast({ title: "Could not take back can't quote", body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: "Could not undo the cannot-quote record", body: mapPgError(err).message, tone: 'danger' })
     }
   }
   return (
@@ -323,7 +323,7 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
     if (!chase) return
     const ok = await copyToClipboard(text)
     if (!ok) {
-      toast({ title: 'Could not copy the text', body: 'Show the whole message and copy it by hand. The follow-up was not recorded.', tone: 'danger' })
+      toast({ title: 'Could not copy the text', body: 'Show the whole message and copy it manually. The follow-up was not recorded.', tone: 'danger' })
       return
     }
     await stampChase(true)
@@ -458,7 +458,7 @@ function ChaseCard({
               label="Reply by"
               value={chosen ?? defaultBy}
               onChange={v => setChosen(v && v !== defaultBy ? v : null)}
-              note={`${rfq.dueOn ? 'Two working days before our quotation is due.' : 'Three working days from today.'} You can change it.`}
+              note={`${rfq.dueOn ? 'Two working days before our quotation is due.' : 'Three working days from today.'} It can be changed.`}
             />
             {channel === 'email' && chase?.subject ? <SubjectRow subject={chase.subject} /> : null}
           </div>
@@ -473,7 +473,7 @@ function ChaseCard({
         {whole ? (
           <ChaseNote className="border-t">
             Copying records follow-up {inquiry.chaseCount + 1} for this supplier. {rfqRef(rfq.number)} moves to Waiting and returns if still silent after {formatDay(returnsOn)}. It lists only the
-            items this supplier has not priced, and never names the customer or our price.
+            items this supplier has not priced, and never names the customer or the Q-Tech price.
           </ChaseNote>
         ) : null}
         <div className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t bg-sunken px-4 py-3">

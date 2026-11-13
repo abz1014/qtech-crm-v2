@@ -93,7 +93,7 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
   /** "Copy message and mark chased": the text goes on the clipboard, the questions are stamped, and an Undo toast offers to take it back. */
   const copyAsk = async (group: ClarificationRow[], repeat: boolean, text: string) => {
     if (!(await copyToClipboard(text))) {
-      toast({ title: 'Could not copy the text', body: 'Select the text in the message and copy it by hand. The questions were not marked as asked.', tone: 'danger' })
+      toast({ title: 'Could not copy the text', body: 'Select the text in the message and copy it manually. The questions were not marked as asked.', tone: 'danger' })
       return
     }
     await markAsk(group, repeat, true)
@@ -172,8 +172,8 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
         title={underHeading ? <span className="sr-only">Questions for the customer</span> : "Questions for the customer"}
         info={
           <InfoTip label="About questions">
-            A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers. Ones raised by suppliers, or your own, are
-            listed here and bundled for the customer in one tap.
+            A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers. Ones raised by suppliers, or entered here, are
+            listed here and bundled for the customer in one message.
           </InfoTip>
         }
         meta={clars.isSuccess && count > 0 ? <span className="num">{count} {count === 1 ? 'question' : 'questions'}</span> : undefined}
@@ -435,7 +435,7 @@ function ChaseGroup({
               label="Kindly confirm by"
               value={by}
               onChange={v => setChosen(v && v !== defaultBy ? v : null)}
-              note={`${rfq.dueOn ? 'One working day before the quotation is due.' : 'Three working days from today.'} You can change it.`}
+              note={`${rfq.dueOn ? 'One working day before the quotation is due.' : 'Three working days from today.'} It can be changed.`}
             />
             {variant === 'email' && shown?.subject ? <SubjectRow subject={shown.subject} /> : null}
           </div>

@@ -6,7 +6,7 @@ keywords: gst, included, basis, imported, old crm, price basis, tax
 screens: /jobs
 ---
 1. An order from the old CRM may show [Is GST included?] as its green button.
-2. Tap it. Pick [The prices include GST] or [The prices are before GST]. Each shows what the order comes to.
-3. Tap [Save answer]. It is asked once per order.
+2. Select it. Pick [The prices include GST] or [The prices are before GST]. Each shows what the order comes to.
+3. Select [Save answer]. It is asked once per order.
 
 Tip: Until it is answered, the order is left out of margins, GST totals and targets.

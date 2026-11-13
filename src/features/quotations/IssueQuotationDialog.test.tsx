@@ -76,7 +76,7 @@ describe('Issue quotation dialog', () => {
   it('blocks Issue on a unit price of 0 and says why', async () => {
     setup(() => ({ data: [] }), 0)
     const issue = await screen.findByRole('button', { name: 'Issue quotation' })
-    await waitFor(() => expect(screen.getByTestId('issue-blocked')).toHaveTextContent("can't carry a price of 0"))
+    await waitFor(() => expect(screen.getByTestId('issue-blocked')).toHaveTextContent("cannot include a price of 0"))
     expect(issue).toBeDisabled()
   })
 

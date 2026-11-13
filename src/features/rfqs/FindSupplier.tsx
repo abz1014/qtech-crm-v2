@@ -8,7 +8,7 @@ const CreateCompanyInline = lazyWithReload(() => import('@/features/companies/Cr
 
 /*
  * "Search or add a supplier" on the RFQ page (the Suppliers to ask card, the Ask suppliers dialog, Enter reply from another supplier).
- * It searches every company on file by name (the same search as New RFQ's "Ask someone who is not listed"); when the name is not on
+ * It searches every company on file by name (the same search as New RFQ's "Ask a supplier who is not listed"); when the name is not on
  * file the last row offers "Add “X” as a new supplier" and opens the same short form the customer picker uses (name, city, contact).
  * No role is stored on a company: it is a supplier from its first inquiry (v_company_roles), so a company added here is a supplier as
  * soon as it is recorded as asked, exactly as one added on Companies and then asked.

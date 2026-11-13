@@ -149,7 +149,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
 
     // The supplier's lead time is a hint and is never filled in (A2b).
     await expect(dialog(page).getByTestId('lead-hint')).toContainText('10 to 14 days')
-    await expect(dialog(page).getByLabel('Lead time we quote, item 1')).toHaveValue('')
+    await expect(dialog(page).getByLabel('Lead time quoted, item 1')).toHaveValue('')
     // Defaults: validity from the company profile, the RFQ's contact, standard terms from the profile, GST 18 %.
     await expect(dialog(page).getByLabel('Addressed to')).toHaveValue(/.+/)
     await expect(dialog(page).getByLabel('Standard terms')).toHaveValue(/Prices are in PKR/)
@@ -170,7 +170,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect(dialog(page).getByTestId('total-gst')).toHaveText('PKR 441')
     await expect(dialog(page).getByText('GST 18% on 2 lines')).toBeVisible()
     await expect(dialog(page).getByTestId('total-gross')).toHaveText('PKR 2,891.50')
-    await dialog(page).getByLabel('Lead time we quote, item 2').fill('Ex-stock')
+    await dialog(page).getByLabel('Lead time quoted, item 2').fill('Ex-stock')
     await dialog(page).getByLabel('Delivery').fill('To your site, within the lead time on each line')
 
     await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
@@ -266,7 +266,7 @@ test.describe('re-issue', () => {
     await price(page, 2).fill('700')
     await dialog(page).getByLabel('Delivery').fill('Ex works Lahore')
     await dialog(page).getByLabel('Payment terms').fill('50% advance')
-    await dialog(page).getByLabel('Lead time we quote, item 1').fill('2 weeks from PO')
+    await dialog(page).getByLabel('Lead time quoted, item 1').fill('2 weeks from PO')
     await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
     await dialog(page).getByRole('button', { name: 'Done' }).click()
@@ -287,7 +287,7 @@ test.describe('re-issue', () => {
     await expect(price(page, 2)).toHaveValue('700.00')
     await expect(dialog(page).getByLabel('Delivery')).toHaveValue('Ex works Lahore')
     await expect(dialog(page).getByLabel('Payment terms')).toHaveValue('50% advance')
-    await expect(dialog(page).getByLabel('Lead time we quote, item 1')).toHaveValue('2 weeks from PO')
+    await expect(dialog(page).getByLabel('Lead time quoted, item 1')).toHaveValue('2 weeks from PO')
     await shot(page, 'rfq-quotation-04-reissue-dialog-1440')
     await price(page, 2).fill('650')
     await dialog(page).getByRole('button', { name: 'Issue revised quotation' }).click()

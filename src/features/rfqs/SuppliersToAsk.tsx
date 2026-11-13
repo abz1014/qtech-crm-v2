@@ -27,7 +27,7 @@ export type TickedSupplier = Pick<SupplierSuggestion, 'supplierId' | 'name'>
 
 /**
  * The ticked suppliers, starting with the pre-ticked ones; a tick or untick by hand is kept. A supplier found or added with
- * "Search or add a supplier" who is not in the suggestions is listed under "Added by you", ticked.
+ * "Search or add a supplier" who is not in the suggestions is listed under "Added manually", ticked.
  */
 function useTicks(suggestions: readonly SupplierSuggestion[] | undefined) {
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -59,7 +59,7 @@ function FindAndAdded({ t, excludeIds }: { t: ReturnType<typeof useTicks>; exclu
     <>
       {t.extras.length > 0 ? (
         <ul data-slot="added-suppliers">
-          <li className="border-t bg-sunken px-5 py-2 text-base font-semibold">Added by you</li>
+          <li className="border-t bg-sunken px-5 py-2 text-base font-semibold">Added manually</li>
           {t.extras.map(a => {
             const id = `ask-${a.id}`
             return (

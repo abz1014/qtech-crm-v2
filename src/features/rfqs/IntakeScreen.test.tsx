@@ -342,7 +342,7 @@ describe('intake screen', () => {
     expect(db.calls.filter(c => c.target === 'rpc:set_rfq_floated').map(c => (opArgs(c, 'args')?.[0] as { p_floated: boolean }).p_floated)).toEqual([false, true])
   })
 
-  it("Save for later (don't ask suppliers yet) keeps the supplier shortlisted (p_mark_sent false)", async () => {
+  it("Save as draft keeps the supplier shortlisted (p_mark_sent false)", async () => {
     const db = installFakeDb(respond)
     const user = setup()
     renderScreen()
@@ -352,7 +352,7 @@ describe('intake screen', () => {
     await screen.findByText('2 items found')
     await user.click(screen.getByRole('button', { name: 'Looks right: find suppliers' }))
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
-    await user.click(screen.getByRole('button', { name: "Save for later (don't ask suppliers yet)" }))
+    await user.click(screen.getByRole('button', { name: "Save as draft" }))
     expect(await screen.findByText(/is saved/)).toBeInTheDocument()
     const args = opArgs(db.calls.find(c => c.target === 'rpc:float_rfq') as FakeCall, 'args')?.[0] as Record<string, unknown>
     expect(args.p_mark_sent).toBe(false)
@@ -386,7 +386,7 @@ describe('New RFQ from a supplier\'s page (?supplier=)', () => {
     renderScreen('/rfqs/new?supplier=s-zeta')
     expect(await screen.findByText(/is ticked as a supplier to ask\./)).toHaveTextContent('Zeta Instruments is ticked as a supplier to ask.')
     await toSuppliers(user)
-    const added = await screen.findByRole('region', { name: 'Added by you' })
+    const added = await screen.findByRole('region', { name: 'Added manually' })
     expect(within(added).getByRole('checkbox', { name: 'Zeta Instruments' })).toBeChecked()
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
     await user.click(screen.getByRole('button', { name: 'Write the message' }))
@@ -401,7 +401,7 @@ describe('New RFQ from a supplier\'s page (?supplier=)', () => {
     await toSuppliers(user)
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
     expect(screen.getAllByRole('checkbox', { name: 'Orient Analytical' })).toHaveLength(1)
-    expect(screen.queryByRole('region', { name: 'Added by you' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Added manually' })).toBeNull()
   })
 })
 

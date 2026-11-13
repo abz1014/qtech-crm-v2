@@ -260,9 +260,9 @@ export function SupplierPicker({
       )}
 
       {shownManual.length > 0 ? (
-        <section aria-label="Added by you">
+        <section aria-label="Added manually">
           <header className="flex items-baseline gap-3 border-b py-3">
-            <h3 className="type-row m-0">Added by you</h3>
+            <h3 className="type-row m-0">Added manually</h3>
           </header>
           <ul className="m-0 grid list-none p-0">
             {shownManual.map(m => {
@@ -284,7 +284,7 @@ export function SupplierPicker({
 
       <div className="grid max-w-[420px] gap-[6px]">
         <label htmlFor="add-supplier" className="type-row">
-          Ask someone who is not listed
+          Ask a supplier who is not listed
         </label>
         <Combobox
           id="add-supplier"

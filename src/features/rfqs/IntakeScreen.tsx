@@ -248,7 +248,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   }, [arrival, wanted.data])
 
   // A supplier's company page arrives with ?supplier=<id>: that supplier is already on the list of suppliers to ask (ticked, under
-  // "Added by you", or ticked in its reason group when it is suggested anyway), with no extra step. Taken once, like the company.
+  // "Added manually", or ticked in its reason group when it is suggested anyway), with no extra step. Taken once, like the company.
   const presetId = params.get('supplier')
   const preset = useCompany(presetId ?? undefined)
   const tookSupplier = useRef(false)
@@ -745,7 +745,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
     step === 'build'
       ? real.length > 0
         ? 'Check the split, then find suppliers.'
-        : 'Paste what the customer sent. Nothing is saved until you copy the message or save.'
+        : 'Paste what the customer sent. Nothing is saved until the message is copied or the RFQ is saved.'
       : step === 'suppliers'
         ? suggestions.preTickedIds.length > 0
           ? 'Ticked: suppliers who supplied these items before. Tick or untick any.'
@@ -814,7 +814,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
         ) : undefined
       }
     >
-      {error.customerRef ? 'Nothing was saved.' : 'Nothing was saved. Try again; it cannot create a duplicate.'}
+      {error.customerRef ? 'Nothing was saved.' : 'Nothing was saved. Try again. A duplicate cannot be created.'}
     </Banner>
   ) : null
 
@@ -867,7 +867,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
       ) : (
         <>
           <strong className="font-medium text-fg">Item {itemNumber(k)} has no supplier yet.</strong>{' '}
-          {alt ? `${alt.name} is on your shortlist for it.${alt.memoryLine === 'no history yet' ? ' It has no history with us.' : ''}` : 'Nothing on file carries it. Add a supplier from the RFQ.'}
+          {alt ? `${alt.name} is on your shortlist for it.${alt.memoryLine === 'no history yet' ? ' It has no history with Q-Tech.' : ''}` : 'Nothing on file carries it. Add a supplier from the RFQ.'}
         </>
       ),
       action: !done && alt ? { label: `Ask them for item ${itemNumber(k)}`, onClick: () => void floatItem(k, alt.supplierId, alt.name), busy: floating === k } : undefined,
@@ -1036,7 +1036,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
               <section aria-labelledby="h-items" className="grid gap-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <h2 id="h-items" className="type-section">Items</h2>
-                  <p className="type-body text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. We split it.'}</p>
+                  <p className="type-body text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. The text is split into items.'}</p>
                 </div>
                 {heldDoc ? (
                   <Banner

@@ -9,7 +9,7 @@ import { useConfirmInquiriesSent } from '@/features/rfqs/hooks'
 
 /*
  * The honest "Sent" (redesign phase 3, P3-C2). Copying a supplier enquiry, or opening it in WhatsApp or email, proves nothing: the
- * person may not press Send. So the app asks once, "Did you send it?", and only [Yes, sent] writes supplier_inquiries.sent_confirmed_at
+ * person may not press Send. So the app asks once, "Confirm the message was sent", and only [Yes, sent] writes supplier_inquiries.sent_confirmed_at
  * (0097). Until then every screen says "Asked", never "Sent" (sentLine in lib/detailView.ts). [Not yet] changes nothing and hides the
  * question here; the supplier's row on the RFQ page keeps a quiet [Yes, sent] for later.
  *   variant "ask"    the question with both answers (right after the message was copied or opened)
@@ -49,8 +49,8 @@ export function SentConfirm({ rfqId, inquiry, variant = 'ask' }: { rfqId: string
   }
   if (notYet) return <p className="m-0 text-base text-fg-muted">Asked, not sent yet</p>
   return (
-    <div role="group" aria-label={`Did you send it to ${inquiry.supplierName}?`} className="flex flex-wrap items-center gap-2" data-sent-question>
-      <span className="text-base font-medium">Did you send it?</span>
+    <div role="group" aria-label={`Confirm the message was sent to ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2" data-sent-question>
+      <span className="text-base font-medium">Confirm the message was sent</span>
       <Button size="sm" busy={confirm.isPending} busyLabel="Saving" onClick={yes} aria-label={`Yes, sent: ${inquiry.supplierName}`}>
         Yes, sent
       </Button>
