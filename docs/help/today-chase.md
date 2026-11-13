@@ -6,7 +6,7 @@ keywords: chase, follow up, nudge, quiet, no reply, waiting, message, to do, tod
 screens: /todo
 related: snooze, whatsapp-or-email
 ---
-1. Select [To do]. Read [Late] first, then [Today].
+1. Select [Home]. Read [Late] first, then [Today].
 2. On a row, select [Follow up]. The message is already written under [Prepared message].
 3. The channel used last is chosen. To switch, select [Email instead] or [WhatsApp instead].
 4. Select [Open in WhatsApp] or [Open in email], press Send there, then select [Record follow-up].

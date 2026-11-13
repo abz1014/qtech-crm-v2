@@ -32,11 +32,11 @@ async function todayReading(page: Page) {
   await expect(header).toBeVisible()
   // the top-bar numbers load once the page has its data (perf/lcp): give them a moment before reading the badge
   const n = Number(await header.innerText())
-  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^To do\\s?, ${n} due now$`) : /^To do$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
+  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^Home\\s?, ${n} due now$`) : /^Home$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
   // Late + Today wherever they are drawn: To do shows 7 rows at most and folds the rest into "N more" (opened here)
   await showAllTodo(page)
   const rules = await dueRows(page).evaluateAll(ls => ls.map(l => l.getAttribute('data-rule') ?? ''))
-  const link = (await nav(page).getByRole('link', { name: /^To do/ }).first().textContent()) ?? ''
+  const link = (await nav(page).getByRole('link', { name: /^Home/ }).first().textContent()) ?? ''
   return {
     badge: Number(/(\d+)/.exec(link)?.[1] ?? 0),
     header: Number(await header.innerText()),

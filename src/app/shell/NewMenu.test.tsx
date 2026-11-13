@@ -18,37 +18,36 @@ const mount = (role: string) =>
     </MemoryRouter>,
   )
 
-describe('the + New menu, by role', () => {
+describe('Create (the rail menu), by role', () => {
   it('admin: New enquiry, Expense, Payment received, Order without enquiry', () => {
     expect(newEntries('admin').map(e => e.label)).toEqual(['New RFQ', 'Expense', 'Payment received', 'Order without RFQ'])
   })
   it('sales: New enquiry and Order without enquiry, no Payment received and no Expense', () => {
     expect(newEntries('sales').map(e => e.label)).toEqual(['New RFQ', 'Order without RFQ'])
   })
-  it('the button shows the word New by default, and iconOnly keeps the name "New" with no visible word', () => {
+  it('the rail button reads Create, and keeps that name while the rail is 72 wide (the word read out only)', () => {
     const { unmount } = mount('admin')
-    expect(screen.getByRole('button', { name: 'New' })).toHaveTextContent('New')
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveTextContent('Create')
     unmount()
-    render(<MemoryRouter><NewMenu role="admin" iconOnly /></MemoryRouter>)
-    const b = screen.getByRole('button', { name: 'New' })
-    expect(b).toHaveAttribute('aria-label', 'New')
-    expect(b.textContent).toBe('')
+    render(<MemoryRouter><NewMenu role="admin" collapsed /></MemoryRouter>)
+    const b = screen.getByRole('button', { name: 'Create' })
+    expect(b.querySelector('span')?.className).toContain('sr-only')
   })
   it('engineer: nothing, and no button is drawn', () => {
     expect(newEntries('engineer')).toEqual([])
     mount('engineer')
-    expect(screen.queryByRole('button', { name: /New/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /New|Create/ })).toBeNull()
   })
   it('opens a menu whose items go to their screens', async () => {
     mount('admin')
-    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
     expect(await screen.findByRole('menuitem', { name: /Payment received/ })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('menuitem', { name: /Order without RFQ/ }))
     expect(screen.getByTestId('where').textContent).toBe('/orders?new=1')
   })
   it('a salesperson\'s menu has no Payment received', async () => {
     mount('sales')
-    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
     await screen.findByRole('menuitem', { name: /New RFQ/ })
     expect(screen.queryByRole('menuitem', { name: /Payment received/ })).toBeNull()
   })

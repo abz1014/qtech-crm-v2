@@ -76,14 +76,14 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     await import('@/ui/CommandPalette')
   }, 60_000)
 
-  it('idle lists Actions: New enquiry (N), Go to To do (G T); no Paste or photo any more', async () => {
+  it('idle lists Actions: New enquiry (N), Go to Home (G T); no Paste or photo any more', async () => {
     const user = userEvent.setup()
     shell()
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Go to To doG T']))
+    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Go to HomeG T']))
     expect(text.some(t => /Paste or photo/.test(t ?? ''))).toBe(false)
   })
 
@@ -192,7 +192,7 @@ describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
     expect(within(dlg).queryByRole('heading', { name: 'Add expenses' })).toBeNull()
     expect(within(dlg).getByText(/^Single keys \(G then T, \/, \?\)/)).toBeInTheDocument()
     expect(within(dlg).getByRole('heading', { name: 'Search box' })).toBeInTheDocument()
-    expect(whats.some(w => w.startsWith('Go to To do'))).toBe(true)
+    expect(whats.some(w => w.startsWith('Go to Home'))).toBe(true)
   })
 
   it('shortcutsFor: sales keeps N and O but not E; admin keeps everything; shortcutList stays complete', () => {
