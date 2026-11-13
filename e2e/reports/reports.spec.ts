@@ -49,10 +49,10 @@ function watch(page: Page) {
 }
 
 const QUESTIONS = [
-  'How many RFQs did we win, and why did we lose the others?',
-  'Does asking suppliers for prices help us win?',
-  'How fast do customers answer our questions?',
-  'Which customers come back?',
+  'RFQs won and lost, with the reasons',
+  'Effect of asking suppliers for prices on wins',
+  'How fast customers answer questions',
+  'Returning customers',
 ]
 
 /** Each report is one line until it is opened: open all four. */

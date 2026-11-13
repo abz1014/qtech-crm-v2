@@ -212,7 +212,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   const [whyOpen, setWhyOpen] = useState(false)
   const whyId = useId()
   const frozen =
-    v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Locked: figures final when the month was locked' : `${plural(v.cash.frozenMonths, 'month')} closed: frozen when closed`
+    v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Locked: figures final when the month was locked' : `${plural(v.cash.frozenMonths, 'month')} locked: figures final`
   return (
     <>
       {narrow ? null : <ReportCsv />} {/* a phone draws it after the two summaries below */}
@@ -341,7 +341,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             </>
           )}
           <p className="type-body text-fg-2">
-            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the Payable to suppliers report.
+            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. The amount still payable to suppliers is in the Payable to suppliers report.
           </p>
             </div>
           </FoldRow>
@@ -351,8 +351,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
           <h2 id="in-out-why" className="type-section flex flex-wrap items-center gap-2">
             Why profit and cash differ in {v.label}
             <InfoTip label="About supplier bills">
-              Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We
-              owe suppliers report.
+              Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. The amount still payable to suppliers is in the Payable to suppliers report.
             </InfoTip>
           </h2>
           {whyLines.length === 0 ? (
@@ -392,7 +391,7 @@ interface DetailLine {
 
 function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
   const rows: DetailLine[] = v.categories.flatMap(c => c.details.map((d, i) => ({ id: `${c.categoryId}-${i}`, categoryId: c.categoryId, ...d })))
-  if (toPaisa(v.unexplainedOut) !== 0n) rows.push({ id: 'unexplained', categoryId: '', detail: 'Changed after the month was closed', count: 0, amount: v.unexplainedOut })
+  if (toPaisa(v.unexplainedOut) !== 0n) rows.push({ id: 'unexplained', categoryId: '', detail: 'Changed after the month was locked', count: 0, amount: v.unexplainedOut })
   const byId = new Map(v.categories.map(c => [c.categoryId, c]))
   const columns: Column<DetailLine>[] = [
     { id: 'detail', header: 'Detail', value: r => r.detail ?? 'No detail', cell: r => <span className={cn(r.detail ? 'text-fg' : 'text-fg-muted')}>{r.detail ?? 'No detail'}</span> },

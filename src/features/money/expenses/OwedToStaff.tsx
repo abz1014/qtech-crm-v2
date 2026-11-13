@@ -44,7 +44,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
     return (
       <section aria-label="Claims to repay" data-testid="owed-to-staff">
         <FoldRow
-          state={{ icon: HandCoins, word: 'Waiting for you' }}
+          state={{ icon: HandCoins, word: 'Action needed' }}
           title="Claims to repay"
           summary={`${pkr(total)} to ${people.length === 1 ? people[0].name : `${people.length} people`}`}
           open={open}
@@ -55,7 +55,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
             {people.map(p => (
               <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 text-base">
                 <span>
-                  Owed to <b className="font-semibold">{p.name}</b>
+                  To repay <b className="font-semibold">{p.name}</b>
                   <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
                 </span>
                 <b className="num font-semibold">{pkr(p.total)}</b>
@@ -84,7 +84,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
         {people.map(p => (
           <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-base lg:px-0 lg:py-2">
             <span>
-              Owed to <b className="font-semibold">{p.name}</b>
+              To repay <b className="font-semibold">{p.name}</b>
               <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
             </span>
             <b className="num font-semibold">{pkr(p.total)}</b>

@@ -10,7 +10,7 @@ import type { MiscSuggestion } from '@/features/money/expenses/api'
 import { pkr } from '@/features/money/expenses/model'
 
 /*
- * 0091: "'Courier from shop' used 5 times: make it a category?" One banner per title that was used 3 or more times in 90 days under
+ * 0091: "'Courier from shop' used 5 times: make it a category." One banner per title that was used 3 or more times in 90 days under
  * an "Other". Admin only (suggest_misc_categories refuses anyone else, so the strip stays away without it). "Make it a category"
  * asks for the name (the title, to change), then promote_misc_title re-files those expenses; their titles stay. "Not now" hides it
  * for this visit only. 16 px text, 44 px taps.
@@ -54,7 +54,7 @@ function Suggestion({ s, onHide }: { s: MiscSuggestion; onHide: () => void }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <Icon icon={Lightbulb} className="text-fg-muted" />
         <p className="min-w-0 flex-1">
-          <b className="font-semibold">‘{s.title}’</b> used {s.uses} times ({pkr(s.spent)}): make it a category?
+          <b className="font-semibold">‘{s.title}’</b> used {s.uses} times ({pkr(s.spent)}): make it a category.
         </p>
         {naming ? null : (
           <span className="flex flex-wrap gap-2">

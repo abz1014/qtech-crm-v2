@@ -152,7 +152,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
         onSuccess: () => {
           onClose()
           setNote('')
-          toast.toast({ title: `${name} reopened`, body: 'It can be changed until you lock it again.', tone: 'success' })
+          toast.toast({ title: `${name} reopened`, body: 'It can be changed until it is locked again.', tone: 'success' })
         },
         onError: e => {
           const m = mapPgError(e, { entity: 'month' })
@@ -194,7 +194,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
             <TextArea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="For example: a supplier invoice arrived late" maxLength={500} />
           </Field>
           <Banner tone="warning" title={`${name} becomes editable again`}>
-            Payments, expenses and invoices dated in {name} can be changed until you lock it a second time.
+            Payments, expenses and invoices dated in {name} can be changed until it is locked a second time.
           </Banner>
           {error ? (
             <Banner tone="danger" title="The month was not reopened">

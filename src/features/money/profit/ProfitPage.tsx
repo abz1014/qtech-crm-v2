@@ -48,7 +48,7 @@ export function ProfitPage() {
         title="Profitability"
         meta={
           <InfoTip label="About profitability">
-            Income is what we invoiced, with GST left out. Cash received is what customers paid, and it includes GST. The two differ when
+            Income is the amount invoiced, with GST left out. Cash received is what customers paid, and it includes GST. The two differ when
             customers pay later than they are invoiced. The average leaves out the current month, because it is not over.
           </InfoTip>
         }
@@ -100,7 +100,7 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
           <p className="text-base text-fg-2 md:hidden">Includes GST. What customers actually paid in the same 12 months.</p>
         </div>
         <p className="hidden text-base text-fg-muted md:order-last md:block md:basis-full">
-          Income is invoiced, GST left out. Cash received includes GST: what customers actually paid. Last 12 complete months, {span}. This month is left out.
+          Income is invoiced, GST left out. Cash received includes GST: the amount customers paid. Last 12 complete months, {span}. This month is left out.
         </p>
         <p className="text-base text-fg-2 md:basis-full">
           Average monthly profit on invoices over the same months: <span className="num font-medium text-fg">{pkr(avgProfit)}</span>.{' '}
@@ -216,7 +216,7 @@ function ProfitTable({ rows: monthRows, label }: { rows: ProfitPoint[]; label: s
 
 /** Money spent on enquiries that ended without an order. Its own panel, so a failed read never hides the profit figures. */
 function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | undefined; isError: boolean; onRetry: () => void }) {
-  const title = 'Spent on RFQs we did not win'
+  const title = 'Spent on RFQs not won'
   if (isError) return <ReportError title={`${title} did not load`} onRetry={onRetry} />
   if (!rows) return <ReportLoading label={`Loading: ${title}`} />
   const columns: Column<LostEnquiryCost>[] = [
@@ -236,7 +236,7 @@ function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | u
     { id: 'last', header: 'Last paid', value: r => r.lastPaidOn ?? '', cell: r => (r.lastPaidOn ? formatShortDate(r.lastPaidOn, undefined, true) : ''), hideBelowMd: true },
   ]
   return (
-    <Panel flat title={title} meta={<InfoTip label="About RFQs we did not win">Costs paid on an RFQ that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
+    <Panel flat title={title} meta={<InfoTip label="About RFQs not won">Costs paid on an RFQ that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
       {rows.length === 0 ? (
         <EmptyState title="Nothing spent on a lost RFQ">No cost is recorded against an RFQ that was closed without an order.</EmptyState>
       ) : (

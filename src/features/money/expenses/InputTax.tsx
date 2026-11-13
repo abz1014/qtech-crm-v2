@@ -52,7 +52,7 @@ export function InputTax({ amount, value, onChange, defaultOpen = false, label =
         </span>
         <span>
           GST paid on purchases <Money value={tax} prefix={false} className="text-fg" />
-          <InfoTip label="About GST paid on purchases">GST on a bill that we can claim back. Leave 0 if unsure.</InfoTip>
+          <InfoTip label="About GST paid on purchases">GST on a bill that can be claimed back. Enter 0 if unsure.</InfoTip>
         </span>
         <span>
           <b className="font-medium">Cost in margin and profit</b> <Money value={Math.max(paid - tax, 0)} prefix={false} className="text-fg" />

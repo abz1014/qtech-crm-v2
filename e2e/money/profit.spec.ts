@@ -152,7 +152,7 @@ test.describe('Money > Profitability: enquiries we did not win', () => {
     await post('orders', { company_id: wonCompany.id, rfq_id: won.id })
 
     await goto(page, '/money/profit')
-    const section = page.getByRole('table', { name: 'Spent on RFQs we did not win' })
+    const section = page.getByRole('table', { name: 'Spent on RFQs not won' })
     await expect(section).toBeVisible()
     const row = section.getByRole('row').filter({ hasText: lostCo })
     await expect(row).toContainText(`RFQ-${String(lost.number).padStart(4, '0')}`)

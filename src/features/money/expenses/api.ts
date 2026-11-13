@@ -211,7 +211,7 @@ export async function deleteExpense(id: string): Promise<void> {
   const { data, error } = await db.from('expenses').delete().eq('id', id).select('id')
   if (error) throw error
   // Row security hides a row the person may not delete: no error, no row. That is not a delete.
-  if (!data || data.length === 0) throw new PlainError('Not deleted. You may not have permission, or the month is locked.')
+  if (!data || data.length === 0) throw new PlainError('Not deleted. Permission may be missing, or the month is locked.')
   // The receipt rows went with the expense (cascade). Their photos stay in storage for 30 days (migration 0120 lists them for the nightly purge).
 }
 

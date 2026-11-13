@@ -98,7 +98,7 @@ function askingHeadline(asked: number | null, notAsked: number | null): string {
 
 // ------------------------------------------------------------------ 1. Won and lost
 const reasonColumns: Column<ReasonLine>[] = [
-  { id: 'reason', header: 'Why we lost it', value: r => r.label },
+  { id: 'reason', header: 'Why RFQs were lost', value: r => r.label },
   { id: 'count', header: 'RFQs', kind: 'num', value: r => r.count, sortable: true },
   { id: 'share', header: 'Share of the lost ones', kind: 'num', value: r => r.share, cell: r => showPct(r.share), sortable: true },
 ]
@@ -109,7 +109,7 @@ function OutcomesReport() {
   return (
     <Section
       id="rep-outcomes"
-      title="How many RFQs did we win, and why did we lose the others?"
+      title="RFQs won and lost, with the reasons"
       headline={headlineOf(q, s, x => x.total > 0, x => `${x.won} won, ${x.closed} lost, ${x.open} open`)}
     >
       {s && s.total > 0 ? (
@@ -133,7 +133,7 @@ function OutcomesReport() {
         getRowId={r => r.key}
         loading={q.isLoading}
         error={q.isError ? { message: 'The outcomes could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
-        empty={<span>No RFQ has been closed yet. Closed RFQs appear here with the reason you chose.</span>}
+        empty={<span>No RFQ has been closed yet. Closed RFQs appear here with the reason selected.</span>}
         defaultSort={{ id: 'count', dir: 'desc' }}
       />
     </Section>
@@ -164,7 +164,7 @@ function FloatReport() {
   return (
     <Section
       id="rep-float"
-      title="Does asking suppliers for prices help us win?"
+      title="Effect of asking suppliers for prices on wins"
       headline={headlineOf(q, s, x => x.lines.length > 0, x => askingHeadline(x.floatedWinRate, x.notFloatedWinRate))}
     >
       {s && s.lines.length > 0 ? (
@@ -211,7 +211,7 @@ function TurnaroundReport() {
   return (
     <Section
       id="rep-turnaround"
-      title="How fast do customers answer our questions?"
+      title="How fast customers answer questions"
       headline={headlineOf(q, s, x => x.asked > 0, x => (x.avgDays === null ? `${x.asked} asked, none answered yet` : `${daysText(x.avgDays)} on average`))}
     >
       {s && s.asked > 0 ? (
@@ -280,7 +280,7 @@ function RepeatReport() {
   return (
     <Section
       id="rep-repeat"
-      title="Which customers come back?"
+      title="Returning customers"
       headline={headlineOf(q, s, x => x.customers > 0, x => `${x.repeat} of ${x.customers} came back`)}
     >
       {s && s.customers > 0 ? (

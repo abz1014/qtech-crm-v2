@@ -161,8 +161,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const tip = (
     <InfoTip label="About locking a month">
       {state?.kind === 'not-ended' ? <>{name} can be locked once it has ended. </> : null}
-      Locking freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. You can reopen
-      it any time; both are written to the audit log. Months lock one at a time, oldest first, and only while they are on screen.
+      Locking freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. It can be reopened at any time. Both actions are written to the audit log. Months lock one at a time, oldest first, and only while they are on screen.
     </InfoTip>
   )
   return (

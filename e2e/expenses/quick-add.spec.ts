@@ -163,7 +163,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     if (await set.count()) {
       await set.click()
       const d = page.getByRole('dialog', { name: 'Set opening cash' })
-      await d.getByRole('textbox', { name: 'Cash in the box, PKR' }).fill('20000')
+      await d.getByRole('textbox', { name: 'Cash in hand, PKR' }).fill('20000')
       await d.getByRole('button', { name: 'Set opening cash' }).click()
       await expect(d).toBeHidden()
     }
@@ -192,7 +192,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     // count 300 less than the books expect
     await line.getByRole('button', { name: 'Count cash' }).click()
     const c = page.getByRole('dialog', { name: 'Count cash' })
-    await c.getByRole('textbox', { name: 'Cash in the box, PKR' }).fill(String(counted))
+    await c.getByRole('textbox', { name: 'Cash in hand, PKR' }).fill(String(counted))
     await expect(c.getByTestId('count-difference')).toContainText('Short by PKR 300')
     await review(page, 'p1-count-cash-1440')
     await c.getByRole('button', { name: 'Save count' }).click()

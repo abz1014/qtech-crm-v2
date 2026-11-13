@@ -31,7 +31,7 @@ describe('I paid refusal for an admin', () => {
     installFakeDb(() => ({ data: [] }))
     mount('admin')
     expect(screen.getAllByText('I paid is for sales and engineers').length).toBeGreaterThan(0)
-    expect(screen.getByText('Your role is Admin. Admins approve claims on the Expenses page, so there is no I paid page for you.')).toBeInTheDocument()
+    expect(screen.getByText('Your role is Admin. Admins approve claims on the Expenses page, so there is no I paid page for admins.')).toBeInTheDocument()
     expect(screen.queryByText(/Ask an admin/)).toBeNull()
   })
 })
@@ -45,7 +45,7 @@ describe('My claims failed load', () => {
       return { data: [] }
     })
     mount('engineer')
-    expect(await screen.findByText("Couldn't load your claims")).toBeInTheDocument()
+    expect(await screen.findByText("Claims could not be loaded")).toBeInTheDocument()
     expect(screen.queryByText('Nothing yet')).toBeNull()
     fail = false
     await user.click(screen.getByRole('button', { name: 'Try again' }))
