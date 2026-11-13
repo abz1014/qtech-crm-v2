@@ -17,7 +17,7 @@ export interface ChallanDoc {
   lines: Array<{ no: number; description: string; qty: number; unit: string | null }>
 }
 
-export function buildChallanDoc(order: OrderHeader, challan: ChallanRow): ChallanDoc {
+export function buildChallanDoc(order: OrderHeader, challan: ChallanRow, showPo: boolean): ChallanDoc {
   return {
     number: challan.number,
     issuedOn: challan.issuedOn,
@@ -26,7 +26,7 @@ export function buildChallanDoc(order: OrderHeader, challan: ChallanRow): Challa
     deliverTo: challan.deliverTo,
     contactName: order.contact?.name ?? null,
     contactPhone: order.contact?.phone ?? null,
-    customerPo: order.customerPo,
+    customerPo: showPo ? order.customerPo : null,
     notes: challan.notes,
     lines: challan.lines.map((l, n) => ({ no: n + 1, description: l.description, qty: l.qty, unit: l.unit })),
   }
