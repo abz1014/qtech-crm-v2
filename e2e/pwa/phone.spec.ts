@@ -5,7 +5,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test'
  *  - the viewport meta (safe areas, keyboard resize) and no sideways scroll at 375;
  *  - a cold open with no signal and a kept session opens the shell with the offline banner, not the sign-in form,
  *    keeps Capture reachable and recovers by itself when signal returns; the same with an expired access token;
- *  - signed out and offline: "Sign in again when you have signal", no form;
+ *  - signed out and offline: "Sign in again when the connection returns", no form;
  *  - the shell's <main> starts each new page at the top and Back returns to the list's place.
  * Signs in as the seeded sales fixture user (supabase/seed.sql, local stack only).
  */
@@ -81,7 +81,7 @@ test.describe('phone platform', () => {
     )
 
     await goOffline(context, page)
-    await expect(banner(page)).toHaveText(/You’re offline — Showing what’s saved; changes need signal\./)
+    await expect(banner(page)).toHaveText(/No connection — Saved records are shown\. Changes need a connection\./)
     await expect(page).toHaveURL(/\/todo$/)
     await expect(page.getByLabel('Email')).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
@@ -114,8 +114,8 @@ test.describe('phone platform', () => {
     await page.goto('/login')
     await workerInControl(page)
     await goOffline(context, page)
-    await expect(page.getByRole('heading', { name: 'You’re offline' })).toBeVisible()
-    await expect(page.getByText('Sign in again when you have signal.', { exact: false })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'No connection' })).toBeVisible()
+    await expect(page.getByText('Sign in again when the connection returns.', { exact: false })).toBeVisible()
     await expect(page.getByLabel('Email')).toHaveCount(0)
     await context.setOffline(false)
     await expect(page.getByLabel('Email')).toBeVisible()

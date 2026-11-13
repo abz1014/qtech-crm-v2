@@ -191,7 +191,7 @@ test('a picture with no text says so plainly, and a read can be cancelled', asyn
   await drop(page, 'blank.png', await shoot(browser, { viewport: { width: 600, height: 400 }, deviceScaleFactor: 1, html: NO_TEXT }))
   const r = await readResult(page)
   expect(r).toMatchObject({ ok: false, reason: 'unclear' })
-  await expect(page.getByTestId('ocr-message')).toHaveText("Couldn't read this clearly — type or paste the items.")
+  await expect(page.getByTestId('ocr-message')).toHaveText('The image is not clear enough to read. Please type or paste the items.')
 
   await drop(page, 'chat.png', await shoot(browser, SCENES[0]!))
   await expect(page.getByTestId('ocr-progress')).toHaveText(/Reading the image… \d+%/)

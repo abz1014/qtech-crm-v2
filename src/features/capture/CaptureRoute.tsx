@@ -39,7 +39,7 @@ export default function CaptureRoute() {
       const found = id ? await safely(() => getCapture(id), null) : null
       if (!live) return
       setItem(found)
-      if (found && takeBackFromSignIn()) toast({ title: 'Your shared item is back', body: 'Choose where it goes to finish.' })
+      if (found && takeBackFromSignIn()) toast({ title: 'Shared item restored', body: 'Choose where it goes to finish.' })
     })()
     return () => {
       live = false
@@ -50,7 +50,7 @@ export default function CaptureRoute() {
 
   if (!id) return <JobFirst />
 
-  if (item === undefined) return <div className="px-4 py-8 text-base text-fg-2">Opening what you shared…</div>
+  if (item === undefined) return <div className="px-4 py-8 text-base text-fg-2">Opening the shared item…</div>
 
   if (item === null)
     return (

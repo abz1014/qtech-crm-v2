@@ -233,7 +233,7 @@ const loadShortcuts = () =>
 function loadFailureText(err: unknown): string {
   return err instanceof Error && err.name === "StaleAppError"
     ? err.message
-    : "Check your signal, then try again.";
+    : "Check the connection, then try again.";
 }
 
 function hasKeyboard(): boolean {

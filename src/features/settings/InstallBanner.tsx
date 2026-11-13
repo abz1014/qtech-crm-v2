@@ -40,7 +40,7 @@ export function InstallBanner() {
           </span>
         }
       >
-        Q-Tech CRM opens full screen from your home screen, like any other app.
+        Install Q-Tech CRM to open it full screen from the home screen.
       </Banner>
     )
   }
@@ -49,7 +49,7 @@ export function InstallBanner() {
     return (
       <Banner
         tone="info"
-        title="Add Q-Tech CRM to your home screen"
+        title="Add Q-Tech CRM to the home screen"
         className="mb-6"
         action={
           <Button

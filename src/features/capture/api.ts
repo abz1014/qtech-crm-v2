@@ -40,7 +40,7 @@ export async function appendNotesSafely(table: 'orders' | 'rfqs', id: string, bu
   return { before: out.before, after: out.after as string, updatedAt: out.updatedAt }
 }
 
-export const CANNOT_UNDO_NOTE = 'The note could not be taken back: the notes were changed after you saved it. Nothing was changed.'
+export const CANNOT_UNDO_NOTE = 'The note could not be taken back: the notes were changed after it was saved. Nothing was changed.'
 
 /**
  * Take back the note a save appended. `before` and `after` are the notes around that save. If the notes are still exactly `after`

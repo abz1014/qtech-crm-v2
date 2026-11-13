@@ -21,7 +21,7 @@ declare const __APP_VERSION__: number | undefined
 export const APP_VERSION: number = typeof __APP_VERSION__ === 'number' ? __APP_VERSION__ : 0
 
 export const UPDATE_NEEDED_MESSAGE =
-  'Update needed: this copy of the app is out of date, so saving is paused. Tap Reload in the bar at the top. Nothing was saved.'
+  'Update needed: this copy of the app is out of date, so saving is paused. Select Reload in the bar at the top. Nothing was saved.'
 
 let needed = false
 const listeners = new Set<() => void>()
