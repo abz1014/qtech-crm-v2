@@ -7,8 +7,8 @@ screens: /settings
 related: tag-a-category
 ---
 1. Open Settings and [Product categories].
-2. Tap [Fill missing categories]. It reads the items without a category and shows how many go to each one. Nothing is saved yet.
-3. Tap the green button to fill them. It works in batches of 200 and says how far it is.
-4. To tidy a category, tap its menu: [Rename], [Merge into…] or [Mark curated].
+2. Select [Fill missing categories]. It reads the items without a category and shows how many go to each category. Nothing is saved yet.
+3. Select the green button to fill them. It works in batches of 200 and shows the progress.
+4. To adjust a category, open its menu: [Rename], [Merge into…] or [Mark curated].
 
-Tip: it never changes an item that already has a category, and it leaves alone any text it is not sure about. Every change is kept in the history.
+Tip: Items that already have a category are never changed. Text that cannot be matched with certainty is left unchanged. Every change is kept in the history.

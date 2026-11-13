@@ -32,7 +32,7 @@ function closeFailure(err: unknown, month: string): string {
   // A rule the server explains ("Close March 2024 first. Months close in order.") is said as written.
   if (code === 'P0001' && m.help) return `${m.message} Nothing was changed.`
   if (code === 'P0001') return `${monthKeyLabel(month)} could not be locked. Lock the earlier months first, or wait until the month has ended. Nothing was changed.`
-  return 'Something went wrong. The month was not locked. Try again.'
+  return 'The month was not locked. Try again.'
 }
 
 export function CloseMonthDialog({
@@ -152,12 +152,12 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
         onSuccess: () => {
           onClose()
           setNote('')
-          toast.toast({ title: `${name} reopened`, body: 'It can be changed until you lock it again.', tone: 'success' })
+          toast.toast({ title: `${name} reopened`, body: 'It can be changed until it is locked again.', tone: 'success' })
         },
         onError: e => {
           const m = mapPgError(e, { entity: 'month' })
           // A rule the server explains (0080: months reopen newest first) is said as written; anything else stays generic.
-          setError(m.kind === 'network' || m.help ? m.message : 'Something went wrong. The month was not reopened. Try again.')
+          setError(m.kind === 'network' || m.help ? m.message : 'The month was not reopened. Try again.')
         },
       },
     )
@@ -194,7 +194,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
             <TextArea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="For example: a supplier invoice arrived late" maxLength={500} />
           </Field>
           <Banner tone="warning" title={`${name} becomes editable again`}>
-            Payments, expenses and invoices dated in {name} can be changed until you lock it a second time.
+            Payments, expenses and invoices dated in {name} can be changed until it is locked a second time.
           </Banner>
           {error ? (
             <Banner tone="danger" title="The month was not reopened">

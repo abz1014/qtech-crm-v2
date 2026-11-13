@@ -38,7 +38,7 @@ describe('Money for this job', () => {
     await show()
     expect(screen.getByText('Quoted (with GST)')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Money for this job' })).toHaveTextContent('236,000')
-    expect(screen.getByText(/Nothing is owed until the customer places an order/)).toBeInTheDocument()
+    expect(screen.getByText(/No balance is due until the customer places an order/)).toBeInTheDocument()
   })
 
   it('latestQuotation takes the newest issue date, then the highest revision', () => {

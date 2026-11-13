@@ -19,7 +19,7 @@ describe('quickProblem: the amount', () => {
 
 describe('claimAmountProblem: the engineer "I paid" form says what Quick add says', () => {
   it('nothing typed asks how much was paid', () => {
-    expect(claimAmountProblem(null)).toBe('Type how much you paid.')
+    expect(claimAmountProblem(null)).toBe('Enter the amount paid.')
   })
   it('0 and a negative amount use the Quick add message', () => {
     expect(claimAmountProblem(0)).toBe(AMOUNT_ABOVE_ZERO)

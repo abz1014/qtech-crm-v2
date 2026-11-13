@@ -73,7 +73,7 @@ export function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCou
   if (!inquiry.sentOn && !inquiry.noOfferOn && inquiry.lines.length === 0) return <StatusBadge dimension="inquiry" value="shortlisted" />
   if (inquiry.responseState === 'quoted' || inquiry.lines.length > 0) return <StatusBadge dimension="inquiry" value="quoted" detail={`${inquiry.lines.length} of ${itemCount}`} />
   if (inquiry.responseState === 'no_offer' || inquiry.noOfferOn) return <StatusBadge dimension="inquiry" value="no-offer" />
-  return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `chased ×${inquiry.chaseCount}` : undefined} />
+  return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `followed up ×${inquiry.chaseCount}` : undefined} />
 }
 
 /** What a typed price reads as in PKR at today's rate. It never says whether it is the lowest: the CRM suggests no supplier. */
@@ -113,7 +113,7 @@ export function CantQuoteMenu({ supplierName, busy, onPick, className }: { suppl
       </PopoverTrigger>
       <PopoverContent variant="menu" align="start" side="top" aria-label="Reason">
         <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
-          One tap records the reason
+          Choose a reason to record it
         </p>
         {CANT_QUOTE_REASONS.map(r => (
           <MenuItem key={r.key} onClick={() => onPick(r.key)}>
@@ -479,7 +479,7 @@ export function SupplierReplyDialog({
                             </PopoverTrigger>
                             <PopoverContent variant="menu" align="end" side="bottom" aria-label="Reason">
                               <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
-                                One tap records the reason
+                                Choose a reason to record it
                               </p>
                               {CANT_QUOTE_REASONS.map(r => (
                                 <MenuItem

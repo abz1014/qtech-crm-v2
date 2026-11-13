@@ -199,21 +199,21 @@ export default function JobsListPage() {
 
   const loading = jobs.isPending || (searching && found.isPending)
   const error = jobs.isError ? jobs : searching && found.isError ? found : null
-  const lede = jobs.isSuccess ? `${counts.open} open · ${counts.history} in history` : 'Every customer request, from enquiry to payment.'
+  const lede = jobs.isSuccess ? `${counts.open} open · ${counts.history} in history` : 'Every customer request, from RFQ to payment.'
 
   const empty = searching ? (
     <NoResults query={text} scope="every job (open and history)" fields="job number, customer, item, RFQ, order, quotation, PO and invoice number" onClear={() => change({ q: null })} />
   ) : chip === 'mine' && stage === null && counts.open > 0 ? (
     <EmptyState
       mood="goal"
-      title={role === 'engineer' ? 'No jobs are assigned to you' : 'None of your jobs are open'}
+      title={role === 'engineer' ? 'No jobs assigned' : 'None of your jobs are open'}
       actions={
         <Button onClick={() => change({ chip: 'open' })}>
           Show every open job ({counts.open})
         </Button>
       }
     >
-      {role === 'engineer' ? 'Jobs you are put on appear here.' : 'Jobs you own appear here.'}
+      {role === 'engineer' ? 'Jobs appear here once assigned.' : 'Jobs you own appear here.'}
     </EmptyState>
   ) : stage !== null ? (
     <EmptyState
@@ -226,7 +226,7 @@ export default function JobsListPage() {
     <EmptyState title="Nothing in history yet">A job moves here once it is paid and installed, lost, or cancelled with no money open.</EmptyState>
   ) : (
     <EmptyState mood="goal" title="No open jobs">
-      Every job is done. A new enquiry starts one.
+      Every job is done. A new RFQ starts one.
     </EmptyState>
   )
 
@@ -239,7 +239,7 @@ export default function JobsListPage() {
         primary={
           money ? (
             <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/enquiries/new')}>
-              New enquiry
+              New RFQ
             </Button>
           ) : undefined
         }
@@ -257,7 +257,7 @@ export default function JobsListPage() {
         mobileRow={j => <JobCard job={j} role={role} po={money ? poOf(j) : undefined} />}
         onRowOpen={j => navigate(`/jobs/${encodeURIComponent(j.key)}`)}
         loading={loading}
-        error={error ? { title: "Couldn't load the jobs", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void error.refetch() } : null}
+        error={error ? { title: "Jobs could not be loaded", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void error.refetch() } : null}
         summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${stage ? ` · ${STAGE_LABEL[stage]}` : ''}`) : undefined}
         toolbar={
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">

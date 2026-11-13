@@ -24,7 +24,7 @@ export const AMOUNT_ABOVE_ZERO = 'The amount must be above zero.'
 
 /** What is wrong with the amount typed on the engineer's "I paid" form, in words; null when it is fine. */
 export function claimAmountProblem(amount: number | null): string | null {
-  if (amount === null || Number.isNaN(amount)) return 'Type how much you paid.'
+  if (amount === null || Number.isNaN(amount)) return 'Enter the amount paid.'
   return amount > 0 ? null : AMOUNT_ABOVE_ZERO
 }
 

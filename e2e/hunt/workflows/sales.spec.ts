@@ -310,7 +310,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
         await shot(page, `${W}-message-step`)
         await resetClipboard(page)
         await copy.dblclick()
-        const text = await readClipboardWhen(page, s => s.includes('Hi hope you are doing well,'))
+        const text = await readClipboardWhen(page, s => s.includes('Dear Sir/Madam,'))
         for (const want of ['Pressure gauge 0-16 bar', 'پریشر', 'Flow switch paddle type'])
           if (!text.includes(want)) note(info, { kind: 'observation', where: `${W} copied message`, what: `the supplier message lacks "${want}"`, detail: text.slice(0, 600) })
         if (/RFQ-####|\{\{|undefined|NaN/.test(text)) note(info, { kind: 'observation', where: `${W} copied message`, what: 'placeholder or junk in the supplier message', detail: text.slice(0, 600) })
@@ -634,9 +634,9 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
     await probe(info, page, `${W} close a reply with typed prices, then Back`, async () => {
       await replyDialog(page, pk.name)
       await price(pk, 1).fill('1111')
-      // The dialog's Close with a typed price asks first, in the dialog's own bar ("Discard what you typed?").
+      // The dialog's Close with a typed price asks first, in the dialog's own bar ("Discard unsaved changes?").
       await region(pk).getByRole('button', { name: 'Close', exact: true }).click()
-      const confirm = page.getByRole('group', { name: 'Discard what you typed?' })
+      const confirm = page.getByRole('group', { name: 'Discard unsaved changes?' })
       await expect(confirm).toBeVisible(T)
       await page.goBack()
       await settle(page)

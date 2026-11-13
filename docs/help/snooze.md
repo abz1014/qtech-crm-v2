@@ -5,9 +5,9 @@ roles: sales, admin
 keywords: snooze, later, hide, not now, remind me, tomorrow, not ours to chase
 screens: /todo
 ---
-1. On [To do], find the row and tap [Snooze].
+1. On [To do], find the row and select [Snooze].
 2. Pick [Tomorrow morning], [Monday] or [Pick a date].
-3. Or pick [Not ours to chase]: it stays hidden until something on that job changes.
-4. It comes back on that day. Only you stop seeing it.
+3. Or pick [Handled by another team member]: it stays hidden until something on that job changes.
+4. It comes back on that day. It is hidden for you only.
 
-Safe to try: tap [Undo] on the message at the bottom to put it back.
+Safe to try: select [Undo] on the message at the bottom to put it back.

@@ -75,13 +75,13 @@ export function SignInPage() {
   // A notice from the session (signed out because deactivated) shows when this form has nothing to say itself.
   const shown: Failure = failure ?? (notice === 'deactivated' ? 'deactivated' : notice === 'unreachable' ? 'unreachable' : null)
 
-  // Signing in needs signal: offline, say so instead of offering a form that cannot work (phone audit 2c).
+  // Signing in needs a connection: offline, say so instead of offering a form that cannot work (phone audit 2c).
   if (!online && !busy) {
     return (
       <OfflineSignInPage>
         {kept ? (
-          <Banner tone="success" title="Your shared item is safe">
-            {`${kept.what}, kept on this phone until ${kept.until}. Sign in when you have signal and the Shared with Q-Tech CRM page opens with it.`}
+          <Banner tone="success" title="Shared item kept on this device">
+            {`${kept.what}, kept on this device until ${kept.until}. Sign in when the connection returns and the Shared with Q-Tech CRM page opens with it.`}
           </Banner>
         ) : null}
       </OfflineSignInPage>
@@ -108,13 +108,13 @@ export function SignInPage() {
           </Banner>
         ) : null}
         {shown === 'unreachable' ? (
-          <Banner tone="danger" title="Can’t reach the server">
+          <Banner tone="danger" title="Server not reachable">
             Check your connection and try again.
           </Banner>
         ) : null}
         {kept ? (
           <>
-            <Banner tone="success" title="Your shared item is safe">
+            <Banner tone="success" title="Shared item kept on this device">
               Sign in and the Shared with Q-Tech CRM page opens with it.
             </Banner>
             <div className="flex items-center gap-3 rounded border border-line-strong bg-sunken p-3 text-sm">
@@ -123,7 +123,7 @@ export function SignInPage() {
               </span>
               <span className="grid">
                 <b className="font-medium">{kept.what}</b>
-                <span className="text-xs text-fg-muted">{`Kept on this phone until ${kept.until}`}</span>
+                <span className="text-xs text-fg-muted">{`Kept on this device until ${kept.until}`}</span>
               </span>
             </div>
           </>

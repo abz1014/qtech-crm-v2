@@ -15,7 +15,7 @@ import { DateInput } from '@/ui/form/DateInput'
  * the month (v_month_pnl); Money in and out also shows profit ON INVOICES (v_month_profit). Both are right; they are labelled
  * so they are never read as one number, and the same (i) explains the gap on both pages.
  */
-export const TWO_PROFITS_LABEL = 'Why two profits?'
+export const TWO_PROFITS_LABEL = 'Profit on invoices and profit on cash'
 export function TwoProfitsTip() {
   return (
     <InfoTip label={TWO_PROFITS_LABEL}>
@@ -171,7 +171,7 @@ export function ReportError({ title, onRetry }: { title: string; onRetry: () => 
           </Button>
         }
       >
-        Your payments, expenses and ticks are safe; nothing was changed. Try again, and if it keeps failing, tell the admin.
+        Nothing was changed. Payments, expenses and ticks are kept. Try again, and if the error continues, tell the admin.
       </EmptyState>
     </div>
   )

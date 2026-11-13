@@ -185,13 +185,13 @@ describe('rule: chase customer', () => {
   it('is due 3 working days after the last ask and says which RFQ', () => {
     const c = ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-24' })] }) // Tue + 3 = Fri 27
     const [e] = ruleChaseCustomer(c)
-    expect(e).toMatchObject({ rule: 'chase_customer', key: 'chase_customer:r1', title: 'Chase customer for clarifications', ref: 'RFQ-0177', party: 'Indus Textile Mills', rfqId: 'r1' })
+    expect(e).toMatchObject({ rule: 'chase_customer', key: 'chase_customer:r1', title: 'Follow up with customer: questions open', ref: 'RFQ-0177', party: 'Indus Textile Mills', rfqId: 'r1' })
     expect(e.waiting).toBeUndefined()
   })
   it('waits (shown in Waiting with its return date) when asked more recently', () => {
     const [e] = ruleChaseCustomer(ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-26' })] }))
     expect(e.waiting).toEqual({ chasedOn: '2026-11-26', nextNudgeOn: '2026-12-01' })
-    expect(e.waitingTitle).toBe('Customer chased')
+    expect(e.waitingTitle).toBe('Customer followed up')
   })
   it('is due after one working day when the bid is within three working days', () => {
     const [e] = ruleChaseCustomer(ctx({ rfqs: [rfq({ dueOn: '2026-12-01' })], clarifications: [clar({ lastAskedOn: '2026-11-26' })] }))
@@ -282,7 +282,7 @@ describe('rule: chase supplier', () => {
   it('measures from the last chase, and a chased supplier waits with its return date', () => {
     const [e] = ruleChaseSupplier(ctx({ rfqs: [rfq()], inquiries: [inq({ sentOn: '2026-11-16', lastChasedOn: '2026-11-26', chaseCount: 1 })] }))
     expect(e.waiting).toEqual({ chasedOn: '2026-11-26', nextNudgeOn: '2026-11-30' }) // 2 working days: Fri, Mon
-    expect(e.waitingTitle).toBe('Supplier chased')
+    expect(e.waitingTitle).toBe('Supplier followed up')
   })
   it('names the supplier, not the customer', () => {
     const [e] = ruleChaseSupplier(ctx({ rfqs: [rfq()], inquiries: [inq({ sentOn: '2026-11-20' })] }))
@@ -351,7 +351,7 @@ describe('rule: decision overdue', () => {
   })
   it('is raised when the quotation expired', () => {
     const [e] = ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'quotation_expired', quotedOn: '2026-10-01', quotationValidUntil: '2026-11-20' })] }))
-    expect(e.title).toBe('Quotation expired: check prices before you revise it')
+    expect(e.title).toBe('Quotation expired. Check prices before revising it.')
     expect(e.badge.text).toBe('7 days overdue')
   })
   it('is not raised for a bid still to send', () => {
@@ -408,7 +408,7 @@ describe('rule: goods late', () => {
   it('waits 3 working days after a chase', () => {
     const [e] = ruleGoodsLate(ctx({ legs: [leg({ lastChasedOn: '2026-11-26', chaseCount: 1 })] }))
     expect(e.waiting).toEqual({ chasedOn: '2026-11-26', nextNudgeOn: '2026-12-01' })
-    expect(e.waitingTitle).toBe('Supplier chased for goods')
+    expect(e.waitingTitle).toBe('Supplier followed up on delivery')
   })
 })
 

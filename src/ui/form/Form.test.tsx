@@ -163,7 +163,7 @@ describe('Form (U07): errors keep the entries and speak plainly', () => {
     render(<Harness save={vi.fn<Save>().mockRejectedValue(err)} defaults={{ name: 'Mehran Paper Board' }} />)
     await user.click(screen.getByRole('button', { name: 'Add company' }))
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent("Couldn't save the company")
+    expect(alert).toHaveTextContent("The company was not saved")
     expect(screen.getByText(text)).toBeInTheDocument()
     expect(screen.getByLabelText(/Company name/)).toHaveValue('Mehran Paper Board')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled()
@@ -210,7 +210,7 @@ describe('Form (U07): errors keep the entries and speak plainly', () => {
 })
 
 describe('Form (U07): pre-filled values say where they came from (FE-2)', () => {
-  it('shows the source, and "Typed by you" once the value is changed', async () => {
+  it('shows the source, and "Entered manually" once the value is changed', async () => {
     const user = userEvent.setup()
     render(<Harness save={vi.fn<Save>()} />)
     expect(screen.getByText('Balance due on ORD-0038')).toBeInTheDocument()
@@ -220,7 +220,7 @@ describe('Form (U07): pre-filled values say where they came from (FE-2)', () => 
     await user.clear(amount)
     await user.type(amount, '700000')
     expect(screen.queryByText('Balance due on ORD-0038')).toBeNull()
-    expect(screen.getByText('Typed by you')).toBeInTheDocument()
+    expect(screen.getByText('Entered manually')).toBeInTheDocument()
   })
 
   it('the date defaults to today (business timezone) with no touch', () => {

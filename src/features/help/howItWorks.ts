@@ -17,18 +17,18 @@ export const HOW_IT_WORKS: Record<HelpRole, HowItWorksStep[]> = {
     { text: 'A customer asks for prices: **New RFQ**, then paste their message.', recipe: 'new-rfq' },
     { text: '**Ask suppliers**: one message, copied into WhatsApp.', recipe: 'ask-suppliers' },
     { text: 'Prices come in: paste their reply, and the app compares them in PKR.', recipe: 'supplier-prices' },
-    { text: '**Issue quotation** makes the PDF. To do reminds you to chase until it is won or lost.', recipe: 'issue-quotation' },
+    { text: '**Issue quotation** makes the PDF. To do reminds you to follow up until it is won or lost.', recipe: 'issue-quotation' },
   ],
   engineer: [
     { text: '**To do** lists your site jobs and their dates.', recipe: 'today-jobs' },
     { text: 'On site, **Add to this job** saves a photo or note on the job. No forms.', recipe: 'paste-or-photo' },
-    { text: 'One tap when done: **Delivered today**, **Installed today**. Wrong tap? **Undo**.', recipe: 'goods-delivered' },
+    { text: 'Select **Delivered today** or **Installed today** when done. To reverse it, select **Undo**.', recipe: 'goods-delivered' },
   ],
   admin: [
     { text: '**To collect**: record payments and send reminders.', recipe: 'record-payment' },
     { text: '**Invoices**: create invoices, mark TCS and FBR.', recipe: 'tcs-fbr' },
     { text: '**Expenses**: add many at once.', recipe: 'add-expenses' },
-    { text: '**Lock a month** lists only what needs fixing, then you lock the month.', recipe: 'month-end-close' },
+    { text: '**Lock a month** lists only what needs fixing, then lock the month.', recipe: 'month-end-close' },
     { text: '**Team**: add people. Each one sees only what their role needs.', recipe: 'add-person' },
   ],
 }

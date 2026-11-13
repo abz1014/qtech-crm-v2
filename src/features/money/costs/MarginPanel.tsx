@@ -154,7 +154,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Margin</h2>
         <InfoTip label="About the margin">
-          Net sale less the costs paid so far. GST sits outside the margin on both sides, and expenses count at true cost, without the GST paid on purchases that we can claim back. It is final once costs are marked complete.
+          Net sale less the costs paid so far. GST sits outside the margin on both sides, and expenses count at true cost, without the GST paid on purchases that can be claimed back. It is final once costs are marked complete.
         </InfoTip>
         {unknown ? <StatusBadge dimension="trust" value="basis-unknown" label="Is GST included?" /> : m ? <StatusBadge dimension="costs" value={complete ? 'complete' : 'provisional'} /> : null}
         <span className="ml-auto inline-flex items-center gap-1 whitespace-nowrap text-xs text-fg-muted">
@@ -187,7 +187,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
                 </div>
                 <p className="text-sm text-fg-2">
                   {unknown
-                    ? `Not worked out until someone answers "Is GST included?" at the top of the page.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''}`
+                    ? `Not worked out until an answer is given to "Is GST included?" at the top of the page.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''}`
                     : complete
                       ? 'Final: costs complete.'
                       : expected !== null

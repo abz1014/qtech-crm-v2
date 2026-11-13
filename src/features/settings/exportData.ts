@@ -88,8 +88,8 @@ export const EXPORTS: readonly ExportKind[] = [
   },
   {
     id: 'rfqs',
-    label: 'Enquiries (RFQs) and jobs',
-    about: 'Every enquiry with its customer, dates, owner and why it closed.',
+    label: 'RFQs and jobs',
+    about: 'Every RFQ with its customer, dates, owner and why it closed.',
     file: 'rfqs',
     run: async () => {
       const [rows, companies, users] = await Promise.all([all('rfqs', 'number, company_id, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason, owner_id, is_priority', 'number'), nameMap('companies'), nameMap('users')])

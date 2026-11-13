@@ -111,7 +111,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           <p className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 border-b py-2 text-fg-2" data-testid="expenses-closed">
             <Icon icon={Lock} className="text-fg-muted" />
             <span>
-              <b className="font-medium text-fg">{monthKeyLabel(month)} is closed.</b> {CLOSED_MONTH_LINE}
+              <b className="font-medium text-fg">{monthKeyLabel(month)} is locked.</b> {CLOSED_MONTH_LINE}
             </span>
             <Link to={`/money/month-end?month=${month}`} className="font-medium text-primary underline-offset-2 hover:underline">
               Open Lock a month
@@ -147,7 +147,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           loading={list.isPending}
           error={
             list.isError
-              ? { title: "Couldn't load the expenses", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void list.refetch() }
+              ? { title: "Expenses could not be loaded", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void list.refetch() }
               : null
           }
           toolbar={
@@ -169,8 +169,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
                   </span>
                   <InfoTip label="About this total">
-                    What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or the cash box). A monthly bill
-                    paid this month for last month is in this total; the Expenses report counts it in the month it is for.
+                    What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or cash in hand). A monthly bill paid this month for last month is in this total. The Expenses report counts it in the month it is for.
                     {totals.inputTax > 0 ? ` GST paid on purchases, ${pkr(totals.inputTax)} of it, is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
                   </InfoTip>
                 </span>
@@ -368,9 +367,9 @@ function buildColumns(
         if (act.locked)
           return (
             <span className="inline-flex items-center gap-1" data-row-actions="">
-              <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked: the month is closed">
+              <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked month">
                 <Icon icon={Lock} size="sm" />
-                <span className="sr-only">Locked, the month is closed</span>
+                <span className="sr-only">Locked month</span>
               </span>
               <Button variant="quiet" size="touch" icon={History} aria-label={`History of ${name} of ${r.amount}`} className="min-w-[44px]" onClick={() => act.onHistory(r)} />
             </span>

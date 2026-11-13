@@ -211,7 +211,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           Ask more suppliers
         </Button>
         {onReplyFrom ? (
-          <Button variant="quiet" icon={MessageSquareReply} onClick={onReplyFrom}>
+          <Button variant="quiet" icon={MessageSquareReply} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" onClick={onReplyFrom}>
             Enter reply from another supplier
           </Button>
         ) : null}
@@ -323,32 +323,32 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
     if (!chase) return
     const ok = await copyToClipboard(text)
     if (!ok) {
-      toast({ title: 'Could not copy the text', body: 'Show the whole message and copy it by hand. The chase was not recorded.', tone: 'danger' })
+      toast({ title: 'Could not copy the text', body: 'Show the whole message and copy it by hand. The follow-up was not recorded.', tone: 'danger' })
       return
     }
     await stampChase(true)
   }
   const stampChase = async (copied: boolean) => {
-    const done = copied ? 'Chase text copied' : 'Marked chased'
+    const done = copied ? 'Follow-up text copied' : 'Marked as followed up'
     const before = { lastChasedOn: inquiry.lastChasedOn, lastChasedBy: inquiry.lastChasedBy ?? null, chaseCount: inquiry.chaseCount }
     try {
       const n = await stamp.mutateAsync(inquiry.id)
       toast({
         title: done,
-        body: `${inquiry.supplierName} · chased ${n} ${n === 1 ? 'time' : 'times'}`,
+        body: `${inquiry.supplierName} · followed up ${n} ${n === 1 ? 'time' : 'times'}`,
         tone: 'success',
         undo: {
           onUndo: async () => {
             await restore.mutateAsync({ inquiryId: inquiry.id, before })
           },
           settledTitle: done,
-          settledBody: `${rfqRef(rfq.number)} marked chased`,
+          settledBody: `${rfqRef(rfq.number)} marked as followed up`,
           undoneTitle: 'Undone.',
-          undoneBody: `${inquiry.supplierName} is not marked chased.`,
+          undoneBody: `${inquiry.supplierName} is not marked as followed up.`,
         },
       })
     } catch (err) {
-      toast({ title: copied ? 'Copied, but the chase was not recorded' : 'The chase was not recorded', body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: copied ? 'Copied, but the follow-up was not recorded' : 'The follow-up was not recorded', body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
@@ -359,8 +359,8 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
 function ChaseNow({ rfq, items, inquiry, variant }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; variant: EnquiryVariant }) {
   const c = useSupplierChase(rfq, items, inquiry, variant)
   return (
-    <Button size="sm" icon={Copy} onClick={() => void c.doChase()} busy={c.busy} busyLabel="Marking chased" aria-label={`Chase ${inquiry.supplierName}`}>
-      Chase
+    <Button size="sm" icon={Copy} onClick={() => void c.doChase()} busy={c.busy} busyLabel="Recording follow-up" aria-label={`Follow up with ${inquiry.supplierName}`}>
+      Follow up
     </Button>
   )
 }
@@ -426,7 +426,7 @@ function ChaseCard({
           onChaseAgain={() => setDismissed(true)}
         />
       ) : null}
-      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] border-y">
+      <div role="group" aria-label={`Follow up with ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] border-y">
         <RecipientRow channel={channel} lead={channel === 'email' ? 'Email to' : 'WhatsApp to'} contact={recipient} />
         {whole ? (
           <div id={wholeId} className="grid">
@@ -472,7 +472,7 @@ function ChaseCard({
         </div>
         {whole ? (
           <ChaseNote className="border-t">
-            Copying records chase {inquiry.chaseCount + 1} for this supplier. {rfqRef(rfq.number)} moves to Waiting and returns if still silent after {formatDay(returnsOn)}. It lists only the
+            Copying records follow-up {inquiry.chaseCount + 1} for this supplier. {rfqRef(rfq.number)} moves to Waiting and returns if still silent after {formatDay(returnsOn)}. It lists only the
             items this supplier has not priced, and never names the customer or our price.
           </ChaseNote>
         ) : null}
@@ -484,14 +484,14 @@ function ChaseCard({
                 text={both.whatsapp.body}
                 email={{ subject: both.email.subject, body: both.email.body }}
                 variant={main && !opened ? 'primary' : 'secondary'}
-                copy={{ label: 'Copy and mark chased', onCopy: doChase, busy, busyLabel: 'Marking chased' }}
+                copy={{ label: 'Copy and record follow-up', onCopy: doChase, busy, busyLabel: 'Recording follow-up' }}
                 onOpen={() => setOpened(true)}
                 channel={channel}
                 onChannelChange={onChannel}
               />
             ) : (
               <Button variant={main ? 'primary' : 'secondary'} icon={Copy} disabled className="w-fit">
-                Copy and mark chased
+                Copy and record follow-up
               </Button>
             )}
             {opened && chase ? (
@@ -499,13 +499,13 @@ function ChaseCard({
                 variant="primary"
                 icon={Check}
                 busy={busy}
-                busyLabel="Marking chased"
+                busyLabel="Recording follow-up"
                 onClick={() => {
                   setOpened(false)
                   void markOnly()
                 }}
               >
-                Mark chased
+                Record follow-up
               </Button>
             ) : null}
           </div>
@@ -513,7 +513,7 @@ function ChaseCard({
             <MoreToggle open={whole} onToggle={() => setWhole(w => !w)} controls={wholeId} />
             {/* The other channel is a rare switch: it waits with the whole message (both Open buttons already show). */}
             {whole ? <ChannelLink value={channel} onChange={onChannel} /> : null}
-            <span className="text-sm text-fg-muted">{inquiry.chaseCount === 0 ? 'Not chased yet' : `Chased ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>
+            <span className="text-sm text-fg-muted">{inquiry.chaseCount === 0 ? 'Not followed up yet' : `Followed up ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>
           </div>
           {others.length > 1 && onPick ? (
             <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">

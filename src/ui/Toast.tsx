@@ -76,7 +76,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       // The error sentences (pgErrors and its message table) are a lazy chunk, awaited here: not part of the first load (perf/trim).
       const body = await import('@/lib/pgErrors').then(
         m => m.mapPgError(err).message,
-        () => 'Something went wrong. Nothing was saved. Try again.', // the chunk itself could not load: mapPgError's own fallback
+        () => 'The change was not saved. Try again.', // the chunk itself could not load: mapPgError's own fallback
       )
       const input: ToastInput = { title: 'Could not undo', body, tone: 'danger' }
       setItems(list => list.map(i => (i.id === id ? { ...i, input, phase: 'running' } : i)))

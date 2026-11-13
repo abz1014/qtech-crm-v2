@@ -317,7 +317,7 @@ describe('intake screen', () => {
       { description: '24V actuator for ball valve', qty: 2, gst_rate: 18 },
     ])
     await waitFor(() => expect(copied).toHaveLength(1))
-    expect(copied[0]).toContain('Hi hope you are doing well,')
+    expect(copied[0]).toContain('Dear Sir/Madam,')
     expect(copied[0]).not.toMatch(/RFQ|Spec:|assalam/i)
     expect(copied[0]).not.toContain('####')
   })
@@ -631,15 +631,15 @@ describe('the New RFQ draft (kept on this device)', () => {
       const user = setup()
       renderScreen()
       fireEvent.paste(document.body, { clipboardData: { getData: () => PO } })
-      expect(await screen.findByText('This looks like a purchase order, not an enquiry.')).toBeInTheDocument()
+      expect(await screen.findByText('This looks like a purchase order, not an RFQ.')).toBeInTheDocument()
       expect(screen.getByText(/No items were added/)).toBeInTheDocument()
       expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
       expect(screen.queryByText(/items? found/)).toBeNull()
       // Plain text, 16px or larger: the warning and its button use the large text size.
       expect(screen.getByRole('status', { name: '' }).className).toMatch(/text-base/)
-      await user.click(screen.getByRole('button', { name: 'Read as an enquiry anyway' }))
+      await user.click(screen.getByRole('button', { name: 'Read as an RFQ anyway' }))
       expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
-      expect(screen.queryByText('This looks like a purchase order, not an enquiry.')).toBeNull()
+      expect(screen.queryByText('This looks like a purchase order, not an RFQ.')).toBeNull()
     })
 
     it('says so when it is our own quotation, not the header cells as items', async () => {
@@ -647,9 +647,9 @@ describe('the New RFQ draft (kept on this device)', () => {
       setup()
       renderScreen()
       fireEvent.paste(document.body, { clipboardData: { getData: () => OWN_QUOTE } })
-      expect(await screen.findByText('This looks like your own quotation, not an enquiry.')).toBeInTheDocument()
+      expect(await screen.findByText('This looks like your own quotation, not an RFQ.')).toBeInTheDocument()
       expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
-      expect(screen.getByRole('button', { name: 'Read as an enquiry anyway' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Read as an RFQ anyway' })).toBeInTheDocument()
     })
 
     it('a paste it cannot place (unknown) shows no warning and is never held back', async () => {
@@ -659,7 +659,7 @@ describe('the New RFQ draft (kept on this device)', () => {
       fireEvent.paste(document.body, { clipboardData: { getData: () => 'hello, call me when you are free' } })
       await screen.findByRole('textbox', { name: 'Customer reference' })
       expect(screen.queryByText(/This looks like/)).toBeNull()
-      expect(screen.queryByRole('button', { name: 'Read as an enquiry anyway' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Read as an RFQ anyway' })).toBeNull()
     })
 
     it('a real enquiry shows no warning', async () => {
@@ -669,7 +669,7 @@ describe('the New RFQ draft (kept on this device)', () => {
       fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
       expect(await screen.findByText('2 items found')).toBeInTheDocument()
       expect(screen.queryByText(/This looks like/)).toBeNull()
-      expect(screen.queryByRole('button', { name: 'Read as an enquiry anyway' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Read as an RFQ anyway' })).toBeNull()
     })
   })
 })

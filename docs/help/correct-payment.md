@@ -6,9 +6,9 @@ keywords: correct, fix payment, wrong amount, wrong date, edit payment, cash or 
 screens: /jobs, /money/receivables
 related: remove-payment, record-payment
 ---
-1. Open the order. In the [Payment] stage, tap ⋯ beside the payment, then [Correct].
+1. Open the order. In the [Payment] stage, select ⋯ beside the payment, then [Correct].
 2. Change the amount, date, paid via or reference. The Changes line shows what will change.
-3. Say why, then tap [Save correction]. The old payment is kept, marked as corrected.
-4. Tap [Undo] on the message if it was a mistake.
+3. Enter the reason, then select [Save correction]. The old payment is kept, marked as corrected.
+4. If the correction was a mistake, select [Undo] on the message.
 
-Tip: Recorded on the wrong order? Use [Void] instead, then record it on the right order.
+Tip: If the payment was recorded on the wrong order, use [Void] instead, then record it on the right order.

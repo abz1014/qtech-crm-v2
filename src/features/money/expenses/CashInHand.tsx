@@ -91,7 +91,7 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
       <Icon icon={Wallet} className="text-fg-muted" />
       {none ? (
         <span className="min-w-0 flex-[1_1_16rem]">
-          <b className="font-semibold">Cash in hand</b> is not set up. Count the office cash once to start; after that the app works out what should be there.
+          <b className="font-semibold">Cash in hand</b> is not set up. Count the office cash once to start. After that the app works out the expected amount.
         </span>
       ) : (
         <span className="min-w-0 flex-[1_1_16rem]" aria-live="polite">
@@ -140,7 +140,7 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
   const diff = !opening && counted !== null && state.expected !== null ? Math.round((counted - state.expected) * 100) / 100 : null
   const submit = () => {
     if (counted === null || counted < 0) {
-      setError('Type what is in the box (0 if it is empty).')
+      setError('Enter the cash counted (0 if there is none).')
       return
     }
     setError(null)
@@ -163,7 +163,7 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
     <Dialog open onOpenChange={o => !o && onClose()} busy={record.isPending} dirty={counted !== null}>
       <DialogContent
         title={opening ? 'Set opening cash' : 'Count cash'}
-        context={opening ? 'The cash in the office box. From now on the app works out what should be there.' : `The books expect ${pkr(state.expected ?? 0)}.`}
+        context={opening ? 'The cash held in the office. From now on the app works out the expected amount.' : `The books expect ${pkr(state.expected ?? 0)}.`}
         size="sm"
         footer={
           <>
@@ -184,8 +184,8 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
           }}
         >
           <label className="grid gap-2">
-            <span className="font-medium">Cash in the box, PKR</span>
-            <NumberInput value={counted} onChange={setCounted} min={0} inputMode="decimal" autoFocus className="num h-12 text-lg" aria-label="Cash in the box, PKR" />
+            <span className="font-medium">Cash in hand, PKR</span>
+            <NumberInput value={counted} onChange={setCounted} min={0} inputMode="decimal" autoFocus className="num h-12 text-lg" aria-label="Cash in hand, PKR" />
           </label>
           {opening ? (
             <label className="grid gap-2">
@@ -195,7 +195,7 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
           ) : null}
           {diff !== null ? (
             <p className={cn('rounded px-3 py-2', diff === 0 ? 'bg-tone-success-bg text-tone-success-fg' : 'bg-tone-warning-bg text-tone-warning-fg')} aria-live="polite" data-testid="count-difference">
-              {diff === 0 ? 'It matches the books.' : `${diff < 0 ? 'Short' : 'Over'} by ${pkr(Math.abs(diff))}. Check for a cash expense not recorded yet; the difference is kept with this count.`}
+              {diff === 0 ? 'It matches the books.' : `${diff < 0 ? 'Short' : 'Over'} by ${pkr(Math.abs(diff))}. Check for an unrecorded cash expense. The difference is saved with this count.`}
             </p>
           ) : null}
           <label className="grid gap-2">
@@ -246,7 +246,7 @@ function TopupDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={o => !o && onClose()} busy={add.isPending} dirty={amount !== null}>
       <DialogContent
         title="Cash drawn from the bank"
-        context="Cash taken from the bank into the office box. It is not an expense."
+        context="Cash taken from the bank into cash in hand. It is not an expense."
         size="sm"
         footer={
           <>

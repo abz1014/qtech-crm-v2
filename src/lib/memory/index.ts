@@ -336,7 +336,7 @@ export function buildMemoryCard(row: MemoryRow | null | undefined, stats: Memory
   const notes: string[] = []
   if (empty) notes.push('Nothing recorded or imported for this supplier yet.')
   else {
-    if (asked > 0 && asked < 3) notes.push(`${asked === 1 ? 'One enquiry' : asked === 2 ? 'Two enquiries' : `${asked} enquiries`} on record. Too few to say how quickly they usually reply.`)
+    if (asked > 0 && asked < 3) notes.push(`${asked === 1 ? 'One RFQ' : asked === 2 ? 'Two RFQs' : `${asked} RFQs`} on record. Too few to say how quickly they usually reply.`)
     if (hasImported) notes.push(`Includes imported history${hidden > 0 ? ` · ${hidden} ${hidden === 1 ? 'price' : 'prices'} hidden (currency unverified)` : ''}.`)
     if ([quote, ordered].some(p => p.date?.ago)) notes.push(`Prices older than ${OLD_PRICE_MONTHS} months are marked with their age.`)
     if (orders && lastContact) notes.push(`Last contacted ${formatShortDate(lastContact, today)}.`)

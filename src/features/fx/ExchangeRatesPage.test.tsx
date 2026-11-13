@@ -33,8 +33,8 @@ function mount() {
 describe('Exchange rates (audit 2026-10-22)', () => {
   it('says once what happened, and who may enter a rate only in the (i)', () => {
     mount()
-    expect(screen.getByText(/Last automatic update Wed 21 Oct\. 1 rate entered by hand\./)).toBeInTheDocument()
-    expect(screen.queryByText(/Anyone on the team can enter today/)).toBeNull()
+    expect(screen.getByText(/Last automatic update Wed 21 Oct\. 1 rate entered manually./)).toBeInTheDocument()
+    expect(screen.queryByText(/Any team member can enter a rate manually/)).toBeNull()
     expect(screen.queryByText(/Anyone on the team can add one/)).toBeNull()
     expect(screen.queryByRole('heading', { name: /^Recent .* rates$/ })).toBeNull() // no second panel repeating the table
   })

@@ -52,7 +52,7 @@ export const ROUTES: readonly RouteSpec[] = [
   // ------------------------------------------------------------------ shell
   { path: '/', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'role landing' },
   { path: '/login', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/todo$/, note: 'signed in: the sign-in page sends you on' },
-  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^Needs suppliers/, /^Chase /, /PKR/, /^Late payment/] },
+  { path: '/todo', admin: 'ok', sales: 'ok', engineer: 'ok', engineerAbsent: [/^Needs suppliers/, /^Follow up /, /PKR/, /^Late payment/] },
   { path: '/no-access', admin: 'no', sales: 'no', engineer: 'no', note: 'the bare no-access page' },
   { path: '/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ RFQs and Orders: the old pages are gone (2026-10-30); every address redirects to Jobs
@@ -80,7 +80,7 @@ export const ROUTES: readonly RouteSpec[] = [
     sales: 'ok',
     engineer: 'ok',
     // an engineer sees the same list, which holds no money for anyone; the one green button starts an enquiry (admin and sales)
-    openers: [{ name: /^New enquiry$/, roles: AS, open: false }], // it goes to the intake page: presence only
+    openers: [{ name: /^New RFQ$/, roles: AS, open: false }], // it goes to the intake page: presence only
     engineerAbsent: [/^Value/, /^Gross/, /PKR/],
   },
   { path: '/jobs?chip=history', admin: 'ok', sales: 'ok', engineer: 'ok' },
@@ -154,7 +154,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/settings/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ Capture (share target and sign-in return point)
   // ------------------------------------------------------------------ redesign phase 3 to 5 additions
-  { path: '/enquiries/new', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'New enquiry (one intake page); no price for an engineer' },
+  { path: '/enquiries/new', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'New RFQ (one intake page); no price for an engineer' },
   { path: '/todo/review', admin: 'ok', sales: 'no', engineer: 'no', note: 'the weekly review is admin only' },
   { path: '/my-expenses', admin: 'no', sales: 'ok', engineer: 'ok', note: '"I paid": an engineer or a salesperson records what they paid (their own claims only, 0124)' },
   { path: '/jobs/{job}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation on the Job page (an engineer gets the page without the dialog)' },

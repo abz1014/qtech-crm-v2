@@ -164,7 +164,7 @@ function PayFormReady({
         <label className="grid gap-2">
           <span className="font-medium">Paid in {currency}</span>
           <NumberInput ref={firstRef} value={fxAmount} onChange={setFxAmount} min={0.01} inputMode="decimal" className={field} aria-label={`Paid in ${currency}`} />
-          {owedFx !== null ? <span className="text-fg-2">Still owed: {currency} {owedFx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span> : null}
+          {owedFx !== null ? <span className="text-fg-2">Balance due: {currency} {owedFx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span> : null}
         </label>
       ) : null}
       <label className="grid gap-2">
@@ -182,9 +182,9 @@ function PayFormReady({
           {foreign
             ? rate
               ? `That is PKR ${rate.toLocaleString('en-US', { maximumFractionDigits: 2 })} per ${currency}. Charges go in the next box.`
-              : 'What reached the supplier, from your bank statement. Charges go in the next box.'
+              : 'What reached the supplier, from the bank statement. Charges go in the next box.'
             : !foreign && owedPkr
-              ? `Still owed: ${pkr(owedPkr)}${context.amountNote ? ` (${context.amountNote.replace(/^still oweds*/i, '')})` : ''}`
+              ? `Balance due: ${pkr(owedPkr)}${context.amountNote ? ` (${context.amountNote.replace(/^balance due/i, '')})` : ''}`
               : 'What reached the supplier. Charges go in the next box.'}
         </span>
       </label>

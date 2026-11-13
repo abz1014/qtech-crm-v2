@@ -114,7 +114,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await showAllTodo(page)
     await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
 
-    const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
+    const row = rowOf(page, s.ref).filter({ hasText: 'Follow up with customer: questions open' })
     await expect(row).toBeVisible()
     // Asked 9 days ago, bid in 14 days: the chase has been due for days, so it is in "Overdue or due today" and the chip says how late.
     // Late or today, wherever it is drawn: a block, or the "N more" fold when older late rows of the shared data take the seven places.
@@ -124,16 +124,16 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(page.locator('[data-needs-you-count]')).not.toHaveText('0') // the one count (redesign phase 0)
     await row.getByRole('button').first().click() // selecting a row is not a chase
     const pane = paneFor(page, s.ref)
-    await expect(pane.getByText('Prepared for you')).toBeVisible()
+    await expect(pane.getByText('Prepared message')).toBeVisible()
     await expect(pane.getByTestId('draft-text')).toContainText('1. Line size and flange rating on the process line')
     await review(page, 'today-01-draft-1440')
 
     // ---- the chase: one tap
     let taps = 0
     await resetClipboard(page)
-    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
+    await pane.getByRole('button', { name: 'Copy and record follow-up' }).click()
     taps++
-    const toast = page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })
+    const toast = page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked as followed up.` })
     await expect(toast).toBeVisible()
     expect(taps).toBe(1)
     const clip = await readClipboardWhen(page, 'A gentle reminder about your RFQ')
@@ -151,25 +151,25 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(row.getByText('Copied')).toHaveCount(0)
 
     // ---- chase again and let the window close: the item moves to Waiting
-    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
-    await expect(page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })).toBeVisible()
-    await expect(page.getByRole('status').filter({ hasText: `${s.ref} marked chased` })).toBeVisible({ timeout: 15_000 }) // the settled sentence
+    await pane.getByRole('button', { name: 'Copy and record follow-up' }).click()
+    await expect(page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked as followed up.` })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: `${s.ref} marked as followed up` })).toBeVisible({ timeout: 15_000 }) // the settled sentence
     const waiting = page.getByRole('region', { name: 'Waiting' })
     await expect(waiting.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible({ timeout: 15_000 })
-    await expect(waiting.getByText(/chased just now · next nudge on/).first()).toBeVisible()
+    await expect(waiting.getByText(/followed up just now · next reminder on/).first()).toBeVisible()
     await expect(page.locator('li[data-rule="chase_customer"]:not([data-waiting])').filter({ hasText: s.ref })).toHaveCount(0)
     expect((await askOf(s.clarificationId)).ask_count).toBe(2)
 
     // ---- just chased: the title stays, the bar says where it went, the cells and the card switch, "Chase again" is there
-    await expect(pane.getByRole('heading', { level: 2, name: 'Chase customer for clarifications' })).toBeVisible()
+    await expect(pane.getByRole('heading', { level: 2, name: 'Follow up with customer: questions open' })).toBeVisible()
     await expect(pane.getByText('Moved to Waiting.')).toBeVisible()
-    await expect(pane.getByText('Chased customer', { exact: true })).toBeVisible()
-    await expect(pane.getByText('Chase again on', { exact: true })).toBeVisible()
-    await expect(pane.getByRole('region', { name: 'Chased today' })).toBeVisible()
-    await expect(pane.getByRole('button', { name: 'Copy and mark chased' })).toHaveCount(0)
+    await expect(pane.getByText('Customer followed up', { exact: true })).toBeVisible()
+    await expect(pane.getByText('Follow up again on', { exact: true })).toBeVisible()
+    await expect(pane.getByRole('region', { name: 'Followed up today' })).toBeVisible()
+    await expect(pane.getByRole('button', { name: 'Copy and record follow-up' })).toHaveCount(0)
     await review(page, 'today-03-waiting-1440')
-    await pane.getByRole('button', { name: 'Chase again', exact: true }).click()
-    await expect(pane.getByRole('button', { name: 'Copy and mark chased' })).toBeVisible()
+    await pane.getByRole('button', { name: 'Follow up again', exact: true }).click()
+    await expect(pane.getByRole('button', { name: 'Copy and record follow-up' })).toBeVisible()
   })
 
   test('the collision line: a colleague already chased it, so you are told who and when before you chase it again', async ({ page }) => {
@@ -180,12 +180,12 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await showAllTodo(page)
     const waiting = page.getByRole('region', { name: 'Waiting' })
     // Waiting starts collapsed (R2-08): "Waiting · N · next nudge …"
-    await waiting.getByRole('button', { name: /^Chased, waiting · \d+/ }).click()
+    await waiting.getByRole('button', { name: /^Followed up, waiting · \d+/ }).click()
     const row = waiting.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })
     await expect(row).toBeVisible()
-    await expect(row.locator('[data-collision]')).toContainText(/Test chased this (just now|\d+ min ago|\d+h ago|today)/)
+    await expect(row.locator('[data-collision]')).toContainText(/Test followed up on this (just now|\d+ min ago|\d+h ago|today)/)
     await row.getByRole('button').first().click()
-    await expect(page.getByRole('region', { name: new RegExp(s.ref) }).locator('[data-collision]').first()).toContainText('chased this')
+    await expect(page.getByRole('region', { name: new RegExp(s.ref) }).locator('[data-collision]').first()).toContainText('followed up on this')
     await review(page, 'today-11-collision-1440')
   })
 
@@ -193,14 +193,14 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     const s = await seedCustomerChase(SALES)
     await openAs(page, 'sales', '/todo')
     await showAllTodo(page)
-    const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
+    const row = rowOf(page, s.ref).filter({ hasText: 'Follow up with customer: questions open' })
     await row.getByRole('button').first().click()
     await paneFor(page, s.ref).getByRole('button', { name: 'Snooze', exact: true }).click() // tap 1: open
     await page.getByRole('menuitem', { name: /^Tomorrow/ }).click() // tap 2: choose
     await expect(page.getByRole('status').filter({ hasText: 'Snoozed until' })).toBeVisible()
     await expect(row).toHaveCount(0)
     await page.getByRole('status').filter({ hasText: 'Snoozed until' }).getByRole('button', { name: /Undo/ }).click()
-    await expect(rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })).toBeVisible()
+    await expect(rowOf(page, s.ref).filter({ hasText: 'Follow up with customer: questions open' })).toBeVisible()
   })
 
   test('at 1366 x 768 the one job, "Copy and mark chased", is on the first screen without scrolling', async ({ page }) => {
@@ -208,9 +208,9 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await page.setViewportSize({ width: 1366, height: 768 })
     await openAs(page, 'sales', '/todo')
     await showAllTodo(page)
-    await rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' }).getByRole('button').first().click()
+    await rowOf(page, s.ref).filter({ hasText: 'Follow up with customer: questions open' }).getByRole('button').first().click()
     const pane = paneFor(page, s.ref)
-    const copy = pane.getByRole('button', { name: 'Copy and mark chased' })
+    const copy = pane.getByRole('button', { name: 'Copy and record follow-up' })
     await expect(copy).toBeVisible()
     const box = await copy.boundingBox()
     expect((box?.y ?? 9999) + (box?.height ?? 0), 'the button bottom is inside the 768 px window').toBeLessThanOrEqual(768)
@@ -382,36 +382,36 @@ test.describe('Today: accessibility and mobile', () => {
     await showAllTodo(page)
     await expect(rowOf(page, s.ref).first()).toBeVisible()
     await rowOf(page, s.ref).first().getByRole('button').first().click()
-    await expect(paneFor(page, s.ref).getByText('Prepared for you')).toBeVisible()
+    await expect(paneFor(page, s.ref).getByText('Prepared message')).toBeVisible()
     expect(await violations(page), 'axe at 1440').toEqual([])
 
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/todo')
     await showAllTodo(page)
     await page.locator('#main').waitFor()
-    const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
+    const row = rowOf(page, s.ref).filter({ hasText: 'Follow up with customer: questions open' })
     await expect(row).toBeVisible()
     // on a phone the list comes first: the target tile sits under it
     const firstRow = await page.locator('li[data-rule]').first().boundingBox()
     const tile = await page.getByRole('region', { name: /target/ }).boundingBox()
     expect(firstRow?.y ?? 9999).toBeLessThan(tile?.y ?? 0)
     await row.getByRole('button').first().click() // the accordion opens under the row
-    await expect(row.getByText('Prepared for you')).toBeVisible()
+    await expect(row.getByText('Prepared message')).toBeVisible()
     await review(page, 'today-08-mobile-accordion-375')
     expect(await violations(page), 'axe at 375, accordion open').toEqual([])
-    const hit = await row.getByRole('button', { name: 'Copy and mark chased' }).boundingBox()
+    const hit = await row.getByRole('button', { name: 'Copy and record follow-up' }).boundingBox()
     expect(hit?.height ?? 0).toBeGreaterThanOrEqual(44) // actions are 44 px on a phone
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
-    await row.getByRole('button', { name: 'Copy and mark chased' }).click()
-    await expect(page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })).toBeVisible()
+    await row.getByRole('button', { name: 'Copy and record follow-up' }).click()
+    await expect(page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked as followed up.` })).toBeVisible()
     await review(page, 'today-09-mobile-copied-375')
     // the undo window closes: the row joins Waiting and the accordion shows the compact "Chased today" card
-    await expect(page.getByRole('status').filter({ hasText: `${s.ref} marked chased` })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('status').filter({ hasText: `${s.ref} marked as followed up` })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('region', { name: 'Waiting' }).locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible({ timeout: 15_000 })
     // (the row was open when it was chased, so it stays open in Waiting)
-    await expect(page.getByRole('region', { name: 'Chased today' })).toBeVisible()
-    await page.getByRole('region', { name: 'Chased today' }).scrollIntoViewIfNeeded()
+    await expect(page.getByRole('region', { name: 'Followed up today' })).toBeVisible()
+    await page.getByRole('region', { name: 'Followed up today' }).scrollIntoViewIfNeeded()
     await review(page, 'today-10-mobile-waiting-375')
   })
 

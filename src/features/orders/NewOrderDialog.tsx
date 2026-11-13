@@ -124,7 +124,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
               </Field>
             </div>
             {error ? (
-              <Banner tone="danger" title="Couldn't create the order">
+              <Banner tone="danger" title="The order could not be created">
                 {error} Nothing was created twice: pressing Create order again is safe.
               </Banner>
             ) : null}
@@ -153,7 +153,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
                 <Skeleton className="h-[3.5rem] w-full" />
               </div>
             ) : found.isError ? (
-              <Banner tone="danger" title="Couldn't search the orders" action={<Button onClick={() => void found.refetch()}>Try again</Button>}>
+              <Banner tone="danger" title="The orders could not be searched" action={<Button onClick={() => void found.refetch()}>Try again</Button>}>
                 Nothing was changed.
               </Banner>
             ) : found.data.length === 0 ? (

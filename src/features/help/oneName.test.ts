@@ -22,7 +22,7 @@ interface Group {
 }
 
 export const GROUPS: readonly Group[] = [
-  { keep: 'Copy and mark chased', others: ['Copy message and mark chased'] },
+  { keep: 'Copy and record follow-up', others: ['Copy message and record follow-up', 'Copy and mark chased', 'Copy message and mark chased'] },
   { keep: 'Copy and mark reminded', others: ['Copy message and mark reminded'] },
   { keep: 'Add expenses', others: ['Add expense'] },
   { keep: 'Quotations', others: ['Quotes', 'Bids', 'Bid', 'Offers'] },
@@ -31,7 +31,8 @@ export const GROUPS: readonly Group[] = [
   { keep: 'Ask suppliers', others: ['Float', 'Float to suppliers', 'Float to another supplier', 'Copy & mark floated', 'Copy enquiry'] },
   { keep: 'Paste or photo', others: ['Paste or add a photo', 'Capture'] },
   { keep: 'Export CSV', others: ['Export'] },
-  { keep: 'Chase again', others: ['Chase again now'] },
+  { keep: 'Follow up again', others: ['Follow up again now', 'Chase again', 'Chase again now'] },
+  { keep: 'New RFQ', others: ['New enquiry', 'New inquiry'] },
   { keep: 'To collect', others: ['Who owes us', 'Receivables', 'Order balances'] },
   { keep: 'Invoices', others: ['Invoices & GST'] },
   { keep: 'Lock a month', others: ['Month end', 'Close through', 'Close a month', 'Closed months'] },
@@ -44,7 +45,7 @@ export const GROUPS: readonly Group[] = [
   { keep: 'Is GST included?', others: ['Resolve price basis', 'Price basis unknown'] },
   { keep: 'Bank check', others: ['Match bank statement', 'Bank tick'] },
   { keep: 'Overdue by age', others: ['Aging'] },
-  { keep: 'We owe suppliers', others: ['We owe'] },
+  { keep: 'Payable to suppliers', others: ['We owe suppliers', 'We owe', 'What we owe'] },
   { keep: 'Margin not final', others: ['Provisional margin'] },
   { keep: 'Repeat a past order', others: ['New order'] },
   { keep: 'Not sent to suppliers', others: ['Not floated'] },

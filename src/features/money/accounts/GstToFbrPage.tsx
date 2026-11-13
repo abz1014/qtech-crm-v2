@@ -47,7 +47,7 @@ export function GstToFbrPage() {
     <MoneyFrame active={null}>
       <MoneySubHeader back={{ to: '/money', label: 'Money' }} title="GST to FBR" />
       <p className="max-w-prose text-base text-fg-2">
-        GST charged on invoices, less GST paid on purchases, is what you pay FBR. Pay by the <span data-testid="gst-pay-day">{dayWords(dl.deadlines.payDay)}</span> of the next month and
+        GST charged on invoices, less GST paid on purchases, is the amount payable to FBR. Pay by the <span data-testid="gst-pay-day">{dayWords(dl.deadlines.payDay)}</span> of the next month and
         file the return by the <span data-testid="gst-return-day">{dayWords(dl.deadlines.returnDay)}</span>.{' '}
         <Link to="/settings/tax-deadlines" className="font-medium text-primary underline underline-offset-2">
           {isAdmin ? 'Change these days' : 'See these days'}
@@ -76,11 +76,11 @@ export function GstToFbrPage() {
       )}
       {isAdmin ? <WhtDeducted /> : null}
       <p className="text-base text-fg-2">
-        To stamp a month&rsquo;s payment slip number and deposit date, open{' '}
+        To stamp a month&apos;s payment slip number and deposit date, open{' '}
         <Link to="/money/gst-register" className="font-medium text-primary underline underline-offset-2">
           Invoices
         </Link>
-        . The month&rsquo;s full GST and FBR report is under{' '}
+        . The month&apos;s full GST and FBR report is under{' '}
         <Link to="/money/reports/gst" className="font-medium text-primary underline underline-offset-2">
           Reports
         </Link>
@@ -270,7 +270,7 @@ function WhtDeducted() {
     <section aria-label="WHT deducted by customers" className="grid gap-3 rounded-panel border bg-surface px-5 py-4" data-testid="wht-deducted">
       <h2 className="text-lg font-semibold">WHT deducted by customers</h2>
       <p className="text-base text-fg-2">
-        Tax your customers held back when they paid. It is not money received; it settles the invoice together with the cash. Keep each certificate to claim the credit.
+        Tax that customers held back when they paid. It is not money received. It settles the invoice together with the cash. Keep each certificate to claim the credit.
       </p>
       {q.isError ? (
         <p role="alert" className="text-base text-tone-danger-fg">The list could not be loaded.</p>

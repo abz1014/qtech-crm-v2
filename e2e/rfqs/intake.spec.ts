@@ -171,7 +171,7 @@ test.describe('canonical scenario (FE-2 counts)', () => {
 
     const [rfq] = await rfqsOf(s.customer.id)
     expect(rfq).toBeTruthy()
-    const text = await readClipboardWhen(page, 'Hi hope you are doing well,')
+    const text = await readClipboardWhen(page, 'Dear Sir/Madam,')
     expect(text).not.toContain(rfqRef(rfq.number)) // the supplier text carries no RFQ number (DECISIONS 2026-10-28)
     expect(text).not.toMatch(/####|assalam|Spec:/i)
     expect(text).toContain('Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important)')
@@ -443,7 +443,7 @@ test.describe('save only, and no supplier ticked', () => {
     expect(shortlisted.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.carries.id].sort())
 
     await page.getByRole('button', { name: 'Write the message' }).click()
-    await expect(page.getByLabel('Message text')).toContainText('Hi hope you are doing well,')
+    await expect(page.getByLabel('Message text')).toContainText('Dear Sir/Madam,')
     await expect(page.getByLabel('Message text')).not.toContainText(rfqRef(rfq.number))
     await page.getByRole('button', { name: 'Copy message for 2 suppliers' }).click()
     await expect(page.getByText(/is waiting for prices/)).toBeVisible()

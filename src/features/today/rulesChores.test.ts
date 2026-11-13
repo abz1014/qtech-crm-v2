@@ -111,7 +111,7 @@ describe('I paid: N to approve', () => {
   it('is one row for the admin while claims wait, with how long the oldest has waited', () => {
     const r = ruleClaimsToApprove(ctx('2026-10-26', { claims: claims(3) }))
     expect(r).toHaveLength(1)
-    expect(r[0]).toMatchObject({ rule: 'claims_to_approve', title: 'I paid: 3 to approve', href: '/money/expenses', group: 'now' })
+    expect(r[0]).toMatchObject({ rule: 'claims_to_approve', title: 'Staff claims: 3 awaiting approval', href: '/money/expenses', group: 'now' })
     expect(r[0].badge.text).toMatch(/6 days old/)
   })
   it('names the source "From staff", whoever paid', () => {

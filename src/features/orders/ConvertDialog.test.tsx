@@ -180,7 +180,7 @@ describe('Mark won, the owner shape: marked sent, no quotation, one supplier rep
     const price = await screen.findByLabelText('Selling price, line 1')
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Include line 1' })).toBeChecked())
     expect(price).toHaveValue('')
-    expect(screen.getByText('Type the selling price from your costing sheet')).toBeInTheDocument()
+    expect(screen.getByText('Enter the selling price from the costing sheet')).toBeInTheDocument()
     // no price is invented from the supplier's
     expect(screen.queryByText(/suggested/)).toBeNull()
     expect(create).toBeEnabled()
@@ -280,7 +280,7 @@ describe('Mark won with an issued quotation', () => {
     const price = await screen.findByLabelText('Selling price, line 1')
     await waitFor(() => expect(price).toHaveValue('1,500'))
     fireEvent.change(price, { target: { value: '1,650' } })
-    expect(screen.getByText('Typed by you', { selector: '[data-source]' })).toBeInTheDocument()
+    expect(screen.getByText('Entered manually', { selector: '[data-source]' })).toBeInTheDocument()
     await choose(1)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     await waitFor(() => expect(payload(db)?.[0].unit_price_net).toBe(1650))

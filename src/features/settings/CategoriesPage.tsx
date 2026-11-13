@@ -88,7 +88,7 @@ export function CategoriesPage() {
         ...(undo ? { undo: { onUndo: () => update.mutateAsync({ id: c.id, patch: undo }).then(() => undefined) } } : {}),
       })
     } catch (err) {
-      toast({ title: `Couldn't change ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
+      toast({ title: `Could not change ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
     }
   }
 
@@ -100,7 +100,7 @@ export function CategoriesPage() {
       const pos = section.rows.findIndex(r => r.id === c.id) + dir + 1
       setAnnounce(`${c.name} moved ${dir < 0 ? 'up' : 'down'} to position ${pos} of ${section.rows.length} in ${section.group.name}.`)
     } catch (err) {
-      toast({ title: `Couldn't move ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
+      toast({ title: `Could not move ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
     }
   }
 
@@ -150,7 +150,7 @@ export function CategoriesPage() {
           <>
             Every expense goes under a category, and every category under a group.{' '}
             <InfoTip label="About categories">
-              <p>A category in use is never deleted: past expenses point to it. Archive it to stop offering it for new expenses (the old ones keep it), or merge it into another category to move its expenses there.</p>
+              <p>A category in use is never deleted, because past expenses use it. Archive it to stop offering it for new expenses. Existing expenses keep it. Merge it into another category to move its expenses there.</p>
               <p className="mt-2">The group decides where spending shows in Profit and loss: running costs, order costs, or not a cost (owner drawings and loan repayments).</p>
               <p className="mt-2">A budget is a monthly limit for one category, compared with what was paid that month.</p>
             </InfoTip>

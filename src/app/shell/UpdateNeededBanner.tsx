@@ -32,10 +32,10 @@ export function UpdateNeededBanner() {
     >
       <Icon icon={CircleArrowUp} className="shrink-0 text-tone-danger-fg" />
       <p className="min-w-0 flex-1 text-pretty">
-        <b className="font-semibold text-fg">Update needed — tap Reload</b>
+        <b className="font-semibold text-fg">Update required. Select Reload.</b>
         {' — '}
         {warned
-          ? 'Reloading clears what is typed in the open form (a New RFQ keeps its draft). Copy anything you need, then tap Reload again.'
+          ? 'Reloading clears what is typed in the open form. A New RFQ keeps its draft. Copy anything needed, then select Reload again.'
           : 'This copy of the app is out of date, so saving is paused. You can still read everything.'}
       </p>
       <Button size="sm" variant="primary" onClick={reload} busy={busy} busyLabel="Reloading">

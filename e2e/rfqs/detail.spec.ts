@@ -343,8 +343,8 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const card = page.locator(`[data-chase-card="${s.china.id}"]`) // the supplier shown in the Suppliers asked card
     await resetClipboard(page)
-    await card.getByRole('button', { name: 'Copy and mark chased' }).click() // the one tap
-    await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
+    await card.getByRole('button', { name: 'Copy and record follow-up' }).click() // the one tap
+    await expect(page.getByRole('status').filter({ hasText: 'Follow-up text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, 'Following up on our enquiry')
     expect(text).not.toMatch(/RFQ-|assalam/i) // no RFQ number or religious greeting in the supplier text
     expect(text).toContain('these 2 requirements are very important')
@@ -355,11 +355,11 @@ test.describe('chase (FE-2: 1 tap)', () => {
     const after = await inquiryOf(s.china.inquiryId)
     expect(after.chase_count).toBe(1)
     expect(after.last_chased_on).toBe(today())
-    await expect(card.getByText('Chased once already')).toBeVisible()
+    await expect(card.getByText('Followed up once already')).toBeVisible()
 
     // The second chase uses the second-reminder wording.
     await resetClipboard(page)
-    await card.getByRole('button', { name: 'Copy and mark chased' }).click()
+    await card.getByRole('button', { name: 'Copy and record follow-up' }).click()
     await readClipboardWhen(page, 'A second reminder')
     // the stamp is written just after the text is copied: poll, do not read once
     await expect.poll(async () => (await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
@@ -401,10 +401,10 @@ test.describe('chase (FE-2: 1 tap)', () => {
     let taps = 0
     // Not the supplier shown in the card: the Germany supplier, straight from its entry in Suppliers asked.
     await resetClipboard(page)
-    await page.getByRole('button', { name: `Chase ${s.germany.name}`, exact: true }).click()
+    await page.getByRole('button', { name: `Follow up with ${s.germany.name}`, exact: true }).click()
     taps++
     expect(taps).toBe(1)
-    await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Follow-up text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, 'Following up on our enquiry')
     expect(text).toContain('Following up on our enquiry')
     expect(text).toContain(s.items[0].description)
@@ -414,7 +414,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     expect(after.last_chased_on).toBe(today())
     expect((await inquiryOf(s.usd.inquiryId)).chase_count).toBe(0) // only that supplier
     // And the next one, 1 tap again.
-    await page.getByRole('button', { name: `Chase ${s.usd.name}`, exact: true }).click()
+    await page.getByRole('button', { name: `Follow up with ${s.usd.name}`, exact: true }).click()
     await expect.poll(async () => (await inquiryOf(s.usd.inquiryId)).chase_count).toBe(1)
   })
 })

@@ -131,11 +131,11 @@ export function imageFailureMessage(reason: ImageReadFailure, subject: PdfSubjec
   const what = `type or paste the ${subject}`
   switch (reason) {
     case 'unclear':
-      return `Couldn't read this clearly — ${what}.`
+      return `The image is not clear enough to read. Please ${what}.`
     case 'unsupported':
       return `This picture could not be opened on this device. Take a screenshot of it and use that, or ${what}.`
     case 'too_big':
-      return `This picture is ${size !== undefined ? mb(size) : 'too big'}; the limit is ${mb(maxBytes)}. Take a screenshot of it and use that, or ${what}.`
+      return `This picture is ${size !== undefined ? mb(size) : 'too big'}. The limit is ${mb(maxBytes)}. Take a screenshot of it and use that, or ${what}.`
     case 'not_image':
       return `This file is not a picture. Paste the text, or ${what}.`
     case 'unreadable':

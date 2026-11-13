@@ -61,7 +61,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
           const m = mapPgError(e, { entity: 'expense' })
           // (recurring_id, period) is unique: a second press, or another tab, finds it already recorded.
           if (m.kind === 'unique') toast.toast({ title: `${t.label} is already recorded`, body: monthKeyLabel(period), tone: 'neutral' })
-          else toast.toast({ title: `Couldn't record ${t.label}`, body: m.message, tone: 'danger' })
+          else toast.toast({ title: `Could not record ${t.label}`, body: m.message, tone: 'danger' })
         },
         onSettled: () => setRecording(null),
       },
@@ -86,7 +86,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
     }
     setRecordingAll(false)
     if (done > 0) toast.toast({ title: `Recorded ${done} recurring ${done === 1 ? 'expense' : 'expenses'}`, body: `${pkr(total)} · for ${months.map(monthKeyLabel).join(' and ')}`, tone: 'success' })
-    if (failed.length > 0) toast.toast({ title: `Couldn't record ${failed.join(', ')}`, body: 'Nothing else was changed. Try again.', tone: 'danger' })
+    if (failed.length > 0) toast.toast({ title: `Could not record ${failed.join(', ')}`, body: 'Nothing else was changed. Try again.', tone: 'danger' })
   }
 
   const loading = templates.isPending || recorded.isPending
@@ -100,8 +100,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
         </h2>
         <span className="type-body text-fg-muted">none set up</span>
         <InfoTip label="About recurring expenses">
-          Rent, salaries and internet that are paid every month. Add one and it shows here as due each month, ready to record in one tap. You can
-          also tick Every month on a row in Add expenses.
+          Rent, salaries and internet that are paid every month. Add one and it shows here as due each month, ready to record in one step. Every month can also be ticked on a row in Add expenses.
         </InfoTip>
         <span className="flex-1" />
         <Button size="sm" variant="quiet" icon={Plus} onClick={() => setEditing('new')} aria-label="Add recurring">

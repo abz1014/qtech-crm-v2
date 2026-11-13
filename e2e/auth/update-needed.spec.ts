@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 /*
  * Minimum app version (owner decision 2026-10-22, src/lib/pwa/minVersion.ts). Every build publishes /version.json; an app older
- * than its minSupported keeps reading, refuses saves before anything is sent, and shows "Update needed — tap Reload".
+ * than its minSupported keeps reading, refuses saves before anything is sent, and shows "Update required. Select Reload.".
  * The "newer server" is simulated by answering /version.json with a minimum above this build.
  */
 const PASSWORD = 'fixture-only-password'
@@ -38,7 +38,7 @@ test.describe('update needed', () => {
     })
 
     await signIn(page, 'sales@test.invalid')
-    const banner = page.getByRole('alert').filter({ hasText: 'Update needed — tap Reload' })
+    const banner = page.getByRole('alert').filter({ hasText: 'Update required. Select Reload.' })
     await expect(banner).toBeVisible()
     await expect(banner).toContainText('saving is paused')
 

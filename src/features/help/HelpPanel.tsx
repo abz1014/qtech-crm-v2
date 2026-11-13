@@ -139,7 +139,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
                 ))}
                 {role === 'admin' || role === 'engineer' ? null : <Checkbox label="Show other roles' help" checked={everyone} onCheckedChange={v => setEveryone(v === true)} />}
                 <HowItWorksList role={role} onShow={show} />
-                <p className="text-base text-fg-muted">Still stuck? Tell the owner what you were trying to do. They can add a step here.</p>
+                <p className="text-base text-fg-muted">Answer not found. Tell the owner what the task was. A step can be added here.</p>
               </div>
             )}
           </div>

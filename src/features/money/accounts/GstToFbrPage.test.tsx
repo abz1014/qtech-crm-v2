@@ -70,7 +70,7 @@ describe('GST to FBR page', () => {
   it('says what the page is for in the words of the plan', async () => {
     mount()
     await screen.findByTestId('gst-months')
-    expect(screen.getByText(/GST charged on invoices, less GST paid on purchases, is what you pay FBR/)).toBeInTheDocument()
+    expect(screen.getByText(/GST charged on invoices, less GST paid on purchases, is the amount payable to FBR/)).toBeInTheDocument()
     expect(screen.getAllByText('GST charged').length).toBeGreaterThan(0)
     expect(screen.getAllByText('GST paid on purchases').length).toBeGreaterThan(0)
   })

@@ -61,7 +61,7 @@ describe('AddLineDialog (BUG-RV-07)', () => {
     render(<AddLineDialog order={order} items={[]} legs={[]} onClose={onClose} />)
     const add = await fill()
     fireEvent.click(add)
-    await screen.findByText("Couldn't add the line")
+    await screen.findByText("The line could not be added")
     h.fail = false
     fireEvent.click(add)
     await waitFor(() => expect(h.calls).toHaveLength(2))

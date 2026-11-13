@@ -429,7 +429,7 @@ test.describe('expenses (M03, M11)', () => {
     const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
     const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id } })))[0]
     await openAs(page, 'admin', '/todo')
-    const note = 'Owed (about) on 30 Nov, from We owe suppliers'
+    const note = 'Payable (about) on 30 Nov, from Payable to suppliers'
     await page.goto(`/money/expenses?add=1&order=${order.id}&leg=${leg.id}&amount=384497&note=${encodeURIComponent(note)}`)
     const dialog = page.getByRole('dialog', { name: `Pay ${supplier.name}` })
     await expect(dialog).toBeVisible()
@@ -926,11 +926,11 @@ test.describe('expenses (M03, M11)', () => {
       await page.getByRole('button', { name: 'Previous month' }).click()
       // The closed-months query and last month's list are two requests; on a loaded runner either can take longer than 5 s. Wait on the
       // line that needs both (closed AND this month), then count the rows: the old count came first and timed out while the list loaded.
-      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is closed.`, { timeout: 20_000 })
+      await expect(page.getByTestId('expenses-closed')).toContainText(`${prev.label} is locked.`, { timeout: 20_000 })
       await expect(page.getByText('before the close')).toHaveCount(1, { timeout: 20_000 })
       await expect(page.getByRole('link', { name: 'Open Lock a month' })).toBeVisible()
       await expect(page.getByRole('button', { name: /^More for Rent of 11/ })).toHaveCount(0)
-      await expect(page.getByText('Locked, the month is closed').first()).toBeAttached()
+      await expect(page.getByText('Locked month').first()).toBeAttached()
       // the database refuses too
       const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?description=eq.${encodeURIComponent('before the close')}&select=*`))
       const res = await rest('admin', `expenses?id=eq.${row.id}`, { method: 'DELETE' })

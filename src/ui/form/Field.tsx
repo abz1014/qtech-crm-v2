@@ -10,7 +10,7 @@ import { Icon } from '@/ui/Icon'
  *
  * FE-2: a pre-filled value says where it came from, in the same place every time
  * ("Today", "from PO-26-0009", "Balance due on ORD-0038"). Once the person types
- * over it the note becomes "Typed by you" so nobody mistakes a guess for a record.
+ * over it the note becomes "Entered manually" so nobody mistakes a guess for a record.
  *
  * Controls (TextField, NumberInput, Select, ...) read their id, aria-invalid and
  * aria-describedby from the surrounding Field, so a label always names its control.
@@ -26,7 +26,7 @@ interface FieldProps {
   /** The message for this field only. A string, or a node when it carries a link ("Open it"). */
   error?: ReactNode
   source?: FieldSource
-  /** The person has changed a pre-filled value: the note reads "Typed by you". */
+  /** The person has changed a pre-filled value: the note reads "Entered manually". */
   edited?: boolean
   /** Share a row with other fields: the field label sits above the control and shrinks to fit. */
   className?: string
@@ -73,7 +73,7 @@ export function Field({ label, requirement, help, error, source, edited = false,
 /** "from PO-26-0009", "Today", "Balance due on ORD-0038": the origin of a pre-filled value. */
 export function SourceNote({ source, edited = false, id }: { source: FieldSource; edited?: boolean; id?: string }) {
   const { label, plain } = typeof source === 'string' ? { label: source, plain: false } : source
-  const shown = edited ? 'Typed by you' : label
+  const shown = edited ? 'Entered manually' : label
   return (
     <span id={id} data-source={edited ? 'typed' : 'prefill'} className="inline-flex items-center gap-[5px] text-xs text-fg-2">
       {edited || plain ? null : <Icon icon={History} size="chip" className="text-fg-muted" />}

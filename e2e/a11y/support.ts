@@ -38,7 +38,7 @@ export const UI = {
   addItemByHand: /^Add an item by hand$/,
   issue: /Send quotation/,
   issuePoLegA: /^Issue PO, /,
-  chase: /mark chased/i,
+  chase: /record follow-up/i,
   undo: /Undo/,
   filterJobs: /^Search jobs$/,
   searchCompanies: /^Search companies or contacts$/,

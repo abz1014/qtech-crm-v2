@@ -49,13 +49,13 @@ function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
       return { text: 'Ask the suppliers for prices', tone: 'now', button: 'Ask suppliers', on: 'rfq' }
     case 'asking_suppliers':
       if (office) return { text: 'Office is waiting for the suppliers', tone: 'inert', button: null, on: null }
-      return { text: 'Waiting for supplier prices', tone: 'waiting', button: 'Open the enquiry', on: 'rfq' }
+      return { text: 'Waiting for supplier prices', tone: 'waiting', button: 'Open the RFQ', on: 'rfq' }
     case 'prices_in':
       if (office) return { text: 'Office is preparing the quotation', tone: 'inert', button: null, on: null }
       return { text: 'Prices are in: send the quotation', tone: 'now', button: 'Send quotation', on: 'rfq', query: 'issue=1' }
     case 'quoted':
       return has(d, 'expired')
-        ? { text: 'The quotation has expired: ask the customer', tone: 'late', button: office ? null : 'Open the enquiry', on: office ? null : 'rfq' }
+        ? { text: 'The quotation has expired: ask the customer', tone: 'late', button: office ? null : 'Open the RFQ', on: office ? null : 'rfq' }
         : { text: 'Waiting for the customer to order', tone: 'waiting', button: office ? null : 'Mark won', on: office ? null : 'rfq', query: 'won=1' }
     case 'ordered':
       if (office) return { text: 'Office is placing the supplier order', tone: 'inert', button: null, on: null }
@@ -63,8 +63,8 @@ function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
         ? { text: 'Choose a supplier for the items', tone: 'now', button: 'Choose suppliers', on: 'order', stop: 3 }
         : { text: 'Place the supplier order', tone: 'now', button: 'Place the order', on: 'order', stop: 3 }
     case 'supplier_ordered':
-      if (office && !has(d, 'arrived')) return { text: has(d, 'late') ? 'The goods are late: the office is chasing the supplier' : 'Waiting for the goods', tone: has(d, 'late') ? 'late' : 'waiting', button: null, on: null }
-      if (has(d, 'late')) return { text: 'The goods are late: chase the supplier', tone: 'late', button: 'Chase the supplier', on: 'order', stop: 4 }
+      if (office && !has(d, 'arrived')) return { text: has(d, 'late') ? 'The goods are late: the office is following up with the supplier' : 'Waiting for the goods', tone: has(d, 'late') ? 'late' : 'waiting', button: null, on: null }
+      if (has(d, 'late')) return { text: 'The goods are late: follow up with the supplier', tone: 'late', button: 'Follow up with the supplier', on: 'order', stop: 4 }
       if (has(d, 'arrived')) return { text: 'The goods are here: deliver them', tone: 'now', button: 'Deliver the goods', on: 'order', stop: 4 }
       return { text: 'Waiting for the goods', tone: 'waiting', button: 'See the deliveries', on: 'order', stop: 4 }
     case 'delivered':
@@ -72,7 +72,7 @@ function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
       return { text: has(d, 'not invoiced') ? 'Delivered: send the invoice' : 'Invoice the rest', tone: 'now', button: 'Create invoice', on: 'order', stop: 5 }
     case 'invoiced':
       if (office) return { text: 'Handled by the office', tone: 'inert', button: null, on: null }
-      return { text: has(d, 'part paid') ? 'Part paid: chase the balance' : 'Invoiced: chase the payment', tone: 'waiting', button: 'Chase the payment', on: 'order', stop: 5 }
+      return { text: has(d, 'part paid') ? 'Part paid: send a reminder for the balance' : 'Invoiced: send a payment reminder', tone: 'waiting', button: 'Send payment reminder', on: 'order', stop: 5 }
     case 'paid':
       // An engineer's words never say paid or invoiced.
       if (office) return has(d, 'installation to plan') ? { text: 'Installation still needs a date', tone: 'now', button: 'Plan installation', on: 'order', stop: 4 } : { text: has(d, 'installation planned') ? 'Installation is planned' : 'Done', tone: has(d, 'installation planned') ? 'inert' : 'done', button: null, on: null }

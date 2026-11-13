@@ -10,4 +10,4 @@ related: read-a-job
 2. Tick [Has prices: hide from engineers] under the file. Engineers no longer see it.
 3. Untick it for a site photo or a nameplate that engineers should see.
 
-Tip: A customer order, a supplier quote and an enquiry file are hidden from engineers when they are added. A photo on an order, a photo that answers a question, and anything an engineer adds are not.
+Tip: A customer order, a supplier quote and an RFQ file are hidden from engineers when they are added. A photo on an order, a photo that answers a question, and anything an engineer adds are not.

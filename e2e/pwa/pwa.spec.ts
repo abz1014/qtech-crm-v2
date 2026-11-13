@@ -151,7 +151,7 @@ test.describe('service worker', () => {
     })
     // Signed out: the app sends the person to sign in, and says their item is safe.
     await page.waitForURL(/\/login/)
-    await expect(page.getByText('Your shared item is safe')).toBeVisible()
+    await expect(page.getByText('Shared item kept on this device')).toBeVisible()
     const kept = await page.evaluate(
       () =>
         new Promise<{ text: string; files: string[]; ttlDays: number }[]>((resolve, reject) => {

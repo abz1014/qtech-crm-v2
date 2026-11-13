@@ -193,7 +193,7 @@ describe('job tag type-ahead (audit X1, 0136)', () => {
     company,
     ...(rfq ? { rfqRef: `RFQ-${String(rfq).padStart(4, '0')}` } : {}),
   })
-  const R = (n: number, company: string, note = 'Enquiry'): JobTagOption => ({ id: `r${n}`, kind: 'rfq', ref: `RFQ-${String(n).padStart(4, '0')}`, company, note })
+  const R = (n: number, company: string, note = 'RFQ'): JobTagOption => ({ id: `r${n}`, kind: 'rfq', ref: `RFQ-${String(n).padStart(4, '0')}`, company, note })
   const JOBS = [O(142, 'Karachi Glass'), O(42, 'Lahore Beverages', 139), O(7, 'Margalla Foods'), O(8, 'Indus Beverages'), R(139, 'Other Co'), R(205, 'Lahore Beverages', 'Lost enquiry')]
 
   it('a bare number finds the job with that number first, then jobs that contain the digits', () => {

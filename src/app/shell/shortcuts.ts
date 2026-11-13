@@ -34,7 +34,7 @@ export const KEY_WORDS: ReadonlySet<string> = new Set(['or', 'then'])
 /** One sentence under a group's heading, for what is not a key (the Add expenses legend moved here). */
 export const GROUP_NOTES: Partial<Record<ShortcutGroup, string>> = {
   Anywhere: 'Single keys (N, E, O, G then T, /, ?) work outside a text box. You can turn them off in Settings, Your details.',
-  'Add expenses': 'A dashed box was filled in for you: type over it to change it. A solid box is what you typed.',
+  'Add expenses': 'A dashed box was filled in automatically. Type over it to change it. A solid box holds typed text.',
 }
 
 /** A group's note for one role: an engineer's Anywhere note names only the keys that work for them. */
@@ -48,11 +48,11 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
   return [
     // Anywhere outside a text field
     { group: 'Anywhere', keys: [mod, 'K'], what: 'Search or jump to', where: 'Also works inside a text box', handles: ['k'] },
-    { group: 'Anywhere', keys: ['N'], what: 'New enquiry', where: 'Admin and sales', handles: ['n'], roles: ['admin', 'sales'] },
+    { group: 'Anywhere', keys: ['N'], what: 'New RFQ', where: 'Admin and sales', handles: ['n'], roles: ['admin', 'sales'] },
     { group: 'Anywhere', keys: ['E'], what: 'Add an expense', where: 'Admin', handles: ['e'], roles: ['admin'] },
-    { group: 'Anywhere', keys: ['O'], what: 'Order without enquiry', where: 'Admin and sales', handles: ['o'], roles: ['admin', 'sales'] },
+    { group: 'Anywhere', keys: ['O'], what: 'Order without RFQ', where: 'Admin and sales', handles: ['o'], roles: ['admin', 'sales'] },
     { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to To do', handles: ['g', 't'] },
-    { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture on To do (starts a New enquiry) or on a job (adds it to the job)', handles: ['v'], roles: ['admin', 'sales'] },
+    { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture on To do (starts a New RFQ) or on a job (adds it to the job)', handles: ['v'], roles: ['admin', 'sales'] },
     { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture on a job (adds it to the job)', handles: ['v'], roles: ['engineer'] },
     { group: 'Anywhere', keys: [mod, 'Z'], what: 'Undo the last action while its Undo button shows', handles: ['z'] },
     { group: 'Anywhere', keys: ['Esc'], what: 'Close a dialog, sheet or menu', handles: ['escape'] },
@@ -60,7 +60,7 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
 
     // Lists and tables
     { group: 'Lists and tables', keys: ['/'], what: "Jump to the list's search", handles: ['/'] },
-    { group: 'Lists and tables', keys: ['Esc'], what: 'Clear the search; press again to leave it', where: "In a list's search", handles: ['escape'] },
+    { group: 'Lists and tables', keys: ['Esc'], what: 'Clear the search. Press again to leave it', where: "In a list's search", handles: ['escape'] },
     { group: 'Lists and tables', keys: ['↑', '↓', 'or', 'J', 'K'], what: 'Move between rows', handles: ['arrowup', 'arrowdown', 'j', 'k'] },
     { group: 'Lists and tables', keys: ['Home', 'End'], what: 'First or last row', handles: ['home', 'end'] },
     { group: 'Lists and tables', keys: ['Page Up', 'Page Down'], what: 'Move 10 rows', handles: ['pageup', 'pagedown'] },

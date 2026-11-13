@@ -206,7 +206,7 @@ function VisitEditDialog({ order, visit, engineers, office, onClose }: { order: 
               <Field label="Engineer" requirement="optional">
                 <Select
                   value={draft.engineerId}
-                  placeholder="Nobody yet"
+                  placeholder="None assigned"
                   onChange={e => setDraft({ ...draft, engineerId: e.target.value })}
                   options={[...people].map(([value, label]) => ({ value, label }))}
                 />

@@ -17,11 +17,11 @@ function DiscardBar({ onKeep, onDiscard }: { onKeep: () => void; onDiscard: () =
   return (
     <div
       role="group"
-      aria-label="Discard what you typed?"
+      aria-label="Discard unsaved changes?"
       data-discard-bar
       className="flex flex-wrap items-center justify-end gap-2 border-t bg-tone-warning-bg px-5 py-3 text-sm text-tone-warning-fg max-md:[&>button]:h-touch"
     >
-      <span className="mr-auto font-medium">Discard what you typed?</span>
+      <span className="mr-auto font-medium">Discard unsaved changes?</span>
       <Button ref={keepRef} onClick={onKeep}>
         Keep editing
       </Button>

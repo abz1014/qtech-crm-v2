@@ -95,7 +95,7 @@ describe('the order page: one primary button, chosen by state', () => {
     const next = screen.getByRole('region', { name: 'Next step' })
     expect(next).toHaveTextContent('Goods from Dubai Instrumentation are 3 days late')
     expect(greens(container)).toHaveLength(1)
-    expect(greens(container)[0]).toHaveAccessibleName('Chase goods, Dubai Instrumentation')
+    expect(greens(container)[0]).toHaveAccessibleName('Follow up on delivery, Dubai Instrumentation')
     // nothing is invoiced yet, so there is no Record payment anywhere (UX audit P2); Add expense is not in the header
     expect(screen.queryByRole('button', { name: 'Record payment' })).toBeNull()
     expect(within(container.querySelector('header') as HTMLElement).queryByRole('button', { name: 'Add expense' })).toBeNull()
@@ -298,7 +298,7 @@ describe('supplier orders, in plain words', () => {
     expect(within(panel).getByRole('button', { name: 'Issue PO, Alpenmark Controls' })).toBeInTheDocument()
     expect(within(panel).getByRole('button', { name: 'Delivered today, Dubai Instrumentation' })).toBeInTheDocument()
     // goods from Dubai are late: Chase goods is on the row
-    expect(within(panel).getByRole('button', { name: 'Chase goods, Dubai Instrumentation' })).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'Follow up on delivery, Dubai Instrumentation' })).toBeInTheDocument()
   })
 })
 
@@ -312,7 +312,7 @@ describe('the order page after the 2026-10-22 audit (P1 to P10)', () => {
     const header = container.querySelector('header') as HTMLElement
     expect(header).toHaveTextContent('Waiting for payment')
     expect(header).not.toHaveTextContent(/\bDone\b/)
-    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('Customer owes PKR 730,420, due')
+    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('To collect PKR 730,420, due')
     expect(greens(container).map(b => b.textContent)).toEqual(['Copy reminder'])
   })
 

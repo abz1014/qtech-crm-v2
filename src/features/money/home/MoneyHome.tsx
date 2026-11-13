@@ -84,7 +84,7 @@ function Blocks({ f }: { f: MoneyHomeFigures }) {
       <Block to="/money/expenses" label={`Paid out in ${f.monthName}`} value={f.paidOut ? rs(f.paidOut.total) : null} sub={f.paidOut ? 'by the day paid' : null} />
       <Block
         to="/money/reports/owe"
-        label="We owe suppliers"
+        label="Payable to suppliers"
         prefix="about"
         value={f.owed ? rs(f.owed.total) : null}
         sub={f.owed ? countWord(f.owed.count, 'supplier order') : null}
@@ -126,7 +126,7 @@ function Sentences({ f }: { f: MoneyHomeFigures }) {
             PKR <span className="num">{rs(f.received.total)}</span> came in this month
             {f.gstShare && Number(f.gstShare) > 0 ? (
               <>
-                , and about <b className="num font-semibold">PKR {rs(f.gstShare)}</b> of it is GST we owe FBR
+                , and about <b className="num font-semibold">PKR {rs(f.gstShare)}</b> of it is GST payable to FBR
               </>
             ) : null}
             . PKR <span className="num">{rs(f.paidOut.total)}</span> went out.

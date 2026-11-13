@@ -79,7 +79,7 @@ export function ExpenseReportPage() {
       const { generateExpenseReportPdf, saveBlob } = await import('@/features/money/expenseReport/pdf/generate')
       saveBlob(await generateExpenseReportPdf(v, formatShortDate(today, undefined, true)), `expenses-${period.key}.pdf`)
     } catch {
-      toast.toast({ title: "Couldn't make the PDF", body: 'Nothing was changed. Try again, or use Export CSV.', tone: 'danger' })
+      toast.toast({ title: "The PDF could not be made", body: 'Nothing was changed. Try again, or use Export CSV.', tone: 'danger' })
     } finally {
       setPdfBusy(false)
     }
@@ -192,7 +192,7 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
 function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
   const up = toPaisa(v.change) > 0n
   const same = toPaisa(v.change) === 0n
-  const frozen = v.frozenMonths === 0 ? null : v.frozenMonths === v.months ? 'Closed: figures frozen' : `${plural(v.frozenMonths, 'month')} closed: figures frozen`
+  const frozen = v.frozenMonths === 0 ? null : v.frozenMonths === v.months ? 'Locked: figures final' : `${plural(v.frozenMonths, 'month')} locked: figures final`
   if (narrow) {
     // Phone: ONE summary, a line per figure (SumBar lines). The by-the-day-paid sentence is the (i); the chart comes after the table.
     const paidElsewhere = toPaisa(v.forHerePaidElsewhere) !== 0n || toPaisa(v.paidForOther) !== 0n
@@ -228,7 +228,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
         {toPaisa(v.unexplained) !== 0n ? (
           <p className="flex items-start gap-2 text-base text-tone-danger-fg" data-testid="expense-report-unexplained">
             <Icon icon={CircleAlert} size="sm" className="mt-[3px]" />
-            In vs out has {signed(v.unexplained)} more paid out than the entries paid in this period: a closed month was changed after it was closed.
+            In vs out has {signed(v.unexplained)} more paid out than the entries paid in this period: a locked month was changed after it was locked.
           </p>
         ) : null}
         <Link to={`/money/reports/in-out?by=${v.period.kind}&period=${v.period.key}`} className="type-body inline-flex min-h-touch items-center gap-1 justify-self-start font-medium text-primary hover:underline">
@@ -258,7 +258,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
                 : ''}
               .
             </span>{' '}
-            <span>Running costs are overheads in Profit and loss; order costs are supplier, freight and customs; not a cost is owner drawings and loan repayments; GST paid on purchases is claimed back.</span>
+            <span>Running costs are overheads in Profit and loss. Order costs are supplier, freight and customs. Not a cost is owner drawings and loan repayments. GST paid on purchases is claimed back.</span>
           </span>
         }
         items={[
@@ -279,7 +279,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
       {toPaisa(v.unexplained) !== 0n ? (
         <p className="type-body flex items-start gap-2 text-tone-danger-fg" data-testid="expense-report-unexplained">
           <Icon icon={CircleAlert} size="sm" className="mt-[3px]" />
-          In vs out has {signed(v.unexplained)} more paid out than the entries paid in this period: a closed month was changed after it was closed.
+          In vs out has {signed(v.unexplained)} more paid out than the entries paid in this period: a locked month was changed after it was locked.
         </p>
       ) : null}
     </div>
@@ -597,7 +597,7 @@ function ByDetail({ v }: { v: ExpenseReportView }) {
         )}
         empty={
           <EmptyState title="No details typed in this period">
-            Type a detail when you add an expense (the car, the bill) and this list shows what each one cost, across categories.
+            Enter a detail when adding an expense (the car, the bill). This list shows what each one cost, across categories.
           </EmptyState>
         }
       />

@@ -6,11 +6,11 @@ keywords: reports, profit, loss, p&l, aging, overdue, csv, export, gst, sales by
 screens: /money
 related: in-vs-out, profitability
 ---
-1. Tap [Money], then [Reports]. Or tap [Reports for <month>] on Lock a month.
-2. In [Report], pick [Expenses], [Profit and loss], [Overdue by age], [We owe suppliers] or another report.
+1. Select [Money], then [Reports]. Alternatively, select [Reports for <month>] on Lock a month.
+2. In [Report], choose [Expenses], [Profit and loss], [Overdue by age], [Payable to suppliers] or another report.
 3. Use the arrows to change the month.
-4. Tap [Export CSV] for the exact figures. The screen shows whole rupees.
+4. Select [Export CSV] for the exact figures. The screen shows whole rupees.
 
-Tip: Need a day other than the month's end? Tap [Change date] on Overdue by age or We owe suppliers.
+Note: To use a day other than the month end, select [Change date] on Overdue by age or Payable to suppliers.
 
-Tip: Want the average month or a longer trend? [Profitability] shows 12 or 24 months.
+Note: For the average month or a longer trend, see [Profitability], which shows 12 or 24 months.

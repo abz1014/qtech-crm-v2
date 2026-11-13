@@ -117,11 +117,11 @@ const MONEY_PLACES: ReadonlyArray<{
   // round 3: every money report is found by name (each opens in Money > Reports)
   { id: "money:pnl", label: "Profit and loss", href: "/money/reports/pnl", icon: ChartColumn, roles: ["admin"], keywords: ["p&l", "profit", "result"] },
   { id: "money:aging", label: "Overdue by age", href: "/money/reports/aging", icon: ChartColumn, roles: ["admin"], keywords: ["aging", "overdue"] },
-  { id: "money:owe", label: "We owe suppliers", href: "/money/reports/owe", icon: ChartColumn, roles: ["admin"], keywords: ["payables", "suppliers", "we owe"] },
+  { id: "money:owe", label: "Payable to suppliers", href: "/money/reports/owe", icon: ChartColumn, roles: ["admin"], keywords: ["payables", "suppliers", "we owe"] },
   { id: "money:gst-month", label: "GST and FBR", href: "/money/reports/gst", icon: ChartColumn, roles: ["admin"], keywords: ["fbr", "gst month", "input tax", "output tax", "gst charged", "gst paid on purchases"] },
   { id: "money:team", label: "Sales by person", href: "/money/reports/team", icon: ChartColumn, roles: ["admin"], keywords: ["team", "targets", "credited"] },
   { id: "money:categories", label: "Expenses by category", href: "/money/reports/categories", icon: ChartColumn, roles: ["admin"], keywords: ["categories", "spend"] },
-  { id: "money:enquiries", label: "Enquiries and customers", href: "/money/reports/enquiries", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
+  { id: "money:enquiries", label: "RFQs and customers", href: "/money/reports/enquiries", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
   {
     id: "money:month-end",
     label: "Lock a month",
@@ -233,7 +233,7 @@ const loadShortcuts = () =>
 function loadFailureText(err: unknown): string {
   return err instanceof Error && err.name === "StaleAppError"
     ? err.message
-    : "Check your signal, then try again.";
+    : "Check the connection, then try again.";
 }
 
 function hasKeyboard(): boolean {
@@ -328,7 +328,7 @@ export function PaletteHost({
         ? [
             {
               id: "new-rfq",
-              label: "New enquiry",
+              label: "New RFQ",
               meta: "Go to intake",
               icon: Plus,
               shortcut: ["N"],
@@ -342,7 +342,7 @@ export function PaletteHost({
         ? [{ id: "new-expense", label: "Add an expense", meta: "Quick add", icon: ReceiptText, shortcut: ["E"], onSelect: openQuickExpense } satisfies PaletteItem]
         : []),
       ...(role === "admin" || role === "sales"
-        ? [{ id: "new-order", label: "Order without enquiry", meta: "Go to Orders", icon: ShoppingCart, shortcut: ["O"], href: NEW_ORDER_ROUTE } satisfies PaletteItem]
+        ? [{ id: "new-order", label: "Order without RFQ", meta: "Go to Orders", icon: ShoppingCart, shortcut: ["O"], href: NEW_ORDER_ROUTE } satisfies PaletteItem]
         : []),
       {
         id: "go-today",

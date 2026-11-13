@@ -70,13 +70,13 @@ export function ReassignOwnerDialog({
       >
         <div className="grid gap-3">
           {error ? (
-            <Banner tone="danger" title="Couldn't change the owner">
+            <Banner tone="danger" title="Could not change the owner">
               {error}
             </Banner>
           ) : null}
           <OwnerPicker value={to} onChange={setTo} exclude={currentOwnerId ?? undefined} />
           <p className="text-sm text-fg-muted">
-            {kind === 'job' ? 'The enquiry and the orders that came from it move together. ' : ''}
+            {kind === 'job' ? 'The RFQ and the orders that came from it move together. ' : ''}
             {CREDIT_NOTE}
           </p>
         </div>
@@ -122,7 +122,7 @@ export function ReassignWorkDialog({ fromId, fromName, onClose }: { fromId: stri
       >
         <div className="grid gap-3">
           {error ? (
-            <Banner tone="danger" title="Couldn't move the work">
+            <Banner tone="danger" title="Could not move the work">
               {error}
             </Banner>
           ) : null}
@@ -130,7 +130,7 @@ export function ReassignWorkDialog({ fromId, fromName, onClose }: { fromId: stri
             {work.isPending ? 'Counting their open work' : `${fromName} has ${workSentence(work.data ?? { rfqs: 0, orders: 0 })}.`}
           </p>
           <OwnerPicker value={to} onChange={setTo} exclude={fromId} />
-          <p className="text-sm text-fg-muted">Closed enquiries, cancelled and finished orders stay as they are. {CREDIT_NOTE}</p>
+          <p className="text-sm text-fg-muted">Closed RFQs, cancelled and finished orders stay as they are. {CREDIT_NOTE}</p>
         </div>
       </DialogContent>
     </Dialog>

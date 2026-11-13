@@ -41,6 +41,6 @@ export async function reassignOpenWork(from: string, to: string): Promise<OpenWo
 }
 
 export const workSentence = (w: OpenWork): string => {
-  const parts = [w.rfqs ? `${w.rfqs} open ${w.rfqs === 1 ? 'enquiry' : 'enquiries'}` : '', w.orders ? `${w.orders} live ${w.orders === 1 ? 'order' : 'orders'}` : ''].filter(Boolean)
+  const parts = [w.rfqs ? `${w.rfqs} open ${w.rfqs === 1 ? 'RFQ' : 'RFQs'}` : '', w.orders ? `${w.orders} live ${w.orders === 1 ? 'order' : 'orders'}` : ''].filter(Boolean)
   return parts.length ? parts.join(' and ') : 'no open work'
 }

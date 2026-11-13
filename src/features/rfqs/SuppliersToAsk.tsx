@@ -201,14 +201,14 @@ export function SuppliersToAskCard({
           {suggestions.length === 0 ? <Empty coverage={coverage} /> : <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />}
           <FindAndAdded t={t} excludeIds={excludeIds} />
           <div className="flex flex-wrap items-center gap-2 border-t px-5 py-3">
-            <Button icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0 || items.length === 0} onClick={() => onAsk(t.ticked)}>
+            <Button icon={Copy} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0 || items.length === 0} onClick={() => onAsk(t.ticked)}>
               {t.ticked.length === 0 ? 'Tick a supplier to ask' : copyLabel(t.ticked.length)}
             </Button>
             <Button variant="quiet" icon={ClipboardCheck} disabled={t.ticked.length === 0 || busy} onClick={() => onRecord(t.ticked)}>
               Record as asked
             </Button>
             {onReplyFrom ? (
-              <Button variant="quiet" icon={MessageSquareReply} onClick={onReplyFrom}>
+              <Button variant="quiet" icon={MessageSquareReply} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" onClick={onReplyFrom}>
                 Enter reply from another supplier
               </Button>
             ) : null}

@@ -140,7 +140,7 @@ export function LegsPanel({
       )}
       {legs.length === 0 ? (
         flat ? null : <EmptyState title="No supplier orders yet">
-          {imported ? 'Imported orders arrive without suppliers. Add a supplier only if you need to track a reorder.' : 'Lines with a supplier appear here, one per supplier. A service has none.'}
+          {imported ? 'Imported orders have no suppliers. Add a supplier only to track a reorder.' : 'Lines with a supplier appear here, one per supplier. A service has none.'}
         </EmptyState>
       ) : (
         <ul className={flat ? undefined : 'divide-y'}>
@@ -409,8 +409,8 @@ function Leg({
               </span>
             ) : null}
             {canChase && late && part !== 'order' ? (
-              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${name}`}>
-                Chase goods
+              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Follow up on delivery, ${name}`}>
+                Follow up on delivery
               </Button>
             ) : null}
             {menu ? (
@@ -442,7 +442,7 @@ function Leg({
                   ) : null}
                   {canChase && !late && part !== 'order' ? (
                     <MenuItem icon={MessageSquareWarning} onClick={onChase}>
-                      Chase goods
+                      Follow up on delivery
                     </MenuItem>
                   ) : null}
                   {isAdmin && po?.id && part !== 'delivery' ? (

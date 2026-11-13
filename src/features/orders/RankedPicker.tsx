@@ -47,7 +47,7 @@ export function RankedPicker({
   usedLineIds,
   usedNote,
   onChange,
-  header = 'Quotes for this item, by supplier',
+  header = 'Supplier prices for this item, by supplier',
 }: {
   /** The trigger's id, so a message can take the person to it. */
   id?: string

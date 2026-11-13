@@ -15,7 +15,7 @@ export function QuickExpenseDialog({ open, onOpenChange }: { open: boolean; onOp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title="Add an expense" icon={ReceiptText} size="lg">
-        {cats.data ? <QuickAdd categories={cats.data} /> : cats.isError ? <p className="text-base text-tone-danger-fg">Expense categories could not load. Check your signal and try again.</p> : <Skeleton className="h-[220px] w-full" />}
+        {cats.data ? <QuickAdd categories={cats.data} /> : cats.isError ? <p className="text-base text-tone-danger-fg">Expense categories could not load. Check the connection and try again.</p> : <Skeleton className="h-[220px] w-full" />}
       </DialogContent>
     </Dialog>
   )

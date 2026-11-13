@@ -63,7 +63,7 @@ test.describe('payment-reminder panel (M09)', () => {
     const text = panel.getByTestId('reminder-text')
     await expect(text).toContainText(`Sales Tax Invoice ${s.invoiceNumber}`)
     await expect(text).toContainText('PKR 118,000')
-    await expect(text).toContainText('Hi Mr. Faisal Qureshi, hope you are doing well,')
+    await expect(text).toContainText('Dear Mr. Faisal Qureshi,')
     await expect(panel.getByText('0300 555 0118')).toBeVisible()
     await expect(panel.getByTestId('reminder-state')).toHaveText('Not reminded yet')
     await expect(panel.getByText(/Firmer wording, because the invoice is 30 days overdue|Standard wording, 30 days overdue/)).toBeVisible()
@@ -145,7 +145,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await page.goto('/todo')
     await showAllTodo(page)
     // Waiting starts collapsed (R2-08): open it to see the reminded order
-    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Chased, waiting · \d+/ }).click()
+    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Followed up, waiting · \d+/ }).click()
     await expect(page.locator('li[data-rule="payment_overdue"][data-waiting]').filter({ hasText: s.company.name })).toHaveCount(1)
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })

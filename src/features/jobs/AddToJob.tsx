@@ -201,7 +201,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
       })
       reset()
     } catch (err) {
-      toast({ title: 'Could not add it', body: `${mapPgError(err).message} Nothing was lost: what you added is still here.`, tone: 'danger' })
+      toast({ title: 'Could not add it', body: `${mapPgError(err).message} Nothing was lost. The added content is still here.`, tone: 'danger' })
     } finally {
       setBusy(false)
     }
@@ -232,7 +232,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
       reset()
       setTicked(null)
     } catch (err) {
-      toast({ title: 'Could not save the answer', body: `${mapPgError(err).message} What you added is still here.`, tone: 'danger' })
+      toast({ title: 'Could not save the answer', body: `${mapPgError(err).message} The added content is still here.`, tone: 'danger' })
     } finally {
       setBusy(false)
     }
@@ -252,7 +252,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         controlsId="add-to-job-body"
         bodyLabel="Add to this job"
       >
-        <p className="type-body pb-3 text-fg-2">Paste a message, or add a photo or a file. We guess where it goes.</p>
+        <p className="type-body pb-3 text-fg-2">Paste a message, or add a photo or a file. The app suggests where it goes.</p>
       <div className="grid gap-3">
         {sharedState.status === 'gone' ? (
           <p role="status" className="flex flex-wrap items-center gap-2 rounded-row border bg-sunken px-3 py-2 text-base" data-testid="shared-gone">
@@ -264,7 +264,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         ) : null}
         {hasKept ? (
           <p className="flex flex-wrap items-center gap-2 text-base text-fg-2" data-testid="shared-kept">
-            What you shared is kept on this device until you add it or discard it.
+            The shared item is kept on this device until it is added or discarded.
             <Button size="touch" variant="quiet" onClick={reset}>
               Discard what was shared
             </Button>
@@ -286,7 +286,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
                 take({ files: f })
               }
             }}
-            placeholder={money ? 'A supplier’s reply, the customer’s answer, a note' : 'A note'}
+            placeholder={money ? "A supplier's reply, the customer's answer, a note" : 'A note'}
             className="w-full resize-y rounded border border-line-input bg-surface px-3 py-2 text-base font-regular"
           />
         </label>
@@ -347,7 +347,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
 
             {kind === 'answer' ? (
               <fieldset className="grid gap-2" data-testid="answer-questions">
-                <legend className="mb-1 text-base font-medium">Which questions does it answer?</legend>
+                <legend className="mb-1 text-base font-medium">Questions this reply answers</legend>
                 {openQuestions.map(q => (
                   <Checkbox
                     key={q.id}
@@ -500,7 +500,7 @@ function PriceSection({
       toast({ title: 'Reply saved', body: `${inquiry.supplierName} · ${n} ${n === 1 ? 'price' : 'prices'}`, tone: 'success' })
       onDone()
     } catch (err) {
-      toast({ title: 'Could not save the reply', body: `${mapPgError(err, { entity: 'reply' }).message} What you added is still here.`, tone: 'danger' })
+      toast({ title: 'Could not save the reply', body: `${mapPgError(err, { entity: 'reply' }).message} The added content is still here.`, tone: 'danger' })
     } finally {
       setBusy(false)
     }
@@ -509,7 +509,7 @@ function PriceSection({
   return (
     <div className="grid gap-3" data-testid="add-price">
       <label className="grid gap-1 text-base font-medium">
-        From which supplier?
+        Supplier
         <select
           value={supplierId ?? ''}
           onChange={e => onSupplier(e.target.value)}
@@ -529,9 +529,9 @@ function PriceSection({
       ) : reading ? (
         <p className="text-base text-fg-2">Reading the file…</p>
       ) : !set ? null : set.question !== null ? (
-        <p className="text-base text-fg-2">They are asking you something, not quoting. Nothing here is a price.</p>
+        <p className="text-base text-fg-2">The supplier is asking a question, not quoting. Nothing here is a price.</p>
       ) : set.suggestions.length === 0 ? (
-        <p className="text-base text-fg-2">No price could be read. Change it to a note, or type the prices on the supplier’s row.</p>
+        <p className="text-base text-fg-2">No price could be read. Change the type to a note, or enter the prices on the supplier's row.</p>
       ) : (
         <ul className="grid gap-2" aria-label="Prices read">
           {set.suggestions.map(s => (

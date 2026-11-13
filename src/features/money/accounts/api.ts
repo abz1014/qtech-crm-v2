@@ -105,7 +105,7 @@ export async function saveWhtCertificate(v: WhtCertificateSave): Promise<void> {
   if (res.error || !res.data || res.data.length === 0) {
     if (path) await db.storage.from(WHT_BUCKET).remove([path])
     if (res.error) throw res.error
-    throw new Error('Not saved. You may not have permission, or the payment is no longer there.')
+    throw new Error('Not saved. Permission may be missing, or the payment is no longer there.')
   }
   if (path && v.oldPath) await db.storage.from(WHT_BUCKET).remove([v.oldPath])
 }

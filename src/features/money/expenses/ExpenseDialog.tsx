@@ -72,7 +72,7 @@ const NO_TEMPLATES: readonly RecurringTemplate[] = []
  *
  *   <AddExpenseDialog open={open} onOpenChange={setOpen}
  *     context={{ orderId, orderLabel: 'ORD-0038', legId, legLabel: 'leg A', payeeId, payeeName, amount: 384497,
- *                amountNote: 'Still owed on leg A: EUR 2,430.00 less the 412,300 advance' }} />
+ *                amountNote: 'Balance due on leg A: EUR 2,430.00 less the 412,300 advance' }} />
  */
 export interface ExpenseContext {
   orderId?: string
@@ -211,7 +211,7 @@ function ExpenseFormReady({
   // ---- the pre-fills, and where each came from (FE-2)
   const pre = (() => {
     if (expense) return { categoryId: expense.categoryId, note: undefined as string | undefined }
-    if (context?.categoryId) return { categoryId: context.categoryId, note: 'Chosen for you' }
+    if (context?.categoryId) return { categoryId: context.categoryId, note: 'Suggested category' }
     if (fromLeg) return { categoryId: SUPPLIER_PAYMENT_ID, note: 'Opened from a supplier order' }
     if (lastForOrder && context?.orderId)
       return { categoryId: lastForOrder, note: `Last used on ${context.orderLabel ?? 'this order'}` }
@@ -298,7 +298,7 @@ function ExpenseFormReady({
 
   useEffect(() => onBusy(sf.pending), [sf.pending, onBusy])
   // A reload keeps what was typed (HW-23): the draft is in this tab's sessionStorage while the dialog is open, and goes when it
-  // closes (saved, cancelled, discarded). Restored as changes, so closing still asks "Discard what you typed?".
+  // closes (saved, cancelled, discarded). Restored as changes, so closing still asks "Discard unsaved changes?".
   // Amount first: the person types it and presses Enter (A6.5: one expense in the default category). After a restore the
   // focus waits a tick, so the amount field shows the kept number (a focused number field does not take outside changes).
   const draftKey = expense ? null : expenseDraftKey(context?.orderId ?? context?.rfqId, context?.legId)

@@ -140,7 +140,7 @@ export function SplitLineDialog({
 
           {noQuotes ? (
             <div className="grid gap-4">
-              <Field label="Move to" requirement="required" help="Suppliers you have asked, ordered from or carry a brand for.">
+              <Field label="Move to" requirement="required" help="Suppliers already asked, ordered from, or carrying a brand for.">
                 <Select
                   value={supplierId}
                   onChange={e => {
@@ -167,17 +167,17 @@ export function SplitLineDialog({
             <div className="grid gap-2">
               <span className="text-sm font-medium">Move to</span>
               {rankQ.isPending ? (
-                <p className="text-sm text-fg-muted">Loading the quotes</p>
+                <p className="text-sm text-fg-muted">Loading the supplier prices</p>
               ) : rankQ.isError ? (
-                <Banner tone="danger" title="Couldn't load the quotes" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
+                <Banner tone="danger" title="The supplier prices could not be loaded" action={<Button onClick={() => void rankQ.refetch()}>Try again</Button>}>
                   Nothing was changed.
                 </Banner>
               ) : (
                 <>
                   <p className="text-xs font-medium text-fg-muted">
-                    Ranked quotes from {order.rfqId ? 'the RFQ' : ''}, item {item.number}
+                    Ranked supplier prices from {order.rfqId ? 'the RFQ' : ''}, item {item.number}
                   </p>
-                  <div role="radiogroup" aria-label="Ranked quotes" className="grid gap-1 rounded border p-1">
+                  <div role="radiogroup" aria-label="Ranked supplier prices" className="grid gap-1 rounded border p-1">
                     {quotes.map(q => {
                       const isHere = here(q)
                       const on = target?.kind === 'quote' && target.q.lineId === q.lineId
@@ -263,7 +263,7 @@ export function SplitLineDialog({
           ) : null}
 
           {error ? (
-            <Banner tone="danger" title="Couldn't split the line">
+            <Banner tone="danger" title="The line could not be split">
               {error} Nothing was changed.
             </Banner>
           ) : null}

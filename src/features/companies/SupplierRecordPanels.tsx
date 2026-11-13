@@ -264,12 +264,12 @@ export function RecentQuotes({
   return (
     <Panel
       flat
-      title="Enquiries"
+      title="RFQs"
       info={
         prices ? (
           <InfoTip label="About the prices">
             <span className="grid gap-2">
-              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the quote was typed in, not today’s.</span>
+              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the supplier price was typed in, not today’s.</span>
               <span>A locked price is on file, but its currency was never checked, so it is not shown.</span>
             </span>
           </InfoTip>
@@ -278,11 +278,11 @@ export function RecentQuotes({
       meta={view ? latestOf(rows.length, view.quoteCount) : undefined}
     >
       {loading ? (
-        <ListSkeleton label="Loading enquiries" />
+        <ListSkeleton label="Loading RFQs" />
       ) : error ? (
-        <LoadError title="Couldn't load the enquiries" onRetry={onRetry} />
+        <LoadError title="Could not load the RFQs" onRetry={onRetry} />
       ) : !view || view.allQuotes.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-fg-muted">No enquiry asked of them yet.</p>
+        <p className="px-5 py-6 text-sm text-fg-muted">No RFQ asked of them yet.</p>
       ) : (
         <div>
           {wide ? (
@@ -364,7 +364,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
       {loading ? (
         <ListSkeleton label="Loading deliveries" />
       ) : error ? (
-        <LoadError title="Couldn't load the deliveries" onRetry={onRetry} />
+        <LoadError title="Could not load the deliveries" onRetry={onRetry} />
       ) : !view || view.deliveries.length === 0 ? (
         <p className="px-5 py-6 text-sm text-fg-muted">No deliveries from them yet.</p>
       ) : (
@@ -446,7 +446,7 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : error ? (
-          <Banner tone="danger" title="Couldn't load what is open" action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
+          <Banner tone="danger" title="Could not load what is open" action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
             Nothing was changed.
           </Banner>
         ) : view ? (

@@ -82,7 +82,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
     <Dialog open onOpenChange={o => !o && !sf.pending && onClose()} busy={sf.pending}>
       <DialogContent
         title={template ? 'Edit recurring expense' : 'Add recurring expense'}
-        context="Shows as due each month until you record it"
+        context="Shown as due each month until it is recorded"
         footer={
           <>
             {template && isAdmin ? (

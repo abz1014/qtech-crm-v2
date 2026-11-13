@@ -88,9 +88,9 @@ describe('drafts', () => {
 
 describe('row words', () => {
   it('says how long ago and when it returns', () => {
-    expect(chasedAgo(TODAY, TODAY)).toBe('chased just now')
-    expect(chasedAgo('2026-11-26', TODAY)).toBe('chased yesterday')
-    expect(waitingLine('2026-11-25', '2026-11-30', TODAY)).toBe('chased 2 days ago · next nudge on Mon 30 Nov')
+    expect(chasedAgo(TODAY, TODAY)).toBe('followed up just now')
+    expect(chasedAgo('2026-11-26', TODAY)).toBe('followed up yesterday')
+    expect(waitingLine('2026-11-25', '2026-11-30', TODAY)).toBe('followed up 2 days ago · next reminder on Mon 30 Nov')
     expect(waitingLine('2026-11-25', '2026-11-30', TODAY, 'reminded')).toContain('reminded 2 days ago')
     expect(agoText('2026-11-21', TODAY)).toBe('6 days ago')
     expect(distanceText('2026-12-01', TODAY)).toBe('4 days')

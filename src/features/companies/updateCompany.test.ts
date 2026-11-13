@@ -27,7 +27,7 @@ describe('updateCompany with the values the form opened with', () => {
 
   it('refuses when someone else changed the same field meanwhile', async () => {
     const db = fake({ ...base, city: 'Karachi', updated_at: 'v2' })
-    await expect(updateCompany('c1', { ...base, city: 'Multan' }, base)).rejects.toMatchObject({ code: STALE_EDIT, message: expect.stringContaining('Changed by someone else') })
+    await expect(updateCompany('c1', { ...base, city: 'Multan' }, base)).rejects.toMatchObject({ code: STALE_EDIT, message: expect.stringContaining('Changed by another user') })
     expect(db.calls.some(c => c.verb === 'update')).toBe(false)
   })
 

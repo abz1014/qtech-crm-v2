@@ -30,8 +30,8 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
   if (!admin || q.isPending) return null
   if (q.isError)
     return (
-      <section aria-label="Owed to staff" data-testid="owed-to-staff">
-        <EmptyState mood="error" title="Couldn't load what is owed to staff" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+      <section aria-label="Claims to repay" data-testid="owed-to-staff">
+        <EmptyState mood="error" title="Claims to repay could not be loaded" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       </section>
@@ -42,10 +42,10 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
   // Phone, full form: one line with the figure and who; a tap opens the people and each claim's Mark paid back.
   if (phone && !summary)
     return (
-      <section aria-label="Owed to staff" data-testid="owed-to-staff">
+      <section aria-label="Claims to repay" data-testid="owed-to-staff">
         <FoldRow
-          state={{ icon: HandCoins, word: 'Waiting for you' }}
-          title="Owed to staff"
+          state={{ icon: HandCoins, word: 'Action needed' }}
+          title="Claims to repay"
           summary={`${pkr(total)} to ${people.length === 1 ? people[0].name : `${people.length} people`}`}
           open={open}
           onToggle={() => setOpen(o => !o)}
@@ -55,7 +55,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
             {people.map(p => (
               <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 text-base">
                 <span>
-                  Owed to <b className="font-semibold">{p.name}</b>
+                  To repay <b className="font-semibold">{p.name}</b>
                   <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
                 </span>
                 <b className="num font-semibold">{pkr(p.total)}</b>
@@ -74,7 +74,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
     <section aria-labelledby="owed-staff-h" className="grid gap-0 rounded border border-tone-warning-fg/30 bg-surface lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent" data-testid="owed-to-staff">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3 lg:px-0 lg:py-2">
         <h2 id="owed-staff-h" className="type-row lg:font-semibold">
-          Owed to staff
+          Claims to repay
         </h2>
         <span className="text-base text-fg-2">
           {pkr(total)} approved, not paid back yet
@@ -84,7 +84,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
         {people.map(p => (
           <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-base lg:px-0 lg:py-2">
             <span>
-              Owed to <b className="font-semibold">{p.name}</b>
+              To repay <b className="font-semibold">{p.name}</b>
               <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
             </span>
             <b className="num font-semibold">{pkr(p.total)}</b>

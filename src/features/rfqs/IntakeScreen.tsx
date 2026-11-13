@@ -927,9 +927,9 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
             <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted max-md:hidden">
               <Link to={enquiry ? '/jobs' : '/rfqs'} className="hover:text-fg">{enquiry ? 'Jobs' : 'RFQs'}</Link>
               <Icon icon={ChevronRight} size="sm" />
-              <span aria-current="page">{enquiry ? 'New enquiry' : 'New RFQ'}</span>
+              <span aria-current="page">{enquiry ? 'New RFQ' : 'New RFQ'}</span>
             </nav>
-            <h1 className="type-page max-md:sr-only">{enquiry ? 'New enquiry' : 'New RFQ'}</h1>
+            <h1 className="type-page max-md:sr-only">{enquiry ? 'New RFQ' : 'New RFQ'}</h1>
             <p className="type-body max-w-prose text-fg-muted">{lede}</p>
             {step === 'build' && !offer && presetSupplier ? (
               <p className="type-body max-w-prose text-fg-2" data-preset-supplier>
@@ -988,7 +988,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {/* Their own number for the request: it is how the RFQ is found again later, so it sits with the company. */}
-                  <Field label="Customer reference" requirement="optional" help="Their RFQ or enquiry number. Search finds the RFQ by it." source={refSource ? (enquiry ? `${refSource}, check this` : refSource) : undefined}>
+                  <Field label="Customer reference" requirement="optional" help="The customer's own RFQ number. Search finds the RFQ by it." source={refSource ? (enquiry ? `${refSource}, check this` : refSource) : undefined}>
                     <TextField
                       value={customerRef}
                       onChange={e => {
@@ -1042,10 +1042,10 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                   <Banner
                     tone="warning"
                     className="text-base"
-                    title={`This looks like ${KIND_LABEL[heldDoc.kind]}, not an enquiry.`}
+                    title={`This looks like ${KIND_LABEL[heldDoc.kind]}, not an RFQ.`}
                     action={
                       <Button size="lg" onClick={() => takePaste(heldDoc.text, heldDoc.from, true)}>
-                        Read as an enquiry anyway
+                        Read as an RFQ anyway
                       </Button>
                     }
                   >

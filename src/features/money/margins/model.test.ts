@@ -67,14 +67,14 @@ describe('marginPct', () => {
 describe('marginNote', () => {
   it('says what is left out, in counts', () => {
     const n = marginNote({ orders: 2, netSale: 0, expectedCost: 0, actualCost: 0, margin: 0, provisional: 3, basisUnknown: 1 })
-    expect(n).toBe('Only orders with costs marked complete are totalled. The 3 provisional margins are shown so you can see the trend, but they are not added up, and the order with an unknown price basis is left out until someone resolves it.')
+    expect(n).toBe('Only orders with costs marked complete are totalled. The 3 provisional margins are shown to indicate the trend, but they are not added up, and the order with an unknown price basis is left out until it is resolved it.')
   })
   it('handles only provisional, only unknown, and neither', () => {
     expect(marginNote({ orders: 1, netSale: 0, expectedCost: 0, actualCost: 0, margin: 0, provisional: 1, basisUnknown: 0 })).toBe(
-      'Only orders with costs marked complete are totalled. The 1 provisional margin is shown so you can see the trend, but it is not added up.',
+      'Only orders with costs marked complete are totalled. The 1 provisional margin is shown to indicate the trend, but it is not added up.',
     )
     expect(marginNote({ orders: 1, netSale: 0, expectedCost: 0, actualCost: 0, margin: 0, provisional: 0, basisUnknown: 2 })).toBe(
-      'Only orders with costs marked complete are totalled. The 2 orders with an unknown price basis are left out until someone resolves them.',
+      'Only orders with costs marked complete are totalled. The 2 orders with an unknown price basis are left out until it is resolved them.',
     )
     expect(marginNote({ orders: 1, netSale: 0, expectedCost: 0, actualCost: 0, margin: 0, provisional: 0, basisUnknown: 0 })).toBe('Only orders with costs marked complete are totalled.')
   })

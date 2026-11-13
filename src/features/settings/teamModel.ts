@@ -46,7 +46,7 @@ export function isOnlyActiveAdmin(m: TeamMember, members: readonly TeamMember[])
 export const hasLoneAdmin = (members: readonly TeamMember[]): boolean => members.filter(m => m.role === 'admin' && isActive(m)).length === 1
 
 export const LONE_ADMIN_TITLE = 'Only one active admin'
-export const LONE_ADMIN_BODY = 'If this person is ever locked out, nobody in the app can reset the password. Add a second admin so someone always can.'
+export const LONE_ADMIN_BODY = 'With one admin, a lost password cannot be reset. Add a second admin.'
 
 export const firstName = (name: string): string => name.trim().split(/\s+/)[0] || name
 

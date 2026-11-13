@@ -46,7 +46,7 @@ export function useDeleteExpenseFlow(categoryName: (r: ListedExpense) => string,
       onConfirm={confirm}
       errorMessage={deleteErrorMessage}
       // The row stays; the sentence is on the confirm so it is read where the tap was, and again as a toast.
-      onError={e => toast.toast({ title: "Couldn't delete the expense", body: deleteErrorMessage(e), tone: 'danger' })}
+      onError={e => toast.toast({ title: "The expense could not be deleted", body: deleteErrorMessage(e), tone: 'danger' })}
     />
   ) : null
 

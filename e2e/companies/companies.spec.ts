@@ -226,14 +226,14 @@ test.describe('company page', () => {
     await expect(page.getByRole('heading', { name: supplier.name, level: 1 })).toBeVisible()
     const line = page.getByTestId('supplier-record-line')
     await expect(line).toHaveText('Asked once · no replies') // the counts, once, under the name ("What we know" is gone, round 3)
-    const enquiries = page.getByRole('region', { name: 'Enquiries' })
+    const enquiries = page.getByRole('region', { name: 'RFQs' })
     await expect(enquiries.getByRole('listitem').filter({ hasText: rfqRef(rfq.number) })).toContainText('No reply')
     expect(await line.innerText()).not.toMatch(/score|rating|rank|%/i)
-    for (const gone of ['What we know', 'Recent quotes', 'Recent enquiries']) await expect(page.getByRole('heading', { name: gone, exact: true })).toHaveCount(0)
+    for (const gone of ['What we know', 'Recent quotes', 'Recent RFQs']) await expect(page.getByRole('heading', { name: gone, exact: true })).toHaveCount(0)
 
     // The useful history comes first: Enquiries, then Deliveries; sites and details fold under it.
     const top = async (name: string) => (await page.getByRole('heading', { name, level: 2, exact: true }).boundingBox())?.y ?? -1
-    const order = [await top('Enquiries'), await top('Deliveries')]
+    const order = [await top('RFQs'), await top('Deliveries')]
     expect(order.every(y => y >= 0)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
     await expect(page.getByText('More about this supplier')).toBeVisible()
@@ -241,10 +241,10 @@ test.describe('company page', () => {
     await expect(page.getByRole('region', { name: 'Open with them' })).not.toContainText('Currency')
 
     // The rules behind the numbers are behind the (i), not printed on the page.
-    await expect(page.getByText('With so few enquiries')).toHaveCount(0)
+    await expect(page.getByText('With so few RFQs')).toHaveCount(0)
     await expect(page.getByText(/Where this comes from/)).toHaveCount(0)
     await line.getByRole('button', { name: 'About these numbers' }).click()
-    await expect(page.getByRole('dialog', { name: 'About these numbers' })).toContainText('With so few enquiries these are facts, not a pattern.')
+    await expect(page.getByRole('dialog', { name: 'About these numbers' })).toContainText('With so few RFQs these are facts, not a pattern.')
     await review(page, 'company-supplier-1440')
     await page.keyboard.press('Escape')
 
@@ -327,7 +327,7 @@ test.describe('admin merge', () => {
 
     // The page for the removed company says where to look instead of crashing.
     await page.goto(`/companies/${drop.id}`)
-    await expect(page.getByText("This company isn't here")).toBeVisible()
+    await expect(page.getByText("This company was not found")).toBeVisible()
   })
 
   test('a clash the database cannot settle is refused in plain words and nothing moves', async ({ page }) => {
@@ -426,7 +426,7 @@ test.describe('review screenshots (only with REVIEW_DIR)', () => {
       await expect(page.getByRole('heading', { name: customer.name, level: 1 })).toBeVisible()
       await review(page, `company-customer-${label}`)
       await page.goto(`/companies/${supplier.id}`)
-      await expect(page.getByRole('heading', { name: 'Enquiries', exact: true })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'RFQs', exact: true })).toBeVisible()
       await review(page, `company-supplier-${label}`)
       await context.close()
     })

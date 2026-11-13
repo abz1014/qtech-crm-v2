@@ -6,9 +6,9 @@ keywords: bank, statement, tick, reconcile, match, psid
 screens: /money/month-end
 related: month-end-close
 ---
-1. Tap [Money], [Lock a month], then [Bank check]. Or tap [Bank check] in the row [More money pages]; on a phone, open [All Money pages].
-2. Tap each line that is on your bank statement. One FBR payment is one tap, however many invoices it covers.
+1. Select [Money], [Lock a month], then [Bank check]. Alternatively, select [Bank check] in the row [More money pages]. On a phone, open [All Money pages].
+2. Select each line that is on the bank statement. One FBR payment is one line, however many invoices it covers.
 3. Compare [Matched, money in] and [Matched, money out] with the statement's totals.
-4. It is done when it says [Everything matched]. Tap [Done] to go back to Lock a month.
+4. The match is complete when it says [Everything matched]. Select [Done] to go back to Lock a month.
 
-Tip: Cash payments and expenses never appear here.
+Note: Cash payments and expenses never appear here.

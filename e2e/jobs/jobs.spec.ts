@@ -91,7 +91,7 @@ test.describe('Jobs list (P5-B)', () => {
     const f = await seed()
     await openAs(page, 'engineer', `/jobs?q=${f.rfq.number}`)
     await expect(page.getByRole('row', { name: new RegExp(`Job ${f.rfq.number}\\b`) }).first()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'New enquiry' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'New RFQ' })).toHaveCount(0)
     expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs\.?\s?\d/)
   })
 

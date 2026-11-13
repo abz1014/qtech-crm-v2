@@ -51,7 +51,7 @@ export function sheetFailureMessage(reason: SheetReadFailure, subject: SheetSubj
     case 'not_sheet':
       return `This file is not a spreadsheet. Copy ${what} and paste them.`
     case 'too_big':
-      return `This spreadsheet is ${size ? `${Math.round(size / (1024 * 1024))} MB` : 'too big'}; the limit is 15 MB. Copy ${what} in Excel and paste them.`
+      return `This spreadsheet is ${size ? `${Math.round(size / (1024 * 1024))} MB` : 'too big'}. The limit is 15 MB. Copy ${what} in Excel and paste them.`
     case 'password':
       return `This spreadsheet is locked with a password. Open it in Excel, copy ${what} and paste them.`
     case 'empty':

@@ -227,7 +227,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <>
                 <ClockTag>By payment date</ClockTag>
                 <TwoProfitsTip />
-                {v.frozenAt ? <span className="text-xs text-fg-muted" data-testid="pnl-frozen">Frozen when the month was closed</span> : null}
+                {v.frozenAt ? <span className="text-xs text-fg-muted" data-testid="pnl-frozen">Figures final when the month was locked</span> : null}
               </>
             }
           >
@@ -270,7 +270,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               />
               <Line label="Overheads" basis={<><Num>{v.overheads.count}</Num> {v.overheads.count === 1 ? 'expense' : 'expenses'}</>} amount={negate(v.overheads.net)} />
               {toPaisa(v.adjustResult) !== 0n ? (
-                <Line tone="sub" label="Changes to closed months" tag="counted this month" basis="Found after those months were closed" amount={v.adjustResult} />
+                <Line tone="sub" label="Changes to locked months" tag="counted this month" basis="Found after those months were locked" amount={v.adjustResult} />
               ) : null}
               <Line tone="result" label={`Profit for ${name}`} amount={v.result} />
             </div>
@@ -289,7 +289,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
                   <Line key={l.categoryId} label={l.category} basis={<><Num>{l.count}</Num> {l.count === 1 ? 'expense' : 'expenses'}, {l.paidVia}</>} amount={negate(l.net)} />
                 ))}
                 {toPaisa(v.adjustNonPnl) !== 0n ? (
-                  <Line tone="sub" label="Changes to closed months" tag="counted this month" amount={negate(v.adjustNonPnl)} />
+                  <Line tone="sub" label="Changes to locked months" tag="counted this month" amount={negate(v.adjustNonPnl)} />
                 ) : null}
                 <Line tone="total" label="Drawn or repaid, total" basis={<><Num>{v.notInPnl.total.count}</Num> {v.notInPnl.total.count === 1 ? 'expense' : 'expenses'}</>} amount={negate(v.notInPnl.total.net)} />
               </div>
@@ -472,7 +472,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       <ReportCsv />
       <div className="grid">
         <DataTable
-          label="What customers owe, by how late"
+          label="To collect, by age"
           columns={columns}
           rows={v.rows}
           getRowId={r => r.invoiceId}
@@ -482,7 +482,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           toolbar={
             <div className="flex w-full flex-wrap items-center gap-3">
               <span className="flex min-w-0 items-center gap-3">
-                <h2 className="text-base font-semibold">What customers owe, by how late</h2>
+                <h2 className="text-base font-semibold">To collect, by age</h2>
                 <InfoTip label="About overdue by age">
                   As of {asOfLabel}. Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after{' '}
                   {asOfLabel} are left out.
@@ -492,7 +492,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <AsOfControl asOf={asOf} chosen={chosen} onChange={setAsOf} />
             </div>
           }
-          empty={<EmptyState mood="goal" title="Nobody owes an invoice">Every invoice dated up to {asOfLabel} is paid.</EmptyState>}
+          empty={<EmptyState mood="goal" title="No balance is due on an invoice">Every invoice dated up to {asOfLabel} is paid.</EmptyState>}
           mobileRow={r => (
             <span className="grid gap-1">
               <span className="flex items-baseline justify-between gap-3">
@@ -531,7 +531,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
                   <span>{advanceLabel(a)}</span>
                   <span className="text-xs text-fg-muted">
                     {a.orderRef ? <Num>{a.orderRef}</Num> : null} · {a.customer}
-                    {a.cancelled ? '. Nobody owes it: refund it or keep it.' : ''}
+                    {a.cancelled ? '. No balance is due on it. Refund or retain it.' : ''}
                   </span>
                 </span>
                 <Money value={a.held} paisa="never" />
@@ -628,7 +628,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         ...whole<PayableRow>(r => r.paidPkr),
         cell: r => (toPaisa(r.paidPkr) === 0n ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.paidPkr} prefix={false} paisa="never" />),
       },
-      { id: 'owed', header: 'Owed', kind: 'money', value: r => r.owedPkr, cell: r => <OwedCell r={r} /> },
+      { id: 'owed', header: 'Payable', kind: 'money', value: r => r.owedPkr, cell: r => <OwedCell r={r} /> },
       {
         id: 'state',
         header: 'State',
@@ -638,8 +638,8 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
     ],
     [asOf],
   )
-  if (q.isError) return <ReportError title="What we owe did not load" onRetry={q.refetch} />
-  if (q.isPending || !v) return <ReportLoading label="Loading what we owe" />
+  if (q.isError) return <ReportError title="Payable to suppliers did not load" onRetry={q.refetch} />
+  if (q.isPending || !v) return <ReportLoading label="Loading payable to suppliers" />
   const day = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7)).slice(0, 3)}`
   const asOfLabel = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7))} ${asOf.slice(0, 4)}`
   const unconv = unconvertedByCurrency(v.rows)
@@ -665,14 +665,14 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         desktop="strip"
         caption={
           <>
-            {plural(v.rows.length, 'supplier order')}, <Num>{v.paidLegs}</Num> with a payment{missing.length ? '' : <>, owed at the rate on {day}</>}
+            {plural(v.rows.length, 'supplier order')}, <Num>{v.paidLegs}</Num> with a payment{missing.length ? '' : <>, payable at the rate on {day}</>}
           </>
         }
-        label="What we owe"
+        label="Payable to suppliers"
         items={[
           missing.length
-            ? { label: 'Owed', figure: owedFigure.length ? owedFigure : '0', sub: plural(owedOrders, 'supplier order') }
-            : { label: 'Owed', amount: v.owed, sub: <>{plural(v.owedCount, 'supplier order')}, at the rate on {day}</> },
+            ? { label: 'Payable', figure: owedFigure.length ? owedFigure : '0', sub: plural(owedOrders, 'supplier order') }
+            : { label: 'Payable', amount: v.owed, sub: <>{plural(v.owedCount, 'supplier order')}, at the rate on {day}</> },
           missing.length
             ? { label: 'Total ordered', figure: orderedFigure, sub: plural(v.rows.length, 'supplier order') }
             : { label: 'Total ordered', amount: v.committed, sub: plural(v.committedLegs, 'supplier order') },
@@ -681,7 +681,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       />
       <ReportCsv />
       <DataTable
-        label="What we owe suppliers"
+        label="Payable to suppliers"
         columns={columns}
         rows={v.rows}
         getRowId={r => r.legId}
@@ -691,17 +691,17 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         toolbar={
           <div className="flex w-full flex-wrap items-center gap-3">
             <span className="flex min-w-0 items-center gap-3">
-              <h2 className="text-base font-semibold">What we owe suppliers</h2>
-              <InfoTip label="About what we owe">
-                As of {asOfLabel}. Owed is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
-                paid. A supplier order in a foreign currency paid to within 3% counts as paid (exchange-rate slippage); in rupees it counts as paid when PKR 1 or less is left.
+              <h2 className="text-base font-semibold">Payable to suppliers</h2>
+              <InfoTip label="About payable to suppliers">
+                As of {asOfLabel}. Payable is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
+                paid. A supplier order in a foreign currency paid to within 3% counts as paid (exchange-rate slippage). In rupees it counts as paid when PKR 1 or less is left.
               </InfoTip>
             </span>
             <span className="flex-1" />
             <AsOfControl asOf={asOf} chosen={chosen} onChange={setAsOf} />
           </div>
         }
-        empty={<EmptyState mood="goal" title="Nothing is owed to suppliers">No placed supplier order has a price to pay on {asOfLabel}.</EmptyState>}
+        empty={<EmptyState mood="goal" title="Nothing is payable to suppliers">No placed supplier order has a price to pay on {asOfLabel}.</EmptyState>}
         mobileRow={r => (
           <span className="grid gap-1">
             <span className="flex items-baseline justify-between gap-3">
@@ -715,7 +715,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             <span className="text-sm text-fg-2">
               {r.committed !== null ? <span className="num">{inCurrency(r.currency, r.committed)}</span> : 'No price yet'} ordered
               {toPaisa(r.paidPkr) > 0n ? <> · <span className="num">PKR {rupees(r.paidPkr)}</span> paid</> : null}
-              {r.owedPkr !== null ? <> · owes <span className="num font-medium text-fg">PKR {rupees(r.owedPkr)}</span></> : null}
+              {r.owedPkr !== null ? <> · to be paid <span className="num font-medium text-fg">PKR {rupees(r.owedPkr)}</span></> : null}
             </span>
           </span>
         )}
@@ -849,7 +849,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           meta={
             <InfoTip label="About GST paid on purchases">
               Never netted on this page; filing stays with the tax agent. GST paid on purchases is the part of a Supplier payment, Clearing or Freight
-              amount that Q-Tech can claim; the profit and loss and the margins use the amount without it.
+              amount that Q-Tech can claim; profit and loss and the margins use the amount without it.
             </InfoTip>
           }
         >
@@ -960,12 +960,12 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <ClockTag>By payment date</ClockTag>
               <InfoTip label="About sales by person">
                 The total matches Received after GST on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net
-                and GST has no net, so nobody is credited for it.
+                and GST has no net, so no one is credited for it.
               </InfoTip>
             </span>
           </div>
         }
-        empty={<EmptyState title="Nobody is credited">No payment counted towards a person in {monthName(ctx.month)}.</EmptyState>}
+        empty={<EmptyState title="No one is credited">No payment counted towards a person in {monthName(ctx.month)}.</EmptyState>}
         mobileRow={r => (
           <span className="grid gap-1">
             <span className="flex items-baseline justify-between gap-3">

@@ -24,7 +24,7 @@ describe('entryAccess (0092 whose-is-it rule)', () => {
     expect(a.note).toMatch(/only an admin/)
   })
   it('does not name anyone before the names have loaded', () => {
-    expect(entryAccess({ id: 'u1', role: 'sales' }, { createdBy: 'u2', ownerId: null }, undefined).note).toMatch(/Entered by someone else/)
+    expect(entryAccess({ id: 'u1', role: 'sales' }, { createdBy: 'u2', ownerId: null }, undefined).note).toMatch(/Entered by another user/)
   })
   it('signed out may change nothing', () => {
     expect(entryAccess(null, { createdBy: 'u1', ownerId: null }, names).can).toBe(false)

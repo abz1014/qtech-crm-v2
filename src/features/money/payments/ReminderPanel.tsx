@@ -238,7 +238,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
       // The copy is the first thing in the tap: a browser only allows it during the gesture.
       const ok = await copyToClipboard(text)
       if (!ok) {
-        toast({ title: 'Could not copy the message', body: 'Select the text and copy it by hand. Nothing was marked.', tone: 'danger' })
+        toast({ title: 'Could not copy the message', body: 'Select the text and copy it manually. Nothing was marked.', tone: 'danger' })
         return
       }
       await mark(true)

@@ -63,7 +63,7 @@ describe('New enquiry', () => {
     installFakeDb(respond)
     renderPage()
     expect(screen.getByTestId('enquiry-dropzone')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'New enquiry', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Create job 162' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Looks right: find suppliers' })).toBeNull()
   })

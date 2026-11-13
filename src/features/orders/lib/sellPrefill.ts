@@ -9,14 +9,14 @@
 //   1 quotation   the LATEST issued quotation's line (never rfq_items: an item a later revision dropped keeps its old price there)
 //   2 draft       the unissued Issue-quotation draft kept in this browser tab
 //   3 memory      what we last quoted this customer for the item, else what we last sold it at
-//   4 none        empty: "Type the selling price from your costing sheet"
+//   4 none        empty: "Enter the selling price from the costing sheet"
 
 import { formatAmount } from '@/lib/money'
 import { orderRef } from '@/lib/refs'
 
 export type SellSource = 'quotation' | 'draft' | 'last_quoted' | 'last_sold' | 'none'
 
-export const NO_PRICE_HINT = 'Type the selling price from your costing sheet'
+export const NO_PRICE_HINT = 'Enter the selling price from the costing sheet'
 
 export interface PrefillItem {
   id: string
@@ -103,7 +103,7 @@ export function prefillLines(input: PrefillInput): Record<string, LinePrefill> {
     const q = input.quoteOf(it.id)
     const warnings: string[] = []
     if (q?.legacyFlags?.includes('item_guessed')) warnings.push('Imported: this supplier price may belong to another item. Check it.')
-    if (q?.legacyFlags?.includes('currency_unverified')) warnings.push('Imported: the currency of this supplier quote was not confirmed. Check it.')
+    if (q?.legacyFlags?.includes('currency_unverified')) warnings.push('Imported: the currency of this supplier price was not confirmed. Check it.')
     if (noRate(q)) warnings.push(`No current ${q.currency} rate: pick the supplier.`)
 
     const line = input.latest?.lines.find(l => l.rfq_item_id === it.id && isPrice(l.unit_price_net))

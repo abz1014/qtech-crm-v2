@@ -303,7 +303,7 @@ describe('To collect (M02)', () => {
     await screen.findAllByText('Punjab Cement Ltd')
     const owed = screen.getByTestId('owed-line')
     expect(owed.className).toContain('sticky')
-    expect(owed).toHaveTextContent(/^Owed PKR/)
+    expect(owed).toHaveTextContent(/^To collect PKR/)
     expect(owed).not.toHaveTextContent('Overdue')
     const split = screen.getByTestId('owed-split')
     expect(split.className).not.toContain('sticky')

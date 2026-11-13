@@ -38,7 +38,7 @@ test('a new sales person sees first-use states, and Help opens from the menu and
   await signIn(page, email, password)
 
   // Today: what it is for, one button.
-  await expect(page.getByText('Your work shows up here', { exact: true })).toBeVisible()
+  await expect(page.getByText('Your tasks appear here', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'New RFQ' }).first()).toBeVisible()
 
   // an old bookmark (even one with the retired ?old=1 on it) opens the Jobs list, which says what is true for a new person

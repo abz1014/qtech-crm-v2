@@ -19,7 +19,7 @@
  *   paid              none: all seven done      (installation, when needed, is a detail)
  *   lost / cancelled  the ruler stops           ends with the reason
  */
-export const STOPS = ['Enquiry', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
+export const STOPS = ['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
 export type StopName = (typeof STOPS)[number]
 
 export type JobStageWord =

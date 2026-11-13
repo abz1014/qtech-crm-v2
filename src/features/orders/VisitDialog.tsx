@@ -19,7 +19,7 @@ import { DEFAULT_VISIT_TYPE, VISIT_TYPES, VISIT_TYPE_LABEL, visitChanged, visitP
 
 export function VisitFields({ value, onChange }: { value: VisitValue; onChange: (v: VisitValue) => void }) {
   return (
-    <Field label="Visit type" requirement="required" help="What the engineer is going for. Installation unless you pick another.">
+    <Field label="Visit type" requirement="required" help="Purpose of the visit. Installation unless another is selected.">
       <Select
         value={value.type}
         onChange={e => onChange({ ...value, type: e.target.value })}

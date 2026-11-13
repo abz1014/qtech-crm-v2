@@ -177,7 +177,7 @@ test.describe('invoice rules in the database (H1, H2, H3)', () => {
     await must(rest('sales', `invoices?id=eq.${inv.id}`, { method: 'PATCH', body: { notes: 'sales note' } }))
     await page.getByLabel('Notes', { exact: true }).fill('admin note')
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(/Someone else changed this invoice/)).toBeVisible()
+    await expect(page.getByText(/This invoice was changed by another user/)).toBeVisible()
     const row = await must(rest<{ notes: string }[]>('admin', `invoices?id=eq.${inv.id}&select=notes`))
     expect(row[0].notes).toBe('sales note')
   })

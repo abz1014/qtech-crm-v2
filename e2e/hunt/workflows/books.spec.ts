@@ -561,14 +561,14 @@ test('books: In vs out for a month and a quarter equals the hand totals and the 
   for (const k of ['pnl', 'categories', 'aging', 'owe', 'gst', 'team', 'margins']) {
     await probe(info, page, `report ${k} (desktop): renders, CSV parses`, async () => {
       await visit(page, info, `/money/reports/${k}?month=${M1.key}`, `report ${k}`)
-      const crashed = (await page.getByText(/Something went wrong|did not load/i).count()) > 0
+      const crashed = (await page.getByText(/The page stopped working|did not load/i).count()) > 0
       if (crashed) note(info, { kind: 'observation', where: `report ${k}`, what: 'shows an error', detail: (await page.locator('#main').innerText()).slice(0, 300) })
       await layout(page, info, `report ${k} desktop`)
       await shot(page, `books-report-${k}-desktop`)
       if ((await page.getByRole('button', { name: 'Export CSV' }).count()) > 0) {
         const csv = await exportCsv(page)
         // A header-only CSV is right for an empty month; it is a finding only when the screen shows rows.
-        const emptyOnScreen = (await page.getByText(/Nobody owes an invoice|Nothing is owed to suppliers|No invoices yet|Nobody is credited|No expenses|Nothing in |No payment was received/).count()) > 0
+        const emptyOnScreen = (await page.getByText(/No balance is due on an invoice|Nothing is payable to suppliers|No invoices yet|No one is credited|No expenses|Nothing in |No payment was received/).count()) > 0
         if (csv.rows.length < 2 && !emptyOnScreen) note(info, { kind: 'observation', where: `report ${k} csv`, what: `${csv.name} has ${csv.rows.length} rows`, detail: csv.rows })
         const widths = new Set(csv.rows.filter(r => r.length > 1).map(r => r.length))
         if (widths.size > 1) note(info, { kind: 'observation', where: `report ${k} csv`, what: `${csv.name}: rows of different widths ${[...widths].join('/')}` })
@@ -669,14 +669,14 @@ test('books: two admins, one closes last month while the other has Add expense o
       await shot(a, 'books-month-end-closed')
     })
 
-    await probe(info, b, 'admin B saves the expense dated in the now closed month: the plain sentence, nothing saved', async () => {
+    await probe(info, b, 'admin B saves the expense dated in the now locked month: the plain sentence, nothing saved', async () => {
       await bd.getByRole('button', { name: 'Save expense' }).click()
       const shown = await b.getByText(sentence).isVisible({ timeout: 10_000 }).catch(() => false)
       const saved = await db.rows(`expenses?description=eq.${encodeURIComponent(descC)}&select=id`)
-      if (saved.length) note(info, { kind: 'observation', where: 'closed month race', what: 'an expense dated in a month another admin just closed WAS saved' })
-      if (!shown) note(info, { kind: 'observation', where: 'closed month race', what: 'no closed-month sentence', detail: (await bd.innerText().catch(() => '')).slice(0, 400) })
+      if (saved.length) note(info, { kind: 'observation', where: 'locked month race', what: 'an expense dated in a month another admin just closed WAS saved' })
+      if (!shown) note(info, { kind: 'observation', where: 'locked month race', what: 'no closed-month sentence', detail: (await bd.innerText().catch(() => '')).slice(0, 400) })
       const kept = await bd.getByRole('textbox', { name: 'Amount, PKR' }).inputValue().catch(() => '')
-      if (kept.replace(/,/g, '') !== String(amtC)) note(info, { kind: 'observation', where: 'closed month race', what: `the amount was not kept (${kept})` })
+      if (kept.replace(/,/g, '') !== String(amtC)) note(info, { kind: 'observation', where: 'locked month race', what: `the amount was not kept (${kept})` })
       await layout(b, info, 'closed refusal phone')
       await shot(b, 'books-closed-refusal-phone')
     })
@@ -688,11 +688,11 @@ test('books: two admins, one closes last month while the other has Add expense o
       const dlg = c.getByRole('dialog', { name: lockTitle })
       await dlg.getByRole('button', { name: lockName }).click({ timeout: 10_000 })
       await sleep(2000)
-      note(info, { kind: 'observation', where: 'stale close', what: `a second admin closing an already-closed month sees: ${(await c.locator('body').innerText()).replace(/\s+/g, ' ').match(/(closed|could not|went wrong)[^.]*\./gi)?.slice(0, 3).join(' | ') ?? 'nothing'}` })
+      note(info, { kind: 'observation', where: 'stale close', what: `a second admin closing an already-locked month sees: ${(await c.locator('body').innerText()).replace(/\s+/g, ' ').match(/(closed|could not|went wrong)[^.]*\./gi)?.slice(0, 3).join(' | ') ?? 'nothing'}` })
       await c.keyboard.press('Escape')
     })
 
-    await probe(info, a, 'Record payment dated in the closed month: the sentence, nothing saved', async () => {
+    await probe(info, a, 'Record payment dated in the locked month: the sentence, nothing saved', async () => {
       await visit(a, info, `/orders/${o.order.id}`, 'order A')
       // The job page: Record payment (an advance, before any invoice) is a button of the Invoice step.
       await openStage(a, 'Invoice')
@@ -701,36 +701,36 @@ test('books: two admins, one closes last month while the other has Add expense o
       await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
       await d.getByRole('textbox', { name: 'Date received' }).fill(typed(M1.day(5)))
       await d.getByRole('button', { name: 'Save payment' }).click()
-      if (!(await d.getByText(sentence).isVisible({ timeout: 10_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'closed month payment', what: 'no plain sentence', detail: (await d.innerText()).slice(0, 400) })
-      if ((await db.rows(`payments_in?order_id=eq.${o.order.id}&select=id`)).length) note(info, { kind: 'observation', where: 'closed month payment', what: 'a payment dated in a closed month was saved' })
+      if (!(await d.getByText(sentence).isVisible({ timeout: 10_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'locked month payment', what: 'no plain sentence', detail: (await d.innerText()).slice(0, 400) })
+      if ((await db.rows(`payments_in?order_id=eq.${o.order.id}&select=id`)).length) note(info, { kind: 'observation', where: 'locked month payment', what: 'a payment dated in a locked month was saved' })
       await a.keyboard.press('Escape')
     })
 
-    await probe(info, a, 'Create invoice dated in the closed month: the sentence, nothing saved', async () => {
+    await probe(info, a, 'Create invoice dated in the locked month: the sentence, nothing saved', async () => {
       await visit(a, info, `/orders/${o.order.id}`, 'order A invoice')
       await openStage(a, 'Invoice')
       await stagesOf(a).getByRole('button', { name: 'Create invoice', exact: true }).first().click({ timeout: 10_000 })
       const d = a.getByRole('dialog', { name: 'Create invoice' })
       await d.getByRole('textbox', { name: 'Invoice date' }).fill(typed(M1.day(6)))
       await d.getByRole('button', { name: 'Create invoice' }).click()
-      if (!(await d.getByText(sentence).isVisible({ timeout: 10_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'closed month invoice', what: 'no plain sentence', detail: (await d.innerText()).slice(0, 400) })
-      if ((await db.rows(`invoices?order_id=eq.${o.order.id}&select=id`)).length) note(info, { kind: 'observation', where: 'closed month invoice', what: 'an invoice dated in a closed month was created' })
+      if (!(await d.getByText(sentence).isVisible({ timeout: 10_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'locked month invoice', what: 'no plain sentence', detail: (await d.innerText()).slice(0, 400) })
+      if ((await db.rows(`invoices?order_id=eq.${o.order.id}&select=id`)).length) note(info, { kind: 'observation', where: 'locked month invoice', what: 'an invoice dated in a locked month was created' })
       await a.keyboard.press('Escape')
     })
 
-    await probe(info, a, 'In vs out and P&L of the closed month: frozen, same figures', async () => {
+    await probe(info, a, 'In vs out and P&L of the locked month: frozen, same figures', async () => {
       const now = await readInOut(a, info, `/money/reports/in-out?by=month&period=${M1.key}`)
-      if (!now.frozen) note(info, { kind: 'observation', where: 'in-out closed', what: 'no "frozen" note on a closed month' })
+      if (!now.frozen) note(info, { kind: 'observation', where: 'in-out closed', what: 'no "frozen" note on a locked month' })
       if (inOutOpen) {
         const o0 = inOutOpen as InOut
         same(info, 'in-out closed', 'money in, closed vs open', now.in, o0.in)
         same(info, 'in-out closed', 'money out, closed vs open', now.out, o0.out)
       }
       await visit(a, info, `/money/reports/pnl?month=${M1.key}`, 'pnl closed')
-      if (!(await a.getByTestId('pnl-frozen').isVisible({ timeout: 5_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'pnl closed', what: 'no "Frozen when the month was closed" on the P&L' })
+      if (!(await a.getByTestId('pnl-frozen').isVisible({ timeout: 5_000 }).catch(() => false))) note(info, { kind: 'observation', where: 'pnl closed', what: 'no "Figures final when the month was locked" on the P&L' })
     })
 
-    await probe(info, b, 'phone: Lock a month of the closed month', async () => {
+    await probe(info, b, 'phone: Lock a month of the locked month', async () => {
       await visit(b, info, `/money/month-end?month=${M1.key}`, 'month-end phone closed')
       await layout(b, info, 'month-end phone closed')
       await shot(b, 'books-month-end-closed-phone')
