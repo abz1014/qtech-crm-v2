@@ -1,7 +1,7 @@
 ---
 id: supplier-history
 title: See what a supplier quoted and how they delivered
-roles: sales, engineer, admin
+roles: sales, admin
 keywords: supplier, history, quotes, past prices, reply time, late, deliveries, brands, what they quoted
 screens: /companies
 related: supplier-prices

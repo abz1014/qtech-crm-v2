@@ -1,7 +1,7 @@
 ---
 id: exchange-rate
 title: Enter today's exchange rate by hand
-roles: sales, engineer, admin
+roles: sales, admin
 keywords: exchange rate, rate, dollar, usd, currency, bank rate, tt rate, fx, pkr
 screens: /settings
 related: supplier-prices

@@ -56,7 +56,7 @@ export default function CaptureRoute() {
     return (
       <div className="mx-auto grid max-w-xl gap-4 px-4 py-8" data-testid="share-gone">
         <h1 className="text-2xl font-semibold tracking-tight">Nothing to add</h1>
-        <p className="text-base text-fg-2">That shared item is no longer on this device (shared items are kept for 7 days). Share it again from WhatsApp, or start from a job.</p>
+        <p className="text-base text-fg-2">That shared item is no longer on this device (shared items are kept for up to 7 days, and signing out clears them). Share it again from WhatsApp, or start from a job.</p>
         <div>
           <Button size="touch" onClick={() => navigate('/jobs')} className="text-base">
             Open Jobs

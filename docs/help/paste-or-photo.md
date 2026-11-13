@@ -1,7 +1,7 @@
 ---
 id: paste-or-photo
 title: Add a photo, a file or a message to a job
-roles: engineer, sales, admin
+roles: sales, admin
 keywords: paste or photo, photo, picture, camera, capture, paste, attach, file, pdf, note, whatsapp, share, supplier price, customer answer, add to job
 screens: /jobs, /capture
 related: new-enquiry
@@ -12,6 +12,6 @@ related: new-enquiry
 4. A photo or a note: tap [Add photo] or [Add note]. There are no other fields.
 5. Sharing from WhatsApp on your phone? Share to Q-Tech CRM, then pick [New enquiry] or [Add to job…].
 
-Tip: An engineer can add a photo or a note. Prices are for sales and the owner.
+Tip: An engineer can add a photo or a note. The other kinds are for the office.
 
 Safe to try: added to the wrong job? Tap Undo on the message at the bottom.

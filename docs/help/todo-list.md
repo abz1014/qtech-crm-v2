@@ -1,7 +1,7 @@
 ---
 id: todo-list
 title: Work through your To do list
-roles: sales, admin, engineer
+roles: sales, admin
 keywords: to do, todo, today, late, this week, list, what to do, button, next step
 screens: /todo
 related: today-chase, snooze

@@ -1,7 +1,7 @@
 ---
 id: read-a-job
 title: See where a job stands
-roles: sales, engineer, admin
+roles: sales, admin
 keywords: job, stage, ruler, next step, where, stands, status
 screens: /jobs
 related: find-a-job
