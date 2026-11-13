@@ -10,7 +10,8 @@ import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useCloseMonth, useReopenMonth } from '@/features/money/monthEnd/hooks'
-import { checksWithItems, closeNeedsMove, monthName, type CheckCard, type ClosedMonth } from '@/features/money/monthEnd/model'
+import { closeNeedsMove, monthName, type ClosedMonth } from '@/features/money/monthEnd/model'
+import { lockChecks, lockChecksWithItems } from '@/features/money/monthEnd/lockChecks'
 import { formatClosedAt, longDay } from '@/features/money/monthEnd/format'
 import type { MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 
@@ -34,7 +35,18 @@ function closeFailure(err: unknown, month: string): string {
   return 'Something went wrong. The month was not locked. Try again.'
 }
 
-export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; onOpenChange: (o: boolean) => void; ctx: MonthEndCtx }) {
+export function CloseMonthDialog({
+  open,
+  onOpenChange,
+  ctx,
+  mistakes = 0,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  ctx: MonthEndCtx
+  /** How many mistakes to fix the page found (0 while they load, as on the page). */
+  mistakes?: number
+}) {
   const toast = useToast()
   const close = useCloseMonth()
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +55,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
   // button moves the page to the older month), and a dialog for any other month stays shut.
   const target = ctx.month
   const blocked = closeNeedsMove(ctx.month, state)
-  const cards: CheckCard[] = ctx.cards
+  const cards = lockChecks(ctx.cards, mistakes)
   const label = monthKeyLabel(target)
   const button = `Lock ${monthName(target)}`
 
@@ -79,7 +91,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
         title={`Lock ${label}?`}
         context={
           <>
-            {longDay(ctx.today)} · <span className="num">{checksWithItems(cards)}</span> of <span className="num">{cards.length}</span> checks have items
+            {longDay(ctx.today)} · <span className="num">{lockChecksWithItems(cards)}</span> of <span className="num">{cards.length}</span> checks have items
           </>
         }
         size="md"

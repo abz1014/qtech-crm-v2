@@ -17,6 +17,7 @@ import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { openFindings, useCheckedSet } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
+import { lockChecks, lockChecksWithItems } from '@/features/money/monthEnd/lockChecks'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 import { ReportError } from '@/features/money/monthEnd/ReportParts'
@@ -130,7 +131,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const [open, setOpen] = useState(false)
   const state = ctx.state
   const closed = state?.kind === 'closed'
-  const withItems = ctx.withItems + (extra > 0 ? 1 : 0)
+  const withItems = lockChecksWithItems(lockChecks(ctx.cards, extra))
   const day = closeWindowDay(ctx.month, ctx.today)
   const name = monthName(ctx.month)
   const target = closeTarget(ctx.month, state)
@@ -203,7 +204,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
           {closed ? <span className="text-sm text-fg-muted">Reopen it from the list below.</span> : tip}
         </div>
       )}
-      {closed || move ? null : <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} />}
+      {closed || move ? null : <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} mistakes={extra} />}
     </section>
   )
 }

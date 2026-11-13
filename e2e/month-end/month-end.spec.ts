@@ -301,7 +301,8 @@ test.describe('month-end (M10)', () => {
     await startCounting(page)
     await closeBtn.click()
     const dialog = page.getByRole('dialog', { name: `Lock ${STMT.label}?` })
-    await expect(dialog.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
+    await expect(dialog.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(7) // the six month checks (round 3: the FBR-deposit check is part of the bank check) and Mistakes to fix, the same seven the page counts
+    await expect(dialog.getByRole('list', { name: 'Warnings' }).getByRole('listitem').last()).toContainText('Mistakes to fix')
     await review(page, 'm10-close-dialog-1440')
     await dialog.getByRole('button', { name: `Lock ${STMT.name}`, exact: true }).click()
     await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is locked.`)
