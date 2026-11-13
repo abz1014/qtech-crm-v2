@@ -705,12 +705,12 @@ function factsFor(
   const bid: Fact | null = rfq?.dueOn ? { label: 'Quotation due in', short: 'Quotation due', icon: CalendarDays, value: distanceText(rfq.dueOn, today), sub: formatDay(rfq.dueOn), tone: rfq.dueOn <= today ? 'danger' : undefined } : null
   /** The two cells that change once it has been chased: "Chased ..." and "Next nudge". */
   const chased = (who: string, count: number, on: string): Fact => ({
-    label: `Followed up ${who}`,
+    label: `${who === 'customer' ? 'Customer' : 'Supplier'} followed up`,
     short: 'Followed up',
     icon: Check,
     tone: 'success',
     value: on === today ? 'Today' : agoText(on, today).replace(/^\w/, ch => ch.toUpperCase()),
-    sub: `${formatDay(on)} · ${count > 0 ? `${who === 'customer' ? 'asked' : 'chase'} ×${count}` : 'once'}`,
+    sub: `${formatDay(on)} · ${count > 0 ? `${who === 'customer' ? 'asked' : 'follow-up'} ×${count}` : 'once'}`,
   })
   const nextNudge = (on: string): Fact => ({ label: 'Follow up again on', short: 'Follow up again', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
   const out: Array<Fact | null> = []

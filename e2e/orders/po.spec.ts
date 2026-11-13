@@ -63,7 +63,7 @@ test.describe('O07: Issue PO', () => {
     await expect(d.getByTestId('po-source-2')).toContainText(s.lastPoRef)
     await expect(price(page, 2)).toHaveValue('742.00')
     await expect(d.getByTestId('po-source-3')).toContainText('quote')
-    await expect(d.getByTestId('po-source-3')).toContainText('Their quote, RFQ-')
+    await expect(d.getByTestId('po-source-3')).toContainText('Their supplier price, RFQ-')
     await expect(price(page, 3)).toHaveValue('214.00')
     await expect(d.getByTestId('po-source-4')).toContainText('typed')
     await expect(d.getByTestId('po-source-4')).toContainText('Type a price')

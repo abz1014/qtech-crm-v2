@@ -392,7 +392,7 @@ test.describe('O01: Mark won creates the order', () => {
     const dialog = page.getByRole('dialog')
     await chooseSupplier(page, dialog, 'Supplier for line 1', new RegExp(supplierB.name)) // the warnings are about the quote chosen
     await expect(dialog.getByTestId('convert-item-1-warning').first()).toContainText('may belong to another item')
-    await expect(dialog.getByTestId('convert-item-1')).toContainText('currency of this supplier quote was not confirmed')
+    await expect(dialog.getByTestId('convert-item-1')).toContainText('currency of this supplier price was not confirmed')
     await expect(price(dialog, 1)).toHaveValue('')
     await price(dialog, 1).fill('1500')
     await price(dialog, 2).fill('3000')
