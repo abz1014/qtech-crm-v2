@@ -165,7 +165,7 @@ describe('Team screen', () => {
     h.list.mockRejectedValueOnce(new PlainError('Only an active admin can manage people.'))
     const user = setupUser()
     mount()
-    expect(await screen.findByText('Couldn’t load the team')).toBeInTheDocument()
+    expect(await screen.findByText('Could not load the team')).toBeInTheDocument()
     expect(screen.getByText('Nothing has changed. Check your connection, then try again.')).toBeInTheDocument()
     expect(screen.queryByText('Only an active admin can manage people.')).toBeNull() // never the raw error text
     await user.click(screen.getByRole('button', { name: /try again|retry/i }))

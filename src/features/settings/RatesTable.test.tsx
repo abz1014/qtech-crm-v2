@@ -71,7 +71,7 @@ describe('exchange rate table', () => {
   it('says plainly when the rates cannot load', () => {
     h.state = { data: [], isLoading: false, isError: true, refetch: vi.fn() }
     render(<RatesTable />)
-    expect(screen.getByText('Couldn’t load the exchange rates')).toBeInTheDocument()
+    expect(screen.getByText('Could not load the exchange rates')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument()
   })
 })
