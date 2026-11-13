@@ -16,12 +16,13 @@ import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ChannelLink } from '@/ui/ChannelLink'
 import { ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
-import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
+import { numbersText, useChooseSuppliers } from '@/features/rfqs/escalationLogic'
+import { askedItemsOf } from '@/features/rfqs/lib/askedItems'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useRestoreSupplierChase, useSetInquiryNoOffer, useStampSupplierChase } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
 import { useChannelPreference } from '@/lib/useChannelPreference'
-import { awaitingReply, canChaseInquiry, jumpToReplyRow, outstandingItems } from '@/features/rfqs/replyFocus'
+import { awaitingReply, canChaseInquiry, jumpToReplyRow, outstandingItems, replyItems } from '@/features/rfqs/replyFocus'
 import { ReplyChip, SupplierReplyDialog } from '@/features/rfqs/SupplierReplies'
 import { useReplyDialog } from '@/features/rfqs/useReplyDialog'
 import { SentConfirm } from '@/features/rfqs/SentConfirm'
@@ -156,18 +157,19 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                   className="-my-2 flex min-h-touch w-full flex-wrap items-center gap-x-3 gap-y-1 rounded text-left"
                 >
                   <b className="min-w-0 flex-1 basis-[10rem] break-words font-semibold">{i.supplierName}</b>
-                  <ReplyChip inquiry={i} itemCount={items.length} />
+                  <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
                   <Icon icon={ChevronDown} className={cn('shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} />
                 </button>
               ) : (
                 <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
                   <b className="min-w-0 flex-1 basis-[10rem] break-words font-semibold">{i.supplierName}</b>
-                  <ReplyChip inquiry={i} itemCount={items.length} />
+                  <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
                 </div>
               )}
               {folded ? null : (
                   <div id={detailId} className="contents">
                     <p className="text-sm text-fg-muted">{sentLine(i)}</p>
+                    <AskedAboutLine inquiry={i} items={items} />
                     {mem ? <p className={mem.late ? 'text-sm text-tone-warning-fg' : 'text-sm text-fg-muted'}>{mem.text}</p> : null}
                     <ChasedByNote byId={i.lastChasedBy} at={i.lastChasedOn} />
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -220,7 +222,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
         <SupplierReplyDialog
           key={`${replying.id}:${replying.lines.map(l => `${l.itemId}=${l.unitPrice}${l.currency}${l.leadTime}${l.inStock}`).join('|')}`}
           rfq={rfq}
-          items={items}
+          items={replyItems(replying, items)}
           inquiry={replying}
           inquiries={inquiries}
           rates={rates}
@@ -229,6 +231,18 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
         />
       ) : null}
     </DetailPanel>
+  )
+}
+
+/** "Asked about items 1 and 2": only for a supplier asked about some of the items (supplier flow D). */
+function AskedAboutLine({ inquiry, items }: { inquiry: InquiryRow; items: readonly RfqItemRow[] }) {
+  if (!inquiry.askedItemIds) return null
+  const asked = askedItemsOf(inquiry, items)
+  if (asked.length === items.length) return null
+  return (
+    <p className="text-sm text-fg-muted" data-asked-about={inquiry.supplierId}>
+      {asked.length === 0 ? 'Asked about an item that was removed' : `Asked about ${numbersText(asked.map(it => it.number))} only`}
+    </p>
   )
 }
 

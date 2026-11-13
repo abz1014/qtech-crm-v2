@@ -19,6 +19,8 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib'
  * come from R03 (the reasons) and R17 (the memory); nothing is scored. Inside a reason the supplier with the better record comes
  * first (A8), and the order behind it is cited (number, the date we placed it, days to delivery).
  * The card's button is not green: the page has one green button, and while nobody is asked it is the header's Ask suppliers.
+ * Supplier flow D: with more than one item, "Items to ask about" lists them with a tick each (all ticked in the card; in the dialog
+ * the items that still need a price). The message lists only the ticked items, and the ask records them (0140).
  */
 const copyLabel = (n: number) => `Copy message for ${n} ${n === 1 ? 'supplier' : 'suppliers'}`
 
@@ -51,6 +53,37 @@ function useTicks(suggestions: readonly SupplierSuggestion[] | undefined) {
       setAdded(a => (a.some(x => x.id === f.id) ? a : [...a, f]))
     },
   }
+}
+
+/** The ticked items, starting with `initial`; a tick or untick by hand is kept. */
+function useItemTicks(items: readonly RfqItemRow[], initial: (item: RfqItemRow) => boolean) {
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const isTicked = (it: RfqItemRow) => touched[it.id] ?? initial(it)
+  return { isTicked, ticked: items.filter(isTicked), set: (id: string, on: boolean) => setTouched(t => ({ ...t, [id]: on })) }
+}
+
+/** "Items to ask about": one tick per item. Not shown for an RFQ with one item (there is nothing to choose). */
+function ItemPicks({ items, t }: { items: readonly RfqItemRow[]; t: ReturnType<typeof useItemTicks> }) {
+  if (items.length < 2) return null
+  return (
+    <ul data-slot="ask-items" aria-label="Items to ask about" className="border-t">
+      <li className="border-b bg-sunken px-5 py-2 text-base font-semibold">
+        Items to ask about <span className="font-regular text-fg-muted">{`· ${t.ticked.length} of ${items.length}`}</span>
+      </li>
+      {items.map(it => {
+        const id = `ask-item-${it.id}`
+        return (
+          <li key={it.id} className="relative flex min-w-0 items-center gap-3 border-b px-5 py-2 last:border-b-0">
+            <Checkbox id={id} checked={t.isTicked(it)} onCheckedChange={v => t.set(it.id, v === true)} aria-label={`Item ${it.number}: ${it.description}`} />
+            <label htmlFor={id} className="min-w-0 text-sm after:absolute after:inset-0 after:cursor-pointer">
+              <span className="num mr-2 text-fg-muted">{it.number}</span>
+              {it.description}
+            </label>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
 /** "Search or add a supplier", and the ones found or added so far, ticked. */
@@ -182,13 +215,16 @@ export function SuppliersToAskCard({
   busy: boolean
   /** Never found by "Search or add a supplier": the customer itself. */
   excludeIds?: ReadonlySet<string>
-  onAsk: (ticked: readonly TickedSupplier[]) => void
-  /** "Record as asked": the ticked suppliers are recorded as asked, nothing is copied. */
-  onRecord: (ticked: readonly TickedSupplier[]) => void
+  /** The ticked suppliers and the ticked items: the message lists only those items. */
+  onAsk: (ticked: readonly TickedSupplier[], items: readonly RfqItemRow[]) => void
+  /** "Record as asked": the ticked suppliers are recorded as asked about the ticked items, nothing is copied. */
+  onRecord: (ticked: readonly TickedSupplier[], items: readonly RfqItemRow[]) => void
   /** "Enter reply from another supplier"; left out for a person who does not see prices. */
   onReplyFrom?: () => void
 }) {
   const t = useTicks(suggestions)
+  const it = useItemTicks(items, () => true)
+  const none = t.ticked.length === 0 || it.ticked.length === 0
   return (
     <DetailPanel title="Suppliers to ask" pill="suggested" dataSlot="suppliers-to-ask">
       {suggestions === undefined ? (
@@ -200,11 +236,12 @@ export function SuppliersToAskCard({
         <>
           {suggestions.length === 0 ? <Empty coverage={coverage} /> : <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />}
           <FindAndAdded t={t} excludeIds={excludeIds} />
+          <ItemPicks items={items} t={it} />
           <div className="flex flex-wrap items-center gap-2 border-t px-5 py-3">
-            <Button icon={Copy} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0 || items.length === 0} onClick={() => onAsk(t.ticked)}>
-              {t.ticked.length === 0 ? 'Tick a supplier to ask' : copyLabel(t.ticked.length)}
+            <Button icon={Copy} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" busy={busy} busyLabel="Copying" disabled={none} onClick={() => onAsk(t.ticked, it.ticked)}>
+              {t.ticked.length === 0 ? 'Tick a supplier to ask' : it.ticked.length === 0 ? 'Tick an item to ask about' : copyLabel(t.ticked.length)}
             </Button>
-            <Button variant="quiet" icon={ClipboardCheck} disabled={t.ticked.length === 0 || busy} onClick={() => onRecord(t.ticked)}>
+            <Button variant="quiet" icon={ClipboardCheck} disabled={none || busy} onClick={() => onRecord(t.ticked, it.ticked)}>
               Record as asked
             </Button>
             {onReplyFrom ? (
@@ -219,11 +256,15 @@ export function SuppliersToAskCard({
   )
 }
 
-/** "Ask suppliers" / "Ask more suppliers": the same list in a dialog, for the items that still need a price (all of them when none does). */
+/**
+ * "Ask suppliers" / "Ask more suppliers": the same list in a dialog. The items that still need a price start ticked (all of them
+ * when none does, or when `needing` is left out).
+ */
 export function FloatDialog({
   title = 'Ask more suppliers',
   suggestions,
-  itemCount,
+  items,
+  needing,
   busy,
   onAsk,
   onRecord,
@@ -234,16 +275,22 @@ export function FloatDialog({
 }: {
   title?: string
   excludeIds?: ReadonlySet<string>
-  onRecord: (ticked: readonly TickedSupplier[]) => void
+  onRecord: (ticked: readonly TickedSupplier[], items: readonly RfqItemRow[]) => void
   partial?: boolean
   coverage?: string | null
   suggestions: readonly SupplierSuggestion[] | undefined
-  itemCount: number
+  items: readonly RfqItemRow[]
+  /** The ids of the items that still need a price. */
+  needing?: ReadonlySet<string>
   busy: boolean
-  onAsk: (ticked: readonly TickedSupplier[]) => void
+  onAsk: (ticked: readonly TickedSupplier[], items: readonly RfqItemRow[]) => void
   onClose: () => void
 }) {
   const t = useTicks(suggestions)
+  const pre = needing && needing.size > 0 ? needing : null
+  const it = useItemTicks(items, x => (pre ? pre.has(x.id) : true))
+  const none = t.ticked.length === 0 || it.ticked.length === 0
+  const itemCount = it.ticked.length
   return (
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
@@ -255,11 +302,11 @@ export function FloatDialog({
             <Button data-cancel onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button icon={ClipboardCheck} disabled={t.ticked.length === 0 || busy} onClick={() => onRecord(t.ticked)}>
+            <Button icon={ClipboardCheck} disabled={none || busy} onClick={() => onRecord(t.ticked, it.ticked)}>
               Record as asked
             </Button>
-            <Button variant="primary" icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0} onClick={() => onAsk(t.ticked)}>
-              {t.ticked.length === 0 ? 'Tick a supplier' : copyLabel(t.ticked.length)}
+            <Button variant="primary" icon={Copy} busy={busy} busyLabel="Copying" disabled={none} onClick={() => onAsk(t.ticked, it.ticked)}>
+              {t.ticked.length === 0 ? 'Tick a supplier' : it.ticked.length === 0 ? 'Tick an item' : copyLabel(t.ticked.length)}
             </Button>
           </>
         }
@@ -270,6 +317,7 @@ export function FloatDialog({
           <div className="-mx-5 -my-2">
             {suggestions.length === 0 ? <Empty coverage={coverage} /> : <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} coverage={coverage} partial={partial} />}
             <FindAndAdded t={t} excludeIds={excludeIds} />
+            <ItemPicks items={items} t={it} />
           </div>
         )}
       </DialogContent>
