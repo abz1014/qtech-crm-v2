@@ -9,19 +9,24 @@ import { extendTailwindMerge } from 'tailwind-merge'
  * and fails when a token size is missing here.
  */
 export const TOKEN_SIZES = {
-  h: ['control', 'control-sm', 'control-lg', 'segment', 'chip', 'row', 'row-tall', 'head', 'topbar', 'touch', 'indicator'],
+  h: ['control', 'control-sm', 'control-lg', 'segment', 'chip', 'row', 'row-tall', 'head', 'topbar', 'tabbar', 'touch', 'indicator'],
   'min-h': ['control', 'control-sm', 'control-lg', 'segment', 'chip', 'row', 'row-tall', 'head', 'touch'],
-  w: ['nav', 'touch', 'control', 'control-sm', 'control-lg'],
+  w: ['nav', 'nav-collapsed', 'panel', 'touch', 'control', 'control-sm', 'control-lg'],
   'min-w': ['touch', 'chip'],
-  'max-w': ['list', 'table', 'prose'],
+  'max-w': ['list', 'table', 'detail', 'prose', 'content', 'sheet', 'dialog', 'dialog-wide'],
   size: ['icon-chip', 'control-sm', 'touch'],
-  text: ['stamp', 'table', 'display'],
-  font: ['regular', 'heavy'],
-  rounded: ['row', 'panel', 'round'],
+  text: ['stamp', 'table', 'display', 'kpi', 'hero'],
+  font: ['regular', 'card', 'bold', 'heavy'],
+  rounded: ['row', 'panel', 'round', 'control', 'card', 'pill', 'sheet'],
+  // Forest: elevation, the layer scale and the card / gutter spacing.
+  shadow: ['e1', 'e2', 'e3', 'pop', 'modal', 'on-navy', 'current'],
+  z: ['base', 'sticky', 'nav', 'picker', 'scrim', 'sheet', 'dialog', 'toast'],
+  spacing: ['card', 'card-gap', 'gutter'],
 } as const
 
 const twMerge = extendTailwindMerge({
   extend: {
+    theme: { spacing: [...TOKEN_SIZES.spacing] },
     classGroups: {
       h: [{ h: [...TOKEN_SIZES.h] }],
       'min-h': [{ 'min-h': [...TOKEN_SIZES['min-h']] }],
@@ -36,6 +41,8 @@ const twMerge = extendTailwindMerge({
       'rounded-b': [{ 'rounded-b': [...TOKEN_SIZES.rounded] }],
       'rounded-l': [{ 'rounded-l': [...TOKEN_SIZES.rounded] }],
       'rounded-r': [{ 'rounded-r': [...TOKEN_SIZES.rounded] }],
+      shadow: [{ shadow: [...TOKEN_SIZES.shadow] }],
+      z: [{ z: [...TOKEN_SIZES.z] }],
     },
   },
 })
