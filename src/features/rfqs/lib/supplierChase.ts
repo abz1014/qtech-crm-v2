@@ -112,7 +112,7 @@ export function generateSupplierChase(input: SupplierChaseInput): SupplierChase 
   const firm = isFirm(input.ageDays)
   const bold = (t: string) => (email ? t : `*${t}*`)
   // Owner format (DECISIONS 2026-10-28): plain greeting, no religious greeting, no RFQ number.
-  const greeting = input.contactName ? `Hi ${input.contactName}, hope you are doing well,` : 'Hi hope you are doing well,'
+  const greeting = input.contactName ? `Dear ${input.contactName},` : 'Dear Sir/Madam,'
 
   const list = items.map(itemLine).join('\n')
   const thanks = input.pricedNumbers.length > 0 ? ` Thank you for pricing ${numbersText(input.pricedNumbers)}.` : ''

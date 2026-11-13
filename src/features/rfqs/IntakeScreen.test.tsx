@@ -317,7 +317,7 @@ describe('intake screen', () => {
       { description: '24V actuator for ball valve', qty: 2, gst_rate: 18 },
     ])
     await waitFor(() => expect(copied).toHaveLength(1))
-    expect(copied[0]).toContain('Hi hope you are doing well,')
+    expect(copied[0]).toContain('Dear Sir/Madam,')
     expect(copied[0]).not.toMatch(/RFQ|Spec:|assalam/i)
     expect(copied[0]).not.toContain('####')
   })

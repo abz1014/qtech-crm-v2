@@ -18,7 +18,7 @@ export function ServiceReportDocument({ doc, profile, logoSrc }: { doc: ServiceR
 
         <View style={s.titleRow}>
           <View>
-            <Text style={s.h1}>Service Report</Text>
+            <Text style={s.h1}>SERVICE REPORT</Text>
             <Text style={s.muted}>{doc.visitType}</Text>
           </View>
           <View style={s.meta}>

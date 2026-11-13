@@ -24,7 +24,7 @@ const ownerItems: EnquiryItem[] = [
 
 // The owner's own sample (2026-10-28), verbatim apart from the sender name.
 const OWNER_TEXT = [
-  'Hi hope you are doing well,',
+  'Dear Sir/Madam,',
   '',
   'Please quote your best price, availability and lead time for the following :',
   '',

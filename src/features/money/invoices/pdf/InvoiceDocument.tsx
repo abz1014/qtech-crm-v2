@@ -131,7 +131,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
 
         <View style={s.titleRow}>
           <View>
-            <Text style={s.h1}>Sales Tax Invoice</Text>
+            <Text style={s.h1}>SALES TAX INVOICE</Text>
             <Text style={s.copyTag}>{copy}</Text>
           </View>
           <View style={s.meta}>

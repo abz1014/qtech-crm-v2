@@ -167,7 +167,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(rows).toHaveLength(1)
     rfq = rows[0]
     expect(rows[0].owner_id).toBe('a0000000-0000-4000-8000-000000000002') // the salesperson, with nothing typed
-    const text = await readClipboardWhen(page, 'Hi hope you are doing well,')
+    const text = await readClipboardWhen(page, 'Dear Sir/Madam,')
     expect(text).not.toContain(rfqRef(rfq.number))
     expect(text).not.toMatch(/####|assalam/i)
     expect(text).toContain(`${s.brand1} ${s.model1} electromagnetic flow meter DN50, 4 nos`)

@@ -755,7 +755,7 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
     const text = pdf ? pdfText(pdf) : null
     if (!text) return obs(info, 'C invoice PDF', 'pdftotext not available: invoice PDF text not checked')
     const needles = [
-      'Sales Tax Invoice',
+      'SALES TAX INVOICE',
       inv.number,
       'NTN 1234567-8',
       '7654321-0',

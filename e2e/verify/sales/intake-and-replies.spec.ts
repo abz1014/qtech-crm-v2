@@ -154,7 +154,7 @@ test('asking a supplier: the copied enquiry carries no RFQ number, every item wi
   await card.getByRole('button', { name: SALES.ask.copyFor(1) }).click()
   await expect(page.getByRole('status').filter({ hasText: SALES.ask.copied })).toBeVisible()
   const ref = `RFQ-${String(r.rfq.number).padStart(4, '0')}`
-  const text = await readClipboardWhen(page, 'Hi hope you are doing well,') // the owner's format: no RFQ number in the message
+  const text = await readClipboardWhen(page, 'Dear Sir/Madam,') // the owner's format: no RFQ number in the message
   expect(text).not.toContain(ref)
   expect(text).toContain(SALES.ask.itemLine(`Verifyflow${tag} electromagnetic flow meter DN80`, '3 nos'))
   expect(text).toContain(SALES.ask.itemLine(`Remote display for flow meter ${tag}`, '1 no'))

@@ -17,7 +17,7 @@ export function ChallanDocument({ doc, profile, logoSrc }: { doc: ChallanDoc; pr
 
         <View style={s.titleRow}>
           <View>
-            <Text style={s.h1}>Delivery Challan</Text>
+            <Text style={s.h1}>DELIVERY CHALLAN</Text>
           </View>
           <View style={s.meta}>
             <View style={s.metaRow}>
