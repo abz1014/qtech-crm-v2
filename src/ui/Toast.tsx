@@ -318,18 +318,18 @@ function ToastCard({
     >
       <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0 max-md:col-start-1 max-md:row-start-1 max-md:mt-[2px]', tone !== 'danger' && 'text-lime-300')} />
       <div className="grid min-w-0 flex-1 text-pretty max-md:col-start-2 max-md:row-start-1">
-        <span className="font-card">{title}</span>
-        {body ? <span className={cn('text-xs', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
+        <span className="font-bold">{title}</span>
+        {body ? <span className={cn('text-xs font-medium', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
         {undoable ? <span className="sr-only">{` Undo is available for ${u?.seconds ?? 10} seconds, or press Control+Z.`}</span> : null}
       </div>
       {undoable ? (
         <button
           type="button"
           onClick={onUndo}
-          className="inline-flex h-control-sm items-center gap-[6px] rounded-control border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-bold transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start"
+          className={cn('inline-flex h-control-sm items-center gap-2 rounded-control border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-heavy', 'transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start', tone !== 'danger' && 'text-lime-300')}
         >
           <svg viewBox="0 0 18 18" aria-hidden="true" className="size-[18px] -rotate-90">
-            <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" className="stroke-tone-ink-fg opacity-30" />
+            <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" className="stroke-current opacity-30" />
             <circle
               cx="9"
               cy="9"
@@ -337,7 +337,7 @@ function ToastCard({
               fill="none"
               strokeWidth="2"
               strokeLinecap="round"
-              className="stroke-tone-ink-fg"
+              className="stroke-current"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={still ? 0 : CIRCUMFERENCE * (1 - fraction)}
             />
@@ -352,7 +352,7 @@ function ToastCard({
             input.action?.onClick()
             onDismiss()
           }}
-          className="inline-flex h-control-sm items-center rounded-control border border-tone-ink-fg/30 px-3 text-xs font-bold transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start"
+          className={cn('inline-flex h-control-sm items-center rounded-control border border-tone-ink-fg/30 px-3 text-xs font-heavy', 'transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start', tone !== 'danger' && 'text-lime-300')}
         >
           {input.action.label}
         </button>
@@ -361,14 +361,14 @@ function ToastCard({
         type="button"
         aria-label="Dismiss"
         onClick={onDismiss}
-        className="grid size-control-sm shrink-0 place-items-center rounded-pill opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:col-start-3 max-md:row-start-1 max-md:-my-2 max-md:-mr-2 max-md:size-10"
+        className="grid size-control-sm shrink-0 place-items-center rounded-control opacity-80 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:col-start-3 max-md:row-start-1 max-md:-my-2 max-md:-mr-2 max-md:size-10"
       >
         <Icon icon={X} />
       </button>
       {undoable ? (
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-tone-ink-fg opacity-60"
+          className="absolute inset-x-0 bottom-0 h-1 origin-left bg-lime-300 opacity-60"
           style={{ transform: `scaleX(${still ? 1 : fraction})` }}
         />
       ) : null}
