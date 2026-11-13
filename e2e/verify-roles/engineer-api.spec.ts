@@ -106,14 +106,14 @@ test('search_all finds an engineer no invoice number and no customer PO; the adm
 
 test('search_all finds an engineer no supplier PO by its number; the admin finds it (0139)', async () => {
   const poNumber = 910000 + Math.floor(Math.random() * 89999)
-  const leg = await service('/rest/v1/supplier_orders', { method: 'POST', body: { order_id: world.order.id, supplier_id: world.supplier.id, currency: 'PKR' }, prefer: 'return=representation' })
-  expect(leg.status, 'fixture supplier order').toBeLessThan(300)
-  const po = await service('/rest/v1/purchase_orders', {
+  const leg = await api('admin', '/rest/v1/supplier_orders', { method: 'POST', body: { order_id: world.order.id, supplier_id: world.supplier.id, currency: 'PKR' }, prefer: 'return=representation' })
+  expect(leg.status, `fixture supplier order ${leg.text}`).toBeLessThan(300)
+  const po = await api('admin', '/rest/v1/purchase_orders', {
     method: 'POST',
-    body: { supplier_order_id: ((await leg.json()) as Array<{ id: string }>)[0].id, number: poNumber, revision: 0, currency: 'PKR', total: 0, lines: [{ qty: 1, unit_price: 1 }] },
+    body: { supplier_order_id: (leg.body as Array<{ id: string }>)[0].id, number: poNumber, revision: 0, currency: 'PKR', total: 0, lines: [{ qty: 1, unit_price: 1 }] },
     prefer: 'return=minimal',
   })
-  expect(po.status, 'fixture purchase order').toBeLessThan(300)
+  expect(po.status, `fixture purchase order ${po.text}`).toBeLessThan(300)
   const find = async (who: 'engineer' | 'admin') => (await api(who, '/rest/v1/rpc/search_all', { method: 'POST', body: { q: `PO-${poNumber}`, lim: 25 } })).body as Array<{ kind: string; label: string }>
   expect((await find('engineer')).filter(h => h.kind === 'po'), 'engineer: a supplier PO number finds no purchase order').toEqual([])
   expect((await find('admin')).filter(h => h.kind === 'po').length, 'admin finds it (control)').toBe(1)
