@@ -222,12 +222,13 @@ test.describe('O07: Issue PO', () => {
     await expect(d.getByRole('button', { name: 'Save payment' })).toBeVisible()
   })
 
-  test('an engineer never sees Issue PO, View PO or a price, but does see the PO chip', async ({ page }) => {
+  test('an engineer never sees Issue PO, View PO, a price or the PO chip', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: s.leg } }))
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
     await openStage(page, 'Supplier order')
-    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
+    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveCount(0)
+    await expect(page.getByText(/No PO yet|PO-\d\d-\d{4} · R0/)).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Issue PO|View PO|Revise PO/ })).toHaveCount(0)
     await expect(page.getByRole('menuitem', { name: /View PO|Revise PO/ })).toHaveCount(0)
   })

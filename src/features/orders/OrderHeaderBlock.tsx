@@ -314,7 +314,7 @@ export function OrderHeaderBlock({
                 action={
                   <div className="flex flex-wrap gap-2">
                     {(invoiced ?? 0) > 0 ? <InvoicePdfButton orderId={order.id} size="sm" /> : null}
-                    {!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
+                    {!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' && goodsLegs.every(l => l.deliveredOn !== null) ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
                   </div>
                 }
               >
