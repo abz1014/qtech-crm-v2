@@ -201,7 +201,7 @@ export interface PaymentNote {
 export function paymentNote(f: PaymentFacts, amount: number | null): PaymentNote {
   if (amount === null || !(amount > 0)) {
     // HW-44: a paid order opens empty and says so, so a second Save cannot record the last payment again by accident
-    if (f.balance <= 0 && f.gross > 0) return { kind: 'none', text: 'Nothing is due on this order: it is paid. Anything recorded here is more than the balance.' }
+    if (f.balance <= 0 && f.gross > 0) return { kind: 'none', text: 'No balance is due on this order, as it is paid. Anything recorded here is more than the balance.' }
     return { kind: 'none', text: 'Type the amount received.' }
   }
   const after = f.balance - amount

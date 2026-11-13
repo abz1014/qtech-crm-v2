@@ -56,7 +56,7 @@ describe('Money home', () => {
     expect(await within(blocks).findByText('1,465,000')).toBeInTheDocument()
     const sentence = await screen.findByText(/came in this month/)
     expect(screen.getByTestId('cash-not-profit')).toHaveTextContent('Cash, not profit:')
-    expect(sentence.closest('p')).toHaveTextContent('about PKR 291,700 of it is GST we owe FBR')
+    expect(sentence.closest('p')).toHaveTextContent('about PKR 291,700 of it is GST payable to FBR')
   })
 
   it('every block is a link to where its number comes from, and Accounts is one level down', async () => {

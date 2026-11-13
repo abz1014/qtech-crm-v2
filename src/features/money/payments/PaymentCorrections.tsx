@@ -180,7 +180,7 @@ export function VoidPaymentDialog({ open, onOpenChange, line, orderNumber }: { o
         }
       >
         <div className="grid gap-4">
-          <p className="text-sm text-fg-2">It stops counting in the balance and every money figure. The record stays, with your reason. You can undo it for 10 minutes.</p>
+          <p className="text-sm text-fg-2">It stops counting in the balance and every money figure. The record stays with its reason. It can be undone for 10 minutes.</p>
           <Field label="Reason" requirement="required" error={tried && !reason.trim() ? 'Say why it is voided' : undefined}>
             <TextArea value={reason} onChange={e => setReason(e.target.value)} rows={2} data-autofocus />
           </Field>
@@ -251,7 +251,7 @@ function CorrectForm({ line, orderNumber, onClose }: { line: PaymentLine; orderN
       icon={PencilLine}
       size="md"
       context={`${orderRef(orderNumber)} · recorded as PKR ${formatAmount(line.amount)} on ${formatShortDate(line.receivedOn, today)}`}
-      lead={<span className="text-xs">Wrong order? Void it here and record it on the right order.</span>}
+      lead={<span className="text-xs">For a wrong order, void it here and record it on the right order.</span>}
       footer={
         <>
           <Button variant="quiet" onClick={onClose} data-cancel>

@@ -28,7 +28,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
       <Panel title="Credit balance">
         <div className="px-5 py-3" data-testid="credit-error">
           <p role="alert" className="mb-2 text-sm text-fg-2">
-            Couldn't load the credit balance. Nothing was changed. Check your connection and try again.
+            The credit balance could not be loaded. Nothing was changed. Check the connection and try again.
           </p>
           <Button size="sm" onClick={() => void q.refetch()}>
             Try again
@@ -47,8 +47,8 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
         title="Credit balance"
         info={
           <InfoTip label="About the credit balance">
-            Money this customer has paid above what their orders are worth, including a credit note on an invoice they already paid, less what
-            you refunded and what you put against another order. Refund it, or apply it to an order of theirs that still owes.
+            Money this customer has paid above what their orders are worth, including a credit note on an invoice already paid, less refunds
+            and credit applied to other orders. Refund it, or apply it to an order of theirs that still has a balance due.
           </InfoTip>
         }
         actions={
@@ -121,8 +121,8 @@ function CreditLine({ companyId, event, orderRef, jobKey }: { companyId: string;
       </div>
       {asking ? (
         <ConfirmRemove
-          title={event.kind === 'refund' ? 'Remove this refund?' : 'Take this credit back off the order?'}
-          detail={event.kind === 'refund' ? 'The customer holds that credit again. Use this only for a refund recorded by mistake.' : 'The order owes that amount again and the customer holds the credit again.'}
+          title={event.kind === 'refund' ? 'Remove this refund?' : 'Take this credit back from the order?'}
+          detail={event.kind === 'refund' ? 'The customer holds that credit again. Use this only for a refund recorded by mistake.' : 'The amount is due on the order again and the customer holds the credit again.'}
           busy={remove.isPending}
           error={error}
           onCancel={() => {

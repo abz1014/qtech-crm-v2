@@ -69,11 +69,11 @@ export function refundNote(c: CreditSummary, amount: number | null): CreditNote 
 /** The line under an apply amount: against the credit and against what the order owes. */
 export function applyNote(c: CreditSummary, target: Pick<ApplyTarget, 'balance'> | null, amount: number | null): CreditNote {
   if (!target) return { kind: 'ok', text: 'Choose the order to put the credit against.' }
-  if (amount === null || !(amount > 0)) return { kind: 'ok', text: `They hold PKR ${formatAmount(c.balance)} of credit; the order owes PKR ${formatAmount(target.balance)}.` }
+  if (amount === null || !(amount > 0)) return { kind: 'ok', text: `They hold PKR ${formatAmount(c.balance)} of credit. The balance due on the order is PKR ${formatAmount(target.balance)}.` }
   if (p(amount) > p(c.balance)) return { kind: 'over', text: `That is more than the PKR ${formatAmount(c.balance)} of credit they hold.` }
-  if (p(amount) > p(target.balance)) return { kind: 'over', text: `That is more than the PKR ${formatAmount(target.balance)} the order still owes.` }
+  if (p(amount) > p(target.balance)) return { kind: 'over', text: `That is more than the PKR ${formatAmount(target.balance)} still due on the order.` }
   const owing = paisaToFixed(p(target.balance) - p(amount))
-  return { kind: 'ok', text: p(amount) === p(target.balance) ? 'This settles the order. No cash moves.' : `The order will still owe PKR ${formatAmount(owing)}. No cash moves.` }
+  return { kind: 'ok', text: p(amount) === p(target.balance) ? 'This settles the order. No cash moves.' : `PKR ${formatAmount(owing)} will still be due on the order. No cash moves.` }
 }
 
 /** One line of the credit history, refunds and applied credit together, newest first. */

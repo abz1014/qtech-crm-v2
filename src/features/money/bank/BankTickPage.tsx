@@ -87,9 +87,9 @@ export function BankTickPage() {
       <span className="inline-flex items-center gap-2">
         <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
         <InfoTip label="About matching the bank statement">
-          Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement; tap again to undo. Cash items never appear here.
-          An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&rsquo;s total
-          credits and debits. Ticking changes nothing in the books and stays editable after the month closes.
+          Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement. Select a line again to undo. Cash items never appear here.
+          An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&apos;s total
+          credits and debits. Ticking changes nothing in the books and stays editable after the month is locked.
         </InfoTip>
       </span>
     </div>
@@ -117,7 +117,7 @@ export function BankTickPage() {
               </Button>
             }
           >
-            Your payments, expenses and ticks are safe; nothing was changed. Try again, and if it keeps failing, tell the admin.
+            Payments, expenses and ticks are safe. Nothing was changed. Try again, and if it keeps failing, tell the admin.
           </EmptyState>
         </div>
       ) : data.isPending || !view || !totals ? (
@@ -125,7 +125,7 @@ export function BankTickPage() {
       ) : (
         <>
           {error ? (
-            <Banner tone="danger" title={error.kind === 'closed-month' ? error.message : "Couldn't save that tick"}>
+            <Banner tone="danger" title={error.kind === 'closed-month' ? error.message : "The tick was not saved"}>
               {error.kind === 'closed-month'
                 ? 'The tick was not saved. Ask an admin to reopen the month, then tick again.'
                 : `${error.message} The line is back where it was.`}

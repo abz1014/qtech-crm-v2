@@ -67,7 +67,7 @@ const schema = z
   depositAmount: z.number().min(0).nullable(),
   notes: z.string(),
   })
-  .refine(v => !v.ackNeeded || v.ack, { path: ['ack'], message: 'Tick the box to go on' })
+  .refine(v => !v.ackNeeded || v.ack, { path: ['ack'], message: 'Tick the box to continue' })
 type Values = z.input<typeof schema>
 type DateField = 'copyReceivedOn' | 'tcsSentOn' | 'clientReceivedOn' | 'receiptOn' | 'depositedOn'
 
@@ -475,7 +475,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
             <FormField<Values, 'net'> name="net" label="Net amount, PKR">
               {f => <NumberInput {...f} inputMode="decimal" />}
             </FormField>
-            <FormField<Values, 'gst'> name="gst" label="GST, PKR" help="18%, or 0 when exempt. The CRM does not work it out for you here.">
+            <FormField<Values, 'gst'> name="gst" label="GST, PKR" help="18%, or 0 when exempt. The CRM does not calculate it here.">
               {f => <NumberInput {...f} inputMode="decimal" />}
             </FormField>
             <p className="num text-base text-fg-2 md:col-span-2">
@@ -517,7 +517,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
               </FormField>
               {date('receiptOn', 'Receipt received')}
               {date('depositedOn', 'GST paid to FBR')}
-              <FormField<Values, 'depositAmount'> name="depositAmount" label="Deposit amount, PKR" help="Defaults to the GST amount when you stamp the month.">
+              <FormField<Values, 'depositAmount'> name="depositAmount" label="Deposit amount, PKR" help="Defaults to the GST amount when the month is stamped.">
                 {f => <NumberInput {...f} />}
               </FormField>
             </fieldset>

@@ -6,9 +6,9 @@ keywords: void, remove, delete payment, typed twice, wrong order, cheque bounced
 screens: /jobs, /money/receivables
 related: correct-payment, record-payment
 ---
-1. Open the order. In the [Payment] stage, tap ⋯ beside the payment, then [Void].
-2. Give the reason: type it, or tap [Typed twice], [Wrong order] or [Cheque bounced].
-3. Tap [Void payment]. It stops counting at once; the record stays, with your reason.
-4. Changed your mind? Tap [Undo] on the message, or under Voided, within 10 minutes.
+1. Open the order. In the [Payment] stage, select ⋯ beside the payment, then [Void].
+2. Enter the reason, or select [Typed twice], [Wrong order] or [Cheque bounced].
+3. Select [Void payment]. It stops counting at once. The record stays with its reason.
+4. To reverse it, select [Undo] on the message, or under Voided, within 10 minutes.
 
 Tip: A payment ticked in [Bank check] must be unticked first. A locked month must be reopened in [Lock a month] first.

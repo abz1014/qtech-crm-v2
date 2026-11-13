@@ -77,7 +77,7 @@ export interface InvoicePatch {
 
 /** The code of the refusal when the invoice was changed by someone else after this person opened it (M1). */
 export const INVOICE_CHANGED = 'invoice_changed'
-const CHANGED_MESSAGE = 'Someone else changed this invoice while you had it open. Nothing was saved. Reload the page to see their change, then make yours again.'
+const CHANGED_MESSAGE = 'This invoice was changed by another user. Nothing was saved. Reload the page to see the change, then enter yours again.'
 
 /**
  * Saves a change to an invoice. With `expectedUpdatedAt` (the updated_at the person's copy came with) the write only lands when the
@@ -272,7 +272,7 @@ export async function restoreStamp(
   }
   if (skipped > 0) {
     throw new PlainError(
-      `Someone else changed ${skipped === 1 ? 'an invoice' : `${skipped} invoices`} after the stamp, so ${skipped === 1 ? 'it was' : 'they were'} left as ${skipped === 1 ? 'it is' : 'they are'}. The others were put back.`,
+      `Another user changed ${skipped === 1 ? 'an invoice' : `${skipped} invoices`} after the stamp, so ${skipped === 1 ? 'it was' : 'they were'} left as ${skipped === 1 ? 'it is' : 'they are'}. The others were put back.`,
       INVOICE_CHANGED,
     )
   }
