@@ -88,7 +88,8 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   const stmt = await seedStatementMonth()
   const m = await seedMargins()
   const ctx = await roleContext(browser, info, 'admin')
-  const sentence = `${STMT.label} is closed. An admin can reopen it.`
+  const sentence = `${STMT.label} is closed. An admin can reopen it.` // the server's text
+  const shown = `${STMT.label} is locked. An admin can reopen it.` // the screen's text
   const closeName = `Lock ${STMT.name}`
 
   // ---- 1. Burst entry, keyboard only -------------------------------------------------------------------------------------------------
@@ -212,7 +213,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amount))
     await page.getByRole('textbox', { name: 'Date paid' }).fill(`05/${STMT.key.slice(5)}/${STMT.key.slice(0, 4)}`)
     await page.getByRole('button', { name: 'Save expense' }).click()
-    await expect(page.getByText(sentence)).toBeVisible()
+    await expect(page.getByText(shown)).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue(amount.toLocaleString('en-US'))
     expect(await must(rest<{ id: string }[]>('admin', `expenses?amount_pkr=eq.${amount}&select=id`))).toHaveLength(0)
 

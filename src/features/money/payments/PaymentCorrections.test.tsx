@@ -86,7 +86,7 @@ describe('Payment rows with Correct / Void (0073)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Wrong order' }))
     await user.click(within(dialog).getByRole('button', { name: 'Void payment' }))
     const err = await within(dialog).findByTestId('correction-error')
-    expect(err.textContent).toContain('October 2026 is closed')
+    expect(err.textContent).toContain('October 2026 is locked')
     expect(within(err).getByRole('link', { name: 'Open Month-end' })).toHaveAttribute('href', '/money/month-end')
   })
 

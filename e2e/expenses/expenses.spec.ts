@@ -840,7 +840,7 @@ test.describe('expenses (M03, M11)', () => {
         label: new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(d),
       }
     })()
-    const sentence = `${prev.label} is closed. An admin can reopen it.`
+    const shown = `${prev.label} is locked. An admin can reopen it.` // what the screen says (the server raises "is closed")
 
     test.beforeAll(async () => {
       // beforeAll runs again when a failed test restarts the worker; a second seed row would make the list ambiguous
@@ -880,7 +880,7 @@ test.describe('expenses (M03, M11)', () => {
       await page.keyboard.press('Tab') // detail
       await page.keyboard.type(tag)
       await page.keyboard.press('Control+Enter')
-      const alert = page.getByRole('alert').filter({ hasText: sentence })
+      const alert = page.getByRole('alert').filter({ hasText: shown })
       await expect(alert).toBeVisible()
       await expect(alert).toContainText('Nothing was saved')
       await expect(alert).toContainText('The other 2 rows are still here')
@@ -913,7 +913,7 @@ test.describe('expenses (M03, M11)', () => {
       await page.getByRole('button', { name: 'Add a detail' }).click()
       await page.getByRole('combobox', { name: 'Detail' }).fill(kept)
       await page.getByRole('button', { name: 'Save expense' }).click()
-      await expect(page.getByText(sentence)).toBeVisible()
+      await expect(page.getByText(shown)).toBeVisible()
       await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue(z.toLocaleString('en-US'))
       await expect(page.getByRole('combobox', { name: 'Detail' })).toHaveValue(kept)
       await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()

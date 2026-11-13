@@ -79,9 +79,9 @@ describe('mapPgError uses the table', () => {
     expect(rpcMessage('set_legacy_review needs kind order or invoice, and state to_review, live or settled')).toBeNull()
   })
 
-  it('closed month passthrough is unchanged', () => {
+  it('closed month says locked (decision H)', () => {
     const m = mapPgError({ code: 'P0001', message: 'March 2026 is closed. An admin can reopen it.' })
-    expect(m).toEqual({ kind: 'closed-month', message: 'March 2026 is closed. An admin can reopen it.' })
+    expect(m).toEqual({ kind: 'closed-month', message: 'March 2026 is locked. An admin can reopen it.' })
   })
 
   it('P0001 reopen out of order names the month to reopen first (0080, owner decision 2026-10-22)', () => {

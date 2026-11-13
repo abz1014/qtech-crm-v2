@@ -46,9 +46,9 @@ describe('mapPgError (U07)', () => {
     expect(m.message).not.toMatch(/Something went wrong/)
   })
 
-  it('P0001 closed month: the server wording is passed through unchanged', () => {
+  it('P0001 closed month: the server sentence is shown with locked (decision H)', () => {
     const msg = 'September 2026 is closed. An admin can reopen it.'
-    expect(mapPgError({ code: 'P0001', message: msg })).toEqual({ kind: 'closed-month', message: msg })
+    expect(mapPgError({ code: 'P0001', message: msg })).toEqual({ kind: 'closed-month', message: 'September 2026 is locked. An admin can reopen it.' })
   })
 
   it('P0001 with any other text is not shown to people', () => {

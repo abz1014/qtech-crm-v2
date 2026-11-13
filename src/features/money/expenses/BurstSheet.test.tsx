@@ -199,7 +199,7 @@ describe('burst entry sheet (M11)', () => {
     await user.keyboard('450{Enter}100000{Tab}{Tab}30 sep{Tab}')
     await user.keyboard('{Control>}{Enter}{/Control}')
     const alert = await screen.findByRole('alert')
-    expect(within(alert).getByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
+    expect(within(alert).getByText('September 2026 is locked. An admin can reopen it.')).toBeInTheDocument()
     expect(alert).toHaveTextContent('Nothing was saved')
     expect(screen.getByRole('textbox', { name: 'Amount, row 1' })).toHaveValue('450')
     expect(screen.getByRole('textbox', { name: 'Amount, row 2' })).toHaveValue('100,000')

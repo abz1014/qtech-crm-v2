@@ -183,7 +183,7 @@ describe('Bank check (M12, the old Bank tick)', () => {
     mount()
     const inList = await screen.findByTestId('bank-in')
     await user.click(within(inList).getByRole('checkbox', { name: /Sargodha Fertilizer/ }))
-    expect(await screen.findByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
+    expect(await screen.findByText('September 2026 is locked. An admin can reopen it.')).toBeInTheDocument()
     await waitFor(() =>
       expect(within(inList).getByRole('checkbox', { name: /Sargodha Fertilizer/ })).toHaveAttribute('aria-checked', 'false'),
     )

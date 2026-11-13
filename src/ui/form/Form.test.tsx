@@ -157,7 +157,7 @@ describe('Form (U07): errors keep the entries and speak plainly', () => {
   it.each([
     ['23503', { code: '23503', message: 'x', details: 'Key (company_id)=(1) is not present in table "companies".' }, /no longer exists/],
     ['23514', { code: '23514', message: 'violates check constraint "c"' }, /not allowed/],
-    ['P0001', { code: 'P0001', message: 'September 2026 is closed. An admin can reopen it.' }, /^September 2026 is closed\. An admin can reopen it\.$/],
+    ['P0001', { code: 'P0001', message: 'September 2026 is closed. An admin can reopen it.' }, /^September 2026 is locked\. An admin can reopen it\.$/],
   ])('%s shows a banner with a plain message and keeps what was typed', async (_c, err, text) => {
     const user = userEvent.setup()
     render(<Harness save={vi.fn<Save>().mockRejectedValue(err)} defaults={{ name: 'Mehran Paper Board' }} />)

@@ -140,7 +140,7 @@ describe('Add expense dialog (M03)', () => {
     await user.keyboard('450')
     await user.click(screen.getByRole('textbox', { name: 'Date paid' }))
     await user.keyboard('30 sep{Enter}')
-    expect(await screen.findByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
+    expect(await screen.findByText('September 2026 is locked. An admin can reopen it.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('450')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
@@ -216,7 +216,7 @@ describe('Add expense dialog (M03)', () => {
       setup({ expense, del: () => ({ data: [] }) })
       await user.click(await screen.findByRole('button', { name: 'Delete expense' }))
       await user.click(await screen.findByRole('button', { name: 'Delete' }))
-      expect((await screen.findAllByText('Not deleted. You may not have permission, or the month is closed.')).length).toBeGreaterThan(0)
+      expect((await screen.findAllByText('Not deleted. You may not have permission, or the month is locked.')).length).toBeGreaterThan(0)
       expect(screen.queryByText('Expense deleted')).not.toBeInTheDocument()
     })
 

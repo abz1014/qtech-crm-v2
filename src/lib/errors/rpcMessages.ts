@@ -308,6 +308,16 @@ export function rupeesToPkr(text: string): string {
   return text.replace(/\bRs\.? ?(?=\S)/g, 'PKR ')
 }
 
+/**
+ * The month sentences of the server and of the app ("September 2026 is closed", "which is closed", "the month is closed") say locked
+ * (decision H). Narrow on purpose: any other "closed" (an enquiry closed as lost) keeps its word.
+ */
+export function lockedWording(text: string): string {
+  return text
+    .replace(/\b((?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4}(?:, which)? is) closed\b/g, '$1 locked')
+    .replace(/\b(the month is) closed\b/g, '$1 locked')
+}
+
 function plainWording(text: string): string {
   return rupeesToPkr(text).replace(/\bclosed\b/g, 'locked')
 }

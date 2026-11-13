@@ -108,7 +108,7 @@ describe('Record payment (M02)', () => {
     mount(<RecordPaymentDialog open onOpenChange={() => {}} orderId="o38" />)
     await screen.findByRole('textbox', { name: 'Amount received, PKR' })
     await user.click(screen.getByRole('button', { name: 'Save payment' }))
-    expect(await screen.findByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
+    expect(await screen.findByText('September 2026 is locked. An admin can reopen it.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('1,600,764')
   })
 })
