@@ -34,6 +34,9 @@ const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/Expe
  * complete; never calculated while the price basis is unknown); how much of the expected cost has been paid out; net sale, the
  * expected cost (typed, or filled once from the supplier-price estimate, never overwritten), the actual cost with the expenses
  * tagged to the order; the estimate and what it leaves out; "Mark costs complete" and "Add expense".
+ * Forest (56-margins-profit #jm-p1): it opens inside the Costs and margin fold of a step that is already a card, so it takes the
+ * compact card edge (FOLD_CARD's hairline and corners, no second shadow); the head row carries the title, the (i), the costs chip and
+ * "Admin only" with no rule under it; the margin so far is the card's one big figure, in the dashed box.
  */
 const ROW = 'flex items-baseline justify-between gap-4 text-sm'
 
@@ -150,9 +153,9 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
   }
 
   return (
-    <section aria-label="Margin" data-slot="margin-costs" className="rounded-panel border bg-surface">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-3 md:px-5">
-        <h2 className="text-base font-semibold">Margin</h2>
+    <section aria-label="Margin" data-slot="margin-costs" className="min-w-0 rounded-card border bg-surface">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-card pt-4">
+        <h2 className="text-lg font-heavy">Margin</h2>
         <InfoTip label="About the margin">
           Net sale less the costs paid so far. GST sits outside the margin on both sides, and expenses count at true cost, without the GST paid on purchases that can be claimed back. It is final once costs are marked complete.
         </InfoTip>
@@ -162,15 +165,17 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
         </span>
       </div>
       {loading ? (
-        <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading margin">
-          <Skeleton className="h-[6rem] w-full" />
+        <div role="status" className="grid gap-3 p-card" aria-busy="true" aria-label="Loading margin">
+          <Skeleton className="h-[6.5rem] w-full rounded-control" />
+          <Skeleton className="h-2 w-full" />
           <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
       ) : error || !m ? (
-        <p className="p-5 text-sm text-fg-muted">The margin could not be read. Reload the page to try again.</p>
+        <p className="p-card text-sm text-fg-muted">The margin could not be read. Reload the page to try again.</p>
       ) : (
-        <div className="grid gap-4 p-4 md:p-5">
-          <div className="grid gap-1 rounded-panel border border-dashed border-line-strong p-4">
+        <div className="grid gap-4 p-card">
+          <div className="grid min-w-0 gap-1 rounded-control border border-dashed border-line-strong p-4">
             <div className="flex items-baseline justify-between gap-3 text-sm text-fg-2">
               <span>{unknown ? 'Margin' : 'Margin so far'}</span>
               <span className="text-xs text-fg-muted">{unknown ? 'Not calculated' : 'Sale less costs paid'}</span>
@@ -182,8 +187,8 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               </p>
             ) : (
               <>
-                <div className="text-xl">
-                  <Margin value={m.margin} state={m.marginState as 'provisional' | 'final' | 'basis_unknown' | null} size="xl" mark="underline" />
+                <div className="min-w-0 [overflow-wrap:anywhere]">
+                  <Margin value={m.margin} state={m.marginState as 'provisional' | 'final' | 'basis_unknown' | null} size="display" mark="underline" />
                 </div>
                 <p className="text-sm text-fg-2">
                   {unknown

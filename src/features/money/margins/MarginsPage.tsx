@@ -1,11 +1,13 @@
 import { NoPrimary } from '@/ui/NoPrimary'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ClipboardCheck } from 'lucide-react'
+import { CircleCheck, ClipboardCheck, Hourglass, TriangleAlert } from 'lucide-react'
 import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
+import { Icon } from '@/ui/Icon'
 import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
@@ -28,6 +30,9 @@ import { cashTotals, isPaidProvisional, marginPct, marginTotals, noCostsYet, sor
  * Round 2 (R2-13): the margin sits beside the customer, bigger; the cost is ONE line (what the margin uses: the actual cost,
  * with the dashed not-final mark while costs may still come in, and the expected cost under it); "Costs complete" is not
  * shown (rule 2: a done state needs no chip), only "Margin not final" and "Is GST included?".
+ * Forest (56-margins-profit #mg-page): the list is one card with its title and switches on the head row, the column heads over a dark
+ * rule and saying the unit once ("Margin (PKR)"), the rows flush with the card's words, the state as an icon and a word, and the total
+ * on the sunken band. The cash view and every state (loading, error, empty) sit in the same card.
  */
 const COLS = 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_90px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
 
@@ -43,6 +48,18 @@ const whole = (n: number) => Math.round(n).toLocaleString('en-US')
 function stateWord(r: MarginRow): string {
   if (r.state === 'basis_unknown') return 'Is GST included?'
   return r.state === 'provisional' ? 'Not final' : 'Final'
+}
+
+/** The state as an icon and its word (56-margins-profit): the word carries it, the icon only helps the eye down the column. */
+function StateMark({ r }: { r: MarginRow }) {
+  const icon = r.state === 'basis_unknown' ? TriangleAlert : r.state === 'provisional' ? Hourglass : CircleCheck
+  const tone = r.state === 'basis_unknown' ? 'text-tone-warning-fg' : r.state === 'provisional' ? 'text-tone-info-fg' : 'text-tone-success-fg'
+  return (
+    <span className={cn('inline-flex items-start gap-1 text-sm font-semibold', tone)}>
+      <Icon icon={icon} size="sm" className="mt-[3px] shrink-0" />
+      <span>{stateWord(r)}</span>
+    </span>
+  )
 }
 
 /** A margin that is not final is an estimate: grey, with "(est.)" (round 3: "0 so far" showed a 100% margin in full black). */
@@ -67,11 +84,11 @@ function MarginRowView({ r }: { r: MarginRow }) {
   return (
     <li className="border-t first:border-t-0" data-margin-state={r.state}>
       {/* Phone: two lines (round 3: each card was about 230 px). */}
-      <div className="grid gap-1 px-4 py-3 md:hidden">
+      <div className="grid gap-1 py-3 md:hidden">
         <div className="flex items-baseline justify-between gap-3">
           <span className="min-w-0">
             <span className="block break-words font-medium">{r.companyName}</span>
-            <Link to={`/orders/${r.orderId}`} className="num whitespace-nowrap rounded font-regular text-fg-2 hover:underline">
+            <Link to={`/orders/${r.orderId}`} className="num whitespace-nowrap rounded font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg">
               {orderRef(r.orderNumber)}
             </Link>
           </span>
@@ -81,14 +98,14 @@ function MarginRowView({ r }: { r: MarginRow }) {
         </div>
         <span className="text-sm text-fg-2">
           Sale {r.netSale === null || unknown ? '—' : whole(r.netSale)} · Cost {whole(r.actualCost)}
-          {pct ? ` · ${pct}` : ''} · <span className={cn(r.state !== 'final' && 'font-medium text-fg')}>{stateWord(r)}</span>
+          {pct ? ` · ${pct}` : ''} · <span className={cn(r.state !== 'final' && 'font-semibold text-fg')}>{stateWord(r)}</span>
         </span>
       </div>
       {/* Desktop: one row, six columns. */}
-      <div className={`hidden gap-4 px-5 py-3 md:grid ${COLS}`}>
+      <div className={`hidden gap-4 py-3 md:grid ${COLS}`}>
         <div className="grid content-start gap-[2px]">
-          <span className="min-w-0 break-words text-sm font-medium">{r.companyName}</span>
-          <Link to={`/orders/${r.orderId}`} className="num w-fit rounded text-sm text-fg-2 hover:underline" aria-label={`Open ${orderRef(r.orderNumber)}`}>
+          <span className="min-w-0 break-words text-sm font-semibold">{r.companyName}</span>
+          <Link to={`/orders/${r.orderId}`} className="num w-fit rounded text-sm font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg" aria-label={`Open ${orderRef(r.orderNumber)}`}>
             {orderRef(r.orderNumber)}
           </Link>
         </div>
@@ -120,7 +137,9 @@ function MarginRowView({ r }: { r: MarginRow }) {
             </span>
           ) : null}
         </div>
-        <div className={cn('content-start text-sm', r.state === 'final' ? 'text-fg-2' : 'font-semibold text-fg')}>{stateWord(r)}</div>
+        <div className="content-start">
+          <StateMark r={r} />
+        </div>
       </div>
     </li>
   )
@@ -163,9 +182,9 @@ export function MarginsPage() {
           ) : null
         }
       />
-      <section aria-labelledby="margins-h" className="min-w-0 rounded-panel border bg-surface md:rounded-none md:border-x-0 md:bg-transparent">
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-5 py-3">
-          <h3 id="margins-h" className="text-base font-semibold">
+      <section aria-labelledby="margins-h" className={cn('min-w-0 p-card', CARD)}>
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-3 pb-4">
+          <h3 id="margins-h" className="text-lg font-heavy">
             Every order
           </h3>
           <span className="flex-1" />
@@ -192,13 +211,20 @@ export function MarginsPage() {
           ) : null}
         </header>
         {q.isPending ? (
-          <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading order margins">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+          <div role="status" className="grid" aria-busy="true" aria-label="Loading order margins">
+            <Skeleton className="mb-3 h-4 w-full" />
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 border-t py-3">
+                <span className="grid gap-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-1/4" />
+                </span>
+                <Skeleton className="h-6 w-24" />
+              </div>
+            ))}
           </div>
         ) : q.isError ? (
-          <div className="p-4">
+          <div>
             <Banner
               tone="danger"
               title="Order margins could not be loaded"
@@ -217,12 +243,12 @@ export function MarginsPage() {
           <CashBody rows={cashRows} totals={cash} />
         ) : (
           <div>
-            <div className={`hidden border-b bg-sunken px-5 py-2 text-sm text-fg-2 md:grid md:gap-4 ${COLS}`} aria-hidden="true">
+            <div className={`hidden border-b-2 border-fg pb-2 text-sm font-semibold text-fg md:grid md:gap-4 ${COLS}`} aria-hidden="true">
               <span>Customer and order</span>
-              <span className="text-right">Margin</span>
+              <span className="text-right">Margin (PKR)</span>
               <span className="text-right">Margin %</span>
-              <span className="text-right">Net sale</span>
-              <span className="text-right">Cost</span>
+              <span className="text-right">Net sale (PKR)</span>
+              <span className="text-right">Cost (PKR)</span>
               <span>State</span>
             </div>
             <ul>
@@ -230,8 +256,8 @@ export function MarginsPage() {
                 <MarginRowView key={r.orderId} r={r} />
               ))}
             </ul>
-            {rows.length === 0 ? <p className="px-5 py-6 text-sm text-fg-2">{view === 'final' ? 'No order has its costs marked complete yet.' : 'Every order has its costs marked complete.'}</p> : null}
-            <div className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 border-t bg-sunken px-5 py-3 text-sm font-medium md:gap-4 ${COLS}`} data-testid="margin-totals">
+            {rows.length === 0 ? <p className="py-6 text-sm text-fg-2">{view === 'final' ? 'No order has its costs marked complete yet.' : 'Every order has its costs marked complete.'}</p> : null}
+            <div className={`-mx-3 grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 rounded-control bg-sunken px-3 py-3 text-sm font-semibold md:gap-4 ${COLS}`} data-testid="margin-totals">
               <span>
                 Total of <span className="num">{totals.orders}</span> final {totals.orders === 1 ? 'order' : 'orders'}
               </span>
@@ -248,7 +274,7 @@ export function MarginsPage() {
               <span className="max-md:hidden" />
             </div>
             {notFinal > 0 ? (
-              <p className="border-t px-5 py-3 text-sm text-fg-2" data-testid="margin-left-out">
+              <p className="pt-3 text-sm text-fg-2" data-testid="margin-left-out">
                 <span className="num">{notFinal}</span> {notFinal === 1 ? 'order' : 'orders'} not final, not in the total
                 {totals.basisUnknown > 0 ? ` (${totals.basisUnknown} waiting for "Is GST included?")` : ''}.
               </p>
@@ -265,21 +291,21 @@ export function MarginsPage() {
 function CashBody({ rows, totals }: { rows: readonly MarginRow[]; totals: CashTotals }) {
   return (
     <div data-testid="margins-cash">
-      <p className="border-b px-4 py-3 text-base text-fg-2">
+      <p className="pb-3 text-base text-fg-2">
         Cash so far: received less paid out. It includes GST, so it is more than the invoiced margin. Nothing is taken off for the GST payable to FBR.
       </p>
-      <div className={`hidden border-b bg-sunken px-4 py-2 text-base text-fg-2 md:grid md:gap-4 ${CASH_COLS}`} aria-hidden="true">
+      <div className={`hidden border-b-2 border-fg pb-2 text-sm font-semibold text-fg md:grid md:gap-4 ${CASH_COLS}`} aria-hidden="true">
         <span>Customer and order</span>
-        <span className="text-right">Cash profit</span>
-        <span className="text-right">Received</span>
-        <span className="text-right">Paid out</span>
+        <span className="text-right">Cash profit (PKR)</span>
+        <span className="text-right">Received (PKR)</span>
+        <span className="text-right">Paid out (PKR)</span>
       </div>
       <ul>
         {rows.map(r => (
-          <li key={r.orderId} className={`grid gap-1 border-t px-4 py-3 first:border-t-0 md:gap-4 ${CASH_COLS}`} data-testid="cash-row">
+          <li key={r.orderId} className={`grid gap-1 border-t py-3 first:border-t-0 md:gap-4 ${CASH_COLS}`} data-testid="cash-row">
             <div className="grid content-start gap-px">
-              <span className="min-w-0 break-words text-base font-medium">{r.companyName}</span>
-              <Link to={`/orders/${r.orderId}`} className="num w-fit rounded text-base text-fg-2 hover:underline" aria-label={`Open ${orderRef(r.orderNumber)}`}>
+              <span className="min-w-0 break-words text-sm font-semibold">{r.companyName}</span>
+              <Link to={`/orders/${r.orderId}`} className="num w-fit rounded text-sm font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg" aria-label={`Open ${orderRef(r.orderNumber)}`}>
                 {orderRef(r.orderNumber)}
               </Link>
             </div>
@@ -298,7 +324,7 @@ function CashBody({ rows, totals }: { rows: readonly MarginRow[]; totals: CashTo
           </li>
         ))}
       </ul>
-      <div className={`grid gap-1 border-t bg-sunken px-4 py-3 text-base font-medium md:gap-4 ${CASH_COLS}`} data-testid="cash-totals">
+      <div className={`-mx-3 grid gap-1 rounded-control bg-sunken px-3 py-3 text-sm font-semibold md:gap-4 ${CASH_COLS}`} data-testid="cash-totals">
         <span>
           Total of <span className="num">{totals.orders}</span> {totals.orders === 1 ? 'order' : 'orders'}
         </span>

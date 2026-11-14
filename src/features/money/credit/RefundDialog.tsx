@@ -26,6 +26,8 @@ import { useCompanyOrders, useRecordRefund } from '@/features/money/credit/hooks
  * balance and the date is today, so refunding it all is: open it (1), Save refund (2). The optional parts (a reference, a reason,
  * the order it is for, and paid by bank or cash) stay folded away until asked for. The server refuses more than the balance and
  * asks "Record it anyway?" when the same customer already has a refund of that amount that day or with that reference.
+ * Forest (55-credit-statement #rf-open): the customer under the title (the dialog's header grid), one column of fields, the folded
+ * parts as a column of green links, and Cancel and Save refund in the dialog's own footer.
  */
 interface RefundDialogProps {
   open: boolean
@@ -39,9 +41,7 @@ export function RefundDialog({ open, onOpenChange, companyId, companyName, credi
   const [busy, setBusy] = useState(false)
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
-      <DialogContent title="Refund customer" size="md" className="md:w-[520px]">
-        {open ? <RefundForm companyId={companyId} companyName={companyName} credit={credit} onBusy={setBusy} onDone={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} /> : null}
-      </DialogContent>
+      {open ? <RefundForm companyId={companyId} companyName={companyName} credit={credit} onBusy={setBusy} onDone={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} /> : null}
     </Dialog>
   )
 }
@@ -107,8 +107,22 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
   const note = refundNote(credit, typeof amount === 'number' ? amount : null)
 
   return (
-    <>
-      <p className="-mt-3 text-sm text-fg-muted">{companyName}</p>
+    <DialogContent
+      title="Refund customer"
+      context={companyName}
+      size="md"
+      className="md:w-[520px]"
+      footer={
+        <>
+          <Button onClick={onCancel} data-cancel disabled={sf.pending}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
+            {sf.failed ? 'Try again' : 'Save refund'}
+          </Button>
+        </>
+      }
+    >
       <Form sf={sf} labels={{ amount: 'Amount refunded', refundedOn: 'Date refunded' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
         {duplicate ? (
@@ -118,7 +132,7 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
             </Banner>
           </div>
         ) : null}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4">
           <FormField<Values, 'amount'> name="amount" label="Amount refunded, PKR" source={{ label: 'Their whole credit balance' }}>
             {f => (
               <NumberInput
@@ -142,8 +156,8 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
           role={note.kind === 'over' ? 'alert' : undefined}
           className={
             note.kind === 'over'
-              ? 'flex items-start gap-3 rounded border border-tone-warning-fg/40 bg-tone-warning-bg px-4 py-3 text-sm font-medium text-fg'
-              : 'flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm text-fg-2'
+              ? 'flex items-start gap-3 rounded-control bg-tone-warning-bg px-4 py-3 text-sm font-semibold text-tone-warning-fg'
+              : 'flex items-start gap-3 rounded-control bg-sunken px-4 py-3 text-sm text-fg-2'
           }
         >
           <Icon icon={note.kind === 'over' ? TriangleAlert : Info} className={note.kind === 'over' ? 'mt-[2px] text-tone-warning-fg' : 'mt-[2px] text-fg-muted'} />
@@ -172,32 +186,24 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
             {f => <Select {...f} options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))} />}
           </FormField>
         ) : null}
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
+        <div className="grid justify-items-start gap-3 text-sm text-fg-2">
           {!showRef ? <LinkButton onClick={() => setShowRef(true)}>Add a reference</LinkButton> : null}
           {!showReason ? <LinkButton onClick={() => setShowReason(true)}>Add a reason</LinkButton> : null}
           {!showOrder ? <LinkButton onClick={() => setShowOrder(true)}>Choose the order</LinkButton> : null}
           {!showVia ? (
             <span>
-              Paid via <b className="font-medium text-fg-2">{PAID_VIA_LABEL[paidVia as PaidVia]}</b>. <LinkButton onClick={() => setShowVia(true)}>Change</LinkButton>
+              Paid via <b className="font-semibold text-fg">{PAID_VIA_LABEL[paidVia as PaidVia]}</b>. <LinkButton onClick={() => setShowVia(true)}>Change</LinkButton>
             </span>
           ) : null}
-        </p>
+        </div>
       </Form>
-      <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
-        <Button variant="quiet" onClick={onCancel} data-cancel>
-          Cancel
-        </Button>
-        <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
-          {sf.failed ? 'Try again' : 'Save refund'}
-        </Button>
-      </div>
-    </>
+    </DialogContent>
   )
 }
 
 function LinkButton({ children, onClick }: { children: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="rounded font-medium text-primary underline-offset-2 hover:underline">
+    <button type="button" onClick={onClick} className="rounded font-semibold text-primary underline-offset-2 hover:underline">
       {children}
     </button>
   )
