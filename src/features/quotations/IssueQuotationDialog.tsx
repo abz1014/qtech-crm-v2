@@ -463,7 +463,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         // A phone sheet: no icon tile (the title fits on one line), and a one-line note with no lone info glyph at its end.
         icon={phone ? undefined : FileText}
         size="lg"
-        className="md:w-[min(1080px,calc(100vw-2rem))]"
+        className="md:w-[min(67.5rem,calc(100vw-2rem))]"
         lead={
           phone ? (
             'Issuing marks it sent today.'

@@ -50,8 +50,14 @@ const toast = (p: Page, t: string | RegExp) => p.getByRole('status').filter({ ha
 const vis = (l: Locator) => l.filter({ visible: true }).first()
 const moreButton = (p: Page) => vis(p.getByRole('button', { name: /^More( actions)?$/ }))
 const T = { timeout: 15_000 }
-/** New RFQ's save-only action (r3/rfq-orders renamed "Save without asking"); on a phone it sits in the step bar's ⋯ menu. */
-const SAVE_FOR_LATER = "Save as draft"
+/**
+ * New RFQ's save-only action: "Create job N" since /rfqs/new is the New RFQ screen (polish-b; it was "Save as draft"). With "Ask suppliers
+ * now" ticked (a ?supplier= link) it is "Create job N without asking suppliers" in the step bar's More options menu.
+ */
+const SAVE_FOR_LATER = /^Create job( \d+)?$/
+const SAVE_FOR_LATER_MENU = /^Create job( \d+)? without asking suppliers$/
+/** What a saved New RFQ says: the toast "Created job N" (the page then opens the job). */
+const SAVED = /Created job \d+/
 
 /**
  * A supplier's reply form. Each supplier is listed once, in Suppliers asked, and "Enter reply" (or "Edit reply" once there is a
@@ -81,7 +87,7 @@ async function saveForLater(page: Page, how: 'click' | 'dblclick' = 'click'): Pr
     return
   }
   await page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'More options' }).click()
-  await page.getByRole('menuitem', { name: SAVE_FOR_LATER })[how]()
+  await page.getByRole('menuitem', { name: SAVE_FOR_LATER_MENU })[how]()
 }
 
 /** beforeunload (and any other) dialogs a page raised, accepted so a reload goes ahead. */
@@ -360,7 +366,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await layout(page, info, `${W} pdf items`)
       await shot(page, `${W}-pdf-items`)
       await saveForLater(page, 'dblclick')
-      await expect(page.getByText(/is saved/).first()).toBeVisible(T)
+      await expect(page.getByText(SAVED).first()).toBeVisible(T)
       await page.waitForTimeout(2000)
       const saved = await rfqsOf(cust.id)
       if (saved.length !== 1) note(info, { kind: 'observation', where: `${W} double Save for later`, what: `${saved.length} RFQs saved` })
@@ -386,7 +392,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await layout(page, info, `${W} screenshot items`)
       await shot(page, `${W}-screenshot-items`)
       await saveForLater(page)
-      await expect(page.getByText(/is saved/).first()).toBeVisible(T)
+      await expect(page.getByText(SAVED).first()).toBeVisible(T)
     })
 
     // ---- reload mid-form
@@ -464,7 +470,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await q.blur()
       await saveForLater(page)
       const outcome = await Promise.race([
-        page.getByText(/is saved/).first().waitFor({ timeout: 15_000 }).then(() => 'saved'),
+        page.getByText(SAVED).first().waitFor({ timeout: 15_000 }).then(() => 'saved'),
         page.getByText(/Nothing was saved/).first().waitFor({ timeout: 15_000 }).then(() => 'refused'),
       ]).catch(() => 'nothing happened')
       const saved = await rfqsOf(cust.id)

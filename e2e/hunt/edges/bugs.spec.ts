@@ -166,7 +166,7 @@ test('HE-11 RFQ intake: a quantity too big for the database (9999999999) is acce
   await page.getByRole('option', { name: new RegExp(world.tag) }).first().click()
   await paste(page, 'Pressure gauge 0-10 bar 9999999999 nos')
   await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toBeVisible()
-  await page.getByRole('button', { name: /^Save (as draft|for later|without asking)/ }).click()
+  await page.getByRole('button', { name: /^Create job( \d+)?$/ }).click()
   await page.waitForTimeout(2000)
   await expect(page.getByText('The change was not saved.').first()).toHaveCount(0)
   await context.close()
