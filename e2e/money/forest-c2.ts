@@ -192,16 +192,25 @@ export function forestC2Screens(): void {
         qty: 2,
         unit_price_net: 430000,
       })
+      // Dated in an earlier month, so Profitability (12 complete months, this one left out) has a month to draw.
+      const earlier = karachiDay(-40)
+      await must(
+        rest('admin', 'invoices', {
+          method: 'POST',
+          body: { order_id: order.id, number: `C2P-${unique()}`.toUpperCase(), invoice_date: earlier, net_amount: 860000, gst_amount: 154800 },
+          prefer: 'return=minimal',
+        }),
+      )
       await post('payments_in', {
         order_id: order.id,
         amount: 523600,
-        received_on: today(),
+        received_on: earlier,
       })
       await post('expenses', {
         order_id: order.id,
         amount_pkr: 500000,
         category_id: SUPPLIER_PAYMENT,
-        paid_on: today(),
+        paid_on: earlier,
         description: 'Supplier payment',
       })
       await must(

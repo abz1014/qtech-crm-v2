@@ -58,7 +58,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
       >
         {/* The two actions on their own row under the head (55 #cr-ok): in the side column a head row with both would crowd the title. */}
         {give ? (
-          <div className="flex flex-wrap justify-end gap-2 px-5 pb-1">
+          <div className="flex flex-wrap justify-end gap-2 px-5 pb-2">
             <Button size="sm" onClick={() => setRefund(true)}>
               Refund
             </Button>
