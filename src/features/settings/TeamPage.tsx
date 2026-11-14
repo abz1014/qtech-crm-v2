@@ -103,8 +103,9 @@ export function TeamPage() {
             </span>
             <span className="num min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
             {narrow ? (
-              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm [overflow-wrap:anywhere]">
-                <span className="min-w-0">
+              // only the words wrap: the Setup badge keeps its one line and moves under them when there is no room
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                <span className="min-w-0 [overflow-wrap:anywhere]">
                   {roleLabel(m.role)}
                   {m.job_title ? ` · ${m.job_title}` : ''}
                 </span>
@@ -122,7 +123,8 @@ export function TeamPage() {
       sortable: false,
       value: m => roleLabel(m.role),
       cell: m => (
-        <span className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 [overflow-wrap:break-word]', dim(m))}>
+        // the Setup badge goes under the role when the column is narrow, on one line of its own
+        <span className={cn('flex flex-wrap items-center gap-x-2 gap-y-1', dim(m))}>
           {roleLabel(m.role)}
           <FirstWeekBadge member={m} facts={firstWeek.data} />
         </span>
