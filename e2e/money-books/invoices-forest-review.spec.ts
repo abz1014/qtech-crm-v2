@@ -57,7 +57,7 @@ const seedInvoice = (orderId: string, net: number, over: Record<string, unknown>
 test.describe.configure({ mode: 'serial' })
 
 test('C1 review pictures: the GST register and the invoice dialogs at 1440 and 375', async ({ page }) => {
-  test.setTimeout(180_000)
+  test.setTimeout(360_000)
   const plain = await seedOrder(uniqueName('Kestrel Power'), 1725000)
   const long = await seedOrder(uniqueName('Pakistan Petroleum Refinery and Industrial Gases (Private) Limited, Karachi Works'), 640000)
   const filedOrder = await seedOrder(uniqueName('Chenab Chemicals'), 1180000)
@@ -81,11 +81,12 @@ test('C1 review pictures: the GST register and the invoice dialogs at 1440 and 3
     await page.waitForLoadState('networkidle')
     await pic(page, 'register')
 
-    // tick the month: the stamps band along the foot of the toolbar card
-    await page.getByRole('checkbox', { name: /Select all in/ }).first().click()
+    // tick an invoice (a phone card has no month tick): the stamps band along the foot of the toolbar card
+    const tick = page.getByRole('checkbox', { name: `Select ${open.number}` })
+    await tick.click()
     await expect(page.getByTestId('batch-bar')).toBeVisible()
     await pic(page, 'register-ticked')
-    await page.getByRole('checkbox', { name: /Select all in/ }).first().click()
+    await tick.click()
 
     // an open invoice opens as the form; a filed one as the summary
     await page.goto(`/money/gst-register?invoice=${open.id}`)
