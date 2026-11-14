@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
-import { History as HistoryIcon } from 'lucide-react'
+import { History as HistoryIcon, RefreshCw } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
 import { useRecordHistory, type HistoryTable } from '@/features/history/api'
-import { buildTimeline, type Entry } from '@/features/history/model'
+import { buildTimeline, type Change, type Entry } from '@/features/history/model'
 
 /*
  * The History panel: "was X, now Y, by whom, when" for one record, newest first. A modal on a desktop, a bottom sheet on a phone
@@ -14,7 +14,8 @@ import { buildTimeline, type Entry } from '@/features/history/model'
  *   <HistoryPanel open={open} onOpenChange={setOpen} table="expenses" id={expense.id} context="Rent · 4 Oct 2026" />
  *
  * The server has already removed what the viewer may not see (an engineer's events carry no money), so this only draws.
- * Text is 16 px; the time of a change is 14 px.
+ * Forest .qb-hist (mockup 85): each entry is "when · who" in the muted meta step with the name in ink, then the changes as
+ * "was → now" with a muted arrow. Text is 16 px or more; the time of a change is the meta step (text-sm).
  */
 export interface HistoryPanelProps {
   open: boolean
@@ -30,7 +31,7 @@ export interface HistoryPanelProps {
 export function HistoryPanel({ open, onOpenChange, table, id, context, imported }: HistoryPanelProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="History" context={context} icon={HistoryIcon} size="md" className="md:w-[560px]">
+      <DialogContent title="History" context={context} icon={HistoryIcon} size="md">
         {open ? <HistoryBody table={table} id={id} imported={imported} /> : null}
       </DialogContent>
     </Dialog>
@@ -44,15 +45,23 @@ function HistoryBody({ table, id, imported }: { table: HistoryTable; id: string;
 
   if (q.isPending)
     return (
-      <div className="grid gap-4" aria-busy="true" aria-label="Loading history">
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
+      <div className="grid" aria-busy="true" aria-label="Loading history">
+        {[0, 1, 2].map(i => (
+          // shaped like an entry: the "when · who" line, then a change line
+          <div key={i} className="grid gap-2 border-b border-line py-3 first:pt-0 last:border-b-0">
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className={i === 1 ? 'h-5 w-2/3' : 'h-5 w-5/6'} />
+          </div>
+        ))}
       </div>
     )
   if (q.isError)
     return (
-      <EmptyState mood="error" title="Could not load the history" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+      <EmptyState mood="error" title="Could not load the history" actions={
+          <Button icon={RefreshCw} onClick={() => void q.refetch()} busy={q.isRefetching} busyLabel="Trying again">
+            Try again
+          </Button>
+        }>
         Nothing was changed. Check your connection and try again.
       </EmptyState>
     )
@@ -77,29 +86,49 @@ function HistoryBody({ table, id, imported }: { table: HistoryTable; id: string;
           Show older
         </Button>
       ) : null}
-      {!hasMore && !showsStart ? <p className="text-base text-fg-muted">Older history archived</p> : null}
+      {!hasMore && !showsStart ? <p className="border-t border-line pt-3 text-sm text-fg-muted">Older history archived</p> : null}
     </div>
   )
 }
 
 function EntryRow({ entry }: { entry: Entry }) {
   return (
-    <li className="grid gap-1 border-b border-line py-3 first:pt-0 last:border-b-0" data-testid="history-entry">
-      <p className="text-sm text-fg-muted">
-        {entry.when ? <time dateTime={entry.at ?? undefined}>{entry.when}</time> : null}
-        {entry.when && entry.by ? ' · ' : null}
-        {entry.by ? <span className="font-medium text-fg-2">{entry.by}</span> : null}
-      </p>
-      {entry.title ? <p className="text-base font-medium text-fg [overflow-wrap:anywhere]">{entry.title}</p> : null}
+    <li className="grid min-w-0 gap-1 border-b border-line py-3 first:pt-0 last:border-b-0" data-testid="history-entry">
+      {entry.when || entry.by ? (
+        <p className="text-sm font-medium text-fg-muted">
+          {entry.when ? (
+            <time dateTime={entry.at ?? undefined} className="tabular-nums">
+              {entry.when}
+            </time>
+          ) : null}
+          {entry.when && entry.by ? ' · ' : null}
+          {entry.by ? <span className="font-semibold text-fg-2">{entry.by}</span> : null}
+        </p>
+      ) : null}
+      {entry.title ? <p className="text-base font-semibold text-fg [overflow-wrap:anywhere]">{entry.title}</p> : null}
       {entry.changes.length > 0 ? (
         <ul className="grid gap-1">
           {entry.changes.map((c, i) => (
             <li key={`${c.label}-${i}`} className="text-base text-fg [overflow-wrap:anywhere]">
-              {c.text}
+              <ChangeText change={c} />
             </li>
           ))}
         </ul>
       ) : null}
     </li>
+  )
+}
+
+const ARROW = ' → '
+
+/** "Amount: PKR 5,000 → PKR 500" with the arrow muted (Forest .qb-hist__arrow); the words read exactly as the model wrote them. */
+function ChangeText({ change }: { change: Change }) {
+  const tail = change.now === null ? null : `${ARROW}${change.now}`
+  if (change.was === null || tail === null || !change.text.endsWith(tail)) return <>{change.text}</>
+  return (
+    <>
+      {change.text.slice(0, -tail.length)}{' '}
+      <span className="text-fg-muted">→</span> {change.now}
+    </>
   )
 }
