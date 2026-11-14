@@ -434,7 +434,8 @@ export function GstRegisterPage() {
                 <Button icon={Truck} onClick={() => void stamp('tcs')} disabled={busy} title="The TCS courier took them today" className="max-sm:flex-1">
                   Invoice posted today
                 </Button>
-                <span className="flex min-w-0 items-center gap-2 max-sm:w-full">
+                {/* a phone: the tip and the PSID box on one line, Add PSID under them, so the box is wide enough for its placeholder */}
+                <span className="flex min-w-0 items-center gap-2 max-sm:grid max-sm:w-full max-sm:grid-cols-[auto_minmax(0,1fr)]">
                   <InfoTip label="About PSID">PSID is the payment slip number FBR gives a tax deposit. Paste it once: it is written to every ticked invoice.</InfoTip>
                   <TextField
                     aria-label="PSID"
@@ -449,9 +450,9 @@ export function GstRegisterPage() {
                     placeholder="Paste PSID once"
                     autoComplete="off"
                     spellCheck={false}
-                    className="num w-[11.5rem] min-w-0 max-sm:flex-1"
+                    className="num w-[11.5rem] min-w-0 max-sm:w-full"
                   />
-                  <Button icon={Plus} onClick={() => void stamp('psid')} disabled={busy} className="shrink-0">
+                  <Button icon={Plus} onClick={() => void stamp('psid')} disabled={busy} className="shrink-0 max-sm:col-span-2">
                     Add PSID
                   </Button>
                 </span>

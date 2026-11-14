@@ -543,7 +543,8 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         <FoldRow
           state={{ icon: ClipboardList, word: '' }}
           title="Courier, FBR and notes"
-          summary={detailsLine}
+          // whole words: on a phone the line beside the title must wrap between its parts, breaking a word only when it alone is too long
+          summary={<span className="[overflow-wrap:break-word]">{detailsLine}</span>}
           open={detailsOpen}
           onToggle={() => setDetailsOpen(o => !o)}
           controlsId="invoice-more-details"
