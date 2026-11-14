@@ -4,7 +4,7 @@ const h = vi.hoisted(() => ({ apply: vi.fn(() => 'none' as 'none' | 'applying' |
 vi.mock('@/lib/pwa/updates', () => ({ applyUpdate: h.apply }))
 vi.mock('@/lib/pwa/dirtyForms', () => ({ hasDirtyForms: h.dirty }))
 
-import { importWithReload, isChunkLoadError, pageReload, RELOAD_MARK, StaleAppError } from '@/lib/importWithReload'
+import { importWithReload, isChunkLoadError, pageReload, RELOAD_GUARD_MS, RELOAD_MARK, StaleAppError } from '@/lib/importWithReload'
 import { mapPgError } from '@/lib/pgErrors'
 
 // What Chrome, Firefox and Safari throw when /assets/old-chunk.js comes back as the app's HTML after a deploy.
@@ -35,10 +35,39 @@ describe('isChunkLoadError', () => {
 })
 
 describe('importWithReload', () => {
-  it('returns the module when the import works, and clears a spent reload mark', async () => {
-    window.sessionStorage.setItem(RELOAD_MARK, '1')
+  it('returns the module when the import works, and leaves a reload mark alone (it expires by itself)', async () => {
+    window.sessionStorage.setItem(RELOAD_MARK, String(Date.now()))
     await expect(importWithReload(() => Promise.resolve({ ok: 1 }))).resolves.toEqual({ ok: 1 })
-    expect(window.sessionStorage.getItem(RELOAD_MARK)).toBeNull()
+    expect(window.sessionStorage.getItem(RELOAD_MARK)).not.toBeNull()
+  })
+
+  // Live incident 14 Nov 2026: the page that came back after the one reload loaded its other parts fine (which used to clear the
+  // mark) and then failed on the same missing chunk again, so it reloaded again, forever: a blinking "Loading" splash on the phone.
+  it('a chunk that stays missing reloads once, not again after another part loads fine in the reloaded page', async () => {
+    const missing = () => Promise.reject(stale())
+    importWithReload(missing).catch(() => {})
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1))
+    // The reloaded page (same tab, same sessionStorage): its route loads, then the same chunk fails again.
+    await expect(importWithReload(() => Promise.resolve({ route: 1 }))).resolves.toEqual({ route: 1 })
+    const err = await importWithReload(missing).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(StaleAppError)
+    expect((err as StaleAppError).code).toBe('reload-spent')
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it('a waiting worker is not asked to take over again right after a reload: the mark is checked first', async () => {
+    h.apply.mockReturnValue('applying')
+    window.sessionStorage.setItem(RELOAD_MARK, String(Date.now()))
+    const err = await importWithReload(() => Promise.reject(stale())).catch((e: unknown) => e)
+    expect((err as StaleAppError).code).toBe('reload-spent')
+    expect(h.apply).not.toHaveBeenCalled()
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('a mark older than the guard window allows one more reload (a later deploy in a long-open tab)', async () => {
+    window.sessionStorage.setItem(RELOAD_MARK, String(Date.now() - RELOAD_GUARD_MS - 1000))
+    importWithReload(() => Promise.reject(stale())).catch(() => {})
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1))
   })
 
   it('reload: false (an idle-time preload) never reloads or applies an update: it throws the plain sentence', async () => {
@@ -73,7 +102,7 @@ describe('importWithReload', () => {
   })
 
   it('does not reload a second time: the mark stops a loop and the person is told what to do', async () => {
-    window.sessionStorage.setItem(RELOAD_MARK, '1')
+    window.sessionStorage.setItem(RELOAD_MARK, String(Date.now()))
     const err = await importWithReload(() => Promise.reject(stale())).catch(e => e)
     expect(err).toBeInstanceOf(StaleAppError)
     expect(reload).not.toHaveBeenCalled()

@@ -482,6 +482,9 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
   for (const sup of history.suppliers) {
     for (const [id] of categories) if ((sup.stats?.brand_ids ?? []).includes(id) || (evidence.get(`${sup.id}|${id}`)?.quoted ?? 0) > 0 || (evidence.get(`${sup.id}|${id}`)?.ordered ?? 0) > 0) dealtIn.add(id)
   }
+  // and when a listed supplier covers an item of it another way (carries its brand, supplied it before): the line must not say
+  // "no supplier deals in level switches" right above a supplier listed for the level switch.
+  for (const s of out) for (const i of items) if (i.familyId && s.coversItemIds.includes(i.id)) dealtIn.add(i.familyId)
   return {
     suppliers: out,
     groups,

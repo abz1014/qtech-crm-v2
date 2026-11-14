@@ -52,7 +52,7 @@ export function FindSupplier({ excludeIds, onPick, autoFocus }: { excludeIds?: R
         onCreate={t => setCreating(t)}
         createLabel={t => `Add “${t}” as a new supplier`}
         loading={matches.isFetching}
-        placeholder="Search a company by name"
+        placeholder="Search companies"
       />
       {creating !== null ? (
         <Suspense fallback={null}>
