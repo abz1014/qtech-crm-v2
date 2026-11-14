@@ -152,7 +152,7 @@ export function TeamPage() {
       id: 'actions',
       header: 'Actions', // hidden from sight by the table's className below, still the column's name for assistive tech
       align: 'right',
-      width: narrow ? 56 : 164,
+      // no width: a width makes DataTable truncate the cell, which clipped the Reactivate button's edge; the column fits its button
       cell: m =>
         isActive(m) ? (
           <span data-row-actions="" className="inline-flex"><RowMenu member={m} onPick={open} /></span>
