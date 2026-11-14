@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Circle, CircleCheck, CircleDot, Copy, Info, Pencil, X, type LucideIcon } from 'lucide-react'
+import { ChevronRight, CircleCheck, Clock, Copy, Info, Pencil, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
@@ -13,6 +13,8 @@ import { MessageActions } from '@/ui/MessageActions'
 import type { ContactChannel } from '@/lib/useChannelPreference'
 import { useRfqInquiries } from '@/features/rfqs/hooks'
 import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
+import { CARD } from '@/ui/card'
 import { ChannelLink } from '@/features/rfqs/ChaseParts'
 import { Icon } from '@/ui/Icon'
 import { MoreMenu } from '@/ui/MoreMenu'
@@ -25,10 +27,8 @@ import { MenuItem } from '@/ui/Popover'
 
 export type Step = 'build' | 'suppliers' | 'enquiry' | 'floated' | 'saved'
 
-const PRIMARY_LINK =
-  'inline-flex h-control items-center justify-center rounded border border-primary bg-primary px-3 text-sm font-medium leading-none text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover'
-const SECONDARY_LINK =
-  'inline-flex h-control items-center justify-center rounded border border-line-strong bg-surface px-3 text-sm font-medium leading-none text-fg transition-colors duration-fast ease-out hover:bg-sunken'
+const PRIMARY_LINK = buttonStyles({ variant: 'primary' })
+const SECONDARY_LINK = buttonStyles()
 
 /** The words for saving without asking anyone (owner audit N2): what it does, and what it does not. */
 export const SAVE_FOR_LATER = "Save as draft"
@@ -48,18 +48,19 @@ export interface BarAction {
 }
 
 /**
- * The sticky "Next step" bar under the steps of New RFQ. Desktop: the summary, a warning, then the buttons in one row, the green
- * one last. Phone (owner audit N1): one slim row (about 62 px) that sits in the page after the list, never over it (audit: a sticky bar covered supplier rows at 375): the green button at full width and
- * the rest ("Back", "Save for later") in a ⋯ menu. The summary is not repeated there, and the warning (with its own one-tap fix)
- * sits just above the bar, in the page.
+ * The sticky "Next step" bar under the steps of New RFQ (Forest .qb-sticky-bar): a white card with the e3 lift. Desktop: it sticks
+ * 16 px above the bottom edge with the summary, a warning, then the buttons in one row, the green one last. Phone (owner audit N1):
+ * one slim card (about 66 px) that sits in the page after the list, never over it (audit: a sticky bar covered supplier rows at 375):
+ * the green button at full width and the rest ("Back", "Save as draft") in a ⋯ menu. The summary is not repeated there, and the
+ * warning (with its own one-tap fix) sits just above the bar, in the page.
  */
 export function StepBar({ summary, warning, primary, more }: { summary?: ReactNode; warning?: ReactNode; primary?: BarAction; more: readonly BarAction[] }) {
   const phone = useMediaQuery('(max-width: 767px)')
   if (phone) {
     return (
       <>
-        {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
-        <div role="region" aria-label="Next step" data-sticky-bar className="flex items-center gap-2 border-t bg-surface py-2">
+        {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-card text-tone-warning-fg">{warning}</div> : null}
+        <div role="region" aria-label="Next step" data-sticky-bar className="flex items-center gap-2 rounded-card border bg-surface p-2 shadow-e1">
           {primary ? (
             <Button
               variant="primary"
@@ -90,11 +91,15 @@ export function StepBar({ summary, warning, primary, more }: { summary?: ReactNo
     )
   }
   return (
-    <div role="region" aria-label="Next step" data-sticky-bar className="sticky bottom-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t bg-surface py-3">
-      {summary ? <p className="m-0 min-w-0 text-sm text-fg-2">{summary}</p> : null}
-      {warning ? <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tone-warning-fg">{warning}</div> : null}
-      <span className="flex-1" />
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+    <div
+      role="region"
+      aria-label="Next step"
+      data-sticky-bar
+      className="sticky bottom-4 z-sticky flex min-h-row flex-wrap items-center gap-x-4 gap-y-2 rounded-card border bg-surface px-card py-3 shadow-e3"
+    >
+      {summary ? <p className="m-0 min-w-0 flex-[1_1_14rem] text-base text-fg-2 [overflow-wrap:anywhere]">{summary}</p> : null}
+      {warning ? <div className="flex min-w-0 flex-[1_1_14rem] flex-wrap items-center gap-x-2 gap-y-1 text-base font-card text-tone-warning-fg">{warning}</div> : null}
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         {more.map(a => (
           <Button key={a.label} variant={a.quiet ? 'quiet' : 'secondary'} icon={a.icon} onClick={a.onClick} busy={a.busy} busyLabel={a.busyLabel} disabled={a.disabled}>
             {a.label}
@@ -136,17 +141,20 @@ export function DraftOffer({
   onContinue: () => void
   onStartNew: () => void
 }) {
-  const box = 'grid gap-3 rounded border border-tone-info-fg/25 bg-tone-info-bg px-4 py-3'
+  // Forest .qb-banner data-tone="waiting": the info tint, the clock (or the tick when it is already saved), words, then the choices.
+  const box = 'flex flex-wrap items-start gap-3 rounded-card bg-tone-info-bg px-card py-4'
+  const glyph = (icon: LucideIcon) => <Icon icon={icon} size="lg" className="mt-[2px] shrink-0 text-tone-info-fg" />
   if (existing) {
     return (
       <section aria-label="Your draft" className={box}>
-        <div className="grid gap-[2px]">
-          <h2 className="font-semibold">
+        {glyph(CircleCheck)}
+        <div className="grid min-w-[14rem] flex-1 gap-1">
+          <h2 className="text-base font-bold text-tone-info-fg">
             Your draft is already saved as <span className="num">{rfqRef(existing.number)}</span>
           </h2>
-          <p className="text-fg-2">{draftSummary(draft)}. It was saved before (in another tab, or by a save whose answer did not arrive), so saving it again would not make a new RFQ.</p>
+          <p className="text-base text-fg">{draftSummary(draft)}. It was saved before (in another tab, or by a save whose answer did not arrive), so saving it again would not make a new RFQ.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex basis-full flex-wrap gap-2 md:basis-auto md:self-center">
           <Link to={`/rfqs/${existing.id}`} className={PRIMARY_LINK}>
             Open {rfqRef(existing.number)}
           </Link>
@@ -157,14 +165,15 @@ export function DraftOffer({
   }
   return (
     <section aria-label="Your draft" className={box}>
-      <div className="grid gap-[2px]">
-        <h2 className="font-semibold">You have a draft from {draftAge(draft.savedAt)}</h2>
-        <p className="text-fg-2">
+      {glyph(Clock)}
+      <div className="grid min-w-[14rem] flex-1 gap-1">
+        <h2 className="text-base font-bold text-tone-info-fg">You have a draft from {draftAge(draft.savedAt)}</h2>
+        <p className="text-base text-fg">
           {draftSummary(draft)}. It is kept on this device until it is saved. Start new discards it.
           {keepsCapture ? ' If you continue it, the message you brought is not added.' : ''}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex basis-full flex-wrap gap-2 md:basis-auto md:self-center">
         <Button variant="primary" onClick={onContinue} busy={checking} busyLabel="Checking the draft">
           Continue your draft
         </Button>
@@ -180,21 +189,30 @@ const STEP_INDEX: Record<Step, number> = { build: 1, suppliers: 2, enquiry: 3, f
 const STEP_LINE = ['Items', 'Suppliers', 'Message', 'Done'] as const
 
 /**
- * One compact line with the four steps and the current one in bold, at every width, so the person always knows which of the four
- * they are on (UX audit S1 and recommendation 16; R2-09). It wraps rather than scrolling sideways at 320.
+ * The four steps in one line at every width (UX audit S1 and recommendation 16; R2-09; Forest .qb-steps): a numbered disc per step
+ * (done: forest with white figures, now: the pale green disc with the current ring, to come: the deep grey disc) joined by short
+ * rules, the current label heavy. Under 640 px only the current step keeps its label beside the discs, so it never wraps; the others
+ * keep theirs for a screen reader. The number is drawn from data-n, so a step reads as its name.
  */
 export function StepLine({ step }: { step: Step }) {
   const at = STEP_INDEX[step]
   return (
-    <ol aria-label={`Step ${at} of 4`} className="m-0 flex list-none items-center justify-between gap-x-3 p-0 text-sm sm:justify-start sm:gap-x-2 sm:gap-y-1" data-step-line>
+    <ol aria-label={`Step ${at} of 4`} className="m-0 flex list-none flex-wrap items-center gap-x-3 gap-y-2 p-0 text-base" data-step-line>
       {STEP_LINE.map((label, i) => {
         const n = i + 1
         const state = n < at || (step !== 'build' && step !== 'suppliers' && step !== 'enquiry' && n === 4) ? 'done' : n === at ? 'now' : 'todo'
         return (
-          <li key={label} className="flex min-w-0 items-center justify-center gap-2 sm:justify-start" aria-current={state === 'now' ? 'step' : undefined}>
-            {i > 0 ? <span aria-hidden="true" className="hidden h-px w-3 bg-line-strong sm:block" /> : null}
-            <span className={cn('inline-flex min-w-0 flex-col items-center gap-1 text-center sm:flex-row sm:text-left', state === 'now' ? 'font-semibold text-fg' : state === 'done' ? 'text-fg-2' : 'text-fg-muted')}>
-              <Icon icon={state === 'done' ? CircleCheck : state === 'now' ? CircleDot : Circle} size="sm" className={state === 'todo' ? 'text-fg-muted' : 'text-brand-green'} />
+          <li key={label} data-step={state} className="flex min-w-0 items-center gap-2 sm:gap-3" aria-current={state === 'now' ? 'step' : undefined}>
+            {i > 0 ? <span aria-hidden="true" className="w-3 shrink-0 border-t-2 border-line sm:w-6" /> : null}
+            <span
+              aria-hidden="true"
+              data-n={n}
+              className={cn(
+                'num grid size-8 shrink-0 place-items-center rounded-pill text-sm font-heavy before:content-[attr(data-n)]',
+                state === 'done' ? 'bg-brand-700 text-primary-foreground' : state === 'now' ? 'bg-brand-100 text-brand-700 shadow-current' : 'bg-deep text-fg-2',
+              )}
+            />
+            <span className={cn('min-w-0', state === 'now' ? 'font-heavy text-fg' : state === 'done' ? 'font-card text-fg-2 max-sm:sr-only' : 'font-card text-fg-muted max-sm:sr-only')}>
               {label}
               <span className="sr-only">{state === 'done' ? ', done' : state === 'now' ? ', now' : ''}</span>
             </span>
@@ -233,7 +251,7 @@ function PreviewLine({ line }: { line: string }) {
         {blank[1]}
         <span
           data-spec-blank
-          className="ml-1 inline-block h-[18px] min-w-[190px] rounded-t-[2px] border-b-[1.5px] border-dashed border-tone-warning-fg bg-tone-warning-bg px-[6px] align-[-3px] text-xs leading-[18px] text-tone-warning-fg"
+          className="ml-1 inline-flex min-h-chip min-w-[12rem] items-center rounded-control border border-dashed border-tone-warning-fg bg-tone-warning-bg px-2 align-middle text-xs leading-none text-tone-warning-fg"
         >
           left blank
         </span>
@@ -312,10 +330,10 @@ export function EnquiryCard({
   // The text is shown as drawn (blank specs highlighted); "Edit the text" swaps it for a text area.
   const [editing, setEditing] = useState(false)
   return (
-    <section aria-label="The message" data-work>
+    <section aria-label="The message" data-work className={cn(CARD, 'px-card')}>
       <header className="flex flex-wrap items-start gap-3 border-b py-4">
         <div className="min-w-[12rem] flex-1">
-          <h2 className="type-row m-0">
+          <h2 className="type-section m-0">
             {variant === 'email' ? 'Email' : 'WhatsApp message'} to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
           </h2>
           <p className="type-body m-0 mt-1 text-fg-muted">
@@ -356,7 +374,7 @@ export function EnquiryCard({
               onChange={e => onBody(e.target.value)}
               rows={Math.min(Math.max(body.split('\n').length + 1, 10), 26)}
               spellCheck={false}
-              className="w-full resize-y rounded border border-line-input bg-surface px-3 py-3 text-base leading-6 text-fg hover:border-fg-muted focus-visible:border-fg"
+              className="w-full resize-y rounded-control border border-line-input bg-surface px-3 py-3 text-base leading-6 text-fg transition-colors duration-fast ease-out hover:border-fg focus-visible:border-primary"
             />
           </>
         ) : (
@@ -425,8 +443,8 @@ export function FloatedPanel({
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const next = messages ? asked.find(i => !opened.has(i.id)) : undefined
   return (
-    <section aria-label="Asked suppliers" data-work className="grid gap-4">
-      <p className="type-body m-0 flex items-center gap-2 text-tone-success-fg">
+    <section aria-label="Asked suppliers" data-work className={cn(CARD, 'grid gap-4 p-card')}>
+      <p className="m-0 inline-flex min-h-chip w-fit items-center gap-2 rounded-pill bg-tone-success-bg px-3 text-sm font-bold text-tone-success-fg">
         <Icon icon={CircleCheck} />
         <span className="min-w-0">
           Asked <span className="num">{n}</span> {n === 1 ? 'supplier' : 'suppliers'} on {formatDay(floatedOn)}
@@ -448,7 +466,7 @@ export function FloatedPanel({
           <label htmlFor="floated-text" className="sr-only">
             Message to copy
           </label>
-          <textarea id="floated-text" readOnly value={text} rows={10} className="w-full rounded border border-line-input bg-sunken px-3 py-3 text-sm leading-5 max-md:text-base max-md:leading-6" />
+          <textarea id="floated-text" readOnly value={text} rows={10} className="w-full rounded-control border border-line-input bg-sunken px-3 py-3 text-sm leading-6 max-md:text-base" />
           <div>
             <Button icon={Copy} onClick={onCopyAgain}>
               Copy again
@@ -459,7 +477,7 @@ export function FloatedPanel({
       {messages && asked.length > 0 ? (
         <ul aria-label="Send it to each supplier" className="m-0 grid list-none gap-3 p-0" data-slot="send-to-each">
           {asked.map(i => (
-            <li key={i.id} data-row-actions="" className="grid gap-2">
+            <li key={i.id} data-row-actions="" className="grid gap-2 rounded-control border p-3">
               <b className="type-row">{i.supplierName}</b>
               <MessageActions
                 size="sm"
@@ -479,14 +497,14 @@ export function FloatedPanel({
       {replyBy.date || dueOn ? (
         <dl className="type-body m-0 grid gap-2">
           {replyBy.date ? (
-            <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
-              <dt className="num m-0">{formatDay(replyBy.date)}</dt>
+            <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-4">
+              <dt className="num m-0 font-card">{formatDay(replyBy.date)}</dt>
               <dd className="m-0 text-fg-2">Reply-by date. Any supplier still silent then appears on Today for a follow-up.</dd>
             </div>
           ) : null}
           {dueOn ? (
-            <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
-              <dt className="num m-0">{formatDay(dueOn)}</dt>
+            <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-4">
+              <dt className="num m-0 font-card">{formatDay(dueOn)}</dt>
               <dd className="m-0 text-fg-2">Quotation due. Prices you enter appear on this RFQ with the best one marked.</dd>
             </div>
           ) : null}
@@ -511,7 +529,7 @@ export function FloatedPanel({
           ) : null}
         </Hint>
       ))}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 border-t pt-4">
         <Link to={openTo} className={next ? SECONDARY_LINK : PRIMARY_LINK}>
           Open {refText}
         </Link>

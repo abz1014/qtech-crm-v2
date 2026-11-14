@@ -8,6 +8,7 @@ import { optionMeta } from '@/features/rfqs/lib/intakeModel'
 import { controlClass } from '@/ui/form/fieldContext'
 import { Field } from '@/ui/form/Field'
 import { Icon } from '@/ui/Icon'
+import { Kbd } from '@/ui/Kbd'
 
 // The new-company form (and its form library) is downloaded when it is opened (perf/lcp).
 const CreateCompanyInline = lazyWithReload(() => import('@/features/companies/CreateCompanyInline').then(m => ({ default: m.CreateCompanyInline })))
@@ -108,7 +109,9 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
       </Field>
 
       {showList ? (
-        <div className="mt-1 rounded bg-surface p-1 shadow-pop">
+        // Forest .qb-listbox: in the flow (so the create form is never clipped), a white card with the e2 lift; the row under the
+        // pointer or the arrow keys takes the pale green.
+        <div className="mt-2 grid gap-2 rounded-card border bg-surface p-2 shadow-e2">
           <ul id={listId} role="listbox" aria-label="Matches" onMouseDown={e => e.preventDefault()} className="m-0 grid list-none p-0">
             {hits.map((h, i) => (
               <li
@@ -119,24 +122,24 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
                 data-active={i === activeIndex || undefined}
                 onMouseMove={() => setActive(i)}
                 onClick={() => pick(h)}
-                className={cn('flex min-h-[44px] cursor-pointer items-center gap-3 rounded px-3 py-2 text-sm', i === activeIndex && 'bg-selected')}
+                className={cn('flex min-h-touch cursor-pointer items-center gap-3 rounded-control px-3 py-2 text-base transition-colors duration-fast ease-out', i === activeIndex && 'bg-brand-100')}
               >
-                <Icon icon={Building2} className="text-fg-muted" />
+                <Icon icon={Building2} className="shrink-0 text-fg-muted" />
                 <span className="grid min-w-0 flex-1">
-                  <span className="min-w-0 [overflow-wrap:anywhere]">{h.name}</span>
+                  <span className="min-w-0 font-card [overflow-wrap:anywhere]">{h.name}</span>
                   {optionMeta(h) ? <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">{optionMeta(h)}</span> : null}
                 </span>
               </li>
             ))}
             {rows === 0 ? (
-              <li role="presentation" className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-fg-muted">
+              <li role="presentation" className="flex min-h-touch items-center gap-2 px-3 text-base text-fg-muted">
                 <Icon icon={Search} />
                 {matches.isFetching ? 'Searching' : `No match for “${typed}”`}
               </li>
             ) : null}
             {canCreate ? (
               <>
-                {hits.length > 0 ? <li role="presentation" className="my-1 border-t border-line" /> : null}
+                {hits.length > 0 ? <li role="presentation" className="mx-3 my-1 border-t" /> : null}
                 <li
                   id={optionId(hits.length)}
                   role="option"
@@ -144,16 +147,16 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
                   data-active={hits.length === activeIndex || undefined}
                   onMouseMove={() => setActive(hits.length)}
                   onClick={() => setCreating(true)}
-                  className={cn('flex min-h-[44px] cursor-pointer items-center gap-3 rounded px-3 py-2 text-sm', hits.length === activeIndex && 'bg-selected')}
+                  className={cn('flex min-h-touch cursor-pointer items-center gap-3 rounded-control px-3 py-2 text-base transition-colors duration-fast ease-out', hits.length === activeIndex && 'bg-brand-100')}
                 >
-                  <Icon icon={Plus} className="text-primary" />
+                  <Icon icon={Plus} className="shrink-0 text-primary" />
                   <span className="grid min-w-0 flex-1">
-                    <span className="min-w-0 [overflow-wrap:anywhere]">Add “{typed}” as a new company</span>
+                    <span className="min-w-0 font-card text-primary [overflow-wrap:anywhere]">Add “{typed}” as a new company</span>
                     <span className="text-xs text-fg-muted">Saved as a prospect until the first order</span>
                   </span>
-                  <kbd aria-hidden="true" className="hidden rounded border border-line-strong bg-sunken px-1 text-xs text-fg-muted sm:inline">
-                    ⏎
-                  </kbd>
+                  <Kbd aria-hidden className="max-sm:hidden [@media(pointer:coarse)]:hidden">
+                    Enter
+                  </Kbd>
                 </li>
               </>
             ) : null}
