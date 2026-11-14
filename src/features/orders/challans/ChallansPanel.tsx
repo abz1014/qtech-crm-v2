@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { FileDown, Plus } from 'lucide-react'
+import { FileDown, FileText, Plus } from 'lucide-react'
 import { useSeesPrices } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
@@ -165,6 +165,7 @@ function NewChallanDialog({ order, items, onClose }: { order: OrderHeader; items
   return (
     <Dialog open busy={create.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
+        icon={FileText}
         title="New delivery challan"
         context="Goods and quantities only, no prices. Untick a line or lower a quantity for a part delivery."
         footer={

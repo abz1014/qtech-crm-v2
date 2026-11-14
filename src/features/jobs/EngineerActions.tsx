@@ -8,7 +8,9 @@ import { formatShortDate } from '@/lib/formatDay'
 import { useOnline } from '@/lib/connection'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { mapPgError } from '@/lib/pgErrors'
+import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { FoldRow } from '@/ui/FoldRow'
 import { StickyActionBar } from '@/ui/StickyActionBar'
@@ -43,11 +45,25 @@ export const OFFLINE_TEXT = 'No connection. The note is kept and can be saved la
 
 const NOTE_KEEP = 'qtech.engineer.note.'
 
-function LegDelivered({ order, leg, variant, offline, label }: { order: OrderHeader; leg: OrderLegRow; variant: 'primary' | 'secondary'; offline: boolean; label: string }) {
+/** The big On site button (Forest 43 engineer, .dv-card): the whole width of its cell; its words may take two lines (the supplier under them). */
+const BIG = 'h-auto min-h-control-lg w-full justify-center whitespace-normal py-2 text-center leading-tight'
+
+function LegDelivered({ order, leg, variant, offline, supplier }: { order: OrderHeader; leg: OrderLegRow; variant: 'primary' | 'secondary'; offline: boolean; supplier: string | null }) {
   const actions = useLegActions(order, leg)
+  const label = supplier ? `Delivered today, ${supplier}` : 'Delivered today'
   return (
-    <Button size="lg" variant={variant} icon={Truck} className="w-full justify-center" disabled={offline} busy={actions.pending} busyLabel="Saving" onClick={() => void actions.doStamp()} aria-label={label}>
-      {label}
+    <Button size="lg" variant={variant} icon={Truck} className={BIG} disabled={offline} busy={actions.pending} busyLabel="Saving" onClick={() => void actions.doStamp()} aria-label={label}>
+      {supplier ? (
+        // Two orders on their way: which supplier, in visible words on a second line (the hidden comma keeps the words one sentence).
+        <span className="grid min-w-0 gap-px">
+          <span>
+            Delivered today<span className="sr-only">, </span>
+          </span>
+          <span className="text-sm font-medium [overflow-wrap:anywhere]">{supplier}</span>
+        </span>
+      ) : (
+        label
+      )}
     </Button>
   )
 }
@@ -55,7 +71,7 @@ function LegDelivered({ order, leg, variant, offline, label }: { order: OrderHea
 function InstalledToday({ order, variant, offline }: { order: OrderHeader; variant: 'primary' | 'secondary'; offline: boolean }) {
   const markDone = useMarkDone(order)
   return (
-    <Button size="lg" variant={variant} icon={HardHat} className="w-full justify-center" disabled={offline} busy={markDone.pending} busyLabel="Saving" onClick={() => markDone.run()}>
+    <Button size="lg" variant={variant} icon={HardHat} className={BIG} disabled={offline} busy={markDone.pending} busyLabel="Saving" onClick={() => markDone.run()}>
       Installed today
     </Button>
   )
@@ -89,7 +105,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
           leg={l}
           offline={offline}
           variant={n === 0 ? 'primary' : 'secondary'}
-          label={toDeliver.length > 1 ? `Delivered today, ${l.supplierName}` : 'Delivered today'}
+          supplier={toDeliver.length > 1 ? l.supplierName : null}
         />
       ))}
       {canInstall ? <InstalledToday order={order as OrderHeader} variant={hasDelivered ? 'secondary' : 'primary'} offline={offline} /> : null}
@@ -103,7 +119,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   return (
     <>
       {card ? (
-      <section aria-label={phone && hasButtons ? 'Site visit' : 'On site'} className="mt-4 grid gap-3 rounded-card border bg-surface p-card shadow-e1 md:mt-6" data-engineer-actions>
+      <section aria-label={phone && hasButtons ? 'Site visit' : 'On site'} className={cn(CARD, 'mt-4 grid gap-3 p-card md:mt-6')} data-engineer-actions>
         {/* The contact row in the list has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
         {!facts.contact && order?.site ? (
           <p className="text-base text-fg-2" data-testid="job-site">
@@ -116,10 +132,11 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
             {OFFLINE_TEXT}
           </p>
         ) : null}
-        {hasButtons && !phone ? <div className="grid gap-3 md:grid-cols-3">{buttons}</div> : null}
+        {/* Forest 43 (engineer): the buttons share the card's width two by two, the first that applies green, the rest white. */}
+        {hasButtons && !phone ? <div className="grid items-stretch gap-3 md:grid-cols-2">{buttons}</div> : null}
         {visit ? (
           <div className="flex flex-wrap items-center gap-2">
-            <VisitButton order={order as OrderHeader} />
+            <VisitButton order={order as OrderHeader} size={phone ? 'lg' : 'md'} />
           </div>
         ) : null}
       </section>
@@ -134,10 +151,13 @@ export function EngineerPapers({ data }: { data: JobData }) {
   const order = data.order.data ?? null
   const cancelled = order?.cancelledOn != null
   if (!((order && order.needsCommissioning && !cancelled) || (order && data.orderItems.data))) return null
+  // The same column as the step cards (the left track of the Job page's two-column grid), so the page keeps one right edge.
   return (
-    <div className="mt-6 grid gap-4">
-      {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit card /> : null}
-      {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
+    <div className="mt-4 grid min-w-0 items-start gap-card-gap md:mt-6 lg:grid-cols-[minmax(0,1fr)_340px]" data-engineer-papers>
+      <div className="grid min-w-0 gap-card-gap">
+        {order && order.needsCommissioning && !cancelled ? <VisitsSection order={order} engineers={data.engineers.data ?? []} isEngineer canEdit card /> : null}
+        {order && data.orderItems.data ? <ChallansPanel order={order} items={data.orderItems.data} /> : null}
+      </div>
     </div>
   )
 }
@@ -315,6 +335,7 @@ function PhotoOrNote({
     <Dialog open busy={photoBusy || noteBusy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         size="sm"
+        icon={Camera}
         title="Add photo or note"
         context={facts.job.companyName}
         footer={

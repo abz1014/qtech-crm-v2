@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CircleCheck, Lock, Pencil, X } from 'lucide-react'
+import { CircleCheck, HardHat, Lock, NotebookPen, Pencil, X } from 'lucide-react'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
@@ -55,15 +55,16 @@ export function CommissioningPanel({
   const row = 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b py-2 type-body'
   const dim = 'text-fg-muted'
   const Wrap = inFold ? 'div' : 'section'
+  // Forest (43-job-delivery #dv-commissioning): Edit at the right of the body, hairline fact rows, the last row without its line.
 
   return (
-    <Wrap aria-label={inFold ? undefined : 'Commissioning'} className="min-w-0">
+    <Wrap aria-label={inFold ? undefined : 'Commissioning'} className="min-w-0 [&>dl:last-of-type>div:last-child]:border-b-0">
       {!inFold || (!isEngineer && canEdit) ? (
-        <div className="flex flex-wrap items-center gap-3 border-b py-2">
+        <div className={cn('flex flex-wrap items-center gap-3', inFold ? 'justify-end pb-1' : 'border-b py-2')}>
           {inFold ? null : <h2 className="type-section">Commissioning</h2>}
           {/* no state chip: the status strip above already says it (consistency spec 1.5) */}
           {!isEngineer && canEdit ? (
-            <Button size="sm" variant="quiet" icon={Pencil} className="ml-auto" onClick={() => setEditing(true)}>
+            <Button size="md" variant="quiet" icon={Pencil} className="ml-auto" onClick={() => setEditing(true)}>
               Edit
             </Button>
           ) : null}
@@ -108,8 +109,8 @@ export function CommissioningPanel({
         <p className={cn('border-b py-2 type-body', dim)}>Supply only, no commissioning.</p>
       )}
       {order.needsCommissioning && !order.doneOn && canEdit && !isEngineer && !markDoneAbove ? (
-        <div className="border-b py-2">
-          <Button size="sm" icon={CircleCheck} onClick={markDone.run} busy={markDone.pending} busyLabel="Saving">
+        <div className="border-b py-3">
+          <Button size="md" icon={CircleCheck} onClick={markDone.run} busy={markDone.pending} busyLabel="Saving">
             Mark done today
           </Button>
         </div>
@@ -189,6 +190,7 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
   return (
     <Dialog open busy={update.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
+        icon={HardHat}
         title="Commissioning"
         context="Mark it done from the page."
         footer={
@@ -255,6 +257,7 @@ function NotesDialog({ order, onClose }: { order: OrderHeader; onClose: () => vo
   return (
     <Dialog open busy={update.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
+        icon={NotebookPen}
         title="Order notes"
         context="Scope, gate pass and anything the engineer should know. Engineers see this read only."
         footer={

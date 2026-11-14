@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CircleCheck, FileDown, Pencil, Plus } from 'lucide-react'
+import { CalendarDays, CircleCheck, FileDown, Pencil, Plus } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -221,6 +221,7 @@ function VisitEditDialog({ order, visit, engineers, office, onClose }: { order: 
     <>
       <Dialog open busy={pending} onOpenChange={o => (o ? null : onClose())}>
         <DialogContent
+          icon={CalendarDays}
           title={visit ? 'Visit' : 'Add a visit'}
           context="A visit has a type and a day, no time. Only the type is needed."
           footer={

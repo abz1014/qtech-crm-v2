@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Tag } from 'lucide-react'
+import { CircleAlert, Tag } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Field } from '@/ui/form/Field'
+import { Icon } from '@/ui/Icon'
 import { Select } from '@/ui/form/Select'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader } from '@/features/orders/api'
@@ -30,11 +31,11 @@ export function VisitFields({ value, onChange }: { value: VisitValue; onChange: 
 }
 
 /** The engineer's button and its small dialog. Saves on its own (nothing else on the order is touched). */
-export function VisitButton({ order, className }: { order: OrderHeader; className?: string }) {
+export function VisitButton({ order, className, size = 'md' }: { order: OrderHeader; className?: string; size?: 'md' | 'lg' }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button icon={Tag} className={className} onClick={() => setOpen(true)}>
+      <Button icon={Tag} size={size} className={className} onClick={() => setOpen(true)}>
         Visit type
       </Button>
       {open ? <VisitDialog order={order} onClose={() => setOpen(false)} /> : null}
@@ -67,6 +68,7 @@ export function VisitDialog({ order, onClose }: { order: OrderHeader; onClose: (
     <Dialog open busy={update.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         size="sm"
+        icon={Tag}
         title="Visit type"
         context="What kind of visit it is: an installation, a survey or a service."
         footer={
@@ -83,8 +85,9 @@ export function VisitDialog({ order, onClose }: { order: OrderHeader; onClose: (
         <div className="grid gap-4">
           <VisitFields value={value} onChange={setValue} />
           {refused ? (
-            <p role="alert" className="text-base text-tone-danger-fg">
-              {refused}
+            <p role="alert" className="flex items-start gap-2 rounded-control border border-tone-danger-fg/25 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
+              <Icon icon={CircleAlert} className="mt-px shrink-0" />
+              <span className="min-w-0">{refused}</span>
             </p>
           ) : null}
         </div>

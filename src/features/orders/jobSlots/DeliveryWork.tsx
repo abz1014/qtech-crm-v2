@@ -3,6 +3,7 @@ import { CircleCheck, CircleDashed, FileText } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { FoldRow } from '@/ui/FoldRow'
+import { FOLD_CARD } from '@/ui/card'
 import { Skeleton } from '@/ui/Skeleton'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import { ChallansPanel } from '@/features/orders/challans/ChallansPanel'
@@ -43,37 +44,45 @@ export default function DeliveryWork({ job }: JobSlotProps) {
   const today = businessToday()
   const issued = challans.data?.length ?? 0
   const hasGoods = w.items.data.some(i => !i.isService)
+  const commissioningState = order.needsCommissioning && order.doneOn ? { icon: CircleCheck, word: 'Done', className: 'text-tone-success-fg' } : { icon: CircleDashed, word: order.needsCommissioning ? 'Not done' : 'Not needed' }
   const challanSummary = challans.isError ? 'Did not load' : challans.isLoading ? '…' : issued > 0 ? `${issued} issued` : hasGoods ? 'None yet' : 'No goods'
   return (
     <div data-delivery-work>
       {w.legs.data.length > 0 ? (
         <LegsPanel order={order} legs={w.legs.data} items={w.items.data} pos={w.pos.data ?? []} money={job.money} isAdmin={job.role === 'admin'} canEdit={w.canEdit} part="delivery" />
       ) : null}
-      <FoldRow
-        state={order.needsCommissioning && order.doneOn ? { icon: CircleCheck, word: 'Done', className: 'text-tone-success-fg' } : { icon: CircleDashed, word: order.needsCommissioning ? 'Not done' : 'Not needed' }}
-        title="Commissioning"
-        summary={commissioningSummary(order, engineers, today)}
-        open={commissioning}
-        onToggle={() => setCommissioning(o => !o)}
-        controlsId="delivery-commissioning-body"
-        bodyLabel="Commissioning"
-        dataStage="Commissioning"
-      >
-        <CommissioningPanel order={order} engineers={engineers} isEngineer={false} canEdit={w.canEdit} inFold />
-      </FoldRow>
-      <FoldRow
-        state={{ icon: FileText, word: issued > 0 ? 'Issued' : 'None' }}
-        // Not "Delivery challans": a step button is found by its name starting with "Delivery"; the body keeps the region name tests and readers know.
-        title="Challans"
-        summary={challanSummary}
-        open={papers}
-        onToggle={() => setPapers(o => !o)}
-        controlsId="delivery-challans-body"
-        bodyLabel="Delivery challans"
-        dataStage="Challans"
-      >
-        <ChallansPanel order={order} items={w.items.data} inFold />
-      </FoldRow>
+      {/* Commissioning and Challans: two compact fold cards (43-job-delivery .qb-fold--compact): the title, a state chip, the summary, a chevron. */}
+      <div className="mt-3 grid gap-2">
+        <FoldRow
+          state={commissioningState}
+          chip={{ icon: commissioningState.icon, word: commissioningState.word, tone: order.needsCommissioning && order.doneOn ? 'success' : 'neutral' }}
+          title="Commissioning"
+          summary={commissioningSummary(order, engineers, today)}
+          open={commissioning}
+          onToggle={() => setCommissioning(o => !o)}
+          controlsId="delivery-commissioning-body"
+          bodyLabel="Commissioning"
+          dataStage="Commissioning"
+          className={FOLD_CARD}
+        >
+          <CommissioningPanel order={order} engineers={engineers} isEngineer={false} canEdit={w.canEdit} inFold />
+        </FoldRow>
+        <FoldRow
+          state={{ icon: FileText, word: issued > 0 ? 'Issued' : 'None' }}
+          chip={{ icon: FileText, word: issued > 0 ? 'Issued' : 'None', tone: issued > 0 ? 'info' : 'neutral' }}
+          // Not "Delivery challans": a step button is found by its name starting with "Delivery"; the body keeps the region name tests and readers know.
+          title="Challans"
+          summary={challanSummary}
+          open={papers}
+          onToggle={() => setPapers(o => !o)}
+          controlsId="delivery-challans-body"
+          bodyLabel="Delivery challans"
+          dataStage="Challans"
+          className={FOLD_CARD}
+        >
+          <ChallansPanel order={order} items={w.items.data} inFold />
+        </FoldRow>
+      </div>
     </div>
   )
 }

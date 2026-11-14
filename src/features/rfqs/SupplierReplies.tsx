@@ -2,7 +2,7 @@ import { readClipboardText } from '@/lib/docread/htmlTable'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
-import { Ban, ChevronDown, ClipboardPaste, Undo2 } from 'lucide-react'
+import { Ban, ChevronDown, ClipboardPaste, MessageSquareReply, Undo2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa } from '@/lib/money'
@@ -329,6 +329,7 @@ export function SupplierReplyDialog({
     <Dialog open onOpenChange={o => (o ? null : onClose())} dirty={dirty || unread} busy={save.isPending}>
       <DialogContent
         size="lg"
+        icon={MessageSquareReply}
         title={inquiry.supplierName}
         context={where || undefined}
         titleChip={<ReplyChip inquiry={inquiry} itemCount={items.length} />}
