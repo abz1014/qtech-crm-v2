@@ -242,7 +242,8 @@ for (const r of AUDIT_ROUTES) {
           record({ route: r.id, path: r.path, role, width: 0, text: 'normal', state: 'ok', rule: 'harness', selector: '', detail: `no record for ${r.path} (fx seed: ${seed.fxError ?? 'ok'})` })
           return
         }
-        const expectPage = r.id === 'not-found' || r.id === 'job-missing' ? 'not-found' : r.id === 'no-access' ? 'no-access' : 'ok'
+        // Sell is for admin and sales: an engineer gets the lane's own "Sell is for admin and sales" page
+        const expectPage = r.id === 'not-found' || r.id === 'job-missing' ? 'not-found' : r.id === 'no-access' || (r.id === 'jobs-sell' && role === 'engineer') ? 'no-access' : 'ok'
         const view = async (v: Width, text: TextSize, state: State, body: (page: Page, where: Where, con: Console) => Promise<void>) => {
           const context = await contextAs(browser, info, role, v, text)
           const page = await context.newPage()

@@ -123,7 +123,8 @@ export function inspect(a: InspectArgs): Raw[] {
         continue
       }
     }
-    if ((el.matches(INTERACTIVE) || ownText(el)) && !parentFlagged) {
+    // a hanging separator ("·" pulled into the margin and clipped at a line start, statement and company headers) is cut on purpose
+    if ((el.matches(INTERACTIVE) || ownText(el)) && !parentFlagged && text(el).replace(/[·•|,\s]/g, '').length > 0) {
       const c = clipAncestor(el)
       if (c && c.kind === 'clip') {
         const cr = c.el.getBoundingClientRect()
@@ -262,9 +263,11 @@ export function inspect(a: InspectArgs): Raw[] {
   }
   if (a.phone) {
     let small = 0
-    for (const { e, r } of rects) {
+    for (const { e, r: shown } of rects) {
       if (small >= 20) break
-      if (r.right < 0 || r.left > vw) continue
+      // the target's own size, measured only when it is wholly in view (a row half under a pinned bar is not a small target)
+      const r = e.getBoundingClientRect()
+      if (Math.abs(shown.width - r.width) > 1 || Math.abs(shown.height - r.height) > 1) continue
       if (e.matches('input[type="checkbox"], input[type="radio"]') && Number(getComputedStyle(e).opacity) === 0) continue
       // WCAG 2.5.8 exception: a link inside a sentence
       if (e.matches('a') && e.parentElement && e.parentElement.matches('p, li, span, small, dd, td') && text(e.parentElement).length > text(e).length + 10) continue
