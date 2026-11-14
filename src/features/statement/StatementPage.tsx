@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, CloudOff, FileDown, ShieldAlert } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, CloudOff, FileDown, ShieldAlert } from 'lucide-react'
 import { useSession, useSeesPrices } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
@@ -10,6 +10,8 @@ import { rfqRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
+import { CARD } from '@/ui/card'
 import { DetailHeader } from '@/ui/DetailHeader'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
@@ -37,6 +39,12 @@ import { generateStatementPdf } from '@/features/statement/pdf/generate'
  *
  * Admin and sales only. The database refuses an engineer the prices this page is made of (migration 0081), and this page draws a
  * notice for an engineer before it asks for anything.
+ *
+ * Forest (25-quotation #qt-statement): "<- Job 141" beside the title, each item a card with a tinted head, amounts in Geist Mono with
+ * tabular figures. Nothing scrolls sideways at any width (live bug 7): from 1024 px the quotes are a table whose columns shrink and
+ * wrap (no minimum width); below that, where a tablet beside the rail is too narrow for six columns, each quote is a card and the
+ * column heads become the one "Sort the rows by" field. The table still sits in its own scroll box, so a freak long word can never push
+ * the page sideways.
  */
 
 function Shell({ children }: { children: ReactNode }) {
@@ -58,7 +66,7 @@ export default function StatementPage() {
           title="The comparative statement is for admins and sales"
           actions={
             key ? (
-              <Link to={`/jobs/${encodeURIComponent(key)}`} className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken">
+              <Link to={`/jobs/${encodeURIComponent(key)}`} className={buttonStyles({ variant: 'secondary' })}>
                 Back to the job
               </Link>
             ) : undefined
@@ -104,7 +112,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
         <EmptyState
           title="There is nothing to compare"
           actions={
-            <Link to={`/jobs/${encodeURIComponent(jobKey)}`} className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken">
+            <Link to={`/jobs/${encodeURIComponent(jobKey)}`} className={buttonStyles({ variant: 'secondary' })}>
               Back to the job
             </Link>
           }
@@ -121,10 +129,23 @@ function PageSkeleton() {
   return (
     <Shell>
       <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading the comparative statement">
-        <Skeleton className="h-4 w-[10rem]" />
-        <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
-        <Skeleton className="h-[10rem] w-full" />
-        <Skeleton className="h-[10rem] w-full" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-control w-[6.5rem] max-md:hidden" />
+          <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
+        </div>
+        <Skeleton className="h-control w-full" />
+        {[0, 1].map(i => (
+          <div key={i} className={cn(CARD, 'overflow-hidden')}>
+            <div className="border-b bg-sunken p-card">
+              <Skeleton className="h-5 w-[20rem] max-w-full" />
+            </div>
+            <div className="grid gap-3 p-card">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+        ))}
       </div>
     </Shell>
   )
@@ -140,8 +161,10 @@ const COLUMNS: Array<{ key: SortKey; label: string; align?: 'right' }> = [
 ]
 
 /** The columns of an item's quotes, as a grid: the table roles are on the elements (the raw table tags are for DataTable only). */
-const ROW = 'grid grid-cols-[minmax(7rem,2fr)_minmax(6rem,1fr)_minmax(7rem,1fr)_minmax(5rem,1fr)_minmax(4.5rem,0.8fr)_minmax(5rem,1.2fr)] items-start'
-const TOTAL_ROW = 'grid grid-cols-[minmax(8rem,2fr)_minmax(5rem,0.7fr)_minmax(8rem,1.3fr)_minmax(6rem,1fr)] items-start'
+const ROW = 'grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.1fr)] items-start'
+const TOTAL_ROW = 'grid grid-cols-[minmax(0,2fr)_minmax(0,0.7fr)_minmax(0,1.3fr)_minmax(0,1fr)] items-start'
+/** An amount: Geist Mono, tabular figures, as the prices on the Job page's Items and supplier prices. */
+const AMOUNT = 'font-mono tabular-nums'
 
 const SORT_CHOICES = [
   { value: 'supplier:asc', label: 'Supplier name, A to Z' },
@@ -169,6 +192,8 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
   const [sort, setSort] = useState<SortSpec>(DEFAULT_SORT)
   const [busy, setBusy] = useState(false)
   const phone = useMediaQuery('(max-width: 767px)')
+  // Below 1024 px (a phone, or a tablet beside the rail) six columns do not fit: each quote is a card instead (no sideways scroll).
+  const compact = useMediaQuery('(max-width: 1023px)')
 
   const statement = useMemo(() => buildStatement(items.data ?? [], inquiries.data ?? [], { showNoReply, sort }), [items.data, inquiries.data, showNoReply, sort])
   const back = `/jobs/${encodeURIComponent(jobKey)}`
@@ -231,14 +256,9 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
 
   return (
     <Shell>
-      <DetailHeader
-        name="Comparative statement"
-        code={jobLabel(jobKey)}
-        breadcrumb={[{ label: 'Jobs', to: '/jobs' }, { label: jobLabel(jobKey), to: back, mono: true }, { label: 'Comparative statement' }]}
-        meta={[rfq.company.name, rfqRef(rfq.number)]}
-      />
+      <DetailHeader name="Comparative statement" back={{ label: jobLabel(jobKey), to: back }} meta={[jobLabel(jobKey), rfq.company.name, rfqRef(rfq.number)]} />
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3" data-testid="statement-toolbar">
+      <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3" data-testid="statement-toolbar">
         <Checkbox
           checked={showNoReply}
           onCheckedChange={v => setShowNoReply(v === true)}
@@ -261,8 +281,8 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
         </Button>
       </div>
 
-      {phone ? (
-        <label className="mt-3 grid gap-1 text-base text-fg-2">
+      {compact ? (
+        <label className="mt-4 grid max-w-[24rem] gap-1 text-base font-medium text-fg-2">
           Sort the rows by
           <Select
             aria-label="Sort the rows by"
@@ -277,49 +297,50 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
       ) : null}
 
       {(items.data ?? []).length === 0 ? (
-        <p className="mt-6 text-base text-fg-muted">This RFQ has no items yet.</p>
+        <p className={cn(CARD, 'mt-4 p-card text-base text-fg-muted')}>This RFQ has no items yet.</p>
       ) : (
-        <div className="mt-4 grid gap-4" data-testid="statement">
+        <div className="mt-4 grid gap-card-gap" data-testid="statement">
           {statement.sections.map(sec => (
-            <ItemSection key={sec.item.id} sec={sec} sort={sort} onSort={clickSort} showNoReply={showNoReply} phone={phone} />
+            <ItemSection key={sec.item.id} sec={sec} sort={sort} onSort={clickSort} showNoReply={showNoReply} compact={compact} />
           ))}
-          <Totals totals={statement.totals} quotedAny={quotedAny} phone={phone} />
+          <Totals totals={statement.totals} quotedAny={quotedAny} compact={compact} />
         </div>
       )}
     </Shell>
   )
 }
 
-function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: StatementSection; sort: SortSpec; onSort: (k: SortKey) => void; showNoReply: boolean; phone: boolean }) {
+/** Exported for its unit test (the table in its own scroll box). */
+export function ItemSection({ sec, sort, onSort, showNoReply, compact }: { sec: StatementSection; sort: SortSpec; onSort: (k: SortKey) => void; showNoReply: boolean; compact: boolean }) {
   const { item } = sec
   const [title, ...rest] = item.description.split(/\r?\n/)
   const spec = rest.join(' ').trim()
   const cur = sec.sharedCurrency ? ` (${sec.sharedCurrency})` : ''
   const noQuote =
     showNoReply && sec.noQuote.length > 0 ? (
-      <p className="border-t px-4 py-3 text-base text-fg-muted" data-statement-noreply="">
+      <p className="border-t px-card py-3 text-base text-fg-muted" data-statement-noreply="">
         {sec.noQuote.map(g => `${g.label}: ${g.names.join(', ')}`).join(' · ')}
       </p>
     ) : null
   return (
-    <section aria-label={`Item ${item.number}`} className="min-w-0 rounded-panel border bg-surface" data-statement-item={item.number}>
-      <header className="border-b bg-sunken px-4 py-4">
+    <section aria-label={`Item ${item.number}`} className={cn(CARD, 'min-w-0 overflow-hidden')} data-statement-item={item.number}>
+      <header className="border-b bg-sunken px-card py-4">
         <h2 className="break-words text-lg font-semibold">{`${item.number}. ${title.trim()}, Qty ${sec.quantityText}`}</h2>
         {spec ? <p className="mt-1 break-words text-base text-fg-muted">{spec}</p> : null}
       </header>
       {sec.rows.length === 0 ? (
-        <p className="px-4 py-4 text-base text-fg-muted">No supplier has quoted this item yet.</p>
-      ) : phone ? (
+        <p className="px-card py-4 text-base text-fg-muted">No supplier has quoted this item yet.</p>
+      ) : compact ? (
         <ul className="divide-y">
           {sec.rows.map(r => (
             <RowCard key={r.lineId} r={r} shared={sec.sharedCurrency} />
           ))}
         </ul>
       ) : (
-        <div className="overflow-x-auto">
-          <div role="table" aria-label={`Supplier prices for item ${item.number}`} className="min-w-[36rem] text-left text-base">
+        <div className="overflow-x-auto" data-testid="statement-table-scroll">
+          <div role="table" aria-label={`Supplier prices for item ${item.number}`} className="text-left text-base">
             <div role="rowgroup">
-              <div role="row" className={cn(ROW, 'border-b text-sm text-fg-muted')}>
+              <div role="row" className={cn(ROW, 'border-b px-2 text-sm text-fg-muted')}>
                 {COLUMNS.map(c => {
                   const active = sort.key === c.key
                   const label = (c.key === 'unit' || c.key === 'total') && cur ? `${c.label}${cur}` : c.label
@@ -328,16 +349,20 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
                       key={c.label}
                       role="columnheader"
                       aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                      className={cn('px-4 py-2 font-medium', c.align === 'right' && 'text-right')}
+                      className={cn('min-w-0 px-2 py-3 font-medium', c.align === 'right' && 'text-right')}
                     >
                       <button
                         type="button"
                         onClick={() => onSort(c.key)}
-                        className={cn('inline-flex items-center gap-1 rounded hover:text-fg', c.align === 'right' && 'flex-row-reverse', active && 'text-fg')}
+                        className={cn(
+                          'group inline-flex max-w-full items-center gap-1 rounded text-left transition-colors hover:text-fg motion-reduce:transition-none',
+                          c.align === 'right' && 'flex-row-reverse text-right',
+                          active && 'text-fg',
+                        )}
                         aria-label={`Sort by ${c.label.toLowerCase()}`}
                       >
-                        {label}
-                        {active ? <Icon icon={sort.dir === 'asc' ? ArrowUp : ArrowDown} size="chip" /> : null}
+                        <span className="min-w-0 break-words">{label}</span>
+                        <Icon icon={active ? (sort.dir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown} size="chip" className={cn('shrink-0', !active && 'text-fg-disabled group-hover:text-fg-muted')} />
                       </button>
                     </div>
                   )
@@ -348,28 +373,28 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
               {sec.rows.map(r => {
                 const money = (t: string) => (sec.sharedCurrency ? t : `${r.currency} ${t}`)
                 return (
-                  <div key={r.lineId} role="row" className="border-b border-line last:border-b-0" data-statement-row={r.supplierName}>
+                  <div key={r.lineId} role="row" className="border-b border-line px-2 transition-colors last:border-b-0 hover:bg-sunken/50 motion-reduce:transition-none" data-statement-row={r.supplierName}>
                     <div className={ROW}>
-                      <div role="rowheader" className="min-w-0 break-words px-4 py-3 font-medium">
+                      <div role="rowheader" className="min-w-0 break-words px-2 py-4 font-semibold">
                         {r.supplierName}
                       </div>
-                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
+                      <div role="cell" className={cn('min-w-0 break-words px-2 py-4 text-right', AMOUNT)}>
                         {money(r.unitCostText)}
                       </div>
-                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
+                      <div role="cell" className={cn('min-w-0 break-words px-2 py-4 text-right font-semibold', AMOUNT)}>
                         {money(r.totalText)}
                       </div>
-                      <div role="cell" className="min-w-0 break-words px-4 py-3">
+                      <div role="cell" className="min-w-0 break-words px-2 py-4">
                         {r.leadTime ?? '—'}
                       </div>
-                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
+                      <div role="cell" className="min-w-0 break-words px-2 py-4 text-right tabular-nums">
                         {r.weightEachText ?? '—'}
                       </div>
-                      <div role="cell" className="min-w-0 break-words px-4 py-3">
+                      <div role="cell" className="min-w-0 break-words px-2 py-4">
                         {r.origin ?? '—'}
                       </div>
                     </div>
-                    {r.note ? <p className="px-4 pb-3 text-sm text-fg-muted">{r.note}</p> : null}
+                    {r.note ? <p className="px-2 pb-4 text-sm text-fg-muted">{r.note}</p> : null}
                   </div>
                 )
               })}
@@ -386,20 +411,20 @@ function ItemSection({ sec, sort, onSort, showNoReply, phone }: { sec: Statement
 function RowCard({ r, shared }: { r: QuotedRow; shared: string | null }) {
   const money = (t: string) => (shared ? `${shared} ${t}` : `${r.currency} ${t}`)
   const facts: Array<[string, ReactNode]> = [
-    ['Unit cost', <span key="u" className="[font-variant-numeric:tabular-nums]">{money(r.unitCostText)}</span>],
-    ['Total cost', <span key="t" className="[font-variant-numeric:tabular-nums]">{money(r.totalText)}</span>],
+    ['Unit cost', <span key="u" className={AMOUNT}>{money(r.unitCostText)}</span>],
+    ['Total cost', <span key="t" className={cn(AMOUNT, 'font-semibold')}>{money(r.totalText)}</span>],
     ['Lead time', r.leadTime ?? '—'],
     ['Weight', r.weightEachText ?? '—'],
     ['Country of origin', r.origin ?? '—'],
   ]
   return (
-    <li className="grid gap-2 px-4 py-4" data-statement-row={r.supplierName}>
-      <p className="break-words text-base font-medium">{r.supplierName}</p>
-      <dl className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] gap-x-3 gap-y-1 text-base">
+    <li className="grid gap-2 px-card py-4" data-statement-row={r.supplierName}>
+      <p className="break-words text-base font-semibold">{r.supplierName}</p>
+      <dl className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-4 gap-y-1 text-base">
         {facts.map(([label, value]) => (
           <Fragment key={label}>
             <dt className="text-fg-muted">{label}</dt>
-            <dd className="m-0 break-words">{value}</dd>
+            <dd className="m-0 min-w-0 break-words">{value}</dd>
           </Fragment>
         ))}
       </dl>
@@ -408,41 +433,41 @@ function RowCard({ r, shared }: { r: QuotedRow; shared: string | null }) {
   )
 }
 
-function Totals({ totals, quotedAny, phone }: { totals: SupplierTotal[]; quotedAny: boolean; phone: boolean }) {
+export function Totals({ totals, quotedAny, compact }: { totals: SupplierTotal[]; quotedAny: boolean; compact: boolean }) {
   if (!quotedAny) return null
   return (
-    <section aria-label="Totals by supplier" className="min-w-0 rounded-panel border bg-surface" data-statement-totals>
-      <header className="border-b bg-sunken px-4 py-4">
+    <section aria-label="Totals by supplier" className={cn(CARD, 'min-w-0 overflow-hidden')} data-statement-totals>
+      <header className="border-b bg-sunken px-card py-4">
         <h2 className="text-lg font-semibold">Totals by supplier</h2>
         <p className="mt-1 text-base text-fg-muted">Quantity times unit cost, for the items each supplier quoted. Currencies are never added together.</p>
       </header>
-      {phone ? (
+      {compact ? (
         <ul className="divide-y">
           {totals.map(t => (
-            <li key={t.supplierId} className="grid gap-1 px-4 py-4" data-statement-total={t.supplierName}>
-              <p className="break-words text-base font-medium">{t.supplierName}</p>
+            <li key={t.supplierId} className="grid gap-1 px-card py-4" data-statement-total={t.supplierName}>
+              <p className="break-words text-base font-semibold">{t.supplierName}</p>
               <p className="text-base text-fg-muted">{`${t.itemsQuoted} of ${t.itemCount} items quoted`}</p>
               {t.byCurrency.map(c => (
-                <p key={c.currency} className="text-base [font-variant-numeric:tabular-nums]">{`${c.currency} ${c.totalText}`}</p>
+                <p key={c.currency} className={cn('text-base font-semibold', AMOUNT)}>{`${c.currency} ${c.totalText}`}</p>
               ))}
             </li>
           ))}
         </ul>
       ) : (
-        <div className="overflow-x-auto">
-          <div role="table" aria-label="Totals by supplier" className="min-w-[30rem] text-left text-base">
+        <div className="overflow-x-auto" data-testid="statement-totals-scroll">
+          <div role="table" aria-label="Totals by supplier" className="text-left text-base">
             <div role="rowgroup">
-              <div role="row" className={cn(TOTAL_ROW, 'border-b text-sm text-fg-muted')}>
-                <div role="columnheader" className="px-4 py-2 font-medium">
+              <div role="row" className={cn(TOTAL_ROW, 'border-b px-2 text-sm text-fg-muted')}>
+                <div role="columnheader" className="px-2 py-3 font-medium">
                   Supplier
                 </div>
-                <div role="columnheader" className="px-4 py-2 font-medium">
+                <div role="columnheader" className="px-2 py-3 font-medium">
                   Currency
                 </div>
-                <div role="columnheader" className="px-4 py-2 text-right font-medium">
+                <div role="columnheader" className="px-2 py-3 text-right font-medium">
                   Total cost
                 </div>
-                <div role="columnheader" className="px-4 py-2 font-medium">
+                <div role="columnheader" className="px-2 py-3 font-medium">
                   Items quoted
                 </div>
               </div>
@@ -451,17 +476,17 @@ function Totals({ totals, quotedAny, phone }: { totals: SupplierTotal[]; quotedA
               {totals.map(t => (
                 <Fragment key={t.supplierId}>
                   {t.byCurrency.map((c, i) => (
-                    <div key={c.currency} role="row" className={cn(TOTAL_ROW, 'border-b border-line')} data-statement-total={t.supplierName}>
-                      <div role="rowheader" className="min-w-0 break-words px-4 py-3 font-medium">
+                    <div key={c.currency} role="row" className={cn(TOTAL_ROW, 'border-b border-line px-2 last:border-b-0')} data-statement-total={t.supplierName}>
+                      <div role="rowheader" className="min-w-0 break-words px-2 py-4 font-semibold">
                         {i === 0 ? t.supplierName : ''}
                       </div>
-                      <div role="cell" className="px-4 py-3">
+                      <div role="cell" className="px-2 py-4">
                         {c.currency}
                       </div>
-                      <div role="cell" className="whitespace-nowrap px-4 py-3 text-right [font-variant-numeric:tabular-nums]">
+                      <div role="cell" className={cn('min-w-0 break-words px-2 py-4 text-right font-semibold', AMOUNT)}>
                         {c.totalText}
                       </div>
-                      <div role="cell" className="px-4 py-3">
+                      <div role="cell" className="px-2 py-4 tabular-nums">
                         {i === 0 ? `${t.itemsQuoted} of ${t.itemCount}` : ''}
                       </div>
                     </div>
