@@ -31,7 +31,7 @@ export interface HistoryPanelProps {
 export function HistoryPanel({ open, onOpenChange, table, id, context, imported }: HistoryPanelProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="History" context={context} icon={HistoryIcon} size="md">
+      <DialogContent title="History" context={context} icon={HistoryIcon} size="md" placement="side">
         {open ? <HistoryBody table={table} id={id} imported={imported} /> : null}
       </DialogContent>
     </Dialog>

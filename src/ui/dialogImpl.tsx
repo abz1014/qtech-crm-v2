@@ -45,6 +45,12 @@ const TILE: Record<Tone, string> = {
 // A width (not a max-width), so a caller's own md:w-[...] (the convert dialog's 1080, the 820 ones) replaces it through cn.
 const WIDTH = { sm: 'md:w-[440px]', md: 'md:w-[var(--dialog-w)]', lg: 'md:w-[var(--dialog-w-wide)]' } as const
 
+// placement 'side' from 1360: the panel stands at the right edge, the window's full height, square-cornered against the edge, and
+// slides in from the right (the motion tokens go to ~0 under reduced motion).
+const SIDE_OVERLAY = 'min-[1360px]:place-items-stretch min-[1360px]:justify-items-end min-[1360px]:p-0'
+const SIDE_PANEL =
+  'min-[1360px]:h-dvh min-[1360px]:max-h-none min-[1360px]:rounded-none min-[1360px]:border-l min-[1360px]:shadow-e3 min-[1360px]:animate-panel-in'
+
 export interface DialogContentProps {
   title: string
   /** The context line under the title ("RFQ-0177 · Indus Textile Mills"). Also the dialog's accessible description. */
@@ -56,6 +62,11 @@ export interface DialogContentProps {
   tone?: Tone
   /** sm 440 (confirm), md 560 (default), lg 760. */
   size?: keyof typeof WIDTH
+  /**
+   * 'side': from 1360 px wide the dialog is a full-height panel at the right edge, beside the record it is about (History, 85-history:
+   * the record stays in view on a wide screen); from 768 to 1359 the usual centred dialog, under 768 the bottom sheet.
+   */
+  placement?: 'center' | 'side'
   /** Buttons for the footer band, Cancel first and the primary last (right-aligned). */
   footer?: ReactNode
   /** A mono tag at the right of the header, beside the close button (the PO number in the Issue purchase order dialog). */
@@ -88,6 +99,7 @@ export function DialogContentImpl({
   icon,
   tone = 'neutral',
   size = 'md',
+  placement = 'center',
   footer,
   lead,
   meta,
@@ -111,7 +123,12 @@ export function DialogContentImpl({
   }
   return (
     <RadixDialog.Portal>
-      <RadixDialog.Overlay className="fixed inset-0 z-dialog grid animate-fade-in place-items-center bg-scrim p-4 max-md:place-items-end max-md:p-0">
+      <RadixDialog.Overlay
+        className={cn(
+          'fixed inset-0 z-dialog grid animate-fade-in place-items-center bg-scrim p-4 max-md:place-items-end max-md:p-0',
+          placement === 'side' && SIDE_OVERLAY,
+        )}
+      >
         <RadixDialog.Content
           ref={contentRef}
           {...(context ? {} : { 'aria-describedby': undefined })}
@@ -144,8 +161,10 @@ export function DialogContentImpl({
             '[@media(max-height:480px)]:grid-rows-[auto_auto_auto] [@media(max-height:480px)]:overflow-y-auto',
             'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none max-md:rounded-t-sheet',
             WIDTH[size],
+            placement === 'side' && SIDE_PANEL,
             className,
           )}
+          data-placement={placement === 'side' ? 'side' : undefined}
         >
           {/* Bottom sheet below 768: the 40 by 4 grab handle (Forest .qb-sheet__grab). */}
           <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-pill bg-line-input md:hidden" />

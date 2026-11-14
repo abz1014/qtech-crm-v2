@@ -135,6 +135,19 @@ export interface DataTableProps<T> {
   /** Below 640px, draw each row as a stacked card with this content instead of columns. */
   mobileRow?: (row: T) => ReactNode
   /**
+   * Cards only: each row is its own Forest card (rounded, edged, raised), a 12 px gap between them, pressed in on a tap, and the table's
+   * frame steps back while there are rows to show (loading, empty and error keep it). The toolbar is then its own card above them.
+   * Without it the cards are rows of the one card, a hairline between them.
+   */
+  cardsApart?: boolean
+  /**
+   * Cards when the table's own box is narrower than this many rem (a list in a pane beside another list), not only under 640 px
+   * wide windows. Measured on the table's box, so the switch follows the room the table really has.
+   */
+  cardsBelow?: number
+  /** What a tap (or Enter) on a card does, when it is not what opening a row does on the full table (Team: the person's actions sheet). */
+  onCardOpen?: (row: T) => void
+  /**
    * Phone cards only, with `group`: the header of a group (a month) as a phone card, given the group's key and its rows. Sum the rows
    * in paisa here (the same rows the table draws) so a subtotal never disagrees with them. Absent: the group's plain label.
    */
@@ -201,7 +214,10 @@ function TableView<T>(props: DataTableProps<T>) {
     label,
     selection,
     activeRowId,
-    onRowOpen,
+    onRowOpen: onRowOpenProp,
+    onCardOpen,
+    cardsApart = false,
+    cardsBelow,
     group,
     groupStyle,
     columnBands,
@@ -224,8 +240,10 @@ function TableView<T>(props: DataTableProps<T>) {
     className,
   } = props
   const phone = useMediaQuery('(max-width: 639px)')
-  const cards = !!mobileRow && phone
   const rootRef = useRef<HTMLDivElement>(null)
+  const narrowBox = useBoxNarrowerThan(rootRef, mobileRow ? cardsBelow : undefined)
+  const cards = !!mobileRow && (phone || narrowBox)
+  const onRowOpen = cards && onCardOpen ? onCardOpen : onRowOpenProp
   const [savedDensity, setDensity] = useTableDensity(label, props.density ?? 'comfortable')
   const densityOn = (props.densitySwitch ?? false) && !cards
   const density = densityOn ? savedDensity : (props.density ?? 'comfortable')
@@ -347,6 +365,8 @@ function TableView<T>(props: DataTableProps<T>) {
   const pendingFocus = useRef(false)
   const bodyRef = useRef<HTMLTableSectionElement>(null)
   const safeFocus = Math.min(focusDi, Math.max(0, dataRows.length - 1))
+  // cardsApart, with cards to show: each row its own card and the table's frame stepped back.
+  const apart = cards && cardsApart && !loading && !error && dataRows.length > 0
 
   useLayoutEffect(() => {
     if (!pendingFocus.current) return
@@ -650,13 +670,16 @@ function TableView<T>(props: DataTableProps<T>) {
             else if (onRowOpen) openRow(row)
           }}
           className={cn(
-            'relative block border-b border-line transition-colors focus-visible:bg-sunken focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
+            'relative block transition-colors focus-visible:bg-sunken focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
+            apart
+              ? 'overflow-clip rounded-card border bg-surface shadow-e1 transition-transform duration-fast ease-out active:scale-press'
+              : 'border-b border-line',
             (onRowOpen || expandable) && 'cursor-pointer',
             ticked || active ? 'bg-selected' : 'active:bg-sunken',
             active && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
           )}
         >
-          <td role="cell" className="flex min-h-touch items-start gap-3 px-4 py-3">
+          <td role="cell" className={cn('flex min-h-touch gap-3 px-4', apart ? 'min-h-row-tall items-center py-2' : 'items-start py-3')}>
             {selection ? <span className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
             <div className="min-w-0 flex-1">
               {mobileRow(row)}
@@ -698,18 +721,20 @@ function TableView<T>(props: DataTableProps<T>) {
         {columns.map((c, ci) => (
           <td
             key={c.id}
-            style={c.width !== undefined ? { maxWidth: c.width } : undefined}
+            style={cuts(c) ? { maxWidth: c.width } : undefined}
             className={cn(
               cellBase,
               'relative',
-              c.width !== undefined && 'truncate',
+              cuts(c) && 'truncate',
+              // a column of row actions keeps its buttons on one line at its width
+              c.width !== undefined && c.hiddenHeader && 'whitespace-nowrap',
               alignRight(c) && 'text-right',
               monoCell(c) && 'num',
               hide(c),
               active && !selection && ci === 0 && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
             )}
           >
-            {c.width !== undefined ? <TruncateTip style={{ maxWidth: c.width }}>{renderCell(c, row)}</TruncateTip> : renderCell(c, row)}
+            {cuts(c) ? <TruncateTip style={{ maxWidth: c.width }}>{renderCell(c, row)}</TruncateTip> : renderCell(c, row)}
           </td>
         ))}
       </tr>
@@ -825,7 +850,10 @@ function TableView<T>(props: DataTableProps<T>) {
   const announced = firstCount !== null && countText !== firstCount ? countText : ''
 
   // toolbarCard: the table and its foot are their own card under the toolbar's (overflow clip rounds it, as the one card does).
-  const framed = (node: ReactNode) => (toolbarCard ? <div className="relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1">{node}</div> : node)
+  // cardsApart: while there are cards to show, the frame steps back and the toolbar is its own card (as with toolbarCard).
+  const ownToolbar = toolbarCard || (cardsApart && !!mobileRow)
+  const framed = (node: ReactNode) =>
+    ownToolbar ? <div className={cn('relative min-w-0', apart ? 'grid' : 'overflow-clip rounded-card border bg-surface shadow-e1')}>{node}</div> : node
 
   return (
     <div
@@ -834,13 +862,14 @@ function TableView<T>(props: DataTableProps<T>) {
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
       data-table-flat={flat || undefined}
-      className={cn(flat ? FLAT_LOOK : toolbarCard ? 'group/dt relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-card-gap' : 'group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
+      data-cards-apart={apart || undefined}
+      className={cn(flat ? FLAT_LOOK : ownToolbar ? 'group/dt relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-card-gap' : 'group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
       </p>
       {toolbarNode || exportCsv ? (
-        <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : toolbarCard ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
+        <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : ownToolbar ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
           {loading ? <span className="text-xs text-fg-muted">{`Loading ${what}`}</span> : null}
           {densityOn ? (
@@ -951,7 +980,7 @@ function TableView<T>(props: DataTableProps<T>) {
               })}
             </tr>
           </thead>
-          <tbody ref={bodyRef} data-row-actions="" role={cards ? 'rowgroup' : undefined} className={cn(cards && 'block')}>
+          <tbody ref={bodyRef} data-row-actions="" role={cards ? 'rowgroup' : undefined} className={cn(cards && (apart ? 'grid gap-3' : 'block'))}>
             {body}
           </tbody>
           {showFoot ? <tfoot>{summaryRow('foot', footerLabel ?? 'Total', dataRows, 'foot')}</tfoot> : null}
@@ -962,7 +991,7 @@ function TableView<T>(props: DataTableProps<T>) {
         // The band's height never depends on focus. A band that appeared while focus was in the table moved the page by its height
         // when focus left, and a click on a control beside the table (Copy and mark reminded) lost its mouseup to that jump.
         // The toolbar, this band and the first and last cells share one inset (20 px; flush in a flat table), so the words line up down the card.
-        <div className={cn('flex min-h-10 items-center justify-between gap-3 border-t py-2 text-xs text-fg-muted', flat ? 'px-0' : 'bg-surface px-5')}>
+        <div className={cn('flex min-h-10 items-center justify-between gap-3 py-2 text-xs text-fg-muted', apart ? 'mt-3 px-1' : 'border-t', !apart && (flat ? 'px-0' : 'bg-surface px-5'))}>
           {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
           {hintsNode}
         </div>
@@ -1021,4 +1050,32 @@ function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density, vir
   }, [read])
   const remeasure = useCallback(() => read(false), [read])
   return [m, remeasure]
+}
+
+/** A fixed-width column cuts its text, except a column of row actions (hidden header) or one marked `truncate: false`. */
+function cuts<T>(c: Column<T>): boolean {
+  return c.width !== undefined && c.truncate !== false && !c.hiddenHeader
+}
+
+/** True while `ref`'s box is narrower than `rem` (undefined: never). Measured with a ResizeObserver; 0 wide (not laid out) is not narrow. */
+function useBoxNarrowerThan(ref: RefObject<HTMLElement>, rem: number | undefined): boolean {
+  const [narrow, setNarrow] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || rem === undefined) {
+      setNarrow(false)
+      return
+    }
+    const measure = () => {
+      const unit = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      const next = el.clientWidth > 0 && el.clientWidth < rem * unit
+      setNarrow(prev => (prev === next ? prev : next))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref, rem])
+  return narrow
 }

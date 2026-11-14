@@ -47,7 +47,7 @@ async function screen(page: Page, name: string, path: string): Promise<void> {
   await pic(page, name)
 }
 
-const SIZES = { 1440: [1440, 900], 375: [375, 812], 320: [320, 640] } as const
+const SIZES = { 1440: [1440, 900], 1024: [1024, 768], 768: [768, 1024], 375: [375, 812], 320: [320, 640] } as const
 type Width = keyof typeof SIZES
 
 /** A signed-in page at `width`; phones are touch devices (as a real phone is), so touch-only rules show. */
@@ -193,6 +193,21 @@ test.describe('Forest review pictures (round 4)', () => {
         }
         await close()
       }
+    })
+  }
+
+  for (const width of [1024, 768] as Width[]) {
+    test(`Team and History at ${width}`, async ({ browser }) => {
+      const { page, close } = await as(browser, 'admin', width, '/settings/team')
+      await expect(page.getByRole('button', { name: 'Add person' })).toBeEnabled()
+      await expect(page.getByRole('table', { name: 'Team' }).getByRole('row').nth(1)).toBeVisible()
+      await pic(page, 'team')
+      await page.goto(`/money/expenses?q=${expenseTag}`)
+      await page.getByRole('button', { name: new RegExp(`^More for Rent of ${expenseAmount}$`) }).click()
+      await page.getByRole('menuitem', { name: 'History' }).click()
+      await expect(page.getByRole('dialog', { name: 'History' }).getByTestId('history-entry').first()).toBeVisible()
+      await pic(page, 'history', { grow: false })
+      await close()
     })
   }
 

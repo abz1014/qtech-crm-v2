@@ -259,6 +259,8 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       header: `Unit price, ${ccy ?? '—'}`,
       align: 'right',
       width: 140,
+      // a field: a truncating cell clipped its focus ring
+      truncate: false,
       cell: r => {
         const n = rows.findIndex(x => x.orderItemId === r.orderItemId)
         return (
@@ -276,6 +278,8 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       id: 'source',
       header: 'Price source',
       width: 200,
+      // the detail line wraps by design; a truncating cell cut it to one line
+      truncate: false,
       cell: r => {
         const n = rows.findIndex(x => x.orderItemId === r.orderItemId)
         const st = sourceText(r, typed, today)

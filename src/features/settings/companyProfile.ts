@@ -48,18 +48,35 @@ export interface CompanyProfile {
 export const FINANCIAL_FIELDS = ['ntn', 'strn', 'bank_name', 'bank_account_title', 'bank_iban'] as const satisfies readonly TextField[]
 
 export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'default_payment_terms_days', 'updated_at'].join(', ')
-/** What an engineer may read: every column but the financial ones. */
+/**
+ * Payment terms and the quotation and purchase order wording: an engineer's screens never show them (gate 2, answer 10: they carry
+ * money words; no engineer issues a quotation or a purchase order, and an order's terms are drawn only where prices are seen).
+ */
+const ENGINEER_LEFT_OUT = ['quotation_terms', 'po_terms'] as const satisfies readonly TextField[]
+/** What an engineer reads: the business details only (no financial columns, no terms). */
 export const COLS_NO_FINANCIAL = [
-  ...TEXT_FIELDS.filter(f => !(FINANCIAL_FIELDS as readonly string[]).includes(f)),
-  'quotation_validity_days',
-  'default_payment_terms_days',
+  ...TEXT_FIELDS.filter(f => !(FINANCIAL_FIELDS as readonly string[]).includes(f) && !(ENGINEER_LEFT_OUT as readonly string[]).includes(f)),
   'updated_at',
 ].join(', ')
 
-/** A row read without the financial columns, completed with nulls so it has the full shape. */
+/** A row read without the financial columns and the terms, completed with nulls and the database defaults so it has the full shape. */
 export function withoutFinancials(row: Partial<CompanyProfile>): CompanyProfile {
-  return { ...row, ntn: null, strn: null, bank_name: null, bank_account_title: null, bank_iban: null } as CompanyProfile
+  return {
+    ...row,
+    ntn: null,
+    strn: null,
+    bank_name: null,
+    bank_account_title: null,
+    bank_iban: null,
+    quotation_terms: null,
+    po_terms: null,
+    quotation_validity_days: DEFAULT_QUOTATION_VALIDITY_DAYS,
+    default_payment_terms_days: FALLBACK_PAYMENT_TERMS_DAYS,
+  } as CompanyProfile
 }
+
+/** The column default of quotation_validity_days (migration 0021). */
+const DEFAULT_QUOTATION_VALIDITY_DAYS = 30
 
 /** 1234567-8, 12345678, 1234567, 35202-1234567-1, 3520212345671. */
 export const NTN_RE = /^(?:\d{7}(?:-?\d)?|\d{5}-?\d{7}-?\d)$/

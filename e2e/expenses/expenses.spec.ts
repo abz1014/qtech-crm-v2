@@ -54,6 +54,10 @@ interface ExpenseRow {
 const addExpense = (body: Record<string, unknown>) =>
   must(rest<ExpenseRow[]>('admin', 'expenses', { method: 'POST', body: { paid_on: today(), paid_via: 'cash', ...body } })).then(r => r[0])
 
+/** Every running animation on the page (a dialog's fade and rise) has finished, so a picture shows the end state. */
+const settled = (page: Page) =>
+  page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => undefined)))).then(() => undefined)
+
 const byNote = (note: string) => must(rest<ExpenseRow[]>('admin', `expenses?description=ilike.${encodeURIComponent(`${note}*`)}&select=*&order=amount_pkr`))
 
 /** Make "Office supplies & snacks" the most used category of the last 30 days, so the default is the one in the mockup. */
@@ -602,12 +606,18 @@ test.describe('expenses (M03, M11)', () => {
     await expect(newest).toContainText(`Amount: PKR ${was.toLocaleString('en-US')} → PKR 500`)
     await expect(newest).toContainText(admin.name)
     await expect(panel.getByText(`Entered by ${admin.name}`)).toBeVisible()
+    // the picture after the open motion has finished (it was taken mid-fade); a side panel at the right edge from 1360
+    await settled(page)
+    await expect(panel).toHaveAttribute('data-placement', 'side')
+    const box = await panel.boundingBox()
+    expect(box && Math.round(box.x + box.width), 'the History panel stands at the right edge at 1440').toBe(1440)
     await review(page, 'history-panel-1440')
     expect(await axeViolations(page)).toEqual([])
     // the same on a phone: a bottom sheet, with its text at 16 px
     await page.setViewportSize({ width: 375, height: 812 })
     await expect(newest).toBeVisible()
     expect(await newest.locator('ul li').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16)
+    await settled(page)
     await review(page, 'history-panel-375')
   })
 

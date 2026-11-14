@@ -22,8 +22,10 @@ import { Icon } from '@/ui/Icon'
  * fills in today's business date and reports it. Seed the form's defaultValues
  * with businessToday() so the field is not "dirty" before anyone touches it.
  */
-interface DateInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
+interface DateInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange' | 'max'> {
   value: string | null | undefined
+  /** The last day allowed (YYYY-MM-DD; I paid: today). A later day typed is marked invalid and reported as empty; the calendar stops there. */
+  max?: string
   onChange: (value: string) => void
   defaultToday?: boolean
   /** Classes for the box round the field and its calendar button. A width goes here, not on the input, so the button stays inside the field. */
@@ -31,7 +33,7 @@ interface DateInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'ty
 }
 
 export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInput(
-  { value, onChange, defaultToday = true, className, wrapperClassName, onBlur, onFocus, onKeyDown, disabled, readOnly, ...rest },
+  { value, onChange, defaultToday = true, max, className, wrapperClassName, onBlur, onFocus, onKeyDown, disabled, readOnly, ...rest },
   ref,
 ) {
   const a11y = useControlProps(rest)
@@ -70,7 +72,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
       return
     }
     const parsed = parseDateText(t, businessToday())
-    if (parsed) {
+    if (parsed && (!max || parsed <= max)) {
       setUnreadable(false)
       setText(formatDateText(parsed))
       report(parsed)
@@ -137,11 +139,12 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
       <input
         ref={picker}
         type="date"
+        max={max}
         tabIndex={-1}
         aria-hidden="true"
         className="pointer-events-none absolute right-0 top-full h-0 w-0 opacity-0"
         onChange={e => {
-          if (!e.target.value) return
+          if (!e.target.value || (max && e.target.value > max)) return
           setUnreadable(false)
           setText(formatDateText(e.target.value))
           report(e.target.value)
