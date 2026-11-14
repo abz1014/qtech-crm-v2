@@ -228,7 +228,11 @@ async function shotForest(browser: Browser, w: Width, role: Role) {
       await row.getByRole('button', { name: /Show details for/ }).click()
       await crop(page, items, `forest-b2-${role}-${w.tag}-items-open`)
     }
-    await asked.getByRole('button', { name: `Edit reply, ${priced.indus.co.name}` }).click()
+    // Phone: a supplier who has answered is one line until tapped (F-130); open Indus first.
+    const indusRow = asked.locator('li[data-supplier-asked]', { hasText: priced.indus.co.name })
+    const fold = indusRow.locator('button[aria-expanded="false"]')
+    if (await fold.count()) await fold.first().click()
+    await asked.getByRole('button', { name: `Edit reply, ${priced.indus.co.name}` }).click({ timeout: 15_000 })
     const reply = page.getByRole('dialog', { name: priced.indus.co.name })
     await expect(reply).toBeVisible()
     await page.waitForTimeout(500)

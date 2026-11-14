@@ -215,7 +215,7 @@ test.describe('R25 supplier prices on the RFQ page: listed by name, nothing mark
     // grade-B C3: the price starts on its own line below the name, at the row's left edge, so the name keeps the row's full width.
     const box = async (sel: string) => (await first.locator(sel).first().boundingBox())!
     const name = await first.getByText(s.bravo.name, { exact: true }).boundingBox()
-    const price = await box('.num')
+    const price = await box('[data-price]')
     expect(price.y).toBeGreaterThan(name!.y + name!.height - 1)
     expect(Math.abs(price.x - name!.x)).toBeLessThan(40)
     await first.getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()

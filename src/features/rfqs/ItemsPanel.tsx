@@ -80,7 +80,7 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
     return (
       <span className="inline-grid justify-items-start gap-x-2 lg:grid lg:justify-items-end">
         <span className="flex flex-wrap items-center gap-x-2 lg:justify-end">
-          <span className="whitespace-nowrap font-mono text-base font-bold tabular-nums">
+          <span className="whitespace-nowrap font-mono text-base font-bold tabular-nums" data-price>
             {/* A real space, not a margin: a screen reader reads "≈ PKR 33,600", not "PKR33,600". */}
             <span className="font-sans text-sm font-medium text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
             {line.currency === 'PKR' ? formatAmount(line.unitPrice, 'auto') : formatPaisa(c.pkrPaisa as bigint, 'auto')}
@@ -97,7 +97,7 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
   return (
     <span className="inline-grid justify-items-start lg:grid lg:justify-items-end">
       <span className="flex flex-wrap items-center gap-x-2 lg:justify-end">
-        <span className="whitespace-nowrap font-mono text-base font-bold tabular-nums">
+        <span className="whitespace-nowrap font-mono text-base font-bold tabular-nums" data-price>
           <span className="font-sans text-sm font-medium text-fg-muted">{line.currency}</span>{' '}
           {formatAmount(line.unitPrice, 'always')}
         </span>
