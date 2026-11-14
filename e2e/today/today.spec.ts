@@ -376,7 +376,13 @@ test.describe('Home: fits every width, with Forest-sized row buttons', () => {
         expect((await b.boundingBox())?.height ?? 0, `a row button is shorter than ${rule}`).toBeGreaterThanOrEqual(min - 0.5)
       }
       // the Forest Home pictures for the lane hand-back (desktop and phone)
-      if (width === 1440 || width === 375) await review(page, `forest-home-admin-${width}`)
+      if (width === 1440 || width === 375) {
+        await page.evaluate(() => {
+          document.querySelector('[data-today-list]')?.scrollTo(0, 0)
+          window.scrollTo(0, 0)
+        })
+        await review(page, `forest-home-admin-${width}`)
+      }
       // the colour blocks: Late is red, Today yellow, This week blue, and an empty block is not drawn
       for (const block of await page.locator('section[data-block="late"], section[data-block="today"], section[data-block="week"]').all()) {
         expect(await block.locator('li[data-rule]').count()).toBeGreaterThan(0)
