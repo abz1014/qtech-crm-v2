@@ -165,7 +165,8 @@ test.describe('Forest review pictures (round 4)', () => {
       await page.locator('body').click({ position: { x: 5, y: 300 } }).catch(() => undefined)
       await page.keyboard.press('Shift+Slash')
       const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
-      if (await sheet.isVisible({ timeout: 3000 }).catch(() => false)) await pic(page, 'shortcuts', { grow: false })
+      // the sheet loads on demand: wait for it (isVisible does not wait)
+      if (await sheet.waitFor({ timeout: 10_000 }).then(() => true, () => false)) await pic(page, 'shortcuts', { grow: false })
       await close()
     })
 
