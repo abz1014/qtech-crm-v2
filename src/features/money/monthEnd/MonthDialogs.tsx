@@ -107,20 +107,20 @@ export function CloseMonthDialog({
           </>
         }
       >
-        <ul aria-label="Warnings" className="grid overflow-hidden rounded-panel border bg-surface">
+        <ul aria-label="Warnings" className="grid overflow-hidden rounded-control border bg-surface">
           {cards.map(c => (
-            <li key={c.key} className="flex items-center gap-3 border-t px-4 py-[10px] first:border-t-0">
+            <li key={c.key} className="grid min-h-touch grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-t px-4 py-2 first:border-t-0 [overflow-wrap:anywhere]">
               <Icon icon={c.clear ? CircleCheck : TriangleAlert} size="md" className={c.clear ? 'text-tone-success-fg' : 'text-tone-warning-fg'} />
               <span className={c.clear ? 'text-fg-muted' : 'text-fg'}>
                 {c.label}
                 {c.clear ? null : <span className="text-xs text-fg-muted"> · {c.unit}</span>}
               </span>
-              <span className="num ml-auto text-sm">{c.clear ? <span className="font-regular text-fg-muted">None</span> : c.n}</span>
+              <span className="num text-right text-sm font-bold">{c.clear ? <span className="font-regular text-fg-muted">None</span> : c.n}</span>
             </li>
           ))}
         </ul>
-        <div className="flex items-start gap-3 rounded-row bg-sunken px-4 py-3 text-sm">
-          <Icon icon={Info} className="mt-[2px] text-fg-muted" />
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-control bg-sunken px-4 py-3 text-sm">
+          <Icon icon={Info} className="mt-px text-fg-muted" />
           <p>
             <span className="font-medium text-fg">These are warnings, not blockers.</span> Locking locks {label}: payments, expenses and invoices dated in it are
             frozen. No other month is changed. Bank matching and the TCS and FBR stamps stay editable. An admin can reopen {label} from the locked-months list.

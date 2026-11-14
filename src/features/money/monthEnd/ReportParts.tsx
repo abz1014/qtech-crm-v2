@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { CalendarDays, CircleAlert, Download, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
@@ -37,7 +38,7 @@ export function ExportCsvButton({ onClick, disabled }: { onClick: () => void; di
 /** "By payment date": the clock a report counts on, so two reports are never read as one (money-07 clock tag). */
 export function ClockTag({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex min-h-6 items-center gap-[6px] rounded bg-selected px-2 py-px text-xs text-fg-2">
+    <span className="inline-flex min-h-6 items-center gap-1 rounded-pill bg-brand-100 px-2 text-xs font-medium text-fg-2">
       <Icon icon={CalendarDays} size="chip" />
       {children}
     </span>
@@ -59,15 +60,19 @@ export function Panel({
   children?: ReactNode
   className?: string
   bodyClassName?: string
-  /** Desktop clarity (lane D2): from 768 up no box, a hairline above the heading and one below it instead of a frame. Phones keep the panel. */
+  /**
+   * Was desktop clarity (lane D2: no box from 768 up). Forest (57/58/59 .qb-card--flush): every panel is the one card on every width,
+   * so the prop no longer changes the look; it is kept so callers need not change.
+   */
   flat?: boolean
 }) {
+  void flat
   return (
-    <section className={cn('overflow-hidden rounded-panel border bg-surface', flat && 'md:rounded-none md:border-x-0 md:border-b-0 md:bg-transparent', className)}>
-      <header className={cn('flex min-h-[52px] flex-wrap items-center gap-3 border-b px-5 py-2', flat && 'md:min-h-[44px]')}>
+    <section className={cn(CARD, 'overflow-hidden', className)}>
+      <header className="flex min-h-head flex-wrap items-center gap-x-3 gap-y-2 border-b px-card py-3">
         {/* Title and its note ("i") stay together: the note sits beside the last line of a long title, never alone on a line of its own. */}
         <div className="flex min-w-0 items-center gap-2">
-          <h2 className="min-w-0 text-base font-semibold">{title}</h2>
+          <h2 className="min-w-0 text-lg font-heavy">{title}</h2>
           {meta}
         </div>
         <span className="flex-1" />
@@ -90,7 +95,7 @@ export function AgeBand({ bucket, children, className }: { bucket: string; child
   if (bucket !== '61-90' && bucket !== '90+') return <>{children}</>
   const severe = bucket === '90+'
   return (
-    <span className={cn('inline-grid justify-items-end gap-px rounded px-2 py-[2px]', severe ? 'bg-tone-danger-bg' : 'bg-tone-warning-bg', className)}>
+    <span className={cn('inline-grid justify-items-end gap-px rounded-control px-2 py-1', severe ? 'bg-tone-danger-bg' : 'bg-tone-warning-bg', className)}>
       <span className={cn('inline-flex items-center gap-1 text-xs font-medium', severe ? 'text-tone-danger-fg' : 'text-tone-warning-fg')}>
         <Icon icon={severe ? CircleAlert : TriangleAlert} size="sm" />
         {severe ? 'Over 90 days' : 'Over 60 days'}
@@ -134,21 +139,21 @@ export function AsOfControl({ asOf, chosen, onChange }: { asOf: string; chosen: 
 export function ReportLoading({ label }: { label: string }) {
   return (
     <div role="status" aria-busy="true" aria-label={label} className="grid gap-4">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-cols-4">
+      <div className={cn(CARD, 'grid grid-cols-2 gap-px overflow-hidden bg-line md:grid-cols-4')}>
         {[0, 1, 2, 3].map(i => (
-          <div key={i} className="grid gap-2 bg-surface px-5 py-4">
+          <div key={i} className="grid gap-2 bg-surface px-card py-4">
             <Skeleton className="h-3 w-[6rem]" />
             <Skeleton className="h-5 w-[8rem]" />
             <Skeleton className="h-3 w-[10rem]" />
           </div>
         ))}
       </div>
-      <div className="rounded border bg-surface">
-        <div className="flex min-h-[52px] items-center border-b px-5">
+      <div className={cn(CARD, 'overflow-hidden')}>
+        <div className="flex min-h-head items-center border-b px-card py-3">
           <Skeleton className="h-4 w-[10rem]" />
         </div>
         {[0, 1, 2, 3, 4, 5].map(r => (
-          <div key={r} className="flex min-h-[48px] items-center gap-4 border-b px-5">
+          <div key={r} className="flex min-h-row items-center gap-4 border-b px-card last:border-b-0">
             <Skeleton className="h-3 flex-1" />
             <Skeleton className="h-3 w-16" />
             <Skeleton className="h-3 w-[5rem]" />
@@ -161,7 +166,7 @@ export function ReportLoading({ label }: { label: string }) {
 
 export function ReportError({ title, onRetry }: { title: string; onRetry: () => void }) {
   return (
-    <div role="alert" className="mx-auto mt-8 max-w-[520px] rounded-panel border bg-surface p-6">
+    <div role="alert" className={cn(CARD, 'mx-auto mt-8 w-full max-w-prose p-card')}>
       <EmptyState
         mood="error"
         title={title}

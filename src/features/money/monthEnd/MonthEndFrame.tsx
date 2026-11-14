@@ -9,28 +9,21 @@ import { monthKeyLabel, monthKeyShort } from '@/features/money/monthEnd/model'
  * checklist links to each fix and Reports lists every report.
  */
 
+/** Forest (.qb-monthbar__step): the outlined step button of a month or period pager. */
+export const PAGER_STEP =
+  'inline-grid h-control w-control shrink-0 place-items-center rounded-control border border-line-input bg-surface text-fg transition-[background-color,transform] duration-fast ease-out hover:bg-brand-100 active:scale-press disabled:border-line disabled:bg-sunken disabled:text-fg-disabled disabled:hover:bg-sunken disabled:active:scale-100 motion-reduce:transition-none max-md:h-touch max-md:w-touch'
+
 /** Previous and next month, the month between them. Next stops at the current month. */
 export function MonthPager({ month, thisMonth, go, label = 'Month' }: { month: string; thisMonth: string; go: (by: number) => void; label?: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex gap-[2px] rounded bg-selected p-[2px]">
-      <button
-        type="button"
-        aria-label="Previous month"
-        onClick={() => go(-1)}
-        className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 transition-colors duration-fast hover:text-fg"
-      >
+    <div role="group" aria-label={label} className="inline-flex items-center gap-2">
+      <button type="button" aria-label="Previous month" onClick={() => go(-1)} className={PAGER_STEP}>
         <Icon icon={ChevronLeft} size="sm" />
       </button>
-      <span aria-live="polite" title={monthKeyLabel(month)} className="num inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
+      <span aria-live="polite" title={monthKeyLabel(month)} className="num inline-flex h-control min-w-[6.5rem] items-center justify-center px-2 text-base font-bold max-md:h-touch">
         {monthKeyShort(month)}
       </span>
-      <button
-        type="button"
-        aria-label="Next month"
-        disabled={month >= thisMonth}
-        onClick={() => go(1)}
-        className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 transition-colors duration-fast hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled"
-      >
+      <button type="button" aria-label="Next month" disabled={month >= thisMonth} onClick={() => go(1)} className={PAGER_STEP}>
         <Icon icon={ChevronRight} size="sm" />
       </button>
     </div>

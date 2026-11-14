@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { Check, CircleCheck, Link2, Search } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
+import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
@@ -40,22 +42,33 @@ export function ReviewImportedPage() {
         Records imported from the old system that still show money or goods open. Decide each one once: still open, or settled and kept as history. Nothing is hidden until each is decided.
       </p>
       <Matches />
-      <section aria-labelledby="review-h" className="rounded-panel border bg-surface">
-        <header className="grid gap-2 border-b px-5 py-4">
-          <h2 id="review-h" className="text-lg font-semibold" data-testid="review-progress">
-            {progress.decided} of {progress.total} decided
+      {/* 58-money-checks .ri-card: the progress card, a decision per row. */}
+      <section aria-labelledby="review-h" className={cn(CARD, 'overflow-hidden')}>
+        <header className="grid gap-3 border-b px-card py-4">
+          <h2 id="review-h" className="text-lg font-heavy" data-testid="review-progress">
+            <span className="num">{progress.decided}</span> of <span className="num">{progress.total}</span> decided
           </h2>
-          <div className="h-3 overflow-hidden rounded bg-selected" role="progressbar" aria-label="Decided" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-            <div className="h-full bg-brand-green" style={{ width: `${pct}%` }} />
+          <div className="h-3 overflow-hidden rounded-pill bg-brand-100" role="progressbar" aria-label="Decided" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+            <div className="h-full rounded-pill bg-brand-500 transition-[width] duration-slow ease-out motion-reduce:transition-none" style={{ width: `${pct}%` }} />
           </div>
         </header>
         {q.isPending ? (
-          <div className="grid gap-3 p-5" aria-busy="true">
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
+          <div aria-busy="true" aria-label="Loading the imported records" role="status">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="grid gap-3 border-t px-card py-4 first:border-t-0 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <span className="grid gap-2">
+                  <Skeleton className="h-4 w-[16rem] max-w-full" />
+                  <Skeleton className="h-3 w-full max-w-[28rem]" />
+                </span>
+                <span className="flex gap-2">
+                  <Skeleton className="h-touch w-[7rem]" />
+                  <Skeleton className="h-touch w-[12rem]" />
+                </span>
+              </div>
+            ))}
           </div>
         ) : q.isError ? (
-          <p role="alert" className="px-5 py-4 text-base text-tone-danger-fg">
+          <p role="alert" className="px-card py-4 text-base font-bold text-tone-danger-fg">
             The records could not be loaded.{' '}
             <button type="button" className="font-medium underline" onClick={() => void q.refetch()}>
               Try again
@@ -104,8 +117,8 @@ function useDecide(item: ReviewItem, onDecided: (item: ReviewItem, state: Review
 function SettledRow({ item, onDecided }: { item: ReviewItem; onDecided: (item: ReviewItem, state: ReviewState) => void }) {
   const { decide, busy, error } = useDecide(item, onDecided)
   return (
-    <li className="grid gap-2 px-5 py-4 text-base sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" data-testid="review-settled-here">
-      <span className="min-w-0">
+    <li className="grid gap-2 bg-canvas px-card py-4 text-base sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" data-testid="review-settled-here">
+      <span className="min-w-0 [overflow-wrap:anywhere]">
         <b className="font-semibold">{item.title}</b> · {item.company}
         <span className="mt-1 inline-flex items-center gap-2 text-tone-success-fg sm:ml-3">
           <Icon icon={CircleCheck} />
@@ -128,8 +141,8 @@ function Row({ item, onDecided }: { item: ReviewItem; onDecided: (item: ReviewIt
   const { decide: onDecide, busy, error } = useDecide(item, onDecided)
   const live = item.state === 'live'
   return (
-    <li className="grid gap-3 px-5 py-4 text-base lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-testid={`review-${item.kind}-${item.id}`}>
-      <div className="grid min-w-0 gap-px">
+    <li className="grid gap-3 px-card py-4 text-base lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-testid={`review-${item.kind}-${item.id}`}>
+      <div className="grid min-w-0 gap-px [overflow-wrap:anywhere]">
         <span>
           <b className="font-semibold">{item.title}</b> · {item.company}
         </span>
@@ -205,9 +218,9 @@ function Matches() {
   }
 
   return (
-    <section aria-labelledby="match-h" className="rounded-panel border bg-surface">
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-4">
-        <h2 id="match-h" className="text-lg font-semibold">
+    <section aria-labelledby="match-h" className={cn(CARD, 'overflow-hidden')}>
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-card py-4">
+        <h2 id="match-h" className="text-lg font-heavy">
           Link invoices to their orders
         </h2>
         <span className="flex-1" />
@@ -221,25 +234,25 @@ function Matches() {
         ) : null}
       </header>
       {error ? (
-        <p role="alert" className="border-b px-5 py-3 text-base text-tone-danger-fg">
+        <p role="alert" className="border-b px-card py-3 text-base font-bold text-tone-danger-fg [overflow-wrap:anywhere]">
           {error}
         </p>
       ) : null}
       {found === null ? (
-        <p className="px-5 py-4 text-base text-fg-2">Imported invoices came without their orders. Find matches proposes them: the same customer, the PO number and the amount. Nothing is linked until it is confirmed.</p>
+        <p className="max-w-prose px-card py-4 text-base text-fg-2">Imported invoices came without their orders. Find matches proposes them: the same customer, the PO number and the amount. Nothing is linked until it is confirmed.</p>
       ) : shown.length === 0 ? (
-        <p className="px-5 py-4 text-base text-fg-2" data-testid="no-matches">
+        <p className="px-card py-4 text-base text-fg-2" data-testid="no-matches">
           No matches left to propose.
         </p>
       ) : (
         <>
-          <p className="border-b px-5 py-3 text-base text-fg-2" data-testid="match-counts">
+          <p className="border-b bg-canvas px-card py-3 text-base text-fg-2" data-testid="match-counts">
             {counts.certain} certain, {counts.likely} likely
           </p>
           <ul className="divide-y" data-testid="match-list">
             {shown.map(p => (
-              <li key={proposalKey(p)} className="grid gap-3 px-5 py-4 text-base lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-confidence={p.confidence}>
-                <div className="grid min-w-0 gap-px">
+              <li key={proposalKey(p)} className="grid gap-3 px-card py-4 text-base lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-confidence={p.confidence}>
+                <div className="grid min-w-0 gap-px [overflow-wrap:anywhere]">
                   <span>
                     <b className="font-semibold">{p.invoice}</b> <span className="text-fg-2">({p.invoiceFacts})</span> on{' '}
                     <Link to={`/orders/${p.orderId}`} className="font-semibold text-primary underline-offset-2 hover:underline">
