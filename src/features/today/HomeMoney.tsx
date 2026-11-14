@@ -5,6 +5,7 @@ import { Clock } from 'lucide-react'
 import { formatAmount } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { buttonStyles } from '@/ui/buttonStyles'
+import { CARD } from '@/ui/card'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { qk } from '@/features/queryKeys'
@@ -20,14 +21,37 @@ import { useReceivablesSummary } from '@/features/money/payments/hooks'
  * Each card is a link-out to its page; nothing is worked out here.
  */
 const pkr = (n: number | string) => `PKR ${formatAmount(n, 'never')}`
+// Each tile is its own container, so its figure is sized by the tile (Figure below).
+const TILE = 'grid min-w-0 content-start gap-2 p-card [container-type:inline-size]'
 const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`
 
 export function HomeMoney({ today, admin }: { today: string; admin: boolean }) {
+  // Side by side only when the list column holds two tiles of a readable width (audit: at 768 and 1024 the column is ~300 px, and
+  // two tiles there cut the figure and the late chip). The column's own width decides, not the window's.
   return (
-    <div className={admin ? 'grid gap-card-gap sm:grid-cols-2' : 'grid gap-card-gap'} data-home-money="">
-      <ToCollect today={today} />
-      {admin ? <Received today={today} /> : null}
+    <div className="[container-type:inline-size]" data-home-money="">
+      <div className={admin ? 'grid gap-card-gap [@container(min-width:36rem)]:grid-cols-2' : 'grid gap-card-gap'}>
+        <ToCollect today={today} />
+        {admin ? <Received today={today} /> : null}
+      </div>
     </div>
+  )
+}
+
+/*
+ * The tile's big figure. It never breaks inside the digits and never leaves the tile: the size is the KPI size until the figure's
+ * own length no longer fits the tile, then it steps down with the tile's width (container units), to the body size at the least.
+ * A Geist heavy tabular digit is ~0.62 em wide, so a figure of n characters needs ~0.62n em.
+ */
+function Figure({ text }: { text: string }) {
+  return (
+    <p
+      className="num whitespace-nowrap font-heavy leading-tight"
+      style={{ fontSize: `min(var(--text-kpi), max(var(--text-base), calc(100cqi / ${(text.length * 0.62).toFixed(2)})))` }}
+      title={text}
+    >
+      {text}
+    </p>
   )
 }
 
@@ -35,12 +59,14 @@ function ToCollect({ today }: { today: string }) {
   const q = useReceivablesSummary(today)
   const s = q.data
   return (
-    <section aria-labelledby="home-to-collect" className="grid content-start gap-2 rounded-card border bg-surface p-card shadow-e1">
+    <section aria-labelledby="home-to-collect" className={cn(CARD, TILE)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="home-to-collect" className="text-lg font-card">To collect</h2>
         {s && s.overdue > 0 ? (
-          <span className="num inline-flex items-center gap-1 rounded-pill bg-tone-danger-bg px-3 py-1 text-sm font-semibold text-tone-danger-fg">
-            <Icon icon={Clock} size="sm" /> {pkr(s.overdue)} late
+          // the chip may wrap inside the tile (a digit group never breaks); it never leaves the tile
+          <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-pill bg-tone-danger-bg px-3 py-1 text-sm font-semibold text-tone-danger-fg">
+            <Icon icon={Clock} size="sm" />
+            <span className="num min-w-0">{pkr(s.overdue)} late</span>
           </span>
         ) : null}
       </div>
@@ -52,7 +78,7 @@ function ToCollect({ today }: { today: string }) {
         </p>
       ) : (
         <>
-          <p className="num text-kpi font-heavy">{pkr(s?.outstanding ?? 0)}</p>
+          <Figure text={pkr(s?.outstanding ?? 0)} />
           <p className="text-base text-fg-muted">
             {s && s.openCount > 0 ? `${plural(s.openCount, 'open order')}, ${s.overdueCount > 0 ? `${s.overdueCount} late` : 'nothing late'}.` : 'Nothing to collect.'}
           </p>
@@ -71,7 +97,7 @@ function Received({ today }: { today: string }) {
   // a month with no row yet has had no money in: zero, as on Money home
   const row = useMemo(() => q.data?.find(f => f.month === month) ?? null, [q.data, month])
   return (
-    <section aria-labelledby="home-received" className="grid content-start gap-2 rounded-card border bg-surface p-card shadow-e1">
+    <section aria-labelledby="home-received" className={cn(CARD, TILE)}>
       <h2 id="home-received" className="text-lg font-card">Received this month</h2>
       {q.isPending ? (
         <div aria-busy="true" className="grid gap-2"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
@@ -81,7 +107,7 @@ function Received({ today }: { today: string }) {
         </p>
       ) : (
         <>
-          <p className="num text-kpi font-heavy">{pkr(row?.moneyIn ?? '0.00')}</p>
+          <Figure text={pkr(row?.moneyIn ?? '0.00')} />
           <p className="text-base text-fg-muted">{row && row.payments > 0 ? plural(row.payments, 'payment') : 'No payment yet this month'}</p>
         </>
       )}

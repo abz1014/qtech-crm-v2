@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { Camera, ChevronRight, FilePlus2, Inbox, PackageOpen, Paperclip, Search, Share2 } from 'lucide-react'
+import { Camera, ChevronRight, CircleAlert, FilePlus2, Inbox, PackageOpen, Paperclip, Search, Share2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { cn } from '@/lib/utils'
@@ -172,6 +172,8 @@ function JobPicker({ onPick, showMine = false }: { onPick: (key: string) => void
       </label>
       {find.trim() === '' ? showMine ? <MyActiveJobs onPick={onPick} /> : null : jobs.isPending ? (
         <ChoiceSkeleton />
+      ) : jobs.isError ? (
+        <LoadFailed onRetry={() => void jobs.refetch()}>The search could not be run.</LoadFailed>
       ) : (jobs.data ?? []).length === 0 ? (
         <p className="flex items-start gap-2 rounded-control bg-sunken px-3 py-3 text-base text-fg-2">
           <Icon icon={Inbox} className="mt-[calc((var(--lh-base)-16px)/2)] shrink-0 text-fg-muted" />
@@ -198,10 +200,11 @@ function JobChoice({ job: j, onPick }: { job: Pick<JobRow, 'key' | 'companyName'
         className="group grid min-h-row w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-control border bg-surface px-4 py-3 text-left transition-[background-color,border-color,transform] duration-fast ease-out hover:border-line-strong hover:bg-selected active:scale-press"
       >
         <span className="grid min-w-0 gap-px">
-          <span className="text-base font-bold text-fg [overflow-wrap:anywhere]">
+          {/* Long names and long item lists are clamped (the full text is the title), so one job never fills the phone. */}
+          <span className="line-clamp-2 text-base font-bold text-fg [overflow-wrap:anywhere]" title={j.companyName}>
             <span className="num text-primary">Job {j.key}</span> · {j.companyName}
           </span>
-          <span className="text-sm text-fg-2 [overflow-wrap:anywhere]">{j.items}</span>
+          <span className="line-clamp-2 text-sm text-fg-2 [overflow-wrap:anywhere]" title={j.items}>{j.items}</span>
         </span>
         <Icon icon={ChevronRight} className="text-fg-muted transition-transform duration-fast ease-out group-hover:translate-x-1" />
       </button>
@@ -220,7 +223,8 @@ function MyActiveJobs({ onPick }: { onPick: (key: string) => void }) {
   const who = useMemo<Who>(() => ({ userId: user?.id ?? null, role: (user?.role ?? '') as Who['role'] }), [user?.id, user?.role])
   const mine = useMemo(() => (list.data ?? []).filter(j => inChip(j, 'mine', who)).sort(byRecent), [list.data, who])
   if (list.isPending) return <ChoiceSkeleton />
-  if (list.isError) return null // the search box above still finds any job
+  // Said, not hidden: a silent gap reads as "no jobs" (audit 5). The search box above may still work.
+  if (list.isError) return <LoadFailed onRetry={() => void list.refetch()}>Your jobs could not be loaded. Search above, or try again.</LoadFailed>
   if (mine.length === 0)
     return (
       <p className="flex items-start gap-2 rounded-control bg-sunken px-3 py-3 text-base text-fg-2">
@@ -278,6 +282,19 @@ function JobFirst() {
           </ul>
         </section>
       ) : null}
+    </div>
+  )
+}
+
+/** A list that could not be read: what happened in plain words and one way on. Nothing was changed. */
+function LoadFailed({ children, onRetry }: { children: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-sunken px-3 py-3 text-base text-fg-2">
+      <Icon icon={CircleAlert} className="shrink-0 text-tone-danger-fg" />
+      <span className="min-w-0 flex-1 basis-[12rem]">{children}</span>
+      <Button size="sm" onClick={onRetry}>
+        Try again
+      </Button>
     </div>
   )
 }

@@ -43,7 +43,8 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
   const monday = nextMonday(today)
   const short = (iso: string) => formatDay(iso).split(' ').slice(0, 2).join(' ')
   return (
-    <>
+    // Snooze and its (i) are one unit: in a narrow pane or with Larger text they wrap together, never the (i) alone on a line.
+    <span className="inline-flex shrink-0 items-center gap-1">
       <Popover>
         <PopoverTrigger asChild>
           {iconOnly ? (
@@ -119,6 +120,6 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
           <p className="mt-2 text-xs text-fg-muted">It disappears from Today until that day.</p>
         </DialogContent>
       </Dialog>
-    </>
+    </span>
   )
 }
