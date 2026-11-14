@@ -300,7 +300,7 @@ function Leg({
 
   if (folded) {
     return (
-      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={flat ? 'border-b' : 'px-4 py-1 md:px-5'}>
+      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={flat ? 'border-b last:border-b-0' : 'px-4 py-1 md:px-5'}>
         <button
           type="button"
           aria-expanded={false}
@@ -325,7 +325,7 @@ function Leg({
   }
 
   return (
-    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={cn('grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6', flat ? 'border-b py-3' : 'px-4 py-4 md:px-5')}>
+    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={cn('grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6', flat ? 'border-b py-4 last:border-b-0 last:pb-1' : 'px-4 py-4 md:px-5')}>
       <div className="grid min-w-0 content-start gap-2">
         {/* Who, in which currency; then where it stands (mockup 42): the state, the PO, and any note about the order. An engineer, with no
             currency or PO to see, reads the name and the state on one line (their own markup, mockup 42 engineer). */}
@@ -407,7 +407,7 @@ function Leg({
         {canEdit ? (
           <div className="ml-auto flex flex-wrap items-center gap-2 lg:justify-end">
             {stamp && !placeInMenu && (part === 'all' || (part === 'order' ? stamp.step === 'place' : stamp.step !== 'place')) ? (
-              <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
+              <Button size="sm" icon={stamp.step === 'place' ? Truck : undefined} onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
                 {stampLabel}
               </Button>
             ) : null}

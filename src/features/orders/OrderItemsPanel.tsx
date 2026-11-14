@@ -51,6 +51,18 @@ interface Row extends OrderItemRow {
   groupPrice?: number | 'mixed' | null
 }
 
+/*
+ * The items sit straight on the Order stop's card (mockup 41), not in a card of their own: no edge, corner or shadow, the first and last
+ * columns flush with the stop's words, the total row a rule rather than a grey band.
+ */
+const FLAT = cn(
+  'overflow-visible rounded-none border-0 bg-transparent shadow-none',
+  '[&_[data-table-toolbar]]:border-0 [&_[data-table-toolbar]]:px-0 [&_[data-table-toolbar]]:pb-3 [&_[data-table-toolbar]]:pt-0',
+  '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
+  '[&_tr[data-row-kind=foot]]:bg-transparent [&_tr[data-row-kind=foot]_td]:border-t-2 [&_tr[data-row-kind=foot]_td]:border-t-fg [&_tr[data-row-kind=foot]_td]:font-semibold',
+  '[&_tr[data-card]]:px-0 [&_td[role=cell]]:px-0',
+)
+
 const STATE_WORDS: Record<LegState, string> = { 'to-place': 'not ordered yet', 'on-order': 'ordered', late: 'late', received: 'delivered', delivered: 'delivered' }
 
 export function OrderItemsPanel({
@@ -164,8 +176,8 @@ export function OrderItemsPanel({
     if (!leg) return <span className="text-fg-muted">No supplier yet</span>
     const st = legState({ placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }, today)
     return (
-      <span className="grid min-w-[9rem] max-w-[16rem] gap-px whitespace-normal">
-        <span className="line-clamp-2 break-words font-regular text-fg" title={leg.supplierName}>
+      <span className="grid max-w-[14rem] gap-px whitespace-normal">
+        <span className="break-words font-regular text-fg">
           {leg.supplierName}
         </span>
         <span className="text-xs font-regular text-fg-muted">
@@ -221,7 +233,7 @@ export function OrderItemsPanel({
       <span className="num text-sm font-regular text-fg-muted">{r.no}</span>
       {r.kind === 'head' ? (
         <span className="grid min-w-0 gap-px">
-          <span className="line-clamp-2 break-words font-medium" title={r.description}>
+          <span className="break-words font-medium">
             {r.description}
           </span>
           <span className="inline-flex w-fit items-center gap-1 text-xs font-regular text-fg-muted">
@@ -247,7 +259,7 @@ export function OrderItemsPanel({
         </span>
       ) : (
         <span className="grid min-w-0 gap-px">
-          <span className="line-clamp-2 break-words font-medium" title={r.description}>
+          <span className="break-words font-medium">
             {r.description}
           </span>
           <span className="text-xs font-regular text-fg-muted">
@@ -362,11 +374,12 @@ export function OrderItemsPanel({
   const priced = rows.filter(r => netPaisa(r) !== null)
   const netSum = priced.reduce((n, r) => n + (netPaisa(r) as number), 0)
   const gstSum = priced.reduce((n, r) => n + (gstPaisa(r) as number), 0)
+  // The GST line sits under the total, right-aligned with the figures (mockup 41), not in the table's own status band.
   const summary = money ? (
     basisUnknown ? (
       'Prices as typed in the old CRM: it did not say whether they include GST'
     ) : priced.length > 0 ? (
-      <span className="num" data-testid="items-gst-summary">
+      <span className="num text-sm text-fg-2" data-testid="items-gst-summary">
         <span className="font-sans">GST</span> {formatPaisa(BigInt(gstSum), 'auto')} <span className="font-sans">· Total with GST</span> <b className="font-medium text-fg">{formatPaisa(BigInt(netSum + gstSum), 'auto')}</b>
       </span>
     ) : undefined
@@ -381,7 +394,7 @@ export function OrderItemsPanel({
         getRowId={r => r.id}
         twoLine
         footerLabel={basisUnknown ? 'Total as typed' : `Total before GST, ${items.length} ${items.length === 1 ? 'line' : 'lines'}`}
-        summary={summary}
+        className={FLAT}
         toolbar={
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
             <h2 className="text-base font-semibold">Items</h2>
@@ -501,8 +514,16 @@ export function OrderItemsPanel({
             </span>
           )
         }
-        empty={<p className="px-4 py-6 text-sm text-fg-muted">This order has no lines yet. Add one to start.</p>}
+        empty={<p className="py-6 text-base text-fg-muted">This order has no lines yet. Add one to start.</p>}
       />
+      {/* Below 640 the table is cards and has no total row of its own: the same total, under a rule, so the phone reads it too. */}
+      {money && priced.length > 0 ? (
+        <p className="flex items-baseline justify-between gap-3 border-t-2 border-t-fg pt-3 font-semibold sm:hidden">
+          <span>{basisUnknown ? 'Total as typed' : `Total before GST, ${items.length} ${items.length === 1 ? 'line' : 'lines'}`}</span>
+          <span className="num">{formatPaisa(BigInt(netSum), 'auto')}</span>
+        </p>
+      ) : null}
+      {summary ? <p className="mt-2 text-right text-sm text-fg-2 [overflow-wrap:anywhere]">{summary}</p> : null}
       {adding ? <AddLineDialog order={order} items={items} legs={legs} onClose={() => setAdding(false)} /> : null}
       {removing ? <RemoveLineConfirm orderId={orderId} line={removing} lineCount={items.length} onClose={() => setRemoving(null)} /> : null}
       {splitting ? <SplitLineDialog order={order} item={items.find(i => i.id === splitting.id) ?? splitting} legs={legs} pos={pos} onClose={() => setSplitting(null)} /> : null}
