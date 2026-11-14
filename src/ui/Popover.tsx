@@ -143,15 +143,15 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
         if (!keepOpen && !e.defaultPrevented) state?.close()
       }}
       className={cn(
-        'flex h-control w-full items-center gap-2 rounded px-2 text-left text-sm transition-colors duration-fast ease-out',
-        'hover:bg-sunken focus-visible:bg-selected focus-visible:outline-offset-[-2px] disabled:text-fg-disabled disabled:hover:bg-transparent',
+        'flex h-control w-full items-center gap-2 rounded-control px-2 text-left text-sm font-card transition-colors duration-fast ease-out',
+        'hover:bg-selected focus-visible:bg-selected focus-visible:outline-offset-[-2px] disabled:text-fg-disabled disabled:hover:bg-transparent',
         danger ? 'text-tone-danger-fg' : 'text-fg',
         className,
       )}
       {...rest}
     >
-      {icon ? <Icon icon={icon} className={danger ? '' : 'text-fg-muted'} /> : null}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {icon ? <Icon icon={icon} className={danger ? '' : 'text-primary'} /> : null}
+      <span className="min-w-0 flex-1 truncate" title={typeof children === 'string' ? children : undefined}>{children}</span>
       {hint ? <span className="shrink-0 text-xs text-fg-muted">{hint}</span> : null}
       {radio ? <Icon icon={Check} className={cn('text-primary', !checked && 'invisible')} /> : null}
     </button>
@@ -164,7 +164,7 @@ export function MenuGroup({ label, children }: { label: string; children: ReactN
   const id = useId()
   return (
     <div role="group" aria-labelledby={id} className="grid">
-      <span id={id} className="px-2 pb-1 pt-2 text-xs font-medium text-fg-muted">
+      <span id={id} className="px-3 pb-1 pt-2 text-xs font-card text-fg-muted">
         {label}
       </span>
       {children}

@@ -14,7 +14,8 @@ import { NeedsCount } from '@/ui/Tag'
  *   mode="radio" (default)  role=radiogroup: sets a value; arrows move and select.
  *   mode="tabs"             role=tablist: switches a panel (render <TabPanel> children);
  *                           arrows move focus, Space or Enter selects.
- * Track bg-selected, selected segment is a surface with a border-strong edge.
+ * Forest .qb-seg: a pill track on --bg-deep; the selected segment is the brand-100 pill with green words and a green edge
+ * (the edge is the 3:1 cue, WCAG 1.4.11) and the e1 lift.
  * Each segment is --segment-h tall (36, 26 with smaller text, 44 on touch), --control-h when `large`.
  * Below 640 px the segments WRAP onto a second row instead of scrolling sideways (rubric: no sideways-scrolling filter
  * strips on a phone); from 640 px up a track too narrow for its words scrolls inside itself, never overlapping labels.
@@ -63,24 +64,24 @@ export function SegmentedControl({
   const track = cn(
     // Phones wrap (flex-wrap, no horizontal overflow); wider screens keep one row and scroll inside the track if they must.
     // A caller that passes `flex-wrap` (Today's tabs) wraps at every width and never scrolls.
-    'inline-flex max-w-full flex-wrap gap-[2px] rounded bg-selected p-[2px]',
+    'inline-flex max-w-full flex-wrap gap-1 rounded-card bg-deep p-1 sm:rounded-pill',
     !/(^|\s)flex-wrap(\s|$)/.test(className ?? '') && 'sm:flex-nowrap sm:overflow-x-auto',
     fill && 'flex w-full',
     className,
   )
   const segment = (o: SegmentOption) => (
     <>
-      {o.icon ? <Icon icon={o.icon} className="text-fg-muted group-data-[state=checked]:text-chrome-fg-2 group-data-[state=active]:text-chrome-fg-2" /> : null}
+      {o.icon ? <Icon icon={o.icon} className="text-fg-muted group-data-[state=checked]:text-primary group-data-[state=active]:text-primary" /> : null}
       {o.label}
       <NeedsCount n={o.needs} variant={o.needsVariant} />
     </>
   )
   const segClass = cn(
-    'group inline-flex shrink-0 items-center justify-center gap-[6px] whitespace-nowrap rounded border border-transparent px-3 text-xs font-medium text-fg-muted',
+    'group inline-flex shrink-0 items-center justify-center gap-[6px] whitespace-nowrap rounded-control border border-transparent px-4 text-xs font-card text-fg-2 sm:rounded-pill',
     'transition-colors duration-fast ease-out hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled',
-    // WCAG 1.4.11: the selected segment is filled navy (direction C), 12:1 against the track.
-    'data-[state=checked]:border-chrome data-[state=checked]:bg-chrome data-[state=checked]:text-chrome-fg',
-    'data-[state=active]:border-chrome data-[state=active]:bg-chrome data-[state=active]:text-chrome-fg',
+    // WCAG 1.4.11: the selected segment's green edge is the 3:1 cue against the track; brand-100 fill, green heavy words.
+    'data-[state=checked]:border-primary data-[state=checked]:bg-selected data-[state=checked]:font-heavy data-[state=checked]:text-primary data-[state=checked]:shadow-e1',
+    'data-[state=active]:border-primary data-[state=active]:bg-selected data-[state=active]:font-heavy data-[state=active]:text-primary data-[state=active]:shadow-e1',
     // locked (a submitting form disables its fieldset): the selected segment keeps its surface but greys out
     'disabled:data-[state=checked]:border-line disabled:data-[state=checked]:bg-surface disabled:data-[state=checked]:text-fg-disabled disabled:data-[state=active]:border-line disabled:data-[state=active]:bg-surface disabled:data-[state=active]:text-fg-disabled',
     // On a phone the height is a floor, so a label that has to break onto two lines grows the segment instead of spilling out.

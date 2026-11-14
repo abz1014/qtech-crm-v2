@@ -12,11 +12,13 @@ import { Icon } from '@/ui/Icon'
  * `bordered` draws the card the mockup shows when the state stands on its own (a panel or a page):
  * solid for the goal state, dashed for the rest, 260px tall. Inside a table body or a list pane the
  * container already has its edge, so leave it off. `bordered="solid"` or "dashed" overrides the default.
+ * Forest .qb-state: a 64 px round tile in the mood's tint, the title in the card-title step, the words at most 46ch; the
+ * action buttons wrap their words instead of running off a phone (R-032).
  */
 type Mood = 'goal' | 'neutral' | 'warning' | 'error'
 const MOOD: Record<Mood, { icon: LucideIcon; tile: string }> = {
   goal: { icon: CircleCheck, tile: 'bg-tone-success-bg text-tone-success-fg' },
-  neutral: { icon: Search, tile: 'bg-selected text-fg-2' },
+  neutral: { icon: Search, tile: 'bg-selected text-primary' },
   warning: { icon: Lock, tile: 'bg-tone-warning-bg text-tone-warning-fg' },
   error: { icon: CloudOff, tile: 'bg-tone-danger-bg text-tone-danger-fg' },
 }
@@ -45,18 +47,22 @@ export function EmptyState({ mood = 'neutral', icon, title, children, actions, m
       data-mood={mood}
       className={cn(
         'grid justify-items-center gap-3 text-center',
-        edge ? 'min-h-[260px] content-center rounded-panel bg-surface px-6 py-10' : 'px-6 py-10',
-        edge === 'solid' && 'border',
+        edge ? 'min-h-[260px] content-center rounded-card bg-surface px-5 py-10' : 'px-5 py-10',
+        edge === 'solid' && 'border shadow-e1',
         edge === 'dashed' && 'border border-dashed border-line-strong',
         className,
       )}
     >
-      <span className={cn('grid size-10 place-items-center rounded', m.tile)}>
-        <Icon icon={icon ?? m.icon} size="xl" />
+      <span className={cn('grid size-16 place-items-center rounded-pill', m.tile)}>
+        <Icon icon={icon ?? m.icon} size="xl" className="size-8" />
       </span>
-      <p className="text-balance text-lg font-semibold tracking-snug">{title}</p>
+      <p className="text-balance text-lg font-card">{title}</p>
       {children ? <p className="max-w-[46ch] text-pretty text-sm text-fg-2">{children}</p> : null}
-      {actions ? <div className="mt-1 flex flex-wrap justify-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="mt-1 flex max-w-full flex-wrap justify-center gap-x-3 gap-y-2 [&_button]:h-auto [&_button]:min-h-control [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2 [&_button]:leading-snug">
+          {actions}
+        </div>
+      ) : null}
       {meta ? <p className="text-xs text-fg-muted">{meta}</p> : null}
     </div>
   )

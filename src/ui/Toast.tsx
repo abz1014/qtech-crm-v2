@@ -5,8 +5,8 @@ import { Icon } from '@/ui/Icon'
 import { ToastContext, type ToastApi, type ToastInput } from '@/ui/useToast'
 
 /*
- * Toast (INVENTORY: U03; D08 section 08, g2-today-b2 "Copied"). Ink surface,
- * shadow-pop, 420px (never under 300) on desktop and full width minus the 16px gutters on a phone
+ * Toast (INVENTORY: U03; D08 section 08, g2-today-b2 "Copied"). Forest .qb-toast: the brand-950 surface,
+ * e3 shadow, a lime glyph, 12 px corners, 420px (never under 300) on desktop and full width minus the 16px gutters on a phone
  * (above the tab bar and the home-bar inset); on a phone the card wraps so the words keep at least 10rem. At most three show, newest at the bottom; the oldest
  * is settled and removed first.
  *
@@ -146,7 +146,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         data-over-dialog={overDialog || undefined}
         style={lift && !overDialog ? { bottom: lift } : undefined}
         className={cn(
-          'pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[420px] min-w-[300px] max-w-[calc(100vw-2rem)] flex-col gap-2 max-md:inset-x-4 max-md:bottom-[calc(76px+env(safe-area-inset-bottom,0px))] max-md:w-auto max-md:min-w-0 max-md:max-w-none',
+          'pointer-events-none fixed bottom-4 right-4 z-toast flex w-[420px] min-w-[300px] max-w-[calc(100vw-2rem)] flex-col gap-2 max-md:inset-x-4 max-md:bottom-[calc(var(--tabbar-h)+var(--sp-1)+env(safe-area-inset-bottom,0px))] max-md:w-auto max-md:min-w-0 max-md:max-w-none',
           // A phone with a dialog open: at the top, clear of the dialog's buttons (they sit at its bottom).
           overDialog && 'max-md:bottom-auto max-md:top-[calc(env(safe-area-inset-top)+8px)]',
         )}
@@ -312,24 +312,24 @@ function ToastCard({
       onBlur={() => setPaused(false)}
       className={cn(
         // On a phone a compact grid: icon, words and Dismiss on the first row (Dismiss inline, top right), Undo or the action under the words.
-        'pointer-events-auto relative flex animate-rise-6 items-center gap-3 overflow-hidden rounded py-[10px] pl-[14px] pr-[10px] text-sm shadow-pop max-md:grid max-md:grid-cols-[auto_minmax(0,1fr)_auto] max-md:items-start max-md:gap-x-3 max-md:gap-y-1',
+        'pointer-events-auto relative flex min-h-control animate-rise-6 items-center gap-3 overflow-hidden rounded-control py-3 pl-4 pr-3 text-sm shadow-e3 max-md:grid max-md:grid-cols-[auto_minmax(0,1fr)_auto] max-md:items-start max-md:gap-x-3 max-md:gap-y-1',
         tone === 'danger' ? 'bg-tone-danger-fg text-tone-ink-fg' : 'bg-tone-ink-bg text-tone-ink-fg',
       )}
     >
-      <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0 max-md:col-start-1 max-md:row-start-1 max-md:mt-[2px]', tone === 'success' && 'text-tone-success-bg')} />
+      <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0 max-md:col-start-1 max-md:row-start-1 max-md:mt-[2px]', tone !== 'danger' && 'text-lime-300')} />
       <div className="grid min-w-0 flex-1 text-pretty max-md:col-start-2 max-md:row-start-1">
-        <span className="font-medium">{title}</span>
-        {body ? <span className={cn('text-xs', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
+        <span className="font-bold">{title}</span>
+        {body ? <span className={cn('text-xs font-medium', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
         {undoable ? <span className="sr-only">{` Undo is available for ${u?.seconds ?? 10} seconds, or press Control+Z.`}</span> : null}
       </div>
       {undoable ? (
         <button
           type="button"
           onClick={onUndo}
-          className="inline-flex h-control-sm items-center gap-[6px] rounded border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start"
+          className={cn('inline-flex h-control-sm items-center gap-2 rounded-control border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-heavy', 'transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start', tone !== 'danger' && 'text-lime-300')}
         >
           <svg viewBox="0 0 18 18" aria-hidden="true" className="size-[18px] -rotate-90">
-            <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" className="stroke-tone-ink-fg opacity-30" />
+            <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" className="stroke-current opacity-30" />
             <circle
               cx="9"
               cy="9"
@@ -337,7 +337,7 @@ function ToastCard({
               fill="none"
               strokeWidth="2"
               strokeLinecap="round"
-              className="stroke-tone-ink-fg"
+              className="stroke-current"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={still ? 0 : CIRCUMFERENCE * (1 - fraction)}
             />
@@ -352,7 +352,7 @@ function ToastCard({
             input.action?.onClick()
             onDismiss()
           }}
-          className="inline-flex h-control-sm items-center rounded border border-tone-ink-fg/30 px-3 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start"
+          className={cn('inline-flex h-control-sm items-center rounded-control border border-tone-ink-fg/30 px-3 text-xs font-heavy', 'transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:h-10 max-md:justify-self-start', tone !== 'danger' && 'text-lime-300')}
         >
           {input.action.label}
         </button>
@@ -361,14 +361,14 @@ function ToastCard({
         type="button"
         aria-label="Dismiss"
         onClick={onDismiss}
-        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:col-start-3 max-md:row-start-1 max-md:-my-2 max-md:-mr-2 max-md:size-10"
+        className="grid size-control-sm shrink-0 place-items-center rounded-control opacity-80 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:col-start-3 max-md:row-start-1 max-md:-my-2 max-md:-mr-2 max-md:size-10"
       >
         <Icon icon={X} />
       </button>
       {undoable ? (
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-tone-ink-fg opacity-60"
+          className="absolute inset-x-0 bottom-0 h-1 origin-left bg-lime-300 opacity-60"
           style={{ transform: `scaleX(${still ? 1 : fraction})` }}
         />
       ) : null}

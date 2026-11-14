@@ -9,7 +9,8 @@ import type { StatusDimension } from '@/lib/status'
  * from the data-status map in tokens.css through --status-fg / --status-bg.
  * The glyph is 16px (12 with smaller text) and the label medium weight, so neutral,
  * info and success chips differ by shape and word, not by colour alone. Height is
- * --chip-h (24, or 20) and grows with the text rather than clipping it.
+ * --chip-h (28, or 20) and grows with the text rather than clipping it. Forest .qb-chip: a pill, 650 words, icon first.
+ * The faint edge stays (live): a dashed edge is how a soft status (--status-border-style) differs from a firm one.
  * Renders nothing for a key marked `hidden` in the registry (Open, Active, Not needed, Complete...).
  */
 interface StatusBadgeProps {
@@ -35,7 +36,7 @@ export function StatusBadge({ dimension, value, label, detail, className }: Stat
         borderColor: 'color-mix(in srgb, var(--status-fg, var(--tone-neutral-fg)) 24%, transparent)',
       }}
       className={cn(
-        'inline-flex min-h-chip items-center gap-[6px] whitespace-nowrap rounded-round border bg-status-bg py-px pl-2 pr-[10px] text-xs font-semibold leading-none text-status-fg',
+        'inline-flex min-h-chip items-center gap-1 whitespace-nowrap rounded-pill border bg-status-bg py-px pl-2 pr-3 text-xs font-card leading-none text-status-fg',
         !s && 'bg-tone-neutral-bg text-tone-neutral-fg',
         className,
       )}

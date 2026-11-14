@@ -507,7 +507,7 @@ function TableView<T>(props: DataTableProps<T>) {
   const alignRight = (c: Column<T>) => (c.align ?? (c.kind === 'money' || c.kind === 'num' ? 'right' : 'left')) === 'right'
   const monoCell = (c: Column<T>) => c.kind === 'money' || c.kind === 'num' || c.kind === 'date'
   // A cell is one line, except text that asks to break anywhere ([overflow-wrap:anywhere]): that is meant to wrap, and nowrap would make it run out of the cell.
-  const cellBase = 'h-row whitespace-nowrap [&_[class*=overflow-wrap]]:whitespace-normal border-b border-line px-[var(--cell-px)] py-[6px] first:pl-5 last:pr-5'
+  const cellBase = 'h-row whitespace-nowrap [&_[class*=overflow-wrap]]:whitespace-normal border-b border-line px-[var(--cell-px)] py-[6px] font-medium first:pl-5 last:pr-5'
   const hide = (c: Column<T>) => (c.hideClass ?? (c.hideBelowLg ? 'hidden lg:table-cell' : c.hideBelowMd ? 'hidden md:table-cell' : ''))
 
   const toolbarNode = typeof toolbar === 'function' ? toolbar({ selectedCount }) : toolbar
@@ -634,7 +634,7 @@ function TableView<T>(props: DataTableProps<T>) {
             active && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
           )}
         >
-          <td role="cell" className="flex min-h-[44px] items-start gap-3 px-4 py-3">
+          <td role="cell" className="flex min-h-touch items-start gap-3 px-4 py-3">
             {selection ? <span className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
             <div className="min-w-0 flex-1">
               {mobileRow(row)}
@@ -736,7 +736,7 @@ function TableView<T>(props: DataTableProps<T>) {
     if (loading && cards)
       return Array.from({ length: 4 }, (_, r) => (
         <tr key={r} role="row" aria-hidden="true" className="block border-b border-line">
-          <td role="cell" className="grid min-h-[44px] gap-2 px-4 py-3">
+          <td role="cell" className="grid min-h-touch gap-2 px-4 py-3">
             <Skeleton style={{ width: `${[60, 75, 50, 68][r % 4]}%` }} />
             <Skeleton style={{ width: '40%' }} />
           </td>
@@ -808,7 +808,7 @@ function TableView<T>(props: DataTableProps<T>) {
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
-      className={cn('group/dt relative min-w-0 overflow-clip rounded-panel border bg-surface', className)}
+      className={cn('group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
@@ -880,7 +880,7 @@ function TableView<T>(props: DataTableProps<T>) {
             ) : null}
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
-                <th className="sticky top-0 z-[1] h-head w-10 border-b-2 border-fg bg-surface px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
+                <th className="sticky top-0 z-base h-head w-10 border-b-2 border-fg bg-surface px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
                   {checkbox(headState, () => setMany(ids, !allOn), 'Select all rows')}
                 </th>
               ) : null}
@@ -894,9 +894,9 @@ function TableView<T>(props: DataTableProps<T>) {
                     aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : sortable ? 'none' : undefined}
                     style={c.width !== undefined ? { width: c.width } : undefined}
                     className={cn(
-                      'group sticky top-0 z-[1] h-head whitespace-nowrap border-b-2 border-fg bg-surface px-[var(--cell-px)] text-xs font-semibold first:pl-5 last:pr-5',
+                      'group sticky top-0 z-base h-head whitespace-nowrap border-b-2 border-fg bg-surface px-[var(--cell-px)] text-xs font-card first:pl-5 last:pr-5',
                       alignRight(c) ? 'text-right' : 'text-left',
-                      dir ? 'text-fg' : 'text-fg-2',
+                      dir ? 'text-fg' : 'text-fg-muted',
                       hide(c),
                     )}
                   >
@@ -904,7 +904,7 @@ function TableView<T>(props: DataTableProps<T>) {
                       <button
                         type="button"
                         onClick={() => cycleSort(c.id)}
-                        className={cn('-mx-1 inline-flex h-6 items-center gap-1 rounded px-1 hover:bg-selected hover:text-fg', alignRight(c) && 'flex-row-reverse')}
+                        className={cn('-mx-1 inline-flex h-6 items-center gap-1 rounded-control px-1 hover:bg-selected hover:text-fg', alignRight(c) && 'flex-row-reverse')}
                       >
                         {c.header}
                         <Icon
@@ -940,7 +940,7 @@ function TableView<T>(props: DataTableProps<T>) {
       ) : hints ? (
         // No summary to show: the legend takes no room of its own (a band that held only an invisible legend was a blank strip under
         // the card). It floats over the card's bottom-right corner while focus is inside the table, and never takes a click.
-        <div className="pointer-events-none absolute bottom-2 right-4 z-[2] rounded border bg-surface px-3 py-1 text-xs text-fg-muted shadow-sm max-sm:hidden invisible group-focus-within/dt:visible">
+        <div className="pointer-events-none absolute bottom-2 right-4 z-sticky rounded-control border bg-surface px-3 py-1 text-xs text-fg-muted shadow-e1 max-sm:hidden invisible group-focus-within/dt:visible">
           {hintsNode}
         </div>
       ) : null}

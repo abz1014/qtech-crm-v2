@@ -245,7 +245,7 @@ export function CommandPalette({
       onOpenChange={onOpenChange}
     >
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-40 animate-fade-in bg-scrim" />
+        <RadixDialog.Overlay className="fixed inset-0 z-scrim animate-fade-in bg-scrim" />
         <RadixDialog.Content
           aria-describedby={undefined}
           ref={contentRef}
@@ -267,11 +267,11 @@ export function CommandPalette({
               if (!otherDialog && (!now || now === document.body || contentRef.current?.contains(now))) document.getElementById('main')?.focus({ preventScroll: true })
             }
           }}
-          className="fixed left-1/2 top-[96px] z-50 flex max-h-[calc(100dvh-112px)] w-[640px] flex-col max-md:max-h-[calc(100dvh-32px)] max-w-[calc(100vw-32px)] -translate-x-1/2 overflow-hidden rounded bg-surface shadow-modal focus:outline-none max-md:top-4"
+          className="fixed left-1/2 top-[96px] z-dialog flex max-h-[calc(100dvh-112px)] w-[640px] flex-col max-md:max-h-[calc(100dvh-32px)] max-w-[calc(100vw-32px)] -translate-x-1/2 overflow-hidden rounded-card border bg-surface shadow-e2 focus:outline-none max-md:top-4"
         >
           <RadixDialog.Title className="sr-only">Search or jump to</RadixDialog.Title>
           <Command shouldFilter={false} loop label="Search or jump to" onKeyDownCapture={onKeyDownCapture} className="flex min-h-0 flex-col">
-            <div className="flex min-h-[calc(var(--control-h)+16px)] shrink-0 items-center gap-3 border-b px-4">
+            <div className="flex min-h-[calc(var(--control-h)+var(--sp-4))] shrink-0 items-center gap-3 border-b px-4">
               <Icon icon={Search} size="lg" className="text-fg-muted" />
               <Command.Input
                 value={query}
@@ -287,16 +287,16 @@ export function CommandPalette({
                 <Command.Group
                   key={g.key}
                   heading={g.heading}
-                  className="[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-fg-muted"
+                  className="[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:text-fg-muted"
                 >
                   {g.items.map(item => (
                     <Command.Item
                       key={item.id}
                       value={`${g.key}:${item.id}`}
                       onSelect={() => run(item, false)}
-                      className="group relative flex min-h-row cursor-pointer items-center gap-3 px-4 py-1 text-sm data-[selected=true]:bg-selected"
+                      className="group relative flex min-h-row cursor-pointer items-center gap-3 px-4 py-2 text-sm hover:bg-sunken data-[selected=true]:bg-selected"
                     >
-                      <span aria-hidden="true" className="absolute inset-y-0 left-0 hidden w-[3px] bg-brand-green group-data-[selected=true]:block" />
+                      <span aria-hidden="true" className="absolute inset-y-0 left-0 hidden w-1 bg-primary group-data-[selected=true]:block" />
                       {item.icon ? <Icon icon={item.icon} className="text-fg-muted group-data-[selected=true]:text-fg" /> : <span className="w-4" />}
                       <span className="min-w-0 flex-1 break-words" title={item.label}>
                         <Highlight text={item.label} q={q} />
@@ -322,11 +322,11 @@ export function CommandPalette({
             {/* Status lines sit beside the listbox, not inside it: a listbox may only hold options and groups. */}
             {slow && searching ? (
               <div role="status" aria-label="Searching" className="grid pb-1">
-                <p className="px-4 pb-1 pt-3 text-xs font-semibold text-fg-muted">Searching</p>
+                <p className="px-4 pb-1 pt-3 text-xs font-bold text-fg-muted">Searching</p>
                 {[60, 42, 52].map(w => (
                   <div key={w} className="flex h-row items-center gap-3 px-4">
-                    <span className="size-4 rounded-round border border-line-strong" />
-                    <span className="h-[10px] animate-pulse rounded bg-selected motion-reduce:animate-none" style={{ width: `${w}%` }} />
+                    <span className="size-4 rounded-pill border border-line-strong" />
+                    <span className="h-[10px] animate-pulse rounded-pill bg-selected motion-reduce:animate-none" style={{ width: `${w}%` }} />
                   </div>
                 ))}
               </div>
@@ -334,9 +334,9 @@ export function CommandPalette({
 
             {settled && !searching && failed && q ? (
               <div role="status" className={cn('grid justify-items-center gap-2 px-6 text-center text-sm text-fg-muted', total === 0 ? 'py-8' : 'border-t py-3')}>
-                <b className="font-medium text-fg">Search could not run</b>
+                <b className="font-card text-fg">Search could not run</b>
                 <p className="max-w-prose text-pretty">{total === 0 ? 'Nothing was lost. Check your connection and try again.' : 'Some results could not load. The rest are shown above.'}</p>
-                <button type="button" onClick={() => setAttempt(n => n + 1)} className="rounded border border-line-strong px-3 py-1 text-fg hover:bg-selected focus-visible:outline focus-visible:outline-2">
+                <button type="button" onClick={() => setAttempt(n => n + 1)} className="min-h-control rounded-control border border-line-strong px-4 font-bold text-fg hover:bg-selected focus-visible:outline focus-visible:outline-2">
                   Try again
                 </button>
               </div>
@@ -344,10 +344,10 @@ export function CommandPalette({
 
             {settled && !searching && !failed && total === 0 && q ? (
               <div role="status" className="grid justify-items-center gap-2 px-6 py-8 text-center text-sm text-fg-muted">
-                <span className="grid size-10 place-items-center rounded bg-selected text-fg-2">
-                  <Icon icon={Search} size="lg" />
+                <span className="grid size-16 place-items-center rounded-pill bg-selected text-primary">
+                  <Icon icon={Search} size="xl" className="size-8" />
                 </span>
-                <b className="font-medium text-fg">Nothing found for “{q}”</b>
+                <b className="font-card text-fg">Nothing found for “{q}”</b>
                 <p className="max-w-prose text-pretty">{emptyHint ?? 'Try one word, or check the spelling.'}</p>
               </div>
             ) : null}

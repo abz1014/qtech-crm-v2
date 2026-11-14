@@ -20,13 +20,16 @@ import { TONE_ICON, TONE_OF_STEP, type StatusDimension, type StepTone, type Tone
 
 const STEP_OF_TONE: Record<Tone, StepTone> = { danger: 'late', warning: 'now', info: 'waiting', success: 'done', neutral: 'inert' }
 
-/** Text and icon colours per tone (rule 5): we act = strong text, amber icon; waiting / done / inert = muted text. */
+/**
+ * Text and icon colours per tone (Forest .qb-status): the icon and the word both take the tone's ink, 650 weight, so who acts
+ * next reads at a glance. Colour is never alone: the glyph and the word carry it too. Done is teal (success), never brand green.
+ */
 const TEXT: Record<StepTone, string> = {
-  late: 'font-medium text-tone-danger-fg',
-  now: 'font-medium text-fg',
-  waiting: 'text-fg-muted',
-  done: 'text-fg-muted',
-  inert: 'text-fg-muted',
+  late: 'font-card text-tone-danger-fg',
+  now: 'font-card text-tone-warning-fg',
+  waiting: 'font-card text-tone-info-fg',
+  done: 'font-card text-tone-success-fg',
+  inert: 'font-card text-tone-neutral-fg',
 }
 const ICON: Record<StepTone, string> = {
   late: 'text-tone-danger-fg',
@@ -115,7 +118,7 @@ function StatusTextView({
   className?: string
 }) {
   return (
-    <span data-tone={tone} data-status-text={statusKey} className={cn('inline-flex items-start gap-[6px] text-sm', className)}>
+    <span data-tone={tone} data-status-text={statusKey} className={cn('inline-flex items-start gap-1 text-sm', className)}>
       <Icon icon={icon ?? TONE_ICON[TONE_OF_STEP[tone]]} size="sm" className={cn('mt-[3px]', ICON[tone])} />
       <span className="grid min-w-0 gap-px">
         <span className={TEXT[tone]}>{label}</span>

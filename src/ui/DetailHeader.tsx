@@ -64,7 +64,7 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, more, chips, me
       <div className={cn('flex items-start justify-between gap-4', phoneSrOnly && 'max-md:sr-only max-md:focus-within:not-sr-only')}>
         <h1 className="min-w-0 text-2xl font-heavy tracking-tight text-pretty max-md:text-xl">
           {nameHref ? (
-            <Link to={nameHref} className="rounded underline-offset-4 hover:underline">
+            <Link to={nameHref} className="rounded-control underline-offset-4 hover:underline">
               {name}
             </Link>
           ) : (
