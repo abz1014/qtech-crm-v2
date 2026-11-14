@@ -10,8 +10,6 @@ import { removeErrorMessage } from '@/features/companies/removeError'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef, rfqRef } from '@/lib/refs'
-import { cn } from '@/lib/utils'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -137,27 +135,27 @@ export function SitesPanel({
 
   return (
     <Panel
-      flat
+      card
       title="Sites"
       actions={
-        <Button variant="quiet" size="sm" icon={Plus} onClick={onAddSite}>
+        <Button size="sm" icon={Plus} onClick={onAddSite}>
           Add site
         </Button>
       }
     >
       {loading ? (
-        <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading sites">
+        <div role="status" className="grid gap-3 px-5 pb-3" aria-busy="true" aria-label="Loading sites">
           <Skeleton className="h-4 w-1/4" />
           <Skeleton className="h-8 w-full" />
         </div>
       ) : error ? (
-        <div className="p-4">
+        <div className="px-5 pb-3">
           <Banner tone="danger" title="Could not load the sites">
             Reload the page to try again. Nothing was changed.
           </Banner>
         </div>
       ) : !sites || (sites.length === 0 && unfiled.length === 0) ? (
-        <div className="grid gap-1 px-5 py-6 text-sm">
+        <div className="grid gap-1 px-5 pb-4 pt-1 text-sm">
           <p className="font-medium text-fg">No sites or RFQs yet.</p>
           <Fine>Add a site here, or type one when you log an RFQ.</Fine>
         </div>
@@ -185,7 +183,7 @@ export function SitesPanel({
                     error={removeError}
                     onConfirm={confirmRemove}
                     onCancel={cancelRemove}
-                    className="mx-5 mb-3"
+                    className="mb-3"
                   />
                 ) : null
               }
@@ -241,9 +239,9 @@ function SiteBlock({
   const orders = items.length - rfqs
   const counts = `${rfqs} ${rfqs === 1 ? 'RFQ' : 'RFQs'} · ${orders} ${orders === 1 ? 'order' : 'orders'}`
   return (
-    <section className="border-t first:border-t-0" aria-label={name}>
-      <header className="flex items-start gap-3 px-5 py-3">
-        <Icon icon={MapPin} className="mt-[3px] text-fg-muted" />
+    <section className="mx-5 border-t first:border-t-0" aria-label={name}>
+      <header className="flex items-start gap-3 py-3">
+        <Icon icon={MapPin} className="mt-1 text-fg-muted" />
         <div className="min-w-0 flex-1">
           {/* the counts sit on the name's line (wrapping under it only when the name is long) */}
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -263,60 +261,38 @@ function SiteBlock({
       {items.length > 0 ? (
         <ItemList label={`RFQs and orders at ${name}`} items={items} today={today} />
       ) : (
-        <p className="px-5 pb-4 text-sm text-fg-muted">No RFQs or orders here yet.</p>
+        <p className="pb-4 pl-8 text-sm text-fg-muted">No RFQs or orders here yet.</p>
       )}
     </section>
   )
 }
 
 /*
- * A site's RFQs and orders as a short list, not a table: the item name wraps, so the State and "Repeat order" always fit at 1366
- * with the side column (a table cut "Repeat order" to "Re"). From 1280: reference · what · date · state · action; narrower stacks it.
+ * A site's RFQs and orders as a short list, not a table (71-company-page .co-item, R-040: never a fixed five-column grid): the
+ * reference and date over what it was on the left, the state and "Repeat order" on the right from 640 px, stacked under it below.
+ * The item name wraps, so the state and "Repeat order" always fit beside the side column (a table cut "Repeat order" to "Re").
  */
-const IGRID = 'md:grid md:grid-cols-[112px_minmax(0,1fr)_72px_minmax(0,168px)_auto] md:items-start md:gap-x-4'
-
 function ItemList({ label, items, today }: { label: string; items: Item[]; today: string }) {
-  // one layout in the DOM at a time, so every reference, item and button exists once.
-  // The five-column row needs ~590px besides the item text; below 1280 the side column (from 1024) or the menu leaves less than that,
-  // so a tablet gets the stacked row (reference and date, the item over its full width, then state and action).
-  const wide = useMediaQuery('(min-width: 1280px)')
   return (
-    <div className="border-t">
-      {wide ? (
-        <div className={cn('bg-sunken px-5 py-2 text-sm text-fg-muted', IGRID)} aria-hidden="true">
-          <span>Reference</span>
-          <span>What</span>
-          <span>Date</span>
-          <span>State</span>
-          <span className="w-[136px]" />
-        </div>
-      ) : null}
-      <ul aria-label={label}>
-        {items.map(item => (
-          <li key={item.key} className="border-t px-5 py-3 first:border-t-0 md:py-2">
-            {wide ? (
-              <div className={cn('min-h-touch', IGRID)}>
-                <span className="pt-[6px]">
-                  <RefTag item={item} />
-                </span>
-                <span className="pt-[8px] text-sm">
-                  <WhatText item={item} />
-                </span>
-                <span className="num pt-[8px] text-sm">{item.date ? formatShortDate(item.date, today) : 'No date'}</span>
-                <span className="pt-[8px] text-sm">
-                  <StateText item={item} />
-                </span>
-                <span className="flex w-[136px] justify-end">
-                  {item.kind === 'order' && item.orderId ? <RepeatOrderSlot orderId={item.orderId} orderNumber={item.number} /> : null}
-                </span>
-              </div>
-            ) : (
-              <ItemCard item={item} today={today} />
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul aria-label={label} className="mb-2 border-t">
+      {items.map(item => (
+        <li key={item.key} className="grid gap-2 border-t py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-4">
+          <div className="grid min-w-0 gap-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <RefTag item={item} />
+              <span className="num text-sm text-fg-muted">{item.date ? formatShortDate(item.date, today) : 'No date'}</span>
+            </div>
+            <span className="text-sm">
+              <WhatText item={item} />
+            </span>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:min-h-control sm:justify-end sm:text-right">
+            <StateText item={item} />
+            {item.kind === 'order' && item.orderId ? <RepeatOrderSlot orderId={item.orderId} orderNumber={item.number} /> : null}
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -353,21 +329,4 @@ function StateText({ item }: { item: Item }) {
   }
   if (item.state === 'won' || item.state === 'closed') return <StatusText dimension="rfq-outcome" value={item.state} detail={item.extra} />
   return item.extra ? <span className="text-sm text-fg-muted">{item.extra}</span> : null
-}
-
-/** A phone row (below 640px): the reference and date, what it was, then its state and Repeat order. */
-function ItemCard({ item, today }: { item: Item; today: string }) {
-  return (
-    <div className="grid gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <RefTag item={item} />
-        <span className="num text-sm text-fg-muted">{item.date ? formatShortDate(item.date, today) : 'No date'}</span>
-      </div>
-      <WhatText item={item} />
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <StateText item={item} />
-        {item.kind === 'order' && item.orderId ? <RepeatOrderSlot orderId={item.orderId} orderNumber={item.number} /> : null}
-      </div>
-    </div>
-  )
 }
