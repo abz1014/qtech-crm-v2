@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useState, type ReactNode, type RefObject } from 'react'
 import * as RadixRadio from '@radix-ui/react-radio-group'
 import * as RadixTabs from '@radix-ui/react-tabs'
 import type { LucideIcon } from 'lucide-react'
@@ -17,8 +17,10 @@ import { NeedsCount } from '@/ui/Tag'
  * Forest .qb-seg: a pill track on --bg-deep; the selected segment is the brand-100 pill with green words and a green edge
  * (the edge is the 3:1 cue, WCAG 1.4.11) and the e1 lift.
  * Each segment is --segment-h tall (36, 26 with smaller text, 44 on touch), --control-h when `large`.
- * Below 640 px the segments WRAP onto a second row instead of scrolling sideways (rubric: no sideways-scrolling filter
- * strips on a phone); from 640 px up a track too narrow for its words scrolls inside itself, never overlapping labels.
+ * Below 640 px (audit 1 blocker 3) two to four segments sit on ONE row of equal columns (a grid, tighter padding; a label
+ * that cannot fit breaks onto two lines inside its own segment), so Mine / Open / History never drops one option to a
+ * second row. Five options wrap. Never a sideways-scrolling strip on a phone; from 640 px up a track too narrow for its
+ * words scrolls inside itself, never overlapping labels.
  */
 export interface SegmentOption {
   value: string
@@ -61,12 +63,20 @@ export function SegmentedControl({
   ...aria
 }: SegmentedControlProps) {
   const trackRef = useScrollActiveIntoView<HTMLDivElement>()
+  // A caller that lays the segments out in its own grid columns keeps its layout.
+  const canRow = options.length <= 4 && !/(^|\s)(max-sm:)?grid-cols-/.test(className ?? '')
+  // Phones: up to four options on ONE row: equal columns; if a longest word does not fit its equal share, columns sized by
+  // their words; only if even that spills (or there are five options) do the segments wrap. Measured before paint.
+  const fit = usePhoneRowFit(trackRef, canRow, options)
+  const oneRow = canRow && fit !== 'wrap'
   const track = cn(
-    // Phones wrap (flex-wrap, no horizontal overflow); wider screens keep one row and scroll inside the track if they must.
-    // A caller that passes `flex-wrap` (Today's tabs) wraps at every width and never scrolls.
+    // Wider screens keep one row and scroll inside the track if they must. A caller that passes `flex-wrap` (Today's tabs)
+    // wraps at every width and never scrolls.
     'inline-flex max-w-full flex-wrap gap-1 rounded-card bg-deep p-1 sm:rounded-pill',
+    oneRow && 'max-sm:inline-grid max-sm:grid-flow-col',
+    oneRow && (fit === 'equal' ? 'max-sm:auto-cols-fr' : 'max-sm:auto-cols-[minmax(min-content,1fr)]'),
     !/(^|\s)flex-wrap(\s|$)/.test(className ?? '') && 'sm:flex-nowrap sm:overflow-x-auto',
-    fill && 'flex w-full',
+    fill && (oneRow ? 'flex w-full max-sm:grid' : 'flex w-full'),
     className,
   )
   const segment = (o: SegmentOption) => (
@@ -88,8 +98,12 @@ export function SegmentedControl({
     large ? 'h-control max-sm:h-auto max-sm:min-h-control' : 'h-segment max-sm:h-auto max-sm:min-h-segment',
     // Shares the width but never shrinks below its words: a track too narrow wraps (phones) or scrolls (wider) instead of overlapping labels.
     fill && 'flex-1 px-2',
-    // A segment longer than the phone itself (one very long label) breaks onto two lines rather than poking out of the track.
-    'max-sm:max-w-full max-sm:whitespace-normal max-sm:text-center',
+    // A label longer than its room breaks onto two lines rather than poking out of the track.
+    'max-sm:whitespace-normal max-sm:text-center',
+    // Wrapping rows: a segment is never wider than the track. One row: the grid column sizes it.
+    !oneRow && 'max-sm:max-w-full',
+    // One row on a phone: tighter side padding so three or four options fit 320 px.
+    oneRow && 'max-sm:px-2',
   )
 
   if (mode === 'tabs') {
@@ -115,4 +129,42 @@ export function SegmentedControl({
       ))}
     </RadixRadio.Root>
   )
+}
+
+const PHONE = '(max-width: 639.98px)'
+
+type RowFit = 'equal' | 'words' | 'wrap'
+const NEXT: Record<RowFit, RowFit> = { equal: 'words', words: 'wrap', wrap: 'wrap' }
+
+/**
+ * How the segments share one phone row: 'equal' columns, else columns sized by their 'words', else 'wrap'. Each step is tried
+ * in a layout effect (before paint) and given up when a segment's words, or the track, spill; a new width or new words start
+ * again from 'equal', so the person only ever sees the first layout that fits.
+ */
+function usePhoneRowFit(ref: RefObject<HTMLDivElement | null>, canRow: boolean, options: readonly SegmentOption[]): RowFit {
+  const [fit, setFit] = useState<RowFit>('equal')
+  const [width, setWidth] = useState(0)
+  const words = options.map(o => `${o.label}|${o.needs ?? ''}`).join('/')
+  useLayoutEffect(() => setFit('equal'), [width, words])
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || !canRow || fit === 'wrap' || typeof window.matchMedia !== 'function' || !window.matchMedia(PHONE).matches) return
+    // 3 px of slack: a segment's own 1 px edges and sub-pixel rounding are not a spill
+    const spills = (e: Element) => e.scrollWidth > e.clientWidth + 3
+    // the track wider than the room its parent gives it (a percentage max-width does not hold a grid inside a content-sized box)
+    const parent = el.parentElement
+    const ps = parent ? getComputedStyle(parent) : null
+    const room = parent && ps ? parent.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight) : Infinity
+    const wide = el.getBoundingClientRect().width > room + 1
+    if (wide || spills(el) || Array.from(el.children).some(c => c.tagName !== 'INPUT' && spills(c))) setFit(NEXT[fit])
+  }, [ref, canRow, fit, width, words])
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || !canRow || typeof ResizeObserver === 'undefined') return
+    const parent = el.parentElement ?? el
+    const ro = new ResizeObserver(() => setWidth(Math.round(parent.getBoundingClientRect().width)))
+    ro.observe(parent)
+    return () => ro.disconnect()
+  }, [ref, canRow])
+  return canRow ? fit : 'wrap'
 }

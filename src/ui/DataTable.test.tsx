@@ -369,6 +369,19 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
     expect(legend?.className).toContain('pointer-events-none')
   })
 
+  it('a load that takes 5 s says it is still loading and what to check (audit 1 major 5)', () => {
+    vi.useFakeTimers()
+    try {
+      mount(<DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} loading toolbar={toolbar} />)
+      expect(el.textContent).toContain('Loading RFQs')
+      act(() => void vi.advanceTimersByTime(5_000))
+      expect(el.textContent).not.toContain('Loading RFQs')
+      expect(el.textContent).toContain('Still loading. Check your connection.')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('loading says what is loading and keeps a skeleton footer; the error has a default sentence and a stamp', () => {
     mount(<DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} loading toolbar={toolbar} />)
     expect(el.textContent).toContain('Loading RFQs')

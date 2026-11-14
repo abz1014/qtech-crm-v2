@@ -91,7 +91,8 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
   }
 
   return (
-    <div className={cn('relative min-w-0', wrapperClassName)}>
+    // a span (block), not a div: callers wrap a control in a <label>, which takes phrasing content only (audit 1 minor 24)
+    <span className={cn('relative block w-full min-w-0', wrapperClassName)}>
       <input
         ref={ref}
         type="text"
@@ -150,6 +151,6 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
           report(e.target.value)
         }}
       />
-    </div>
+    </span>
   )
 })

@@ -253,7 +253,7 @@
   --cell-px: var(--sp-3);
   --text-table: var(--text-sm);
   --lh-table: var(--lh-sm);
-  --hit-touch: 44px;     /* minimum tap target on phones (touch controls are 48, set below) */
+  --hit-touch: 44px;     /* minimum tap target (48 on a touch screen, set below) */
 
   /* ---- 8. Layout --------------------------------------------------------- */
   --nav-w: 240px;            /* the forest rail */
@@ -375,11 +375,11 @@
   --row-h: 32px;
 }
 
-/* Phones and tablets, at EITHER text size: every control, small button and segment 48px (Forest's touch target, over the 44px
-   --hit-touch floor, WCAG 2.5.5), 64px rows. Smaller text never shrinks a tap target (this block comes after [data-text="small"]
-   and wins at equal specificity). */
+/* Phones and tablets, at EITHER text size: every control, small button, segment and tap target 48px (Forest's touch size; the
+   --hit-touch floor is 44 with a mouse, WCAG 2.5.5, and 48 here: audit 1 minor 23), 64px rows. Smaller text never shrinks a tap
+   target (this block comes after [data-text="small"] and wins at equal specificity). */
 @media (pointer: coarse) {
-  :root { --control-h: 48px; --control-lg-h: 56px; --control-sm-h: 48px; --segment-h: 48px; --row-h: 64px; }
+  :root { --control-h: 48px; --control-lg-h: 56px; --control-sm-h: 48px; --segment-h: 48px; --row-h: 64px; --hit-touch: 48px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -572,12 +572,26 @@
     outline-offset: var(--focus-offset);
   }
   :focus:not(:focus-visible) { outline: none; }
+  /* Date and time fields are typed into, like text: Chromium does not always match :focus-visible on them when tabbed to, so
+     they ring on any focus (audit 1 major 13, WCAG 2.4.7). A field drawn invisible over its own label (a tap-to-pick date
+     chip) rings the label instead. */
+  input:is([type="date"], [type="time"], [type="month"], [type="datetime-local"]):focus {
+    outline: var(--ring-width) solid var(--brand-green);
+    outline-offset: var(--focus-offset);
+  }
+  label:has(> input.opacity-0:is([type="date"], [type="time"], [type="month"], [type="datetime-local"]):focus) {
+    outline: var(--ring-width) solid var(--brand-green);
+    outline-offset: var(--focus-offset);
+  }
 
   /* WCAG 2.4.11: sticky and fixed action bars (intake Next step, RFQ/order header bars, month-end close) sit over
      the bottom of #main. Tabbing scrolls the focused control clear of them instead of underneath. */
   #main { scroll-padding-top: 8px; scroll-padding-bottom: 16px; }
   #main:has([data-action-bar]) { scroll-padding-bottom: 96px; }
   #main:has([data-sticky-bar]) { scroll-padding-bottom: 136px; }
+  /* A page with nothing to Tab to puts <main> itself in the Tab order so the keyboard can scroll it (useKeyboardScroll):
+     then it shows the ring, inside its edge. */
+  #main[data-tab-scroll]:focus-visible { outline: var(--ring-width) solid var(--brand-green); outline-offset: calc(var(--ring-width) * -1); }
   /* The h1 takes focus on a route change (useRouteFocus); the page has just opened, no ring needed. */
   #main h1[tabindex="-1"]:focus { outline: none; }
 
@@ -669,6 +683,15 @@
 .row-settle { animation: row-settle var(--dur-slow) var(--ease-out) both; }
 @media (prefers-reduced-motion: reduce) {
   .row-settle { animation: none; }
+}
+
+/* Money `fit` (src/ui/Money.tsx, audit 1 blocker 2): a stat tile's or hero's figure fills the width it is given and steps its font
+   size down until the whole number fits (100cqi over the figure's width in ems, less the PKR prefix), between the 16 px floor and
+   its own step. The digits never break; the chips beside it wrap under it. */
+.money-fit { container-type: inline-size; }
+.money-fit > .num {
+  font-size: clamp(var(--text-sm), calc((100cqi - var(--fit-pre, 0px)) / var(--fit-ems, 8)), var(--fit-max, var(--text-base)));
+  line-height: 1.2;
 }
 
 /* Touch screens (pointer: coarse): no tap target under --hit-touch (DESIGN_SYSTEM 11, WCAG 2.5.5; screen audit "phone tap

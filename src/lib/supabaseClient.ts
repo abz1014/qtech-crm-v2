@@ -109,7 +109,16 @@ export function createLeanClient<Database>(
   const functionsFetch = withAuth(true)
   // The database part may be reached through the site's own origin (restOrigin: Vercel forwards /rest/v1/ to Supabase, see
   // supabase.ts); the same requests, headers and answers either way.
-  const rest = new PostgrestClient(new URL('rest/v1', options.restOrigin ? `${options.restOrigin}/` : base).href, { headers, schema: 'public', fetch: dataFetch })
+  // retry: false (audit 1 major 5). postgrest-js retries a failed read three times itself (1 + 2 + 4 s), and TanStack Query
+  // retries the whole query on top (queryClient.ts), so with no signal a screen sat on its skeleton for 15 s or more before it
+  // said "could not load". Retrying is TanStack's job alone now: one quick retry, a few more only for PostgREST's own
+  // "schema cache is loading" answer (retryRead in queryClient.ts).
+  const rest = new PostgrestClient(new URL('rest/v1', options.restOrigin ? `${options.restOrigin}/` : base).href, {
+    headers,
+    schema: 'public',
+    fetch: dataFetch,
+    retry: false,
+  })
   const storage = lazyStorage(new URL('storage/v1', base).href, headers, dataFetch)
   const functionsUrl = new URL('functions/v1', base).href
 

@@ -28,6 +28,22 @@ export function refuseOfflineSave(): void {
   if (!onlineManager.isOnline()) throw new TypeError('offline')
 }
 
+/** PostgREST's "not ready yet" answers (schema cache loading or connecting to the database, HTTP 503): worth a few tries. */
+const TRANSIENT_CODES = new Set(['PGRST000', 'PGRST001', 'PGRST002', 'PGRST003'])
+/** Retries for a transient answer (TanStack's backoff: 1, 2, 4 s). Anything else, including no signal, is retried once. */
+export const TRANSIENT_RETRIES = 3
+
+/**
+ * How often a failed read is tried again (audit 1 major 5: errors were shown 10 to 20 s late). The database client no longer
+ * retries by itself (supabaseClient.ts), so this is the only retry: once, a second later, for a failed request or an
+ * unexpected answer, so a screen says "could not load" within about two seconds of the second failure instead of sitting on
+ * its skeleton; up to TRANSIENT_RETRIES times while PostgREST says it is still starting.
+ */
+export function retryRead(failureCount: number, error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : ''
+  return failureCount < (TRANSIENT_CODES.has(code) ? TRANSIENT_RETRIES : 1)
+}
+
 /**
  * The app's one query client. A module singleton (not React context) so non-React code, such as a
  * command-palette source, can use the same cache as the screens.
@@ -47,7 +63,7 @@ export const queryClient = new QueryClient({
     mutations: { networkMode: 'always' },
     queries: {
       staleTime: 30_000,
-      retry: 1,
+      retry: retryRead,
       refetchOnWindowFocus: refetchOnReturn,
       refetchOnReconnect: true,
     },

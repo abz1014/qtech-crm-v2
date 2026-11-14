@@ -18,11 +18,12 @@ export function Adorned({ prefix, suffix, children, className }: Adornment & { c
   if (!prefix && !suffix) return <>{children}</>
   const cap = 'inline-flex shrink-0 items-center border-line-input bg-sunken px-3 text-sm text-fg-muted'
   return (
-    <div className={cn('flex min-w-0 items-stretch [&_input]:min-w-0 [&_input]:flex-1', className)}>
+    // a span, not a div: callers wrap a control in a <label>, which takes phrasing content only (audit 1 minor 24)
+    <span className={cn('flex min-w-0 items-stretch [&_input]:min-w-0 [&_input]:flex-1', className)}>
       {prefix ? <span className={cn(cap, 'rounded-l border border-r-0')}>{prefix}</span> : null}
       {children}
       {suffix ? <span className={cn(cap, 'rounded-r border border-l-0')}>{suffix}</span> : null}
-    </div>
+    </span>
   )
 }
 

@@ -91,6 +91,22 @@ describe('lean Supabase client (no Realtime)', () => {
     await full.auth.stopAutoRefresh()
   })
 
+  it('a read that cannot reach the server fails at once: no hidden retries under TanStack Query (audit 1 major 5)', async () => {
+    let calls = 0
+    const down: typeof fetch = async () => {
+      calls++
+      throw new TypeError('Failed to fetch')
+    }
+    const a = createLeanClient<never>(URL_, LEGACY_KEY, { fetch: down })
+    const started = Date.now()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- an untyped read
+    const res = await (a as any).from('companies').select('id')
+    expect(res.error).toBeTruthy()
+    expect(calls).toBe(1)
+    expect(Date.now() - started).toBeLessThan(900)
+    a.auth.stopAutoRefresh()
+  })
+
   it('has no Realtime part', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     const a = createLeanClient<never>(URL_, LEGACY_KEY, { fetch: network().fetchFn })

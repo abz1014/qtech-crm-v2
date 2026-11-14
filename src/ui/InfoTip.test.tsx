@@ -71,12 +71,12 @@ describe('InfoTip (UX 2026-10-19)', () => {
     expect(onRow).not.toHaveBeenCalled()
   })
 
-  it('target: 24px with a mouse, a 44px (--hit-touch) area on a coarse pointer; readable text, at most ~32ch wide', async () => {
+  it('target: 24px with a mouse, a 48px (--hit-touch) area on a coarse pointer; readable text, at most ~32ch wide', async () => {
     const user = userEvent.setup()
     render(<Tip />)
     const button = screen.getByRole('button', { name: 'About PSID' })
     expect(button.className).toContain('size-6')
-    expect(button.className).toContain('[@media(pointer:coarse)]:size-touch [@media(pointer:coarse)]:-m-[10px]')
+    expect(button.className).toContain('[@media(pointer:coarse)]:size-touch [@media(pointer:coarse)]:-m-3')
     await user.click(button)
     const tip = await screen.findByRole('dialog')
     expect(tip.className).toContain('max-w-[32ch]')

@@ -10,8 +10,8 @@ import { Icon } from '@/ui/Icon'
  * Label is the click target as well as the name. The only label-less use is a
  * table row or header tick: pass `aria-label` instead and no label is drawn.
  * Supports "indeterminate" for a select-all header. Space toggles.
- * Touch (pointer: coarse): the label is 44px tall (--hit-touch) with the box centred on its line. A label-less box (aria-label,
- * often with the caller's own <label htmlFor>) is itself a 44px target there, the 24px square drawn inside it, with negative
+ * Touch (pointer: coarse): the label is 48px tall (--hit-touch) with the box centred on its line. A label-less box (aria-label,
+ * often with the caller's own <label htmlFor>) is itself a 48px target there, the 24px square drawn inside it, with negative
  * margins so the row keeps its height.
  */
 const TOUCH_LABEL = '[@media(pointer:coarse)]:py-[calc((var(--hit-touch)-var(--lh-sm))/2)]'
@@ -64,7 +64,7 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
         aria-describedby={help ? `${id}-help` : undefined}
         className={cn(
           'group mt-[calc((var(--lh-sm)-var(--sp-6))/2)] grid size-6 shrink-0 place-items-center rounded-[var(--sp-1)] disabled:cursor-not-allowed',
-          '[@media(pointer:coarse)]:-m-[10px] [@media(pointer:coarse)]:size-touch',
+          '[@media(pointer:coarse)]:-m-3 [@media(pointer:coarse)]:size-touch',
           className,
         )}
         {...rest}

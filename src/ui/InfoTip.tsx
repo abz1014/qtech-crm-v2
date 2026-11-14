@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
  * Built on the information Popover, not Tooltip: it opens on click and on tap (phones have no hover; a Radix tooltip
  * ignores touch), on Enter or Space from the keyboard, and closes on Esc, an outside click or a second press, with focus
  * back on the button. The click does not bubble, so it can sit inside a clickable row or card.
- * Target: 24px on a mouse; on a touch screen (pointer: coarse) the button is 44px (--hit-touch) around the same glyph, with a
+ * Target: 24px on a mouse; on a touch screen (pointer: coarse) the button is 48px (--hit-touch) around the same glyph, with a
  * negative margin so the line it sits on does not grow.
  *
  *   <h2>TCS <InfoTip label="About TCS">Tax collected at source: ...</InfoTip></h2>
@@ -40,8 +40,8 @@ export function InfoTip({ label, children, side = 'bottom', align = 'start', cla
           className={cn(
             'relative inline-grid size-6 shrink-0 place-items-center rounded-pill align-middle text-primary',
             'transition-colors duration-fast ease-out hover:bg-selected data-[state=open]:bg-selected',
-            // touch: the button itself is 44px; the negative margin keeps the 24px footprint beside the text it explains
-            '[@media(pointer:coarse)]:size-touch [@media(pointer:coarse)]:-m-[10px]',
+            // touch: the button itself is 48px (--hit-touch); the 12px negative margin keeps the 24px footprint beside the text
+            '[@media(pointer:coarse)]:size-touch [@media(pointer:coarse)]:-m-3',
             className,
           )}
         >
