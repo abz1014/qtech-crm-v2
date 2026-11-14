@@ -364,6 +364,7 @@ function CompleteManyDialog({ rows, onClose }: { rows: readonly MarginRow[]; onC
   return (
     <Dialog open busy={many.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
+        icon={ClipboardCheck}
         title={`Mark costs complete for ${rows.length} orders?`}
         context="Their margins become final. Each can be reopened on its order page."
         footer={

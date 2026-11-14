@@ -585,7 +585,8 @@ function TableView<T>(props: DataTableProps<T>) {
       ) : null}
       <td
         colSpan={labelCols}
-        className={cn('h-[2.25rem] whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
+        // A long group or footer label wraps inside its cells instead of running past them (a windowed table keeps one line: its rows have fixed heights).
+        className={cn('h-[2.25rem] border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', virtual ? 'whitespace-nowrap' : 'py-2 [overflow-wrap:anywhere]', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
       >
         {labelNode}
       </td>
@@ -777,7 +778,7 @@ function TableView<T>(props: DataTableProps<T>) {
     if (items.length === 0)
       return (
         <tr>
-          <td colSpan={colCount}>{pinned(empty)}</td>
+          <td colSpan={colCount} className={cn(flat && 'pt-4')}>{pinned(empty)}</td>
         </tr>
       )
     const slice = items.slice(first, last)
@@ -839,7 +840,7 @@ function TableView<T>(props: DataTableProps<T>) {
         {announced}
       </p>
       {toolbarNode || exportCsv ? (
-        <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : toolbarCard ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-4 py-3')} data-table-toolbar>
+        <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : toolbarCard ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
           {loading ? <span className="text-xs text-fg-muted">{`Loading ${what}`}</span> : null}
           {densityOn ? (
@@ -960,7 +961,8 @@ function TableView<T>(props: DataTableProps<T>) {
       {shown || loading ? (
         // The band's height never depends on focus. A band that appeared while focus was in the table moved the page by its height
         // when focus left, and a click on a control beside the table (Copy and mark reminded) lost its mouseup to that jump.
-        <div className="flex min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted">
+        // The toolbar, this band and the first and last cells share one inset (20 px; flush in a flat table), so the words line up down the card.
+        <div className={cn('flex min-h-10 items-center justify-between gap-3 border-t py-2 text-xs text-fg-muted', flat ? 'px-0' : 'bg-surface px-5')}>
           {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
           {hintsNode}
         </div>

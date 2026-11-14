@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Check, CircleAlert, Info, TriangleAlert } from 'lucide-react'
+import { ArrowLeftRight, Check, CircleAlert, Info, TriangleAlert } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
@@ -48,6 +48,7 @@ export function ApplyCreditDialog({ open, onOpenChange, companyId, companyName, 
 function ApplyFrame({ companyName, credit, footer, children }: { companyName: string; credit: CreditSummary; footer: ReactNode; children: ReactNode }) {
   return (
     <DialogContent
+      icon={ArrowLeftRight}
       title="Apply credit to an order"
       context={
         <>

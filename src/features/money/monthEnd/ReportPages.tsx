@@ -307,7 +307,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         </div>
 
         <div className="grid gap-6">
-          <Panel flat title="Where the money went" meta={<span className="num text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
+          <Panel flat title="Where the money went" meta={<span className="num whitespace-nowrap text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
             <div className="grid gap-3 px-card py-4">
               <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 gap-px overflow-hidden rounded-pill bg-sunken">
                 <i className="block bg-tone-info-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />

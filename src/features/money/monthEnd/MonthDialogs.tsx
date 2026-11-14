@@ -88,6 +88,7 @@ export function CloseMonthDialog({
       busy={close.isPending}
     >
       <DialogContent
+        icon={Lock}
         title={`Lock ${label}?`}
         context={
           <>
@@ -177,6 +178,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
     >
       {entry ? (
         <DialogContent
+          icon={LockOpen}
           title={`Reopen ${monthKeyLabel(entry.key)}?`}
           context={`Locked ${formatClosedAt(entry.closedAt)}${entry.closedBy ? ` by ${entry.closedBy}` : ''}`}
           size="md"
