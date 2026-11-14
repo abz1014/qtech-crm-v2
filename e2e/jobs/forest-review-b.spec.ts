@@ -67,7 +67,7 @@ async function paste(page: Page, text: string): Promise<void> {
 async function seedRfqStage() {
   const tag = Math.random().toString(36).slice(2, 6).toUpperCase()
   const customer = await createCompany(uniqueName(`Pakistan Petroleum Refinery and Industrial Gases ${tag} (Private) Limited`))
-  await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: customer.id, name: 'Tariq Mehmood', title: 'Procurement Manager' } }))
+  await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: customer.id, name: 'Tariq Mehmood', phone: '0300 1234567' } }))
   const rfq = await createRfq(customer.id, { due_on: karachiDay(4), customer_ref: `ENQ-${tag}` })
   const items: string[] = []
   for (const [i, description] of [`Endress+Hauser Promag 400 flowmeter DN80 ${tag}`, `Cerabar PMC71 pressure transmitter 0-10 bar ${tag}`, `Vibrating fork level switch ${tag}`].entries()) {
