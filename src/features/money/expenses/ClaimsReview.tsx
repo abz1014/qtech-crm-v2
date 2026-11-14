@@ -54,8 +54,9 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
     return (
       <section aria-label="To approve" data-testid="claims-review">
         <FoldRow
-          state={ACTION}
-          chip={{ ...ACTION, tone: 'warning' }}
+          // One line on a phone (the chip would squeeze the title and the figure at 320): the state icon in the "now" ink.
+          state={{ ...ACTION, className: 'text-tone-warning-fg' }}
+          figure
           title="To approve"
           summary={`${count} · ${total}`}
           open={open}

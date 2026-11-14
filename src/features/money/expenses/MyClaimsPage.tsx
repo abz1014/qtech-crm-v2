@@ -305,24 +305,27 @@ function ClaimLine({ claim, onWithdraw, busy }: { claim: Claim; onWithdraw: () =
       </StatusText>
     )
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-card py-4 text-base">
-      <span className="min-w-0 [overflow-wrap:anywhere]">
+    // What was paid over the state and the day (63-my-expenses): the words always have the card's width, so a long note or a refusal
+    // reason never squeezes them into a column one letter wide on a phone.
+    <li className="grid gap-2 px-card py-4 text-base">
+      <p className="min-w-0 [overflow-wrap:anywhere]">
         <b className="num font-bold">{pkr(claim.amount)}</b>
         {claim.note ? <span> · {claim.note}</span> : null}
         {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
         {claim.visitLabel ? <span className="text-fg-2"> · {claim.visitLabel}</span> : null}
-      </span>
-      <span className="justify-self-end">{state}</span>
-      <span className="num text-sm text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>
-      {claim.status === 'pending' ? (
-        <Button variant="quiet" icon={Trash2} onClick={onWithdraw} disabled={busy} aria-label={`Take back ${pkr(claim.amount)}`} className="-mr-2 justify-self-end max-md:h-touch">
-          Take back
-        </Button>
-      ) : claim.status === 'rejected' && claim.rejectReason ? (
-        <span className="justify-self-end text-right text-sm text-fg-2 [overflow-wrap:anywhere]">{claim.rejectReason}</span>
-      ) : (
-        <span />
-      )}
+      </p>
+      <div className="flex min-h-control-sm flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+          {state}
+          <span className="num text-sm text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>
+        </span>
+        {claim.status === 'pending' ? (
+          <Button variant="quiet" icon={Trash2} onClick={onWithdraw} disabled={busy} aria-label={`Take back ${pkr(claim.amount)}`} className="-mr-2 max-md:h-touch">
+            Take back
+          </Button>
+        ) : null}
+      </div>
+      {claim.status === 'rejected' && claim.rejectReason ? <p className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{claim.rejectReason}</p> : null}
     </li>
   )
 }
