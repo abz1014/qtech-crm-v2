@@ -88,6 +88,7 @@ for (const role of ['admin', 'sales'] as const) {
       if (role === 'sales') await expect(page.getByTestId('report-picker')).toHaveCount(0)
       await waitForAnimationsToFinish(page)
       await review(page, `p01-reports-${role}-1440`)
+      await page.screenshot({ path: test.info().outputPath(`forest-c4-reports-${role}-1440.png`), fullPage: true })
 
       // network log: the four report views were read, and no report answer holds a money-looking column
       const mine = log.urls.filter(u => u.includes('/rest/v1/'))
@@ -112,6 +113,7 @@ for (const role of ['admin', 'sales'] as const) {
       expect(overflow).toBeLessThanOrEqual(0)
       await waitForAnimationsToFinish(page)
       await review(page, `p01-reports-${role}-375`)
+      await page.screenshot({ path: test.info().outputPath(`forest-c4-reports-${role}-375.png`), fullPage: true })
       expect(await axeViolations(page)).toEqual([])
     })
   })

@@ -29,6 +29,10 @@ async function spentBetween(from: string, to: string): Promise<number> {
   const rows = await must(rest<Row[]>('admin', `expenses?paid_on=gte.${from}&paid_on=lte.${to}&select=amount_pkr,paid_on`))
   return rows.reduce((s, r) => s + Number(r.amount_pkr), 0)
 }
+/** A whole-page picture in the run's test-results (the CI artifact), for the Forest review. */
+const shot = (page: Page, name: string) => page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true })
+const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+
 async function csvOf(page: Page, name: string) {
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name }).first().click()])
   return { file: download.suggestedFilename(), text: readFileSync(await download.path(), 'utf8') }
@@ -70,6 +74,8 @@ test.describe('expenses report (2026-10-22)', () => {
     await expect(drill.getByRole('listitem').filter({ hasText: 'LEB-5678' })).toHaveCount(2) // the detail line and the entry
     await page.waitForLoadState('networkidle')
     await review(page, 'expense-report-month-1440')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await shot(page, 'forest-c4-expense-report-1440')
     expect(await axeViolations(page)).toEqual([])
 
     const csv = await csvOf(page, 'Export CSV')
@@ -96,7 +102,15 @@ test.describe('expenses report (2026-10-22)', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await page.waitForLoadState('networkidle')
     await review(page, 'expense-report-quarter-375')
+    await shot(page, 'forest-c4-expense-report-375')
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
+    // the dense widths: a small phone and a tablet keep the page inside the window too
+    for (const width of [320, 768]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(page.getByTestId('expense-report-trend')).toBeVisible()
+      expect(await sideways(page), `${width} px`).toBe(false)
+      await shot(page, `forest-c4-expense-report-${width}`)
+    }
   })
 
   test('the Report select opens it on the month kept, and the old Expenses by category address lands on it', async ({ page }) => {
