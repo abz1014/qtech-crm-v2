@@ -294,7 +294,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                     setAmount(v)
                     setProblem(null)
                   }}
-                  className="num h-control-lg text-xl font-bold max-md:h-control-lg max-md:text-xl"
+                  className="num h-control-lg text-left text-xl font-bold max-md:h-control-lg max-md:text-xl"
                 />
               </div>
               <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="h-control-lg min-w-[7rem] text-base">

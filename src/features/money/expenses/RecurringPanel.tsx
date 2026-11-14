@@ -118,7 +118,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
   const list = (
     <ul className="divide-y">
       {(templates.data ?? []).map(t => (
-        <li key={t.id} className="grid min-h-row grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-card py-3" data-testid={`recurring-${t.label}`}>
+        <li key={t.id} className="grid min-h-row grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-card py-4" data-testid={`recurring-${t.label}`}>
           {/* the name opens the template (on a phone this is the edit control; the pencil shows from sm up) */}
           <button type="button" onClick={() => setEditing(t)} className="grid min-w-0 gap-px rounded-control text-left">
             <span className="min-w-0 text-base font-bold [overflow-wrap:anywhere]">{t.label}</span>
@@ -129,8 +129,9 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
               {t.autoBook ? ' · books itself' : ''}
             </span>
           </button>
-          <span className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
-            <Money value={t.amount} prefix={false} className="text-base font-bold" />
+          <Money value={t.amount} prefix={false} className="text-base font-bold" />
+          {/* What is next for this bill, under its name: Record, Recorded or Starts, and Edit at the far end. */}
+          <span className="col-span-2 flex min-h-control-sm flex-wrap items-center justify-between gap-2">
             {dueIds.has(t.id) ? (
               <Button size="sm" icon={Check} busy={recording === t.id} busyLabel="Recording" onClick={() => doRecord(t)} aria-label={`Record ${t.label}`} className="max-sm:h-touch">
                 Record
@@ -141,8 +142,10 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
               <StatusText tone="done" className="text-sm">
                 Recorded
               </StatusText>
-            ) : null}
-            <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${t.label}`} onClick={() => setEditing(t)} className="max-sm:hidden" />
+            ) : (
+              <span />
+            )}
+            <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${t.label}`} onClick={() => setEditing(t)} className="-mr-2 max-sm:hidden" />
           </span>
         </li>
       ))}

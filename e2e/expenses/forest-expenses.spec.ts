@@ -46,7 +46,7 @@ const WIDTHS = [
 
 test.describe.configure({ mode: 'serial' })
 
-test('Forest expenses: the page, the sheet, the dialog and I paid, at 1440, 768, 375 and 320', async ({ page }) => {
+test('Forest expenses: the page, the sheet, the dialog and I paid, at 1440, 768, 375 and 320', async ({ page, browser }) => {
   test.setTimeout(300_000)
   const today = karachiDay(0)
   const rows = [
@@ -95,17 +95,21 @@ test('Forest expenses: the page, the sheet, the dialog and I paid, at 1440, 768,
   for (const role of ['engineer', 'sales'] as const) {
     // sales's own claim is taken back straight after its pictures: another spec asserts that sales see no claim
     const [mine] = role === 'sales' ? await must(rest<{ id: string }[]>('sales', 'expense_claims', { method: 'POST', body: { amount_pkr: 1200, note: 'Taxi to the client meeting' } })) : [null]
+    // a fresh context per role: the admin's session would skip the sign-in form
+    const ctx = await browser.newContext()
+    const mePage = await ctx.newPage()
     try {
-      await openAs(page, role, '/my-expenses')
+      await openAs(mePage, role, '/my-expenses')
       for (const [w, h] of [WIDTHS[0], WIDTHS[2]]) {
-        await page.setViewportSize({ width: w, height: h })
-        await page.goto('/my-expenses')
-        await expect(page.locator('#main')).toBeVisible()
-        await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(400)
-        await shoot(page, `ipaid-${role}`, w, h)
+        await mePage.setViewportSize({ width: w, height: h })
+        await mePage.goto('/my-expenses')
+        await expect(mePage.locator('#main')).toBeVisible()
+        await mePage.waitForLoadState('networkidle')
+        await mePage.waitForTimeout(400)
+        await shoot(mePage, `ipaid-${role}`, w, h)
       }
     } finally {
+      await ctx.close()
       if (mine) await must(rest('sales', `expense_claims?id=eq.${mine.id}`, { method: 'DELETE' }))
     }
   }

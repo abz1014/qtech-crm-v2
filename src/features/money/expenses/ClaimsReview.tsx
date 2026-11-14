@@ -224,10 +224,8 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
               It is an Other, so it shows in the reports as <b className="font-bold text-fg">{title || 'no title'}</b>.
             </p>
           ) : null}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="quiet" onClick={() => setRejecting(true)} disabled={busy} aria-label={`Not approved…, ${label}`} className="mr-auto max-md:h-touch">
-              Not approved…
-            </Button>
+          {/* Approve and Approve, pay later share the width (each the full width when the card is narrow); Not approved is the quiet way out. */}
+          <div className="flex flex-wrap items-center gap-2 [&>button]:flex-[1_1_auto]">
             <Button
               busy={owe.isPending}
               busyLabel="Saving"
@@ -267,6 +265,9 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
               Approve
             </Button>
           </div>
+          <Button variant="quiet" onClick={() => setRejecting(true)} disabled={busy} aria-label={`Not approved…, ${label}`} className="-ml-2 justify-self-start max-md:h-touch">
+            Not approved…
+          </Button>
         </div>
       )}
       {error ? (

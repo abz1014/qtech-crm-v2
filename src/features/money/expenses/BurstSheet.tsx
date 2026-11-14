@@ -435,7 +435,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               <div role="group" aria-label="Expense rows">
-                <div className={cn(GRID, 'min-h-control-sm items-end whitespace-nowrap pb-2 pt-3 text-xs font-card text-fg-2')} aria-hidden="true">
+                <div className={cn(GRID, 'min-h-control-sm items-end whitespace-nowrap pb-2 text-xs font-card text-fg-2')} aria-hidden="true">
                   <span />
                   <span className="text-right">Amount, PKR</span>
                   <span>Category</span>
@@ -940,7 +940,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         />
         {adding ? <p role="status" className="type-body text-fg-2">Adding category…</p> : null}
       </div>
-      <div className="grid grid-cols-1 items-end gap-3 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid grid-cols-1 items-end gap-3 min-[480px]:grid-cols-[minmax(0,1fr)_auto]">
         <div className="grid min-w-0 gap-1">
         <span aria-hidden="true" className="text-sm font-bold text-fg">Paid on</span>
         <label

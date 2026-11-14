@@ -108,7 +108,7 @@ function MyClaims() {
   const amountField = (
     <label className="grid gap-2">
       {label('How much, PKR')}
-      <NumberInput value={amount} onChange={setAmount} min={0.01} inputMode="decimal" className="num h-control-lg text-xl font-bold max-md:h-control-lg max-md:text-xl" aria-label="How much, PKR" />
+      <NumberInput value={amount} onChange={setAmount} min={0.01} inputMode="decimal" className="num h-control-lg text-left text-xl font-bold max-md:h-control-lg max-md:text-xl" aria-label="How much, PKR" />
     </label>
   )
   const noteField = (
