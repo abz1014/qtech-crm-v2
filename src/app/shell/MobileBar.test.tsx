@@ -68,6 +68,15 @@ describe('phone bar: the one-bar form', () => {
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
   })
 
+  it('a long record name keeps to one line in the bar, whole in its tooltip; the page lane lights its tab', () => {
+    const name = 'Pakistan Petroleum Refinery and Industrial Gases (Private) Limited'
+    shell(['/jobs/139'], <Route path="/jobs/:key" element={<Detail config={{ title: name, subtitle: 'Job 139', back: 'history', lane: 'deliver' }} />} />)
+    const title = screen.getByText(name)
+    expect(title).toHaveClass('line-clamp-1')
+    expect(title).toHaveAttribute('title', name)
+    expect(screen.getByRole('link', { name: /Deliver/ })).toHaveAttribute('aria-current', 'page')
+  })
+
   it("back 'history' returns to the screen the person came from", async () => {
     const u = userEvent.setup()
     shell(['/today', '/rfqs/177'], <Route path="/rfqs/:id" element={<Detail config={{ title: 'RFQ-0177', back: 'history', fallback: '/rfqs' }} />} />)

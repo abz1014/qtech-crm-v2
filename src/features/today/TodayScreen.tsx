@@ -395,6 +395,10 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
     </div>
   )
 
+  // The pane column is drawn while there is something to pick (or the list is loading); an empty Home is one calm column, not a list
+  // beside a blank card.
+  const pane = wide && (query.isPending || all.length > 0)
+
   if (team) {
     return (
       <div className="mx-auto grid w-full max-w-table content-start gap-card-gap px-4 pb-12 pt-6 md:px-8" data-user={name}>
@@ -412,7 +416,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
   return (
     // Forest (11 and 12-home): the page scrolls; the list is the wide column, the pane a card beside it that stays in view and is the only
     // part of Home that scrolls on its own (R-039). 768 to 1279 px: the list takes three fifths; from 1280 the pane is 28rem.
-    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] items-start gap-card-gap px-4 pb-12 pt-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:px-8 xl:grid-cols-[minmax(0,1fr)_28rem]" data-user={name}>
+    <div className={cn('mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] items-start gap-card-gap px-4 pb-12 pt-6 md:px-8', pane && 'md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_28rem]')} data-user={name}>
       <NoPrimary />
       <div className="flex min-w-0 flex-col">
         {/* The target tile is the foot of the list, at every width: it scrolls with the list instead of taking a pinned block
@@ -435,7 +439,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
           ) : null}
         </div>
       </div>
-      {wide ? (
+      {pane ? (
         <div data-home-pane className={cn(CARD, 'sticky top-6 max-h-[calc(100dvh-var(--topbar-h)-var(--sp-12))] min-w-0 overflow-y-auto p-card')}>
           {current && data ? (
             <Suspense fallback={<PaneSkeleton />}>
