@@ -4,7 +4,9 @@ import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
+import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
@@ -71,7 +73,7 @@ export function ProductCategoriesPage() {
   ]
 
   return (
-    <div className="grid content-start gap-6">
+    <div className="grid content-start gap-card-gap">
       <PageHeader
         title="Product categories"
         lede={
@@ -95,31 +97,40 @@ export function ProductCategoriesPage() {
           Check your connection, then try again.
         </Banner>
       ) : q.isPending ? (
-        <div role="status" className="grid border-y" aria-busy="true" aria-label="Loading product categories">
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} className="border-t py-2 first:border-t-0">
-              <Skeleton className="h-8 w-full" />
-            </div>
-          ))}
+        <div role="status" className="grid gap-card-gap" aria-busy="true" aria-label="Loading product categories">
+          {/* shaped like the page: the toolbar card, then the list card's rows */}
+          <div className={cn(CARD, 'flex flex-wrap items-center gap-3 p-card')}>
+            <Skeleton className="h-segment w-1/3" />
+            <Skeleton className="h-control flex-1" />
+          </div>
+          <div className={cn(CARD, 'overflow-hidden')}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="flex min-h-row items-center gap-3 border-b px-card last:border-b-0">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="ml-auto h-4 w-1/6" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Mockup 77 #prod-pane: the switch and the search in their own card, the list in the card under it (as Sell and Companies). */}
+          <div className={cn(CARD, 'flex flex-wrap items-center gap-3 p-card')}>
             <SegmentedControl aria-label="Show" value={view} onValueChange={v => setView(v as CategoryView)} options={VIEWS} />
-            <div className="relative min-w-[14rem] flex-1 md:max-w-[22rem]">
+            <div className="relative min-w-[14rem] flex-1 md:max-w-sm">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
               <TextField aria-label="Search product categories" placeholder="Search" className="pl-10" value={text} onChange={e => setText(e.target.value)} />
             </div>
           </div>
           {shown.length === 0 ? (
-            <p className="border-y py-4 text-base text-fg-muted">{text ? 'No category matches.' : view === 'curated' ? 'No curated category yet.' : 'Nothing here.'}</p>
+            <p className={cn(CARD, 'px-card py-6 text-base text-fg-muted')}>{text ? 'No category matches.' : view === 'curated' ? 'No curated category yet.' : 'Nothing here.'}</p>
           ) : (
-            <ul aria-label="Product categories" className="border-y">
+            <ul aria-label="Product categories" className={cn(CARD, 'overflow-hidden')}>
               {shown.slice(0, SHOWN_MAX).map((c, i) => (
-                <li key={c.id} className="flex min-h-[48px] items-center gap-3 border-t py-1 pl-1 first:border-t-0" data-curated={c.curated || undefined} data-work={i === 0 ? '' : undefined}>
-                  <p className="min-w-0 flex-1 text-base font-medium [overflow-wrap:anywhere]">
+                <li key={c.id} className="flex min-h-row items-center gap-3 border-t py-1 pl-card pr-2 first:border-t-0" data-curated={c.curated || undefined} data-work={i === 0 ? '' : undefined}>
+                  <p className="min-w-0 flex-1 text-base font-card [overflow-wrap:anywhere]">
                     {c.name}
-                    {view === 'all' && !c.curated ? <span className="ml-2 font-normal text-fg-muted">Not curated</span> : null}
+                    {view === 'all' && !c.curated ? <span className="ml-2 font-regular text-fg-muted">Not curated</span> : null}
                   </p>
                   <span className="shrink-0 text-base text-fg-muted">
                     {c.suppliers} {c.suppliers === 1 ? 'supplier' : 'suppliers'}

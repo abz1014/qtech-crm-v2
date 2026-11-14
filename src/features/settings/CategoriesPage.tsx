@@ -36,6 +36,7 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { InfoTip } from '@/ui/InfoTip'
 import { PageHeader } from '@/ui/PageHeader'
 import { Skeleton } from '@/ui/Skeleton'
@@ -143,7 +144,7 @@ export function CategoriesPage() {
   const failed = q.isError || groupsQ.isError
 
   return (
-    <div className="grid content-start gap-6">
+    <div className="grid content-start gap-card-gap">
       <PageHeader
         title="Expense categories"
         lede={
@@ -191,25 +192,35 @@ export function CategoriesPage() {
           Check your connection, then try again.
         </Banner>
       ) : loading ? (
-        <div role="status" className="grid border-y" aria-busy="true" aria-label="Loading categories">
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} className="border-t py-2 first:border-t-0">
-              <Skeleton className="h-8 w-full" />
+        <div role="status" className="grid gap-card-gap" aria-busy="true" aria-label="Loading categories">
+          {/* shaped like the page: a group card, its heading row and three category rows */}
+          {[0, 1].map(g => (
+            <div key={g} className={cn(CARD, 'overflow-hidden')}>
+              <div className="flex min-h-row items-center gap-3 border-b bg-canvas px-card">
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="ml-auto h-6 w-1/5" />
+              </div>
+              {[0, 1, 2].map(i => (
+                <div key={i} className="flex min-h-row items-center gap-3 border-b px-card last:border-b-0">
+                  <Skeleton className="h-4 w-2/5" />
+                  <Skeleton className="ml-auto h-4 w-1/6" />
+                </div>
+              ))}
             </div>
           ))}
         </div>
       ) : (
         <>
-          <p className="-mb-3 text-base text-fg-muted">Amounts are what was paid in {monthName}, cash and bank together.</p>
+          <p className="text-base text-fg-muted">Amounts are what was paid in {monthName}, cash and bank together.</p>
           {sections.map((s, i) => (
             <GroupSection key={s.group.id} first={i === 0} s={s} phone={phone} totals={totals} groupItems={groupItems(s)} itemsFor={c => categoryItems(c, s)} onAdd={() => setOpen({ kind: 'add', groupId: s.group.id })} />
           ))}
           {archived.length > 0 ? (
-            <details className="group/arch border-y">
-              <summary className="flex min-h-touch cursor-pointer items-center gap-2 pl-1 text-base font-medium text-fg-2 [&::-webkit-details-marker]:hidden">
+            <details className={cn(CARD, 'group/arch overflow-hidden')}>
+              <summary className="flex min-h-row cursor-pointer items-center gap-2 px-card text-base font-medium text-fg-2 transition-colors duration-fast hover:bg-sunken [&::-webkit-details-marker]:hidden">
                 <Icon16 />
                 Archived ({archived.length})
-                <span className="text-base font-normal text-fg-muted">hidden from new expenses</span>
+                <span className="text-base font-regular text-fg-muted">hidden from new expenses</span>
               </summary>
               <ul aria-label="Archived categories" className="border-t">
                 {archived.map(c => (
@@ -265,22 +276,22 @@ function GroupSection({
 }) {
   const headId = `grp-${s.group.id}`
   return (
-    <section aria-labelledby={headId} data-group={s.group.name}>
-      <header className="flex items-center gap-3 border-b py-1 pl-1">
-        <h2 id={headId} className="type-section min-w-0 flex-1 [overflow-wrap:anywhere]">
+    <section aria-labelledby={headId} data-group={s.group.name} className={cn(CARD, 'overflow-hidden')}>
+      <header className="flex min-h-row items-center gap-3 border-b bg-canvas py-1 pl-card pr-2">
+        <h2 id={headId} className="type-section min-w-0 flex-1 [overflow-wrap:break-word]">
           {s.group.name}
-          {kindNote(s.group) ? <span className="ml-3 text-base font-normal text-fg-muted">{kindNote(s.group)}</span> : null}
+          {kindNote(s.group) ? <span className="block text-base font-regular text-fg-muted md:ml-3 md:inline">{kindNote(s.group)}</span> : null}
         </h2>
         <span className="num shrink-0 text-base font-medium" data-testid="group-total">
           PKR {amountText(s.monthTotal)}
-          <span className="ml-2 font-normal text-fg-muted">this month</span>
+          <span className="ml-2 font-regular text-fg-muted">this month</span>
         </span>
         <span data-row-actions="" className="-my-1 flex shrink-0">
           <RowMenu label={`More for the group ${s.group.name}`} title={s.group.name} subtitle={KIND_WORDS[s.group.kind]} items={groupItems} phone={phone} />
         </span>
       </header>
       {s.rows.length === 0 ? (
-        <div className="flex min-h-touch items-center gap-3 border-b py-2 pl-1 text-base text-fg-muted">
+        <div className="flex min-h-row items-center gap-3 py-2 pl-card pr-2 text-base text-fg-muted">
           <span className="flex-1">{s.held > 0 ? 'Every category here is archived.' : 'No categories yet.'}</span>
           <Button variant="quiet" icon={Plus} onClick={onAdd}>
             Add one
@@ -304,10 +315,10 @@ function CategoryRow({ c, spent, phone, items, groupName, work }: { c: Category;
     <li
       data-category={c.name}
       data-work={work ? '' : undefined}
-      className={cn('grid min-h-[48px] grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b py-1 pl-1 last:border-b-0', !c.active && 'bg-canvas')}
+      className={cn('grid min-h-row grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b py-1 pl-card pr-2 last:border-b-0', !c.active && 'bg-canvas')}
     >
       <div className="grid min-w-0 md:flex md:flex-wrap md:items-baseline md:gap-x-3">
-        <span className={cn('min-w-0 text-base font-medium [overflow-wrap:anywhere]', !c.active && 'text-fg-2')}>{c.name}</span>
+        <span className={cn('min-w-0 text-base font-card [overflow-wrap:anywhere]', !c.active && 'text-fg-2')}>{c.name}</span>
         <span className="min-w-0 text-base text-fg-muted" data-testid="usage">
           {groupName ? <span className="whitespace-nowrap">{groupName} · </span> : null}
           {groupName ? ' ' : null}
