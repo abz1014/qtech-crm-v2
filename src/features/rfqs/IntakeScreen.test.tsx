@@ -230,23 +230,21 @@ describe('intake screen', () => {
     expect(screen.queryByText(/tick Zeta Instruments\?/)).toBeNull()
   })
 
-  it('shows the Family column only when a row named neither a brand nor a family; the family can always be set', async () => {
+  it('every row sets its brand and its family with its own select, the brand picked from the description (Forest .qb-itemrow)', async () => {
     installFakeDb(respond)
     setup()
     renderScreen()
     fireEvent.paste(document.body, { clipboardData: { getData: () => '1) Hach HQ1110 portable meter - 1 no' } })
     expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
     await waitFor(() => expect(within(screen.getByRole('combobox', { name: 'Brand of item 1' })).getByRole('option', { selected: true })).toHaveTextContent('Hach'))
-    // The brand was found: no Family column, but the row still sets its family after the brand.
-    expect(screen.getByText('Brand and family')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Family of item 1' })).toBeInTheDocument()
-    expect(screen.getByText('+ family', { selector: 'span' })).toBeInTheDocument()
-    // A row with nothing to go on: the Family column appears.
+    // The brand was found; the family is still its own select, empty until it is chosen.
+    expect(within(screen.getByRole('combobox', { name: 'Family of item 1' })).getByRole('option', { selected: true })).toHaveTextContent('No family')
+    // A row with nothing to go on gets the same two selects, both empty.
     fireEvent.paste(document.body, { clipboardData: { getData: () => '1) 24V actuator for ball valve x 2' } })
     expect(await screen.findByRole('textbox', { name: 'Description of item 2' })).toHaveValue('24V actuator for ball valve')
-    expect(screen.queryByText('Brand and family')).toBeNull()
-    expect(screen.getByText('Family')).toBeInTheDocument()
-    expect(screen.getAllByText('no family', { selector: 'span' })).toHaveLength(2)
+    expect(within(screen.getByRole('combobox', { name: 'Brand of item 2' })).getByRole('option', { selected: true })).toHaveTextContent('No brand')
+    expect(within(screen.getByRole('combobox', { name: 'Family of item 2' })).getByRole('option', { selected: true })).toHaveTextContent('No family')
+    expect(screen.getAllByRole('combobox', { name: /^Family of item \d$/ })).toHaveLength(2)
   })
 
   it('opens a Memory card per supplier: tier label, last quote at the time, brands, replies; one memory call per item, none per row', async () => {

@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { FileSpreadsheet, FileText, ImageIcon, Upload } from 'lucide-react'
+import { ClipboardPaste, FileSpreadsheet, FileText, ImageIcon, RefreshCw, Upload } from 'lucide-react'
 import { pastedText } from '@/lib/docread/htmlTable'
+import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
+import { Kbd } from '@/ui/Kbd'
+import { Skeleton } from '@/ui/Skeleton'
 import { Icon } from '@/ui/Icon'
 import IntakeScreen from '@/features/rfqs/IntakeScreen'
 
@@ -57,28 +61,33 @@ export default function NewEnquiryPage() {
   }
 
   const text = capture?.text?.trim() || pasted.trim()
+  // Forest 21-new-enquiry: the page head, the steps, then the document card (left from 1024 px) beside the form; the intake draws
+  // the page and places this card (IntakeScreen `doc`).
+  const doc = (
+    <aside aria-label="The customer's document" className={cn(CARD, 'grid min-w-0 content-start gap-4 p-card')}>
+      <h2 className="type-section">The customer&rsquo;s document</h2>
+      {files.length > 0 ? (
+        files.map(f => <Preview key={`${f.name}|${f.size}|${f.lastModified}`} file={f} />)
+      ) : text ? null : (
+        <DropZone onFiles={take} />
+      )}
+      {text ? (
+        <section aria-label="Pasted text" className="grid min-w-0 gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-card text-fg-muted">
+            <Icon icon={ClipboardPaste} size="sm" />
+            Pasted text
+          </h3>
+          <pre className="m-0 max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-control bg-sunken px-3 py-2 font-mono text-sm leading-6 text-fg-2 [overflow-wrap:anywhere] max-md:text-base" data-testid="source-text">
+            {text}
+          </pre>
+        </section>
+      ) : null}
+      {files.length > 0 || text ? <ChooseAnother onFiles={take} /> : null}
+    </aside>
+  )
   return (
-    <div className="grid w-full min-w-0 gap-4 px-0 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-2 lg:pl-8" data-testid="new-enquiry">
-      <aside aria-label="The customer's document" className="grid min-w-0 content-start gap-3 px-4 pb-8 pt-6 max-lg:order-2 max-lg:pb-[10rem] lg:sticky lg:top-4 lg:px-0 lg:pr-4">
-        <h2 className="type-section">The customer&rsquo;s document</h2>
-        {files.length > 0 ? (
-          files.map(f => <Preview key={`${f.name}|${f.size}|${f.lastModified}`} file={f} />)
-        ) : text ? null : (
-          <DropZone onFiles={take} />
-        )}
-        {text ? (
-          <section aria-label="Pasted text" className="grid gap-2">
-            <h3 className="text-base font-medium text-fg-2">Pasted text</h3>
-            <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap border-y py-3 text-base [overflow-wrap:anywhere]" data-testid="source-text">
-              {text}
-            </pre>
-          </section>
-        ) : null}
-        {files.length > 0 || text ? <ChooseAnother onFiles={take} /> : null}
-      </aside>
-      <div className="min-w-0 max-lg:order-1">
-        <IntakeScreen mode="enquiry" onFilePicked={f => setPicked([f])} />
-      </div>
+    <div className="min-w-0" data-testid="new-enquiry">
+      <IntakeScreen mode="enquiry" onFilePicked={f => setPicked([f])} doc={doc} />
     </div>
   )
 }
@@ -116,28 +125,37 @@ function Preview({ file }: { file: File }) {
     }
   }, [file, pdf])
   return (
-    <figure className="m-0 grid gap-2" data-testid="source-file">
-      <figcaption className="flex min-w-0 items-center gap-2 text-base font-medium">
-        <Icon icon={pdf ? FileText : image ? ImageIcon : FileSpreadsheet} className="shrink-0 text-fg-muted" />
+    <figure className="m-0 grid min-w-0 gap-3" data-testid="source-file">
+      <figcaption className="flex min-w-0 items-center gap-2 text-base font-bold">
+        <Icon icon={pdf ? FileText : image ? ImageIcon : FileSpreadsheet} className="shrink-0 text-brand-700" />
         <span className="min-w-0 [overflow-wrap:anywhere]">{file.name}</span>
       </figcaption>
       {pdf ? (
         pages === null ? (
-          <p className="border-y py-3 text-base text-fg-2">Drawing the first page…</p>
+          <div className="grid gap-2">
+            <p role="status" className="text-sm text-fg-muted">Drawing the first page…</p>
+            {/* shaped like a page: a sheet with a heading line and text lines */}
+            <div aria-hidden="true" className="grid aspect-[3/4] max-h-[28rem] content-start gap-3 rounded-control border bg-surface p-5 shadow-e1">
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="w-11/12" />
+              <Skeleton className="w-4/5" />
+              <Skeleton className="w-3/5" />
+            </div>
+          </div>
         ) : pages === 'failed' ? (
-          <p className="border-y py-3 text-base text-fg-2">The preview could not be drawn. The items are read on the right.</p>
+          <p className="rounded-control bg-sunken px-3 py-3 text-base text-fg-2">The preview could not be drawn. The items are read on the right.</p>
         ) : (
-          <div className="grid max-h-[78vh] gap-2 overflow-auto border-y py-1">
+          <div className="grid max-h-[78vh] gap-3 overflow-auto rounded-control bg-deep p-3">
             {pages.urls.map((u, i) => (
-              <img key={u} src={u} alt={`${file.name}, page ${i + 1}`} className="w-full" />
+              <img key={u} src={u} alt={`${file.name}, page ${i + 1}`} className="w-full rounded-control border bg-surface shadow-e1" />
             ))}
-            {pages.more > 0 ? <p className="px-3 py-2 text-base text-fg-2">{pages.more === 1 ? '1 more page' : `${pages.more} more pages`} not shown. All of it is read.</p> : null}
+            {pages.more > 0 ? <p className="px-1 text-sm text-fg-2">{pages.more === 1 ? '1 more page' : `${pages.more} more pages`} not shown. All of it is read.</p> : null}
           </div>
         )
       ) : url && image ? (
-        <img src={url} alt={`The photo ${file.name}`} className="max-h-[78vh] w-full border-y object-contain" />
+        <img src={url} alt={`The photo ${file.name}`} className="max-h-[78vh] w-full rounded-control border bg-deep object-contain" />
       ) : (
-        <p className="border-y py-3 text-base text-fg-2">A spreadsheet has no preview. It is read on this device. The items are on the right.</p>
+        <p className="rounded-control bg-sunken px-3 py-3 text-base text-fg-2">A spreadsheet has no preview. It is read on this device. The items are on the right.</p>
       )}
     </figure>
   )
@@ -161,11 +179,16 @@ function DropZone({ onFiles }: { onFiles: (f: File[]) => void }) {
         setOver(false)
         onFiles([...e.dataTransfer.files])
       }}
-      className={`grid justify-items-start gap-3 border-y-2 border-dashed py-8 text-base ${over ? 'border-brand-green bg-block-quiet' : 'border-line-strong'}`}
+      // Forest .qb-drop: a dashed card, centred; it turns the pale green with a forest edge while a file is over it (or a control in it
+      // has focus).
+      className={cn(
+        'grid min-h-[10rem] min-w-0 content-center justify-items-center gap-2 rounded-card border-2 border-dashed p-5 text-center text-base transition-colors duration-fast ease-out focus-within:border-brand-700 focus-within:bg-brand-100',
+        over ? 'border-brand-700 bg-brand-100' : 'border-line-input bg-surface',
+      )}
     >
-      <Icon icon={Upload} size="lg" className="text-fg-muted" />
-      <p className="m-0 font-medium">Drop the customer&rsquo;s PDF, photo or spreadsheet here</p>
-      <p className="m-0 text-fg-2">Or paste their message anywhere on this page. Nothing is saved until the job is created.</p>
+      <Icon icon={Upload} size="xl" className="text-brand-700" />
+      <p className="m-0 max-w-[26rem] font-bold text-fg text-balance">Drop the customer&rsquo;s PDF, photo or spreadsheet here</p>
+      <p className="m-0 max-w-[26rem] text-sm text-fg-2 text-pretty">Or paste their message anywhere on this page. Nothing is saved until the job is created.</p>
       <input
         ref={input}
         type="file"
@@ -181,9 +204,12 @@ function DropZone({ onFiles }: { onFiles: (f: File[]) => void }) {
           onFiles(list)
         }}
       />
-      <Button size="touch" icon={Upload} onClick={() => input.current?.click()} className="text-base">
+      <Button size="lg" icon={Upload} onClick={() => input.current?.click()} className="mt-2 max-md:h-touch">
         Choose a file
       </Button>
+      <span className="text-sm text-fg-muted max-md:hidden [@media(pointer:coarse)]:hidden">
+        <Kbd size="inline">Ctrl</Kbd> <Kbd size="inline">V</Kbd> pastes the message
+      </span>
     </div>
   )
 }
@@ -205,7 +231,7 @@ function ChooseAnother({ onFiles }: { onFiles: (f: File[]) => void }) {
           onFiles(list)
         }}
       />
-      <Button size="touch" variant="quiet" onClick={() => input.current?.click()} className="text-base">
+      <Button variant="quiet" icon={RefreshCw} onClick={() => input.current?.click()} className="max-md:h-touch">
         Use a different file
       </Button>
     </div>

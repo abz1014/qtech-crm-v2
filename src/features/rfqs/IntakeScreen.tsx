@@ -1,7 +1,7 @@
 import { pastedText } from '@/lib/docread/htmlTable'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, Copy, Plus, Save, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, CircleCheck, Copy, Plus, Save, Send, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -55,6 +55,9 @@ import { CompanyPicker, type IntakeCompany } from '@/features/rfqs/CompanyPicker
 import { Avatar } from '@/ui/Avatar'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
+import { CARD } from '@/ui/card'
+import { DetailHeader } from '@/ui/DetailHeader'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
@@ -128,7 +131,17 @@ const newKey = () => `i${++keySeq}`
  */
 export type IntakeMode = 'rfq' | 'enquiry'
 
-export default function IntakeScreen({ mode = 'rfq', onFilePicked }: { mode?: IntakeMode; /** A file chosen with this form's own "Choose PDF or photo" button (New enquiry shows it on its left side). */ onFilePicked?: (file: File) => void } = {}) {
+export default function IntakeScreen({
+  mode = 'rfq',
+  onFilePicked,
+  doc,
+}: {
+  mode?: IntakeMode
+  /** A file chosen with this form's own "Choose PDF or photo" button (New enquiry shows it on its left side). */
+  onFilePicked?: (file: File) => void
+  /** The customer's document column (New enquiry): drawn left of the form from 1024 px, under it on a narrower screen. */
+  doc?: ReactNode
+} = {}) {
   const [round, setRound] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
@@ -144,6 +157,7 @@ export default function IntakeScreen({ mode = 'rfq', onFilePicked }: { mode?: In
       key={`${round}|${captureId}|${companyParam}|${supplierParam}`}
       mode={mode}
       onFilePicked={onFilePicked}
+      doc={doc}
       onAnother={() => {
         // A fresh form does not take again what the last one arrived with (a company, a supplier, a captured message).
         if (captureId || companyParam || supplierParam) navigate(mode === 'enquiry' ? '/enquiries/new' : '/rfqs/new', { replace: true })
@@ -153,7 +167,7 @@ export default function IntakeScreen({ mode = 'rfq', onFilePicked }: { mode?: In
   )
 }
 
-function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; mode: IntakeMode; onFilePicked?: (file: File) => void }) {
+function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => void; mode: IntakeMode; onFilePicked?: (file: File) => void; doc?: ReactNode }) {
   const enquiry = mode === 'enquiry'
   const navigate = useNavigate()
   const nextJob = useNextJobNumber(enquiry)
@@ -203,6 +217,8 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   const [pdfNote, setPdfNote] = useState<string | null>(null)
   // Why the next step cannot happen yet, said beside the button after a press (the button stays enabled).
   const [blocked, setBlocked] = useState(false)
+  // New enquiry's optional "Ask suppliers now" (gate 2): on, the green button goes to the suppliers step instead of creating the job.
+  const [askNow, setAskNow] = useState(false)
 
   // ---- the flow
   const [step, setStep] = useState<Step>('build')
@@ -743,9 +759,15 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   const heading = step === 'floated' ? (copied ? "Copied. Paste it into each supplier's chat." : 'Marked as asked. Copy the message below.') : null
   const lede =
     step === 'build'
-      ? real.length > 0
-        ? 'Check the split, then find suppliers.'
-        : 'Paste what the customer sent. Nothing is saved until the message is copied or the RFQ is saved.'
+      ? enquiry
+        ? real.length > 0
+          ? askNow
+            ? 'Check the split, then find suppliers.'
+            : 'Check the split, then create the job. You can ask suppliers now, or later from the job page.'
+          : 'Paste what the customer sent, or drop their file. Nothing is saved until you create the job.'
+        : real.length > 0
+          ? 'Check the split, then find suppliers.'
+          : 'Paste what the customer sent. Nothing is saved until the message is copied or the RFQ is saved.'
       : step === 'suppliers'
         ? suggestions.preTickedIds.length > 0
           ? 'Ticked: suppliers who supplied these items before. Tick or untick any.'
@@ -788,7 +810,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
       title={error.message}
       action={
         <div className="flex flex-wrap gap-2">
-          <Link to={`/rfqs/${error.existing.id}`} className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
+          <Link to={`/rfqs/${error.existing.id}`} className={buttonStyles()}>
             Open {rfqRef(error.existing.number)}
           </Link>
           <Button onClick={onAnother}>Start new</Button>
@@ -805,7 +827,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
         error.customerRef ? (
           <div className="flex flex-wrap gap-2">
             {error.existing ? (
-              <Link to={`/rfqs/${error.existing.id}`} className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
+              <Link to={`/rfqs/${error.existing.id}`} className={buttonStyles()}>
                 Open {rfqRef(error.existing.number)}
               </Link>
             ) : null}
@@ -875,6 +897,7 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
   })
 
   // The step bar of steps 1 and 2. With nobody ticked on step 2, saving for later is the one green button.
+  const createLabel = nextJob ? `Create job ${nextJob}` : 'Create job'
   const saveAction: BarAction = { label: SAVE_FOR_LATER, icon: Save, quiet: true, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Saving' }
   const stepBar: { summary?: ReactNode; warning?: ReactNode; primary?: BarAction; more: BarAction[] } =
     step === 'build'
@@ -890,10 +913,15 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
                 {why}
               </span>
             ) : undefined,
-          primary: enquiry
-            ? { label: nextJob ? `Create job ${nextJob}` : 'Create job', icon: Save, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Creating' }
-            : { label: 'Looks right: find suppliers', next: true, onClick: whenReady(() => setStep('suppliers')) },
-          more: enquiry ? [{ label: 'Find suppliers first', next: true, quiet: true, onClick: whenReady(() => setStep('suppliers')) }] : [saveAction],
+          primary:
+            enquiry && !askNow
+              ? { label: createLabel, icon: Save, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Creating' }
+              : { label: 'Looks right: find suppliers', next: true, onClick: whenReady(() => setStep('suppliers')) },
+          more: enquiry
+            ? askNow
+              ? [{ label: `${createLabel} without asking suppliers`, icon: Save, quiet: true, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Creating' }]
+              : [{ label: 'Ask suppliers now', icon: Send, quiet: true, onClick: () => setAskNow(true) }]
+            : [saveAction],
         }
       : {
           summary: (
@@ -918,350 +946,405 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
           more: [{ label: 'Back to items', icon: ArrowLeft, onClick: () => setStep('build') }, ...(ticked.length > 0 ? [saveAction] : [])],
         }
 
-  return (
-    <div className={cn('mx-auto w-full max-w-table px-4 pt-6 md:px-8', enquiry ? 'max-lg:pb-0 lg:pb-[10rem]' : 'pb-[10rem]')}>
-      {/* minmax(0,1fr) tracks: a long item name or supplier never widens the page past a phone screen (it truncates or wraps). */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
-          <header className="grid gap-1">
-            <nav aria-label="Breadcrumb" className="type-body flex items-center gap-1 text-fg-muted max-md:hidden">
-              <Link to={enquiry ? '/jobs' : '/rfqs'} className="hover:text-fg">{enquiry ? 'Jobs' : 'RFQs'}</Link>
-              <Icon icon={ChevronRight} size="sm" />
-              <span aria-current="page">{enquiry ? 'New RFQ' : 'New RFQ'}</span>
-            </nav>
-            <h1 className="type-page max-md:sr-only">{enquiry ? 'New RFQ' : 'New RFQ'}</h1>
-            <p className="type-body max-w-prose text-fg-muted">{lede}</p>
-            {step === 'build' && !offer && presetSupplier ? (
-              <p className="type-body max-w-prose text-fg-2" data-preset-supplier>
-                <strong className="font-medium text-fg">{presetSupplier.name}</strong> is ticked as a supplier to ask.
-              </p>
-            ) : null}
-          </header>
-          <StepLine step={step} />
+  // ---- page parts
+  /** A card of the form (Forest .qb-card .qb-formsec): white, hairline, 16 px corners, e1; the card's own padding. */
+  const sectionCard = cn(CARD, 'grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4 p-card')
+  const checkChip = (
+    <span className="inline-flex min-h-chip items-center gap-1 rounded-pill bg-tone-warning-bg px-3 text-xs font-bold text-tone-warning-fg">
+      <Icon icon={TriangleAlert} size="chip" />
+      Check this
+    </span>
+  )
 
-          {offer ? (
-            <DraftOffer
-              draft={offer}
-              existing={check.data?.existing ?? null}
-              checking={check.isPending}
-              startLabel={startLabel}
-              keepsCapture={Boolean(captured)}
-              onContinue={() => restore(offer, check.data)}
-              onStartNew={startNew}
-            />
-          ) : null}
+  const form = (
+    <>
+      {offer ? (
+        <DraftOffer
+          draft={offer}
+          existing={check.data?.existing ?? null}
+          checking={check.isPending}
+          startLabel={startLabel}
+          keepsCapture={Boolean(captured)}
+          onContinue={() => restore(offer, check.data)}
+          onStartNew={startNew}
+        />
+      ) : null}
 
-          {notKept && !saved ? (
-            <Banner tone="warning" title="This form is not kept on this device">
-              Another New RFQ draft is kept (from another tab). Save this one, or it is lost when you leave.
-            </Banner>
-          ) : null}
+      {notKept && !saved ? (
+        <Banner tone="warning" title="This form is not kept on this device">
+          Another New RFQ draft is kept (from another tab). Save this one, or it is lost when you leave.
+        </Banner>
+      ) : null}
 
-          {step === 'build' && !offer ? (
-            <>
-              <section aria-labelledby="h-customer" data-work className="grid gap-3">
-                <h2 id="h-customer" className="type-section flex flex-wrap items-center gap-2">
-                  Customer
-                  {enquiry && !company && sender ? <Tag dashed>Check this</Tag> : null}
-                </h2>
-                {restoreNote ? <Banner tone="warning" title={restoreNote} /> : null}
-                {!company && sender ? (
-                  <SenderSuggestion
-                    hint={sender}
-                    canCreate={canCreateCompany}
-                    onUse={c => {
-                      setCompany(c)
-                      setRestoreNote(null)
-                    }}
-                  />
-                ) : null}
-                {company ? (
-                  <CustomerChip company={company} contacts={contactList.map(c => c.name)} onChange={() => setCompany(null)} />
-                ) : (
-                  <CompanyPicker
-                    onPick={c => {
-                      setCompany(c)
-                      setRestoreNote(null)
-                    }}
-                    loadingName={Boolean(wantedId) && arrival === 'take' && wanted.isPending}
-                  />
-                )}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {/* Their own number for the request: it is how the RFQ is found again later, so it sits with the company. */}
-                  <Field label="Customer reference" requirement="optional" help="The customer's own RFQ number. Search finds the RFQ by it." source={refSource ? (enquiry ? `${refSource}, check this` : refSource) : undefined}>
-                    <TextField
-                      value={customerRef}
-                      onChange={e => {
-                        setCustomerRef(e.target.value)
-                        setRefSource(null)
-                      }}
-                      placeholder="e.g. ENQ-2211"
-                      autoComplete="off"
-                    />
-                  </Field>
-                  {company && siteList.length > 0 ? (
-                    <Field
-                      label="Site"
-                      requirement="optional"
-                      source={siteOverride === null && siteList.length === 1 ? 'Only site on file' : undefined}
-                      edited={siteOverride !== null && siteList.length === 1}
-                    >
-                      <Select
-                        value={siteId}
-                        onChange={e => setSiteOverride(e.target.value)}
-                        options={siteList.map(s => ({ value: s.id, label: s.name }))}
-                        placeholder="No site"
-                      />
-                    </Field>
-                  ) : null}
-                  {company && contactList.length > 0 ? (
-                    <Field
-                      label="Contact"
-                      requirement="optional"
-                      source={contactOverride === null && contactList.length === 1 ? 'Only contact on file' : undefined}
-                      edited={contactOverride !== null && contactList.length === 1}
-                    >
-                      <Select
-                        value={contactId}
-                        onChange={e => setContactOverride(e.target.value)}
-                        options={contactList.map(c => ({ value: c.id, label: c.name }))}
-                        placeholder="No contact"
-                      />
-                    </Field>
-                  ) : null}
-                </div>
-              </section>
-
-              {/* Open before the company is chosen (owner test 2026-10-20): the PDF or paste is often what tells us the company. */}
-              <section aria-labelledby="h-items" className="grid gap-3">
-                <div className="flex items-baseline justify-between gap-4">
-                  <h2 id="h-items" className="type-section">Items</h2>
-                  <p className="type-body text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. The text is split into items.'}</p>
-                </div>
-                {heldDoc ? (
-                  <Banner
-                    tone="warning"
-                    className="text-base"
-                    title={`This looks like ${KIND_LABEL[heldDoc.kind]}, not an RFQ.`}
-                    action={
-                      <Button size="lg" onClick={() => takePaste(heldDoc.text, heldDoc.from, true)}>
-                        Read as an RFQ anyway
-                      </Button>
-                    }
-                  >
-                    No items were added. It looked like this because: {heldDoc.reasons.join('; ')}.
-                  </Banner>
-                ) : null}
-                {pasted ? <PastedPanel block={pasted} /> : null}
-                {items.length > 0 ? (
-                  <ItemRows
-                    items={items}
-                    brands={brands}
-                    onChange={updateItem}
-                    onRemove={removeItem}
-                    onAdd={addBlank}
-                    note={itemCountNote}
-                    focusKey={focusKey}
-                  />
-                ) : null}
-                {items.length === 0 || pasteMore ? (
-                  <>
-                    <PasteZone zoneRef={zoneRef} onText={takePaste} onPicture={takePicture} filled={items.length > 0} />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <PdfPickButton
-                        label="Choose PDF or photo"
-                        subject="items"
-                        onFile={f => {
-                          pickedFiles.current.push(f)
-                          onFilePicked?.(f)
-                        }}
-                        onText={(t, from) => takePaste(t, from)}
-                        onMessage={setPdfNote}
-                      />
-                      {items.length === 0 ? (
-                        <Button variant="quiet" onClick={addBlank}>Add an item manually</Button>
-                      ) : null}
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <Button variant="quiet" icon={Plus} onClick={() => setPasteMore(true)}>
-                      Paste more
-                    </Button>
-                  </div>
-                )}
-                {pdfNote ? <Banner tone="warning" title={pdfNote} /> : null}
-              </section>
-
-              <section aria-label="Optional details" className="grid items-end gap-4 sm:grid-cols-2">
-                <Field
-                  label="Quotation due"
-                  requirement="optional"
-                  help="The customer's deadline for our quotation. Today warns you two days before."
-                  source={dueSource ? (enquiry ? `${dueSource}, check this` : dueSource) : undefined}
-                >
-                  <DateInput
-                    value={dueOn}
-                    onChange={v => {
-                      setDueOn(v)
-                      setDueSource(null)
-                    }}
-                    defaultToday={false}
-                    placeholder="e.g. 3 dec"
-                  />
-
-                </Field>
-                <Checkbox
-                  checked={isPriority}
-                  onCheckedChange={v => setIsPriority(v === true)}
-                  label="Top priority"
-                  help="Sorts it to the top of the board for everyone."
-                />
-              </section>
-            </>
-          ) : null}
-
-          {step === 'suppliers' ? (
-            <>
-              <section aria-labelledby="h-items" data-work className="grid gap-3">
-                <div className="flex items-baseline justify-between gap-4">
-                  <h2 id="h-items" className="type-section">Items</h2>
-                  <p className="type-body text-fg-muted">
-                    <span className="num">{real.length}</span> {real.length === 1 ? 'item' : 'items'}
-                    {dueOn ? <> · quotation due <span className="num">{formatDay(dueOn)}</span></> : null}
-                  </p>
-                </div>
-                <ItemChips items={real} />
-              </section>
-              <section aria-labelledby="h-sup" className="grid gap-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <span className="inline-flex items-center gap-1">
-                    <h2 id="h-sup" className="type-section">
-                      Suppliers
-                    </h2>
-                    <InfoTip label="How is this list ordered?">
-                      Suppliers who deal in the item's category come first, then those who carry its brand. Inside a group: how often we have ordered, how often they
-                      answered in this category, then overall, then the most recent contact. A supplier that said no offer on 2 of its last 3 asks goes last.
-                      Only suppliers who supplied these items before start ticked.
-                    </InfoTip>
-                  </span>
-                </div>
-                <SupplierPicker
-                  groups={suggestions.groups}
-                  coverage={coverage}
-                  ticked={tickedSet}
-                  onToggle={toggleSupplier}
-                  manual={manualList}
-                  onAddManual={addManual}
-                  memory={memoryContext}
-                  excludeIds={new Set([...(company ? [company.id] : []), ...suggestions.suppliers.map(s => s.supplierId)])}
-                  loading={suppliersLoading}
-                  error={suppliersError}
-                  partial={extras.partial}
-                  onRetry={() => {
-                    void candidates.refetch()
-                    void memory.refetch()
-                  }}
-                />
-              </section>
-            </>
-          ) : null}
-
-          {step === 'enquiry' && draft ? (
-            <>
-              {undone && saved ? (
-                <Banner tone="info" title="Undone">
-                  {rfqRef(saved.number)} is saved with {ticked.length} {ticked.length === 1 ? 'supplier' : 'suppliers'} shortlisted. Copy the message again when you send it.
-                </Banner>
-              ) : null}
-              <EnquiryCard
-                count={ticked.length}
-                variant={variant}
-                onVariant={setVariant}
-                recipients={recipients}
-                onRemoveRecipient={id => toggleSupplier(id, false)}
-                subject={draft.subject}
-                body={body}
-                onBody={text => setEdit(e => ({ sig, text: { ...(e.sig === sig ? e.text : {}), [variant]: text } }))}
-                locked={Boolean(saved)}
-              />
-              {errorBanner}
-              {/* The actions sit in the sticky step bar, so Copy is above the fold at 1366 however long the message (owner audit N5). */}
-              <StepBar
-                summary={
-                  saved ? (
-                    <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier&apos;s chat.</>
-                  ) : (
-                    'Copies the message and marks the RFQ as asked.'
-                  )
-                }
-                primary={{
-                  label: `Copy message for ${ticked.length} ${ticked.length === 1 ? 'supplier' : 'suppliers'}`,
-                  icon: Copy,
-                  onClick: () => void copyAndFloat(),
-                  busy: busy === 'copy',
-                  busyLabel: 'Copying',
-                  disabled: ticked.length === 0,
+      {step === 'build' && !offer ? (
+        <>
+          <section aria-labelledby="h-customer" data-work className={sectionCard}>
+            <h2 id="h-customer" className="type-section flex flex-wrap items-center gap-2">
+              Customer
+              {enquiry && !company && sender ? checkChip : null}
+            </h2>
+            {restoreNote ? <Banner tone="warning" title={restoreNote} /> : null}
+            {!company && sender ? (
+              <SenderSuggestion
+                hint={sender}
+                canCreate={canCreateCompany}
+                onUse={c => {
+                  setCompany(c)
+                  setRestoreNote(null)
                 }}
-                more={[
-                  ...(saved ? [] : [{ label: 'Back to suppliers', icon: ArrowLeft, onClick: () => setStep('suppliers') }]),
-                  { label: SAVE_FOR_LATER, icon: Save, quiet: true, onClick: () => void saveOnly(), busy: busy === 'save', busyLabel: 'Saving' },
-                ]}
               />
-            </>
-          ) : null}
-
-          {step === 'floated' && saved && draft && floatedOn ? (
-            <FloatedPanel
-              refText={rfqRef(saved.number)}
-              openTo={`/rfqs/${saved.id}`}
-              floatedOn={floatedOn}
-              names={floatedNames}
-              replyBy={replyBy}
-              dueOn={dueOn || null}
-              copied={copied}
-              text={copiedText}
-              onCopyAgain={copyAgain}
-              unfloated={unfloated}
-              onAnother={onAnother}
-              rfqId={saved.id}
-              messages={floatMessages(saved.number)}
-              channel={variant}
-              onChannelChange={setVariant}
-            />
-          ) : null}
-
-          {step === 'saved' && saved ? (
-            <section aria-label="Saved" data-work className="grid gap-4">
-              <h2 className="type-section m-0"><span className="num">{rfqRef(saved.number)}</span> is saved</h2>
-              <p className="type-body m-0 text-fg-2">
-                {ticked.length > 0
-                  ? `${ticked.length} ${ticked.length === 1 ? 'supplier is' : 'suppliers are'} shortlisted (${joinNames(floatedNames)}). No supplier has been asked yet, so it shows as not asked.`
-                  : 'No supplier is shortlisted yet. Open it to ask suppliers when you are ready.'}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  to={`/rfqs/${saved.id}`}
-                  className="inline-flex h-control items-center justify-center rounded border border-primary bg-primary px-3 text-sm font-medium leading-none text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover"
+            ) : null}
+            {company ? (
+              <CustomerChip company={company} contacts={contactList.map(c => c.name)} onChange={() => setCompany(null)} />
+            ) : (
+              <CompanyPicker
+                onPick={c => {
+                  setCompany(c)
+                  setRestoreNote(null)
+                }}
+                loadingName={Boolean(wantedId) && arrival === 'take' && wanted.isPending}
+              />
+            )}
+            <div className="grid items-start gap-4 sm:grid-cols-2">
+              {/* Their own number for the request: it is how the RFQ is found again later, so it sits with the company. */}
+              <Field label="Customer reference" requirement="optional" help="The customer's own RFQ number. Search finds the RFQ by it." source={refSource ? (enquiry ? `${refSource}, check this` : refSource) : undefined}>
+                <TextField
+                  value={customerRef}
+                  onChange={e => {
+                    setCustomerRef(e.target.value)
+                    setRefSource(null)
+                  }}
+                  placeholder="e.g. ENQ-2211"
+                  autoComplete="off"
+                  className="num"
+                />
+              </Field>
+              {company && siteList.length > 0 ? (
+                <Field
+                  label="Site"
+                  requirement="optional"
+                  source={siteOverride === null && siteList.length === 1 ? 'Only site on file' : undefined}
+                  edited={siteOverride !== null && siteList.length === 1}
                 >
-                  Open {rfqRef(saved.number)}
-                </Link>
-                {ticked.length > 0 ? <Button onClick={() => setStep('enquiry')}>Write the message</Button> : null}
-                <Button variant="quiet" onClick={onAnother}>Start another RFQ</Button>
+                  <Select
+                    value={siteId}
+                    onChange={e => setSiteOverride(e.target.value)}
+                    options={siteList.map(s => ({ value: s.id, label: s.name }))}
+                    placeholder="No site"
+                  />
+                </Field>
+              ) : null}
+              {company && contactList.length > 0 ? (
+                <Field
+                  label="Contact"
+                  requirement="optional"
+                  source={contactOverride === null && contactList.length === 1 ? 'Only contact on file' : undefined}
+                  edited={contactOverride !== null && contactList.length === 1}
+                >
+                  <Select
+                    value={contactId}
+                    onChange={e => setContactOverride(e.target.value)}
+                    options={contactList.map(c => ({ value: c.id, label: c.name }))}
+                    placeholder="No contact"
+                  />
+                </Field>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Open before the company is chosen (owner test 2026-10-20): the PDF or paste is often what tells us the company. */}
+          <section aria-labelledby="h-items" className={sectionCard}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 id="h-items" className="type-section">Items</h2>
+              <p className="text-sm text-fg-muted">{pasted ? (enquiry ? 'Check this: split from the document' : 'Split from the pasted text') : 'Paste once. The text is split into items.'}</p>
+            </div>
+            {heldDoc ? (
+              <Banner
+                tone="warning"
+                className="text-base"
+                title={`This looks like ${KIND_LABEL[heldDoc.kind]}, not an RFQ.`}
+                action={
+                  <Button size="lg" onClick={() => takePaste(heldDoc.text, heldDoc.from, true)}>
+                    Read as an RFQ anyway
+                  </Button>
+                }
+              >
+                No items were added. It looked like this because: {heldDoc.reasons.join('; ')}.
+              </Banner>
+            ) : null}
+            {pasted ? <PastedPanel block={pasted} /> : null}
+            {items.length > 0 ? (
+              <ItemRows
+                items={items}
+                brands={brands}
+                onChange={updateItem}
+                onRemove={removeItem}
+                onAdd={addBlank}
+                note={itemCountNote}
+                focusKey={focusKey}
+              />
+            ) : null}
+            {items.length === 0 || pasteMore ? (
+              <>
+                <PasteZone zoneRef={zoneRef} onText={takePaste} onPicture={takePicture} filled={items.length > 0} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <PdfPickButton
+                    label="Choose PDF or photo"
+                    subject="items"
+                    onFile={f => {
+                      pickedFiles.current.push(f)
+                      onFilePicked?.(f)
+                    }}
+                    onText={(t, from) => takePaste(t, from)}
+                    onMessage={setPdfNote}
+                  />
+                  {items.length === 0 ? (
+                    <Button variant="quiet" icon={Plus} onClick={addBlank}>Add an item manually</Button>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <div>
+                <Button variant="quiet" icon={Plus} onClick={() => setPasteMore(true)}>
+                  Paste more
+                </Button>
               </div>
+            )}
+            {pdfNote ? <Banner tone="warning" title={pdfNote} /> : null}
+          </section>
+
+          <section aria-label="Optional details" className={cn(sectionCard, 'items-start sm:grid-cols-2')}>
+            <Field
+              label="Quotation due"
+              requirement="optional"
+              help="The customer's deadline for our quotation. Today warns you two days before."
+              source={dueSource ? (enquiry ? `${dueSource}, check this` : dueSource) : undefined}
+            >
+              <DateInput
+                value={dueOn}
+                onChange={v => {
+                  setDueOn(v)
+                  setDueSource(null)
+                }}
+                defaultToday={false}
+                placeholder="e.g. 3 dec"
+              />
+            </Field>
+            {/* On a row with the date: the box sits level with the date field, under the line its label takes. */}
+            <div className="sm:pt-[calc(var(--lh-sm)+var(--sp-4))]">
+              <Checkbox
+                checked={isPriority}
+                onCheckedChange={v => setIsPriority(v === true)}
+                label="Top priority"
+                help="Sorts it to the top of the board for everyone."
+              />
+            </div>
+          </section>
+
+          {enquiry ? (
+            // Forest 21-new-enquiry (gate 2): one page with an optional "Ask suppliers now". Off, the green button creates the job;
+            // on, it goes to the suppliers step (2 to 4) as New RFQ does. The bar's More options does the same.
+            <section aria-labelledby="h-ask" className={cn(sectionCard, 'gap-3')} data-ask-now>
+              <Checkbox
+                checked={askNow}
+                onCheckedChange={v => setAskNow(v === true)}
+                label={
+                  <>
+                    <b id="h-ask" className="font-bold">Ask suppliers now</b> <span className="text-fg-muted">(optional)</span>
+                  </>
+                }
+                help="Leave it off to create the job now. You can ask suppliers later from the job page. Turn it on to pick suppliers and write the message next."
+              />
+              {askNow ? (
+                <p className="flex items-start gap-2 rounded-control bg-brand-100 px-3 py-2 text-sm text-fg-2">
+                  <Icon icon={Send} size="sm" className="mt-[calc((var(--lh-sm)-14px)/2)] shrink-0 text-brand-700" />
+                  <span className="min-w-0">Next you choose who to ask and copy the message (steps 2 to 4). Nothing is saved until you copy it or save.</span>
+                </p>
+              ) : null}
             </section>
           ) : null}
+        </>
+      ) : null}
 
-          {(step === 'build' && !offer) || step === 'suppliers' ? (
-            <>
-              {errorBanner}
-              <StepBar {...stepBar} />
-            </>
+      {step === 'suppliers' ? (
+        <>
+          <section aria-labelledby="h-items" data-work className={sectionCard}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 id="h-items" className="type-section">Items</h2>
+              <p className="text-sm text-fg-muted">
+                <span className="num">{real.length}</span> {real.length === 1 ? 'item' : 'items'}
+                {dueOn ? <> · quotation due <span className="num">{formatDay(dueOn)}</span></> : null}
+              </p>
+            </div>
+            <ItemChips items={real} />
+          </section>
+          <section aria-labelledby="h-sup" className={sectionCard}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span className="inline-flex items-center gap-1">
+                <h2 id="h-sup" className="type-section">
+                  Suppliers
+                </h2>
+                <InfoTip label="How is this list ordered?">
+                  Suppliers who deal in the item's category come first, then those who carry its brand. Inside a group: how often we have ordered, how often they
+                  answered in this category, then overall, then the most recent contact. A supplier that said no offer on 2 of its last 3 asks goes last.
+                  Only suppliers who supplied these items before start ticked.
+                </InfoTip>
+              </span>
+            </div>
+            <SupplierPicker
+              groups={suggestions.groups}
+              coverage={coverage}
+              ticked={tickedSet}
+              onToggle={toggleSupplier}
+              manual={manualList}
+              onAddManual={addManual}
+              memory={memoryContext}
+              excludeIds={new Set([...(company ? [company.id] : []), ...suggestions.suppliers.map(s => s.supplierId)])}
+              loading={suppliersLoading}
+              error={suppliersError}
+              partial={extras.partial}
+              onRetry={() => {
+                void candidates.refetch()
+                void memory.refetch()
+              }}
+            />
+          </section>
+        </>
+      ) : null}
+
+      {step === 'enquiry' && draft ? (
+        <>
+          {undone && saved ? (
+            <Banner tone="info" title="Undone">
+              {rfqRef(saved.number)} is saved with {ticked.length} {ticked.length === 1 ? 'supplier' : 'suppliers'} shortlisted. Copy the message again when you send it.
+            </Banner>
           ) : null}
+          <EnquiryCard
+            count={ticked.length}
+            variant={variant}
+            onVariant={setVariant}
+            recipients={recipients}
+            onRemoveRecipient={id => toggleSupplier(id, false)}
+            subject={draft.subject}
+            body={body}
+            onBody={text => setEdit(e => ({ sig, text: { ...(e.sig === sig ? e.text : {}), [variant]: text } }))}
+            locked={Boolean(saved)}
+          />
+        </>
+      ) : null}
+
+      {step === 'floated' && saved && draft && floatedOn ? (
+        <FloatedPanel
+          refText={rfqRef(saved.number)}
+          openTo={`/rfqs/${saved.id}`}
+          floatedOn={floatedOn}
+          names={floatedNames}
+          replyBy={replyBy}
+          dueOn={dueOn || null}
+          copied={copied}
+          text={copiedText}
+          onCopyAgain={copyAgain}
+          unfloated={unfloated}
+          onAnother={onAnother}
+          rfqId={saved.id}
+          messages={floatMessages(saved.number)}
+          channel={variant}
+          onChannelChange={setVariant}
+        />
+      ) : null}
+
+      {step === 'saved' && saved ? (
+        <section aria-label="Saved" data-work className={sectionCard}>
+          <p className="m-0 inline-flex min-h-chip w-fit items-center gap-2 rounded-pill bg-tone-success-bg px-3 text-sm font-bold text-tone-success-fg">
+            <Icon icon={CircleCheck} size="sm" />
+            Saved
+          </p>
+          <h2 className="type-section m-0"><span className="num">{rfqRef(saved.number)}</span> is saved</h2>
+          <p className="type-body m-0 text-fg-2">
+            {ticked.length > 0
+              ? `${ticked.length} ${ticked.length === 1 ? 'supplier is' : 'suppliers are'} shortlisted (${joinNames(floatedNames)}). No supplier has been asked yet, so it shows as not asked.`
+              : 'No supplier is shortlisted yet. Open it to ask suppliers when you are ready.'}
+          </p>
+          <div className="flex flex-wrap gap-2 border-t pt-4">
+            <Link to={`/rfqs/${saved.id}`} className={buttonStyles({ variant: 'primary' })}>
+              Open {rfqRef(saved.number)}
+            </Link>
+            {ticked.length > 0 ? <Button onClick={() => setStep('enquiry')}>Write the message</Button> : null}
+            <Button variant="quiet" onClick={onAnother}>Start another RFQ</Button>
+          </div>
+        </section>
+      ) : null}
+    </>
+  )
+
+  // The step bar (and the error above it): after the form, across the page; on a computer it sticks 16 px above the bottom edge.
+  const bar: ReactNode =
+    (step === 'build' && !offer) || step === 'suppliers' ? (
+      <>
+        {errorBanner}
+        <StepBar {...stepBar} />
+      </>
+    ) : step === 'enquiry' && draft ? (
+      <>
+        {errorBanner}
+        {/* The actions sit in the sticky step bar, so Copy is above the fold at 1366 however long the message (owner audit N5). */}
+        <StepBar
+          summary={
+            saved ? (
+              <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier&apos;s chat.</>
+            ) : (
+              'Copies the message and marks the RFQ as asked.'
+            )
+          }
+          primary={{
+            label: `Copy message for ${ticked.length} ${ticked.length === 1 ? 'supplier' : 'suppliers'}`,
+            icon: Copy,
+            onClick: () => void copyAndFloat(),
+            busy: busy === 'copy',
+            busyLabel: 'Copying',
+            disabled: ticked.length === 0,
+          }}
+          more={[
+            ...(saved ? [] : [{ label: 'Back to suppliers', icon: ArrowLeft, onClick: () => setStep('suppliers') }]),
+            { label: SAVE_FOR_LATER, icon: Save, quiet: true, onClick: () => void saveOnly(), busy: busy === 'save', busyLabel: 'Saving' },
+          ]}
+        />
+      </>
+    ) : null
+
+  return (
+    <div className="mx-auto w-full max-w-content px-gutter pb-16 pt-4 md:pt-6" data-intake={mode}>
+      {/* minmax(0,1fr) tracks: a long item name or supplier never widens the page past a phone screen (it truncates or wraps). */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-card-gap">
+        <div className="grid min-w-0 gap-4">
+          <DetailHeader
+            name="New RFQ"
+            back={{ label: 'Sell', to: '/jobs?lane=sell' }}
+            phoneSrOnly
+            sub={
+              <div className="grid gap-2 md:mt-1">
+                <p className="type-body m-0 max-w-prose text-fg-2">{lede}</p>
+                {step === 'build' && !offer && presetSupplier ? (
+                  <p className="type-body m-0 max-w-prose text-fg-2" data-preset-supplier>
+                    <strong className="font-bold text-fg">{presetSupplier.name}</strong> is ticked as a supplier to ask.
+                  </p>
+                ) : null}
+              </div>
+            }
+          />
+          <StepLine step={step} />
         </div>
 
+        {/* Forest .qb-docform: with the customer's document (New RFQ from a file), the document on the left (5) and the form on the
+            right (6) from 1024 px, the bar across both under them; on a narrower screen the form, its bar, then the document. */}
+        <div className={cn('grid grid-cols-[minmax(0,1fr)] items-start gap-card-gap', doc && 'lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]')}>
+          <div className={cn('grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-card-gap', doc && 'lg:col-start-2 lg:row-start-1')}>{form}</div>
+          {bar ? <div className={cn('grid min-w-0 gap-3 md:sticky md:bottom-4 md:z-sticky', doc && 'lg:col-span-2 lg:row-start-2')}>{bar}</div> : null}
+          {doc ? (
+            <div className="min-w-0 lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">{doc}</div>
+          ) : null}
+        </div>
       </div>
-
       {leaving ? (
         <Dialog open onOpenChange={o => (o ? null : setLeaving(null))}>
           <DialogContent
@@ -1301,18 +1384,20 @@ function IntakeForm({ onAnother, mode, onFilePicked }: { onAnother: () => void; 
 function CustomerChip({ company, contacts, onChange }: { company: Company; contacts: string[]; onChange: () => void }) {
   const contactNote = contacts.length === 0 ? 'contact not added yet' : contacts.length === 1 ? contacts[0] : `${contacts.length} contacts`
   return (
-    <div className="flex min-h-12 flex-wrap items-center gap-3 border-y py-2">
-      <Avatar name={company.name} className="!bg-selected !text-fg-2" />
-      <div className="min-w-0">
-        <p className="type-row m-0 min-w-0 [overflow-wrap:anywhere]">{company.name}</p>
-        <p className="type-body m-0 text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
+    // Forest .qb-cochip: hairlines above and below, the initial, the name (wraps, never widens the page), where and who, Change.
+    <div className="flex min-h-row flex-wrap items-center gap-3 border-y py-3">
+      <Avatar name={company.name} className="!bg-brand-100 !text-brand-700" />
+      <div className="grid min-w-0 flex-[1_1_12rem] gap-px">
+        <p className="m-0 min-w-0 text-base font-bold text-fg [overflow-wrap:anywhere]">{company.name}</p>
+        <p className="m-0 text-sm text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
       </div>
-      <span className="ml-auto" />
       {/* A plain "Customer" tag said nothing here (owner audit N3): only a new prospect is worth a mark. */}
-      {company.role === 'prospect' ? <Tag dashed>New prospect</Tag> : null}
-      <Button variant="quiet" size="sm" onClick={onChange} aria-label={`Change company, now ${company.name}`}>
-        Change
-      </Button>
+      <span className="ml-auto inline-flex items-center gap-2">
+        {company.role === 'prospect' ? <Tag dashed>New prospect</Tag> : null}
+        <Button variant="quiet" onClick={onChange} aria-label={`Change company, now ${company.name}`}>
+          Change
+        </Button>
+      </span>
     </div>
   )
 }
