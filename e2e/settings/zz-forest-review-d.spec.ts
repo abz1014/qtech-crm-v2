@@ -79,7 +79,6 @@ const ADMIN_PAGES: Array<[string, string]> = [
   ['/settings/password', 'password-admin'],
 ]
 
-test.describe.configure({ mode: 'serial' })
 
 test.describe('Forest review pictures (round 4)', () => {
   test.setTimeout(600_000)
@@ -135,6 +134,8 @@ test.describe('Forest review pictures (round 4)', () => {
       const secret = page.getByRole('dialog', { name: 'Account created' })
       await expect(secret).toBeVisible({ timeout: 20_000 })
       await pic(page, 'team-password', { grow: false })
+      // Done waits until the one-time password was copied
+      await secret.getByRole('button', { name: 'Copy', exact: true }).click()
       await secret.getByRole('button', { name: 'Done' }).click()
       if (width === 1440) {
         await page.getByRole('button', { name: `Actions for ${name}` }).click()
