@@ -149,8 +149,22 @@ export interface DataTableProps<T> {
    * between them, instead of a band inside one card.
    */
   toolbarCard?: boolean
+  /**
+   * A table that sits straight on a card it is part of (the Order stop's items, mockup 41): no edge, corner, shadow or white of its
+   * own, the toolbar a plain line over the table instead of a band, the first and last columns flush with the card's words, and the
+   * total row a rule rather than a grey band. Not with `toolbarCard`.
+   */
+  flat?: boolean
   className?: string
 }
+
+/** `flat`: the table's own frame taken away (see the prop). The selectors reach the cells the table draws for the default frame. */
+const FLAT_LOOK = cn(
+  'group/dt relative min-w-0 overflow-visible',
+  '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
+  '[&_tr[data-row-kind=foot]]:bg-transparent [&_tr[data-row-kind=foot]_td]:border-t-2 [&_tr[data-row-kind=foot]_td]:border-t-fg [&_tr[data-row-kind=foot]_td]:font-semibold',
+  '[&_tr[data-card]]:px-0 [&_td[role=cell]]:px-0',
+)
 
 export function DataTable<T>(props: DataTableProps<T>) {
   return props.sortParam && props.sort === undefined ? <AddressSortTable {...props} sortParam={props.sortParam} /> : <TableView {...props} />
@@ -196,6 +210,7 @@ function TableView<T>(props: DataTableProps<T>) {
     total,
     toolbar,
     toolbarCard = false,
+    flat = false,
     exportCsv,
     loading,
     error,
@@ -817,13 +832,14 @@ function TableView<T>(props: DataTableProps<T>) {
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
-      className={cn(toolbarCard ? 'group/dt relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-card-gap' : 'group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
+      data-table-flat={flat || undefined}
+      className={cn(flat ? FLAT_LOOK : toolbarCard ? 'group/dt relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-card-gap' : 'group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
       </p>
       {toolbarNode || exportCsv ? (
-        <div className={cn('flex flex-wrap items-center gap-3', toolbarCard ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-4 py-3')} data-table-toolbar>
+        <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : toolbarCard ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-4 py-3')} data-table-toolbar>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
           {loading ? <span className="text-xs text-fg-muted">{`Loading ${what}`}</span> : null}
           {densityOn ? (

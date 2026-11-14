@@ -67,6 +67,20 @@ export interface DialogContentProps {
   className?: string
 }
 
+/** The header grid's columns: [icon] title [meta] Close (the meta column only from 768; on a phone the meta is under the title). */
+const HEADER_COLS: Record<string, string> = {
+  'icon-meta': 'grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,1fr)_minmax(0,max-content)_auto]',
+  'icon-none': 'grid-cols-[auto_minmax(0,1fr)_auto]',
+  'plain-meta': 'grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_minmax(0,max-content)_auto]',
+  'plain-none': 'grid-cols-[minmax(0,1fr)_auto]',
+}
+const CLOSE_COL: Record<string, string> = {
+  'icon-meta': 'col-start-3 md:col-start-4',
+  'icon-none': 'col-start-3',
+  'plain-meta': 'col-start-2 md:col-start-3',
+  'plain-none': 'col-start-2',
+}
+
 export function DialogContentImpl({
   title,
   titleChip,
@@ -135,13 +149,22 @@ export function DialogContentImpl({
         >
           {/* Bottom sheet below 768: the 40 by 4 grab handle (Forest .qb-sheet__grab). */}
           <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-pill bg-line-input md:hidden" />
-          <header className="flex items-start gap-3 px-card pb-1 pt-5 max-md:border-b max-md:pb-3 max-md:pt-6 [@media(max-height:480px)]:sticky [@media(max-height:480px)]:top-0 [@media(max-height:480px)]:z-sticky [@media(max-height:480px)]:bg-surface [@media(max-height:480px)]:pb-2">
+          {/*
+            * The header is a grid: [icon] title [meta] Close. On a phone the meta (a PO number and its revision) goes under the title, so a
+            * long meta never squeezes the title into a narrow column or pushes Close off a 320 px screen; Close always keeps its own column.
+            */}
+          <header
+            className={cn(
+              'grid items-start gap-x-3 gap-y-2 px-card pb-1 pt-5 max-md:border-b max-md:pb-3 max-md:pt-6 [@media(max-height:480px)]:sticky [@media(max-height:480px)]:top-0 [@media(max-height:480px)]:z-sticky [@media(max-height:480px)]:bg-surface [@media(max-height:480px)]:pb-2',
+              HEADER_COLS[`${icon ? 'icon' : 'plain'}-${meta ? 'meta' : 'none'}`],
+            )}
+          >
             {icon ? (
-              <span aria-hidden="true" className={cn('grid size-[36px] shrink-0 place-items-center rounded-control', TILE[tone])}>
+              <span aria-hidden="true" className={cn('col-start-1 row-start-1 grid size-[36px] shrink-0 place-items-center rounded-control', TILE[tone])}>
                 <Icon icon={icon} size="lg" />
               </span>
             ) : null}
-            <div className="grid min-w-0 flex-1 gap-[2px]">
+            <div className={cn('row-start-1 grid min-w-0 gap-[2px]', icon ? 'col-start-2' : 'col-start-1')}>
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <RadixDialog.Title className="min-w-0 text-xl font-bold tracking-snug [overflow-wrap:anywhere] max-[359px]:text-lg">{title}</RadixDialog.Title>
                 {titleChip}
@@ -150,9 +173,19 @@ export function DialogContentImpl({
                 <RadixDialog.Description className="text-base text-fg-2">{context}</RadixDialog.Description>
               ) : null}
             </div>
-            {meta ? <div className="mr-2 shrink-0 self-start">{meta}</div> : null}
+            {meta ? (
+              <div
+                data-dialog-meta
+                className={cn(
+                  'min-w-0 [overflow-wrap:anywhere] max-md:row-start-2 max-md:justify-self-start md:row-start-1 md:mr-2 md:justify-self-end md:text-right',
+                  icon ? 'max-md:col-start-2 md:col-start-3' : 'max-md:col-start-1 md:col-start-2',
+                )}
+              >
+                {meta}
+              </div>
+            ) : null}
             <RadixDialog.Close asChild>
-              <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={busy} className="-mr-2 -mt-1 text-fg-muted" />
+              <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={busy} className={cn('row-start-1 -mr-2 -mt-1 shrink-0 text-fg-muted', CLOSE_COL[`${icon ? 'icon' : 'plain'}-${meta ? 'meta' : 'none'}`])} />
             </RadixDialog.Close>
           </header>
           <div

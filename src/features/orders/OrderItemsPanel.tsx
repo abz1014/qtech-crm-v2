@@ -52,16 +52,11 @@ interface Row extends OrderItemRow {
 }
 
 /*
- * The items sit straight on the Order stop's card (mockup 41), not in a card of their own: no edge, corner or shadow, the first and last
- * columns flush with the stop's words, the total row a rule rather than a grey band.
+ * The items sit straight on the Order stop's card (mockup 41), not in a card of their own: DataTable's `flat` (no edge, corner or
+ * shadow, the first and last columns flush with the stop's words, the total row a rule). Here the rows are roomier and top-aligned,
+ * as an item's description runs to two or three lines.
  */
-const FLAT = cn(
-  'overflow-visible rounded-none border-0 bg-transparent shadow-none [&_tbody_td]:py-3 [&_tbody_td]:align-top',
-  '[&_[data-table-toolbar]]:border-0 [&_[data-table-toolbar]]:px-0 [&_[data-table-toolbar]]:pb-3 [&_[data-table-toolbar]]:pt-0',
-  '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
-  '[&_tr[data-row-kind=foot]]:bg-transparent [&_tr[data-row-kind=foot]_td]:border-t-2 [&_tr[data-row-kind=foot]_td]:border-t-fg [&_tr[data-row-kind=foot]_td]:font-semibold',
-  '[&_tr[data-card]]:px-0 [&_td[role=cell]]:px-0',
-)
+const ROOMY = '[&_tbody_td]:py-3 [&_tbody_td]:align-top'
 
 const STATE_WORDS: Record<LegState, string> = { 'to-place': 'not ordered yet', 'on-order': 'ordered', late: 'late', received: 'delivered', delivered: 'delivered' }
 
@@ -394,7 +389,8 @@ export function OrderItemsPanel({
         getRowId={r => r.id}
         twoLine
         footerLabel={basisUnknown ? 'Total as typed' : `Total before GST, ${items.length} ${items.length === 1 ? 'line' : 'lines'}`}
-        className={FLAT}
+        flat
+        className={ROOMY}
         toolbar={
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
             <h2 className="text-base font-semibold">Items</h2>
