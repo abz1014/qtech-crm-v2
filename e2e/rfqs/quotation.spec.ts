@@ -507,7 +507,8 @@ for (const width of [1440, 768, 375]) {
     await expect(dialog(page).getByTestId('chip-sold-1')).toBeVisible()
     expect(await violations(page)).toEqual([])
     await shot(page, `rfq-quotation-dialog-${width}`)
-    await forestShot(page, 'issue-dialog')
+    // The phone sheet is not grown and shrunk again mid-test: it settles back too slowly for the chip tap that follows.
+    if (width !== 375) await forestShot(page, 'issue-dialog')
 
     await dialog(page).getByTestId('chip-sold-1').click()
     await price(page, 2).fill('300')

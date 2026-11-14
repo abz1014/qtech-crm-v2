@@ -45,8 +45,10 @@ const gross = (q: QuotationRow) => toPaisa(q.netTotal) + toPaisa(q.gstTotal)
 
 /** Narrow: two columns, the version and the actions across both. Wide (the panel 40rem or more): one line per version. */
 const ROW_BASE = 'grid-cols-[repeat(2,minmax(0,1fr))]'
-// The actions track is `auto`, so Open PDF, Share and the menu stay on one line; the other columns share what is left.
-const ROW_WIDE = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,1fr)_auto]'
+// From 40rem the facts are one line and the PDF actions sit under them at the right; from 56rem the actions join the line. Fixed
+// fractions (never `auto`): each row is its own grid, so its tracks must match the head row's to line up.
+const ROW_WIDE =
+  '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,1fr)] [@container(min-width:56rem)]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,17rem)]'
 const ROW_WIDE_ENG = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]'
 /** The word before a value while the row is stacked ("Issued", "PKR"); the column heads say it once the row is a table line. */
 const LAB = 'text-sm text-fg-muted [@container(min-width:40rem)]:sr-only'
@@ -215,7 +217,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                           </span>
                           <span className="num text-sm text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
                         </span>
-                        <span role="cell" className="col-span-full flex min-w-0 flex-wrap items-center gap-2 [@container(min-width:40rem)]:col-span-1 [@container(min-width:40rem)]:justify-end">
+                        <span role="cell" className="col-span-full flex min-w-0 flex-wrap items-center gap-2 [@container(min-width:40rem)]:justify-end [@container(min-width:56rem)]:col-span-1">
                           <Button
                             size="sm"
                             variant={latest ? 'secondary' : 'quiet'}
