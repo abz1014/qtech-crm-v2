@@ -308,12 +308,13 @@ export function ItemRows({
                       onChange={e => onChange(it.key, { description: e.target.value })}
                       placeholder="What the customer asked for"
                       autoComplete="off"
-                      rows={2}
+                      // Grows with the text (2 to 4 lines) so a long part number is read whole, never cut at the box edge.
+                      rows={Math.min(4, Math.max(2, Math.ceil(it.description.length / 56)))}
                       title={it.description}
                       className={cn(controlClass, 'h-auto min-h-control resize-y py-2 leading-6 [@container(min-width:38rem)]:resize-none')}
                     />
                   </div>
-                  <div className={cn('col-span-3 grid min-w-0 gap-3 [@container(min-width:38rem)]:contents', family ? 'grid-cols-2' : 'grid-cols-1')}>
+                  <div className={cn('col-span-3 grid min-w-0 gap-3 [@container(min-width:38rem)]:contents', family && '[@container(min-width:22rem)]:grid-cols-2')}>
                     <PickCell id={`item-brand-${it.key}`} label="Brand" n={n} value={it.brandId} onChange={v => onChange(it.key, { brandId: v })} options={brandOptions} empty="No brand" />
                     {family ? (
                       <PickCell id={`item-family-${it.key}`} label="Family" n={n} value={it.familyId} onChange={v => onChange(it.key, { familyId: v })} options={familyOptions} empty="No family" />

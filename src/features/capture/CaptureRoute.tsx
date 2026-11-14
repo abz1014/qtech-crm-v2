@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import type { LucideIcon } from 'lucide-react'
 import { Camera, ChevronRight, FilePlus2, Inbox, PackageOpen, Paperclip, Search, Share2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
@@ -99,7 +100,7 @@ export default function CaptureRoute() {
     <div className={COLUMN} data-testid="share-target">
       <header className="grid gap-1">
         <h1 className={TITLE}>
-          <Icon icon={Share2} size="lg" className="shrink-0 text-brand-700" />
+          <TitleGlyph icon={Share2} />
           Shared with Q-Tech CRM
         </h1>
         <p className="text-base text-fg-2">{summary}</p>
@@ -219,7 +220,14 @@ function MyActiveJobs({ onPick }: { onPick: (key: string) => void }) {
   const who = useMemo<Who>(() => ({ userId: user?.id ?? null, role: (user?.role ?? '') as Who['role'] }), [user?.id, user?.role])
   const mine = useMemo(() => (list.data ?? []).filter(j => inChip(j, 'mine', who)).sort(byRecent), [list.data, who])
   if (list.isPending) return <ChoiceSkeleton />
-  if (list.isError || mine.length === 0) return null // the search box above still finds any job
+  if (list.isError) return null // the search box above still finds any job
+  if (mine.length === 0)
+    return (
+      <p className="flex items-start gap-2 rounded-control bg-sunken px-3 py-3 text-base text-fg-2">
+        <Icon icon={Inbox} className="mt-[calc((var(--lh-base)-16px)/2)] shrink-0 text-fg-muted" />
+        <span className="min-w-0">No job is on your list yet. Search above finds any job by customer, number or item.</span>
+      </p>
+    )
   return (
     <div className="grid gap-2">
       <h2 className="text-sm font-card text-fg-muted">Your jobs</h2>
@@ -249,7 +257,7 @@ function JobFirst() {
       <NoPrimary />
       <header className="grid gap-1">
         <h1 className={TITLE}>
-          <Icon icon={Camera} size="lg" className="shrink-0 text-brand-700" />
+          <TitleGlyph icon={Camera} />
           Photo or note
         </h1>
         <p className="text-base text-fg-2">Which job is it for? Then take the photo or write the note.</p>
@@ -286,5 +294,14 @@ function ChoiceSkeleton() {
         </div>
       ))}
     </div>
+  )
+}
+
+/** The glyph beside a page title: the forest glyph on its pale green tile, so it holds its own beside the heavy title. */
+function TitleGlyph({ icon }: { icon: LucideIcon }) {
+  return (
+    <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-control bg-brand-100 text-brand-700">
+      <Icon icon={icon} size="lg" />
+    </span>
   )
 }
