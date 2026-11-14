@@ -55,19 +55,18 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
             and credit applied to other orders. Refund it, or apply it to an order of theirs that still has a balance due.
           </InfoTip>
         }
-        actions={
-          give ? (
-            <>
-              <Button size="sm" onClick={() => setRefund(true)}>
-                Refund
-              </Button>
-              <Button size="sm" icon={ArrowRightLeft} onClick={() => setApply(true)}>
-                Apply to an order
-              </Button>
-            </>
-          ) : null
-        }
       >
+        {/* The two actions on their own row under the head (55 #cr-ok): in the side column a head row with both would crowd the title. */}
+        {give ? (
+          <div className="flex flex-wrap justify-end gap-2 px-5 pb-1">
+            <Button size="sm" onClick={() => setRefund(true)}>
+              Refund
+            </Button>
+            <Button size="sm" icon={ArrowRightLeft} onClick={() => setApply(true)}>
+              Apply to an order
+            </Button>
+          </div>
+        ) : null}
         <div className="grid gap-2 px-5 pb-3" data-testid="credit-balance">
           <p className="num min-w-0 text-kpi font-heavy tracking-snug text-fg [overflow-wrap:anywhere]">
             <span className="sr-only">Credit balance </span>

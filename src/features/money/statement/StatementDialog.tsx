@@ -42,13 +42,13 @@ export function StatementButton({ companyId, companyName }: { companyId: string;
  * container: from 34rem wide the lines are five columns under a header row; narrower (a phone, a narrow dialog) each line stacks, and
  * each figure carries its own label ("Charged, PKR: 118,000.00"), with an empty figure left out instead of a blank cell.
  */
-const WIDE = '[@container(min-width:34rem)]'
-const ROW = `grid grid-cols-[minmax(0,1fr)] gap-x-3 gap-y-1 px-4 py-3 ${WIDE}:grid-cols-[minmax(0,5rem)_minmax(0,1fr)_minmax(0,7.5rem)_minmax(0,7.5rem)_minmax(0,8rem)] ${WIDE}:py-2`
-const FIG = `num [overflow-wrap:anywhere] ${WIDE}:text-right`
+// Class names are written out whole: Tailwind reads them from the source, so a variant built from a template string is never generated.
+const ROW = 'grid grid-cols-[minmax(0,1fr)] gap-x-3 gap-y-1 px-4 py-3 [@container(min-width:34rem)]:grid-cols-[minmax(0,5rem)_minmax(0,1fr)_minmax(0,7.5rem)_minmax(0,7.5rem)_minmax(0,8rem)] [@container(min-width:34rem)]:py-2'
+const FIG = 'num [overflow-wrap:anywhere] [@container(min-width:34rem)]:text-right'
 /** The figure's label: shown on a stacked line, kept for a screen reader on a wide one (the header row is presentation only). */
-const LAB = `font-sans text-fg-muted ${WIDE}:sr-only`
+const LAB = 'font-sans text-fg-muted [@container(min-width:34rem)]:sr-only'
 /** An empty figure: nothing on a stacked line, a blank cell on a wide one so the columns stay put. */
-const NONE = `hidden ${WIDE}:block`
+const NONE = 'hidden [@container(min-width:34rem)]:block'
 
 function StatementDialog({ companyId, companyName, onClose }: { companyId: string; companyName: string; onClose: () => void }) {
   const today = businessToday()
@@ -120,7 +120,7 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
           ) : st ? (
             <div className="min-w-0 [container-type:inline-size]">
               <div className="min-w-0 overflow-hidden rounded-card border text-sm" role="list" aria-label="Statement lines">
-                <div className={`hidden ${ROW} border-b text-fg-muted ${WIDE}:grid`} role="presentation">
+                <div className={`${ROW} hidden border-b text-fg-muted [@container(min-width:34rem)]:grid`} role="presentation">
                   <span className="font-semibold">Date</span>
                   <span className="font-semibold">Document</span>
                   <span className="text-right font-semibold">Charged</span>
