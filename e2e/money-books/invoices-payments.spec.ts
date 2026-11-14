@@ -357,7 +357,7 @@ test.describe('payments in and receivables (M02)', () => {
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
     await page.getByTestId('batch-bar').getByRole('button', { name: 'Invoice posted today' }).click()
     await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
-    await page.getByRole('link', { name: 'Open To collect' }).click()
+    await page.getByRole('link', { name: /^To collect/ }).click()
     const row = page.getByRole('row', { name: new RegExp(order.company.name) })
     await expect(row).toContainText('88,000') // the balance: 118,000 less 30,000
     await expect(page.getByRole('button', { name: /Record payment/ })).toHaveCount(0)

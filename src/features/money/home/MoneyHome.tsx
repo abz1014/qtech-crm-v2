@@ -21,7 +21,7 @@ import { ACCOUNTS_LINKS, countWord, type MoneyHomeFigures } from '@/features/mon
  * The one green button is Add expense.
  * Forest (50-money-hub.html#hub-ok): To collect is the hero, the one forest card with its figure in lime and "Open To collect" as
  * its lime button; the late part rides on it as a chip. Received, Paid out and Payable to suppliers are three white KPI cards
- * under it. Owed to staff and Cash in hand sit side by side from 1100 px.
+ * under it. Owed to staff and Cash in hand sit side by side when both show and there is room; one alone takes the full width.
  */
 const rs = (v: string | number) => formatAmount(v, 'never')
 
@@ -53,7 +53,7 @@ export function MoneyHome() {
       ) : null}
       <Blocks f={f} />
       <Sentences f={f} />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-card-gap min-[1100px]:grid-cols-2 [&>*]:min-w-0">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),1fr))] items-start gap-card-gap [&>*]:min-w-0">
         <OwedToStaff summary />
         <CashInHandLine />
       </div>
