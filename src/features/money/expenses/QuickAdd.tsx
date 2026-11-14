@@ -297,7 +297,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                   className="num h-control-lg text-xl font-bold max-md:h-control-lg max-md:text-xl"
                 />
               </div>
-              <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="h-control-lg min-w-28 text-base">
+              <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="h-control-lg min-w-[7rem] text-base">
                 Save
                 <span className="sr-only"> this expense</span>
               </Button>
@@ -502,7 +502,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                   <label htmlFor={`${uid}-tax`} className="font-bold">
                     GST on this bill, PKR
                   </label>
-                  <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num w-40 text-base max-md:h-touch" />
+                  <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num w-[10rem] text-base max-md:h-touch" />
                   <span className="text-fg-2">Counts toward GST paid on purchases, so less GST to pay FBR.</span>
                 </div>
               ) : null}

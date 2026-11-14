@@ -122,12 +122,12 @@ function QuickAddSkeleton() {
   return (
     <div className={cn(CARD, 'grid gap-4 p-card')} aria-hidden="true">
       <div className="flex items-center justify-between gap-4">
-        <Skeleton className="h-6 w-28" />
-        <Skeleton className="h-5 w-56 max-sm:hidden" />
+        <Skeleton className="h-6 w-1/5" />
+        <Skeleton className="h-5 w-1/3 max-sm:hidden" />
       </div>
       <div className="flex gap-2">
         <Skeleton className="h-control-lg flex-1" />
-        <Skeleton className="h-control-lg w-28" />
+        <Skeleton className="h-control-lg w-[7rem]" />
       </div>
       <div className="flex flex-wrap gap-2">
         {[24, 32, 20, 28, 16].map(w => (

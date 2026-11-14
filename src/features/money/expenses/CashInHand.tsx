@@ -34,7 +34,7 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
   const [counting, setCounting] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const c = q.data
-  if (q.isPending) return <div className={cn(CARD, 'grid gap-2 p-card')} aria-hidden="true"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-48" /></div>
+  if (q.isPending) return <div className={cn(CARD, 'grid gap-2 p-card')} aria-hidden="true"><Skeleton className="h-5 w-1/3" /><Skeleton className="h-4 w-1/2" /></div>
   if (q.isError || !c) return null
   const none = c.kind === 'none' || c.expected === null
   // `fold` (the Expenses page) on a phone: ONE line. Not set up: the words and the action. Set up: the figure on the line, the buttons under a tap.

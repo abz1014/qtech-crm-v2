@@ -179,7 +179,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     </InfoTip>
                   </span>
                 ) : list.isPending ? (
-                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-6 w-[12rem]" />
                 ) : null}
                 {phone ? null : (
                   <Link

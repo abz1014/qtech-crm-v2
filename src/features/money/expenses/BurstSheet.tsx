@@ -854,10 +854,21 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
       onKeyDown={onKey}
       className={cn('grid gap-3 rounded-card border bg-surface p-4', err && 'border-tone-danger-fg/45')}
     >
+      {/* 61-add-expenses #bs-phone: each card is named, its Remove at the top right. */}
+      <div className="-mb-1 flex min-h-touch items-center justify-between gap-2">
+        <span className="text-base font-bold" aria-hidden="true">
+          Expense {index}
+        </span>
+        {onRemove ? (
+          <button type="button" aria-label={`Remove expense ${index}`} onClick={onRemove} className="-mr-2 grid size-touch place-items-center rounded-control text-fg-muted transition-colors duration-fast hover:bg-selected hover:text-fg">
+            <Icon icon={Trash2} />
+          </button>
+        ) : null}
+      </div>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
         <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Amount, PKR</span>
-        <label className="flex h-touch items-center gap-2 rounded border border-line-input px-3 focus-within:border-fg">
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Amount, PKR</span>
+        <label className="flex h-touch items-center gap-2 rounded-control border border-line-input bg-surface px-3 focus-within:border-primary">
           <span className="text-xs text-fg-muted">PKR</span>
           <NumberInput
             data-cell="amount"
@@ -882,7 +893,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
           aria-label={hasPhoto ? `Remove receipt photo, expense ${index}` : `Take a receipt photo, expense ${index}`}
           onClick={() => (hasPhoto ? onPatch({ photo: null }) : fileRef.current?.click())}
           className={cn(
-            'relative grid size-touch place-items-center rounded border',
+            'relative grid size-touch place-items-center rounded-control border',
             hasPhoto ? 'overflow-hidden border-tone-success-fg text-primary-foreground' : 'border-line-strong bg-surface text-fg-2',
           )}
         >
@@ -912,7 +923,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         />
       </div>
       <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Category</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Category</span>
         <CategoryPicker
           ref={categoryRef}
           categories={categories}
@@ -931,10 +942,10 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
       </div>
       <div className="grid grid-cols-1 items-end gap-3 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
         <div className="grid min-w-0 gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Paid on</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Paid on</span>
         <label
           className={cn(
-            'relative inline-flex h-touch min-w-0 items-center gap-2 rounded border px-3 text-sm text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
+            'relative inline-flex h-touch min-w-0 items-center gap-2 rounded-control border bg-surface px-3 text-base text-fg has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
             'border-line-input',
             err && 'border-tone-danger-fg',
           )}
@@ -952,7 +963,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         </div>
         {/* two values, both visible: one tap picks Cash or Bank (grader: the hidden tap-to-toggle chip is gone) */}
         <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Paid by</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Paid by</span>
         <SegmentedControl
           aria-label={`Paid via, expense ${index}`}
           value={paid}
@@ -965,7 +976,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         </div>
       </div>
       <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">{isOther ? MISC_TITLE_LABEL : 'Detail, optional'}</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">{isOther ? MISC_TITLE_LABEL : 'Detail, optional'}</span>
         <input
           data-cell="detail"
           aria-label={`Detail, expense ${index}`}
@@ -977,7 +988,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
           aria-required={isOther || undefined}
           onChange={e => onPatch({ note: e.target.value })}
           className={cn(
-            'h-touch w-full rounded border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg',
+            'h-touch w-full rounded-control border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-primary',
             row.noteError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
           )}
         />
@@ -985,7 +996,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
       {row.noteError ? <p className="text-base text-tone-danger-fg">{row.noteError}</p> : null}
       <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Job, optional</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Job, optional</span>
         <OrderTagPicker
           jobs={jobs}
           value={row.orderId ?? row.rfqId}
@@ -997,7 +1008,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         />
       </div>
       {showsInputTax(row.categoryId) ? <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} /> : null}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex min-h-touch items-center">
         <Checkbox
           label={
             <span className="inline-flex items-center gap-2">
@@ -1008,11 +1019,6 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
           checked={!!row.repeat}
           onCheckedChange={c => onPatch({ repeat: c === true })}
         />
-        {onRemove ? (
-          <button type="button" aria-label={`Remove expense ${index}`} onClick={onRemove} className="grid size-touch place-items-center rounded text-fg-muted hover:bg-sunken">
-            <Icon icon={Trash2} />
-          </button>
-        ) : null}
       </div>
       {err ? (
         <div role="alert" className="flex gap-2 rounded-row bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
