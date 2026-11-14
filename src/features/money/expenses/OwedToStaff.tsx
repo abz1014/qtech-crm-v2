@@ -73,7 +73,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
           state={{ ...ACTION, className: 'text-tone-warning-fg' }}
           figure
           title="Claims to repay"
-          summary={`${pkr(total)} to ${who}`}
+          summary={<span className="whitespace-nowrap">{`${pkr(total)} to ${who}`}</span>}
           open={open}
           onToggle={() => setOpen(o => !o)}
           controlsId={id}

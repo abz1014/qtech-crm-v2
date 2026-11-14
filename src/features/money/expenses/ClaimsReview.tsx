@@ -58,7 +58,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
           state={{ ...ACTION, className: 'text-tone-warning-fg' }}
           figure
           title="To approve"
-          summary={`${count} · ${total}`}
+          summary={<span className="whitespace-nowrap">{`${count} · ${total}`}</span>}
           open={open}
           onToggle={() => setOpen(o => !o)}
           controlsId={id}
