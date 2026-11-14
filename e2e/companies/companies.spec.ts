@@ -261,6 +261,8 @@ test.describe('company page', () => {
     await openAs(salesPage, 'sales', `/companies/${supplier.id}`)
     await salesPage.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'New RFQ' }).click()
     await expect(salesPage).toHaveURL(url => url.pathname === '/rfqs/new' && url.searchParams.get('supplier') === supplier.id)
+    // New RFQ from a supplier is about asking it: Ask suppliers now starts ticked, so the supplier is asked after the items.
+    await expect(salesPage.getByRole('checkbox', { name: /Ask suppliers now/ })).toBeChecked()
     await sales.close()
   })
 

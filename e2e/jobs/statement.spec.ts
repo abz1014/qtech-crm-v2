@@ -260,8 +260,25 @@ test('at 1024 px wide the quotes table fits the page: no sideways scroll inside 
   await page.setViewportSize({ width: 1024, height: 800 })
   await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
   await expect(page.locator('[data-statement-item="1"]')).toBeVisible()
+  await expect(page.locator('[data-statement-item="1"]').getByRole('table')).toBeVisible()
   const overflow = await page.evaluate(() =>
     Array.from(document.querySelectorAll('[data-statement-item] .overflow-x-auto, [data-statement-totals] .overflow-x-auto')).filter(el => el.scrollWidth > el.clientWidth + 1).length,
   )
   expect(overflow).toBe(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+})
+
+test('live bug 7: on a tablet (768 px) the page never scrolls sideways; each quote is a card and the heads are one Sort field', async ({ page }) => {
+  const s = await seed()
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
+  const first = page.locator('[data-statement-item="1"]')
+  await expect(first.locator(`li[data-statement-row="${s.names.zeta}"]`)).toContainText('400.00')
+  await expect(first.getByRole('table')).toHaveCount(0)
+  await expect(page.getByRole('combobox', { name: 'Sort the rows by' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+  expect(await page.evaluate(() => {
+    const m = document.querySelector('#main') as HTMLElement
+    return m.scrollWidth - m.clientWidth
+  })).toBeLessThanOrEqual(1)
 })

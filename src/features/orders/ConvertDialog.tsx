@@ -64,8 +64,10 @@ type Props = {
   onClose: () => void
 }
 
-// Sized for 16px text: the quantity, a supplier price with its currency, and our net price fit their tracks (UX foundation review).
-const GRID = 'lg:grid lg:grid-cols-[26px_minmax(0,1.25fr)_72px_minmax(0,1.55fr)_148px_216px] lg:items-start lg:gap-x-3'
+// Sized for 16px text (UX foundation review): the tick takes its own width, then shares of the row in the proportions the old fixed
+// tracks had at 1080 (item 1.25, qty 0.45, buy from 1.55, supplier price 0.9, sell at 1.35), so the quantity, a supplier price with
+// its currency and our net price still fit, and the row scales with the dialog like Issue quotation's lines.
+const GRID = 'lg:grid lg:grid-cols-[auto_minmax(0,1.25fr)_minmax(0,0.45fr)_minmax(0,1.55fr)_minmax(0,0.9fr)_minmax(0,1.35fr)] lg:items-start lg:gap-x-3'
 /** The state of a supplier picker nobody has used: nothing is chosen for the person. */
 const UNCHOSEN = ''
 const EXTRAS = [
@@ -343,8 +345,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
         {!empty && edited ? <span className="sr-only">Entered manually</span> : null}
         {p?.qtyNote && on ? <span className="text-base text-fg-2">{p.qtyNote}</span> : null}
         {warns.map(w => (
-          <span key={w} className="flex items-start gap-[6px] text-base text-tone-warning-fg" data-testid={`convert-item-${n}-warning`}>
-            <Icon icon={TriangleAlert} size="sm" className="mt-[3px] shrink-0" />
+          <span key={w} className="flex items-start gap-2 text-base text-tone-warning-fg" data-testid={`convert-item-${n}-warning`}>
+            <Icon icon={TriangleAlert} size="sm" className="mt-1 shrink-0" />
             <span>{w}</span>
           </span>
         ))}
@@ -359,7 +361,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
         titleChip={latestQuote ? <span className="num rounded-pill border border-line-strong px-2 text-xs text-fg-2">{latestQuote}</span> : undefined}
         context={itemsQ.isSuccess ? context : rfq.company.name}
         icon={FileCheck2}
-        className="md:w-[min(1080px,calc(100vw-32px))]"
+        className="md:w-[min(67.5rem,calc(100vw-2rem))]"
         lead={itemsQ.isSuccess && ordered.length > 0 ? `Creates ${lineCount} order ${lineCount === 1 ? 'line' : 'lines'}.` : undefined}
         footer={
           <>
@@ -409,8 +411,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
               Add the items to the RFQ first.
             </Banner>
           ) : (
-            <div className="overflow-hidden rounded-panel border md:rounded-none md:border-x-0" role="group" aria-label="Suppliers by line">
-              <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-snug text-fg-muted', GRID)}>
+            <div className="overflow-hidden rounded-control border" role="group" aria-label="Suppliers by line">
+              <div className={cn('hidden border-b bg-canvas px-4 py-2 text-sm font-semibold leading-snug text-fg-muted', GRID)}>
                 <span><span className="sr-only">Include</span></span>
                 <span>Item</span>
                 <span className="text-right">Qty</span>
@@ -447,7 +449,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                         {[it.brandName, it.familyName].filter(Boolean).length > 0 ? <span className="text-xs text-fg-muted">{[it.brandName, it.familyName].filter(Boolean).join(' · ')}</span> : null}
                         {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}
                       </div>
-                      <span className="num text-sm lg:pt-[0.375rem] lg:text-right">
+                      <span className="num text-sm lg:pt-2 lg:text-right">
                         {it.qty}
                         {it.unit ? <span className="text-fg-muted"> {unitWord(it.qty, it.unit)}</span> : null}
                       </span>
@@ -565,7 +567,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                   </div>
                 )
               })}
-              <div className="grid justify-end gap-1 border-t bg-sunken px-4 py-3 text-sm" role="group" aria-label="Order totals">
+              <div className="grid justify-end gap-1 border-t bg-canvas px-4 py-3 text-sm" role="group" aria-label="Order totals">
                 <div className="flex justify-between gap-8">
                   <span className="text-fg-muted">Net</span>
                   <span className="num">{formatAmount(totals.net)}</span>

@@ -243,7 +243,7 @@ describe('Add to this job: a kept share is deleted only after the save', () => {
 
   it('an item that has expired says so in plain words and can be dismissed', async () => {
     const { user } = mount('sales', [], { text: '', files: [], captureId: 'cap-gone', gone: true })
-    expect(await screen.findByTestId('shared-gone')).toHaveTextContent('no longer on this device')
+    expect(await screen.findByTestId('shared-gone')).toHaveTextContent('no longer on this device (shared items are kept for up to 7 days, and signing out clears them)')
     await user.click(screen.getByRole('button', { name: 'Dismiss' }))
     await waitFor(() => expect(screen.queryByTestId('shared-gone')).toBeNull())
   })

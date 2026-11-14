@@ -471,3 +471,21 @@ describe('DataTable cell wrapping', () => {
     expect(el.querySelector('tbody td span[class*=overflow-wrap]')).not.toBeNull()
   })
 })
+
+describe('DataTable: flat (a table inside a card)', () => {
+  it('draws no card of its own: no edge, corner, shadow or white; the toolbar is a plain line', () => {
+    mount(<DataTable label="Items" columns={columns} rows={INVOICES} getRowId={r => r.id} flat toolbar={<h2>Items</h2>} />)
+    const root = el.querySelector<HTMLElement>('[data-table-root]')!
+    expect(root.dataset.tableFlat).toBe('true')
+    for (const c of ['rounded-card', 'border', 'bg-surface', 'shadow-e1', 'overflow-clip']) expect(root.classList.contains(c)).toBe(false)
+    const toolbar = el.querySelector<HTMLElement>('[data-table-toolbar]')!
+    for (const c of ['border-b', 'px-4', 'py-3', 'rounded-card']) expect(toolbar.classList.contains(c)).toBe(false)
+  })
+
+  it('without flat the table keeps its one card', () => {
+    mount(<DataTable label="Items" columns={columns} rows={INVOICES} getRowId={r => r.id} />)
+    const root = el.querySelector<HTMLElement>('[data-table-root]')!
+    expect(root.dataset.tableFlat).toBeUndefined()
+    for (const c of ['rounded-card', 'border', 'bg-surface', 'shadow-e1']) expect(root.classList.contains(c)).toBe(true)
+  })
+})

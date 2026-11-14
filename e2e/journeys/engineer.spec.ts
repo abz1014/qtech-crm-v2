@@ -35,26 +35,36 @@ const MONEY_COLUMN = /unit_price|pkr_unit_price|net_total|gst_total|unit_price_n
 // (the Job page names its Invoice and Payment stages for everyone: an engineer's say "Handled by the office" and hold no figure)
 const MONEY_WORDS = /PKR|GST|Invoiced|INV-|Margin|Receivable|Spread|Selling price|Balance|187,400|187400/
 
-type Seen = { requests: string[]; leaks: string[] }
+type Seen = { requests: string[]; leaks: string[]; unread: string[] }
+/** How long one answer's body may take to read before settle() moves on without it. */
+const BODY_WAIT_MS = 10_000
 
 /** Watches every call the browser makes to the API and every JSON body that comes back. */
 function watch(context: BrowserContext): { seen: Seen; settle: () => Promise<void> } {
-  const seen: Seen = { requests: [], leaks: [] }
+  const seen: Seen = { requests: [], leaks: [], unread: [] }
   const pending: Promise<void>[] = []
   context.on('request', r => {
     if (r.url().startsWith(API_URL)) seen.requests.push(`${r.method()} ${decodeURIComponent(r.url())} ${r.postData() ?? ''}`)
   })
   context.on('response', r => {
     if (!r.url().startsWith(`${API_URL}/rest/v1/`)) return
-    pending.push(
-      r
-        .text()
-        .then(body => {
-          const hits = Array.from(new Set(body.match(new RegExp(`"(${MONEY_COLUMN.source})":\\s*(?!null)[^,}\\s]`, 'g')) ?? []))
-          if (hits.length) seen.leaks.push(`${decodeURIComponent(r.url())} carried ${hits.join(', ')}`)
-        })
-        .catch(() => undefined), // a response that was aborted or redirected has no body to check
-    )
+    const check = r
+      .text()
+      .then(body => {
+        const hits = Array.from(new Set(body.match(new RegExp(`"(${MONEY_COLUMN.source})":\\s*(?!null)[^,}\\s]`, 'g')) ?? []))
+        if (hits.length) seen.leaks.push(`${decodeURIComponent(r.url())} carried ${hits.join(', ')}`)
+      })
+      .catch(() => undefined) // a response that was aborted or redirected has no body to check
+    // A body that never finishes (a request the page dropped mid-stream) must not hang settle(): each read gets BODY_WAIT_MS of its
+    // own, then it is listed in seen.unread (named in the failure message if a leak check fails) and settle() moves on.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const late = new Promise<void>(resolve => {
+      timer = setTimeout(() => {
+        seen.unread.push(decodeURIComponent(r.url()))
+        resolve()
+      }, BODY_WAIT_MS)
+    })
+    pending.push(Promise.race([check, late]).finally(() => clearTimeout(timer)))
   })
   return { seen, settle: async () => void (await Promise.all(pending)) }
 }
@@ -191,7 +201,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     expect(seen.requests.length, 'the log must not be empty, or this proves nothing').toBeGreaterThan(10)
     expect(seen.requests.some(r => r.includes('/orders?') || r.includes('/order_items?'))).toBe(true)
     expect(seen.requests.filter(r => MONEY_REQUEST.test(r)), 'money requests made by the engineer').toEqual([])
-    expect(seen.leaks, 'money columns carried in answers to the engineer').toEqual([])
+    expect(seen.leaks, `money columns carried in answers to the engineer (bodies not read in time: ${seen.unread.join(', ') || 'none'})`).toEqual([])
   })
 
   await ctx.close()

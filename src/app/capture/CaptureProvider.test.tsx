@@ -1,7 +1,8 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
+import { SessionContext } from '@/app/session'
 
 /*
  * What a paste or a drop does outside a field (P4): on To do and the Jobs list it starts a New enquiry with it; on a job's page
@@ -18,14 +19,23 @@ function Where() {
   )
 }
 
-function mount(at: string) {
+function mount(at: string, role = 'sales') {
   return render(
-    <MemoryRouter initialEntries={[at]}>
-      <CaptureProvider>
-        <Where />
-      </CaptureProvider>
-    </MemoryRouter>,
+    <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Test', role } }}>
+      <MemoryRouter initialEntries={[at]}>
+        <CaptureProvider>
+          <Where />
+        </CaptureProvider>
+      </MemoryRouter>
+    </SessionContext.Provider>,
   )
+}
+
+const drag = (type: 'dragenter' | 'dragleave', target: EventTarget = document.body) => {
+  const e = new Event(type, { bubbles: true, cancelable: true }) as Event & { dataTransfer?: unknown }
+  e.dataTransfer = { types: ['Files'], files: [], items: [] }
+  target.dispatchEvent(e)
+  return e
 }
 
 const drop = (file: File) => {
@@ -67,6 +77,34 @@ describe('Capture provider', () => {
       expect(drop(file).defaultPrevented).toBe(false)
       expect(paste('some text').defaultPrevented).toBe(false)
       expect(screen.getByLabelText('where')).toHaveTextContent(at)
+      view.unmount()
+    }
+  })
+
+  it('dragging a file over Home or the Jobs list covers the window with "Drop to start a New RFQ"; leaving or dropping takes it away', async () => {
+    const file = new File(['%PDF'], 'enquiry.pdf', { type: 'application/pdf' })
+    for (const at of ['/todo', '/jobs']) {
+      const view = mount(at)
+      expect(screen.queryByTestId('drop-overlay')).toBeNull()
+      act(() => void drag('dragenter'))
+      expect(screen.getByTestId('drop-overlay')).toBeInTheDocument()
+      expect(within(screen.getByTestId('drop-overlay')).getByRole('status')).toHaveTextContent('Drop to start a New RFQ')
+      act(() => void drag('dragleave'))
+      expect(screen.queryByTestId('drop-overlay')).toBeNull()
+      act(() => void drag('dragenter'))
+      act(() => void drop(file))
+      expect(screen.queryByTestId('drop-overlay')).toBeNull()
+      await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/enquiries/new'))
+      view.unmount()
+    }
+  })
+
+  it('no overlay for an engineer, on a job page, or on the intake screens', () => {
+    const cases: [string, string][] = [['/todo', 'engineer'], ['/jobs/139', 'sales'], ['/enquiries/new', 'admin'], ['/rfqs/new', 'admin'], ['/companies', 'admin']]
+    for (const [at, role] of cases) {
+      const view = mount(at, role)
+      act(() => void drag('dragenter'))
+      expect(screen.queryByTestId('drop-overlay'), `${at} as ${role}`).toBeNull()
       view.unmount()
     }
   })

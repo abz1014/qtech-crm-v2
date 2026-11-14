@@ -131,7 +131,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   let page!: Page
 
   // ---- 1. Paste the enquiry: a new RFQ -------------------------------------------------------------------------------------------
-  await test.step('paste the enquiry: company, paste, Looks right', async () => {
+  await test.step('paste the enquiry: company, paste, Ask suppliers now, Looks right', async () => {
     page = await openPage(salesCtx, '/rfqs/new')
     await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
     await resetCount(page)
@@ -144,10 +144,13 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(page.getByText('2 items found').first()).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('4 nos')
     await expect(page.getByRole('textbox', { name: 'Quantity of item 2' })).toHaveValue('2 nos')
+    // /rfqs/new is the New RFQ page: asking suppliers there is optional (gate 2), one tick turns it on.
+    await page.getByRole('checkbox', { name: /Ask suppliers now/ }).check()
+    actions++
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     actions++
-    fe2('New RFQ: company (2) + Looks right, after 1 paste', actions, 3)
-    fe2('New RFQ: mouse presses', (await readCount(page)).mouse, 3)
+    fe2('New RFQ: company (2) + Ask suppliers now + Looks right, after 1 paste', actions, 4)
+    fe2('New RFQ: mouse presses', (await readCount(page)).mouse, 4)
   })
 
   // ---- 2. Ask the suppliers: the message is copied ---------------------------------------------------------------------------------

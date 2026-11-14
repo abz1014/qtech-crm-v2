@@ -20,7 +20,6 @@ export const routeChunks = {
   companies: () => import('@/features/companies/CompaniesScreen'),
   companiesList: () => import('@/features/companies/CompaniesPage'),
   company: () => import('@/features/companies/CompanyPage'),
-  rfqNew: () => import('@/features/rfqs/IntakeScreen'),
   enquiryNew: () => import('@/features/enquiry/NewEnquiryPage'),
   jobs: () => import('@/features/jobs/JobsScreen'),
   jobsList: () => import('@/features/jobs/JobsListPage'),
@@ -54,9 +53,10 @@ export function chunksForPath(pathname: string): ChunkKey[] {
     case 'todo':
     case 'today': // the old address: it redirects to /todo
       return ['today']
-    // /rfqs and /orders open Jobs (src/app/oldAddresses.tsx): the first visit needs the Jobs downloads. New RFQ keeps its own address.
+    // /rfqs and /orders open Jobs (src/app/oldAddresses.tsx): the first visit needs the Jobs downloads. /rfqs/new is New RFQ, the same
+    // page as /enquiries/new.
     case 'rfqs':
-      if (n === 2 && sub === 'new') return ['rfqNew']
+      if (n === 2 && sub === 'new') return ['enquiryNew']
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
     case 'enquiries':
       return n === 2 && sub === 'new' ? ['enquiryNew'] : []

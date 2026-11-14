@@ -143,6 +143,7 @@ async function reachSuppliers(page: Page, s: Seed, itemsText: string): Promise<v
   await page.getByRole('combobox', { name: 'Company' }).fill(s.customer.name)
   await page.getByRole('option', { name: new RegExp(s.customer.name) }).click()
   await paste(page, itemsText)
+  await page.getByRole('checkbox', { name: /Ask suppliers now/ }).check() // New RFQ creates the job unless asking is ticked (gate 2)
   await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
   await expect(page.locator(`label[for^="sup-"]`).first()).toBeVisible({ timeout: 20_000 }) // the ask list is read after the page draws (perf2)
 }

@@ -119,3 +119,24 @@ describe('Dialog (U03)', () => {
     expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled()
   })
 })
+
+describe('DialogContent: the meta beside Close', () => {
+  it('a long meta wraps under the title on a phone and beside it from 768; Close keeps its own column (it stays on a 320 px screen)', async () => {
+    render(
+      <Dialog open onOpenChange={() => {}}>
+        <DialogContent title="Issue purchase order" meta={<span>PO-2026-000123 revision 4, replaces PO-2026-000123 revision 3</span>}>
+          <p>Body</p>
+        </DialogContent>
+      </Dialog>,
+    )
+    const dialog = await screen.findByRole('dialog')
+    const meta = dialog.querySelector<HTMLElement>('[data-dialog-meta]')!
+    expect(meta).toHaveTextContent('revision 4')
+    for (const c of ['min-w-0', '[overflow-wrap:anywhere]', 'max-md:row-start-2', 'max-md:col-start-1', 'md:row-start-1', 'md:col-start-2']) expect(meta.classList.contains(c)).toBe(true)
+    const close = screen.getByRole('button', { name: 'Close' })
+    for (const c of ['shrink-0', 'row-start-1', 'col-start-2', 'md:col-start-3']) expect(close.classList.contains(c)).toBe(true)
+    const header = dialog.querySelector('header')!
+    expect(header.className).toContain('grid-cols-[minmax(0,1fr)_auto]')
+    expect(header.className).toContain('md:grid-cols-[minmax(0,1fr)_minmax(0,max-content)_auto]')
+  })
+})
