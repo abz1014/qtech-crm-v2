@@ -144,7 +144,7 @@ const HUNT_FILES: Record<string, string> = {
 }
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'jobs', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
+const dbSuites = ['db', 'auth', 'companies', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'jobs', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', 'review-items23', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
@@ -445,6 +445,15 @@ export default defineConfig({
         permissions: ['clipboard-read', 'clipboard-write'],
         screenshot: 'only-on-failure',
       },
+    },
+    {
+      // Throwaway review screenshots (branch shots/items-2-3): supplier flow D and the engineer search, at 1440, 375 and 320.
+      name: 'review-items23',
+      testMatch: /review\/items-2-3-shots\.spec\.ts/,
+      fullyParallel: false,
+      retries: 0,
+      timeout: 600_000,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     // The edge-case hunt (e2e/hunt/edges): see HUNT_EDGES above. Contexts are made per viewport by the specs themselves.
     ...(
