@@ -352,6 +352,8 @@ function Progress({ p, target, year, quarter }: { p: ReturnType<typeof cellProgr
         total={amount}
         marker={amount > 0 ? Math.min(100, Math.max(0, (p.onPace / amount) * 100)) : undefined}
         label={`Achieved ${p.achieved} of ${amount}, on pace ${p.onPace}`}
+        // the current quarter's column is tinted with the track's own colour: a white track keeps the bar visible on it
+        className="bg-surface"
       />
       {p.excluded > 0 ? (
         <p className="text-right text-sm text-fg-muted">

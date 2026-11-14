@@ -270,7 +270,6 @@ export function TeamPage() {
                 { value: 'deactivated', label: 'Deactivated' },
               ]}
             />
-            <span className="ml-auto text-base text-fg-muted max-sm:hidden">At least one active admin is always required.</span>
           </div>
         }
         summary={
@@ -281,7 +280,8 @@ export function TeamPage() {
         }
       />
       </div>
-      <p className="px-1 text-sm text-fg-muted sm:hidden">At least one active admin is always required.</p>
+      {/* Under the list at every width (in the toolbar it broke onto a line of its own, right-aligned, in a Settings pane). */}
+      <p className="px-1 text-sm text-fg-muted">At least one active admin is always required.</p>
 
       {dialog?.kind === 'sheet' ? <RowActionSheet member={dialog.member} onClose={close} onPick={open} /> : null}
       {dialog?.kind === 'add' ? (

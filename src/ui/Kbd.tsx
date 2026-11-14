@@ -22,7 +22,7 @@ export function Kbd({
     <kbd
       aria-hidden={ariaHidden || undefined}
       className={cn(
-        'inline-flex items-center justify-center rounded border border-b-2 border-line-strong bg-surface',
+        'inline-flex items-center justify-center rounded-[var(--sp-1)] border border-b-2 border-line-strong bg-surface',
         size === 'chip' ? 'h-chip min-w-chip px-[6px]' : 'h-[var(--lh-xs)] min-w-[var(--lh-xs)] px-1',
         'font-sans text-xs font-medium leading-none text-fg-muted',
         className,

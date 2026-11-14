@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, 
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { useBackToClose } from '@/lib/useBackToClose'
 import { Command } from 'cmdk'
-import { ArrowDown, ArrowUp, Building2, CornerDownLeft, FileText, Package, Search, type LucideIcon } from 'lucide-react'
+import { ArrowDown, ArrowUp, Building2, CornerDownLeft, FileText, Package, Search, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
@@ -280,6 +280,16 @@ export function CommandPalette({
                 className="min-w-0 flex-1 bg-transparent text-lg text-fg placeholder:text-fg-muted focus:outline-none"
               />
               <Kbd className="text-xs max-md:hidden [@media(pointer:coarse)]:hidden">Esc</Kbd>
+              {/* A phone has no Esc key: a close button in its place (mockup 80, "Close search"); a tap on the scrim still closes too. */}
+              <RadixDialog.Close asChild>
+                <button
+                  type="button"
+                  aria-label="Close search"
+                  className="-mr-2 hidden size-touch shrink-0 place-items-center rounded-control text-fg-muted hover:bg-sunken hover:text-fg focus-visible:outline focus-visible:outline-2 max-md:grid [@media(pointer:coarse)]:grid"
+                >
+                  <Icon icon={X} size="lg" />
+                </button>
+              </RadixDialog.Close>
             </div>
 
             <Command.List className="max-h-[min(480px,60dvh)] min-h-0 overflow-y-auto pb-2 pt-1">

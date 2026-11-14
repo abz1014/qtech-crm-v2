@@ -233,7 +233,7 @@ export function DialogContentImpl({
                 'max-md:flex-col-reverse max-md:items-stretch max-md:[&>button]:h-touch',
               )}
             >
-              {lead ? <span className="mr-auto inline-flex items-center gap-2 text-xs text-fg-muted max-md:mr-0">{lead}</span> : null}
+              {lead ? <span className="mr-auto inline-flex min-w-0 items-center gap-2 text-xs text-fg-muted max-md:mr-0 md:flex-1 md:basis-[12rem]">{lead}</span> : null}
               {footer}
             </footer>
           ) : null}
