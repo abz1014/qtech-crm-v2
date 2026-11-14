@@ -21,6 +21,7 @@ interface Width { tag: string; width: number; height: number; phone: boolean }
 const DESKTOP: Width = { tag: 'desktop', width: 1440, height: 900, phone: false }
 const PHONE: Width = { tag: 'phone375', width: 375, height: 812, phone: true }
 const PHONE320: Width = { tag: 'phone320', width: 320, height: 700, phone: true }
+const TABLET: Width = { tag: 'tablet768', width: 768, height: 1024, phone: false }
 
 async function ctx(browser: Browser, w: Width): Promise<BrowserContext> {
   return browser.newContext({
@@ -93,6 +94,30 @@ async function seedRfq(label: string) {
   return { rfq, items, carrier, supplier }
 }
 
+/**
+ * Forest lane B2 (suppliers, items and prices): an RFQ with four suppliers asked, one priced in PKR (lead time, in stock), one in USD,
+ * one who cannot quote and one still waiting, so Suppliers asked and Items and supplier prices show every kind of row.
+ */
+async function seedPriced() {
+  const r = await seedRfq('ShotsF')
+  const asked = async (name: string, extra: Record<string, unknown> = {}) => {
+    const co = await createCompany(uniqueName(name), extra.country ? { country: extra.country } : {})
+    const [inq] = await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: r.rfq.id, supplier_id: co.id, sent_on: karachiDay(-3), ...(extra.inquiry as object) } }))
+    return { co, inq }
+  }
+  const line = (inquiryId: string, itemId: string, body: Record<string, unknown>) =>
+    must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: inquiryId, rfq_item_id: itemId, ...body }, prefer: 'return=minimal' }))
+  const indus = await asked('Indus Instruments Trading')
+  await line(indus.inq.id, r.items[0].id, { unit_price: 112000, currency: 'PKR', lead_time: '14 days', in_stock: true })
+  await line(indus.inq.id, r.items[1].id, { unit_price: 38500, currency: 'PKR', lead_time: '14 days', in_stock: true })
+  const zhob = await asked('Zhob Control Parts Private Limited, Quetta Industrial Estate', { country: 'China' })
+  await line(zhob.inq.id, r.items[0].id, { unit_price: 390, currency: 'USD', lead_time: '28 days', in_stock: false })
+  await asked('Swat Sensor Supply', { inquiry: { no_offer_on: karachiDay(-1), no_offer_reason: 'no_brand' } })
+  const hunza = await asked('Hunza Valve and Pump')
+  return { ...r, indus, zhob, hunza }
+}
+
+let priced: Awaited<ReturnType<typeof seedPriced>>
 let notAsked: Awaited<ReturnType<typeof seedRfq>>
 let partly: Awaited<ReturnType<typeof seedRfq>>
 let world: World
@@ -105,6 +130,7 @@ test.beforeAll(async () => {
     method: 'POST',
     body: { rfq_id: partly.rfq.id, supplier_id: partly.supplier.id, sent_on: karachiDay(-1), asked_item_ids: [partly.items[0].id, partly.items[1].id] },
   }))
+  priced = await seedPriced()
   world = await seedWorld('SH')
   poNumber = 910000 + Math.floor(Math.random() * 89999)
   const leg = await api('admin', '/rest/v1/supplier_orders', { method: 'POST', body: { order_id: world.order.id, supplier_id: world.supplier.id, currency: 'PKR' }, prefer: 'return=representation' })
@@ -181,6 +207,42 @@ async function shotBtoE(browser: Browser, w: Width, only: 'all' | 'c') {
   await c.close()
 }
 
+/** Forest B2: the Quotation stage with prices in, the whole page and each panel, then the reply dialog of the priced supplier. */
+async function shotForest(browser: Browser, w: Width, role: Role) {
+  const c = await ctx(browser, w)
+  const page = await c.newPage()
+  await openAs(page, role, `/rfqs/${priced.rfq.id}`)
+  await openStage(page, 'Quotation')
+  const asked = page.locator('[data-slot="suppliers-asked"]')
+  const items = page.locator('[data-slot="items"]')
+  await expect(asked).toContainText(priced.hunza.co.name)
+  await expect(items.locator('[data-price-row]').first()).toBeVisible()
+  await items.scrollIntoViewIfNeeded()
+  await shot(page, `forest-b2-${role}-${w.tag}`)
+  await crop(page, asked, `forest-b2-${role}-${w.tag}-asked`)
+  await crop(page, items, `forest-b2-${role}-${w.tag}-items`)
+  if (role !== 'engineer') {
+    // A price line opened (chevron): the own-currency figure, the rate and the row menu.
+    const row = items.locator('[data-price-row]', { hasText: priced.zhob.co.name }).first()
+    if (await row.count()) {
+      await row.getByRole('button', { name: /Show details for/ }).click()
+      await crop(page, items, `forest-b2-${role}-${w.tag}-items-open`)
+    }
+    await asked.getByRole('button', { name: `Edit reply, ${priced.indus.co.name}` }).click()
+    const reply = page.getByRole('dialog', { name: priced.indus.co.name })
+    await expect(reply).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `${DIR}/forest-b2-${role}-${w.tag}-reply-viewport.png` })
+    await page.keyboard.press('Escape')
+    await asked.getByRole('button', { name: `Enter reply, ${priced.hunza.co.name}` }).click()
+    const first = page.getByRole('dialog', { name: priced.hunza.co.name })
+    await expect(first).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `${DIR}/forest-b2-${role}-${w.tag}-reply-first-viewport.png` })
+  }
+  await c.close()
+}
+
 async function openPalette(page: Page) {
   await expect(async () => {
     const dialog = page.getByRole('dialog', { name: 'Search or jump to' })
@@ -216,4 +278,10 @@ for (const w of [DESKTOP, PHONE]) {
   test(`item 3 (g) admin search @ ${w.tag}`, async ({ browser }) => shotSearch(browser, w, 'admin', 'g'))
 }
 test('item 2 (a) @ phone320', async ({ browser }) => shotA(browser, PHONE320))
+for (const w of [DESKTOP, PHONE, TABLET, PHONE320]) {
+  test(`forest b2 prices in, sales @ ${w.tag}`, async ({ browser }) => shotForest(browser, w, 'sales'))
+}
+test('forest b2 prices in, engineer @ desktop', async ({ browser }) => shotForest(browser, DESKTOP, 'engineer'))
+test('forest b2 prices in, engineer @ phone375', async ({ browser }) => shotForest(browser, PHONE, 'engineer'))
+test('item 2 (a) @ tablet768', async ({ browser }) => shotA(browser, TABLET))
 test('item 2 (b)-(e) @ phone320', async ({ browser }) => shotBtoE(browser, PHONE320, 'all'))

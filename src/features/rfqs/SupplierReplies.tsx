@@ -350,7 +350,7 @@ export function SupplierReplyDialog({
             </p>
           ) : null}
           {declinedAll ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-row border border-line bg-sunken px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3 rounded-control bg-deep px-4 py-3">
               <span>
                 <span className="font-medium">{"Cannot quote"}</span>
                 {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
@@ -404,8 +404,8 @@ export function SupplierReplyDialog({
                 />
               ) : null}
               {!draft.currency ? (
-                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="grid gap-2 rounded-row border border-line bg-sunken px-3 py-2">
-                  <span className="text-fg-2">Which currency are they quoting in? Asked once, then remembered.</span>
+                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="grid gap-3 rounded-control bg-deep p-4">
+                  <span className="text-fg">Which currency are they quoting in? Asked once, then remembered.</span>
                   {/* The choices on rows of their own under the question, evenly sized: one row of eight wide, two of four on a phone. */}
                   <span className="grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-2">
                   {CURRENCY_CHIPS.map(c => (
@@ -414,7 +414,7 @@ export function SupplierReplyDialog({
                       type="button"
                       aria-pressed={false}
                       onClick={() => setDraft(d => ({ ...d, currency: c }))}
-                      className="inline-flex h-control items-center justify-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
+                      className="inline-flex h-control items-center justify-center rounded-control border border-line-strong bg-surface px-3 text-sm font-bold transition-[background-color,transform] duration-fast ease-out hover:bg-selected active:scale-press max-md:h-touch"
                     >
                       {c}
                     </button>
@@ -432,14 +432,12 @@ export function SupplierReplyDialog({
                   return (
                     <li key={it.id} className="grid content-start gap-1">
                       <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto]" data-reply-item={it.id}>
-                        <span className="flex min-w-0 items-start gap-2" aria-hidden="true">
-                          <span className="num mt-[2px] text-sm text-fg-muted">{it.number}</span>
-                          <span className="min-w-0">
-                            <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
-                              {it.description}
-                            </span>
-                            {q ? <span className="num ml-2 text-sm text-fg-muted">{q}</span> : null}
+                        <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2" aria-hidden="true">
+                          <span className="num text-sm text-fg-muted">{it.number}</span>
+                          <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
+                            {it.description}
                           </span>
+                          {q ? <span className="num col-start-2 text-sm text-fg-muted">{q}</span> : null}
                         </span>
                         <span className="flex min-w-0 items-center gap-2 max-sm:flex-wrap">
                         {reason ? (
@@ -476,7 +474,7 @@ export function SupplierReplyDialog({
                                 void doSave()
                               }
                             }}
-                            className="sm:w-[170px]"
+                            className="font-mono tabular-nums sm:w-[11rem]"
                           />
                           <Popover>
                             <PopoverTrigger asChild>
@@ -522,8 +520,8 @@ export function SupplierReplyDialog({
                 })}
               </ul>
 
-              <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_200px]">
-                <label className="grid gap-1 text-sm text-fg-muted">
+              <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_12.5rem]">
+                <label className="grid gap-1 text-sm font-semibold text-fg">
                   Lead time
                   <TextField
                     aria-label={`Lead time from ${inquiry.supplierName}`}
@@ -532,7 +530,7 @@ export function SupplierReplyDialog({
                     placeholder="2 weeks, ex-stock"
                   />
                 </label>
-                <label className="grid gap-1 text-sm text-fg-muted">
+                <label className="grid gap-1 text-sm font-semibold text-fg">
                   Stock
                   <Select
                     aria-label={`Stock at ${inquiry.supplierName}`}
@@ -547,7 +545,7 @@ export function SupplierReplyDialog({
                 </label>
               </div>
               <details className="text-sm" open={Object.keys(draft.extras ?? {}).length > 0 || undefined} data-reply-extras="">
-                <summary className="w-fit cursor-pointer text-fg-muted hover:text-fg">Weight and country of origin (optional)</summary>
+                <summary className="flex min-h-touch w-fit cursor-pointer items-center rounded-control font-semibold text-fg-2 hover:text-fg md:min-h-control">Weight and country of origin (optional)</summary>
                 <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement. Nothing is worked out from it.</p>
                 <ul className="mt-2 grid gap-3">
                   {items
@@ -561,7 +559,7 @@ export function SupplierReplyDialog({
                             <span className="num mr-2 text-fg-muted">{it.number}</span>
                             {it.description}
                           </span>
-                          <span className="grid grid-cols-[minmax(0,1fr)_84px_minmax(0,1.3fr)] gap-2">
+                          <span className="grid grid-cols-[minmax(0,1fr)_5.25rem_minmax(0,1.3fr)] gap-2">
                             <NumberInput
                               aria-label={`Weight of one unit, item ${it.number} from ${inquiry.supplierName}`}
                               value={x.weight}
@@ -589,15 +587,15 @@ export function SupplierReplyDialog({
                 </ul>
               </details>
               {draft.currency ? (
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-2">
                   <span>{`Prices in ${currencyNote}.`}</span>
-                  <button type="button" onClick={() => setChangeCurrency(c => !c)} aria-expanded={changeCurrency} className="rounded font-medium underline underline-offset-2 hover:text-fg">
+                  <button type="button" onClick={() => setChangeCurrency(c => !c)} aria-expanded={changeCurrency} className="inline-flex min-h-touch items-center rounded-control px-2 font-bold text-primary hover:bg-selected md:min-h-control">
                     {changeCurrency ? 'Keep it' : 'Change currency'}
                   </button>
                   {changeCurrency ? (
                     <Select
                       aria-label={`Currency for ${inquiry.supplierName}`}
-                      className="w-[96px]"
+                      className="w-[6rem]"
                       options={currencyOptions}
                       value={draft.currency}
                       onChange={e => setDraft(d => ({ ...d, currency: e.target.value }))}

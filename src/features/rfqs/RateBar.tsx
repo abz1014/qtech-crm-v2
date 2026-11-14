@@ -18,19 +18,19 @@ export function RateBar({ entries }: { entries: readonly RateBarEntry[] }) {
   const lineId = useId()
   const trouble = entries.filter(e => e.ratePkr === null || e.staleness === 'unusable' || e.staleness === 'stale').length
   return (
-    <div className="border-b bg-sunken text-sm text-fg-2" data-ratebar>
+    <div className="mt-4 rounded-control bg-deep text-sm text-fg-2" data-ratebar>
       <button
         type="button"
-        className="flex min-h-touch w-full items-center gap-2 px-5 text-left font-medium md:hidden"
+        className="flex min-h-touch w-full items-center gap-2 rounded-control px-4 text-left font-semibold md:hidden"
         aria-expanded={open}
         aria-controls={lineId}
         onClick={() => setOpen(o => !o)}
       >
         Rates
         {trouble > 0 ? <span className="font-regular text-tone-warning-fg">{`· ${trouble} need a look`}</span> : null}
-        <Icon icon={ChevronDown} size="sm" className={cn('ml-auto transition-transform', open && 'rotate-180')} />
+        <Icon icon={ChevronDown} size="sm" className={cn('ml-auto transition-transform duration-base ease-out', open && 'rotate-180')} />
       </button>
-      <p id={lineId} className={cn('flex-wrap items-center gap-x-1 gap-y-1 px-5 py-2 md:flex', open ? 'flex max-md:pt-0' : 'hidden')}>
+      <p id={lineId} className={cn('flex-wrap items-center gap-x-1 gap-y-1 px-4 py-2 md:flex', open ? 'flex max-md:pt-0' : 'hidden')}>
         <span className="mr-1 text-fg-muted">Rates today, PKR per unit:</span>
         {entries.length === 0 ? <span className="text-fg-muted">none yet</span> : null}
         {entries.map((e, n) => (
@@ -54,13 +54,13 @@ export function RateBar({ entries }: { entries: readonly RateBarEntry[] }) {
                 title={rateBarNote(e)}
               >
                 {e.staleness === 'stale' ? <Icon icon={TriangleAlert} size="chip" /> : null}
-                <b className="num font-medium">{`${e.currency} ${formatRate(e.ratePkr)}`}</b>
+                <b className="font-mono font-semibold tabular-nums">{`${e.currency} ${formatRate(e.ratePkr)}`}</b>
                 {e.staleness === 'stale' ? <span>{`${e.ageDays} days old`}</span> : null}
               </span>
             )}
           </span>
         ))}
-        <Link to="/settings/exchange-rates" aria-label="Edit exchange rates" className="ml-auto rounded font-medium underline underline-offset-2 hover:text-fg max-md:ml-0">
+        <Link to="/settings/exchange-rates" aria-label="Edit exchange rates" className="ml-auto rounded-control font-bold text-primary underline underline-offset-2 hover:text-primary-hover max-md:ml-0">
           Edit
         </Link>
       </p>

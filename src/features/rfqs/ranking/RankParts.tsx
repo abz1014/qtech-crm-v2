@@ -54,14 +54,14 @@ export function ReasonParts({ reason }: { reason: Reason }) {
 export function ReasonBlock({ set, unrankedCurrency, supplier }: { set: ReasonSet; unrankedCurrency?: string | null; supplier: string }) {
   return (
     <div className="grid gap-1" data-reasons-for={supplier}>
-      <ul className="mt-[2px] grid gap-[6px] rounded-r border-l-2 border-line-strong bg-sunken px-3 py-2" data-reasons="full">
+      <ul className="mt-px grid gap-2 rounded-r-control border-l-2 border-line-strong bg-sunken px-3 py-2" data-reasons="full">
         {set.full.map((r, i) => (
           <li
             key={r.id + i}
             data-reason={r.id}
-            className={cn('grid grid-cols-[14px_minmax(0,1fr)] gap-2 text-sm text-fg-2', r.id === 'evidence' && 'text-fg-muted', r.tone === 'warn' && 'text-tone-warning-fg')}
+            className={cn('grid grid-cols-[auto_minmax(0,1fr)] gap-2 text-sm text-fg-2', r.id === 'evidence' && 'text-fg-muted', r.tone === 'warn' && 'text-tone-warning-fg')}
           >
-            <Icon icon={ICONS[r.icon]} size="chip" className={cn('mt-[3px]', r.tone === 'warn' ? 'text-tone-warning-fg' : 'text-fg-muted')} />
+            <Icon icon={ICONS[r.icon]} size="sm" className={cn('mt-1', r.tone === 'warn' ? 'text-tone-warning-fg' : 'text-fg-muted')} />
             <span className="text-pretty">
               <ReasonParts reason={r} />
             </span>
@@ -71,7 +71,7 @@ export function ReasonBlock({ set, unrankedCurrency, supplier }: { set: ReasonSe
       {unrankedCurrency ? (
         <Link
           to="/settings/exchange-rates"
-          className="inline-flex h-control w-fit items-center gap-1 rounded border border-line-strong bg-surface px-2 text-sm font-medium hover:bg-sunken"
+          className="inline-flex h-control w-fit items-center gap-1 rounded-control border border-line-strong bg-surface px-3 text-sm font-bold hover:bg-selected"
         >
           <Icon icon={Plus} size="sm" />
           {`Add ${unrankedCurrency} rate`}

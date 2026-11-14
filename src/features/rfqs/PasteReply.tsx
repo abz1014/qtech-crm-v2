@@ -50,14 +50,14 @@ export function PasteReplyPanel({
     })
 
   return (
-    <section aria-label={`Read from the reply of ${supplierName}`} className="grid gap-3 rounded-panel border bg-sunken p-3">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <h4 className="text-sm font-semibold">Read from their reply</h4>
-        <p className="text-xs text-fg-muted">Nothing is saved until you accept.</p>
+    <section aria-label={`Read from the reply of ${supplierName}`} className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-control bg-deep p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h4 className="type-row">Read from their reply</h4>
+        <p className="text-sm text-fg-muted">Nothing is saved until you accept.</p>
       </div>
 
       {set.question !== null ? (
-        <div className="rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm" data-reply-question="">
+        <div className="rounded-control border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm" data-reply-question="">
           <p className="font-medium">The reply is a question, not a quotation.</p>
           {set.question ? <p className="mt-1 break-words text-fg-2">{set.question}</p> : null}
           <p className="mt-1 text-fg-muted">Nothing here is a price. Answer them, then paste their next reply.</p>
@@ -69,7 +69,7 @@ export function PasteReplyPanel({
       ) : null}
 
       {set.regret ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-control border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
           <span className="min-w-0 flex-1 basis-[14rem]">{`The supplier cannot quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
           <Button variant="primary" size="sm" busy={busy} busyLabel="Saving" onClick={() => onCantQuote(set.regret!.reason)}>
             {"Mark cannot quote"}
@@ -87,28 +87,28 @@ export function PasteReplyPanel({
               <li
                 key={s.key}
                 data-flagged={flagged ? '' : undefined}
-                className={`rounded border px-3 py-2 ${flagged ? 'border-tone-warning-fg/40 bg-tone-warning-bg' : 'border-line bg-surface'}`}
+                className={`grid grid-cols-[minmax(0,1fr)] gap-1 rounded-control border px-3 py-2 ${flagged ? 'border-tone-warning-fg/40 bg-tone-warning-bg' : 'border-line bg-surface'}`}
               >
                 <Checkbox
                   checked={selected.has(s.key)}
                   disabled={!s.selectable}
                   onCheckedChange={v => toggle(s, v === true)}
                   label={
-                    <span className="grid gap-[2px]">
-                      <span className="text-sm font-medium">
+                    <span className="grid gap-px">
+                      <span className="text-sm font-semibold">
                         {s.itemNumber !== null ? `Item ${s.itemNumber}` : 'No item matched'}
                         {name ? <span className="font-regular text-fg-muted">{` · ${name.length > 60 ? `${name.slice(0, 57)}...` : name}`}</span> : null}
                       </span>
-                      <span className="num text-sm">
+                      <span className="font-mono text-sm font-bold tabular-nums">
                         {s.unitPrice !== null ? (
                           <>
-                            <span className="mr-1 font-sans text-xs text-fg-muted">{s.currency}</span>
+                            <span className="mr-1 font-sans text-xs font-medium text-fg-muted">{s.currency}</span>
                             {formatAmount(s.unitPrice, 'always')}
                           </>
                         ) : (
                           <span className="font-sans text-fg-muted">No price</span>
                         )}
-                        {detail ? <span className="ml-2 font-sans text-xs text-fg-muted">{detail}</span> : null}
+                        {detail ? <span className="ml-2 font-sans text-xs font-regular text-fg-muted">{detail}</span> : null}
                       </span>
                       {s.currencyFrom === 'supplier' && s.unitPrice !== null ? (
                         <span className="text-xs text-fg-muted">{`No currency in the reply: ${s.currency} is this supplier's usual.`}</span>
@@ -117,17 +117,17 @@ export function PasteReplyPanel({
                   }
                 />
                 {flagged ? (
-                  <ul className="mt-1 grid gap-[2px] pl-[30px] text-xs text-tone-warning-fg">
+                  <ul className="grid gap-px pl-[calc(var(--sp-6)+var(--sp-3))] text-xs text-tone-warning-fg">
                     {s.check.map(c => (
                       <li key={c} className="flex items-start gap-1">
-                        <Icon icon={TriangleAlert} size="chip" className="mt-[2px]" />
+                        <Icon icon={TriangleAlert} size="chip" className="mt-1" />
                         {c}
                       </li>
                     ))}
                   </ul>
                 ) : null}
-                {s.blocked ? <p className="mt-1 pl-[30px] text-xs text-fg-muted">{s.blocked}</p> : null}
-                {s.snippet ? <p className="mt-1 break-words pl-[30px] text-xs text-fg-muted">{`From: ${s.snippet}`}</p> : null}
+                {s.blocked ? <p className="pl-[calc(var(--sp-6)+var(--sp-3))] text-xs text-fg-muted">{s.blocked}</p> : null}
+                {s.snippet ? <p className="break-words pl-[calc(var(--sp-6)+var(--sp-3))] text-xs text-fg-muted">{`From: ${s.snippet}`}</p> : null}
               </li>
             )
           })}
@@ -165,8 +165,8 @@ export function PasteReplyPanel({
 export function PasteBox({ onRead, onCancel }: { onRead: (text: string) => void; onCancel: () => void }) {
   const [text, setText] = useState('')
   return (
-    <section aria-label="Paste their reply" className="grid gap-2 rounded-panel border bg-sunken p-3">
-      <label className="grid gap-1 text-sm font-medium">
+    <section aria-label="Paste their reply" className="grid gap-2 rounded-control bg-deep p-3">
+      <label className="grid gap-1 text-sm font-semibold">
         Paste what they sent
         <TextArea
           autoFocus

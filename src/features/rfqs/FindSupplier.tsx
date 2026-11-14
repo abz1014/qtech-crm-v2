@@ -28,8 +28,8 @@ export function FindSupplier({ excludeIds, onPick, autoFocus }: { excludeIds?: R
     .filter(m => !excludeIds?.has(m.id))
     .map(m => ({ value: m.id, label: m.name, meta: [m.city, m.country].filter(Boolean).join(', ') || undefined }))
   return (
-    <div className="grid max-w-[420px] gap-[6px]" data-slot="find-supplier">
-      <label htmlFor={id} className="text-sm font-medium">
+    <div className="grid max-w-md gap-2" data-slot="find-supplier">
+      <label htmlFor={id} className="type-row">
         Search or add a supplier
       </label>
       <Combobox
