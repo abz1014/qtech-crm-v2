@@ -136,14 +136,12 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
       title="Suppliers asked"
       dataSlot="suppliers-asked"
       tip={
-        <span className="ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <QuietChip className="num px-2">
-            {inquiries.length}
-            <span className="sr-only">{inquiries.length === 1 ? ' supplier' : ' suppliers'}</span>
-          </QuietChip>
-          {askedN > 0 ? <span className="num text-sm text-fg-muted" data-answered>{`${answeredN} of ${askedN} answered`}</span> : null}
-        </span>
+        <QuietChip className="num ml-2 shrink-0 px-2">
+          {inquiries.length}
+          <span className="sr-only">{inquiries.length === 1 ? ' supplier' : ' suppliers'}</span>
+        </QuietChip>
       }
+      meta={askedN > 0 ? <span className="num text-sm" data-answered>{`${answeredN} of ${askedN} answered`}</span> : undefined}
     >
       <ul>
         {inquiries.map(i => {
@@ -170,10 +168,13 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                   aria-expanded={!folded}
                   aria-controls={folded ? undefined : detailId}
                   onClick={() => toggle(i.id)}
-                  className="-my-2 flex min-h-touch w-full items-center gap-x-3 gap-y-1 rounded-control text-left"
+                  className="-my-2 grid min-h-touch w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-control py-1 text-left"
                 >
-                  <b className="type-row min-w-0 flex-1 break-words">{i.supplierName}</b>
-                  <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
+                  {/* A long name keeps its width: the chip drops under it, the chevron stays at the right edge. */}
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                    <b className="type-row min-w-0 flex-1 basis-[10rem] break-words">{i.supplierName}</b>
+                    <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
+                  </span>
                   <Icon icon={ChevronDown} className={cn('shrink-0 text-fg-muted transition-transform duration-base ease-out', !folded && 'rotate-180')} />
                 </button>
               ) : (

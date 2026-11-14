@@ -419,20 +419,21 @@ export function ItemsPanel({
                         item.description
                       )}
                     </h3>
-                    <p className="mt-1 overflow-x-clip text-sm text-fg-muted">
-                     <span className="-ml-4 flex flex-wrap items-center gap-y-1">
+                  </div>
+                  {/* The quantity, brand and category under the title, across to the right edge (the chevron and menu sit on the title's line only). */}
+                  <p className="col-span-2 col-start-2 row-start-2 -mt-1 min-w-0 overflow-x-clip text-sm text-fg-muted lg:col-span-3">
+                    <span className="-ml-4 flex flex-wrap items-center gap-y-1">
                       {q ? <span className="num pl-4">{q}</span> : null}
                       {item.brandName ? <Dot>{item.brandName}</Dot> : null}
                       <Dot>
                         <CategoryChip rfqId={rfq.id} item={item} />
                       </Dot>
-                     </span>
-                    </p>
-                  </div>
+                    </span>
+                  </p>
                   {/* "Priced" is said once, on each supplier's row (Suppliers asked): an item with prices shows its price rows, not a second chip. */}
                   {/* An item others were asked about but nobody about this one says so folded too: Needs suppliers. */}
                   {unasked || (cov.value && cov.value !== 'priced') ? (
-                    <span className="col-start-2 row-start-2 justify-self-start lg:col-start-3 lg:row-start-1">
+                    <span className="col-start-2 row-start-3 justify-self-start lg:col-start-3 lg:row-start-1">
                       <StatusBadge dimension="item-price" value={unasked ? 'unasked' : (cov.value as string)} detail={cov.detail} />
                     </span>
                   ) : null}
@@ -571,8 +572,10 @@ export function ItemsPanel({
                             <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-0 py-3 text-fg-muted" data-declined={i.supplierId}>
                               <span className="type-row min-w-0 break-words text-fg-2">{i.supplierName}</span>
                               <StatusBadge dimension="inquiry" value="no-offer" />
-                              <span className="text-sm">{reasonLabel(reason)}</span>
-                              {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num text-sm">{`· ${formatDay(i.noOfferOn)}`}</span> : null}
+                              <span className="text-sm">
+                                {reasonLabel(reason)}
+                                {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num whitespace-nowrap">{` · ${formatDay(i.noOfferOn)}`}</span> : null}
+                              </span>
                             </li>
                           ))}
                           {/* Phone: the chip says it is waiting and Suppliers asked says on whom; the line stays on desktop. */}

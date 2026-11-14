@@ -24,6 +24,9 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib'
  * Supplier flow D: with more than one item, "Items to ask about" lists them with a tick each (all ticked in the card; in the dialog
  * the items that still need a price). The message lists only the ticked items, and the ask records them (0140).
  */
+/** The list at the top of the dialog runs to its edges; on a phone the sheet's header already draws the line above it. */
+const DIALOG_TOP = '-mx-card max-md:-mt-4 max-md:[&>*]:border-t-0'
+
 const copyLabel = (n: number) => `Copy message for ${n} ${n === 1 ? 'supplier' : 'suppliers'}`
 
 /** Who is asked: only the name and the id are used. */
@@ -342,12 +345,12 @@ export function FloatDialog({
         }
       >
         {suggestions === undefined ? (
-          <div className="-mx-card">
+          <div className={DIALOG_TOP}>
             <PickSkeleton bleed />
           </div>
         ) : (
           <>
-            <div className="-mx-card">
+            <div className={DIALOG_TOP}>
               <PickBox suggestions={suggestions} t={t} coverage={coverage} partial={partial} bleed />
             </div>
             <FindSupplier excludeIds={excludeIds} onPick={t.pick} />
