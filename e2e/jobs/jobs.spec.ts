@@ -9,7 +9,7 @@ import { db } from '../verify/support/db'
  * Every test makes its own records with unique names.
  */
 /** The Job page's one action: the lime button on the forest hero (a computer), or a green one (Forest, Button variant lime). */
-const ONE_ACTION = 'button.bg-primary, button.bg-lime-300'
+const ONE_ACTION = '#main button.bg-primary, #main button.bg-lime-300'
 
 async function openPalette(page: Page) {
   await page.locator('#main').waitFor()

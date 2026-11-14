@@ -70,7 +70,7 @@ const COUNT: Record<Block, string> = {
   quiet: 'bg-block-quiet text-block-quiet-fg',
 }
 const CARD_OF: Record<TodoBlock, string> = {
-  late: 'border-t-4 border-t-tone-danger-fg',
+  late: 'border-t-ring border-t-tone-danger-fg',
   today: '',
   week: '',
 }
@@ -222,24 +222,28 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
     </Row>
   )
 
+  const head = (
+    // Spans the list and the pane, so the hero and the pane start on one line (11-home-lists.html).
+    <header className="col-span-full grid gap-1">
+      <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>Home</h1>
+      <p className="text-sm text-fg-muted">
+        {headerDate(today)}
+        {view ? (
+          <>
+            {' · '}
+            <b className="num font-medium text-fg" data-needs-you-count>{needYou}</b> due now
+            {model && model.weekTotal > 0 ? ` · ${model.weekTotal} later this week` : ''}
+          </>
+        ) : null}
+      </p>
+      {switcher ? <div className="mt-2">{switcher}</div> : null}
+      <HowItWorksCard userId={user.id} role={user.role} since={since} className="mt-2" />
+    </header>
+  )
+
   const list = (
     // One column that may shrink to the pane: no card or row can make the list wider than its pane (no sideways scroll).
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-3">
-      <header className="grid gap-1">
-        <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>Home</h1>
-        <p className="text-sm text-fg-muted">
-          {headerDate(today)}
-          {view ? (
-            <>
-              {' · '}
-              <b className="num font-medium text-fg" data-needs-you-count>{needYou}</b> due now
-              {model && model.weekTotal > 0 ? ` · ${model.weekTotal} later this week` : ''}
-            </>
-          ) : null}
-        </p>
-        {switcher ? <div className="mt-2">{switcher}</div> : null}
-        <HowItWorksCard userId={user.id} role={user.role} since={since} className="mt-2" />
-      </header>
 
       {query.isPending ? (
         // Shaped like what comes: the hero, the Late card with two rows, two fold rows.
@@ -418,6 +422,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
     // part of Home that scrolls on its own (R-039). 768 to 1279 px: the list takes three fifths; from 1280 the pane is 28rem.
     <div className={cn('mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] items-start gap-card-gap px-4 pb-12 pt-6 md:px-8', pane && 'md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_28rem]')} data-user={name}>
       <NoPrimary />
+      {head}
       <div className="flex min-w-0 flex-col">
         {/* The target tile is the foot of the list, at every width: it scrolls with the list instead of taking a pinned block
             of the laptop's first screen from the jobs (audit T2). An engineer gets no tile at all: a target is PKR amounts, and an
@@ -541,7 +546,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
         onClick={onPick}
         aria-expanded={wide ? undefined : open}
         aria-current={wide && open ? 'true' : undefined}
-        className="grid w-full min-w-0 gap-px rounded-row px-2 pb-1 pt-2 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken"
+        className="grid w-full min-w-0 gap-px rounded-row px-3 pb-1 pt-2 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken"
       >
         <span className={cn('type-row min-w-0 [overflow-wrap:anywhere]', (waiting || faded) && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
         <span className="type-body min-w-0 [overflow-wrap:anywhere]">
@@ -557,7 +562,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
         ) : null}
       </button>
       {/* Line 3: when it is due, in words (it may wrap at 320), its one button, and snooze. */}
-      <div className="flex flex-wrap items-center gap-2 px-2 pb-2" data-row-actions="">
+      <div className="flex flex-wrap items-center gap-2 px-3 pb-2" data-row-actions="">
         {waiting ? (
           <span className="sr-only">Waiting</span>
         ) : copied ? (

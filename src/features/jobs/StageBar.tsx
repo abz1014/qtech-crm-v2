@@ -14,10 +14,12 @@ import { stageModel, type JobStanding, type StopState, type StopView } from '@/f
  *   - mini:    the seven-part bar and the words, one line, for a list row
  * A direct order (job O-45) draws Enquiry and Quotation as "none"; a lost or cancelled job ends with its reason.
  */
+// The same ink as the Job page's track (Forest .qb-track): the line is lit brand green up to the stop the job is at, the stop itself
+// the deep forest, what is still to come a pale bar.
 const SEG: Record<StopState, string> = {
-  done: 'bg-tone-success-fg',
-  current: 'bg-chrome',
-  future: 'bg-line-strong',
+  done: 'bg-brand-500',
+  current: 'bg-brand-700',
+  future: 'bg-deep',
   none: 'bg-line',
   stopped: 'bg-line',
 }

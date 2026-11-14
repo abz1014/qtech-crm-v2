@@ -118,7 +118,7 @@ function JobCard({ job, role, po }: { job: JobRow; role: Who['role']; po?: strin
         <span className="line-clamp-2 min-w-0 font-semibold [overflow-wrap:anywhere]" title={job.companyName}>
           {job.companyName}
         </span>
-        <span className="num shrink-0 text-base text-fg-muted">{jobLabel(job.key)}</span>
+        <span className="num shrink-0 text-base font-heavy text-primary">{jobLabel(job.key)}</span>
       </span>
       {po || job.imported ? (
         <span className="flex items-baseline justify-between gap-3">
