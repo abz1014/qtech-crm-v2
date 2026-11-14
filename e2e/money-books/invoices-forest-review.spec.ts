@@ -69,9 +69,13 @@ test('C1 review pictures: the GST register and the invoice dialogs at 1440 and 3
   await must(rest('admin', 'rpc/void_invoice', { method: 'POST', body: { p_invoice_id: voided.id, p_reason: 'Typed twice' } }))
   await must(rest('admin', 'rpc/create_credit_note', { method: 'POST', body: { p_invoice_id: filed.id, p_net: 100000, p_reason: 'Part of the order was returned' } }))
 
+  let signedIn = false
   for (const [w, h] of WIDTHS) {
     await page.setViewportSize({ width: w, height: h })
-    await openAs(page, 'admin', '/money/gst-register')
+    // signed in once: a second visit to /login would only send the session on to Home
+    if (signedIn) await page.goto('/money/gst-register')
+    else await openAs(page, 'admin', '/money/gst-register')
+    signedIn = true
     await expect(page.getByRole('heading', { name: 'GST register', level: 2 })).toBeVisible()
     await expect(page.getByText(open.number).first()).toBeVisible()
     await page.waitForLoadState('networkidle')
