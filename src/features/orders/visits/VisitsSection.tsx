@@ -146,11 +146,9 @@ function VisitRowItem({ order, visit, state, mayEdit, onEdit, card }: { order: O
     }
   }
   const canMark = mayEdit && !visit.doneOn
-  const count = (canMark ? 1 : 0) + (mayEdit ? 1 : 0) + 1
-  // an engineer's phone: the buttons are 48 px and share the width (two to a line; an odd first one takes the whole line)
+  // an engineer's phone: 48 px buttons that grow to fill the line and wrap whole when two do not fit (320 px: one to a line)
   const size = card ? 'md' : 'sm'
-  const btn = card ? 'max-md:h-control-lg max-md:w-full' : undefined
-  const lead = card && count % 2 === 1 ? 'max-md:col-span-2' : undefined
+  const btn = card ? 'max-md:h-control-lg max-md:flex-[1_1_auto]' : undefined
   return (
     <li className={cn('grid min-w-0 gap-2 border-b py-3', card && 'last:border-b-0 last:pb-0')} data-visit={visit.id}>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
@@ -167,18 +165,18 @@ function VisitRowItem({ order, visit, state, mayEdit, onEdit, card }: { order: O
         </span>
       ) : null}
       {visit.notes ? <p className="m-0 whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{visit.notes}</p> : null}
-      <div className={cn('mt-1 flex flex-wrap items-center gap-2', card && 'max-md:grid max-md:grid-cols-2')}>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
         {canMark ? (
-          <Button size={size} icon={CircleCheck} className={cn(btn, lead)} onClick={() => void markDone()} busy={update.isPending} busyLabel="Saving" aria-label={`Mark visit done: ${which}`}>
+          <Button size={size} icon={CircleCheck} className={btn} onClick={() => void markDone()} busy={update.isPending} busyLabel="Saving" aria-label={`Mark visit done: ${which}`}>
             Mark visit done
           </Button>
         ) : null}
         {mayEdit ? (
-          <Button size={size} icon={Pencil} className={cn(btn, !canMark && lead)} onClick={onEdit} aria-label={`Edit visit: ${which}`}>
+          <Button size={size} icon={Pencil} className={btn} onClick={onEdit} aria-label={`Edit visit: ${which}`}>
             Edit visit
           </Button>
         ) : null}
-        <Button size={size} icon={FileDown} className={cn(btn, !mayEdit && lead)} onClick={() => void report.download()} busy={report.pending} busyLabel="Preparing" aria-label={`Service report: ${which}`}>
+        <Button size={size} icon={FileDown} className={btn} onClick={() => void report.download()} busy={report.pending} busyLabel="Preparing" aria-label={`Service report: ${which}`}>
           Service report
         </Button>
       </div>

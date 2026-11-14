@@ -162,7 +162,7 @@ test('forest: the engineer reads Visits and Delivery challans as cards, never th
 
   await page.setViewportSize({ width: 1440, height: 900 })
   await openAs(page, 'engineer', `/orders/${s.order.id}`)
-  for (const [name, size] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 375, height: 812 }]] as const) {
+  for (const [name, size] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 375, height: 812 }], ['narrow', { width: 320, height: 700 }]] as const) {
     await page.setViewportSize(size)
     await page.reload()
     await page.locator('#main').waitFor()
@@ -174,11 +174,13 @@ test('forest: the engineer reads Visits and Delivery challans as cards, never th
     await expect(challans.getByRole('button', { name: 'New challan' })).toBeVisible()
     await expect(challans.getByRole('button', { name: /^Download challan DC-\d{4}$/ })).toBeVisible()
     // an engineer's row buttons are 48 px tall on a phone
-    if (name === 'phone') expect((await visits.getByRole('button', { name: /^Service report: Survey / }).boundingBox())?.height).toBeGreaterThanOrEqual(48)
+    if (name !== 'desktop') expect((await visits.getByRole('button', { name: /^Service report: Survey / }).boundingBox())?.height).toBeGreaterThanOrEqual(48)
     // live bug 9 (gate 2): no customer PO on an engineer's screen
     await expect(page.locator('#main')).not.toContainText(po)
     await visits.scrollIntoViewIfNeeded()
     await page.screenshot({ path: `test-results/forest-b5-delivery-${name}.png`, fullPage: true, animations: 'disabled', caret: 'hide' })
+    await challans.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `test-results/forest-b5-delivery-${name}-challans.png`, animations: 'disabled', caret: 'hide' })
   }
 
   // the office's Delivery step, for the picture beside it
@@ -186,7 +188,6 @@ test('forest: the engineer reads Visits and Delivery challans as cards, never th
   await openAs(office, 'admin', `/orders/${s.order.id}`)
   await openStage(office, 'Delivery')
   await expect(office.getByRole('region', { name: 'Commissioning' }).getByRole('list', { name: 'Visits on this order' }).getByRole('listitem')).toHaveCount(3)
-  await office.getByRole('button', { name: /^Challans/ }).click()
   await expect(office.getByRole('region', { name: 'Delivery challans' }).getByRole('button', { name: /^Download challan / })).toBeVisible()
   await office.screenshot({ path: 'test-results/forest-b5-delivery-office.png', fullPage: true, animations: 'disabled', caret: 'hide' })
   await office.close()
