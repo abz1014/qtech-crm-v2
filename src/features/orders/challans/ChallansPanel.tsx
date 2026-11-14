@@ -38,7 +38,7 @@ export function ChallansPanel({ order, items, inFold = false }: { order: OrderHe
   const line = card ? 'pt-3' : 'border-b py-3'
 
   const newButton = canNew ? (
-    <Button size={card ? 'md' : 'sm'} variant="quiet" icon={Plus} className={cn('ml-auto', card && 'max-md:h-control-lg')} onClick={() => setMaking(true)}>
+    <Button size={card ? 'md' : 'sm'} variant="quiet" icon={Plus} className={cn('ml-auto shrink-0', card && 'max-md:h-control-lg')} onClick={() => setMaking(true)}>
       New challan
     </Button>
   ) : null
@@ -63,8 +63,8 @@ export function ChallansPanel({ order, items, inFold = false }: { order: OrderHe
   if (card) {
     return (
       <section aria-label="Delivery challans" className={cn(CARD, 'min-w-0 p-card')} data-testid="challans">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h2 className="type-section">Delivery challans</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="min-w-0 type-section">Delivery challans</h2>
           {newButton}
         </div>
         {body}
@@ -119,15 +119,18 @@ function useChallanDownload(order: OrderHeader) {
 function ChallanItem({ order, challan, card }: { order: OrderHeader; challan: ChallanRow; card: boolean }) {
   const file = useChallanDownload(order)
   return (
-    <li className={cn('flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b py-3', card && 'last:border-b-0 last:pb-0')} data-challan={challan.number}>
-      <span className="num font-card text-sm">{challan.number}</span>
-      <span className="num text-sm text-fg-muted">{formatDay(challan.issuedOn)}</span>
-      <span className="text-sm text-fg-muted">{challan.lines.length === 1 ? '1 line' : `${challan.lines.length} lines`}</span>
+    <li className={cn('flex min-w-0 items-center gap-3 border-b py-3', card && 'last:border-b-0 last:pb-0')} data-challan={challan.number}>
+      {/* the facts wrap among themselves on a narrow phone; Download keeps its place on the right */}
+      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="num font-card text-sm">{challan.number}</span>
+        <span className="num text-sm text-fg-muted">{formatDay(challan.issuedOn)}</span>
+        <span className="text-sm text-fg-muted">{challan.lines.length === 1 ? '1 line' : `${challan.lines.length} lines`}</span>
+      </span>
       <Button
         size={card ? 'md' : 'sm'}
         variant="quiet"
         icon={FileDown}
-        className={cn('ml-auto', card && 'max-md:h-control-lg')}
+        className={cn('shrink-0', card && 'max-md:h-control-lg')}
         onClick={() => void file.download(challan)}
         busy={file.pending}
         busyLabel="Preparing"
