@@ -174,7 +174,7 @@ export function TargetsPage() {
         ) : null}
         <Button
           variant="quiet"
-          className="max-md:-ml-[13px] max-md:h-touch"
+          className="-ml-4 max-md:h-touch"
           onClick={() => {
             setMode(mode === 'now' ? 'year' : 'now')
             setYear(now.year)

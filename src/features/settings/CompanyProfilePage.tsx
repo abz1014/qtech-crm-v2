@@ -226,9 +226,13 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             name="default_payment_terms_days"
             label="Default payment terms"
             help="Days after the invoice date. An order with its own terms keeps them."
-            className="sm:max-w-[12.5rem]"
           >
-            {f => <NumberInput {...f} suffix="days" decimals={0} />}
+            {f => (
+              // the days box stays short; its help line keeps the section's width
+              <div className="sm:max-w-[12.5rem]">
+                <NumberInput {...f} suffix="days" decimals={0} />
+              </div>
+            )}
           </FormField>
         </Section>
 
@@ -240,9 +244,13 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             name="quotation_validity_days"
             label="Quotation validity"
             help="A new quotation is valid for this many days from its date."
-            className="sm:max-w-[12.5rem]"
           >
-            {f => <NumberInput {...f} suffix="days" decimals={0} />}
+            {f => (
+              // the days box stays short; its help line keeps the section's width
+              <div className="sm:max-w-[12.5rem]">
+                <NumberInput {...f} suffix="days" decimals={0} />
+              </div>
+            )}
           </FormField>
           <FormField name="quotation_terms" label="Quotation terms" requirement="optional">
             {f => <TextArea {...f} rows={5} />}

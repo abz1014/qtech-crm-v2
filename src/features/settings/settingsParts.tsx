@@ -39,7 +39,7 @@ export function SettingsSection({
 }
 
 /** Label left, value right on a tablet and up; stacked on a phone. Used by the read-only Company profile and Your details. */
-export const FACTS = 'grid gap-x-6 gap-y-3 text-base sm:grid-cols-[10rem_minmax(0,1fr)]'
+export const FACTS = 'grid gap-x-6 gap-y-1 text-base sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-y-3 max-sm:[&>dd:not(:last-child)]:mb-3'
 
 /** "Only an admin can edit": the read-only pages say it once, beside the title. */
 export function ViewOnlyTag() {

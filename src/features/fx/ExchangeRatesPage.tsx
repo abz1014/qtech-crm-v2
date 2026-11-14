@@ -302,7 +302,7 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
     <div ref={panelRef} className="scroll-mt-[5rem]">
       <Panel card title="Add a rate manually">
         <form
-          className="grid gap-4 px-card pb-3 pt-1 sm:max-w-md"
+          className="grid gap-4 px-5 pb-5 pt-1 sm:max-w-md"
           onSubmit={e => {
             e.preventDefault()
             void submit(false)

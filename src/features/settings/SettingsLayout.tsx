@@ -43,7 +43,7 @@ export function SettingsLayout() {
   const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => canOpenSettingsLink(l, role)) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
   return (
-    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-card-gap px-4 pb-12 pt-4 md:grid-cols-[19rem_minmax(0,1fr)] md:px-8 md:pt-6">
+    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-card-gap px-4 pb-12 pt-4 md:grid-cols-[20rem_minmax(0,1fr)] md:px-8 md:pt-6">
       <NoPrimary />
       {/* Team sets its own phone bar; every other page under Settings gets the back arrow to the list. */}
       {!atHome && current && current.to !== '/settings/team' ? <BackToSettings title={current.label} /> : null}
@@ -61,7 +61,7 @@ export function SettingsLayout() {
                       to={l.to}
                       className={({ isActive }) =>
                         cn(
-                          'flex h-control min-w-0 items-center gap-3 whitespace-nowrap rounded-control px-3 text-base font-medium transition-colors duration-fast max-md:h-touch',
+                          'flex h-control min-w-0 items-center gap-2 whitespace-nowrap rounded-control px-3 text-base font-medium transition-colors duration-fast max-md:h-touch',
                           isActive ? 'bg-brand-100 font-card text-primary' : 'text-fg hover:bg-sunken',
                         )
                       }

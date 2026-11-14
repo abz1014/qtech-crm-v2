@@ -278,9 +278,9 @@ function GroupSection({
   return (
     <section aria-labelledby={headId} data-group={s.group.name} className={cn(CARD, 'overflow-hidden')}>
       <header className="flex min-h-row items-center gap-3 border-b bg-canvas py-1 pl-card pr-2">
-        <h2 id={headId} className="type-section min-w-0 flex-1 [overflow-wrap:anywhere]">
+        <h2 id={headId} className="type-section min-w-0 flex-1 [overflow-wrap:break-word]">
           {s.group.name}
-          {kindNote(s.group) ? <span className="ml-3 text-base font-regular text-fg-muted">{kindNote(s.group)}</span> : null}
+          {kindNote(s.group) ? <span className="block text-base font-regular text-fg-muted md:ml-3 md:inline">{kindNote(s.group)}</span> : null}
         </h2>
         <span className="num shrink-0 text-base font-medium" data-testid="group-total">
           PKR {amountText(s.monthTotal)}
