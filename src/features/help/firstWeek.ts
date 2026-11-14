@@ -33,7 +33,7 @@ export const FIRST_WEEK: Record<string, FirstWeekItem[]> = {
     { id: 'ask', label: 'Ask suppliers' },
     { id: 'price', label: 'Enter a supplier price' },
     { id: 'quotation', label: 'Issue a quotation' },
-    { id: 'chase', label: 'Follow up from To do' },
+    { id: 'chase', label: 'Follow up from Home' },
   ],
   engineer: [
     PHONE,

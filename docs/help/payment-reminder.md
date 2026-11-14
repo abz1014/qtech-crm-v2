@@ -11,6 +11,6 @@ related: record-payment
 3. The channel used last is chosen. To switch, select [Email instead] or [WhatsApp instead].
 4. Select [Open in WhatsApp] or [Open in email], press Send there, then select [Mark reminded].
 
-Tip: [Copy and mark reminded] copies and marks in one step. On an order with a balance due, [Copy reminder] is the green button. Overdue payments also show on Today. Payments are recorded by the admin.
+Tip: [Copy and mark reminded] copies and marks in one step. On an order with a balance due, [Copy reminder] is the green button. Overdue payments also show on Home. Payments are recorded by the admin.
 
 Safe to try: If a reminder was marked by mistake, select [Undo] on the message at the bottom.

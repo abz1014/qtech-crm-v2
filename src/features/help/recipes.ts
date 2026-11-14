@@ -132,23 +132,36 @@ export function recipesForPath(recipes: readonly Recipe[], pathname: string, rol
     .map(x => x.r)
 }
 
-/** The app's areas, in tab order: a recipe is listed under the area of its first `screens:` entry. */
+/**
+ * The app's areas, in the rail's order: a recipe is listed under the area of its first `screens:` entry. /todo is Home (gate 2).
+ * /jobs, /rfqs and /orders are all the one Jobs list now; an office role reads it as the Sell and Deliver lanes, an engineer as
+ * Jobs (their rail's word). /rfqs keeps its own group, RFQs, because those answers are about the RFQ page itself.
+ */
+const JOBS = 'jobs'
 const AREAS: ReadonlyArray<readonly [prefix: string, area: string]> = [
-  ['/todo', 'To do'],
-  ['/jobs', 'Jobs'],
+  ['/todo', 'Home'],
+  ['/jobs', JOBS],
+  ['/orders', JOBS],
   ['/rfqs', 'RFQs'],
   ['/companies', 'Companies'],
   ['/money', 'Money'],
   ['/settings', 'Team and settings'],
 ]
 
-/** Recipes grouped by area, so a long list (admin sees every recipe) reads like the app's tabs. Empty areas are left out. */
-export function groupByArea(recipes: readonly Recipe[]): Array<{ area: string; recipes: Recipe[] }> {
-  const groups = new Map<string, Recipe[]>([...AREAS.map(([, area]) => [area, []] as [string, Recipe[]]), ['Other', []]])
+/** The group name for the Jobs list: the rail's word for this role. */
+const jobsArea = (role?: string) => (role === 'engineer' ? 'Jobs' : 'Sell and Deliver')
+
+/**
+ * Recipes grouped by area, so a long list (admin sees every recipe) reads like the rail. Empty areas are left out. `role` names
+ * the Jobs group the way that role's rail does.
+ */
+export function groupByArea(recipes: readonly Recipe[], role?: string): Array<{ area: string; recipes: Recipe[] }> {
+  const name = (area: string) => (area === JOBS ? jobsArea(role) : area)
+  const groups = new Map<string, Recipe[]>([...AREAS.map(([, area]) => [name(area), []] as [string, Recipe[]]), ['Other', []]])
   for (const r of recipes) {
     const first = r.screens[0] ?? ''
-    const area = AREAS.find(([prefix]) => first === prefix || first.startsWith(`${prefix}/`))?.[1] ?? 'Other'
-    groups.get(area)?.push(r)
+    const area = AREAS.find(([prefix]) => first === prefix || first.startsWith(`${prefix}/`))?.[1]
+    groups.get(area ? name(area) : 'Other')?.push(r)
   }
   return [...groups].filter(([, list]) => list.length > 0).map(([area, list]) => ({ area, recipes: list }))
 }

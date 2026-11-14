@@ -16,7 +16,7 @@ export function InlineText({ parts }: { parts: readonly Inline[] }) {
             {p.text}
           </strong>
         ) : p.kind === 'label' ? (
-          <span key={i} data-label="" className="box-decoration-clone rounded border border-line-strong bg-sunken px-1 font-medium text-fg">
+          <span key={i} data-label="" className="box-decoration-clone rounded-[var(--sp-1)] border border-line-strong bg-canvas px-1 font-semibold text-fg">
             {p.text}
           </span>
         ) : (
@@ -56,7 +56,7 @@ export function MarkdownBlocks({ blocks, className }: { blocks: readonly Block[]
             )
           case 'steps':
             return (
-              <ol key={i} className="grid list-decimal gap-2 pl-5 marker:font-semibold marker:text-fg-muted">
+              <ol key={i} className="grid list-decimal gap-2 pl-5 marker:font-heavy marker:text-fg-muted">
                 {b.items.map((item, j) => (
                   <li key={j} className="pl-1 text-pretty">
                     <InlineText parts={item} />
@@ -76,7 +76,7 @@ export function MarkdownBlocks({ blocks, className }: { blocks: readonly Block[]
             )
           case 'note':
             return (
-              <p key={i} className={cn('rounded px-3 py-2 text-pretty', NOTE[b.note].className)}>
+              <p key={i} className={cn('rounded-control px-3 py-2 text-pretty', NOTE[b.note].className)}>
                 <strong className="font-semibold">{NOTE[b.note].lead}</strong> <InlineText parts={b.inline} />
               </p>
             )
