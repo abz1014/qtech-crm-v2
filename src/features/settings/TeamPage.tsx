@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Ellipsis, KeyRound, Pencil, Phone, Shield, UserCheck, UserPlus, UserRoundCog, UserX } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useSession } from '@/app/session'
@@ -60,6 +60,11 @@ export function TeamPage() {
   const [filter, setFilter] = useState<TeamFilter>('all')
   const [query, setQuery] = useQueryParamText()
   const phone = useMediaQuery('(max-width: 639px)')
+  // Mockup 76 (F-792): the people read as a full table only when the Settings pane is 50rem wide or more. In a narrower pane (a tablet,
+  // a laptop with the Settings list beside it) Role, Job title and Status fold into a second line under the name, so the table never
+  // runs out of its card. Under 640 px DataTable draws cards anyway.
+  const workRef = useRef<HTMLDivElement>(null)
+  const narrow = useNarrowerThan(workRef, 50)
 
   const members = useMemo(() => team.data ?? [], [team.data])
   const counts = teamCounts(members)
@@ -88,16 +93,25 @@ export function TeamPage() {
       header: 'Name',
       sortable: true,
       value: m => m.name,
-      width: 360,
       cell: m => (
-        <span className={cn('flex min-w-0 items-center gap-3', dim(m))}>
+        <span className={cn('flex min-w-0 items-center gap-3', narrow ? 'py-1' : 'min-w-[14rem]', dim(m))}>
           <Avatar name={m.name} className={avatarTone(m)} />
-          <span className="grid min-w-0">
+          <span className="grid min-w-0 gap-y-1">
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className={cn('min-w-0 font-card [overflow-wrap:anywhere]', isActive(m) && 'text-fg')}>{m.name}</span>
               {m.id === me ? <Tag>You</Tag> : null}
             </span>
             <span className="num min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
+            {narrow ? (
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm [overflow-wrap:anywhere]">
+                <span className="min-w-0">
+                  {roleLabel(m.role)}
+                  {m.job_title ? ` · ${m.job_title}` : ''}
+                </span>
+                <FirstWeekBadge member={m} facts={firstWeek.data} />
+                {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" />}
+              </span>
+            ) : null}
           </span>
         </span>
       ),
@@ -108,19 +122,20 @@ export function TeamPage() {
       sortable: false,
       value: m => roleLabel(m.role),
       cell: m => (
-        <span className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 lg:flex-nowrap', dim(m))}>
+        <span className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 [overflow-wrap:break-word]', dim(m))}>
           {roleLabel(m.role)}
           <FirstWeekBadge member={m} facts={firstWeek.data} />
         </span>
       ),
-      hideBelowMd: true,
+      hideClass: narrow ? 'hidden' : 'hidden md:table-cell',
     },
     {
       id: 'job',
       header: 'Job title',
       value: m => m.job_title ?? '',
-      cell: m => (m.job_title ? <span className={dim(m)}>{m.job_title}</span> : <span className="text-fg-muted">Not set</span>),
-      hideBelowMd: true,
+      // A long title wraps at its spaces ([overflow-wrap] lifts the table's one-line rule) instead of pushing the table out of its card.
+      cell: m => (m.job_title ? <span className={cn('[overflow-wrap:break-word]', dim(m))}>{m.job_title}</span> : <span className="text-fg-muted">Not set</span>),
+      hideClass: narrow ? 'hidden' : 'hidden md:table-cell',
     },
     {
       id: 'status',
@@ -128,16 +143,19 @@ export function TeamPage() {
       value: m => (isActive(m) ? 'Active' : 'Deactivated'),
       // An active person reads "Active" in plain text (a blank cell read as missing, audit 2026-10-22); only the exception is a chip.
       cell: m => (isActive(m) ? <span className="text-fg-2">Active</span> : <StatusBadge dimension="user" value="deactivated" />),
-      hideBelowMd: true,
+      hideClass: narrow ? 'hidden' : 'hidden md:table-cell',
     },
     {
       id: 'actions',
       header: 'Actions', // hidden from sight by the table's className below, still the column's name for assistive tech
       align: 'right',
-      width: 164,
+      width: narrow ? 56 : 164,
       cell: m =>
         isActive(m) ? (
           <span data-row-actions="" className="inline-flex"><RowMenu member={m} onPick={open} /></span>
+        ) : narrow ? (
+          // the narrow pane keeps the button's name and drops its word, so the name column keeps the width
+          <Button size="sm" icon={UserCheck} onClick={() => open('reactivate', m)} aria-label={`Reactivate ${m.name}`} />
         ) : (
           <Button size="sm" icon={UserCheck} onClick={() => open('reactivate', m)} aria-label={`Reactivate ${m.name}`}>
             Reactivate
@@ -178,7 +196,7 @@ export function TeamPage() {
         </Banner>
       ) : null}
 
-      <div data-work="" className="min-w-0">
+      <div ref={workRef} data-work="" className="min-w-0">
       <DataTable
         label="Team"
         columns={columns}
@@ -234,7 +252,9 @@ export function TeamPage() {
         toolbar={
           <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-3">
             <TableFilter label="Search people" hint="Finds a person by name or email." value={query} onChange={setQuery} />
+            {/* fill on a phone: the three choices share the card's width and stay on one line at 320 */}
             <SegmentedControl
+              fill={phone}
               aria-label="Show"
               value={filter}
               onValueChange={v => setFilter(v as TeamFilter)}
@@ -288,6 +308,27 @@ export function TeamPage() {
       ) : null}
     </div>
   )
+}
+
+/** True while the element is narrower than `rem` root ems (a container query for one switch; Tailwind here has no container plugin). */
+function useNarrowerThan(ref: RefObject<HTMLElement>, rem: number): boolean {
+  const [narrow, setNarrow] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => {
+      const width = el.getBoundingClientRect().width
+      const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      // 0 is "not laid out" (a test page, a hidden tab): keep the full table
+      setNarrow(width > 0 && width < rem * root)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref, rem])
+  return narrow
 }
 
 /*
