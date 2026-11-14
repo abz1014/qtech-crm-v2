@@ -62,10 +62,10 @@ export function TeamPage() {
   const phone = useMediaQuery('(max-width: 639px)')
   // Mockup 76 (F-792): the people read as a full table only in a wide Settings pane. In a narrower pane (a tablet, a laptop with the
   // Settings list beside it) Role, Job title and Status fold into a second line under the name, so the table never runs out of its
-  // card. The mockup switches at 50rem; the live rows carry the Setup badge and a worded Reactivate button, which need 56rem
+  // card. The mockup switches at 50rem; the live rows carry the Setup badge and a worded Reactivate button, which need 58rem
   // (at 50rem, a 1440 window, Reactivate was cut off at the card's edge). Under 640 px DataTable draws cards anyway.
   const workRef = useRef<HTMLDivElement>(null)
-  const narrow = useNarrowerThan(workRef, 56)
+  const narrow = useNarrowerThan(workRef, 58)
 
   const members = useMemo(() => team.data ?? [], [team.data])
   const counts = teamCounts(members)
@@ -95,7 +95,7 @@ export function TeamPage() {
       sortable: true,
       value: m => m.name,
       cell: m => (
-        <span className={cn('flex min-w-0 items-center gap-3', narrow ? 'py-1' : 'min-w-[14rem]', dim(m))}>
+        <span className={cn('flex min-w-0 items-center gap-3', narrow ? 'py-1' : 'min-w-[12rem]', dim(m))}>
           <Avatar name={m.name} className={avatarTone(m)} />
           <span className="grid min-w-0 gap-y-1">
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
