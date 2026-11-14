@@ -308,7 +308,8 @@ test.describe('Sell and Deliver lanes (Forest, gate 2)', () => {
     await page.setViewportSize({ width: 375, height: 800 })
     await openAs(page, 'admin', '/jobs?lane=sell&chip=open')
     await expect(page.getByRole('heading', { name: 'Sell', level: 1 })).toBeVisible()
-    await expect(page.locator('tr[data-card]').filter({ hasText: `Job ${sell.number}` })).toHaveCount(1)
+    // the card whose job label is exactly this job (a card's text runs "Job 2" into "2 items", so a plain text filter also hit Job 2)
+    await expect(page.locator('tr[data-card]').filter({ has: page.getByText(`Job ${sell.number}`, { exact: true }) })).toHaveCount(1)
     await review(page, 'forest-a2-lanes-phone')
 
     const eng = await (await browser.newContext()).newPage()
