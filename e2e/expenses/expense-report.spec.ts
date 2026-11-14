@@ -29,8 +29,23 @@ async function spentBetween(from: string, to: string): Promise<number> {
   const rows = await must(rest<Row[]>('admin', `expenses?paid_on=gte.${from}&paid_on=lte.${to}&select=amount_pkr,paid_on`))
   return rows.reduce((s, r) => s + Number(r.amount_pkr), 0)
 }
-/** A whole-page picture in the run's test-results (the CI artifact), for the Forest review. */
-const shot = (page: Page, name: string) => page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true })
+/** A whole-page picture in the run's test-results (the CI artifact): the page scrolls inside the shell, so the window is grown to the
+ * content for the picture and put back after. */
+async function wholePage(page: Page, name: string) {
+  const size = page.viewportSize() ?? { width: 1440, height: 900 }
+  const tall = await page.evaluate(() =>
+    Math.max(
+      ...Array.from(document.querySelectorAll('#main, #main *'))
+        .filter(e => /auto|scroll/.test(getComputedStyle(e).overflowY))
+        .map(e => e.scrollHeight + e.getBoundingClientRect().top),
+      window.innerHeight,
+    ),
+  )
+  await page.setViewportSize({ width: size.width, height: Math.min(Math.ceil(tall) + 120, 6000) })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true })
+  await page.setViewportSize(size)
+}
 const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
 
 async function csvOf(page: Page, name: string) {
@@ -74,8 +89,7 @@ test.describe('expenses report (2026-10-22)', () => {
     await expect(drill.getByRole('listitem').filter({ hasText: 'LEB-5678' })).toHaveCount(2) // the detail line and the entry
     await page.waitForLoadState('networkidle')
     await review(page, 'expense-report-month-1440')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await shot(page, 'forest-c4-expense-report-1440')
+    await wholePage(page, 'forest-c4-expense-report-1440')
     expect(await axeViolations(page)).toEqual([])
 
     const csv = await csvOf(page, 'Export CSV')
@@ -102,14 +116,14 @@ test.describe('expenses report (2026-10-22)', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await page.waitForLoadState('networkidle')
     await review(page, 'expense-report-quarter-375')
-    await shot(page, 'forest-c4-expense-report-375')
+    await wholePage(page, 'forest-c4-expense-report-375')
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
     // the dense widths: a small phone and a tablet keep the page inside the window too
     for (const width of [320, 768]) {
       await page.setViewportSize({ width, height: 900 })
       await expect(page.getByTestId('expense-report-trend')).toBeVisible()
       expect(await sideways(page), `${width} px`).toBe(false)
-      await shot(page, `forest-c4-expense-report-${width}`)
+      await wholePage(page, `forest-c4-expense-report-${width}`)
     }
   })
 
