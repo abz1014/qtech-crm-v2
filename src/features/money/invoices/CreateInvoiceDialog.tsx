@@ -50,25 +50,38 @@ export function CreateInvoiceDialog({ open, onOpenChange, orderId, onCreated }: 
   }, [open, orderId])
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
-      <DialogContent title="Create invoice" size="md" className="md:w-[520px]">
-        {open ? (
-          picked ? (
-            <InvoiceLoader orderId={picked} onBusy={setBusy} onDone={n => { onOpenChange(false); onCreated?.(n) }} onCancel={() => onOpenChange(false)} />
-          ) : (
-            <OrderPicker onPick={setPicked} onCancel={() => onOpenChange(false)} />
-          )
-        ) : null}
-      </DialogContent>
+      {open ? (
+        picked ? (
+          <InvoiceLoader orderId={picked} onBusy={setBusy} onDone={n => { onOpenChange(false); onCreated?.(n) }} onCancel={() => onOpenChange(false)} />
+        ) : (
+          <OrderPicker onPick={setPicked} onCancel={() => onOpenChange(false)} />
+        )
+      ) : null}
     </Dialog>
   )
 }
 
+/** The one frame of every step of Create invoice (54-invoice-dialogs #create): the file tile, the order under the title, the footer band. */
+function Frame({ context, footer, children }: { context?: ReactNode; footer?: ReactNode; children: ReactNode }) {
+  return (
+    <DialogContent title="Create invoice" icon={FilePlus2} size="md" context={context} footer={footer}>
+      {children}
+    </DialogContent>
+  )
+}
+
+const cancelButton = (onCancel: () => void) => (
+  <Button variant="quiet" onClick={onCancel} data-cancel>
+    Cancel
+  </Button>
+)
+
 function OrderPicker({ onPick, onCancel }: { onPick: (id: string) => void; onCancel: () => void }) {
   const orders = useInvoiceableOrders()
   return (
-    <div className="grid gap-4">
-      <p className="text-sm text-fg-2">Choose the order this invoice is for. Its lines give the amounts.</p>
-      <label className="grid gap-[6px] text-sm font-medium">
+    <Frame footer={cancelButton(onCancel)}>
+      <p>Choose the order this invoice is for. Its lines give the amounts.</p>
+      <label className="grid gap-2 text-sm font-medium text-fg">
         Order
         <Combobox
           data-autofocus
@@ -79,13 +92,8 @@ function OrderPicker({ onPick, onCancel }: { onPick: (id: string) => void; onCan
           onChange={v => v && onPick(v)}
         />
       </label>
-      {orders.isError ? <p role="alert" className="text-sm text-tone-danger-fg">The orders could not be loaded. Close this and try again.</p> : null}
-      <div className="-mx-5 -mb-5 flex justify-end border-t bg-sunken px-5 py-3">
-        <Button variant="quiet" onClick={onCancel} data-cancel>
-          Cancel
-        </Button>
-      </div>
-    </div>
+      {orders.isError ? <Banner tone="danger" title="The orders could not be loaded">Close this and try again.</Banner> : null}
+    </Frame>
   )
 }
 
@@ -94,18 +102,40 @@ function InvoiceLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
   const next = useNextInvoiceNumber()
   if (order.isError || next.isError)
     return (
-      <p role="alert" className="text-sm text-tone-danger-fg">
-        The order could not be loaded. Close this and try again. Nothing was created.
-      </p>
+      <Frame footer={cancelButton(props.onCancel)}>
+        <Banner tone="danger" title="The order could not be loaded">Close this and try again. Nothing was created.</Banner>
+      </Frame>
     )
   if (order.isPending || next.isPending)
     return (
-      <div className="grid gap-4" aria-busy="true">
-        <Skeleton className="h-8" />
-        <Skeleton className="h-[6rem]" />
-      </div>
+      // Shaped like the form: the two fields side by side, then the four figure lines.
+      <Frame footer={cancelButton(props.onCancel)}>
+        <div className="grid gap-5" aria-busy="true">
+          <div className="grid gap-4 md:grid-cols-2">
+            {[0, 1].map(i => (
+              <div key={i} className="grid gap-2">
+                <Skeleton className="h-4 w-[7rem]" />
+                <Skeleton className="h-control" />
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-3">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="flex items-center justify-between gap-4 border-b pb-3 last:border-b-0">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-[7rem]" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </Frame>
     )
-  if (!order.data) return <p role="alert" className="text-sm text-tone-danger-fg">This order is not here any more.</p>
+  if (!order.data)
+    return (
+      <Frame footer={cancelButton(props.onCancel)}>
+        <Banner tone="danger" title="This order is not here any more">It may have been deleted. Close this and choose another.</Banner>
+      </Frame>
+    )
   return <InvoiceForm {...props} order={order.data} next={next.data} />
 }
 
@@ -192,8 +222,17 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   const context = `${orderRef(order.number)} · ${order.companyName}${start.wholeOrder ? ` · all ${lines} ${lines === 1 ? 'line' : 'lines'}` : ' · what is left to invoice'}`
 
   return (
-    <>
-      <p className="-mt-3 text-sm text-fg-muted">{context}</p>
+    <Frame
+      context={<span className="num">{context}</span>}
+      footer={
+        <>
+          {cancelButton(onCancel)}
+          <Button variant="primary" type="submit" form={sf.formId} icon={FilePlus2} busy={sf.pending} busyLabel="Creating">
+            {sf.failed ? 'Try again' : 'Create invoice'}
+          </Button>
+        </>
+      }
+    >
       <Form sf={sf} labels={{ number: 'Invoice number', invoiceDate: 'Invoice date', net: 'Net amount', gst: 'GST', option: 'GST rate' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
         {order.cancelled ? <Banner tone="warning" title="This order is cancelled">An invoice can still be created, for example to record what was already supplied.</Banner> : null}
@@ -225,29 +264,29 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
           </FormField>
         </div>
 
-        <dl className="grid text-sm">
+        <dl className="grid">
           <Line label="Net">
-            <Money value={typeof net === 'number' ? net : 0} prefix={false} />
+            <Money value={typeof net === 'number' ? net : 0} />
           </Line>
           <Line label={gstRowLabel(option)}>
-            <Money value={gst ?? 0} prefix={false} />
+            <Money value={gst ?? 0} />
           </Line>
           <Line label="Gross" strong>
-            <Money value={gross} prefix={false} strong />
+            <Money value={gross} strong />
           </Line>
-          <Line label="Due" last>
+          <Line label="Due" last={!editing}>
             {due ? (
-              <span className="num text-xs text-fg-2">
-                {formatDateText(due)} <span className="text-fg-muted">· {terms.days} days from {order.amounts.earliestInvoiceDate && order.amounts.earliestInvoiceDate < date ? 'the first invoice' : 'invoice'}{terms.isDefault ? ' (default terms)' : ''}</span>
+              <span className="num text-fg">
+                {formatDateText(due)} <span className="text-sm text-fg-2">· {terms.days} days from {order.amounts.earliestInvoiceDate && order.amounts.earliestInvoiceDate < date ? 'the first invoice' : 'invoice'}{terms.isDefault ? ' (default terms)' : ''}</span>
               </span>
             ) : (
-              <span className="text-xs text-fg-muted">No payment terms on the order</span>
+              <span className="text-sm text-fg-muted">No payment terms on the order</span>
             )}
           </Line>
         </dl>
 
         {editing ? (
-          <div className="grid gap-4 rounded-panel border bg-canvas p-4">
+          <div className="grid gap-4 rounded-card border bg-canvas p-4 motion-safe:animate-fade-in">
             <FormField<Values, 'net'> name="net" label="Net amount, PKR" help="Change it to invoice part of the order.">
               {f => <NumberInput {...f} onChange={setNet} />}
             </FormField>
@@ -263,8 +302,8 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
                 its lines. Invoicing whole lines keeps the GST exact.
               </p>
             ) : null}
-            <div className="grid gap-[6px]">
-              <span className="text-sm font-medium">GST</span>
+            <div className="grid gap-2">
+              <span className="text-sm font-medium text-fg">GST</span>
               <SegmentedControl
                 aria-label="GST"
                 value={option === 'mixed' ? '' : option}
@@ -274,29 +313,25 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setEditing(true)} className="inline-flex w-fit items-center gap-[6px] rounded text-xs font-medium text-primary">
-            <Icon icon={Plus} size="chip" />
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="inline-flex min-h-control w-fit items-center gap-2 justify-self-center rounded-control px-2 text-sm font-medium text-primary underline-offset-4 transition-colors duration-fast hover:bg-sunken hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green"
+          >
+            <Icon icon={Plus} size="sm" />
             Edit the amounts, optional
           </button>
         )}
       </Form>
-      <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
-        <Button variant="quiet" onClick={onCancel} data-cancel>
-          Cancel
-        </Button>
-        <Button variant="primary" type="submit" form={sf.formId} icon={FilePlus2} busy={sf.pending} busyLabel="Creating">
-          {sf.failed ? 'Try again' : 'Create invoice'}
-        </Button>
-      </div>
-    </>
+    </Frame>
   )
 }
 
 function Line({ label, children, strong, last }: { label: string; children: ReactNode; strong?: boolean; last?: boolean }) {
   return (
-    <div className={`flex items-center justify-between gap-4 py-[10px] ${last ? '' : 'border-b'}`}>
-      <dt className={strong ? 'font-medium text-fg' : 'text-fg-muted'}>{label}</dt>
-      <dd className="text-fg">{children}</dd>
+    <div className={`flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 ${last ? '' : 'border-b'}`}>
+      <dt className={strong ? 'font-semibold text-fg' : 'text-fg-2'}>{label}</dt>
+      <dd className="ml-auto text-right text-fg">{children}</dd>
     </div>
   )
 }

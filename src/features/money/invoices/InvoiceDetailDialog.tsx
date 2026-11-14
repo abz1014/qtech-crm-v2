@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/app/session'
-import { Ban, Banknote, Camera, Check, ClipboardList, Ellipsis, ExternalLink, FilePlus2, History as HistoryIcon, Lock, Pencil, Printer, Trash2 } from 'lucide-react'
+import { Ban, Banknote, Camera, Check, ClipboardList, Ellipsis, ExternalLink, FilePlus2, FileText, History as HistoryIcon, Lock, Pencil, Printer, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, DEFAULT_ACCEPT } from '@/lib/fileIntake'
@@ -13,6 +13,7 @@ import { Button } from '@/ui/Button'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { FoldRow } from '@/ui/FoldRow'
+import { FOLD_CARD } from '@/ui/card'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { lazyDialog } from '@/lib/lazyDialog'
 import { Money } from '@/ui/Money'
@@ -74,23 +75,44 @@ type DateField = 'copyReceivedOn' | 'tcsSentOn' | 'clientReceivedOn' | 'receiptO
 export function InvoiceDetailDialog({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
   const q = useInvoice(invoiceId)
   const [busy, setBusy] = useState(false)
+  const closeButton = (
+    <Button variant="quiet" onClick={onClose} data-cancel>
+      Close
+    </Button>
+  )
   return (
     <Dialog open onOpenChange={o => !o && !busy && onClose()} busy={busy}>
-      <DialogContent title={q.data?.number ? `Invoice ${q.data.number}` : 'Invoice'} context={q.data?.invoice_date ? `Dated ${formatDay(q.data.invoice_date)}` : undefined} size="lg">
-        {q.isError ? (
-          <p role="alert" className="text-sm text-tone-danger-fg">The invoice could not be loaded. Close this and try again.</p>
-        ) : q.isPending ? (
-          <div className="grid gap-3" aria-busy="true">
-            <Skeleton className="h-8" />
-            <Skeleton className="h-[6rem]" />
-          </div>
-        ) : q.data ? (
-          <DetailForm invoice={q.data} onBusy={setBusy} onClose={onClose} />
-        ) : (
-          <p className="text-sm text-fg-muted">This invoice is not here any more.</p>
-        )}
-      </DialogContent>
+      {q.data ? (
+        <DetailForm invoice={q.data} onBusy={setBusy} onClose={onClose} />
+      ) : (
+        <Frame title="Invoice" footer={closeButton}>
+          {q.isError ? (
+            <Banner tone="danger" title="The invoice could not be loaded">Close this and try again.</Banner>
+          ) : q.isPending ? (
+            // Shaped like the summary: a column of fact lines.
+            <div className="grid gap-3" aria-busy="true">
+              {[0, 1, 2, 3, 4].map(i => (
+                <div key={i} className="flex items-center justify-between gap-4 border-b pb-3">
+                  <Skeleton className="h-4 w-[7rem]" />
+                  <Skeleton className="h-4 w-[9rem]" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-fg-muted">This invoice is not here any more.</p>
+          )}
+        </Frame>
+      )}
     </Dialog>
+  )
+}
+
+/** The invoice dialog's frame (54-invoice-dialogs #detail): the file tile, "Dated ... · customer" under the title, the footer band. */
+function Frame({ title, context, footer, children }: { title: string; context?: ReactNode; footer: ReactNode; children: ReactNode }) {
+  return (
+    <DialogContent title={title} icon={FileText} context={context} size="lg" footer={footer}>
+      {children}
+    </DialogContent>
   )
 }
 
@@ -115,6 +137,9 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const monthClosed =
     !!invoice.invoice_date && (isAdmin ? (closedQ.data ?? []).some(c => c.key === invoice.invoice_date?.slice(0, 7)) : staffClosedQ.data === true)
   const registerQ = useGstRegister()
+  const company = (registerQ.data ?? []).find(r => r.invoiceId === invoice.id)?.companyName ?? null
+  const frameTitle = invoice.number ? `Invoice ${invoice.number}` : 'Invoice'
+  const frameContext = invoice.invoice_date || company ? [invoice.invoice_date ? `Dated ${formatDay(invoice.invoice_date)}` : null, company].filter(Boolean).join(' · ') : undefined
   const [historyOpen, setHistoryOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
   const navigate = useNavigate()
@@ -251,7 +276,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const more = (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="quiet" size="lg" icon={Ellipsis} className="text-base">
+        <Button variant="quiet" icon={Ellipsis} aria-haspopup="menu" className="md:mr-auto">
           More
         </Button>
       </PopoverTrigger>
@@ -323,8 +348,21 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
 
   if (voided) {
     return (
-      <>
-        <div role="status" className="grid gap-1 rounded-row border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3 text-base" data-testid="invoice-void-banner">
+      <Frame
+        title={frameTitle}
+        context={frameContext}
+        footer={
+          <>
+            <Button variant="quiet" icon={HistoryIcon} onClick={() => setHistoryOpen(true)} className="md:mr-auto">
+              History
+            </Button>
+            <Button variant="primary" onClick={onClose} data-cancel>
+              Close
+            </Button>
+          </>
+        }
+      >
+        <div role="status" className="grid gap-1 rounded-card border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3 text-base text-tone-danger-fg" data-testid="invoice-void-banner">
           <p className="font-semibold">Void: {invoice.number} is kept in the register but counts for nothing.</p>
           <p>
             {invoice.void_reason}
@@ -334,24 +372,16 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
             It was {pkr(Number(invoice.voided_net ?? 0))} + GST {pkr(Number(invoice.voided_gst ?? 0))}.
           </p>
         </div>
-        <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
-          <Button variant="quiet" size="lg" icon={HistoryIcon} onClick={() => setHistoryOpen(true)} className="text-base">
-            History
-          </Button>
-          <Button variant="primary" onClick={onClose} data-cancel>
-            Close
-          </Button>
-        </div>
         {historyOpen ? (
           <LazyHistoryPanel open onOpenChange={o => !o && setHistoryOpen(false)} table="invoices" id={invoice.id} context={invoice.number ?? 'Invoice'} imported={invoice.legacy_source !== null} />
         ) : null}
-      </>
+      </Frame>
     )
   }
 
   const lockLine = figuresLocked ? (
-    <p className="flex items-center gap-2 py-2 text-base text-fg-2" data-testid="invoice-closed-line">
-      <Lock className="size-5 shrink-0 text-fg-muted" aria-hidden="true" />
+    <p className="flex items-start gap-3 py-1 text-base text-fg-2" data-testid="invoice-closed-line">
+      <Lock className="mt-[0.125rem] size-5 shrink-0 text-fg-muted" aria-hidden="true" />
       {monthClosed ? (
         <>
           {invoice.number ?? 'This invoice'} is in a locked month. {isAdmin ? CLOSED_MONTH_LINE : 'An admin can reopen it.'}
@@ -367,12 +397,12 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   const receiptsAndNotes = (
     <>
       {(creditNotes.data ?? []).length > 0 ? (
-        <section aria-label="Credit notes" className="grid" data-testid="invoice-credit-notes">
-          <h3 className="py-2 type-row">Credit notes</h3>
+        <section aria-label="Credit notes" className="grid gap-1" data-testid="invoice-credit-notes">
+          <h3 className="type-row text-fg">Credit notes</h3>
           <ul className="m-0 list-none p-0">
             {(creditNotes.data ?? []).map(n => (
-              <li key={n.id} className="flex items-center justify-between gap-3 border-b py-2 type-body">
-                <span className="min-w-0">
+              <li key={n.id} className="flex items-center justify-between gap-3 border-b py-2 type-body last:border-b-0">
+                <span className="min-w-0 text-fg">
                   <span className="num font-medium">{n.number}</span> · {formatDay(n.issuedOn)} · <span className="num">{pkr(n.net + n.gst)}</span> · {n.reason}
                 </span>
                 <CreditNotePdfButton creditNoteId={n.id} />
@@ -382,25 +412,25 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         </section>
       ) : null}
 
-      <section aria-label="Receipts" className="grid">
-        <div className="flex items-center gap-3 border-b py-2">
-          <h3 className="type-row">FBR receipt</h3>
-          <Button size="sm" icon={Camera} className="ml-auto" onClick={() => fileRef.current?.click()}>
+      <section aria-label="Receipts" className="grid gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <h3 className="type-row text-fg">FBR receipt</h3>
+          <Button icon={Camera} className="ml-auto" onClick={() => fileRef.current?.click()}>
             Add receipt
           </Button>
           <input ref={fileRef} type="file" accept="image/*,application/pdf" tabIndex={-1} aria-label="Receipt file" className="sr-only" onChange={e => { void addFile(e.target.files); e.target.value = '' }} />
         </div>
         {fileError ? <Banner tone="danger" title="That file was not added">{fileError}</Banner> : null}
         {(receipts.data ?? []).length === 0 ? (
-          <p className="border-b py-2 type-body text-fg-muted">
+          <p className="type-body text-fg-2">
             No receipt uploaded yet. A photo or a PDF, up to 5 MB.
             {invoice.psid?.trim() ? ' One receipt covers every invoice with this PSID.' : ''}
           </p>
         ) : (
-          <ul className="m-0 list-none p-0">
+          <ul className="m-0 grid list-none gap-2 p-0">
             {(receipts.data ?? []).map(r => (
-              <li key={r.id} className="flex items-center justify-between gap-3 border-b py-2 type-body">
-                <button type="button" onClick={() => void open(r.path)} className="inline-flex min-w-0 items-center gap-2 text-left font-medium text-primary hover:underline">
+              <li key={r.id} className="flex items-center justify-between gap-3 rounded-control border bg-surface py-1 pl-3 pr-1 type-body">
+                <button type="button" onClick={() => void open(r.path)} className="inline-flex min-h-control min-w-0 items-center gap-2 text-left font-medium text-primary underline-offset-4 hover:underline">
                   <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
                   <span className="min-w-0 [overflow-wrap:anywhere] break-all">{r.fileName}</span>
                 </button>
@@ -420,7 +450,21 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   if (summary) {
     const gross = net + gst
     return (
-      <>
+      <Frame
+        title={frameTitle}
+        context={frameContext}
+        footer={
+          <>
+            {more}
+            <Button variant="quiet" onClick={onClose} data-cancel>
+              Close
+            </Button>
+            <Button variant="primary" icon={Pencil} onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          </>
+        }
+      >
         <dl className="m-0" data-testid="invoice-summary">
           {fact('Invoice number', <span className="num">{invoice.number ?? 'No number'}</span>)}
           {fact('Invoice date', day(invoice.invoice_date))}
@@ -436,22 +480,27 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         </dl>
         {lockLine}
         {receiptsAndNotes}
-        <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
-          {more}
-          <Button variant="quiet" onClick={onClose} data-cancel>
-            Close
-          </Button>
-          <Button variant="primary" icon={Pencil} onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-        </div>
         {overlays}
-      </>
+      </Frame>
     )
   }
 
   return (
-    <>
+    <Frame
+      title={frameTitle}
+      context={frameContext}
+      footer={
+        <>
+          {more}
+          <Button variant="quiet" onClick={onClose} data-cancel>
+            Close
+          </Button>
+          <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
+            {sf.failed ? 'Try again' : 'Save'}
+          </Button>
+        </>
+      }
+    >
       {figuresLocked ? (
         <dl className="m-0">
           {fact('Net', <Money value={net} />)}
@@ -465,7 +514,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
           lockLine
         ) : (
           <fieldset className="grid min-w-0 gap-4 md:grid-cols-2" data-testid="invoice-edit">
-            <legend className="mb-2 type-row">Invoice</legend>
+            <legend className="mb-2 type-row text-fg">Invoice</legend>
             <FormField<Values, 'number'> name="number" label="Invoice number">
               {f => <TextField {...f} autoComplete="off" className="num" />}
             </FormField>
@@ -478,14 +527,14 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
             <FormField<Values, 'gst'> name="gst" label="GST, PKR" help="18%, or 0 when exempt. The CRM does not calculate it here.">
               {f => <NumberInput {...f} inputMode="decimal" />}
             </FormField>
-            <p className="num text-base text-fg-2 md:col-span-2">
-              Gross {pkr(round2((typeof wNet === 'number' ? wNet : 0) + (typeof wGst === 'number' ? wGst : 0)))}
+            <p className="num text-base font-semibold text-fg md:col-span-2">
+              <span className="font-regular text-fg-2">Gross</span> {pkr(round2((typeof wNet === 'number' ? wNet : 0) + (typeof wGst === 'number' ? wGst : 0)))}
             </p>
           </fieldset>
         )}
         {ackNeeded ? (
-          <div role="group" aria-label="GST return warning" data-testid="gst-filed-warning" className="grid gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-4 py-3 text-base">
-            <p className="font-medium">{GST_FILED_WARNING}</p>
+          <div role="group" aria-label="GST return warning" data-testid="gst-filed-warning" className="grid gap-2 rounded-card border border-tone-warning-fg/25 bg-tone-warning-bg px-4 py-3 text-base text-tone-warning-fg">
+            <p className="font-semibold">{GST_FILED_WARNING}</p>
             <Checkbox label="I understand" checked={ack} onCheckedChange={c => sf.form.setValue('ack', c === true, { shouldValidate: true })} />
             {sf.form.formState.errors.ack ? <p role="alert" className="text-tone-danger-fg">{sf.form.formState.errors.ack.message}</p> : null}
           </div>
@@ -494,15 +543,18 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         <FoldRow
           state={{ icon: ClipboardList, word: '' }}
           title="Courier, FBR and notes"
-          summary={detailsLine}
+          // a phone: too narrow beside the title, the whole line moves under it (never one letter a line)
+          summary={<span className="[overflow-wrap:break-word]">{detailsLine}</span>}
+          figure
           open={detailsOpen}
           onToggle={() => setDetailsOpen(o => !o)}
           controlsId="invoice-more-details"
           bodyLabel="Courier, FBR and notes"
+          className={FOLD_CARD}
         >
           <div className="grid gap-4">
             <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
-              <legend className="mb-2 type-row">Courier (TCS)</legend>
+              <legend className="mb-2 type-row text-fg">Courier (TCS)</legend>
               {date('copyReceivedOn', 'Copy received')}
               {date('tcsSentOn', 'Invoice posted')}
               <FormField<Values, 'tcsNumber'> name="tcsNumber" label="Consignment number">
@@ -511,7 +563,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
               {date('clientReceivedOn', 'Customer received')}
             </fieldset>
             <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
-              <legend className="mb-2 type-row">FBR</legend>
+              <legend className="mb-2 type-row text-fg">FBR</legend>
               <FormField<Values, 'psid'> name="psid" label="PSID" help={!isAdmin && invoice.psid?.trim() ? 'Change it if it was typed wrong. Only an admin can clear it.' : undefined}>
                 {f => <TextField {...f} autoComplete="off" spellCheck={false} className="num" />}
               </FormField>
@@ -529,17 +581,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
       </Form>
 
       {receiptsAndNotes}
-
-      <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3">
-        {more}
-        <Button variant="quiet" onClick={onClose} data-cancel>
-          Close
-        </Button>
-        <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
-          {sf.failed ? 'Try again' : 'Save'}
-        </Button>
-      </div>
       {overlays}
-    </>
+    </Frame>
   )
 }
