@@ -286,3 +286,28 @@ describe('SuppliersAsked: each supplier once, with its reply (grade-B R2, R3, R4
     expect(screen.queryByRole('button', { name: /Enter reply/ })).toBeNull()
   })
 })
+
+describe('SuppliersAsked: a supplier asked about some items (supplier flow D, 0140)', () => {
+  const three: RfqItemRow[] = [
+    { id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: null, brandName: null, familyId: null, qty: 1, unit: 'pcs' },
+    { id: 'it-2', number: 2, description: 'pH probe', brandId: null, brandName: null, familyId: null, qty: 1, unit: 'pcs' },
+    { id: 'it-3', number: 3, description: 'Buffer kit', brandId: null, brandName: null, familyId: null, qty: 1, unit: 'set' },
+  ]
+
+  it('says which items they were asked about, and the follow-up lists only those', async () => {
+    const user = userEvent.setup()
+    renderWith(three, { ...inquiry, chaseCount: 0, lastChasedOn: null, askedItemIds: ['it-1', 'it-2'] })
+    expect(screen.getByText('Asked about items 1 and 2 only')).toBeInTheDocument()
+    const card = screen.getByRole('group', { name: 'Follow up with Silent Traders' })
+    await user.click(within(card).getByRole('button', { name: 'Show the whole message' }))
+    const text = within(card).getByTestId('chase-text')
+    expect(text).toHaveTextContent('Hach HQ1110 meter')
+    expect(text).toHaveTextContent('pH probe')
+    expect(text).not.toHaveTextContent('Buffer kit')
+  })
+
+  it('an old whole-RFQ ask shows no such line', () => {
+    renderWith(three, { ...inquiry, chaseCount: 0, lastChasedOn: null })
+    expect(screen.queryByText(/^Asked about/)).toBeNull()
+  })
+})

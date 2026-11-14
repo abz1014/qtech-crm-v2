@@ -245,6 +245,7 @@ export const LABELS: Record<string, Record<string, ColumnSpec>> = {
     unit: t('Unit'),
   },
   supplier_inquiries: {
+    asked_item_ids: hide,
     chase_count: hide,
     last_chased_by: hide,
     last_chased_on: d('Last followed up on'),

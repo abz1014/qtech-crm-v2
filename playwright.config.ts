@@ -221,7 +221,8 @@ export default defineConfig({
     },
     {
       name: 'rfq-detail',
-      testMatch: /rfqs\/(detail|clarifications|delete)\.spec\.ts/,
+      // supplier-ask (PR #19) was listed in .github/e2e-suites.yml but not matched here, so it never ran; supplier-ask-items is flow D.
+      testMatch: /rfqs\/(detail|clarifications|delete|supplier-ask|supplier-ask-items)\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: {

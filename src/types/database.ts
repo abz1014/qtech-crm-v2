@@ -2041,14 +2041,14 @@ isOneToOne: false
                   ]
                 },"supplier_inquiries": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_confirmed_at": string | null,"sent_on": string | null,"supplier_id": string
+                    "asked_item_ids": (string)[] | null,"chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_confirmed_at": string | null,"sent_on": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id": string
+                    "asked_item_ids"?: (string)[] | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id"?: string
+                    "asked_item_ids"?: (string)[] | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {

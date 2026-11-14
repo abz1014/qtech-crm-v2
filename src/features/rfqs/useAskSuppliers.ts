@@ -6,7 +6,8 @@ import { rfqRef } from '@/lib/refs'
 import { useSession } from '@/app/session'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useAddInquiries, useMarkInquiriesSent, useRemoveInquiries } from '@/features/rfqs/hooks'
+import { useAddInquiries, useMarkInquiriesSent, useRemoveInquiries, useRfqItems, useSetAskedItems } from '@/features/rfqs/hooks'
+import { sameScope, scopeFor, widenScope } from '@/features/rfqs/lib/askedItems'
 import { generateEnquiryDraft } from '@/features/rfqs/lib/enquiryDraft'
 
 /*
@@ -16,6 +17,8 @@ import { generateEnquiryDraft } from '@/features/rfqs/lib/enquiryDraft'
  * inquiries back (they return to shortlisted and are deleted; nothing else is touched). A supplier already asked is left alone.
  * A supplier on the shortlist (New RFQ's "Save without asking": an inquiry with no sent date) has that inquiry stamped sent today
  * (review of ux/rfqs, item 3), and the Undo takes the stamp back. If the clipboard refuses nothing is recorded.
+ * Supplier flow D (0140): the ask records which items it was about (null when every item of the RFQ). A supplier already asked
+ * about some items and now asked about more has its list widened; the Undo puts the previous list back.
  */
 /** What one ask produced: the enquiry (the same text for every supplier) and who it is for. */
 export interface AskResult {
@@ -45,6 +48,13 @@ export function useLastAsk(rfqId: string): [AskResult | null, () => void] {
   return [last, () => setLast(null)]
 }
 
+/** Who is asked, and about which items (absent: every item; only "Record as asked" for a reply leaves it out). */
+interface AskInput {
+  supplierIds: readonly string[]
+  names: readonly string[]
+  items?: readonly RfqItemRow[]
+}
+
 export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]) {
   const { toast } = useToast()
   const session = useSession()
@@ -52,6 +62,9 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
   const add = useAddInquiries(rfq.id)
   const remove = useRemoveInquiries(rfq.id)
   const mark = useMarkInquiriesSent(rfq.id)
+  const scope = useSetAskedItems(rfq.id)
+  // Every item of the RFQ (the page has it loaded already): an ask about all of them is stored as "every item" (null).
+  const allItems = useRfqItems(rfq.id || undefined)
 
   // The copy runs before the insert, so nothing is pending yet while it does: a second tap then would ask the same suppliers again.
   const inFlight = useRef(false)
@@ -93,32 +106,50 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
 
   /**
    * Put the suppliers under "Suppliers asked" as asked today: a new inquiry stamped sent, or the shortlisted one stamped. The toast has
-   * the Undo. Nothing is copied here; `askOnce` copies first and calls this.
+   * the Undo. Nothing is copied here; `askOnce` copies first and calls this. `items` absent: the ask is about every item, and a
+   * supplier already asked keeps the items they were asked about.
    */
-  const recordInquiries = async (input: { supplierIds: readonly string[]; names: readonly string[] }, titles: { settledTitle: string; failTitle: string }): Promise<boolean> => {
+  const recordInquiries = async (input: AskInput, titles: { settledTitle: string; failTitle: string }): Promise<boolean> => {
+    const all = allItems.data?.map(it => it.id)
+    const asked = input.items ? scopeFor(input.items.map(it => it.id), all) : null
     const fresh = input.supplierIds.filter(id => !inquiries.some(i => i.supplierId === id))
     const shortlisted = inquiries.filter(i => input.supplierIds.includes(i.supplierId) && !i.sentOn && !i.noOfferOn).map(i => i.id)
+    // The new list for a shortlisted supplier is the items of this ask; for one already asked, what they were asked before and now.
+    const changes = inquiries
+      .filter(i => input.supplierIds.includes(i.supplierId))
+      .map(i => {
+        const before = i.askedItemIds ?? null
+        const after = shortlisted.includes(i.id) ? asked : input.items ? widenScope(before, asked, all) : before
+        return { id: i.id, before, after, widened: !shortlisted.includes(i.id) }
+      })
+      .filter(c => !sameScope(c.before, c.after))
     try {
       const today = businessToday()
       const [ids, stamped] = await Promise.all([
-        fresh.length > 0 ? add.mutateAsync({ supplierIds: fresh, sentOn: today }) : Promise.resolve<string[]>([]),
+        fresh.length > 0 ? add.mutateAsync({ supplierIds: fresh, sentOn: today, itemIds: asked }) : Promise.resolve<string[]>([]),
         shortlisted.length > 0 ? mark.mutateAsync({ ids: shortlisted, on: today }) : Promise.resolve<string[]>([]),
+        changes.length > 0 ? scope.mutateAsync(changes.map(c => ({ id: c.id, itemIds: c.after }))) : Promise.resolve(),
       ])
       const who = input.names.length === 1 ? input.names[0] : `${input.names.length} suppliers`
+      const widened = changes.filter(c => c.widened).length
+      const changed = ids.length + stamped.length + widened > 0
       toast({
         title: titles.settledTitle,
-        body: ids.length + stamped.length > 0 ? `${who} added to the suppliers asked` : `${who} already asked`,
+        body: ids.length + stamped.length > 0 ? `${who} added to the suppliers asked` : widened > 0 ? `${who} asked about more items` : `${who} already asked`,
         tone: 'success',
-        undo:
-          ids.length + stamped.length > 0
-            ? {
-                onUndo: async () => {
-                  await Promise.all([ids.length > 0 ? remove.mutateAsync(ids) : null, stamped.length > 0 ? mark.mutateAsync({ ids: stamped, on: today, undo: true }) : null])
-                },
-                settledTitle: titles.settledTitle,
-                undoneTitle: 'Taken back',
-              }
-            : undefined,
+        undo: changed
+          ? {
+              onUndo: async () => {
+                await Promise.all([
+                  ids.length > 0 ? remove.mutateAsync(ids) : null,
+                  stamped.length > 0 ? mark.mutateAsync({ ids: stamped, on: today, undo: true }) : null,
+                  changes.length > 0 ? scope.mutateAsync(changes.map(c => ({ id: c.id, itemIds: c.before }))) : null,
+                ])
+              },
+              settledTitle: titles.settledTitle,
+              undoneTitle: 'Taken back',
+            }
+          : undefined,
       })
       return true
     } catch (err) {
@@ -127,8 +158,8 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
     }
   }
 
-  /** "Record as asked": the same recording as the copy, with no message copied. */
-  const record = async (input: { supplierIds: readonly string[]; names: readonly string[] }): Promise<AskResult> => {
+  /** "Record as asked": the same recording as the copy, with no message copied. `items`: the items they were asked about. */
+  const record = async (input: AskInput): Promise<AskResult> => {
     if (inFlight.current || input.supplierIds.length === 0) return { ok: false, text: '', supplierIds: [] }
     inFlight.current = true
     setCopying(true)
@@ -141,5 +172,5 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
     }
   }
 
-  return { ask, record, busy: copying || add.isPending || remove.isPending || mark.isPending }
+  return { ask, record, busy: copying || add.isPending || remove.isPending || mark.isPending || scope.isPending }
 }
