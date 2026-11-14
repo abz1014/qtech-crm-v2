@@ -11,7 +11,7 @@ describe('chunksForPath', () => {
     // the old addresses open Jobs, so they fetch the Jobs pages
     expect(chunksForPath('/rfqs')).toEqual(['jobs', 'jobsList'])
     expect(chunksForPath('/rfqs/abc')).toEqual(['jobs', 'job'])
-    expect(chunksForPath('/rfqs/new')).toEqual(['rfqNew'])
+    expect(chunksForPath('/rfqs/new')).toEqual(['enquiryNew'])
     expect(chunksForPath('/enquiries/new')).toEqual(['enquiryNew'])
     expect(chunksForPath('/enquiries')).toEqual([])
     expect(chunksForPath('/orders')).toEqual(['jobs', 'jobsList'])

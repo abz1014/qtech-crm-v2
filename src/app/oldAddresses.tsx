@@ -12,7 +12,7 @@ import { jobsSearchForOldList, withoutOldSwitch, type OldKind } from '@/app/oldA
  *   /rfqs/<id>, /orders/<id>   open the Job that holds that RFQ or order (v_jobs gives the key), the query string kept
  *   /rfqs, /orders             open the Jobs list with the matching filter (Mine, Open or History); /orders also picks the Orders stage
  * The retired ?old=1 / ?old=0 switch is simply dropped from the address it came on, so an old link with it lands on Jobs too.
- * /rfqs/new is not here: New enquiry keeps its own address.
+ * /rfqs/new is not here: it is the New RFQ page (the same page as /enquiries/new), with its own address.
  */
 function ToJob({ kind, id, search }: { kind: OldKind; id: string; search: string }) {
   const [state, setState] = useState<{ key: string | null } | 'loading' | 'failed'>('loading')

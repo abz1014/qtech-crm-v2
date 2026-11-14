@@ -8,10 +8,13 @@ import { SCENES } from '../docread/scenes'
 /*
  * R05 end to end, against the local CI stack: the intake = float screen, as the fixture users, through the real
  * login form. Each test makes its own companies, brands and suppliers with unique names, so tests do not depend on
- * each other or on the seed beyond its fixture users.
+ * each other or on the seed beyond its fixture users. /rfqs/new is the New RFQ page (the same page as /enquiries/new, Forest
+ * polish-b): its green button is "Create job N", which saves and opens the job; "Ask suppliers now" (gate 2) turns the same
+ * form into the suppliers and message steps, and anything saved from there opens the job too.
  *
- * FE-2 targets asserted here (BUILD_PLAN FE-2):
- *   New RFQ, desktop   at most 3 actions + 1 paste   (pick the company = 2: type, choose; then "Looks right")
+ * FE-2 targets asserted here (BUILD_PLAN FE-2, with gate 2's optional asking):
+ *   New RFQ, desktop   3 actions + 1 paste to create the job (type, choose the company; Create job N); asking suppliers
+ *                      as well is 4 (type, choose; tick Ask suppliers now; "Looks right")
  *   Ask suppliers      at most 2 taps                (Write the message, Copy message for N suppliers)
  *   R05 canonical      at most 15 interactions in all, Undo included
  */
@@ -29,6 +32,23 @@ async function paste(page: Page, text: string): Promise<void> {
 
 
 const violations = (page: Page): Promise<string[]> => axeViolations(page)
+
+/** Gate 2: New RFQ creates the job unless "Ask suppliers now" is ticked; ticked, the green button goes to the suppliers step. */
+async function askSuppliersNow(page: Page): Promise<void> {
+  await page.getByRole('checkbox', { name: /Ask suppliers now/ }).check()
+}
+
+/** The New RFQ page's green button: "Create job N" (the number is the next one, read when the page opens). */
+const createJob = (page: Page) => page.getByRole('button', { name: /^Create job \d+$/ })
+
+/** Saving from New RFQ opens the new job's page (Created job N). */
+async function jobOpened(page: Page, companyId: string): Promise<RfqRow> {
+  await expect(page).toHaveURL(/\/jobs\/\d+$/)
+  const [rfq] = await rfqsOf(companyId)
+  expect(rfq).toBeTruthy()
+  expect(new URL(page.url()).pathname).toBe(`/jobs/${rfq.number}`)
+  return rfq
+}
 
 interface Seed {
   customer: { id: string; name: string }
@@ -132,10 +152,12 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     await expect(page.getByRole('combobox', { name: 'Brand of item 1' }).locator('option:checked')).toHaveText(s.brand1) // picked from the text
     await expect(page.getByRole('textbox', { name: 'Quantity of item 2' })).toHaveValue('4 nos')
     await review(page, 'intake-float-03-items-pasted-1440')
-    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    await askSuppliersNow(page)
     actions++ // 3
+    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    actions++ // 4
     const newRfqActions = actions
-    expect(newRfqActions).toBeLessThanOrEqual(3)
+    expect(newRfqActions).toBe(4)
     expect(pastes).toBe(1)
 
     // Suppliers: reasons first (C3: the brand group, with "Supplied this item before" as a badge on the one that did). The one that
@@ -223,6 +245,7 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await page.getByRole('textbox', { name: 'Customer reference' }).fill(ref)
+    await askSuppliersNow(page)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await page.getByRole('button', { name: 'Write the message' }).click()
     await page.getByRole('button', { name: 'Copy message for 1 supplier' }).dblclick()
@@ -266,12 +289,11 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(`${s.brand1} ${s.model} electromagnetic flow meter DN50`)
     await expect(page.getByRole('textbox', { name: 'Customer reference' })).toHaveValue(ref)
 
-    // Saving it clears the draft: the next New RFQ starts blank, and leaving no longer asks.
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
+    // Creating the job clears the draft: the job opens without asking to leave, and the next New RFQ starts blank.
+    await createJob(page).click()
+    await jobOpened(page, s.customer.id)
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
-    await rfqsTab.click()
-    await expect(page).toHaveURL(/\/jobs/)
+    await expect(page.getByRole('dialog', { name: 'Leave this new RFQ?' })).toHaveCount(0)
     await page.goto('/rfqs/new')
     await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
     await expect(page.getByText(/You have a draft/)).toHaveCount(0)
@@ -315,6 +337,7 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await expect(page.getByText('2 items found').first()).toBeVisible()
+    await askSuppliersNow(page)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByRole('list', { name: 'Step 2 of 4' })).toBeVisible()
     await review(page, 'intake-steps-320')
@@ -344,15 +367,14 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
     await openAs(page, 'engineer', '/rfqs/new')
     // Not ready: the reason is beside the button, and a press puts the focus on what is missing (owner test 2026-10-20).
     await expect(page.getByText('Choose the company first, then paste or add an item.')).toBeVisible()
-    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    await createJob(page).click()
     await expect(page.locator('#intake-company')).toBeFocused()
     await pickCompany(page, customer.name)
     await page.getByRole('button', { name: 'Add an item manually' }).click()
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Spare gasket set')
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
+    await createJob(page).click()
 
-    const [rfq] = await rfqsOf(customer.id)
+    const rfq = await jobOpened(page, customer.id)
     expect(rfq.received_on).toBe(karachiDay())
     expect(rfq.owner_id).toBe('a0000000-0000-4000-8000-000000000003') // the engineer who entered it
     const items = await itemsOf(rfq.id)
@@ -369,9 +391,8 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
     await expect(page.getByText('Only site on file')).toBeVisible()
     await expect(page.getByText('Only contact on file')).toBeVisible()
     await paste(page, s.email)
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
-    const [rfq] = await rfqsOf(s.customer.id)
+    await createJob(page).click()
+    const rfq = await jobOpened(page, s.customer.id)
     expect(rfq.site_id).not.toBeNull()
     expect(rfq.contact_id).not.toBeNull()
   })
@@ -385,9 +406,8 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
     await page.getByRole('textbox', { name: 'Customer reference' }).fill(ref)
     await page.getByRole('textbox', { name: /Quotation due/ }).fill('3 dec 2030')
     await page.getByRole('checkbox', { name: /Top priority/ }).check()
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
-    const [rfq] = await rfqsOf(s.customer.id)
+    await createJob(page).click()
+    const rfq = await jobOpened(page, s.customer.id)
     expect(rfq).toMatchObject({ customer_ref: ref, due_on: '2030-12-03', is_priority: true })
   })
 })
@@ -401,9 +421,8 @@ test.describe('a polite WhatsApp paste is not lost (audit E1)', () => {
     await expect(page.getByText('1 item found in 2 lines').first()).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('pressure transmitter 0-10 bar')
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
-    const [rfq] = await rfqsOf(customer.id)
+    await createJob(page).click()
+    const rfq = await jobOpened(page, customer.id)
     const items = await itemsOf(rfq.id)
     expect(items.map(i => [i.description, i.qty, i.unit])).toEqual([['pressure transmitter 0-10 bar', 2, 'nos']])
   })
@@ -415,41 +434,38 @@ test.describe('save only, and no supplier ticked', () => {
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, customer.name)
     await paste(page, '1. Hand-made one-off bracket - 3 nos')
+    await askSuppliersNow(page)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByText('0 suppliers ticked')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Write the message' })).toHaveCount(0)
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
     expect(await violations(page)).toEqual([])
-    const [rfq] = await rfqsOf(customer.id)
+    // With nobody ticked the green button is Save as draft: the job is created, nobody is asked, and its page opens.
+    await page.getByRole('button', { name: "Save as draft" }).click()
+    const rfq = await jobOpened(page, customer.id)
     expect(await inquiriesOf(rfq.id)).toEqual([])
-    await expect(page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` })).toBeVisible()
   })
 
-  test('saved without asking keeps the ticked supplier shortlisted, then floats from the saved RFQ', async ({ page }) => {
+  test('saved without asking keeps both ticked suppliers shortlisted, and the job opens with them on its Quotation stage', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
+    await askSuppliersNow(page)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
     await tick(page, s.carries.name)
     await expect(page.getByRole('checkbox', { name: s.carries.name })).toBeChecked()
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
-    const [rfq] = await rfqsOf(s.customer.id)
+    await page.getByRole('button', { name: 'Save as draft' }).click()
+    const rfq = await jobOpened(page, s.customer.id)
     const shortlisted = await inquiriesOf(rfq.id)
     expect(shortlisted.map(i => i.sent_on)).toEqual([null, null])
     expect(shortlisted.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.carries.id].sort())
-
-    await page.getByRole('button', { name: 'Write the message' }).click()
-    await expect(page.getByLabel('Message text')).toContainText('Dear Sir/Madam,')
-    await expect(page.getByLabel('Message text')).not.toContainText(rfqRef(rfq.number))
-    await page.getByRole('button', { name: 'Copy message for 2 suppliers' }).click()
-    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
-    const floated = await inquiriesOf(rfq.id)
-    expect(floated.map(i => i.sent_on)).toEqual([karachiDay(), karachiDay()])
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
+
+    await openStage(page, 'Quotation')
+    const card = page.locator('[data-slot="suppliers-to-ask"]')
+    await expect(card.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
+    await expect(card.getByRole('checkbox', { name: s.carries.name })).toBeChecked()
   })
 
   test('saved without asking, then Ask suppliers on the RFQ page: the shortlist comes first and ticked, and asking stamps it sent', async ({ page }) => {
@@ -457,14 +473,13 @@ test.describe('save only, and no supplier ticked', () => {
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
+    await askSuppliersNow(page)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
-    await page.getByRole('button', { name: "Save as draft" }).click()
-    await expect(page.getByText(/is saved/)).toBeVisible()
-    const [rfq] = await rfqsOf(s.customer.id)
+    await page.getByRole('button', { name: 'Save as draft' }).click()
+    const rfq = await jobOpened(page, s.customer.id)
     expect((await inquiriesOf(rfq.id)).map(i => i.sent_on)).toEqual([null])
 
-    await page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` }).click()
     // on the job page the shortlist is the card on the Quotation stage (nobody has been asked yet)
     await openStage(page, 'Quotation')
     const dialog = page.locator('[data-slot="suppliers-to-ask"]')
@@ -487,8 +502,9 @@ test.describe('save only, and no supplier ticked', () => {
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await page.getByRole('textbox', { name: 'Customer reference' }).fill(ref)
-    await page.getByRole('button', { name: "Save as draft" }).click()
+    await createJob(page).click()
     await expect(page.getByText('This customer already has an RFQ with that reference.')).toBeVisible()
+    await expect(page).toHaveURL(/\/rfqs\/new$/)
     await expect(page.getByRole('link', { name: `Open ${rfqRef(existing.number)}` })).toBeVisible()
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
   })
@@ -555,6 +571,7 @@ test.describe('float one item to the supplier who is not ticked', () => {
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
+    await askSuppliersNow(page)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await page.getByRole('button', { name: 'Write the message' }).click()
     await resetClipboard(page)
@@ -598,6 +615,8 @@ for (const width of [1440, 375]) {
     await page.getByRole('textbox', { name: 'Description of item 1' }).scrollIntoViewIfNeeded()
     await review(page, `intake-float-03-items-pasted-${width}`)
 
+    await askSuppliersNow(page)
+    expect(await violations(page)).toEqual([])
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
     expect(await violations(page)).toEqual([])

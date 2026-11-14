@@ -160,7 +160,7 @@ export default function IntakeScreen({
       doc={doc}
       onAnother={() => {
         // A fresh form does not take again what the last one arrived with (a company, a supplier, a captured message).
-        if (captureId || companyParam || supplierParam) navigate(mode === 'enquiry' ? '/enquiries/new' : '/rfqs/new', { replace: true })
+        if (captureId || companyParam || supplierParam) navigate(location.pathname, { replace: true })
         setRound(r => r + 1)
       }}
     />
@@ -274,7 +274,9 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
     const s = { id: preset.data.id, name: preset.data.name }
     setManual(m => (m.some(x => x.id === s.id) ? m : [...m, s]))
     setOverrides(o => ({ ...o, [s.id]: true }))
-  }, [arrival, preset.data])
+    // New RFQ from a supplier's page ("Ask for prices") is about asking: Ask suppliers now starts on, so the supplier is asked next.
+    if (enquiry) setAskNow(true)
+  }, [arrival, preset.data, enquiry])
 
   // ---- items
   const itemsRef = useRef(items)

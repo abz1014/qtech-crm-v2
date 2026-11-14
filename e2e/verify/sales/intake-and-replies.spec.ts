@@ -40,10 +40,10 @@ async function rowsOnScreen(page: Page): Promise<[string, string][]> {
   return out
 }
 
-/** Save without floating, then the RFQ items as stored. */
+/** Create the job without asking anyone (its page opens), then the RFQ items as stored. */
 async function saveAndRead(page: Page, customerId: string) {
   await page.getByRole('button', { name: SALES.intake.saveOnly }).click()
-  await expect(page.getByText(SALES.intake.saved).first()).toBeVisible()
+  await expect(page).toHaveURL(SALES.intake.saved)
   const r = await db.one<{ id: string; owner_id: string; received_on: string }>(`rfqs?company_id=eq.${customerId}&select=id,owner_id,received_on`)
   expect(r).toMatchObject({ owner_id: USER.sales, received_on: karachiDay(0) })
   const items = await db.rows<{ description: string; qty: number; unit: string | null; gst_rate: number }>(`rfq_items?rfq_id=eq.${r.id}&select=description,qty,unit,gst_rate&order=position`)

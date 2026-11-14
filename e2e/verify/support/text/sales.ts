@@ -8,8 +8,10 @@ export const SALES = {
     quantity: (n: number) => `Quantity of item ${n}`,
     anyDescription: /^Description of item \d+$/,
     found: (items: number, lines: number) => `${items} ${items === 1 ? 'item' : 'items'} found in ${lines} ${lines === 1 ? 'line' : 'lines'}`,
-    saveOnly: "Save as draft",
-    saved: /is saved/,
+    /** The New RFQ page's green button (/rfqs/new is the same page as /enquiries/new): it saves and opens the job. */
+    saveOnly: /^Create job \d+$/,
+    /** Where Create job lands: the new job's page. */
+    saved: /\/jobs\/\d+$/,
     /** BUG-SALES-3: a second paste of the same lines (src/features/rfqs/lib/skipRepeats.ts repeatedNote). */
     alreadyThere: (n: number) => `${n} ${n === 1 ? 'line was' : 'lines were'} already there`,
   },
