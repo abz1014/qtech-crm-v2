@@ -77,10 +77,10 @@ export function TeamPage() {
   // could not find or press the small bar "Add" on Android (2026-10-22), so it is a full-width 44 px button at the top of the page.
   useMobileBar({ title: 'Team', back: '/settings' })
 
-  // A deactivated person's row is quiet: muted ink in every cell and a neutral avatar (the mockup's is-dim row).
-  // Initials stay white on it, so it must be dark enough for 4.5:1 (neutral-400 gave 3.4:1 and failed Lighthouse color-contrast).
+  // A deactivated person's row is quiet: muted ink in every cell and a pale avatar (mockup 76 .qb-people__dim: the canvas-deep
+  // disc with muted initials, 6:1 or better, where the old dark grey disc with white initials read as louder than an active row).
   const dim = (m: TeamMember) => (isActive(m) ? undefined : 'text-fg-muted')
-  const avatarTone = (m: TeamMember) => (isActive(m) ? undefined : 'bg-[var(--neutral-500)]')
+  const avatarTone = (m: TeamMember) => (isActive(m) ? undefined : 'bg-deep text-fg-muted')
 
   const columns: Column<TeamMember>[] = [
     {
@@ -93,11 +93,11 @@ export function TeamPage() {
         <span className={cn('flex min-w-0 items-center gap-3', dim(m))}>
           <Avatar name={m.name} className={avatarTone(m)} />
           <span className="grid min-w-0">
-            <span className="flex items-center gap-1">
-              <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{m.name}</span>
-              {m.id === me ? <Tag className="ml-1">You</Tag> : null}
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className={cn('min-w-0 font-card [overflow-wrap:anywhere]', isActive(m) && 'text-fg')}>{m.name}</span>
+              {m.id === me ? <Tag>You</Tag> : null}
             </span>
-            <span className="num min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
+            <span className="num min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
           </span>
         </span>
       ),
@@ -186,15 +186,8 @@ export function TeamPage() {
         getRowId={m => m.id}
         defaultSort={null}
         loading={team.isLoading}
-        // The Actions header is for assistive tech only. The row whose menu is open takes the selected background.
-        // The footer carries the count on the left and the note on the right; on a phone it goes (the note sits under the list).
-        className={cn(
-          '[&_thead_th:last-child]:text-transparent',
-          '[&_tbody_tr:has([data-state=open])]:bg-selected',
-          'max-sm:[&>div:last-child]:hidden',
-          '[&>div:last-child>span:first-child]:flex [&>div:last-child>span:first-child]:flex-1 [&>div:last-child>span:first-child]:justify-between',
-          '[&>div:last-child>span:not(:first-child)]:hidden', // no key legend in this footer (the mockup draws none)
-        )}
+        toolbarCard
+        className={TABLE_LOOK}
         error={
           team.isError
             ? {
@@ -225,21 +218,21 @@ export function TeamPage() {
         onRowOpen={phone ? m => setDialog({ kind: 'sheet', member: m }) : undefined}
         mobileRow={m => (
           <span className={cn('flex items-center gap-3', dim(m))}>
-            <Avatar name={m.name} size="xl" className={avatarTone(m)} />
-            <span className="grid min-w-0 flex-1">
-              <span className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{m.name}</span>
-              <span className="min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">
+            <Avatar name={m.name} size="2xl" className={avatarTone(m)} />
+            <span className="grid min-w-0 flex-1 gap-1">
+              <span className={cn('min-w-0 text-base font-card [overflow-wrap:anywhere]', isActive(m) && 'text-fg')}>{m.name}</span>
+              <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">
                 {roleLabel(m.role)}
                 {m.job_title ? ` · ${m.job_title}` : ''}
               </span>
               {/* Under the name, not beside it: beside it the chip took the width and the name broke into 3-letter lines at 320 px. */}
-              {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" className="mt-1 justify-self-start" />}
+              {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" className="justify-self-start" />}
             </span>
             <Icon icon={Ellipsis} className="shrink-0 text-fg-muted" />
           </span>
         )}
         toolbar={
-          <div className="flex w-full flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-3">
             <TableFilter label="Search people" hint="Finds a person by name or email." value={query} onChange={setQuery} />
             <SegmentedControl
               aria-label="Show"
@@ -262,7 +255,7 @@ export function TeamPage() {
         }
       />
       </div>
-      <p className="px-1 text-base text-fg-muted sm:hidden">At least one active admin is always required.</p>
+      <p className="px-1 text-sm text-fg-muted sm:hidden">At least one active admin is always required.</p>
 
       {dialog?.kind === 'sheet' ? <RowActionSheet member={dialog.member} onClose={close} onPick={open} /> : null}
       {dialog?.kind === 'add' ? (
@@ -296,6 +289,33 @@ export function TeamPage() {
     </div>
   )
 }
+
+/*
+ * The table's look on top of DataTable (toolbarCard: search and Show in their own card, the people in the card under it). The root's
+ * last child is that card: its last child is the foot band, the scroll box before it holds the table.
+ * - The Actions header is for assistive tech only; the row whose menu is open takes the selected background.
+ * - Foot: the count on the left, the note on the right, no key legend (mockup 76 draws none); on a phone it goes and the note sits under
+ *   the list.
+ * - Phone (under 640 px, DataTable's card rows): each person is their own Forest card, 64 px, 12 px apart (mockup .qb-people__cards), so
+ *   the shared card frame steps back while there are people to show. Loading, empty and error keep the frame.
+ */
+// Tailwind reads class names from the source as written, so each one is spelled out in full (no built strings).
+const TABLE_LOOK = cn(
+  '[&_thead_th:last-child]:text-transparent',
+  '[&_tbody_tr:has([data-state=open])]:bg-selected',
+  // the foot band
+  'max-sm:[&>div:last-child>div:last-child]:hidden',
+  '[&>div:last-child>div:last-child>span:first-child]:flex [&>div:last-child>div:last-child>span:first-child]:flex-1',
+  '[&>div:last-child>div:last-child>span:first-child]:flex-wrap [&>div:last-child>div:last-child>span:first-child]:justify-between',
+  '[&>div:last-child>div:last-child>span:first-child]:gap-x-4 [&>div:last-child>div:last-child>span:not(:first-child)]:hidden',
+  // phone: one card per person
+  'max-sm:[&>div:last-child:has(tr[data-card])]:overflow-visible max-sm:[&>div:last-child:has(tr[data-card])]:border-0',
+  'max-sm:[&>div:last-child:has(tr[data-card])]:bg-transparent max-sm:[&>div:last-child:has(tr[data-card])]:shadow-none',
+  'max-sm:[&_tbody:has(tr[data-card])]:grid max-sm:[&_tbody:has(tr[data-card])]:gap-3',
+  'max-sm:[&_tr[data-card]]:rounded-card max-sm:[&_tr[data-card]]:border max-sm:[&_tr[data-card]]:bg-surface max-sm:[&_tr[data-card]]:shadow-e1',
+  'max-sm:[&_tr[data-card]]:transition-transform max-sm:[&_tr[data-card]:active]:scale-press',
+  'max-sm:[&_tr[data-card]>td]:min-h-row-tall max-sm:[&_tr[data-card]>td]:items-center max-sm:[&_tr[data-card]>td]:py-2',
+)
 
 function RowMenu({ member, onPick }: { member: TeamMember; onPick: (kind: RowAction, m: TeamMember) => void }) {
   return (
