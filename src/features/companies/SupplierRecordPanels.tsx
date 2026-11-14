@@ -57,6 +57,11 @@ function Label({ children }: { children: string }) {
   return <span className="text-xs text-fg-muted md:sr-only">{children}</span>
 }
 
+/** The quote rows' label: shown while the price and outcome sit under the item, hidden (the header names them) in three columns. */
+function QLabel({ children }: { children: string }) {
+  return <span className="text-xs text-fg-muted [@container(min-width:40rem)]:sr-only">{children}</span>
+}
+
 function LoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
   return (
     <div className="p-4">
@@ -97,22 +102,24 @@ function latestOf(shown: number, total: number): ReactNode {
 // ------------------------------------------------------------------------------------------------ recent quotes
 
 /*
- * Three columns, so the row reads at 1366 with the side column and at 1024 too: what (item, with the date, the RFQ, the
- * brand and the lead time under it), the price (original currency, then the PKR value at the time), and what came of it.
+ * Three columns when the card is wide enough (a container query on the card, not the window: at 1024 the card sits beside the side
+ * column and is ~430 px, which squeezed the item to one word per line and pushed its RFQ tag under the price): what (item, with the
+ * date, the RFQ, the brand and the lead time under it), the price (original currency, then the PKR value at the time), and what
+ * came of it. Narrower, the item takes the full row and the price and outcome sit side by side under it, each with its label.
  */
-const QGRID = 'md:grid-cols-[minmax(0,1fr)_minmax(0,176px)_minmax(0,176px)] md:gap-x-5'
-const QHEAD = cn('hidden border-b px-5 py-2 text-sm text-fg-muted md:grid', QGRID)
+const QGRID = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1fr)_minmax(0,176px)_minmax(0,176px)] [@container(min-width:40rem)]:gap-x-5'
+const QHEAD = cn('hidden border-b px-5 py-2 text-sm text-fg-muted [@container(min-width:40rem)]:grid', QGRID)
 const QROW = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', QGRID)
 /** An engineer's quotes: what, and what came of it (no price). */
-const QGRID_NO_PRICES = 'md:grid-cols-[minmax(0,1fr)_minmax(0,176px)] md:gap-x-5'
-const QHEAD_NO_PRICES = cn('hidden border-b px-5 py-2 text-sm text-fg-muted md:grid', QGRID_NO_PRICES)
+const QGRID_NO_PRICES = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1fr)_minmax(0,176px)] [@container(min-width:40rem)]:gap-x-5'
+const QHEAD_NO_PRICES = cn('hidden border-b px-5 py-2 text-sm text-fg-muted [@container(min-width:40rem)]:grid', QGRID_NO_PRICES)
 const QROW_NO_PRICES = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', QGRID_NO_PRICES)
 
 function PriceCell({ r }: { r: QuoteRow }) {
   const p = r.price
   if (p.state === 'hidden') {
     return (
-      <span className="inline-flex items-start gap-2 text-base text-fg-muted md:justify-end md:text-right">
+      <span className="inline-flex items-start gap-2 text-base text-fg-muted [@container(min-width:40rem)]:justify-end [@container(min-width:40rem)]:text-right">
         <Icon icon={Lock} size="sm" className="mt-1" />
         Price on file, currency unverified
       </span>
@@ -121,7 +128,7 @@ function PriceCell({ r }: { r: QuoteRow }) {
   if (p.state === 'none') return <span className="text-base text-fg-muted text-pretty">{r.pkrNote ?? '—'}</span>
   const cur = (p.amount ?? '').split(' ')[0]
   return (
-    <span className="grid gap-px md:justify-items-end">
+    <span className="grid gap-px [@container(min-width:40rem)]:justify-items-end">
       <span className="num whitespace-nowrap">
         <span className="mr-1 font-sans text-base text-fg-muted">{cur}</span>
         {p.figure}
@@ -294,7 +301,7 @@ export function RecentQuotes({
       ) : !view || view.allQuotes.length === 0 ? (
         <p className="px-5 py-6 text-sm text-fg-muted">No RFQ asked of them yet.</p>
       ) : (
-        <div>
+        <div className="[container-type:inline-size]">
           {wide ? (
             <div className={prices ? QHEAD : QHEAD_NO_PRICES} aria-hidden="true">
               <span>Item</span>
@@ -308,18 +315,18 @@ export function RecentQuotes({
                 <QuotePhoneRow key={r.key} r={r} reply={replies?.get(r.inquiryId)} prices={prices} />
               ) : (
               <li key={r.key} className={prices ? QROW : QROW_NO_PRICES}>
-                <div className="col-span-2 grid content-start gap-1 md:col-span-1">
+                <div className="col-span-2 grid content-start gap-1 [@container(min-width:40rem)]:col-span-1">
                   <ItemCell r={r} />
                   <ReplyLine reply={replies?.get(r.inquiryId)} />
                 </div>
                 {prices ? (
-                  <div className="grid content-start gap-1 md:justify-items-end md:text-right">
-                    <Label>Quoted price</Label>
+                  <div className="grid content-start gap-1 [@container(min-width:40rem)]:justify-items-end [@container(min-width:40rem)]:text-right">
+                    <QLabel>Quoted price</QLabel>
                     <PriceCell r={r} />
                   </div>
                 ) : null}
                 <div className="grid content-start gap-1">
-                  <Label>Outcome</Label>
+                  <QLabel>Outcome</QLabel>
                   <OutcomeCell r={r} />
                 </div>
               </li>

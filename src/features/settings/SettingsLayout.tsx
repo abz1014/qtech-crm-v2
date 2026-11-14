@@ -65,7 +65,7 @@ export function SettingsLayout() {
                       className={({ isActive }) =>
                         cn(
                           // a long name (Larger text, or a "View only" tag beside it at 320) wraps to a second line; it is never cut
-                          'flex min-h-control min-w-0 items-center gap-2 rounded-control px-3 py-1 text-base font-medium leading-tight transition-colors duration-fast max-md:min-h-touch',
+                          'flex min-h-control min-w-0 items-center gap-2 rounded-control px-3 py-1 text-base font-medium leading-tight transition-colors duration-fast max-md:min-h-touch max-md:py-2',
                           isActive ? 'bg-brand-100 font-card text-primary' : 'text-fg hover:bg-sunken',
                         )
                       }
