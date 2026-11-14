@@ -52,7 +52,20 @@ async function shot(page: Page, name: string): Promise<void> {
     }
     return { scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wide }
   })
+  // The app scrolls inside #main, so fullPage alone stops at the viewport: grow the viewport by what #main hides, shoot, restore.
+  const vp = page.viewportSize()!
+  const extra = await page.evaluate(() => {
+    const m = document.getElementById('main')
+    return m ? Math.max(0, m.scrollHeight - m.clientHeight) : 0
+  })
+  const scrollTop = await page.evaluate(() => document.getElementById('main')?.scrollTop ?? 0)
+  if (extra > 0) await page.setViewportSize({ width: vp.width, height: Math.min(vp.height + extra, 12000) })
+  await page.evaluate(() => { const m = document.getElementById('main'); if (m) m.scrollTop = 0 })
+  await page.waitForTimeout(300)
   await page.screenshot({ path: `${DIR}/${name}.png`, fullPage: true })
+  if (extra > 0) await page.setViewportSize(vp)
+  await page.evaluate(t => { const m = document.getElementById('main'); if (m) m.scrollTop = t }, scrollTop)
+  await page.waitForTimeout(200)
   writeFileSync(`${DIR}/overflow-${name}.json`, JSON.stringify(overflow[name], null, 2))
 }
 
