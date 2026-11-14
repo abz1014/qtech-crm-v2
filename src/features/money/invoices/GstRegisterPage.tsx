@@ -191,7 +191,7 @@ export function GstRegisterPage() {
         value: r => r.number,
         cell: r => (
           <span className="grid gap-px">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="flex items-center gap-2">
               {r.number ? <span className="num whitespace-nowrap font-heavy text-primary">{r.number}</span> : <span className="text-fg-muted">No number</span>}
               <KindTag r={r} />
             </span>
@@ -215,7 +215,8 @@ export function GstRegisterPage() {
       { id: 'gst', header: 'GST, PKR', kind: 'money', sortable: true, value: r => String(r.gst), total: true },
       { id: 'gross', header: 'Gross, PKR', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
       // ONE Next step (round 3) in place of the two chip columns, sent to customer and tax deposited.
-      { id: 'next', header: 'Next step', sortable: false, cell: r => <InvoiceStep r={r} /> },
+      // The reason under the step wraps: held on one line, a long one pushed the PDF column off the card at 1440.
+      { id: 'next', header: 'Next step', sortable: false, cell: r => <InvoiceStep r={r} className="min-w-[11rem] max-w-[17rem] [overflow-wrap:break-word]" /> },
       {
         id: 'pdf',
         header: 'PDF',
