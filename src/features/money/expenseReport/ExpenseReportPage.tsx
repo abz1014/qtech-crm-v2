@@ -202,7 +202,7 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
               Where the money went
             </h2>
             <SegmentedControl
-              className="ml-auto"
+              className="sm:ml-auto"
               aria-label="Show by"
               options={[
                 { value: 'category', label: 'By category' },
@@ -626,13 +626,14 @@ function Drill({ c, label, onClose }: { c: CategoryLine; label: string; onClose:
 function EntryLine({ e, category }: { e: ReportEntry; category?: string }) {
   const words = [category, e.detail, e.who].filter(Boolean).join(' · ')
   return (
-    <li className="grid grid-cols-[4rem_minmax(0,1fr)_auto] items-baseline gap-3 border-b border-line py-2 text-base last:border-b-0">
-      <span className="num text-sm text-fg-2">{formatShortDate(e.paidOn)}</span>
-      <span className="min-w-0">
-        <span className={cn('[overflow-wrap:anywhere]', !words && 'text-fg-muted')}>{words || 'No detail'}</span>
+    // Phone: the day and the amount on one line, the words under them at full width (a narrow middle column broke "LEA-1234").
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1 border-b border-line py-2 text-base last:border-b-0 sm:grid-cols-[4rem_minmax(0,1fr)_auto]">
+      <span className="num text-sm text-fg-2 max-sm:col-start-1 max-sm:row-start-1">{formatShortDate(e.paidOn)}</span>
+      <span className="min-w-0 max-sm:col-span-2 max-sm:row-start-2">
+        <span className={cn('[overflow-wrap:break-word]', !words && 'text-fg-muted')}>{words || 'No detail'}</span>
         <span className="ml-2 text-sm text-fg-muted">{e.paidVia === 'cash' ? 'Cash' : 'Bank'}</span>
       </span>
-      <span className="num text-right">{rupees(e.amount)}</span>
+      <span className="num text-right max-sm:col-start-2 max-sm:row-start-1">{rupees(e.amount)}</span>
     </li>
   )
 }

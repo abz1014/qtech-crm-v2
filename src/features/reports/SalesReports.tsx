@@ -102,6 +102,52 @@ function Section({ id, title, headline, children }: { id: string; title: string;
 }
 
 /** A report's figures while they load: four tiles' shape. */
+/** A phone row (59-reports .rp-cardrow): the name and its main count on one line, the other figures in words under it. */
+function CardRow({ name, figure, children }: { name: ReactNode; figure: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1 py-1">
+      <span className="min-w-0 font-medium [overflow-wrap:break-word]">{name}</span>
+      <span className="num text-right">{figure}</span>
+      <span className="col-span-2 text-sm text-fg-2">{children}</span>
+    </div>
+  )
+}
+const reasonCard = (r: ReasonLine) => (
+  <CardRow name={r.label} figure={String(r.count)}>
+    Share of the lost ones <span className="num">{showPct(r.share)}</span>
+  </CardRow>
+)
+const floatCard = (r: FloatLine) => (
+  <CardRow name={r.label} figure={`${r.rfqs} ${r.rfqs === 1 ? 'RFQ' : 'RFQs'}`}>
+    {r.state === 'not_floated' ? null : <>Items priced <span className="num">{`${r.itemsQuoted} of ${r.itemsTotal}`}</span> · </>}
+    won <span className="num">{r.won}</span> · lost <span className="num">{r.closed}</span> · open <span className="num">{r.open}</span>
+    <span className="block">
+      Won of decided <span className="num">{showPct(r.winRate)}</span>
+    </span>
+  </CardRow>
+)
+const turnaroundCard = (r: TurnaroundRow) => (
+  <CardRow name={monthLabel(r.month)} figure={`${r.asked} asked`}>
+    answered <span className="num">{r.answered}</span> · still open <span className="num">{r.open}</span>
+    <span className="block">
+      Average to answer <span className="num">{daysText(r.avgDays)}</span>
+    </span>
+  </CardRow>
+)
+const repeatCard = (r: RepeatRow) => (
+  <CardRow
+    name={
+      <Link to={`/companies/${r.companyId}`} className="text-primary underline-offset-4 hover:underline">
+        {r.name}
+      </Link>
+    }
+    figure={`${r.orders} ${r.orders === 1 ? 'order' : 'orders'}`}
+  >
+    Came back {r.isRepeat ? 'Yes' : 'No'}
+    {r.lastOrderOn ? ` · last order ${formatShortDate(r.lastOrderOn, undefined, true)}` : ''}
+  </CardRow>
+)
+
 const Loading = ({ label }: { label: string }) => (
   <div role="status" aria-label={label} className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-cols-4">
     {[0, 1, 2, 3].map(i => (
@@ -168,6 +214,7 @@ function OutcomesReport() {
         noun="reasons"
         columns={reasonColumns}
         rows={s?.reasons ?? []}
+        mobileRow={reasonCard}
         getRowId={r => r.key}
         loading={q.isLoading}
         error={q.isError ? { message: 'The outcomes could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
@@ -222,6 +269,7 @@ function FloatReport() {
         noun="groups"
         columns={floatColumns}
         rows={s?.lines ?? []}
+        mobileRow={floatCard}
         getRowId={r => r.state}
         loading={q.isLoading}
         error={q.isError ? { message: 'This report could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
@@ -275,6 +323,7 @@ function TurnaroundReport() {
         noun="months"
         columns={turnaroundColumns}
         rows={s?.rows ?? []}
+        mobileRow={turnaroundCard}
         getRowId={r => r.month}
         loading={q.isLoading}
         error={q.isError ? { message: 'This report could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
@@ -291,7 +340,7 @@ const repeatColumns: Column<RepeatRow>[] = [
     header: 'Customer',
     value: r => r.name,
     cell: r => (
-      <Link to={`/companies/${r.companyId}`} className="font-medium text-fg hover:underline">
+      <Link to={`/companies/${r.companyId}`} className="font-medium text-primary underline-offset-4 hover:underline">
         {r.name}
       </Link>
     ),
@@ -337,6 +386,7 @@ function RepeatReport() {
         noun="customers"
         columns={repeatColumns}
         rows={s?.rows ?? []}
+        mobileRow={repeatCard}
         getRowId={r => r.companyId}
         loading={q.isLoading}
         error={q.isError ? { message: 'The customers could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
