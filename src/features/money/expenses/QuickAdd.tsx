@@ -238,7 +238,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   const paidThisMonth = month.data ? listTotals(month.data.rows).total : null
 
   return (
-    <section aria-labelledby={`${uid}-h`} className={cn(CARD, 'grid gap-4 p-card')} data-testid="quick-add" data-work="">
+    <section aria-labelledby={`${uid}-h`} className={cn(CARD, 'grid gap-4 p-card', IN_DIALOG)} data-testid="quick-add" data-work="">
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
@@ -545,6 +545,9 @@ function QuickSelect({ className, children, ...rest }: SelectHTMLAttributes<HTML
     </NativeSelect>
   )
 }
+
+/** Inside the Add an expense dialog (the E key, + Create > Expense) the dialog is the card: no second frame. */
+const IN_DIALOG = '[[data-dialog-body]_&]:rounded-none [[data-dialog-body]_&]:border-0 [[data-dialog-body]_&]:p-0 [[data-dialog-body]_&]:shadow-none'
 
 /** A category button: a pill, 40 with a mouse and 44 on a phone, 16 px words (60-expenses Quick add). */
 const CHOICE = 'inline-flex min-h-control items-center rounded-pill border px-4 text-base font-bold text-fg transition-[background-color,border-color,transform] duration-fast ease-out active:scale-press max-md:min-h-touch'
