@@ -34,7 +34,8 @@ function leave(config: MobileBarConfig, navigate: NavigateFunction, location: Lo
  * Phone top band (below 768), forest (data-surface="navy"; 86-phone-shell.html#ps-band). Default: the page title first, then the
  * magnifier (Search), Help and the account initial, --topbar-h tall. Create is the + in the bottom bar (the old "New" word broke the
  * title at 320, R-004), so the title has the room: it wraps, it is never cut.
- * A screen can ask for the one-bar form through useMobileBar(): chevron-left or x, its own title, and one slot on the
+ * A screen can ask for the one-bar form through useMobileBar(): chevron-left or x, its own title (one line: a long record name is cut
+ * with an ellipsis, whole in its tooltip), and one slot on the
  * right for its actions (86-phone-shell.html#ps-detail). Search, Help and the initial are not shown then.
  */
 export function MobileBar({ user, title, onSearch }: { user: SessionUser; title: string; onSearch?: () => void }) {
@@ -49,7 +50,11 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
     return (
       <header data-mobile-bar="detail" data-surface="navy" className="flex h-topbar items-center gap-1 bg-chrome px-2 text-fg md:hidden">
         <Button variant="quiet" size="touch" icon={isBack ? ChevronLeft : X} aria-label={label} onClick={() => leave(config, navigate, location)} />
-        <p className="min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base">{config.title ?? title}</p>
+        {/* A record's name (a long company) keeps to one line, cut with an ellipsis and whole in the tooltip: three lines ran out of the
+            band over the page. The page's h1 holds the whole name for a screen reader. */}
+        <p className="line-clamp-1 min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base" title={config.title ?? title}>
+          {config.title ?? title}
+        </p>
         {config.subtitle ? <p className="num shrink-0 text-base font-medium text-fg-muted">{config.subtitle}</p> : null}
         {actions ? <div className="flex shrink-0 items-center">{actions}</div> : null}
       </header>

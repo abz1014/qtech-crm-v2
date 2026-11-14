@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Clock } from 'lucide-react'
 import { formatAmount } from '@/lib/money'
+import { cn } from '@/lib/utils'
+import { buttonStyles } from '@/ui/buttonStyles'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { qk } from '@/features/queryKeys'
@@ -22,7 +24,7 @@ const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`
 
 export function HomeMoney({ today, admin }: { today: string; admin: boolean }) {
   return (
-    <div className="grid gap-card-gap" data-home-money="">
+    <div className={admin ? 'grid gap-card-gap sm:grid-cols-2' : 'grid gap-card-gap'} data-home-money="">
       <ToCollect today={today} />
       {admin ? <Received today={today} /> : null}
     </div>
@@ -33,7 +35,7 @@ function ToCollect({ today }: { today: string }) {
   const q = useReceivablesSummary(today)
   const s = q.data
   return (
-    <section aria-labelledby="home-to-collect" className="grid gap-2 rounded-card border bg-surface p-card shadow-e1">
+    <section aria-labelledby="home-to-collect" className="grid content-start gap-2 rounded-card border bg-surface p-card shadow-e1">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="home-to-collect" className="text-lg font-card">To collect</h2>
         {s && s.overdue > 0 ? (
@@ -56,7 +58,7 @@ function ToCollect({ today }: { today: string }) {
           </p>
         </>
       )}
-      <Link to="/money/receivables" className="inline-flex min-h-control items-center justify-center rounded-control border border-line-strong bg-surface px-4 text-base font-bold text-fg hover:bg-selected">
+      <Link to="/money/receivables" className={cn(buttonStyles({ variant: 'secondary' }), 'mt-1 w-full')}>
         Open To collect
       </Link>
     </section>
@@ -69,7 +71,7 @@ function Received({ today }: { today: string }) {
   // a month with no row yet has had no money in: zero, as on Money home
   const row = useMemo(() => q.data?.find(f => f.month === month) ?? null, [q.data, month])
   return (
-    <section aria-labelledby="home-received" className="grid gap-2 rounded-card border bg-surface p-card shadow-e1">
+    <section aria-labelledby="home-received" className="grid content-start gap-2 rounded-card border bg-surface p-card shadow-e1">
       <h2 id="home-received" className="text-lg font-card">Received this month</h2>
       {q.isPending ? (
         <div aria-busy="true" className="grid gap-2"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>

@@ -163,7 +163,7 @@ export function StageBlock({
         {action ? <div className="flex flex-wrap items-center gap-3 max-md:hidden">{action}</div> : null}
       </section>
       {between}
-      <section aria-label="Stage of this job" data-stage-track className="mt-4 rounded-card bg-surface p-card shadow-e1 md:mt-6">
+      <section aria-label="Stage of this job" data-stage-track className="mt-4 rounded-card border bg-surface p-card shadow-e1 md:mt-6">
         {m.ending ? (
           <p className="mb-4 flex items-center gap-2 text-lg font-card text-tone-danger-fg" data-stage-ending data-stage-phone>
             <Icon icon={CircleAlert} size="sm" />

@@ -1,12 +1,13 @@
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Building2, ChevronDown, ChevronRight, Users } from 'lucide-react'
+import { Building2, ChevronDown, ChevronRight, Clock, Users } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { pkr } from '@/features/money/expenses/model'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -56,13 +57,44 @@ if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').m
 const NONE: TodayItem[] = []
 const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08)
 
-/* The three work blocks and the quiet folds: each block's ink is its own (7.8:1 or better); hints sit on the white tiles, never on the yellow. */
+/*
+ * Forest (11-home-lists.html): every block is a white card. Late carries the red: a red top edge and a red heading with a clock; Today
+ * and This week are fold rows (the name, the count as a coloured chip, a chevron); the quiet folds are grey cards. The count chips keep
+ * the block colours (each ink is 7:1 on its own tint).
+ */
 type Block = TodoBlock | 'quiet'
-const BLOCK: Record<Block, string> = {
+const COUNT: Record<Block, string> = {
   late: 'bg-block-late text-block-late-fg',
   today: 'bg-block-today text-block-today-fg',
   week: 'bg-block-week text-block-week-fg',
   quiet: 'bg-block-quiet text-block-quiet-fg',
+}
+const CARD_OF: Record<TodoBlock, string> = {
+  late: 'border-t-4 border-t-tone-danger-fg',
+  today: '',
+  week: '',
+}
+/** The grey fold cards (Waiting, Imported, Older than 30 days): never counted, never coloured. */
+const QUIET = 'rounded-card border bg-sunken text-fg-2'
+
+/** The block's count: a small round chip in the block's colour. */
+function Count({ n, of }: { n: number; of: Block }) {
+  return <span className={cn('num inline-flex min-h-chip min-w-chip items-center justify-center rounded-pill px-2 text-xs font-card', COUNT[of])}>{n}</span>
+}
+
+/** The context pane while its download or the list loads: a title, two facts and a button, as the pane draws them. */
+function PaneSkeleton() {
+  return (
+    <div className="grid gap-3" aria-hidden="true">
+      <Skeleton className="h-3 w-1/4" />
+      <Skeleton className="h-6 w-3/4" />
+      <div className="grid grid-cols-2 gap-3">
+        <Skeleton className="h-16" />
+        <Skeleton className="h-16" />
+      </div>
+      <Skeleton className="h-10 w-1/2" />
+    </div>
+  )
 }
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
@@ -178,8 +210,8 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
     } else navigate(i.href)
   }
 
-  const row = (i: TodayItem, o: { waiting?: boolean; faded?: boolean; actions?: boolean } = {}) => (
-    <Row key={i.key} item={i} today={today} role={user.role} names={data?.names} waiting={o.waiting} faded={o.faded} actions={o.actions ?? true} open={openId === i.key} copied={!o.waiting && copied.has(i.key)} wide={wide} onPick={() => pick(i.key)} onAct={() => act(i)} onGo={href => navigate(href)}>
+  const row = (i: TodayItem, o: { waiting?: boolean; faded?: boolean; actions?: boolean; card?: boolean } = {}) => (
+    <Row key={i.key} card={o.card} item={i} today={today} role={user.role} names={data?.names} waiting={o.waiting} faded={o.faded} actions={o.actions ?? true} open={openId === i.key} copied={!o.waiting && copied.has(i.key)} wide={wide} onPick={() => pick(i.key)} onAct={() => act(i)} onGo={href => navigate(href)}>
       {!wide && expanded === i.key && data ? (
         <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
           <Suspense fallback={null}>
@@ -192,10 +224,10 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
 
   const list = (
     // One column that may shrink to the pane: no card or row can make the list wider than its pane (no sideways scroll).
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
-      <header className="grid gap-1 px-5 pb-3 pt-5">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-3">
+      <header className="grid gap-1">
         <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>Home</h1>
-        <p className="text-base text-fg-muted">
+        <p className="text-sm text-fg-muted">
           {headerDate(today)}
           {view ? (
             <>
@@ -205,15 +237,21 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
             </>
           ) : null}
         </p>
-        {switcher}
+        {switcher ? <div className="mt-2">{switcher}</div> : null}
         <HowItWorksCard userId={user.id} role={user.role} since={since} className="mt-2" />
       </header>
 
       {query.isPending ? (
-        <div role="status" className="grid gap-4 px-5 py-4" aria-busy="true" aria-label="Loading Home">
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} className="grid gap-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
-          ))}
+        // Shaped like what comes: the hero, the Late card with two rows, two fold rows.
+        <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading Home">
+          <Skeleton className="h-[6.5rem] w-full rounded-card" />
+          <div className={cn(CARD, 'grid gap-4 p-card')}>
+            {[0, 1].map(i => (
+              <div key={i} className="grid gap-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
+            ))}
+          </div>
+          <Skeleton className="h-row w-full rounded-card" />
+          <Skeleton className="h-row w-full rounded-card" />
         </div>
       ) : query.isError || !view || !model ? (
         <EmptyState mood="error" title="Home could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
@@ -223,7 +261,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
         <>
           {!firstUse.isNew && model.total > 0 ? <Hero role={user.role} name={name} count={needYou} /> : null}
           {firstUse.isNew ? (
-            <FirstUseState screen="today" role={user.role} alone={firstUse.alone} className="mx-5 my-4" />
+            <FirstUseState screen="today" role={user.role} alone={firstUse.alone} />
           ) : model.total === 0 ? (
             <EmptyState mood="goal" title="No tasks for today">
               {waiting.length > 0
@@ -250,31 +288,42 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
                   data-block-closed={id}
                   data-work={n === 0 ? '' : undefined}
                   onClick={() => toggleBlock(id, false)}
-                  className={cn('type-section mx-2 mb-3 flex min-h-touch items-center gap-2 rounded-panel px-4 py-2 text-left first:mt-1 md:mx-3', BLOCK[id])}
+                  className={cn(CARD, 'type-section flex min-h-row items-center gap-2 px-card py-2 text-left transition-[box-shadow,background-color] duration-fast ease-out hover:bg-sunken hover:shadow-e2')}
                 >
-                  <span>{title}</span>
-                  <span className="num">{items.length}</span>
-                  <Icon icon={ChevronRight} size="sm" className="ml-auto" />
+                  <span className="min-w-0 flex-1">{title}</span>
+                  <Count n={items.length} of={id} />
+                  <Icon icon={ChevronRight} size="sm" className="text-fg-muted" />
                 </button>
               )
             }
             return (
-              <section key={`${id}-${n}`} aria-label={title} data-block={id} data-work={n === 0 ? '' : undefined} className={cn('mx-2 mb-3 rounded-panel px-3 py-2 first-of-type:mt-1 md:mx-3', BLOCK[id])}>
-                <h2 className="type-section">
-                  {foldable ? (
-                    <button type="button" aria-expanded={true} onClick={() => toggleBlock(id, true)} className="flex min-h-touch w-full items-center gap-2 text-left">
-                      <span>{title}</span>
-                      <span className="num">{items.length}</span>
-                      <Icon icon={ChevronDown} size="sm" className="ml-auto" />
-                    </button>
-                  ) : (
-                    <span className="flex min-h-touch items-center gap-2">
-                      {title} <span className="num">{items.length}</span>
-                    </span>
-                  )}
-                </h2>
-                <ul className="grid">{items.map(i => row(i))}</ul>
-              </section>
+              user.role === 'engineer' ? (
+                // An engineer's day (11-home-lists.html, engineer): the day as a heading with its count, each visit its own card.
+                <section key={`${id}-${n}`} aria-label={title} data-block={id} data-work={n === 0 ? '' : undefined} className="grid gap-2">
+                  <h2 className="type-section flex min-h-touch items-center gap-2 pt-1">
+                    {title} <Count n={items.length} of={id} />
+                  </h2>
+                  <ul className="grid gap-2">{items.map(i => row(i, { card: true }))}</ul>
+                </section>
+              ) : (
+                <section key={`${id}-${n}`} aria-label={title} data-block={id} data-work={n === 0 ? '' : undefined} className={cn(CARD, 'px-3 pb-2 pt-1', CARD_OF[id])}>
+                  <h2 className={cn('type-section', id === 'late' && 'text-tone-danger-fg')}>
+                    {foldable ? (
+                      <button type="button" aria-expanded={true} onClick={() => toggleBlock(id, true)} className="flex min-h-row w-full items-center gap-2 px-2 text-left">
+                        <span className="min-w-0 flex-1">{title}</span>
+                        <Count n={items.length} of={id} />
+                        <Icon icon={ChevronDown} size="sm" className="text-fg-muted" />
+                      </button>
+                    ) : (
+                      <span className="flex min-h-row items-center gap-2 px-2">
+                        {id === 'late' ? <Icon icon={Clock} /> : null}
+                        <span className="min-w-0 flex-1">{title}</span> <Count n={items.length} of={id} />
+                      </span>
+                    )}
+                  </h2>
+                  <ul className="grid">{items.map(i => row(i))}</ul>
+                </section>
+              )
             )
           })}
           {model.more.length > 0 && user.role !== 'engineer' ? (
@@ -283,7 +332,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
             </Fold>
           ) : null}
           {waiting.length > 0 ? (
-            <section aria-label="Waiting" data-block="quiet" className="mx-2 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg md:mx-3">
+            <section aria-label="Waiting" data-block="quiet" className={QUIET}>
               <button
                 type="button"
                 aria-expanded={waitingOpen}
@@ -291,9 +340,9 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
                   waitingToggledThisSession = !waitingOpen
                   setWaitingToggled(!waitingOpen)
                 }}
-                className="flex min-h-touch w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2"
+                className="flex min-h-row w-full items-center gap-2 rounded-card px-card py-3 text-left text-base font-semibold text-fg-2"
               >
-                <Icon icon={waitingOpen ? ChevronDown : ChevronRight} size="sm" />
+                <Icon icon={waitingOpen ? ChevronDown : ChevronRight} size="sm" className="text-fg-muted" />
                 {/* Words, never a pill (spec 2.2 #8): "Chased, waiting until Mon 30 Nov". */}
                 <span>
                   {WAITING_TITLE} · <span className="num">{waiting.length}</span>
@@ -348,12 +397,12 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
 
   if (team) {
     return (
-      <div className="min-h-full bg-surface" data-user={name}>
+      <div className="mx-auto grid w-full max-w-table content-start gap-card-gap px-4 pb-12 pt-6 md:px-8" data-user={name}>
         <NoPrimary />
-        <header className="grid gap-1 px-5 pb-1 pt-5">
+        <header className="grid gap-1">
           <h1 className="text-2xl font-heavy tracking-tight">Home</h1>
-          <p className="text-base text-fg-muted">{headerDate(today)} · the team</p>
-          {switcher}
+          <p className="text-sm text-fg-muted">{headerDate(today)} · the team</p>
+          <div className="mt-2">{switcher}</div>
         </header>
         {data ? <TeamView data={data} today={today} selfId={user.id} /> : query.isPending ? <div role="status" aria-busy="true" aria-label="Loading the team" className="p-5"><Skeleton className="h-4 w-2/3" /></div> : <EmptyState mood="error" title="The team could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>Nothing was changed.</EmptyState>}
       </div>
@@ -361,22 +410,23 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
   }
 
   return (
-    // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
-    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
+    // Forest (11 and 12-home): the page scrolls; the list is the wide column, the pane a card beside it that stays in view and is the only
+    // part of Home that scrolls on its own (R-039). 768 to 1279 px: the list takes three fifths; from 1280 the pane is 28rem.
+    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] items-start gap-card-gap px-4 pb-12 pt-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:px-8 xl:grid-cols-[minmax(0,1fr)_28rem]" data-user={name}>
       <NoPrimary />
-      <div className="flex min-h-0 min-w-0 flex-col border-r bg-surface">
+      <div className="flex min-w-0 flex-col">
         {/* The target tile is the foot of the list, at every width: it scrolls with the list instead of taking a pinned block
             of the laptop's first screen from the jobs (audit T2). An engineer gets no tile at all: a target is PKR amounts, and an
             engineer sees no prices (owner decision 2026-10-22; no request is made). */}
-        <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">
+        <div data-today-list className="min-w-0 overflow-x-clip">
           {list}
           {seesPrices(user.role) ? (
             // Admin and sales only (an engineer's branch draws none of this: no amount, and no request is made).
-            <div className="grid gap-card-gap bg-surface px-3 pb-4 pt-1">
+            <div className="mt-card-gap grid gap-card-gap">
               <HomeMoney today={today} admin={user.role === 'admin'} />
-              <TargetTile today={today} className="rounded-card border bg-surface shadow-e1" />
+              <TargetTile today={today} className={CARD} />
               {/* F-826: on a phone Companies is not on the bottom bar, so Home ends with it (the rail has it from 768 up). */}
-              <Link to="/companies" data-home-companies="" className="flex min-h-touch items-center gap-3 rounded-card border bg-surface px-4 py-3 text-base font-semibold text-fg shadow-e1 hover:bg-selected md:hidden">
+              <Link to="/companies" data-home-companies="" className={cn(CARD, 'flex min-h-touch items-center gap-3 px-card py-3 text-base font-semibold text-fg hover:bg-selected md:hidden')}>
                 <Icon icon={Building2} />
                 <span className="min-w-0 flex-1">Companies</span>
                 <Icon icon={ChevronRight} size="sm" />
@@ -386,15 +436,15 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
         </div>
       </div>
       {wide ? (
-        <div className="min-h-0 overflow-y-auto px-5 py-6 lg:px-8">
+        <div data-home-pane className={cn(CARD, 'sticky top-6 max-h-[calc(100dvh-var(--topbar-h)-var(--sp-12))] min-w-0 overflow-y-auto p-card')}>
           {current && data ? (
-            <div className="mx-auto max-w-list">
-              <Suspense fallback={null}>
-                <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
-              </Suspense>
-            </div>
-          ) : query.isPending ? null : (
-            <div className="grid h-full place-items-center text-base text-fg-muted">Select an item to see what to do about it.</div>
+            <Suspense fallback={<PaneSkeleton />}>
+              <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
+            </Suspense>
+          ) : query.isPending ? (
+            <PaneSkeleton />
+          ) : (
+            <p className="py-8 text-center text-base text-fg-muted">Select an item to see what to do about it.</p>
           )}
         </div>
       ) : null}
@@ -417,10 +467,10 @@ function Hero({ role, name, count }: { role: Role; name: string; count: number }
   const h = HERO[role]
   const first = name.trim().split(/\s+/)[0] ?? ''
   return (
-    <section data-surface="navy" aria-labelledby="home-hero-title" data-home-hero={role} className="mx-2 mb-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-2 rounded-card bg-chrome bg-hero p-card text-fg shadow-e2 md:mx-3">
+    <section data-surface="navy" aria-labelledby="home-hero-title" data-home-hero={role} className="flex flex-wrap items-end justify-between gap-x-5 gap-y-2 rounded-card bg-chrome bg-hero p-card text-fg shadow-e2">
       <div className="min-w-0 flex-1">
         <p className="text-base text-fg-2">{first ? `${h.role}, ${first}` : h.role}</p>
-        <h2 id="home-hero-title" className="text-xl font-heavy tracking-tight">{h.title}</h2>
+        <h2 id="home-hero-title" className="text-2xl font-heavy tracking-tight max-md:text-xl">{h.title}</h2>
       </div>
       <p className="num text-hero font-heavy text-lime-300">
         <span aria-hidden="true">{count}</span>
@@ -433,9 +483,9 @@ function Hero({ role, name, count }: { role: Role; name: string; count: number }
 /** A grey fold: one line that opens its rows. Never counted. */
 function Fold({ label, ariaLabel, open, hint, onToggle, children, ...rest }: { label: ReactNode; ariaLabel?: string; open: boolean; hint: string; onToggle: () => void; children: ReactNode } & Record<`data-${string}`, string>) {
   return (
-    <section aria-label={ariaLabel ?? (typeof label === 'string' ? label : undefined)} data-block="quiet" className="mx-2 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg md:mx-3" {...rest}>
-      <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-h-touch w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2">
-        <Icon icon={open ? ChevronDown : ChevronRight} size="sm" />
+    <section aria-label={ariaLabel ?? (typeof label === 'string' ? label : undefined)} data-block="quiet" className={QUIET} {...rest}>
+      <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-h-row w-full items-center gap-2 rounded-card px-card py-3 text-left text-base font-semibold text-fg-2">
+        <Icon icon={open ? ChevronDown : ChevronRight} size="sm" className="text-fg-muted" />
         <span className="min-w-0 break-words">
           {label}
           <span className="font-regular text-fg-muted">{hint}</span>
@@ -464,15 +514,23 @@ interface RowProps {
   onAct: () => void
   onGo: (href: string) => void
   children?: ReactNode
+  /** Drawn as its own card (an engineer's day list). */
+  card?: boolean
 }
 
-function Row({ item, today, role, names, waiting = false, faded = false, actions, open, copied, wide, onPick, onAct, onGo, children }: RowProps) {
+function Row({ item, today, role, names, waiting = false, faded = false, actions, open, copied, wide, onPick, onAct, onGo, children, card = false }: RowProps) {
   // On the selected row's background the amber is below 4.5:1, so a warning badge reads in the body colour there (as on the GST register).
   const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? (open ? 'text-fg-2' : 'text-tone-warning-fg') : 'text-fg-muted'
   const second = actions ? secondAction(item, role) : null
   const own = actions && !waiting // the row carries its own button and its own snooze
   return (
-    <li data-row-actions="" data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className={cn('relative rounded-row border-t first:border-t-0', open && 'after:pointer-events-none after:absolute after:inset-0 after:rounded-row after:ring-2 after:ring-inset after:ring-fg', waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle')}>
+    <li data-row-actions="" data-rule={item.rule} data-due={dueOf(item, today, waiting || faded)} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className={cn(
+        // A row in a block is a tile under a hairline; an engineer's visit is its own card (the day list). The selected row (the one the
+        // pane shows) is tinted, with the brand bar at its left edge (11-home-lists.html): the bar is 3:1 on white (WCAG 1.4.11).
+        'relative rounded-row transition-colors duration-fast',
+        card ? 'border bg-surface p-1 shadow-e1 rounded-card' : 'border-t first:border-t-0',
+        open && 'bg-selected before:pointer-events-none before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-pill before:bg-brand-700',
+        waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle')}>
       {/* Line 1 the title, line 2 the reference and party; tap to read what to do about it. */}
       <button
         type="button"

@@ -260,7 +260,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
 }
 
 /** From 768 px each step is its own white card; on a phone the rows share the one card above. */
-const CARD = 'px-card md:rounded-card md:border-b-0 md:bg-surface md:shadow-e1'
+const CARD = 'px-card md:rounded-card md:border md:bg-surface md:shadow-e1'
 
 export const NO_ENQUIRY_ROW = 'No RFQ or quotation: this job started as an order'
 
@@ -295,7 +295,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
   const merged = facts.job.kind === 'direct'
   const sections = merged ? built.slice(2) : built
   return (
-    <div className="grid min-w-0 overflow-hidden rounded-card bg-surface shadow-e1 max-md:[&>:last-child]:border-b-0 md:gap-2 md:overflow-visible md:rounded-none md:bg-transparent md:shadow-none" data-stages>
+    <div className="grid min-w-0 overflow-hidden rounded-card border bg-surface shadow-e1 max-md:[&>:last-child]:border-b-0 md:gap-2 md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none" data-stages>
       {merged ? (
         <div id="stage-0" data-stage="RFQ" data-fold-row="" className={cn('flex min-h-touch items-center gap-3 border-b py-3 text-fg-muted', CARD)}>
           <Icon icon={Minus} />
