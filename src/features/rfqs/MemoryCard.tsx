@@ -13,12 +13,12 @@ import { Tag } from '@/ui/Tag'
  * footnote says where it comes from. Built from lib/memory (pure); this file only lays it out.
  */
 
-const CELL = 'grid min-w-0 content-start gap-[6px] bg-surface px-4 py-3'
+const CELL = 'grid min-w-0 content-start gap-1 bg-surface px-4 py-3'
 
 function Cell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className={CELL}>
-      <h5 className="text-sm text-fg-muted">{title}</h5>
+      <h5 className="text-sm font-semibold text-fg-2">{title}</h5>
       {children}
     </div>
   )
@@ -52,7 +52,7 @@ function Price({ fact, source }: { fact: PriceFact; source?: boolean }) {
   return (
     <>
       <p className="flex flex-wrap items-baseline gap-x-2">
-        <span className="num text-lg font-medium">{fact.amount}</span>
+        <span className="font-mono text-lg font-bold tabular-nums">{fact.amount}</span>
         <span className="text-xs text-fg-muted">each</span>
       </p>
       {fact.pkr ? (
@@ -82,19 +82,19 @@ function Price({ fact, source }: { fact: PriceFact; source?: boolean }) {
 function EvidenceView({ block }: { block: EvidenceBlock }) {
   return (
     <div className="border-t" data-evidence-block>
-      <header className="flex items-center justify-between gap-3 border-b bg-canvas px-4 py-2 text-xs font-medium text-fg-muted">
-        <h5 className="font-medium">{block.title}</h5>
+      <header className="flex items-center justify-between gap-3 border-b bg-sunken px-4 py-2 text-sm font-semibold text-fg-2">
+        <h5 className="font-semibold">{block.title}</h5>
         {block.countText ? <span className="num text-fg-2">{block.countText}</span> : null}
       </header>
       <ul className="m-0 list-none p-0">
         {block.orders.map((o, i) => (
-          <li key={`${i}-${o.ref}`} className="grid grid-cols-[86px_minmax(0,1fr)_auto] gap-3 border-t px-4 py-2 text-sm first:border-t-0" data-evidence-order>
-            <span className="num pt-[2px] text-xs font-medium">{o.ref}</span>
-            <span className="grid min-w-0 gap-[1px]">
+          <li key={`${i}-${o.ref}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-3 border-t px-4 py-2 text-sm first:border-t-0" data-evidence-order>
+            <span className="font-mono text-xs font-medium tabular-nums">{o.ref}</span>
+            <span className="grid min-w-0 gap-px">
               <span className="text-pretty">{o.what}</span>
               {o.when ? <span className="num text-xs text-fg-muted">{o.when}</span> : null}
             </span>
-            <span className="grid justify-items-end gap-[1px] text-right">
+            <span className="grid justify-items-end gap-px text-right">
               <b className={cn('text-sm font-medium', o.tone === 'late' && 'text-tone-warning-fg', o.tone === 'wait' && 'font-regular text-fg-muted')}>{o.result}</b>
               {o.detail ? <span className="text-xs text-fg-muted">{o.detail}</span> : null}
             </span>
@@ -104,7 +104,7 @@ function EvidenceView({ block }: { block: EvidenceBlock }) {
       {block.counts.length > 0 ? (
         <dl className="m-0 flex flex-wrap gap-x-6 gap-y-2 border-t bg-surface px-4 py-3">
           {block.counts.map(c => (
-            <div key={c.label} className="grid gap-[1px]">
+            <div key={c.label} className="grid gap-px">
               <dt className="text-xs font-medium text-fg-muted">{c.label}</dt>
               <dd className={cn('num m-0 text-sm font-medium', c.tone === 'late' && 'text-tone-warning-fg')}>{c.value}</dd>
             </div>
@@ -139,16 +139,16 @@ export function MemoryCardView({
   const tier = card.tierLabel ?? fallbackTier ?? null
   const scope = card.scope
   return (
-    <section id={id} aria-label={`What we know about ${supplierName}`} className="overflow-hidden rounded-panel border bg-surface" data-memory-card>
-      <header className="flex flex-wrap items-start gap-x-3 gap-y-1 border-b bg-sunken px-4 py-3">
+    <section id={id} aria-label={`What we know about ${supplierName}`} className="overflow-hidden rounded-control border bg-surface" data-memory-card>
+      <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b bg-deep px-4 py-3">
         <div className="min-w-0 flex-1 basis-[15rem]">
-          <h4 className="text-sm font-semibold">What we know about {supplierName}</h4>
-          <p className="mt-1 text-xs text-fg-muted text-pretty">
+          <h4 className="type-row">What we know about {supplierName}</h4>
+          <p className="mt-1 text-sm text-fg-2 text-pretty">
             {itemLine} {card.matchedOn}
           </p>
         </div>
         {tier ? (
-          <span className="inline-flex h-5 shrink-0 items-center gap-[6px] whitespace-nowrap rounded border border-line-strong bg-surface px-[6px] text-xs text-fg-2">
+          <span className="inline-flex min-h-chip shrink-0 items-center gap-1 whitespace-nowrap rounded-pill bg-tone-neutral-bg py-px pl-2 pr-3 text-xs font-card text-tone-neutral-fg">
             <Icon icon={TagIcon} size="chip" />
             {tier}
           </span>
@@ -176,10 +176,10 @@ export function MemoryCardView({
         </Cell>
         <Cell title="Brands carried">
           {card.brands.length > 0 ? (
-            <ul className="flex flex-wrap gap-[6px]">
+            <ul className="flex flex-wrap gap-2">
               {card.brands.map(b => (
                 <li key={b}>
-                  <Tag className="h-6 px-2 text-sm">{b}</Tag>
+                  <Tag className="font-sans text-sm font-semibold">{b}</Tag>
                 </li>
               ))}
             </ul>
@@ -205,8 +205,8 @@ export function MemoryCardView({
 
       {evidence ? <EvidenceView block={evidence} /> : null}
 
-      <footer className="flex items-start gap-2 border-t bg-sunken px-4 py-3 text-xs text-fg-muted">
-        <Icon icon={Info} size="sm" className="mt-[1px]" />
+      <footer className="flex items-start gap-2 border-t bg-deep px-4 py-3 text-sm text-fg-2">
+        <Icon icon={Info} size="sm" className="mt-1" />
         <p className="text-pretty">{card.footnote || 'Counts come from RFQs, supplier price lines, purchase orders and delivery dates. Nothing here is typed in.'}</p>
       </footer>
     </section>

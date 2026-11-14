@@ -15,11 +15,13 @@ import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
  * decides "Deals in <category>" on the ask list. A solid chip is the item's own category. An item with none shows the keyword
  * dictionary's guess as a DASHED chip ("Contactors, guessed"): a guess is never saved by itself, tapping it opens the picker with
  * that guess first, and picking a category (the guess included) writes it. "No category" is dashed and muted. Admin and sales pick;
- * an engineer sees the chip and cannot change it. The chip is as tall as its line (22 px) and its 44 px tap target is an ::after that reaches past it, and sits above the item header's stretched tap target
- * (z-10, as the row menu does): without it, on a phone the header's ::after covered it and a Tab stop was hidden under it (2.4.11).
+ * an engineer sees the chip and cannot change it. Forest: a pill (proposal 24, .qb-chip outlined), as tall as a chip; its 44 px tap
+ * target is an ::after that reaches past it (half of what the chip is short of --hit-touch, each side), and it sits above the item
+ * header's stretched tap target (z-base, as the row menu does): without it, on a phone the header's ::after covered it and a Tab
+ * stop was hidden under it (2.4.11).
  */
 const chip =
-  "relative z-10 -my-px inline-flex items-center rounded border px-2 text-base leading-6 after:absolute after:inset-x-0 after:-inset-y-[11px] after:content-['']"
+  "relative z-base -my-px inline-flex min-h-chip items-center rounded-pill border px-3 text-sm font-semibold leading-tight transition-colors duration-fast after:absolute after:inset-x-0 after:-inset-y-[calc((var(--hit-touch)-var(--chip-h))/2)] after:content-['']"
 
 export function CategoryChip({ rfqId, item }: { rfqId: string; item: Pick<RfqItemRow, 'id' | 'description' | 'familyId' | 'familyName'> }) {
   const session = useSession()
@@ -66,20 +68,20 @@ export function CategoryChip({ rfqId, item }: { rfqId: string; item: Pick<RfqIte
           {label}
         </button>
       </PopoverTrigger>
-      <PopoverContent role="dialog" aria-label="Product category" className="max-h-[320px] w-[280px] overflow-y-auto">
-        <p className="px-1 pb-2 text-base font-medium">Product category</p>
+      <PopoverContent role="dialog" aria-label="Product category" className="max-h-[20rem] w-[17.5rem] overflow-y-auto">
+        <p className="px-2 pb-2 text-base font-bold">Product category</p>
         <ul className="grid gap-px">
           {options.map(o => (
             <li key={o.id}>
-              <button type="button" onClick={() => choose(o.id)} className="flex min-h-touch w-full items-center gap-2 rounded px-2 text-left text-base hover:bg-sunken">
+              <button type="button" onClick={() => choose(o.id)} className="flex min-h-touch w-full items-center gap-2 rounded-control px-2 text-left text-base hover:bg-selected">
                 <span className="min-w-0 flex-1">{o.name}</span>
-                {o.id === item.familyId ? <Check aria-label="Current" className="size-4" /> : guess?.id === o.id ? <span className="text-base text-fg-muted">guess</span> : null}
+                {o.id === item.familyId ? <Check aria-label="Current" className="size-4 text-primary" /> : guess?.id === o.id ? <span className="text-base text-fg-muted">guess</span> : null}
               </button>
             </li>
           ))}
           {item.familyId ? (
             <li>
-              <button type="button" onClick={() => choose(null)} className="flex min-h-touch w-full items-center rounded px-2 text-left text-base text-fg-2 hover:bg-sunken">
+              <button type="button" onClick={() => choose(null)} className="flex min-h-touch w-full items-center rounded-control px-2 text-left text-base text-fg-2 hover:bg-selected">
                 No category
               </button>
             </li>

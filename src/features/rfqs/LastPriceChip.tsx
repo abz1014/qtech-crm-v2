@@ -19,7 +19,7 @@ export function LastPriceChipView({ chip }: { chip: LastPriceChip }) {
           <b className="font-medium text-fg-2">price on file, currency unverified</b>
         ) : (
           <>
-            <b className="num font-medium text-fg-2">{chip.amount}</b>
+            <b className="font-mono font-semibold tabular-nums text-fg-2">{chip.amount}</b>
             {chip.pkr ? (
               <>
                 {' '}

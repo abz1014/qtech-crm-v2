@@ -13,7 +13,6 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
-import { StatusText } from '@/ui/StatusText'
 import { agoDays, days } from '@/lib/timeWords'
 import { useToast } from '@/ui/useToast'
 import { LastPriceChipView } from '@/features/rfqs/LastPriceChip'
@@ -58,17 +57,17 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
 // Every row is its own grid, so the tracks are fixed to line up; sized for 16px text ("≈ PKR 1,234,567", "Not in stock").
-const COLS = 'lg:grid-cols-[minmax(0,1fr)_168px_minmax(0,112px)_112px_72px]'
-const HEAD = `hidden items-end gap-x-4 px-0 py-2 text-sm text-fg-muted lg:grid ${COLS}`
+const COLS = 'lg:grid-cols-[minmax(0,1fr)_10.5rem_minmax(0,7rem)_7rem_4.5rem]'
+const HEAD = `hidden items-end gap-x-4 px-0 pb-2 pt-3 text-sm font-semibold text-fg-muted lg:grid ${COLS}`
 /**
  * Phone (UX audit C3): two lines per supplier. The name (and its mark) across the row with the two buttons at its end; then
  * price · lead time · stock on one wrapping line. On desktop the second line's wrapper dissolves (lg:contents) into the columns.
  */
-const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 lg:py-2 ${COLS}`
+const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 ${COLS}`
 /** An engineer's row: the supplier, then lead time · stock (no price, no buttons). */
-const COLS_NO_PRICES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,112px)_112px]'
-const HEAD_NO_PRICES = `hidden items-end gap-x-4 px-0 py-2 text-sm text-fg-muted lg:grid ${COLS_NO_PRICES}`
-const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 lg:py-2 ${COLS_NO_PRICES}`
+const COLS_NO_PRICES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,7rem)_7rem]'
+const HEAD_NO_PRICES = `hidden items-end gap-x-4 px-0 pb-2 pt-3 text-sm font-semibold text-fg-muted lg:grid ${COLS_NO_PRICES}`
+const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t px-0 py-3 lg:gap-x-4 ${COLS_NO_PRICES}`
 
 interface Entry {
   line: QuoteLineRow
@@ -81,14 +80,14 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
     return (
       <span className="inline-grid justify-items-start gap-x-2 lg:grid lg:justify-items-end">
         <span className="flex flex-wrap items-center gap-x-2 lg:justify-end">
-          <span className="num whitespace-nowrap text-base font-medium">
+          <span className="whitespace-nowrap font-mono text-base font-bold tabular-nums" data-price>
             {/* A real space, not a margin: a screen reader reads "≈ PKR 33,600", not "PKR33,600". */}
-            <span className="font-sans text-sm font-regular text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
+            <span className="font-sans text-sm font-medium text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
             {line.currency === 'PKR' ? formatAmount(line.unitPrice, 'auto') : formatPaisa(c.pkrPaisa as bigint, 'auto')}
           </span>
         </span>
         {line.currency === 'PKR' ? null : (
-          <span className="num whitespace-nowrap text-sm text-fg-muted" data-own-price>
+          <span className="whitespace-nowrap font-mono text-sm tabular-nums text-fg-muted" data-own-price>
             {`${line.currency} ${formatAmount(line.unitPrice, 'auto')}`}
           </span>
         )}
@@ -98,8 +97,8 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
   return (
     <span className="inline-grid justify-items-start lg:grid lg:justify-items-end">
       <span className="flex flex-wrap items-center gap-x-2 lg:justify-end">
-        <span className="num whitespace-nowrap text-base font-medium">
-          <span className="font-sans text-sm font-regular text-fg-muted">{line.currency}</span>{' '}
+        <span className="whitespace-nowrap font-mono text-base font-bold tabular-nums" data-price>
+          <span className="font-sans text-sm font-medium text-fg-muted">{line.currency}</span>{' '}
           {formatAmount(line.unitPrice, 'always')}
         </span>
       </span>
@@ -219,11 +218,11 @@ function declinedReason(itemId: string, inquiry: InquiryRow): string | null {
 function AskForItem({ suggestions, item, onCopyEnquiry }: { suggestions: readonly SupplierSuggestion[]; item: RfqItemRow; onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void }) {
   if (suggestions.length === 0) return null
   return (
-    <ul className="border-b">
+    <ul className="rounded-b-control border border-t-0">
       {suggestions.map(s => (
         <li key={s.supplierId} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3 first:border-t-0">
-          <span className="min-w-0 flex-1 basis-[14rem]">
-            <b className="block font-semibold">{s.name}</b>
+          <span className="min-w-0 flex-1 basis-[14rem] [overflow-wrap:anywhere]">
+            <b className="type-row block">{s.name}</b>
             <span className="text-sm text-fg-muted">{s.reason}</span>
           </span>
           <Button size="sm" icon={Copy} onClick={() => onCopyEnquiry(s, item)} aria-label={`Copy message for ${s.name}`}>
@@ -243,7 +242,7 @@ function AskForItem({ suggestions, item, onCopyEnquiry }: { suggestions: readonl
 function WaitingLine({ waiting }: { waiting: readonly InquiryRow[] }) {
   const names = waiting.map(w => w.supplierName)
   return (
-    <li className="flex items-center gap-2 border-t bg-sunken px-0 py-2 text-fg-2" data-waiting={waiting.map(w => w.supplierId).join(' ')} title={names.join(', ')}>
+    <li className="mt-2 flex items-center gap-2 rounded-control bg-deep px-3 py-2 text-fg-2" data-waiting={waiting.map(w => w.supplierId).join(' ')} title={names.join(', ')}>
       <Icon icon={Clock} className="shrink-0 text-fg-muted" />
       <span className="min-w-0 [overflow-wrap:anywhere]">
         Waiting on {waiting.length === 1 ? <b className="font-semibold text-fg">{names[0]}</b> : `${waiting.length} suppliers`}
@@ -256,7 +255,7 @@ function WaitingLine({ waiting }: { waiting: readonly InquiryRow[] }) {
 function Bullet() {
   return (
     <span aria-hidden="true" className="flex h-5 w-4 shrink-0 items-center justify-center">
-      <span className="size-[3px] rounded-round bg-fg-muted" />
+      <span className="size-1 rounded-round bg-fg-muted" />
     </span>
   )
 }
@@ -348,24 +347,24 @@ export function ItemsPanel({
     >
       {!nobodyAsked && rateBar.length > 0 ? <RateBar entries={rateBar} /> : null}
       {prices && statementTo && responders.length > 0 ? (
-        <p className="border-b px-0 py-1">
+        <p className="border-b px-0 py-2">
           <Link
             to={statementTo}
             data-testid="open-statement"
-            className="inline-flex min-h-touch items-center gap-2 rounded text-base font-medium text-primary underline-offset-4 hover:underline"
+            className="inline-flex min-h-touch items-center gap-2 rounded-control text-base font-bold text-primary underline underline-offset-4 hover:text-primary-hover"
           >
-            <Icon icon={Table2} size="sm" />
+            <Icon icon={Table2} />
             Open the comparative statement
           </Link>
         </p>
       ) : null}
       {nobodyAsked && items.length > 0 ? (
-        <p className="border-b px-0 py-4 text-fg-2">
+        <p className="mt-4 rounded-control border border-dashed px-4 py-3 text-fg-2">
           <b className="font-semibold text-fg">Ask a supplier first.</b> Replies are entered under Suppliers asked.
         </p>
       ) : null}
       {items.length === 0 ? (
-        <p className="px-0 py-6 text-fg-muted">This RFQ has no items yet. Add the first one to start asking for prices.</p>
+        <p className="mt-4 rounded-control border border-dashed px-4 py-6 text-fg-muted">This RFQ has no items yet. Add the first one to start asking for prices.</p>
       ) : (
         <div className="divide-y">
           {items.map(item => {
@@ -402,9 +401,9 @@ export function ItemsPanel({
                 {/* A grid, so the number stays beside the title and the fold chevron and menu stay at the right of the first row at any
                     width; below lg the chip drops under the title, from lg it sits before the chevron. */}
                 <header className={cn('relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-0 pt-4 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:pt-3', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
-                  <span className="num col-start-1 row-start-1 mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-sm">{item.number}</span>
+                  <span className="num col-start-1 row-start-1 mt-px grid size-6 place-items-center rounded-round border border-line-strong text-sm font-medium">{item.number}</span>
                   <div className="col-start-2 row-start-1 min-w-0">
-                    <h3 className="text-base font-medium text-pretty">
+                    <h3 className="type-row text-pretty [overflow-wrap:anywhere]">
                       {foldable ? (
                         // The whole header is the tap target (the button's box stretches over it); the name is its label.
                         <button
@@ -420,27 +419,28 @@ export function ItemsPanel({
                         item.description
                       )}
                     </h3>
-                    <p className="mt-1 overflow-x-clip text-sm text-fg-muted">
-                     <span className="-ml-4 flex flex-wrap items-center gap-y-1">
+                  </div>
+                  {/* The quantity, brand and category under the title, across to the right edge (the chevron and menu sit on the title's line only). */}
+                  <p className="col-span-2 col-start-2 row-start-2 -mt-1 min-w-0 overflow-x-clip text-sm text-fg-muted lg:col-span-3">
+                    <span className="-ml-4 flex flex-wrap items-center gap-y-1">
                       {q ? <span className="num pl-4">{q}</span> : null}
                       {item.brandName ? <Dot>{item.brandName}</Dot> : null}
                       <Dot>
                         <CategoryChip rfqId={rfq.id} item={item} />
                       </Dot>
-                     </span>
-                    </p>
-                  </div>
+                    </span>
+                  </p>
                   {/* "Priced" is said once, on each supplier's row (Suppliers asked): an item with prices shows its price rows, not a second chip. */}
                   {/* An item others were asked about but nobody about this one says so folded too: Needs suppliers. */}
                   {unasked || (cov.value && cov.value !== 'priced') ? (
-                    <span className="col-start-2 row-start-2 justify-self-start lg:col-start-3 lg:row-start-1">
+                    <span className="col-start-2 row-start-3 justify-self-start lg:col-start-3 lg:row-start-1">
                       <StatusBadge dimension="item-price" value={unasked ? 'unasked' : (cov.value as string)} detail={cov.detail} />
                     </span>
                   ) : null}
                   <span className="col-start-3 row-start-1 flex shrink-0 items-start gap-x-1 lg:col-start-4">
-                    {foldable ? <Icon icon={ChevronDown} className={cn('mt-[2px] shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} /> : null}
-                    {/* Above the phone header's whole-width tap target (z-10), so the menu is its own button. */}
-                    <span className="relative z-10 -my-2 shrink-0">
+                    {foldable ? <Icon icon={ChevronDown} className={cn('mt-1 shrink-0 text-fg-muted transition-transform duration-base ease-out', !folded && 'rotate-180')} /> : null}
+                    {/* Above the phone header's whole-width tap target (z-base), so the menu is its own button. */}
+                    <span className="relative z-base -my-2 shrink-0">
                       <ItemMenu rfq={rfq} item={item} />
                     </span>
                   </span>
@@ -449,9 +449,9 @@ export function ItemsPanel({
                 {folded ? null : (
                   <div id={bodyId}>
                     {cov.kind === 'uncovered' ? (
-                      <div className="mt-3 grid gap-0 px-0">
-                        <div role="status" className="flex items-start gap-3 border-l-4 border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3">
-                          <Icon icon={TriangleAlert} className="mt-[2px] text-tone-danger-fg" />
+                      <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-0 px-0">
+                        <div role="status" className={cn('flex items-start gap-3 border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3', forThis.length > 0 ? 'rounded-t-control' : 'rounded-control')}>
+                          <Icon icon={TriangleAlert} className="mt-1 text-tone-danger-fg" />
                           <p className="text-fg-2">
                             <b className="font-semibold text-fg">
                               {itemResponders.length > 0
@@ -467,8 +467,8 @@ export function ItemsPanel({
                     ) : null}
 
                     {unasked ? (
-                      <div className="mt-3 grid gap-0 px-0" data-unasked={item.id}>
-                        <p role="status" className="border-l-4 border-line-strong bg-sunken px-4 py-3 text-fg-2">
+                      <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-0 px-0" data-unasked={item.id}>
+                        <p role="status" className={cn('border bg-deep px-4 py-3 text-fg-2', forThis.length > 0 ? 'rounded-t-control' : 'rounded-control')}>
                           <b className="font-semibold text-fg">No supplier has been asked about this item.</b> Ask a supplier before the quotation is due.
                         </p>
                         <AskForItem suggestions={forThis} item={item} onCopyEnquiry={onCopyEnquiry} />
@@ -508,16 +508,17 @@ export function ItemsPanel({
                                 >
                                   {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
                                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                                    <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
+                                    <span className="type-row min-w-0 break-words">{inquiry.supplierName}</span>
                                   </span>
                                   {/* Phone: price · lead time · stock on the second line (an engineer: lead time · stock). Desktop: the wrapper dissolves into the columns. */}
                                   <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 lg:contents">
                                     {prices ? (
                                       <>
-                                        <span className="lg:text-right">
+                                        {/* Phone: a price with a second line (its own currency, or "not compared") takes the whole line, and lead time and stock follow under it. */}
+                                        <span className={cn('lg:text-right', line.currency !== 'PKR' && 'max-lg:basis-full')}>
                                           <PriceCell line={line} c={c} />
                                         </span>
-                                        <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', !line.leadTime && 'hidden')}>
+                                        <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', (!line.leadTime || line.currency !== 'PKR') && 'hidden')}>
                                           ·
                                         </span>
                                       </>
@@ -536,7 +537,7 @@ export function ItemsPanel({
                                         </span>
                                       ) : (
                                         <>
-                                          <i aria-hidden="true" className={`size-[6px] rounded-round ${line.inStock ? 'bg-tone-success-fg' : 'border border-fg-muted'}`} />
+                                          <i aria-hidden="true" className={`size-2 rounded-round ${line.inStock ? 'bg-tone-success-fg' : 'border border-fg-muted'}`} />
                                           {line.inStock ? 'In stock' : 'Not in stock'}
                                         </>
                                       )}
@@ -569,11 +570,13 @@ export function ItemsPanel({
                             )
                           })}
                           {declined.map(({ i, reason }) => (
-                            <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-0 py-2 text-fg-muted" data-declined={i.supplierId}>
-                              <span className="min-w-0 break-words font-medium text-fg-2">{i.supplierName}</span>
-                              <StatusText dimension="inquiry" value="no-offer" />
-                              <span className="text-sm">{reasonLabel(reason)}</span>
-                              {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num text-sm">{`· ${formatDay(i.noOfferOn)}`}</span> : null}
+                            <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-0 py-3 text-fg-muted" data-declined={i.supplierId}>
+                              <span className="type-row min-w-0 break-words text-fg-2">{i.supplierName}</span>
+                              <StatusBadge dimension="inquiry" value="no-offer" />
+                              <span className="text-sm">
+                                {reasonLabel(reason)}
+                                {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num whitespace-nowrap">{` · ${formatDay(i.noOfferOn)}`}</span> : null}
+                              </span>
                             </li>
                           ))}
                           {/* Phone: the chip says it is waiting and Suppliers asked says on whom; the line stays on desktop. */}
