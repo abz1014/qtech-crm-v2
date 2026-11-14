@@ -7,6 +7,7 @@ import { Checkbox } from '@/ui/form/Checkbox'
 import { Icon } from '@/ui/Icon'
 import { returnTarget } from '@/ui/menuTrigger'
 import { InlineMarkdown, MarkdownBlocks } from '@/features/help/RecipeText'
+import { STEP_TEXT_BESIDE_BUTTON, StepNumber } from '@/features/help/StepNumber'
 import { howItWorksFor } from '@/features/help/howItWorks'
 import { findRecipe, groupByArea, recipesForPath, recipesForRole, searchRecipes, type Recipe } from '@/features/help/recipes'
 
@@ -16,8 +17,13 @@ import { findRecipe, groupByArea, recipesForPath, recipesForRole, searchRecipes,
  * Phones and tablets: a full-height sheet with a back arrow (modal, so focus stays in it). Esc closes either.
  *
  * Top to bottom: search, "For this screen" (recipes whose screens: match the path), the person's own recipes by area
- * (Today, RFQs, Orders, Money...; "Show other roles" adds the rest; admin sees all), and a recipe view. Steps show on-screen labels as chips. Nothing is fetched: the
- * recipes are bundled markdown (recipes.ts).
+ * (Home, Sell and Deliver, RFQs, Companies, Money...; "Show other roles" adds the rest for sales; admin sees all; an engineer never
+ * gets the box, live bug 33), and a recipe view. Steps show on-screen labels as chips. Nothing is fetched: the recipes are bundled
+ * markdown (recipes.ts).
+ *
+ * Forest (82-help.html .qb-help): one rhythm inside the panel. Header, search and body share the 16 px gutter; sections sit 20 px
+ * apart with a bold secondary title; every row is a full-width target with a brand tint on hover; the How this works numbers are
+ * brand-tinted discs. Gate 2 (question 21) keeps the live overlay: the panel sits over the page, it does not narrow it.
  */
 export interface HelpPanelProps {
   recipes: readonly Recipe[]
@@ -88,24 +94,24 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
             openerRef.current.focus()
           }}
           className={cn(
-            'fixed z-40 flex flex-col bg-surface focus:outline-none',
+            'fixed z-sheet flex flex-col bg-surface focus:outline-none',
             wide
-              ? 'bottom-0 right-0 top-[var(--topbar-h)] w-[400px] animate-fade-in border-l shadow-modal'
+              ? 'bottom-0 right-0 top-[var(--topbar-h)] w-[400px] animate-fade-in border-l shadow-e3'
               : 'inset-0 animate-sheet-in pb-[env(safe-area-inset-bottom,0px)]',
           )}
         >
-          <header className="flex items-center gap-2 border-b px-3 py-2 lg:px-5 lg:py-3">
+          <header className={cn('flex min-w-0 items-center gap-2 border-b py-2', wide ? 'px-4' : 'pl-2 pr-4')}>
             {wide ? null : (
-              <Button variant="quiet" size="touch" icon={ChevronLeft} aria-label={view === 'recipe' ? 'Back to all help' : 'Close help'} onClick={back} />
+              <Button variant="quiet" size="touch" icon={ChevronLeft} aria-label={view === 'recipe' ? 'Back to all help' : 'Close help'} onClick={back} className="text-fg" />
             )}
-            <RadixDialog.Title className="flex flex-1 items-center gap-2 text-lg font-semibold tracking-snug">
+            <RadixDialog.Title className="flex min-w-0 flex-1 items-center gap-2 text-lg font-card tracking-snug text-fg">
               <Icon icon={CircleHelp} className="text-fg-muted" />
               Help
             </RadixDialog.Title>
-            {wide ? <Button variant="quiet" size="sm" icon={X} aria-label="Close help" onClick={onClose} className="-mr-2 text-fg-muted" /> : null}
+            {wide ? <Button variant="quiet" icon={X} aria-label="Close help" onClick={onClose} className="-mr-2 rounded-pill text-fg" /> : null}
           </header>
 
-          <div className="border-b px-4 py-3 lg:px-5">
+          <div className="border-b px-4 py-3">
             <label className="relative block">
               <span className="sr-only">Search help</span>
               <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
@@ -116,30 +122,34 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
                 onChange={e => setQuery(e.target.value)}
                 placeholder="How do I…"
                 autoComplete="off"
-                className="h-control w-full rounded border border-line-input bg-surface pl-10 pr-3 text-base text-fg placeholder:text-fg-muted md:text-sm"
+                className="h-control w-full rounded-control border border-line-input bg-surface pl-10 pr-3 text-base text-fg transition-colors duration-fast ease-out placeholder:text-fg-muted hover:border-fg-muted md:text-sm"
               />
             </label>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
             {view === 'results' ? (
               <Results results={results} query={query} onShow={show} />
             ) : view === 'recipe' && recipe ? (
               <RecipeView recipe={recipe} recipes={allowed} headingRef={recipeHeadingRef} onShow={show} wide={wide} />
             ) : (
-              <div className="grid content-start gap-6">
+              <div className="grid content-start gap-5">
                 {recipeId && !recipe ? (
-                  <p role="status" className="rounded bg-sunken px-3 py-2 text-base text-fg-2">
+                  <p role="status" className="rounded-control bg-sunken px-3 py-2 text-base text-fg-2 text-pretty">
                     That help page is not here any more. Pick one below.
                   </p>
                 ) : null}
                 {here.length ? <RecipeList title="For this screen" recipes={here} onShow={show} /> : null}
-                {groupByArea(mine).map(g => (
+                {groupByArea(mine, role).map(g => (
                   <RecipeList key={g.area} title={g.area} recipes={g.recipes} onShow={show} />
                 ))}
-                {role === 'admin' || role === 'engineer' ? null : <Checkbox label="Show other roles' help" checked={everyone} onCheckedChange={v => setEveryone(v === true)} />}
+                {role === 'admin' || role === 'engineer' ? null : (
+                  <div className="px-2">
+                    <Checkbox label="Show other roles' help" checked={everyone} onCheckedChange={v => setEveryone(v === true)} />
+                  </div>
+                )}
                 <HowItWorksList role={role} onShow={show} />
-                <p className="text-base text-fg-muted">Answer not found. Tell the owner what the task was. A step can be added here.</p>
+                <p className="px-2 text-base text-fg-2 text-pretty">Answer not found. Tell the owner what the task was. A step can be added here.</p>
               </div>
             )}
           </div>
@@ -149,23 +159,19 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
   )
 }
 
-/** "How this works" (owner decision 8): after the first week the To do card is gone and the steps live here, inline. */
+/** "How this works" (owner decision 8): after the first week the card on Home is gone and the steps live here, inline. */
 function HowItWorksList({ role, onShow }: { role: string; onShow: (id: string) => void }) {
   const id = useId()
   const steps = howItWorksFor(role)
   if (steps.length === 0) return null
   return (
-    <section aria-labelledby={id} className="grid content-start gap-1">
-      <h3 id={id} className="text-sm font-semibold text-fg-2">
-        How this works
-      </h3>
+    <section aria-labelledby={id} className="grid min-w-0 content-start gap-1">
+      <SectionTitle id={id}>How this works</SectionTitle>
       <ol className="grid">
         {steps.map((s, i) => (
-          <li key={s.recipe} className="flex items-start gap-2 border-b py-2 text-base text-fg-2 last:border-b-0">
-            <span aria-hidden="true" className="mt-1 grid size-5 shrink-0 place-items-center rounded-round bg-selected text-sm font-semibold text-fg">
-              {i + 1}
-            </span>
-            <span id={`${id}-step-${i}`} className="min-w-0 flex-1 text-pretty">
+          <li key={s.recipe} className="flex items-start gap-2 border-b px-2 py-2 text-base text-fg-2 last:border-b-0">
+            <StepNumber n={i + 1} besideButton />
+            <span id={`${id}-step-${i}`} className={cn('min-w-0 flex-1 text-pretty', STEP_TEXT_BESIDE_BUTTON)}>
               <InlineMarkdown text={s.text} />
             </span>
             <Button variant="quiet" size="sm" aria-describedby={`${id}-step-${i}`} onClick={() => onShow(s.recipe)} className="shrink-0">
@@ -178,23 +184,30 @@ function HowItWorksList({ role, onShow }: { role: string; onShow: (id: string) =
   )
 }
 
+/** A section's title in the panel: bold, secondary size, the second ink (.qb-help__sec-t). */
+function SectionTitle({ id, children }: { id: string; children: string }) {
+  return (
+    <h3 id={id} className="px-2 text-sm font-bold text-fg-2">
+      {children}
+    </h3>
+  )
+}
+
 function RecipeList({ title, recipes, onShow }: { title: string; recipes: readonly Recipe[]; onShow: (id: string) => void }) {
   const id = useId()
   return (
-    <section aria-labelledby={id} className="grid content-start gap-1">
-      <h3 id={id} className="text-sm font-semibold text-fg-2">
-        {title}
-      </h3>
+    <section aria-labelledby={id} className="grid min-w-0 content-start gap-1">
+      <SectionTitle id={id}>{title}</SectionTitle>
       <ul className="grid">
         {recipes.map(r => (
           <li key={r.id}>
             <button
               type="button"
               onClick={() => onShow(r.id)}
-              className="flex min-h-touch w-full items-center gap-2 rounded px-2 py-2 text-left text-base text-fg hover:bg-sunken lg:min-h-control"
+              className="group flex min-h-touch w-full items-center gap-2 rounded-control p-2 text-left text-base font-medium text-fg transition-colors duration-fast ease-out hover:bg-brand-100 active:bg-brand-100 lg:min-h-control"
             >
-              <span className="flex-1 text-pretty">{r.title}</span>
-              <Icon icon={ChevronRight} size="sm" className="text-fg-muted" />
+              <span className="min-w-0 flex-1 break-words text-pretty">{r.title}</span>
+              <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast ease-out group-hover:translate-x-1 motion-reduce:transform-none" />
             </button>
           </li>
         ))}
@@ -206,7 +219,7 @@ function RecipeList({ title, recipes, onShow }: { title: string; recipes: readon
 function Results({ results, query, onShow }: { results: readonly Recipe[]; query: string; onShow: (id: string) => void }) {
   return (
     <div className="grid content-start gap-3">
-      <p role="status" className="text-base text-fg-muted">
+      <p role="status" className="px-2 text-base text-fg-muted text-pretty">
         {results.length ? `${results.length} ${results.length === 1 ? 'answer' : 'answers'} for “${query.trim()}”` : `Nothing matches “${query.trim()}”. Try one word, like quotation or payment.`}
       </p>
       {results.length ? <RecipeList title="Answers" recipes={results} onShow={onShow} /> : null}
@@ -229,14 +242,14 @@ function RecipeView({
 }) {
   const next = recipe.related.map(id => findRecipe(id, recipes as Recipe[])).filter((r): r is Recipe => Boolean(r))
   return (
-    <article className="grid content-start gap-4" aria-labelledby={`help-${recipe.id}`}>
+    <article className="grid min-w-0 content-start gap-4" aria-labelledby={`help-${recipe.id}`}>
       {wide ? (
         <Button variant="quiet" size="sm" icon={ChevronLeft} onClick={() => onShow(null)} className="-ml-2 justify-self-start">
           All help
         </Button>
       ) : null}
-      <h3 id={`help-${recipe.id}`} ref={headingRef} tabIndex={-1} className="text-lg font-semibold tracking-snug text-fg focus:outline-none">
-        <span className="block text-sm font-medium text-fg-muted">How do I…</span>
+      <h3 id={`help-${recipe.id}`} ref={headingRef} tabIndex={-1} className="break-words text-lg font-card tracking-snug text-fg focus:outline-none">
+        <span className="block text-sm font-semibold tracking-normal text-fg-muted">How do I…</span>
         {recipe.title}
       </h3>
       <MarkdownBlocks blocks={recipe.blocks} />

@@ -6,7 +6,7 @@ keywords: new enquiry, job, pdf, photo, paste, excel, spreadsheet, drop, custome
 screens: /enquiries/new
 related: ask-suppliers, new-rfq
 ---
-1. Select [Create], then [New RFQ]. Or drop the customer's PDF, photo or spreadsheet anywhere on To do or on Jobs.
+1. Select [Create], then [New RFQ]. Or drop the customer's PDF, photo or spreadsheet anywhere on Home or on Jobs.
 2. The document is on the left and what was read is on the right. Look at anything marked [Check this].
 3. Select [Use <company>] when the customer is suggested, or choose the company.
 4. Select [Create job]. The job opens. No supplier is asked for a price yet.

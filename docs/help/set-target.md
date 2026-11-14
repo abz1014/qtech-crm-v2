@@ -10,4 +10,4 @@ screens: /settings
 3. To carry over the targets of the last quarter, select [Copy last quarter]. It fills empty boxes only.
 4. For quarters that are over, select [Show earlier quarters].
 
-Tip: Each person sees only their own target, on Today.
+Tip: Each person sees only their own target, on Home.
