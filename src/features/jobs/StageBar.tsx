@@ -54,7 +54,7 @@ export function StageTrack({ job }: { job: JobStanding }) {
         const lit = s.state === 'done' || s.state === 'current'
         return (
           <li key={s.name} className="relative grid min-w-0 content-start justify-items-center gap-2 text-center" aria-current={s.state === 'current' ? 'step' : undefined}>
-            {s.index > 0 ? <span aria-hidden="true" className={cn('absolute -left-1/2 right-1/2 top-4 h-1 -translate-y-1/2 rounded-pill', lit ? 'bg-brand-500' : 'bg-deep')} /> : null}
+            {s.index > 0 ? <span aria-hidden="true" className={cn('absolute left-[calc(-50%+var(--sp-4))] right-[calc(50%+var(--sp-4))] top-4 h-1 -translate-y-1/2 rounded-pill', lit ? 'bg-brand-500' : 'bg-deep')} /> : null}
             <span aria-hidden="true" className={cn('relative grid size-8 place-items-center rounded-pill border-2', DOT[s.state], s.half && 'outline outline-2 outline-offset-2 outline-brand-500')}>
               <Mark s={s} />
             </span>
