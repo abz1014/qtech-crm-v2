@@ -50,7 +50,7 @@ export function CancelDialog({
         <div className="grid gap-4">
           <p className="text-sm text-fg-muted">The order stays on record and can be reopened. Reports use the reason.</p>
           {sent.length > 0 ? (
-            <ul aria-label="Purchase orders already sent" data-testid="cancel-sent-pos" className="grid gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg p-3 text-sm text-tone-warning-fg">
+            <ul aria-label="Purchase orders already sent" data-testid="cancel-sent-pos" className="grid gap-3 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg p-3 text-sm text-tone-warning-fg">
               {sent.map(po => (
                 <li key={po.ref} className="flex flex-wrap items-center justify-between gap-2">
                   <span>{sentPoSentence(po)}</span>

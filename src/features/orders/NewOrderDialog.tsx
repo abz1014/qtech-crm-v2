@@ -157,7 +157,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
                 Nothing was changed.
               </Banner>
             ) : found.data.length === 0 ? (
-              <p className="rounded border border-dashed p-4 text-sm text-fg-muted" data-testid="no-past-orders">
+              <p className="rounded-row border border-dashed p-4 text-sm text-fg-muted" data-testid="no-past-orders">
                 {debounced.trim() ? 'No past order matches that. Try a company name, a site or an item.' : 'There are no past orders to copy yet. Mark an RFQ won to start the first one.'}
               </p>
             ) : (
@@ -167,7 +167,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
                     <button
                       type="button"
                       onClick={() => setChosen(o)}
-                      className={cn('grid w-full gap-px rounded border bg-surface px-4 py-3 text-left transition-colors duration-fast hover:border-line-input hover:bg-sunken')}
+                      className={cn('grid w-full gap-px rounded-row border bg-surface px-4 py-3 text-left transition-colors duration-fast hover:border-line-input hover:bg-sunken')}
                     >
                       <span className="flex flex-wrap items-baseline justify-between gap-2">
                         <span className="font-medium">{o.companyName}</span>

@@ -1,24 +1,18 @@
 import type { ReactNode } from 'react'
-import { Check, Minus, X } from 'lucide-react'
+import { Check, CircleAlert, CircleCheck, CircleDashed, Clock, Hourglass, Minus, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
+import type { StepTone } from '@/lib/status'
 import { stageModel, type JobStanding, type StopState, type StopView } from '@/features/jobs/lib/stages'
 
 /*
  * The job's ruler (redesign plan, "Stage bar"): seven stops, the current one the earliest not finished, parallel sub-states written
- * under their stop. Colour is never alone: every stop has a mark (a tick, its number, a dash, a cross) and its name.
- *   - desktop: the full ruler, each stop a button that opens its stage below when `onSelect` is given
- *   - phone:   "Stage 4 of 7 · Supplier order" over a thin seven-part bar (the full ruler would be seven names at 320 px)
+ * under their stop. Colour is never alone: every stop has a mark (a tick, a ringed dot, a dash, a cross) and its name.
+ *   - track:   the Job page's seven dots on one line (Forest .qb-track), names under them from 768 px, the head line on a phone
+ *   - block:   the Job page's hero ("Next step") and the track card (StageBlock)
  *   - mini:    the seven-part bar and the words, one line, for a list row
  * A direct order (job O-45) draws Enquiry and Quotation as "none"; a lost or cancelled job ends with its reason.
  */
-const DOT: Record<StopState, string> = {
-  done: 'bg-tone-success-bg text-tone-success-fg border-tone-success-fg',
-  current: 'bg-chrome text-chrome-fg border-chrome',
-  future: 'bg-surface text-fg-muted border-line-strong border-dashed',
-  none: 'bg-sunken text-fg-muted border-line border-dashed',
-  stopped: 'bg-sunken text-fg-muted border-line',
-}
 const SEG: Record<StopState, string> = {
   done: 'bg-tone-success-fg',
   current: 'bg-chrome',
@@ -27,71 +21,53 @@ const SEG: Record<StopState, string> = {
   stopped: 'bg-line',
 }
 
+/** The state in words, for screen readers (the dot's mark and the label's weight carry it for the eye). */
+const STATE_WORD: Record<StopState, string> = { done: 'done', current: 'now', future: 'not yet', none: 'not part of this job', stopped: 'not reached' }
+
+// Forest .qb-track: a filled forest dot with a tick (done), a ringed dot (now), an empty dot (not yet), dashed (not part of this job).
+const DOT: Record<StopState, string> = {
+  done: 'border-brand-700 bg-brand-700 text-chrome-fg',
+  current: 'border-brand-500 bg-brand-100 text-brand-700 shadow-current',
+  future: 'border-deep bg-surface text-fg-muted',
+  none: 'border-dashed border-line-strong bg-deep text-fg-muted',
+  stopped: 'border-tone-danger-fg bg-surface text-tone-danger-fg',
+}
+
 function Mark({ s }: { s: StopView }) {
   if (s.state === 'done') return <Icon icon={Check} size="sm" />
   if (s.state === 'none') return <Icon icon={Minus} size="sm" />
   if (s.state === 'stopped') return <Icon icon={X} size="sm" />
-  return <span className="num text-sm font-semibold">{s.index + 1}</span>
+  if (s.state === 'current') return <span className="size-2 rounded-pill bg-brand-700" />
+  return null
 }
 
-/** The state in words, for screen readers and for the stop's tooltip. */
-const STATE_WORD: Record<StopState, string> = { done: 'done', current: 'now', future: 'not yet', none: 'not part of this job', stopped: 'not reached' }
-
-export function StageBar({ job, onSelect, className }: { job: JobStanding; onSelect?: (index: number) => void; className?: string }) {
+/**
+ * The seven stops (30-job-page.html, .qb-track): a dot per stop on one line, the line filled up to the stop the job is at. On a
+ * computer each stop has its name and, under it, the parallel sub-state ("2 of 3 delivered", "advance received"); on a phone the head
+ * line ("Stage 5 of 7 · Delivery") says it and the names are read by a screen reader only. Colour is never alone: every dot has a mark.
+ */
+export function StageTrack({ job }: { job: JobStanding }) {
   const m = stageModel(job)
   return (
-    <div className={cn('grid gap-3', className)} data-stage-bar>
-      {/* phone form */}
-      <div className="md:hidden">
-        <p className="text-base font-semibold" data-stage-phone>
-          {m.phoneLabel}
-        </p>
-        {m.current !== null && m.ending === null && m.detail ? <p className="text-base text-fg-2">{m.detail}</p> : null}
-        <div className="mt-2 flex gap-1" aria-hidden="true">
-          {m.stops.map(s => (
-            <span key={s.name} className={cn('h-2 flex-1 rounded-round', SEG[s.state])} />
-          ))}
-        </div>
-      </div>
-      {/* desktop ruler */}
-      <ol className="hidden grid-cols-7 gap-1 md:grid" aria-label="Stages of this job">
-        {m.stops.map(s => {
-          const body = (
-            <>
-              <span className="relative flex w-full items-center justify-center">
-                <span aria-hidden="true" className={cn('absolute left-0 right-1/2 h-[2px]', s.index === 0 ? 'bg-transparent' : s.state === 'done' || s.state === 'current' ? 'bg-tone-success-fg' : 'bg-line-strong')} />
-                <span aria-hidden="true" className={cn('absolute left-1/2 right-0 h-[2px]', s.index === 6 ? 'bg-transparent' : s.state === 'done' ? 'bg-tone-success-fg' : 'bg-line-strong')} />
-                <span className={cn('relative z-[1] flex h-8 w-8 items-center justify-center rounded-round border-2', DOT[s.state], s.half && 'ring-2 ring-tone-success-fg ring-offset-2')}>
-                  <Mark s={s} />
-                </span>
-              </span>
-              <span className={cn('mt-2 text-center text-sm', s.state === 'current' ? 'font-semibold text-fg' : s.state === 'done' ? 'font-medium text-fg-2' : 'text-fg-muted')}>
-                {s.shown}
-                <span className="sr-only">{`, ${STATE_WORD[s.state]}`}</span>
-              </span>
-              {s.note ? <span className="mt-px text-center text-sm text-fg-2">{s.note}</span> : null}
-              {s.state === 'none' ? <span className="mt-px text-center text-sm text-fg-muted">none</span> : null}
-            </>
-          )
-          return (
-            <li key={s.name} className="flex min-w-0 flex-col items-stretch" aria-current={s.state === 'current' ? 'step' : undefined}>
-              {onSelect && s.state !== 'none' ? (
-                <button type="button" onClick={() => onSelect(s.index)} className="flex min-h-touch min-w-0 flex-col items-stretch rounded px-1 py-1 hover:bg-sunken">
-                  {body}
-                </button>
-              ) : (
-                <div className="flex min-w-0 flex-col items-stretch px-1 py-1">{body}</div>
-              )}
-            </li>
-          )
-        })}
-      </ol>
-      {m.ending ? (
-        <p className="text-base font-semibold text-tone-danger-fg" data-stage-ending>
-          {m.ending}
-        </p>
-      ) : null}
-    </div>
+    <ol className="grid grid-cols-7" aria-label="Stages of this job" data-stage-bar>
+      {m.stops.map(s => {
+        const lit = s.state === 'done' || s.state === 'current'
+        return (
+          <li key={s.name} className="relative grid min-w-0 content-start justify-items-center gap-2 text-center" aria-current={s.state === 'current' ? 'step' : undefined}>
+            {s.index > 0 ? <span aria-hidden="true" className={cn('absolute -left-1/2 right-1/2 top-4 h-1 -translate-y-1/2 rounded-pill', lit ? 'bg-brand-500' : 'bg-deep')} /> : null}
+            <span aria-hidden="true" className={cn('relative grid size-8 place-items-center rounded-pill border-2', DOT[s.state], s.half && 'outline outline-2 outline-offset-2 outline-brand-500')}>
+              <Mark s={s} />
+            </span>
+            <span className={cn('min-w-0 text-sm [overflow-wrap:anywhere] max-md:sr-only', s.state === 'current' ? 'font-heavy text-fg' : s.state === 'done' ? 'text-fg-2' : 'text-fg-muted')}>
+              {s.shown}
+              <span className="sr-only">{`, ${STATE_WORD[s.state]}`}</span>
+            </span>
+            {s.note ? <span className="min-w-0 text-sm text-tone-warning-fg [overflow-wrap:anywhere] max-md:hidden">{s.note}</span> : null}
+            {s.state === 'none' ? <span className="text-sm text-fg-muted max-md:hidden">none</span> : null}
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
@@ -125,37 +101,88 @@ export function StageLine({ job }: { job: JobStanding }) {
   )
 }
 
+/** Who acts next, as the hero's chip says it: an icon and a word (30-job-page.html chipFor). */
+const CHIP: Record<StepTone, { icon: LucideIcon; word: string }> = {
+  now: { icon: CircleAlert, word: 'Needs action' },
+  waiting: { icon: Hourglass, word: 'Waiting' },
+  late: { icon: Clock, word: 'Late' },
+  done: { icon: CircleCheck, word: 'Done' },
+  inert: { icon: CircleDashed, word: 'Nothing to do' },
+}
+
+/** "2 of 3 delivered, installation planned 28 Nov" as sentences: "2 of 3 delivered. Installation planned 28 Nov." */
+const sentences = (detail: string | null) =>
+  (detail ?? '')
+    .split(', ')
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `${p[0].toUpperCase()}${p.slice(1)}.`)
+    .join(' ')
+
 /**
- * The stage and the next step in ONE block (clarity redesign): the seven-part bar over "Stage 7 of 7 · Chase the payment". On a computer
- * the page's one green button sits in the block, on the right; on a phone the sticky bar holds it. Colour is never alone: the sentence
- * says the stage. A lost or cancelled job ends with its reason instead. It is the page's "Next step" region.
+ * The Job page's top (Forest, 30-job-page.html): the hero and the track card.
+ *   Hero    on the forest: "Next step · Job 139" (an engineer reads "Where it stands"), who acts next as a chip, the step in one
+ *           sentence, its detail, and on a computer the page's one green button. It is the page's "Next step" region.
+ *   Track   "Stage 5 of 7 · Delivery" over the seven stops, then the key facts under a hairline. A lost or cancelled job ends with its
+ *           reason instead of the stage line.
  */
-export function StageBlock({ job, text, late = false, action }: { job: JobStanding; text: string; late?: boolean; action?: ReactNode }) {
+export function StageBlock({
+  job,
+  label,
+  text,
+  tone,
+  action,
+  facts,
+  between,
+}: {
+  job: JobStanding
+  /** "Next step · Job 139", or "Where it stands" for an engineer. */
+  label: string
+  /** The step in one sentence ("Waiting for the goods"). */
+  text: string
+  tone: StepTone
+  /** The page's one green button (a computer only; a phone has the sticky bar). */
+  action?: ReactNode
+  /** The key facts line, under the track. */
+  facts?: ReactNode
+  /** Drawn between the hero and the track (an engineer's On site card, on a computer). */
+  between?: ReactNode
+}) {
   const m = stageModel(job)
-  // Payment as the current stop is stage 7 of 7; only a finished (paid) job is "All 7 stages done".
-  const lead = m.finished && m.current === 7 ? 'All 7 stages done' : m.current === null ? 'Not started' : `Stage ${m.current} of 7`
-  const said = text && text !== 'Done' ? text : m.current !== null && !m.finished ? m.stops[m.current - 1].shown : ''
+  const chip = CHIP[tone]
+  const detail = m.ending ? null : sentences(m.detail)
+  const title = text || (m.ending ?? m.label)
   return (
-    <section aria-label="Next step" data-stage-block className="mt-3 rounded-panel border bg-surface px-4 py-3 md:mt-4 md:py-4">
-      <div className="flex items-center justify-between gap-6">
-        <div className="min-w-0 flex-1" data-stage-bar>
-          <div className="flex gap-1" aria-hidden="true">
-            {m.stops.map(s => (
-              <span key={s.name} className={cn('h-2 flex-1 rounded-round', SEG[s.state])} />
-            ))}
-          </div>
-          {m.ending ? (
-            <p className="type-row mt-3 text-tone-danger-fg" data-stage-ending data-stage-phone>
-              {m.ending}
-            </p>
-          ) : (
-            <p className={cn('type-row mt-2', late && 'text-tone-danger-fg')} data-stage-phone>
-              {said ? `${lead} · ${said}` : lead}
-            </p>
-          )}
+    <>
+      <section aria-label="Next step" data-stage-block data-surface="navy" className="mt-4 grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2 md:mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <p className="text-base text-fg-2">{label}</p>
+          <span data-tone={tone} className="inline-flex min-h-chip items-center gap-1 rounded-pill border border-line-strong py-px pl-2 pr-3 text-xs font-card leading-none">
+            <Icon icon={chip.icon} size="chip" className="size-icon-chip" />
+            {chip.word}
+          </span>
         </div>
-        {action ? <div className="max-md:hidden">{action}</div> : null}
-      </div>
-    </section>
+        <h2 className={cn('text-2xl font-heavy tracking-tight [overflow-wrap:anywhere] [text-wrap:balance] max-md:text-xl', tone === 'late' && 'text-tone-danger-bg')} data-next-text>
+          {title}
+        </h2>
+        {detail ? <p className="-mt-2 text-base text-fg-2 [overflow-wrap:anywhere]">{detail}</p> : null}
+        {action ? <div className="flex flex-wrap items-center gap-3 max-md:hidden">{action}</div> : null}
+      </section>
+      {between}
+      <section aria-label="Stage of this job" data-stage-track className="mt-4 rounded-card bg-surface p-card shadow-e1 md:mt-6">
+        {m.ending ? (
+          <p className="mb-4 flex items-center gap-2 text-lg font-card text-tone-danger-fg" data-stage-ending data-stage-phone>
+            <Icon icon={CircleAlert} size="sm" />
+            {m.ending}
+          </p>
+        ) : (
+          <p className="mb-4 text-lg font-card" data-stage-phone>
+            {m.phoneLabel}
+          </p>
+        )}
+        <StageTrack job={job} />
+        {facts}
+      </section>
+    </>
   )
 }
