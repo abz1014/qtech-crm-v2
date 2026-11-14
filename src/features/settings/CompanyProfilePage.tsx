@@ -1,5 +1,5 @@
-import { useRef, type ReactElement, type ReactNode } from 'react'
-import { CircleDot, Lock, TriangleAlert } from 'lucide-react'
+import { useRef, type ReactElement } from 'react'
+import { TriangleAlert } from 'lucide-react'
 import { useController, useFormContext, type ControllerRenderProps } from 'react-hook-form'
 import { useSeesPrices, useSession } from '@/app/session'
 import { missingForDocuments, missingForPdf, toFormValues, type CompanyProfile, type DocumentField } from '@/features/settings/companyProfile'
@@ -11,13 +11,13 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
-import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { Form, FormField } from '@/ui/form/Form'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { Field } from '@/ui/form/Field'
 import { TextArea, TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
+import { FACTS, SaveBar, SectionSkeleton, SettingsSection as Section, ViewOnlyTag } from '@/features/settings/settingsParts'
 
 const LABELS: Partial<Record<keyof ProfileValues, string>> = {
   legal_name: 'Legal name',
@@ -44,11 +44,12 @@ const LABELS: Partial<Record<keyof ProfileValues, string>> = {
 export function CompanyProfilePage() {
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
+  const isEngineer = session.status === 'signed-in' && session.user.role === 'engineer'
   const seesFinancials = useSeesPrices()
   const q = useCompanyProfile()
 
   return (
-    <div className="grid content-start gap-4">
+    <div className="grid content-start gap-card-gap">
       <PageHeader
         title="Company profile"
         lede={
@@ -56,21 +57,13 @@ export function CompanyProfilePage() {
             ? 'Registered details and standard wording. Only admins can change them.'
             : 'Registered details and standard wording, as printed on quotations and purchase orders.'
         }
-        secondary={
-          !isAdmin ? (
-            <span className="inline-flex h-6 items-center gap-[6px] rounded bg-selected px-[6px] text-sm font-medium text-fg-2">
-              <Icon icon={Lock} size="sm" />
-              Only an admin can edit
-            </span>
-          ) : undefined
-        }
+        secondary={!isAdmin ? <ViewOnlyTag /> : undefined}
       />
 
       {q.isLoading ? (
-        <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading the company profile">
-          <Skeleton className="h-10" />
-          <Skeleton className="h-[240px]" />
-          <Skeleton className="h-[160px]" />
+        <div role="status" className="grid gap-card-gap" aria-busy="true" aria-label="Loading the company profile">
+          <SectionSkeleton rows={4} />
+          <SectionSkeleton rows={1} />
         </div>
       ) : q.isError || !q.data ? (
         <EmptyState
@@ -83,7 +76,7 @@ export function CompanyProfilePage() {
       ) : isAdmin ? (
         <ProfileForm profile={q.data} />
       ) : (
-        <ProfileReadOnly profile={q.data} financial={seesFinancials} />
+        <ProfileReadOnly profile={q.data} financial={seesFinancials} engineer={isEngineer} />
       )}
     </div>
   )
@@ -110,20 +103,8 @@ function MissingBanner({ profile, onAdd }: { profile: Pick<CompanyProfile, Docum
   )
 }
 
-function Section({ title, hint, children, work }: { title: string; hint?: string; children: ReactNode; work?: boolean }) {
-  return (
-    <section className="grid gap-4 border-t pt-4" data-work={work ? '' : undefined}>
-      <div className="grid gap-[2px]">
-        <h2 className="type-section">{title}</h2>
-        {hint ? <p className="max-w-[62ch] text-base text-fg-muted text-pretty">{hint}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-const NEEDED = <span className="ml-2 text-base font-regular text-fg-muted">Needed for PDFs</span>
-const NEEDED_GST = <span className="ml-2 text-base font-regular text-fg-muted">Needed for GST invoices</span>
+const NEEDED = <span className="ml-2 text-sm font-regular text-fg-muted">Needed for PDFs</span>
+const NEEDED_GST = <span className="ml-2 text-sm font-regular text-fg-muted">Needed for GST invoices</span>
 
 /**
  * The two fields a PDF cannot be issued without. While one is empty it is drawn invalid with its own
@@ -191,7 +172,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
           // setFocus focuses without scrolling to the middle: on a phone the field can sit under the bars or the keyboard.
           document.querySelector(`[name="${first}"]`)?.scrollIntoView({ block: 'center' })
         }} />
-      <Form sf={sf} labels={LABELS} className="grid gap-4">
+      <Form sf={sf} labels={LABELS} className="[&>fieldset]:gap-card-gap">
         <Section work title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
           <NeededField name="legal_name" label="Legal name" message="Add the legal name before issuing a PDF.">
             {f => <TextField {...f} placeholder="As registered with SECP" autoComplete="organization" />}
@@ -232,7 +213,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
               {f => <TextField {...f} autoComplete="off" />}
             </FormField>
           </div>
-          <FormField name="bank_iban" label="IBAN" requirement="optional" className="sm:max-w-[320px]">
+          <FormField name="bank_iban" label="IBAN" requirement="optional" className="sm:max-w-sm">
             {f => <TextField {...f} className="num" autoComplete="off" />}
           </FormField>
         </Section>
@@ -245,7 +226,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             name="default_payment_terms_days"
             label="Default payment terms"
             help="Days after the invoice date. An order with its own terms keeps them."
-            className="sm:max-w-[200px]"
+            className="sm:max-w-[12.5rem]"
           >
             {f => <NumberInput {...f} suffix="days" decimals={0} />}
           </FormField>
@@ -259,7 +240,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             name="quotation_validity_days"
             label="Quotation validity"
             help="A new quotation is valid for this many days from its date."
-            className="sm:max-w-[200px]"
+            className="sm:max-w-[12.5rem]"
           >
             {f => <NumberInput {...f} suffix="days" decimals={0} />}
           </FormField>
@@ -273,34 +254,29 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
       </Form>
 
       {/* With unsaved changes the bar sticks to the bottom of the screen, so Save is never a long scroll away (audit 2026-10-22). */}
-      <div
-        data-sticky-bar=""
-        data-save-bar
-        className={cn('flex flex-wrap items-center gap-3 border-t py-3', dirty.length > 0 && 'sticky bottom-0 z-10 bg-surface')}
-      >
-        {dirty.length > 0 ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
-        <p role="status" className="text-base text-fg-muted">
-          {dirty.length === 0
+      <SaveBar
+        dirty={dirty.length > 0}
+        message={
+          dirty.length === 0
             ? 'Nothing to save yet'
-            : `${dirty.length} unsaved ${dirty.length === 1 ? 'change' : 'changes'}: ${dirty.map(k => LABELS[k]).join(', ')}`}
-        </p>
-        <div className="ml-auto flex gap-2">
-          <Button disabled={dirty.length === 0 || sf.pending} onClick={() => sf.form.reset(toFormValues(profile))}>
-            Discard
-          </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            form={sf.formId}
-            busy={sf.pending}
-            busyLabel="Saving"
-            // nothing changed: Save is disabled, so it is plain that there is nothing to save
-            disabled={dirty.length === 0}
-          >
-            {sf.failed ? 'Try again' : 'Save changes'}
-          </Button>
-        </div>
-      </div>
+            : `${dirty.length} unsaved ${dirty.length === 1 ? 'change' : 'changes'}: ${dirty.map(k => LABELS[k]).join(', ')}`
+        }
+      >
+        <Button disabled={dirty.length === 0 || sf.pending} onClick={() => sf.form.reset(toFormValues(profile))}>
+          Discard
+        </Button>
+        <Button
+          variant="primary"
+          type="submit"
+          form={sf.formId}
+          busy={sf.pending}
+          busyLabel="Saving"
+          // nothing changed: Save is disabled, so it is plain that there is nothing to save
+          disabled={dirty.length === 0}
+        >
+          {sf.failed ? 'Try again' : 'Save changes'}
+        </Button>
+      </SaveBar>
     </>
   )
 }
@@ -335,7 +311,7 @@ function Row({
           <span className="sr-only">Not given</span>
         </dd>
       ) : empty ? (
-        <dd className="inline-flex min-w-0 items-center gap-[6px] font-medium text-tone-warning-fg">
+        <dd className="inline-flex min-w-0 items-center gap-2 font-medium text-tone-warning-fg">
           <Icon icon={TriangleAlert} size="sm" />
           Not set
         </dd>
@@ -354,10 +330,14 @@ function Row({
   )
 }
 
-const KV = 'grid gap-x-4 gap-y-2 text-base sm:grid-cols-[160px_minmax(0,1fr)]'
+const KV = FACTS
 
-/** `financial` is false for an engineer: the database does not give them the tax and bank details, so those sections are not drawn. */
-function ProfileReadOnly({ profile: p, financial }: { profile: CompanyProfile; financial: boolean }) {
+/**
+ * `financial` is false for an engineer: the database does not give them the tax and bank details, so those sections are not drawn.
+ * `engineer`: business details only (gate 2, answer 10; mockup 78 #engineer-company): Payment terms and the quotation and purchase
+ * order wording carry money words, so an engineer's page has its own markup without them (not hidden with CSS).
+ */
+function ProfileReadOnly({ profile: p, financial, engineer }: { profile: CompanyProfile; financial: boolean; engineer: boolean }) {
   return (
     <>
       <MissingBanner profile={financial ? p : { ...p, ntn: 'n/a', strn: 'n/a' }} />
@@ -387,18 +367,22 @@ function ProfileReadOnly({ profile: p, financial }: { profile: CompanyProfile; f
           </Section>
         </>
       ) : null}
-      <Section title="Payment terms">
-        <dl className={KV}>
-          <Row label="Default payment terms" value={`${p.default_payment_terms_days} days`} />
-        </dl>
-      </Section>
-      <Section title="Quotations and purchase orders">
-        <dl className={KV}>
-          <Row label="Quotation validity" value={`${p.quotation_validity_days} days`} />
-          <Row label="Quotation terms" value={p.quotation_terms} />
-          <Row label="Purchase order terms" value={p.po_terms} />
-        </dl>
-      </Section>
+      {engineer ? null : (
+        <>
+          <Section title="Payment terms">
+            <dl className={KV}>
+              <Row label="Default payment terms" value={`${p.default_payment_terms_days} days`} />
+            </dl>
+          </Section>
+          <Section title="Quotations and purchase orders">
+            <dl className={KV}>
+              <Row label="Quotation validity" value={`${p.quotation_validity_days} days`} />
+              <Row label="Quotation terms" value={p.quotation_terms} />
+              <Row label="Purchase order terms" value={p.po_terms} />
+            </dl>
+          </Section>
+        </>
+      )}
     </>
   )
 }

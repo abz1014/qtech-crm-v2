@@ -21,6 +21,7 @@ import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { PageHeader } from '@/ui/PageHeader'
 import { Skeleton } from '@/ui/Skeleton'
+import { SectionSkeleton } from '@/features/settings/settingsParts'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
@@ -57,7 +58,7 @@ export function ExchangeRatesPage() {
   }
 
   return (
-    <div className="grid min-w-0 content-start gap-4">
+    <div className="grid min-w-0 content-start gap-card-gap">
       <PageHeader
         title="Exchange rates"
         lede={
@@ -73,9 +74,9 @@ export function ExchangeRatesPage() {
       />
 
       {latest.isPending ? (
-        <div role="status" aria-busy="true" aria-label="Loading the exchange rates" className="grid gap-4">
-          <Skeleton className="h-[260px]" />
-          <Skeleton className="h-[200px]" />
+        <div role="status" aria-busy="true" aria-label="Loading the exchange rates" className="grid gap-card-gap">
+          <SectionSkeleton rows={4} />
+          <SectionSkeleton rows={3} />
         </div>
       ) : latest.isError ? (
         <EmptyState
@@ -90,15 +91,15 @@ export function ExchangeRatesPage() {
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (
-        <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="grid min-w-0 gap-4">
+        <div className="grid items-start gap-card-gap 2xl:grid-cols-[minmax(0,1fr)_21rem]">
+          <div className="grid min-w-0 gap-card-gap">
             <Panel
               title="Latest rate per currency"
               meta="PKR for 1 unit"
-              flat
+              card
               actions={lastRun.data ? <span className="text-base text-fg-muted" data-fx-auto-run>{autoRunStamp(lastRun.data)}</span> : undefined}
             >
-              <div data-work="" className="min-w-0"><RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} /></div>
+              <div data-work="" className="min-w-0 border-t"><RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} /></div>
             </Panel>
             {warnings.map(w => (
               <Banner key={w} tone="warning" title={w.split('. ')[0] + '.'}>
@@ -208,7 +209,7 @@ function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: st
       rows={rows}
       getRowId={r => r.currency}
       twoLine
-      className="rounded-none border-0 [&_thead_th:last-child]:text-transparent"
+      className="rounded-none border-0 shadow-none [&_thead_th:last-child]:text-transparent"
       mobileRow={r => (
         <span className="grid gap-2">
           <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -240,7 +241,7 @@ function HistoryDialog({ currency, onClose }: { currency: string | null; onClose
             <ul>
               {history.data.map(h => (
                 <li key={`${h.asOf}-${h.source}`} className="flex items-center gap-4 border-t py-3 text-base first:border-t-0">
-                  <span className="num w-[72px] shrink-0">{shortDay(h.asOf)}</span>
+                  <span className="num min-w-[4.5rem] shrink-0">{shortDay(h.asOf)}</span>
                   <span className="inline-flex items-center gap-1 text-fg-2">
                     <Icon icon={h.source === 'manual' ? Pencil : RefreshCw} size="sm" className="text-fg-muted" />
                     {sourceText(h.source)}
@@ -299,9 +300,9 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
 
   return (
     <div ref={panelRef} className="scroll-mt-[5rem]">
-      <Panel flat title="Add a rate manually">
+      <Panel card title="Add a rate manually">
         <form
-          className="grid gap-4 px-5 py-4"
+          className="grid gap-4 px-card pb-3 pt-1 sm:max-w-md"
           onSubmit={e => {
             e.preventDefault()
             void submit(false)

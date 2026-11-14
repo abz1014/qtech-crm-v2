@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { mapPgError } from '@/lib/pgErrors'
+import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { PageHeader } from '@/ui/PageHeader'
 import { useToast } from '@/ui/useToast'
 import { EXPORTS, downloadExport, type ExportId, type ExportKind } from '@/features/settings/exportData'
@@ -26,13 +28,13 @@ export function ExportPage() {
     }
   }
   return (
-    <div className="grid gap-4" data-testid="export-page">
+    <div className="grid content-start gap-card-gap" data-testid="export-page">
       <PageHeader title="Export data" lede={<span className="text-base">Download records as files that open in Excel. Nothing is changed.</span>} />
-      <ul className="divide-y border-y">
+      <ul className={cn(CARD, 'divide-y overflow-hidden')}>
         {EXPORTS.map(k => (
-          <li key={k.id} className="flex min-h-[48px] flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 pl-1" data-work={k === EXPORTS[0] ? '' : undefined}>
+          <li key={k.id} className="flex min-h-row flex-wrap items-center justify-between gap-x-6 gap-y-3 px-card py-4" data-work={k === EXPORTS[0] ? '' : undefined}>
             <span className="min-w-0">
-              <b className="block font-medium">{k.label}</b>
+              <b className="block font-card">{k.label}</b>
               <span className="text-base text-fg-muted">{k.about}</span>
             </span>
             <Button icon={Download} busy={busy === k.id} busyLabel="Making the file" disabled={busy !== null} aria-label={`Download CSV, ${k.label}`} onClick={() => void go(k)}>

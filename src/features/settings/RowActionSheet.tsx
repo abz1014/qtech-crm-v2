@@ -42,17 +42,17 @@ export function RowActionSheet({
   return (
     <RadixDialog.Root open onOpenChange={open => !open && onClose()}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-40 animate-fade-in bg-scrim" />
+        <RadixDialog.Overlay className="fixed inset-0 z-scrim animate-fade-in bg-scrim" />
         <RadixDialog.Content
           aria-describedby={undefined}
-          className="fixed inset-x-0 bottom-0 z-50 animate-sheet-in rounded-t bg-surface pb-4 shadow-modal focus:outline-none"
+          className="fixed inset-x-0 bottom-0 z-sheet animate-sheet-in rounded-t-sheet bg-surface pb-[max(var(--sp-4),env(safe-area-inset-bottom,0px))] shadow-modal focus:outline-none"
         >
-          <div aria-hidden="true" className="mx-auto mb-1 mt-2 h-1 w-[2.25rem] rounded-round bg-line-strong" />
+          <div aria-hidden="true" className="mx-auto mb-1 mt-2 h-1 w-10 rounded-round bg-line-strong" />
           <div className="flex items-center gap-3 border-b px-4 pb-3 pt-2">
             <Avatar name={member.name} size="lg" />
             <div className="grid min-w-0">
-              <RadixDialog.Title className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium text-fg">{member.name}</RadixDialog.Title>
-              <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">{sub}</span>
+              <RadixDialog.Title className="min-w-0 [overflow-wrap:anywhere] text-base font-card text-fg">{member.name}</RadixDialog.Title>
+              <span className="min-w-0 [overflow-wrap:anywhere] text-sm text-fg-muted">{sub}</span>
             </div>
           </div>
           <ul>
@@ -62,7 +62,7 @@ export function RowActionSheet({
                   type="button"
                   onClick={() => onPick(a.kind, member)}
                   className={cn(
-                    'flex min-h-touch w-full items-center gap-3 px-4 py-2 text-left text-sm font-medium active:bg-sunken',
+                    'flex min-h-touch w-full items-center gap-3 px-4 py-2 text-left text-base font-medium transition-colors duration-fast hover:bg-sunken active:bg-sunken',
                     a.danger ? 'text-tone-danger-fg' : 'text-fg',
                   )}
                 >

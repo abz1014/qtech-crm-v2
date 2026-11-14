@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Lock, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { monthKeyLabel, shiftMonth } from '@/features/money/expenses/model'
 import { dayWords, gstDatesFor, parseGstDay, type GstDeadlines } from '@/features/settings/gstDeadlines'
@@ -9,14 +9,13 @@ import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
-import { Icon } from '@/ui/Icon'
 import { PageHeader } from '@/ui/PageHeader'
-import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
+import { SectionSkeleton, SettingsSection as Section, ViewOnlyTag } from '@/features/settings/settingsParts'
 
 /*
  * Settings > Tax deadlines (migration 0110; owner answer to Q8). The day GST is paid to FBR and the day the return is filed are not
@@ -29,7 +28,7 @@ export function TaxDeadlinesPage() {
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const q = useGstDeadlines()
   return (
-    <div className="grid content-start gap-4">
+    <div className="grid content-start gap-card-gap">
       <PageHeader
         title="Tax deadlines"
         lede={
@@ -37,19 +36,12 @@ export function TaxDeadlinesPage() {
             ? 'The days GST is paid to FBR and the return is filed. They are not the same every year, so change them here when they change.'
             : 'The days GST is paid to FBR and the return is filed. Only an admin can change them.'
         }
-        secondary={
-          !isAdmin ? (
-            <span className="inline-flex h-6 items-center gap-[6px] rounded bg-selected px-[6px] text-sm font-medium text-fg-2">
-              <Icon icon={Lock} size="sm" />
-              Only an admin can edit
-            </span>
-          ) : undefined
-        }
+        secondary={!isAdmin ? <ViewOnlyTag /> : undefined}
       />
       {q.isPending ? (
-        <div role="status" aria-busy="true" aria-label="Loading the tax deadlines" className="grid gap-4">
-          <Skeleton className="h-[160px]" />
-          <Skeleton className="h-[120px]" />
+        <div role="status" aria-busy="true" aria-label="Loading the tax deadlines" className="grid gap-card-gap">
+          <SectionSkeleton rows={1} />
+          <SectionSkeleton rows={2} />
         </div>
       ) : q.isError ? (
         <EmptyState mood="error" title="Could not load the tax deadlines" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
@@ -62,18 +54,6 @@ export function TaxDeadlinesPage() {
         </>
       )}
     </div>
-  )
-}
-
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <section className="grid gap-4 rounded-panel border bg-surface p-5">
-      <div className="grid gap-[2px]">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {hint ? <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{hint}</p> : null}
-      </div>
-      {children}
-    </section>
   )
 }
 
@@ -98,7 +78,7 @@ function DaysSection({ deadlines, isAdmin }: { deadlines: GstDeadlines; isAdmin:
   }
 
   return (
-    <Section title="Usual days" hint="Every month's GST uses these days of the following month, unless a one-off date is set below. Days 1 to 28.">
+    <Section work title="Usual days" hint="Every month's GST uses these days of the following month, unless a one-off date is set below. Days 1 to 28.">
       {isAdmin ? (
         <form
           className="grid gap-4"
@@ -124,13 +104,13 @@ function DaysSection({ deadlines, isAdmin }: { deadlines: GstDeadlines; isAdmin:
       ) : (
         <dl className="grid gap-3 sm:grid-cols-2">
           <div className="grid gap-1">
-            <dt className="text-sm text-fg-muted">Pay GST to FBR by</dt>
+            <dt className="text-base text-fg-muted">Pay GST to FBR by</dt>
             <dd className="text-base" data-testid="read-pay-day">
               the {dayWords(deadlines.payDay)} of the following month
             </dd>
           </div>
           <div className="grid gap-1">
-            <dt className="text-sm text-fg-muted">File the return by</dt>
+            <dt className="text-base text-fg-muted">File the return by</dt>
             <dd className="text-base" data-testid="read-return-day">
               the {dayWords(deadlines.returnDay)} of the following month
             </dd>
@@ -181,8 +161,8 @@ function OverridesSection({ deadlines, isAdmin }: { deadlines: GstDeadlines; isA
           {deadlines.overrides.map(o => {
             const d = gstDatesFor(deadlines, o.month)
             return (
-              <li key={o.month} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-row border px-4 py-3 text-base">
-                <span className="font-medium">GST for {monthKeyLabel(o.month.slice(0, 7))}</span>
+              <li key={o.month} className="flex min-h-row flex-wrap items-center gap-x-4 gap-y-2 rounded-row border bg-canvas px-4 py-2 text-base">
+                <span className="font-card">GST for {monthKeyLabel(o.month.slice(0, 7))}</span>
                 <span>Pay by {formatDay(d.payBy)}{d.payOverridden ? '' : ' (usual day)'}</span>
                 <span>Return by {formatDay(d.returnBy)}{d.returnOverridden ? '' : ' (usual day)'}</span>
                 {isAdmin ? (
