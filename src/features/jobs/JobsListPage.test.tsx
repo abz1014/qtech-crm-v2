@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
@@ -46,6 +46,11 @@ function mount(role: 'admin' | 'sales' | 'engineer', path = '/jobs') {
       </SessionProvider>
     </QueryClientProvider>,
   )
+}
+/** The job page's stand-in: says the address a row opened. */
+function Where() {
+  const l = useLocation()
+  return <p data-testid="where">{l.pathname + l.search}</p>
 }
 const desktopMedia = window.matchMedia
 /** Below 640px the Jobs list draws cards instead of table rows. */
@@ -240,6 +245,103 @@ describe('Jobs list', () => {
       mount('engineer', '/jobs?stage=invoice')
       await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
       expect(screen.queryByText(/No .* to invoice/)).toBeNull()
+    })
+  })
+
+  describe('Sell and Deliver lanes (Forest, gate 2)', () => {
+    // 139 and O-45 have an order (Deliver); 140 is quoted with no order (Sell); 120 paid (Deliver's history); 121 a lost enquiry (Sell's history)
+    const laneRows = [...rows.slice(0, 3), view('120', { stage: 'paid', stage_detail: null, is_history: true, order_id: 'o120' }), rows[4]!, view('141', { stage: 'enquiry', stage_detail: null })]
+    const lanes = (c: FakeCall) => (c.target === 'v_jobs' ? { data: laneRows } : fake(c))
+    const radios = () => screen.getAllByRole('radio').map(r => r.textContent?.trim())
+    const jobRows = () => screen.queryAllByRole('row').map(r => /Job (O-\d+|\d+)/.exec(r.textContent ?? '')?.[1]).filter(Boolean)
+
+    it('Sell holds the jobs with no order yet, titled Sell, with RFQs and Quotations and a link to every job', async () => {
+      installFakeDb(lanes)
+      const user = userEvent.setup()
+      mount('admin', '/jobs?lane=sell')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      expect(screen.getByRole('heading', { level: 1, name: 'Sell' })).toBeInTheDocument()
+      expect(jobRows().sort()).toEqual(['140', '141'])
+      expect(screen.getByText('2 open · 1 in history')).toBeInTheDocument()
+      expect(radios().slice(-3)).toEqual(['All', 'RFQs', 'Quotations'])
+      expect(screen.getByRole('button', { name: 'New RFQ' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'All jobs' })).toHaveAttribute('href', '/jobs')
+      await user.click(screen.getByRole('radio', { name: 'Quotations' }))
+      await waitFor(() => expect(screen.queryAllByRole('row', { name: /Job 141/ })).toHaveLength(0))
+      expect(jobRows()).toEqual(['140'])
+      expect(screen.getByText(/Showing 1 open job · Quotations/)).toBeInTheDocument()
+      // Sell's History is the lost enquiry, with no stage filter (nothing finished stands at RFQ or Quotation)
+      await user.click(screen.getByRole('radio', { name: /History/ }))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 121/ }).length).toBeGreaterThan(0))
+      expect(jobRows()).toEqual(['121'])
+      expect(screen.queryByTestId('stage-filter')).toBeNull()
+    })
+
+    it('Deliver holds the jobs with an order, with the live stage filter; a Sell stage in the address is All', async () => {
+      installFakeDb(lanes)
+      mount('sales', '/jobs?lane=deliver&chip=open&stage=quotation')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      expect(screen.getByRole('heading', { level: 1, name: 'Deliver' })).toBeInTheDocument()
+      expect(jobRows().sort()).toEqual(['139', 'O-45'])
+      expect(radios().slice(-6)).toEqual(['All', 'Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
+      expect(screen.queryByRole('radio', { name: 'Quotations' })).toBeNull()
+      expect(screen.getByRole('link', { name: 'All jobs' })).toHaveAttribute('href', '/jobs?chip=open')
+    })
+
+    it('a search from a lane still looks in every list', async () => {
+      installFakeDb(lanes)
+      mount('admin', '/jobs?lane=sell&q=139')
+      expect(await screen.findByText(/found, in every list/)).toBeInTheDocument()
+    })
+
+    it('a job opened from a lane carries it', async () => {
+      installFakeDb(lanes)
+      const user = userEvent.setup()
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Faizan', role: 'admin' } }}>
+            <MemoryRouter initialEntries={['/jobs?lane=deliver']}>
+              <ToastProvider>
+                <Routes>
+                  <Route path="/jobs" element={<JobsListPage />} />
+                  <Route path="/jobs/:key" element={<Where />} />
+                </Routes>
+              </ToastProvider>
+            </MemoryRouter>
+          </SessionProvider>
+        </QueryClientProvider>,
+      )
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await user.click(screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))!)
+      expect(await screen.findByTestId('where')).toHaveTextContent('/jobs/139?from=deliver')
+    })
+
+    it('the bare /jobs list is every job, titled Jobs, with no All jobs link and no Sell stages', async () => {
+      installFakeDb(lanes)
+      mount('admin', '/jobs')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 141/ }).length).toBeGreaterThan(0))
+      expect(screen.getByRole('heading', { level: 1, name: 'Jobs' })).toBeInTheDocument()
+      expect(jobRows().sort()).toEqual(['139', '140', '141', 'O-45'])
+      expect(screen.queryByRole('link', { name: 'All jobs' })).toBeNull()
+      expect(screen.queryByRole('radio', { name: 'Quotations' })).toBeNull()
+    })
+
+    it('an engineer on Sell is told it is for admin and sales and sent to Jobs, and no job list is asked for', async () => {
+      const { calls } = installFakeDb(lanes)
+      mount('engineer', '/jobs?lane=sell')
+      expect(await screen.findByText('Sell is for admin and sales')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Open Jobs' })).toHaveAttribute('href', '/jobs')
+      expect(screen.queryAllByRole('row')).toHaveLength(0)
+      expect(calls.filter(c => c.target === 'v_jobs')).toHaveLength(0)
+    })
+
+    it("an engineer's Deliver is their Jobs list, as before", async () => {
+      installFakeDb(lanes)
+      mount('engineer', '/jobs?lane=deliver')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      expect(screen.getByRole('heading', { level: 1, name: 'Jobs' })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'All jobs' })).toBeNull()
+      expect(radios().slice(-4)).toEqual(['All', 'Orders', 'Waiting for supplier', 'To deliver'])
     })
   })
 
