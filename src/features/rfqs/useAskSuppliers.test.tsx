@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionContext } from '@/app/session'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
+import { rfqItemsQuery } from '@/features/rfqs/hooks'
 import { useAskSuppliers, type AskResult } from '@/features/rfqs/useAskSuppliers'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
@@ -109,5 +110,89 @@ describe('useAskSuppliers', () => {
     expect(writeText).not.toHaveBeenCalled()
     expect(inserts).toHaveLength(1)
     expect((opArgs(inserts[0], 'insert')?.[0] as { supplier_id: string; sent_on: string }[])[0]).toMatchObject({ supplier_id: 's-1', sent_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })
+  })
+
+  describe('supplier flow D: which items the ask is about (0140)', () => {
+    const three: RfqItemRow[] = ['it-1', 'it-2', 'it-3'].map((id, n) => ({ id, number: n + 1, description: `Item ${n + 1}`, brandId: null, brandName: null, familyId: null, qty: 1, unit: 'pcs' }))
+    const dbItems = three.map((it, n) => ({ id: it.id, position: n, description: it.description, brand_id: null, family_id: null, qty: 1, unit: 'pcs', created_at: '2026-11-01T00:00:00Z' }))
+
+    function setup(inquiries: InquiryRow[]) {
+      const calls: FakeCall[] = []
+      installFakeDb(call => {
+        calls.push(call)
+        if (call.target === 'rfq_items') return { data: dbItems }
+        if (call.target === 'supplier_inquiries' && call.verb === 'insert') return { data: [{ id: 'inq-new' }] }
+        if (call.target === 'supplier_inquiries' && call.verb === 'update') return { data: [{ id: 'inq-x' }] }
+        return { data: [] }
+      })
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.resolve() } })
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+      client.setQueryData(rfqItemsQuery('r-1').queryKey, three)
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>
+          <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+            <ToastProvider>{children}</ToastProvider>
+          </SessionContext.Provider>
+        </QueryClientProvider>
+      )
+      const { result } = renderHook(() => useAskSuppliers(rfq, inquiries), { wrapper })
+      return { calls, result }
+    }
+    const inserted = (calls: FakeCall[]) => opArgs(calls.find(c => c.target === 'supplier_inquiries' && c.verb === 'insert') as FakeCall, 'insert')?.[0] as Record<string, unknown>[]
+    const scopeUpdates = (calls: FakeCall[]) =>
+      calls.filter(c => c.target === 'supplier_inquiries' && c.verb === 'update').map(c => opArgs(c, 'update')?.[0] as Record<string, unknown>).filter(u => 'asked_item_ids' in u)
+
+    it('asking one supplier about 2 of 3 items records those two; the message lists only them', async () => {
+      const { calls, result } = setup([])
+      let text = ''
+      await act(async () => {
+        text = (await result.current.ask({ supplierIds: ['s-1'], names: ['Orient'], items: [three[0], three[1]] })).text
+      })
+      expect(inserted(calls)[0]).toMatchObject({ supplier_id: 's-1', asked_item_ids: ['it-1', 'it-2'] })
+      expect(text).toContain('Item 1')
+      expect(text).toContain('Item 2')
+      expect(text).not.toContain('Item 3')
+    })
+
+    it('Record as asked for the chosen items records them too', async () => {
+      const { calls, result } = setup([])
+      await act(async () => {
+        await result.current.record({ supplierIds: ['s-1'], names: ['Orient'], items: [three[2]] })
+      })
+      expect(inserted(calls)[0]).toMatchObject({ supplier_id: 's-1', asked_item_ids: ['it-3'] })
+    })
+
+    it('an ask about every item stores no list (every item, as before 0140)', async () => {
+      const { calls, result } = setup([])
+      await act(async () => {
+        await result.current.ask({ supplierIds: ['s-1'], names: ['Orient'], items: three })
+      })
+      expect(inserted(calls)[0]).not.toHaveProperty('asked_item_ids')
+    })
+
+    it('a supplier asked about item 1 and now asked about item 3 has the list widened; asking about the rest makes it every item', async () => {
+      const asked = { id: 'inq-1', supplierId: 's-1', supplierName: 'Orient', sentOn: '2026-11-10', noOfferOn: null, lines: [], itemDeclines: {}, askedItemIds: ['it-1'] } as unknown as InquiryRow
+      const first = setup([asked])
+      await act(async () => {
+        await first.result.current.ask({ supplierIds: ['s-1'], names: ['Orient'], items: [three[2]] })
+      })
+      expect(scopeUpdates(first.calls)).toEqual([{ asked_item_ids: ['it-1', 'it-3'] }])
+      expect(first.calls.some(c => c.target === 'supplier_inquiries' && c.verb === 'insert')).toBe(false)
+
+      const second = setup([{ ...asked, askedItemIds: ['it-1', 'it-3'] }])
+      await act(async () => {
+        await second.result.current.record({ supplierIds: ['s-1'], names: ['Orient'], items: [three[1]] })
+      })
+      expect(scopeUpdates(second.calls)).toEqual([{ asked_item_ids: null }])
+    })
+
+    it('a supplier asked the old way (every item) is left as it is', async () => {
+      const old = { id: 'inq-1', supplierId: 's-1', supplierName: 'Orient', sentOn: '2026-11-10', noOfferOn: null, lines: [], itemDeclines: {}, askedItemIds: null } as unknown as InquiryRow
+      const { calls, result } = setup([old])
+      await act(async () => {
+        await result.current.ask({ supplierIds: ['s-1'], names: ['Orient'], items: [three[0]] })
+      })
+      expect(scopeUpdates(calls)).toEqual([])
+    })
   })
 })

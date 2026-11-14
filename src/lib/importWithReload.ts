@@ -13,13 +13,19 @@ import { applyUpdate } from '@/lib/pwa/updates'
  * moves the page onto the new build:
  *   - a new service worker is waiting: it takes over and the page reloads (the same path as Reload in the
  *     "New version available" toast, src/lib/pwa/updates.ts);
- *   - otherwise the page reloads once. A sessionStorage mark stops a second automatic reload, so a chunk that is
- *     really missing cannot loop; the mark is cleared by the next import that works.
+ *   - otherwise the page reloads once.
+ * Either way at most ONE automatic reload per RELOAD_GUARD_MS in this tab: a sessionStorage mark (the time of the reload) stops
+ * the next one, so a chunk that is really missing cannot loop. The mark is NOT cleared by an import that works: the page that
+ * comes back loads other parts fine and then fails on the same missing chunk again, and clearing the mark there turned that into
+ * an endless reload (the phone's blinking "Loading" splash, 14 Nov 2026). It simply expires.
  * It never reloads over unsaved typing (hasDirtyForms, the same rule the update toast follows), and never while
  * offline (a reload cannot fetch anything new). In those cases, and when the one reload is spent, it throws a
  * PlainError whose sentence says what to do; mapPgError shows it as it is.
  */
 export const RELOAD_MARK = 'qtech.chunkReload'
+
+/** After an automatic reload, no other one in this tab for this long. */
+export const RELOAD_GUARD_MS = 5 * 60_000
 
 /** How long to wait for a waiting worker to take over before giving up on it. */
 const TAKEOVER_MS = 10_000
@@ -49,17 +55,20 @@ const UNSAVED = 'Q-Tech has been updated. Save what you are typing, then reload 
 const SPENT = 'Q-Tech has been updated. Close the app (or the tab) and open it again, then try once more.'
 const NOT_LOADED = 'This part of Q-Tech could not be downloaded. Check the connection, then try again.'
 
-function readMark(): boolean {
+/** An automatic reload happened in this tab within RELOAD_GUARD_MS (a mark that is not a time counts as recent). */
+function recentlyReloaded(): boolean {
   try {
-    return window.sessionStorage.getItem(RELOAD_MARK) !== null
+    const raw = window.sessionStorage.getItem(RELOAD_MARK)
+    if (raw === null) return false
+    const at = Number(raw)
+    return !Number.isFinite(at) || Date.now() - at < RELOAD_GUARD_MS
   } catch {
     return false
   }
 }
-function writeMark(on: boolean): void {
+function writeMark(): void {
   try {
-    if (on) window.sessionStorage.setItem(RELOAD_MARK, String(Date.now()))
-    else window.sessionStorage.removeItem(RELOAD_MARK)
+    window.sessionStorage.setItem(RELOAD_MARK, String(Date.now()))
   } catch {
     /* storage blocked: the reload still happens once per failure, which the person triggers */
   }
@@ -75,13 +84,14 @@ function waitForReload(): Promise<never> {
 async function recover(): Promise<never> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new StaleAppError(OFFLINE, 'offline')
   if (hasDirtyForms()) throw new StaleAppError(UNSAVED, 'unsaved')
+  // Already reloaded for this a moment ago (either way below): the reload did not help, so say what to do instead of looping.
+  if (recentlyReloaded()) throw new StaleAppError(SPENT, 'reload-spent')
   // A new worker is waiting: let it take over. updates.ts reloads the page when it does.
   if (applyUpdate() === 'applying') {
-    writeMark(true)
+    writeMark()
     return waitForReload()
   }
-  if (readMark()) throw new StaleAppError(SPENT, 'reload-spent')
-  writeMark(true)
+  writeMark()
   pageReload.run()
   return waitForReload()
 }
@@ -114,7 +124,6 @@ export async function importWithReload<T>(load: () => Promise<T>, { reload = tru
       return recover()
     }
   }
-  if (readMark()) writeMark(false)
   return mod
 }
 

@@ -298,14 +298,17 @@ export function CommandPalette({
                     >
                       <span aria-hidden="true" className="absolute inset-y-0 left-0 hidden w-1 bg-primary group-data-[selected=true]:block" />
                       {item.icon ? <Icon icon={item.icon} className="text-fg-muted group-data-[selected=true]:text-fg" /> : <span className="w-4" />}
-                      <span className="min-w-0 flex-1 break-words" title={item.label}>
-                        <Highlight text={item.label} q={q} />
-                      </span>
-                      {item.meta ? (
-                        <span className="min-w-0 max-w-[45%] shrink-0 break-words text-xs text-fg-muted" title={item.meta}>
-                          <Highlight text={item.meta} q={g.key === 'recent' ? '' : q} />
+                      {/* Phone: the detail sits under the title at full width; from sm it is a right-hand column, at most 45%. */}
+                      <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:gap-3">
+                        <span className="min-w-0 break-words sm:flex-1" title={item.label}>
+                          <Highlight text={item.label} q={q} />
                         </span>
-                      ) : null}
+                        {item.meta ? (
+                          <span className="min-w-0 break-words text-xs text-fg-muted sm:max-w-[45%] sm:shrink-0" title={item.meta}>
+                            <Highlight text={item.meta} q={g.key === 'recent' ? '' : q} />
+                          </span>
+                        ) : null}
+                      </span>
                       {item.shortcut?.length ? (
                         <span className="inline-flex gap-1 [@media(pointer:coarse)]:hidden">
                           {item.shortcut.map(k => (

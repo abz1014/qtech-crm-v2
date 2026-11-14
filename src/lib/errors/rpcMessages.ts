@@ -229,6 +229,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Rs (.+?) for 1 (.+?) is more than 20 percent away from the latest rate / },
   { match: /^0115: /, internal: true },
   { match: /^0138: /, internal: true },
+  // 0140 (supplier flow D): an item ticked in the ask was removed from the RFQ meanwhile. Already plain.
+  { match: /^An item asked about is not an item of this RFQ\.$/ },
   // 0121 (supplier debt on a cancelled order) and 0122 (reassign owner): already plain.
   { match: /^Only an admin cancels a supplier order with the supplier\./ },
   { match: /^That supplier order was not found\./ },

@@ -52,9 +52,11 @@ function Fold({ title, count, children }: { title: string; count: number; childr
         onClick={() => setChosen(!open)}
         className="flex min-h-touch w-full items-center gap-2 rounded px-2 text-left text-base font-medium hover:bg-sunken"
       >
-        <ChevronRight aria-hidden="true" className={open ? 'size-4 rotate-90' : 'size-4'} />
-        {title}
-        <span className="num text-fg-muted">{count > 0 ? `(${count})` : 'none yet'}</span>
+        <ChevronRight aria-hidden="true" className={open ? 'size-4 shrink-0 rotate-90' : 'size-4 shrink-0'} />
+        {/* One run of text: on a narrow phone "none yet" follows the title to the next line whole, not two wrapped columns. */}
+        <span className="min-w-0">
+          {title} <span className="num whitespace-nowrap text-fg-muted">{count > 0 ? `(${count})` : 'none yet'}</span>
+        </span>
       </button>
       {open ? <Suspense fallback={<Skeleton className="h-8 w-full" />}>{children}</Suspense> : null}
     </div>
@@ -170,10 +172,15 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
   const open = (rfq.state?.outcome ?? 'open') === 'open' && !hasOrder
   const sent = quotationSent({ bidState: rfq.state?.bid_state, quotationCount })
   const chaseMode: ChaseMode = !open || sent ? 'none' : hasPrices ? 'button' : 'card'
-  const askFrom = async (ticked: readonly { supplierId: string; name: string }[], list: RfqItemRow[]) => ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
-  const recordFrom = async (ticked: readonly { supplierId: string; name: string }[]) => record({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name) })
-  // Never found by "Search or add a supplier": the customer itself, and suppliers already asked.
-  const askExclude = useMemo(() => new Set([rfq.company.id, ...inquiryList.filter(i => i.sentOn || i.noOfferOn).map(i => i.supplierId)]), [rfq.company.id, inquiryList])
+  const askFrom = async (ticked: readonly { supplierId: string; name: string }[], list: readonly RfqItemRow[]) => ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
+  const recordFrom = async (ticked: readonly { supplierId: string; name: string }[], list: readonly RfqItemRow[]) =>
+    record({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
+  // Never found by "Search or add a supplier": the customer itself, and suppliers already asked about every item. One asked about
+  // some items (supplier flow D) can be found and asked about more.
+  const askExclude = useMemo(
+    () => new Set([rfq.company.id, ...inquiryList.filter(i => (i.sentOn || i.noOfferOn) && !i.askedItemIds).map(i => i.supplierId)]),
+    [rfq.company.id, inquiryList],
+  )
   const replyExclude = useMemo(() => new Set([rfq.company.id]), [rfq.company.id])
   // A reply is prices: an engineer is never offered it.
   const onReplyFrom = prices ? () => setPickingReply(true) : undefined
@@ -206,8 +213,8 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
             coverage={coverage}
             partial={extras.partial}
             excludeIds={askExclude}
-            onAsk={ticked => void askFrom(ticked, itemList)}
-            onRecord={ticked => void recordFrom(ticked)}
+            onAsk={(ticked, list) => void askFrom(ticked, list)}
+            onRecord={(ticked, list) => void recordFrom(ticked, list)}
             onReplyFrom={onReplyFrom}
           />
         ) : (
@@ -253,14 +260,12 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
             suggestions={askList}
             coverage={coverage}
             excludeIds={askExclude}
-            onRecord={ticked => void recordFrom(ticked).then(r => r.ok && setFloating(false))}
-            itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
+            onRecord={(ticked, list) => void recordFrom(ticked, list).then(r => r.ok && setFloating(false))}
+            items={itemList}
+            needing={new Set(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).map(it => it.id))}
             busy={asking}
             onClose={() => setFloating(false)}
-            onAsk={ticked => {
-              const needing = itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id)))
-              void askFrom(ticked, needing.length > 0 ? needing : itemList).then(r => r.ok && setFloating(false))
-            }}
+            onAsk={(ticked, list) => void askFrom(ticked, list).then(r => r.ok && setFloating(false))}
           />
         </Suspense>
       ) : null}

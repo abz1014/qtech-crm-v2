@@ -31,6 +31,7 @@ import { comparePrices, type ComparedLine, type RateTable } from '@/features/rfq
 import { itemCoverage } from '@/features/rfqs/lib/detailView'
 import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
 import { reasonForItem, reasonLabel } from '@/features/rfqs/lib/cantQuote'
+import { askedAbout } from '@/features/rfqs/lib/askedItems'
 import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
@@ -207,6 +208,34 @@ function RowMenu({ rfqId, entry, item }: { rfqId: string; entry: Entry; item: Rf
 }
 
 /**
+ * Why a supplier cannot quote this item: its own reason, or the whole inquiry's "cannot quote" when they were asked about the item
+ * (supplier flow D: a supplier never asked about an item has not said no to it).
+ */
+function declinedReason(itemId: string, inquiry: InquiryRow): string | null {
+  return inquiry.itemDeclines[itemId] ?? (askedAbout(inquiry, itemId) ? reasonForItem(itemId, inquiry) : null)
+}
+
+/** The suppliers worth asking about one item, each with "Copy message" (it copies the message for this item and records the ask). */
+function AskForItem({ suggestions, item, onCopyEnquiry }: { suggestions: readonly SupplierSuggestion[]; item: RfqItemRow; onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void }) {
+  if (suggestions.length === 0) return null
+  return (
+    <ul className="border-b">
+      {suggestions.map(s => (
+        <li key={s.supplierId} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3 first:border-t-0">
+          <span className="min-w-0 flex-1 basis-[14rem]">
+            <b className="block font-semibold">{s.name}</b>
+            <span className="text-sm text-fg-muted">{s.reason}</span>
+          </span>
+          <Button size="sm" icon={Copy} onClick={() => onCopyEnquiry(s, item)} aria-label={`Copy message for ${s.name}`}>
+            Copy message
+          </Button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
  * The suppliers asked about this item who have not answered yet, as ONE line (grade-B R1): "Waiting on Midlands Valves Ltd", or
  * "Waiting on 3 suppliers" with the names in the title. Who they are, the chase and "Cannot quote" live once per supplier in
  * Suppliers asked (SuppliersAsked.tsx), not on every item.
@@ -296,7 +325,7 @@ export function ItemsPanel({
     : []
   const nobodyAsked = inquiries.length === 0
   // Something under the header besides the waiting line: a price or a cannot quote.
-  const hasBody = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId) || Boolean(reasonForItem(itemId, i)))
+  const hasBody = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId) || Boolean(declinedReason(itemId, i)))
   // Desktop: the column names show once, over the first item that has prices (they were repeated over every item).
   const headItemId = items.find(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id)))?.id
   const shownItem = openItem === undefined ? items.find(it => hasBody(it.id))?.id : openItem
@@ -351,23 +380,30 @@ export function ItemsPanel({
             entries.sort((x, y) => x.inquiry.supplierName.localeCompare(y.inquiry.supplierName))
             const declined = inquiries
               .filter(i => !i.lines.some(l => l.itemId === item.id))
-              .map(i => ({ i, reason: reasonForItem(item.id, i) }))
+              .map(i => ({ i, reason: declinedReason(item.id, i) }))
               .filter(d => d.reason)
-            // Still waiting: asked, nothing back from them at all, and not declined for this item. A supplier who answered other items
-            // and left this one is not waiting on it (the chase card still asks for it).
-            const waiting = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[item.id])
-            const cov = itemCoverage(lines.length, waiting.length, responders.length, askedCount)
+            // Still waiting: asked about this item (supplier flow D), nothing back from them at all, and not declined for this item. A
+            // supplier who answered other items and left this one is not waiting on it (the chase card still asks for it).
+            const waiting = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[item.id] && askedAbout(i, item.id))
+            // Only the suppliers asked about this item count for it; one who priced it unasked counts too.
+            const itemResponders = responders.filter(i => askedAbout(i, item.id) || i.lines.some(l => l.itemId === item.id))
+            const askedForItem = inquiries.filter(i => (i.sentOn || i.noOfferOn) && askedAbout(i, item.id)).length
+            const cov = itemCoverage(lines.length, waiting.length, itemResponders.length, askedForItem)
+            // Others were asked, but nobody about this item: it says so, with the suppliers worth asking.
+            const unasked = cov.kind === 'unasked' && askedCount > 0
             const q = qtyText(item.qty, item.unit)
             const forThis = (suggestions ?? []).filter(s => s.coversItemIds.includes(item.id)).slice(0, 3)
             // Phone accordion: an item with prices, a cannot quote or the warning folds to its header; one open at a time.
-            const foldable = phone && !nobodyAsked && (entries.length > 0 || declined.length > 0 || cov.kind === 'uncovered')
+            const foldable = phone && !nobodyAsked && (entries.length > 0 || declined.length > 0 || cov.kind === 'uncovered' || unasked)
             const folded = foldable && shownItem !== item.id
             const bodyId = `item-body-${item.id}`
             return (
               <article key={item.id} aria-label={`Item ${item.number}`} className="min-w-0" data-folded={folded ? '' : undefined}>
-                <header className={cn('relative flex flex-wrap items-start gap-x-3 gap-y-2 px-0 pt-4 lg:pt-3', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
-                  <span className="num mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-sm">{item.number}</span>
-                  <div className="min-w-0 flex-1 basis-[16rem]">
+                {/* A grid, so the number stays beside the title and the fold chevron and menu stay at the right of the first row at any
+                    width; below lg the chip drops under the title, from lg it sits before the chevron. */}
+                <header className={cn('relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-0 pt-4 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:pt-3', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
+                  <span className="num col-start-1 row-start-1 mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-sm">{item.number}</span>
+                  <div className="col-start-2 row-start-1 min-w-0">
                     <h3 className="text-base font-medium text-pretty">
                       {foldable ? (
                         // The whole header is the tap target (the button's box stretches over it); the name is its label.
@@ -395,11 +431,18 @@ export function ItemsPanel({
                     </p>
                   </div>
                   {/* "Priced" is said once, on each supplier's row (Suppliers asked): an item with prices shows its price rows, not a second chip. */}
-                  {cov.value && cov.value !== 'priced' ? <StatusBadge dimension="item-price" value={cov.value} detail={cov.detail} /> : null}
-                  {foldable ? <Icon icon={ChevronDown} className={cn('mt-[2px] shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} /> : null}
-                  {/* Above the phone header's whole-width tap target (z-10), so the menu is its own button. */}
-                  <span className="relative z-10 -my-2 shrink-0">
-                    <ItemMenu rfq={rfq} item={item} />
+                  {/* An item others were asked about but nobody about this one says so folded too: Needs suppliers. */}
+                  {unasked || (cov.value && cov.value !== 'priced') ? (
+                    <span className="col-start-2 row-start-2 justify-self-start lg:col-start-3 lg:row-start-1">
+                      <StatusBadge dimension="item-price" value={unasked ? 'unasked' : (cov.value as string)} detail={cov.detail} />
+                    </span>
+                  ) : null}
+                  <span className="col-start-3 row-start-1 flex shrink-0 items-start gap-x-1 lg:col-start-4">
+                    {foldable ? <Icon icon={ChevronDown} className={cn('mt-[2px] shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} /> : null}
+                    {/* Above the phone header's whole-width tap target (z-10), so the menu is its own button. */}
+                    <span className="relative z-10 -my-2 shrink-0">
+                      <ItemMenu rfq={rfq} item={item} />
+                    </span>
                   </span>
                 </header>
 
@@ -411,29 +454,24 @@ export function ItemsPanel({
                           <Icon icon={TriangleAlert} className="mt-[2px] text-tone-danger-fg" />
                           <p className="text-fg-2">
                             <b className="font-semibold text-fg">
-                              {responders.length > 0
-                                ? `None of the ${responders.length} ${responders.length === 1 ? 'supplier' : 'suppliers'} who replied quoted this item.`
+                              {itemResponders.length > 0
+                                ? `None of the ${itemResponders.length} ${itemResponders.length === 1 ? 'supplier' : 'suppliers'} who replied quoted this item.`
                                 : 'Every supplier asked said they cannot quote it.'}
                             </b>{' '}
                             {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}
                             Ask another supplier before the quotation is due.
                           </p>
                         </div>
-                        {forThis.length > 0 ? (
-                          <ul className="border-b">
-                            {forThis.map(s => (
-                              <li key={s.supplierId} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3 first:border-t-0">
-                                <span className="min-w-0 flex-1 basis-[14rem]">
-                                  <b className="block font-semibold">{s.name}</b>
-                                  <span className="text-sm text-fg-muted">{s.reason}</span>
-                                </span>
-                                <Button size="sm" icon={Copy} onClick={() => onCopyEnquiry(s, item)} aria-label={`Copy message for ${s.name}`}>
-                                  Copy message
-                                </Button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
+                        <AskForItem suggestions={forThis} item={item} onCopyEnquiry={onCopyEnquiry} />
+                      </div>
+                    ) : null}
+
+                    {unasked ? (
+                      <div className="mt-3 grid gap-0 px-0" data-unasked={item.id}>
+                        <p role="status" className="border-l-4 border-line-strong bg-sunken px-4 py-3 text-fg-2">
+                          <b className="font-semibold text-fg">No supplier has been asked about this item.</b> Ask a supplier before the quotation is due.
+                        </p>
+                        <AskForItem suggestions={forThis} item={item} onCopyEnquiry={onCopyEnquiry} />
                       </div>
                     ) : null}
 

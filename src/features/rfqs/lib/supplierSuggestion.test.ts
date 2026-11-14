@@ -278,6 +278,13 @@ describe('the coverage line', () => {
     expect(coverageLine(r.uncovered)).toBe('No supplier on file deals in flow meters yet. Ask a few: their answers build the list.')
   })
 
+  it('does not name a category whose item a listed supplier covers by its brand', () => {
+    // s1 carries Endress+Hauser, the brand of the flow meter: flow meters are covered; contactors still are not.
+    const r = run([sup('s1', 'A', { brand_ids: [EH] })])
+    expect(r.suppliers.map((s) => s.group)).toEqual(['carries_brand'])
+    expect(r.uncovered.map((u) => u.name)).toEqual(['Contactors'])
+  })
+
   it('says nothing when every category has a supplier, or the items have no category', () => {
     expect(coverageLine(run([sup('s1', 'A', { brand_ids: [FLOW, CONTACTORS] })]).uncovered)).toBeNull()
     expect(coverageLine([])).toBeNull()

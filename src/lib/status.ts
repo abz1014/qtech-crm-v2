@@ -108,6 +108,8 @@ export const STATUS = {
     waiting: def('Waiting for prices', 'info'),
     priced: def('Priced', 'success'),
     none: def('No price yet', 'warning'),
+    // Others were asked, nobody about this item (supplier flow D): the stage chip's words, since this item still needs suppliers.
+    unasked: def('Needs suppliers', 'warning'),
   },
   'inquiry-blocked': {
     none: hid('Not blocked', 'neutral'),

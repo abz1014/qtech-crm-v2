@@ -299,7 +299,7 @@ export function SupplierPicker({
           }}
           onQueryChange={setText}
           loading={matches.isFetching}
-          placeholder="Search a company by name"
+          placeholder="Search companies"
         />
         <p className="type-body text-fg-muted">Any company on file can be asked. Add new companies from the Companies screen.</p>
       </div>
