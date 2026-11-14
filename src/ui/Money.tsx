@@ -31,15 +31,17 @@ import { formatDay } from '@/lib/formatDay'
  *  - Provisional: dashed underline plus the warning chip ("Not final"). Basis unknown: shown as
  *    typed, with the dashed warning chip ("Is GST included?"). Nothing here converts or hides either.
  */
-type Size = 'sm' | 'base' | 'lg' | 'xl' | 'display'
+/** `kpi`: the Forest headline figure (proposal .qb-kpi): the kpi step, heavy, as on the Money hub, Profitability and the credit card. */
+type Size = 'sm' | 'base' | 'lg' | 'xl' | 'display' | 'kpi'
 const SIZE: Record<Size, string> = {
   sm: 'text-sm',
   base: 'text-base',
   lg: 'text-lg tracking-snug',
   xl: 'text-xl tracking-snug',
   display: 'text-display font-medium tracking-tight',
+  kpi: 'text-kpi font-heavy tracking-snug',
 }
-const CCY_SIZE: Record<Size, string> = { sm: 'text-xs', base: 'text-xs', lg: 'text-xs', xl: 'text-xs', display: 'text-base' }
+const CCY_SIZE: Record<Size, string> = { sm: 'text-xs', base: 'text-xs', lg: 'text-xs', xl: 'text-xs', display: 'text-base', kpi: 'text-sm' }
 
 export interface MoneyProps {
   value: Amount | null | undefined
@@ -82,7 +84,7 @@ export function Money({
         className={cn(
           'num whitespace-nowrap',
           size && SIZE[size],
-          (strong || size === 'display') && 'font-medium',
+          (strong || size === 'display') && size !== 'kpi' && 'font-medium',
           negative && !plainNegative && 'text-tone-danger-fg',
           (missing || (provisional && mark === 'underline')) && 'text-fg-muted',
         )}

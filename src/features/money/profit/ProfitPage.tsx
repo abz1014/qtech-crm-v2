@@ -88,7 +88,7 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
   return (
     <>
       <section aria-label="Average monthly income" className="grid gap-4" data-testid="profit-average">
-        <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:flex lg:flex-wrap">
+        <div className="grid gap-card-gap sm:grid-cols-2">
           <Figure
             label="Average monthly income"
             testId="profit-average-income"
@@ -145,8 +145,9 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
 /** One of the two averages: the label, the figure as the page's big number, and what it counts. */
 function Figure({ label, value, note, testId }: { label: string; value: string; note: ReactNode; testId: string }) {
   return (
-    <div className="grid min-w-0 content-start gap-1 lg:max-w-[22rem]">
-      <h2 className="text-sm font-semibold text-fg">{label}</h2>
+    // the Money hub's figure card (50-money-hub .qb-kpi card): label, the big figure, what it counts
+    <div className={cn(CARD, 'grid min-w-0 content-start gap-1 p-card')}>
+      <h2 className="text-sm font-semibold text-fg-2">{label}</h2>
       <p className="num text-kpi font-heavy tracking-snug text-fg [overflow-wrap:anywhere]" data-testid={testId}>
         {value}
       </p>
@@ -195,9 +196,9 @@ function LoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
 function ProfitLoading() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading profitability" className="grid gap-card-gap">
-      <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:flex">
+      <div className="grid gap-card-gap sm:grid-cols-2">
         {[0, 1].map(i => (
-          <div key={i} className="grid gap-2">
+          <div key={i} className={cn(CARD, 'grid gap-2 p-card')}>
             <Skeleton className="h-4 w-[10rem]" />
             <Skeleton className="h-8 w-[12rem]" />
             <Skeleton className="h-4 w-[16rem] max-w-full" />

@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils'
+import { CARD } from '@/ui/card'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Banknote } from 'lucide-react'
@@ -89,7 +91,8 @@ export function PaymentsPage() {
         </Button>
       }
     >
-      <div className="flex flex-wrap items-center gap-3">
+      {/* the month bar as on Lock a month and Bank check (57, 58 .qb-monthbar): the pager in its own card */}
+      <div className={cn(CARD, 'flex flex-wrap items-center gap-3 px-card py-3')}>
         <MonthPager month={month} thisMonth={thisMonth} go={go} />
         {isClosed ? <MonthStateChip closed /> : null}
       </div>

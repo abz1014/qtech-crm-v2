@@ -188,7 +188,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
             ) : (
               <>
                 <div className="min-w-0 [overflow-wrap:anywhere]">
-                  <Margin value={m.margin} state={m.marginState as 'provisional' | 'final' | 'basis_unknown' | null} size="display" mark="underline" />
+                  <Margin value={m.margin} state={m.marginState as 'provisional' | 'final' | 'basis_unknown' | null} size="kpi" mark="underline" />
                 </div>
                 <p className="text-sm text-fg-2">
                   {unknown

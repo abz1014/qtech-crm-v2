@@ -13,21 +13,45 @@ import { monthKeyLabel, monthKeyShort } from '@/features/money/monthEnd/model'
 export const PAGER_STEP =
   'inline-grid h-control w-control shrink-0 place-items-center rounded-control border border-line-input bg-surface text-fg transition-[background-color,transform] duration-fast ease-out hover:bg-brand-100 active:scale-press disabled:border-line disabled:bg-sunken disabled:text-fg-disabled disabled:hover:bg-sunken disabled:active:scale-100 motion-reduce:transition-none max-md:h-touch max-md:w-touch'
 
-/** Previous and next month, the month between them. Next stops at the current month. */
-export function MonthPager({ month, thisMonth, go, label = 'Month' }: { month: string; thisMonth: string; go: (by: number) => void; label?: string }) {
+/**
+ * The one pager look (Forest .qb-monthbar): two outlined step buttons and the period between them, bold. Lock a month, Payments, Bank
+ * check, the month reports, Money in and out and the Expenses report all draw it, so a month never looks different from page to page.
+ */
+export function PeriodStepper({
+  label,
+  unit,
+  text,
+  title,
+  atNow,
+  go,
+  testId,
+}: {
+  label: string
+  unit: string
+  text: string
+  title?: string
+  atNow: boolean
+  go: (by: number) => void
+  testId?: string
+}) {
   return (
     <div role="group" aria-label={label} className="inline-flex items-center gap-2">
-      <button type="button" aria-label="Previous month" onClick={() => go(-1)} className={PAGER_STEP}>
+      <button type="button" aria-label={`Previous ${unit}`} onClick={() => go(-1)} className={PAGER_STEP}>
         <Icon icon={ChevronLeft} size="sm" />
       </button>
-      <span aria-live="polite" title={monthKeyLabel(month)} className="num inline-flex h-control min-w-[6.5rem] items-center justify-center px-2 text-base font-bold max-md:h-touch">
-        {monthKeyShort(month)}
+      <span aria-live="polite" title={title} data-testid={testId} className="num inline-flex h-control min-w-[6.5rem] items-center justify-center px-2 text-base font-bold max-md:h-touch">
+        {text}
       </span>
-      <button type="button" aria-label="Next month" disabled={month >= thisMonth} onClick={() => go(1)} className={PAGER_STEP}>
+      <button type="button" aria-label={`Next ${unit}`} disabled={atNow} onClick={() => go(1)} className={PAGER_STEP}>
         <Icon icon={ChevronRight} size="sm" />
       </button>
     </div>
   )
+}
+
+/** Previous and next month, the month between them. Next stops at the current month. */
+export function MonthPager({ month, thisMonth, go, label = 'Month' }: { month: string; thisMonth: string; go: (by: number) => void; label?: string }) {
+  return <PeriodStepper label={label} unit="month" text={monthKeyShort(month)} title={monthKeyLabel(month)} atNow={month >= thisMonth} go={go} />
 }
 
 export function MonthStateChip({ closed }: { closed: boolean }) {

@@ -88,6 +88,7 @@ export function CloseMonthDialog({
       busy={close.isPending}
     >
       <DialogContent
+        icon={Lock}
         title={`Lock ${label}?`}
         context={
           <>
@@ -95,7 +96,6 @@ export function CloseMonthDialog({
           </>
         }
         size="md"
-        lead={`This locks ${label} only. Months lock one at a time, oldest first.`}
         footer={
           <>
             <Button data-cancel onClick={() => onOpenChange(false)} disabled={close.isPending}>
@@ -107,6 +107,8 @@ export function CloseMonthDialog({
           </>
         }
       >
+        {/* 57-lock-month: the one sentence that says what this does opens the body, above the checks (it sat at the foot, beside Cancel). */}
+        <p className="text-base text-fg-2">This locks {label} only. Months lock one at a time, oldest first.</p>
         <ul aria-label="Warnings" className="grid overflow-hidden rounded-control border bg-surface">
           {cards.map(c => (
             <li key={c.key} className="grid min-h-touch grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-t px-4 py-2 first:border-t-0 [overflow-wrap:anywhere]">
@@ -176,6 +178,7 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
     >
       {entry ? (
         <DialogContent
+          icon={LockOpen}
           title={`Reopen ${monthKeyLabel(entry.key)}?`}
           context={`Locked ${formatClosedAt(entry.closedAt)}${entry.closedBy ? ` by ${entry.closedBy}` : ''}`}
           size="md"

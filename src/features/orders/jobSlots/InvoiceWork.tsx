@@ -29,6 +29,12 @@ export default function InvoiceWork({ job }: JobSlotProps) {
   const canPay = job.role === 'admin' && order.cancelledOn === null
   const main = canCreate ? 'create' : canPay ? 'pay' : canPrint ? 'print' : owing ? 'remind' : null
   const look = (k: string) => (main === k ? 'secondary' : 'quiet') as 'secondary' | 'quiet'
+  const buttons = [
+    canCreate ? { key: 'create', node: <CreateInvoiceButton key="create" orderId={order.id} size="sm" variant={look('create')} /> } : null,
+    canPrint ? { key: 'print', node: <InvoicePdfButton key="print" orderId={order.id} size="sm" variant={look('print')} /> } : null,
+    canPay ? { key: 'pay', node: <RecordPaymentButton key="pay" orderId={order.id} size="sm" variant={look('pay')} /> } : null,
+    owing ? { key: 'remind', node: <CopyReminderButton key="remind" order={order} money={m} variant={look('remind')} /> } : null,
+  ].filter((b): b is { key: string; node: JSX.Element } => b !== null)
   return (
     <div className="grid gap-2" data-invoice-work>
       {order.cancelledOn === null && !fully ? (
@@ -38,16 +44,16 @@ export default function InvoiceWork({ job }: JobSlotProps) {
           </p>
         ) : null
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {canCreate ? <CreateInvoiceButton orderId={order.id} size="sm" variant={look('create')} /> : null}
-        {canPrint ? <InvoicePdfButton orderId={order.id} size="sm" variant={look('print')} /> : null}
-        {canPay ? <RecordPaymentButton orderId={order.id} size="sm" variant={look('pay')} /> : null}
-        {owing ? <CopyReminderButton order={order} money={m} variant={look('remind')} /> : null}
+      {/* 54-invoice-dialogs #job-print: the one outlined button first, the quiet ones after it, the register link last, all on one
+          left edge: the quiet buttons and the link share the outlined button's inner padding, so their icons and words line up with
+          its icon down a phone's column (they were staggered). */}
+      <div className="flex flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-2">
+        {buttons.sort((a, b) => Number(b.key === main) - Number(a.key === main)).map(b => b.node)}
         {invoiced > 0 && job.role === 'admin' ? (
           <Link
             to={`/money/gst-register?q=${encodeURIComponent(`ORD-${String(order.number).padStart(4, '0')}`)}`}
             data-slot="invoice-register-link"
-            className="inline-flex min-h-touch items-center rounded type-body font-medium text-primary underline-offset-4 hover:underline"
+            className="inline-flex min-h-touch items-center rounded-control px-3 type-body font-medium text-primary underline-offset-4 hover:underline"
           >
             Open in Invoices to void one or issue a credit note
           </Link>

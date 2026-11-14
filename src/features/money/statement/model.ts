@@ -98,7 +98,7 @@ export const KIND_LABEL: Record<StatementKind, string> = {
   credit_applied: 'Credit applied',
 }
 
-/** "Rs 1,234.00" style amount for a statement cell, always with paisa so columns line up. */
+/** "1,234.00" style amount for a statement cell, always with paisa so columns line up. */
 export const fixed = (p: bigint): string => paisaToFixed(p)
 
 /** The same amount for the screen only, with thousands commas ("1,234.50"). The CSV and the PDF keep `fixed`. */

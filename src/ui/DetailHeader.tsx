@@ -92,7 +92,7 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, back, sub, more
           {code ? (
             <>
               {' '}
-              <span className="num ml-1 text-lg font-medium text-fg-muted max-md:hidden">{code}</span>
+              <span className="num ml-1 whitespace-nowrap text-lg font-medium text-fg-muted max-md:hidden">{code}</span>
             </>
           ) : null}
         </h1>
