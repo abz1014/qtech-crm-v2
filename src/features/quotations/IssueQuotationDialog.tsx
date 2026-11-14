@@ -546,8 +546,10 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </Field>
             </div>
 
-            <div className="w-full min-w-0 overflow-hidden rounded-control border">
-              <div className={`hidden gap-3 border-b bg-canvas px-3 py-2 text-sm font-semibold text-fg-muted min-[832px]:grid ${GRID}`} aria-hidden="true">
+            {/* No overflow-hidden here: in the phone sheet's scrolling grid body a clipping box collapsed to no height (Chromium), so the
+                tinted pieces round their own corners instead. */}
+            <div className="w-full min-w-0 rounded-control border">
+              <div className={`hidden gap-3 rounded-t-control border-b bg-canvas px-3 py-2 text-sm font-semibold text-fg-muted min-[832px]:grid ${GRID}`} aria-hidden="true">
                 <span />
                 <span>Item</span>
                 <span className="text-right">Qty</span>
@@ -568,7 +570,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   const n = idx + 1
                   const nothingToQuote = !on && price === null && !hasSupplierPrice(it.id) && sold === null && quoted === null
                   return (
-                    <li key={it.id} className={`grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 transition-colors duration-fast ${GRID} ${on ? '' : 'bg-canvas'}`} data-testid={`quote-line-${n}`}>
+                    <li key={it.id} className={`grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 transition-colors duration-fast max-[831px]:first:rounded-t-control ${GRID} ${on ? '' : 'bg-canvas'}`} data-testid={`quote-line-${n}`}>
                       <div className="pt-px">
                         <Checkbox
                           aria-label={`Include item ${n}`}
@@ -666,7 +668,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   )
                 })}
               </ul>
-              <dl className="grid gap-1 border-t bg-canvas px-4 py-3 text-sm min-[832px]:justify-items-end" aria-label="Totals">
+              <dl className="grid gap-1 rounded-b-control border-t bg-canvas px-4 py-3 text-sm min-[832px]:justify-items-end" aria-label="Totals">
                 <div className={TOT_ROW}>
                   <dt className="text-fg-muted">Net</dt>
                   <dd className="num" data-testid="total-net">
