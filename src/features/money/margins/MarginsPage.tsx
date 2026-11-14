@@ -66,7 +66,7 @@ function StateMark({ r }: { r: MarginRow }) {
 function MarginFigure({ r, size }: { r: MarginRow; size?: 'lg' }) {
   if (r.state === 'basis_unknown' || r.margin === null) return <Money value={null} prefix={false} size={size} />
   // Plan D6: with no cost yet the margin would be the whole sale. Say so in words (a settled imported order has its costs marked complete, so it is final and never says this).
-  if (noCostsYet(r)) return <span className="text-sm text-fg-2" data-testid="costs-not-entered">Costs not entered yet</span>
+  if (noCostsYet(r)) return <span className="text-right text-sm text-fg-2" data-testid="costs-not-entered">Costs not entered yet</span>
   const est = r.state === 'provisional'
   return (
     <span className={cn('inline-flex items-baseline gap-1', est && 'text-fg-muted')}>
@@ -119,14 +119,14 @@ function MarginRowView({ r }: { r: MarginRow }) {
           ) : (
             <>
               <Money value={r.netSale} prefix={false} />
-              <span className="text-xs text-fg-2">{r.basis === 'invoice' ? 'invoiced' : 'from items'}</span>
+              <span className="text-right text-xs text-fg-2">{r.basis === 'invoice' ? 'invoiced' : 'from items'}</span>
             </>
           )}
         </div>
         <div className="grid content-start justify-items-end gap-1">
           <Money value={r.actualCost} prefix={false} />
           {r.state !== 'final' ? (
-            <span className="text-xs text-fg-2">
+            <span className="text-right text-xs text-fg-2">
               {r.expectedCost !== null ? (
                 <>
                   so far, <Money value={r.expectedCost} prefix={false} /> expected
