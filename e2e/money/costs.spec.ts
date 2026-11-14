@@ -3,6 +3,7 @@ import { openStage } from '../support/job'
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { forestC2Screens } from './forest-c2'
 
 /*
  * M04 and M07 end to end, against the local CI stack: the Margin panel on the order page, Money > Lock a month > Margins and Things to
@@ -275,3 +276,6 @@ for (const width of [1440, 375]) {
     })
   })
 }
+
+// Forest lane C2 review pictures (credit, statement, margin card, order margins, profitability): e2e/money/forest-c2.ts.
+forestC2Screens()

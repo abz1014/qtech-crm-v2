@@ -114,7 +114,8 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
       className="md:w-[520px]"
       footer={
         <>
-          <Button onClick={onCancel} data-cancel disabled={sf.pending}>
+          {/* No data-cancel: Cancel closes at once, as it did when it sat in the body (the footer would ask "Discard unsaved changes?"). */}
+          <Button onClick={onCancel} disabled={sf.pending}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">

@@ -145,7 +145,8 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
       credit={credit}
       footer={
         <>
-          <Button onClick={onCancel} data-cancel disabled={sf.pending}>
+          {/* No data-cancel: Cancel closes at once, as it did when it sat in the body (the footer would ask "Discard unsaved changes?"). */}
+          <Button onClick={onCancel} disabled={sf.pending}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
