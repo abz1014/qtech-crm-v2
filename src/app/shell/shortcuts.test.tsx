@@ -4,12 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
-import { KEY_WORDS, handledKeys, shortcutList, shortcutsFor } from '@/app/shell/shortcuts'
+import { KEYBOARD_MEDIA, KEY_WORDS, handledKeys, shortcutList, shortcutsFor } from '@/app/shell/shortcuts'
 import { setSingleKeyShortcuts } from '@/ui/useShortcutsSetting'
 import { Avatar } from '@/ui/Avatar'
 import { installFakeDb } from '@/test/fakeSupabase'
@@ -161,6 +161,33 @@ describe('palette Actions and global shortcuts (A-89)', () => {
 })
 
 describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
+  /** A desktop with a mouse (KEYBOARD_MEDIA) or a touch screen; every other media query stays false. */
+  const keyboard = (on: boolean) =>
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      query =>
+        ({
+          matches: on && query === KEYBOARD_MEDIA,
+          media: query,
+          onchange: null,
+          addEventListener() {},
+          removeEventListener() {},
+          addListener() {},
+          removeListener() {},
+          dispatchEvent: () => false,
+        }) as unknown as MediaQueryList,
+    )
+  beforeEach(() => keyboard(true))
+  afterEach(() => vi.restoreAllMocks())
+
+  it('where no keyboard is likely, the sheet says so in place of the list (F-818)', async () => {
+    keyboard(false)
+    shell('/rfqs')
+    press('?')
+    const dlg = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
+    expect(within(dlg).getByText('Shortcuts are for a keyboard')).toBeInTheDocument()
+    expect(dlg.querySelectorAll('kbd')).toHaveLength(0)
+  })
+
   it('? opens the sheet, drawn from shortcuts.ts: every shortcut and its keys appear in it', async () => {
     shell('/rfqs')
     press('?')

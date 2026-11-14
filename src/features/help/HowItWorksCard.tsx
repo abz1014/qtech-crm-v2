@@ -61,7 +61,8 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
           >
             <Icon icon={CircleHelp} className="text-fg-muted" />
             <span className="min-w-0 flex-1 break-words">
-              How Q-Tech CRM works · {steps.length} steps
+              {/* a narrow phone breaks before the count, never inside "Q-Tech CRM works" */}
+              How Q-Tech CRM works <span className="whitespace-nowrap">· {steps.length} steps</span>
             </span>
             <Icon icon={ChevronDown} className={cn('text-fg-muted transition-transform duration-base ease-out', expanded && 'rotate-180')} />
           </button>

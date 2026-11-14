@@ -25,8 +25,8 @@ export interface Shortcut {
 
 export type ShortcutRole = 'admin' | 'sales' | 'engineer'
 
-/** Where a keyboard is likely: a fine pointer from md up. Phones never see a shortcuts entry or hint. */
-export const KEYBOARD_MEDIA = '(pointer: fine) and (min-width: 768px)'
+/** Where a keyboard is likely (kept in src/ui so the primitives can ask too). */
+export { KEYBOARD_MEDIA } from '@/ui/keyboardMedia'
 
 /** Joining words drawn as text between key caps. */
 export const KEY_WORDS: ReadonlySet<string> = new Set(['or', 'then'])

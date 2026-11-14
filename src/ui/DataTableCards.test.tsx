@@ -77,3 +77,51 @@ describe('DataTable mobileRow', () => {
     expect(screen.getAllByRole('row').find(r => r.hasAttribute('data-card'))).toHaveAttribute('aria-selected', 'true')
   })
 })
+
+describe('DataTable cardsApart, cardsBelow and onCardOpen', () => {
+  it('cardsApart: each card is its own Forest card and the frame steps back; onCardOpen is what a tap on a card does', async () => {
+    phone(true)
+    const opened = vi.fn()
+    const card = vi.fn()
+    render(
+      <DataTable label="People" columns={cols} rows={ROWS} getRowId={r => r.id} onRowOpen={opened} onCardOpen={card} cardsApart mobileRow={r => <span>{r.name} card</span>} />,
+    )
+    const root = document.querySelector('[data-table-root]')!
+    expect(root.hasAttribute('data-cards-apart')).toBe(true)
+    const rows = [...document.querySelectorAll('tr[data-card]')]
+    expect(rows).toHaveLength(3)
+    for (const r of rows) expect(r.className).toMatch(/rounded-card/)
+    await userEvent.click(screen.getByText('Bravo card'))
+    expect(card).toHaveBeenCalledWith(ROWS[1])
+    expect(opened).not.toHaveBeenCalled()
+  })
+
+  it('cardsBelow: cards when the table box is narrower than the given rem, the full table when it is wider', () => {
+    phone(false)
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+    width.mockReturnValue(400)
+    const { unmount } = render(<DataTable label="People" columns={cols} rows={ROWS} getRowId={r => r.id} cardsBelow={36} mobileRow={r => <span>{r.name} card</span>} />)
+    expect(document.querySelectorAll('tr[data-card]')).toHaveLength(3)
+    unmount()
+    width.mockReturnValue(900)
+    render(<DataTable label="People" columns={cols} rows={ROWS} getRowId={r => r.id} cardsBelow={36} mobileRow={r => <span>{r.name} card</span>} />)
+    expect(document.querySelectorAll('tr[data-card]')).toHaveLength(0)
+    expect(screen.getByRole('cell', { name: 'Alpha' })).toBeInTheDocument()
+  })
+
+  it('a fixed width cuts text, never a column of row actions (hidden header) or one marked truncate: false', () => {
+    phone(false)
+    const c: Column<R>[] = [
+      { id: 'name', header: 'Name', value: r => r.name, width: 80 },
+      { id: 'note', header: 'Note', value: r => r.name, width: 80, truncate: false },
+      { id: 'actions', header: 'Actions', hiddenHeader: true, width: '5rem', cell: r => <button type="button">Edit {r.name}</button> },
+    ]
+    render(<DataTable label="People" columns={c} rows={ROWS.slice(0, 1)} getRowId={r => r.id} />)
+    const [name, note, actions] = [...document.querySelectorAll('tbody tr td')]
+    expect(name.className).toMatch(/\btruncate\b/)
+    expect(note.className).not.toMatch(/\btruncate\b/)
+    expect(actions.className).not.toMatch(/\btruncate\b/)
+    expect(actions.className).toMatch(/whitespace-nowrap/)
+    expect((actions as HTMLElement).style.maxWidth).toBe('')
+  })
+})

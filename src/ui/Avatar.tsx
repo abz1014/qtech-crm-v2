@@ -7,12 +7,13 @@ const SIZE = {
   lg: 'size-[36px] text-xs',
   xl: 'size-[40px] text-xs',
   '2xl': 'size-[44px] text-sm',
+  '3xl': 'size-12 text-base',
 } as const
 
 interface AvatarProps {
   name: string
-  /** sm 28 (key-figures row; initials at 14 px, a picture of a name, not text to read: the name is the label), md 32 (top bar, lists), lg 36 (who-row), xl 40 (phone row), 2xl 44 (avatar-lg). */
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  /** sm 28 (key-figures row; initials at 14 px, a picture of a name, not text to read: the name is the label), md 32 (top bar, lists), lg 36 (who-row), xl 40 (phone row), 2xl 44 (avatar-lg), 3xl 48 (a person's sheet and Team cards, mockup 76). */
+  size?: keyof typeof SIZE
   className?: string
 }
 

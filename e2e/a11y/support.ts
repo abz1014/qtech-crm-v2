@@ -192,7 +192,7 @@ export async function openChase(page: Page, ref: string) {
 
 /** The main screens, as the admin sees them: a name for the test title and the path, which may need the seeded records. */
 export const SCREENS: ReadonlyArray<{ name: string; path: (w: World) => string }> = [
-  { name: 'To do', path: () => '/todo' },
+  { name: 'Home', path: () => '/todo' },
   { name: 'Jobs list', path: () => '/jobs' },
   { name: 'New RFQ', path: () => '/rfqs/new' },
   { name: 'Job page: enquiry', path: w => `/rfqs/${w.rfq.id}` },

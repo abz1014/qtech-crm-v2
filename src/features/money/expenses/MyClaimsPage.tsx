@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Camera, Check, CircleAlert, Trash2, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
@@ -14,6 +14,7 @@ import { PageHeader } from '@/ui/PageHeader'
 import { StatusText } from '@/ui/StatusText'
 import { useToast } from '@/ui/useToast'
 import { NumberInput } from '@/ui/form/NumberInput'
+import { DateInput } from '@/ui/form/DateInput'
 import { CARD } from '@/ui/card'
 import { Skeleton } from '@/ui/Skeleton'
 import { useCreateClaim, useMyClaims, useMyVisitOptions, useOrderOptions, useWithdrawClaim } from '@/features/money/expenses/hooks'
@@ -29,6 +30,8 @@ import { cn } from '@/lib/utils'
  * Until then it counts nowhere. The engineer sees only their own claims and the amounts they typed; no other price anywhere.
  * Phone first: one column, 16 px text, 44 px taps, the camera opens straight away.
  */
+/** An unreadable day, or one after today (DateInput reports it as empty). */
+const DATE_PROBLEM = 'Enter the day you paid: today or earlier.'
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
 
 export function MyClaimsPage() {
@@ -55,6 +58,7 @@ function MyClaims() {
   const [orderId, setOrderId] = useState('')
   const [visitId, setVisitId] = useState('')
   const visitTouched = useRef(false)
+  const dateId = useId()
   const [photo, setPhoto] = useState<AddedFile | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
@@ -70,6 +74,10 @@ function MyClaims() {
   const pending = useMemo(() => (claims.data ?? []).filter(c => c.status === 'pending'), [claims.data])
 
   const submit = () => {
+    if (!spentOn) {
+      setError(DATE_PROBLEM)
+      return
+    }
     const amountProblem = claimAmountProblem(amount)
     if (amountProblem || amount === null) {
       setError(amountProblem ?? AMOUNT_ABOVE_ZERO)
@@ -117,11 +125,13 @@ function MyClaims() {
       <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} placeholder="e.g. Petrol to the site, cable ties" className={FIELD} />
     </label>
   )
+  // DateInput as on every other form ("Sat 14 Nov 2026", typed or picked); no day after today. The label is its own element, so the
+  // calendar button's name does not join the field's.
   const dateField = (
-    <label className="grid min-w-0 gap-2">
-      {label('Date')}
-      <input type="date" value={spentOn} max={today} onChange={e => e.target.value && setSpentOn(e.target.value)} className={cn(FIELD, 'num')} />
-    </label>
+    <div className="grid min-w-0 gap-2">
+      <label htmlFor={dateId}>{label('Date')}</label>
+      <DateInput id={dateId} value={spentOn} max={today} onChange={setSpentOn} className="text-base max-md:h-touch" />
+    </div>
   )
   const jobField = (
     <label className="grid min-w-0 gap-2">

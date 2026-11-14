@@ -37,7 +37,7 @@ export function VersionLabel({ check = checkForUpdateNow }: { check?: () => Prom
       <button
         type="button"
         onClick={run}
-        className="grid min-h-touch justify-items-start gap-[2px] rounded text-left hover:text-fg"
+        className="grid min-h-touch justify-items-start gap-1 rounded text-left hover:text-fg"
       >
         <span>{versionLabel()}</span>
         <span className="inline-flex items-center gap-1 font-medium text-fg-2 underline underline-offset-2">
@@ -45,7 +45,7 @@ export function VersionLabel({ check = checkForUpdateNow }: { check?: () => Prom
           Check for update now
         </span>
       </button>
-      <p role="status" className="min-h-[1.5em]">
+      <p role="status" className="min-h-6">
         {state ? CHECK_TEXT[state] : ''}
       </p>
     </div>

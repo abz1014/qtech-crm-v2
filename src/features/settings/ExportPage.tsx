@@ -32,8 +32,8 @@ export function ExportPage() {
       <PageHeader title="Export data" lede={<span className="text-base">Download records as files that open in Excel. Nothing is changed.</span>} />
       <ul className={cn(CARD, 'divide-y overflow-hidden')}>
         {EXPORTS.map(k => (
-          <li key={k.id} className="flex min-h-row flex-wrap items-center justify-between gap-x-6 gap-y-3 px-card py-4" data-work={k === EXPORTS[0] ? '' : undefined}>
-            <span className="min-w-0">
+          <li key={k.id} className="grid min-h-row grid-cols-1 items-center gap-x-6 gap-y-3 px-card py-4 sm:grid-cols-[minmax(0,1fr)_auto]" data-work={k === EXPORTS[0] ? '' : undefined}>
+            <span className="min-w-0 text-pretty">
               <b className="block font-card">{k.label}</b>
               <span className="text-base text-fg-muted">{k.about}</span>
             </span>

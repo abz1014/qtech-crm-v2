@@ -236,10 +236,13 @@ export function TeamPage() {
             <EmptyState title="No people yet">Add the first person to give them a way to sign in.</EmptyState>
           )
         }
-        onRowOpen={phone ? m => setDialog({ kind: 'sheet', member: m }) : undefined}
+        // a person's card (a phone, or a pane under 36rem) opens their actions as a sheet; the full table has the row menu instead
+        cardsApart
+        cardsBelow={36}
+        onCardOpen={m => setDialog({ kind: 'sheet', member: m })}
         mobileRow={m => (
           <span className={cn('flex items-center gap-3', dim(m))}>
-            <Avatar name={m.name} size="2xl" className={avatarTone(m)} />
+            <Avatar name={m.name} size="3xl" className={avatarTone(m)} />
             <span className="grid min-w-0 flex-1 gap-1">
               <span className={cn('min-w-0 text-base font-card [overflow-wrap:anywhere]', isActive(m) && 'text-fg')}>{m.name}</span>
               <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">
@@ -267,7 +270,6 @@ export function TeamPage() {
                 { value: 'deactivated', label: 'Deactivated' },
               ]}
             />
-            <span className="ml-auto text-base text-fg-muted max-sm:hidden">At least one active admin is always required.</span>
           </div>
         }
         summary={
@@ -278,7 +280,8 @@ export function TeamPage() {
         }
       />
       </div>
-      <p className="px-1 text-sm text-fg-muted sm:hidden">At least one active admin is always required.</p>
+      {/* Under the list at every width (in the toolbar it broke onto a line of its own, right-aligned, in a Settings pane). */}
+      <p className="px-1 text-sm text-fg-muted">At least one active admin is always required.</p>
 
       {dialog?.kind === 'sheet' ? <RowActionSheet member={dialog.member} onClose={close} onPick={open} /> : null}
       {dialog?.kind === 'add' ? (
@@ -340,8 +343,8 @@ function useNarrowerThan(ref: RefObject<HTMLElement>, rem: number): boolean {
  * - The Actions header is for assistive tech only; the row whose menu is open takes the selected background.
  * - Foot: the count on the left, the note on the right, no key legend (mockup 76 draws none); on a phone it goes and the note sits under
  *   the list.
- * - Phone (under 640 px, DataTable's card rows): each person is their own Forest card, 64 px, 12 px apart (mockup .qb-people__cards), so
- *   the shared card frame steps back while there are people to show. Loading, empty and error keep the frame.
+ * - Phone, or a Settings pane under 36rem (DataTable `cardsApart`, `cardsBelow`): each person is their own Forest card, 64 px, 12 px
+ *   apart (mockup .qb-people__cards); the table's frame steps back while there are people to show. Loading, empty and error keep it.
  */
 // Tailwind reads class names from the source as written, so each one is spelled out in full (no built strings).
 const TABLE_LOOK = cn(
@@ -352,13 +355,6 @@ const TABLE_LOOK = cn(
   '[&>div:last-child>div:last-child>span:first-child]:flex [&>div:last-child>div:last-child>span:first-child]:flex-1',
   '[&>div:last-child>div:last-child>span:first-child]:flex-wrap [&>div:last-child>div:last-child>span:first-child]:justify-between',
   '[&>div:last-child>div:last-child>span:first-child]:gap-x-4 [&>div:last-child>div:last-child>span:not(:first-child)]:hidden',
-  // phone: one card per person
-  'max-sm:[&>div:last-child:has(tr[data-card])]:overflow-visible max-sm:[&>div:last-child:has(tr[data-card])]:border-0',
-  'max-sm:[&>div:last-child:has(tr[data-card])]:bg-transparent max-sm:[&>div:last-child:has(tr[data-card])]:shadow-none',
-  'max-sm:[&_tbody:has(tr[data-card])]:grid max-sm:[&_tbody:has(tr[data-card])]:gap-3',
-  'max-sm:[&_tr[data-card]]:rounded-card max-sm:[&_tr[data-card]]:border max-sm:[&_tr[data-card]]:bg-surface max-sm:[&_tr[data-card]]:shadow-e1',
-  'max-sm:[&_tr[data-card]]:transition-transform max-sm:[&_tr[data-card]:active]:scale-press',
-  'max-sm:[&_tr[data-card]>td]:min-h-row-tall max-sm:[&_tr[data-card]>td]:items-center max-sm:[&_tr[data-card]>td]:py-2',
 )
 
 function RowMenu({ member, onPick }: { member: TeamMember; onPick: (kind: RowAction, m: TeamMember) => void }) {

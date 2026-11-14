@@ -16,7 +16,7 @@ export function InlineText({ parts }: { parts: readonly Inline[] }) {
             {p.text}
           </strong>
         ) : p.kind === 'label' ? (
-          <span key={i} data-label="" className="box-decoration-clone rounded-[var(--sp-1)] border border-line-strong bg-canvas px-1 font-semibold text-fg">
+          <span key={i} data-label="" className="inline-block max-w-full rounded-[var(--sp-1)] border border-line-strong bg-canvas px-1 font-semibold text-fg">
             {p.text}
           </span>
         ) : (

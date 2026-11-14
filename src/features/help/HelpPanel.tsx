@@ -96,7 +96,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
           className={cn(
             'fixed z-sheet flex flex-col bg-surface focus:outline-none',
             wide
-              ? 'bottom-0 right-0 top-[var(--topbar-h)] w-[400px] animate-fade-in border-l shadow-e3'
+              ? 'bottom-0 right-0 top-topbar w-[400px] animate-fade-in border-l shadow-e3'
               : 'inset-0 animate-sheet-in pb-[env(safe-area-inset-bottom,0px)]',
           )}
         >

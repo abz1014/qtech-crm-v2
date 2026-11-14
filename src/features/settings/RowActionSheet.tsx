@@ -49,7 +49,7 @@ export function RowActionSheet({
         >
           <div aria-hidden="true" className="mx-auto mb-1 mt-2 h-1 w-10 rounded-round bg-line-strong" />
           <div className="flex items-center gap-3 border-b px-4 pb-3 pt-2">
-            <Avatar name={member.name} size="lg" />
+            <Avatar name={member.name} size="3xl" />
             <div className="grid min-w-0">
               <RadixDialog.Title className="min-w-0 [overflow-wrap:anywhere] text-base font-card text-fg">{member.name}</RadixDialog.Title>
               <span className="min-w-0 [overflow-wrap:anywhere] text-sm text-fg-muted">{sub}</span>

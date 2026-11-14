@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, 
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { useBackToClose } from '@/lib/useBackToClose'
 import { Command } from 'cmdk'
-import { ArrowDown, ArrowUp, Building2, CornerDownLeft, FileText, Package, Search, type LucideIcon } from 'lucide-react'
+import { ArrowDown, ArrowUp, Building2, CornerDownLeft, FileText, Package, Search, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
@@ -279,7 +279,17 @@ export function CommandPalette({
                 placeholder="Search or jump to"
                 className="min-w-0 flex-1 bg-transparent text-lg text-fg placeholder:text-fg-muted focus:outline-none"
               />
-              <Kbd className="text-xs [@media(pointer:coarse)]:hidden">Esc</Kbd>
+              <Kbd className="text-xs max-md:hidden [@media(pointer:coarse)]:hidden">Esc</Kbd>
+              {/* A phone has no Esc key: a close button in its place (mockup 80, "Close search"); a tap on the scrim still closes too. */}
+              <RadixDialog.Close asChild>
+                <button
+                  type="button"
+                  aria-label="Close search"
+                  className="-mr-2 hidden size-touch shrink-0 place-items-center rounded-control text-fg-muted hover:bg-sunken hover:text-fg focus-visible:outline focus-visible:outline-2 max-md:grid [@media(pointer:coarse)]:grid"
+                >
+                  <Icon icon={X} size="lg" />
+                </button>
+              </RadixDialog.Close>
             </div>
 
             <Command.List className="max-h-[min(480px,60dvh)] min-h-0 overflow-y-auto pb-2 pt-1">
@@ -310,7 +320,7 @@ export function CommandPalette({
                         ) : null}
                       </span>
                       {item.shortcut?.length ? (
-                        <span className="inline-flex gap-1 [@media(pointer:coarse)]:hidden">
+                        <span className="inline-flex gap-1 max-md:hidden [@media(pointer:coarse)]:hidden">
                           {item.shortcut.map(k => (
                             <Kbd key={k}>{k}</Kbd>
                           ))}
@@ -355,28 +365,32 @@ export function CommandPalette({
               </div>
             ) : null}
 
-            <div className="flex min-h-head items-center gap-4 border-t bg-sunken px-4 py-1 text-xs text-fg-muted">
-              <span className="inline-flex items-center gap-[6px] [@media(pointer:coarse)]:hidden">
+            {/*
+              * The key legend, one line at 640 (it wrapped at 1440 with "open in new tab"). Key hints are for a keyboard only (R-044:
+              * a fine pointer from 768); a phone keeps the band only for the result count while something is typed.
+              */}
+            <div className={cn('flex min-h-head flex-nowrap items-center gap-x-4 overflow-hidden border-t bg-sunken px-4 py-1 text-xs text-fg-muted', !q && 'max-md:hidden [@media(pointer:coarse)]:hidden')}>
+              <span className={HINT}>
                 <Kbd><Icon icon={ArrowUp} size="chip" /></Kbd>
                 <Kbd><Icon icon={ArrowDown} size="chip" /></Kbd>
                 move
               </span>
-              <span className="inline-flex items-center gap-[6px] [@media(pointer:coarse)]:hidden">
+              <span className={HINT}>
                 <Kbd><Icon icon={CornerDownLeft} size="chip" /></Kbd>
                 open
               </span>
-              <span className="inline-flex items-center gap-[6px] max-md:hidden [@media(pointer:coarse)]:hidden">
+              <span className={HINT}>
                 <Kbd>{m}</Kbd>
                 <Kbd><Icon icon={CornerDownLeft} size="chip" /></Kbd>
-                open in new tab
+                new tab
               </span>
               {shortcutsHint ? (
-                <span className="inline-flex items-center gap-[6px] max-md:hidden [@media(pointer:coarse)]:hidden">
+                <span className={HINT}>
                   <Kbd>?</Kbd>
                   Shortcuts
                 </span>
               ) : null}
-              <span className={cn('num ml-auto', !q && 'hidden')} aria-live="polite">
+              <span className={cn('num ml-auto shrink-0 whitespace-nowrap', !q && 'hidden')} aria-live="polite">
                 {total} {total === 1 ? 'result' : 'results'}
               </span>
             </div>
@@ -386,6 +400,9 @@ export function CommandPalette({
     </RadixDialog.Root>
   )
 }
+
+/** A key hint in the footer: one piece, never broken; shown only where a keyboard is likely (R-044). */
+const HINT = 'inline-flex shrink-0 items-center gap-1 whitespace-nowrap max-md:hidden [@media(pointer:coarse)]:hidden'
 
 /** Matches in the typed text are semibold. */
 function Highlight({ text, q }: { text: string; q: string }) {

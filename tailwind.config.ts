@@ -167,6 +167,8 @@ export default {
         dialog: v('z-dialog'),
         toast: v('z-toast'),
       },
+      // The top bar's height as an offset: a panel that opens under the bar (Help) starts at top-topbar.
+      inset: { topbar: v('topbar-h') },
       scale: { press: v('press-scale') },
       translate: { rise: v('hover-rise') },
       // Overlay motion (DESIGN_SYSTEM section 9): fade and rise, always in answer to an action.
@@ -175,6 +177,8 @@ export default {
         'rise-4': { from: { opacity: '0', transform: 'translateY(4px)' }, to: { opacity: '1', transform: 'none' } },
         'rise-6': { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'none' } },
         'sheet-in': { from: { transform: 'translateY(24px)', opacity: '0' }, to: { transform: 'none', opacity: '1' } },
+        // A side panel (Dialog placement 'side' from 1360) comes in from the right edge.
+        'panel-in': { from: { transform: 'translateX(24px)', opacity: '0' }, to: { transform: 'none', opacity: '1' } },
         // DateRail fill draws once from the left (g2-d.css rail-grow); the duration token goes to ~0 under reduced motion.
         'rail-grow': { from: { transform: 'scaleX(0)' }, to: { transform: 'none' } },
       },
@@ -183,6 +187,7 @@ export default {
         'rise-4': 'rise-4 var(--dur-base) var(--ease-out) both',
         'rise-6': 'rise-6 var(--dur-base) var(--ease-out) both',
         'sheet-in': 'sheet-in var(--dur-base) var(--ease-out) both',
+        'panel-in': 'panel-in var(--dur-base) var(--ease-out) both',
         'rail-grow': 'rail-grow var(--dur-slow) var(--ease-out) both',
       },
       // Heights scale with the text size (normal or [data-text="small"]): never a fixed pixel height around text.
