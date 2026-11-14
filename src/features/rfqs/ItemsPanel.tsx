@@ -514,10 +514,11 @@ export function ItemsPanel({
                                   <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 lg:contents">
                                     {prices ? (
                                       <>
-                                        <span className="lg:text-right">
+                                        {/* Phone: a price with a second line (its own currency, or "not compared") takes the whole line, and lead time and stock follow under it. */}
+                                        <span className={cn('lg:text-right', line.currency !== 'PKR' && 'max-lg:basis-full')}>
                                           <PriceCell line={line} c={c} />
                                         </span>
-                                        <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', !line.leadTime && 'hidden')}>
+                                        <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', (!line.leadTime || line.currency !== 'PKR') && 'hidden')}>
                                           ·
                                         </span>
                                       </>
