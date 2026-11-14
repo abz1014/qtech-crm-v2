@@ -41,8 +41,9 @@ const TILE: Record<Tone, string> = {
   danger: 'bg-tone-danger-bg text-tone-danger-fg',
 }
 // Forest .qb-dialog: 560 (--dialog-w) and the wide 760 (--dialog-w-wide); the confirm stays 440 so its two lines keep their length.
-// Every width is a cap: the dialog is never wider than the window less its 16 px margins (R-006).
-const WIDTH = { sm: 'md:w-[440px]', md: 'md:max-w-dialog', lg: 'md:max-w-dialog-wide' } as const
+// Every width is a cap: the dialog is never wider than the window less its 16 px margins (R-006, the max-w-full below).
+// A width (not a max-width), so a caller's own md:w-[...] (the convert dialog's 1080, the 820 ones) replaces it through cn.
+const WIDTH = { sm: 'md:w-[440px]', md: 'md:w-[var(--dialog-w)]', lg: 'md:w-[var(--dialog-w-wide)]' } as const
 
 export interface DialogContentProps {
   title: string
