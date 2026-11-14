@@ -149,7 +149,7 @@ select is((select count(*)::int from public.search_all('ORD-' || lpad((select nu
 select is((select meta from public.search_all('ORD-' || lpad((select number::text from fxo), 4, '0'), 8) where kind = 'order'), null,
   'an engineer is not shown the customer PO');
 select is((select count(*)::int from public.search_all('6es7 214', 8) where kind = 'item'), 1, 'an engineer finds an order item');
-select is((select count(*)::int from public.search_all('PO-8123', 8) where kind = 'po'), 1, 'an engineer finds a supplier PO (engineers work them)');
+select is((select count(*)::int from public.search_all('PO-8123', 8) where kind = 'po'), 0, 'an engineer finds no supplier PO by its number (0139: a money number; they reach it through the order)');
 
 -- ------------------------------------------------------------------ deactivated and anonymous
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000004","role":"authenticated"}', true);

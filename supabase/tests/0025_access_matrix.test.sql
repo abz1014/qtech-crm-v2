@@ -233,7 +233,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'search_all',            'invoice',     'X', 'X', ''),   -- P02 (0054): an invoice number is found by admin and sales, never by an engineer
   ('function', 'search_all',            'customer_po', 'X', 'X', ''),   -- P02 (0054): the customer PO text is searched and shown to admin and sales only
   ('function', 'search_all',            'order_item',  'X', 'X', 'X'),  -- P02 (0054): order lines, no price
-  ('function', 'search_all',            'supplier_po', 'X', 'X', 'X'),  -- P02 (0054): our PO numbers, all staff (RLS: purchase_orders is all staff)
+  ('function', 'search_all',            'supplier_po', 'X', 'X', ''),   -- P02 (0054), 0139: our PO numbers, admin and sales; never an engineer
   ('function', 'next_invoice_number',    '',    'X',    'X',    ''),     -- M01 (0044): the next number in the invoice series, admin and sales
   ('function', 'stamp_payment_reminder',  '',    'X',    'X',    ''),     -- s10 "RPC stamp_payment_reminder"
   ('function', 'stamp_tcs_sent',          '',    'X',    'X',    ''),     -- A4: admin and sales
