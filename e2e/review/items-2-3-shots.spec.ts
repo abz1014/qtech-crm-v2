@@ -53,7 +53,7 @@ async function shot(page: Page, name: string): Promise<void> {
     return { scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wide }
   })
   await page.screenshot({ path: `${DIR}/${name}.png`, fullPage: true })
-  writeFileSync(`${DIR}/overflow.json`, JSON.stringify(overflow, null, 2))
+  writeFileSync(`${DIR}/overflow-${name}.json`, JSON.stringify(overflow[name], null, 2))
 }
 
 async function crop(page: Page, selector: ReturnType<Page['locator']>, name: string): Promise<void> {
@@ -139,7 +139,7 @@ async function shotBtoE(browser: Browser, w: Width, only: 'all' | 'c') {
 
   const item3 = page.getByRole('article', { name: 'Item 3' })
   // Phone: the item is folded to its header until tapped. Shoot the folded state first, then open it.
-  const head = item3.locator('header button[aria-expanded]')
+  const head = item3.locator('h3 button[aria-expanded]')
   if ((await head.count()) && (await head.getAttribute('aria-expanded')) === 'false') {
     await item3.scrollIntoViewIfNeeded()
     await shot(page, `item2-d-item-nobody-asked-${w.tag}-folded`)
