@@ -43,7 +43,7 @@ export function StatementButton({ companyId, companyName }: { companyId: string;
  * each figure carries its own label ("Charged, PKR: 118,000.00"), with an empty figure left out instead of a blank cell.
  */
 const WIDE = '[@container(min-width:34rem)]'
-const ROW = `grid grid-cols-[minmax(0,1fr)] gap-x-3 gap-y-1 px-4 py-3 ${WIDE}:grid-cols-[minmax(0,5rem)_minmax(0,1fr)_minmax(0,7.5rem)_minmax(0,7.5rem)_minmax(0,8rem)] ${WIDE}:py-2.5`
+const ROW = `grid grid-cols-[minmax(0,1fr)] gap-x-3 gap-y-1 px-4 py-3 ${WIDE}:grid-cols-[minmax(0,5rem)_minmax(0,1fr)_minmax(0,7.5rem)_minmax(0,7.5rem)_minmax(0,8rem)] ${WIDE}:py-2`
 const FIG = `num [overflow-wrap:anywhere] ${WIDE}:text-right`
 /** The figure's label: shown on a stacked line, kept for a screen reader on a wide one (the header row is presentation only). */
 const LAB = `font-sans text-fg-muted ${WIDE}:sr-only`

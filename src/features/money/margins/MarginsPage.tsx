@@ -219,7 +219,7 @@ export function MarginsPage() {
                   <Skeleton className="h-4 w-1/2" />
                   <Skeleton className="h-4 w-1/4" />
                 </span>
-                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-6 w-[6rem]" />
               </div>
             ))}
           </div>

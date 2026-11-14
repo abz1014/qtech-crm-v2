@@ -199,7 +199,7 @@ function ProfitLoading() {
         {[0, 1].map(i => (
           <div key={i} className="grid gap-2">
             <Skeleton className="h-4 w-[10rem]" />
-            <Skeleton className="h-9 w-[12rem]" />
+            <Skeleton className="h-8 w-[12rem]" />
             <Skeleton className="h-4 w-[16rem] max-w-full" />
           </div>
         ))}
