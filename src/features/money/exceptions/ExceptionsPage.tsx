@@ -8,6 +8,8 @@ import { computeReconciliationExceptions, countBySeverity, type ReconciliationEx
 import { useSession } from '@/app/session'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
+import { CARD } from '@/ui/card'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { NeedsCount } from '@/ui/Tag'
@@ -29,17 +31,17 @@ import { useCarryOverLocalTicks, useUnchecked } from '@/features/money/exception
 function Row({ e, customer, first, onCheck }: { e: ReconciliationException; customer: string | null; first: boolean; onCheck: () => void }) {
   const critical = e.severity === 'critical'
   return (
-    <li className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3 border-t px-5 py-3 first:border-t-0 md:grid-cols-[24px_minmax(0,1fr)_auto]" data-severity={e.severity}>
-      <Icon icon={critical ? CircleAlert : TriangleAlert} size="lg" className={critical ? 'mt-[1px] text-tone-danger-fg' : 'mt-[1px] text-tone-warning-fg'} />
-      <div className="grid min-w-0 gap-1">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-3 border-t px-card py-4 first:border-t-0 md:grid-cols-[auto_minmax(0,1fr)_auto]" data-severity={e.severity}>
+      <Icon icon={critical ? CircleAlert : TriangleAlert} size="lg" className={critical ? 'text-tone-danger-fg' : 'text-tone-warning-fg'} />
+      <div className="grid min-w-0 gap-1 [overflow-wrap:anywhere]">
         <span className="sr-only">{critical ? 'Critical.' : 'Warning.'}</span>
-        <b className="text-base font-semibold">{e.category}</b>
-        <p className="text-sm text-pretty">
-          {customer ? <span className="font-medium">{customer} · </span> : null}
+        <b className="text-base font-heavy">{e.category}</b>
+        <p className="text-base text-pretty text-fg-2">
+          {customer ? <span className="font-bold text-fg">{customer} · </span> : null}
           {e.message}
         </p>
       </div>
-      <div className="col-start-2 flex flex-wrap items-center gap-2 md:col-start-3 md:justify-end">
+      <div className="col-start-2 flex flex-wrap items-center gap-2 md:col-start-3 md:self-center md:justify-end">
         <Button variant="quiet" icon={Check} onClick={onCheck} className="max-md:h-touch">
           Mark as checked
         </Button>
@@ -48,10 +50,7 @@ function Row({ e, customer, first, onCheck }: { e: ReconciliationException; cust
           <Link
             to={`/orders/${e.orderId}`}
             data-variant={first ? 'primary' : undefined}
-            className={cn(
-              'inline-flex h-control items-center rounded border px-3 text-sm font-medium transition-colors duration-fast max-md:h-touch',
-              first ? 'border-primary bg-primary text-primary-foreground hover:bg-primary-hover' : 'border-line-strong bg-surface text-fg hover:bg-sunken',
-            )}
+            className={cn(buttonStyles({ variant: first ? 'primary' : 'secondary' }), 'max-md:h-touch')}
           >
             View order
           </Link>
@@ -95,16 +94,17 @@ export function ExceptionsPage() {
             type="button"
             onClick={exportCsv}
             disabled={list.length === 0}
-            className="inline-flex min-h-touch items-center gap-1 rounded text-sm font-medium text-fg-2 hover:text-fg hover:underline disabled:text-fg-disabled md:min-h-0"
+            className="inline-flex min-h-touch items-center gap-1 rounded-control text-base font-bold text-fg-2 underline-offset-4 hover:text-fg hover:underline disabled:text-fg-disabled disabled:no-underline md:min-h-control"
           >
             <Icon icon={Download} size="sm" />
             Export CSV
           </button>
         }
       />
-      <section aria-labelledby="exceptions-h" className="min-w-0 rounded-panel border bg-surface">
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-5 py-4">
-          <h3 id="exceptions-h" className="text-base font-semibold">
+      {/* 58-money-checks .mx-card: one card, the counts in its head, a finding per row. */}
+      <section aria-labelledby="exceptions-h" className={cn(CARD, 'min-w-0 overflow-hidden')}>
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-card py-4">
+          <h3 id="exceptions-h" className="text-lg font-heavy">
             What does not add up
           </h3>
           {/* The needs-you counts as NeedsCount pills (spec 2.2 #22: danger for critical), the word beside each; "All clear" as text. */}
@@ -125,17 +125,24 @@ export function ExceptionsPage() {
           </div>
         </header>
         {tickError ? (
-          <p role="alert" className="border-b px-5 py-3 text-base text-tone-danger-fg">
+          <p role="alert" className="border-b px-card py-3 text-base font-bold text-tone-danger-fg">
             {tickError}
           </p>
         ) : null}
         {q.isPending ? (
-          <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Checking the money records">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+          <div role="status" aria-busy="true" aria-label="Checking the money records">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 border-t px-card py-4 first:border-t-0">
+                <Skeleton className="size-6" />
+                <span className="grid gap-2">
+                  <Skeleton className="h-4 w-[12rem] max-w-full" />
+                  <Skeleton className="h-3 w-full max-w-[32rem]" />
+                </span>
+              </div>
+            ))}
           </div>
         ) : q.isError ? (
-          <div className="p-4">
+          <div className="p-card">
             <Banner
               tone="danger"
               title="The checks could not be run"
@@ -149,8 +156,8 @@ export function ExceptionsPage() {
             </Banner>
           </div>
         ) : open.length === 0 ? (
-          <p className="flex items-center gap-2 px-5 py-6 text-sm text-fg-2" data-testid="exceptions-clear">
-            <Icon icon={CircleCheck} size="lg" className="text-tone-success-fg" />
+          <p className="flex items-center gap-3 px-card py-5 text-base text-fg-2" data-testid="exceptions-clear">
+            <Icon icon={CircleCheck} size="lg" className="shrink-0 text-tone-success-fg" />
             {checked.length ? 'Nothing left to check.' : 'Nothing to check. Orders, payments, invoices and costs are in balance and in sequence.'}
           </p>
         ) : (
@@ -161,15 +168,15 @@ export function ExceptionsPage() {
           </ul>
         )}
         {checked.length > 0 ? (
-          <div className="border-t px-5 py-2">
+          <div className="grid gap-2 border-t bg-canvas px-card py-2">
             <Button variant="quiet" size="sm" onClick={() => setShowChecked(s => !s)} aria-expanded={showChecked} className="max-md:h-touch">
               {showChecked ? 'Hide the checked ones' : `${checked.length} marked as checked`}
             </Button>
             {showChecked ? (
-              <ul aria-label="Marked as checked" className="grid gap-1 pb-2">
+              <ul aria-label="Marked as checked" className="grid gap-2 pb-2">
                 {checked.map(e => (
                   <li key={e.key} className="flex flex-wrap items-center justify-between gap-2 text-sm text-fg-2">
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-[1_1_14rem] [overflow-wrap:anywhere]">
                       {e.category}: {e.message}
                     </span>
                     <Button variant="quiet" size="sm" onClick={() => mark(e, false)} className="max-md:h-touch">

@@ -257,6 +257,53 @@ test.describe('month-end (M10)', () => {
     }
   })
 
+  // ---- Forest pictures (lane c3-lock): the whole page at each width, for the review; nothing is asserted on the look ----------
+  test('Forest pictures: Lock a month, its dialog, Bank check, Mistakes to fix and Review imported', async ({ page }) => {
+    const dir = process.env.REVIEW_DIR
+    /** Grows the window to the content (the shell is one viewport tall and #main scrolls) and writes a whole-page picture. */
+    const shot = async (name: string, w: number) => {
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(400)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect.soft(overflow, `${name}: no sideways scroll at ${w}`).toBeLessThanOrEqual(0)
+      const tall = await page.evaluate(() => Math.max(...Array.from(document.querySelectorAll('#main, #main *')).filter(e => /auto|scroll/.test(getComputedStyle(e).overflowY)).map(e => e.scrollHeight + e.getBoundingClientRect().top), window.innerHeight))
+      const h = page.viewportSize()?.height ?? 900
+      if (tall > h) {
+        await page.setViewportSize({ width: w, height: Math.min(Math.ceil(tall) + 120, 6000) })
+        await page.waitForTimeout(300)
+      }
+      if (dir) await page.screenshot({ path: `${dir}/forest-c3-${name}-${w}.png`, fullPage: true })
+    }
+    const order = await newOrder('Forest lock picture Pakistan Petroleum Refinery and Industrial Gases (Private) Limited')
+    await addPayment(order.order.id)
+    await addExpense()
+    await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
+    for (const [w, h] of [[1440, 900], [768, 1024], [375, 812], [320, 640]] as const) {
+      await page.setViewportSize({ width: w, height: h })
+      await page.goto(`/money/month-end?month=${STMT.key}`)
+      await expect(page.getByTestId('checks-summary')).toBeVisible()
+      await shot('lock', w)
+    }
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`/money/month-end?month=${STMT.key}`)
+    const lockBtn = page.getByRole('region', { name: `${STMT.label} summary` }).getByRole('button', { name: /^(Lock|Go to) / })
+    if ((await lockBtn.textContent())?.startsWith('Lock')) {
+      await lockBtn.click()
+      await expect(page.getByRole('dialog')).toBeVisible()
+      await page.waitForTimeout(400)
+      if (dir) await page.screenshot({ path: `${dir}/forest-c3-lock-dialog-1440.png` })
+      await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
+    }
+    for (const [path, name] of [[`/money/month-end/bank?month=${STMT.key}`, 'bank'], ['/money/exceptions', 'mistakes'], ['/money/review-imported', 'review-imported']] as const) {
+      for (const [w, h] of [[1440, 900], [375, 812]] as const) {
+        await page.setViewportSize({ width: w, height: h })
+        await page.goto(path)
+        await page.locator('#main').waitFor()
+        await shot(name, w)
+      }
+    }
+  })
+
   // ---- last: close, see the sentence, reopen ------------------------------------------------------------------
 
   test('months close one at a time, oldest first; close is two taps, the lock holds with the exact sentence, reopen is two taps', async ({ page }) => {

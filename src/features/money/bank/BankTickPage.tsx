@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { InfoTip } from '@/ui/InfoTip'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { businessToday } from '@/lib/dates'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
+import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { StatusText } from '@/ui/StatusText'
 import { Skeleton } from '@/ui/Skeleton'
@@ -18,6 +19,7 @@ import { bankTotals, buildBankView, defaultStatementMonth, isOpenableMonth, type
 import { TickPanel } from '@/features/money/bank/TickPanel'
 
 /*
+ * Forest: 58-money-checks.html (the statement-month card, the totals card, a card per list).
  * Money › Lock a month › Bank check (M12; admin only; the old "Bank tick", reached from the checklist). Pick the statement month, tick each bank line against the statement:
  * one tap a line, one tap a whole PSID group, the same tap again to undo. The four totals are for comparing with the
  * statement's total credits and debits. Nothing is typed and there is no import. Layout: g2-month-end "Bank tick".
@@ -28,8 +30,6 @@ const items = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`
 
 export function BankTickPage() {
   const today = businessToday()
-  // Desktop: the statement month sits on the title's line; a phone keeps its own row under the bar.
-  const wide = useMediaQuery('(min-width: 768px)')
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const asked = params.get('month')
@@ -81,9 +81,10 @@ export function BankTickPage() {
       view.out.older.length ===
       0
 
+  // 58-money-checks .qb-monthbar: the statement month is its own card under the title, on every width.
   const picker = (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="text-sm font-medium text-fg-2">Statement month</span>
+    <div className={cn(CARD, 'flex flex-wrap items-center gap-x-4 gap-y-2 px-card py-3')}>
+      <span className="text-base font-bold text-fg-2">Statement month</span>
       <span className="inline-flex items-center gap-2">
         <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
         <InfoTip label="About matching the bank statement">
@@ -101,13 +102,12 @@ export function BankTickPage() {
         back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
         title="Bank check"
         meta={totals ? <StateChip open={openCount ?? 0} /> : null}
-        actions={wide ? picker : undefined}
       />
 
-      {wide ? null : picker}
+      {picker}
 
       {data.isError ? (
-        <div className="mx-auto mt-12 max-w-[520px] rounded-panel border bg-surface p-6">
+        <div className={cn(CARD, 'mx-auto mt-8 w-full max-w-prose p-card')}>
           <EmptyState
             mood="error"
             title="The bank statement lines did not load"
@@ -131,10 +131,10 @@ export function BankTickPage() {
                 : `${error.message} The line is back where it was.`}
             </Banner>
           ) : null}
+          {/* 58-money-checks .qb-sumstrip: the three figures as one card of cells, on every width. */}
           <SumBar
-            className="max-sm:grid-cols-1"
+            className="rounded-card shadow-e1 max-md:[&>div:last-child]:col-span-2"
             label="Running ticked totals"
-            desktop="strip"
             items={[
               {
                 label: 'Matched, money in',
@@ -166,7 +166,7 @@ export function BankTickPage() {
             ]}
           />
           {empty ? (
-            <section className="rounded-panel border bg-surface">
+            <section className={CARD}>
               <EmptyState
                 title={`Nothing to tick for ${monthKeyLabel(month)}`}
                 actions={
@@ -180,16 +180,17 @@ export function BankTickPage() {
             </section>
           ) : (
             <>
-              <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+              <div className="grid items-start gap-card-gap xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
                 <TickPanel dir="in" side={view.in} justTicked={just} onTick={onTick} />
                 <TickPanel dir="out" side={view.out} justTicked={just} onTick={onTick} />
               </div>
               {/* The page's one green button, always in reach while ticking: how far along, and back to the checklist. */}
               <div
                 data-testid="bank-progress"
-                className="sticky bottom-3 z-10 mt-2 flex flex-wrap items-center gap-3 rounded-panel border border-line-strong bg-surface px-5 py-3 shadow-pop"
+                data-sticky-bar=""
+                className="sticky bottom-3 z-sticky flex flex-wrap items-center gap-3 rounded-card border bg-surface px-card py-3 shadow-pop"
               >
-                <span className="text-base">
+                <span className="text-lg">
                   <b className="num font-semibold">{allLines - (openCount ?? 0)}</b> of <span className="num">{allLines}</span> matched
                 </span>
                 <span className="flex-1" />
@@ -214,37 +215,39 @@ function StateChip({ open }: { open: number }) {
   )
 }
 
+/** Shaped like the page: the three totals in one card, then the two lists as cards of rows (live bug 26: three cells, as loaded). */
 function Loading() {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading the bank statement lines" className="grid gap-4">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-cols-4">
-        {[0, 1, 2, 3].map(i => (
-          <div key={i} className="grid gap-2 bg-surface px-5 py-4">
+    <div role="status" aria-busy="true" aria-label="Loading the bank statement lines" className="grid gap-card-gap">
+      <div className={cn(CARD, 'grid grid-cols-2 gap-px overflow-hidden bg-line md:grid-cols-3 max-md:[&>div:last-child]:col-span-2')}>
+        {[0, 1, 2].map(i => (
+          <div key={i} data-testid="bank-skeleton-cell" className="grid gap-2 bg-surface px-card py-4">
             <Skeleton className="h-3 w-[6rem]" />
-            <Skeleton className="h-5 w-[8rem]" />
-            <Skeleton className="h-3 w-[10rem]" />
+            <Skeleton className="h-6 w-[8rem]" />
+            <Skeleton className="h-3 w-[5rem]" />
           </div>
         ))}
       </div>
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-card-gap xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         {[0, 1].map(i => (
-          <div key={i} className="min-w-0 rounded-panel border bg-surface md:rounded-none md:border-0 md:bg-transparent">
-            <div className="flex min-h-[52px] items-center border-b py-2 pl-5 pr-4 md:pl-0 md:pr-0">
-              <Skeleton className="h-4 w-[7rem]" />
+          <div key={i} className={cn(CARD, 'min-w-0 overflow-hidden')}>
+            <div className="flex min-h-head items-center gap-3 border-b px-card py-3">
+              <Skeleton className="h-5 w-[6rem]" />
+              <Skeleton className="h-5 w-[9rem]" />
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-5 py-1 md:px-0">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b px-card py-1">
               <Skeleton className="h-3 w-[8rem]" />
               <Skeleton className="h-3 w-8" />
             </div>
             {[0, 1, 2, 3, 4].map(r => (
-              <div key={r} data-testid="bank-skeleton-row" className="grid min-h-[48px] grid-cols-[28px_52px_minmax(0,1fr)_auto] items-center gap-3 border-b px-5 py-[6px] md:px-0">
-                <Skeleton className="size-[20px]" />
-                <Skeleton className="h-3 w-12" />
+              <div key={r} data-testid="bank-skeleton-row" className="grid min-h-row grid-cols-[var(--sp-6)_minmax(0,1fr)_auto] items-center gap-3 border-b px-card py-2 last:border-b-0 sm:grid-cols-[var(--sp-6)_3.5rem_minmax(0,1fr)_auto]">
+                <Skeleton className="size-6" />
+                <Skeleton className="h-3 w-12 max-sm:hidden" />
                 <span className="grid min-w-0 gap-1">
-                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
                 </span>
-                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-4 w-16" />
               </div>
             ))}
           </div>

@@ -8,6 +8,7 @@ import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
+import { CARD } from '@/ui/card'
 import { Money } from '@/ui/Money'
 import { SumBar } from '@/ui/SumBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -17,6 +18,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { ReportCsv } from '@/ui/ReportCsv'
 import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { ReportError, ReportLoading, TwoProfitsTip } from '@/features/money/monthEnd/ReportParts'
+import { PAGER_STEP } from '@/features/money/monthEnd/MonthEndFrame'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
 import { useInOutReport } from '@/features/money/inOut/hooks'
 import {
@@ -138,25 +140,14 @@ export function InOutPage() {
 function PeriodPager({ period, atNow, go }: { period: Period; atNow: boolean; go: (by: number) => void }) {
   const unit = period.kind === 'month' ? 'month' : 'quarter'
   return (
-    <div role="group" aria-label="Period" className="inline-flex gap-[2px] rounded bg-selected p-[2px]">
-      <button
-        type="button"
-        aria-label={`Previous ${unit}`}
-        onClick={() => go(-1)}
-        className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 hover:text-fg"
-      >
+    <div role="group" aria-label="Period" className="inline-flex items-center gap-2">
+      <button type="button" aria-label={`Previous ${unit}`} onClick={() => go(-1)} className={PAGER_STEP}>
         <Icon icon={ChevronLeft} size="sm" />
       </button>
-      <span aria-live="polite" className="num inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
+      <span aria-live="polite" className="num inline-flex h-control min-w-[6.5rem] items-center justify-center px-2 text-base font-bold max-md:h-touch">
         {periodLabel(period)}
       </span>
-      <button
-        type="button"
-        aria-label={`Next ${unit}`}
-        disabled={atNow}
-        onClick={() => go(1)}
-        className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 hover:text-fg disabled:text-fg-disabled"
-      >
+      <button type="button" aria-label={`Next ${unit}`} disabled={atNow} onClick={() => go(1)} className={PAGER_STEP}>
         <Icon icon={ChevronRight} size="sm" />
       </button>
     </div>
@@ -166,7 +157,7 @@ function PeriodPager({ period, atNow, go }: { period: Period; atNow: boolean; go
 /** One figure line: label, its basis in small words, this period, the previous one and the change. */
 function Row({ label, sub, now, before, strong, testId }: { label: string; sub?: ReactNode; now: Amount; before: Amount; strong?: boolean; testId?: string }) {
   return (
-    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-[2px] border-b px-0 py-2 md:grid-cols-[minmax(0,1fr)_140px_140px_120px]', strong && 'border-b-2')}>
+    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-px border-b px-0 py-2 md:grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem]', strong && 'border-b-2')}>
       <span role="rowheader" className={cn('type-body', strong && 'font-semibold')}>
         {label}
         {sub ? <span className="type-body block text-fg-muted">{sub}</span> : null}
@@ -187,7 +178,7 @@ function Row({ label, sub, now, before, strong, testId }: { label: string; sub?:
 
 function Head({ prev }: { prev: string }) {
   return (
-    <div role="row" className="type-body hidden min-h-[36px] grid-cols-[minmax(0,1fr)_140px_140px_120px] items-center gap-x-4 border-b px-0 font-medium text-fg-muted md:grid">
+    <div role="row" className="type-body hidden min-h-control-sm grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem] items-center gap-x-4 border-b px-0 font-medium text-fg-muted md:grid">
       <span role="columnheader">Line</span>
       <span role="columnheader" className="text-right">
         PKR
@@ -217,7 +208,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
     <>
       {narrow ? null : <ReportCsv />} {/* a phone draws it after the two summaries below */}
       {empty ? (
-        <section className="rounded-panel border bg-surface lg:rounded-none lg:border-x-0 lg:bg-transparent">
+        <section className={CARD}>
           <EmptyState title={`Nothing in ${v.label} yet`}>No payment, expense or invoice is dated in it. The trend below still shows the periods before.</EmptyState>
         </section>
       ) : null}

@@ -147,12 +147,12 @@ function Line({
     <div
       role="row"
       className={cn(
-        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t px-5 first:border-t-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem]',
-        tone === 'group' && 'min-h-[40px] bg-sunken text-sm font-semibold',
-        tone === 'line' && 'min-h-[44px] text-table',
-        tone === 'sub' && 'min-h-[36px] text-table',
-        tone === 'total' && 'min-h-[40px] bg-sunken text-table font-semibold',
-        tone === 'result' && 'min-h-[52px] bg-selected text-base font-semibold',
+        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t px-card first:border-t-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem]',
+        tone === 'group' && 'min-h-control bg-sunken text-sm font-semibold',
+        tone === 'line' && 'min-h-head text-table',
+        tone === 'sub' && 'min-h-control-sm text-table',
+        tone === 'total' && 'min-h-control bg-sunken text-table font-semibold',
+        tone === 'result' && 'min-h-row bg-brand-100 text-base font-heavy',
       )}
     >
       <span role="cell" className={cn('flex flex-wrap items-center gap-2 py-2', tone === 'sub' && 'pl-4 text-fg-2')}>
@@ -232,7 +232,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             }
           >
             <div role="table" aria-label="Profit and loss">
-              <div role="row" className="hidden min-h-[36px] grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem] items-center gap-x-4 border-b bg-sunken px-5 text-xs font-medium text-fg-muted md:grid">
+              <div role="row" className="hidden min-h-control-sm grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_9rem] items-center gap-x-4 border-b bg-sunken px-card text-xs font-medium text-fg-muted md:grid">
                 <span role="columnheader">Line</span>
                 <span role="columnheader">Basis</span>
                 <span role="columnheader" className="text-right">
@@ -278,8 +278,8 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
 
           {/* Shown only when something was drawn or repaid: an empty panel every month was noise. */}
           {drawings ? (
-          <section aria-label="Not a cost" className="overflow-hidden rounded-panel border border-dashed border-line-input bg-canvas md:rounded-none md:border-x-0 md:border-b-0 md:bg-transparent">
-            <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3 md:px-0">
+          <section aria-label="Not a cost" className="overflow-hidden rounded-card border border-dashed border-line-input bg-canvas">
+            <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-card py-3">
               <h3 className="text-base font-semibold">Drawings and loan repayment</h3>
               <InfoTip label="About drawings">Owner drawings and loan repayment are money out, but not a cost of doing business, so they are not in the profit.</InfoTip>
             </header>
@@ -294,7 +294,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
                 <Line tone="total" label="Drawn or repaid, total" basis={<><Num>{v.notInPnl.total.count}</Num> {v.notInPnl.total.count === 1 ? 'expense' : 'expenses'}</>} amount={negate(v.notInPnl.total.net)} />
               </div>
             )}
-            <div className="flex items-baseline justify-between gap-4 rounded-b border-t bg-selected px-5 py-4">
+            <div className="flex items-baseline justify-between gap-4 border-t bg-brand-100 px-card py-4">
               <div className="grid">
                 <span className="text-base font-semibold">After drawings</span>
                 <span className="text-xs text-fg-muted">
@@ -309,27 +309,27 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
 
         <div className="grid gap-6">
           <Panel flat title="Where the money went" meta={<span className="num text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
-            <div className="grid gap-3 px-5 py-4">
-              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 gap-[2px] overflow-hidden rounded-panel border bg-surface md:border-0 md:bg-sunken">
+            <div className="grid gap-3 px-card py-4">
+              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 gap-px overflow-hidden rounded-pill bg-sunken">
                 <i className="block bg-tone-info-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />
                 <i className="block bg-tone-warning-fg" style={{ width: w(toPaisa(v.overheads.net)) }} />
                 {resultPositive ? <i className="block flex-1 bg-brand-green" /> : null}
               </div>
               <ul className="grid gap-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <i className="size-[10px] rounded-[2px] bg-tone-info-fg" />
+                  <i className="size-3 rounded-pill bg-tone-info-fg" />
                   Order costs <span className="text-xs text-fg-muted">{plural(v.orderCosts.count, 'expense')}</span>
                   <span className="flex-1" />
                   <Money value={v.orderCosts.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
-                  <i className="size-[10px] rounded-[2px] bg-tone-warning-fg" />
+                  <i className="size-3 rounded-pill bg-tone-warning-fg" />
                   Overheads <span className="text-xs text-fg-muted">{plural(v.overheads.count, 'expense')}</span>
                   <span className="flex-1" />
                   <Money value={v.overheads.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
-                  <i className="size-[10px] rounded-[2px] bg-brand-green" />
+                  <i className="size-3 rounded-pill bg-brand-green" />
                   Profit
                   <span className="flex-1" />
                   <Money value={v.result} prefix={false} paisa="never" plainNegative />
@@ -346,7 +346,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
                 [`paid in cash, ${v.cash.cashCount}`, v.cash.cashAmount],
                 [`paid by bank, ${v.cash.bankCount}`, v.cash.bankAmount],
               ].map(([k, amt]) => (
-                <div key={k} className="flex min-h-[40px] items-center justify-between gap-4 border-t px-5 first:border-t-0">
+                <div key={k} className="flex min-h-control items-center justify-between gap-4 border-t px-card first:border-t-0">
                   <dt className="text-fg-2">{k}</dt>
                   <dd>
                     <Money value={amt} prefix={false} paisa="never" />
@@ -525,7 +525,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         {v.advances.length ? (
           <ul aria-label="Advances held" className="rounded-b border border-t-0 border-dashed border-line-input bg-canvas md:rounded-none md:border-x-0 md:bg-transparent">
             {v.advances.map(a => (
-              <li key={a.orderId} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 text-sm">
+              <li key={a.orderId} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-card py-3 text-sm">
                 <Icon icon={Wallet} size="md" className="text-fg-muted" />
                 <span className="grid">
                   <span>{advanceLabel(a)}</span>
@@ -854,13 +854,13 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           }
         >
           <dl className="text-table">
-            <div className="grid gap-1 border-t px-5 py-3 first:border-t-0">
+            <div className="grid gap-1 border-t px-card py-3 first:border-t-0">
               <dt className="text-fg-2">GST charged, {name} invoices</dt>
               <dd className="num type-row">
                 {pkr(sel?.gst ?? 0)} · {plural(sel?.invoiceCount ?? 0, 'invoice')}
               </dd>
             </div>
-            <div className="grid gap-1 border-t px-5 py-3">
+            <div className="grid gap-1 border-t px-card py-3">
               <dt className="text-fg-2">GST paid on purchases in {name}, for the tax agent</dt>
               <dd className="num type-row">{pkr(sel?.inputTax ?? 0)}</dd>
             </div>
@@ -917,7 +917,7 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <span
                 role="img"
                 aria-label={`${rupees(r.quarterNet ?? 0)} of ${rupees(r.quarterTarget)}`}
-                className="relative block h-[6px] w-full min-w-[96px] max-w-[220px] overflow-hidden rounded-round bg-selected"
+                className="relative block h-2 w-full min-w-[6rem] max-w-[14rem] overflow-hidden rounded-pill bg-selected"
               >
                 <i className="absolute inset-y-0 left-0 block rounded-round bg-fg-muted" style={{ width: `${Math.min(100, Math.max(0, (Number(r.quarterNet ?? 0) / Math.max(1, Number(r.quarterTarget))) * 100))}%` }} />
               </span>
