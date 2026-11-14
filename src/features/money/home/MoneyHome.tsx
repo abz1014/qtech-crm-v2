@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, CircleAlert, Plus, Receipt } from 'lucide-react'
+import { ChevronRight, CircleCheck, Clock, Plus, Receipt } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
-import { cn } from '@/lib/utils'
+import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
@@ -19,6 +19,9 @@ import { ACCOUNTS_LINKS, countWord, type MoneyHomeFigures } from '@/features/mon
  * it), Received, Paid out, We owe suppliers. Below them, in words: cash is not profit (with the GST inside what came in), the profit
  * of the last finished month one click away, and the cash in hand. Accounts, the monthly work, is one level down.
  * The one green button is Add expense.
+ * Forest (50-money-hub.html#hub-ok): To collect is the hero, the one forest card with its figure in lime and "Open To collect" as
+ * its lime button; the late part rides on it as a chip. Received, Paid out and Payable to suppliers are three white KPI cards
+ * under it. Owed to staff and Cash in hand sit side by side when both show and there is room; one alone takes the full width.
  */
 const rs = (v: string | number) => formatAmount(v, 'never')
 
@@ -38,17 +41,22 @@ export function MoneyHome() {
       }
     >
       {isError ? (
-        <p role="alert" className="rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3 text-base text-tone-danger-fg">
-          Some of these numbers could not be loaded.{' '}
-          <button type="button" className="font-medium underline" onClick={refetch}>
-            Try again
-          </button>
-        </p>
+        <Banner
+          tone="danger"
+          title="Some of these numbers could not be loaded."
+          action={
+            <Button variant="quiet" onClick={refetch}>
+              Try again
+            </Button>
+          }
+        />
       ) : null}
       <Blocks f={f} />
       <Sentences f={f} />
-      <OwedToStaff summary />
-      <CashInHandLine />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),1fr))] items-start gap-card-gap [&>*]:min-w-0">
+        <OwedToStaff summary />
+        <CashInHandLine />
+      </div>
       <Accounts />
     </MoneyFrame>
   )
@@ -56,62 +64,92 @@ export function MoneyHome() {
 
 function Blocks({ f }: { f: MoneyHomeFigures }) {
   return (
-    <section aria-label={`Money, ${f.monthName} so far`} className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 xl:grid-cols-4" data-testid="money-blocks">
-      <Block
-        to="/money/receivables"
-        tone="week"
-        label="To collect"
-        value={f.toCollect ? rs(f.toCollect.total) : null}
-        sub={
-          f.toCollect ? (
-            f.toCollect.late > 0 ? (
-              <span className="inline-flex items-center gap-2 rounded-row bg-block-late px-2 py-1 font-medium text-block-late-fg" data-testid="late-part">
-                <Icon icon={CircleAlert} />
-                {rs(f.toCollect.late)} late, {countWord(f.toCollect.lateCount, 'order')}
-              </span>
-            ) : (
-              <span>Nothing is late</span>
-            )
-          ) : null
-        }
-      />
-      <Block
-        to="/money/reports/in-out"
-        label={`Received in ${f.monthName}`}
-        value={f.received ? rs(f.received.total) : null}
-        sub={f.received ? `${countWord(f.received.count, 'payment')}, GST included` : null}
-      />
-      <Block to="/money/expenses" label={`Paid out in ${f.monthName}`} value={f.paidOut ? rs(f.paidOut.total) : null} sub={f.paidOut ? 'by the day paid' : null} />
-      <Block
-        to="/money/reports/owe"
-        label="Payable to suppliers"
-        prefix="about"
-        value={f.owed ? rs(f.owed.total) : null}
-        sub={f.owed ? countWord(f.owed.count, 'supplier order') : null}
-      />
+    <section aria-label={`Money, ${f.monthName} so far`} className="grid grid-cols-[minmax(0,1fr)] gap-card-gap" data-testid="money-blocks">
+      <Hero f={f} />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-card-gap min-[480px]:grid-cols-2 lg:grid-cols-3">
+        <Block
+          to="/money/reports/in-out"
+          label={`Received in ${f.monthName}`}
+          value={f.received ? rs(f.received.total) : null}
+          sub={f.received ? `${countWord(f.received.count, 'payment')}, GST included` : null}
+        />
+        <Block to="/money/expenses" label={`Paid out in ${f.monthName}`} value={f.paidOut ? rs(f.paidOut.total) : null} sub={f.paidOut ? 'by the day paid' : null} />
+        <Block
+          to="/money/reports/owe"
+          label="Payable to suppliers"
+          prefix="about"
+          value={f.owed ? rs(f.owed.total) : null}
+          sub={f.owed ? countWord(f.owed.count, 'supplier order') : null}
+        />
+      </div>
     </section>
   )
 }
 
-function Block({ to, label, value, prefix = 'PKR', sub, tone }: { to: string; label: string; value: string | null; prefix?: string; sub: ReactNode; tone?: 'week' }) {
+/** To collect, the hero: the forest card (data-surface re-inks the words), the figure in lime, the late part as a chip, one lime button. */
+function Hero({ f }: { f: MoneyHomeFigures }) {
+  const t = f.toCollect
+  return (
+    <section data-surface="navy" aria-labelledby="money-hero-h" className="grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="grid min-w-0 flex-[1_1_14rem] gap-1">
+          <p className="text-sm font-card text-fg-2">To collect</p>
+          <h2 id="money-hero-h" className="text-2xl font-heavy tracking-tight text-pretty">
+            {t && t.total <= 0 ? 'Nothing to collect' : 'Customers still owe us'}
+          </h2>
+        </div>
+        {t ? (
+          <p className="num min-w-0 text-hero font-heavy text-lime-300 [overflow-wrap:anywhere]">
+            <span className="mr-2 text-lg font-card">PKR</span>
+            {rs(t.total)}
+          </p>
+        ) : (
+          <Skeleton className="h-[3rem] w-[14rem] max-w-full" />
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        {t ? (
+          t.late > 0 ? (
+            <span className="inline-flex items-center gap-2 rounded-pill border border-line-strong px-3 py-1 text-sm font-card" data-testid="late-part">
+              <Icon icon={Clock} />
+              <span>
+                <span className="num">PKR {rs(t.late)}</span> late, {countWord(t.lateCount, 'order')}
+              </span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-pill border border-line-strong px-3 py-1 text-sm font-card">
+              <Icon icon={CircleCheck} />
+              Nothing is late
+            </span>
+          )
+        ) : null}
+        <Link
+          to="/money/receivables"
+          className="inline-flex h-control items-center rounded-control bg-lime-300 px-5 text-base font-bold text-lime-on transition-colors duration-fast ease-out hover:bg-lime-hover active:bg-lime-press"
+        >
+          Open To collect
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+function Block({ to, label, value, prefix = 'PKR', sub }: { to: string; label: string; value: string | null; prefix?: string; sub: ReactNode }) {
   return (
     <Link
       to={to}
-      className={cn(
-        'grid min-h-[44px] content-start gap-1 rounded-panel border px-5 py-4 transition-colors hover:border-line-strong',
-        tone === 'week' ? 'border-transparent bg-block-week text-block-week-fg' : 'border-line bg-block-quiet text-block-quiet-fg',
-      )}
+      className="grid min-h-touch content-start gap-1 rounded-card border bg-surface p-card shadow-e1 transition-[box-shadow,border-color] duration-fast ease-out hover:border-line-strong hover:shadow-e2"
     >
-      <span className="text-base font-medium">{label}</span>
+      <span className="text-base font-card text-fg-2">{label}</span>
       {value === null ? (
-        <Skeleton className="h-[2.25rem] w-[10rem]" />
+        <Skeleton className="h-[2.25rem] w-[10rem] max-w-full" />
       ) : (
-        <span className="num text-3xl font-semibold leading-tight tracking-snug">
-          <span className="mr-1 text-base font-medium opacity-80">{prefix}</span>
+        <span className="num text-kpi font-heavy tracking-snug [overflow-wrap:anywhere]">
+          <span className="mr-2 text-base font-card">{prefix}</span>
           {value}
         </span>
       )}
-      <span className="min-h-6 text-base">{sub}</span>
+      <span className="min-h-6 text-base text-fg-2">{sub}</span>
     </Link>
   )
 }
@@ -119,8 +157,8 @@ function Block({ to, label, value, prefix = 'PKR', sub, tone }: { to: string; la
 function Sentences({ f }: { f: MoneyHomeFigures }) {
   return (
     <section className="grid gap-3" aria-label="Cash and profit">
-      <p className="rounded-panel border bg-surface px-5 py-4 text-lg leading-relaxed" data-testid="cash-not-profit">
-        <b className="mr-2 font-semibold">Cash, not profit:</b>
+      <p className="rounded-card border bg-surface p-card text-lg shadow-e1" data-testid="cash-not-profit">
+        <b className="mr-2 font-heavy">Cash, not profit:</b>
         {f.received && f.paidOut ? (
           <>
             PKR <span className="num">{rs(f.received.total)}</span> came in this month
@@ -136,14 +174,14 @@ function Sentences({ f }: { f: MoneyHomeFigures }) {
         )}
       </p>
       {f.profit ? (
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border bg-surface px-5 py-4 text-lg leading-relaxed" data-testid="profit-line">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card border bg-surface p-card text-lg shadow-e1" data-testid="profit-line">
           <span>
-            <b className="mr-2 font-semibold">Profit, {f.profit.monthName}:</b>
+            <b className="mr-2 font-heavy">Profit, {f.profit.monthName}:</b>
             <b className="num font-semibold">PKR {rs(f.profit.amount)}</b> after GST and costs, on invoices.
           </span>
           <Link
             to={`/money/reports/in-out?by=month&period=${f.profit.monthKey}`}
-            className="inline-flex min-h-[44px] items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+            className="inline-flex h-control items-center gap-1 rounded-control border border-line-strong bg-surface px-4 text-base font-bold text-fg transition-colors duration-fast ease-out hover:bg-selected"
           >
             Open the profit report
             <Icon icon={ChevronRight} />
@@ -156,10 +194,10 @@ function Sentences({ f }: { f: MoneyHomeFigures }) {
 
 function Accounts() {
   return (
-    <section aria-labelledby="accounts-h" className="rounded-panel border bg-surface">
+    <section aria-labelledby="accounts-h" className="rounded-card border bg-surface shadow-e1">
       <header className="flex items-center gap-3 border-b px-5 py-3">
         <Icon icon={Receipt} className="text-fg-muted" />
-        <h2 id="accounts-h" className="text-lg font-semibold">
+        <h2 id="accounts-h" className="text-lg font-heavy">
           Accounts
         </h2>
         <span className="text-base text-fg-2">monthly work</span>
@@ -167,9 +205,9 @@ function Accounts() {
       <ul className="grid divide-y md:grid-cols-2 md:divide-y-0">
         {ACCOUNTS_LINKS.map(a => (
           <li key={a.to + a.label} className="md:border-b md:odd:border-r">
-            <Link to={a.to} className="flex min-h-[56px] items-center gap-3 px-5 py-3 hover:bg-sunken">
+            <Link to={a.to} className="flex min-h-row-tall items-center gap-3 px-5 py-3 hover:bg-sunken">
               <span className="grid min-w-0 flex-1">
-                <span className="text-base font-medium">{a.label}</span>
+                <span className="text-base font-card">{a.label}</span>
                 <span className="text-base text-fg-2">{a.hint}</span>
               </span>
               <Icon icon={ChevronRight} className="text-fg-muted" />

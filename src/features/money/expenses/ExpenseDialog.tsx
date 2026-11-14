@@ -585,7 +585,7 @@ function ExpenseFormReady({
           }}
         />
       </Form>
-      <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
+      <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
         {expense ? (
           monthClosed ? (
             <p className="mr-auto flex items-center gap-2 text-base text-fg-2 max-md:mr-0" data-testid="expense-closed-line">
