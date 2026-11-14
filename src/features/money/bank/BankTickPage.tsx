@@ -133,7 +133,7 @@ export function BankTickPage() {
           ) : null}
           {/* 58-money-checks .qb-sumstrip: the three figures as one card of cells, on every width. */}
           <SumBar
-            className="rounded-card shadow-e1 max-sm:grid-cols-1"
+            className="rounded-card shadow-e1 max-md:[&>div:last-child]:col-span-2"
             label="Running ticked totals"
             items={[
               {
@@ -187,6 +187,7 @@ export function BankTickPage() {
               {/* The page's one green button, always in reach while ticking: how far along, and back to the checklist. */}
               <div
                 data-testid="bank-progress"
+                data-sticky-bar=""
                 className="sticky bottom-3 z-sticky flex flex-wrap items-center gap-3 rounded-card border bg-surface px-card py-3 shadow-pop"
               >
                 <span className="text-lg">
@@ -218,7 +219,7 @@ function StateChip({ open }: { open: number }) {
 function Loading() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading the bank statement lines" className="grid gap-card-gap">
-      <div className={cn(CARD, 'grid grid-cols-1 gap-px overflow-hidden bg-line sm:grid-cols-3')}>
+      <div className={cn(CARD, 'grid grid-cols-2 gap-px overflow-hidden bg-line md:grid-cols-3 max-md:[&>div:last-child]:col-span-2')}>
         {[0, 1, 2].map(i => (
           <div key={i} data-testid="bank-skeleton-cell" className="grid gap-2 bg-surface px-card py-4">
             <Skeleton className="h-3 w-[6rem]" />
@@ -239,9 +240,9 @@ function Loading() {
               <Skeleton className="h-3 w-8" />
             </div>
             {[0, 1, 2, 3, 4].map(r => (
-              <div key={r} data-testid="bank-skeleton-row" className="grid min-h-row grid-cols-[var(--sp-6)_3.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b px-card py-2 last:border-b-0">
+              <div key={r} data-testid="bank-skeleton-row" className="grid min-h-row grid-cols-[var(--sp-6)_minmax(0,1fr)_auto] items-center gap-3 border-b px-card py-2 last:border-b-0 sm:grid-cols-[var(--sp-6)_3.5rem_minmax(0,1fr)_auto]">
                 <Skeleton className="size-6" />
-                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3 w-12 max-sm:hidden" />
                 <span className="grid min-w-0 gap-1">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />

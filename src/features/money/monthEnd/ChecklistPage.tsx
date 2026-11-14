@@ -76,7 +76,7 @@ export function ChecklistPage() {
       {isClosed ? <LockBar month={ctx.month} /> : null}
       {/* 0087 (A9, owner: yes): cash in hand, with Count cash, so a missing small cash expense shows before the month is locked.
           57-lock-month .lm-cash: its own white card, the one Forest card look. */}
-      <div className="[&>section]:rounded-card [&>section]:px-card [&>section]:py-4 [&>section]:shadow-e1">
+      <div className="max-[359px]:[&>section>svg:first-child]:hidden [&>section]:rounded-card [&>section]:px-card [&>section]:py-4 [&>section]:shadow-e1">
         <CashInHandLine />
       </div>
 
@@ -105,7 +105,7 @@ export function ChecklistPage() {
         </section>
       ) : (
         // Room under the last card for the phone's sticky action bar.
-        <div className="grid gap-card-gap max-md:pb-[calc(var(--control-lg-h)+2rem)]">
+        <div className="grid gap-4 max-md:pb-[calc(var(--control-lg-h)+2rem)]">
           <Hero ctx={ctx} extra={things?.length ?? 0} />
           <CheckList ctx={ctx} things={things} />
           <ClosedList ctx={ctx} onReopen={setReopen} />
@@ -181,7 +181,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
       >
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
           <div className="grid min-w-0 flex-[1_1_14rem] gap-1">
-            <p className="text-sm font-card text-fg-2">{closed ? 'Locked month' : 'Lock a month'}</p>
+            <p className="text-sm font-card text-fg-2">Lock a month</p>
             {/* No chip in the heading (spec 1.2): the month's state is the chip on the month card and the lock banner. */}
             <h2 className="text-2xl font-heavy tracking-tight text-balance">{monthKeyLabel(ctx.month)}</h2>
           </div>
@@ -262,9 +262,10 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
               >
                 <i aria-hidden="true" className="bg-tone-warning-fg" />
                 <span className="grid min-w-0 content-center gap-1 py-4">
-                  <span className="flex flex-wrap items-baseline gap-x-2 text-base font-bold">
-                    {r.label}
-                    <span className="num inline-grid min-w-chip place-items-center rounded-pill bg-tone-warning-bg px-2 text-sm font-heavy text-tone-warning-fg">{r.n}</span>
+                  {/* The count rides on the label's last word, so a wrapped label never leaves it alone on a line. */}
+                  <span className="text-base font-bold [overflow-wrap:anywhere]">
+                    {r.label}{' '}
+                    <span className="num ml-1 inline-grid min-w-chip place-items-center whitespace-nowrap rounded-pill bg-tone-warning-bg px-2 align-[0.0625rem] text-sm font-heavy text-tone-warning-fg">{r.n}</span>
                   </span>
                   <span className="text-pretty text-sm text-fg-2">
                     {r.parts.map((p, i) =>
@@ -369,7 +370,7 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
 /** Shaped like the page: the forest hero, the card of check rows and the locked-months card. */
 function ChecklistLoading() {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading the month-end checklist" className="grid gap-card-gap">
+    <div role="status" aria-busy="true" aria-label="Loading the month-end checklist" className="grid gap-4">
       <div data-surface="navy" className="grid gap-4 rounded-card bg-hero p-card shadow-e2">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid gap-2">

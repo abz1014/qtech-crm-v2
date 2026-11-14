@@ -15,7 +15,8 @@ import type { BankLine, BankSide } from '@/features/money/bank/model'
  * Forest (58-money-checks .bk-panel): each list is the one card on every width; its rows run edge to edge inside it.
  */
 /** The row grid: the tick box, the date, the line, the amount. The PSID group's invoices use it too, so their columns line up. */
-const ROW_COLS = 'grid-cols-[var(--sp-6)_3.5rem_minmax(0,1fr)_auto]'
+// A phone drops the date column (58 .bk-d2): the date leads the line's detail instead, so the name keeps its width.
+const ROW_COLS = 'grid-cols-[var(--sp-6)_minmax(0,1fr)_auto] sm:grid-cols-[var(--sp-6)_3.5rem_minmax(0,1fr)_auto]'
 const COLLAPSED_TICKED = 6
 const COLLAPSED_OLDER = 10
 
@@ -165,12 +166,13 @@ function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l
         >
           <Check size={14} strokeWidth={2.5} className={cn(!line.ticked && 'opacity-0')} />
         </span>
-        <span className={cn('num text-sm', quiet ? 'text-fg-muted' : just ? 'text-fg' : 'text-fg-2')}>
+        <span className={cn('num text-sm max-sm:hidden', quiet ? 'text-fg-muted' : just ? 'text-fg' : 'text-fg-2')}>
           {formatShortDate(line.date, today)}
         </span>
         <span className="grid min-w-0 gap-px">
           <span className={cn('min-w-0 text-base [overflow-wrap:anywhere]', quiet ? 'font-medium text-fg-2' : 'font-bold')}>{line.title}</span>
           <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">
+            <span className="num sm:hidden">{formatShortDate(line.date, today)} · </span>
             {sub.map((part, i) => (
               <Part key={i} first={i === 0}>
                 {part}
@@ -190,7 +192,7 @@ function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l
               className={cn('grid min-h-8 items-center gap-3 px-card py-1 text-sm text-fg-muted', ROW_COLS)}
             >
               <span aria-hidden="true" className="h-full w-px justify-self-center bg-line-strong" />
-              <span className="num">{k.date ? formatShortDate(k.date, today) : ''}</span>
+              <span className="num max-sm:hidden">{k.date ? formatShortDate(k.date, today) : ''}</span>
               <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className="num text-fg-2">{k.number ?? 'No number'}</span>
                 {k.company ? ` · ${k.company}` : ''} · GST
