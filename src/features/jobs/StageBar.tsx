@@ -34,10 +34,10 @@ const DOT: Record<StopState, string> = {
 }
 
 function Mark({ s }: { s: StopView }) {
-  if (s.state === 'done') return <Icon icon={Check} size="sm" />
-  if (s.state === 'none') return <Icon icon={Minus} size="sm" />
-  if (s.state === 'stopped') return <Icon icon={X} size="sm" />
-  if (s.state === 'current') return <span className="size-2 rounded-pill bg-brand-700" />
+  // A heavy stroke (the mockup's 3): at 16 px the default 1.75 stroke is too faint to read as a tick on the forest dot.
+  const Glyph = s.state === 'done' ? Check : s.state === 'none' ? Minus : s.state === 'stopped' ? X : null
+  if (Glyph) return <Glyph aria-hidden="true" className="size-4 shrink-0" strokeWidth={3} />
+  if (s.state === 'current') return <span className="size-3 rounded-pill bg-brand-700" />
   return null
 }
 
