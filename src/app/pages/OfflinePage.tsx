@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, RefreshCw, WifiOff } from 'lucide-react'
+import { AuthFrame, AuthLead } from '@/app/pages/AuthFrame'
 import type { Connection } from '@/lib/connection'
 import { getSupabase } from '@/lib/supabase'
 import { Button } from '@/ui/Button'
@@ -24,11 +25,11 @@ export function OfflineBanner({ connection }: { connection: Exclude<Connection, 
     <div
       role="status"
       data-offline-banner={connection}
-      className="flex items-center gap-2 border-b border-tone-warning-fg/25 bg-tone-warning-bg px-4 py-2 text-sm text-fg-2"
+      className="flex items-center gap-x-3 gap-y-2 bg-tone-warning-bg px-4 py-2 text-sm font-medium text-tone-warning-fg"
     >
-      <Icon icon={connection === 'offline' ? WifiOff : RefreshCw} className="shrink-0 text-tone-warning-fg" />
+      <Icon icon={connection === 'offline' ? WifiOff : RefreshCw} className="shrink-0" />
       <p className="min-w-0 text-pretty">
-        <b className="font-semibold text-fg">{copy.title}</b>
+        <b className="font-heavy">{copy.title}</b>
         {' — '}
         {copy.body}
       </p>
@@ -38,26 +39,10 @@ export function OfflineBanner({ connection }: { connection: Exclude<Connection, 
 
 function Frame({ children }: { children: ReactNode }) {
   return (
-    <main className="grid min-h-dvh place-items-center bg-canvas px-4 py-8 max-sm:items-start max-sm:bg-surface max-sm:px-0 max-sm:py-6">
-      <div className="grid w-full max-w-[360px] gap-5 rounded-panel border border-line bg-surface px-8 pb-6 pt-8 max-sm:max-w-none max-sm:border-0 max-sm:px-4">
-        <img src="/brand/logo-wordmark.png" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
-        {children}
-      </div>
-    </main>
-  )
-}
-
-function Lead({ icon, title, children }: { icon: typeof CloudOff; title: string; children: ReactNode }) {
-  return (
-    <div className="flex items-start gap-3">
-      <span aria-hidden="true" className="grid size-[36px] shrink-0 place-items-center rounded bg-tone-warning-bg text-tone-warning-fg">
-        <Icon icon={icon} size="lg" />
-      </span>
-      <div className="grid gap-[2px]">
-        <h1 className="text-xl font-semibold tracking-snug">{title}</h1>
-        <div className="grid gap-2 text-sm text-fg-muted text-pretty">{children}</div>
-      </div>
-    </div>
+    <AuthFrame>
+      <img src="/brand/logo-wordmark.png" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
+      {children}
+    </AuthFrame>
   )
 }
 
@@ -75,10 +60,10 @@ export function OfflineWaitingPage({ connection }: { connection: Exclude<Connect
   }
   return (
     <Frame>
-      <Lead icon={connection === 'offline' ? WifiOff : CloudOff} title={connection === 'offline' ? 'No connection' : 'Q-Tech CRM cannot be reached yet'}>
+      <AuthLead icon={connection === 'offline' ? WifiOff : CloudOff} title={connection === 'offline' ? 'No connection' : 'Q-Tech CRM cannot be reached yet'}>
         <p>You are still signed in. Q-Tech CRM reopens when the connection returns.</p>
         <p>Anything shared to Q-Tech CRM is kept on this device.</p>
-      </Lead>
+      </AuthLead>
       <Button icon={RefreshCw} busy={trying} busyLabel="Trying" onClick={() => void tryAgain()} className="w-full">
         Try again
       </Button>
@@ -89,9 +74,9 @@ export function OfflineWaitingPage({ connection }: { connection: Exclude<Connect
 export function OfflineSignInPage({ children }: { children?: ReactNode }) {
   return (
     <Frame>
-      <Lead icon={WifiOff} title="No connection">
+      <AuthLead icon={WifiOff} title="No connection">
         <p>Sign in again when the connection returns. This page changes to the sign-in form automatically.</p>
-      </Lead>
+      </AuthLead>
       {children}
     </Frame>
   )

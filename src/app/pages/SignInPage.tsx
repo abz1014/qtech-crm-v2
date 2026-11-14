@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, KeyRound, Smartphone, UserX } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { AuthFrame, AuthHead } from '@/app/pages/AuthFrame'
 import { OfflineSignInPage } from '@/app/pages/OfflinePage'
 import { useSession, useSignInNotice } from '@/app/session'
 import { useOnline } from '@/lib/connection'
@@ -17,7 +18,7 @@ import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 
 /*
- * Sign-in (docs/design/mockups/g2-login-team-settings.html, Login). Wordmark, two fields, one
+ * Sign-in (Forest 84-auth-errors, Sign in; first drawn in g2-login-team-settings.html). Wordmark, two fields, one
  * action, one sentence about a lost password: no "forgot" link, the admin is the recovery path.
  * One message for a wrong email or a wrong password, so it never says which one was wrong.
  */
@@ -89,93 +90,90 @@ export function SignInPage() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-canvas px-4 py-8 max-sm:items-start max-sm:bg-surface max-sm:px-0 max-sm:py-6">
-      <div className="grid w-full max-w-[360px] gap-5 rounded-panel border border-line bg-surface px-8 pb-6 pt-8 max-sm:max-w-none max-sm:border-0 max-sm:px-4">
-        <BrandImage name="logo-wordmark" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
-        <div className="grid gap-[2px]">
-          <h1 className="text-xl font-semibold tracking-snug">{kept ? 'Sign in to continue' : 'Sign in'}</h1>
-          <p className="text-sm text-fg-muted">{kept ? 'You were signed out.' : 'Use the email and password your admin gave you.'}</p>
-        </div>
+    <AuthFrame>
+      <BrandImage name="logo-wordmark" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
+      <AuthHead title={kept ? 'Sign in to continue' : 'Sign in'}>
+        {kept ? 'You were signed out.' : 'Use the email and password your admin gave you.'}
+      </AuthHead>
 
-        {shown === 'invalid' ? (
-          <Banner tone="danger" title="Email or password is incorrect">
-            Check both and try again.
+      {shown === 'invalid' ? (
+        <Banner tone="danger" title="Email or password is incorrect">
+          Check both and try again.
+        </Banner>
+      ) : null}
+      {shown === 'deactivated' ? (
+        <Banner tone="warning" icon={UserX} title="This account is deactivated">
+          Ask your admin to reactivate it.
+        </Banner>
+      ) : null}
+      {shown === 'unreachable' ? (
+        <Banner tone="danger" title="Server not reachable">
+          Check your connection and try again.
+        </Banner>
+      ) : null}
+      {kept ? (
+        <>
+          <Banner tone="success" title="Shared item kept on this device">
+            Sign in and the Shared with Q-Tech CRM page opens with it.
           </Banner>
-        ) : null}
-        {shown === 'deactivated' ? (
-          <Banner tone="warning" icon={UserX} title="This account is deactivated">
-            Ask your admin to reactivate it.
-          </Banner>
-        ) : null}
-        {shown === 'unreachable' ? (
-          <Banner tone="danger" title="Server not reachable">
-            Check your connection and try again.
-          </Banner>
-        ) : null}
-        {kept ? (
-          <>
-            <Banner tone="success" title="Shared item kept on this device">
-              Sign in and the Shared with Q-Tech CRM page opens with it.
-            </Banner>
-            <div className="flex items-center gap-3 rounded border border-line-strong bg-sunken p-3 text-sm">
-              <span aria-hidden="true" className="grid size-[32px] shrink-0 place-items-center rounded border bg-surface text-fg-2">
-                <Icon icon={Smartphone} />
-              </span>
-              <span className="grid">
-                <b className="font-medium">{kept.what}</b>
-                <span className="text-xs text-fg-muted">{`Kept on this device until ${kept.until}`}</span>
-              </span>
-            </div>
-          </>
-        ) : null}
-        {notice === 'unconfigured' ? (
-          <Banner tone="warning" title="Sign-in is not set up in this build">
-            The Supabase address and key are missing.
-          </Banner>
-        ) : null}
+          <div className="flex items-center gap-3 rounded-control border border-line-strong bg-sunken p-3 text-sm">
+            <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-control border bg-surface text-fg-2">
+              <Icon icon={Smartphone} />
+            </span>
+            <span className="grid">
+              <b className="font-medium">{kept.what}</b>
+              <span className="text-xs text-fg-muted">{`Kept on this device until ${kept.until}`}</span>
+            </span>
+          </div>
+        </>
+      ) : null}
+      {notice === 'unconfigured' ? (
+        <Banner tone="warning" title="Sign-in is not set up in this build">
+          The Supabase address and key are missing.
+        </Banner>
+      ) : null}
 
-        <form noValidate onSubmit={form.handleSubmit(onSubmit)} aria-busy={busy || undefined} className="grid gap-4">
-          <Field label="Email" error={errors.email?.message}>
+      <form noValidate onSubmit={form.handleSubmit(onSubmit)} aria-busy={busy || undefined} className="grid gap-4">
+        <Field label="Email" error={errors.email?.message}>
+          <TextField
+            type="email"
+            autoComplete="username"
+            placeholder="name@company.pk"
+            inputMode="email"
+            readOnly={busy}
+            {...form.register('email')}
+          />
+        </Field>
+        <Field label="Password" error={errors.password?.message}>
+          <div className="relative">
             <TextField
-              type="email"
-              autoComplete="username"
-              placeholder="name@company.pk"
-              inputMode="email"
+              type={reveal ? 'text' : 'password'}
+              autoComplete="current-password"
               readOnly={busy}
-              {...form.register('email')}
+              aria-invalid={shown === 'invalid' || undefined}
+              className="pr-12"
+              {...form.register('password')}
             />
-          </Field>
-          <Field label="Password" error={errors.password?.message}>
-            <div className="relative">
-              <TextField
-                type={reveal ? 'text' : 'password'}
-                autoComplete="current-password"
-                readOnly={busy}
-                aria-invalid={shown === 'invalid' || undefined}
-                className="pr-10"
-                {...form.register('password')}
-              />
-              <button
-                type="button"
-                aria-label={reveal ? 'Hide password' : 'Show password'}
-                aria-pressed={reveal}
-                onClick={() => setReveal(r => !r)}
-                className="absolute inset-y-0 right-0 grid w-control place-items-center rounded text-fg-muted hover:text-fg"
-              >
-                <Icon icon={reveal ? EyeOff : Eye} />
-              </button>
-            </div>
-          </Field>
-          <Button type="submit" variant="primary" size="lg" busy={busy} busyLabel="Signing in" className="w-full">
-            Sign in
-          </Button>
-        </form>
+            <button
+              type="button"
+              aria-label={reveal ? 'Hide password' : 'Show password'}
+              aria-pressed={reveal}
+              onClick={() => setReveal(r => !r)}
+              className="absolute inset-y-0 right-0 grid w-control place-items-center rounded text-fg-muted hover:text-fg"
+            >
+              <Icon icon={reveal ? EyeOff : Eye} />
+            </button>
+          </div>
+        </Field>
+        <Button type="submit" variant="primary" size="lg" busy={busy} busyLabel="Signing in" className="w-full">
+          Sign in
+        </Button>
+      </form>
 
-        <p className="flex items-start gap-2 border-t border-line pt-4 text-sm text-fg-muted text-pretty">
-          <Icon icon={KeyRound} className="mt-[2px]" />
-          <span>Forgot your password? Ask your admin to reset it.</span>
-        </p>
-      </div>
-    </main>
+      <p className="flex items-start gap-2 border-t border-line pt-4 text-sm text-fg-muted text-pretty">
+        <Icon icon={KeyRound} className="mt-[2px]" />
+        <span>Forgot your password? Ask your admin to reset it.</span>
+      </p>
+    </AuthFrame>
   )
 }

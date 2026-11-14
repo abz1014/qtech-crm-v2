@@ -34,7 +34,7 @@ export function NoAccessPage({ area, roles, adminNote }: { area?: string; roles?
       : `Your role is ${ROLE_LABEL[role] ?? role}. Ask an admin ${area ? (NEED[area] ?? `if you need access to ${area}`) : 'if you need access to this page'}.`
     : 'Your account has no role assigned. Ask an admin to set one on the Team screen.'
   return (
-    <div className="mx-auto grid max-w-list content-start px-4 pb-12 pt-6 md:px-8 md:pt-12">
+    <div className="mx-auto grid max-w-list content-start px-gutter pb-12 pt-6 md:pt-12">
       <h1 className="sr-only">{title}</h1>
       <EmptyState
         mood="warning"
