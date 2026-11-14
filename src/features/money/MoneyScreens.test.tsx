@@ -186,6 +186,8 @@ describe('GST register (M01)', () => {
     await screen.findByText('INV-2299')
     expect(screen.getByRole('columnheader', { name: /Next step/ })).toBeInTheDocument()
     for (const h of [/GST paid to FBR/, /Invoice posted/]) expect(screen.queryByRole('columnheader', { name: h })).toBeNull()
+    // the admin's filing figures, in PKR (53-invoices: the headers name the currency)
+    for (const h of [/^Net, PKR/, /^GST, PKR/, /^Gross, PKR/]) expect(screen.getByRole('columnheader', { name: h })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'More' }))
     expect(await screen.findByRole('menuitem', { name: 'Export CSV' })).toBeInTheDocument()
     await user.keyboard('{Escape}')
@@ -197,7 +199,8 @@ describe('GST register (M01)', () => {
     expect(screen.queryByRole('menuitem', { name: 'Export CSV' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create invoice' })).toBeInTheDocument()
     const table = screen.getByRole('table', { name: 'GST register' })
-    for (const h of ['Net', 'GST']) expect(within(table).queryByRole('columnheader', { name: h })).toBeNull()
+    for (const h of [/^Net/, /^GST/]) expect(within(table).queryByRole('columnheader', { name: h })).toBeNull()
+    expect(within(table).getByRole('columnheader', { name: /^Gross, PKR/ })).toBeInTheDocument()
     expect(within(table).getByRole('columnheader', { name: /Next step/ })).toBeInTheDocument()
     // ONE switch (R2-15): All, Needs attention N, Not sent yet N; the counts are needs-you pills
     expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()

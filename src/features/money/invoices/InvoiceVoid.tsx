@@ -168,8 +168,8 @@ export function useVoidInvoiceFlow(invoice: InvoiceRow, opts: { monthClosed: boo
               <p>
                 The invoice keeps its number in the register but counts for nothing: it leaves the amount to collect, the aging report, sales and the GST of the month. This cannot be undone.
               </p>
-              <label className="grid gap-1">
-                <span className="font-medium">Reason for voiding</span>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-fg">Reason for voiding</span>
                 <TextArea value={reason} onChange={e => setReason(e.target.value)} maxLength={300} rows={2} aria-label="Reason for voiding" />
               </label>
             </>
@@ -256,15 +256,15 @@ export function useCreditNoteFlow(invoice: InvoiceRow, opts: { onDone?: () => vo
           <p className="num text-fg-2" data-testid="credit-note-left">
             Invoice {pkr(invNet)} + GST {pkr(invGst)}. Left to credit: {pkr(Math.max(leftNet, 0))}.
           </p>
-          <label className="grid gap-1">
-            <span className="font-medium">Amount to credit, without GST (PKR)</span>
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-fg">Amount to credit, without GST (PKR)</span>
             <TextField value={net} onChange={e => setNet(e.target.value)} inputMode="decimal" className="num" aria-label="Amount to credit" />
           </label>
           <p className="num text-fg-2" data-testid="credit-note-gst">
             {valid ? `GST on it: ${pkr(gst)}. The customer is credited ${pkr(amount + gst)}.` : `Enter an amount up to ${pkr(Math.max(leftNet, 0))}.`}
           </p>
-          <label className="grid gap-1">
-            <span className="font-medium">Reason for the credit note</span>
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-fg">Reason for the credit note</span>
             <TextArea value={reason} onChange={e => setReason(e.target.value)} maxLength={300} rows={2} aria-label="Reason for the credit note" />
           </label>
           {error ? (

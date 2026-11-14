@@ -25,6 +25,8 @@ import { SumBar } from '@/ui/SumBar'
 import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
 import { TextField } from '@/ui/form/TextField'
+import { Skeleton } from '@/ui/Skeleton'
+import { CARD } from '@/ui/card'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
@@ -64,6 +66,15 @@ import {
  * same words as on the order.
  */
 type RegisterView = 'all' | 'attention' | 'tcs'
+
+/** "Void" or "Credit note" beside a number: a quiet pill, so the kind reads without competing with the Next step's colour. */
+function KindTag({ r }: { r: GstRow }) {
+  const word = isCreditNote(r) ? 'Credit note' : r.voided ? 'Void' : null
+  return word ? <span className="inline-flex min-h-chip items-center whitespace-nowrap rounded-pill border px-2 font-sans text-xs font-medium leading-none text-fg-2">{word}</span> : null
+}
+
+/** The register's short day ("7 Oct"): the year is in the month row above it. */
+const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '')
 
 /** The invoice's one Next step, with why under it when it is late or out of order. */
 function InvoiceStep({ r, className }: { r: GstRow; className?: string }) {
@@ -115,6 +126,8 @@ export function GstRegisterPage() {
   const [creating, setCreating] = useState(false)
   // Below 768 "Create invoice" is in the sticky bar (the page's one green button); from 768 it stays in the page header.
   const phone = useMediaQuery('(max-width: 767px)')
+  // Below 640 the table is cards and the totals are lines (DataTable and SumBar switch there).
+  const narrow = useMediaQuery('(max-width: 639px)')
   useTabsHeight(phone)
 
   const all = useMemo(() => register.data ?? [], [register.data])
@@ -128,6 +141,23 @@ export function GstRegisterPage() {
     for (const r of shown) m.set(rowMonth(r), (m.get(rowMonth(r)) ?? 0) + (isInert(r) ? 0 : 1))
     return m
   }, [shown])
+  /** What else the month holds, said after its count (", 1 void, 1 credit note"), so the count never reads as every line. */
+  const monthExtras = useMemo(() => {
+    const m = new Map<string, { voids: number; notes: number }>()
+    for (const r of shown) {
+      const e = m.get(rowMonth(r)) ?? { voids: 0, notes: 0 }
+      if (isCreditNote(r)) e.notes += 1
+      else if (r.voided) e.voids += 1
+      m.set(rowMonth(r), e)
+    }
+    return m
+  }, [shown])
+  const monthLabel = (month: string) => {
+    const n = monthCounts.get(month) ?? 0
+    const e = monthExtras.get(month)
+    const extra = [e?.voids ? `${e.voids} void` : null, e?.notes ? `${e.notes} ${e.notes === 1 ? 'credit note' : 'credit notes'}` : null].filter(Boolean)
+    return `${n} ${n === 1 ? 'invoice' : 'invoices'}${extra.length ? `, ${extra.join(', ')}` : ''}`
+  }
   const tickedRows = useMemo(() => shown.filter(r => ticked.has(r.invoiceId)), [shown, ticked])
 
   // /money/gst-register?new=1&order=<id> opens the create dialog for that order (the order page can link here).
@@ -153,42 +183,43 @@ export function GstRegisterPage() {
   const columns = useMemo<Column<GstRow>[]>(() => {
     const cols: Column<GstRow>[] = [
       {
+        // Forest (53-invoices #iv-table): the number in the brand ink, its day under it; a void or a credit note says so beside it.
         id: 'number',
-        header: 'Invoice',
+        header: 'Invoice, date',
         kind: 'date',
         sortable: true,
         value: r => r.number,
         cell: r => (
-          <span className="num">
-            {r.number ?? <span className="font-sans text-fg-muted">No number</span>}
-            {isCreditNote(r) ? <span className="ml-2 font-sans text-xs text-fg-2">Credit note</span> : null}
-            {r.voided ? <span className="ml-2 font-sans text-xs text-tone-danger-fg">Void</span> : null}
+          <span className="grid gap-px">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {r.number ? <span className="num whitespace-nowrap font-heavy text-primary">{r.number}</span> : <span className="text-fg-muted">No number</span>}
+              <KindTag r={r} />
+            </span>
+            {r.invoiceDate ? <span className="num text-sm text-fg-2">{shortDay(r.invoiceDate)}</span> : null}
           </span>
         ),
       },
-      { id: 'date', header: 'Date', kind: 'date', sortable: true, hideBelowLg: true, value: r => r.invoiceDate, cell: r => (r.invoiceDate ? formatDay(r.invoiceDate).replace(/^\w+ /, '') : '—') },
       {
         id: 'customer',
-        header: 'Customer',
+        header: 'Customer and order',
         sortable: true,
         value: r => r.companyName,
         cell: r => (
           <span className="grid gap-px">
-            <span className="min-w-[12ch] [overflow-wrap:break-word] font-medium">{r.companyName ?? 'No customer'}</span>
-            {r.orderNumber !== null ? <span className="num text-xs text-fg-2">{orderRef(r.orderNumber)}</span> : null}
-            {/* below 1024 the Date column is hidden to make room for Net and GST: the date sits under the name */}
-            {r.invoiceDate ? <span className="num text-xs text-fg-2 lg:hidden">{formatDay(r.invoiceDate).replace(/^\w+ /, '')}</span> : null}
+            <span className="min-w-[12ch] font-semibold text-fg [overflow-wrap:anywhere]">{r.companyName ?? 'No customer'}</span>
+            {r.orderNumber !== null ? <span className="num text-sm text-fg-2">{orderRef(r.orderNumber)}</span> : null}
           </span>
         ),
       },
-      { id: 'net', header: 'Net', kind: 'money', sortable: true, value: r => String(r.net), total: true },
-      { id: 'gst', header: 'GST', kind: 'money', sortable: true, value: r => String(r.gst), total: true },
-      { id: 'gross', header: 'Gross', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
+      { id: 'net', header: 'Net, PKR', kind: 'money', sortable: true, value: r => String(r.net), total: true },
+      { id: 'gst', header: 'GST, PKR', kind: 'money', sortable: true, value: r => String(r.gst), total: true },
+      { id: 'gross', header: 'Gross, PKR', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
       // ONE Next step (round 3) in place of the two chip columns, sent to customer and tax deposited.
       { id: 'next', header: 'Next step', sortable: false, cell: r => <InvoiceStep r={r} /> },
       {
         id: 'pdf',
         header: 'PDF',
+        hiddenHeader: true,
         sortable: false,
         // stop the row's own click (it opens the invoice) for the button and for its dialog, whose events bubble through the portal
         cell: r => (
@@ -265,8 +296,8 @@ export function GstRegisterPage() {
     { value: 'tcs', label: 'Not sent yet', needs: tcsCount },
   ]
   const header = (
-    <div className="flex flex-wrap items-center gap-3">
-      <h2 className="text-base font-semibold">GST register</h2>
+    <div className="flex flex-wrap items-center gap-2">
+      <h2 className="type-section">GST register</h2>
       <InfoTip label="About sending, FBR and PSID">
         By invoice date{all.length > 0 ? `, ${rangeLabel(all)}` : ''}. <b className="font-medium text-fg">Invoice posted</b> means the TCS courier took
         the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the tax office: the GST on every invoice is deposited with FBR.{' '}
@@ -308,10 +339,22 @@ export function GstRegisterPage() {
         )
       }
     >
+      {register.isPending ? (
+        // Shaped like the figures it stands for: a tile each on a card from 640 (four for the admin, two for sales), a line each on a phone.
+        <div aria-hidden="true" data-testid="register-totals-loading" className={cn('grid gap-3 max-sm:px-1 sm:auto-cols-fr sm:grid-flow-col sm:gap-px sm:overflow-hidden sm:bg-line', !narrow && CARD)}>
+          {(isAdmin ? [0, 1, 2, 3] : [0, 1]).map(i => (
+            <div key={i} className="grid gap-2 bg-surface max-sm:bg-transparent sm:px-5 sm:py-4">
+              <Skeleton className="h-4 w-[5rem]" />
+              <Skeleton className="h-6 w-[8rem] max-sm:hidden" />
+            </div>
+          ))}
+        </div>
+      ) : register.isError ? null : (
       <SumBar
         label="Totals for the invoices shown"
         phone="lines"
-        desktop="strip"
+        // Forest (53-invoices #iv-totals): one card of tiles, each a label, the PKR figure and a line of context.
+        className={narrow ? undefined : 'rounded-card shadow-e1'}
         caption={`PKR · ${all.length ? `${rangeLabel(shown.length ? shown : all)}, by invoice date` : 'By invoice date'}`}
         items={
           isAdmin
@@ -327,26 +370,27 @@ export function GstRegisterPage() {
               ]
         }
       />
+      )}
 
       <DataTable
         label="GST register"
-        className="md:rounded-none md:border-x-0"
+        toolbarCard
+        groupStyle="big"
         sortParam="sort"
         columns={columns}
         rows={shown}
         getRowId={r => r.invoiceId}
         twoLine
-        group={r => ({ key: rowMonth(r), label: `${rowMonth(r)} · ${monthCounts.get(rowMonth(r)) ?? 0} ${(monthCounts.get(rowMonth(r)) ?? 0) === 1 ? 'invoice' : 'invoices'}` })}
+        group={r => ({ key: rowMonth(r), label: `${rowMonth(r)} · ${monthLabel(rowMonth(r))}` })}
         // Phone: the month carries its own Net, GST and Gross (sales: Gross only), summed in paisa from the month's rows.
         mobileGroup={(month, rows) => {
           const t = registerTotals(rows)
-          const n = monthCounts.get(month) ?? rows.length
           const figures: Array<[string, number]> = isAdmin ? [['Net', t.net], ['GST', t.gst], ['Gross', t.gross]] : [['Gross', t.gross]]
           return (
             <div className="grid gap-2">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="type-section">{month}</span>
-                <span className="type-body text-fg-2">{`${n} ${n === 1 ? 'invoice' : 'invoices'}`}</span>
+                <span className="type-body text-right text-fg-2">{monthLabel(month)}</span>
               </div>
               <dl className="flex flex-wrap gap-x-4 gap-y-2">
                 {figures.map(([name, v]) => (
@@ -376,15 +420,20 @@ export function GstRegisterPage() {
             {header}
             {controls}
             {selectedCount > 0 ? (
-              <div data-testid="batch-bar" className="-mx-4 flex w-[calc(100%+2rem)] flex-wrap items-center gap-3 border-y bg-sunken px-4 py-2">
-                <span className="text-sm">
-                  <b className="num font-medium">{selectedCount}</b> {selectedCount === 1 ? 'invoice' : 'invoices'} ticked
+              // The stamps band: the full width of the toolbar card, along its foot (53-invoices #iv-batch).
+              <div
+                data-testid="batch-bar"
+                role="group"
+                aria-label="Stamp the ticked invoices"
+                className="-mx-card -mb-card mt-1 flex w-[calc(100%+2*var(--card-pad))] flex-wrap items-center gap-x-3 gap-y-2 rounded-b-card border-t bg-sunken px-card py-3"
+              >
+                <span className="type-body mr-auto text-fg">
+                  <b className="num font-semibold">{selectedCount}</b> {selectedCount === 1 ? 'invoice' : 'invoices'} ticked
                 </span>
-                <span className="flex-1" />
-                <Button size="sm" icon={Truck} onClick={() => void stamp('tcs')} disabled={busy} title="The TCS courier took them today">
+                <Button icon={Truck} onClick={() => void stamp('tcs')} disabled={busy} title="The TCS courier took them today" className="max-sm:flex-1">
                   Invoice posted today
                 </Button>
-                <span className="inline-flex items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2 max-sm:w-full">
                   <InfoTip label="About PSID">PSID is the payment slip number FBR gives a tax deposit. Paste it once: it is written to every ticked invoice.</InfoTip>
                   <TextField
                     aria-label="PSID"
@@ -399,13 +448,13 @@ export function GstRegisterPage() {
                     placeholder="Paste PSID once"
                     autoComplete="off"
                     spellCheck={false}
-                    className="num w-[180px]"
+                    className="num w-[11.5rem] min-w-0 max-sm:flex-1"
                   />
-                  <Button size="sm" icon={Plus} onClick={() => void stamp('psid')} disabled={busy}>
+                  <Button icon={Plus} onClick={() => void stamp('psid')} disabled={busy} className="shrink-0">
                     Add PSID
                   </Button>
                 </span>
-                <Button size="sm" variant="primary" icon={Check} onClick={() => void stamp('deposit')} disabled={busy}>
+                <Button variant="primary" icon={Check} onClick={() => void stamp('deposit')} disabled={busy} className="max-sm:flex-1">
                   Deposited today
                 </Button>
               </div>
@@ -435,16 +484,19 @@ export function GstRegisterPage() {
         mobileRow={r => (
           <div className="grid gap-1">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="num type-row">
-                {r.number ?? 'No number'}
-                {isCreditNote(r) ? ' (credit note)' : r.voided ? ' (void)' : ''}
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="num type-row font-heavy text-primary">{r.number ?? 'No number'}</span>
+                <KindTag r={r} />
               </span>
-              <span className="num type-row">
-                <Money value={r.gross} prefix={false} paisa="never" strong />
+              <span className="num type-row shrink-0">
+                <Money value={r.gross} paisa="never" strong />
               </span>
             </div>
-            <span className="type-body min-w-0 [overflow-wrap:anywhere]">{r.companyName}</span>
-            <InvoiceStep r={r} className="text-base [&_span]:text-base" />
+            <span className="type-row min-w-0 [overflow-wrap:anywhere]">{r.companyName ?? 'No customer'}</span>
+            <span className="num text-sm text-fg-2">
+              {[r.invoiceDate ? shortDay(r.invoiceDate) : null, r.orderNumber !== null ? orderRef(r.orderNumber) : null].filter(Boolean).join(' · ')}
+            </span>
+            <InvoiceStep r={r} className="mt-1 text-base [&_span]:text-base" />
           </div>
         )}
         mobileExpand={
