@@ -356,7 +356,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         title="Mark won"
-        titleChip={latestQuote ? <span className="num rounded border border-line-strong px-[6px] text-xs leading-5 text-fg-2">{latestQuote}</span> : undefined}
+        titleChip={latestQuote ? <span className="num rounded-pill border border-line-strong px-2 text-xs text-fg-2">{latestQuote}</span> : undefined}
         context={itemsQ.isSuccess ? context : rfq.company.name}
         icon={FileCheck2}
         className="md:w-[min(1080px,calc(100vw-32px))]"

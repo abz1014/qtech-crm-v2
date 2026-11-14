@@ -24,7 +24,7 @@ import { jobNext } from '@/features/jobs/lib/nextStep'
 import { jobHasMore } from '@/features/jobs/lib/hasMore'
 import { stageModel, STOPS } from '@/features/jobs/lib/stages'
 import { stageIndexOf } from '@/features/jobs/deleteJob/model'
-import { jobLabel } from '@/features/jobs/lib/listModel'
+import { jobLabel, laneOfJob } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
 import { JobKeyFacts } from '@/features/jobs/JobKeyFacts'
 import { jobKeyFacts } from '@/features/jobs/lib/keyFacts'
@@ -34,10 +34,12 @@ import { WonDialogHost } from '@/features/jobs/WonDialogHost'
 /*
  * The Job page (redesign phase 5, P5-C; clarity redesign L1): /jobs/:key, one page for a customer request from enquiry to payment.
  *   Phone bar   the customer, and "Job 139" on the right (the h1 is for a screen reader there)
- *   Block       the seven-part bar and "Stage 7 of 7 · Chase the payment" in one block; on a computer the ONE green button sits in it
- *   Facts       Customer PO (admin and sales), Supplier, Delivery: one compact line
- *   One list    the seven steps (StageSections), then Contact, Money (PKR) (admin), Add to this job, Notes and files: hairline rows,
- *               all closed; the step the job is at is marked, not opened. On a computer the steps and the rest are two columns.
+ *   Header      (computer) the way back to the job's lane (Sell, Deliver, Money; Jobs for an engineer), the title, Owner and site, More
+ *   Hero        Forest (30-job-page.html): "Next step · Job 139", who acts next, the step in one sentence, its detail; on a computer the
+ *               ONE green button sits in it. An engineer's reads "Where it stands", with the On site card under it.
+ *   Track       "Stage 5 of 7 · Delivery" over the seven stops, then the key facts: Customer PO (admin and sales), Supplier, Delivery
+ *   Two cards   the seven steps (StageSections), then Contact, Money (PKR) (admin), Add to this job, Notes and files: rows, all
+ *               closed; the step the job is at is marked, not opened. On a computer the steps and the rest are two columns.
  * Reads: the job (the view and the enquiry or order, with the names) in one round, then every panel at once; the app starts both
  * before the page is drawn (prefetch.ts). An engineer asks for no price and no money row; the database hides priced files.
  */
@@ -57,17 +59,18 @@ function PageSkeleton() {
         <Skeleton className="h-4 w-[10rem]" />
         <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
         <Skeleton className="h-5 w-[18rem] max-w-full" />
-        <Skeleton className="h-[5rem] w-full" />
-        <Skeleton className="h-16 w-full" />
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* the hero and the track card */}
+        <Skeleton className="h-[10rem] w-full rounded-card" />
+        <Skeleton className="h-[8rem] w-full rounded-card" />
+        <div className="grid items-start gap-card-gap lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-12" />
             ))}
           </div>
           <div className="grid gap-4">
-            <Skeleton className="h-[8rem]" />
-            <Skeleton className="h-[10rem]" />
+            <Skeleton className="h-[8rem] rounded-card" />
+            <Skeleton className="h-[10rem] rounded-card" />
           </div>
         </div>
       </div>
@@ -100,6 +103,15 @@ export default function JobPage() {
   }
   if (!facts.data) return <NotFoundPage />
   return <JobView facts={facts.data} />
+}
+
+/**
+ * Where the job page leads back to: the lane the Jobs list puts this job in (laneOfJob, so the list and the link always agree): Sell
+ * for an RFQ with no order, Deliver for an order. An engineer has Jobs.
+ */
+function backTo(job: JobFacts['job'], role: 'admin' | 'sales' | 'engineer'): { label: string; to: string } {
+  if (role === 'engineer') return { label: 'Jobs', to: '/jobs' }
+  return laneOfJob(job) === 'deliver' ? { label: 'Deliver', to: '/jobs?lane=deliver' } : { label: 'Sell', to: '/jobs?lane=sell' }
 }
 
 function JobView({ facts }: { facts: JobFacts }) {
@@ -183,8 +195,6 @@ function JobView({ facts }: { facts: JobFacts }) {
     </p>
   )
 
-  // "Stage 7 of 7 · Chase the payment": the action says it in two or three words; a step that only waits says its sentence.
-  const said = role !== 'engineer' && next.button && !/^(See|Open) /.test(next.button) ? next.button : next.text
   const items = data.orderItems.data
   const keyFacts = job.orderId
     ? jobKeyFacts({ order: data.order.data, legs: data.legs.data, money: ctx.money, cancelled: Boolean(data.order.data?.cancelledOn), servicesOnly: Boolean(items && items.length > 0 && items.every(i => i.isService)), today: businessToday() })
@@ -193,7 +203,17 @@ function JobView({ facts }: { facts: JobFacts }) {
   return (
     <Shell bar>
       {role === 'engineer' || !button ? <NoPrimary /> : null}
-      <DetailHeader name={job.companyName} nameHref={`/companies/${job.companyId}`} code={jobLabel(job.key)} breadcrumb={[{ label: 'Jobs', to: '/jobs' }, { label: jobLabel(job.key), mono: true }]} phoneSrOnly>
+      <DetailHeader
+        name={job.companyName}
+        nameHref={`/companies/${job.companyId}`}
+        code={jobLabel(job.key)}
+        breadcrumb={[backTo(job, role), { label: jobLabel(job.key), mono: true }]}
+        more={phone ? undefined : <JobSlot name="next-step" context={ctx} />}
+        phoneSrOnly
+      >
+        <p className="mt-1 text-base text-fg-2 [overflow-wrap:anywhere] max-md:hidden" data-job-owner>
+          {[job.ownerName ? `Owner ${job.ownerName}` : 'No owner yet', facts.site?.name ?? null].filter(Boolean).join(' · ')}
+        </p>
         {job.repeatOf ? (
           <p className="mt-2 text-base">
             <Link to={`/jobs/${encodeURIComponent(job.repeatOf)}`} className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline">
@@ -205,35 +225,30 @@ function JobView({ facts }: { facts: JobFacts }) {
 
       <StageBlock
         job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }}
-        text={said}
-        late={next.tone === 'late'}
-        action={
-          phone ? undefined : (
-            <span className="flex flex-wrap items-center gap-2">
-              <JobSlot name="next-step" context={ctx} />
-              {button}
-            </span>
-          )
+        label={role === 'engineer' ? 'Where it stands' : `Next step · ${jobLabel(job.key)}`}
+        text={next.text}
+        tone={next.tone}
+        action={phone ? undefined : button}
+        facts={keyFacts ? <JobKeyFacts facts={keyFacts} /> : null}
+        between={
+          // An engineer: the On site buttons are a card under the hero on a computer and the sticky bar on a phone. Contact and Add photo or note are rows of the side column.
+          role === 'engineer' && !phone ? (
+            <Suspense fallback={null}>
+              <EngineerActions facts={facts} data={data} />
+            </Suspense>
+          ) : null
         }
       />
-      {keyFacts ? <JobKeyFacts facts={keyFacts} /> : null}
       {phone && (button || jobHasMore(ctx)) ? (
         <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} className={button ? undefined : 'left-auto rounded-tl-panel'} />
-      ) : null}
-
-      {/* An engineer: the On site buttons are a card on a computer and the sticky bar on a phone. Contact and Add photo or note are rows of the list below. */}
-      {role === 'engineer' && !phone ? (
-        <Suspense fallback={null}>
-          <EngineerActions facts={facts} data={data} />
-        </Suspense>
       ) : null}
       {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div
         data-work
-        className="mt-3 grid min-w-0 items-start rounded-panel border bg-surface px-4 lg:mt-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0"
+        className="mt-4 grid min-w-0 items-start gap-card-gap md:mt-6 lg:grid-cols-[minmax(0,1fr)_340px]"
       >
         <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} />
-        <aside aria-label="About this job" className="min-w-0 lg:rounded-panel lg:border lg:bg-surface lg:px-4 [&>:last-child]:border-b-0">
+        <aside aria-label="About this job" className="min-w-0 rounded-card bg-surface px-card py-2 shadow-e1 [&>:last-child]:border-b-0">
           <ContactRow facts={facts} showWhere={role === 'engineer'} />
           {role === 'admin' ? <MoneyRow data={data} hasOrder={Boolean(job.orderId)} /> : null}
           <CancelledOrders data={data} money={role !== 'engineer'} />

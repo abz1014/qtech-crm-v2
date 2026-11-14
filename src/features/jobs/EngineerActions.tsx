@@ -103,7 +103,7 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
   return (
     <>
       {card ? (
-      <section aria-label={phone && hasButtons ? 'Site visit' : 'On site'} className="mt-4 grid gap-3 border-y py-3" data-engineer-actions>
+      <section aria-label={phone && hasButtons ? 'Site visit' : 'On site'} className="mt-4 grid gap-3 rounded-card bg-surface p-card shadow-e1 md:mt-6" data-engineer-actions>
         {/* The contact row in the list has the site and the person (Call, WhatsApp); this line is only for a job with no contact. */}
         {!facts.contact && order?.site ? (
           <p className="text-base text-fg-2" data-testid="job-site">

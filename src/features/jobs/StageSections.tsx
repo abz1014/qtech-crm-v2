@@ -279,7 +279,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta }:
   const merged = facts.job.kind === 'direct'
   const sections = merged ? built.slice(2) : built
   return (
-    <div className="min-w-0 lg:rounded-panel lg:border lg:bg-surface lg:px-4 lg:[&>:last-child]:border-b-0" data-stages>
+    <div className="min-w-0 rounded-card bg-surface px-card py-2 shadow-e1 [&>:last-child]:border-b-0" data-stages>
       {merged ? (
         <div id="stage-0" data-stage="RFQ" data-fold-row="" className="flex min-h-touch items-center gap-3 border-b py-2 text-fg-muted">
           <Icon icon={Minus} />

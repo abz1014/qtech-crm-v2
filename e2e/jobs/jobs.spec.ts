@@ -250,6 +250,19 @@ test.describe('Jobs list: stage filters and Customer PO (2026-11-03)', () => {
   })
 })
 
+/** The Forest review pictures (REVIEW_DIR, uploaded by CI): the whole page at 1440 and at 375, then the viewport is put back. */
+async function shot(page: Page, name: string): Promise<void> {
+  const dir = process.env.REVIEW_DIR
+  if (!dir) return
+  const was = page.viewportSize()
+  for (const [w, h, tag] of [[1440, 900, 'desktop'], [375, 812, 'phone']] as const) {
+    await page.setViewportSize({ width: w, height: h })
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: `${dir}/${name}-${tag}.png`, fullPage: true })
+  }
+  if (was) await page.setViewportSize(was)
+}
+
 test.describe('Sell and Deliver lanes (Forest, gate 2)', () => {
   const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`Job ${key}\\b`) })
 
@@ -332,6 +345,13 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     const f = await seed()
     await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
     await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    // Forest (30-job-page.html): the hero says the step and holds the one green button; the track card says the stage over seven stops
+    const hero = page.getByRole('region', { name: 'Next step' })
+    await expect(hero).toContainText(`Next step · Job ${f.rfq.number}`)
+    await expect(hero.getByRole('heading', { level: 2 })).toHaveText('Choose a supplier for the items')
+    await expect(page.locator('[data-stage-phone]')).toHaveText('Stage 4 of 7 · Supplier order')
+    await expect(page.getByRole('list', { name: 'Stages of this job' }).getByRole('listitem')).toHaveCount(7)
+    await shot(page, 'forest-a3-jobpage')
     await page.getByRole('button', { name: 'Choose suppliers' }).click()
     const stage = page.getByRole('region', { name: 'Supplier order stage' })
     await expect(stage).toBeVisible()
