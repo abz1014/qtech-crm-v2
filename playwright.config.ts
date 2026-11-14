@@ -144,7 +144,7 @@ const HUNT_FILES: Record<string, string> = {
 }
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'jobs', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', 'review-items23', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
+const dbSuites = ['db', 'auth', 'companies', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'jobs', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', 'review-items23', 'forest-audit', ...Object.keys(HUNT_FILES), ...HUNT_EDGES]
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
@@ -172,7 +172,8 @@ export default defineConfig({
   outputDir: 'test-results',
   forbidOnly: Boolean(process.env.CI),
   // The database suites share one database: one worker, in order. The gallery suite is stateless.
-  workers: suite === 'db' ? 1 : process.env.CI ? 2 : undefined,
+  // E2E_WORKERS: a read-only suite that runs its tests in parallel (forest-audit; scripts/ci/e2e-run.sh sets it for that suite only).
+  workers: suite === 'db' ? Number(process.env.E2E_WORKERS ?? 1) : process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   expect: {
     toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixelRatio: 0.002 },
@@ -455,6 +456,18 @@ export default defineConfig({
       retries: 0,
       timeout: 600_000,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
+    {
+      // The Forest final audit (e2e/audit-forest): every route x role x width x text size x state, and the dialogs one click away. It records
+      // findings (test-results/forest-audit/findings) and never fails on one. Read-only (writes are refused while openers are clicked), so the
+      // tests run in parallel; CI splits them over shards (.github/e2e-suites.yml shards=N, Playwright --shard).
+      name: 'forest-audit',
+      testMatch: /audit-forest\/sweep\.spec\.ts$/,
+      fullyParallel: true,
+      workers: 3,
+      retries: 0,
+      timeout: 600_000,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'off' as const, trace: 'off' as const },
     },
     // The edge-case hunt (e2e/hunt/edges): see HUNT_EDGES above. Contexts are made per viewport by the specs themselves.
     ...(

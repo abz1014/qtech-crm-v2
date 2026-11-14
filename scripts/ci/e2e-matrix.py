@@ -3,7 +3,8 @@
 
 Reads .github/e2e-suites.yml (suite keys and optional "# weight=N"), the JSON list of changed suite
 names from dorny/paths-filter (CHANGED), RUN_ALL ("true" runs every suite) and SUITES (optional, comma or space separated suite
-keys: run only those, whatever else is set; an unknown key is an error). Writes two GitHub outputs:
+keys: run only those, whatever else is set; an unknown key is an error). A suite marked "shards=N" becomes N entries "<key>@i/N"
+(e2e-run.sh passes --shard=i/N), each its own shard job; one marked "manual" runs only when SUITES names it. Writes two GitHub outputs:
   any     "true" when at least one suite runs
   matrix  {"include":[{"shard":1,"suites":"a b c"}, ...]}  (longest-first greedy balancing)
 """
@@ -15,15 +16,19 @@ import json, math, os, re, sys
 SHARDS_MAX = int(os.environ.get("E2E_MAX_SHARDS", "8"))
 TARGET_SECONDS = 950  # one shard should not take more than about this much test time
 
-suites, weights = [], {}
+suites, weights, shards, manual = [], {}, {}, set()
 for line in open(sys.argv[1], encoding="utf-8"):
     m = re.match(r"^([a-z0-9][a-z0-9-]*):(.*)$", line)
     if not m or m.group(1) == "shared":
         continue
     name = m.group(1)
     w = re.search(r"weight=(\d+)", m.group(2))
+    k = re.search(r"shards=(\d+)", m.group(2))
     suites.append(name)
     weights[name] = int(w.group(1)) if w else 50
+    shards[name] = int(k.group(1)) if k else 1
+    if re.search(r"\bmanual\b", m.group(2)):
+        manual.add(name)
 
 changed = json.loads(os.environ.get("CHANGED") or "[]")
 wanted = [x for x in re.split(r"[,\s]+", os.environ.get("SUITES") or "") if x]
@@ -34,6 +39,19 @@ if wanted:
     chosen = [s for s in suites if s in wanted]
 else:
     chosen = suites if os.environ.get("RUN_ALL") == "true" else [s for s in suites if s in changed]
+    chosen = [s for s in chosen if s not in manual]
+
+# a sharded suite becomes one entry per shard, each carrying the per-shard weight
+expanded = []
+for s in chosen:
+    if shards[s] > 1:
+        for i in range(1, shards[s] + 1):
+            e = f"{s}@{i}/{shards[s]}"
+            weights[e] = weights[s]
+            expanded.append(e)
+    else:
+        expanded.append(s)
+chosen = expanded
 
 total = sum(weights[s] for s in chosen)
 n = min(SHARDS_MAX, len(chosen), max(1, math.ceil(total / TARGET_SECONDS))) if chosen else 0

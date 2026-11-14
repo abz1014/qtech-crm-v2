@@ -43,8 +43,14 @@ for s in "$@"; do
       || { cat "$PERF_TLS/build.log"; fail=1; }
     export E2E_TLS_KEY="$PERF_TLS/key.pem" E2E_TLS_CERT="$PERF_TLS/cert.pem" E2E_DIST=dist-perf E2E_APP_API_URL=https://127.0.0.1:54390
   fi
-  E2E_SUITE=db REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT="playwright-report/$s" \
-    npx playwright test --project="$s" --output="test-results/$s" || { echo "::error::suite $s failed"; fail=1; }
+  # "<suite>@i/N" is shard i of N of one suite (e2e-matrix.py, "shards=N" in .github/e2e-suites.yml)
+  proj="${s%@*}"; part=""; [ "$proj" != "$s" ] && part="${s#*@}"
+  out="${s//\//of}"
+  workers=1; [ "$proj" = "forest-audit" ] && workers=3
+  E2E_WORKERS=$workers E2E_SUITE=db REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT="playwright-report/$out" \
+    npx playwright test --project="$proj" ${part:+--shard=$part} --output="test-results/$out" || { echo "::error::suite $s failed"; fail=1; }
+  # the Forest audit's findings: the per-worker lines merged into findings.json and summary.json
+  if [ "$proj" = "forest-audit" ]; then node scripts/audit/forest-merge.mjs test-results/forest-audit || true; fi
   if [ "$s" = "perf" ]; then
     kill "$proxy" 2>/dev/null || true
     cat "$PERF_TLS/proxy.log" || true
