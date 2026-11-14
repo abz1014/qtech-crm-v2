@@ -2,7 +2,9 @@
 #
 # Each key is a Playwright project name from playwright.config.ts. The paths under it decide when that suite runs on a push
 # (it always runs on main and on a manual dispatch). The optional "# weight=N" is the measured seconds the suite takes with its
-# database reset (median of 5 shard runs on 2026-10-22, refresh it from the "##[group]suite" log timestamps); it is only used to balance suites across the parallel shards (default 50). `shared` is special: a change there
+# database reset (median of 5 shard runs on 2026-10-22, refresh it from the "##[group]suite" log timestamps); it is only used to balance suites across the parallel shards (default 50).
+# "# shards=N" splits one suite over N shard jobs (Playwright --shard, each with its own stack; the weight is then per shard).
+# "manual" keeps a suite out of every automatic run: it runs only when named in the dispatch's `suites` input. `shared` is special: a change there
 # runs every suite. Do NOT add anything else at column 0 except suite keys. See docs/CI.md.
 shared:
   - 'src/**'
@@ -136,3 +138,5 @@ hunt-workflows-crosscut: # weight=432 (bug hunt: Today, search, shortcuts, help,
   - 'e2e/hunt/workflows/support.ts'
 review-items23: # weight=120 (review screenshots for items 2 and 3; re-shoot after layout fixes)
   - 'e2e/review/**'
+forest-audit: # weight=1500 shards=8 manual (the Forest final CSS/HTML audit: every route x role x width x text size x state + dialogs; findings, not a gate)
+  - 'e2e/audit-forest/**'
