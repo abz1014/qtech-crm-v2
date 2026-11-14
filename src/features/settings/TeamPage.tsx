@@ -60,11 +60,12 @@ export function TeamPage() {
   const [filter, setFilter] = useState<TeamFilter>('all')
   const [query, setQuery] = useQueryParamText()
   const phone = useMediaQuery('(max-width: 639px)')
-  // Mockup 76 (F-792): the people read as a full table only when the Settings pane is 50rem wide or more. In a narrower pane (a tablet,
-  // a laptop with the Settings list beside it) Role, Job title and Status fold into a second line under the name, so the table never
-  // runs out of its card. Under 640 px DataTable draws cards anyway.
+  // Mockup 76 (F-792): the people read as a full table only in a wide Settings pane. In a narrower pane (a tablet, a laptop with the
+  // Settings list beside it) Role, Job title and Status fold into a second line under the name, so the table never runs out of its
+  // card. The mockup switches at 50rem; the live rows carry the Setup badge and a worded Reactivate button, which need 56rem
+  // (at 50rem, a 1440 window, Reactivate was cut off at the card's edge). Under 640 px DataTable draws cards anyway.
   const workRef = useRef<HTMLDivElement>(null)
-  const narrow = useNarrowerThan(workRef, 50)
+  const narrow = useNarrowerThan(workRef, 56)
 
   const members = useMemo(() => team.data ?? [], [team.data])
   const counts = teamCounts(members)

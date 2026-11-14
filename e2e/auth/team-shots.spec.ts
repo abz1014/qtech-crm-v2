@@ -31,7 +31,7 @@ async function picture(page: Page, name: string): Promise<void> {
   await page.setViewportSize({ width, height: h })
 }
 
-test('Team pictures at 1440, 1024, 768, 375 and 320', async ({ browser }) => {
+test('Team pictures at 1920, 1440, 1024, 768, 375 and 320', async ({ browser }) => {
   test.setTimeout(150_000)
   const ctx = await browser.newContext({ baseURL: 'http://127.0.0.1:4173', permissions: ['clipboard-read', 'clipboard-write'], viewport: { width: 1440, height: 900 } })
   const page = await ctx.newPage()
@@ -68,7 +68,7 @@ test('Team pictures at 1440, 1024, 768, 375 and 320', async ({ browser }) => {
   await deact.getByRole('button', { name: /^Deactivate/ }).click()
   await expect(page.getByRole('button', { name: `Reactivate ${name}` })).toBeVisible()
 
-  for (const [w, h] of [[1440, 900], [1024, 768], [768, 1024]] as const) {
+  for (const [w, h] of [[1920, 1080], [1440, 900], [1024, 768], [768, 1024]] as const) {
     await page.setViewportSize({ width: w, height: h })
     await page.goto('/settings/team')
     await expect(page.getByRole('table', { name: 'Team' })).toBeVisible()
