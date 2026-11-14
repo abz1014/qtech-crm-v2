@@ -259,7 +259,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
     <section aria-label={`${item.title}, ${item.ref}`} className="grid content-start gap-4">
       {compact ? null : (
         <header className="grid gap-1">
-          <Breadcrumb className="mb-1" items={[{ label: 'To do', to: '/todo' }, { label: item.ref, mono: true }]} />
+          <Breadcrumb className="mb-1" items={[{ label: 'Home', to: '/todo' }, { label: item.ref, mono: true }]} />
           <h2 className="text-xl font-semibold tracking-snug">{item.title}</h2>
           <p className="text-sm text-fg-2">
             {customerRule ? (

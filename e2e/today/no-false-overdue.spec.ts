@@ -227,7 +227,7 @@ for (const role of ['admin', 'sales'] as const) {
     test.setTimeout(240_000)
     const s = await seed(role)
     await openAs(page, role, '/todo')
-    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
 
     await checkToday(page, s)
     await checkRfqs(page, s)

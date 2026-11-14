@@ -1,6 +1,6 @@
 ---
 id: snooze
-title: Hide an item on To do until later
+title: Hide an item on Home until later
 roles: sales, admin
 keywords: snooze, later, hide, not now, remind me, tomorrow, not ours to chase
 screens: /todo

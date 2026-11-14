@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronDown, ChevronRight, Users } from 'lucide-react'
+import { Building2, ChevronDown, ChevronRight, Users } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -20,6 +20,7 @@ import { needsYouItems } from '@/features/today/needsYou'
 import { SnoozeMenu } from '@/features/today/SnoozeMenu'
 import { engineerDayGroups, dayBlock } from '@/features/today/engineerDays'
 import { TargetTile } from '@/features/today/TargetTile'
+import { HomeMoney } from '@/features/today/HomeMoney'
 import { TeamView } from '@/features/today/TeamView'
 import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
@@ -38,7 +39,11 @@ const ContextPane = lazyWithReload(() => loadContextPane().then(m => ({ default:
 if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches) void loadContextPane().catch(() => {})
 
 /*
- * To do (redesign phase 3, P3-A; replaces Today). ONE list that says "do this", three colour blocks (direction C): Late (red),
+ * Home (Forest, 10-home.html and 11-home-lists.html; the page was called To do, and before that Today: route /todo kept). On top a
+ * forest hero per role with the one number (admin "Needs you now", sales "Quotes to send or follow up", engineer "My day"); at the foot
+ * the money pulse for admin and sales (HomeMoney.tsx) and, on a phone, the Companies row (F-826: Companies is not on the bottom bar).
+ *
+ * The list (redesign phase 3, P3-A). ONE list that says "do this", three colour blocks (direction C): Late (red),
  * Today (yellow), This week (blue). A block with nothing in it is not drawn. At most 7 rows are drawn, late money first, then a
  * promise to a customer, then the rest; the rest folds into "N more this week" (nothing is dropped). The count is ONE number:
  * needsYouItems(view).length (needsYou.ts), which is Late plus Today, and it is the same number as the top bar's badge.
@@ -189,7 +194,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
     // One column that may shrink to the pane: no card or row can make the list wider than its pane (no sideways scroll).
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
       <header className="grid gap-1 px-5 pb-3 pt-5">
-        <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>To do</h1>
+        <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>Home</h1>
         <p className="text-base text-fg-muted">
           {headerDate(today)}
           {view ? (
@@ -205,17 +210,18 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
       </header>
 
       {query.isPending ? (
-        <div role="status" className="grid gap-4 px-5 py-4" aria-busy="true" aria-label="Loading To do">
+        <div role="status" className="grid gap-4 px-5 py-4" aria-busy="true" aria-label="Loading Home">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="grid gap-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
           ))}
         </div>
       ) : query.isError || !view || !model ? (
-        <EmptyState mood="error" title="To do could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" title="Home could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (
         <>
+          {!firstUse.isNew && model.total > 0 ? <Hero role={user.role} name={name} count={needYou} /> : null}
           {firstUse.isNew ? (
             <FirstUseState screen="today" role={user.role} alone={firstUse.alone} className="mx-5 my-4" />
           ) : model.total === 0 ? (
@@ -345,7 +351,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
       <div className="min-h-full bg-surface" data-user={name}>
         <NoPrimary />
         <header className="grid gap-1 px-5 pb-1 pt-5">
-          <h1 className="text-2xl font-heavy tracking-tight">To do</h1>
+          <h1 className="text-2xl font-heavy tracking-tight">Home</h1>
           <p className="text-base text-fg-muted">{headerDate(today)} · the team</p>
           {switcher}
         </header>
@@ -365,8 +371,16 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
         <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">
           {list}
           {seesPrices(user.role) ? (
-            <div className="bg-surface px-3 pb-4 pt-1">
-              <TargetTile today={today} className="rounded-panel border bg-surface" />
+            // Admin and sales only (an engineer's branch draws none of this: no amount, and no request is made).
+            <div className="grid gap-card-gap bg-surface px-3 pb-4 pt-1">
+              <HomeMoney today={today} admin={user.role === 'admin'} />
+              <TargetTile today={today} className="rounded-card border bg-surface shadow-e1" />
+              {/* F-826: on a phone Companies is not on the bottom bar, so Home ends with it (the rail has it from 768 up). */}
+              <Link to="/companies" data-home-companies="" className="flex min-h-touch items-center gap-3 rounded-card border bg-surface px-4 py-3 text-base font-semibold text-fg shadow-e1 hover:bg-selected md:hidden">
+                <Icon icon={Building2} />
+                <span className="min-w-0 flex-1">Companies</span>
+                <Icon icon={ChevronRight} size="sm" />
+              </Link>
             </div>
           ) : null}
         </div>
@@ -374,7 +388,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
       {wide ? (
         <div className="min-h-0 overflow-y-auto px-5 py-6 lg:px-8">
           {current && data ? (
-            <div className="mx-auto max-w-[860px]">
+            <div className="mx-auto max-w-list">
               <Suspense fallback={null}>
                 <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
               </Suspense>
@@ -385,6 +399,34 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
         </div>
       ) : null}
     </div>
+  )
+}
+
+/** The hero's words per role (10-home.html): the role and first name, then what the one number counts. */
+const HERO: Record<Role, { role: string; title: string }> = {
+  admin: { role: 'Admin', title: 'Needs you now' },
+  sales: { role: 'Sales', title: 'Quotes to send or follow up' },
+  engineer: { role: 'Engineer', title: 'My day' },
+}
+
+/**
+ * The forest hero on top of the list: the same one number as the header and the Home badge (needsYou.ts), drawn large in lime.
+ * The header keeps data-needs-you-count; the hero's number is a second sight of it, so it is read out once, in words.
+ */
+function Hero({ role, name, count }: { role: Role; name: string; count: number }) {
+  const h = HERO[role]
+  const first = name.trim().split(/\s+/)[0] ?? ''
+  return (
+    <section data-surface="navy" aria-labelledby="home-hero-title" data-home-hero={role} className="mx-2 mb-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-2 rounded-card bg-chrome bg-hero p-card text-fg shadow-e2 md:mx-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-base text-fg-2">{first ? `${h.role}, ${first}` : h.role}</p>
+        <h2 id="home-hero-title" className="text-xl font-heavy tracking-tight">{h.title}</h2>
+      </div>
+      <p className="num text-hero font-heavy text-lime-300">
+        <span aria-hidden="true">{count}</span>
+        <span className="sr-only">{count === 1 ? '1 thing needs you' : `${count} things need you`}</span>
+      </p>
+    </section>
   )
 }
 
@@ -457,7 +499,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
         {waiting ? (
           <span className="sr-only">Waiting</span>
         ) : copied ? (
-          <span className="type-row inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-[10px] text-tone-success-fg">Copied</span>
+          <span className="type-row inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-3 text-tone-success-fg">Copied</span>
         ) : (
           <span className={cn('type-row min-w-0 flex-1 basis-1/4', tone)}>{item.badge.text}</span>
         )}
