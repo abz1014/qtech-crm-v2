@@ -46,7 +46,7 @@ describe('status registry vs tokens.css', () => {
     const keys = STATUS_ENTRIES.filter(([d]) => d === 'rfq-stage' || d === 'item-price').map(([d, v]) => `${d}:${v}`)
     expect(keys).toEqual([
       'rfq-stage:suppliers', 'rfq-stage:prices', 'rfq-stage:ready', 'rfq-stage:sent', 'rfq-stage:expired',
-      'item-price:waiting', 'item-price:priced', 'item-price:none',
+      'item-price:waiting', 'item-price:priced', 'item-price:none', 'item-price:unasked',
     ])
     expect(keys.filter(k => !map.has(k))).toEqual([])
   })

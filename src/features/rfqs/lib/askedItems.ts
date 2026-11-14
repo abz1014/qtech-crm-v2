@@ -43,3 +43,23 @@ export function sameScope(a: readonly string[] | null | undefined, b: readonly s
   if (!a || !b) return !a && !b
   return a.length === b.length && a.every(id => b.includes(id))
 }
+
+/** "item 2", "items 1 and 2", "items 1, 2 and 3", in number order. */
+export function numbersText(nums: readonly number[]): string {
+  const n = [...nums].sort((a, b) => a - b)
+  if (n.length === 0) return ''
+  if (n.length === 1) return `item ${n[0]}`
+  if (n.length === 2) return `items ${n[0]} and ${n[1]}`
+  return `items ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`
+}
+
+/**
+ * "Asked about items 1 and 2 only" (no full stop): said only for a supplier asked about some of the items. Null when they were
+ * asked about every item.
+ */
+export function askedAboutText(inquiry: AskedScope, items: readonly { id: string; number: number }[]): string | null {
+  if (!inquiry.askedItemIds) return null
+  const asked = askedItemsOf(inquiry, items)
+  if (asked.length === items.length) return null
+  return asked.length === 0 ? 'Asked about an item that was removed' : `Asked about ${numbersText(asked.map(it => it.number))} only`
+}

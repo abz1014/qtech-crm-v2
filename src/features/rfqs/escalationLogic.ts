@@ -2,13 +2,7 @@ import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useAskSuppliers } from '@/features/rfqs/useAskSuppliers'
 import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
 
-export function numbersText(nums: readonly number[]): string {
-  const n = [...nums].sort((a, b) => a - b)
-  if (n.length === 0) return ''
-  if (n.length === 1) return `item ${n[0]}`
-  if (n.length === 2) return `items ${n[0]} and ${n[1]}`
-  return `items ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`
-}
+export { numbersText } from '@/features/rfqs/lib/askedItems'
 
 /** The next suppliers in line for these items (at most `limit`), excluding everyone already asked on the RFQ. Pure over the loaded history. */
 export function nextInLine(suggestions: readonly SupplierSuggestion[], askedIds: ReadonlySet<string>, limit = 2): SupplierSuggestion[] {
