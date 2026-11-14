@@ -1,7 +1,7 @@
 import { NoPrimary } from '@/ui/NoPrimary'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { FilePlus2 } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { FilePlus2, List } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -11,12 +11,13 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
 import { TableFilter } from '@/ui/TableFilter'
 import { EmptyState } from '@/ui/EmptyState'
+import { Icon } from '@/ui/Icon'
 import { useCustomerPos, useJobSearch, useJobsList } from '@/features/jobs/hooks'
 import type { JobRow } from '@/features/jobs/api'
 import { StageLine, StageMini } from '@/features/jobs/StageBar'
 import { StageFilter } from '@/features/jobs/StageFilter'
 import { jobNext } from '@/features/jobs/lib/nextStep'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, itemsSummary, jobLabel, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, isLane, itemsSummary, jobLabel, laneOfJob, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type JobLane, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
 import { stageModel } from '@/features/jobs/lib/stages'
 import { lazyShown } from '@/lib/lazyDialog'
 
@@ -33,11 +34,43 @@ const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog'
  * an RFQ-, ORD-, QT- or PO- number, an invoice number, a customer reference or the customer's name land on the same jobs. A search
  * ignores the chips (a number must find its job wherever it lives). The list holds no money, for anyone: an engineer sees this page
  * as the office does. The route is reachable by address only until the navigation switch (P5-F).
+ *
+ * Forest lanes (gate 2, 20-sell.html and 40-deliver.html): ?lane=sell is Sell (a job until the customer's order arrives: RFQs and
+ * Quotations in the stage filter) and ?lane=deliver is Deliver (from the order to the payment: the live stage filter). Each keeps the chips,
+ * the search (which still looks in every list) and an "All jobs" link to the bare /jobs, which shows every job as before. A job opened
+ * from a lane carries it (?from=sell) so the shell can say where the person came from. Sell is for admin and sales: an engineer who
+ * lands on it is sent to Jobs; an engineer's ?lane=deliver is their Jobs list.
  */
 const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'History' }
 
+const LANE_TITLE: Record<JobLane, string> = { sell: 'Sell', deliver: 'Deliver' }
+
+/** The header's link to every job: the bare list, keeping the chip and the search. */
+const ALL_JOBS_LINK =
+  'inline-flex h-control shrink-0 items-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-sm font-bold text-fg transition-colors duration-fast ease-out hover:bg-selected max-md:h-touch'
+
+/** Sell has no engineer view (20-sell.html#sell-eng-no-access): the jobs an engineer is put on are in Jobs. */
+function SellIsForOffice() {
+  return (
+    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
+      <NoPrimary />
+      <PageHeader title="Sell" />
+      <EmptyState
+        title="Sell is for admin and sales"
+        actions={
+          <Link to="/jobs" className={ALL_JOBS_LINK}>
+            Open Jobs
+          </Link>
+        }
+      >
+        Your role is Engineer. The jobs you are put on are in Jobs.
+      </EmptyState>
+    </div>
+  )
+}
+
 /** What a stage filter finds, said after "No open jobs": "No open jobs to invoice". */
-const STAGE_EMPTY: Record<Stage, string> = { orders: 'with an order', supplier: 'waiting for a supplier', deliver: 'to deliver', invoice: 'to invoice', payment: 'to be paid' }
+const STAGE_EMPTY: Record<Stage, string> = { rfq: 'at RFQ', quotation: 'at Quotation', orders: 'with an order', supplier: 'waiting for a supplier', deliver: 'to deliver', invoice: 'to invoice', payment: 'to be paid' }
 
 function NextText({ job, role, card }: { job: JobRow; role: Who['role']; card?: boolean }) {
   // On a card an imported job wears an "Imported" tag, so its step does not repeat the word.
@@ -105,6 +138,14 @@ function JobCard({ job, role, po }: { job: JobRow; role: Who['role']; po?: strin
 
 export default function JobsListPage() {
   const session = useSession()
+  const role = (session.status === 'signed-in' ? session.user.role : '') as Who['role']
+  const [params] = useSearchParams()
+  if (role === 'engineer' && params.get('lane') === 'sell') return <SellIsForOffice />
+  return <JobsList />
+}
+
+function JobsList() {
+  const session = useSession()
   const user = session.status === 'signed-in' ? session.user : null
   const role = (user?.role ?? '') as Who['role']
   const money = role === 'admin' || role === 'sales'
@@ -131,6 +172,9 @@ export default function JobsListPage() {
   const text = params.get('q') ?? ''
   const chipParam = params.get('chip')
   const chip: Chip = isChip(chipParam) ? chipParam : defaultChip(role)
+  // The lens (Sell or Deliver) is the office's: an engineer's Jobs is every job they are put on, whatever the address says.
+  const laneParam = params.get('lane')
+  const lane: JobLane | null = role !== 'engineer' && isLane(laneParam) ? laneParam : null
   const change = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
     for (const [k, v] of Object.entries(patch)) {
@@ -144,12 +188,13 @@ export default function JobsListPage() {
   const pos = useCustomerPos(money)
   const poOf = (j: JobRow) => (j.orderId ? pos.data?.get(j.orderId) : undefined)
 
-  const all = useMemo(() => jobs.data ?? [], [jobs.data])
+  const all = useMemo(() => (jobs.data ?? []).filter(j => lane === null || laneOfJob(j) === lane), [jobs.data, lane])
   const counts = useMemo(() => chipCounts(all, who), [all, who])
   const searching = text.trim() !== ''
   const found = useJobSearch(text)
   // A search ignores the chip and the stage; otherwise the stage (when one is picked and offered) narrows the chip's jobs.
-  const stage = searching ? null : normalizeStage(params.get('stage'), role, chip)
+  const stage = searching ? null : normalizeStage(params.get('stage'), role, chip, lane)
+  const stages = stagesFor(role, chip, lane)
   const rows = useMemo(
     () => (searching ? (found.data ?? []) : all.filter(j => inChip(j, chip, who) && (stage === null || inStage(j, stage))).sort(byRecent)),
     [searching, found.data, all, chip, who, stage],
@@ -199,7 +244,19 @@ export default function JobsListPage() {
 
   const loading = jobs.isPending || (searching && found.isPending)
   const error = jobs.isError ? jobs : searching && found.isError ? found : null
-  const lede = jobs.isSuccess ? `${counts.open} open · ${counts.history} in history` : 'Every customer request, from RFQ to payment.'
+  const lede = jobs.isSuccess
+    ? `${counts.open} open · ${counts.history} in history`
+    : lane === 'sell'
+      ? 'RFQs and quotations, until the order arrives.'
+      : lane === 'deliver'
+        ? 'From the order to the payment.'
+        : 'Every customer request, from RFQ to payment.'
+  const allJobs = () => {
+    const next = new URLSearchParams(params)
+    for (const k of ['lane', 'stage']) next.delete(k)
+    const q = next.toString()
+    return q ? `/jobs?${q}` : '/jobs'
+  }
 
   const empty = searching ? (
     <NoResults query={text} scope="every job (open and history)" fields="job number, customer, item, RFQ, order, quotation, PO and invoice number" onClear={() => change({ q: null })} />
@@ -234,8 +291,16 @@ export default function JobsListPage() {
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
       {money ? null : <NoPrimary />}
       <PageHeader
-        title="Jobs"
+        title={lane ? LANE_TITLE[lane] : 'Jobs'}
         lede={lede}
+        secondary={
+          lane ? (
+            <Link to={allJobs()} className={ALL_JOBS_LINK}>
+              <Icon icon={List} />
+              All jobs
+            </Link>
+          ) : undefined
+        }
         primary={
           money ? (
             <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/enquiries/new')}>
@@ -255,7 +320,7 @@ export default function JobsListPage() {
         twoLine
         defaultSort={null}
         mobileRow={j => <JobCard job={j} role={role} po={money ? poOf(j) : undefined} />}
-        onRowOpen={j => navigate(`/jobs/${encodeURIComponent(j.key)}`)}
+        onRowOpen={j => navigate(`/jobs/${encodeURIComponent(j.key)}${lane ? `?from=${lane}` : ''}`)}
         loading={loading}
         error={error ? { title: "Jobs could not be loaded", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void error.refetch() } : null}
         summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${stage ? ` · ${STAGE_LABEL[stage]}` : ''}`) : undefined}
@@ -264,7 +329,7 @@ export default function JobsListPage() {
             <SegmentedControl
               aria-label="Which jobs"
               value={searching ? '' : chip}
-              onValueChange={v => change({ chip: v === defaultChip(role) ? null : v, stage: normalizeStage(params.get('stage'), role, v as Chip) })}
+              onValueChange={v => change({ chip: v === defaultChip(role) ? null : v, stage: normalizeStage(params.get('stage'), role, v as Chip, lane) })}
               options={(['mine', 'open', 'history'] as const).map(c => ({ value: c, label: LABEL[c] }))}
             />
             <TableFilter
@@ -274,9 +339,9 @@ export default function JobsListPage() {
               onChange={v => change({ q: v })}
               className="min-w-0 max-sm:basis-full sm:max-w-[360px] sm:flex-1"
             />
-            {searching ? null : (
+            {searching || stages.length === 0 ? null : (
               <div className="min-w-0 basis-full">
-                <StageFilter value={stage} stages={stagesFor(role, chip)} onChange={s => change({ stage: s })} />
+                <StageFilter value={stage} stages={stages} onChange={s => change({ stage: s })} />
               </div>
             )}
           </div>
