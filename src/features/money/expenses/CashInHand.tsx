@@ -10,7 +10,10 @@ import { FoldRow } from '@/ui/FoldRow'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
+import { CARD } from '@/ui/card'
+import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
+import { FIELD, PanelCard, PHONE_FOLD } from '@/features/money/expenses/Panel'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { useAddCashTopup, useCashInHand, useRecordCashCount } from '@/features/money/expenses/hooks'
 import { pkr } from '@/features/money/expenses/model'
@@ -31,7 +34,7 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
   const [counting, setCounting] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const c = q.data
-  if (q.isPending) return <div className="h-[60px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />
+  if (q.isPending) return <div className={cn(CARD, 'grid gap-2 p-card')} aria-hidden="true"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-48" /></div>
   if (q.isError || !c) return null
   const none = c.kind === 'none' || c.expected === null
   // `fold` (the Expenses page) on a phone: ONE line. Not set up: the words and the action. Set up: the figure on the line, the buttons under a tap.
@@ -44,7 +47,7 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
     )
     if (none)
       return (
-        <section aria-label="Cash in hand" data-testid="cash-in-hand" className="flex min-h-touch items-center gap-3 border-b py-1">
+        <section aria-label="Cash in hand" data-testid="cash-in-hand" className={cn(CARD, 'flex min-h-touch items-center gap-3 py-1 pl-card pr-2')}>
           <Icon icon={Wallet} className="text-fg-muted" />
           <span className="type-body min-w-0 flex-1">
             <b className="font-semibold">Cash in hand</b> is not set up
@@ -65,6 +68,7 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
           open={open}
           onToggle={() => setOpen(o => !o)}
           controlsId={foldId}
+          className={PHONE_FOLD}
         >
           <div className="flex flex-wrap items-center gap-2">
             <Button size="touch" icon={ArrowDownToLine} onClick={() => setDrawing(true)} className="text-base">
@@ -82,47 +86,88 @@ export function CashInHandLine({ compact = false, fold = false }: { compact?: bo
       </section>
     )
   }
+  const how = (
+    <InfoTip label="How cash in hand is worked out">
+      {`${c.kind === 'opening' ? 'Opening balance' : 'Last count'} ${pkr(c.base)} + cash drawn from the bank since ${pkr(c.topups)} (${c.topupCount}) - cash expenses since ${pkr(c.cashOut)} (${c.cashOutCount}) = ${pkr(c.expected ?? 0)}. Cash drawn from the bank is not an expense.`}
+    </InfoTip>
+  )
+  const diffWords =
+    c.kind === 'count' && c.lastDifference !== null && c.lastDifference !== 0 ? (
+      <span className={c.lastDifference < 0 ? 'text-tone-danger-fg' : 'text-tone-warning-fg'}>
+        {' '}
+        ({c.lastDifference < 0 ? 'short' : 'over'} {pkr(Math.abs(c.lastDifference))})
+      </span>
+    ) : null
+  const buttons = (
+    <span className="flex flex-wrap gap-2">
+      {!none ? (
+        <Button icon={ArrowDownToLine} onClick={() => setDrawing(true)} className="max-md:h-touch">
+          Cash drawn
+        </Button>
+      ) : null}
+      <Button icon={Calculator} onClick={() => setCounting(true)} className="max-md:h-touch">
+        {none ? 'Set opening cash' : 'Count cash'}
+      </Button>
+    </span>
+  )
+  const dialogs = (
+    <>
+      {counting ? <CountDialog state={c} onClose={() => setCounting(false)} /> : null}
+      {drawing ? <TopupDialog onClose={() => setDrawing(false)} /> : null}
+    </>
+  )
+  // `fold` from 640 up (the Expenses page's side column): a side card, the figure in the header, the two buttons under a hairline.
+  if (fold)
+    return (
+      <PanelCard
+        headingId="cash-h"
+        title="Cash in hand"
+        summary={
+          none ? (
+            'Not set up. Count the office cash once to start. After that the app works out the expected amount.'
+          ) : (
+            <span aria-live="polite">
+              <b className="num font-bold text-fg" data-testid="cash-expected">
+                {pkr(c.expected ?? 0)}
+              </b>{' '}
+              expected · {c.kind === 'opening' ? 'opening' : 'counted'} <span className="num">{c.baseOn ? formatShortDate(c.baseOn, businessToday()) : ''}</span>
+              {diffWords}
+              {how}
+            </span>
+          )
+        }
+        data-testid="cash-in-hand"
+      >
+        <div className="px-card py-4">{buttons}</div>
+        {dialogs}
+      </PanelCard>
+    )
   return (
-    <section
-      aria-label="Cash in hand"
-      data-testid="cash-in-hand"
-      className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border bg-surface px-4 py-3 text-base', compact && 'py-2', fold && 'lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent lg:px-0 lg:py-2')}
-    >
-      <Icon icon={Wallet} className="text-fg-muted" />
+    <section aria-label="Cash in hand" data-testid="cash-in-hand" className={cn(CARD, 'flex flex-wrap items-center gap-x-4 gap-y-3 px-card py-4 text-base', compact && 'py-3')}>
+      <span aria-hidden="true" className="grid size-control-sm shrink-0 place-items-center rounded-control bg-selected text-fg-2">
+        <Icon icon={Wallet} />
+      </span>
       {none ? (
         <span className="min-w-0 flex-[1_1_16rem]">
-          <b className="font-semibold">Cash in hand</b> is not set up. Count the office cash once to start. After that the app works out the expected amount.
+          <b className="font-bold">Cash in hand</b> is not set up. Count the office cash once to start. After that the app works out the expected amount.
         </span>
       ) : (
         <span className="min-w-0 flex-[1_1_16rem]" aria-live="polite">
-          <b className="font-semibold">Cash in hand:</b> <b className="num font-semibold" data-testid="cash-expected">{pkr(c.expected ?? 0)}</b> expected
+          <b className="font-bold">Cash in hand:</b>{' '}
+          <b className="num font-bold" data-testid="cash-expected">
+            {pkr(c.expected ?? 0)}
+          </b>{' '}
+          expected
           <span className="text-fg-2">
             {' · '}
             {c.kind === 'opening' ? 'opening' : 'counted'} {c.baseOn ? formatShortDate(c.baseOn, businessToday()) : ''}
-            {c.kind === 'count' && c.lastDifference !== null && c.lastDifference !== 0 ? (
-              <span className={c.lastDifference < 0 ? 'text-tone-danger-fg' : 'text-tone-warning-fg'}>
-                {' '}
-                ({c.lastDifference < 0 ? 'short' : 'over'} {pkr(Math.abs(c.lastDifference))})
-              </span>
-            ) : null}
+            {diffWords}
           </span>
-          <InfoTip label="How cash in hand is worked out">
-            {`${c.kind === 'opening' ? 'Opening balance' : 'Last count'} ${pkr(c.base)} + cash drawn from the bank since ${pkr(c.topups)} (${c.topupCount}) - cash expenses since ${pkr(c.cashOut)} (${c.cashOutCount}) = ${pkr(c.expected ?? 0)}. Cash drawn from the bank is not an expense.`}
-          </InfoTip>
+          {how}
         </span>
       )}
-      <span className="flex flex-wrap gap-2">
-        {!none ? (
-          <Button size="touch" icon={ArrowDownToLine} onClick={() => setDrawing(true)} className="text-base">
-            Cash drawn
-          </Button>
-        ) : null}
-        <Button size="touch" icon={Calculator} onClick={() => setCounting(true)} className="text-base">
-          {none ? 'Set opening cash' : 'Count cash'}
-        </Button>
-      </span>
-      {counting ? <CountDialog state={c} onClose={() => setCounting(false)} /> : null}
-      {drawing ? <TopupDialog onClose={() => setDrawing(false)} /> : null}
+      {buttons}
+      {dialogs}
     </section>
   )
 }
@@ -162,6 +207,7 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
   return (
     <Dialog open onOpenChange={o => !o && onClose()} busy={record.isPending} dirty={counted !== null}>
       <DialogContent
+        icon={Calculator}
         title={opening ? 'Set opening cash' : 'Count cash'}
         context={opening ? 'The cash held in the office. From now on the app works out the expected amount.' : `The books expect ${pkr(state.expected ?? 0)}.`}
         size="sm"
@@ -184,25 +230,25 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
           }}
         >
           <label className="grid gap-2">
-            <span className="font-medium">Cash in hand, PKR</span>
-            <NumberInput value={counted} onChange={setCounted} min={0} inputMode="decimal" autoFocus className="num h-12 text-lg" aria-label="Cash in hand, PKR" />
+            <span className="text-sm font-bold">Cash in hand, PKR</span>
+            <NumberInput value={counted} onChange={setCounted} min={0} inputMode="decimal" autoFocus className="num h-control-lg text-lg max-md:h-control-lg" aria-label="Cash in hand, PKR" />
           </label>
           {opening ? (
             <label className="grid gap-2">
-              <span className="font-medium">At the start of</span>
-              <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className="num min-h-touch rounded border border-line-input bg-surface px-3 text-base" />
+              <span className="text-sm font-bold">At the start of</span>
+              <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num')} />
             </label>
           ) : null}
           {diff !== null ? (
-            <p className={cn('rounded px-3 py-2', diff === 0 ? 'bg-tone-success-bg text-tone-success-fg' : 'bg-tone-warning-bg text-tone-warning-fg')} aria-live="polite" data-testid="count-difference">
+            <p className={cn('rounded-control px-3 py-2', diff === 0 ? 'bg-tone-success-bg text-tone-success-fg' : 'bg-tone-warning-bg text-tone-warning-fg')} aria-live="polite" data-testid="count-difference">
               {diff === 0 ? 'It matches the books.' : `${diff < 0 ? 'Short' : 'Over'} by ${pkr(Math.abs(diff))}. Check for an unrecorded cash expense. The difference is saved with this count.`}
             </p>
           ) : null}
           <label className="grid gap-2">
-            <span className="font-medium">
+            <span className="text-sm font-bold">
               Note <span className="font-regular text-fg-muted">optional</span>
             </span>
-            <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} className="min-h-touch rounded border border-line-input bg-surface px-3 text-base" />
+            <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} className={FIELD} />
           </label>
           {error ? (
             <p role="alert" className="text-tone-danger-fg">
@@ -245,6 +291,7 @@ function TopupDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog open onOpenChange={o => !o && onClose()} busy={add.isPending} dirty={amount !== null}>
       <DialogContent
+        icon={ArrowDownToLine}
         title="Cash drawn from the bank"
         context="Cash taken from the bank into cash in hand. It is not an expense."
         size="sm"
@@ -267,18 +314,18 @@ function TopupDialog({ onClose }: { onClose: () => void }) {
           }}
         >
           <label className="grid gap-2">
-            <span className="font-medium">Amount, PKR</span>
-            <NumberInput value={amount} onChange={setAmount} min={0.01} inputMode="decimal" autoFocus className="num h-12 text-lg" aria-label="Amount drawn, PKR" />
+            <span className="text-sm font-bold">Amount, PKR</span>
+            <NumberInput value={amount} onChange={setAmount} min={0.01} inputMode="decimal" autoFocus className="num h-control-lg text-lg max-md:h-control-lg" aria-label="Amount drawn, PKR" />
           </label>
           <label className="grid gap-2">
-            <span className="font-medium">Date</span>
-            <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className="num min-h-touch rounded border border-line-input bg-surface px-3 text-base" />
+            <span className="text-sm font-bold">Date</span>
+            <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num')} />
           </label>
           <label className="grid gap-2">
-            <span className="font-medium">
+            <span className="text-sm font-bold">
               Note <span className="font-regular text-fg-muted">optional</span>
             </span>
-            <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} className="min-h-touch rounded border border-line-input bg-surface px-3 text-base" />
+            <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} className={FIELD} />
           </label>
           {error ? (
             <p role="alert" className="text-tone-danger-fg">

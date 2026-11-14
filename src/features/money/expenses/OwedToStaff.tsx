@@ -8,7 +8,11 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { cn } from '@/lib/utils'
+import { CARD } from '@/ui/card'
+import { StatusText } from '@/ui/StatusText'
 import { useToast } from '@/ui/useToast'
+import { NativeSelect, PanelCard, PHONE_FOLD } from '@/features/money/expenses/Panel'
 import { useOwedClaims, usePayBackClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, owedByPerson, type Claim, type PaidHow } from '@/features/money/expenses/claimsApi'
 import { pkr } from '@/features/money/expenses/model'
@@ -30,7 +34,7 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
   if (!admin || q.isPending) return null
   if (q.isError)
     return (
-      <section aria-label="Claims to repay" data-testid="owed-to-staff">
+      <section aria-label="Claims to repay" data-testid="owed-to-staff" className={cn(CARD, 'p-card')}>
         <EmptyState mood="error" title="Claims to repay could not be loaded" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
@@ -39,68 +43,70 @@ export function OwedToStaff({ summary = false }: { summary?: boolean }) {
   if (claims.length === 0) return null
   const people = owedByPerson(claims)
   const total = claims.reduce((s, c) => s + c.amount, 0)
-  // Phone, full form: one line with the figure and who; a tap opens the people and each claim's Mark paid back.
+  const who = people.length === 1 ? people[0].name : `${people.length} people`
+  const peopleList = (
+    <ul className="divide-y" data-testid="owed-people">
+      {people.map(p => (
+        <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-card py-3 text-base">
+          <span className="min-w-0 [overflow-wrap:anywhere]">
+            To repay <b className="font-bold">{p.name}</b>
+            <span className="text-sm text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
+          </span>
+          <b className="num font-bold">{pkr(p.total)}</b>
+        </li>
+      ))}
+    </ul>
+  )
+  const claimList = (
+    <ul className="divide-y border-t">
+      {claims.map(c => (
+        <OwedRow key={c.id} claim={c} />
+      ))}
+    </ul>
+  )
+  // Phone, full form: one card row with the figure and who; a tap opens the people and each claim's Mark paid back.
   if (phone && !summary)
     return (
       <section aria-label="Claims to repay" data-testid="owed-to-staff">
         <FoldRow
-          state={{ icon: HandCoins, word: 'Action needed' }}
+          state={ACTION}
+          chip={{ ...ACTION, tone: 'warning' }}
           title="Claims to repay"
-          summary={`${pkr(total)} to ${people.length === 1 ? people[0].name : `${people.length} people`}`}
+          summary={`${pkr(total)} to ${who}`}
           open={open}
           onToggle={() => setOpen(o => !o)}
           controlsId={id}
+          className={cn(PHONE_FOLD, '[&_li]:px-0')}
         >
-          <ul className="divide-y" data-testid="owed-people">
-            {people.map(p => (
-              <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 text-base">
-                <span>
-                  To repay <b className="font-semibold">{p.name}</b>
-                  <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
-                </span>
-                <b className="num font-semibold">{pkr(p.total)}</b>
-              </li>
-            ))}
-          </ul>
-          <ul className="divide-y border-t">
-            {claims.map(c => (
-              <OwedRow key={c.id} claim={c} />
-            ))}
-          </ul>
+          {peopleList}
+          {claimList}
         </FoldRow>
       </section>
     )
   return (
-    <section aria-labelledby="owed-staff-h" className="grid gap-0 rounded border border-tone-warning-fg/30 bg-surface lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent" data-testid="owed-to-staff">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3 lg:px-0 lg:py-2">
-        <h2 id="owed-staff-h" className="type-row lg:font-semibold">
-          Claims to repay
-        </h2>
-        <span className="text-base text-fg-2">
-          {pkr(total)} approved, not paid back yet
-        </span>
-      </header>
-      <ul className="divide-y" data-testid="owed-people">
-        {people.map(p => (
-          <li key={p.personId ?? p.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-base lg:px-0 lg:py-2">
-            <span>
-              To repay <b className="font-semibold">{p.name}</b>
-              <span className="text-fg-2"> · {p.count === 1 ? '1 claim' : `${p.count} claims`}</span>
-            </span>
-            <b className="num font-semibold">{pkr(p.total)}</b>
-          </li>
-        ))}
-      </ul>
-      {summary ? null : (
-        <ul className="divide-y border-t">
-          {claims.map(c => (
-            <OwedRow key={c.id} claim={c} />
-          ))}
-        </ul>
-      )}
-    </section>
+    <PanelCard
+      headingId={summary ? 'owed-staff-sum-h' : 'owed-staff-h'}
+      title="Claims to repay"
+      summary={
+        <>
+          <span className="num">{pkr(total)}</span> approved, not paid back yet
+        </>
+      }
+      status={
+        <StatusText tone="now" className="text-sm">
+          {ACTION.word}
+        </StatusText>
+      }
+      data-testid="owed-to-staff"
+    >
+      {peopleList}
+      {summary ? null : claimList}
+    </PanelCard>
   )
 }
+
+/** Who acts next on a claim to repay: the admin. */
+const ACTION = { icon: HandCoins, word: 'Action needed' }
 
 function OwedRow({ claim }: { claim: Claim }) {
   const toast = useToast()
@@ -109,38 +115,34 @@ function OwedRow({ claim }: { claim: Claim }) {
   const [error, setError] = useState<string | null>(null)
   const label = `${claim.byName}, ${pkr(claim.amount)}`
   return (
-    <li className="grid gap-2 px-4 py-3 text-base lg:px-0" data-testid={`owed-${claim.id}`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <span className="min-w-0">
-          Approved, to repay <b className="font-semibold">{claim.byName}</b>: <b className="num font-semibold">{pkr(claim.amount)}</b>
+    <li className="grid gap-3 px-card py-4 text-base" data-testid={`owed-${claim.id}`}>
+      <div className="grid gap-1">
+        <p className="min-w-0 [overflow-wrap:anywhere]">
+          Approved, to repay <b className="font-bold">{claim.byName}</b>: <b className="num font-bold">{pkr(claim.amount)}</b>
           {claim.note ? <span> for {claim.note}</span> : null}
-          {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
-        </span>
-        <span className="num text-xs text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>
+        </p>
+        <p className="num flex flex-wrap gap-x-2 text-sm text-fg-2">
+          <span>{formatShortDate(claim.spentOn, businessToday())}</span>
+          {claim.orderLabel ? <span>· {claim.orderLabel}</span> : null}
+        </p>
       </div>
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] items-end gap-3">
         <label className="grid min-w-0 gap-2">
-          <span className="font-medium">How it was paid</span>
-          <select
-            value={how}
-            onChange={e => setHow(e.target.value as PaidHow)}
-            aria-label={`How it was paid back, ${label}`}
-            className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
-          >
+          <span className="text-sm font-bold">How it was paid</span>
+          <NativeSelect value={how} onChange={e => setHow(e.target.value as PaidHow)} aria-label={`How it was paid back, ${label}`}>
             {(Object.keys(PAID_HOW_LABEL) as PaidHow[]).map(k => (
               <option key={k} value={k}>
                 {PAID_HOW_LABEL[k]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <Button
-          size="touch"
           icon={Check}
           busy={pay.isPending}
           busyLabel="Saving"
           aria-label={`Mark paid back: ${label}`}
-          className="text-base"
+          className="max-md:h-touch"
           onClick={() =>
             pay.mutate(
               { id: claim.id, paidHow: how },

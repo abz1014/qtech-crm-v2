@@ -239,7 +239,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
   const showList = open && !disabled
   const optionId = (i: number) => `${listId}-o${i}`
   const typing = query !== null && typed !== ''
-  const rowHeight = size === 'phone' ? 'min-h-[44px]' : 'h-[36px]'
+  const rowHeight = size === 'phone' ? 'min-h-touch' : 'h-control-sm'
 
   return (
     <RadixPopover.Root open={showList}>
@@ -278,8 +278,8 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
             className={cn(
               controlClass,
               'text-ellipsis',
-              size === 'cell' && 'h-[36px]',
-              size === 'phone' && 'h-[44px] text-base',
+              size === 'cell' && 'h-control-sm',
+              size === 'phone' && 'h-touch text-base',
               prefilled && !typing && 'text-fg-2',
               typing && 'pr-[6rem]',
               chevron && !typing && 'pr-8',
@@ -305,9 +305,9 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
           onInteractOutside={e => {
             if (inputRef.current?.parentElement?.contains(e.target as Node)) e.preventDefault()
           }}
-          className="z-[70] w-[max(var(--radix-popover-trigger-width),320px)] max-w-[calc(100vw-16px)] focus:outline-none"
+          className="z-dialog w-[max(var(--radix-popover-trigger-width),20rem)] max-w-[calc(100vw-16px)] focus:outline-none"
         >
-          <div className="animate-rise-4 rounded bg-surface p-1 shadow-pop" onMouseDown={e => e.preventDefault()}>
+          <div className="animate-rise-4 rounded-control border bg-surface p-1 shadow-e3" onMouseDown={e => e.preventDefault()}>
             <ul id={listId} role="listbox" aria-label="Categories" className="max-h-[min(320px,45dvh)] overflow-y-auto">
               {matches.map((c, i) => [
                 headings.has(i) ? (
@@ -350,7 +350,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                 </li>
               ) : null}
               {matches.length === 0 && !canCreate && !misc ? (
-                <li role="presentation" className="flex h-[36px] items-center px-2 text-sm text-fg-muted">
+                <li role="presentation" className="flex h-control-sm items-center px-2 text-sm text-fg-muted">
                   No category matches “{typed}”
                 </li>
               ) : null}
@@ -406,7 +406,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                         }}
                         className={cn(
                           'inline-flex items-center rounded border px-3 text-sm',
-                          size === 'phone' ? 'min-h-[44px]' : 'h-[32px]',
+                          size === 'phone' ? 'min-h-touch' : 'h-control-sm',
                           g.id === createGroupId ? 'border-fg bg-selected font-medium text-fg' : 'border-line-input text-fg-2',
                         )}
                       >
@@ -415,14 +415,14 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                     ))}
                   </div>
                 ) : (
-                  <span className={cn('flex flex-wrap items-center gap-x-2', size === 'phone' ? 'min-h-[44px]' : 'min-h-[32px]')}>
+                  <span className={cn('flex flex-wrap items-center gap-x-2', size === 'phone' ? 'min-h-touch' : 'min-h-control-sm')}>
                     <span>
                       Goes under <b className="font-medium text-fg-2">{createGroupName ?? 'Office running'}</b>
                     </span>
                     <button
                       type="button"
                       onClick={() => setPickGroup(true)}
-                      className={cn('rounded font-medium text-primary underline-offset-2 hover:underline', size === 'phone' && 'min-h-[44px] px-2')}
+                      className={cn('rounded font-medium text-primary underline-offset-2 hover:underline', size === 'phone' && 'min-h-touch px-2')}
                     >
                       Change group
                     </button>
@@ -431,7 +431,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
               </div>
             ) : null}
             {size === 'phone' ? null : (
-              <footer className="mt-[2px] flex items-center gap-4 border-t px-2 pb-[2px] pt-[6px] text-xs text-fg-muted">
+              <footer className="mt-px flex items-center gap-4 border-t px-2 pb-px pt-2 text-xs text-fg-muted">
                 <span className="inline-flex items-center gap-1">
                   <Kbd size="inline">↑</Kbd>
                   <Kbd size="inline">↓</Kbd>choose

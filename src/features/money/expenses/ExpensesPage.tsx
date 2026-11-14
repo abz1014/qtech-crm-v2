@@ -2,7 +2,10 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Rows3 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
+import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
+import { Skeleton } from '@/ui/Skeleton'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { BurstSheet } from '@/features/money/expenses/BurstSheet'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
@@ -68,26 +71,26 @@ export function ExpensesPage() {
     >
       {/* Desktop (lg): the list in the main column, the side panels in a narrow one. The wrappers are `contents` below lg, so a phone and a
           tablet keep one column and the order classes: claims, Quick add, then (phone) the list, Recurring, cash / (tablet) cash, Recurring, the list. */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-x-8">
-        <div className="contents lg:grid lg:min-w-0 lg:gap-4">
-          <div className="order-2">
-            {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <div className="h-[220px] animate-pulse rounded-panel border bg-sunken" aria-hidden="true" />}
+      <div className="grid gap-card-gap lg:grid-cols-[minmax(0,1fr)_minmax(0,21.25rem)] lg:items-start">
+        <div className="contents lg:grid lg:min-w-0 lg:gap-card-gap">
+          <div className="order-2 min-w-0">
+            {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <QuickAddSkeleton />}
           </div>
-          <div className="order-5 max-sm:order-3">
+          <div className="order-5 min-w-0 max-sm:order-3">
             <ExpensesTab />
           </div>
         </div>
-        <div className="contents lg:grid lg:min-w-0 lg:gap-4">
-          {/* To approve and Owed (one line each on a phone) come first while there are any; cash and the misc banners follow the list on a phone. */}
-          <div className="order-1 grid gap-0 empty:hidden">
+        <div className="contents lg:grid lg:min-w-0 lg:gap-card-gap">
+          {/* To approve and Claims to repay (one card row each on a phone) come first while there are any; cash and the misc banners follow the list on a phone. */}
+          <div className="order-1 grid min-w-0 gap-card-gap empty:hidden">
             {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
             <OwedToStaff />
           </div>
-          <div className="order-3 grid gap-0 empty:hidden max-sm:order-5">
+          <div className="order-3 grid min-w-0 gap-card-gap empty:hidden max-sm:order-5">
             <CashInHandLine fold />
             <MiscPromoteBanners />
           </div>
-          <div className="order-4 empty:hidden">{cats.data ? <RecurringPanel categories={cats.data} today={today} /> : null}</div>
+          <div className="order-4 min-w-0 empty:hidden">{cats.data ? <RecurringPanel categories={cats.data} today={today} /> : null}</div>
         </div>
       </div>
       <BurstSheet
@@ -111,5 +114,26 @@ export function ExpensesPage() {
         <AddExpenseDialog open context={context} onOpenChange={o => !o && closeLinked()} />
       ) : null}
     </MoneyFrame>
+  )
+}
+
+/** Quick add while the categories load: the card's shape (title line, the amount box and Save, a row of category buttons). */
+function QuickAddSkeleton() {
+  return (
+    <div className={cn(CARD, 'grid gap-4 p-card')} aria-hidden="true">
+      <div className="flex items-center justify-between gap-4">
+        <Skeleton className="h-6 w-28" />
+        <Skeleton className="h-5 w-56 max-sm:hidden" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-control-lg flex-1" />
+        <Skeleton className="h-control-lg w-28" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {[24, 32, 20, 28, 16].map(w => (
+          <Skeleton key={w} className="h-control rounded-pill" style={{ width: `${w / 4}rem` }} />
+        ))}
+      </div>
+    </div>
   )
 }

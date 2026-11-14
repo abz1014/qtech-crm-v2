@@ -65,7 +65,6 @@ test('Forest expenses: the page, the sheet, the dialog and I paid, at 1440, 768,
   await must(rpc('admin', 'owe_expense_claim', { p_claim: owed.id, p_category: FUEL }))
   const [refused] = await must(rest<{ id: string }[]>('engineer', 'expense_claims', { method: 'POST', body: { amount_pkr: 300, note: 'Parking' } }))
   await must(rest('admin', `expense_claims?id=eq.${refused.id}`, { method: 'PATCH', body: { status: 'rejected', reject_reason: 'Parking is paid by the customer on this job' } }))
-  await must(rest('sales', 'expense_claims', { method: 'POST', body: { amount_pkr: 1200, note: 'Taxi to the client meeting' } }))
 
   await openAs(page, 'admin', '/money/expenses')
   for (const [w, h] of WIDTHS) {
@@ -80,8 +79,10 @@ test('Forest expenses: the page, the sheet, the dialog and I paid, at 1440, 768,
   for (const [w, h] of [WIDTHS[0], WIDTHS[2]]) {
     await page.setViewportSize({ width: w, height: h })
     await page.goto('/money/expenses?burst=1')
-    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeVisible()
-    await page.getByRole('textbox', { name: 'Amount, row 1' }).fill('4500')
+    // the sheet is a table of rows from 1280 wide and a card per expense below it
+    const amount = page.getByRole('textbox', { name: /^Amount, (row|expense) 1$/ })
+    await expect(amount).toBeVisible()
+    await amount.fill('4500')
     await page.waitForTimeout(300)
     await shoot(page, 'add-expenses', w, h, true)
 
@@ -92,14 +93,20 @@ test('Forest expenses: the page, the sheet, the dialog and I paid, at 1440, 768,
   }
 
   for (const role of ['engineer', 'sales'] as const) {
-    await openAs(page, role, '/my-expenses')
-    for (const [w, h] of [WIDTHS[0], WIDTHS[2]]) {
-      await page.setViewportSize({ width: w, height: h })
-      await page.goto('/my-expenses')
-      await expect(page.locator('#main')).toBeVisible()
-      await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(400)
-      await shoot(page, `ipaid-${role}`, w, h)
+    // sales's own claim is taken back straight after its pictures: another spec asserts that sales see no claim
+    const [mine] = role === 'sales' ? await must(rest<{ id: string }[]>('sales', 'expense_claims', { method: 'POST', body: { amount_pkr: 1200, note: 'Taxi to the client meeting' } })) : [null]
+    try {
+      await openAs(page, role, '/my-expenses')
+      for (const [w, h] of [WIDTHS[0], WIDTHS[2]]) {
+        await page.setViewportSize({ width: w, height: h })
+        await page.goto('/my-expenses')
+        await expect(page.locator('#main')).toBeVisible()
+        await page.waitForLoadState('networkidle')
+        await page.waitForTimeout(400)
+        await shoot(page, `ipaid-${role}`, w, h)
+      }
+    } finally {
+      if (mine) await must(rest('sales', `expense_claims?id=eq.${mine.id}`, { method: 'DELETE' }))
     }
   }
 })
