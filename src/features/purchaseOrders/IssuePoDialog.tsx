@@ -312,7 +312,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         icon={FileCheck2}
         size="lg"
         className="md:w-[min(820px,calc(100vw-2rem))]"
-        meta={<span className="num inline-flex h-6 items-center rounded border border-line-strong bg-surface px-2 text-xs text-fg-2">{tag}</span>}
+        meta={<Tag className="whitespace-normal border-line-strong bg-transparent px-2 text-fg-2">{tag}</Tag>}
         lead={
           <Button icon={FileText} onClick={() => void preview()} busy={previewing} busyLabel="Preparing" disabled={loading || ccy === null || rows.length === 0}>
             Preview PDF
@@ -332,7 +332,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         {loading ? (
           <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the purchase order">
             <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-[10rem] w-full" />
+            <Skeleton className="h-[10rem] w-full rounded-control" />
           </div>
         ) : loadFailed ? (
           <Banner tone="danger" title="The purchase order could not be prepared" action={<Button onClick={() => void prefill.refetch()}>Try again</Button>}>
@@ -410,9 +410,9 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
                 columns={columns}
                 twoLine
               />
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-row border bg-sunken px-4 py-3 text-xs text-fg-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-control bg-sunken px-4 py-3 text-sm text-fg-2">
                 <span>{conversion ?? `Total in ${ccy ?? '—'}`}</span>
-                <span className="num text-sm font-medium text-fg" data-testid="po-total">
+                <span className="num text-base font-semibold text-fg" data-testid="po-total">
                   {ccy ?? ''} {formatAmount(total, 'always')}
                 </span>
               </div>
