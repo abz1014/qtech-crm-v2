@@ -55,7 +55,7 @@ export function ReportsFrame({
       {/* The report's select and its period on ONE row. */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         {named ? (
-          <label className="grid min-w-0 flex-[1_1_200px] gap-1 text-base font-medium text-fg-2 sm:w-[320px] sm:flex-none">
+          <label className="grid min-w-0 flex-[1_1_12.5rem] gap-1 text-sm font-card text-fg sm:w-[20rem] sm:flex-none">
             Report
             <Select
               data-testid="report-picker"

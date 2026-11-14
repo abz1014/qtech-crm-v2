@@ -33,6 +33,24 @@ async function seed(): Promise<Seed> {
   return { customer, reason: 'The customer chose a competitor' }
 }
 
+/** A whole-page picture in the run's test-results (the CI artifact): the page scrolls inside the shell, so the window is grown to the
+ * content for the picture and put back after. */
+async function wholePage(page: Page, name: string) {
+  const size = page.viewportSize() ?? { width: 1440, height: 900 }
+  const tall = await page.evaluate(() =>
+    Math.max(
+      ...Array.from(document.querySelectorAll('#main, #main *'))
+        .filter(e => /auto|scroll/.test(getComputedStyle(e).overflowY))
+        .map(e => e.scrollHeight + e.getBoundingClientRect().top),
+      window.innerHeight,
+    ),
+  )
+  await page.setViewportSize({ width: size.width, height: Math.min(Math.ceil(tall) + 120, 6000) })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true })
+  await page.setViewportSize(size)
+}
+
 function watch(page: Page) {
   const urls: string[] = []
   const bodies: string[] = []
@@ -88,6 +106,7 @@ for (const role of ['admin', 'sales'] as const) {
       if (role === 'sales') await expect(page.getByTestId('report-picker')).toHaveCount(0)
       await waitForAnimationsToFinish(page)
       await review(page, `p01-reports-${role}-1440`)
+      await wholePage(page, `forest-c4-reports-${role}-1440`)
 
       // network log: the four report views were read, and no report answer holds a money-looking column
       const mine = log.urls.filter(u => u.includes('/rest/v1/'))
@@ -112,6 +131,7 @@ for (const role of ['admin', 'sales'] as const) {
       expect(overflow).toBeLessThanOrEqual(0)
       await waitForAnimationsToFinish(page)
       await review(page, `p01-reports-${role}-375`)
+      await wholePage(page, `forest-c4-reports-${role}-375`)
       expect(await axeViolations(page)).toEqual([])
     })
   })
