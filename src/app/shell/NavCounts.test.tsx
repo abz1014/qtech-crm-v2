@@ -12,7 +12,7 @@ import { installFakeDb } from '@/test/fakeSupabase'
 /*
  * E-SH-01, revised by the owner's redesign approval of 2026-10-22 (phase 0, "stop the noise"): ONE number in the top bar, on
  * Today, and it means "needs you" by the one definition (features/today/needsYou.ts): due today or late, not Waiting, not older
- * than 30 days. Jobs, Money and Companies carry no number any more. Every number still comes from the person's own Today list.
+ * than 30 days. Sell, Money and Companies carry no number any more. Every number still comes from the person's own Today list.
  */
 const twoDaysAgo = addDays(businessToday(), -2) as string
 const open = (n: number, receivedOn = twoDaysAgo) => ({ rfq_id: `r${n}`, number: n, company_id: 'c', owner_id: null as string | null, received_on: receivedOn, due_on: null, outcome: 'open', sourcing_state: 'not_floated', clarification_state: 'none', bid_state: 'to_bid', companies: { name: 'Acme' }, users: null })
@@ -41,17 +41,18 @@ function mount(role: 'admin' | 'engineer', rfqs = [open(1)]) {
 describe('the top bar has one number: Today\'s "needs you"', () => {
   it('makes no head request for active orders: every number comes from the Today list', async () => {
     const { fake, bar } = mount('admin')
-    await within(bar).findByRole('link', { name: /^To do\s?, 1 due now$/ })
+    await within(bar).findByRole('link', { name: /^Home\s?, 1 due now$/ })
     expect(fake.calls.some(c => c.target === 'v_order_state' && /head|count/.test(JSON.stringify(c)))).toBe(false)
   })
 
-  it('Today counts the items due today or late (three RFQs nobody asked suppliers about); Jobs, Money and Companies carry no number', async () => {
+  it('Today counts the items due today or late (three RFQs nobody asked suppliers about); Sell, Money and Companies carry no number', async () => {
     const { bar } = mount('admin', [open(1), open(2), open(3)])
-    expect(await within(bar).findByRole('link', { name: /^To do\s?, 3 due now$/ })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: /^Home\s?, 3 due now$/ })).toBeInTheDocument()
     // "Plan commissioning" and the FBR roll-up are ready-to-move chores: listed on Today, never counted
-    expect(within(bar).getByRole('link', { name: 'Jobs' })).toBeInTheDocument()
+    expect(within(bar).getByRole('link', { name: 'Sell' })).toBeInTheDocument()
     expect(within(bar).getByRole('link', { name: 'Money' })).toBeInTheDocument()
-    expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
+    // one lane carries a number (the rail draws it twice: on the icon at 72 wide, beside the word at 240)
+    expect([...bar.querySelectorAll('a')].filter(a => a.querySelector('[data-needs-count]'))).toHaveLength(1)
   })
 
   it('an item older than 30 days is not counted (it waits in Today\'s grey fold)', async () => {
@@ -59,9 +60,10 @@ describe('the top bar has one number: Today\'s "needs you"', () => {
     // the fresh one is counted, the one from January 2025 is not (on a Monday the admin's weekly review row, which that old enquiry
     // is on, is counted too: it is real work for that day)
     const n = isMonday(businessToday()) ? 2 : 1
-    expect(await within(bar).findByRole('link', { name: new RegExp(`^To do\\s?, ${n} due now$`) })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: new RegExp(`^Home\\s?, ${n} due now$`) })).toBeInTheDocument()
     expect(fake.calls.some(c => c.target === 'v_rfq_state')).toBe(true)
-    expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
+    // one lane carries a number (the rail draws it twice: on the icon at 72 wide, beside the word at 240)
+    expect([...bar.querySelectorAll('a')].filter(a => a.querySelector('[data-needs-count]'))).toHaveLength(1)
   })
 
   it('an engineer: no Money entry, no money request, and no number for a chore that is not due (plan commissioning)', async () => {

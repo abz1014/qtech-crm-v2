@@ -1,9 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
-import { navItemForPath, type CountKey } from '@/app/navConfig'
+import { activeLink, navItemForPath, railLinks, type CountKey } from '@/app/navConfig'
 import { useSession, type SessionUser } from '@/app/session'
-import { cn } from '@/lib/utils'
 import { ToastProvider } from '@/ui/Toast'
 import { useSearchPaletteSource } from '@/features/search/paletteSource'
 import { PaletteHost } from '@/app/palette/PaletteHost'
@@ -11,8 +10,8 @@ import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
-import { EngineerFab } from '@/app/shell/EngineerFab'
-import { hidesEngineerFab } from '@/app/shell/hidesEngineerFab'
+import { Rail } from '@/app/shell/Rail'
+import { useRailCollapsed } from '@/app/shell/useRailCollapsed'
 import { TopBar } from '@/app/shell/TopBar'
 import type { NavCounts } from '@/app/shell/useNavCounts'
 import { usePageSettled } from '@/app/usePageSettled'
@@ -37,10 +36,9 @@ interface AppShellProps {
 }
 
 /**
- * AppShell composite (INVENTORY section 2). A viewport-tall frame: top bar on
- * tablet and desktop, mobile bar plus bottom tab bar on phones, one scrolling
- * <main> between. A render error inside a page is caught here, so the
- * navigation stays usable and the person can move on.
+ * AppShell composite (INVENTORY section 2; Forest, 02-navigation.html). A viewport-tall frame: from 768 up the forest rail on the
+ * left (240, or 72 from 768 to 1023 and when collapsed) and the top bar above one scrolling <main>; below 768 the forest top band,
+ * <main> and the bottom bar. A render error inside a page is caught here, so the navigation stays usable and the person can move on.
  */
 export function AppShell({ counts }: AppShellProps) {
   const session = useSession()
@@ -98,34 +96,36 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   }, [])
   const palette = usePalette()
   useSearchPaletteSource()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  const [collapsed, toggleRail] = useRailCollapsed()
+  // The lane the address belongs to (Sell, Deliver: two views of /jobs) names the page before the route's own destination does.
+  const lane = activeLink(railLinks(user.role), pathname, search)
   const active = navItemForPath(pathname)
   const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
-  const title = phoneTitle(pathname) ?? active?.label ?? (inSettings ? 'Settings' : 'Q-Tech CRM')
+  const section = lane?.label ?? active?.label ?? (inSettings ? 'Settings' : null)
+  const title = phoneTitle(pathname) ?? section ?? 'Q-Tech CRM'
 
-  // The engineer's pill overlaps <main> by 12 px: shown only where it covers nothing, and then <main> gets 12 px of room under its last row.
-  const showFab = user.role === 'engineer' && !hidesEngineerFab(pathname)
-
-  useRouteFocus(pathname, active?.label ?? (inSettings ? 'Settings' : null))
+  useRouteFocus(pathname, section)
 
   return (
-    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
+    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas md:grid-cols-[auto_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]">
       <a
         href="#main"
-        className="sr-only rounded border bg-surface px-3 py-2 text-sm font-medium focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50"
+        className="sr-only rounded-control border bg-surface px-3 py-2 text-sm font-medium focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-toast"
       >
         Skip to content
       </a>
-      <TopBar user={user} counts={badges} dots={dots} onSearch={palette.open} />
+      <Rail user={user} counts={badges} dots={dots} collapsed={collapsed} onToggle={toggleRail} />
+      <TopBar user={user} onSearch={palette.open} />
       <MobileBar user={user} title={title} onSearch={palette.open} />
-      <main id="main" tabIndex={-1} className={cn('relative min-h-0 overflow-y-auto focus:outline-none', showFab && 'max-md:pb-3')}>
+      <main id="main" tabIndex={-1} className="relative min-h-0 min-w-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
           <NavCountsContext.Provider value={nav.ready ? counts : null}>
             <Outlet />
           </NavCountsContext.Provider>
         </ErrorBoundary>
       </main>
-      <BottomTabs role={user.role} counts={badges} dots={dots} fab={showFab ? <EngineerFab /> : undefined} />
+      <BottomTabs role={user.role} counts={badges} dots={dots} />
       {settled ? (
         <Suspense fallback={null}>
           <HelpHost />

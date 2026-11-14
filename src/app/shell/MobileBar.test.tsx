@@ -47,9 +47,9 @@ function shell(entries: string[], routes: ReactNode) {
 const where = () => screen.getByTestId('where').textContent
 
 describe('phone bar: the one-bar form', () => {
-  it('default: logo, title, search, avatar, and the tab bar (no Paste or photo button)', () => {
+  it('default: title, search, avatar, and the tab bar (no Paste or photo button, no logo: the title has the room)', () => {
     shell(['/rfqs'], null)
-    expect(screen.getByRole('link', { name: 'Q-Tech, home' })).toBeInTheDocument()
+    expect(screen.getByText('RFQs')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Paste or photo' })).toBeNull()
     expect(screen.getByRole('button', { name: /Account menu/ })).toBeInTheDocument()

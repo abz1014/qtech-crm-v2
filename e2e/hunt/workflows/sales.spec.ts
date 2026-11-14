@@ -440,7 +440,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await startIntake(page, info, cust)
       await pasteOnPage(page, { text: `Temperature transmitter PT100 ${tag()} - 4 nos` })
       await expect(page.getByRole('textbox', { name: 'Description of item 1', exact: true })).toBeVisible(T)
-      await vis(page.getByRole('link', { name: /^Jobs/ })).click()
+      await vis(page.getByRole('link', { name: /^Sell/ })).click()
       const leave = page.getByRole('dialog', { name: 'Leave this new RFQ?' })
       await expect(leave).toBeVisible(T)
       await layout(page, info, `${W} leave dialog`)

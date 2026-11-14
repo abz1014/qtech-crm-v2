@@ -244,8 +244,8 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await paste(page, s.email)
     await expect(page.getByText('2 items found').first()).toBeVisible()
 
-    // A tab in the top bar: the screen asks first, and Stay keeps everything.
-    const rfqsTab = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Jobs/ })
+    // A lane in the rail: the screen asks first, and Stay keeps everything.
+    const rfqsTab = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Sell/ })
     await rfqsTab.click()
     const ask = page.getByRole('dialog', { name: 'Leave this new RFQ?' })
     await expect(ask).toContainText(`${s.customer.name}, 2 items`)
@@ -284,7 +284,7 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await expect(page.getByText('2 items found').first()).toBeVisible()
-    await page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Jobs/ }).click()
+    await page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Sell/ }).click()
     await page.getByRole('dialog', { name: 'Leave this new RFQ?' }).getByRole('button', { name: 'Leave, keep the draft' }).click()
     await expect(page).toHaveURL(/\/jobs/)
 

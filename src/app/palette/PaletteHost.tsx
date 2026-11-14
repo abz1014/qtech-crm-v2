@@ -26,7 +26,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { navItemsForRole } from "@/app/navConfig";
+import { navItemsForRole, railLinks } from "@/app/navConfig";
 import { settingsLinksFor } from "@/features/settings/settingsLinks";
 import { PaletteContext, type PaletteApi } from "@/app/palette/usePalette";
 import { KEYBOARD_MEDIA } from "@/app/shell/shortcuts";
@@ -43,10 +43,16 @@ import {
 
 /** The old destination names, kept as search words: RFQs and Orders are Jobs now; To collect is To collect (a Money page). */
 const NAV_SYNONYMS: Record<string, string[]> = {
-  today: ["today", "tasks"],
+  today: ["to do", "todo", "today", "tasks"],
   jobs: ["rfqs", "rfq", "orders", "order", "enquiries", "enquiry", "quotations"],
   money: ["payments", "invoices", "expenses"],
   companies: ["customers", "suppliers"],
+};
+
+/** The lanes' search words: what each one holds (02-navigation.html: Sell is stages 1-2, Deliver 3-5). */
+const LANE_SYNONYMS: Record<string, string[]> = {
+  sell: ["enquiries", "enquiry", "rfqs", "quotations", "quotes"],
+  deliver: ["orders", "supplier orders", "delivery", "deliveries"],
 };
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
@@ -300,6 +306,17 @@ export function PaletteHost({
         // the old words still find their new home (redesign phase 5: one door per action, plus Search)
         keywords: NAV_SYNONYMS[n.key],
       })),
+      // The two lanes of the office's rail (Forest, gate 2): views of the one Jobs list, so they sit beside Jobs, not instead of it.
+      ...railLinks(role)
+        .filter((l) => l.id === "sell" || l.id === "deliver")
+        .map((l) => ({
+          id: `lane-${l.id}`,
+          label: l.label,
+          icon: l.icon,
+          meta: "Go to",
+          href: l.to,
+          keywords: LANE_SYNONYMS[l.id],
+        })),
       ...placesFor(role),
     ];
     return {
@@ -346,7 +363,7 @@ export function PaletteHost({
         : []),
       {
         id: "go-today",
-        label: "Go to To do",
+        label: "Go to Home",
         icon: CalendarCheck,
         shortcut: ["G T"],
         href: TODAY_ROUTE,

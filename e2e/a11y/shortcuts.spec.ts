@@ -71,7 +71,7 @@ test('an engineer\'s shortcuts sheet lists only keys that work for them (live bu
     await pressOnNavLink(page, '?')
     const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(sheet).toBeVisible()
-    await expect(sheet.getByText('Go to To do')).toBeVisible()
+    await expect(sheet.getByText('Go to Home')).toBeVisible()
     await expect(sheet.getByText('New RFQ')).toHaveCount(0)
     await expect(sheet.getByText('Add an expense')).toHaveCount(0)
     await expect(sheet.getByText('Order without RFQ')).toHaveCount(0)

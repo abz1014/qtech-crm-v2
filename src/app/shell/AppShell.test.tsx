@@ -49,54 +49,71 @@ function navs() {
   )
 }
 
-describe('page shell navigation, per role', () => {
-  it('admin: all four, in order, on both bars', () => {
+describe('page shell navigation, per role (Forest lanes: the rail, then the phone bar)', () => {
+  it('admin: the rail is Home, Sell, Deliver, Money, Companies; the phone bar Home, Sell, Deliver, Money with the + between', () => {
     render(signedIn('admin'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
-        "To do -> /todo",
-        "Jobs -> /jobs",
+        "Home -> /todo",
+        "Sell -> /jobs?lane=sell",
+        "Deliver -> /jobs?lane=deliver",
         "Money -> /money",
         "Companies -> /companies",
       ]
     `)
-    expect(navs()[1]).toEqual(navs()[0])
+    expect(navs()[1]).toEqual(navs()[0].slice(0, 4))
+    const bar = el.querySelectorAll('nav[aria-label="Main"]')[1]
+    expect([...bar.children].map(c => c.getAttribute('aria-label') ?? c.textContent?.trim())).toEqual(['Home', 'Sell', 'Create', 'Deliver', 'Money'])
   })
 
-  it('sales: all four, in order, on both bars', () => {
+  it('sales: the same lanes as admin', () => {
     render(signedIn('sales'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
-        "To do -> /todo",
-        "Jobs -> /jobs",
+        "Home -> /todo",
+        "Sell -> /jobs?lane=sell",
+        "Deliver -> /jobs?lane=deliver",
         "Money -> /money",
         "Companies -> /companies",
       ]
     `)
-    expect(navs()[1]).toEqual(navs()[0])
+    expect(navs()[1]).toEqual(navs()[0].slice(0, 4))
   })
 
-  it('engineer: To do and Jobs only, never Money or Companies (top bar or tab bar)', () => {
+  it('engineer: their own lists, Home, I paid and Jobs on the rail, Home, Camera, I paid and Jobs on the bar; never Money, Sell or Create', () => {
     render(signedIn('engineer'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
-        "To do -> /todo",
+        "Home -> /todo",
+        "I paid -> /my-expenses",
         "Jobs -> /jobs",
       ]
     `)
-    expect(navs()[1]).toEqual(navs()[0])
+    expect(navs()[1]).toMatchInlineSnapshot(`
+      [
+        "Home -> /todo",
+        "Camera -> /capture",
+        "I paid -> /my-expenses",
+        "Jobs -> /jobs",
+      ]
+    `)
     expect(el.querySelector('a[href="/money"]')).toBeNull()
     expect(el.textContent).not.toContain('Money')
+    expect(el.textContent).not.toContain('Sell')
+    expect(el.querySelector('[data-create-tab]')).toBeNull()
+    expect([...el.querySelectorAll('button')].some(b => b.textContent?.includes('Create'))).toBe(false)
+    // the lime button on an engineer's rail is Take photo, to Capture
+    expect(el.querySelector('[data-rail] a[href="/capture"]')?.textContent).toContain('Take photo')
   })
 
   it('unknown role: no destinations', () => {
     render(signedIn('guest'), '/todo')
-    expect(navs()).toEqual([[], []])
+    expect(navs()).toEqual([[]])
   })
 })
 
 describe('routing and role landing', () => {
-  it.each(['admin', 'sales', 'engineer'])('%s lands on To do from /', role => {
+  it.each(['admin', 'sales', 'engineer'])('%s lands on Home (/todo) from /', role => {
     render(signedIn(role), '/')
     // Today is a lazy screen now (R11): the shell lands on its route; the screen itself is covered in features/today.
     expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/todo')
@@ -135,38 +152,26 @@ describe('routing and role landing', () => {
     expect(el.querySelector('main h1')?.textContent).toBe('Page not found')
   })
 
-  it('a sub-route keeps its section active', () => {
-    render(signedIn('admin'), '/jobs/177')
+  it('a lane lights from its ?lane=, and a sub-route keeps its section active', () => {
+    render(signedIn('admin'), '/jobs?lane=deliver')
+    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/jobs?lane=deliver')
+    act(() => root?.unmount())
+    el.remove()
+    render(signedIn('admin'), '/money/gst-register')
+    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/money')
+  })
+
+  it('an engineer\'s Jobs stays lit on a job page', () => {
+    render(signedIn('engineer'), '/jobs/177')
     expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/jobs')
   })
 })
 
-describe('the engineer\'s phone bar (P7-C)', () => {
-  it('only an engineer has the Photo or note button and I paid; admin and sales have neither', () => {
-    render(signedIn('engineer'), '/todo')
-    expect(el.querySelector('[data-engineer-fab]')).not.toBeNull()
-    act(() => root?.unmount())
-    el.remove()
-    render(signedIn('admin'), '/todo')
-    expect(el.querySelector('[data-engineer-fab]')).toBeNull()
-    act(() => root?.unmount())
-    el.remove()
-    render(signedIn('sales'), '/todo')
-    expect(el.querySelector('[data-engineer-fab]')).toBeNull()
-  })
-
-  it('main gets max-md:pb-3 while the pill shows, and neither on the screens where it is hidden', () => {
-    render(signedIn('engineer'), '/todo')
-    expect(el.querySelector('[data-engineer-fab]')).not.toBeNull()
-    expect(el.querySelector('main')?.className).toContain('max-md:pb-3')
-    act(() => root?.unmount())
-    el.remove()
+describe('the engineer\'s phone bar (gate 2, question 3)', () => {
+  it('is a bar of four that does not float over the page: no pill, and <main> needs no extra room', () => {
     render(signedIn('engineer'), '/my-expenses')
     expect(el.querySelector('[data-engineer-fab]')).toBeNull()
-    expect(el.querySelector('main')?.className).not.toContain('max-md:pb-3')
-    act(() => root?.unmount())
-    el.remove()
-    render(signedIn('admin'), '/todo')
-    expect(el.querySelector('main')?.className).not.toContain('max-md:pb-3')
+    expect(el.querySelector('nav[data-tabbar="engineer"] a[aria-current="page"]')?.getAttribute('href')).toBe('/my-expenses')
+    expect(el.querySelector('main')?.className).not.toContain('pb-3')
   })
 })
