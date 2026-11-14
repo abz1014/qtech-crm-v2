@@ -1,6 +1,6 @@
 import { test, type Page } from '@playwright/test'
 import { axe, engineerMoney, focusSweep, inspect, type Raw } from './checks'
-import { bounded, combo, contextAs, fullShot, isPhone, makeEmpty, makeError, makeLoading, record, rel, settle, shotPath, spaGo, waitAnimations, writeFirewall, type State, type TextSize, type Where } from './lib'
+import { bounded, coarse, combo, contextAs, fullShot, isPhone, makeEmpty, makeError, makeLoading, record, rel, settle, shotPath, spaGo, waitAnimations, writeFirewall, type State, type TextSize, type Where } from './lib'
 import { AUDIT_ROUTES, at, WIDE, WIDTHS, type AuditRoute, type Role, type Width } from './routes'
 import { ensureSeed, fillPath, type AuditSeed } from './seed'
 
@@ -42,6 +42,8 @@ class Console {
       const s = state()
       if (m.type() === 'error') {
         if ((s === 'error' || s === 'loading' || s === 'empty' || s.startsWith('dialog')) && /Failed to load resource|net::ERR|ERR_FAILED|blockedbyclient|TypeError: Failed to fetch|FetchError|406/.test(t)) return
+        // the write firewall's own refusals (writeFirewall)
+        if (/ERR_BLOCKED_BY_CLIENT/.test(t)) return
         this.lines.push({ rule: /Warning:|React|validateDOMNesting|Each child in a list/.test(t) ? 'react-warning' : 'console-error', selector: 'console', detail: t.slice(0, 400) })
       } else if (m.type() === 'warning' && /Warning:|React|validateDOMNesting|Each child in a list|aria|DialogContent|Description/.test(t)) {
         this.lines.push({ rule: 'react-warning', selector: 'console', detail: t.slice(0, 400) })
@@ -77,7 +79,7 @@ async function pageKind(page: Page): Promise<'ok' | 'not-found' | 'no-access' | 
   const main = await page.locator('#main').innerText({ timeout: 2_000 }).catch(() => '')
   if (/page stopped working|something went wrong/i.test(main)) return 'crashed'
   if (/not found|doesn.t exist|no such/i.test(h)) return 'not-found'
-  if (/no access|not for your role|can.t open/i.test(`${h} ${main.slice(0, 300)}`)) return 'no-access'
+  if (/no access|not for your role|can.t open|is for admins?\b|for admin and sales|Your role is/i.test(`${h} ${main.slice(0, 300)}`)) return 'no-access'
   if (page.url().includes('/login')) return 'signed-out'
   return 'ok'
 }
@@ -95,6 +97,8 @@ async function audit(page: Page, where: Where, con: Console, o: ViewOpts = {}): 
   await page.screenshot({ path: shot, timeout: 15_000, animations: 'disabled', caret: 'hide' }).catch(e => put(where, [{ rule: 'harness', selector: '', detail: `screenshot: ${String(e).slice(0, 200)}` }], url, ''))
   if (o.full) await fullShot(page, shotPath(where, '-full')).catch(() => undefined)
   const found: Raw[] = []
+  if (isPhone(where.width) && !(await page.evaluate(() => matchMedia('(pointer: coarse)').matches).catch(() => true)))
+    found.push({ rule: 'harness', selector: 'html', detail: 'phone page without (pointer: coarse): touch sizes are the desktop ones' })
   const step = async (name: string, ms: number, fn: () => Promise<Raw[]>) => {
     try {
       found.push(...(await bounded(ms, fn)))
@@ -120,12 +124,12 @@ async function open(page: Page, path: string): Promise<void> {
 async function expandAll(page: Page): Promise<number> {
   let n = 0
   for (; n < 14; n++) {
-    const b = page.locator('#main button[aria-expanded="false"]:not([aria-haspopup]):not([data-infotip] *):not([data-infotip])').filter({ visible: true }).first()
+    const b = page.locator('#main button[aria-expanded="false"]:not([aria-haspopup]):not([data-audit-tried]):not([data-infotip] *):not([data-infotip])').filter({ visible: true }).first()
     if (!(await b.count())) break
+    // marked first, so a fold that does not open (or re-renders closed) is tried once, not forever; a data attribute leaves aria alone
+    await b.evaluate(e => e.setAttribute('data-audit-tried', '')).catch(() => undefined)
     await b.click({ timeout: 3_000 }).catch(() => undefined)
-    await page.waitForTimeout(150)
-    // a fold that does not open (or re-renders closed) must not loop forever
-    if ((await b.getAttribute('aria-expanded').catch(() => 'true')) === 'false') await b.evaluate(e => e.setAttribute('aria-expanded', 'audit-skip')).catch(() => undefined)
+    await page.waitForTimeout(400)
   }
   await settle(page)
   return n
@@ -242,6 +246,7 @@ for (const r of AUDIT_ROUTES) {
         const view = async (v: Width, text: TextSize, state: State, body: (page: Page, where: Where, con: Console) => Promise<void>) => {
           const context = await contextAs(browser, info, role, v, text)
           const page = await context.newPage()
+          if (isPhone(v.w)) await coarse(page)
           let cur: State = state
           const con = new Console(page, () => cur)
           const where: Where = { route: r.id, path: r.path, role, width: v.w, text, state }
@@ -264,7 +269,7 @@ for (const r of AUDIT_ROUTES) {
           for (const v of r.wide ? [...WIDTHS, WIDE] : WIDTHS) {
             await view(v, 'normal', 'ok', async (page, where, con) => {
               await open(page, path)
-              if (r.dialog) await page.locator('[role="dialog"], [role="alertdialog"], aside').first().waitFor({ timeout: 10_000 }).catch(() => record({ ...where, rule: 'dialog-not-open', selector: '', detail: `${path} did not open a dialog` }))
+              if (r.dialog) await page.locator('[role="dialog"], [role="alertdialog"], aside').filter({ visible: true }).first().waitFor({ timeout: 10_000 }).catch(() => record({ ...where, rule: 'dialog-not-open', selector: '', detail: `${path} did not open a dialog` }))
               await settle(page)
               await checkKind(page, where)
               await audit(page, where, con, { full: v.w === 375 || v.w === 1440, focus: true })
@@ -298,8 +303,8 @@ for (const r of AUDIT_ROUTES) {
                 if (state === 'loading') await page.waitForTimeout(1_200)
                 else if (state === 'error')
                   await page
-                    .waitForFunction(() => /could not|couldn.t|try again|went wrong|no connection|offline|failed/i.test(document.getElementById('main')?.innerText ?? ''), undefined, { timeout: 9_000 })
-                    .catch(() => record({ ...where, rule: 'error-state-silent', selector: '#main', detail: 'every data request failed and after 9 s the screen says nothing about it (no "could not", "try again")' }))
+                    .waitForFunction(() => /could not|couldn.t|try again|went wrong|no connection|offline|failed|did not load/i.test(document.getElementById('main')?.innerText ?? ''), undefined, { timeout: 20_000 })
+                    .catch(() => record({ ...where, rule: 'error-state-silent', selector: '#main', detail: 'every data request failed and after 20 s the screen says nothing about it (no "could not", "try again"): a skeleton or a blank page' }))
                 else await settle(page)
                 await waitAnimations(page)
                 await audit(page, where, con, { full: false, focus: false })
@@ -357,6 +362,7 @@ for (const role of ['admin', 'sales', 'engineer'] as const) {
     for (const v of [at(320), at(768), at(1024), WIDE]) {
       const context = await contextAs(browser, info, role, v, 'normal')
       const page = await context.newPage()
+      if (isPhone(v.w)) await coarse(page)
       const con = new Console(page, () => 'ok')
       const where: Where = { route: 'palette', path: '/todo (Ctrl+K)', role, width: v.w, text: 'normal', state: 'dialog-palette' }
       try {

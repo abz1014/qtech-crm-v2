@@ -101,6 +101,17 @@ export async function contextAs(browser: Browser, info: TestInfo, role: Role, v:
   return context
 }
 
+/**
+ * Emulates a touch screen's pointer media features (pointer: coarse, hover: none) on a phone page: hasTouch alone does not make
+ * (pointer: coarse) match in headless Chromium, and the app sizes its touch targets on it (index.css). Call it before the first goto.
+ */
+export async function coarse(page: Page): Promise<void> {
+  const cdp = await page.context().newCDPSession(page).catch(() => null)
+  await cdp
+    ?.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'light' }, { name: 'pointer', value: 'coarse' }, { name: 'any-pointer', value: 'coarse' }, { name: 'hover', value: 'none' }, { name: 'any-hover', value: 'none' }] })
+    .catch(() => undefined)
+}
+
 /** Waits until the screen has loaded: shell, no request in flight, no skeleton or busy region, fonts in, animations done. */
 export async function settle(page: Page, opts: { skeletons?: boolean } = {}): Promise<void> {
   await page.locator('#main, form').first().waitFor({ timeout: 15_000 }).catch(() => undefined)

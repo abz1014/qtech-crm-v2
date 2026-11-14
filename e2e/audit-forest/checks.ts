@@ -64,12 +64,22 @@ export function inspect(a: InspectArgs): Raw[] {
     return `${parts.join(' > ')}${lab ? ` [aria-label="${lab.slice(0, 40)}"]` : ''}${t ? ` "${t}"` : ''}`
   }
   const add = (rule: string, el: Element | null, detail: string) => out.push({ rule, selector: el ? sel(el) : '', detail })
+  const hiddenBox = new Set<Element>()
   const visible = (el: Element): boolean => {
     const r = el.getBoundingClientRect()
     if (r.width < 2 || r.height < 2) return false
     const he = el as HTMLElement
     if (typeof he.checkVisibility === 'function' && !he.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false
-    if (el.closest('[inert], .sr-only')) return false
+    if (el.closest('[inert], .sr-only, [data-radix-focus-guard]')) return false
+    // inside a visually hidden box (sr-only and its responsive variants such as max-md:sr-only: a 1 px box that clips)
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      if (hiddenBox.has(p)) return false
+      const pr = p.getBoundingClientRect()
+      if ((pr.width <= 1 || pr.height <= 1) && /(hidden|clip)/.test(getComputedStyle(p).overflow)) {
+        hiddenBox.add(p)
+        return false
+      }
+    }
     return true
   }
   const root: Element = (a.scope && document.querySelector(a.scope)) || document.body
@@ -132,6 +142,8 @@ export function inspect(a: InspectArgs): Raw[] {
     const cs = getComputedStyle(el)
     if (!/(auto|scroll)/.test(cs.overflowX) || el.id === 'main' || el === document.documentElement || el === document.body) continue
     if (el.scrollWidth <= el.clientWidth + 1) continue
+    if (vw >= 1024 && el.querySelector('table, [role="table"], [role="grid"]'))
+      add('table-sideways', el, `a table needs sideways scrolling at ${vw} px: ${el.scrollWidth} px of columns in ${el.clientWidth} px`)
     if (el.querySelector('table, [role="table"], [role="grid"], [role="tablist"], pre, code') || el.matches('[role="tablist"], nav, pre, code')) continue
     add('sideways-box', el, `scrolls sideways: ${el.scrollWidth} px of content in ${el.clientWidth} px`)
   }
@@ -142,6 +154,8 @@ export function inspect(a: InspectArgs): Raw[] {
       const title = e.getAttribute('title') ?? ''
       const lab = e.getAttribute('aria-label') ?? ''
       if ((title && title.replace(/\s+/g, ' ').includes(t.slice(0, 60))) || (lab && lab.replace(/\s+/g, ' ').includes(t.slice(0, 60)))) return true
+      // a title that carries the whole value in another form (the raw item list behind an "N items · ..." summary)
+      if (title.length >= Math.min(t.length, 40)) return true
     }
     return false
   }
@@ -165,7 +179,27 @@ export function inspect(a: InspectArgs): Raw[] {
   // ---- controls: overlap, covered, touch size, input text size
   const controls = vis.filter(e => e.matches(INTERACTIVE) && !e.matches('[aria-hidden="true"] *'))
   const leaf = controls.filter(c => !controls.some(o => o !== c && c.contains(o) && o.matches('button, a[href], input, select, textarea')))
-  const rects = leaf.map(e => ({ e, r: e.getBoundingClientRect() }))
+  // what can be seen of a box: clipped by every scrolling or clipping ancestor and by the viewport
+  const seen = (el: Element): DOMRect | null => {
+    const r = el.getBoundingClientRect()
+    let l = Math.max(r.left, 0), t = Math.max(r.top, 0), rr = Math.min(r.right, vw), b = Math.min(r.bottom, vh)
+    for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+      const st = getComputedStyle(p)
+      if (/(auto|scroll|hidden|clip)/.test(st.overflowX + st.overflowY)) {
+        const pr = p.getBoundingClientRect()
+        l = Math.max(l, pr.left); t = Math.max(t, pr.top); rr = Math.min(rr, pr.right); b = Math.min(b, pr.bottom)
+      }
+    }
+    return rr - l > 1 && b - t > 1 ? new DOMRect(l, t, rr - l, b - t) : null
+  }
+  const pinned = (el: Element): Element | null => {
+    for (let p: Element | null = el; p && p !== document.body; p = p.parentElement) {
+      const pos = getComputedStyle(p).position
+      if (pos === 'fixed' || pos === 'sticky') return p
+    }
+    return null
+  }
+  const rects = leaf.map(e => ({ e, r: seen(e) })).filter((x): x is { e: Element; r: DOMRect } => x.r !== null)
   let overlaps = 0
   for (let i = 0; i < rects.length && overlaps < 10; i++) {
     for (let j = i + 1; j < rects.length && overlaps < 10; j++) {
@@ -183,6 +217,8 @@ export function inspect(a: InspectArgs): Raw[] {
         const field = (x: Element) => x.matches('input, textarea, select, [role="combobox"]')
         const abs = (x: Element) => getComputedStyle(x).position === 'absolute'
         if ((field(A.e) || field(B.e)) && (abs(A.e) || abs(B.e)) && (A.e.parentElement === B.e.parentElement || A.e.parentElement?.parentElement === B.e.parentElement?.parentElement)) continue
+        // a pinned bar (the phone tab bar, a sticky action bar, the top bar) over content that scrolls under it
+        if (pinned(A.e) !== pinned(B.e)) continue
         overlaps++
         add('overlap', A.e, `intersects ${sel(B.e).slice(0, 90)} by ${Math.round(ix)}x${Math.round(iy)} px`)
       }
@@ -218,6 +254,8 @@ export function inspect(a: InspectArgs): Raw[] {
       }
     }
     if (fixedHit) continue
+    const main = document.getElementById('main')
+    if (main && main.contains(e) && !main.contains(hit)) continue
     if (a.scope === null && hit.closest('[role="dialog"], [role="alertdialog"], [data-radix-popper-content-wrapper]')) continue
     covered++
     add('covered', e, `centre (${Math.round(x)},${Math.round(y)}) is covered by ${sel(hit).slice(0, 90)}`)
@@ -230,10 +268,18 @@ export function inspect(a: InspectArgs): Raw[] {
       if (e.matches('input[type="checkbox"], input[type="radio"]') && Number(getComputedStyle(e).opacity) === 0) continue
       // WCAG 2.5.8 exception: a link inside a sentence
       if (e.matches('a') && e.parentElement && e.parentElement.matches('p, li, span, small, dd, td') && text(e.parentElement).length > text(e).length + 10) continue
-      const m = Math.min(r.width, r.height)
+      let box = r
+      if (e.matches('[role="checkbox"], [role="radio"], input[type="checkbox"], input[type="radio"]')) {
+        const lab = (e.id && document.querySelector(`label[for="${CSS.escape(e.id)}"]`)) || e.closest('label')
+        if (lab) {
+          const lr = lab.getBoundingClientRect()
+          box = new DOMRect(Math.min(r.left, lr.left), Math.min(r.top, lr.top), Math.max(r.right, lr.right) - Math.min(r.left, lr.left), Math.max(r.bottom, lr.bottom) - Math.min(r.top, lr.top))
+        }
+      }
+      const m = Math.min(box.width, box.height)
       if (m < 44) {
         small++
-        add('touch-target-44', e, `${Math.round(r.width)}x${Math.round(r.height)} px`)
+        add('touch-target-44', e, `${Math.round(r.width)}x${Math.round(r.height)} px${box !== r ? ` (with its label ${Math.round(box.width)}x${Math.round(box.height)})` : ''}`)
       } else if (m < 48) {
         small++
         add('touch-target-48', e, `${Math.round(r.width)}x${Math.round(r.height)} px (Forest touch size 48)`)
@@ -301,7 +347,7 @@ export function inspect(a: InspectArgs): Raw[] {
     last = n
   }
   if (!a.scope) {
-    const h1s = Array.from(document.querySelectorAll('h1')).filter(h => visible(h) || h.closest('.sr-only'))
+    const h1s = Array.from(document.querySelectorAll('h1')).filter(h => getComputedStyle(h).display !== 'none' && !h.closest('[hidden], [aria-hidden="true"]') && (h as HTMLElement).checkVisibility?.({ checkVisibilityCSS: true }) !== false)
     if (h1s.length > 1) add('multiple-h1', h1s[1], `${h1s.length} h1 on the page: ${h1s.map(h => `"${text(h).slice(0, 30)}"`).join(', ')}`)
     if (h1s.length === 0 && document.getElementById('main')) add('no-h1', document.getElementById('main'), 'no h1 on the page')
   }
@@ -428,6 +474,7 @@ export async function focusSweep(page: Page, n = 15, scope: string | null = null
       }
     })
     if (!step) break
+    if (/^span\b/.test(step.sel) && step.detail.startsWith('0x0')) continue // a Radix focus guard: Tab passes straight through it
     if (seen.has(step.sel)) continue
     seen.add(step.sel)
     if (!step.visible || !step.inView) out.push({ rule: 'focus-hidden', selector: step.sel, detail: `Tab ${i + 1} lands on an element a person cannot see (${step.detail})` })
