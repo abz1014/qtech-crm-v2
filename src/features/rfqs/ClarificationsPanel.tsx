@@ -1,5 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react'
-import { Check, Send } from 'lucide-react'
+import { Check, ChevronRight, Send } from 'lucide-react'
 import { businessToday, toBusinessDate } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { MessageActions } from '@/ui/MessageActions'
@@ -11,7 +11,7 @@ import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
-import { Panel } from '@/features/companies/CompanyParts'
+import { Banner } from '@/ui/Banner'
 import type { ClarificationRow, InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/ClarificationParts'
 import { ChannelLink } from '@/ui/ChannelLink'
@@ -165,38 +165,50 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
 
   const relays = inquiries.map(i => ({ inq: i, answered: answersToRelay(rows, i) })).filter(r => r.answered.length > 0)
   const count = rows.length - groups.withdrawn.length
+  const headingId = useId()
 
   return (
-    <div data-slot="clarifications">
-      <Panel
-        title={underHeading ? <span className="sr-only">Questions for the customer</span> : "Questions for the customer"}
-        info={
+    // 26-job-questions-files .qq: no box of its own (it sits in the Job page's fold, inside the step card); the groups are hairline
+    // sections, each question a dashed row.
+    <section data-slot="clarifications" aria-labelledby={headingId} className="grid min-w-0 gap-3">
+      <header className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex min-w-0 items-center gap-1">
+          <h2 id={headingId} className={underHeading ? 'sr-only' : 'type-section'}>
+            Questions for the customer
+          </h2>
           <InfoTip label="About questions">
             A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers. Ones raised by suppliers, or entered here, are
             listed here and bundled for the customer in one message.
           </InfoTip>
-        }
-        meta={clars.isSuccess && count > 0 ? <span className="num">{count} {count === 1 ? 'question' : 'questions'}</span> : undefined}
-      >
+        </div>
+        {clars.isSuccess && count > 0 ? (
+          <span className="num text-sm text-fg-muted">
+            {count} {count === 1 ? 'question' : 'questions'}
+          </span>
+        ) : null}
+      </header>
         {clars.isPending ? (
-          <div role="status" className="grid gap-2 p-4" aria-busy="true" aria-label="Loading questions">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
+          <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading questions">
+            {/* Shaped like a group: its heading, then two questions with their line under each. */}
+            <Skeleton className="h-4 w-1/3" />
+            <div className="grid gap-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/3" />
+            </div>
+            <div className="grid gap-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/4" />
+            </div>
           </div>
         ) : clars.isError ? (
-          <div className="px-5 py-4 text-sm text-fg-muted">
-            <p>Could not load the questions. Nothing was changed.</p>
-            <Button className="mt-2" size="sm" onClick={() => void clars.refetch()}>
-              Try again
-            </Button>
-          </div>
+          <Banner tone="danger" title="Could not load the questions. Nothing was changed." action={<Button size="sm" onClick={() => void clars.refetch()}>Try again</Button>} />
         ) : rows.length === 0 ? null : (
           <>
             {relays.map(({ inq, answered }) => (
-              <div key={inq.id} className="mx-4 mb-3 mt-3 flex flex-wrap items-center gap-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
-                <Icon icon={Send} className="text-tone-warning-fg" />
-                <span className="min-w-0 flex-1 basis-[10rem]">
-                  <b className="font-medium">{inq.supplierName}</b> is waiting for <span className="num">{answered.length}</span> {answered.length === 1 ? 'answer' : 'answers'}.
+              <div key={inq.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-tone-warning-bg px-4 py-3 text-sm text-fg">
+                <Icon icon={Send} className="shrink-0 text-tone-warning-fg" />
+                <span className="min-w-0 flex-1 basis-[10rem] break-words">
+                  <b className="font-bold">{inq.supplierName}</b> is waiting for <span className="num">{answered.length}</span> {answered.length === 1 ? 'answer' : 'answers'}.
                 </span>
                 <MessageActions
                   size="sm"
@@ -275,11 +287,12 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
             ) : null}
 
             {groups.withdrawn.length > 0 ? (
-              <details className="border-t px-0 py-1 text-sm">
-                <summary className="cursor-pointer px-4 py-2 text-fg-muted hover:text-fg">
+              <details className="group/wd border-t pt-2 text-sm">
+                <summary className="flex min-h-control-sm w-fit cursor-pointer list-none items-center gap-1 rounded-control font-semibold text-primary hover:underline [&::-webkit-details-marker]:hidden">
+                  <ChevronRight aria-hidden="true" className="size-4 shrink-0 transition-transform duration-fast group-open/wd:rotate-90" />
                   Not needed (<span className="num">{groups.withdrawn.length}</span>)
                 </summary>
-                <ul className="divide-y">
+                <ul className="divide-y divide-dashed">
                   {groups.withdrawn.map(c => (
                     <WithdrawnRow key={c.id} rfqId={rfq.id} c={c} />
                   ))}
@@ -289,8 +302,7 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
           </>
         )}
         {clars.isSuccess ? <AddQuestions rfqId={rfq.id} inquiries={options} empty={rows.length === 0} /> : null}
-      </Panel>
-    </div>
+    </section>
   )
 }
 
@@ -402,19 +414,19 @@ function ChaseGroup({
   const phone = useMediaQuery('(max-width: 767px)')
   const [chasing, setChasing] = useState(false)
   return (
-    <div className="border-t first:border-t-0">
+    <div className={GROUP}>
       <GroupHeading heading={header} hint={hint} />
       <div className="divide-y divide-dashed">{children}</div>
-      {repeat ? <ChasedByNote byId={lastBy?.by} at={lastBy?.at} className="px-4 pt-2" /> : null}
+      {repeat ? <ChasedByNote byId={lastBy?.by} at={lastBy?.at} /> : null}
       {repeat && phone && !chasing ? (
-        <div className="mx-4 mb-3 mt-2 grid gap-1">
+        <div className="grid gap-1">
           <Button size="sm" icon={Send} className="w-fit" aria-expanded={false} onClick={() => setChasing(true)}>
             Follow up with the customer
           </Button>
           {dueNote ? <p className="text-sm text-tone-warning-fg">{dueNote}</p> : null}
         </div>
       ) : (
-      <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded-panel border bg-surface">
+      <div className="grid overflow-hidden rounded-control border bg-surface">
         {/* The questions are listed just above, so the message itself waits under "Show the whole message" (the rail stays short). */}
         {whole ? (
           <div id={wholeId} className="grid">
@@ -451,7 +463,7 @@ function ChaseGroup({
             {dueNote ? ` ${dueNote}` : ''}
           </ChaseNote>
         ) : null}
-        <div className={`grid gap-2 bg-sunken px-4 py-3 ${whole ? 'border-t' : ''}`}>
+        <div className={`grid gap-2 bg-canvas px-4 py-3 ${whole ? 'border-t' : ''}`}>
           {draft ? (
             <div className="flex flex-wrap items-start gap-2">
               <MessageActions
@@ -497,13 +509,15 @@ function ChaseGroup({
   )
 }
 
-/** A plain group of questions (answered). */
+/** One group: a hairline above it, its heading, its rows and its message card, spaced on one rhythm. */
+const GROUP = 'grid min-w-0 gap-2 border-t pt-3'
+
 /** A group's heading: a plain h3 with its count, and an optional muted note on the right. */
 function GroupHeading({ heading, hint }: { heading: string; hint?: string }) {
   return (
-    <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3">
-      <h3 className="text-sm font-semibold text-fg">{heading}</h3>
-      {hint ? <span className="text-right text-sm text-fg-muted">{hint}</span> : null}
+    <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <h3 className="text-base font-heavy text-fg">{heading}</h3>
+      {hint ? <span className="num text-sm text-fg-muted">{hint}</span> : null}
     </header>
   )
 }
@@ -511,7 +525,7 @@ function GroupHeading({ heading, hint }: { heading: string; hint?: string }) {
 /** A plain group of questions (answered). */
 function Group({ header, hint, children }: { header: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="border-t first:border-t-0">
+    <div className={GROUP}>
       <GroupHeading heading={header} hint={hint} />
       <div className="divide-y divide-dashed">{children}</div>
     </div>

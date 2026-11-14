@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useId, useState } from 'react'
 import { ExternalLink, FilePlus2, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -6,7 +6,6 @@ import { formatPaisa, toPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
-import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
@@ -44,6 +43,13 @@ const IssueQuotationDialog = lazyWithReload(() => import('@/features/quotations/
 
 const gross = (q: QuotationRow) => toPaisa(q.netTotal) + toPaisa(q.gstTotal)
 
+/** Narrow: two columns, the version and the actions across both. Wide (the panel 40rem or more): one line per version. */
+const ROW_BASE = 'grid-cols-[repeat(2,minmax(0,1fr))]'
+const ROW_WIDE = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.5fr)_minmax(0,1fr)_minmax(0,2.2fr)]'
+const ROW_WIDE_ENG = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]'
+/** The word before a value while the row is stacked ("Issued", "PKR"); the column heads say it once the row is a table line. */
+const LAB = 'text-sm text-fg-muted [@container(min-width:40rem)]:sr-only'
+
 export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader; inquiries: InquiryRow[]; itemCount: number }) {
   const { toast } = useToast()
   const prices = useSeesPrices()
@@ -52,6 +58,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
   const storePdf = useStorePdf(rfq.id)
   const [open, setOpen] = useIssueDialog()
   const [working, setWorking] = useState<string | null>(null)
+  const headingId = useId()
   const today = businessToday()
   const profile = profileQ.data
   const gaps = profileGaps(profile)
@@ -98,34 +105,42 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
     }
   }
 
-  const GRID = prices
-    ? 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_72px_minmax(0,1.1fr)_minmax(0,1.4fr)]'
-    : 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]'
+  // One row per version (25-quotation .qt-row): two columns while the panel is narrow (a phone, a tablet, the Job page beside its
+  // side column), the table from 40rem of the panel's own width. Every track shrinks (R-001, R-026); nothing scrolls sideways.
+  const ROW = prices ? `${ROW_BASE} ${ROW_WIDE}` : `${ROW_BASE} ${ROW_WIDE_ENG}`
+  const tip = rows.length > 0 ? <InfoTip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</InfoTip> : null
   return (
-    <DetailPanel
-      title="Quotations"
-      tip={rows.length > 0 ? <InfoTip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</InfoTip> : null}
-      dataSlot="quotations"
-      actions={
-        prices && isOpen && rows.length > 0 ? (
-          <Button icon={FilePlus2} onClick={() => setOpen(true)}>
+    <section aria-labelledby={headingId} data-slot="quotations" className="grid min-w-0 gap-3 [container-name:qt] [container-type:inline-size]">
+      <header className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex min-w-0 items-center gap-1">
+          <h2 id={headingId} className="type-section">
+            Quotations
+          </h2>
+          {tip}
+        </div>
+        {prices && isOpen && rows.length > 0 ? (
+          <Button icon={FilePlus2} className="ms-auto" onClick={() => setOpen(true)}>
             Revise quotation
           </Button>
-        ) : undefined
-      }
-    >
+        ) : null}
+      </header>
       {quotations.isPending ? (
-        <div className="py-5">
-          <Skeleton className="h-16 w-full" />
+        <div role="status" aria-busy="true" aria-label="Loading the quotations" className="grid gap-3 border-t pt-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-chip w-1/4 rounded-pill" />
+            <Skeleton className="h-4 w-1/5" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
         </div>
       ) : quotations.isError ? (
-        <div className="py-5">
-          <Banner tone="danger" title="Quotations could not be loaded" action={<Button onClick={() => void quotations.refetch()}>Try again</Button>}>
-            Nothing was changed.
-          </Banner>
-        </div>
+        <Banner tone="danger" title="Quotations could not be loaded" action={<Button onClick={() => void quotations.refetch()}>Try again</Button>}>
+          Nothing was changed.
+        </Banner>
       ) : rows.length === 0 ? (
-        <p className="px-0 py-5 text-fg-muted">
+        <p className="border-t pt-3 text-fg-muted text-pretty">
           {prices
             ? 'Nothing issued yet. Issue quotation sets the price for each item, from a supplier price or an entered price, and makes the PDF.'
             : 'Nothing issued yet. Sales issue the quotation.'}
@@ -133,14 +148,12 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
       ) : (
         <>
           {prices && lacksPdf && gaps.length > 0 ? (
-            <div className="px-0 pt-4">
-              <Banner tone="warning" title={`A PDF needs the company's ${gaps.join(' and ')}`}>
-                Quotations are saved without one. Their PDFs are made when you open them after the profile is complete. <SettingsLink />
-              </Banner>
-            </div>
+            <Banner tone="warning" title={`A PDF needs the company's ${gaps.join(' and ')}`}>
+              Quotations are saved without one. Their PDFs are made when you open them after the profile is complete. <SettingsLink />
+            </Banner>
           ) : null}
-          <div role="table" aria-label="Issued quotations" className="text-sm">
-            <div role="row" className={`hidden gap-4 px-0 py-2 text-sm text-fg-muted sm:grid ${GRID}`}>
+          <div role="table" aria-label="Issued quotations" className="grid min-w-0">
+            <div role="row" className={`hidden pb-2 text-sm font-semibold text-fg-muted [@container(min-width:40rem)]:grid ${ROW}`}>
               <span role="columnheader">Quotation</span>
               <span role="columnheader">Issued</span>
               <span role="columnheader">Valid until</span>
@@ -168,9 +181,9 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                     role="row"
                     data-testid={`quotation-${q.revision}`}
                     aria-label={q.revision > 0 ? `${base}, revision ${q.revision}` : base}
-                    className={`grid items-center gap-x-4 gap-y-2 border-t px-0 py-3 ${GRID}`}
+                    className={`grid items-start gap-x-3 gap-y-2 border-t py-3 [@container(min-width:40rem)]:items-center ${ROW}`}
                   >
-                    <span role="cell" className="flex flex-wrap items-center gap-2">
+                    <span role="cell" className="col-span-full flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 [@container(min-width:40rem)]:col-span-1">
                       <Tag>{base}</Tag>
                       {q.revision > 0 ? <span className="text-sm text-fg-2">Revision {q.revision}</span> : null}
                       {expired ? (
@@ -178,30 +191,30 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                       ) : latest ? null : (
                         <span className="text-sm text-fg-muted" data-replaced>{`Replaced by revision ${rows[i - 1].revision}`}</span>
                       )}
-                      {prices && latest ? <LastChanged table="quotations" id={q.id} className="w-full text-base text-fg-2" /> : null}
+                      {prices && latest ? <LastChanged table="quotations" id={q.id} className="w-full text-sm text-fg-muted" /> : null}
                     </span>
-                    <span role="cell" className="num text-sm">
-                      <span className="text-sm text-fg-muted sm:sr-only">Issued </span>
+                    <span role="cell" className="num min-w-0 text-sm">
+                      <span className={`${LAB} me-1`}>Issued</span>
                       {formatDay(q.issuedOn)}
                     </span>
-                    <span role="cell" className={`num text-sm ${expired ? 'font-medium text-tone-warning-fg' : ''}`}>
-                      <span className="text-sm font-regular text-fg-muted sm:sr-only">{expired ? 'Expired ' : 'Valid until '}</span>
+                    <span role="cell" className={`num min-w-0 text-sm ${expired ? 'font-bold text-tone-warning-fg' : ''}`}>
+                      <span className={`${LAB} me-1 font-regular`}>{expired ? 'Expired' : 'Valid until'}</span>
                       {formatDay(q.validUntil)}
                     </span>
                     {prices ? (
                       <>
-                        <span role="cell" className="num text-sm">
+                        <span role="cell" className="num min-w-0 text-sm">
                           {q.lines.length} of {itemCount}
-                          <span className="text-sm text-fg-muted sm:sr-only">{q.lines.length === 1 ? ' item' : ' items'}</span>
+                          <span className={`${LAB} ms-1`}>{q.lines.length === 1 ? 'item' : 'items'}</span>
                         </span>
-                        <span role="cell" className="grid sm:justify-items-end sm:text-right">
-                          <span className="num text-sm font-medium">
-                            <span className="mr-1 font-sans text-sm font-regular text-fg-muted sm:sr-only">PKR{' '}</span>
+                        <span role="cell" className="grid min-w-0 [@container(min-width:40rem)]:justify-items-end [@container(min-width:40rem)]:text-right">
+                          <span className="num text-sm font-bold">
+                            <span className={`${LAB} me-1 font-regular`}>PKR</span>
                             {formatPaisa(gp, 'auto')}
                           </span>
                           <span className="num text-sm text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
                         </span>
-                        <span role="cell" className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <span role="cell" className="col-span-full flex min-w-0 flex-wrap items-center gap-2 [@container(min-width:40rem)]:col-span-1 [@container(min-width:40rem)]:justify-end">
                           <Button
                             size="sm"
                             variant={latest ? 'secondary' : 'quiet'}
@@ -234,6 +247,6 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
           <IssueQuotationDialog rfq={rfq} inquiries={inquiries} onClose={() => setOpen(false)} />
         </Suspense>
       ) : null}
-    </DetailPanel>
+    </section>
   )
 }

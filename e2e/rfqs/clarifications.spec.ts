@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { openEnquiryPanels } from '../support/job'
-import { axeViolations } from '../support/axe'
+import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { API_URL, ANON_KEY, createCompany, createRfq, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
@@ -18,6 +18,24 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
  */
 
 const violations = (page: Page): Promise<string[]> => axeViolations(page)
+
+/**
+ * A Forest review picture of the whole page (forest/b3-quotation): the shell is one window tall and #main scrolls inside it, so the
+ * window grows to the content first, then goes back. Written to REVIEW_DIR as `forest-b3-<name>-<width>.png`; nothing when unset.
+ */
+async function forestShot(page: Page, name: string): Promise<void> {
+  const dir = process.env.REVIEW_DIR
+  if (!dir) return
+  await waitForAnimationsToFinish(page)
+  const size = page.viewportSize() ?? { width: 1440, height: 900 }
+  const tall = await page.evaluate(() =>
+    Math.max(...Array.from(document.querySelectorAll('#main, #main *')).filter(e => /auto|scroll/.test(getComputedStyle(e).overflowY)).map(e => e.scrollHeight + e.getBoundingClientRect().top), window.innerHeight),
+  )
+  if (tall > size.height) await page.setViewportSize({ width: size.width, height: Math.min(Math.ceil(tall) + 120, 6000) })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${dir}/forest-b3-${name}-${size.width}.png`, fullPage: true })
+  await page.setViewportSize(size)
+}
 
 // A real 1x1 PNG, so the browser can decode (and try to shrink) it.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
@@ -381,11 +399,13 @@ for (const width of [1440, 375]) {
     await panel(page).scrollIntoViewIfNeeded()
     expect(await violations(page)).toEqual([])
     await review(page, `r09-clarifications-populated-${width}`)
+    await forestShot(page, 'questions-files')
 
     await panel(page).getByRole('button', { name: 'Add question', exact: true }).click()
     await panel(page).getByRole('textbox', { name: 'Add questions' }).fill('Which cable gland size?\nHow long a cable?')
     expect(await violations(page)).toEqual([])
     await review(page, `r09-clarifications-adding-${width}`)
+    await forestShot(page, 'questions-adding')
 
     await page.getByRole('button', { name: /^nameplate-old-meter\.png/ }).first().click()
     await expect(page.getByRole('dialog')).toBeVisible()
