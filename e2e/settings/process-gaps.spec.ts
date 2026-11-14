@@ -122,7 +122,12 @@ test('an older month of undeposited GST stays on To do', async ({ page }) => {
   await invoice(o.id, `OG-${Date.now().toString(36)}`, old, 100000, 18000)
   await openAs(page, 'admin', '/todo')
   await showAllTodo(page)
-  await expect(page.locator('li[data-rule="gst_fbr"]').first()).toBeAttached()
+  // this month's own row (other suites seed GST rows too): in the counted list, late, never in the grey "Older than 30 days" fold
+  const name = new Date(`${old}T00:00:00Z`).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })
+  const row = page.locator('li[data-rule="gst_fbr"]').filter({ hasText: `GST to FBR: ${name},` })
+  await expect(row.first()).toBeAttached()
+  await expect(row.first()).toHaveAttribute('data-due', 'late')
+  await expect(row.and(page.locator('[data-stale]'))).toHaveCount(0)
 })
 
 test('the statement of account lists the invoice and the payment and downloads as a PDF', async ({ page }) => {
