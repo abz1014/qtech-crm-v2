@@ -100,7 +100,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
               : 'inset-0 animate-sheet-in pb-[env(safe-area-inset-bottom,0px)]',
           )}
         >
-          <header className={cn('flex min-w-0 items-center gap-2 border-b py-2', wide ? 'px-4' : 'pl-2 pr-4')}>
+          <div className={cn('flex min-w-0 items-center gap-2 border-b py-2', wide ? 'px-4' : 'pl-2 pr-4')}>
             {wide ? null : (
               <Button variant="quiet" size="touch" icon={ChevronLeft} aria-label={view === 'recipe' ? 'Back to all help' : 'Close help'} onClick={back} className="text-fg" />
             )}
@@ -109,7 +109,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
               Help
             </RadixDialog.Title>
             {wide ? <Button variant="quiet" icon={X} aria-label="Close help" onClick={onClose} className="-mr-2 rounded-pill text-fg" /> : null}
-          </header>
+          </div>
 
           <div className="border-b px-4 py-3">
             <label className="relative block">

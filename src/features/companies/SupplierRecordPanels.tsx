@@ -138,13 +138,26 @@ function PriceCell({ r }: { r: QuoteRow }) {
   )
 }
 
+/**
+ * The item's name, cut at two lines, then its quantity outside the cut, so a long name never hides "×999" (audit 35).
+ * The quantity sits beside the name's last line when there is room and drops under it when there is not.
+ */
+function ItemName({ r, className }: { r: QuoteRow; className?: string }) {
+  const qty = r.qty ? (r.qty.startsWith('+') ? r.qty : `×${r.qty.replace(' ', ' ')}`) : null
+  return (
+    <span className={cn('flex min-w-0 flex-wrap items-baseline gap-x-1', className)}>
+      <span className="line-clamp-2 min-w-0 break-words" title={r.item}>
+        {r.item}
+      </span>
+      {qty ? <span className={cn('num font-regular text-fg-muted', !qty.startsWith('+') && 'whitespace-nowrap')}>{qty}</span> : null}
+    </span>
+  )
+}
+
 function ItemCell({ r }: { r: QuoteRow }) {
   return (
     <span className="grid min-w-0 gap-1">
-      <span className="line-clamp-2 break-words font-medium" title={r.item}>
-        {r.item}
-        {r.qty ? <span className={cn('num ml-1 font-regular text-fg-muted', !r.qty.startsWith('+') && 'whitespace-nowrap')}>{r.qty.startsWith('+') ? r.qty : `×${r.qty.replace(' ', '\u00A0')}`}</span> : null}
-      </span>
+      <ItemName r={r} className="font-medium" />
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
         <span className="num">{r.dateText}</span>
         <Link to={`/rfqs/${r.rfqId}`} className="w-fit rounded hover:underline" aria-label={`Open ${r.rfqRef}`}>
@@ -193,10 +206,7 @@ function QuotePhoneRow({ r, reply, prices }: { r: QuoteRow; reply: ReplyFact | u
   const hasMore = Boolean(r.brand || r.imported || r.itemNote || r.ago)
   return (
     <li className="grid gap-1 border-t py-3 first:border-t-0">
-      <span className="type-row line-clamp-2 break-words" title={r.item}>
-        {r.item}
-        {r.qty ? <span className={cn('num ml-1 font-regular text-fg-muted', !r.qty.startsWith('+') && 'whitespace-nowrap')}>{r.qty.startsWith('+') ? r.qty : `×${r.qty.replace(' ', ' ')}`}</span> : null}
-      </span>
+      <ItemName r={r} className="type-row" />
       <span className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 text-fg-2">
         <Link to={`/rfqs/${r.rfqId}`} className="w-fit rounded hover:underline" aria-label={`Open ${r.rfqRef}`}>
           <Tag>{r.rfqRef}</Tag>

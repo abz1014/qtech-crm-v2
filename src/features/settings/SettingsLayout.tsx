@@ -64,7 +64,8 @@ export function SettingsLayout() {
                       to={l.to}
                       className={({ isActive }) =>
                         cn(
-                          'flex h-control min-w-0 items-center gap-2 whitespace-nowrap rounded-control px-3 text-base font-medium transition-colors duration-fast max-md:h-touch',
+                          // a long name (Larger text, or a "View only" tag beside it at 320) wraps to a second line; it is never cut
+                          'flex min-h-control min-w-0 items-center gap-2 rounded-control px-3 py-1 text-base font-medium leading-tight transition-colors duration-fast max-md:min-h-touch',
                           isActive ? 'bg-brand-100 font-card text-primary' : 'text-fg hover:bg-sunken',
                         )
                       }
@@ -72,7 +73,7 @@ export function SettingsLayout() {
                       {({ isActive }) => (
                         <>
                           <Icon icon={l.icon} className={cn('shrink-0', isActive ? 'text-primary' : 'text-fg-2')} />
-                          <span className="min-w-0 truncate">{l.label}</span>
+                          <span className="min-w-0 text-pretty [overflow-wrap:anywhere]">{l.label}</span>
                           {!isAdmin && l.tagForOthers ? (
                             <span className="ml-auto inline-flex min-h-chip shrink-0 items-center rounded-pill bg-deep px-2 text-sm font-medium text-fg-2">
                               {l.tagForOthers}

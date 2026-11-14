@@ -172,7 +172,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
           // setFocus focuses without scrolling to the middle: on a phone the field can sit under the bars or the keyboard.
           document.querySelector(`[name="${first}"]`)?.scrollIntoView({ block: 'center' })
         }} />
-      <Form sf={sf} labels={LABELS} className="[&>fieldset]:gap-card-gap">
+      <Form sf={sf} labels={LABELS} className="[&>fieldset]:min-w-0 [&>fieldset]:gap-card-gap">
         <Section work title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
           <NeededField name="legal_name" label="Legal name" message="Add the legal name before issuing a PDF.">
             {f => <TextField {...f} placeholder="As registered with SECP" autoComplete="organization" />}
@@ -228,9 +228,10 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             help="Days after the invoice date. An order with its own terms keeps them."
           >
             {f => (
-              // the days box stays short; its help line keeps the section's width
-              <div className="sm:max-w-[12.5rem]">
-                <NumberInput {...f} suffix="days" decimals={0} />
+              // the days box stays short; its help line keeps the section's width. The input fills the box (w-full), so its own
+              // 20-character width never pushes the card past a 320 px phone
+              <div className="min-w-0 sm:max-w-[12.5rem]">
+                <NumberInput {...f} suffix="days" decimals={0} className="w-full" />
               </div>
             )}
           </FormField>
@@ -246,9 +247,10 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             help="A new quotation is valid for this many days from its date."
           >
             {f => (
-              // the days box stays short; its help line keeps the section's width
-              <div className="sm:max-w-[12.5rem]">
-                <NumberInput {...f} suffix="days" decimals={0} />
+              // the days box stays short; its help line keeps the section's width. The input fills the box (w-full), so its own
+              // 20-character width never pushes the card past a 320 px phone
+              <div className="min-w-0 sm:max-w-[12.5rem]">
+                <NumberInput {...f} suffix="days" decimals={0} className="w-full" />
               </div>
             )}
           </FormField>
