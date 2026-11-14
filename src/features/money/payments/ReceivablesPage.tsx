@@ -49,6 +49,7 @@ const HeldAdvancesPanel = lazyWithReload(() => import('@/features/money/payments
 const ReminderPanel = lazyWithReload(() => import('@/features/money/payments/ReminderPanel').then(m => ({ default: m.ReminderPanel })))
 const CreateInvoiceDialog = lazyDialog(() => import('@/features/money/invoices/CreateInvoiceDialog').then(m => m.CreateInvoiceDialog))
 const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
+const RecordPaymentFlow = lazyDialog(() => import('@/features/money/payments/RecordPaymentFlow').then(m => m.RecordPaymentFlow))
 
 /*
  * Money > To collect (M02; g2-money "receivables"; one name for admin and sales since the owner decision of 2026-10-19, and
@@ -62,6 +63,8 @@ const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/R
  * number. Beside the table from 1360 px, under it below that.
  *
  *   /money/receivables?pay=1&order=<id>   opens Record payment for that order (admin)
+ *   /money/receivables?pay=1              asks "Which order?" first, then opens Record payment (admin; + Create > Payment received,
+ *                                         F-287 / F-642)
  */
 // Gross and Settled fold away on a phone, and again between 1360 and 1535 px (1439 before the bigger text, DECISIONS 2026-10-19), where
 // the reminder panel sits beside the table and the Balance column carries the figure that matters; the table then fits without a
@@ -137,6 +140,7 @@ export function ReceivablesPage() {
   }
 
   const linkedPay = isAdmin && params.get('pay') !== null ? params.get('order') : null
+  const pickPay = isAdmin && params.get('pay') !== null && !params.get('order')
   const closeLinked = () => {
     const next = new URLSearchParams(params)
     next.delete('pay')
@@ -213,7 +217,7 @@ export function ReceivablesPage() {
       active="receivables"
     >
       {/* Phone: only Owed stays in view while the cards scroll (the five tiles took half the screen); the split sits under it and scrolls away. */}
-      <p data-testid="owed-line" className="sticky top-0 z-10 -mx-4 flex flex-wrap items-baseline gap-x-3 border-b bg-canvas px-4 py-2 text-base sm:hidden">
+      <p data-testid="owed-line" className="sticky top-0 z-sticky -mx-4 flex flex-wrap items-baseline gap-x-3 border-b bg-canvas px-4 py-2 text-base sm:hidden">
         <span>
           To collect <b className="num font-semibold">PKR {phoneMoney(totals.outstanding)}</b>
         </span>
@@ -256,7 +260,7 @@ export function ReceivablesPage() {
           { label: 'Imported, to review', amount: totals.imported, tone: 'muted', sub: `${totals.importedCount} ${totals.importedCount === 1 ? 'order' : 'orders'}, from the old CRM` },
         ]}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 min-[1360px]:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-card-gap min-[1360px]:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
           <DataTable
             label={tabLabel}
@@ -273,7 +277,7 @@ export function ReceivablesPage() {
             toolbar={
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-base font-semibold">Balances</h2>
+                  <h2 className="text-lg font-heavy">Balances</h2>
                   {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. The tip stays with its line: a lone (i) on its own row pointed at nothing. */}
                   <span className="inline-flex items-center gap-2">
                   <span className="text-base text-fg-2">Balance includes GST</span>
@@ -362,6 +366,7 @@ export function ReceivablesPage() {
         </Dialog>
       ) : null}
       <CreateInvoiceDialog open={invoicing !== null} onOpenChange={o => (o ? undefined : setInvoicing(null))} orderId={invoicing ?? undefined} />
+      <RecordPaymentFlow open={pickPay} onOpenChange={o => (o ? undefined : closeLinked())} />
       <RecordPaymentDialog open={paying !== null || linkedPay !== null} orderId={paying ?? linkedPay} onOpenChange={o => { if (!o) { setPaying(null); if (linkedPay) closeLinked() } }} />
     </MoneyFrame>
   )

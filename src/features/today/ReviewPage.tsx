@@ -36,7 +36,7 @@ const SECTIONS: ReadonlyArray<{ kind: ReviewKind; title: string; why: string }> 
   { kind: 'quotation', title: 'Quotations with no decision after 10 working days', why: 'Ask the customer, or let it go.' },
   { kind: 'enquiry', title: 'RFQs with no supplier asked after 10 days', why: 'Ask suppliers now, or close it.' },
   { kind: 'goods', title: 'Goods more than 14 days late', why: 'Follow up with the supplier, or move the date.' },
-  { kind: 'payment', title: 'Payments more than 30 days late', why: 'They also stay at the top of To do.' },
+  { kind: 'payment', title: 'Payments more than 30 days late', why: 'They also stay at the top of Home.' },
 ]
 
 const CLOSE_NOTE: Record<'quotation' | 'enquiry', string> = {
@@ -68,7 +68,7 @@ function useTabsHeight() {
 
 function ReviewBody({ user }: { user: { id: string; role: Role } }) {
   useTabsHeight()
-  useMobileBar({ title: 'Weekly review', back: { to: '/todo', label: 'To do' } })
+  useMobileBar({ title: 'Weekly review', back: { to: '/todo', label: 'Home' } })
   const today = useBusinessToday()
   const navigate = useNavigate()
   const client = useQueryClient()
@@ -142,11 +142,11 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
   }
 
   return (
-    <div className={cn('mx-auto grid max-w-[920px] gap-5 px-4 py-5 md:px-6', selected.length > 0 && 'pb-[calc(var(--tabs-h,0px)+1.5rem)]')} data-review>
+    <div className={cn('mx-auto grid max-w-list gap-5 px-4 py-5 md:px-6', selected.length > 0 && 'pb-[calc(var(--tabs-h,0px)+1.5rem)]')} data-review>
       <NoPrimary />
       <header className="grid gap-1">
         <Link to="/todo" className="inline-flex min-h-touch items-center gap-1 justify-self-start rounded text-base font-medium text-primary underline-offset-2 hover:underline max-md:hidden">
-          <Icon icon={ChevronLeft} size="sm" /> To do
+          <Icon icon={ChevronLeft} size="sm" /> Home
         </Link>
         <h1 className="text-2xl font-heavy tracking-tight">Weekly review</h1>
         <p className="text-base text-fg-muted">
@@ -214,7 +214,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
           ) : null}
 
           {selected.length > 0 ? (
-            <div role="region" aria-label="Selected" className="sticky bottom-[calc(var(--tabs-h,0px)+0.5rem)] z-20 flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-3 shadow-pop" data-bulk>
+            <div role="region" aria-label="Selected" className="sticky bottom-[calc(var(--tabs-h,0px)+0.5rem)] z-sticky flex flex-wrap items-center gap-2 rounded-card border bg-surface p-3 shadow-e3" data-bulk data-sticky-bar>
               <span className="mr-auto text-base font-semibold">
                 <span className="num">{selected.length}</span> selected
               </span>

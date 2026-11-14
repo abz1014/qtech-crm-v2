@@ -158,13 +158,23 @@ export function CompaniesPage() {
         getRowId={r => r.id}
         twoLine
         mobileRow={r => (
+          // Forest card (70-companies .qb-cocard, C-011): the name, the place, then the role tag with the facts the table's count
+          // columns carry (RFQs, Orders, Last), so a phone loses none of the table's columns.
           <div className="grid min-w-0 gap-1">
             <NameLink row={r} />
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <PlaceLine row={r} />
+            <PlaceLine row={r} />
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
               <Role row={r} />
+              <span className="flex flex-wrap gap-x-3 text-sm text-fg-muted">
+                <span>
+                  RFQs <span className="num text-fg">{r.rfqCount}</span>
+                </span>
+                <span>
+                  Orders <span className="num text-fg">{r.orderCount}</span>
+                </span>
+                <span className="num">{r.lastActivity ? `Last: ${formatShortDate(r.lastActivity, today)}` : 'No activity yet'}</span>
+              </span>
             </div>
-            <span className="num text-sm text-fg-muted">{r.lastActivity ? `Last: ${formatShortDate(r.lastActivity, today)}` : 'No activity yet'}</span>
           </div>
         )}
         defaultSort={{ id: 'name', dir: 'asc' }}

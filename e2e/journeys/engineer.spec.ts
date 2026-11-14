@@ -106,7 +106,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
   // ---- 1. Today shows the commissioning to plan -------------------------------------------------------------------------------------
   const page = await openPage(ctx, '/todo')
   await test.step('To do lists the planned commissioning under Tomorrow, with 0 taps', async () => {
-    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
     await showAllTodo(page)
     await resetCount(page)
     const row = page.getByRole('region', { name: 'Tomorrow' }).locator('li[data-rule="job_commissioning"]').filter({ hasText: ref })
@@ -179,7 +179,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     await page.goto('/todo')
     await showAllTodo(page)
     await page.locator('#main').waitFor()
-    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
     await expect(page.locator('li[data-rule="job_commissioning"]').filter({ hasText: ref })).toHaveCount(0)
     await noMoneyOnScreen(page, 'Today at the end of the day')
   })

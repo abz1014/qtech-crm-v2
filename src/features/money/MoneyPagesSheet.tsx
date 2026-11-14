@@ -40,7 +40,7 @@ export function MoneyPagesSwitcher({
         aria-haspopup="dialog"
         data-testid="money-switcher"
         onClick={() => setOpen(true)}
-        className="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded border border-line bg-surface px-4 text-base"
+        className="flex min-h-touch w-full min-w-0 items-center justify-between gap-3 rounded-control border border-line-strong bg-surface px-4 text-base shadow-e1"
       >
         <span className="type-row inline-flex min-w-0 items-center gap-2">
           <span>{current}</span>

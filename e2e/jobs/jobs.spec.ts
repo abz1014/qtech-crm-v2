@@ -263,6 +263,61 @@ async function shot(page: Page, name: string): Promise<void> {
   if (was) await page.setViewportSize(was)
 }
 
+test.describe('Sell and Deliver lanes (Forest, gate 2)', () => {
+  const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`Job ${key}\\b`) })
+
+  test('Sell holds the enquiry with no order, Deliver the ordered jobs; each has its stages, an All jobs link, and a job opened from a lane carries it', async ({ page }) => {
+    const f = await seed()
+    // an RFQ with no order yet: Sell, at RFQ
+    const sell = await createRfq(f.company.id, { customer_ref: `${f.ref}-S`, due_on: karachiDay(7) })
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openAs(page, 'admin', '/jobs?lane=sell&chip=open')
+    await expect(page.getByRole('heading', { name: 'Sell', level: 1 })).toBeVisible()
+    await expect(row(page, String(sell.number)).first()).toBeVisible()
+    await expect(row(page, String(f.rfq.number))).toHaveCount(0)
+    await expect(row(page, `O-${f.direct.number}`)).toHaveCount(0)
+    await expect(page.getByTestId('stage-filter').getByRole('radio')).toHaveText(['All', 'RFQs', 'Quotations'])
+    await page.getByRole('radio', { name: 'RFQs' }).click()
+    await expect(page).toHaveURL(/lane=sell.*stage=rfq|stage=rfq.*lane=sell/)
+    await expect(row(page, String(sell.number)).first()).toBeVisible()
+    await review(page, 'forest-a2-lanes-desktop')
+    expect(await axeViolations(page)).toEqual([])
+
+    await row(page, String(sell.number)).first().click()
+    await expect(page).toHaveURL(new RegExp(`/jobs/${sell.number}\\?from=sell$`))
+
+    await page.goto('/jobs?lane=deliver&chip=open')
+    await expect(page.getByRole('heading', { name: 'Deliver', level: 1 })).toBeVisible()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+    await expect(row(page, String(sell.number))).toHaveCount(0)
+    await expect(page.getByTestId('stage-filter').getByRole('radio')).toHaveText(['All', 'Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
+
+    await page.getByRole('link', { name: 'All jobs' }).click()
+    await expect(page).toHaveURL(/\/jobs\?chip=open$/)
+    await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
+    await expect(row(page, String(sell.number)).first()).toBeVisible()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+  })
+
+  test('on a phone Sell is cards; an engineer who opens Sell is sent to Jobs', async ({ page, browser }) => {
+    const f = await seed()
+    const sell = await createRfq(f.company.id, { customer_ref: `${f.ref}-P`, due_on: karachiDay(7) })
+    await page.setViewportSize({ width: 375, height: 800 })
+    await openAs(page, 'admin', '/jobs?lane=sell&chip=open')
+    await expect(page.getByRole('heading', { name: 'Sell', level: 1 })).toBeVisible()
+    await expect(page.locator('tr[data-card]').filter({ hasText: `Job ${sell.number}` })).toHaveCount(1)
+    await review(page, 'forest-a2-lanes-phone')
+
+    const eng = await (await browser.newContext()).newPage()
+    await openAs(eng, 'engineer', '/jobs?lane=sell')
+    await expect(eng.getByText('Sell is for admin and sales')).toBeVisible()
+    await expect(eng.getByRole('row')).toHaveCount(0)
+    await eng.getByRole('link', { name: 'Open Jobs' }).click()
+    await expect(eng).toHaveURL(/\/jobs$/)
+    await expect(eng.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
+  })
+})
+
 test.describe('Job page (P5-C, P5-D1)', () => {
   test('the page for an enquiry: header, seven-stop ruler, one green button, and the enquiry work on the Quotation stage', async ({ page }) => {
     const f = await seed()

@@ -77,7 +77,7 @@ test('To do is laid out in colour blocks, at most 7 rows before "N more", and ev
   test.setTimeout(180_000)
   await seed()
   await openAs(page, 'admin', '/todo')
-  await expect(page.getByRole('heading', { name: 'To do', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
   await expect(page.locator('[data-needs-you-count]')).toBeVisible()
 
   // an empty block is not drawn; a drawn one is a colour block with its heading and a number

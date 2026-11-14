@@ -24,7 +24,7 @@ import { jobNext } from '@/features/jobs/lib/nextStep'
 import { jobHasMore } from '@/features/jobs/lib/hasMore'
 import { stageModel, STOPS } from '@/features/jobs/lib/stages'
 import { stageIndexOf } from '@/features/jobs/deleteJob/model'
-import { jobLabel } from '@/features/jobs/lib/listModel'
+import { jobLabel, laneOfJob } from '@/features/jobs/lib/listModel'
 import type { JobFacts } from '@/features/jobs/api'
 import { JobKeyFacts } from '@/features/jobs/JobKeyFacts'
 import { jobKeyFacts } from '@/features/jobs/lib/keyFacts'
@@ -106,17 +106,12 @@ export default function JobPage() {
 }
 
 /**
- * Where the job page leads back to (30-job-page.html backFor): the lane the job is in. Sell holds the RFQ and the quotation, Deliver the
- * order to the delivery, Money the invoice and the payment; a lost or cancelled job goes back to where it stopped. An engineer has Jobs.
+ * Where the job page leads back to: the lane the Jobs list puts this job in (laneOfJob, so the list and the link always agree): Sell
+ * for an RFQ with no order, Deliver for an order. An engineer has Jobs.
  */
-function laneOf(current: number | null, hasOrder: boolean, role: 'admin' | 'sales' | 'engineer'): { label: string; to: string } {
+function backTo(job: JobFacts['job'], role: 'admin' | 'sales' | 'engineer'): { label: string; to: string } {
   if (role === 'engineer') return { label: 'Jobs', to: '/jobs' }
-  const sell = { label: 'Sell', to: '/jobs?lane=sell' }
-  const deliver = { label: 'Deliver', to: '/jobs?lane=deliver' }
-  if (current === null) return hasOrder ? deliver : sell
-  if (current <= 2) return sell
-  if (current <= 5) return deliver
-  return { label: 'Money', to: '/money' }
+  return laneOfJob(job) === 'deliver' ? { label: 'Deliver', to: '/jobs?lane=deliver' } : { label: 'Sell', to: '/jobs?lane=sell' }
 }
 
 function JobView({ facts }: { facts: JobFacts }) {
@@ -212,7 +207,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         name={job.companyName}
         nameHref={`/companies/${job.companyId}`}
         code={jobLabel(job.key)}
-        breadcrumb={[laneOf(model.current, Boolean(job.orderId), role), { label: jobLabel(job.key), mono: true }]}
+        breadcrumb={[backTo(job, role), { label: jobLabel(job.key), mono: true }]}
         more={phone ? undefined : <JobSlot name="next-step" context={ctx} />}
         phoneSrOnly
       >

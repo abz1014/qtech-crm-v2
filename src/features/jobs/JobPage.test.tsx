@@ -123,6 +123,8 @@ describe('Job page', () => {
     const money = screen.getByRole('region', { name: 'Money for this job' })
     expect(money).toHaveTextContent('No money yet: no quotation has been sent.')
     expect(money).not.toHaveTextContent('Loading')
+    // an RFQ with no order is in Sell, as the Jobs list puts it (laneOfJob)
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Sell' })).toHaveAttribute('href', '/jobs?lane=sell')
   })
 
   it('sales and engineers see no Money card on an enquiry-stage job', async () => {
