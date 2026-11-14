@@ -152,8 +152,8 @@ test('forest: the engineer reads Visits and Delivery challans as cards, never th
       method: 'POST',
       body: [
         { order_id: s.order.id, visit_type: 'survey', visit_on: karachiDay(-4), engineer_id: ENGINEER, notes: 'Gate pass arranged. Panel space checked with the plant manager.', done_on: karachiDay(-4) },
-        { order_id: s.order.id, visit_type: 'installation', visit_on: karachiDay(3), engineer_id: ENGINEER },
-        { order_id: s.order.id, visit_type: 'service', visit_on: karachiDay(12), engineer_id: ADMIN },
+        { order_id: s.order.id, visit_type: 'installation', visit_on: karachiDay(3), engineer_id: ENGINEER, notes: null, done_on: null },
+        { order_id: s.order.id, visit_type: 'service', visit_on: karachiDay(12), engineer_id: ADMIN, notes: null, done_on: null },
       ],
       prefer: 'return=minimal',
     }),
