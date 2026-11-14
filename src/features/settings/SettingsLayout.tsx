@@ -43,18 +43,21 @@ export function SettingsLayout() {
   const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => canOpenSettingsLink(l, role)) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
   return (
-    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-card-gap px-4 pb-12 pt-4 md:grid-cols-[20rem_minmax(0,1fr)] md:px-8 md:pt-6">
+    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-card-gap px-4 pb-12 pt-4 xl:grid-cols-[20rem_minmax(0,1fr)] md:px-8 md:pt-6">
       <NoPrimary />
       {/* Team sets its own phone bar; every other page under Settings gets the back arrow to the list. */}
       {!atHome && current && current.to !== '/settings/team' ? <BackToSettings title={current.label} /> : null}
-      {/* Mockup 75: the list is a Forest card on the canvas, beside the page from 768. */}
+      {/*
+        * Mockup 75: the list is a Forest card on the canvas, beside the page from 1280. On a tablet or a small laptop (768 to 1279) it sits above the
+        * page with its links in two columns: beside it, the page had 288 px at 768 and 376 at 1024 (Team broke names and emails into 3-letter lines).
+        */}
       <nav aria-label="Settings" className={cn(CARD, 'min-w-0 self-start px-3 py-3 md:py-4', !atHome && 'max-md:hidden')}>
         <p className="hidden px-3 pb-1 type-section md:block">Settings</p>
         {groups.map(g =>
           g.links.length ? (
             <div key={g.title} className="grid gap-px pb-2">
               <p className="px-3 pb-1 pt-2 text-sm font-medium text-fg-muted">{g.title}</p>
-              <ul className="grid min-w-0 gap-px">
+              <ul className="grid min-w-0 gap-px md:max-xl:grid-cols-2 md:max-xl:gap-x-2">
                 {g.links.map(l => (
                   <li key={l.to} className="min-w-0">
                     <NavLink

@@ -4,7 +4,7 @@ import { openAs, type Role } from '../support/stack'
 /*
  * Forest lane D1 (Settings, mockups 75, 77, 78): one picture of each Settings page at 1440 and at 375, written to REVIEW_DIR (CI
  * uploads it as part of the e2e artifact; nothing is written locally), and checks that hold for every page: no sideways scroll on a
- * phone, the list is a card beside the page from 768, and an engineer's Company profile shows business details only (gate 2,
+ * phone, the list is a card beside the page from 1280 (above it on a tablet or small laptop), and an engineer's Company profile shows business details only (gate 2,
  * answer 10: Payment terms and the quotation and purchase order wording carry money words).
  */
 
@@ -54,7 +54,7 @@ test.describe('Forest Settings pictures (lane D1)', () => {
   test('every admin page at 1440 and 375, and the list', async ({ page }) => {
     test.setTimeout(240_000)
     await openAs(page, 'admin', '/settings/company')
-    // the list is one card on the canvas beside the page from 768
+    // the list is one card on the canvas beside the page from 1280
     const nav = page.getByRole('navigation', { name: 'Settings' })
     await expect(nav).toBeVisible()
     const box = await nav.boundingBox()

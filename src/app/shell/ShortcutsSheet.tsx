@@ -39,14 +39,14 @@ export function ShortcutsSheet({ open, onOpenChange }: { open: boolean; onOpenCh
                 {group}
               </h3>
               {note ? <p className="text-sm text-fg-2 text-pretty">{note}</p> : null}
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 min-[30rem]:grid-cols-[minmax(0,1fr)_auto]">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 {rows.map(s => (
                   <Fragment key={`${s.what}|${s.keys.join(' ')}`}>
                     <dt className="min-w-0 break-words text-base text-fg">
                       {s.what}
                       {s.where ? <span className="block text-sm text-fg-muted">{s.where}</span> : null}
                     </dt>
-                    <dd className="mb-2 flex flex-wrap items-center justify-start gap-1 self-start min-[30rem]:mb-0 min-[30rem]:justify-end">
+                    <dd className="mb-2 flex flex-wrap items-center justify-start gap-1 self-start sm:mb-0 sm:justify-end">
                       <Keys keys={s.keys} />
                     </dd>
                   </Fragment>
