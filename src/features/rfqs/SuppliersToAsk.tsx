@@ -73,8 +73,15 @@ function ItemPicks({ items, t }: { items: readonly RfqItemRow[]; t: ReturnType<t
       {items.map(it => {
         const id = `ask-item-${it.id}`
         return (
-          <li key={it.id} className="relative flex min-w-0 items-center gap-3 border-b px-5 py-2 last:border-b-0">
-            <Checkbox id={id} checked={t.isTicked(it)} onCheckedChange={v => t.set(it.id, v === true)} aria-label={`Item ${it.number}: ${it.description}`} />
+          // The tick sits on the first line of a name that wraps (the box's own top offset; on touch its 44px target, less 13px).
+          <li key={it.id} className="relative flex min-w-0 items-start gap-3 border-b px-5 py-2 last:border-b-0">
+            <Checkbox
+              id={id}
+              checked={t.isTicked(it)}
+              onCheckedChange={v => t.set(it.id, v === true)}
+              aria-label={`Item ${it.number}: ${it.description}`}
+              className="[@media(pointer:coarse)]:mt-[calc((var(--lh-sm)-18px)/2-13px)]"
+            />
             <label htmlFor={id} className="min-w-0 text-sm after:absolute after:inset-0 after:cursor-pointer">
               <span className="num mr-2 text-fg-muted">{it.number}</span>
               {it.description}

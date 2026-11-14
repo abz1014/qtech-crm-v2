@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { askedAbout, askedItemsOf, sameScope, scopeFor, widenScope } from '@/features/rfqs/lib/askedItems'
+import { askedAbout, askedAboutText, askedItemsOf, sameScope, scopeFor, widenScope } from '@/features/rfqs/lib/askedItems'
 
 /* Supplier flow D (0140): which items a supplier was asked about. NULL is every item, as every inquiry before 0140 meant. */
 
@@ -36,5 +36,16 @@ describe('askedItems', () => {
     expect(sameScope(null, undefined)).toBe(true)
     expect(sameScope(['a', 'b'], ['b', 'a'])).toBe(true)
     expect(sameScope(['a'], null)).toBe(false)
+  })
+})
+
+describe('askedAboutText', () => {
+  const items = [{ id: 'a', number: 1 }, { id: 'b', number: 2 }, { id: 'c', number: 3 }]
+  it('names the items of a partial ask, and says nothing for a full one', () => {
+    expect(askedAboutText({ askedItemIds: ['b', 'a'] }, items)).toBe('Asked about items 1 and 2 only')
+    expect(askedAboutText({ askedItemIds: ['c'] }, items)).toBe('Asked about item 3 only')
+    expect(askedAboutText({ askedItemIds: ['gone'] }, items)).toBe('Asked about an item that was removed')
+    expect(askedAboutText({ askedItemIds: null }, items)).toBeNull()
+    expect(askedAboutText({ askedItemIds: ['a', 'b', 'c'] }, items)).toBeNull()
   })
 })

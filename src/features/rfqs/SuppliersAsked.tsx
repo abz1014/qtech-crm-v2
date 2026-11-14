@@ -16,8 +16,8 @@ import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { ChannelLink } from '@/ui/ChannelLink'
 import { ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
-import { numbersText, useChooseSuppliers } from '@/features/rfqs/escalationLogic'
-import { askedItemsOf } from '@/features/rfqs/lib/askedItems'
+import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
+import { askedAboutText } from '@/features/rfqs/lib/askedItems'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useRestoreSupplierChase, useSetInquiryNoOffer, useStampSupplierChase } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
@@ -223,6 +223,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           key={`${replying.id}:${replying.lines.map(l => `${l.itemId}=${l.unitPrice}${l.currency}${l.leadTime}${l.inStock}`).join('|')}`}
           rfq={rfq}
           items={replyItems(replying, items)}
+          allItems={items}
           inquiry={replying}
           inquiries={inquiries}
           rates={rates}
@@ -236,12 +237,11 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
 
 /** "Asked about items 1 and 2": only for a supplier asked about some of the items (supplier flow D). */
 function AskedAboutLine({ inquiry, items }: { inquiry: InquiryRow; items: readonly RfqItemRow[] }) {
-  if (!inquiry.askedItemIds) return null
-  const asked = askedItemsOf(inquiry, items)
-  if (asked.length === items.length) return null
+  const text = askedAboutText(inquiry, items)
+  if (!text) return null
   return (
     <p className="text-sm text-fg-muted" data-asked-about={inquiry.supplierId}>
-      {asked.length === 0 ? 'Asked about an item that was removed' : `Asked about ${numbersText(asked.map(it => it.number))} only`}
+      {text}
     </p>
   )
 }

@@ -22,6 +22,7 @@ import { Banner } from '@/ui/Banner'
 import { PdfPickButton } from '@/features/rfqs/PdfIntake'
 import type { readDocument as ReadDocument } from '@/features/rfqs/lib/readPdf'
 import { replyInputId } from '@/features/rfqs/replyFocus'
+import { askedAboutText } from '@/features/rfqs/lib/askedItems'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
 import {
@@ -141,9 +142,12 @@ export function SupplierReplyDialog({
   rates,
   focusItemId,
   onClose,
+  allItems,
 }: {
   rfq: RfqHeader
   items: RfqItemRow[]
+  /** Every item of the RFQ, so a supplier asked about some of them says so ("Asked about items 1 and 2 only."). */
+  allItems?: readonly RfqItemRow[]
   inquiry: InquiryRow
   /** The other suppliers' replies. No longer read here (the price preview names no lowest), kept so callers need no change. */
   inquiries?: InquiryRow[]
@@ -168,6 +172,7 @@ export function SupplierReplyDialog({
   const [priceText, setPriceText] = useState<Record<string, string>>({})
 
   const hasLines = inquiry.lines.length > 0
+  const askedLine = allItems ? askedAboutText(inquiry, allItems) : null
   const declinedAll = Boolean(inquiry.noOfferOn) && !hasLines
   const dirty = isReplyDirty(existing, draft)
   // Text in a price box that is not a price yet ("about 12", or "PKR 1," half typed) is typed work too: closing asks first, and
@@ -339,6 +344,11 @@ export function SupplierReplyDialog({
         }
       >
         <div className="grid gap-4 text-base text-fg" data-reply-form={inquiry.supplierId}>
+          {askedLine ? (
+            <p className="-mt-1 text-sm text-fg-muted" data-asked-about={inquiry.supplierId}>
+              {`${askedLine}.`}
+            </p>
+          ) : null}
           {declinedAll ? (
             <div className="flex flex-wrap items-center gap-3 rounded-row border border-line bg-sunken px-3 py-2">
               <span>
@@ -394,19 +404,22 @@ export function SupplierReplyDialog({
                 />
               ) : null}
               {!draft.currency ? (
-                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded-row border border-line bg-sunken px-3 py-2">
+                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="grid gap-2 rounded-row border border-line bg-sunken px-3 py-2">
                   <span className="text-fg-2">Which currency are they quoting in? Asked once, then remembered.</span>
+                  {/* The choices on rows of their own under the question, evenly sized: one row of eight wide, two of four on a phone. */}
+                  <span className="grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-2">
                   {CURRENCY_CHIPS.map(c => (
                     <button
                       key={c}
                       type="button"
                       aria-pressed={false}
                       onClick={() => setDraft(d => ({ ...d, currency: c }))}
-                      className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
+                      className="inline-flex h-control items-center justify-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
                     >
                       {c}
                     </button>
                   ))}
+                  </span>
                 </div>
               ) : null}
               <ul className="grid gap-3">

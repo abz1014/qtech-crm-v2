@@ -52,9 +52,11 @@ function Fold({ title, count, children }: { title: string; count: number; childr
         onClick={() => setChosen(!open)}
         className="flex min-h-touch w-full items-center gap-2 rounded px-2 text-left text-base font-medium hover:bg-sunken"
       >
-        <ChevronRight aria-hidden="true" className={open ? 'size-4 rotate-90' : 'size-4'} />
-        {title}
-        <span className="num text-fg-muted">{count > 0 ? `(${count})` : 'none yet'}</span>
+        <ChevronRight aria-hidden="true" className={open ? 'size-4 shrink-0 rotate-90' : 'size-4 shrink-0'} />
+        {/* One run of text: on a narrow phone "none yet" follows the title to the next line whole, not two wrapped columns. */}
+        <span className="min-w-0">
+          {title} <span className="num whitespace-nowrap text-fg-muted">{count > 0 ? `(${count})` : 'none yet'}</span>
+        </span>
       </button>
       {open ? <Suspense fallback={<Skeleton className="h-8 w-full" />}>{children}</Suspense> : null}
     </div>

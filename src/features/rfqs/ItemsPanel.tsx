@@ -399,9 +399,11 @@ export function ItemsPanel({
             const bodyId = `item-body-${item.id}`
             return (
               <article key={item.id} aria-label={`Item ${item.number}`} className="min-w-0" data-folded={folded ? '' : undefined}>
-                <header className={cn('relative flex flex-wrap items-start gap-x-3 gap-y-2 px-0 pt-4 lg:pt-3', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
-                  <span className="num mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-sm">{item.number}</span>
-                  <div className="min-w-0 flex-1 basis-[16rem]">
+                {/* A grid, so the number stays beside the title and the fold chevron and menu stay at the right of the first row at any
+                    width; below lg the chip drops under the title, from lg it sits before the chevron. */}
+                <header className={cn('relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-0 pt-4 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:pt-3', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
+                  <span className="num col-start-1 row-start-1 mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-sm">{item.number}</span>
+                  <div className="col-start-2 row-start-1 min-w-0">
                     <h3 className="text-base font-medium text-pretty">
                       {foldable ? (
                         // The whole header is the tap target (the button's box stretches over it); the name is its label.
@@ -429,11 +431,18 @@ export function ItemsPanel({
                     </p>
                   </div>
                   {/* "Priced" is said once, on each supplier's row (Suppliers asked): an item with prices shows its price rows, not a second chip. */}
-                  {cov.value && cov.value !== 'priced' ? <StatusBadge dimension="item-price" value={cov.value} detail={cov.detail} /> : null}
-                  {foldable ? <Icon icon={ChevronDown} className={cn('mt-[2px] shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} /> : null}
-                  {/* Above the phone header's whole-width tap target (z-10), so the menu is its own button. */}
-                  <span className="relative z-10 -my-2 shrink-0">
-                    <ItemMenu rfq={rfq} item={item} />
+                  {/* An item others were asked about but nobody about this one says so folded too: Needs suppliers. */}
+                  {unasked || (cov.value && cov.value !== 'priced') ? (
+                    <span className="col-start-2 row-start-2 justify-self-start lg:col-start-3 lg:row-start-1">
+                      <StatusBadge dimension="item-price" value={unasked ? 'unasked' : (cov.value as string)} detail={cov.detail} />
+                    </span>
+                  ) : null}
+                  <span className="col-start-3 row-start-1 flex shrink-0 items-start gap-x-1 lg:col-start-4">
+                    {foldable ? <Icon icon={ChevronDown} className={cn('mt-[2px] shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} /> : null}
+                    {/* Above the phone header's whole-width tap target (z-10), so the menu is its own button. */}
+                    <span className="relative z-10 -my-2 shrink-0">
+                      <ItemMenu rfq={rfq} item={item} />
+                    </span>
                   </span>
                 </header>
 
