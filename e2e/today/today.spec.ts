@@ -377,8 +377,9 @@ test.describe('Home: fits every width, with Forest-sized row buttons', () => {
       }
       // the Forest Home pictures for the lane hand-back (desktop and phone)
       if (width === 1440 || width === 375) {
+        // every scrolled box back to its top (the list pane on a desktop, #main on a phone), so the picture starts at the hero
         await page.evaluate(() => {
-          document.querySelector('[data-today-list]')?.scrollTo(0, 0)
+          for (const el of Array.from(document.querySelectorAll<HTMLElement>('*'))) if (el.scrollTop > 0) el.scrollTop = 0
           window.scrollTo(0, 0)
         })
         await review(page, `forest-home-admin-${width}`)

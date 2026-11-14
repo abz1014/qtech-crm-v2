@@ -501,15 +501,16 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
         ) : copied ? (
           <span className="type-row inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-3 text-tone-success-fg">Copied</span>
         ) : (
-          <span className={cn('type-row min-w-0 flex-1 basis-1/4', tone)}>{item.badge.text}</span>
+          // half the row on a phone, so "15 days overdue" stays on one line and the buttons drop under it, to the right
+          <span className={cn('type-row min-w-0 flex-1 basis-1/2 md:basis-1/4', tone)}>{item.badge.text}</span>
         )}
         {own ? (
-          <>
+          <div className="ml-auto flex items-center gap-2">
             <Button variant="secondary" onClick={onAct} aria-label={`${ACTION_LABEL[item.rule]}: ${item.ref} ${item.party}`} className="max-md:min-h-touch">
               {ACTION_LABEL[item.rule]}
             </Button>
             <SnoozeMenu item={item} today={today} iconOnly extra={second ? { label: second.label, ariaLabel: `${second.label}: ${item.ref} ${item.party}`, onSelect: () => onGo(second.href) } : undefined} />
-          </>
+          </div>
         ) : null}
       </div>
       {children}
