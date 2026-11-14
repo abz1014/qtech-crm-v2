@@ -1,6 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
 import { KIND_LABEL, fixed, type Statement } from '@/features/money/statement/model'
+import { rupeesToPkr } from '@/lib/errors/rpcMessages'
 
 /*
  * The statement of account PDF (process audit 7), in the invoice's style: A4, Geist, the same letterhead (company_profile and the
@@ -108,7 +109,7 @@ export function StatementDocument({
               {KIND_LABEL[r.kind]}
               {r.ref ? <Text style={s.mono}>{`  ${r.ref}`}</Text> : null}
               {r.orderNumber ? <Text style={s.muted}>{`  · order ${String(r.orderNumber).padStart(4, '0')}`}</Text> : null}
-              {r.note ? <Text style={s.muted}>{`  · ${r.note}`}</Text> : null}
+              {r.note ? <Text style={s.muted}>{`  · ${rupeesToPkr(r.note)}`}</Text> : null}
             </Text>
             <Text style={[s.cNum, s.mono]}>{r.debit > 0n ? fixed(r.debit) : ''}</Text>
             <Text style={[s.cNum, s.mono]}>{r.credit > 0n ? fixed(r.credit) : ''}</Text>

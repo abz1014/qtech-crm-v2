@@ -67,6 +67,20 @@ describe('GST to FBR page', () => {
     expect(feb.getByTestId('psid-AAA-1')).toHaveTextContent('10 Mar')
     expect(feb.getByTestId('psid-BBB-2')).toHaveTextContent('14 Mar')
   })
+  it('a month not fully paid says when its one PSID was deposited, not "(not deposited yet)" (live bug 24)', async () => {
+    mountWith([], [
+      { invoice_date: '2020-02-10', psid: '1023-4471-0226', tax_deposited_on: '2020-03-14' },
+      { invoice_date: '2020-03-05', psid: 'CCC-3', tax_deposited_on: '2020-04-02' },
+    ])
+    const mar = within(await screen.findByTestId('gst-2020-03'))
+    expect(await mar.findByTestId('psid-CCC-3')).toHaveTextContent('PSID CCC-3, deposited Thu 2 Apr')
+    expect(mar.getByTestId('status-2020-03')).not.toHaveTextContent('not deposited yet')
+  })
+  it('a PSID with no deposit recorded still says so', async () => {
+    mountWith([], [{ invoice_date: '2020-03-05', psid: 'DDD-4', tax_deposited_on: null }])
+    const mar = within(await screen.findByTestId('gst-2020-03'))
+    expect(mar.getByTestId('status-2020-03')).toHaveTextContent('PSID DDD-4 (not deposited yet)')
+  })
   it('says what the page is for in the words of the plan', async () => {
     mount()
     await screen.findByTestId('gst-months')

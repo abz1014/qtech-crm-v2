@@ -11,6 +11,7 @@ import { Icon } from '@/ui/Icon'
 import { TextField } from '@/ui/form/TextField'
 import { mapPgError } from '@/lib/pgErrors'
 import { Skeleton } from '@/ui/Skeleton'
+import { CARD } from '@/ui/card'
 import { qk } from '@/features/queryKeys'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { MoneySubHeader, MoneyFrame } from '@/features/money/MoneyFrame'
@@ -54,19 +55,36 @@ export function GstToFbrPage() {
         </Link>
       </p>
       {failed ? (
-        <p role="alert" className="rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3 text-base text-tone-danger-fg">
-          The GST months could not be loaded.{' '}
-          <button type="button" className="font-medium underline" onClick={() => void Promise.all([months.refetch(), filings.refetch()])}>
+        <p role="alert" className={cn(CARD, 'flex flex-wrap items-center gap-x-3 gap-y-2 p-card text-base font-medium text-tone-danger-fg')}>
+          <Icon icon={CircleAlert} className="shrink-0" />
+          <span>The GST months could not be loaded.</span>
+          <Button size="sm" variant="secondary" onClick={() => void Promise.all([months.refetch(), filings.refetch()])}>
             Try again
-          </button>
+          </Button>
         </p>
       ) : !lines ? (
-        <div className="grid gap-3" aria-busy="true">
-          <Skeleton className="h-[6rem]" />
-          <Skeleton className="h-[6rem]" />
+        // shaped like the month cards: the month, the three figures, the status
+        <div className="grid gap-3" aria-busy="true" aria-label="Loading the GST months">
+          {[0, 1, 2].map(i => (
+            <div key={i} className={cn(CARD, 'grid gap-4 p-card md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,15rem)] md:items-center md:gap-6')}>
+              <span className="grid gap-2">
+                <Skeleton className="h-5 w-[8rem]" />
+                <Skeleton className="h-3 w-[5rem]" />
+              </span>
+              <span className="grid gap-2">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-4 w-full" />
+              </span>
+              <span className="grid gap-2">
+                <Skeleton className="h-4 w-[9rem]" />
+                <Skeleton className="h-3 w-[7rem]" />
+              </span>
+            </div>
+          ))}
         </div>
       ) : lines.length === 0 ? (
-        <p className="rounded-panel border bg-surface px-5 py-4 text-base text-fg-2">No invoices yet, so no GST to pay.</p>
+        <p className={cn(CARD, 'p-card text-base text-fg-2')}>No invoices yet, so no GST to pay.</p>
       ) : (
         <ul className="grid gap-3" data-testid="gst-months">
           {lines.map(l => (
@@ -75,7 +93,7 @@ export function GstToFbrPage() {
         </ul>
       )}
       {isAdmin ? <WhtDeducted /> : null}
-      <p className="text-base text-fg-2">
+      <p className="max-w-prose text-base text-fg-2" data-testid="gst-foot">
         To stamp a month&apos;s payment slip number and deposit date, open{' '}
         <Link to="/money/gst-register" className="font-medium text-primary underline underline-offset-2">
           Invoices
@@ -90,28 +108,29 @@ export function GstToFbrPage() {
   )
 }
 
-const TONE: Record<GstLine['tone'], string> = {
-  paid: 'border-line bg-surface',
-  ok: 'border-line bg-surface',
-  soon: 'border-transparent bg-block-today text-block-today-fg',
-  late: 'border-transparent bg-block-late text-block-late-fg',
-  nothing: 'border-line bg-block-quiet text-block-quiet-fg',
+/* Forest (58-money-checks #gst-cards): every month is the one white card; the state is the status line's icon and ink, never a tinted card. */
+const STATUS_INK: Record<GstLine['tone'], string> = {
+  paid: 'text-tone-success-fg',
+  ok: 'text-fg',
+  soon: 'text-tone-warning-fg',
+  late: 'text-tone-danger-fg',
+  nothing: 'text-fg-2',
 }
 
 function MonthCard({ l }: { l: GstLine }) {
   return (
-    <li className={cn('grid gap-3 rounded-panel border px-5 py-4 md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_minmax(0,14rem)] md:items-center', TONE[l.tone])} data-testid={`gst-${l.month}`}>
-      <div className="grid gap-px">
-        <h2 className="text-lg font-semibold">{monthKeyLabel(l.month)}</h2>
-        <span className="text-base">{l.invoiceCount === 1 ? '1 invoice' : `${l.invoiceCount} invoices`}</span>
+    <li className={cn(CARD, 'grid gap-4 p-card md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,15rem)] md:items-center md:gap-6')} data-testid={`gst-${l.month}`} data-tone={l.tone}>
+      <div className="grid gap-1">
+        <h2 className="text-lg font-heavy">{monthKeyLabel(l.month)}</h2>
+        <span className="text-sm text-fg-2">{l.invoiceCount === 1 ? '1 invoice' : `${l.invoiceCount} invoices`}</span>
       </div>
-      <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-base">
-        <dt>GST charged</dt>
+      <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 text-base">
+        <dt className="text-fg-2">GST charged</dt>
         <dd className="num text-right">{rs(l.charged)}</dd>
-        <dt>GST paid on purchases</dt>
+        <dt className="text-fg-2">GST paid on purchases</dt>
         <dd className="num text-right">{l.paidOnPurchases === null ? 'not shown' : `− ${rs(l.paidOnPurchases)}`}</dd>
-        <dt className="border-t pt-1 font-semibold">To pay</dt>
-        <dd className="num border-t pt-1 text-right text-lg font-semibold" data-testid={`topay-${l.month}`}>
+        <dt className="mt-1 border-t pt-2 font-heavy">To pay</dt>
+        <dd className="num mt-1 border-t pt-2 text-right text-lg font-heavy" data-testid={`topay-${l.month}`}>
           {rs(l.toPay)}
         </dd>
         {Number(l.credit) > 0 ? (
@@ -131,7 +150,7 @@ function PsidDays({ l }: { l: GstLine }) {
   return (
     <ul className="grid gap-px" aria-label="Payment slips">
       {l.psidDeposits.map(d => (
-        <li key={d.psid} className="num [overflow-wrap:anywhere]" data-testid={`psid-${d.psid}`}>
+        <li key={d.psid} className="num text-fg-2 [overflow-wrap:anywhere]" data-testid={`psid-${d.psid}`}>
           PSID {d.psid}, {d.on ? `deposited ${formatDay(d.on)}` : 'not deposited yet'}
         </li>
       ))}
@@ -143,28 +162,30 @@ function Status({ l }: { l: GstLine }) {
   if (l.tone === 'paid')
     return (
       <div className="grid gap-px text-base" data-testid={`status-${l.month}`}>
-        <span className="inline-flex items-center gap-2 font-medium text-tone-success-fg">
+        <span className={cn('inline-flex items-center gap-2 font-heavy', STATUS_INK.paid)}>
           <Icon icon={CircleCheck} />
           Paid{l.paidOn ? ` ${formatDay(l.paidOn)}` : ''}
         </span>
-        {l.psidDeposits.length > 1 ? <PsidDays l={l} /> : l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">Payment slip no. (PSID) {l.psids.join(', ')}</span> : null}
+        {l.psidDeposits.length > 1 ? <PsidDays l={l} /> : l.psids.length > 0 ? <span className="num text-fg-2 [overflow-wrap:anywhere]">Payment slip no. (PSID) {l.psids.join(', ')}</span> : null}
         {Number(l.deposited) > 0 ? <span className="num text-fg-2">Deposited PKR {rs(l.deposited)}</span> : null}
       </div>
     )
   if (l.tone === 'nothing')
     return (
-      <div className="text-base" data-testid={`status-${l.month}`}>
+      <div className={cn('inline-flex items-center gap-2 text-base font-medium', STATUS_INK.nothing)} data-testid={`status-${l.month}`}>
+        <Icon icon={CircleCheck} />
         Nothing to pay
       </div>
     )
   return (
     <div className="grid gap-px text-base" data-testid={`status-${l.month}`}>
-      <span className="inline-flex items-center gap-2 font-medium">
+      <span className={cn('inline-flex items-center gap-2 font-heavy', STATUS_INK[l.tone])}>
         <Icon icon={l.tone === 'late' ? CircleAlert : Clock} />
         {l.tone === 'late' ? `Late: was due ${formatDay(l.payBy)}` : `Pay by ${formatDay(l.payBy)}${l.payOverridden ? ' (date moved)' : ''}`}
       </span>
-      <span>Return by {formatDay(l.returnBy)}{l.returnOverridden ? ' (date moved)' : ''}</span>
-      {l.psidDeposits.length > 1 && l.psidDeposits.some(d => d.on) ? <PsidDays l={l} /> : l.psids.length > 0 ? <span className="num [overflow-wrap:anywhere]">PSID {l.psids.join(', ')} (not deposited yet)</span> : null}
+      <span className="text-fg-2">Return by {formatDay(l.returnBy)}{l.returnOverridden ? ' (date moved)' : ''}</span>
+      {/* live bug 24: a PSID whose deposit is recorded said "(not deposited yet)" while the month was still open. Each slip now says its own day. */}
+      {l.psidDeposits.some(d => d.on) ? <PsidDays l={l} /> : l.psids.length > 0 ? <span className="num text-fg-2 [overflow-wrap:anywhere]">PSID {l.psids.join(', ')} (not deposited yet)</span> : null}
     </div>
   )
 }
@@ -267,8 +288,8 @@ function WhtDeducted() {
   const months = Array.from(new Set(rows.map(r => r.month))).sort().reverse()
   const missing = rows.filter(r => r.certificateMissing).length
   return (
-    <section aria-label="WHT deducted by customers" className="grid gap-3 rounded-panel border bg-surface px-5 py-4" data-testid="wht-deducted">
-      <h2 className="text-lg font-semibold">WHT deducted by customers</h2>
+    <section aria-label="WHT deducted by customers" className={cn(CARD, 'grid gap-3 p-card')} data-testid="wht-deducted">
+      <h2 className="text-lg font-heavy">WHT deducted by customers</h2>
       <p className="text-base text-fg-2">
         Tax that customers held back when they paid. It is not money received. It settles the invoice together with the cash. Keep each certificate to claim the credit.
       </p>
@@ -290,13 +311,13 @@ function WhtDeducted() {
             const total = list.reduce((s, r) => s + r.amount, 0)
             return (
               <div key={m} className="grid gap-1" data-testid={`wht-${m.slice(0, 7)}`}>
-                <h3 className="flex items-baseline justify-between gap-3 text-base font-semibold">
+                <h3 className="flex items-baseline justify-between gap-3 pt-1 text-base font-heavy">
                   <span>{monthKeyLabel(m.slice(0, 7))}</span>
                   <span className="num">PKR {rs(total)}</span>
                 </h3>
                 <ul className="grid gap-1">
                   {list.map(r => (
-                    <li key={r.paymentId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-row border px-3 py-2 text-base">
+                    <li key={r.paymentId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-row border bg-canvas px-3 py-2 text-base">
                       <span className="min-w-0 [overflow-wrap:anywhere]">
                         <Link to={`/orders/${r.orderId}#payments`} className="num font-medium text-primary underline underline-offset-2">
                           {orderRef(r.orderNumber)}

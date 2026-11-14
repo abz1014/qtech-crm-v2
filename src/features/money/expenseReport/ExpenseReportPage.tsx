@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Download, FileText } from 'lucide-react'
+import { ChevronDown, ChevronRight, CircleAlert, Download, FileText } from 'lucide-react'
+import { PeriodStepper } from '@/features/money/monthEnd/MonthEndFrame'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
@@ -160,26 +161,7 @@ function Loading() {
 }
 
 function PeriodPager({ period, atNow, go }: { period: Period; atNow: boolean; go: (by: number) => void }) {
-  const unit = period.kind === 'month' ? 'month' : 'quarter'
-  return (
-    <div role="group" aria-label="Period" className="inline-flex gap-[2px] rounded bg-selected p-[2px]">
-      <button type="button" aria-label={`Previous ${unit}`} onClick={() => go(-1)} className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 hover:text-fg">
-        <Icon icon={ChevronLeft} size="sm" />
-      </button>
-      <span aria-live="polite" data-testid="expense-report-period" className="num inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
-        {periodLabel(period)}
-      </span>
-      <button
-        type="button"
-        aria-label={`Next ${unit}`}
-        disabled={atNow}
-        onClick={() => go(1)}
-        className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 hover:text-fg disabled:text-fg-disabled"
-      >
-        <Icon icon={ChevronRight} size="sm" />
-      </button>
-    </div>
-  )
+  return <PeriodStepper label="Period" unit={period.kind === 'month' ? 'month' : 'quarter'} text={periodLabel(period)} atNow={atNow} go={go} testId="expense-report-period" />
 }
 
 function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void }) {

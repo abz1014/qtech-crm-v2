@@ -75,8 +75,8 @@ export function ChecklistPage() {
 
       {isClosed ? <LockBar month={ctx.month} /> : null}
       {/* 0087 (A9, owner: yes): cash in hand, with Count cash, so a missing small cash expense shows before the month is locked.
-          57-lock-month .lm-cash: its own white card, the one Forest card look. */}
-      <div className="max-[359px]:[&>section>svg:first-child]:hidden [&>section]:rounded-card [&>section]:px-card [&>section]:py-4 [&>section]:shadow-e1">
+          57-lock-month .lm-cash: CashInHandLine draws the one Forest card itself; below 360 the icon tile gives its width to the words. */}
+      <div className="max-[359px]:[&>section>span:first-child]:hidden">
         <CashInHandLine />
       </div>
 

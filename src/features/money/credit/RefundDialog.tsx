@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Info, TriangleAlert } from 'lucide-react'
+import { Check, Info, TriangleAlert, Undo2 } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
@@ -108,6 +108,7 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
 
   return (
     <DialogContent
+      icon={Undo2}
       title="Refund customer"
       context={companyName}
       size="md"

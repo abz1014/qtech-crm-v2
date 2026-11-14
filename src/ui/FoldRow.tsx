@@ -85,17 +85,32 @@ export function FoldRow({ state, title, summary, open, onToggle, controlsId, chi
       </span>
       <span className={cn('col-start-1 row-start-2 min-w-0 text-sm font-regular [overflow-wrap:anywhere]', tone ? summaryTone : 'text-fg-muted')}>{summary}</span>
     </>
+  ) : figure ? (
+    // A figure: [icon | title ... summary | chevron]. When the figure does not fit beside the title it moves under it, still to the right,
+    // and the chevron keeps its own column at the right (it wrapped under the row with the figure at 375 before).
+    <>
+      <span className="col-start-2 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-3">
+        <span className={cn('shrink-0', muted && 'font-medium text-fg-muted')}>{title}</span>
+        <span className="sr-only">{state.word}</span>
+        <span className={cn('type-body ml-auto min-w-[min-content] text-right [overflow-wrap:anywhere]', summaryTone)}>{summary}</span>
+      </span>
+      <Icon icon={state.icon} className={cn('col-start-1 row-start-1', state.className ?? 'text-fg-muted')} />
+    </>
   ) : (
     <>
       <span className={cn('shrink-0', muted && 'font-medium text-fg-muted')}>{title}</span>
       <span className="sr-only">{state.word}</span>
       <Icon icon={state.icon} className={cn('order-first', state.className ?? 'text-fg-muted')} />
-      <span className={cn('type-body flex-1 text-right [overflow-wrap:anywhere]', figure ? 'min-w-[min-content]' : 'min-w-0', summaryTone)}>{summary}</span>
+      <span className={cn('type-body min-w-0 flex-1 text-right [overflow-wrap:anywhere]', summaryTone)}>{summary}</span>
     </>
   )
-  // With a chip: a grid of [words | chip | chevron] over two lines; without: the one line.
-  const line = chip ? 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-px py-3' : cn('flex items-center gap-3 py-2', figure && 'flex-wrap gap-y-0')
-  const chevron = chip ? 'col-start-3 row-span-2 row-start-1' : ''
+  // With a chip: a grid of [words | chip | chevron] over two lines; a figure: a grid of [icon | words | chevron]; else the one line.
+  const line = chip
+    ? 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-px py-3'
+    : figure
+      ? 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 py-2'
+      : 'flex items-center gap-3 py-2'
+  const chevron = chip ? 'col-start-3 row-span-2 row-start-1' : figure ? 'col-start-3 row-start-1' : ''
   return (
     <div id={id} className={cn('border-b', className)} data-fold-row="" data-stage={dataStage}>
       {disabled ? (

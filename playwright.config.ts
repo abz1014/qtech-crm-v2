@@ -319,7 +319,8 @@ export default defineConfig({
     },
     {
       name: 'money-costs',
-      testMatch: /money\/costs\.spec\.ts/,
+      // every spec under e2e/money/ (costs, profit, the review pictures): profit.spec.ts ran in no suite while this named costs only
+      testMatch: /money\/.*\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },

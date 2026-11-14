@@ -175,7 +175,9 @@ test.describe('who sees profitability', () => {
       await openAs(page, role, '/money/receivables')
       await page.goto('/money/profit')
       await page.waitForLoadState('networkidle')
-      await expect(page.getByRole('heading', { name: 'Profitability' })).toHaveCount(0)
+      // the page's own heading (exact): sales meet "Profitability is for admins", the no-access page
+      await expect(page.getByRole('heading', { name: 'Profitability', exact: true })).toHaveCount(0)
+      if (role === 'sales') await expect(page.getByRole('heading', { name: 'Profitability is for admins' })).toBeVisible()
       await expect(page.getByTestId('profit-average')).toHaveCount(0)
       expect(seen, `${role}: no profit view is requested`).toEqual([])
       await context.close()

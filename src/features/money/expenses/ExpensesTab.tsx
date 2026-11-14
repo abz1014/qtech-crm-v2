@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChartColumn, ChevronLeft, ChevronRight, Ellipsis, History, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
+import { ChartColumn, Ellipsis, History, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Button } from '@/ui/Button'
+import { PeriodStepper } from '@/features/money/monthEnd/MonthEndFrame'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { FilterSheet } from '@/ui/FilterSheet'
@@ -160,13 +161,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               </h2>
               {/* The month, its one total (by the day paid) and the report for it; then search and filters (60-expenses #ex-monthbar). */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-                <div className="inline-flex items-center gap-1 rounded-control border bg-surface p-px" role="group" aria-label="Month">
-                  <Button variant="quiet" size="sm" icon={ChevronLeft} aria-label="Previous month" className="max-md:size-touch" onClick={() => setMonth(m => shiftMonth(m, -1))} />
-                  <span className="num min-w-[5.5rem] text-center text-base font-bold" aria-live="polite" title={monthKeyLabel(month)}>
-                    {monthKeyShort(month)}
-                  </span>
-                  <Button variant="quiet" size="sm" icon={ChevronRight} aria-label="Next month" className="max-md:size-touch" disabled={isCurrent} onClick={() => setMonth(m => shiftMonth(m, 1))} />
-                </div>
+                <PeriodStepper label="Month" unit="month" text={monthKeyShort(month)} title={monthKeyLabel(month)} atNow={isCurrent} go={by => setMonth(m => shiftMonth(m, by))} />
                 {list.isSuccess ? (
                   <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-base" data-testid="expenses-month-total" aria-live="polite">
                     <b className="num text-xl font-heavy tracking-snug">{pkr(totals.total)}</b>

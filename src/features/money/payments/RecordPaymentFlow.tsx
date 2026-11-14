@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { Banknote, ChevronRight } from 'lucide-react'
 import { orderRef } from '@/lib/refs'
 import { businessToday } from '@/lib/dates'
 import { lazyDialog } from '@/lib/lazyDialog'
@@ -47,6 +47,7 @@ export function WhichOrderDialog({ open, onOpenChange, onPick }: { open: boolean
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        icon={Banknote}
         title="Which order?"
         context="Record payment, step 1 of 2"
         size="md"

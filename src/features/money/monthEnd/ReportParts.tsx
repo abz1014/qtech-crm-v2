@@ -38,7 +38,7 @@ export function ExportCsvButton({ onClick, disabled }: { onClick: () => void; di
 /** "By payment date": the clock a report counts on, so two reports are never read as one (money-07 clock tag). */
 export function ClockTag({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex min-h-6 items-center gap-1 rounded-pill bg-brand-100 px-2 text-xs font-medium text-fg-2">
+    <span className="inline-flex min-h-6 items-center gap-1 whitespace-nowrap rounded-pill bg-brand-100 px-2 text-xs font-medium text-fg-2">
       <Icon icon={CalendarDays} size="chip" />
       {children}
     </span>
@@ -70,8 +70,9 @@ export function Panel({
   return (
     <section className={cn(CARD, 'overflow-hidden', className)}>
       <header className="flex min-h-head flex-wrap items-center gap-x-3 gap-y-2 border-b px-card py-3">
-        {/* Title and its note ("i") stay together: the note sits beside the last line of a long title, never alone on a line of its own. */}
-        <div className="flex min-w-0 items-center gap-2">
+        {/* Title and its note ("i") stay together: the note sits beside the last line of a long title, never alone on a line of its own.
+            When title and note do not fit one line (a phone), the note moves under the title whole: it never squeezes the title into a column. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <h2 className="min-w-0 text-lg font-heavy">{title}</h2>
           {meta}
         </div>
@@ -115,10 +116,11 @@ export function AsOfControl({ asOf, chosen, onChange }: { asOf: string; chosen: 
     )
   }
   return (
-    <span className="flex flex-wrap items-center gap-2">
-      <label className="inline-flex items-center gap-2 text-sm text-fg-2">
+    // F-783: the field fills the row on a phone (it was a fixed 232 px beside its word, too wide for 320 at Larger text).
+    <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      <label className="flex min-w-0 flex-[1_1_12rem] items-center gap-2 text-sm text-fg-2 sm:flex-none">
         As of
-        <span className="w-full min-w-0 sm:max-w-[232px]">
+        <span className="w-full min-w-0 flex-1 sm:w-[15rem] sm:flex-none">
           <DateInput aria-label="As of date" value={asOf} onChange={v => v && onChange(v)} defaultToday={false} />
         </span>
       </label>

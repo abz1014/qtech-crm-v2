@@ -42,7 +42,7 @@ export function TickPanel({ dir, side, justTicked, onTick }: TickPanelProps) {
     <section aria-label={heading} data-testid={`bank-${dir}`} className={cn(CARD, 'min-w-0 overflow-hidden')}>
       <header className="flex min-h-head flex-wrap items-center gap-x-3 gap-y-2 border-b px-card py-3">
         <h2 className="text-lg font-heavy">{heading}</h2>
-        <span className="inline-flex min-h-6 min-w-0 items-center gap-1 rounded-pill bg-brand-100 px-2 text-xs font-bold text-fg-2 [overflow-wrap:anywhere]">
+        <span className="inline-flex min-h-6 max-w-full items-center gap-1 whitespace-nowrap rounded-pill bg-brand-100 px-2 text-xs font-medium text-fg-2">
           <Icon icon={dir === 'in' ? ArrowDownLeft : ArrowUpRight} size="sm" />
           {tag}
         </span>

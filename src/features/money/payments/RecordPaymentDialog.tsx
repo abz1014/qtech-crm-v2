@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TriangleAlert, Check, Info } from 'lucide-react'
+import { Banknote, Check, Info, TriangleAlert } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
@@ -43,7 +43,7 @@ export function RecordPaymentDialog({ open, onOpenChange, orderId, onRecorded }:
   const [busy, setBusy] = useState(false)
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
-      <DialogContent title="Record payment" size="md" className="md:w-[520px]">
+      <DialogContent title="Record payment" icon={Banknote} size="md" className="md:w-[32.5rem]">
         {open && orderId ? (
           <PaymentLoader orderId={orderId} onBusy={setBusy} onDone={() => { onOpenChange(false); onRecorded?.() }} onCancel={() => onOpenChange(false)} />
         ) : null}

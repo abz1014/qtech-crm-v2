@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
+import { CARD } from '@/ui/card'
 import { formatPaisa, paisaToFixed, toPaisa, type Amount, type PaisaMode } from '@/lib/money'
 
 const abs = (p: bigint) => (p < 0n ? -p : p)
@@ -13,6 +14,8 @@ const abs = (p: bigint) => (p < 0n ? -p : p)
  * a row of key figures, each a small label, a big mono figure and one line of
  * context. Hairlines between cells; two columns on a phone or tablet, where the figure steps down to lg so
  * an eight-digit amount still fits its half of the screen.
+ * Forest (59-reports, 51-to-collect .qb-sum): the tiles are ONE card (the CARD look, heavy figures) and a `caption` sits above them;
+ * the phone lines sit in the same card. `desktop="strip"` is kept for a view that wants one line, but no Money view uses it now.
  */
 export interface SumBarItem {
   label: string
@@ -106,7 +109,7 @@ export function SumBar({
   }
   if (phone === 'lines' && narrow) {
     return (
-      <section aria-label={label} data-work="" className={cn('grid gap-1 px-1', className)}>
+      <section aria-label={label} data-work="" className={cn(CARD, 'grid gap-2 p-card', className)}>
         {caption ? <p className="type-body text-fg-2">{caption}</p> : null}
         <dl className="grid gap-1">
           {items.map(item => (
@@ -125,27 +128,35 @@ export function SumBar({
       </section>
     )
   }
-  return (
+  const tiles = (
     <section
       aria-label={label}
       data-work=""
       className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-flow-col md:auto-cols-fr md:grid-cols-none',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-card border bg-line shadow-e1 md:grid-flow-col md:auto-cols-fr md:grid-cols-none',
         className,
       )}
     >
       {items.map(item => (
-        <div key={item.label} className={cn('grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4 max-sm:px-4', item.tone === 'danger' && 'text-tone-danger-fg', item.tone === 'muted' && 'bg-sunken text-fg-2')}>
-          <span className="text-sm font-medium text-fg-2">{item.label}</span>
+        <div key={item.label} className={cn('grid min-w-0 content-start gap-1 bg-surface px-card py-4 max-sm:px-4', item.tone === 'danger' && 'text-tone-danger-fg', item.tone === 'muted' && 'bg-sunken text-fg-2')}>
+          <span className={cn('text-sm font-medium', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg-2')}>{item.label}</span>
           {item.count !== undefined || item.figure !== undefined ? (
-            <span className="num text-xl font-medium tracking-snug max-sm:text-lg">{Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)}</span>
+            <span className="num text-xl font-heavy tracking-snug max-sm:text-lg">{Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)}</span>
           ) : (
-            <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} className="max-sm:[&>span]:text-lg" />
+            <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} className="[&>span]:font-heavy max-sm:[&>span]:text-lg" />
           )}
-          {item.sub ? <span className="text-xs text-fg-muted">{item.sub}</span> : null}
+          {item.sub ? <span className="text-sm text-fg-muted">{item.sub}</span> : null}
         </div>
       ))}
     </section>
+  )
+  if (!caption) return tiles
+  // The caption (the period, the basis, "as of") says once what every figure is: above the card, never lost with the strip.
+  return (
+    <div className="grid gap-2">
+      <p className="type-body text-fg-2">{caption}</p>
+      {tiles}
+    </div>
   )
 }
 
