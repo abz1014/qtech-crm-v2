@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Camera, Check, History as HistoryIcon, Lock, Trash2 } from 'lucide-react'
+import { Camera, Check, History as HistoryIcon, Lock, ReceiptText, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
@@ -44,6 +44,7 @@ import { forMonthChoices, isMonthlyBill, linkMonthlyBills } from '@/features/mon
 import { Checkbox } from '@/ui/form/Checkbox'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { clearExpenseDraft, expenseDraftKey, loadExpenseDraft, saveExpenseDraft } from '@/features/money/expenses/addDraft'
+import { FIELD } from '@/features/money/expenses/Panel'
 import {
   MISC_TITLE_ERROR,
   MISC_TITLE_LABEL,
@@ -115,7 +116,7 @@ export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved
   const sub = expense ? 'Edit expense' : [orderLabel, context?.legId ? context?.payeeName : null].filter(Boolean).join(' · ') || 'Money › Expenses'
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
-      <DialogContent title={expense ? 'Edit expense' : 'Add expense'} context={expense ? undefined : sub} size="md" className="md:w-[520px]">
+      <DialogContent icon={ReceiptText} title={expense ? 'Edit expense' : 'Add expense'} context={expense ? undefined : sub} size="md" className="md:w-[32.5rem]">
         {open ? (
           <ExpenseForm
             context={context}
@@ -425,8 +426,8 @@ function ExpenseFormReady({
             )}
           </FormField>
           {lockedPayee ? (
-            <div className="grid min-w-0 content-start gap-[6px]">
-              <span className="text-sm font-medium text-fg">Payee</span>
+            <div className="grid min-w-0 content-start gap-2">
+              <span className="text-sm font-bold text-fg">Payee</span>
               <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded-row border border-line-strong bg-sunken px-3 text-sm text-fg-2" role="group" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
@@ -441,12 +442,12 @@ function ExpenseFormReady({
         </div>
 
         {showFor && paidOnNow ? (
-          <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border border-tone-info-fg/25 bg-tone-info-bg px-3 py-2 text-base">
-            <span className="font-medium">This bill is for</span>
+          <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-sunken px-3 py-3 text-base">
+            <span className="font-bold">This bill is for</span>
             <select
               value={forChoice ?? expense?.period ?? forMonthOf(paidOnNow, categoryId)}
               onChange={e => setForChoice(e.target.value)}
-              className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
+              className={FIELD}
             >
               {forMonthChoices(paidOnNow)
                 .concat(expense?.period && !forMonthChoices(paidOnNow).some(o => o.value === expense.period) ? [{ value: expense.period, label: expense.period }] : [])
@@ -538,7 +539,7 @@ function ExpenseFormReady({
 
         {photo ? <FileRow item={photo} onRemove={() => setPhoto(null)} /> : null}
         {(receipts.data ?? []).map(r => (
-          <div key={r.id} className="flex items-center justify-between gap-3 rounded-row border border-line-strong px-3 py-2 text-sm">
+          <div key={r.id} className="flex items-center justify-between gap-3 rounded-control border bg-surface px-3 py-2 text-sm">
             <span title={r.fileName} className="line-clamp-2 min-w-0 break-words">{r.fileName}</span>
             <Button size="sm" variant="quiet" onClick={() => deleteReceipt.mutate(r)} aria-label={`Remove ${r.fileName}`}>
               Remove
@@ -585,7 +586,8 @@ function ExpenseFormReady({
           }}
         />
       </Form>
-      <div className="-mx-5 -mb-5 mt-1 flex flex-wrap items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
+      {/* The dialog's footer, drawn inside the form so Delete and History sit with Save: edge to edge under a hairline, as DialogContent's own. */}
+      <div className="-mx-card -mb-5 mt-1 flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-t bg-surface px-card py-4 max-md:flex-col-reverse max-md:items-stretch max-md:pb-[max(var(--sp-4),env(safe-area-inset-bottom,0px))] max-md:[&>button]:h-touch">
         {expense ? (
           monthClosed ? (
             <p className="mr-auto flex items-center gap-2 text-base text-fg-2 max-md:mr-0" data-testid="expense-closed-line">
@@ -594,10 +596,9 @@ function ExpenseFormReady({
             </p>
           ) : (
             <Button
-              variant="secondary"
-              size="lg"
+              variant="danger"
               icon={Trash2}
-              className="mr-auto min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg max-md:mr-0"
+              className="mr-auto max-md:mr-0"
               onClick={() => deleteFlow.ask(expense)}
               disabled={sf.pending}
             >
@@ -606,7 +607,7 @@ function ExpenseFormReady({
           )
         ) : null}
         {expense && onHistory ? (
-          <Button variant="quiet" size="lg" icon={HistoryIcon} onClick={onHistory}>
+          <Button variant="quiet" icon={HistoryIcon} onClick={onHistory}>
             History
           </Button>
         ) : null}

@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type SelectHTMLAttributes } from 'react'
-import { Camera, Check, ChevronDown, ChevronRight, CircleAlert, X } from 'lucide-react'
+import { Camera, Check, ChevronRight, CircleAlert, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
@@ -11,7 +11,8 @@ import { PaidByToggle } from '@/features/money/expenses/PaidByToggle'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { DateInput } from '@/ui/form/DateInput'
-import { controlClass } from '@/ui/form/fieldContext'
+import { CARD } from '@/ui/card'
+import { FIELD, NativeSelect } from '@/features/money/expenses/Panel'
 import { NumberInput } from '@/ui/form/NumberInput'
 import {
   useCategoryUse,
@@ -237,24 +238,24 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   const paidThisMonth = month.data ? listTotals(month.data.rows).total : null
 
   return (
-    <section aria-labelledby={`${uid}-h`} className="grid gap-3 border-b pb-3 md:gap-4 md:rounded md:border-0 md:bg-surface md:p-5 lg:rounded-none lg:border-b lg:bg-transparent lg:p-0 lg:pb-3" data-testid="quick-add" data-work="">
-      <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+    <section aria-labelledby={`${uid}-h`} className={cn(CARD, 'grid gap-4 p-card', IN_DIALOG)} data-testid="quick-add" data-work="">
+      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id={`${uid}-h`} className="type-section">
           Quick add
           <InfoTip label="Paying a supplier" className="ml-2 sm:hidden">
             To pay a supplier, use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers). This reduces the amount payable.
           </InfoTip>
         </h2>
-        <p className="type-body text-fg-2" aria-live="polite" data-testid="quick-total">
+        <p className="text-sm text-fg-2" aria-live="polite" data-testid="quick-total">
           {here.count > 0 ? (
             <>
-              Added here: <b className="num font-semibold text-fg">{here.count}</b>, <span className="num">{pkr(here.total)}</span>
+              Added here: <b className="num font-bold text-fg">{here.count}</b>, <span className="num">{pkr(here.total)}</span>
               {' · '}
             </>
           ) : null}
           {paidThisMonth !== null ? (
             <>
-              Paid in <span className="sm:hidden">{monthKeyShort(monthKey(today)).split(' ')[0]}</span><span className="max-sm:hidden">{monthKeyLabel(monthKey(today)).split(' ')[0]}</span>: <span className="num font-medium text-fg">{pkr(paidThisMonth)}</span>
+              Paid in <span className="sm:hidden">{monthKeyShort(monthKey(today)).split(' ')[0]}</span><span className="max-sm:hidden">{monthKeyLabel(monthKey(today)).split(' ')[0]}</span>: <span className="num font-bold text-fg">{pkr(paidThisMonth)}</span>
               <span className="max-sm:hidden">, by the day paid</span>
             </>
           ) : null}
@@ -262,18 +263,19 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
       </header>
 
       <form
-        className="grid gap-3"
+        className="grid gap-4"
         autoComplete="off"
         onSubmit={e => {
           e.preventDefault()
           void save()
         }}
       >
-        <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+        {/* The amount and Save on one line, the categories under them (60-expenses #ex-g-dialog, the narrow card): a big box at every width. */}
+        <div className="grid gap-3">
           <div className="grid content-start gap-2">
             {/* Words of their own (Amount (PKR), Paid on, Has a GST invoice): the Add expense dialog over this screen says
                 Amount, PKR and Date paid, and one name must find one field. */}
-            <label htmlFor={`${uid}-amount`} className="type-body font-medium max-sm:sr-only">
+            <label htmlFor={`${uid}-amount`} className="text-sm font-bold max-sm:sr-only">
               Amount (PKR)
             </label>
             <div className="flex items-start gap-2">
@@ -292,27 +294,28 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                     setAmount(v)
                     setProblem(null)
                   }}
-                  className="num h-12 text-xl font-medium"
+                  className="num h-control-lg text-left text-xl font-bold max-md:h-control-lg max-md:text-xl"
                 />
               </div>
-              <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="h-12 min-w-[112px] text-base">
+              <Button type="submit" variant={sheetOpen ? 'secondary' : 'primary'} size="touch" icon={Check} busy={busy} busyLabel="Saving" className="h-control-lg min-w-[7rem] text-base">
                 Save
                 <span className="sr-only"> this expense</span>
               </Button>
             </div>
           </div>
-          <fieldset className="grid min-w-0 gap-2 lg:flex lg:flex-wrap lg:gap-x-2">
+          <fieldset className="grid min-w-0 gap-3">
             <legend className="sr-only">What for, used most first</legend>
-            <div className="flex flex-wrap gap-2 lg:contents" data-row-actions="">
+            <div className="flex flex-wrap gap-2" data-row-actions="">
               {top.map(c => (
                 <button
                   key={c.id}
                   type="button"
                   aria-pressed={c.isMisc ? isOther : categoryId === c.id}
                   onClick={() => pick(c.id)}
+                  // A choice, not an action (as Add to this job): the chosen one is pale green with a forest edge, never the green button.
                   className={cn(
-                    'min-h-touch rounded border px-4 text-base font-medium transition-colors',
-                    (c.isMisc ? isOther : categoryId === c.id) ? 'border-fg bg-selected text-fg' : 'border-line-strong bg-surface text-fg hover:bg-sunken',
+                    CHOICE,
+                    (c.isMisc ? isOther : categoryId === c.id) ? 'border-brand-700 bg-brand-100' : 'border-line-strong bg-surface hover:bg-selected',
                   )}
                 >
                   {c.isMisc ? 'Other' : c.name}
@@ -322,7 +325,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                 aria-label="More categories"
                 value={top.some(c => c.id === categoryId) ? '' : categoryId}
                 onChange={e => e.target.value && pick(e.target.value)}
-                className={cn('w-auto max-w-full px-4 pr-10 font-medium text-fg max-sm:w-[8.5rem]', categoryId && !top.some(c => c.id === categoryId) ? 'border-fg bg-selected read-only:border-fg read-only:bg-selected' : 'border-line-strong bg-surface read-only:border-line-strong')}
+                className={cn('w-auto max-w-full rounded-pill px-4 pr-10 font-bold text-fg max-sm:w-[8.5rem]', categoryId && !top.some(c => c.id === categoryId) ? 'border-brand-700 bg-brand-100 read-only:border-brand-700 read-only:bg-brand-100' : 'border-line-strong bg-surface read-only:border-line-strong')}
               >
                 <option value="">More…</option>
                 {more.map(g => (
@@ -336,7 +339,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                 ))}
               </QuickSelect>
             </div>
-            <div className="grid gap-2 lg:min-w-[16rem] lg:flex-1" data-testid="quick-find">
+            <div className="grid gap-2" data-testid="quick-find">
               <label htmlFor={`${uid}-find`} className="sr-only">
                 Or type what it was
               </label>
@@ -352,17 +355,17 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                   if (matches[0]) pick(matches[0].id)
                   else if (otherFor) pickOther(otherFor, typed)
                 }}
-                className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base placeholder:text-fg-muted sm:max-w-sm"
+                className={cn(FIELD, 'sm:max-w-md')}
               />
               {typed.trim() ? (
                 <div className="flex flex-wrap gap-2">
                   {matches.map(c => (
-                    <button key={c.id} type="button" onClick={() => pick(c.id)} className="min-h-touch rounded border border-line-strong bg-surface px-4 text-base font-medium hover:bg-sunken">
+                    <button key={c.id} type="button" onClick={() => pick(c.id)} className={cn(CHOICE, 'border-line-strong bg-surface hover:bg-selected')}>
                       {c.name}
                     </button>
                   ))}
                   {matches.length === 0 && otherFor ? (
-                    <button type="button" onClick={() => pickOther(otherFor, typed)} className="min-h-touch rounded border border-dashed border-fg bg-surface px-4 text-base font-medium hover:bg-sunken">
+                    <button type="button" onClick={() => pickOther(otherFor, typed)} className={cn(CHOICE, 'border-dashed border-brand-700 bg-surface hover:bg-selected')}>
                       {`Other: '${typed.trim().replace(/\s+/g, ' ')}'`}
                     </button>
                   ) : null}
@@ -374,7 +377,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
 
         {isOther && others.length > 1 ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-base" data-testid="quick-other-group">
-            <label htmlFor={`${uid}-other`} className="font-medium">
+            <label htmlFor={`${uid}-other`} className="font-bold">
               Filed under
             </label>
             <QuickSelect id={`${uid}-other`} value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-auto">
@@ -395,21 +398,23 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
           aria-controls={extrasId}
           onClick={() => setExtrasOpen(o => !o)}
           data-testid="quick-extras-line"
-          className="type-body flex min-h-touch w-full items-center gap-2 rounded text-left text-fg-2 hover:bg-sunken"
+          title={extrasLine.join(' · ')}
+          className="-mx-2 flex min-h-touch w-[calc(100%+var(--sp-4))] items-center gap-2 rounded-control px-2 py-2 text-left text-base text-fg-2 transition-colors duration-fast hover:bg-selected"
         >
-          <span className="min-w-0 flex-1 truncate">{extrasLine.join(' · ')}</span>
+          {/* Wraps instead of an ellipsis (live bug 6): every value stays readable; the title carries the line too. */}
+          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{extrasLine.join(' · ')}</span>
           <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform', showExtras && 'rotate-90')} />
         </button>
 
-        <p className="type-body text-fg-2 max-sm:hidden">
+        <p className="text-sm text-fg-2 max-sm:hidden">
           To pay a supplier, use <b className="font-medium text-fg">Pay</b> on the supplier order (or in Payable to suppliers). This reduces the amount payable.
         </p>
 
         {showExtras ? (
           <div id={extrasId} className="grid gap-3" data-testid="quick-extras">
             {monthly && period ? (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-y py-2 text-base" data-testid="quick-for-month">
-                <label htmlFor={`${uid}-for`} className="font-medium">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-sunken px-3 py-2 text-base" data-testid="quick-for-month">
+                <label htmlFor={`${uid}-for`} className="font-bold">
                   This bill is for
                 </label>
                 <QuickSelect id={`${uid}-for`} value={period} onChange={e => setForChoice({ key: forKey, value: e.target.value })} className="w-auto">
@@ -425,13 +430,13 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
 
             <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
               <div className="grid gap-2">
-                <span className="text-base font-medium" aria-hidden="true">
+                <span className="text-sm font-bold" aria-hidden="true">
                   Paid by
                 </span>
                 <PaidByToggle value={paidVia} onChange={setVia} />
               </div>
               <div className="grid gap-2">
-                <label htmlFor={`${uid}-date`} className="text-base font-medium">
+                <label htmlFor={`${uid}-date`} className="text-sm font-bold">
                   Paid on
                 </label>
                 {/* Shows "Tue 27 Oct 2026", takes 27 oct, 27/10, yesterday typed (Enter only reads the date; it does not Save). */}
@@ -443,11 +448,11 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                   onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
                   placeholder="e.g. 27 oct, yesterday"
                   wrapperClassName="w-[13.5rem] max-w-full"
-                  className="h-auto min-h-touch text-base max-md:text-base"
+                  className="text-base max-md:h-touch max-md:text-base"
                 />
               </div>
               <div className="grid min-w-0 gap-2 lg:flex-1">
-                <label htmlFor={`${uid}-detail`} className="text-base font-medium">
+                <label htmlFor={`${uid}-detail`} className="text-sm font-bold">
                   {isOther ? (
                     MISC_TITLE_LABEL
                   ) : (
@@ -469,10 +474,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
                     setDetail(e.target.value)
                     setTitleError(null)
                   }}
-                  className={cn(
-                    'min-h-touch w-full min-w-0 rounded border bg-surface px-3 text-base placeholder:text-fg-muted',
-                    titleError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
-                  )}
+                  className={cn(FIELD, titleError && 'border-tone-danger-fg bg-tone-danger-bg')}
                 />
                 {titleError ? (
                   <p id={`${uid}-detail-err`} className="text-base text-tone-danger-fg">
@@ -482,11 +484,11 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
               </div>
               <div className="flex items-end gap-2">
                 {photo && !photo.error ? (
-                  <Button size="touch" icon={X} onClick={() => setPhoto(null)} className="text-base">
+                  <Button icon={X} onClick={() => setPhoto(null)} className="max-md:h-touch">
                     Receipt added
                   </Button>
                 ) : (
-                  <Button size="touch" icon={Camera} onClick={() => fileRef.current?.click()} className="text-base">
+                  <Button icon={Camera} onClick={() => fileRef.current?.click()} className="max-md:h-touch">
                     Receipt
                   </Button>
                 )}
@@ -496,11 +498,11 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
             <div className="grid gap-3">
               <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} />
               {hasGst ? (
-                <div className="flex flex-wrap items-center gap-3 border-y py-2 text-base">
-                  <label htmlFor={`${uid}-tax`} className="font-medium">
+                <div className="flex flex-wrap items-center gap-3 rounded-control bg-sunken px-3 py-2 text-base">
+                  <label htmlFor={`${uid}-tax`} className="font-bold">
                     GST on this bill, PKR
                   </label>
-                  <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num h-[2.75rem] w-[10rem] text-base" />
+                  <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num w-[10rem] text-base max-md:h-touch" />
                   <span className="text-fg-2">Counts toward GST paid on purchases, so less GST to pay FBR.</span>
                 </div>
               ) : null}
@@ -525,7 +527,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
         />
 
         {problem ? (
-          <p role="alert" className="flex items-center gap-2 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
+          <p role="alert" className="flex items-center gap-2 rounded-control border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-base text-tone-danger-fg">
             <Icon icon={CircleAlert} />
             {problem}
           </p>
@@ -535,14 +537,17 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   )
 }
 
-/** A native <select> (best list on a phone) drawn like the app's Select: same control look, chevron, 44 px tall, 16 px text. Kept local for the optgroups. */
+/** The Quick add selects (More..., Filed under, This bill is for): the page's NativeSelect, 44 px on a phone like the category buttons. */
 function QuickSelect({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <div className="relative min-w-0">
-      <select {...rest} className={cn(controlClass, 'h-auto min-h-touch appearance-none pr-10 text-base read-only:border-line-input read-only:bg-surface read-only:text-fg max-md:text-base', className)}>
-        {children}
-      </select>
-      <Icon icon={ChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted" />
-    </div>
+    <NativeSelect {...rest} className={cn('max-md:h-touch', className)}>
+      {children}
+    </NativeSelect>
   )
 }
+
+/** Inside the Add an expense dialog (the E key, + Create > Expense) the dialog is the card: no second frame. */
+const IN_DIALOG = '[[data-dialog-body]_&]:rounded-none [[data-dialog-body]_&]:border-0 [[data-dialog-body]_&]:p-0 [[data-dialog-body]_&]:shadow-none'
+
+/** A category button: a pill, 40 with a mouse and 44 on a phone, 16 px words (60-expenses Quick add). */
+const CHOICE = 'inline-flex min-h-control items-center rounded-pill border px-4 text-base font-bold text-fg transition-[background-color,border-color,transform] duration-fast ease-out active:scale-press max-md:min-h-touch'

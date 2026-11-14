@@ -8,7 +8,11 @@ import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { Icon } from '@/ui/Icon'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { cn } from '@/lib/utils'
+import { CARD } from '@/ui/card'
+import { StatusText } from '@/ui/StatusText'
 import { useToast } from '@/ui/useToast'
+import { FIELD, NativeSelect, PanelCard, PHONE_FOLD } from '@/features/money/expenses/Panel'
 import { useApproveClaim, useClaimPhotos, useOweClaim, usePendingClaims, useRejectClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, signClaimPhoto, type Claim, type PaidHow } from '@/features/money/expenses/claimsApi'
 import { miscCategories, pkr, sortGroups, type Category, type ExpenseGroup } from '@/features/money/expenses/model'
@@ -29,7 +33,7 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
   if (q.isPending) return null
   if (q.isError)
     return (
-      <section aria-label="To approve" data-testid="claims-review">
+      <section aria-label="To approve" data-testid="claims-review" className={cn(CARD, 'p-card')}>
         <EmptyState mood="error" title="Claims to approve could not be loaded" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
@@ -45,29 +49,48 @@ export function ClaimsReview({ categories, groups }: { categories: readonly Cate
       ))}
     </ul>
   )
-  // Phone: one line with the count and the figure; a tap opens the claims. The figures are on the line, never behind the tap.
+  // Phone: one card row with the count and the figure; a tap opens the claims. The figures are on the line, never behind the tap.
   if (phone)
     return (
       <section aria-label="To approve" data-testid="claims-review">
-        <FoldRow state={{ icon: HandCoins, word: 'Action needed' }} title="To approve" summary={`${count} · ${total}`} open={open} onToggle={() => setOpen(o => !o)} controlsId={id}>
+        <FoldRow
+          // One line on a phone (the chip would squeeze the title and the figure at 320): the state icon in the "now" ink.
+          state={{ ...ACTION, className: 'text-tone-warning-fg' }}
+          figure
+          title="To approve"
+          summary={<span className="whitespace-nowrap">{`${count} · ${total}`}</span>}
+          open={open}
+          onToggle={() => setOpen(o => !o)}
+          controlsId={id}
+          className={cn(PHONE_FOLD, '[&_li]:px-0')}
+        >
           {list}
         </FoldRow>
       </section>
     )
   return (
-    <section aria-labelledby="claims-h" className="grid gap-0 rounded border border-tone-info-fg/30 bg-surface lg:rounded-none lg:border-x-0 lg:border-t-0 lg:bg-transparent" data-testid="claims-review">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-4 py-3 lg:px-0 lg:py-2">
-        <h2 id="claims-h" className="type-row lg:font-semibold">
-          To approve
-        </h2>
-        <span className="text-base text-fg-2">
-          {count} from staff · {total} · not counted until approved
-        </span>
-      </header>
+    <PanelCard
+      headingId="claims-h"
+      title="To approve"
+      summary={
+        <>
+          {count} from staff · <span className="num">{total}</span> · not counted until approved
+        </>
+      }
+      status={
+        <StatusText tone="now" className="text-sm">
+          {ACTION.word}
+        </StatusText>
+      }
+      data-testid="claims-review"
+    >
       {list}
-    </section>
+    </PanelCard>
   )
 }
+
+/** Who acts next on a claim: the admin (the Forest "now" tone, the state word the fold row reads). */
+const ACTION = { icon: HandCoins, word: 'Action needed' }
 
 function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: readonly Category[]; groups: readonly ExpenseGroup[] }) {
   const toast = useToast()
@@ -101,106 +124,110 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
   }
 
   return (
-    <li className="grid gap-3 px-4 py-4 text-base lg:px-0 lg:py-3" data-testid={`claim-${claim.id}`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <span className="min-w-0">
-          <b className="font-semibold">{claim.byName}</b> paid <b className="num font-semibold">{pkr(claim.amount)}</b>
+    <li className="grid gap-4 px-card py-5 text-base" data-testid={`claim-${claim.id}`}>
+      <div className="grid gap-1">
+        <p className="min-w-0 [overflow-wrap:anywhere]">
+          <b className="font-bold">{claim.byName}</b> paid <b className="num font-bold">{pkr(claim.amount)}</b>
           {claim.note ? <span> for {claim.note}</span> : null}
-          {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
-          {claim.rfqLabel && !claim.orderLabel ? <span className="text-fg-2"> · {claim.rfqLabel}</span> : null}
-          {claim.visitLabel ? <span className="text-fg-2"> · {claim.visitLabel}</span> : null}
-        </span>
-        <span className="num text-xs text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>
+        </p>
+        <p className="num flex flex-wrap gap-x-2 text-sm text-fg-2">
+          <span>{formatShortDate(claim.spentOn, businessToday())}</span>
+          {claim.orderLabel ? <span>· {claim.orderLabel}</span> : null}
+          {claim.rfqLabel && !claim.orderLabel ? <span>· {claim.rfqLabel}</span> : null}
+          {claim.visitLabel ? <span className="font-sans">· {claim.visitLabel}</span> : null}
+        </p>
       </div>
       {(photos.data ?? []).length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {(photos.data ?? []).map((p, i) => (
-            <Button key={p.path} size="touch" icon={ImageIcon} onClick={() => void openPhoto(p.path)} className="text-base">
+            <Button key={p.path} icon={ImageIcon} onClick={() => void openPhoto(p.path)} className="max-md:h-touch">
               {`Receipt${(photos.data ?? []).length > 1 ? ` ${i + 1}` : ''}`}
             </Button>
           ))}
         </div>
       ) : photos.isSuccess ? (
-        <span className="text-fg-2">No receipt photo.</span>
+        <span className="text-sm text-fg-muted">No receipt photo.</span>
       ) : null}
       {rejecting ? (
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="grid min-w-0 flex-1 gap-2">
-            <span className="font-medium">Why not? The engineer sees this.</span>
-            <input value={reason} maxLength={200} onChange={e => setReason(e.target.value)} placeholder="e.g. No receipt" className="min-h-touch rounded border border-line-input bg-surface px-3 text-base" />
-          </label>
-          <Button size="touch" variant="quiet" onClick={() => setRejecting(false)} disabled={busy} className="text-base">
-            Back
-          </Button>
-          <Button
-            size="touch"
-            variant="danger"
-            icon={X}
-            busy={reject.isPending}
-            busyLabel="Saving"
-            aria-label={`Not approved: ${label}`}
-            onClick={() =>
-              reject.mutate(
-                { id: claim.id, reason: reason.trim() || null },
-                {
-                  onSuccess: () => toast.toast({ title: 'Claim not approved', body: label, tone: 'neutral' }),
-                  onError: e => setError(mapPgError(e, { entity: 'expense' }).message),
-                },
-              )
-            }
-            className="text-base"
-          >
-            Not approved
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid gap-3">
           <label className="grid min-w-0 gap-2">
-            <span className="font-medium">Category</span>
-            <select
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-              aria-label={`Category for ${label}`}
-              className="min-h-touch max-w-full rounded border border-line-input bg-surface px-3 text-base"
-            >
-              {grouped.map(x => (
-                <optgroup key={x.g.id} label={x.g.name}>
-                  {x.items.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <span className="text-sm font-bold">Why not? The engineer sees this.</span>
+            <input value={reason} maxLength={200} onChange={e => setReason(e.target.value)} placeholder="e.g. No receipt" className={FIELD} />
           </label>
-          {others.length > 0 && !isOther ? (
-            <Button size="touch" variant="quiet" onClick={() => setCategoryId(others[0].id)} className="text-base" aria-label={`File under Other: ${label}`}>
-              Other
-            </Button>
-          ) : null}
-          <label className="grid min-w-0 gap-2">
-            <span className="font-medium">Paid back</span>
-            <select
-              value={paidHow}
-              onChange={e => setPaidHow(e.target.value as PaidHow)}
-              aria-label={`Paid back, ${label}`}
-              className="min-h-touch rounded border border-line-input bg-surface px-3 text-base"
-            >
-              {(Object.keys(PAID_HOW_LABEL) as PaidHow[]).map(k => (
-                <option key={k} value={k}>
-                  {PAID_HOW_LABEL[k]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className="flex flex-wrap gap-2">
-            <Button size="touch" variant="quiet" onClick={() => setRejecting(true)} disabled={busy} aria-label={`Not approved…, ${label}`} className="text-base">
-              Not approved…
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="quiet" onClick={() => setRejecting(false)} disabled={busy} className="max-md:h-touch">
+              Back
             </Button>
             <Button
-              size="touch"
-              variant="quiet"
+              variant="danger"
+              icon={X}
+              busy={reject.isPending}
+              busyLabel="Saving"
+              aria-label={`Not approved: ${label}`}
+              onClick={() =>
+                reject.mutate(
+                  { id: claim.id, reason: reason.trim() || null },
+                  {
+                    onSuccess: () => toast.toast({ title: 'Claim not approved', body: label, tone: 'neutral' }),
+                    onError: e => setError(mapPgError(e, { entity: 'expense' }).message),
+                  },
+                )
+              }
+              className="max-md:h-touch"
+            >
+              Not approved
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {/* Category and Paid back side by side where the card has room (the claims page width), stacked in the side column. */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] items-end gap-3">
+            <label className="grid min-w-0 gap-2">
+              <span className="flex items-center justify-between gap-2 text-sm font-bold">
+                Category
+                {others.length > 0 && !isOther ? (
+                  <button
+                    type="button"
+                    onClick={() => setCategoryId(others[0].id)}
+                    aria-label={`File under Other: ${label}`}
+                    className="-my-2 inline-flex min-h-touch items-center rounded-control px-2 font-bold text-primary hover:bg-selected md:min-h-control-sm"
+                  >
+                    Other
+                  </button>
+                ) : null}
+              </span>
+              <NativeSelect value={categoryId} onChange={e => setCategoryId(e.target.value)} aria-label={`Category for ${label}`}>
+                {grouped.map(x => (
+                  <optgroup key={x.g.id} label={x.g.name}>
+                    {x.items.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </NativeSelect>
+            </label>
+            <label className="grid min-w-0 gap-2">
+              <span className="text-sm font-bold">Paid back</span>
+              <NativeSelect value={paidHow} onChange={e => setPaidHow(e.target.value as PaidHow)} aria-label={`Paid back, ${label}`}>
+                {(Object.keys(PAID_HOW_LABEL) as PaidHow[]).map(k => (
+                  <option key={k} value={k}>
+                    {PAID_HOW_LABEL[k]}
+                  </option>
+                ))}
+              </NativeSelect>
+            </label>
+          </div>
+          {isOther ? (
+            <p className="text-sm text-fg-2" data-testid="claim-other-title">
+              It is an Other, so it shows in the reports as <b className="font-bold text-fg">{title || 'no title'}</b>.
+            </p>
+          ) : null}
+          {/* Approve and Approve, pay later share the width (each the full width when the card is narrow); Not approved is the quiet way out. */}
+          <div className="flex flex-wrap items-center gap-2 [&>button]:flex-[1_1_auto]">
+            <Button
               busy={owe.isPending}
               busyLabel="Saving"
               disabled={busy}
@@ -214,12 +241,12 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
                   },
                 )
               }
-              className="text-base"
+              className="max-md:h-touch"
             >
               Approve, pay later
             </Button>
             <Button
-              size="touch"
+              variant="primary"
               icon={Check}
               busy={approve.isPending}
               busyLabel="Approving"
@@ -234,21 +261,19 @@ function ClaimRow({ claim, categories, groups }: { claim: Claim; categories: rea
                   },
                 )
               }
-              className="text-base"
+              className="max-md:h-touch"
             >
               Approve
             </Button>
-          </span>
+          </div>
+          <Button variant="quiet" onClick={() => setRejecting(true)} disabled={busy} aria-label={`Not approved…, ${label}`} className="-ml-2 justify-self-start max-md:h-touch">
+            Not approved…
+          </Button>
         </div>
       )}
-      {isOther && !rejecting ? (
-        <p className="text-base text-fg-2" data-testid="claim-other-title">
-          It is an Other, so it shows in the reports as <b className="font-medium text-fg">{title || 'no title'}</b>.
-        </p>
-      ) : null}
       {error ? (
-        <p role="alert" className="flex items-center gap-2 text-tone-danger-fg">
-          <Icon icon={X} />
+        <p role="alert" className="flex items-start gap-2 text-tone-danger-fg">
+          <Icon icon={X} className="mt-1 shrink-0" />
           {error}
         </p>
       ) : null}

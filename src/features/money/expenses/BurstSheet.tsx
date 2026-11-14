@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
-import { Camera, Check, CircleAlert, Landmark, Plus, Repeat, Trash2, TriangleAlert, Wallet, X, CalendarDays } from 'lucide-react'
+import { Camera, Check, CircleAlert, Landmark, Plus, Repeat, Rows3, Trash2, TriangleAlert, Wallet, X, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { parseDateText } from '@/lib/dateInput'
@@ -347,7 +347,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
     <RadixDialog.Portal>
       <RadixDialog.Overlay
         className={cn(
-          'fixed inset-0 z-40 grid animate-fade-in justify-items-center overflow-y-auto bg-scrim',
+          'fixed inset-0 z-sheet grid animate-fade-in justify-items-center overflow-y-auto bg-scrim',
           compact ? 'place-items-stretch p-0' : 'content-start px-4 pt-10',
         )}
       >
@@ -366,27 +366,31 @@ function BurstContent({ onClose }: { onClose: () => void }) {
             'grid w-full grid-rows-[auto_minmax(0,1fr)_auto] bg-surface focus:outline-none',
             compact
               ? 'min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto]'
-              : 'mb-10 max-w-[calc(100vw-2rem)] rounded-panel shadow-modal md:w-[1320px]',
+              : 'mb-10 max-w-[calc(100vw-2rem)] rounded-card shadow-e3 md:w-[82.5rem]',
           )}
         >
           {compact ? (
-            <header className="flex h-[52px] items-center gap-3 border-b pl-2 pr-4">
+            <header className="flex min-h-control-lg items-center gap-3 border-b pl-2 pr-4">
               <RadixDialog.Close asChild>
                 <Button variant="quiet" size="touch" icon={X} aria-label="Close" disabled={pending} className="text-fg" />
               </RadixDialog.Close>
-              <RadixDialog.Title className="flex-1 text-base font-semibold">Add expenses</RadixDialog.Title>
+              <RadixDialog.Title className="flex-1 text-lg font-bold tracking-snug">Add expenses</RadixDialog.Title>
               <span id="burst-desc" className="sr-only">One card per expense. Save adds them all.</span>
             </header>
           ) : (
-            <header className="flex items-start gap-4 border-b px-6 pb-4 pt-5">
-              <div className="grid flex-1 gap-[2px]">
-                <RadixDialog.Title className="text-lg font-semibold tracking-snug">Add expenses</RadixDialog.Title>
-                <RadixDialog.Description id="burst-desc" className="text-sm text-fg-muted">
+            // The dialog header grid (src/ui/dialogImpl): the icon tile, the title over its line, Close in its own column.
+            <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 border-b px-6 pb-4 pt-5">
+              <span aria-hidden="true" className="grid size-control-sm place-items-center rounded-control bg-selected text-fg-2">
+                <Icon icon={Rows3} size="lg" />
+              </span>
+              <div className="grid min-w-0 gap-px">
+                <RadixDialog.Title className="text-xl font-bold tracking-snug">Add expenses</RadixDialog.Title>
+                <RadixDialog.Description id="burst-desc" className="text-base text-fg-2">
                   One row per expense. Save adds them all.
                 </RadixDialog.Description>
               </div>
               <RadixDialog.Close asChild>
-                <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={pending} className="-mr-2 text-fg-muted" />
+                <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={pending} className="-mr-2 -mt-1 text-fg-muted" />
               </RadixDialog.Close>
             </header>
           )}
@@ -394,8 +398,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
           <div ref={bodyRef} className={cn('min-h-0', compact && 'overflow-y-auto')}>
             {!ready || !categories ? (
               <div className="grid gap-3 p-6" aria-busy="true">
-                <Skeleton className="h-[36px]" />
-                <Skeleton className="h-[36px]" />
+                <Skeleton className="h-control-sm" />
+                <Skeleton className="h-control-sm" />
               </div>
             ) : cats.isError ? (
               <p role="alert" className="p-6 text-sm text-tone-danger-fg">The categories could not be loaded. Close this and try again.</p>
@@ -423,7 +427,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => addRowAfter(rows[rows.length - 1].id)}
-                  className="flex h-touch items-center justify-center gap-2 rounded border border-line-strong bg-surface text-sm font-medium text-fg-2"
+                  className="flex h-touch items-center justify-center gap-2 rounded-control border border-line-strong bg-surface text-base font-bold text-fg transition-colors duration-fast hover:bg-selected"
                 >
                   <Icon icon={Plus} size="sm" />
                   Add a row
@@ -431,7 +435,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               <div role="group" aria-label="Expense rows">
-                <div className={cn(GRID, 'min-h-[36px] items-end whitespace-nowrap pb-[6px] text-xs font-medium text-fg-muted')} aria-hidden="true">
+                <div className={cn(GRID, 'min-h-control-sm items-end whitespace-nowrap pb-2 text-xs font-card text-fg-2')} aria-hidden="true">
                   <span />
                   <span className="text-right">Amount, PKR</span>
                   <span>Category</span>
@@ -466,7 +470,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => addRowAfter(rows[rows.length - 1].id)}
-                  className="mx-6 mb-4 mt-2 flex h-10 w-[calc(100%-3rem)] items-center gap-3 rounded border border-line-strong bg-surface px-4 text-sm text-fg-2 hover:bg-sunken"
+                  className="mx-6 mb-5 mt-2 flex h-control w-[calc(100%-3rem)] items-center gap-3 rounded-control border border-line-strong bg-surface px-4 text-sm font-bold text-fg transition-colors duration-fast hover:bg-selected"
                 >
                   <Icon icon={Plus} size="sm" />
                   Add a row
@@ -475,7 +479,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </div>
             )}
             {banner ? (
-              <p role="alert" className="mx-6 mb-4 flex items-center gap-2 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-sm text-tone-danger-fg max-lg:mx-4">
+              <p role="alert" className="mx-6 mb-4 flex items-center gap-2 rounded-control border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-sm text-tone-danger-fg max-lg:mx-4">
                 <Icon icon={CircleAlert} />
                 {banner}
               </p>
@@ -489,16 +493,16 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </Button>
             </footer>
           ) : (
-            <footer className="flex flex-wrap items-center gap-4 rounded-b border-t bg-sunken px-6 py-3">
+            <footer className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-b-card border-t bg-surface px-6 py-4">
               <span className="flex-1" />
               {badCount > 0 ? (
-                <span className="inline-flex h-chip items-center gap-[5px] rounded-round border border-tone-warning-fg/25 bg-tone-warning-bg pl-[6px] pr-2 text-xs font-medium text-tone-warning-fg">
+                <span className="inline-flex h-chip items-center gap-1 rounded-pill border border-tone-warning-fg/25 bg-tone-warning-bg pl-2 pr-3 text-xs font-medium text-tone-warning-fg">
                   <Icon icon={TriangleAlert} size="chip" />
                   {badCount} {badCount === 1 ? 'row needs' : 'rows need'} a change
                 </span>
               ) : null}
               <span className="text-right text-sm text-fg-2" aria-live="polite">
-                <span className="num font-medium text-fg">{totals.count}</span> {totals.count === 1 ? 'row' : 'rows'} · PKR <span className="num font-medium text-fg">{fmt(totals.total)}</span>
+                <span className="num font-bold text-fg">{totals.count}</span> {totals.count === 1 ? 'row' : 'rows'} · PKR <span className="num font-bold text-fg">{fmt(totals.total)}</span>
               </span>
               <RadixDialog.Close asChild>
                 <Button variant="quiet" disabled={pending} data-cancel>
@@ -507,7 +511,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </RadixDialog.Close>
               <Button variant="primary" icon={Check} busy={pending} busyLabel="Saving" disabled={addingCategory} onClick={() => void save()}>
                 {addingCategory ? 'Adding category…' : label}
-                <span className="inline-flex items-center gap-[2px]" aria-hidden="true">
+                <span className="inline-flex items-center gap-px" aria-hidden="true">
                   <Kbd size="inline" className="border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">Ctrl</Kbd>
                   <Kbd size="inline" className="border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">↵</Kbd>
                 </span>
@@ -567,7 +571,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
   const isOther = !!categories.find(c => c.id === row.categoryId)?.isMisc
   return (
     <div data-row={row.id} role="group" aria-label={`Row ${index}`} onKeyDown={onKey} className={cn(GRID, 'py-2', err && 'bg-tone-danger-bg/40')}>
-      <div className="num grid h-[36px] place-items-center text-xs text-fg-muted" aria-hidden="true">
+      <div className="num grid h-control-sm place-items-center text-xs text-fg-muted" aria-hidden="true">
         {index}
       </div>
       <NumberInput
@@ -576,7 +580,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
         value={row.amount}
         min={0.01}
         onChange={v => onPatch({ amount: v })}
-        className="h-[36px]"
+        className="h-control-sm"
       />
       <CategoryPicker
         categories={categories}
@@ -608,7 +612,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
           value={paid}
           options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))}
           onChange={e => onPatch({ paidVia: e.target.value as PaidVia })}
-          className={cn('h-[36px]', row.paidVia === null && defaultEdge)}
+          className={cn('h-control-sm', row.paidVia === null && defaultEdge)}
         />
       </div>
       <div className="min-w-0">
@@ -622,7 +626,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
           aria-invalid={row.noteError ? true : undefined}
           aria-required={isOther || undefined}
           onChange={e => onPatch({ note: e.target.value })}
-          className={cn('h-[36px]', row.noteError && 'border-tone-danger-fg bg-tone-danger-bg')}
+          className={cn('h-control-sm', row.noteError && 'border-tone-danger-fg bg-tone-danger-bg')}
         />
         {row.noteError ? <p className="mt-1 text-base text-tone-danger-fg">{row.noteError}</p> : null}
         <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
@@ -641,9 +645,9 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
             title="Remove this photo"
             aria-label={`Remove receipt photo, row ${index}`}
             onClick={() => onPatch({ photo: null })}
-            className="inline-flex h-[36px] w-full items-center justify-start gap-2 rounded border border-line-strong bg-surface pl-1 pr-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
+            className="inline-flex h-control-sm w-full items-center justify-start gap-2 rounded border border-line-strong bg-surface pl-1 pr-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
           >
-            <PhotoThumb file={row.photo.file} className="size-[28px] rounded-[3px]" />
+            <PhotoThumb file={row.photo.file} className="aspect-square h-chip rounded" />
             Receipt
           </button>
         ) : (
@@ -651,7 +655,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
             type="button"
             aria-label={`Add receipt photo, row ${index}`}
             onClick={() => fileRef.current?.click()}
-            className="inline-flex h-[36px] w-full items-center justify-center gap-2 rounded border border-line-strong bg-surface px-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
+            className="inline-flex h-control-sm w-full items-center justify-center gap-2 rounded border border-line-strong bg-surface px-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
           >
             <Icon icon={Camera} className="text-fg-muted" />
             Photo
@@ -673,7 +677,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
           }}
         />
       </div>
-      <div className="flex h-[36px] items-center">
+      <div className="flex h-control-sm items-center">
         <Checkbox
           label="Every month"
           checked={!!row.repeat}
@@ -686,7 +690,7 @@ function SheetRow({ row, index, categories, jobs, today, onPatch, onKey, onRemov
           type="button"
           aria-label={`Remove row ${index}`}
           onClick={onRemove}
-          className="grid size-[36px] place-items-center rounded text-fg-muted hover:bg-sunken hover:text-fg"
+          className="grid size-control-sm place-items-center rounded text-fg-muted hover:bg-sunken hover:text-fg"
         >
           <Icon icon={Trash2} />
         </button>
@@ -707,9 +711,9 @@ function ClosedError({ message, others }: { message: string; others: number }) {
   return (
     <div
       role="alert"
-      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
+      className="col-start-3 col-end-10 -mt-px mb-2 flex items-start gap-3 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
     >
-      <Icon icon={CircleAlert} className="mt-[2px] text-tone-danger-fg" />
+      <Icon icon={CircleAlert} className="mt-px text-tone-danger-fg" />
       <div className="grid gap-0">
         <b className="text-sm font-medium text-tone-danger-fg">{message}</b>
         <span className="text-xs text-fg-2">
@@ -810,7 +814,7 @@ function CellDate({
           window.setTimeout(commit, 0)
         }}
         className={cn(
-          'num h-[36px] w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
+          'num h-control-sm w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
           'aria-[invalid=true]:border-tone-danger-fg aria-[invalid=true]:bg-tone-danger-bg',
           isDefault && defaultEdge,
           isDefault && 'pr-[3.25rem]',
@@ -848,12 +852,23 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
       role="group"
       aria-label={`Expense ${index}`}
       onKeyDown={onKey}
-      className={cn('grid gap-3 rounded-row border bg-surface px-3 pb-4 pt-3', err && 'border-tone-danger-fg/45')}
+      className={cn('grid gap-3 rounded-card border bg-surface p-4', err && 'border-tone-danger-fg/45')}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-3">
+      {/* 61-add-expenses #bs-phone: each card is named, its Remove at the top right. */}
+      <div className="-mb-1 flex min-h-touch items-center justify-between gap-2">
+        <span className="text-base font-bold" aria-hidden="true">
+          Expense {index}
+        </span>
+        {onRemove ? (
+          <button type="button" aria-label={`Remove expense ${index}`} onClick={onRemove} className="-mr-2 grid size-touch place-items-center rounded-control text-fg-muted transition-colors duration-fast hover:bg-selected hover:text-fg">
+            <Icon icon={Trash2} />
+          </button>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
         <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Amount, PKR</span>
-        <label className="flex h-[44px] items-center gap-2 rounded border border-line-input px-3 focus-within:border-fg">
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Amount, PKR</span>
+        <label className="flex h-touch items-center gap-2 rounded-control border border-line-input bg-surface px-3 focus-within:border-primary">
           <span className="text-xs text-fg-muted">PKR</span>
           <NumberInput
             data-cell="amount"
@@ -878,15 +893,15 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
           aria-label={hasPhoto ? `Remove receipt photo, expense ${index}` : `Take a receipt photo, expense ${index}`}
           onClick={() => (hasPhoto ? onPatch({ photo: null }) : fileRef.current?.click())}
           className={cn(
-            'relative grid size-[44px] place-items-center rounded border',
+            'relative grid size-touch place-items-center rounded-control border',
             hasPhoto ? 'overflow-hidden border-tone-success-fg text-primary-foreground' : 'border-line-strong bg-surface text-fg-2',
           )}
         >
           {hasPhoto && row.photo ? <PhotoThumb file={row.photo.file} className="absolute inset-0 size-full" /> : null}
           <Icon icon={Camera} size="lg" className="relative" />
           {hasPhoto ? (
-            <span className="absolute -right-[6px] -top-[6px] grid size-[18px] place-items-center rounded-round bg-tone-success-fg text-primary-foreground ring-2 ring-surface">
-              <Check className="size-[11px]" strokeWidth={3} aria-hidden="true" />
+            <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-round bg-tone-success-fg text-primary-foreground ring-2 ring-surface">
+              <Check className="size-3" strokeWidth={3} aria-hidden="true" />
             </span>
           ) : null}
         </button>
@@ -908,7 +923,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         />
       </div>
       <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Category</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Category</span>
         <CategoryPicker
           ref={categoryRef}
           categories={categories}
@@ -925,12 +940,12 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         />
         {adding ? <p role="status" className="type-body text-fg-2">Adding category…</p> : null}
       </div>
-      <div className="grid grid-cols-1 items-end gap-3 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid grid-cols-1 items-end gap-3 min-[480px]:grid-cols-[minmax(0,1fr)_auto]">
         <div className="grid min-w-0 gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Paid on</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Paid on</span>
         <label
           className={cn(
-            'relative inline-flex h-touch min-w-0 items-center gap-2 rounded border px-3 text-sm text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
+            'relative inline-flex h-touch min-w-0 items-center gap-2 rounded-control border bg-surface px-3 text-base text-fg has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
             'border-line-input',
             err && 'border-tone-danger-fg',
           )}
@@ -948,7 +963,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         </div>
         {/* two values, both visible: one tap picks Cash or Bank (grader: the hidden tap-to-toggle chip is gone) */}
         <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Paid by</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Paid by</span>
         <SegmentedControl
           aria-label={`Paid via, expense ${index}`}
           value={paid}
@@ -961,7 +976,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         </div>
       </div>
       <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">{isOther ? MISC_TITLE_LABEL : 'Detail, optional'}</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">{isOther ? MISC_TITLE_LABEL : 'Detail, optional'}</span>
         <input
           data-cell="detail"
           aria-label={`Detail, expense ${index}`}
@@ -973,7 +988,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
           aria-required={isOther || undefined}
           onChange={e => onPatch({ note: e.target.value })}
           className={cn(
-            'h-touch w-full rounded border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg',
+            'h-touch w-full rounded-control border bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-primary',
             row.noteError ? 'border-tone-danger-fg bg-tone-danger-bg' : 'border-line-input',
           )}
         />
@@ -981,7 +996,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
       {row.noteError ? <p className="text-base text-tone-danger-fg">{row.noteError}</p> : null}
       <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       <div className="grid gap-1">
-        <span aria-hidden="true" className="text-base font-medium text-fg-2">Job, optional</span>
+        <span aria-hidden="true" className="text-sm font-bold text-fg">Job, optional</span>
         <OrderTagPicker
           jobs={jobs}
           value={row.orderId ?? row.rfqId}
@@ -993,7 +1008,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         />
       </div>
       {showsInputTax(row.categoryId) ? <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} /> : null}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex min-h-touch items-center">
         <Checkbox
           label={
             <span className="inline-flex items-center gap-2">
@@ -1004,15 +1019,10 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
           checked={!!row.repeat}
           onCheckedChange={c => onPatch({ repeat: c === true })}
         />
-        {onRemove ? (
-          <button type="button" aria-label={`Remove expense ${index}`} onClick={onRemove} className="grid size-touch place-items-center rounded text-fg-muted hover:bg-sunken">
-            <Icon icon={Trash2} />
-          </button>
-        ) : null}
       </div>
       {err ? (
         <div role="alert" className="flex gap-2 rounded-row bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
-          <Icon icon={CircleAlert} size="sm" className="mt-[1px] text-tone-danger-fg" />
+          <Icon icon={CircleAlert} size="sm" className="mt-px text-tone-danger-fg" />
           <span>
             <b className="font-medium text-tone-danger-fg">{err}</b> The row keeps its details.
           </span>

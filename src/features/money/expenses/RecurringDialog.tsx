@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { useState } from 'react'
-import { Check, Trash2 } from 'lucide-react'
+import { Check, Repeat, Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { amountSchema } from '@/lib/formRules'
@@ -81,12 +81,13 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
     <>
     <Dialog open onOpenChange={o => !o && !sf.pending && onClose()} busy={sf.pending}>
       <DialogContent
+        icon={Repeat}
         title={template ? 'Edit recurring expense' : 'Add recurring expense'}
         context="Shown as due each month until it is recorded"
         footer={
           <>
             {template && isAdmin ? (
-              <Button variant="secondary" size="lg" icon={Trash2} className="mr-auto min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg max-md:mr-0" onClick={() => setConfirming(true)} disabled={sf.pending}>
+              <Button variant="danger" icon={Trash2} className="mr-auto max-md:mr-0" onClick={() => setConfirming(true)} disabled={sf.pending}>
                 Delete recurring expense
               </Button>
             ) : null}

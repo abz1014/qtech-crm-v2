@@ -14,10 +14,14 @@ import { PageHeader } from '@/ui/PageHeader'
 import { StatusText } from '@/ui/StatusText'
 import { useToast } from '@/ui/useToast'
 import { NumberInput } from '@/ui/form/NumberInput'
+import { CARD } from '@/ui/card'
+import { Skeleton } from '@/ui/Skeleton'
 import { useCreateClaim, useMyClaims, useMyVisitOptions, useOrderOptions, useWithdrawClaim } from '@/features/money/expenses/hooks'
 import { PAID_HOW_LABEL, type Claim } from '@/features/money/expenses/claimsApi'
 import { pkr } from '@/features/money/expenses/model'
 import { AMOUNT_ABOVE_ZERO, claimAmountProblem } from '@/features/money/expenses/quick'
+import { FIELD, NativeSelect } from '@/features/money/expenses/Panel'
+import { cn } from '@/lib/utils'
 
 /*
  * "I paid" (0087, owner decision 2026-10-22: engineers may record what they paid themselves). An engineer types the amount, what it
@@ -94,132 +98,183 @@ function MyClaims() {
     )
   }
 
+  const engineer = session.status === 'signed-in' && session.user.role === 'engineer'
+  const label = (words: string, optional = false) => (
+    <span className="text-sm font-bold">
+      {words}
+      {optional ? <span className="font-regular text-fg-muted"> optional</span> : null}
+    </span>
+  )
+  const amountField = (
+    <label className="grid gap-2">
+      {label('How much, PKR')}
+      <NumberInput value={amount} onChange={setAmount} min={0.01} inputMode="decimal" className="num h-control-lg text-left text-xl font-bold max-md:h-control-lg max-md:text-xl" aria-label="How much, PKR" />
+    </label>
+  )
+  const noteField = (
+    <label className="grid gap-2">
+      {label('What for', true)}
+      <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} placeholder="e.g. Petrol to the site, cable ties" className={FIELD} />
+    </label>
+  )
+  const dateField = (
+    <label className="grid min-w-0 gap-2">
+      {label('Date')}
+      <input type="date" value={spentOn} max={today} onChange={e => e.target.value && setSpentOn(e.target.value)} className={cn(FIELD, 'num')} />
+    </label>
+  )
+  const jobField = (
+    <label className="grid min-w-0 gap-2">
+      {label('Job', true)}
+      <NativeSelect
+        value={orderId}
+        onChange={e => {
+          visitTouched.current = true
+          setOrderId(e.target.value)
+          // a visit belongs to one order: another job leaves no visit named
+          const v = (visits.data ?? []).find(x => x.id === visitId)
+          if (v && v.orderId !== e.target.value) setVisitId('')
+        }}
+      >
+        <option value="">No job</option>
+        {(orders.data ?? []).map(o => (
+          <option key={o.id} value={o.id}>
+            {o.ref} · {o.company}
+          </option>
+        ))}
+      </NativeSelect>
+    </label>
+  )
+  const visitField =
+    (visits.data ?? []).length > 0 ? (
+      <label className="grid min-w-0 gap-2">
+        {label('Which visit?', true)}
+        <NativeSelect
+          value={visitId}
+          onChange={e => {
+            visitTouched.current = true
+            setVisitId(e.target.value)
+            const v = (visits.data ?? []).find(x => x.id === e.target.value)
+            if (v) setOrderId(v.orderId)
+          }}
+        >
+          <option value="">No visit</option>
+          {(visits.data ?? []).map(v => (
+            <option key={v.id} value={v.id}>
+              {v.label}
+            </option>
+          ))}
+        </NativeSelect>
+      </label>
+    ) : null
+  const photoButton =
+    photo && !photo.error ? (
+      <Button icon={X} onClick={() => setPhoto(null)} className="max-md:h-touch">
+        Remove receipt photo
+      </Button>
+    ) : (
+      <Button icon={Camera} onClick={() => fileRef.current?.click()} className="max-md:h-touch">
+        Photo of the receipt
+      </Button>
+    )
+  const fileInput = (
+    <input
+      ref={fileRef}
+      type="file"
+      accept="image/*,application/pdf"
+      capture="environment"
+      tabIndex={-1}
+      aria-hidden="true"
+      className="sr-only"
+      onChange={async e => {
+        const f = e.target.files?.[0]
+        e.target.value = ''
+        if (!f) return
+        const [one] = await intakeFiles([f], { accept: PHOTO_TYPES })
+        setPhoto(one)
+      }}
+    />
+  )
+  const sendButton = (wide: boolean) => (
+    <Button type="submit" variant="primary" icon={Check} busy={create.isPending} busyLabel="Sending" className={cn('max-md:h-touch', wide ? 'h-control-lg w-full' : 'ml-auto max-sm:w-full')}>
+      Send for approval
+    </Button>
+  )
+  const problem = error ? (
+    <p role="alert" className="flex items-start gap-2 rounded-control border border-tone-danger-fg/30 bg-tone-danger-bg px-3 py-2 text-tone-danger-fg">
+      <Icon icon={CircleAlert} className="mt-1 shrink-0" />
+      {error}
+    </p>
+  ) : null
+
   return (
-    <div className="mx-auto grid w-full max-w-[720px] grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
+    <div className="mx-auto grid w-full max-w-[45rem] grid-cols-[minmax(0,1fr)] content-start gap-card-gap px-gutter pb-12 pt-4 md:pt-6">
       <PageHeader title="I paid" lede={<span className="text-base">Amounts paid personally for work. Repaid after approval.</span>} />
       <form
-        className="grid gap-4 rounded-panel border bg-surface p-4 text-base"
+        className={cn(CARD, 'grid gap-4 p-card text-base')}
         autoComplete="off"
         onSubmit={e => {
           e.preventDefault()
           submit()
         }}
       >
-        <label className="grid gap-2">
-          <span className="font-medium">How much, PKR</span>
-          <NumberInput value={amount} onChange={setAmount} min={0.01} inputMode="decimal" className="num h-12 text-xl" aria-label="How much, PKR" />
-        </label>
-        <label className="grid gap-2">
-          <span className="font-medium">
-            What for <span className="font-regular text-fg-muted">optional</span>
-          </span>
-          <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} placeholder="e.g. Petrol to the site, cable ties" className="min-h-touch rounded border border-line-input bg-surface px-3 text-base placeholder:text-fg-muted" />
-        </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2">
-            <span className="font-medium">Date</span>
-            <input type="date" value={spentOn} max={today} onChange={e => e.target.value && setSpentOn(e.target.value)} className="num min-h-touch rounded border border-line-input bg-surface px-3 text-base" />
-          </label>
-          <label className="grid min-w-0 gap-2">
-            <span className="font-medium">
-              Job <span className="font-regular text-fg-muted">optional</span>
-            </span>
-            <select
-              value={orderId}
-              onChange={e => {
-                visitTouched.current = true
-                setOrderId(e.target.value)
-                // a visit belongs to one order: another job leaves no visit named
-                const v = (visits.data ?? []).find(x => x.id === visitId)
-                if (v && v.orderId !== e.target.value) setVisitId('')
-              }}
-              className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base">
-              <option value="">No job</option>
-              {(orders.data ?? []).map(o => (
-                <option key={o.id} value={o.id}>
-                  {o.ref} · {o.company}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {(visits.data ?? []).length > 0 ? (
-          <label className="grid min-w-0 gap-2">
-            <span className="font-medium">
-              Which visit? <span className="font-regular text-fg-muted">optional</span>
-            </span>
-            <select
-              value={visitId}
-              onChange={e => {
-                visitTouched.current = true
-                setVisitId(e.target.value)
-                const v = (visits.data ?? []).find(x => x.id === e.target.value)
-                if (v) setOrderId(v.orderId)
-              }}
-              className="min-h-touch w-full min-w-0 rounded border border-line-input bg-surface px-3 text-base"
-            >
-              <option value="">No visit</option>
-              {(visits.data ?? []).map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-3">
-          {photo && !photo.error ? (
-            <Button size="touch" icon={X} onClick={() => setPhoto(null)} className="text-base">
-              Remove receipt photo
-            </Button>
-          ) : (
-            <Button size="touch" icon={Camera} onClick={() => fileRef.current?.click()} className="text-base">
-              Photo of the receipt
-            </Button>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*,application/pdf"
-            capture="environment"
-            tabIndex={-1}
-            aria-hidden="true"
-            className="sr-only"
-            onChange={async e => {
-              const f = e.target.files?.[0]
-              e.target.value = ''
-              if (!f) return
-              const [one] = await intakeFiles([f], { accept: PHOTO_TYPES })
-              setPhoto(one)
-            }}
-          />
-          <Button type="submit" variant="primary" size="touch" icon={Check} busy={create.isPending} busyLabel="Sending" className="ml-auto text-base max-sm:w-full">
-            Send for approval
-          </Button>
-        </div>
-        {error ? (
-          <p role="alert" className="flex items-center gap-2 text-tone-danger-fg">
-            <Icon icon={CircleAlert} />
-            {error}
-          </p>
-        ) : null}
+        {engineer ? (
+          // Engineer (63-my-expenses #ipaid-engineer): one column for a phone in one hand, the visit picked for today, the photo and Send
+          // each the full width. Only what they typed: no category, no other price.
+          <>
+            {amountField}
+            {noteField}
+            {dateField}
+            {jobField}
+            {visitField}
+            <div className="grid gap-3 pt-1 [&>button]:w-full">
+              {photoButton}
+              {fileInput}
+              {sendButton(true)}
+            </div>
+          </>
+        ) : (
+          // Sales (63-my-expenses, sales): the date and the job side by side from 640, the photo and Send on one line.
+          <>
+            {amountField}
+            {noteField}
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+              {dateField}
+              {jobField}
+            </div>
+            {visitField}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {photoButton}
+              {fileInput}
+              {sendButton(false)}
+            </div>
+          </>
+        )}
+        {problem}
       </form>
 
-      <section aria-labelledby="mine-h" className="grid gap-2">
-        <h2 id="mine-h" className="text-lg font-semibold">
+      <section aria-labelledby="mine-h" className="grid gap-3">
+        <h2 id="mine-h" className="type-section">
           <span>My claims</span>
-          {pending.length > 0 ? <span className="font-regular text-fg-2"> · {pending.length} waiting</span> : null}
+          {pending.length > 0 ? <span className="text-base font-regular text-fg-2"> · {pending.length} waiting</span> : null}
         </h2>
         {claims.isPending ? (
-          <div className="h-16 animate-pulse rounded-row border bg-sunken" aria-busy="true" />
+          <div className={cn(CARD, 'grid gap-3 p-card')} aria-busy="true">
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-1/3" />
+          </div>
         ) : claims.isError ? (
-          <EmptyState mood="error" title="Claims could not be loaded" actions={<Button onClick={() => void claims.refetch()}>Try again</Button>}>
-            Nothing was changed. Check your connection and try again.
-          </EmptyState>
+          <div className={cn(CARD, 'p-card')}>
+            <EmptyState mood="error" title="Claims could not be loaded" actions={<Button onClick={() => void claims.refetch()}>Try again</Button>}>
+              Nothing was changed. Check your connection and try again.
+            </EmptyState>
+          </div>
         ) : (claims.data ?? []).length === 0 ? (
-          <EmptyState title="Nothing yet">Submitted claims and their approval status appear here.</EmptyState>
+          <div className={cn(CARD, 'p-card')}>
+            <EmptyState title="Nothing yet">Submitted claims and their approval status appear here.</EmptyState>
+          </div>
         ) : (
-          <ul className="divide-y rounded-panel border bg-surface">
+          <ul className={cn(CARD, 'divide-y overflow-clip')}>
             {(claims.data ?? []).map(c => (
               <ClaimLine key={c.id} claim={c} onWithdraw={() => withdraw.mutate(c.id, { onSuccess: () => toast.toast({ title: 'Claim taken back', body: pkr(c.amount), tone: 'neutral' }) })} busy={withdraw.isPending} />
             ))}
@@ -250,24 +305,27 @@ function ClaimLine({ claim, onWithdraw, busy }: { claim: Claim; onWithdraw: () =
       </StatusText>
     )
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-base">
-      <span className="min-w-0">
-        <b className="num font-semibold">{pkr(claim.amount)}</b>
+    // What was paid over the state and the day (63-my-expenses): the words always have the card's width, so a long note or a refusal
+    // reason never squeezes them into a column one letter wide on a phone.
+    <li className="grid gap-2 px-card py-4 text-base">
+      <p className="min-w-0 [overflow-wrap:anywhere]">
+        <b className="num font-bold">{pkr(claim.amount)}</b>
         {claim.note ? <span> · {claim.note}</span> : null}
         {claim.orderLabel ? <span className="text-fg-2"> · {claim.orderLabel}</span> : null}
         {claim.visitLabel ? <span className="text-fg-2"> · {claim.visitLabel}</span> : null}
-      </span>
-      <span className="justify-self-end">{state}</span>
-      <span className="num text-xs text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>
-      {claim.status === 'pending' ? (
-        <Button size="touch" variant="quiet" icon={Trash2} onClick={onWithdraw} disabled={busy} aria-label={`Take back ${pkr(claim.amount)}`} className="justify-self-end text-base">
-          Take back
-        </Button>
-      ) : claim.status === 'rejected' && claim.rejectReason ? (
-        <span className="justify-self-end text-fg-2">{claim.rejectReason}</span>
-      ) : (
-        <span />
-      )}
+      </p>
+      <div className="flex min-h-control-sm flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+          {state}
+          <span className="num text-sm text-fg-muted">{formatShortDate(claim.spentOn, businessToday())}</span>
+        </span>
+        {claim.status === 'pending' ? (
+          <Button variant="quiet" icon={Trash2} onClick={onWithdraw} disabled={busy} aria-label={`Take back ${pkr(claim.amount)}`} className="-mr-2 max-md:h-touch">
+            Take back
+          </Button>
+        ) : null}
+      </div>
+      {claim.status === 'rejected' && claim.rejectReason ? <p className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{claim.rejectReason}</p> : null}
     </li>
   )
 }

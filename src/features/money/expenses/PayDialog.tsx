@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, CircleAlert } from 'lucide-react'
+import { Check, CircleAlert, Landmark } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
@@ -13,6 +13,8 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { useInsertPayment, useLegPayState } from '@/features/money/expenses/hooks'
 import { pkr, type PaidVia } from '@/features/money/expenses/model'
 import { effectiveRate, owedInCurrency, payInserts, payProblem } from '@/features/money/expenses/pay'
+import { FIELD } from '@/features/money/expenses/Panel'
+import { cn } from '@/lib/utils'
 
 /*
  * Pay <supplier> (redesign phase 1: supplier payments have ONE door). Opened from the supplier order's menu on the order page and from
@@ -39,7 +41,7 @@ export function PayDialog({ open, onOpenChange, context }: { open: boolean; onOp
   const [busy, setBusy] = useState(false)
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
-      <DialogContent title={`Pay ${context.supplierName}`} context={[context.orderLabel, 'Supplier payment'].filter(Boolean).join(' · ')} size="md" className="md:w-[560px]">
+      <DialogContent title={`Pay ${context.supplierName}`} context={[context.orderLabel, 'Supplier payment'].filter(Boolean).join(' · ')} size="md" icon={Landmark} className="md:w-[35rem]">
         {open ? <PayForm context={context} onBusy={setBusy} onDone={() => onOpenChange(false)} /> : null}
       </DialogContent>
     </Dialog>
@@ -198,7 +200,7 @@ function PayFormReady({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2">
           <span className="font-medium">Date paid</span>
-          <input type="date" value={paidOn} max={today} onChange={e => e.target.value && setPaidOn(e.target.value)} className="num min-h-touch rounded border border-line-input bg-surface px-3 text-base" />
+          <input type="date" value={paidOn} max={today} onChange={e => e.target.value && setPaidOn(e.target.value)} className={cn(FIELD, 'num')} />
         </label>
         <div className="grid gap-2">
           <span className="font-medium" aria-hidden="true">
@@ -211,7 +213,7 @@ function PayFormReady({
         <span className="font-medium">
           Reference <span className="font-regular text-fg-muted">optional</span>
         </span>
-        <input value={detail} maxLength={200} onChange={e => setDetail(e.target.value)} placeholder="e.g. TT ref, cheque no." className="min-h-touch rounded border border-line-input bg-surface px-3 text-base placeholder:text-fg-muted" />
+        <input value={detail} maxLength={200} onChange={e => setDetail(e.target.value)} placeholder="e.g. TT ref, cheque no." className={FIELD} />
       </label>
       <Checkbox label={<span className="text-base">More: has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} />
       {hasGst ? (

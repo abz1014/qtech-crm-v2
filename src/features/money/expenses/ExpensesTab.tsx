@@ -15,7 +15,10 @@ import { Money } from '@/ui/Money'
 import { NoResults } from '@/ui/NoResults'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { TableFilter } from '@/ui/TableFilter'
+import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
+import { CARD } from '@/ui/card'
+import { cn } from '@/lib/utils'
 import { Select } from '@/ui/form/Select'
 import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
 import { useClosedMonths } from '@/features/money/monthEnd/hooks'
@@ -105,10 +108,10 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const phone = useMediaQuery('(max-width: 639px)')
 
   return (
-    <div className="grid gap-4">
-      <section aria-labelledby="expenses-h" className="grid gap-3" data-work="">
+    <div className="grid min-w-0 gap-card-gap">
+      <section aria-labelledby="expenses-h" className="grid min-w-0 gap-card-gap" data-work="">
         {monthClosed ? (
-          <p className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 border-b py-2 text-fg-2" data-testid="expenses-closed">
+          <p className={cn(CARD, 'type-body flex flex-wrap items-center gap-x-2 gap-y-1 px-card py-3 text-fg-2')} data-testid="expenses-closed">
             <Icon icon={Lock} className="text-fg-muted" />
             <span>
               <b className="font-medium text-fg">{monthKeyLabel(month)} is locked.</b> {CLOSED_MONTH_LINE}
@@ -120,7 +123,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
         ) : null}
         <DataTable
           label="Expenses"
-          className="max-sm:rounded-none max-sm:border-0 lg:rounded-none lg:border-x-0"
+          toolbarCard
           columns={columns}
           rows={rows}
           getRowId={r => r.id}
@@ -151,45 +154,49 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               : null
           }
           toolbar={
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div className="grid w-full min-w-0 gap-4">
               <h2 id="expenses-h" className="sr-only">
                 Expenses
               </h2>
-              <div className="inline-flex items-center gap-2" role="group" aria-label="Month">
-                <Button variant="quiet" size="sm" icon={ChevronLeft} aria-label="Previous month" onClick={() => setMonth(m => shiftMonth(m, -1))} />
-                <span className="num min-w-[84px] text-center text-base font-semibold max-sm:min-w-[72px]" aria-live="polite" title={monthKeyLabel(month)}>
-                  {monthKeyShort(month)}
-                </span>
-                <Button variant="quiet" size="sm" icon={ChevronRight} aria-label="Next month" disabled={isCurrent} onClick={() => setMonth(m => shiftMonth(m, 1))} />
-              </div>
-              {list.isSuccess ? (
-                <span className="inline-flex items-center gap-1 text-base max-sm:order-3 max-sm:basis-full" data-testid="expenses-month-total" aria-live="polite">
-                  <b className="num font-semibold">{pkr(totals.total)}</b>
-                  <span className="num text-sm text-fg-muted">
-                    {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
+              {/* The month, its one total (by the day paid) and the report for it; then search and filters (60-expenses #ex-monthbar). */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                <div className="inline-flex items-center gap-1 rounded-control border bg-surface p-px" role="group" aria-label="Month">
+                  <Button variant="quiet" size="sm" icon={ChevronLeft} aria-label="Previous month" className="max-md:size-touch" onClick={() => setMonth(m => shiftMonth(m, -1))} />
+                  <span className="num min-w-[5.5rem] text-center text-base font-bold" aria-live="polite" title={monthKeyLabel(month)}>
+                    {monthKeyShort(month)}
                   </span>
-                  <InfoTip label="About this total">
-                    What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or cash in hand). A monthly bill paid this month for last month is in this total. The Expenses report counts it in the month it is for.
-                    {totals.inputTax > 0 ? ` GST paid on purchases, ${pkr(totals.inputTax)} of it, is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
-                  </InfoTip>
-                </span>
-              ) : null}
-              {phone ? null : (
-              <Link
-                to={`/money/reports/expenses?by=month&period=${month}`}
-                aria-label={`Report for ${monthKeyShort(month)}`}
-                className="type-body inline-flex min-h-touch items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline"
-              >
-                <Icon icon={ChartColumn} size="sm" />
-                Report for {monthKeyShort(month)}
-              </Link>
-              )}
-              <span className="flex-1 max-sm:hidden" />
-              <div className="flex min-w-0 items-center gap-2 max-sm:order-4 max-sm:basis-full">
-              <TableFilter label="Search expenses" hint="Finds an expense by payee, detail, category or order number." value={q} onChange={setQ} className="max-sm:min-w-0 max-sm:flex-1" />
-              <FilterSheet title="Filter expenses" on={filtersOn.length} shown={rows.length} noun={['expense', 'expenses']} onClear={() => setFilters(NO_FILTERS)}>
-                <FilterSelects categories={categories} groups={groups} filters={filters} onChange={setFilters} />
-              </FilterSheet>
+                  <Button variant="quiet" size="sm" icon={ChevronRight} aria-label="Next month" className="max-md:size-touch" disabled={isCurrent} onClick={() => setMonth(m => shiftMonth(m, 1))} />
+                </div>
+                {list.isSuccess ? (
+                  <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-base" data-testid="expenses-month-total" aria-live="polite">
+                    <b className="num text-xl font-heavy tracking-snug">{pkr(totals.total)}</b>
+                    <span className="num text-sm text-fg-2">
+                      {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
+                    </span>
+                    <InfoTip label="About this total" className="self-center">
+                      What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or cash in hand). A monthly bill paid this month for last month is in this total. The Expenses report counts it in the month it is for.
+                      {totals.inputTax > 0 ? ` GST paid on purchases, ${pkr(totals.inputTax)} of it, is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
+                    </InfoTip>
+                  </span>
+                ) : list.isPending ? (
+                  <Skeleton className="h-6 w-[12rem]" />
+                ) : null}
+                {phone ? null : (
+                  <Link
+                    to={`/money/reports/expenses?by=month&period=${month}`}
+                    aria-label={`Report for ${monthKeyShort(month)}`}
+                    className="ml-auto inline-flex min-h-control items-center gap-2 rounded-control px-2 text-sm font-bold text-primary underline-offset-2 hover:bg-selected hover:underline"
+                  >
+                    <Icon icon={ChartColumn} size="sm" />
+                    Report for {monthKeyShort(month)}
+                  </Link>
+                )}
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <TableFilter label="Search expenses" hint="Finds an expense by payee, detail, category or order number." value={q} onChange={setQ} className="min-w-0 flex-[1_1_16rem] max-sm:flex-1" />
+                <FilterSheet title="Filter expenses" on={filtersOn.length} shown={rows.length} noun={['expense', 'expenses']} onClear={() => setFilters(NO_FILTERS)}>
+                  <FilterSelects categories={categories} groups={groups} filters={filters} onChange={setFilters} />
+                </FilterSheet>
               </div>
             </div>
           }
@@ -204,17 +211,17 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           }
           mobileRow={r => <ExpenseCard row={r} categories={categories} listing={list.data} locked={monthClosed} onEdit={setEditing} onDelete={onDelete} onHistory={setHistory} />}
         />
-      {phone ? (
-              <Link
-                to={`/money/reports/expenses?by=month&period=${month}`}
-                aria-label={`Report for ${monthKeyShort(month)}`}
-                className="type-body inline-flex min-h-touch items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline"
-              >
-                <Icon icon={ChartColumn} size="sm" />
-                Report for {monthKeyShort(month)}
-              </Link>
+        {phone ? (
+          <Link
+            to={`/money/reports/expenses?by=month&period=${month}`}
+            aria-label={`Report for ${monthKeyShort(month)}`}
+            className="inline-flex min-h-touch items-center gap-2 justify-self-start rounded-control px-2 text-base font-bold text-primary underline-offset-2 hover:bg-selected hover:underline"
+          >
+            <Icon icon={ChartColumn} size="sm" />
+            Report for {monthKeyShort(month)}
+          </Link>
         ) : null}
-        </section>
+      </section>
 
       {editing ? (
         <AddExpenseDialog
@@ -319,7 +326,7 @@ function buildColumns(
       id: 'paid',
       header: 'Paid',
       kind: 'date',
-      width: 96,
+      width: '6rem',
       sortable: true,
       value: r => r.paidOn,
       cell: r => <span className="num">{formatShortDate(r.paidOn, today)}</span>,
@@ -333,21 +340,23 @@ function buildColumns(
         const d = describe(r, categories, listing)
         return (
           <div className="grid min-w-0 gap-px">
-            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{d.name}{r.autoBooked ? <AutoTag /> : null}</span>
+            <span className="min-w-0 font-bold [overflow-wrap:anywhere]">{d.name}{r.autoBooked ? <AutoTag /> : null}</span>
             {d.detail ? <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{d.detail}</span> : null}
+            {/* Below 1536 the side column leaves no room for the GST column: the row says it here instead. */}
+            {act.showTax && r.inputTax > 0 ? <span className="num text-sm text-fg-2 2xl:hidden">GST paid on purchases {pkr(r.inputTax)}</span> : null}
           </div>
         )
       },
     },
-    { id: 'via', header: 'Paid via', width: 96, value: r => r.paidVia, sortable: true, cell: r => <Tag>{PAID_VIA_LABEL[r.paidVia]}</Tag>, hideBelowMd: true },
+    { id: 'via', header: 'Paid via', width: '6.5rem', value: r => r.paidVia, sortable: true, cell: r => <Tag>{PAID_VIA_LABEL[r.paidVia]}</Tag>, hideBelowMd: true },
   ]
   if (act.showTax)
     cols.push({
       id: 'tax',
       header: 'GST paid on purchases (PKR)',
       kind: 'money',
-      width: 132,
-      hideBelowMd: true,
+      width: '9rem',
+      hideClass: 'max-2xl:hidden',
       value: r => (r.inputTax > 0 ? r.inputTax : null),
       // a group (or month) with no input tax shows a blank, not a 0
       total: list => {
@@ -356,22 +365,23 @@ function buildColumns(
       },
     })
   cols.push(
-    { id: 'amount', header: 'Amount (PKR)', kind: 'money', width: 140, sortable: true, value: r => r.amount, total: true },
+    { id: 'amount', header: 'Amount (PKR)', kind: 'money', width: '9rem', sortable: true, value: r => r.amount, total: true },
     {
       id: 'actions',
       header: 'Actions',
-      width: 84,
+      hiddenHeader: true,
+      width: '5.5rem',
       cell: r => {
         const name = describe(r, categories, listing).name
         // A closed month cannot be edited or deleted, but what changed and who changed it is still there to read: History sits by the lock.
         if (act.locked)
           return (
             <span className="inline-flex items-center gap-1" data-row-actions="">
-              <span className="inline-grid size-[36px] place-items-center text-fg-muted" title="Locked month">
+              <span className="inline-grid size-control-sm place-items-center text-fg-muted" title="Locked month">
                 <Icon icon={Lock} size="sm" />
                 <span className="sr-only">Locked month</span>
               </span>
-              <Button variant="quiet" size="touch" icon={History} aria-label={`History of ${name} of ${r.amount}`} className="min-w-[44px]" onClick={() => act.onHistory(r)} />
+              <Button variant="quiet" size="touch" icon={History} aria-label={`History of ${name} of ${r.amount}`} className="min-w-touch" onClick={() => act.onHistory(r)} />
             </span>
           )
         return (
@@ -419,15 +429,15 @@ function ExpenseCard({
 }) {
   const d = describe(row, categories, listing)
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-[2px] py-1">
-      <span className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{d.name}{row.autoBooked ? <AutoTag /> : null}</span>
-      <Money value={row.amount} prefix={false} className="justify-self-end text-right text-base font-medium" />
+    <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-px py-1">
+      <span className="min-w-0 text-base font-bold [overflow-wrap:anywhere]">{d.name}{row.autoBooked ? <AutoTag /> : null}</span>
+      <Money value={row.amount} prefix={false} className="justify-self-end text-right text-base font-bold" />
       {locked ? (
-        <Button variant="quiet" size="touch" icon={History} className="row-span-2 min-w-[44px]" aria-label={`History of ${d.name} of ${row.amount}`} onClick={() => onHistory(row)} />
+        <Button variant="quiet" size="touch" icon={History} className="row-span-2 min-w-touch" aria-label={`History of ${d.name} of ${row.amount}`} onClick={() => onHistory(row)} />
       ) : (
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="quiet" size="touch" icon={Ellipsis} className="row-span-2 min-w-[44px]" aria-label={`More for ${d.name} of ${row.amount}`} />
+            <Button variant="quiet" size="touch" icon={Ellipsis} className="row-span-2 min-w-touch" aria-label={`More for ${d.name} of ${row.amount}`} />
           </PopoverTrigger>
           <PopoverContent variant="menu" align="end">
             <MenuItem icon={Pencil} onClick={() => onEdit(row)}>
@@ -453,5 +463,5 @@ function ExpenseCard({
 
 /** 0138: booked by the daily job (Book it for me) and not yet looked at; opening the row and saving it, or ticking it on the bank statement, clears it. */
 function AutoTag() {
-  return (<span className="ml-2 inline-flex items-center rounded-round border bg-sunken px-2 text-base font-normal text-fg-2" title="Booked automatically. Open it and save to confirm.">Auto</span>)
+  return (<span className="ml-2 inline-flex min-h-chip items-center rounded-pill border border-dashed border-line-strong bg-tone-neutral-bg px-2 align-middle text-xs font-card leading-none text-tone-neutral-fg" title="Booked automatically. Open it and save to confirm.">Auto</span>)
 }
