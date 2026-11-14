@@ -1,13 +1,12 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Scale } from 'lucide-react'
+import { Scale } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatPaisa, paisaToFixed, toPaisa, type Amount } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
-import { Icon } from '@/ui/Icon'
 import { CARD } from '@/ui/card'
 import { Money } from '@/ui/Money'
 import { SumBar } from '@/ui/SumBar'
@@ -18,7 +17,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { ReportCsv } from '@/ui/ReportCsv'
 import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { ReportError, ReportLoading, TwoProfitsTip } from '@/features/money/monthEnd/ReportParts'
-import { PAGER_STEP } from '@/features/money/monthEnd/MonthEndFrame'
+import { PeriodStepper } from '@/features/money/monthEnd/MonthEndFrame'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
 import { useInOutReport } from '@/features/money/inOut/hooks'
 import {
@@ -138,26 +137,13 @@ export function InOutPage() {
 }
 
 function PeriodPager({ period, atNow, go }: { period: Period; atNow: boolean; go: (by: number) => void }) {
-  const unit = period.kind === 'month' ? 'month' : 'quarter'
-  return (
-    <div role="group" aria-label="Period" className="inline-flex items-center gap-2">
-      <button type="button" aria-label={`Previous ${unit}`} onClick={() => go(-1)} className={PAGER_STEP}>
-        <Icon icon={ChevronLeft} size="sm" />
-      </button>
-      <span aria-live="polite" className="num inline-flex h-control min-w-[6.5rem] items-center justify-center px-2 text-base font-bold max-md:h-touch">
-        {periodLabel(period)}
-      </span>
-      <button type="button" aria-label={`Next ${unit}`} disabled={atNow} onClick={() => go(1)} className={PAGER_STEP}>
-        <Icon icon={ChevronRight} size="sm" />
-      </button>
-    </div>
-  )
+  return <PeriodStepper label="Period" unit={period.kind === 'month' ? 'month' : 'quarter'} text={periodLabel(period)} atNow={atNow} go={go} />
 }
 
 /** One figure line: label, its basis in small words, this period, the previous one and the change. */
 function Row({ label, sub, now, before, strong, testId }: { label: string; sub?: ReactNode; now: Amount; before: Amount; strong?: boolean; testId?: string }) {
   return (
-    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-px border-b px-0 py-2 md:grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem]', strong && 'border-b-2')}>
+    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-px border-b px-card py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem]', strong && 'bg-tone-success-bg')}>
       <span role="rowheader" className={cn('type-body', strong && 'font-semibold')}>
         {label}
         {sub ? <span className="type-body block text-fg-muted">{sub}</span> : null}
@@ -178,7 +164,7 @@ function Row({ label, sub, now, before, strong, testId }: { label: string; sub?:
 
 function Head({ prev }: { prev: string }) {
   return (
-    <div role="row" className="type-body hidden min-h-control-sm grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem] items-center gap-x-4 border-b px-0 font-medium text-fg-muted md:grid">
+    <div role="row" className="hidden min-h-head grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem] items-center gap-x-4 border-b px-card text-sm font-medium text-fg-2 md:grid">
       <span role="columnheader">Line</span>
       <span role="columnheader" className="text-right">
         PKR
@@ -249,9 +235,8 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
         </>
       ) : (
         <>
-          {/* Desktop: one strip with the headline figures, then ONE column of hairline rows with the period before and the change. */}
+          {/* Desktop: the sum card with the headline figures (59-reports .qb-sum), then the two tables, each a card, with the period before and the change. */}
           <SumBar
-            desktop="strip"
             label={`Cash and profit, ${v.label}`}
             caption={
               <span>
@@ -265,7 +250,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               { label: 'Profit on invoices', amount: v.profit.profit },
             ]}
           />
-          <section className="grid gap-1">
+          <section className="grid gap-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <h2 className="type-section">Cash in and out</h2>
               <span className="type-body text-fg-muted">On the day money moved</span>
@@ -275,7 +260,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
                 </span>
               ) : null}
             </div>
-            <div role="table" aria-label="Cash in and out">
+            <div role="table" aria-label="Cash in and out" className={cn(CARD, 'overflow-hidden')}>
               <Head prev={prev} />
               <Row testId="cash-in" label="Money in" sub={`${plural(v.cash.payments, 'customer payment')} received, GST included`} now={v.cash.in} before={v.prevCash.in} />
               <Row testId="cash-out" label="Money out" sub={`${plural(v.cash.expenses, 'expense')} and supplier payments, GST paid on purchases included`} now={v.cash.out} before={v.prevCash.out} />
@@ -285,13 +270,13 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               <Row testId="cash-net" label="Cash in minus cash out" now={v.cash.net} before={v.prevCash.net} strong />
             </div>
           </section>
-          <section className="grid gap-1">
+          <section className="grid gap-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <h2 className="type-section">Profit on invoices</h2>
               <span className="type-body text-fg-muted">By invoice date</span>
               <TwoProfitsTip />
             </div>
-            <div role="table" aria-label="Profit on invoices">
+            <div role="table" aria-label="Profit on invoices" className={cn(CARD, 'overflow-hidden')}>
               <Head prev={prev} />
               <Row label="Sales" sub={`${plural(v.profit.invoices, 'invoice')}, GST taken out`} now={v.profit.sales} before={v.prevProfit.sales} />
               <Row label="Order costs" sub="Supplier, freight and clearing, counted with the order's sales" now={v.profit.orderCosts} before={v.prevProfit.orderCosts} />
@@ -303,8 +288,9 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       )}
 
       {narrow ? (
-        <section aria-label={`Why profit and cash differ in ${v.label}`} data-testid="in-out-why">
+        <section aria-label={`Why profit and cash differ in ${v.label}`} data-testid="in-out-why" className={cn(CARD, 'px-card [&>[data-fold-row]]:border-b-0')}>
           <FoldRow
+            figure
             state={{ icon: Scale, word: whyLines.length === 0 ? 'Agree' : 'Differ' }}
             title="Why profit and cash differ"
             summary={whyLines.length === 0 ? 'They agree' : signed(r.gap)}
@@ -338,7 +324,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
           </FoldRow>
         </section>
       ) : (
-      <section aria-labelledby="in-out-why" className="grid gap-2 border-b pb-3" data-testid="in-out-why">
+      <section aria-labelledby="in-out-why" className={cn(CARD, 'grid gap-2 p-card')} data-testid="in-out-why">
           <h2 id="in-out-why" className="type-section flex flex-wrap items-center gap-2">
             Why profit and cash differ in {v.label}
             <InfoTip label="About supplier bills">
@@ -392,7 +378,6 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
   return (
     <DataTable
       label={`Money out by category, ${v.label}`}
-      className="max-sm:rounded-none max-sm:border-0 lg:rounded-none lg:border-x-0"
       columns={columns}
       rows={rows}
       getRowId={r => r.id}
@@ -458,7 +443,6 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
   return (
     <DataTable
       label={title}
-      className="max-sm:rounded-none max-sm:border-0 lg:rounded-none lg:border-x-0"
       columns={columns}
       rows={v.trend}
       getRowId={t => t.period.key}

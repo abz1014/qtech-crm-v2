@@ -39,10 +39,13 @@ export function ContactRow({ facts, showWhere = false }: { facts: JobFacts; show
   const c = facts.contact
   if (!c) {
     return (
-      <section aria-label="Contact" className="flex min-h-touch items-center gap-3 border-b py-2">
-        <Icon icon={User} className="text-fg-muted" />
-        <h2 className="type-row">Contact</h2>
-        <p className="type-body min-w-0 flex-1 text-right text-fg-muted">No contact person is set</p>
+      // The sentence under the title, left with it (as a set contact's actions are): right-aligned beside "Contact" it broke into two ragged lines in the side column.
+      <section aria-label="Contact" className="border-b py-2">
+        <div className="flex min-h-touch items-center gap-3">
+          <Icon icon={User} className="text-fg-muted" />
+          <h2 className="type-row">Contact</h2>
+        </div>
+        <p className="type-body pb-2 pl-8 text-fg-muted">No contact person is set</p>
       </section>
     )
   }
@@ -104,7 +107,7 @@ export function MoneyRow({ data, hasOrder }: { data: JobData; hasOrder: boolean 
         {q ? (
           <dl className="grid grid-cols-[1fr_auto] gap-y-2 text-base">
             <dt className="text-fg-2">Quoted (with GST)</dt>
-            <dd className="pl-4 text-right"><Money value={q.netTotal + q.gstTotal} /></dd>
+            <dd className="pl-4 text-right"><Money value={q.netTotal + q.gstTotal} prefix={false} /></dd>
           </dl>
         ) : (
           <p className="text-base text-fg-muted">No money yet: no quotation has been sent.</p>
@@ -144,7 +147,7 @@ export function MoneyRow({ data, hasOrder }: { data: JobData; hasOrder: boolean 
     <>
       <dl className="grid grid-cols-[1fr_auto] gap-y-2 text-base">
         <dt className="text-fg-2">Sale (with GST)</dt>
-        <dd className="pl-4 text-right"><Money value={m.grossTarget} /></dd>
+        <dd className="pl-4 text-right"><Money value={m.grossTarget} prefix={false} /></dd>
         <dt className="text-fg-2">Received</dt>
         <dd className="pl-4 text-right"><Money value={m.settled} prefix={false} /></dd>
         <dt className="border-t pt-2 font-semibold">Still to collect</dt>

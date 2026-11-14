@@ -200,7 +200,6 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
     <>
       <SumBar
         className={drawings ? 'max-sm:grid-cols-1' : undefined}
-        desktop="strip"
         label="Profit and loss"
         items={[
           {
@@ -443,7 +442,6 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       <SumBar
-        desktop="strip"
         caption={`${plural(v.rows.length, 'invoice')} open, as of ${asOfLabel}`}
         label="Overdue by age"
         items={AGING_BUCKETS.map(b => ({
@@ -478,7 +476,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           getRowId={r => r.invoiceId}
           twoLine
           footerLabel={`${plural(v.rows.length, 'invoice')} open`}
-          className={cn('md:rounded-none md:border-x-0', v.advances.length && 'rounded-b-none')}
+          className={cn(v.advances.length && 'rounded-b-none')}
           toolbar={
             <div className="flex w-full flex-wrap items-center gap-3">
               <span className="flex min-w-0 items-center gap-3">
@@ -523,7 +521,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           )}
         />
         {v.advances.length ? (
-          <ul aria-label="Advances held" className="rounded-b border border-t-0 border-dashed border-line-input bg-canvas md:rounded-none md:border-x-0 md:bg-transparent">
+          <ul aria-label="Advances held" className="overflow-hidden rounded-b-card border border-t-0 bg-sunken shadow-e1">
             {v.advances.map(a => (
               <li key={a.orderId} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-card py-3 text-sm">
                 <Icon icon={Wallet} size="md" className="text-fg-muted" />
@@ -651,7 +649,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       {missing.length ? (
-        <Banner tone="warning" title={`No exchange rate for ${day}`} className="md:rounded-none md:border-x-0">
+        <Banner tone="warning" title={`No exchange rate for ${day}`}>
           {/* The link sits in the text, not beside it: a side button squeezed the words into one column on a phone. */}
           {missing.join(', ')} {missing.length === 1 ? 'is' : 'are'} shown in {missing.length === 1 ? 'its' : 'their'} own currency.
           {partPaid ? ` ${plural(partPaid, 'supplier order is', 'supplier orders are')} part paid in PKR: what is left shows once a rate is added.` : ''}{' '}
@@ -662,7 +660,6 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       ) : null}
       <SumBar
         className="max-sm:grid-cols-1"
-        desktop="strip"
         caption={
           <>
             {plural(v.rows.length, 'supplier order')}, <Num>{v.paidLegs}</Num> with a payment{missing.length ? '' : <>, payable at the rate on {day}</>}
@@ -685,7 +682,6 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         columns={columns}
         rows={v.rows}
         getRowId={r => r.legId}
-        className="md:rounded-none md:border-x-0"
         twoLine
         footerLabel={plural(v.rows.length, 'supplier order')}
         toolbar={
@@ -797,7 +793,6 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       <SumBar
-        desktop="strip"
         label="GST and FBR"
         items={[
           { label: `${name} invoices`, count: sel?.invoiceCount ?? 0, sub: <>Net PKR <Num>{rupees(sel?.net ?? 0)}</Num></> },
@@ -814,7 +809,6 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         rows={v.rows}
         getRowId={r => r.month}
         activeRowId={ctx.month}
-        className="md:rounded-none md:border-x-0"
         footerLabel={`${plural(note, 'month')}`}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
@@ -935,7 +929,6 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   return (
     <>
       <SumBar
-        desktop="strip"
         label="Sales by person"
         items={[
           { label: 'Net cash credited', amount: v.credited,  sub: <><Num>{v.creditedPayments}</Num> {v.creditedPayments === 1 ? 'payment' : 'payments'} credited to <Num>{v.creditedPeople}</Num> {v.creditedPeople === 1 ? 'person' : 'people'}</> },
@@ -950,7 +943,6 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         columns={columns}
         rows={v.rows}
         getRowId={r => r.userId}
-        className="md:rounded-none md:border-x-0"
         twoLine
         footerLabel="Credited to people"
         toolbar={
