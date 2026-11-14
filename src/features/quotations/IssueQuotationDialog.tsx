@@ -73,8 +73,8 @@ function LeadHint({ item, inquiries, className }: { item: QuoteItem; inquiries: 
   const said = inquiries.flatMap(i => i.lines.filter(l => l.itemId === item.id && l.leadTime?.trim()).map(l => ({ who: i.supplierName, text: l.leadTime as string })))
   if (said.length === 0) return null
   return (
-    <p className={`flex min-w-0 items-start gap-1 text-xs text-fg-muted ${className ?? ''}`} data-testid="lead-hint">
-      <Icon icon={Info} size="chip" className="mt-[1px] shrink-0" />
+    <p className={`flex min-w-0 items-start gap-2 text-sm text-fg-muted ${className ?? ''}`} data-testid="lead-hint">
+      <Icon icon={Info} size="chip" className="mt-1 shrink-0" />
       <span>Suppliers say {said.map(s => `${s.text} (${s.who})`).join(', ')}</span>
     </p>
   )
@@ -88,18 +88,22 @@ function Chip({ label, value, selected, onPick, testId, disabled }: { label: str
       aria-pressed={selected}
       disabled={disabled}
       onClick={onPick}
-      className={`inline-flex min-h-[28px] max-w-full flex-wrap items-baseline gap-x-1 rounded border px-2 py-1 text-left text-xs transition-colors duration-fast max-md:min-h-touch max-md:items-center disabled:cursor-not-allowed ${
-        selected ? 'border-primary bg-selected text-fg' : 'border-line-input bg-surface text-fg-2 hover:border-fg-muted hover:bg-sunken'
+      className={`inline-flex min-h-control-sm max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-control border px-3 py-1 text-left text-sm transition-[background-color,border-color,transform] duration-fast ease-out active:scale-press max-md:min-h-touch disabled:cursor-not-allowed ${
+        selected ? 'border-brand-700 bg-brand-100 text-fg' : 'border-line-input bg-surface text-fg-2 hover:border-fg-muted hover:bg-selected'
       }`}
     >
       <span className="text-fg-muted">{label}</span>
-      <span className="num font-medium text-fg">{value}</span>
+      <span className="num font-bold text-fg">{value}</span>
     </button>
   )
 }
 
-// Each line is its own grid, so the tracks are fixed to line up; sized for 16px text (a 7-figure price, "Exempt", a 4-digit qty).
-const GRID = 'lg:grid-cols-[28px_minmax(0,1.6fr)_88px_140px_108px_minmax(172px,1fr)_128px]'
+// Each line is its own grid (25-quotation .qi-line). Stacked in a phone sheet and on a tablet, one table line from an 832 px window,
+// where the dialog is wide enough for a 7-figure price, "Exempt" and a 4-digit qty. Every track shrinks (R-001, R-026). A window
+// width, not a container query: a size container inside the dialog's scrolling grid body collapsed to no height in Chromium.
+const GRID = 'min-[832px]:grid-cols-[auto_minmax(0,2.6fr)_minmax(0,0.6fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.3fr)_minmax(0,1.1fr)]'
+/** One totals line: the label left, the figure right; on a wide box the block keeps to the right edge under the Line net column. */
+const TOT_ROW = 'flex w-full flex-wrap justify-between gap-x-4 min-[832px]:max-w-sm'
 
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()
@@ -445,7 +449,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         title={title}
         titleChip={
           previous ? (
-            <span className="inline-flex h-6 items-center gap-1 rounded border border-line-strong bg-surface px-[6px] text-sm font-medium text-fg-2">
+            <span className="inline-flex h-chip items-center gap-1 rounded-pill border border-line-strong bg-surface px-2 text-sm font-semibold text-fg-2">
               <Icon icon={RotateCcw} size="chip" />
               Revision {nextRevision}
             </span>
@@ -488,9 +492,20 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         }
       >
         {loading ? (
-          <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the quotation">
-            <Skeleton className="h-[6rem] w-full" />
-            <Skeleton className="h-[6rem] w-full" />
+          <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading the quotation">
+            {/* Shaped like the form: the two fields, the items box with two lines and its totals, the terms. */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Skeleton className="h-control w-full" />
+              <Skeleton className="h-control w-full" />
+            </div>
+            <div className="grid gap-3 rounded-control border p-3">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-control w-full" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-control w-full" />
+              <Skeleton className="ms-auto h-4 w-1/3" />
+            </div>
+            <Skeleton className="h-16 w-full" />
           </div>
         ) : loadFailed ? (
           <Banner tone="danger" title="Items could not be loaded">
@@ -531,8 +546,10 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </Field>
             </div>
 
-            <div className="rounded border">
-              <div className={`hidden gap-3 border-b bg-sunken px-3 py-2 text-xs font-medium text-fg-muted lg:grid ${GRID}`} aria-hidden="true">
+            {/* No overflow-hidden here: in the phone sheet's scrolling grid body a clipping box collapsed to no height (Chromium), so the
+                tinted pieces round their own corners instead. */}
+            <div className="w-full min-w-0 rounded-control border">
+              <div className={`hidden gap-3 rounded-t-control border-b bg-canvas px-3 py-2 text-sm font-semibold text-fg-muted min-[832px]:grid ${GRID}`} aria-hidden="true">
                 <span />
                 <span>Item</span>
                 <span className="text-right">Qty</span>
@@ -553,8 +570,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   const n = idx + 1
                   const nothingToQuote = !on && price === null && !hasSupplierPrice(it.id) && sold === null && quoted === null
                   return (
-                    <li key={it.id} className={`grid grid-cols-[28px_minmax(0,1fr)] gap-3 px-3 py-3 lg:items-start ${GRID} ${on ? '' : 'bg-sunken'}`} data-testid={`quote-line-${n}`}>
-                      <div className="pt-[1px]">
+                    <li key={it.id} className={`grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 transition-colors duration-fast max-[831px]:first:rounded-t-control ${GRID} ${on ? '' : 'bg-canvas'}`} data-testid={`quote-line-${n}`}>
+                      <div className="pt-px">
                         <Checkbox
                           aria-label={`Include item ${n}`}
                           checked={on}
@@ -563,7 +580,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                       </div>
                       <div className={`grid min-w-0 content-start gap-1 ${on ? '' : 'text-fg-muted'}`}>
                         <p className={`break-words font-medium ${on ? 'text-fg' : ''}`}>{it.description}</p>
-                        <p className="num text-xs text-fg-muted lg:hidden">
+                        <p className="num text-sm text-fg-muted min-[832px]:hidden">
                           {it.qty}
                           {it.unit ? ` ${it.unit}` : ''}
                         </p>
@@ -575,7 +592,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                             </a>
                           </p>
                         ) : null}
-                        {nothingToQuote ? <p className="text-xs">No supplier price yet, so there is nothing to quote. Add a reply to include it, or type a price.</p> : null}
+                        {nothingToQuote ? <p className="text-sm">No supplier price yet, so there is nothing to quote. Add a reply to include it, or type a price.</p> : null}
                         {sold !== null || quoted !== null ? (
                           <div className="mt-1 grid justify-items-start gap-2">
                             {sold !== null ? (
@@ -601,13 +618,13 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           </div>
                         ) : null}
                       </div>
-                      <p className="num hidden whitespace-nowrap text-right text-sm lg:block">
+                      <p className="num hidden whitespace-nowrap pt-2 text-right text-sm min-[832px]:block">
                         {it.qty}
                         {it.unit ? <span className="text-fg-muted">{`\u00A0${it.unit}`}</span> : null}
                       </p>
-                      <div className="grid grid-cols-[minmax(0,1fr)_96px] items-end gap-2 max-lg:col-start-2 lg:contents">
-                        <div className="grid gap-1 lg:block">
-                          <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
+                      <div className="col-start-2 grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)] items-end gap-2 min-[832px]:contents">
+                        <div className="grid min-w-0 gap-1 min-[832px]:block">
+                          <span className="text-sm text-fg-muted min-[832px]:hidden" aria-hidden="true">
                             Unit price, net PKR
                           </span>
                           <NumberInput
@@ -621,16 +638,16 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                             }}
                           />
                         </div>
-                        <div className="grid gap-1 lg:block">
-                          <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
+                        <div className="grid min-w-0 gap-1 min-[832px]:block">
+                          <span className="text-sm text-fg-muted min-[832px]:hidden" aria-hidden="true">
                             GST
                           </span>
                           <Select aria-label={`GST rate, item ${n}`} value={rateOf[it.id] ?? '18'} onChange={e => setRateOf(r => ({ ...r, [it.id]: e.target.value }))} options={GST_OPTIONS} />
                         </div>
                       </div>
-                      <div className="grid min-w-0 content-start gap-2 max-lg:col-start-2">
+                      <div className="col-start-2 grid min-w-0 content-start gap-2 min-[832px]:col-start-auto">
                         <div className="grid gap-1">
-                          <span className="text-xs text-fg-muted lg:hidden" aria-hidden="true">
+                          <span className="text-sm text-fg-muted min-[832px]:hidden" aria-hidden="true">
                             Lead time quoted
                           </span>
                           <TextField
@@ -641,25 +658,25 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                           />
                         </div>
                       </div>
-                      <p className="num whitespace-nowrap text-right text-sm font-medium text-fg max-lg:order-2 max-lg:col-start-2 lg:col-start-7 lg:row-start-1 lg:pt-2">
+                      <p className="num col-start-2 whitespace-nowrap text-right text-sm font-bold text-fg min-[832px]:col-start-7 min-[832px]:row-start-1 min-[832px]:pt-2">
                         <span className="sr-only">{`Line net, item ${n}: `}</span>
                         {on && a.priced ? `PKR ${formatPaisa(a.net, 'auto')}` : on ? 'No price yet' : 'Not included'}
                       </p>
                       {/* What suppliers said about lead time: its own full-width line under the row, not a sliver in the narrow column. */}
-                      <LeadHint item={it} inquiries={inquiries} className="max-lg:col-start-2 lg:col-[2/-1]" />
+                      <LeadHint item={it} inquiries={inquiries} className="col-start-2 min-[832px]:col-[2/-1]" />
                     </li>
                   )
                 })}
               </ul>
-              <dl className="ml-auto grid w-full max-w-[380px] gap-1 bg-sunken px-4 py-3 text-sm md:max-w-none md:justify-items-end" aria-label="Totals">
-                <div className="flex w-full justify-between md:w-[340px]">
+              <dl className="grid gap-1 rounded-b-control border-t bg-canvas px-4 py-3 text-sm min-[832px]:justify-items-end" aria-label="Totals">
+                <div className={TOT_ROW}>
                   <dt className="text-fg-muted">Net</dt>
                   <dd className="num" data-testid="total-net">
                     PKR {formatPaisa(totals.net, 'auto')}
                   </dd>
                 </div>
                 {gstRows.map(g => (
-                  <div key={g.rate} className="flex w-full justify-between md:w-[340px]">
+                  <div key={g.rate} className={TOT_ROW}>
                     <dt className="text-fg-muted">
                       {Number(g.rate) === 0 ? 'GST exempt' : `GST ${g.rate}%`} on {g.count} {g.count === 1 ? 'line' : 'lines'}
                     </dt>
@@ -669,14 +686,14 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   </div>
                 ))}
                 {gstRows.length === 0 ? (
-                  <div className="flex w-full justify-between md:w-[340px]">
+                  <div className={TOT_ROW}>
                     <dt className="text-fg-muted">GST</dt>
                     <dd className="num" data-testid="total-gst">
                       PKR 0
                     </dd>
                   </div>
                 ) : null}
-                <div className="flex w-full justify-between border-t pt-2 font-medium text-fg md:w-[340px]">
+                <div className={`${TOT_ROW} mt-1 border-t pt-2 font-bold text-fg`}>
                   <dt>Gross</dt>
                   <dd className="num" data-testid="total-gross">
                     PKR {formatPaisa(totals.gross, 'auto')}
@@ -685,23 +702,23 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </dl>
             </div>
             {chosen.length === 0 ? (
-              <p className="text-xs text-fg-muted" role="status">
+              <p className="text-sm text-fg-muted" role="status">
                 Tick at least one item to quote.
               </p>
             ) : missing.length > 0 ? (
-              <p className="text-xs text-fg-muted" role="status">
+              <p className="text-sm text-fg-muted" role="status">
                 {missing.length === 1 ? '1 ticked item still needs a price.' : `${missing.length} ticked items still need a price.`}
               </p>
             ) : zero.length > 0 ? (
-              <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">
+              <p className="text-sm font-semibold text-tone-danger-fg" role="status" data-testid="issue-blocked">
                 {`A quotation cannot include a price of 0. Enter the price for item ${zero.map(i => list.indexOf(i) + 1).join(', ')}, or clear the tick.`}
               </p>
             ) : tooBig.length > 0 ? (
-              <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">
+              <p className="text-sm font-semibold text-tone-danger-fg" role="status" data-testid="issue-blocked">
                 {`The price of item ${tooBig.map(i => list.indexOf(i) + 1).join(', ')} is too large. A unit price can be at most PKR 999,999,999,999.99.`}
               </p>
             ) : totalTooBig ? (
-              <p className="text-xs text-tone-danger-fg" role="status" data-testid="issue-blocked">
+              <p className="text-sm font-semibold text-tone-danger-fg" role="status" data-testid="issue-blocked">
                 The total is larger than a quotation can hold (PKR 999,999,999,999.99 net or GST). Check the prices and quantities.
               </p>
             ) : null}
@@ -718,7 +735,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               <TextArea rows={4} value={terms} onChange={e => setTerms(e.target.value)} />
             </Field>
             <p className="flex items-start gap-2 text-sm text-fg-muted text-pretty">
-              <TriangleAlert className="mt-[2px] size-4 shrink-0" aria-hidden="true" />
+              <Icon icon={TriangleAlert} size="chip" className="mt-1 shrink-0" />
               <span className="min-w-0">An issued quotation cannot be edited. To change it, revise it: the new one keeps the same number.</span>
             </p>
           </>

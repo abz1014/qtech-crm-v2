@@ -34,8 +34,8 @@ export function AddQuestions({ rfqId, inquiries, empty = false }: { rfqId: strin
   const [open, setOpen] = useState(false)
   if (!open) {
     return (
-      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 ${empty ? '' : 'border-t'}`}>
-        {empty ? <span className="min-w-0 flex-1 text-fg-muted">No questions yet.</span> : null}
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${empty ? '' : 'border-t pt-3'}`}>
+        {empty ? <span className="min-w-0 flex-1 basis-[10rem] text-fg-muted">No questions yet.</span> : null}
         <Button size="sm" icon={Plus} onClick={() => setOpen(true)}>
           Add question
         </Button>
@@ -78,7 +78,7 @@ function AddQuestionsForm({ rfqId, inquiries, onDone }: { rfqId: string; inquiri
   }
 
   return (
-    <div className="grid gap-3 border-t px-4 py-3">
+    <div className="grid gap-3 border-t pt-3 motion-safe:animate-rise-4">
       <label id={labelId} htmlFor={`${labelId}-in`} className="sr-only">
         Add questions
       </label>
@@ -99,10 +99,10 @@ function AddQuestionsForm({ rfqId, inquiries, onDone }: { rfqId: string; inquiri
       {lines.length > 0 ? (
         <ol className="grid gap-2" aria-label="Questions to add">
           {lines.map((q, i) => (
-            <li key={q} className="grid gap-1 rounded border border-line bg-sunken p-2 text-sm">
+            <li key={q} className="grid gap-2 rounded-control border bg-canvas px-3 py-2 text-sm">
               <div className="flex items-start gap-2">
-                <span className="num mt-[2px] text-sm text-fg-muted">{i + 1}</span>
-                <span className="min-w-0 flex-1 break-words">{q}</span>
+                <span className="num pt-1 text-sm text-fg-muted">{i + 1}</span>
+                <span className="min-w-0 flex-1 break-words pt-1">{q}</span>
                 <Button variant="quiet" size="sm" icon={X} aria-label={`Leave out: ${q}`} className="text-fg-muted" onClick={() => setDropped(d => new Set([...d, q]))} />
               </div>
               {inquiries.length > 0 ? (
@@ -126,7 +126,7 @@ function AddQuestionsForm({ rfqId, inquiries, onDone }: { rfqId: string; inquiri
         <Button variant="quiet" onClick={onDone} disabled={add.isPending}>
           Cancel
         </Button>
-        {lines.length > 0 && inquiries.length > 0 ? <span className="text-sm text-fg-muted">Select the supplier who asked, or leave it as an own question.</span> : null}
+        {lines.length > 0 && inquiries.length > 0 ? <span className="min-w-0 basis-[10rem] text-sm text-fg-muted">Select the supplier who asked, or leave it as an own question.</span> : null}
       </div>
     </div>
   )
@@ -242,12 +242,12 @@ export function QuestionRow({
   }
 
   return (
-    <div className="grid gap-1 px-4 py-2 text-sm">
-      <p className="break-words text-pretty">{c.question}</p>
+    <div className="grid min-w-0 gap-1 py-3 text-sm">
+      <p className="break-words font-medium text-fg text-pretty">{c.question}</p>
       <span className="text-sm text-fg-muted">{by}</span>
 
       {c.answeredAt ? (
-        <div className="mt-1 grid gap-2 rounded-r border-l-2 border-tone-success-fg bg-sunken px-3 py-2">
+        <div className="mt-1 grid min-w-0 gap-2 rounded-r-control border-l-ring border-tone-success-fg bg-canvas px-3 py-2">
           <div>
             <span className="block text-sm text-fg-muted">{c.answer ? 'Our answer' : 'Answered with a photo'}</span>
             {c.answer ? <span className="break-words">{c.answer}</span> : null}
@@ -287,7 +287,7 @@ export function QuestionRow({
           </div>
           <p className="text-sm text-fg-muted max-md:hidden">Pick or take a photo. No text needed.</p>
           {typing ? (
-            <div className="mt-1 grid gap-2">
+            <div className="mt-1 grid gap-2 motion-safe:animate-rise-4">
               <TextArea
                 aria-label={`Answer to: ${c.question}`}
                 rows={3}
@@ -323,7 +323,7 @@ export function WithdrawnRow({ rfqId, c }: { rfqId: string; c: ClarificationRow 
   const { toast } = useToast()
   const withdraw = useSetClarificationWithdrawn(rfqId)
   return (
-    <li className="flex items-start gap-2 px-4 py-2 text-sm">
+    <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2 text-sm">
       <span className="min-w-0 flex-1 break-words text-fg-muted line-through">{c.question}</span>
       <Button
         size="sm"
