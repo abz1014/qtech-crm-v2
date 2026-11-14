@@ -546,7 +546,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </Field>
             </div>
 
-            <div className="w-full min-w-0 overflow-hidden rounded-control border [container-type:inline-size]">
+            <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-control border [container-type:inline-size]">
               <div className={`hidden gap-3 border-b bg-canvas px-3 py-2 text-sm font-semibold text-fg-muted [@container(min-width:46rem)]:grid ${GRID}`} aria-hidden="true">
                 <span />
                 <span>Item</span>
