@@ -154,7 +154,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
 
   return (
     <section aria-label="Margin" data-slot="margin-costs" className="min-w-0 rounded-card border bg-surface">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-card pt-4">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pt-4 md:px-card">
         <h2 className="text-lg font-heavy">Margin</h2>
         <InfoTip label="About the margin">
           Net sale less the costs paid so far. GST sits outside the margin on both sides, and expenses count at true cost, without the GST paid on purchases that can be claimed back. It is final once costs are marked complete.
@@ -174,9 +174,9 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
       ) : error || !m ? (
         <p className="p-card text-sm text-fg-muted">The margin could not be read. Reload the page to try again.</p>
       ) : (
-        <div className="grid gap-4 p-card">
+        <div className="grid gap-4 p-4 md:p-card">
           <div className="grid min-w-0 gap-1 rounded-control border border-dashed border-line-strong p-4">
-            <div className="flex items-baseline justify-between gap-3 text-sm text-fg-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm text-fg-2">
               <span>{unknown ? 'Margin' : 'Margin so far'}</span>
               <span className="text-xs text-fg-muted">{unknown ? 'Not calculated' : 'Sale less costs paid'}</span>
             </div>
