@@ -1,6 +1,6 @@
 ---
 id: today-chase
-title: Follow up with a customer or a supplier from To do
+title: Follow up with a customer or a supplier from Home
 roles: sales, admin
 keywords: chase, follow up, nudge, quiet, no reply, waiting, message, to do, today
 screens: /todo

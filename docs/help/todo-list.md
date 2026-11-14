@@ -1,6 +1,6 @@
 ---
 id: todo-list
-title: Work through your To do list
+title: Work through your list on Home
 roles: sales, admin, engineer
 keywords: to do, todo, today, late, this week, list, what to do, button, next step
 screens: /todo

@@ -11,7 +11,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRe
  * pressed straight after `goto` can be lost: wait for the shell (heading and an enabled search button) first.
  */
 async function openPalette(page: Page) {
-  await expect(page.getByRole('heading', { name: 'To do', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Search or jump to' }).first()).toBeEnabled()
   await page.keyboard.press('Control+k')
   await expect(page.getByRole('dialog', { name: 'Search or jump to' })).toBeVisible()

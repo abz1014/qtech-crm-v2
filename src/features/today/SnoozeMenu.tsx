@@ -47,7 +47,7 @@ export function SnoozeMenu({ item, today, iconOnly = false, extra }: { item: Tod
       <Popover>
         <PopoverTrigger asChild>
           {iconOnly ? (
-            <Button variant="secondary" icon={AlarmClock} aria-label={extra ? 'More actions' : 'Snooze'} size="touch" className="text-fg [&_svg]:text-fg" />
+            <Button variant="secondary" icon={AlarmClock} aria-label={extra ? 'More actions' : 'Snooze'} className="text-fg max-md:min-h-touch max-md:min-w-touch [&_svg]:text-fg" />
           ) : (
             <Button variant="quiet" icon={AlarmClock}>
               Snooze

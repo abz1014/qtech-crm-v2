@@ -208,7 +208,7 @@ async function todayItems(ctx: BrowserContext, info: TestInfo, rule: string, tex
   const p = await newPage(ctx, info, `today ${rule}`)
   try {
     await visit(p, info, '/todo')
-    await p.getByRole('heading', { level: 1, name: 'To do' }).waitFor({ timeout: T }).catch(() => undefined)
+    await p.getByRole('heading', { level: 1, name: 'Home' }).waitFor({ timeout: T }).catch(() => undefined)
     await p.getByText(/\d+ due now|Nothing due|all done/i).first().waitFor({ timeout: T }).catch(() => undefined)
     // Waiting starts collapsed (R2-08): open it so its items are in the DOM too.
     const toggle = p.getByRole('region', { name: 'Waiting' }).getByRole('button', { expanded: false })
@@ -615,7 +615,7 @@ test('hunt orderflow B: commissioning planned by sales on the phone, the enginee
 
   await probe(info, ep, 'B engineer phone Today: the visit type', async () => {
     await visit(ep, info, '/todo')
-    await ep.getByRole('heading', { level: 1, name: 'To do' }).waitFor({ timeout: T })
+    await ep.getByRole('heading', { level: 1, name: 'Home' }).waitFor({ timeout: T })
     const li = ep.locator('li[data-rule="job_commissioning"]').filter({ hasText: oref })
     want(info, 'B engineer Today', (await li.count()) === 1, `engineer Today has ${await li.count()} job_commissioning items for ${oref}`)
     if (await li.count()) want(info, 'B engineer Today', /Install/.test(await li.innerText()), 'the item does not say the visit type (Install)', await li.innerText())

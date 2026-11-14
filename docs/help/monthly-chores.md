@@ -1,6 +1,6 @@
 ---
 id: monthly-chores
-title: The month's chores on To do
+title: The month's chores on Home
 roles: admin
 keywords: gst, fbr, month end, close month, i paid, claims, 15th, 18th, deadline, return
 screens: /todo
