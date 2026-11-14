@@ -1,19 +1,24 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { businessToday } from '@/lib/dates'
 import { formatPaisa, paisaToFixed } from '@/lib/money'
 import { rfqRef } from '@/lib/refs'
 import { formatShortDate } from '@/lib/formatDay'
 import { BarChart } from '@/ui/BarChart'
+import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
+import { CARD } from '@/ui/card'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { InfoTip } from '@/ui/InfoTip'
 import { Money } from '@/ui/Money'
 import { NoPrimary } from '@/ui/NoPrimary'
 import { SegmentedControl } from '@/ui/SegmentedControl'
+import { Skeleton } from '@/ui/Skeleton'
+import { cn } from '@/lib/utils'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
-import { Panel, ReportError, ReportLoading } from '@/features/money/monthEnd/ReportParts'
 import { useLostEnquiryCosts, useProfitPage } from '@/features/money/profit/hooks'
 import type { LostEnquiryCost } from '@/features/money/profit/api'
 import { averageOf, bestMonth, buildPoints, completeMonths, rupeesOf, shortMonth, spanLabel, sumOf, type ProfitPoint, type RangeMonths } from '@/features/money/profit/model'
@@ -24,6 +29,9 @@ import { averageOf, bestMonth, buildPoints, completeMonths, rupeesOf, shortMonth
  * 12 or 24 months of both; the table under it is the monthly profit on invoices (v_month_profit) with cash received (v_month_cash_flow).
  * Under the table, "Spent on enquiries we did not win" lists what was spent on enquiries closed without an order (v_enquiry_costs, state
  * lost; 0136), net of GST paid on purchases. It is a list for the owner to see; the profit figures above are not changed by it.
+ * Forest (56-margins-profit #pf-page): the two averages as the page's big figures side by side (stacked on a phone), each with its
+ * note; then the chart, the monthly table and the lost-RFQ list each as one card, and "See the profit of each order" an outline
+ * button between them. Loading draws the same shapes; a failed read is one card with Try again.
  */
 const rupees = (p: bigint) => formatPaisa(p, 'never')
 const pkr = (p: bigint) => `PKR ${rupees(p)}`
@@ -54,9 +62,9 @@ export function ProfitPage() {
         }
       />
       {q.isError ? (
-        <ReportError title="Profitability did not load" onRetry={q.refetch} />
+        <LoadError title="Profitability did not load" onRetry={() => void q.refetch()} />
       ) : q.isPending || !view ? (
-        <ReportLoading label="Loading profitability" />
+        <ProfitLoading />
       ) : (
         <>
           <Body last12={view.last12} shown={view.shown} range={range} onRange={setRange} />
@@ -79,38 +87,22 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
     : `Income and cash received for each of the last ${range} complete months, ${spanLabel(shown.map(x => x.month))}. Average monthly income over the last 12 months is ${pkr(avgIncome)}, GST left out.${best ? ` The highest month was ${shortMonth(best.month)} at ${pkr(best.income)}.` : ''}`
   return (
     <>
-      <section
-        aria-label="Average monthly income"
-        className="grid gap-4 rounded-panel border bg-surface p-4 md:flex md:flex-wrap md:items-baseline md:gap-x-8 md:gap-y-2 md:rounded-none md:border-x-0 md:bg-transparent md:px-0 md:py-2"
-        data-testid="profit-average"
-      >
-        {/* From 768 up the averages are one strip: label and figure inline, the two notes joined in one muted line under it. */}
-        <div className="grid content-start gap-1 md:flex md:items-baseline md:gap-2">
-          <h2 className="text-base font-semibold md:font-normal md:text-fg-2">Average monthly income</h2>
-          <p className="num text-2xl font-semibold md:text-base" data-testid="profit-average-income">
-            {pkr(avgIncome)}
-          </p>
-          <p className="text-base text-fg-2 md:hidden">Invoiced, GST left out. Last 12 complete months, {span}. This month is left out.</p>
+      <section aria-label="Average monthly income" className="grid gap-4" data-testid="profit-average">
+        <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:flex lg:flex-wrap">
+          <Figure
+            label="Average monthly income"
+            testId="profit-average-income"
+            value={pkr(avgIncome)}
+            note={<>Invoiced, GST left out. Last 12 complete months, {span}. This month is left out.</>}
+          />
+          <Figure label="Average cash received a month" testId="profit-average-cash" value={pkr(avgCash)} note="Includes GST. What customers actually paid in the same 12 months." />
         </div>
-        <div className="grid content-start gap-1 md:flex md:items-baseline md:gap-2">
-          <h2 className="text-base font-semibold md:font-normal md:text-fg-2">Average cash received a month</h2>
-          <p className="num text-2xl font-semibold md:text-base" data-testid="profit-average-cash">
-            {pkr(avgCash)}
-          </p>
-          <p className="text-base text-fg-2 md:hidden">Includes GST. What customers actually paid in the same 12 months.</p>
-        </div>
-        <p className="hidden text-base text-fg-muted md:order-last md:block md:basis-full">
-          Income is invoiced, GST left out. Cash received includes GST: the amount customers paid. Last 12 complete months, {span}. This month is left out.
-        </p>
-        <p className="text-base text-fg-2 md:basis-full">
-          Average monthly profit on invoices over the same months: <span className="num font-medium text-fg">{pkr(avgProfit)}</span>.{' '}
-          <Link to="/money/margins" className="inline-flex items-center gap-1 rounded font-medium text-primary-text hover:underline md:hidden">
-            See the profit of each order <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
+        <p className="text-base text-fg-2">
+          Average monthly profit on invoices over the same months: <span className="num font-semibold text-fg">{pkr(avgProfit)}</span>.
         </p>
       </section>
 
-      <Panel
+      <Card
         title="Income by month"
         actions={
           <SegmentedControl
@@ -124,8 +116,6 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
             large
           />
         }
-        flat
-        bodyClassName="p-4 md:px-0 md:py-4"
       >
         {empty ? (
           <EmptyState title="Nothing invoiced or received yet">No invoice or payment is dated in these months.</EmptyState>
@@ -142,14 +132,89 @@ function Body({ last12, shown, range, onRange }: { last12: ProfitPoint[]; shown:
             tableCaption={`Income and cash received by month, ${spanLabel(shown.map(x => x.month))}`}
           />
         )}
-      </Panel>
+      </Card>
 
       <ProfitTable rows={[...shown].reverse()} label={`Profit by month, last ${range} months`} />
-      {/* From 768 up the way on to each order sits under the table, so the strip at the top stays figures only. */}
-      <Link to="/money/margins" className="hidden w-fit items-center gap-1 rounded font-medium text-primary-text hover:underline md:inline-flex">
-        See the profit of each order <ArrowRight aria-hidden="true" className="size-4" />
+      <Link to="/money/margins" className={cn(buttonStyles(), 'w-fit max-md:h-touch')}>
+        See the profit of each order <ChevronRight aria-hidden="true" className="size-4" />
       </Link>
     </>
+  )
+}
+
+/** One of the two averages: the label, the figure as the page's big number, and what it counts. */
+function Figure({ label, value, note, testId }: { label: string; value: string; note: ReactNode; testId: string }) {
+  return (
+    <div className="grid min-w-0 content-start gap-1 lg:max-w-[22rem]">
+      <h2 className="text-sm font-semibold text-fg">{label}</h2>
+      <p className="num text-kpi font-heavy tracking-snug text-fg [overflow-wrap:anywhere]" data-testid={testId}>
+        {value}
+      </p>
+      <p className="text-sm text-fg-2 text-pretty">{note}</p>
+    </div>
+  )
+}
+
+/** A Forest card with its title row (the one card look, src/ui/card.ts). */
+function Card({ title, meta, actions, children }: { title: string; meta?: ReactNode; actions?: ReactNode; children: ReactNode }) {
+  return (
+    <section aria-label={title} className={cn('grid min-w-0 gap-4 p-card', CARD)}>
+      <header className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="min-w-0 text-lg font-heavy">{title}</h2>
+          {meta}
+        </div>
+        <span className="flex-1" />
+        {actions}
+      </header>
+      {children}
+    </section>
+  )
+}
+
+/** A failed read: one card that says what happened and offers Try again. */
+function LoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
+  return (
+    <div className={cn('mx-auto w-full max-w-[520px] p-card', CARD)}>
+      <EmptyState
+        mood="error"
+        title={title}
+        actions={
+          <Button variant="secondary" onClick={onRetry}>
+            Try again
+          </Button>
+        }
+      >
+        Nothing was changed. Try again, and if the error continues, tell the admin.
+      </EmptyState>
+    </div>
+  )
+}
+
+/** Loading, in the page's own shapes: the two figures, the chart card and the table card. */
+function ProfitLoading() {
+  return (
+    <div role="status" aria-busy="true" aria-label="Loading profitability" className="grid gap-card-gap">
+      <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:flex">
+        {[0, 1].map(i => (
+          <div key={i} className="grid gap-2">
+            <Skeleton className="h-4 w-[10rem]" />
+            <Skeleton className="h-8 w-[12rem]" />
+            <Skeleton className="h-4 w-[16rem] max-w-full" />
+          </div>
+        ))}
+      </div>
+      <div className={cn('grid gap-4 p-card', CARD)}>
+        <Skeleton className="h-5 w-[10rem]" />
+        <Skeleton className="h-[12rem] w-full rounded-control" />
+      </div>
+      <div className={cn('grid gap-3 p-card', CARD)}>
+        <Skeleton className="h-5 w-[10rem]" />
+        {[0, 1, 2, 3].map(r => (
+          <Skeleton key={r} className="h-4 w-full" />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -190,14 +255,13 @@ function ProfitTable({ rows: monthRows, label }: { rows: ProfitPoint[]; label: s
   ]
   return (
     <DataTable
-      className="md:rounded-none md:border-x-0"
       label={label}
       columns={columns}
       rows={rows}
       getRowId={r => r.month}
       footerLabel={`Total of ${monthRows.length} months`}
       summary="Income is invoiced, GST left out. Cash received includes GST."
-      toolbar={<h2 className="text-base font-semibold">Profit by month</h2>}
+      toolbar={<h2 className="text-lg font-heavy">Profit by month</h2>}
       mobileRow={r =>
         r.run ? (
           <span className="text-fg-2">{r.run}: nothing recorded</span>
@@ -217,15 +281,22 @@ function ProfitTable({ rows: monthRows, label }: { rows: ProfitPoint[]; label: s
 /** Money spent on enquiries that ended without an order. Its own panel, so a failed read never hides the profit figures. */
 function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | undefined; isError: boolean; onRetry: () => void }) {
   const title = 'Spent on RFQs not won'
-  if (isError) return <ReportError title={`${title} did not load`} onRetry={onRetry} />
-  if (!rows) return <ReportLoading label={`Loading: ${title}`} />
+  if (isError) return <LoadError title={`${title} did not load`} onRetry={onRetry} />
+  if (!rows)
+    return (
+      <div role="status" aria-busy="true" aria-label={`Loading: ${title}`} className={cn('grid gap-3 p-card', CARD)}>
+        <Skeleton className="h-5 w-[12rem]" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+      </div>
+    )
   const columns: Column<LostEnquiryCost>[] = [
     {
       id: 'rfq',
       header: 'RFQ',
       value: r => r.rfqNumber,
       cell: r => (
-        <Link to={`/rfqs/${r.rfqId}`} className="font-medium text-primary-text hover:underline">
+        <Link to={`/rfqs/${r.rfqId}`} className="num rounded font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg">
           {rfqRef(r.rfqNumber)}
         </Link>
       ),
@@ -236,12 +307,12 @@ function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | u
     { id: 'last', header: 'Last paid', value: r => r.lastPaidOn ?? '', cell: r => (r.lastPaidOn ? formatShortDate(r.lastPaidOn, undefined, true) : ''), hideBelowMd: true },
   ]
   return (
-    <Panel flat title={title} meta={<InfoTip label="About RFQs not won">Costs paid on an RFQ that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
+    <Card title={title} meta={<InfoTip label="About RFQs not won">Costs paid on an RFQ that was closed without an order, net of GST paid on purchases. The profit figures above are not changed by this list.</InfoTip>}>
       {rows.length === 0 ? (
         <EmptyState title="Nothing spent on a lost RFQ">No cost is recorded against an RFQ that was closed without an order.</EmptyState>
       ) : (
         <DataTable
-          className="md:rounded-none md:border-x-0"
+          flat
           label={title}
           columns={columns}
           rows={rows}
@@ -257,6 +328,6 @@ function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | u
           )}
         />
       )}
-    </Panel>
+    </Card>
   )
 }

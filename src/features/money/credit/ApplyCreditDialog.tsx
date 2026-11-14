@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Check, Info, TriangleAlert } from 'lucide-react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Check, CircleAlert, Info, TriangleAlert } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
@@ -23,6 +23,9 @@ import { useApplyCredit, useApplyTargets } from '@/features/money/credit/hooks'
  * Apply credit to another order of the same customer (0127). Admin only. An allocation record, not a payment: no cash moves, the
  * target order is settled by it (up to what it owes) and the customer's credit balance goes down by the same amount. The order is
  * chosen from the customer's orders that still owe money; the amount starts at the smaller of the credit and what the order owes.
+ * Forest (55-credit-statement #ap-open): who and how much credit they hold under the title (the dialog's header grid), one column of
+ * fields, and the buttons in the dialog's own footer. While the orders load, on a read error and with no order to put it against,
+ * the same header with Close alone.
  */
 interface ApplyCreditDialogProps {
   open: boolean
@@ -36,35 +39,64 @@ export function ApplyCreditDialog({ open, onOpenChange, companyId, companyName, 
   const [busy, setBusy] = useState(false)
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
-      <DialogContent title="Apply credit to an order" size="md" className="md:w-[520px]">
-        {open ? <ApplyLoader companyId={companyId} companyName={companyName} credit={credit} onBusy={setBusy} onDone={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} /> : null}
-      </DialogContent>
+      {open ? <ApplyLoader companyId={companyId} companyName={companyName} credit={credit} onBusy={setBusy} onDone={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} /> : null}
     </Dialog>
+  )
+}
+
+/** The dialog frame every state shares: the title, the customer and their credit under it, the footer the caller gives. */
+function ApplyFrame({ companyName, credit, footer, children }: { companyName: string; credit: CreditSummary; footer: ReactNode; children: ReactNode }) {
+  return (
+    <DialogContent
+      title="Apply credit to an order"
+      context={
+        <>
+          {companyName} · holds <span className="num">PKR {formatAmount(credit.balance)}</span> of credit
+        </>
+      }
+      size="md"
+      className="md:w-[520px]"
+      footer={footer}
+    >
+      {children}
+    </DialogContent>
   )
 }
 
 function ApplyLoader(props: { companyId: string; companyName: string; credit: CreditSummary; onBusy: (b: boolean) => void; onDone: () => void; onCancel: () => void }) {
   const q = useApplyTargets(props.companyId, true)
+  const close = (
+    <Button onClick={props.onCancel} data-cancel>
+      Close
+    </Button>
+  )
   if (q.isError)
     return (
-      <p role="alert" className="text-sm text-tone-danger-fg">
-        The orders could not be read. Close this and try again. Nothing was applied.
-      </p>
+      <ApplyFrame companyName={props.companyName} credit={props.credit} footer={close}>
+        <p role="alert" className="flex items-start gap-3 rounded-control bg-tone-danger-bg px-4 py-3 text-sm font-semibold text-tone-danger-fg">
+          <Icon icon={CircleAlert} className="mt-[2px]" />
+          <span>The orders could not be read. Close this and try again. Nothing was applied.</span>
+        </p>
+      </ApplyFrame>
     )
   // the balances must be today's, never a cached page
-  if (q.isPending || !q.isFetchedAfterMount) return <div className="grid gap-4" aria-busy="true"><Skeleton className="h-8" /><Skeleton className="h-16" /></div>
+  if (q.isPending || !q.isFetchedAfterMount)
+    return (
+      <ApplyFrame companyName={props.companyName} credit={props.credit} footer={close}>
+        <div className="grid gap-4" role="status" aria-busy="true" aria-label="Loading the orders that owe">
+          <Skeleton className="h-control-lg rounded-control" />
+          <Skeleton className="h-control-lg rounded-control" />
+          <Skeleton className="h-12 rounded-control" />
+        </div>
+      </ApplyFrame>
+    )
   if (q.data.length === 0) {
     return (
-      <>
+      <ApplyFrame companyName={props.companyName} credit={props.credit} footer={close}>
         <p className="text-sm text-fg-2" data-testid="no-targets">
           No order of {props.companyName} has a balance due, so there is nothing to put the credit against. Refund it instead.
         </p>
-        <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end border-t bg-sunken px-5 py-3">
-          <Button variant="quiet" onClick={props.onCancel} data-cancel>
-            Close
-          </Button>
-        </div>
-      </>
+      </ApplyFrame>
     )
   }
   return <ApplyForm {...props} targets={q.data} />
@@ -108,10 +140,21 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
   }
 
   return (
-    <>
-      <p className="-mt-3 text-sm text-fg-muted">
-        {companyName} · holds <span className="num">PKR {formatAmount(credit.balance)}</span> of credit
-      </p>
+    <ApplyFrame
+      companyName={companyName}
+      credit={credit}
+      footer={
+        <>
+          {/* No data-cancel: Cancel closes at once, as it did when it sat in the body (the footer would ask "Discard unsaved changes?"). */}
+          <Button onClick={onCancel} disabled={sf.pending}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
+            {sf.failed ? 'Try again' : 'Apply credit'}
+          </Button>
+        </>
+      }
+    >
       <Form sf={sf} labels={{ orderId: 'Order', amount: 'Amount to apply', appliedOn: 'Date' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
         <FormField<Values, 'orderId'> name="orderId" label="Put it against" source={{ label: 'Their oldest order with a balance due' }}>
@@ -126,7 +169,7 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
             />
           )}
         </FormField>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4">
           <FormField<Values, 'amount'> name="amount" label="Amount to apply, PKR" source={{ label: 'The smaller of the credit and the balance due' }}>
             {f => <NumberInput {...f} inputMode="decimal" />}
           </FormField>
@@ -140,8 +183,8 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
           role={note.kind === 'over' ? 'alert' : undefined}
           className={
             note.kind === 'over'
-              ? 'flex items-start gap-3 rounded border border-tone-warning-fg/40 bg-tone-warning-bg px-4 py-3 text-sm font-medium text-fg'
-              : 'flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm text-fg-2'
+              ? 'flex items-start gap-3 rounded-control bg-tone-warning-bg px-4 py-3 text-sm font-semibold text-tone-warning-fg'
+              : 'flex items-start gap-3 rounded-control bg-sunken px-4 py-3 text-sm text-fg-2'
           }
         >
           <Icon icon={note.kind === 'over' ? TriangleAlert : Info} className={note.kind === 'over' ? 'mt-[2px] text-tone-warning-fg' : 'mt-[2px] text-fg-muted'} />
@@ -153,21 +196,13 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
           </FormField>
         ) : (
           <p className="text-xs text-fg-muted">
-            <button type="button" onClick={() => setShowNote(true)} className="rounded font-medium text-primary underline-offset-2 hover:underline">
+            <button type="button" onClick={() => setShowNote(true)} className="rounded font-semibold text-primary underline-offset-2 hover:underline">
               Add a note
             </button>
             , optional.
           </p>
         )}
       </Form>
-      <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
-        <Button variant="quiet" onClick={onCancel} data-cancel>
-          Cancel
-        </Button>
-        <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
-          {sf.failed ? 'Try again' : 'Apply credit'}
-        </Button>
-      </div>
-    </>
+    </ApplyFrame>
   )
 }
