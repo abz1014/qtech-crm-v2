@@ -419,8 +419,8 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
 
   return (
     // Forest (11 and 12-home): the page scrolls; the list is the wide column, the pane a card beside it that stays in view and is the only
-    // part of Home that scrolls on its own (R-039). 768 to 1279 px: the list takes three fifths; from 1280 the pane is 28rem.
-    <div className={cn('mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] items-start gap-card-gap px-4 pb-12 pt-6 md:px-8', pane && 'md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_28rem]')} data-user={name}>
+    // part of Home that scrolls on its own (R-039). 768 to 1023 px: half and half; to 1279 the list takes three fifths; from 1280 the pane is 28rem.
+    <div className={cn('mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] items-start gap-card-gap px-4 pb-12 pt-6 md:px-8', pane && 'md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_28rem]')} data-user={name}>
       <NoPrimary />
       {head}
       <div className="flex min-w-0 flex-col">
@@ -445,7 +445,8 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
         </div>
       </div>
       {pane ? (
-        <div data-home-pane className={cn(CARD, 'sticky top-6 max-h-[calc(100dvh-var(--topbar-h)-var(--sp-12))] min-w-0 overflow-y-auto p-card')}>
+        // One shrinking column inside: no line in the pane may make it wider than its card (zoom bands, WCAG 1.4.10).
+        <div data-home-pane className={cn(CARD, 'sticky top-6 grid max-h-[calc(100dvh-var(--topbar-h)-var(--sp-12))] min-w-0 grid-cols-[minmax(0,1fr)] overflow-y-auto overflow-x-clip p-card')}>
           {current && data ? (
             <Suspense fallback={<PaneSkeleton />}>
               <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />

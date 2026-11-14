@@ -256,7 +256,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const touch = compact ? 'min-h-touch' : ''
 
   return (
-    <section aria-label={`${item.title}, ${item.ref}`} className="grid content-start gap-4">
+    <section aria-label={`${item.title}, ${item.ref}`} className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4">
       {compact ? null : (
         <header className="grid gap-1">
           <Breadcrumb className="mb-1" items={[{ label: 'Home', to: '/todo' }, { label: item.ref, mono: true }]} />
