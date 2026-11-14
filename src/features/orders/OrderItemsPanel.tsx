@@ -56,7 +56,7 @@ interface Row extends OrderItemRow {
  * columns flush with the stop's words, the total row a rule rather than a grey band.
  */
 const FLAT = cn(
-  'overflow-visible rounded-none border-0 bg-transparent shadow-none',
+  'overflow-visible rounded-none border-0 bg-transparent shadow-none [&_tbody_td]:py-3 [&_tbody_td]:align-top',
   '[&_[data-table-toolbar]]:border-0 [&_[data-table-toolbar]]:px-0 [&_[data-table-toolbar]]:pb-3 [&_[data-table-toolbar]]:pt-0',
   '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
   '[&_tr[data-row-kind=foot]]:bg-transparent [&_tr[data-row-kind=foot]_td]:border-t-2 [&_tr[data-row-kind=foot]_td]:border-t-fg [&_tr[data-row-kind=foot]_td]:font-semibold',
@@ -176,7 +176,7 @@ export function OrderItemsPanel({
     if (!leg) return <span className="text-fg-muted">No supplier yet</span>
     const st = legState({ placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }, today)
     return (
-      <span className="grid max-w-[14rem] gap-px whitespace-normal">
+      <span className="grid min-w-[10rem] max-w-[14rem] gap-px whitespace-normal">
         <span className="break-words font-regular text-fg">
           {leg.supplierName}
         </span>
@@ -488,7 +488,7 @@ export function OrderItemsPanel({
                 </span>
                 {r.isService ? null : <span className="text-sm">{supplierCell(r)}</span>}
                 {showEdit ? (
-                  <span className="mt-1 grid gap-2 border-t pt-3">
+                  <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-3">
                     <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
                       {gstCol.cell?.(r)}
                       <Checkbox
@@ -498,7 +498,7 @@ export function OrderItemsPanel({
                         onCheckedChange={v => updateItem.mutate({ id: r.id, patch: v === true ? { is_service: true, supplier_order_id: null } : { is_service: false } }, { onError: fail('Could not change the line') })}
                       />
                     </span>
-                    <span className="flex flex-wrap items-center gap-2">
+                    <span className="-ml-3 inline-flex flex-wrap items-center">
                       {canSplit(r) ? (
                         <Button size="sm" variant="quiet" icon={Split} aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
                           Split line
