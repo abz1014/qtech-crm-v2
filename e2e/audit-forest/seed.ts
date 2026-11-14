@@ -51,6 +51,10 @@ async function seedLong(big = true): Promise<World> {
     ? { sell: 98765432, supplier: 87654321, invoiceNet: 98765432109, invoiceGst: 17777777779, payment: 12345678901, expense: 9876543210, cost: 99999999999, legacyValue: 88888888888, legacyCost: 77777777777 }
     : { sell: 9876543, supplier: 8765432, invoiceNet: 987654321, invoiceGst: 177777777, payment: 123456789, expense: 98765432, cost: 999999999, legacyValue: 888888888, legacyCost: 777777777 }
   const qty = big ? 999 : 99
+  // an invoice may not be for more than is left to invoice on the order: exactly the order's net, and its GST at 18%
+  amounts.invoiceNet = qty * amounts.sell
+  amounts.invoiceGst = Math.round(amounts.invoiceNet * 0.18)
+  amounts.payment = Math.round(amounts.invoiceNet / 8)
   const today = karachiToday()
   const company = await adminPost<{ id: string; name: string }>('companies', { name: `${LONG.customer} ${tag}` })
   const supplier = await adminPost<{ id: string; name: string }>('companies', { name: `${LONG.supplier}-${tag}`, country: 'United Arab Emirates' })
@@ -137,11 +141,18 @@ export async function ensureSeed(): Promise<AuditSeed> {
     /* another worker is seeding */
   }
   if (mine) {
-    const s = await seedAll()
-    writeFileSync(FILE, JSON.stringify(s, null, 2))
-    return (cached = s)
+    try {
+      const s = await seedAll()
+      writeFileSync(FILE, JSON.stringify(s, null, 2))
+      return (cached = s)
+    } catch (e) {
+      // the other workers stop waiting at once
+      writeFileSync(`${FILE}.error`, String(e instanceof Error ? e.message : e))
+      throw e
+    }
   }
   for (let i = 0; i < 600; i++) {
+    if (existsSync(`${FILE}.error`)) throw new Error(`the seeding worker failed: ${readFileSync(`${FILE}.error`, 'utf8').slice(0, 300)}`)
     if (existsSync(FILE)) {
       try {
         return (cached = JSON.parse(readFileSync(FILE, 'utf8')) as AuditSeed)
