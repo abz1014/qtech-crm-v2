@@ -45,7 +45,8 @@ const gross = (q: QuotationRow) => toPaisa(q.netTotal) + toPaisa(q.gstTotal)
 
 /** Narrow: two columns, the version and the actions across both. Wide (the panel 40rem or more): one line per version. */
 const ROW_BASE = 'grid-cols-[repeat(2,minmax(0,1fr))]'
-const ROW_WIDE = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.5fr)_minmax(0,1fr)_minmax(0,2.2fr)]'
+// The actions track is `auto`, so Open PDF, Share and the menu stay on one line; the other columns share what is left.
+const ROW_WIDE = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,1fr)_auto]'
 const ROW_WIDE_ENG = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]'
 /** The word before a value while the row is stacked ("Issued", "PKR"); the column heads say it once the row is a table line. */
 const LAB = 'text-sm text-fg-muted [@container(min-width:40rem)]:sr-only'
@@ -110,7 +111,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
   const ROW = prices ? `${ROW_BASE} ${ROW_WIDE}` : `${ROW_BASE} ${ROW_WIDE_ENG}`
   const tip = rows.length > 0 ? <InfoTip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</InfoTip> : null
   return (
-    <section aria-labelledby={headingId} data-slot="quotations" className="grid min-w-0 gap-3 [container-name:qt] [container-type:inline-size]">
+    <section aria-labelledby={headingId} data-slot="quotations" className="grid w-full min-w-0 gap-3 [container-name:qt] [container-type:inline-size]">
       <header className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
         <div className="flex min-w-0 items-center gap-1">
           <h2 id={headingId} className="type-section">
@@ -194,22 +195,22 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                       {prices && latest ? <LastChanged table="quotations" id={q.id} className="w-full text-sm text-fg-muted" /> : null}
                     </span>
                     <span role="cell" className="num min-w-0 text-sm">
-                      <span className={`${LAB} me-1`}>Issued</span>
-                      {formatDay(q.issuedOn)}
+                      <span className={LAB}>Issued </span>
+                      <span className="whitespace-nowrap">{formatDay(q.issuedOn)}</span>
                     </span>
                     <span role="cell" className={`num min-w-0 text-sm ${expired ? 'font-bold text-tone-warning-fg' : ''}`}>
-                      <span className={`${LAB} me-1 font-regular`}>{expired ? 'Expired' : 'Valid until'}</span>
-                      {formatDay(q.validUntil)}
+                      <span className={`${LAB} font-regular`}>{expired ? 'Expired ' : 'Valid until '}</span>
+                      <span className="whitespace-nowrap">{formatDay(q.validUntil)}</span>
                     </span>
                     {prices ? (
                       <>
                         <span role="cell" className="num min-w-0 text-sm">
                           {q.lines.length} of {itemCount}
-                          <span className={`${LAB} ms-1`}>{q.lines.length === 1 ? 'item' : 'items'}</span>
+                          <span className={LAB}>{q.lines.length === 1 ? ' item' : ' items'}</span>
                         </span>
                         <span role="cell" className="grid min-w-0 [@container(min-width:40rem)]:justify-items-end [@container(min-width:40rem)]:text-right">
                           <span className="num text-sm font-bold">
-                            <span className={`${LAB} me-1 font-regular`}>PKR</span>
+                            <span className={`${LAB} font-regular`}>PKR </span>
                             {formatPaisa(gp, 'auto')}
                           </span>
                           <span className="num text-sm text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>

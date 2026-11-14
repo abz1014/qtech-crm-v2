@@ -171,21 +171,20 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
     // 26-job-questions-files .qq: no box of its own (it sits in the Job page's fold, inside the step card); the groups are hairline
     // sections, each question a dashed row.
     <section data-slot="clarifications" aria-labelledby={headingId} className="grid min-w-0 gap-3">
-      <header className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <div className="flex min-w-0 items-center gap-1">
-          <h2 id={headingId} className={underHeading ? 'sr-only' : 'type-section'}>
-            Questions for the customer
-          </h2>
-          <InfoTip label="About questions">
-            A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers. Ones raised by suppliers, or entered here, are
-            listed here and bundled for the customer in one message.
-          </InfoTip>
-        </div>
+      {/* Under the fold (the Job page) the title is for screen readers only, so the count leads and the tip follows it. */}
+      <header className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <h2 id={headingId} className={underHeading ? 'sr-only' : 'type-section me-1'}>
+          Questions for the customer
+        </h2>
         {clars.isSuccess && count > 0 ? (
           <span className="num text-sm text-fg-muted">
             {count} {count === 1 ? 'question' : 'questions'}
           </span>
         ) : null}
+        <InfoTip label="About questions">
+          A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers. Ones raised by suppliers, or entered here, are
+          listed here and bundled for the customer in one message.
+        </InfoTip>
       </header>
         {clars.isPending ? (
           <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading questions">
@@ -290,7 +289,9 @@ export function ClarificationsPanel({ rfq, inquiries, underHeading = false }: { 
               <details className="group/wd border-t pt-2 text-sm">
                 <summary className="flex min-h-control-sm w-fit cursor-pointer list-none items-center gap-1 rounded-control font-semibold text-primary hover:underline [&::-webkit-details-marker]:hidden">
                   <ChevronRight aria-hidden="true" className="size-4 shrink-0 transition-transform duration-fast group-open/wd:rotate-90" />
-                  Not needed (<span className="num">{groups.withdrawn.length}</span>)
+                  <span>
+                    Not needed (<span className="num">{groups.withdrawn.length}</span>)
+                  </span>
                 </summary>
                 <ul className="divide-y divide-dashed">
                   {groups.withdrawn.map(c => (

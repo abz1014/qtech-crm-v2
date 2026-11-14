@@ -18,8 +18,8 @@ import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib'
  *
  *   FE-2  add a file   drop, paste or 1 tap on Choose files (Add file). 0 typed. Required: the file. Nothing else.
  *
- * `slimWhenEmpty` (the RFQ page): with no file yet, the panel is one "Add file" row (grade-A 6 fix 2; grade-B P9 asks the same
- * of the order page, which can pass it too); drop and paste still land on it. Once there are files, they list above the zone.
+ * `slimWhenEmpty` (the Job page): the zone is one "Add file" row (grade-A 6 fix 2; mockup 26 keeps it slim with files too); drop and
+ * paste still land on it, and the files list under it. A refused file brings the full zone back, with the reason beside it.
  */
 
 export function AttachmentsPanel({
@@ -32,7 +32,7 @@ export function AttachmentsPanel({
   orderId?: string
   /** A shorter drop zone and one-line empty text, under a fold that already names the panel "Files" (the Job page). */
   compact?: boolean
-  /** With no file yet, one "Add file" row instead of the zone (the RFQ page). */
+  /** One "Add file" row instead of the zone (the Job page), with or without files; the zone comes back beside a refused file. */
   slimWhenEmpty?: boolean
 }) {
   // One panel for an RFQ's files and an order's files (R22): give it the RFQ, or the order.
@@ -78,12 +78,13 @@ export function AttachmentsPanel({
   }
 
   const list = atts.data ?? []
-  // Compact and empty: one "Add file" row, no zone and no "No files yet" line (the meta already says "None yet").
-  const slim = slimWhenEmpty && atts.isSuccess && list.length === 0 && refused.length === 0
+  // One "Add file" row instead of the zone (26-job-questions-files .ff-slim), with or without files: drop and paste still land on it,
+  // and the files list under it. No "No files yet" line when empty (the meta already says "None yet"). A refused file brings the zone back.
+  const slim = slimWhenEmpty && atts.isSuccess && refused.length === 0
   return (
     // 26-job-questions-files .ff: no box of its own (it sits in a fold inside the step card, which already says "Files"): the count,
     // the drop zone (one "Add file" row while empty), then the file rows.
-    <section aria-labelledby={headingId} className="grid min-w-0 gap-3">
+    <section aria-labelledby={headingId} className="grid w-full min-w-0 gap-3">
       <header className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id={headingId} className={compact ? 'sr-only' : 'type-section'}>
           Files
