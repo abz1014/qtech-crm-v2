@@ -40,8 +40,8 @@ import { generateStatementPdf } from '@/features/statement/pdf/generate'
  * Admin and sales only. The database refuses an engineer the prices this page is made of (migration 0081), and this page draws a
  * notice for an engineer before it asks for anything.
  *
- * Forest (25-quotation #qt-statement): "<- Job 141" beside the title, each item a card with a tinted head, amounts in Geist Mono with
- * tabular figures. Nothing scrolls sideways at any width (live bug 7): from 1024 px the quotes are a table whose columns shrink and
+ * Forest (25-quotation #qt-statement): "<- Job 141" beside the title, each item a card with a tinted head, amounts in the sans with
+ * tabular figures (owner rule: figures are never monospace). Nothing scrolls sideways at any width (live bug 7): from 1024 px the quotes are a table whose columns shrink and
  * wrap (no minimum width); below that, where a tablet beside the rail is too narrow for six columns, each quote is a card and the
  * column heads become the one "Sort the rows by" field. The table still sits in its own scroll box, so a freak long word can never push
  * the page sideways.
@@ -49,6 +49,11 @@ import { generateStatementPdf } from '@/features/statement/pdf/generate'
 
 function Shell({ children }: { children: ReactNode }) {
   return <div className="mx-auto w-full max-w-detail px-4 pb-16 pt-4 md:px-8 md:pt-6">{children}</div>
+}
+
+/** The page's one heading while it loads or cannot load (the header draws the visible title once the job is read). */
+function PageTitle() {
+  return <h1 className="sr-only">Comparative statement</h1>
 }
 
 export default function StatementPage() {
@@ -89,6 +94,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
   if (facts.isError && !facts.data) {
     return (
       <Shell>
+        <PageTitle />
         <EmptyState
           mood="error"
           icon={CloudOff}
@@ -128,10 +134,12 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
 function PageSkeleton() {
   return (
     <Shell>
-      <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading the comparative statement">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-control w-[6.5rem] max-md:hidden" />
-          <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
+      <PageTitle />
+      {/* minmax(0,1fr): a bare grid sizes its track to the widest bar (24rem), wider than a phone */}
+      <div role="status" className="grid grid-cols-[minmax(0,1fr)] gap-4" aria-busy="true" aria-label="Loading the comparative statement">
+        <div className="flex min-w-0 items-center gap-4">
+          <Skeleton className="h-control w-[6.5rem] shrink-0 max-md:hidden" />
+          <Skeleton className="h-[2.25rem] w-[24rem] min-w-0 max-w-full" />
         </div>
         <Skeleton className="h-control w-full" />
         {[0, 1].map(i => (
@@ -163,8 +171,8 @@ const COLUMNS: Array<{ key: SortKey; label: string; align?: 'right' }> = [
 /** The columns of an item's quotes, as a grid: the table roles are on the elements (the raw table tags are for DataTable only). */
 const ROW = 'grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.1fr)] items-start'
 const TOTAL_ROW = 'grid grid-cols-[minmax(0,2fr)_minmax(0,0.7fr)_minmax(0,1.3fr)_minmax(0,1fr)] items-start'
-/** An amount: Geist Mono, tabular figures, as the prices on the Job page's Items and supplier prices. */
-const AMOUNT = 'font-mono tabular-nums'
+/** An amount: the sans with tabular figures (`num`), as every other figure in the app; never monospace. */
+const AMOUNT = 'num'
 
 const SORT_CHOICES = [
   { value: 'supplier:asc', label: 'Supplier name, A to Z' },
@@ -202,6 +210,7 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
   if (!header.data || items.isError || inquiries.isError) {
     return (
       <Shell>
+        <PageTitle />
         <EmptyState
           mood="error"
           icon={CloudOff}
@@ -407,6 +416,10 @@ export function ItemSection({ sec, sort, onSort, showNoReply, compact }: { sec: 
   )
 }
 
+/** Written out in full (Tailwind finds classes as whole words): label beside value from 18.5em of card, label over value below it. */
+const FACTS = 'grid grid-cols-[minmax(0,1fr)] gap-x-4 text-base [@container(min-width:18.5em)]:grid-cols-[minmax(0,8rem)_minmax(0,1fr)] [@container(min-width:18.5em)]:gap-y-1'
+const FACT_LABEL = 'text-fg-muted [&:not(:first-child)]:mt-2 [@container(min-width:18.5em)]:[&:not(:first-child)]:mt-0'
+
 /** One supplier's quote for one item on a phone: its name, then each fact under its label. */
 function RowCard({ r, shared }: { r: QuotedRow; shared: string | null }) {
   const money = (t: string) => (shared ? `${shared} ${t}` : `${r.currency} ${t}`)
@@ -418,13 +431,15 @@ function RowCard({ r, shared }: { r: QuotedRow; shared: string | null }) {
     ['Country of origin', r.origin ?? '—'],
   ]
   return (
-    <li className="grid gap-2 px-card py-4" data-statement-row={r.supplierName}>
-      <p className="break-words text-base font-semibold">{r.supplierName}</p>
-      <dl className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-4 gap-y-1 text-base">
+    <li className="grid grid-cols-[minmax(0,1fr)] gap-2 px-card py-4 [container-type:inline-size]" data-statement-row={r.supplierName}>
+      <p className="text-base font-semibold [overflow-wrap:anywhere]">{r.supplierName}</p>
+      {/* Label beside value where a whole amount fits beside the label; on a narrow phone (320) each label sits over its value, so an
+          amount never runs out of the card or breaks inside its digits. em, so Larger text stacks sooner. */}
+      <dl className={FACTS}>
         {facts.map(([label, value]) => (
           <Fragment key={label}>
-            <dt className="text-fg-muted">{label}</dt>
-            <dd className="m-0 min-w-0 break-words">{value}</dd>
+            <dt className={FACT_LABEL}>{label}</dt>
+            <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{value}</dd>
           </Fragment>
         ))}
       </dl>
@@ -444,8 +459,8 @@ export function Totals({ totals, quotedAny, compact }: { totals: SupplierTotal[]
       {compact ? (
         <ul className="divide-y">
           {totals.map(t => (
-            <li key={t.supplierId} className="grid gap-1 px-card py-4" data-statement-total={t.supplierName}>
-              <p className="break-words text-base font-semibold">{t.supplierName}</p>
+            <li key={t.supplierId} className="grid grid-cols-[minmax(0,1fr)] gap-1 px-card py-4" data-statement-total={t.supplierName}>
+              <p className="text-base font-semibold [overflow-wrap:anywhere]">{t.supplierName}</p>
               <p className="text-base text-fg-muted">{`${t.itemsQuoted} of ${t.itemCount} items quoted`}</p>
               {t.byCurrency.map(c => (
                 <p key={c.currency} className={cn('text-base font-semibold', AMOUNT)}>{`${c.currency} ${c.totalText}`}</p>

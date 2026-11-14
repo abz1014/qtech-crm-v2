@@ -475,7 +475,7 @@ export function SupplierReplyDialog({
                                 void doSave()
                               }
                             }}
-                            className="font-mono tabular-nums sm:w-[11rem]"
+                            className="num sm:w-[11rem]"
                           />
                           <Popover>
                             <PopoverTrigger asChild>

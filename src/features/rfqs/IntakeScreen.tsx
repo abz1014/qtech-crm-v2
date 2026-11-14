@@ -170,7 +170,7 @@ export default function IntakeScreen({
 function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => void; mode: IntakeMode; onFilePicked?: (file: File) => void; doc?: ReactNode }) {
   const enquiry = mode === 'enquiry'
   const navigate = useNavigate()
-  const nextJob = useNextJobNumber(enquiry)
+  const { next: nextJob, failed: offlineAtOpen, retry: retryOpen } = useNextJobNumber(enquiry)
   const session = useSession()
   const seesHistory = useSeesPrices() // supply history is item memory, which carries prices: an engineer never loads it
   const uploaderRole = session.status === 'signed-in' ? session.user.role : 'engineer'
@@ -970,6 +970,20 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
           onContinue={() => restore(offer, check.data)}
           onStartNew={startNew}
         />
+      ) : null}
+
+      {offlineAtOpen && !saved ? (
+        <Banner
+          tone="warning"
+          title="Q-Tech CRM could not be reached"
+          action={
+            <Button size="sm" onClick={retryOpen}>
+              Try again
+            </Button>
+          }
+        >
+          You can fill this in now. Creating the job needs a connection.
+        </Banner>
       ) : null}
 
       {notKept && !saved ? (

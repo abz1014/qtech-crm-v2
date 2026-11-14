@@ -302,7 +302,8 @@ for (const r of AUDIT_ROUTES) {
                 if (state === 'loading') release = await makeLoading(page)
                 await spaGo(page, path)
                 if (state === 'loading') await page.waitForTimeout(1_200)
-                else if (state === 'error')
+                // an expected no-access page (Sell for an engineer) asks for no data, so it has no failure to report
+                else if (state === 'error' && expectPage === 'ok')
                   await page
                     .waitForFunction(() => /could not|couldn.t|try again|went wrong|no connection|offline|failed|did not load/i.test(document.getElementById('main')?.innerText ?? ''), undefined, { timeout: 20_000 })
                     .catch(() => record({ ...where, rule: 'error-state-silent', selector: '#main', detail: 'every data request failed and after 20 s the screen says nothing about it (no "could not", "try again"): a skeleton or a blank page' }))

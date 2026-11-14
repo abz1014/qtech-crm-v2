@@ -45,6 +45,9 @@ const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog'
  */
 const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'History' }
 
+/** Customer PO and Items need a 1440 window: with the menu open, seven columns at 16 px do not fit 1280 or 1366 without sideways scrolling. */
+const WIDE_ONLY = 'hidden min-[1440px]:table-cell'
+
 const LANE_TITLE: Record<JobLane, string> = { sell: 'Sell', deliver: 'Deliver' }
 
 /** The header's link to every job: the bare list, keeping the chip and the search. */
@@ -87,7 +90,7 @@ function NextText({ job, role, card }: { job: JobRow; role: Who['role']; card?: 
 
 function JobCell({ job }: { job: JobRow }) {
   return (
-    <span className="grid min-w-[5.5rem] gap-px whitespace-normal">
+    <span className="grid min-w-[4.5rem] gap-px whitespace-normal">
       <span className="num whitespace-nowrap font-heavy text-primary">{jobLabel(job.key)}</span>
       {job.repeatOf ? <span className="text-sm text-fg-muted">{`Repeat of ${jobLabel(job.repeatOf)}`}</span> : null}
     </span>
@@ -96,7 +99,7 @@ function JobCell({ job }: { job: JobRow }) {
 
 function CustomerCell({ job }: { job: JobRow }) {
   return (
-    <span className="grid min-w-[160px] max-w-[320px] gap-px whitespace-normal">
+    <span className="grid min-w-[8rem] max-w-[20rem] gap-px whitespace-normal">
       <span className="line-clamp-2 min-w-0 font-medium [overflow-wrap:anywhere]" title={job.companyName}>
         {job.companyName}
       </span>
@@ -211,10 +214,18 @@ function JobsList() {
             header: 'Customer PO',
             value: (j: JobRow) => poOf(j) ?? '',
             sortable: true,
-            hideClass: 'hidden xl:table-cell',
+            hideClass: WIDE_ONLY,
+            // One line, cut with an ellipsis: a customer's PO can be 50 characters, and a nowrap cell that long pushes Where it stands
+            // and Next step out of the card. The whole number is the title (and on the job page).
             cell: (j: JobRow) => {
               const po = poOf(j)
-              return po ? <span className="num whitespace-nowrap">{po}</span> : <span className="text-fg-muted">—</span>
+              return po ? (
+                <span className="num block max-w-[9rem] truncate" title={po}>
+                  {po}
+                </span>
+              ) : (
+                <span className="text-fg-muted">—</span>
+              )
             },
           } satisfies Column<JobRow>,
         ]
@@ -223,11 +234,11 @@ function JobsList() {
       id: 'items',
       header: 'Items',
       value: j => j.items,
-      // Below 1280 (tablet, a laptop with the menu open) Items and Customer PO give their room to Where it stands and Next step; the job page has both.
-      hideClass: 'hidden xl:table-cell',
+      // Below 1440 (tablet, a 1280 or 1366 laptop with the menu open) Items and Customer PO give their room to Where it stands and Next step; the job page has both.
+      hideClass: WIDE_ONLY,
       // One line (a long item list would make the row, and with it every row of a windowed list, very tall); the whole list is the title.
       cell: j => (
-        <span className="line-clamp-1 min-w-[160px] max-w-[320px] whitespace-normal text-fg-2 [overflow-wrap:anywhere]" title={j.items || undefined}>
+        <span className="line-clamp-1 min-w-[8rem] max-w-[20rem] whitespace-normal text-fg-2 [overflow-wrap:anywhere]" title={j.items || undefined}>
           {itemsSummary(j.items) || <span className="text-fg-muted">No items yet</span>}
         </span>
       ),
@@ -239,8 +250,9 @@ function JobsList() {
       sortable: true,
       cell: j => <StageMini job={{ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind, office: role === 'engineer' }} />,
     },
-    { id: 'next', header: 'Next step', cell: j => <span className="block min-w-[11rem] whitespace-normal"><NextText job={j} role={role} /></span> },
-    { id: 'owner', header: 'Owner', value: j => j.ownerName ?? '', sortable: true, hideClass: 'hidden lg:table-cell', cell: j => j.ownerName ?? <span className="text-fg-muted">No owner</span> },
+    { id: 'next', header: 'Next step', cell: j => <span className="block min-w-[10rem] whitespace-normal"><NextText job={j} role={role} /></span> },
+    // From 1280; a long name wraps rather than widening the table.
+    { id: 'owner', header: 'Owner', value: j => j.ownerName ?? '', sortable: true, hideClass: 'hidden xl:table-cell', cell: j => <span className="block min-w-[5rem] whitespace-normal">{j.ownerName ?? <span className="text-fg-muted">No owner</span>}</span> },
   ]
 
   const loading = jobs.isPending || (searching && found.isPending)
