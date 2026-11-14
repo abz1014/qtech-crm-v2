@@ -5,6 +5,7 @@ import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
@@ -123,10 +124,7 @@ function Hero({ f }: { f: MoneyHomeFigures }) {
             </span>
           )
         ) : null}
-        <Link
-          to="/money/receivables"
-          className="inline-flex h-control items-center rounded-control bg-lime-300 px-5 text-base font-bold text-lime-on transition-colors duration-fast ease-out hover:bg-lime-hover active:bg-lime-press"
-        >
+        <Link to="/money/receivables" className={buttonStyles({ variant: 'lime', size: 'lg' })}>
           Open To collect
         </Link>
       </div>

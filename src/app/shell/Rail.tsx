@@ -3,6 +3,7 @@ import { Camera, PanelLeft } from 'lucide-react'
 import { activeLink, railLinks, type CountKey, type NavKey, type ShellLink, type ShellLinkId } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
 import { NewMenu } from '@/app/shell/NewMenu'
+import { useMobileBarConfig } from '@/app/shell/MobileBarContext'
 import { limeButtonClass, railTextClass } from '@/app/shell/railStyle'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
@@ -39,7 +40,8 @@ const pill = 'relative flex min-h-control items-center gap-3 rounded-pill text-b
 export function Rail({ user, counts, dots, collapsed, onToggle, links: given, current: named }: RailProps) {
   const { pathname, search } = useLocation()
   const links = given ?? railLinks(user.role)
-  const current = named ? links.find(l => l.id === named) : activeLink(links, pathname, search)
+  const pageLane = useMobileBarConfig()?.lane ?? null
+  const current = named ? links.find(l => l.id === named) : activeLink(links, pathname, search, pageLane)
   const text = railTextClass(collapsed)
   const shape = collapsed ? 'justify-center px-0' : 'px-4 max-lg:justify-center max-lg:px-0'
   return (

@@ -82,7 +82,7 @@ describe('Job page', () => {
     expect(hero).toHaveTextContent('Next step · Job 139')
     expect(hero).toHaveTextContent('Late')
     expect(within(hero).getByRole('heading', { level: 2 })).toHaveTextContent('The goods are late: follow up with the supplier')
-    expect(within(hero).getByRole('button', { name: 'Follow up with the supplier' })).toHaveClass('bg-primary')
+    expect(within(hero).getByRole('button', { name: 'Follow up with the supplier' })).toHaveClass('bg-lime-300')
     expect(container.querySelector('[data-stage-phone]')).toHaveTextContent(/^Stage 4 of 7 · Supplier order$/)
     const track = screen.getByRole('list', { name: 'Stages of this job' })
     expect(within(track).getAllByRole('listitem')).toHaveLength(7)
@@ -90,7 +90,7 @@ describe('Job page', () => {
     // the way back is the lane the job is in (Supplier order is Deliver), and the owner line sits under the title
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Deliver' })).toHaveAttribute('href', '/jobs?lane=deliver')
     expect(container.querySelector('[data-job-owner]')).toHaveTextContent(/^Owner /)
-    expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
+    expect([...container.querySelectorAll('button.bg-primary, button.bg-lime-300')]).toHaveLength(1)
     // the steps are one hairline list, in their natural order, all closed; the one the job is at is marked by its state word, not opened
     const rows = [...container.querySelectorAll('[data-stages] > [data-fold-row]')]
     expect(rows.map(e => e.id)).toEqual(['stage-0', 'stage-1', 'stage-2', 'stage-3', 'stage-4', 'stage-5', 'stage-6'])
@@ -317,13 +317,15 @@ describe('Job page: the stage list', () => {
     }
   })
 
-  it('a closed step says one short thing, with no tag chips: the state is a word for a screen reader', async () => {
+  it('a closed step says one short thing under its title, and its state as a chip (Forest 30-job-page: Done, Not yet), read once', async () => {
     const { container } = mount(job({ stage: 'paid', stageDetail: null }), 'admin', c => c.setQueryData([...qk.jobs.part('139', 'invoices'), 'o1'], [{ id: 'v1', number: 'INV-1', invoiceDate: '2026-10-01', gross: 1392400 }]))
     await screen.findByRole('heading', { level: 1 })
     const stages = stagesOf(container)
     expect(stages.getByRole('button', { name: /^RFQ Done 12 Aug · 1 item$/ })).toBeInTheDocument()
     expect(stages.getByRole('button', { name: /^Order Done Ordered 2 Sep$/ })).toBeInTheDocument()
-    expect(stages.queryByText('Done', { selector: ':not(.sr-only)' })).toBeNull()
+    // every step of a paid job is done: seven drawn Done chips, and no hidden second "Done" (the chip is the word a screen reader hears)
+    expect(stages.getAllByText('Done', { selector: ':not(.sr-only)' })).toHaveLength(7)
+    expect(stages.queryAllByText('Done', { selector: '.sr-only' })).toHaveLength(0)
     expect(container.textContent).not.toMatch(/their ref|Goods to the customer/)
   })
 })

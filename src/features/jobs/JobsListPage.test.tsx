@@ -286,6 +286,9 @@ describe('Jobs list', () => {
       expect(radios().slice(-6)).toEqual(['All', 'Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
       expect(screen.queryByRole('radio', { name: 'Quotations' })).toBeNull()
       expect(screen.getByRole('link', { name: 'All jobs' })).toHaveAttribute('href', '/jobs?chip=open')
+      // Deliver starts at the order (40-deliver): Order without RFQ, a white button; no New RFQ and no green button in the header
+      expect(screen.getByRole('button', { name: 'Order without RFQ' })).not.toHaveClass('bg-primary')
+      expect(screen.queryByRole('button', { name: 'New RFQ' })).toBeNull()
     })
 
     it('a search from a lane still looks in every list', async () => {

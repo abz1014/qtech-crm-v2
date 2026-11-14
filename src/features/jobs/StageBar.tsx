@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
-import { Check, CircleAlert, CircleCheck, CircleDashed, Clock, Hourglass, Minus, X, type LucideIcon } from 'lucide-react'
+import { Check, CircleAlert, Minus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import type { StepTone } from '@/lib/status'
+import { STEP_CHIP } from '@/features/jobs/lib/stepChip'
 import { stageModel, type JobStanding, type StopState, type StopView } from '@/features/jobs/lib/stages'
 
 /*
@@ -13,10 +14,12 @@ import { stageModel, type JobStanding, type StopState, type StopView } from '@/f
  *   - mini:    the seven-part bar and the words, one line, for a list row
  * A direct order (job O-45) draws Enquiry and Quotation as "none"; a lost or cancelled job ends with its reason.
  */
+// The same ink as the Job page's track (Forest .qb-track): the line is lit brand green up to the stop the job is at, the stop itself
+// the deep forest, what is still to come a pale bar.
 const SEG: Record<StopState, string> = {
-  done: 'bg-tone-success-fg',
-  current: 'bg-chrome',
-  future: 'bg-line-strong',
+  done: 'bg-brand-500',
+  current: 'bg-brand-700',
+  future: 'bg-deep',
   none: 'bg-line',
   stopped: 'bg-line',
 }
@@ -101,14 +104,7 @@ export function StageLine({ job }: { job: JobStanding }) {
   )
 }
 
-/** Who acts next, as the hero's chip says it: an icon and a word (30-job-page.html chipFor). */
-const CHIP: Record<StepTone, { icon: LucideIcon; word: string }> = {
-  now: { icon: CircleAlert, word: 'Needs action' },
-  waiting: { icon: Hourglass, word: 'Waiting' },
-  late: { icon: Clock, word: 'Late' },
-  done: { icon: CircleCheck, word: 'Done' },
-  inert: { icon: CircleDashed, word: 'Nothing to do' },
-}
+const CHIP = STEP_CHIP
 
 /** "2 of 3 delivered, installation planned 28 Nov" as sentences: "2 of 3 delivered. Installation planned 28 Nov." */
 const sentences = (detail: string | null) =>
@@ -169,7 +165,7 @@ export function StageBlock({
         {action ? <div className="flex flex-wrap items-center gap-3 max-md:hidden">{action}</div> : null}
       </section>
       {between}
-      <section aria-label="Stage of this job" data-stage-track className="mt-4 rounded-card bg-surface p-card shadow-e1 md:mt-6">
+      <section aria-label="Stage of this job" data-stage-track className="mt-4 rounded-card border bg-surface p-card shadow-e1 md:mt-6">
         {m.ending ? (
           <p className="mb-4 flex items-center gap-2 text-lg font-card text-tone-danger-fg" data-stage-ending data-stage-phone>
             <Icon icon={CircleAlert} size="sm" />

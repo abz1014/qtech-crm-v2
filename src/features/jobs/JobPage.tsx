@@ -159,7 +159,8 @@ function JobView({ facts }: { facts: JobFacts }) {
     requestAnimationFrame(() => document.getElementById(`stage-${i}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
   }
 
-  useMobileBar({ title: job.companyName, subtitle: jobLabel(job.key), back: 'history', fallback: '/jobs', hideTabs: true })
+  // The lane lights Sell or Deliver on the rail for a job opened from Home or Search (no ?from=); an engineer has Jobs.
+  useMobileBar({ title: job.companyName, subtitle: jobLabel(job.key), back: 'history', fallback: '/jobs', hideTabs: true, lane: role === 'engineer' ? undefined : laneOfJob(job) })
 
   // The enquiry-side steps are done on this page (P5-D1): the button opens the Quotation stage, or the same dialog the RFQ page opens
   // (?issue=1, ?won=1). The order-side steps are done here too (P5-D2): the button opens the stage that holds the action (choose a
@@ -181,8 +182,9 @@ function JobView({ facts }: { facts: JobFacts }) {
   }
   // An engineer's one green button is on the site card (EngineerActions: Delivered today, Installed today, Add photo or note), so the
   // band's "Open the order" is not a second one; the card has the link.
+  // On the forest hero it is lime (Forest 30-job-page); the phone's sticky bar is white, so there it is the green button.
   const button = role !== 'engineer' && (onRfq || inPlace !== null) ? (
-    <Button variant="primary" size={phone ? 'touch' : 'lg'} onClick={act}>
+    <Button variant={phone ? 'primary' : 'lime'} size={phone ? 'touch' : 'lg'} onClick={act}>
       {next.button}
     </Button>
   ) : undefined
@@ -207,21 +209,24 @@ function JobView({ facts }: { facts: JobFacts }) {
         name={job.companyName}
         nameHref={`/companies/${job.companyId}`}
         code={jobLabel(job.key)}
-        breadcrumb={[backTo(job, role), { label: jobLabel(job.key), mono: true }]}
+        back={backTo(job, role)}
+        sub={
+          <>
+            <p className="mt-1 text-sm text-fg-2 [overflow-wrap:anywhere] max-md:hidden" data-job-owner>
+              {[job.ownerName ? `Owner ${job.ownerName}` : 'No owner yet', facts.site?.name ?? null].filter(Boolean).join(' · ')}
+            </p>
+            {job.repeatOf ? (
+              <p className="mt-2 text-base">
+                <Link to={`/jobs/${encodeURIComponent(job.repeatOf)}`} className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline">
+                  {`Repeat of ${jobLabel(job.repeatOf)}`}
+                </Link>
+              </p>
+            ) : null}
+          </>
+        }
         more={phone ? undefined : <JobSlot name="next-step" context={ctx} />}
         phoneSrOnly
-      >
-        <p className="mt-1 text-base text-fg-2 [overflow-wrap:anywhere] max-md:hidden" data-job-owner>
-          {[job.ownerName ? `Owner ${job.ownerName}` : 'No owner yet', facts.site?.name ?? null].filter(Boolean).join(' · ')}
-        </p>
-        {job.repeatOf ? (
-          <p className="mt-2 text-base">
-            <Link to={`/jobs/${encodeURIComponent(job.repeatOf)}`} className="inline-flex min-h-touch items-center rounded font-medium text-primary underline-offset-4 hover:underline">
-              {`Repeat of ${jobLabel(job.repeatOf)}`}
-            </Link>
-          </p>
-        ) : null}
-      </DetailHeader>
+      />
 
       <StageBlock
         job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }}
@@ -247,8 +252,8 @@ function JobView({ facts }: { facts: JobFacts }) {
         data-work
         className="mt-4 grid min-w-0 items-start gap-card-gap md:mt-6 lg:grid-cols-[minmax(0,1fr)_340px]"
       >
-        <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} />
-        <aside aria-label="About this job" className="min-w-0 rounded-card bg-surface px-card py-2 shadow-e1 [&>:last-child]:border-b-0">
+        <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} tone={next.tone} />
+        <aside aria-label="About this job" className="min-w-0 rounded-card border bg-surface px-card py-2 shadow-e1 [&>:last-child]:border-b-0">
           <ContactRow facts={facts} showWhere={role === 'engineer'} />
           {role === 'admin' ? <MoneyRow data={data} hasOrder={Boolean(job.orderId)} /> : null}
           <CancelledOrders data={data} money={role !== 'engineer'} />

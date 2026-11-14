@@ -144,6 +144,11 @@ export interface DataTableProps<T> {
    * tap opens it (`onRowOpen`) as before. Enter does what a tap does. Absent: every tap opens the row.
    */
   mobileExpand?: (row: T) => ReactNode | null
+  /**
+   * Forest list pages (20-sell, 40-deliver, 70-companies): the toolbar is its own white card above the table's card, a card gap
+   * between them, instead of a band inside one card.
+   */
+  toolbarCard?: boolean
   className?: string
 }
 
@@ -190,6 +195,7 @@ function TableView<T>(props: DataTableProps<T>) {
     noun,
     total,
     toolbar,
+    toolbarCard = false,
     exportCsv,
     loading,
     error,
@@ -802,19 +808,22 @@ function TableView<T>(props: DataTableProps<T>) {
   }, [countText, firstCount])
   const announced = firstCount !== null && countText !== firstCount ? countText : ''
 
+  // toolbarCard: the table and its foot are their own card under the toolbar's (overflow clip rounds it, as the one card does).
+  const framed = (node: ReactNode) => (toolbarCard ? <div className="relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1">{node}</div> : node)
+
   return (
     <div
       ref={rootRef}
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
-      className={cn('group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
+      className={cn(toolbarCard ? 'group/dt relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-card-gap' : 'group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
       </p>
       {toolbarNode || exportCsv ? (
-        <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
+        <div className={cn('flex flex-wrap items-center gap-3', toolbarCard ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-4 py-3')} data-table-toolbar>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
           {loading ? <span className="text-xs text-fg-muted">{`Loading ${what}`}</span> : null}
           {densityOn ? (
@@ -836,6 +845,8 @@ function TableView<T>(props: DataTableProps<T>) {
         </div>
       ) : null}
 
+      {framed(
+      <>
       <div
         ref={scrollRef}
         data-virtual={virtual ? '' : undefined}
@@ -944,6 +955,8 @@ function TableView<T>(props: DataTableProps<T>) {
           {hintsNode}
         </div>
       ) : null}
+      </>,
+      )}
     </div>
   )
 }

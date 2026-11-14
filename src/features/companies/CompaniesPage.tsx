@@ -152,6 +152,7 @@ export function CompaniesPage() {
       <DataTable
         label="Companies"
         noun="companies"
+        toolbarCard
         total={counts.all}
         columns={columns}
         rows={shown}
@@ -277,7 +278,7 @@ function NameLink({ row, clamp = false }: { row: Shown; clamp?: boolean }) {
     <Link
       to={`/companies/${row.id}`}
       title={clamp ? row.name : undefined}
-      className={`min-w-0 [overflow-wrap:anywhere] font-medium text-fg hover:underline ${clamp ? 'line-clamp-2' : ''}`}
+      className={`min-w-0 [overflow-wrap:anywhere] font-semibold text-fg hover:underline ${clamp ? 'line-clamp-2' : ''}`}
     >
       {row.name}
     </Link>
