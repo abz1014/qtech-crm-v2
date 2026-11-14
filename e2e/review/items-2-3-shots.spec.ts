@@ -138,6 +138,13 @@ async function shotBtoE(browser: Browser, w: Width, only: 'all' | 'c') {
   if (only === 'c') return c.close()
 
   const item3 = page.getByRole('article', { name: 'Item 3' })
+  // Phone: the item is folded to its header until tapped. Shoot the folded state first, then open it.
+  const head = item3.locator('header button[aria-expanded]')
+  if ((await head.count()) && (await head.getAttribute('aria-expanded')) === 'false') {
+    await item3.scrollIntoViewIfNeeded()
+    await shot(page, `item2-d-item-nobody-asked-${w.tag}-folded`)
+    await head.click()
+  }
   await expect(item3).toContainText('No supplier has been asked about this item.')
   await item3.scrollIntoViewIfNeeded()
   await shot(page, `item2-d-item-nobody-asked-${w.tag}`)
