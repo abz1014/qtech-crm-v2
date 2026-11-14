@@ -310,12 +310,12 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('dialog', { name: 'Record payment' })).toBeVisible()
   })
 
-  test('Money home opens on four numbers and To collect leads to To collect; on a phone a card opens its reminder sheet with Record payment and Open order', async ({ page }) => {
+  test('Money home opens on the To collect hero and three numbers, and Open To collect leads to To collect; on a phone a card opens its reminder sheet with Record payment and Open order', async ({ page }) => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000, invoice_date: karachiDay(-60) })
     await openAs(page, 'admin', '/money')
     await expect(page.getByTestId('money-blocks')).toBeVisible()
-    await page.getByTestId('money-blocks').getByRole('link', { name: /^To collect/ }).click()
+    await page.getByTestId('money-blocks').getByRole('link', { name: 'Open To collect' }).click()
     await expect(page).toHaveURL(/\/money\/receivables$/)
     await expect(page.getByRole('heading', { name: 'To collect', level: 1 })).toBeAttached()
     await page.setViewportSize({ width: 375, height: 812 })
@@ -357,7 +357,7 @@ test.describe('payments in and receivables (M02)', () => {
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
     await page.getByTestId('batch-bar').getByRole('button', { name: 'Invoice posted today' }).click()
     await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
-    await page.getByRole('link', { name: /^To collect/ }).click()
+    await page.getByRole('link', { name: 'Open To collect' }).click()
     const row = page.getByRole('row', { name: new RegExp(order.company.name) })
     await expect(row).toContainText('88,000') // the balance: 118,000 less 30,000
     await expect(page.getByRole('button', { name: /Record payment/ })).toHaveCount(0)

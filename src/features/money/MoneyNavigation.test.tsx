@@ -82,10 +82,13 @@ describe('Money tabs and landing', () => {
     expect(screen.getByRole('link', { name: /^To collect/ })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('admin has five tabs in the decided order (Reports last), one strip only, and the h1 names the tab', async () => {
+  it('admin has six tabs in the decided order (Payments third, Reports last), one strip only, and the h1 names the tab', async () => {
     at('/money/receivables')
-    await screen.findByRole('navigation', { name: 'Money views' })
-    expect(tabs()).toEqual(['To collect', 'Invoices', 'Expenses', 'Lock a month', 'Reports'])
+    const nav = await screen.findByRole('navigation', { name: 'Money views' })
+    expect(within(nav).getAllByRole('link').map(a => a.textContent?.replace(/New$/, ''))).toEqual(['To collect', 'Invoices', 'Payments', 'Expenses', 'Lock a month', 'Reports'])
+    // the "New" word beside Payments is for the eye only (aria-hidden): the tab's name stays "Payments"
+    expect(within(nav).getByRole('link', { name: 'Payments' })).toHaveAttribute('href', '/money/payments')
+    expect(within(nav).getByRole('link', { name: 'Payments' })).toHaveTextContent(/^PaymentsNew$/)
     expect(screen.getAllByRole('navigation')).toHaveLength(1)
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/money/reports')
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('To collect')

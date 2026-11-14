@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo, useEffect, useRef, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -20,6 +20,8 @@ import { MoneyPagesSwitcher } from '@/features/money/MoneyPagesSheet'
  * phone bar says "Money" and the switcher names the page. No date line: the month views carry their own month. No tab carries a
  * number (redesign phase 0, plan section (c)): the one "needs you" count is Today's, and a late payment is a row on Today
  * (features/today/needsYou.ts).
+ * Forest (50-money-hub.html#money-strip): the desktop tabs are one underlined strip on a hairline, the lit tab green with a 3 px
+ * bar under it and scrolled into view when the window is narrow (R-023); Payments carries a small "New" word (gate 2).
  */
 export function MoneyFrame({
   active,
@@ -77,11 +79,7 @@ export function MoneyFrame({
             ))}
           </nav>
         ) : (
-          <nav aria-label="Money views" className="inline-flex max-w-full gap-[2px] justify-self-start rounded bg-selected p-[2px]" data-testid="money-tabs">
-            {tabs.map(t => (
-              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
-            ))}
-          </nav>
+          <DesktopTabs tabs={tabs} active={active} toOf={toOf} />
         )}
         {isAdmin && morePages && !phone ? (
           <div role="group" aria-label="More money pages" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
@@ -118,6 +116,21 @@ const FrameBar = memo(function FrameBar({ title }: { title: string }) {
   return null
 })
 
+/** The desktop strip: it scrolls sideways only when the tabs are wider than the page, and the lit tab is brought into view. */
+function DesktopTabs({ tabs, active, toOf }: { tabs: readonly MoneyTab[]; active: string | null; toOf: (t: MoneyTab) => string }) {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [active])
+  return (
+    <nav ref={ref} aria-label="Money views" className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden" data-testid="money-tabs">
+      {tabs.map(t => (
+        <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
+      ))}
+    </nav>
+  )
+}
+
 /** One Money tab. A plain Link: the lit tab follows `active`, not the address (a page that is not a tab passes null). */
 function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolean; phone?: boolean }) {
   return (
@@ -125,13 +138,20 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
       to={to}
       aria-current={on ? 'page' : undefined}
       className={cn(
-        'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
-        phone ? 'min-h-touch min-w-0 justify-center gap-1 px-1 text-center text-sm leading-tight' : 'min-h-control gap-2 px-4 text-sm',
-        on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg',
+        'inline-flex items-center transition-colors duration-fast ease-out',
+        phone
+          ? 'min-h-touch min-w-0 justify-center gap-1 rounded border px-1 text-center text-sm font-medium leading-tight'
+          : 'min-h-control shrink-0 gap-2 border-b-ring px-4 text-sm font-card',
+        phone ? (on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg') : on ? 'border-primary font-heavy text-primary' : 'border-transparent text-fg-2 hover:text-fg',
       )}
     >
       {/* One label on every screen: the full name. */}
       <span className="whitespace-nowrap">{tab.label}</span>
+      {tab.isNew && !phone ? (
+        <span aria-hidden="true" className="rounded-pill bg-brand-100 px-2 text-xs font-heavy text-primary">
+          New
+        </span>
+      ) : null}
     </Link>
   )
 }
@@ -165,7 +185,7 @@ export function MoneySubHeader({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* The title and what explains it (the (i), a tag) stay together: a lone (i) under the phone bar pointed at nothing. So a view with `meta` draws its title on a phone too. */}
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-          <h2 className={cn('text-xl font-semibold tracking-snug', !meta && 'max-md:sr-only')}>{title}</h2>
+          <h2 className={cn('text-xl font-heavy tracking-snug', !meta && 'max-md:sr-only')}>{title}</h2>
           {meta}
         </div>
         <span className="flex-1 max-md:hidden" />

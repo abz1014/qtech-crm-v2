@@ -36,3 +36,11 @@ export function useRecordPayment(orderId: string) {
     onSuccess: () => invalidateAfter(client, 'payment.record', { orderId }),
   })
 }
+
+/**
+ * Money > Payments: one month of payments received (admin; pass enabled = isAdmin). Keyed under the receivables, so recording,
+ * voiding, correcting or restoring a payment (they all make qk.money.receivables.all stale) reads the month again.
+ */
+export function usePaymentsReceived(month: string, enabled = true) {
+  return useQuery({ queryKey: [...qk.money.receivables.all, 'received', month], queryFn: () => api.listPaymentsReceived(month), enabled, staleTime: 0 })
+}
