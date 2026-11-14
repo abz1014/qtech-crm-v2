@@ -21,6 +21,8 @@ const mount = (role: string) =>
 describe('Create (the rail menu), by role', () => {
   it('admin: New enquiry, Expense, Payment received, Order without enquiry', () => {
     expect(newEntries('admin').map(e => e.label)).toEqual(['New RFQ', 'Expense', 'Payment received', 'Order without RFQ'])
+    // Payment received asks "Which order?" first, on To collect (?pay=1)
+    expect(newEntries('admin').find(e => e.id === 'payment')?.to).toBe('/money/receivables?pay=1')
   })
   it('sales: New enquiry and Order without enquiry, no Payment received and no Expense', () => {
     expect(newEntries('sales').map(e => e.label)).toEqual(['New RFQ', 'Order without RFQ'])

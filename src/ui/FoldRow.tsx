@@ -19,6 +19,22 @@ export interface FoldRowState {
   className?: string
 }
 
+/** A row's state chip (Forest 30-job-page .qb-fold chips): Done, Waiting, Not yet. */
+export type FoldRowChipTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
+export interface FoldRowChip {
+  icon: LucideIcon
+  /** The chip's word, drawn and heard ("Done", "Waiting", "Not yet"). */
+  word: string
+  tone: FoldRowChipTone
+}
+const CHIP_TONE: Record<FoldRowChipTone, string> = {
+  success: 'border-tone-success-fg/25 bg-tone-success-bg text-tone-success-fg',
+  info: 'border-tone-info-fg/25 bg-tone-info-bg text-tone-info-fg',
+  warning: 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
+  danger: 'border-tone-danger-fg/25 bg-tone-danger-bg text-tone-danger-fg',
+  neutral: 'border-dashed border-line-strong bg-tone-neutral-bg text-tone-neutral-fg',
+}
+
 /** The summary's colour: none (the quiet default), success (green), warning (brown: the step the job waits at). */
 export type FoldRowTone = 'success' | 'warning' | 'danger'
 const TONE: Record<FoldRowTone, string> = { success: 'text-tone-success-fg', warning: 'text-tone-warning-fg font-semibold', danger: 'text-tone-danger-fg font-semibold' }
@@ -48,24 +64,44 @@ export interface FoldRowProps {
   figure?: boolean
   /** A row that does not open: no button, no chevron (a step this job does not have). */
   disabled?: boolean
+  /**
+   * The state as a drawn chip, right of the words (the Job page's steps). The row then reads in two lines, the title over the summary,
+   * with no leading icon. The chip's word is part of the name; the state word is still heard first when it says something else
+   * ("Delivery, Now, Waiting, 2 of 3 delivered").
+   */
+  chip?: FoldRowChip
 }
 
-export function FoldRow({ state, title, summary, open, onToggle, controlsId, children, className, id, dataStage, bodyLabel, tone, muted = false, disabled = false, figure = false }: FoldRowProps) {
-  const lead = <Icon icon={state.icon} className={cn('order-first', state.className ?? 'text-fg-muted')} />
-  const words = (
+export function FoldRow({ state, title, summary, open, onToggle, controlsId, children, className, id, dataStage, bodyLabel, tone, muted = false, disabled = false, figure = false, chip }: FoldRowProps) {
+  const summaryTone = tone ? TONE[tone] : 'text-fg-2'
+  const words = chip ? (
+    // Two lines: the title over the summary, the chip to the right (DOM order keeps the name "Title State Chip Summary").
+    <>
+      <span className={cn('col-start-1 row-start-1 min-w-0 [overflow-wrap:anywhere]', muted && 'font-medium text-fg-2')}>{title}</span>
+      {chip.word === state.word ? null : <span className="sr-only">{state.word}</span>}
+      <span className={cn('col-start-2 row-span-2 row-start-1 inline-flex min-h-chip items-center gap-1 self-center whitespace-nowrap rounded-pill border py-px pl-2 pr-3 text-xs font-card leading-none', CHIP_TONE[chip.tone])}>
+        <Icon icon={chip.icon} size="chip" className="size-icon-chip" />
+        {chip.word}
+      </span>
+      <span className={cn('col-start-1 row-start-2 min-w-0 text-sm font-regular [overflow-wrap:anywhere]', tone ? summaryTone : 'text-fg-muted')}>{summary}</span>
+    </>
+  ) : (
     <>
       <span className={cn('shrink-0', muted && 'font-medium text-fg-muted')}>{title}</span>
       <span className="sr-only">{state.word}</span>
-      {lead}
-      <span className={cn('type-body flex-1 text-right [overflow-wrap:anywhere]', figure ? 'min-w-[min-content]' : 'min-w-0', tone ? TONE[tone] : 'text-fg-2')}>{summary}</span>
+      <Icon icon={state.icon} className={cn('order-first', state.className ?? 'text-fg-muted')} />
+      <span className={cn('type-body flex-1 text-right [overflow-wrap:anywhere]', figure ? 'min-w-[min-content]' : 'min-w-0', summaryTone)}>{summary}</span>
     </>
   )
+  // With a chip: a grid of [words | chip | chevron] over two lines; without: the one line.
+  const line = chip ? 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-px py-3' : cn('flex items-center gap-3 py-2', figure && 'flex-wrap gap-y-0')
+  const chevron = chip ? 'col-start-3 row-span-2 row-start-1' : ''
   return (
     <div id={id} className={cn('border-b', className)} data-fold-row="" data-stage={dataStage}>
       {disabled ? (
-        <div className={cn('type-row flex min-h-touch w-full items-center gap-3 py-2 text-left', figure && 'flex-wrap gap-y-0')}>
+        <div className={cn('type-row min-h-touch w-full text-left', line)}>
           {words}
-          <span className="size-4 shrink-0" aria-hidden="true" />
+          <span className={cn('size-4 shrink-0', chevron)} aria-hidden="true" />
         </div>
       ) : (
         <button
@@ -73,10 +109,10 @@ export function FoldRow({ state, title, summary, open, onToggle, controlsId, chi
           aria-expanded={open}
           aria-controls={controlsId}
           onClick={onToggle}
-          className={cn('type-row flex min-h-touch w-full items-center gap-3 py-2 text-left hover:bg-sunken', figure && 'flex-wrap gap-y-0')}
+          className={cn('type-row min-h-touch w-full text-left transition-colors duration-fast hover:bg-sunken', line, chip && '-mx-2 w-[calc(100%+var(--sp-4))] rounded-row px-2')}
         >
           {words}
-          <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform', open && 'rotate-90')} />
+          <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform duration-fast motion-reduce:transition-none', chevron, open && 'rotate-90')} />
         </button>
       )}
       {open && !disabled ? (

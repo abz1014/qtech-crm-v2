@@ -93,7 +93,7 @@ export function BottomTabs({
   const { pathname, search } = useLocation()
   const config = useMobileBarConfig()
   if (config?.hideTabs || links.length === 0) return null
-  const current = named ? links.find(l => l.id === named) : activeLink(links, pathname, search)
+  const current = named ? links.find(l => l.id === named) : activeLink(links, pathname, search, config?.lane ?? null)
   const engineer = role === 'engineer'
   // The office's + sits in the middle, between the two lanes (Home, Sell, +, Deliver, Money).
   const plusAt = engineer ? -1 : Math.min(2, links.length)

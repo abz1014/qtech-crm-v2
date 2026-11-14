@@ -117,18 +117,27 @@ export function laneOf(search: string): Lane | null {
   return v === 'sell' || v === 'deliver' ? v : null
 }
 
+/** The lane a job page was opened from (/jobs/139?from=deliver: the Jobs list adds it to a row it opens from a lane), or null. */
+export function fromLaneOf(search: string): Lane | null {
+  const v = new URLSearchParams(search).get('from')
+  return v === 'sell' || v === 'deliver' ? v : null
+}
+
 /**
- * Which of `links` an address belongs to. /jobs lights the lane in its ?lane= (an engineer's Jobs, whatever it says); the old RFQ and
- * enquiry addresses light Sell, the old order addresses Deliver. A job's own page and the bare list name no lane, so no lane is lit.
+ * Which of `links` an address belongs to. /jobs lights the lane in its ?lane= (an engineer's Jobs, whatever it says); a job's own page
+ * (/jobs/139) lights the lane it was opened from (?from=), else the lane the page says the job is in (`pageLane`: the Job page passes
+ * laneOfJob through the shell, so a job opened from Home or Search lights its lane too). The old RFQ and enquiry addresses light Sell,
+ * the old order addresses Deliver. The bare list names no lane, so no lane is lit.
  */
-export function activeLink(links: readonly ShellLink[], pathname: string, search = ''): ShellLink | undefined {
+export function activeLink(links: readonly ShellLink[], pathname: string, search = '', pageLane: Lane | null = null): ShellLink | undefined {
   const on = (p: string) => pathname === p || pathname.startsWith(`${p}/`)
   const find = (id: ShellLinkId) => links.find(l => l.id === id)
   if (on('/todo')) return find('home')
   if (on('/jobs') || on('/rfqs') || on('/enquiries') || on('/orders')) {
     const jobs = find('jobs')
     if (jobs) return jobs
-    const lane = pathname === '/jobs' || pathname === '/jobs/' ? laneOf(search) : null
+    const list = pathname === '/jobs' || pathname === '/jobs/'
+    const lane = list ? laneOf(search) : on('/jobs') ? (fromLaneOf(search) ?? pageLane) : null
     if (lane) return find(lane)
     if (on('/rfqs') || on('/enquiries')) return find('sell')
     if (on('/orders')) return find('deliver')

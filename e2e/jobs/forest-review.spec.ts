@@ -45,6 +45,12 @@ async function both(page: Page, path: string, name: string): Promise<void> {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect.soft(overflow, `${name}: no sideways scroll at 375`).toBeLessThanOrEqual(0)
     }
+    // The shell is one viewport tall and #main (or Home's list) scrolls inside it: grow the window to the content so the picture is whole.
+    const tall = await page.evaluate(() => Math.max(...Array.from(document.querySelectorAll('#main, #main *')).filter(e => { const s = getComputedStyle(e); return /auto|scroll/.test(s.overflowY) }).map(e => e.scrollHeight + e.getBoundingClientRect().top), window.innerHeight))
+    if (tall > h) {
+      await page.setViewportSize({ width: w, height: Math.min(Math.ceil(tall) + 120, 6000) })
+      await page.waitForTimeout(300)
+    }
     if (dir) await page.screenshot({ path: `${dir}/polish-${name}-${w}.png`, fullPage: true })
   }
 }

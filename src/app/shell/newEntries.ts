@@ -1,10 +1,11 @@
 import { Banknote, FilePlus2, ReceiptText, ShoppingCart, type LucideIcon } from 'lucide-react'
 
 /*
- * What "+ New" offers, by role (NewMenu.tsx draws it):
- *   admin     New enquiry (N) · Expense (E) · Payment received · Order without enquiry (O)
- *   sales     New enquiry (N) · Order without enquiry (O)           payments are admin only (0010): no "Payment received"
+ * What "+ Create" offers, by role (NewMenu.tsx draws it), in the live words (TONE-REVIEW):
+ *   admin     New RFQ (N) · Expense (E) · Payment received · Order without RFQ (O)
+ *   sales     New RFQ (N) · Order without RFQ (O)           payments are admin only (0010): no "Payment received"
  *   engineer  none
+ * Payment received opens To collect with ?pay=1: "Which order?" first, then Record payment for that order (ReceivablesPage).
  */
 export interface NewEntry {
   id: 'enquiry' | 'expense' | 'payment' | 'order'
@@ -22,7 +23,7 @@ export function newEntries(role: string): NewEntry[] {
     return [
       enquiry,
       { id: 'expense', label: 'Expense', icon: ReceiptText, to: '/money/expenses', key: 'E' },
-      { id: 'payment', label: 'Payment received', icon: Banknote, to: '/money/receivables' },
+      { id: 'payment', label: 'Payment received', icon: Banknote, to: '/money/receivables?pay=1' },
       order,
     ]
   }

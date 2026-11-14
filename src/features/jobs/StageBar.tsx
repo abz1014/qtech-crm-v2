@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
-import { Check, CircleAlert, CircleCheck, CircleDashed, Clock, Hourglass, Minus, X, type LucideIcon } from 'lucide-react'
+import { Check, CircleAlert, Minus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import type { StepTone } from '@/lib/status'
+import { STEP_CHIP } from '@/features/jobs/lib/stepChip'
 import { stageModel, type JobStanding, type StopState, type StopView } from '@/features/jobs/lib/stages'
 
 /*
@@ -101,14 +102,7 @@ export function StageLine({ job }: { job: JobStanding }) {
   )
 }
 
-/** Who acts next, as the hero's chip says it: an icon and a word (30-job-page.html chipFor). */
-const CHIP: Record<StepTone, { icon: LucideIcon; word: string }> = {
-  now: { icon: CircleAlert, word: 'Needs action' },
-  waiting: { icon: Hourglass, word: 'Waiting' },
-  late: { icon: Clock, word: 'Late' },
-  done: { icon: CircleCheck, word: 'Done' },
-  inert: { icon: CircleDashed, word: 'Nothing to do' },
-}
+const CHIP = STEP_CHIP
 
 /** "2 of 3 delivered, installation planned 28 Nov" as sentences: "2 of 3 delivered. Installation planned 28 Nov." */
 const sentences = (detail: string | null) =>

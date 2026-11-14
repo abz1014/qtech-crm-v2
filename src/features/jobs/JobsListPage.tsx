@@ -1,9 +1,11 @@
 import { NoPrimary } from '@/ui/NoPrimary'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { FilePlus2, List } from 'lucide-react'
+import { FilePlus2, List, ShoppingCart } from 'lucide-react'
 import { useSession } from '@/app/session'
+import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { NoResults } from '@/ui/NoResults'
 import { PageHeader } from '@/ui/PageHeader'
@@ -46,8 +48,7 @@ const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'Hist
 const LANE_TITLE: Record<JobLane, string> = { sell: 'Sell', deliver: 'Deliver' }
 
 /** The header's link to every job: the bare list, keeping the chip and the search. */
-const ALL_JOBS_LINK =
-  'inline-flex h-control shrink-0 items-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-sm font-bold text-fg transition-colors duration-fast ease-out hover:bg-selected max-md:h-touch'
+const ALL_JOBS_LINK = cn(buttonStyles({ variant: 'quiet' }), 'shrink-0 max-md:h-touch')
 
 /** Sell has no engineer view (20-sell.html#sell-eng-no-access): the jobs an engineer is put on are in Jobs. */
 function SellIsForOffice() {
@@ -87,7 +88,7 @@ function NextText({ job, role, card }: { job: JobRow; role: Who['role']; card?: 
 function JobCell({ job }: { job: JobRow }) {
   return (
     <span className="grid min-w-[5.5rem] gap-px whitespace-normal">
-      <span className="num whitespace-nowrap font-medium">{jobLabel(job.key)}</span>
+      <span className="num whitespace-nowrap font-heavy text-primary">{jobLabel(job.key)}</span>
       {job.repeatOf ? <span className="text-sm text-fg-muted">{`Repeat of ${jobLabel(job.repeatOf)}`}</span> : null}
     </span>
   )
@@ -295,14 +296,23 @@ function JobsList() {
         lede={lede}
         secondary={
           lane ? (
-            <Link to={allJobs()} className={ALL_JOBS_LINK}>
-              <Icon icon={List} />
-              All jobs
-            </Link>
+            <span className="flex flex-wrap items-center gap-2">
+              {money && lane === 'deliver' ? (
+                <Button icon={ShoppingCart} onClick={() => setCreating(true)}>
+                  Order without RFQ
+                </Button>
+              ) : null}
+              <Link to={allJobs()} className={ALL_JOBS_LINK}>
+                <Icon icon={List} />
+                All jobs
+              </Link>
+            </span>
           ) : undefined
         }
         primary={
-          money ? (
+          // Deliver starts at the order (40-deliver): its button is Order without RFQ, a white one (the jobs in it carry their own
+          // green steps). Sell and the bare list start an RFQ.
+          money && lane !== 'deliver' ? (
             <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/enquiries/new')}>
               New RFQ
             </Button>
@@ -312,7 +322,7 @@ function JobsList() {
       <div data-work>
       <DataTable
         label="Jobs"
-        className="rounded-none border-0 border-t bg-transparent"
+        toolbarCard
         sortParam="sort"
         columns={columns}
         rows={rows}

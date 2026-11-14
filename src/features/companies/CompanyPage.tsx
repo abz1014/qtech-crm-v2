@@ -350,7 +350,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
         <DetailHeader
           name={company.name}
           phoneSrOnly
-          breadcrumb={[{ label: 'Companies', to: '/companies' }, { label: company.name }]}
+          back={{ label: 'Companies', to: '/companies' }}
           more={moreMenu(false)}
           // the role is identity, not state: a Tag on its own row above the meta line (so no "·" follows it), never a chip in the h1
           chips={company.role ? <RoleChip role={company.role} /> : undefined}

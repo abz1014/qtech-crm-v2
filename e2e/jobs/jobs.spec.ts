@@ -8,6 +8,9 @@ import { db } from '../verify/support/db'
  * palette. A job is a read-only view over rfqs and orders (migration 0099): "Job 139" is an RFQ, "Job O-45" an order with no RFQ.
  * Every test makes its own records with unique names.
  */
+/** The Job page's one action: the lime button on the forest hero (a computer), or a green one (Forest, Button variant lime). */
+const ONE_ACTION = 'button.bg-primary, button.bg-lime-300'
+
 async function openPalette(page: Page) {
   await page.locator('#main').waitFor()
   await expect(async () => {
@@ -334,7 +337,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.locator('[data-stage-block]')).toHaveCount(1)
     await expect(page.locator('[data-stages] > [data-fold-row]')).toHaveCount(7)
     for (const b of await page.locator('[data-stages]').getByRole('button').all()) await expect(b).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await expect(page.locator(ONE_ACTION)).toHaveCount(1)
     await page.getByRole('button', { name: 'Ask suppliers' }).click()
     await expect(page.locator('[data-stages]').getByRole('button', { name: /^Quotation/ })).toHaveAttribute('aria-expanded', 'true')
     await review(page, 'job-page-1440')
@@ -344,7 +347,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
   test('the order steps are on the page (P5-D2): the green button opens the Supplier order stage, which holds the supplier work; Invoice offers nothing before delivery', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
-    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await expect(page.locator(ONE_ACTION)).toHaveCount(1)
     // Forest (30-job-page.html): the hero says the step and holds the one green button; the track card says the stage over seven stops
     const hero = page.getByRole('region', { name: 'Next step' })
     await expect(hero).toContainText(`Next step · Job ${f.rfq.number}`)
@@ -362,7 +365,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     // the customer PO is shown once, in the key facts line under the stage block; the Order step does not repeat it
     await expect(page.getByLabel('Key facts').getByText(f.po)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Create invoice' })).toHaveCount(0)
-    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await expect(page.locator(ONE_ACTION)).toHaveCount(1)
   })
 
   for (const role of ['sales', 'engineer'] as const) {
