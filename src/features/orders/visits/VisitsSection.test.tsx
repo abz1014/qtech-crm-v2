@@ -76,7 +76,7 @@ describe('Visits on an order', () => {
     const user = userEvent.setup()
     mount(admin)
     const list = await screen.findByRole('list', { name: 'Visits on this order' })
-    await user.click(within(within(list).getAllByRole('listitem')[1]).getByRole('button', { name: 'Mark visit done' }))
+    await user.click(within(within(list).getAllByRole('listitem')[1]).getByRole('button', { name: 'Mark visit done: Installation Mon 9 Nov' }))
     await waitFor(() => expect(fake?.calls.some(c => c.verb === 'update')).toBe(true))
     const call = fake!.calls.find(c => c.verb === 'update')!
     expect(call.ops).toContainEqual(['eq', ['id', 'v2']])
@@ -89,10 +89,12 @@ describe('Visits on an order', () => {
     const list = await screen.findByRole('list', { name: 'Visits on this order' })
     const items = within(list).getAllByRole('listitem')
     // v1 is done (no Mark done), v2 is theirs, v3 is Bilal's
-    expect(within(items[0]).queryByRole('button', { name: 'Mark visit done' })).toBeNull()
-    expect(within(items[1]).getByRole('button', { name: 'Mark visit done' })).toBeInTheDocument()
-    expect(within(items[2]).queryByRole('button', { name: 'Mark visit done' })).toBeNull()
-    expect(within(items[2]).queryByRole('button', { name: 'Edit visit' })).toBeNull()
+    expect(within(items[0]).queryByRole('button', { name: 'Mark visit done: Survey Mon 2 Nov' })).toBeNull()
+    expect(within(items[0]).getByRole('button', { name: 'Edit visit: Survey Mon 2 Nov' })).toBeInTheDocument()
+    expect(within(items[1]).getByRole('button', { name: 'Mark visit done: Installation Mon 9 Nov' })).toBeInTheDocument()
+    expect(within(items[2]).queryByRole('button', { name: 'Mark visit done: Service Fri 20 Nov' })).toBeNull()
+    expect(within(items[2]).queryByRole('button', { name: 'Edit visit: Service Fri 20 Nov' })).toBeNull()
+    expect(within(items[2]).getAllByRole('button')).toHaveLength(1)
     expect(screen.queryByRole('button', { name: 'Add visit' })).toBeNull()
   })
 
@@ -100,7 +102,31 @@ describe('Visits on an order', () => {
     fake = db()
     mount(engineer, { isEngineer: true, canEdit: true })
     const list = await screen.findByRole('list', { name: 'Visits on this order' })
-    expect(within(list).getAllByRole('button', { name: 'Service report' })).toHaveLength(3)
+    expect(within(list).getAllByRole('button', { name: /^Service report: / }).map(b => b.getAttribute('aria-label'))).toEqual([
+      'Service report: Survey Mon 2 Nov',
+      'Service report: Installation Mon 9 Nov',
+      'Service report: Service Fri 20 Nov',
+    ])
+  })
+
+  it('draws the engineer job page version as its own card: a Visits region with its heading and no Add visit', async () => {
+    fake = db()
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={qc}>
+        <SessionProvider value={engineer}>
+          <ToastProvider>
+            <VisitsSection order={header({ needsCommissioning: true })} engineers={[{ id: 'e1', name: 'Hamza Sheikh' }]} isEngineer canEdit card />
+          </ToastProvider>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    const region = screen.getByRole('region', { name: 'Visits' })
+    expect(within(region).getByRole('heading', { level: 2, name: 'Visits' })).toBeInTheDocument()
+    expect(within(region).getByRole('status', { name: 'Loading visits' })).toBeInTheDocument()
+    await within(region).findByRole('list', { name: 'Visits on this order' })
+    expect(within(region).queryByRole('status', { name: 'Loading visits' })).toBeNull()
+    expect(within(region).queryByRole('button', { name: 'Add visit' })).toBeNull()
   })
 
   it('says so when there are no visits', async () => {

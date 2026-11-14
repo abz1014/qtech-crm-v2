@@ -142,3 +142,52 @@ test('an engineer changes only their own visits, and cannot add or delete one', 
   expect((await rest('engineer', `order_visits?id=eq.${mine.id}`, { method: 'DELETE' })).body).toHaveLength(0)
   expect((await visitsOf(s.order.id)).find(v => v.id === theirs.id)?.notes).toBeNull()
 })
+
+test('forest: the engineer reads Visits and Delivery challans as cards, never the customer PO (pictures at 1440 and 375)', async ({ page, browser }) => {
+  const po = `CPO-${Date.now().toString(36).toUpperCase()}`
+  const s = await seedOrder({ customer_po_number: po })
+  await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: s.order.id, position: 0, description: 'Endress+Hauser Cerabar PMC71 pressure transmitter', qty: 12, unit: 'nos', unit_price_net: 1500 }, prefer: 'return=minimal' }))
+  await must(
+    rest('admin', 'order_visits', {
+      method: 'POST',
+      body: [
+        { order_id: s.order.id, visit_type: 'survey', visit_on: karachiDay(-4), engineer_id: ENGINEER, notes: 'Gate pass arranged. Panel space checked with the plant manager.', done_on: karachiDay(-4) },
+        { order_id: s.order.id, visit_type: 'installation', visit_on: karachiDay(3), engineer_id: ENGINEER },
+        { order_id: s.order.id, visit_type: 'service', visit_on: karachiDay(12), engineer_id: ADMIN },
+      ],
+      prefer: 'return=minimal',
+    }),
+  )
+  await must(rest('admin', 'rpc/create_delivery_challan', { method: 'POST', body: { p_order_id: s.order.id } }))
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openAs(page, 'engineer', `/orders/${s.order.id}`)
+  for (const [name, size] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 375, height: 812 }]] as const) {
+    await page.setViewportSize(size)
+    await page.reload()
+    await page.locator('#main').waitFor()
+    const visits = page.getByRole('region', { name: 'Visits', exact: true })
+    const challans = page.getByRole('region', { name: 'Delivery challans', exact: true })
+    await expect(visits.getByRole('heading', { name: 'Visits' })).toBeVisible()
+    await expect(visits.getByRole('list', { name: 'Visits on this order' }).getByRole('listitem')).toHaveCount(3)
+    await expect(visits.getByRole('button', { name: /^Mark visit done: Installation / })).toBeVisible()
+    await expect(challans.getByRole('button', { name: 'New challan' })).toBeVisible()
+    await expect(challans.getByRole('button', { name: /^Download challan DC-\d{4}$/ })).toBeVisible()
+    // an engineer's row buttons are 48 px tall on a phone
+    if (name === 'phone') expect((await visits.getByRole('button', { name: /^Service report: Survey / }).boundingBox())?.height).toBeGreaterThanOrEqual(48)
+    // live bug 9 (gate 2): no customer PO on an engineer's screen
+    await expect(page.locator('#main')).not.toContainText(po)
+    await visits.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `test-results/forest-b5-delivery-${name}.png`, fullPage: true, animations: 'disabled', caret: 'hide' })
+  }
+
+  // the office's Delivery step, for the picture beside it
+  const office = await browser.newPage({ baseURL: test.info().project.use.baseURL, viewport: { width: 1440, height: 900 } })
+  await openAs(office, 'admin', `/orders/${s.order.id}`)
+  await openStage(office, 'Delivery')
+  await expect(office.getByRole('region', { name: 'Commissioning' }).getByRole('list', { name: 'Visits on this order' }).getByRole('listitem')).toHaveCount(3)
+  await office.getByRole('button', { name: /^Challans/ }).click()
+  await expect(office.getByRole('region', { name: 'Delivery challans' }).getByRole('button', { name: /^Download challan / })).toBeVisible()
+  await office.screenshot({ path: 'test-results/forest-b5-delivery-office.png', fullPage: true, animations: 'disabled', caret: 'hide' })
+  await office.close()
+})

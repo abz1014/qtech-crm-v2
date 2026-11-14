@@ -4,14 +4,19 @@ import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
+import { cn } from '@/lib/utils'
+import type { StepTone } from '@/lib/status'
 import { Avatar } from '@/ui/Avatar'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextArea } from '@/ui/form/TextField'
+import { Skeleton } from '@/ui/Skeleton'
+import { StatusText } from '@/ui/StatusText'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, PersonRow } from '@/features/orders/api'
 import { useEngineerCandidates } from '@/features/orders/hooks'
@@ -47,42 +52,81 @@ export function VisitsSection({ order, engineers, isEngineer, canEdit, card = fa
   const rows = visits.data ?? []
   const today = businessToday()
 
-  // card: the engineer's job page draws it as its own panel, like Contact and Delivery challans; inside the commissioning panel it stays a plain section.
-  const Head = card ? 'h2' : 'h3'
+  const body = (
+    <>
+      {visits.isLoading ? <VisitsLoading card={card} /> : null}
+      {visits.isError ? <p className={cn('type-body text-fg-muted', card ? 'pt-3' : 'border-b py-3')}>The visits did not load. Reload the page to try again.</p> : null}
+      {!visits.isError && !visits.isLoading && rows.length === 0 ? <p className={cn('type-body text-fg-muted', card ? 'pt-3' : 'border-b py-3')}>No visits yet.</p> : null}
+      {rows.length > 0 ? (
+        <ul className="m-0 grid list-none grid-cols-[minmax(0,1fr)] p-0" aria-label="Visits on this order">
+          {rows.map(v => (
+            <VisitRowItem key={v.id} order={order} visit={v} state={visitState(v, today)} mayEdit={canEdit && canEditVisit(v, who, onOrder)} onEdit={() => setEditing(v)} card={card} />
+          ))}
+        </ul>
+      ) : null}
+      {editing ? <VisitEditDialog order={order} visit={editing === 'new' ? null : editing} engineers={engineers} office={office && !isEngineer} onClose={() => setEditing(null)} /> : null}
+    </>
+  )
+
+  // card: the engineer's job page draws it as its own Forest card (43-job-delivery #e-visits), like Contact and Delivery challans, with
+  // phone-sized buttons. Inside the office's Commissioning row it stays a plain section under its own small heading (#dv-commissioning).
+  if (card) {
+    return (
+      <section aria-label="Visits" className={cn(CARD, 'min-w-0 p-card')} data-testid="visits">
+        <h2 className="type-section">Visits</h2>
+        {body}
+      </section>
+    )
+  }
   return (
-    <section
-      aria-label={card ? 'Visits' : undefined}
-      className="min-w-0"
-      data-testid="visits"
-    >
-      <div className="flex flex-wrap items-center gap-3 border-b py-2">
-        <Head className={card ? 'type-section' : 'type-row'}>Visits</Head>
+    <section className="min-w-0" data-testid="visits">
+      <div className="flex min-h-control flex-wrap items-center gap-x-3 gap-y-2 border-b py-2">
+        <h3 className="type-row">Visits</h3>
         {office && canEdit ? (
           <Button size="sm" variant="quiet" icon={Plus} className="ml-auto" onClick={() => setEditing('new')}>
             Add visit
           </Button>
         ) : null}
       </div>
-      <div className="contents">
-      {visits.isError ? <p className="border-b py-2 type-body text-fg-muted">The visits did not load. Reload the page to try again.</p> : null}
-      {!visits.isError && !visits.isLoading && rows.length === 0 ? <p className="border-b py-2 type-body text-fg-muted">No visits yet.</p> : null}
-      {rows.length > 0 ? (
-        <ul className="m-0 list-none p-0" aria-label="Visits on this order">
-          {rows.map(v => (
-            <VisitRowItem key={v.id} order={order} visit={v} state={visitState(v, today)} mayEdit={canEdit && canEditVisit(v, who, onOrder)} onEdit={() => setEditing(v)} />
-          ))}
-        </ul>
-      ) : null}
-      {editing ? <VisitEditDialog order={order} visit={editing === 'new' ? null : editing} engineers={engineers} office={office && !isEngineer} onClose={() => setEditing(null)} /> : null}
-      </div>
+      {body}
     </section>
   )
 }
 
-function VisitRowItem({ order, visit, state, mayEdit, onEdit }: { order: OrderHeader; visit: VisitRow; state: VisitState; mayEdit: boolean; onEdit: () => void }) {
+/** Two rows shaped like a visit (type, day, state; the engineer; the buttons) while the list loads. */
+function VisitsLoading({ card }: { card: boolean }) {
+  return (
+    <div className="grid" role="status" aria-label="Loading visits">
+      {[0, 1].map(n => (
+        <div key={n} className={cn('grid gap-3 py-3', (!card || n === 0) && 'border-b')}>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-4 w-[6rem]" />
+            <Skeleton className="h-4 w-[5rem]" />
+            <Skeleton className="h-4 w-[4rem]" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="size-8 rounded-pill" />
+            <Skeleton className="h-3 w-[7rem]" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className={cn('w-[7rem]', card ? 'h-control' : 'h-control-sm')} />
+            <Skeleton className={cn('w-[7rem]', card ? 'h-control' : 'h-control-sm')} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** The state as the Forest status (an icon and a word in the tone's ink): Done with its day, Planned, Late, No date yet. */
+const STATE_TONE: Record<VisitState, StepTone> = { done: 'done', planned: 'waiting', late: 'late', unplanned: 'inert' }
+
+function VisitRowItem({ order, visit, state, mayEdit, onEdit, card }: { order: OrderHeader; visit: VisitRow; state: VisitState; mayEdit: boolean; onEdit: () => void; card: boolean }) {
   const { toast } = useToast()
   const update = useUpdateVisit(order.id)
   const report = useServiceReport(order, visit)
+  // the buttons repeat on every row, so each one's name says which visit it is for ("Edit visit: Survey Tue 20 Oct")
+  const which = `${VISIT_TYPE_LABEL[visit.type]}${visit.on ? ` ${formatDay(visit.on)}` : ''}`
   const markDone = async () => {
     try {
       await update.mutateAsync({ id: visit.id, patch: { done_on: businessToday() } })
@@ -101,34 +145,40 @@ function VisitRowItem({ order, visit, state, mayEdit, onEdit }: { order: OrderHe
       toast({ title: 'Could not mark it done', body: mapPgError(err, { entity: 'visit' }).message, tone: 'danger' })
     }
   }
+  const canMark = mayEdit && !visit.doneOn
+  const count = (canMark ? 1 : 0) + (mayEdit ? 1 : 0) + 1
+  // an engineer's phone: the buttons are 48 px and share the width (two to a line; an odd first one takes the whole line)
+  const size = card ? 'md' : 'sm'
+  const btn = card ? 'max-md:h-control-lg max-md:w-full' : undefined
+  const lead = card && count % 2 === 1 ? 'max-md:col-span-2' : undefined
   return (
-    <li className="grid gap-2 border-b py-3" data-visit={visit.id}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-sm font-medium">{VISIT_TYPE_LABEL[visit.type]}</span>
-        <span className={visit.on ? 'num text-sm' : 'text-sm text-fg-muted'}>{visit.on ? formatDay(visit.on) : 'No date yet'}</span>
-        <span className={state === 'late' ? 'text-xs font-medium text-tone-danger-fg' : 'text-xs text-fg-muted'}>
-          {state === 'done' && visit.doneOn ? `${VISIT_STATE_LABEL.done} ${formatDay(visit.doneOn)}` : VISIT_STATE_LABEL[state]}
-        </span>
+    <li className={cn('grid min-w-0 gap-2 border-b py-3', card && 'last:border-b-0 last:pb-0')} data-visit={visit.id}>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="font-card text-base">{VISIT_TYPE_LABEL[visit.type]}</span>
+        <span className={visit.on ? 'num text-sm text-fg-2' : 'text-sm text-fg-muted'}>{visit.on ? formatDay(visit.on) : 'No date yet'}</span>
+        {state === 'unplanned' ? null : (
+          <StatusText tone={STATE_TONE[state]}>{state === 'done' && visit.doneOn ? `${VISIT_STATE_LABEL.done} ${formatDay(visit.doneOn)}` : VISIT_STATE_LABEL[state]}</StatusText>
+        )}
       </div>
       {visit.engineerName ? (
-        <span className="flex items-center gap-2 text-sm">
+        <span className="flex min-w-0 items-center gap-2 text-sm text-fg-2">
           <Avatar name={visit.engineerName} />
-          {visit.engineerName}
+          <span className="min-w-0 [overflow-wrap:anywhere]">{visit.engineerName}</span>
         </span>
       ) : null}
-      {visit.notes ? <p className="whitespace-pre-wrap text-sm">{visit.notes}</p> : null}
-      <div className="flex flex-wrap items-center gap-2">
-        {mayEdit && !visit.doneOn ? (
-          <Button size="sm" icon={CircleCheck} onClick={() => void markDone()} busy={update.isPending} busyLabel="Saving">
+      {visit.notes ? <p className="m-0 whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{visit.notes}</p> : null}
+      <div className={cn('mt-1 flex flex-wrap items-center gap-2', card && 'max-md:grid max-md:grid-cols-2')}>
+        {canMark ? (
+          <Button size={size} icon={CircleCheck} className={cn(btn, lead)} onClick={() => void markDone()} busy={update.isPending} busyLabel="Saving" aria-label={`Mark visit done: ${which}`}>
             Mark visit done
           </Button>
         ) : null}
         {mayEdit ? (
-          <Button size="sm" icon={Pencil} onClick={onEdit}>
+          <Button size={size} icon={Pencil} className={cn(btn, !canMark && lead)} onClick={onEdit} aria-label={`Edit visit: ${which}`}>
             Edit visit
           </Button>
         ) : null}
-        <Button size="sm" icon={FileDown} onClick={() => void report.download()} busy={report.pending} busyLabel="Preparing">
+        <Button size={size} icon={FileDown} className={cn(btn, !mayEdit && lead)} onClick={() => void report.download()} busy={report.pending} busyLabel="Preparing" aria-label={`Service report: ${which}`}>
           Service report
         </Button>
       </div>
