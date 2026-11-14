@@ -29,6 +29,12 @@ async function seed(): Promise<Fixture> {
   const [leg] = await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id, currency: 'PKR', placed_on: karachiDay(-4), expected_on: karachiDay(2) } }))
   await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, position: 0, description: `Pressure transmitter ${tag}`, qty: 4, unit_price_net: 85000, gst_rate: 18, supplier_order_id: leg.id }, prefer: 'return=minimal' }))
   await must(rest('admin', 'order_engineers', { method: 'POST', body: { order_id: order.id, user_id: ENGINEER }, prefer: 'return=minimal' }))
+  // two site visits for the engineer's day (today and in three days): the engineer Home draws a card per visit
+  for (const day of [0, 3]) {
+    const [visit] = await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, ordered_on: karachiDay(-8), needs_commissioning: true, commissioning_planned_on: karachiDay(day), payment_terms_days: 30 } }))
+    await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: visit.id, position: 0, description: `Flow computer install ${tag}`, qty: 1, unit_price_net: 50000, gst_rate: 18 }, prefer: 'return=minimal' }))
+    await must(rest('admin', 'order_engineers', { method: 'POST', body: { order_id: visit.id, user_id: ENGINEER }, prefer: 'return=minimal' }))
+  }
   return { company, rfq, ordered }
 }
 
