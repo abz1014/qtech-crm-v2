@@ -36,8 +36,8 @@ export function CategoriesDealtIn({ companyId }: { companyId: string }) {
   const busy = carry.isPending || unlink.isPending
 
   return (
-    <Panel flat title="Categories they deal in" meta={loading || failed ? undefined : rows.length === 0 ? 'None yet' : `${rows.length}`}>
-      <div className="grid gap-3 p-4">
+    <Panel card title="Categories they deal in" meta={loading || failed ? undefined : rows.length === 0 ? 'None yet' : `${rows.length}`}>
+      <div className="grid gap-3 px-5 pb-3 pt-1">
         {loading ? (
           <Skeleton className="h-10 w-full" />
         ) : failed ? (
@@ -71,7 +71,7 @@ export function CategoriesDealtIn({ companyId }: { companyId: string }) {
           </ul>
         )}
         {canTag && !loading && !failed && options.length > 0 ? (
-          <div className="grid max-w-[360px] gap-1">
+          <div className="grid max-w-[var(--panel-w)] gap-1">
             <label htmlFor="tag-category" className="flex items-center gap-2 text-base font-medium">
               <TagsIcon aria-hidden="true" className="size-4" />
               Tag a category

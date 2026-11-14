@@ -113,7 +113,7 @@ function PriceCell({ r }: { r: QuoteRow }) {
   if (p.state === 'hidden') {
     return (
       <span className="inline-flex items-start gap-2 text-base text-fg-muted md:justify-end md:text-right">
-        <Icon icon={Lock} size="sm" className="mt-[3px]" />
+        <Icon icon={Lock} size="sm" className="mt-1" />
         Price on file, currency unverified
       </span>
     )
@@ -121,7 +121,7 @@ function PriceCell({ r }: { r: QuoteRow }) {
   if (p.state === 'none') return <span className="text-base text-fg-muted text-pretty">{r.pkrNote ?? '—'}</span>
   const cur = (p.amount ?? '').split(' ')[0]
   return (
-    <span className="grid gap-[2px] md:justify-items-end">
+    <span className="grid gap-px md:justify-items-end">
       <span className="num whitespace-nowrap">
         <span className="mr-1 font-sans text-base text-fg-muted">{cur}</span>
         {p.figure}
@@ -263,7 +263,7 @@ export function RecentQuotes({
   const rows = view ? (all ? view.allQuotes : view.allQuotes.slice(0, ENQUIRY_ROWS_FIRST)) : []
   return (
     <Panel
-      flat
+      card
       title="RFQs"
       info={
         prices ? (
@@ -352,7 +352,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
   const wide = useMediaQuery('(min-width: 768px)')
   return (
     <Panel
-      flat
+      card
       title="Deliveries"
       info={
         <InfoTip label="About the dates">
@@ -438,7 +438,7 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
   const row = 'flex items-baseline justify-between gap-4 border-t py-2 text-sm first:border-t-0'
   const prices = useSeesPrices()
   return (
-    <Panel flat title="Open with them">
+    <Panel card title="Open with them">
       <div className="px-5 py-3">
         {loading ? (
           <div role="status" className="grid gap-2" aria-busy="true" aria-label="Loading what is open with them">
