@@ -312,7 +312,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         icon={FileCheck2}
         size="lg"
         className="md:w-[min(820px,calc(100vw-2rem))]"
-        meta={<Tag className="border-line-strong bg-transparent text-fg-2">{tag}</Tag>}
+        meta={<Tag className="whitespace-normal border-line-strong bg-transparent px-2 text-fg-2">{tag}</Tag>}
         lead={
           <Button icon={FileText} onClick={() => void preview()} busy={previewing} busyLabel="Preparing" disabled={loading || ccy === null || rows.length === 0}>
             Preview PDF

@@ -176,7 +176,7 @@ export function OrderItemsPanel({
     if (!leg) return <span className="text-fg-muted">No supplier yet</span>
     const st = legState({ placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }, today)
     return (
-      <span className="grid min-w-[10rem] max-w-[14rem] gap-px whitespace-normal">
+      <span className="grid min-w-[8.5rem] max-w-[14rem] gap-px whitespace-normal">
         <span className="break-words font-regular text-fg">
           {leg.supplierName}
         </span>
@@ -229,7 +229,7 @@ export function OrderItemsPanel({
   const groupPriceText = (r: Row) =>
     r.groupPrice === 'mixed' ? <span className="text-fg-muted">Mixed</span> : r.unitPriceNet === null ? <span className="text-fg-muted">Not set</span> : <span className="num">{formatAmount(r.unitPriceNet)}</span>
   const itemCell = (r: Row) => (
-    <span className="grid min-w-[12rem] grid-cols-[1.5rem_minmax(0,1fr)] items-baseline gap-x-2 whitespace-normal">
+    <span className="grid min-w-[10rem] grid-cols-[1.5rem_minmax(0,1fr)] items-baseline gap-x-2 whitespace-normal">
       <span className="num text-sm font-regular text-fg-muted">{r.no}</span>
       {r.kind === 'head' ? (
         <span className="grid min-w-0 gap-px">
