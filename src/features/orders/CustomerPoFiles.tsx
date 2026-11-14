@@ -55,11 +55,11 @@ export function CustomerPoFiles({ orderId, canAdd }: { orderId: string; canAdd: 
       {pos.length > 0 ? (
         <ul className="grid gap-1" aria-label="Customer PO files">
           {pos.map(f => (
-            <li key={f.id} className="flex min-w-0 items-start gap-2">
-              <span className="shrink-0 text-fg-2">PO file:</span>
+            <li key={f.id} className="flex min-w-0 items-baseline gap-2">
+              <span className="shrink-0 text-sm text-fg-2">PO file:</span>
               {urls.data?.[f.path] ? (
-                <a href={urls.data[f.path]} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-start gap-2 rounded text-primary hover:underline">
-                  <Icon icon={FileText} className="mt-[3px] shrink-0" />
+                <a href={urls.data[f.path]} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 self-center rounded font-medium text-primary underline underline-offset-2 hover:text-primary-hover">
+                  <Icon icon={FileText} className="shrink-0" />
                   <span className="min-w-0 [overflow-wrap:anywhere]">{f.fileName}</span>
                 </a>
               ) : (
@@ -70,7 +70,7 @@ export function CustomerPoFiles({ orderId, canAdd }: { orderId: string; canAdd: 
         </ul>
       ) : null}
       {canAdd ? (
-        <div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <input
             ref={input}
             type="file"
@@ -89,6 +89,7 @@ export function CustomerPoFiles({ orderId, canAdd }: { orderId: string; canAdd: 
           <Button size="touch" icon={Paperclip} className="text-base" busy={sending} busyLabel="Adding" onClick={() => input.current?.click()}>
             Attach PO file
           </Button>
+          <span className="text-sm text-fg-muted">PDF or a picture</span>
         </div>
       ) : null}
     </div>

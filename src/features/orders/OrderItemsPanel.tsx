@@ -164,11 +164,11 @@ export function OrderItemsPanel({
     if (!leg) return <span className="text-fg-muted">No supplier yet</span>
     const st = legState({ placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }, today)
     return (
-      <span className="grid min-w-[140px] max-w-[260px] gap-px whitespace-normal">
-        <span className="line-clamp-2 break-words" title={leg.supplierName}>
+      <span className="grid min-w-[9rem] max-w-[16rem] gap-px whitespace-normal">
+        <span className="line-clamp-2 break-words font-regular text-fg" title={leg.supplierName}>
           {leg.supplierName}
         </span>
-        <span className="text-xs text-fg-muted">
+        <span className="text-xs font-regular text-fg-muted">
           <span className={cn(st === 'late' && 'font-medium text-tone-danger-fg')}>{STATE_WORDS[st]}</span>
           {money ? (
             r.supplierUnitPrice === null ? (
@@ -197,7 +197,7 @@ export function OrderItemsPanel({
         aria-label={`Selling price before GST, PKR, ${r.description}`}
         data-autofocus
         autoFocus
-        className="w-[160px]"
+        className="w-[10rem]"
         onKeyDown={e => {
           if (e.key === 'Enter') void saveGroup(r)
           if (e.key === 'Escape') {
@@ -217,14 +217,14 @@ export function OrderItemsPanel({
   const groupPriceText = (r: Row) =>
     r.groupPrice === 'mixed' ? <span className="text-fg-muted">Mixed</span> : r.unitPriceNet === null ? <span className="text-fg-muted">Not set</span> : <span className="num">{formatAmount(r.unitPriceNet)}</span>
   const itemCell = (r: Row) => (
-    <span className="grid min-w-[200px] grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 whitespace-normal">
-      <span className="num text-xs text-fg-muted">{r.no}</span>
+    <span className="grid min-w-[12rem] grid-cols-[1.5rem_minmax(0,1fr)] items-baseline gap-x-2 whitespace-normal">
+      <span className="num text-sm font-regular text-fg-muted">{r.no}</span>
       {r.kind === 'head' ? (
         <span className="grid min-w-0 gap-px">
           <span className="line-clamp-2 break-words font-medium" title={r.description}>
             {r.description}
           </span>
-          <span className="inline-flex w-fit items-center gap-1 text-xs text-fg-muted">
+          <span className="inline-flex w-fit items-center gap-1 text-xs font-regular text-fg-muted">
             <Split size={12} aria-hidden="true" />
             split across {r.members?.length ?? 0} suppliers
           </span>
@@ -240,17 +240,17 @@ export function OrderItemsPanel({
         </span>
       ) : r.kind === 'part' ? (
         <span className="grid min-w-0 gap-px">
-          <span>
+          <span className="font-regular text-fg-2">
             Part {(r.partIndex ?? 0) + 1} of {r.partCount}
           </span>
-          {[r.brandName, r.model].filter(Boolean).length ? <span className="text-xs text-fg-muted">{[r.brandName, r.model].filter(Boolean).join(' · ')}</span> : null}
+          {[r.brandName, r.model].filter(Boolean).length ? <span className="text-xs font-regular text-fg-muted">{[r.brandName, r.model].filter(Boolean).join(' · ')}</span> : null}
         </span>
       ) : (
         <span className="grid min-w-0 gap-px">
-          <span className="line-clamp-2 break-words" title={r.description}>
+          <span className="line-clamp-2 break-words font-medium" title={r.description}>
             {r.description}
           </span>
-          <span className="text-xs text-fg-muted">
+          <span className="text-xs font-regular text-fg-muted">
             {r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}
             {/* below 1024 the unit price folds into the item line */}
             {money && r.unitPriceNet !== null ? (
@@ -266,7 +266,7 @@ export function OrderItemsPanel({
     </span>
   )
   const qtyCell = (r: Row) => (
-    <span className="num">
+    <span className="num font-regular">
       {r.qty}
       {r.unit ? <span className="text-fg-muted"> {unitWord(r.qty, r.unit)}</span> : null}
     </span>
@@ -279,7 +279,7 @@ export function OrderItemsPanel({
     value: r => r.unitPriceNet,
     cell: r =>
       r.kind !== 'head' ? (
-        <Money value={r.unitPriceNet} prefix={false} />
+        <Money value={r.unitPriceNet} prefix={false} className="font-regular text-fg-2" />
       ) : (
         <span className="inline-flex items-center justify-end gap-1">
           {groupPriceText(r)}
@@ -289,7 +289,15 @@ export function OrderItemsPanel({
       ),
     hideBelowLg: true,
   }
-  const totalCol: Column<Row> = { id: 'net', header: basisUnknown ? 'Total as typed (PKR)' : 'Total (PKR)', kind: 'money', value: net, total: true }
+  // The line total is the figure that counts: heavier than the unit price beside it (mockup 41).
+  const totalCol: Column<Row> = {
+    id: 'net',
+    header: basisUnknown ? 'Total as typed (PKR)' : 'Total (PKR)',
+    kind: 'money',
+    value: net,
+    total: true,
+    cell: r => (net(r) === null ? null : <Money value={net(r)} prefix={false} strong className="font-semibold text-fg" />),
+  }
   const gstCol: Column<Row> = {
     id: 'gst',
     header: 'GST',
@@ -302,7 +310,7 @@ export function OrderItemsPanel({
           value={String(rate(r))}
           onChange={e => updateItem.mutate({ id: r.id, patch: { gst_rate: Number(e.target.value) } }, { onError: fail('Could not change the GST') })}
           options={gstOptions(rate(r))}
-          className="w-[120px]"
+          className="w-[7.5rem]"
         />
       ),
   }
@@ -414,48 +422,82 @@ export function OrderItemsPanel({
           </div>
         }
         mobileRow={r =>
+          // The phone card (mockup 41): the line number in its own column so every line of words starts at one edge; the line total on the
+          // right in mono; quantity times the unit price, then who supplies it. In edit mode the GST choice, Service and the row actions follow.
           r.kind === 'head' ? (
-            <span className="grid gap-1">
-              <span className="font-medium">{r.description}</span>
-              <span className="text-sm text-fg-muted">
-                <span className="num">{r.qty}</span>
-                {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''} · split across {r.members?.length ?? 0} suppliers
+            <span className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2 gap-y-1">
+              <span className="num pt-px text-sm text-fg-muted">{r.no}</span>
+              <span className="grid min-w-0 gap-1">
+                <span className="break-words font-medium">{r.description}</span>
+                <span className="inline-flex flex-wrap items-center gap-x-1 text-sm text-fg-muted">
+                  <span className="num">{r.qty}</span>
+                  {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''}
+                  <Split size={12} aria-hidden="true" className="ml-1" /> split across {r.members?.length ?? 0} suppliers
+                </span>
+                {money ? (
+                  <span className="text-sm text-fg-2">
+                    {groupPriceText(r)} <span className="text-fg-muted">each</span>
+                  </span>
+                ) : null}
+                {editable ? (
+                  editingGroup === r.id ? (
+                    groupEditor(r)
+                  ) : (
+                    <Button size="sm" variant="quiet" icon={Pencil} className="justify-self-start" aria-label={`Edit price, ${r.description}`} onClick={() => startGroupEdit(r)}>
+                      Edit price
+                    </Button>
+                  )
+                ) : null}
               </span>
-              {editable ? (
-                editingGroup === r.id ? (
-                  groupEditor(r)
-                ) : (
-                  <Button size="sm" variant="quiet" icon={Pencil} className="justify-self-start" aria-label={`Edit price, ${r.description}`} onClick={() => startGroupEdit(r)}>
-                    Edit price
-                  </Button>
-                )
-              ) : null}
             </span>
           ) : (
-            <span className="grid gap-1">
-              <span className="flex items-start justify-between gap-3">
-                <span className="min-w-0 break-words font-medium">
-                  <span className="num mr-2 text-xs font-regular text-fg-muted">{r.no}</span>
-                  {r.kind === 'part' ? `${r.description}, part ${(r.partIndex ?? 0) + 1} of ${r.partCount}` : r.description}
+            <span className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2">
+              <span className="num pt-px text-sm text-fg-muted">{r.no}</span>
+              <span className="grid min-w-0 gap-1">
+                <span className="flex items-start justify-between gap-3">
+                  <span className="min-w-0 break-words font-medium">{r.kind === 'part' ? `${r.description}, part ${(r.partIndex ?? 0) + 1} of ${r.partCount}` : r.description}</span>
+                  {money && net(r) !== null ? <span className="num shrink-0 font-semibold">{formatAmount(net(r) as number)}</span> : null}
                 </span>
-                {money && net(r) !== null ? <span className="num shrink-0">{formatAmount(net(r) as number)}</span> : null}
+                {r.isService || r.brandName || r.model ? (
+                  <span className="text-xs text-fg-muted">{r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}</span>
+                ) : null}
+                <span className="text-sm text-fg-2">
+                  <span className="num">{r.qty}</span>
+                  {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''}
+                  {money && r.unitPriceNet !== null ? (
+                    <>
+                      <span className="text-fg-muted"> × </span>
+                      <span className="num">{formatAmount(r.unitPriceNet)}</span>
+                      <span className="text-fg-muted">{basisUnknown ? ' each, as typed' : ' each'}</span>
+                    </>
+                  ) : null}
+                  {money && !basisUnknown && !showEdit && rate(r) !== STANDARD_GST ? <span className="text-fg-muted">{` · GST ${rate(r)}%`}</span> : null}
+                </span>
+                {r.isService ? null : <span className="text-sm">{supplierCell(r)}</span>}
+                {showEdit ? (
+                  <span className="mt-1 grid gap-2 border-t pt-3">
+                    <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      {gstCol.cell?.(r)}
+                      <Checkbox
+                        label="Service"
+                        aria-label={`Service, line ${r.number}`}
+                        checked={r.isService}
+                        onCheckedChange={v => updateItem.mutate({ id: r.id, patch: v === true ? { is_service: true, supplier_order_id: null } : { is_service: false } }, { onError: fail('Could not change the line') })}
+                      />
+                    </span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      {canSplit(r) ? (
+                        <Button size="sm" variant="quiet" icon={Split} aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
+                          Split line
+                        </Button>
+                      ) : null}
+                      <Button size="sm" variant="quiet" icon={Trash2} aria-label={`Remove line ${r.no}`} onClick={() => setRemoving(r)}>
+                        Remove line
+                      </Button>
+                    </span>
+                  </span>
+                ) : null}
               </span>
-              <span className="text-sm text-fg-muted">
-                <span className="num">{r.qty}</span>
-                {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''}
-                {money && r.unitPriceNet !== null ? <span className="num">{` × ${formatAmount(r.unitPriceNet)}`}</span> : null}
-                {r.isService ? ' · Service' : legOf(r) ? ` · ${legOf(r)?.supplierName}` : ' · No supplier yet'}
-              </span>
-              {showEdit && canSplit(r) ? (
-                <Button size="sm" variant="quiet" icon={Split} className="justify-self-start" aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
-                  Split line
-                </Button>
-              ) : null}
-              {showEdit ? (
-                <Button size="sm" variant="quiet" icon={Trash2} className="justify-self-start" aria-label={`Remove line ${r.no}`} onClick={() => setRemoving(r)}>
-                  Remove line
-                </Button>
-              ) : null}
             </span>
           )
         }

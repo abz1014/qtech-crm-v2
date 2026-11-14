@@ -36,7 +36,7 @@ async function picture(page: Page, name: string, width: number): Promise<void> {
   await page.waitForLoadState('networkidle')
   await page.waitForTimeout(400)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-  expect.soft(overflow, `${name}: no sideways scroll`).toBeLessThanOrEqual(0)
+  expect.soft(overflow, `${name} at ${width}: no sideways scroll`).toBeLessThanOrEqual(0)
   const dir = process.env.REVIEW_DIR
   if (!dir) return
   const h = page.viewportSize()?.height ?? 900
@@ -49,32 +49,43 @@ async function picture(page: Page, name: string, width: number): Promise<void> {
   await page.setViewportSize({ width, height: h })
 }
 
+/** Opens one stop (?stage=, every other step closed) at 1440 and at 375 and takes its picture; `then` runs after each, for a second picture. */
+async function stop(page: Page, job: number, stage: 'order' | 'supplier-order', name: string, then?: (width: number) => Promise<void>): Promise<void> {
+  for (const [w, h] of [[1440, 900], [375, 812]] as const) {
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto(`/jobs/${job}?stage=${stage}`)
+    await expect(page.locator(stage === 'order' ? '[data-order-work]' : '[data-supplier-order-work]')).toBeVisible()
+    await picture(page, name, w)
+    if (then) await then(w)
+  }
+}
+
 test.describe('Forest B4 pictures: Order and Supplier order stops', () => {
   let job: number
   test.beforeAll(async () => {
     job = await seed()
   })
+  test.beforeEach(async ({ page }) => {
+    // the stop asked for in ?stage= is the one open: the e2e helper that opens the current step stands down
+    await page.addInitScript(() => {
+      ;(window as unknown as { __keepStepsClosed?: boolean }).__keepStepsClosed = true
+    })
+  })
 
   test('admin: the Order stop, its edit mode, and the Supplier order stop', async ({ page }) => {
-    const width = page.viewportSize()?.width ?? 1440
-    await openAs(page, 'admin', `/jobs/${job}?stage=order`)
-    await expect(page.locator('[data-order-work]')).toBeVisible()
-    await picture(page, 'order-admin', width)
-    await page.getByRole('button', { name: 'Edit GST and lines' }).click()
-    await picture(page, 'order-edit-admin', width)
-    await page.goto(`/jobs/${job}?stage=supplier-order`)
-    await expect(page.locator('[data-supplier-order-work]')).toBeVisible()
-    await picture(page, 'supplier-order-admin', width)
+    await openAs(page, 'admin', '/jobs')
+    await stop(page, job, 'order', 'order-admin', async w => {
+      await page.getByRole('button', { name: 'Edit GST and lines' }).click()
+      await picture(page, 'order-edit-admin', w)
+    })
+    await stop(page, job, 'supplier-order', 'supplier-order-admin')
   })
 
   test('engineer: the Order and Supplier order stops, no prices', async ({ page }) => {
-    const width = page.viewportSize()?.width ?? 1440
-    await openAs(page, 'engineer', `/jobs/${job}?stage=order`)
-    await expect(page.locator('[data-order-work]')).toBeVisible()
-    await picture(page, 'order-engineer', width)
-    await page.goto(`/jobs/${job}?stage=supplier-order`)
-    await expect(page.locator('[data-supplier-order-work]')).toBeVisible()
-    await expect(page.locator('[data-supplier-order-work]')).not.toContainText(/PKR|USD|PO-/)
-    await picture(page, 'supplier-order-engineer', width)
+    await openAs(page, 'engineer', '/jobs')
+    await stop(page, job, 'order', 'order-engineer')
+    await stop(page, job, 'supplier-order', 'supplier-order-engineer', async () => {
+      await expect(page.locator('[data-supplier-order-work]')).not.toContainText(/PKR|USD|PO-/)
+    })
   })
 })

@@ -11,8 +11,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
  * Edit on tap (A3/O03): a stamped date or a short text reads as plain text, and tapping it opens a small editor. Nothing here is
  * required: the one-tap stamp buttons write the dates, and this is only for fixing one.
  */
+/*
+ * One look for every tap-to-edit value (mockups 41 and 42): the value in medium weight over a dashed underline, so it reads as
+ * something you can change; an empty one is a green "add". The chip-height hit area keeps it as easy to tap as the chips beside it.
+ */
 const trigger =
-  'num inline-flex min-h-[28px] items-center rounded border-b border-dashed border-line-strong px-[2px] text-left text-sm text-fg hover:bg-sunken disabled:cursor-default disabled:border-transparent disabled:hover:bg-transparent'
+  'num inline-flex min-h-chip items-center rounded border-b border-dashed border-line-strong px-px text-left text-sm font-medium text-fg transition-colors duration-fast hover:border-fg hover:bg-sunken disabled:cursor-default disabled:border-transparent disabled:font-regular disabled:hover:bg-transparent'
 
 interface TapDateProps {
   value: string | null
@@ -59,7 +63,7 @@ export function TapDate({ value, label, today, onSave, disabled, button, empty =
           </button>
         )}
       </PopoverTrigger>
-      <PopoverContent role="dialog" className="w-[280px]" aria-label={label}>
+      <PopoverContent role="dialog" className="w-[17.5rem]" aria-label={label}>
         <div className="grid gap-3">
           <p className="text-sm font-medium">{label}</p>
           <DateInput value={draft} onChange={setDraft} defaultToday={false} aria-label={label} />
@@ -111,13 +115,20 @@ export function TapText({ value, label, empty, render, onSave, disabled, placeho
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={cn('inline-flex min-h-[28px] items-center rounded text-left text-sm underline-offset-2 hover:underline', value ? 'text-fg' : 'text-primary', className)}>
+        <button
+          type="button"
+          className={cn(
+            'inline-flex min-h-chip items-center rounded text-left text-sm transition-colors duration-fast',
+            value ? 'border-b border-dashed border-line-strong px-px font-medium text-fg hover:border-fg hover:bg-sunken' : 'font-semibold text-primary underline-offset-2 hover:underline',
+            className,
+          )}
+        >
           {/* the visible words stay inside the accessible name (WCAG 2.5.3): the label is added before them, not instead of them */}
           <span className="sr-only">{label}: </span>
           {value ? (render ? render(value) : value) : empty}
         </button>
       </PopoverTrigger>
-      <PopoverContent role="dialog" className="w-[280px]" aria-label={label}>
+      <PopoverContent role="dialog" className="w-[17.5rem]" aria-label={label}>
         <form
           className="grid gap-3"
           onSubmit={e => {
