@@ -401,8 +401,6 @@ export interface InquiryRow {
   noOfferReason: string | null
   /** A different reason for one item, by item id. */
   itemDeclines: Record<string, string>
-  /** 0140: the items this supplier was asked about; null or absent means every item of the RFQ (lib/askedItems.ts). */
-  askedItemIds?: string[] | null
   chaseCount: number
   notes: string | null
   contactName: string | null
@@ -433,7 +431,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
   const inq = unwrap(
     await db
       .from('supplier_inquiries')
-      .select('id, supplier_id, sent_on, sent_confirmed_at, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at, asked_item_ids')
+      .select('id, supplier_id, sent_on, sent_confirmed_at, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at'),
   )
@@ -515,7 +513,6 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       noOfferOn: i.no_offer_on,
       noOfferReason: i.no_offer_reason,
       itemDeclines: declinesBy.get(i.id) ?? {},
-      askedItemIds: i.asked_item_ids ?? null,
       chaseCount: i.chase_count,
       notes: i.notes,
       contactName: ct?.name ?? null,
@@ -1037,7 +1034,7 @@ export async function listSupplierStatsFor(supplierIds: readonly string[]): Prom
 }
 
 /** Ask more suppliers (Float to another supplier, Copy enquiry text): an inquiry per supplier, stamped sent today. Suppliers already asked are left alone. */
-export async function addInquiries(input: { rfqId: string; supplierIds: readonly string[]; sentOn: string; itemIds?: readonly string[] | null }): Promise<string[]> {
+export async function addInquiries(input: { rfqId: string; supplierIds: readonly string[]; sentOn: string }): Promise<string[]> {
   const db = requireSupabase()
   if (input.supplierIds.length === 0) return []
   const existing = unwrap(await db.from('supplier_inquiries').select('supplier_id').eq('rfq_id', input.rfqId))
@@ -1047,20 +1044,10 @@ export async function addInquiries(input: { rfqId: string; supplierIds: readonly
   const rows = unwrap(
     await db
       .from('supplier_inquiries')
-      .insert(fresh.map(supplier_id => ({ rfq_id: input.rfqId, supplier_id, sent_on: input.sentOn, ...(input.itemIds ? { asked_item_ids: [...input.itemIds] } : {}) })))
+      .insert(fresh.map(supplier_id => ({ rfq_id: input.rfqId, supplier_id, sent_on: input.sentOn })))
       .select('id'),
   )
   return rows.map(r => r.id)
-}
-
-/**
- * 0140: set which items each inquiry was asked about (null: every item). Used when a shortlisted or already asked supplier is asked
- * about some items, and by the Undo to put the previous list back.
- */
-export async function setAskedItems(changes: ReadonlyArray<{ id: string; itemIds: readonly string[] | null }>): Promise<void> {
-  if (changes.length === 0) return
-  const db = requireSupabase()
-  for (const c of changes) unwrap(await db.from('supplier_inquiries').update({ asked_item_ids: c.itemIds ? [...c.itemIds] : null }).eq('id', c.id).select('id'))
 }
 
 /**

@@ -1,5 +1,4 @@
 import type { InquiryRow, RfqItemRow } from '@/features/rfqs/api'
-import { askedAbout } from '@/features/rfqs/lib/askedItems'
 
 /** The id of a supplier's price box for an item, so a menu elsewhere on the page ("Edit reply") can take the person straight to it. */
 export const replyInputId = (inquiryId: string, itemId: string) => `reply-${inquiryId}-${itemId}`
@@ -39,17 +38,9 @@ export function jumpToReplyRow(supplierId: string): boolean {
   return true
 }
 
-/** Items this supplier was asked about and has neither priced nor declined: what a chase asks for. */
+/** Items this supplier has neither priced nor declined: what a chase asks for. */
 export function outstandingItems(inquiry: InquiryRow, items: readonly RfqItemRow[]): RfqItemRow[] {
-  return items.filter(it => askedAbout(inquiry, it.id) && !inquiry.lines.some(l => l.itemId === it.id) && !inquiry.itemDeclines[it.id])
-}
-
-/**
- * The items in a supplier's reply: the ones they were asked about, and any they priced or declined anyway (supplier flow D). An
- * inquiry from before 0140 was asked about every item.
- */
-export function replyItems(inquiry: InquiryRow, items: readonly RfqItemRow[]): RfqItemRow[] {
-  return items.filter(it => askedAbout(inquiry, it.id) || inquiry.lines.some(l => l.itemId === it.id) || Boolean(inquiry.itemDeclines[it.id]))
+  return items.filter(it => !inquiry.lines.some(l => l.itemId === it.id) && !inquiry.itemDeclines[it.id])
 }
 
 /** Asked, not said no, and still owing a price for at least one item. */

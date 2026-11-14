@@ -235,34 +235,3 @@ describe('the supplier comparison', () => {
     expect(screen.queryByText(/cheapest|recommended|best/i)).toBeNull()
   })
 })
-
-describe('supplier flow D: items a supplier was asked about (0140)', () => {
-  const three: RfqItemRow[] = [item, { ...item, id: 'it-2', number: 2, description: 'pH probe' }, { ...item, id: 'it-3', number: 3, description: 'Buffer kit' }]
-
-  it('a supplier asked about items 1 and 2 waits on those two; item 3 says no supplier has been asked about it', () => {
-    const scoped: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0, askedItemIds: ['it-1', 'it-2'] }
-    renderPanel([scoped], three)
-    for (const n of [1, 2]) {
-      const art = screen.getByRole('article', { name: `Item ${n}` })
-      expect(within(art).getByText('Keller GmbH')).toBeInTheDocument()
-      expect(art.querySelector('[data-unasked]')).toBeNull()
-    }
-    const third = screen.getByRole('article', { name: 'Item 3' })
-    expect(within(third).getByText('No supplier has been asked about this item.')).toBeInTheDocument()
-    expect(within(third).queryByText('Keller GmbH')).toBeNull()
-  })
-
-  it('an old whole-RFQ ask (no list) still counts for every item', () => {
-    const old: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }
-    renderPanel([old], three)
-    expect(screen.queryByText('No supplier has been asked about this item.')).toBeNull()
-    for (const n of [1, 2, 3]) expect(within(screen.getByRole('article', { name: `Item ${n}` })).getByText('Keller GmbH')).toBeInTheDocument()
-  })
-
-  it('a whole "cannot quote" from a supplier asked about item 1 only is not shown on item 2', () => {
-    const no: InquiryRow = { ...inquiry('n', 'Midlands Valves', []), noOfferOn: '2026-11-21', noOfferReason: 'no_brand', responseState: 'no_offer', itemsQuoted: 0, askedItemIds: ['it-1'] }
-    renderPanel([no], three.slice(0, 2))
-    expect(screen.getByRole('article', { name: 'Item 1' }).querySelector('[data-declined]')).not.toBeNull()
-    expect(screen.getByRole('article', { name: 'Item 2' }).querySelector('[data-declined]')).toBeNull()
-  })
-})

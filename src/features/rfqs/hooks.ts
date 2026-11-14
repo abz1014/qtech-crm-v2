@@ -424,16 +424,7 @@ export function useSupplierStatsFor(supplierIds: readonly string[]) {
 export function useAddInquiries(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { supplierIds: readonly string[]; sentOn: string; itemIds?: readonly string[] | null }) => api.addInquiries({ rfqId, ...input }),
-    onSuccess: () => invalidateAfter(client, 'inquiry.add', { rfqId }),
-  })
-}
-
-/** 0140: which items each inquiry was asked about (null: every item). The Undo of an ask passes the previous lists. */
-export function useSetAskedItems(rfqId: string) {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: (changes: ReadonlyArray<{ id: string; itemIds: readonly string[] | null }>) => api.setAskedItems(changes),
+    mutationFn: (input: { supplierIds: readonly string[]; sentOn: string }) => api.addInquiries({ rfqId, ...input }),
     onSuccess: () => invalidateAfter(client, 'inquiry.add', { rfqId }),
   })
 }
