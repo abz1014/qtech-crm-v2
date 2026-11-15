@@ -21,6 +21,11 @@ export interface PageHeaderProps {
   primary?: ReactNode
   /** At most one secondary button or link ("Reports"). */
   secondary?: ReactNode
+  /**
+   * What explains the title (an (i) InfoTip, a state chip), drawn beside the h1 on its baseline. On a phone, where the h1 is the
+   * bar's and visually hidden, the title is drawn again (hidden from screen readers) so the (i) never points at nothing.
+   */
+  meta?: ReactNode
   className?: string
 }
 
@@ -40,7 +45,7 @@ function isPrimary(node: ReactNode): boolean {
   )
 }
 
-export function PageHeader({ title, lede, primary, secondary, className }: PageHeaderProps) {
+export function PageHeader({ title, lede, primary, secondary, meta, className }: PageHeaderProps) {
   if (import.meta.env.DEV) {
     if (count(primary) > 1) throw new Error(`PageHeader "${title}": at most one primary action (got ${count(primary)}).`)
     if (count(secondary) > 1) throw new Error(`PageHeader "${title}": at most one secondary action (got ${count(secondary)}).`)
@@ -50,7 +55,17 @@ export function PageHeader({ title, lede, primary, secondary, className }: PageH
   return (
     <header className={cn('flex flex-wrap items-end justify-between gap-x-4 gap-y-3', className)}>
       <div className="grid min-w-0 gap-1">
-        <h1 className="text-2xl font-heavy tracking-tight text-pretty max-md:sr-only">{title}</h1>
+        {meta ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 className="text-2xl font-heavy tracking-tight text-pretty max-md:sr-only">{title}</h1>
+            <span aria-hidden="true" className="text-xl font-heavy tracking-snug text-fg md:hidden">
+              {title}
+            </span>
+            {meta}
+          </div>
+        ) : (
+          <h1 className="text-2xl font-heavy tracking-tight text-pretty max-md:sr-only">{title}</h1>
+        )}
         {lede ? <p className="text-sm text-fg-muted text-pretty">{lede}</p> : null}
       </div>
       {hasActions ? (

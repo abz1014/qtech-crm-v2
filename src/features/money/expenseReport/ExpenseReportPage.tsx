@@ -11,8 +11,8 @@ import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
-import { type SumBarItem } from '@/ui/SumBar'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar, type SumBarItem } from '@/ui/SumBar'
+
 import { Skeleton } from '@/ui/Skeleton'
 import { CARD } from '@/ui/card'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -246,7 +246,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
     // Phone: ONE card, a line per figure (SumBar lines), so every figure shows without a tap. The by-the-day-paid sentence is the (i).
     return (
       <>
-        <FitSumBar
+        <SumBar
           phone="lines"
           className={cn(CARD, 'gap-3 p-card')}
           label={`Spent in ${v.label}`}
@@ -289,7 +289,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
   ]
   return (
     <div className="grid gap-3" data-testid="expense-report-total">
-      <FitSumBar label={`Spent in ${v.label}`} className="rounded-card shadow-e1" items={items} />
+      <SumBar label={`Spent in ${v.label}`} className="rounded-card shadow-e1" items={items} />
       <p className="type-body max-w-prose text-fg-2">
         <span>
           PKR · Spent in {v.label}, {plural(v.total.count, 'expense')}

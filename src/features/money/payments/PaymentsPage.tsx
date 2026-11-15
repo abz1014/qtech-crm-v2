@@ -12,7 +12,7 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PAID_VIA_LABEL, monthKeyLabel, shiftMonth, type PaidVia } from '@/features/money/expenses/model'
@@ -97,7 +97,7 @@ export function PaymentsPage() {
         {isClosed ? <MonthStateChip closed /> : null}
       </div>
       {q.isSuccess && rows.length > 0 ? (
-        <FitSumBar
+        <SumBar
           label={`Received in ${name}, includes GST`}
           items={[
             { label: `Received in ${name}`, amount: sum.total, sub: `${plural(sum.count)}, GST included` },

@@ -192,8 +192,8 @@ export function CompaniesPage() {
             <TableFilter label="Search companies or contacts" placeholder="Search companies" hint="Finds a company by name, city, or a contact's name or phone." value={text} onChange={v => setText(v)} />
             <SegmentedControl
               aria-label="Show"
-              // a 2 by 2 grid on a phone (all four in view, none cut off), one row from sm up
-              className="max-sm:grid max-sm:w-full max-sm:grid-cols-2"
+              // one row of equal columns on a phone (the shared SegmentedControl, audit 1 blocker 3), full width
+              className="max-sm:w-full"
               value={filter}
               onValueChange={v => setFilter(v as Filter)}
               options={[

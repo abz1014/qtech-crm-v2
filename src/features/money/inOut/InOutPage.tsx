@@ -9,7 +9,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { CARD } from '@/ui/card'
 import { Money } from '@/ui/Money'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Select } from '@/ui/form/Select'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -201,7 +201,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       {narrow ? (
         // Phone: a line per figure (SumBar lines), cash first and profit second; the period before is in the last-months table below.
         <>
-          <FitSumBar
+          <SumBar
             phone="lines"
             label="Cash in and out"
             caption={
@@ -216,7 +216,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               { label: 'Cash in minus cash out', amount: v.cash.net },
             ]}
           />
-          <FitSumBar
+          <SumBar
             phone="lines"
             label="Profit on invoices"
             caption={
@@ -236,7 +236,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       ) : (
         <>
           {/* Desktop: the sum card with the headline figures (59-reports .qb-sum), then the two tables, each a card, with the period before and the change. */}
-          <FitSumBar
+          <SumBar
             label={`Cash and profit, ${v.label}`}
             caption={
               <span>

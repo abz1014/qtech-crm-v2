@@ -438,7 +438,15 @@ export async function focusSweep(page: Page, n = 15, scope: string | null = null
           return [...PROPS.map(p => a.getPropertyValue(p)), b.getPropertyValue('box-shadow'), b.getPropertyValue('outline-style'), b.getPropertyValue('border-top-color'), bf.getPropertyValue('box-shadow')]
         })
       const focused = snap()
-      el.blur()
+      // The resting look is read with focus on ANOTHER element, not after blur(): a Radix dialog's focus trap pulls focus straight
+      // back into the dialog on blur (a date input kept its ring, audit 2). The stand-in sits at the top of the same dialog (or the
+      // body), outside the element's own ancestor chain, so no :focus-within on the chain stays lit.
+      const holder = el.closest('[role="dialog"], [role="alertdialog"]') ?? document.body
+      const other = document.createElement('span')
+      other.tabIndex = -1
+      other.setAttribute('data-audit-sentinel', '')
+      holder.prepend(other)
+      other.focus({ preventScroll: true })
       // the transition (if any) back to the resting look must finish before it is read
       const anims = document.getAnimations()
       for (const x of anims) {
@@ -450,6 +458,7 @@ export async function focusSweep(page: Page, n = 15, scope: string | null = null
       }
       const rest = snap()
       el.focus({ preventScroll: true })
+      other.remove()
       for (const x of document.getAnimations()) {
         try {
           x.finish()

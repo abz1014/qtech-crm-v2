@@ -46,7 +46,7 @@ export function MoneyFrame({
    * link above the h1 on a desktop ("< Lock a month"); on a phone the bar's own back arrow (one bar, UX audit 2026-10-19).
    */
   back?: { to: string; label: string }
-  /** What explains the title (an (i), a state chip), in the line under it. On a phone, where the h1 is the bar's, the title is drawn beside it so the (i) never points at nothing. */
+  /** What explains the title (an (i), a state chip): beside the h1 (PageHeader `meta`). On a phone, where the h1 is the bar's, the title is drawn beside it so the (i) never points at nothing. */
   titleMeta?: ReactNode
   /** The phone bar's title. Default "Money": on a phone the switcher row names the page, not the bar. */
   barTitle?: string
@@ -89,19 +89,8 @@ export function MoneyFrame({
         {/* The list-page head (spec 5.2): the page's own name as the one h1 on every Money page (audit 1, item 22), and its one green action. */}
         <PageHeader
           title={heading}
-          lede={
-            titleMeta ? (
-              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span aria-hidden="true" className="text-xl font-heavy tracking-snug text-fg md:hidden">
-                  {heading}
-                </span>
-                {lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
-                {titleMeta}
-              </span>
-            ) : (
-              (lede ?? <span className="max-md:hidden">All amounts in PKR</span>)
-            )
-          }
+          lede={lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
+          meta={titleMeta}
           primary={actions}
           secondary={secondary}
         />

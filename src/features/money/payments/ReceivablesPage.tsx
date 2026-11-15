@@ -18,7 +18,7 @@ import { Money } from '@/ui/Money'
 import { NoResults } from '@/ui/NoResults'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { TableFilter } from '@/ui/TableFilter'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
@@ -251,7 +251,7 @@ export function ReceivablesPage() {
           Send a reminder
         </Button>
       ) : null}
-      <FitSumBar
+      <SumBar
         className="max-sm:hidden"
         label="Balance by status, includes GST"
         items={[

@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Link } from 'react-router-dom'
 import { CircleAlert, Receipt, TriangleAlert, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Avatar } from '@/ui/Avatar'
@@ -199,7 +198,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const drawings = toPaisa(v.notInPnl.total.net) !== 0n || v.notInPnl.lines.length > 0 || toPaisa(v.adjustNonPnl) !== 0n
   return (
     <>
-      <FitSumBar
+      <SumBar
         label="Profit and loss"
         items={[
           {
@@ -375,7 +374,6 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   useCsv(setCsv, v, v ? () => downloadReport(agingCsv(v), csvFile('overdue-by-age', ctx.month)) : null)
   // the "Imported, no order" column is all dashes unless an imported invoice has no order: then it is left out (9 columns at 1440 scrolled sideways)
   const hasImported = v?.rows.some(r => r.importedUnlinked) ?? false
-  const belowXl = useMediaQuery('(max-width: 1279px)')
   const columns = useMemo<Column<AgingRow>[]>(
     () => [
       {
@@ -404,12 +402,12 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         cell: r => (
           <span className="grid gap-px">
             <span className="num">{formatShortDate(r.invoiceDate, asOf)}</span>
-            {belowXl ? <span className="num text-xs text-fg-muted">{plural(r.ageDays, 'day')}</span> : null}
+            <span className="num text-xs text-fg-muted xl:hidden">{plural(r.ageDays, 'day')}</span>
           </span>
         ),
       },
-      // left out below 1280 rather than hidden: the footer's label spans the columns before the first total
-      ...(belowXl ? [] : [{ id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays } satisfies Column<AgingRow>]),
+      // hidden below 1280 (the age rides under the date there); the footer's label spans only the columns drawn
+      { id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays, hideClass: 'hidden xl:table-cell' },
       {
         // What was paid by the date rides under the gross (it was its own column from 1440, which did not fit beside the four ages).
         id: 'gross',
@@ -494,14 +492,14 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           ]
         : []),
     ],
-    [asOf, hasImported, belowXl],
+    [asOf, hasImported],
   )
   if (q.isError) return <ReportError title="Overdue by age did not load" onRetry={q.refetch} />
   if (q.isPending || !v) return <ReportLoading label="Loading overdue by age" />
   const asOfLabel = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7))} ${asOf.slice(0, 4)}`
   return (
     <>
-      <FitSumBar
+      <SumBar
         caption={`${plural(v.rows.length, 'invoice')} open, as of ${asOfLabel}`}
         label="Overdue by age"
         items={AGING_BUCKETS.map(b => ({
@@ -718,7 +716,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           </Link>
         </Banner>
       ) : null}
-      <FitSumBar
+      <SumBar
         caption={
           <>
             {plural(v.rows.length, 'supplier order')}, <Num>{v.paidLegs}</Num> with a payment{missing.length ? '' : <>, payable at the rate on {day}</>}
@@ -860,7 +858,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const note = v.rows.length
   return (
     <>
-      <FitSumBar
+      <SumBar
         label="GST and FBR"
         items={[
           { label: `${name} invoices`, count: sel?.invoiceCount ?? 0, sub: <>Net PKR <Num>{rupees(sel?.net ?? 0)}</Num></> },
@@ -1015,7 +1013,7 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   if (q.isPending || !v) return <ReportLoading label="Loading sales by person" />
   return (
     <>
-      <FitSumBar
+      <SumBar
         label="Sales by person"
         items={[
           { label: 'Net cash credited', amount: v.credited,  sub: <><Num>{v.creditedPayments}</Num> {v.creditedPayments === 1 ? 'payment' : 'payments'} credited to <Num>{v.creditedPeople}</Num> {v.creditedPeople === 1 ? 'person' : 'people'}</> },

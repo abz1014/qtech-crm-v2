@@ -21,7 +21,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
 import { StickyActionBar } from '@/ui/StickyActionBar'
 import { Select } from '@/ui/form/Select'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
 import { TextField } from '@/ui/form/TextField'
@@ -194,7 +194,7 @@ export function GstRegisterPage() {
         sortable: true,
         value: r => r.number,
         // Audit 1 (item 10): the register fits its card from 1024 up, so nothing scrolls sideways. Below 1280 the number and day
-        // ride under the customer (this column is left out, so the month rows still span the right columns); a long number is cut
+        // ride under the customer (this column is left out rather than hidden, so the number is in the page once); a long number is cut
         // with the whole of it in the title.
         cell: r => (
           <span className="grid gap-px">
@@ -398,7 +398,7 @@ export function GstRegisterPage() {
           ))}
         </div>
       ) : register.isError ? null : (
-      <FitSumBar
+      <SumBar
         label="Totals for the invoices shown"
         phone="lines"
         // Forest (53-invoices #iv-totals): one card of tiles, each a label, the PKR figure and a line of context.

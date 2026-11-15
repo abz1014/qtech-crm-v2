@@ -517,6 +517,30 @@ function TableView<T>(props: DataTableProps<T>) {
   // ---- totals -------------------------------------------------------------
   const hasTotals = columns.some(c => c.total)
   const firstTotal = columns.findIndex(c => c.total)
+  // A group or footer label spans the columns before the first total. Columns hidden at this width (hideBelowMd, hideClass ...)
+  // are no cells at all, so a colSpan that counted them would reach into the totals and push every subtotal one column right
+  // (audit 2): the span counts only the header cells that are drawn now, read again whenever the window is resized.
+  const leadCols = firstTotal < 0 ? columns.length : firstTotal
+  const hasSelection = !!selection
+  const [shownLead, setShownLead] = useState(leadCols)
+  useLayoutEffect(() => {
+    const table = tableRef.current
+    if (!table || leadCols === 0) return setShownLead(leadCols)
+    const offset = hasSelection ? 1 : 0
+    const measure = () => {
+      const row = table.tHead?.rows[table.tHead.rows.length - 1]
+      if (!row) return setShownLead(leadCols)
+      let n = 0
+      for (let i = 0; i < leadCols; i++) {
+        const th = row.cells[i + offset]
+        if (th && getComputedStyle(th).display !== 'none') n++
+      }
+      setShownLead(Math.max(1, n))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [columns, leadCols, hasSelection])
   const renderTotal = useCallback(
     (col: Column<T>, list: readonly T[]): ReactNode => {
       if (!col.total) return null
@@ -568,7 +592,7 @@ function TableView<T>(props: DataTableProps<T>) {
     </div>
   )
 
-  const labelCols = firstTotal < 0 ? columns.length : firstTotal
+  const labelCols = leadCols
   const summaryRow = (kind: 'group' | 'foot', labelNode: ReactNode, list: readonly T[], key: string, groupIds?: string[], groupKey?: string) =>
     cards && kind === 'group' && mobileGroup && groupKey !== undefined ? (
       <tr key={key} role="row" data-row-kind="group" className="block bg-canvas">
@@ -607,7 +631,7 @@ function TableView<T>(props: DataTableProps<T>) {
         </td>
       ) : null}
       <td
-        colSpan={labelCols}
+        colSpan={shownLead}
         // A long group or footer label wraps inside its cells instead of running past them (a windowed table keeps one line: its rows have fixed heights).
         className={cn('h-[2.25rem] border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', virtual ? 'whitespace-nowrap' : 'py-2 [overflow-wrap:anywhere]', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
       >
@@ -873,7 +897,8 @@ function TableView<T>(props: DataTableProps<T>) {
       </p>
       {toolbarNode || exportCsv ? (
         <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : ownToolbar ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
+          {/* The toolbar's own controls take a whole row on a phone, so the loading line (or Export) goes under them instead of squeezing them (audit 2: Invoices at 375). */}
+          <div className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-3', toolbarNode && 'max-sm:basis-full')}>{toolbarNode}</div>
           {loading ? (
             <span className="text-xs text-fg-muted" data-slow={slow || undefined}>
               {slow ? SLOW_LOAD_TEXT : `Loading ${what}`}

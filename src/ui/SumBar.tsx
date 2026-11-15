@@ -5,7 +5,8 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { CARD } from '@/ui/card'
-import { formatPaisa, paisaToFixed, toPaisa, type Amount, type PaisaMode } from '@/lib/money'
+import { fitEms } from '@/ui/moneyFit'
+import { formatAmount, formatPaisa, paisaToFixed, toPaisa, type Amount, type PaisaMode } from '@/lib/money'
 
 const abs = (p: bigint) => (p < 0n ? -p : p)
 
@@ -32,6 +33,14 @@ export interface SumBarItem {
   tone?: 'danger' | 'muted'
   /** Headline rounding. Default 'never' (whole rupees, as in the approved mockup); the exact paisa stays in the rows and the equation line. */
   paisa?: PaisaMode
+}
+
+/** The text a tile's figure shows (what the tile's width depends on). */
+function figureText(i: SumBarItem): string | null {
+  if (i.count !== undefined) return String(i.count)
+  if (i.figure !== undefined) return Array.isArray(i.figure) ? i.figure.reduce((a, b) => (b.length > a.length ? b : a), '') : i.figure
+  if (i.amount === null || i.amount === undefined) return null
+  return formatAmount(i.amount, i.paisa ?? 'never')
 }
 
 /** A list of amounts ("PKR 958,000 · AED 62,780"): the line may break between amounts, never inside one. */
@@ -128,22 +137,34 @@ export function SumBar({
       </section>
     )
   }
+  // The tiles never cut a figure (audit 1 blocker 2, audit 2): each tile is at least as wide as the widest figure needs at the
+  // tile size (plus "PKR" and the padding), the tiles wrap onto more rows (the last row's tiles grow to fill it, one per row at
+  // the narrowest), and the figure itself fits (Money `fit`) if even one tile per row is too narrow.
+  const em = Math.max(4, ...items.map(i => {
+    const t = figureText(i)
+    return t ? fitEms(t) : 0
+  }))
   const tiles = (
     <section
       aria-label={label}
       data-work=""
-      className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-card border bg-line shadow-e1 md:grid-flow-col md:auto-cols-fr md:grid-cols-none',
-        className,
-      )}
+      style={{ ['--sum-em' as string]: String(em) }}
+      className={cn('flex flex-wrap gap-px overflow-hidden rounded-card border bg-line shadow-e1', className)}
     >
       {items.map(item => (
-        <div key={item.label} className={cn('grid min-w-0 content-start gap-1 bg-surface px-card py-4 max-sm:px-4', item.tone === 'danger' && 'text-tone-danger-fg', item.tone === 'muted' && 'bg-sunken text-fg-2')}>
+        <div
+          key={item.label}
+          className={cn(
+            'grid min-w-0 flex-[1_1_calc(var(--sum-em)*var(--text-xl)+2.5rem+2*var(--card-pad))] content-start gap-1 bg-surface px-card py-4 max-sm:flex-[1_1_calc(var(--sum-em)*var(--text-lg)+2.5rem+2rem)] max-sm:px-4',
+            item.tone === 'danger' && 'text-tone-danger-fg',
+            item.tone === 'muted' && 'bg-sunken text-fg-2',
+          )}
+        >
           <span className={cn('text-sm font-medium', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg-2')}>{item.label}</span>
           {item.count !== undefined || item.figure !== undefined ? (
             <span className="num text-xl font-heavy tracking-snug max-sm:text-lg">{Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)}</span>
           ) : (
-            <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} className="[&>span]:font-heavy max-sm:[&>span]:text-lg" />
+            <Money value={item.amount} size="xl" fit provisional={item.provisional} paisa={item.paisa ?? 'never'} className="[&>span]:font-heavy max-sm:[&>.num]:[--fit-max:var(--text-lg)]" />
           )}
           {item.sub ? <span className="text-sm text-fg-muted">{item.sub}</span> : null}
         </div>

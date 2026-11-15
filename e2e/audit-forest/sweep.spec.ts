@@ -298,7 +298,15 @@ for (const r of AUDIT_ROUTES) {
                 await open(page, path.startsWith('/todo') ? '/settings/password' : '/todo')
                 let release: () => void = () => undefined
                 if (state === 'empty') await makeEmpty(page)
-                if (state === 'error') await makeError(page)
+                // error: count the data requests the screen makes (and that fail) from here on, so a screen that asks for nothing
+                // (Settings home is a list of links; a list already read by the shell a moment ago) is told apart from a silent one
+                let failedReads = 0
+                if (state === 'error') {
+                  await makeError(page)
+                  page.on('requestfailed', q => {
+                    if (/\/rest\/v1\//.test(q.url())) failedReads++
+                  })
+                }
                 // Home and Weekly review show the Today read the shell's nav counts made a moment ago (features/today/hooks.ts
                 // JUST_READ_MS, 10 s): opened at once they rightly make no request, so nothing of theirs failed. Wait the window out,
                 // so the screen reads again and its error state is what is measured (L5, audit round 1 false positive).
@@ -307,10 +315,17 @@ for (const r of AUDIT_ROUTES) {
                 await spaGo(page, path)
                 if (state === 'loading') await page.waitForTimeout(1_200)
                 // an expected no-access page (Sell for an engineer) asks for no data, so it has no failure to report
-                else if (state === 'error' && expectPage === 'ok')
-                  await page
-                    .waitForFunction(() => /could not|couldn.t|try again|went wrong|no connection|offline|failed|did not load/i.test(document.getElementById('main')?.innerText ?? ''), undefined, { timeout: 20_000 })
-                    .catch(() => record({ ...where, rule: 'error-state-silent', selector: '#main', detail: 'every data request failed and after 20 s the screen says nothing about it (no "could not", "try again"): a skeleton or a blank page' }))
+                else if (state === 'error' && expectPage === 'ok') {
+                  // Audit 2: an error must show promptly (one retry a second later, then "could not load"), so 10 s, not 20.
+                  const said = await page
+                    .waitForFunction(() => /could not|couldn.t|try again|went wrong|no connection|offline|failed|did not load/i.test(document.getElementById('main')?.innerText ?? ''), undefined, { timeout: 10_000 })
+                    .then(() => true)
+                    .catch(() => false)
+                  // Narrowed (audit 2): a screen that made no data request at all has nothing that failed to report. Proven by
+                  // counting the refused /rest/v1/ requests made after the screen was opened; one or more and silence is a finding.
+                  if (!said && failedReads > 0)
+                    record({ ...where, rule: 'error-state-silent', selector: '#main', detail: `${failedReads} data request(s) failed and after 10 s the screen says nothing about it (no "could not", "try again"): a skeleton, a blank page or stale words` })
+                }
                 else await settle(page)
                 await waitAnimations(page)
                 await audit(page, where, con, { full: false, focus: false })
