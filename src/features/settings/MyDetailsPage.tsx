@@ -73,7 +73,7 @@ function DetailsForm({ details }: { details: MyDetails }) {
 
   return (
     <>
-      <Form sf={sf} labels={{ phone: 'Phone' }} className="[&>fieldset]:gap-card-gap">
+      <Form sf={sf} labels={{ phone: 'Phone' }} className="[&>fieldset]:min-w-0 [&>fieldset]:gap-card-gap">
         <Section work title="Your details" hint="Your name, email and job title are set by an admin.">
           {/* Label left, value right: the same shape as the Company profile (the section's hint says an admin sets these). */}
           <dl className={FACTS} data-testid="your-facts">

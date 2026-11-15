@@ -91,6 +91,7 @@ export function CompanyPage() {
   if (company.isError) {
     return (
       <Shell>
+        <PageName />
         <EmptyState
           mood="error"
           title="Could not load this company"
@@ -108,6 +109,7 @@ export function CompanyPage() {
   if (!company.data) {
     return (
       <Shell>
+        <PageName />
         <EmptyState
           icon={Building2}
           title="This company was not found"
@@ -141,9 +143,15 @@ function Shell({ children, sticky = false }: { children: ReactNode; sticky?: boo
   return <div className={cn('mx-auto w-full max-w-detail px-4 pb-16 pt-6 md:px-8', sticky && 'max-md:pb-[calc(var(--control-lg-h)+2rem)]')}>{children}</div>
 }
 
+/** While the company loads, or when it cannot be shown, the page still has its one level-one heading (the card's title is not a heading). */
+function PageName() {
+  return <h1 className="sr-only">Company</h1>
+}
+
 function PageSkeleton() {
   return (
     <Shell>
+      <PageName />
       <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading company">
         <Skeleton className="h-4 w-[10rem]" />
         <Skeleton className="h-8 w-[20rem]" />
