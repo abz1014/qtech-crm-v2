@@ -172,7 +172,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(row).toBeVisible()
     await resetCount(page)
     await row.getByRole('link').click()
-    await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 1 })).toBeVisible()
     fe2('Lock a month to Mistakes to fix', (await readCount(page)).mouse, 1)
     const over = page.getByRole('list', { name: 'Mistakes to fix' }).getByRole('listitem').filter({ hasText: ordRef(m.over.order.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(over).toContainText('Customer payments (15,000) exceed the order')

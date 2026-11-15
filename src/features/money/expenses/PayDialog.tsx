@@ -13,7 +13,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { useInsertPayment, useLegPayState } from '@/features/money/expenses/hooks'
 import { pkr, type PaidVia } from '@/features/money/expenses/model'
 import { effectiveRate, owedInCurrency, payInserts, payProblem } from '@/features/money/expenses/pay'
-import { FIELD } from '@/features/money/expenses/Panel'
+import { DATE_FOCUS, FIELD } from '@/features/money/expenses/Panel'
 import { cn } from '@/lib/utils'
 
 /*
@@ -200,7 +200,7 @@ function PayFormReady({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2">
           <span className="font-medium">Date paid</span>
-          <input type="date" value={paidOn} max={today} onChange={e => e.target.value && setPaidOn(e.target.value)} className={cn(FIELD, 'num')} />
+          <input type="date" value={paidOn} max={today} onChange={e => e.target.value && setPaidOn(e.target.value)} className={cn(FIELD, 'num', DATE_FOCUS)} />
         </label>
         <div className="grid gap-2">
           <span className="font-medium" aria-hidden="true">

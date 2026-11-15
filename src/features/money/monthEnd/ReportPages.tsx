@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
-import { SumBar } from '@/ui/SumBar'
+import { FitSumBar } from '@/features/money/FitSumBar'
 import { Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Avatar } from '@/ui/Avatar'
@@ -82,10 +82,10 @@ function ReportPage({ report, children }: { report: MonthReportKey; children: (c
       report={report}
       csv={csv ? csv.run : null}
       period={
-        <span className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <MonthPager month={ctx.month} thisMonth={ctx.thisMonth} go={ctx.go} />
           {ctx.state ? <MonthStateChip closed={ctx.state.kind === 'closed'} /> : null}
-        </span>
+        </div>
       }
     >
       {children(ctx, setCsv)}
@@ -198,8 +198,7 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const drawings = toPaisa(v.notInPnl.total.net) !== 0n || v.notInPnl.lines.length > 0 || toPaisa(v.adjustNonPnl) !== 0n
   return (
     <>
-      <SumBar
-        className={drawings ? 'max-sm:grid-cols-1' : undefined}
+      <FitSumBar
         label="Profit and loss"
         items={[
           {
@@ -314,24 +313,22 @@ function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
                 <i className="block bg-tone-warning-fg" style={{ width: w(toPaisa(v.overheads.net)) }} />
                 {resultPositive ? <i className="block flex-1 bg-brand-green" /> : null}
               </div>
+              {/* A row wraps before it is cut: at 320 the figure drops under its words, still right-aligned (audit 1, item 12). */}
               <ul className="grid gap-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <i className="size-3 rounded-pill bg-tone-info-fg" />
+                <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <i className="size-3 shrink-0 rounded-pill bg-tone-info-fg" />
                   Order costs <span className="text-xs text-fg-muted">{plural(v.orderCosts.count, 'expense')}</span>
-                  <span className="flex-1" />
-                  <Money value={v.orderCosts.net} prefix={false} paisa="never" plainNegative />
+                  <Money value={v.orderCosts.net} prefix={false} paisa="never" plainNegative className="ml-auto" />
                 </li>
-                <li className="flex items-center gap-2">
-                  <i className="size-3 rounded-pill bg-tone-warning-fg" />
+                <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <i className="size-3 shrink-0 rounded-pill bg-tone-warning-fg" />
                   Overheads <span className="text-xs text-fg-muted">{plural(v.overheads.count, 'expense')}</span>
-                  <span className="flex-1" />
-                  <Money value={v.overheads.net} prefix={false} paisa="never" plainNegative />
+                  <Money value={v.overheads.net} prefix={false} paisa="never" plainNegative className="ml-auto" />
                 </li>
-                <li className="flex items-center gap-2">
-                  <i className="size-3 rounded-pill bg-brand-green" />
+                <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <i className="size-3 shrink-0 rounded-pill bg-brand-green" />
                   Profit
-                  <span className="flex-1" />
-                  <Money value={v.result} prefix={false} paisa="never" plainNegative />
+                  <Money value={v.result} prefix={false} paisa="never" plainNegative className="ml-auto" />
                 </li>
               </ul>
             </div>
@@ -383,9 +380,12 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         id: 'customer',
         header: 'Customer and invoice',
         value: r => r.customer,
+        // Two lines at most, the whole name in the title (audit 1, item 10: a long name pushed the figures into a sideways scroll).
         cell: r => (
-          <span className="grid gap-px">
-            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{r.customer}</span>
+          <span className="grid min-w-[10rem] max-w-[16rem] gap-px">
+            <span className="line-clamp-2 min-w-0 font-medium [overflow-wrap:anywhere]" title={r.customer}>
+              {r.customer}
+            </span>
             <span className="min-w-0 num text-xs text-fg-muted [overflow-wrap:anywhere]">
               {r.invoiceNumber}
               {r.orderRef ? ` · ${r.orderRef}` : ''}
@@ -395,13 +395,57 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       },
       { id: 'date', header: 'Invoice date', kind: 'date', value: r => r.invoiceDate, cell: r => <span className="num">{formatShortDate(r.invoiceDate, asOf)}</span> },
       { id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays },
-      { id: 'gross', header: 'Invoice gross', kind: 'money', value: r => r.gross, ...whole<AgingRow>(r => r.gross), hideBelowMd: true },
-      { id: 'applied', header: 'Paid by then', kind: 'money', value: r => (toPaisa(r.applied) > 0n ? r.applied : null), ...whole<AgingRow>(r => r.applied), hideClass: 'hidden min-[1440px]:table-cell' }, // 10 columns at 16 px do not fit a 1366 window: Paid by then waits for 1440
+      {
+        // What was paid by the date rides under the gross (it was its own column from 1440, which did not fit beside the four ages).
+        id: 'gross',
+        header: 'Invoice gross',
+        kind: 'money',
+        value: r => r.gross,
+        ...whole<AgingRow>(r => r.gross),
+        hideBelowMd: true,
+        cell: r => (
+          <span className="grid justify-items-end gap-px">
+            <Money value={r.gross} prefix={false} paisa="never" />
+            {toPaisa(r.applied) > 0n ? (
+              <span className="num whitespace-nowrap text-xs text-fg-muted">
+                paid <Money value={r.applied} prefix={false} paisa="never" /> by then
+              </span>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        // Below 1536 one column says what is still owed and its age (the four age columns need the room of a wide window; their
+        // totals are the summary above).
+        id: 'owed',
+        header: 'Still owed',
+        kind: 'money',
+        value: r => r.remaining,
+        ...whole<AgingRow>(r => r.remaining),
+        hideClass: '2xl:hidden',
+        cell: r =>
+          r.importedUnlinked ? (
+            <span className="grid justify-items-end gap-px text-fg-2">
+              <Money value={r.remaining} prefix={false} paisa="never" />
+              <span className="text-xs text-fg-muted">Imported, no order</span>
+            </span>
+          ) : r.bucket === '61-90' || r.bucket === '90+' ? (
+            <AgeBand bucket={r.bucket} className="-mx-2">
+              <Money value={r.remaining} prefix={false} paisa="never" />
+            </AgeBand>
+          ) : (
+            <span className="grid justify-items-end gap-px">
+              <Money value={r.remaining} prefix={false} paisa="never" />
+              <span className="whitespace-nowrap text-xs text-fg-muted">{BUCKET_TITLE[r.bucket]}</span>
+            </span>
+          ),
+      },
       ...AGING_BUCKETS.map(
         (b): Column<AgingRow> => ({
           id: `b${b}`,
           header: BUCKET_LABEL[b],
           kind: 'money',
+          hideClass: 'hidden 2xl:table-cell',
           value: r => (r.bucket === b && !r.importedUnlinked ? r.remaining : null),
           ...whole<AgingRow>(r => (r.bucket === b && !r.importedUnlinked ? r.remaining : null)),
           cell: r =>
@@ -420,6 +464,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         id: 'imported',
         header: 'Imported, no order',
         kind: 'money',
+        hideClass: 'hidden 2xl:table-cell',
         value: r => (r.importedUnlinked ? r.remaining : null),
         ...whole<AgingRow>(r => (r.importedUnlinked ? r.remaining : null)),
         cell: r =>
@@ -441,7 +486,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const asOfLabel = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7))} ${asOf.slice(0, 4)}`
   return (
     <>
-      <SumBar
+      <FitSumBar
         caption={`${plural(v.rows.length, 'invoice')} open, as of ${asOfLabel}`}
         label="Overdue by age"
         items={AGING_BUCKETS.map(b => ({
@@ -658,8 +703,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           </Link>
         </Banner>
       ) : null}
-      <SumBar
-        className="max-sm:grid-cols-1"
+      <FitSumBar
         caption={
           <>
             {plural(v.rows.length, 'supplier order')}, <Num>{v.paidLegs}</Num> with a payment{missing.length ? '' : <>, payable at the rate on {day}</>}
@@ -756,32 +800,41 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         id: 'month',
         header: 'Invoice month',
         value: r => r.month,
+        // Audit 1 (item 10): the table fits its card from 1024 up. The deposit figures always show; the counts from 1280, Net and
+        // GST paid on purchases from 1536 (the summary above has the month's net, the card below its GST paid on purchases).
         cell: r => (
           <span className="grid gap-px">
             <span className="font-medium">{monthKeyLabel(r.month)}</span>
+            <span className="num text-xs text-fg-muted xl:hidden">{plural(r.invoiceCount, 'invoice')}</span>
             {r.month === ctx.month ? <span className="text-xs text-fg-muted">Selected month</span> : null}
           </span>
         ),
       },
-      { id: 'count', header: 'Invoices', kind: 'num', value: r => r.invoiceCount, total: true },
-      { id: 'net', header: 'Net', kind: 'money', value: r => r.net, ...whole<GstMonthRow>(r => r.net) },
+      { id: 'count', header: 'Invoices', kind: 'num', value: r => r.invoiceCount, total: true, hideClass: 'hidden xl:table-cell' },
+      { id: 'net', header: 'Net', kind: 'money', value: r => r.net, ...whole<GstMonthRow>(r => r.net), hideClass: 'hidden 2xl:table-cell' },
       { id: 'gst', header: 'GST', kind: 'money', value: r => r.gst, ...whole<GstMonthRow>(r => r.gst) },
-      { id: 'psid', header: 'PSID sets', kind: 'num', value: r => r.psidSets, total: true },
       {
+        // The PSID sets ride under the deposited count (one deposit slip can cover several invoices).
         id: 'deposited',
         header: 'Deposited',
         kind: 'num',
         value: r => r.depositedCount,
         total: true,
+        hideClass: 'hidden xl:table-cell',
         cell: r => (
-          <span className="num">
-            {r.depositedCount} of {r.invoiceCount}
+          <span className="grid justify-items-end gap-px">
+            <span className="num whitespace-nowrap">
+              {r.depositedCount} of {r.invoiceCount}
+            </span>
+            <span className="num whitespace-nowrap text-xs text-fg-muted">
+              {r.psidSets} PSID {r.psidSets === 1 ? 'set' : 'sets'}
+            </span>
           </span>
         ),
       },
       { id: 'depositedAmount', header: 'Deposited, PKR', kind: 'money', value: r => r.depositedAmount, ...whole<GstMonthRow>(r => r.depositedAmount) },
       { id: 'todeposit', header: 'To deposit, PKR', kind: 'money', value: r => r.toDeposit, ...whole<GstMonthRow>(r => r.toDeposit) },
-      { id: 'tax', header: 'GST paid on purchases', kind: 'money', value: r => r.inputTax, ...whole<GstMonthRow>(r => r.inputTax) },
+      { id: 'tax', header: 'GST paid on purchases', kind: 'money', value: r => r.inputTax, ...whole<GstMonthRow>(r => r.inputTax), hideClass: 'hidden 2xl:table-cell' },
     ],
     [ctx.month],
   )
@@ -792,7 +845,7 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const note = v.rows.length
   return (
     <>
-      <SumBar
+      <FitSumBar
         label="GST and FBR"
         items={[
           { label: `${name} invoices`, count: sel?.invoiceCount ?? 0, sub: <>Net PKR <Num>{rupees(sel?.net ?? 0)}</Num></> },
@@ -802,7 +855,8 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         ]}
       />
       <ReportCsv />
-      <div className={cn('grid items-start gap-6', v.showInputTax && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]')}>
+      {/* The GST paid on purchases card sits under the table: beside it, it squeezed the table into a sideways scroll. */}
+      <div className="grid items-start gap-card-gap">
       <DataTable
         label="GST and FBR, by invoice month"
         columns={v.showInputTax ? columns : columns.filter(c => c.id !== 'tax')}
@@ -847,14 +901,14 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             </InfoTip>
           }
         >
-          <dl className="text-table">
-            <div className="grid gap-1 border-t px-card py-3 first:border-t-0">
+          <dl className="text-table md:grid md:grid-cols-2">
+            <div className="grid content-start gap-1 border-t px-card py-3 first:border-t-0 md:border-t-0">
               <dt className="text-fg-2">GST charged, {name} invoices</dt>
               <dd className="num type-row">
                 {pkr(sel?.gst ?? 0)} · {plural(sel?.invoiceCount ?? 0, 'invoice')}
               </dd>
             </div>
-            <div className="grid gap-1 border-t px-card py-3">
+            <div className="grid content-start gap-1 border-t px-card py-3 md:border-l md:border-t-0">
               <dt className="text-fg-2">GST paid on purchases in {name}, for the tax agent</dt>
               <dd className="num type-row">{pkr(sel?.inputTax ?? 0)}</dd>
             </div>
@@ -889,14 +943,18 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         cell: r => (
           <span className="flex items-center gap-3">
             <Avatar name={r.name} />
-            <span className="grid gap-px">
+            <span className="grid min-w-0 gap-px">
               <span className="font-medium">{r.name}</span>
-              <span className="text-xs capitalize text-fg-muted">{r.role}</span>
+              <span className="text-xs text-fg-muted">
+                <span className="capitalize">{r.role}</span>
+                {/* Below 1280 the payment count rides here (its column hides so the table fits the card: audit 1, item 10). */}
+                <span className="num xl:hidden"> · {plural(r.payments, 'payment')}</span>
+              </span>
             </span>
           </span>
         ),
       },
-      { id: 'payments', header: 'Payments', kind: 'num', value: r => r.payments, total: true },
+      { id: 'payments', header: 'Payments', kind: 'num', value: r => r.payments, total: true, hideClass: 'hidden xl:table-cell' },
       { id: 'net', header: `Net credited, ${monthName(ctx.month)}`, kind: 'money', value: r => r.net, ...whole<TeamRow>(r => r.net), cell: r => (r.net === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.net} prefix={false} paisa="never" />) },
       { id: 'qtd', header: 'Quarter to date', kind: 'money', value: r => r.quarterNet, ...whole<TeamRow>(r => r.quarterNet), cell: r => (r.quarterNet === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.quarterNet} prefix={false} paisa="never" />) },
       {
@@ -928,7 +986,7 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   if (q.isPending || !v) return <ReportLoading label="Loading sales by person" />
   return (
     <>
-      <SumBar
+      <FitSumBar
         label="Sales by person"
         items={[
           { label: 'Net cash credited', amount: v.credited,  sub: <><Num>{v.creditedPayments}</Num> {v.creditedPayments === 1 ? 'payment' : 'payments'} credited to <Num>{v.creditedPeople}</Num> {v.creditedPeople === 1 ? 'person' : 'people'}</> },

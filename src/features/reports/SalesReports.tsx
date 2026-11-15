@@ -7,7 +7,7 @@ import { formatShortDate } from '@/lib/formatDay'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { SumBar } from '@/ui/SumBar'
+import { FitSumBar } from '@/features/money/FitSumBar'
 import { CARD } from '@/ui/card'
 import { useFloatReport, useOutcomes, useRepeatCustomers, useTurnaround } from '@/features/reports/hooks'
 import {
@@ -45,7 +45,7 @@ export function SalesReports() {
         o.total === 0 && r.customers === 0 ? (
           <p className={cn(CARD, 'type-body p-card text-fg-2')}>Not enough data yet. These fill in as RFQs are won or closed and orders are placed.</p>
         ) : (
-          <SumBar
+          <FitSumBar
             label="At a glance"
             className="rounded-card shadow-e1"
             items={[
@@ -196,7 +196,7 @@ function OutcomesReport() {
       )}
     >
       {s && s.total > 0 ? (
-        <SumBar
+        <FitSumBar
           label="RFQ outcome totals"
           items={[
             { label: 'RFQs', count: s.total, sub: 'All time' },
@@ -251,7 +251,7 @@ function FloatReport() {
       )}
     >
       {s && s.lines.length > 0 ? (
-        <SumBar
+        <FitSumBar
           label="Asking suppliers totals"
           items={[
             { label: 'RFQs sent to suppliers', count: s.floatedRfqs },
@@ -305,7 +305,7 @@ function TurnaroundReport() {
       )}
     >
       {s && s.asked > 0 ? (
-        <SumBar
+        <FitSumBar
           label="Customer answer totals"
           items={[
             { label: 'Questions asked', count: s.asked },
@@ -368,7 +368,7 @@ function RepeatReport() {
       )}
     >
       {s && s.customers > 0 ? (
-        <SumBar
+        <FitSumBar
           label="Repeat customer totals"
           items={[
             { label: 'Customers with orders', count: s.customers },

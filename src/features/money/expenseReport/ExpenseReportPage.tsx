@@ -11,7 +11,8 @@ import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
-import { SumBar, type SumBarItem } from '@/ui/SumBar'
+import { type SumBarItem } from '@/ui/SumBar'
+import { FitSumBar } from '@/features/money/FitSumBar'
 import { Skeleton } from '@/ui/Skeleton'
 import { CARD } from '@/ui/card'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -83,7 +84,7 @@ export function ExpenseReportPage() {
       report="expenses"
       csv={v ? () => downloadReport(expenseReportCsv(v), `expenses-${period.key}.csv`) : null}
       period={
-        <span className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <SegmentedControl
             aria-label="Month or quarter"
             options={[
@@ -95,7 +96,7 @@ export function ExpenseReportPage() {
             large
           />
           <PeriodPager period={period} atNow={period.key >= now.key} go={by => set(shiftPeriod(period, by))} />
-        </span>
+        </div>
       }
     >
       {q.isError ? (
@@ -245,7 +246,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
     // Phone: ONE card, a line per figure (SumBar lines), so every figure shows without a tap. The by-the-day-paid sentence is the (i).
     return (
       <>
-        <SumBar
+        <FitSumBar
           phone="lines"
           className={cn(CARD, 'gap-3 p-card')}
           label={`Spent in ${v.label}`}
@@ -288,7 +289,7 @@ function Summary({ v, narrow }: { v: ExpenseReportView; narrow: boolean }) {
   ]
   return (
     <div className="grid gap-3" data-testid="expense-report-total">
-      <SumBar label={`Spent in ${v.label}`} className="rounded-card shadow-e1 md:auto-cols-auto md:grid-flow-row md:grid-cols-4" items={items} />
+      <FitSumBar label={`Spent in ${v.label}`} className="rounded-card shadow-e1" items={items} />
       <p className="type-body max-w-prose text-fg-2">
         <span>
           PKR · Spent in {v.label}, {plural(v.total.count, 'expense')}
@@ -325,7 +326,7 @@ export function Trend({ bars, kind, onPick }: { bars: TrendBar[]; kind: PeriodKi
               type="button"
               data-row-actions=""
               onClick={() => onPick(b.period)}
-              aria-label={`${b.current ? `${compact(b.amount)}, ` : ''}${b.label}: PKR ${rupees(b.amount)} spent${b.current ? ', shown' : ''}`}
+              aria-label={`${compact(b.amount)}, ${b.label}: PKR ${rupees(b.amount)} spent${b.current ? ', shown' : ''}`}
               aria-current={b.current || undefined}
               title={`${b.label}: PKR ${rupees(b.amount)}`}
               className="group relative flex h-full flex-col items-center justify-end rounded-t-control transition-colors duration-fast hover:bg-sunken focus-visible:outline-offset-0 motion-reduce:transition-none"
@@ -473,7 +474,8 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
         </span>
       ),
     },
-    { id: 'budget', header: 'Budget', width: 240, align: 'right', hideBelowLg: true, value: r => r.budgetLeft, cell: r => <BudgetCell budget={r.budget} left={r.budgetLeft} /> },
+    // From 1280: at 1024 the budget bars pushed the table into a sideways scroll (audit 1, item 10).
+    { id: 'budget', header: 'Budget', width: 240, align: 'right', hideClass: 'hidden xl:table-cell', value: r => r.budgetLeft, cell: r => <BudgetCell budget={r.budget} left={r.budgetLeft} /> },
   ]
   return (
     <div className="grid min-w-0" data-testid="expense-report-breakdown">

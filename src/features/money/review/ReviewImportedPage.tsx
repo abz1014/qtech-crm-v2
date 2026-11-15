@@ -10,7 +10,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { MoneyFrame } from '@/features/money/MoneyFrame'
 import type { ProposalView } from '@/features/money/review/api'
 import { useFindMatches, useLinkAllCertain, useLinkOne, useReviewItems, useSetReview } from '@/features/money/review/hooks'
 import { countProposals, proposalKey, reviewProgress, sortReview, visibleProposals, type ReviewItem, type ReviewState } from '@/features/money/review/model'
@@ -35,9 +35,8 @@ export function ReviewImportedPage() {
     setSettledHere(list => (state === 'to_review' ? list.filter(s => s.item.id !== item.id) : [...list.filter(s => s.item.id !== item.id), { item, state }]))
 
   return (
-    <MoneyFrame active={null}>
+    <MoneyFrame active={null} title="Review imported" back={{ to: '/money', label: 'Money' }}>
       <NoPrimary />
-      <MoneySubHeader back={{ to: '/money', label: 'Money' }} title="Review imported" />
       <p className="max-w-prose text-base text-fg-2">
         Records imported from the old system that still show money or goods open. Decide each one once: still open, or settled and kept as history. Nothing is hidden until each is decided.
       </p>
@@ -70,7 +69,7 @@ export function ReviewImportedPage() {
         ) : q.isError ? (
           <p role="alert" className="px-card py-4 text-base font-bold text-tone-danger-fg">
             The records could not be loaded.{' '}
-            <button type="button" className="font-medium underline" onClick={() => void q.refetch()}>
+            <button type="button" className="inline-flex min-h-touch items-center font-medium underline" onClick={() => void q.refetch()}>
               Try again
             </button>
           </p>

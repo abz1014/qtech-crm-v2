@@ -625,7 +625,8 @@ function ExpenseFormReady({
 
 function LinkButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline">
+    // a finger-sized target on a touch screen (audit 1: 19 px tall), the same quiet link look with a mouse
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-1 rounded font-medium text-primary underline-offset-2 hover:underline [@media(pointer:coarse)]:min-h-touch">
       {children}
     </button>
   )

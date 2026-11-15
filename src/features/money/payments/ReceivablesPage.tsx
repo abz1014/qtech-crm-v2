@@ -18,7 +18,7 @@ import { Money } from '@/ui/Money'
 import { NoResults } from '@/ui/NoResults'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
-import { SumBar } from '@/ui/SumBar'
+import { FitSumBar } from '@/features/money/FitSumBar'
 import { TableFilter } from '@/ui/TableFilter'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
@@ -66,10 +66,10 @@ const RecordPaymentFlow = lazyDialog(() => import('@/features/money/payments/Rec
  *   /money/receivables?pay=1              asks "Which order?" first, then opens Record payment (admin; + Create > Payment received,
  *                                         F-287 / F-642)
  */
-// Gross and Settled fold away on a phone, and again between 1360 and 1535 px (1439 before the bigger text, DECISIONS 2026-10-19), where
-// the reminder panel sits beside the table and the Balance column carries the figure that matters; the table then fits without a
-// sideways scroll. They show everywhere else.
-const GROSS_SETTLED = 'hidden md:table-cell min-[1360px]:hidden min-[1536px]:table-cell'
+// Gross and Settled fold away on a phone and a tablet, and from 1360 px, where the reminder panel sits beside the table (the page is no
+// wider past 1536, so neither is the table) and the Balance column carries the figure that matters; the table then fits without a
+// sideways scroll (audit 1, item 10: six columns needed one at 1024 and from 1536 up). They show from 1280 to 1359, with no panel beside.
+const GROSS_SETTLED = 'hidden xl:table-cell min-[1360px]:hidden'
 const SEARCH_FIELDS = 'customer, order number and invoice number'
 const FILTER_WORD: Record<ReceivableFilter, string> = { open: 'Open', overdue: 'Overdue', settled: 'Paid' }
 const phoneMoney = (n: number) => Math.round(n).toLocaleString('en-US')
@@ -155,8 +155,11 @@ export function ReceivablesPage() {
         header: 'Customer and order',
         value: r => r.companyName,
         cell: r => (
-          <span className="grid gap-px">
-            <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName}</span>
+          <span className="grid min-w-[10rem] max-w-[16rem] gap-px">
+            {/* Two lines at most, the whole name in the title: a long name never pushes the figures off the card. */}
+            <span className="line-clamp-2 min-w-0 font-medium [overflow-wrap:anywhere]" title={r.companyName}>
+              {r.companyName}
+            </span>
             <span className="num min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">
               <Link to={`/orders/${r.orderId}`} className="underline-offset-2 hover:underline" aria-label={`Open ${orderRef(r.orderNumber)}`}>
                 {orderRef(r.orderNumber)}
@@ -248,7 +251,7 @@ export function ReceivablesPage() {
           Send a reminder
         </Button>
       ) : null}
-      <SumBar
+      <FitSumBar
         className="max-sm:hidden"
         label="Balance by status, includes GST"
         items={[
@@ -322,9 +325,12 @@ export function ReceivablesPage() {
             }
             mobileRow={r => (
               <div className="grid gap-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName}</span>
-                  <Money value={r.balance} prefix={false} strong />
+                {/* A long name keeps two lines beside the balance (the whole name in the title); a big balance drops under it. */}
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <span className="line-clamp-2 min-w-0 flex-[1_1_9rem] font-medium [overflow-wrap:anywhere]" title={r.companyName}>
+                    {r.companyName}
+                  </span>
+                  <Money value={r.balance} prefix={false} strong className="ml-auto" />
                 </div>
                 <span className="num text-sm text-fg-2">
                   {/* Each number is one word: "INV-0103" never breaks at its hyphen. */}

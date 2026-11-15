@@ -53,6 +53,12 @@ export const PHONE_FOLD = cn(FOLD_CARD, 'shadow-e1')
 export const FIELD = cn(controlClass, 'text-base max-md:h-touch')
 
 /**
+ * A native date box's focus ring (audit 1, item 13): Chromium does not match :focus-visible on a date input reached by Tab (its
+ * focus sits in the inner day / month / year fields), so the control look's ring never showed. :focus does.
+ */
+export const DATE_FOCUS = 'focus:border-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-brand-green'
+
+/**
  * A native <select> (the best list on a phone, and it keeps the optgroups) drawn like the app's Select: the control look, a chevron,
  * 40 with a mouse and 44 on a phone, 16 px text.
  */

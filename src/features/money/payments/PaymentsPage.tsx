@@ -12,7 +12,7 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
-import { SumBar } from '@/ui/SumBar'
+import { FitSumBar } from '@/features/money/FitSumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PAID_VIA_LABEL, monthKeyLabel, shiftMonth, type PaidVia } from '@/features/money/expenses/model'
@@ -97,7 +97,7 @@ export function PaymentsPage() {
         {isClosed ? <MonthStateChip closed /> : null}
       </div>
       {q.isSuccess && rows.length > 0 ? (
-        <SumBar
+        <FitSumBar
           label={`Received in ${name}, includes GST`}
           items={[
             { label: `Received in ${name}`, amount: sum.total, sub: `${plural(sum.count)}, GST included` },
@@ -127,12 +127,16 @@ export function PaymentsPage() {
           </EmptyState>
         }
         mobileRow={r => (
+          // The customer on its own line (two at most, the whole name in the title), the amount under it: a long name never
+          // squeezes to one word a line beside a big figure (audit 1, item 11).
           <div className="grid gap-1">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 font-card [overflow-wrap:anywhere]">{r.company ?? 'Customer'}</span>
-              <Money value={r.amount} strong />
+            <span className="line-clamp-2 min-w-0 font-card [overflow-wrap:anywhere]" title={r.company ?? undefined}>
+              {r.company ?? 'Customer'}
+            </span>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <OrderLink r={r} />
+              <Money value={r.amount} strong className="ml-auto" />
             </div>
-            <OrderLink r={r} />
             <span className="text-sm text-fg-2">
               Received <time dateTime={r.receivedOn} className="num">{day(r.receivedOn)}</time> · {viaWord(r.paidVia)}
               {r.reference ? <span className="num"> · {r.reference}</span> : null}
@@ -162,8 +166,10 @@ function OrderLink({ r }: { r: ReceivedPayment }) {
 
 function CustomerCell({ r }: { r: ReceivedPayment }) {
   return (
-    <span className="grid gap-px">
-      <span className="min-w-0 font-card [overflow-wrap:anywhere]">{r.company ?? 'Customer'}</span>
+    <span className="grid min-w-[10rem] max-w-[18rem] gap-px">
+      <span className="line-clamp-2 min-w-0 font-card [overflow-wrap:anywhere]" title={r.company ?? undefined}>
+        {r.company ?? 'Customer'}
+      </span>
       <OrderLink r={r} />
     </span>
   )

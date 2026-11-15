@@ -14,7 +14,7 @@ import { Skeleton } from '@/ui/Skeleton'
 import { CARD } from '@/ui/card'
 import { qk } from '@/features/queryKeys'
 import { monthKeyLabel } from '@/features/money/expenses/model'
-import { MoneySubHeader, MoneyFrame } from '@/features/money/MoneyFrame'
+import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { loadGstMonths } from '@/features/money/monthEnd/api'
 import { loadGstFilings, loadWhtDeducted, saveWhtCertificate, type WhtRow } from '@/features/money/accounts/api'
 import { signReceipt } from '@/features/money/expenses/api'
@@ -45,8 +45,7 @@ export function GstToFbrPage() {
   )
   const failed = months.isError || filings.isError
   return (
-    <MoneyFrame active={null}>
-      <MoneySubHeader back={{ to: '/money', label: 'Money' }} title="GST to FBR" />
+    <MoneyFrame active={null} title="GST to FBR" back={{ to: '/money', label: 'Money' }}>
       <p className="max-w-prose text-base text-fg-2">
         GST charged on invoices, less GST paid on purchases, is the amount payable to FBR. Pay by the <span data-testid="gst-pay-day">{dayWords(dl.deadlines.payDay)}</span> of the next month and
         file the return by the <span data-testid="gst-return-day">{dayWords(dl.deadlines.returnDay)}</span>.{' '}
@@ -64,7 +63,7 @@ export function GstToFbrPage() {
         </p>
       ) : !lines ? (
         // shaped like the month cards: the month, the three figures, the status
-        <div className="grid gap-3" aria-busy="true" aria-label="Loading the GST months">
+        <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the GST months">
           {[0, 1, 2].map(i => (
             <div key={i} className={cn(CARD, 'grid gap-4 p-card md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,15rem)] md:items-center md:gap-6')}>
               <span className="grid gap-2">

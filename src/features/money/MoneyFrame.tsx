@@ -26,16 +26,28 @@ import { MoneyPagesSwitcher } from '@/features/money/MoneyPagesSheet'
 export function MoneyFrame({
   active,
   actions,
+  secondary,
   title,
   barTitle,
   lede,
+  back,
+  titleMeta,
   morePages = true,
   children,
 }: {
   active: string | null
   actions?: ReactNode
-  /** The h1; the active tab's name when absent. */
+  /** One secondary button beside the green one (Export CSV on Mistakes to fix). */
+  secondary?: ReactNode
+  /** The h1: the page's own name. The active tab's name when absent. */
   title?: string
+  /**
+   * A page reached from a tab rather than being one (Bank check, Margins, Mistakes to fix...): where it was opened from. A small back
+   * link above the h1 on a desktop ("< Lock a month"); on a phone the bar's own back arrow (one bar, UX audit 2026-10-19).
+   */
+  back?: { to: string; label: string }
+  /** What explains the title (an (i), a state chip), in the line under it. On a phone, where the h1 is the bar's, the title is drawn beside it so the (i) never points at nothing. */
+  titleMeta?: ReactNode
   /** The phone bar's title. Default "Money": on a phone the switcher row names the page, not the bar. */
   barTitle?: string
   /** The line under the h1 when it is not "All amounts in PKR". A view with no line made the tabs sit higher than on its sister tabs. */
@@ -61,14 +73,37 @@ export function MoneyFrame({
     // One column no wider than the screen (minmax(0, 1fr)): a wide child (a register's table) scrolls inside its own card
     // instead of stretching the column, and every card with it, past the right edge of a phone.
     <div className="mx-auto grid w-full min-w-0 max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
-      {/* The phone bar's title. Rendered before the page, so a sub-page's own bar (MoneySubHeader) wins. */}
-      <FrameBar title={barTitle ?? 'Money'} />
+      {/* The phone bar: "Money" on a tab (the switcher names the page); a page reached from a tab has its name and a back arrow. */}
+      <FrameBar title={back ? heading : (barTitle ?? 'Money')} back={back?.to} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4">
-        {/* The list-page head (spec 5.2): the view's name and the page's one green action (`actions`). */}
+        {back ? (
+          <Link
+            to={back.to}
+            className="-mb-2 inline-flex items-center gap-1 justify-self-start text-sm font-medium text-fg-2 hover:text-fg hover:underline max-md:hidden md:-mb-3"
+          >
+            <Icon icon={ChevronLeft} size="sm" />
+            <span className="sr-only">Back to </span>
+            {back.label}
+          </Link>
+        ) : null}
+        {/* The list-page head (spec 5.2): the page's own name as the one h1 on every Money page (audit 1, item 22), and its one green action. */}
         <PageHeader
           title={heading}
-          lede={lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
+          lede={
+            titleMeta ? (
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span aria-hidden="true" className="text-xl font-heavy tracking-snug text-fg md:hidden">
+                  {heading}
+                </span>
+                {lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
+                {titleMeta}
+              </span>
+            ) : (
+              (lede ?? <span className="max-md:hidden">All amounts in PKR</span>)
+            )
+          }
           primary={actions}
+          secondary={secondary}
         />
         {phone && isAdmin ? (
           <MoneyPagesSwitcher current={current} tabs={tabs} activeKey={active} more={MORE_MONEY_PAGES} toOf={toOf} isHere={isHere} />
@@ -110,9 +145,10 @@ export function MoneyFrame({
 }
 
 // Memo: a re-render of the frame must not replace the bar a sub-page set (Lock a month's hideTabs) with the plain title. It re-runs
-// only when the title changes.
-const FrameBar = memo(function FrameBar({ title }: { title: string }) {
-  useMobileBar({ title })
+// only when the title or the back address changes. Back goes where the person came from (Today's "Margin not final" item, Reports,
+// the checklist), else to `back`.
+const FrameBar = memo(function FrameBar({ title, back }: { title: string; back?: string }) {
+  useMobileBar(back ? { title, back: 'history', fallback: back } : { title })
   return null
 })
 
@@ -153,44 +189,5 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
         </span>
       ) : null}
     </Link>
-  )
-}
-
-/**
- * The heading of a view reached from a Money tab rather than being one (Bank check, Margins, Mistakes to fix): a
- * back link to where it was opened from, the title and its actions. It replaces the old third strip of tabs.
- * On a phone the back link is the phone bar's own back arrow (one bar, UX audit 2026-10-19), so it is not drawn twice, and
- * the title is the phone bar's (not repeated as a heading).
- */
-export function MoneySubHeader({
-  back,
-  title,
-  meta,
-  actions,
-}: {
-  back: { to: string; label: string }
-  title: string
-  meta?: ReactNode
-  actions?: ReactNode
-}) {
-  // Back goes where the person came from (Today's "Margin not final" item, Reports, the checklist), else to `back.to`.
-  useMobileBar({ title, back: 'history', fallback: back.to })
-  return (
-    <div className="grid gap-2">
-      <Link to={back.to} className="inline-flex items-center gap-1 justify-self-start text-sm font-medium text-fg-2 hover:text-fg hover:underline max-md:hidden">
-        <Icon icon={ChevronLeft} size="sm" />
-        <span className="sr-only">Back to </span>
-        {back.label}
-      </Link>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {/* The title and what explains it (the (i), a tag) stay together: a lone (i) under the phone bar pointed at nothing. So a view with `meta` draws its title on a phone too. */}
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-          <h2 className={cn('text-xl font-heavy tracking-snug', !meta && 'max-md:sr-only')}>{title}</h2>
-          {meta}
-        </div>
-        <span className="flex-1 max-md:hidden" />
-        {actions}
-      </div>
-    </div>
   )
 }

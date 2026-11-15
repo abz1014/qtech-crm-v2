@@ -18,7 +18,7 @@ import { NoPrimary } from '@/ui/NoPrimary'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { cn } from '@/lib/utils'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { useLostEnquiryCosts, useProfitPage } from '@/features/money/profit/hooks'
 import type { LostEnquiryCost } from '@/features/money/profit/api'
 import { averageOf, bestMonth, buildPoints, completeMonths, rupeesOf, shortMonth, spanLabel, sumOf, type ProfitPoint, type RangeMonths } from '@/features/money/profit/model'
@@ -49,18 +49,18 @@ export function ProfitPage() {
   }, [q.profit, q.flows, today, range])
 
   return (
-    <MoneyFrame active={null}>
-      <NoPrimary />
-      <MoneySubHeader
-        back={{ to: '/money', label: 'Money' }}
-        title="Profitability"
-        meta={
+    <MoneyFrame
+      active={null}
+      title="Profitability"
+      back={{ to: '/money', label: 'Money' }}
+      titleMeta={
           <InfoTip label="About profitability">
             Income is the amount invoiced, with GST left out. Cash received is what customers paid, and it includes GST. The two differ when
             customers pay later than they are invoiced. The average leaves out the current month, because it is not over.
           </InfoTip>
         }
-      />
+    >
+      <NoPrimary />
       {q.isError ? (
         <LoadError title="Profitability did not load" onRetry={() => void q.refetch()} />
       ) : q.isPending || !view ? (
@@ -248,11 +248,30 @@ function ProfitTable({ rows: monthRows, label }: { rows: ProfitPoint[]; label: s
   const rows = useMemo(() => runEmptyMonths(monthRows), [monthRows])
   const money = (get: (r: DrawnRow) => bigint) => (r: DrawnRow) => (r.run ? <span /> : <Money value={paisaToFixed(get(r))} prefix={false} paisa="never" />)
   const columns: Column<DrawnRow>[] = [
-    { id: 'month', header: 'Month', value: r => r.month, cell: r => (r.run ? <span className="text-fg-2">{r.run}: nothing recorded</span> : shortMonth(r.month)) },
-    { id: 'income', header: 'Income (PKR)', kind: 'money', value: r => paisaToFixed(r.income), total: true, paisa: 'never', cell: money(r => r.income) },
-    { id: 'costs', header: 'Costs (PKR)', kind: 'money', value: r => paisaToFixed(r.costs), total: true, paisa: 'never', hideBelowMd: true, cell: money(r => r.costs) },
+    { id: 'month', header: 'Month', value: r => r.month, cell: r => (r.run ? <span className="block min-w-[9rem] whitespace-normal text-fg-2">{r.run}: nothing recorded</span> : shortMonth(r.month)) },
+    {
+      id: 'income',
+      header: 'Income (PKR)',
+      kind: 'money',
+      value: r => paisaToFixed(r.income),
+      total: true,
+      paisa: 'never',
+      // Below 1280 the cash received rides under the income it is compared with (its column hides, so the table fits: audit 1, item 10).
+      cell: r =>
+        r.run ? (
+          <span />
+        ) : (
+          <span className="grid justify-items-end gap-px">
+            <Money value={paisaToFixed(r.income)} prefix={false} paisa="never" />
+            <span className="num whitespace-nowrap text-xs text-fg-muted xl:hidden">
+              cash received <Money value={paisaToFixed(r.cash)} prefix={false} paisa="never" />
+            </span>
+          </span>
+        ),
+    },
+    { id: 'costs', header: 'Costs (PKR)', kind: 'money', value: r => paisaToFixed(r.costs), total: true, paisa: 'never', hideClass: 'hidden xl:table-cell', cell: money(r => r.costs) }, // below 1280 profit is income less these; the table then fits
     { id: 'profit', header: 'Profit (PKR)', kind: 'money', value: r => paisaToFixed(r.profit), total: true, paisa: 'never', cell: money(r => r.profit) },
-    { id: 'cash', header: 'Cash received, includes GST (PKR)', kind: 'money', value: r => paisaToFixed(r.cash), total: true, paisa: 'never', cell: money(r => r.cash) },
+    { id: 'cash', header: 'Cash received, includes GST (PKR)', kind: 'money', value: r => paisaToFixed(r.cash), total: true, paisa: 'never', hideClass: 'hidden xl:table-cell', cell: money(r => r.cash) },
   ]
   return (
     <DataTable

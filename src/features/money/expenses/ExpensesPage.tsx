@@ -69,10 +69,11 @@ export function ExpensesPage() {
         </Button>
       }
     >
-      {/* Desktop (lg): the list in the main column, the side panels in a narrow one. The wrappers are `contents` below lg, so a phone and a
-          tablet keep one column and the order classes: claims, Quick add, then (phone) the list, Recurring, cash / (tablet) cash, Recurring, the list. */}
-      <div className="grid gap-card-gap lg:grid-cols-[minmax(0,1fr)_minmax(0,21.25rem)] lg:items-start">
-        <div className="contents lg:grid lg:min-w-0 lg:gap-card-gap">
+      {/* Desktop (xl): the list in the main column, the side panels in a narrow one. The wrappers are `contents` below xl, so a phone and a
+          tablet keep one column and the order classes: claims, Quick add, then (phone) the list, Recurring, cash / (tablet) cash, Recurring, the list.
+          From lg (1024) the side column left the list 354 px and it scrolled sideways (audit 1, item 10), so it waits for xl (1280). */}
+      <div className="grid gap-card-gap xl:grid-cols-[minmax(0,1fr)_minmax(0,21.25rem)] xl:items-start">
+        <div className="contents xl:grid xl:min-w-0 xl:gap-card-gap">
           <div className="order-2 min-w-0">
             {cats.data ? <QuickAdd categories={cats.data} sheetOpen={burst} /> : <QuickAddSkeleton />}
           </div>
@@ -80,7 +81,7 @@ export function ExpensesPage() {
             <ExpensesTab />
           </div>
         </div>
-        <div className="contents lg:grid lg:min-w-0 lg:gap-card-gap">
+        <div className="contents xl:grid xl:min-w-0 xl:gap-card-gap">
           {/* To approve and Claims to repay (one card row each on a phone) come first while there are any; cash and the misc banners follow the list on a phone. */}
           <div className="order-1 grid min-w-0 gap-card-gap empty:hidden">
             {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}

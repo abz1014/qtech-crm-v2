@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useSession } from '@/app/session'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -43,6 +43,7 @@ export function ReportsFrame({
   const ctx = useMemo(() => ({ csv, claim: setClaimed }), [csv])
   const named = options.length > 1 // the select names the report; with no select (sales, one report) the name is shown
   const name = reportTitle(report)
+  const pickerId = useId()
   return (
     <MoneyFrame
       active="reports"
@@ -55,15 +56,18 @@ export function ReportsFrame({
       {/* The report's select and its period on ONE row. */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         {named ? (
-          <label className="grid min-w-0 flex-[1_1_12.5rem] gap-1 text-sm font-card text-fg sm:w-[20rem] sm:flex-none">
-            Report
+          <div className="grid min-w-0 flex-[1_1_12.5rem] gap-1 sm:w-[20rem] sm:flex-none">
+            <label htmlFor={pickerId} className="text-sm font-card text-fg">
+              Report
+            </label>
             <Select
+              id={pickerId}
               data-testid="report-picker"
               value={report}
               onChange={e => pick(e.target.value)}
               options={options.map(o => ({ value: o.key, label: o.title }))}
             />
-          </label>
+          </div>
         ) : null}
         {period}
         {/* 768 and up: Export CSV on this row, right-aligned (it was its own 36px row). Below 768 the report body's slot draws it. */}

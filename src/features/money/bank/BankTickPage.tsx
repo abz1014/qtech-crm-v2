@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { StatusText } from '@/ui/StatusText'
 import { Skeleton } from '@/ui/Skeleton'
-import { SumBar } from '@/ui/SumBar'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { FitSumBar } from '@/features/money/FitSumBar'
+import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { MonthPager } from '@/features/money/monthEnd/MonthEndFrame'
 import { monthKeyLabel, shiftMonth } from '@/features/money/expenses/model'
 import { useBankMonth, useTickLine } from '@/features/money/bank/hooks'
@@ -85,25 +85,24 @@ export function BankTickPage() {
   const picker = (
     <div className={cn(CARD, 'flex flex-wrap items-center gap-x-4 gap-y-2 px-card py-3')}>
       <span className="text-base font-bold text-fg-2">Statement month</span>
-      <span className="inline-flex items-center gap-2">
+      <div className="inline-flex items-center gap-2">
         <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
         <InfoTip label="About matching the bank statement">
           Tick each line that is on the {monthKeyLabel(month).split(' ')[0]} bank statement. Select a line again to undo. Cash items never appear here.
           An FBR payment is one line per PSID, however many invoices it covers. Compare the matched totals with the statement&apos;s total
           credits and debits. Ticking changes nothing in the books and stays editable after the month is locked.
         </InfoTip>
-      </span>
+      </div>
     </div>
   )
 
   return (
-    <MoneyFrame active={null}>
-      <MoneySubHeader
-        back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
-        title="Bank check"
-        meta={totals ? <StateChip open={openCount ?? 0} /> : null}
-      />
-
+    <MoneyFrame
+      active={null}
+      title="Bank check"
+      back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
+      titleMeta={totals ? <StateChip open={openCount ?? 0} /> : null}
+    >
       {picker}
 
       {data.isError ? (
@@ -132,8 +131,8 @@ export function BankTickPage() {
             </Banner>
           ) : null}
           {/* 58-money-checks .qb-sumstrip: the three figures as one card of cells, on every width. */}
-          <SumBar
-            className="rounded-card shadow-e1 max-md:[&>div:last-child]:col-span-2"
+          <FitSumBar
+            className="rounded-card shadow-e1"
             label="Running ticked totals"
             items={[
               {

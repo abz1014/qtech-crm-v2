@@ -8,6 +8,8 @@ import { Button } from '@/ui/Button'
 import { buttonStyles } from '@/ui/buttonStyles'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
+import { cn } from '@/lib/utils'
+import { FIT_BOX, fitFigure } from '@/features/money/fit'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { OwedToStaff } from '@/features/money/expenses/OwedToStaff'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
@@ -91,7 +93,7 @@ function Blocks({ f }: { f: MoneyHomeFigures }) {
 function Hero({ f }: { f: MoneyHomeFigures }) {
   const t = f.toCollect
   return (
-    <section data-surface="navy" aria-labelledby="money-hero-h" className="grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2">
+    <section data-surface="navy" aria-labelledby="money-hero-h" className={cn(FIT_BOX, 'grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2')}>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="grid min-w-0 flex-[1_1_14rem] gap-1">
           <p className="text-sm font-card text-fg-2">To collect</p>
@@ -100,7 +102,8 @@ function Hero({ f }: { f: MoneyHomeFigures }) {
           </h2>
         </div>
         {t ? (
-          <p className="num min-w-0 text-hero font-heavy text-lime-300 [overflow-wrap:anywhere]">
+          // The figure stays whole: it steps down from the hero size until it fits the card on one line (audit 1, blocker 2).
+          <p className="num text-hero font-heavy leading-tight text-lime-300" style={fitFigure(rs(t.total), 'var(--text-hero)', '3.5rem')}>
             <span className="mr-2 text-lg font-card">PKR</span>
             {rs(t.total)}
           </p>
@@ -136,13 +139,16 @@ function Block({ to, label, value, prefix = 'PKR', sub }: { to: string; label: s
   return (
     <Link
       to={to}
-      className="grid min-h-touch content-start gap-1 rounded-card border bg-surface p-card shadow-e1 transition-[box-shadow,border-color] duration-fast ease-out hover:border-line-strong hover:shadow-e2"
+      className={cn(
+        FIT_BOX,
+        'grid min-h-touch content-start gap-1 rounded-card border bg-surface p-card shadow-e1 transition-[box-shadow,border-color] duration-fast ease-out hover:border-line-strong hover:shadow-e2',
+      )}
     >
       <span className="text-base font-card text-fg-2">{label}</span>
       {value === null ? (
         <Skeleton className="h-[2.25rem] w-[10rem] max-w-full" />
       ) : (
-        <span className="num text-kpi font-heavy tracking-snug [overflow-wrap:anywhere]">
+        <span className="num text-kpi font-heavy leading-tight tracking-snug" style={fitFigure(value, 'var(--text-kpi)', prefix === 'PKR' ? '3rem' : '3.75rem')}>
           <span className="mr-2 text-base font-card">{prefix}</span>
           {value}
         </span>
